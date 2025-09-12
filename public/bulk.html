@@ -63,7 +63,7 @@
     .stat{margin:6px 0 0; font-size:13px}
     .grid-3{display:grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap:14px}
     @media (max-width: 980px){ .grid-3{grid-template-columns:1fr} }
-    pre#log {white-space:pre-wrap; font-size:12px; color:#cde1ff; margin:0}
+    pre#log {white-space:pre-wrap; font-size:12px; color:#cde1ff; margin:0; max-height:220px; overflow:auto}
   </style>
 </head>
 <body>
@@ -82,7 +82,7 @@
         <input id="file" type="file" accept=".csv" />
         <div class="muted" style="margin-top:6px">CSV must include a <code>url</code> column (optional <code>title</code>).</div>
         <div style="margin-top:10px; display:flex; gap:8px">
-          <button id="start" class="btn">Start Ingest</button>
+          <button id="start" class="btn">Crawl &amp; Ingest</button>
           <button id="stop" class="btn btn-secondary">Stop</button>
         </div>
       </div>
@@ -99,7 +99,7 @@
           </div>
         </div>
         <div class="muted" style="margin-top:8px">
-          Each row goes to <code>/api/ingest-embed-replace</code> (server fetches, chunks, embeds, replaces).
+          Each row goes to <code>/api/ingest-embed-replace</code> (server fetches, chunks, embeds, replaces existing rows).
         </div>
       </div>
     </div>
@@ -133,24 +133,81 @@ const API_PATH = "/api/ingest-embed-replace";
 function log(msg){
   const el = document.getElementById('log');
   el.textContent += msg + "\\n";
-  el.parentElement.scrollTop = el.parentElement.scrollHeight;
+  el.scrollTop = el.scrollHeight;
 }
 
+// Robust CSV parsing:
+// - strips BOM / normalizes newlines
+// - auto-detects delimiter (",", ";", "\\t", "|")
+// - handles quoted fields with commas
+// - accepts url/link/href/page/address
+// - if no header, assumes first column is URLs
 function parseCSV(text) {
   const rows = [];
-  const lines = text.split(/\\r?\\n/).map(l => l.trim()).filter(Boolean);
-  if (!lines.length) return rows;
-  const header = lines[0].split(',').map(s => s.trim().toLowerCase());
-  const urlIdx = header.indexOf('url');
-  const titleIdx = header.indexOf('title');
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(s => s.trim());
-    const url = cols[urlIdx];
+  if (!text) return rows;
+
+  // normalize
+  let txt = text.replace(/^\\uFEFF/, ''); // BOM
+  txt = txt.replace(/\\r\\n/g, '\\n').replace(/\\r/g, '\\n');
+
+  const allLines = txt.split('\\n').map(l => l.trim());
+  const nonEmpty = allLines.filter(l => l.length);
+  if (!nonEmpty.length) return rows;
+
+  // detect delimiter from the first non-empty line
+  const firstLine = nonEmpty[0];
+  const cand = [',',';','\\t','|'];
+  let delim = ',';
+  let bestCount = 0;
+  for (const d of cand) {
+    const c = splitCSV(firstLine, d).length;
+    if (c > bestCount) { bestCount = c; delim = d; }
+  }
+  log(`CSV: detected delimiter "${delim === '\\t' ? 'TAB' : delim}"`);
+
+  const headerCells = splitCSV(firstLine, delim).map(s => s.trim().toLowerCase());
+  const urlNames = new Set(['url','link','href','page','address']);
+  let urlIdx = headerCells.findIndex(h => urlNames.has(h));
+  let titleIdx = headerCells.indexOf('title');
+
+  let startIdx = 1;
+  // If header has no url-like name but only one column, assume the file has *no header* and column 0 is URLs
+  if (urlIdx < 0 && splitCSV(nonEmpty[1] || '', delim).length === 1) {
+    log('CSV: no recognizable URL header; assuming first column is URL and no header row.');
+    urlIdx = 0; titleIdx = -1; startIdx = 0;
+  } else {
+    log('CSV header: ' + JSON.stringify(headerCells));
+  }
+
+  for (let i = startIdx; i < nonEmpty.length; i++) {
+    const cells = splitCSV(nonEmpty[i], delim).map(s => s.trim());
+    const url = cells[urlIdx] || '';
     if (!url) continue;
-    const title = titleIdx >= 0 ? cols[titleIdx] : '';
+    const title = titleIdx >= 0 ? (cells[titleIdx] || '') : '';
     rows.push({ url, title });
   }
   return rows;
+}
+
+// CSV line splitter with quotes handling
+function splitCSV(line, delim) {
+  const out = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i=0; i<line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      // handle escaped quotes ""
+      if (inQuotes && line[i+1] === '"') { cur += '"'; i++; continue; }
+      inQuotes = !inQuotes;
+    } else if (ch === delim && !inQuotes) {
+      out.push(cur); cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  out.push(cur);
+  return out;
 }
 
 const els = {
@@ -183,6 +240,7 @@ els.start.onclick = async () => {
 
   const text = await file.text();
   const rows = parseCSV(text);
+
   if (!rows.length) { alert('No rows found (need url column)'); return; }
 
   els.table.innerHTML = '';
