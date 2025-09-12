@@ -2,46 +2,72 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Upload URL List to Train AI Bot</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{
-      --bg:#0f172a; --panel:#111827; --muted:#6b7280; --text:#e5e7eb; --accent:#60a5fa;
-      --ok:#22c55e; --err:#ef4444; --warn:#f59e0b; --border:#1f2937;
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #0b1220;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #60a5fa;
+      --ok: #34d399;
+      --warn: #f59e0b;
+      --err: #f87171;
+      --line: #1f2937;
+      --chip: #1e293b;
     }
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-    .wrap{max-width:1200px;margin:26px auto;padding:0 16px}
-    h1{margin:0 0 18px;font-size:22px}
-    .grid{display:grid;gap:14px}
-    @media(min-width:900px){.grid{grid-template-columns:1fr 1fr 1fr}}
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
-    .label{font-size:12px;color:var(--muted);margin-bottom:6px}
-    input[type="text"], input[type="number"], input[type="file"], textarea, select {
-      width:100%; background:#0b1220; color:var(--text); border:1px solid var(--border);
-      border-radius:8px; padding:10px; outline:none;
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
     }
-    textarea{min-height:120px; resize:vertical}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    button{
-      appearance:none; border:0; padding:10px 14px; border-radius:8px; cursor:pointer;
-      color:#fff; background:#1f2937;
+    .wrap { max-width: 1200px; margin: 24px auto 56px; padding: 0 16px; }
+    h1 { font-size: 22px; margin: 0 0 16px; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 980px) {
+      .grid { grid-template-columns: 1.2fr 1fr 1fr; }
     }
-    .btn-primary{background:var(--accent)}
-    .btn-ghost{background:#1f2937}
-    .btn-danger{background:#b91c1c}
-    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
-    .ok{color:var(--ok)} .err{color:var(--err)} .muted{color:var(--muted)}
-    details{background:var(--panel);border:1px solid var(--border);border-radius:10px;margin-top:14px}
-    summary{padding:10px 14px;cursor:pointer;color:var(--muted)}
-    .console{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      background:#0b1220;border-top:1px solid var(--border);max-height:220px;overflow:auto;padding:10px;white-space:pre-wrap}
-    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
-    th,td{border-top:1px solid var(--border);padding:8px 10px;vertical-align:top}
-    th{position:sticky;top:0;background:#0b1220}
-    .url-cell{word-break:break-all}
-    .status-ok{color:var(--ok)} .status-fail{color:var(--err)}
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+    .title { font-weight: 600; margin-bottom: 8px; color: var(--muted); font-size: 12px; letter-spacing: .02em; text-transform: uppercase; }
+    input[type="text"], input[type="number"], textarea, .fileBox {
+      width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+      border-radius: 8px; padding: 10px 12px; outline: none;
+    }
+    input[type="text"]::placeholder, textarea::placeholder { color: #6b7280; }
+    textarea { min-height: 96px; resize: vertical; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn {
+      border: 1px solid transparent; background: var(--chip); color: var(--text);
+      padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: 600;
+    }
+    .btn.primary { background: linear-gradient(180deg, #2563eb, #1d4ed8); border-color: #1e40af; }
+    .btn.stop { background: linear-gradient(180deg, #ef4444, #dc2626); border-color: #b91c1c; }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .flex { display: flex; align-items: center; gap: 8px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .counts { display: flex; gap: 10px; align-items: center; margin: 12px 0; }
+    .chip { background: var(--chip); color: var(--text); border: 1px solid var(--line); padding: 6px 10px; border-radius: 999px; font-size: 12px; }
+    .chip.ok { color: var(--ok); }
+    .chip.err { color: var(--err); }
+    .chip.muted { color: var(--muted); }
+    details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+    details summary { cursor: pointer; color: var(--muted); margin: 4px 0; }
+    pre {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+      padding: 10px; overflow: auto; max-height: 260px; white-space: pre-wrap; word-break: break-word;
+    }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 10px; border: 1px solid var(--line); }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { text-align: left; background: #0c1220; color: var(--muted); font-weight: 600; font-size: 12px; }
+    tbody tr:hover td { background: #0b1326; }
+    .status { font-weight: 600; }
+    .status.ok { color: var(--ok); }
+    .status.fail { color: var(--err); }
+    .hint { color: var(--muted); }
+    .w100 { width: 100%; }
   </style>
 </head>
 <body>
@@ -49,255 +75,353 @@
     <h1>Upload URL List to Train AI Bot</h1>
 
     <div class="grid">
-      <!-- Token -->
+      <!-- TOKEN + SINGLE URL -->
       <div class="card">
-        <div class="label">Ingest Token (Bearer)</div>
-        <input id="token" type="text" placeholder="paste your ingest token"
-               value="b6c30c9e6f44cce9e1a4f3f2d3a5c676" />
-        <div class="muted" style="margin-top:6px">Saved locally (browser only). Sent as
-          <span class="pill" style="background:#0b1220">Authorization: Bearer …</span>
+        <div class="title">Ingest Token (Bearer)</div>
+        <input id="token" type="text" class="mono" placeholder="paste your ingest token…" />
+        <div class="note">Saved locally (browser only). Sent as <span class="mono">Authorization: Bearer …</span></div>
+
+        <div style="height:10px"></div>
+        <div class="title">Test a Single URL</div>
+        <input id="singleUrl" type="text" class="mono" placeholder="https://example.com/page" />
+        <div class="btns" style="margin-top:8px">
+          <button id="btnSingle" class="btn primary">Test Single URL</button>
         </div>
+
+        <div class="note">Great for diagnosing one page end-to-end (fetch → extract → embed → replace).</div>
       </div>
 
-      <!-- CSV + paste -->
+      <!-- FILE + PASTE -->
       <div class="card">
-        <div class="label">CSV file (must include a <b>url</b> column) — or paste URLs below (one per line)</div>
-        <div class="row">
-          <input id="csv" type="file" accept=".csv,text/csv" />
-          <button id="btnStart" class="btn-primary">Crawl &amp; Ingest</button>
-          <button id="btnStop" class="btn-ghost">Stop</button>
-        </div>
-        <div class="label" style="margin-top:10px">Paste URLs (one per line)</div>
-        <textarea id="paste" placeholder="https://example.com/page-1
+        <div class="title">CSV file</div>
+        <input id="csv" type="file" accept=".csv,text/csv" class="fileBox" />
+        <div class="note">CSV must include a <span class="mono">url</span> column (optional <span class="mono">title</span>).</div>
+
+        <div style="height:10px"></div>
+        <div class="title">Paste URLs (one per line) — optional</div>
+        <textarea id="pasteBox" class="mono" placeholder="https://example.com/page-1
 https://example.com/page-2"></textarea>
+
+        <div class="btns" style="margin-top:10px">
+          <button id="btnStart" class="btn primary">Crawl &amp; Ingest</button>
+          <button id="btnStop" class="btn stop">Stop</button>
+        </div>
       </div>
 
-      <!-- Concurrency -->
+      <!-- SETTINGS -->
       <div class="card">
-        <div class="grid" style="grid-template-columns:1fr 1fr; gap:10px">
+        <div class="title">Settings</div>
+        <div class="row">
           <div>
-            <div class="label">Concurrency</div>
-            <input id="concurrency" type="number" min="1" max="12" value="3" />
+            <div class="title" style="margin-bottom:6px">Concurrency</div>
+            <input id="concurrency" type="number" min="1" max="10" value="3" />
           </div>
           <div>
-            <div class="label">Delay between requests (ms)</div>
+            <div class="title" style="margin-bottom:6px">Delay between requests (ms)</div>
             <input id="delay" type="number" min="0" step="50" value="400" />
           </div>
         </div>
-        <div class="muted" style="margin-top:8px">Each row goes to
-          <span class="pill" style="background:#0b1220">/api/ingest-embed-replace</span>
-          (server fetches, chunks, embeds, replaces existing rows).
-        </div>
+        <div class="note" style="margin-top:10px">Each request goes to <span class="mono">/api/ingest-embed-replace</span> (fetches, chunks, embeds, replaces existing rows).</div>
       </div>
     </div>
 
-    <details open>
-      <summary>CSV format (click to expand)</summary>
-      <div class="console" id="fmt">
-        CSV must include a header named <b>url</b>, for example:
-
-        url,title
-        https://www.example.com/page-1,Optional title 1
-        https://www.example.com/page-2,Optional title 2
-
-        Tip: You can also skip the CSV and paste URLs (one per line) in the box above.
+    <details style="margin-top:18px">
+      <summary><strong>CSV format</strong> (click to expand)</summary>
+      <div class="note" style="margin:8px 0 2px">
+        CSV must include a header named <span class="mono">url</span>, for example:
       </div>
+      <pre class="mono">url,title
+https://www.example.com/page-1,Optional title 1
+https://www.example.com/page-2,Optional title 2</pre>
+      <div class="note">Tip: You can also skip the CSV and paste URLs (one per line) in the box above.</div>
     </details>
 
-    <details open>
-      <summary>Debug console (what the client sees)</summary>
-      <div class="console" id="log"></div>
+    <details style="margin-top:12px" open>
+      <summary><strong>Debug console</strong> (what the client sees)</summary>
+      <pre id="debug" class="mono"></pre>
     </details>
 
-    <div class="card" style="margin-top:14px">
-      <div class="row" style="justify-content:space-between;margin-bottom:6px">
-        <div><span id="rowCount">Loaded 0 rows.</span>
-          <span class="ok" id="okCount">Success: 0</span>,
-          <span class="err" id="failCount">Failed: 0</span>.
-        </div>
-      </div>
+    <div class="counts">
+      <div class="chip muted"><span id="loadedCount">Loaded 0 rows</span>.</div>
+      <div class="chip ok">Success: <span id="okCount">0</span></div>
+      <div class="chip err">Failed: <span id="failCount">0</span></div>
+      <div class="chip muted">Stopped: <span id="stoppedFlag">0</span></div>
+    </div>
 
-      <div style="overflow:auto;max-height:52vh">
-        <table id="resultsTbl">
-          <thead>
-          <tr><th style="width:48px">#</th><th>URL</th><th style="width:28%">Result</th></tr>
-          </thead>
-          <tbody id="resultsBody"></tbody>
-        </table>
-      </div>
+    <div style="overflow:auto">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:64px">#</th>
+            <th>URL</th>
+            <th style="width:28%">Result</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
     </div>
   </div>
 
-<script>
-(function(){
-  // --- helpers ---------------------------------------------------------------
-  const $ = sel => document.querySelector(sel);
-  const logEl = $('#log');
-  const resultsBody = $('#resultsBody');
-  const rowCountEl = $('#rowCount'), okCountEl = $('#okCount'), failCountEl = $('#failCount');
-  const storageKey = 'ingest_token_v1';
+  <script>
+    // ---------- constants ----------
+    const API_PATH = '/api/ingest-embed-replace';
+    // Pre-fill token as requested (will be saved to localStorage). Keep private.
+    const DEFAULT_TOKEN = 'b6c30c9e6f44cce9e1a4f3f2d3a5c676';
 
-  // restore persisted token
-  const saved = localStorage.getItem(storageKey);
-  if (saved) $('#token').value = saved;
-  $('#token').addEventListener('input', e => localStorage.setItem(storageKey, e.target.value.trim()));
+    // ---------- el helpers ----------
+    const $ = (id) => document.getElementById(id);
+    const els = {
+      token: $('token'),
+      singleUrl: $('singleUrl'),
+      btnSingle: $('btnSingle'),
+      csv: $('csv'),
+      pasteBox: $('pasteBox'),
+      btnStart: $('btnStart'),
+      btnStop: $('btnStop'),
+      concurrency: $('concurrency'),
+      delay: $('delay'),
+      debug: $('debug'),
+      tbody: $('tbody'),
+      loadedCount: $('loadedCount'),
+      okCount: $('okCount'),
+      failCount: $('failCount'),
+      stoppedFlag: $('stoppedFlag'),
+    };
 
-  function log(msg){
-    logEl.textContent += (typeof msg === 'string' ? msg : JSON.stringify(msg)) + '\n';
-    logEl.scrollTop = logEl.scrollHeight;
-  }
+    // ---------- state ----------
+    let STOP = false;
+    let ok = 0, fail = 0;
 
-  function isHttpUrl(u){
-    try {
-      const url = new URL(u.trim());
-      return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch { return false; }
-  }
+    // ---------- init ----------
+    (function init() {
+      const saved = localStorage.getItem('ingest_token');
+      els.token.value = saved || DEFAULT_TOKEN;
 
-  function dedupe(arr){ return Array.from(new Set(arr)); }
+      els.btnStart.addEventListener('click', onStart);
+      els.btnStop.addEventListener('click', () => { STOP = true; els.stoppedFlag.textContent = '1'; log('⏹️ stop requested'); });
+      els.btnSingle.addEventListener('click', onSingle);
 
-  function updateCounts(total, ok, fail){
-    rowCountEl.textContent = `Loaded ${total} rows.`;
-    okCountEl.textContent   = `Success: ${ok}`;
-    failCountEl.textContent = `Failed: ${fail}`;
-  }
+      els.token.addEventListener('change', () => localStorage.setItem('ingest_token', els.token.value.trim()));
+      els.token.addEventListener('blur', () => localStorage.setItem('ingest_token', els.token.value.trim()));
+    })();
 
-  function addRow(i, url, status, detail){
-    const tr = document.createElement('tr');
-    const td1 = document.createElement('td'); td1.textContent = String(i+1);
-    const td2 = document.createElement('td'); td2.className = 'url-cell'; td2.textContent = url;
-    const td3 = document.createElement('td');
-    td3.innerHTML = status === 'OK'
-      ? `<span class="status-ok">OK</span>`
-      : `<span class="status-fail">FAILED</span> — <span class="muted">${detail || ''}</span>`;
-    tr.append(td1,td2,td3);
-    resultsBody.appendChild(tr);
-  }
+    // ---------- logging ----------
+    function log(s) {
+      els.debug.textContent += (s.endsWith('\n') ? s : s + '\n');
+      els.debug.scrollTop = els.debug.scrollHeight;
+    }
+    function resetCounters(total) {
+      ok = 0; fail = 0; STOP = false;
+      els.okCount.textContent = '0';
+      els.failCount.textContent = '0';
+      els.stoppedFlag.textContent = '0';
+      els.loadedCount.textContent = `Loaded ${total} rows`;
+      els.tbody.innerHTML = '';
+    }
+    function addRow(i, url, resultHtml) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mono hint">${i+1}</td>
+        <td class="mono">${escapeHtml(url)}</td>
+        <td>${resultHtml}</td>
+      `;
+      els.tbody.appendChild(tr);
+    }
+    function setOK(i, url, data) {
+      ok++; els.okCount.textContent = String(ok);
+      addRow(i, url, `<div class="status ok">OK</div><div class="hint mono">chunks: ${data?.chunks ?? '?'}</div>`);
+    }
+    function setFail(i, url, errText) {
+      fail++; els.failCount.textContent = String(fail);
+      addRow(i, url, `<div class="status fail">FAILED</div><div class="hint mono">${escapeHtml(errText)}</div>`);
+    }
+    function escapeHtml(s='') { return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-  // --- CSV parsing (PapaParse) + pasted URLs ---------------------------------
-  async function getUrlsFromInputs(){
-    const pasted = $('#paste').value.trim();
-    const file = $('#csv').files[0];
-    let urls = [];
-
-    if (file){
-      log(`Parsing CSV file: ${file.name}`);
-      urls = await new Promise((resolve) => {
-        Papa.parse(file, {
-          header: true,
-          skipEmptyLines: 'greedy',
-          transformHeader: h => (h || '').trim().toLowerCase(),
-          complete: (res) => {
-            if (res.errors?.length){
-              log(`PapaParse errors: ${res.errors.map(e=>e.message).join(' | ')}`);
-            }
-            // accept 'url' column OR treat first column as url
-            const rows = res.data || [];
-            const out = [];
-            for (const r of rows){
-              const keys = Object.keys(r);
-              let u = (r.url ?? r['Url'] ?? r['URL']);
-              if (!u && keys.length) u = r[keys[0]];
-              if (u && isHttpUrl(u)) out.push(u.trim());
-            }
-            resolve(out);
-          }
-        });
-      });
+    // ---------- single URL ----------
+    async function onSingle() {
+      const token = els.token.value.trim();
+      const url = els.singleUrl.value.trim();
+      if (!token) { alert('Missing token'); return; }
+      if (!url) { alert('Enter a URL'); return; }
+      resetCounters(1);
+      log(`Single test → ${url}`);
+      const [res, err] = await callIngest(url, null, token);
+      if (err) { setFail(0, url, err); log(`❌ ${url} → ${err}`); }
+      else { setOK(0, url, res); log(`✅ ${url} → chunks=${res?.chunks}`); }
     }
 
-    if (pasted){
-      const lines = pasted.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-      const good = lines.filter(isHttpUrl);
-      if (good.length !== lines.length){
-        log(`Some pasted lines were not valid URLs and were skipped.`);
+    // ---------- start bulk ----------
+    async function onStart() {
+      const token = els.token.value.trim();
+      if (!token) { alert('Missing token'); return; }
+      localStorage.setItem('ingest_token', token);
+
+      let rows = [];
+      // CSV
+      const f = els.csv.files && els.csv.files[0];
+      if (f) {
+        try {
+          const text = await readFileText(f);
+          const parsed = parseCsv(text);
+          rows = rows.concat(parsed);
+        } catch (e) {
+          alert('CSV parse failed: ' + e.message);
+          return;
+        }
       }
-      urls = urls.concat(good);
+      // Pasted URLs (optional)
+      const pasted = els.pasteBox.value.trim();
+      if (pasted) {
+        const list = pasted.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        rows = rows.concat(list.map(u => ({ url: u, title: '' })));
+      }
+
+      if (!rows.length) {
+        alert('No rows found (need url column or paste URLs).');
+        return;
+      }
+
+      resetCounters(rows.length);
+      const conc = Math.max(1, Math.min(10, parseInt(els.concurrency.value || '3', 10)));
+      const delay = Math.max(0, parseInt(els.delay.value || '0', 10));
+
+      log(`Starting ingest: rows=${rows.length}, concurrency=${conc}, delay=${delay}ms`);
+      await processQueue(rows, conc, delay, async (row, i) => {
+        if (STOP) return;
+        const [data, err] = await callIngest(row.url, row.title || null, token);
+        if (err) { setFail(i, row.url, err); log(`❌ [${i+1}/${rows.length}] ${row.url} → ${err}`); }
+        else { setOK(i, row.url, data); log(`✅ [${i+1}/${rows.length}] ${row.url} → chunks=${data?.chunks}`); }
+      });
+      log(`Ingest complete. ✅ ${ok}, ❌ ${fail}.`);
     }
 
-    urls = dedupe(urls);
-    return urls;
-  }
-
-  // --- ingestion queue -------------------------------------------------------
-  let stopFlag = false;
-
-  async function postIngest(url, token){
-    const res = await fetch('/api/ingest-embed-replace', {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ url })
-    });
-    const text = await res.text();
-    let json = {};
-    try { json = JSON.parse(text); } catch { /* text fallback */ }
-
-    if (!res.ok){
-      const detail = json?.detail || text || `HTTP ${res.status}`;
-      throw new Error(detail);
+    // ---------- queue w/ concurrency ----------
+    async function processQueue(items, concurrency, delayMs, worker) {
+      let i = 0;
+      const running = new Set();
+      const next = async () => {
+        if (STOP || i >= items.length) return;
+        const idx = i++; const item = items[idx];
+        const p = (async () => {
+          try { await worker(item, idx); }
+          catch (e) { setFail(idx, item.url || '(row)', String(e.message || e)); }
+          finally { running.delete(p); }
+        })();
+        running.add(p);
+        if (delayMs) await sleep(delayMs);
+        if (running.size < concurrency && i < items.length) await next();
+      };
+      // kick off initial batch
+      const kicks = Math.min(concurrency, items.length);
+      for (let k=0; k<kicks; k++) await next();
+      await Promise.allSettled([...running]);
     }
-    return json;
-  }
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  async function runIngest(urls, token, concurrency, delayMs){
-    stopFlag = false;
-    resultsBody.innerHTML = '';
-    let ok=0, fail=0;
+    // ---------- call API ----------
+    async function callIngest(url, title, token) {
+      const body = { url };
+      if (title) body.title = title;
 
-    updateCounts(urls.length, ok, fail);
-    log(`Starting ingest: rows=${urls.length}, concurrency=${concurrency}, delay=${delayMs}ms`);
+      try {
+        const res = await fetch(API_PATH, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(body)
+        });
 
-    let index = 0;
-    const workers = Array.from({length: concurrency}, async (_,workerId) => {
-      while (!stopFlag){
-        const i = index++;
-        if (i >= urls.length) break;
-        const url = urls[i];
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        const raw = await res.text();
 
-        try{
-          const result = await postIngest(url, token);
-          ok++; addRow(i,url,'OK'); updateCounts(urls.length, ok, fail);
-          log(`✔️ [${i+1}/${urls.length}] OK ${url}`);
-        }catch(err){
-          fail++; addRow(i,url,'FAIL', String(err && err.message || err)); updateCounts(urls.length, ok, fail);
-          log(`❌ [${i+1}/${urls.length}] ${url} — ${String(err && err.message || err)}`);
+        if (!ct.includes('application/json')) {
+          // The server responded with HTML or something else — show a snippet
+          const snippet = raw.slice(0, 220).replace(/\s+/g, ' ');
+          return [null, `server returned non-JSON (status ${res.status}) — ${snippet}`];
         }
 
-        if (delayMs > 0) await new Promise(r=>setTimeout(r, delayMs));
+        let data;
+        try { data = JSON.parse(raw); }
+        catch (e) { return [null, `response JSON parse failed (status ${res.status})`]; }
+
+        if (!res.ok || data?.error) {
+          return [null, `${data?.error || 'error'}: ${typeof data?.detail === 'string' ? data.detail : JSON.stringify(data?.detail || '')}`];
+        }
+        return [data, null];
+
+      } catch (e) {
+        return [null, String(e.message || e)];
       }
-    });
-
-    await Promise.all(workers);
-    log(`Ingest complete. ✅ ${ok} ok, ❌ ${fail} failed.`);
-  }
-
-  // --- UI events -------------------------------------------------------------
-  $('#btnStart').addEventListener('click', async () => {
-    const token = $('#token').value.trim();
-    if (!token){ alert('Please paste your ingest token'); return; }
-
-    const urls = await getUrlsFromInputs();
-    if (!urls.length){
-      alert('No rows found (need at least one valid URL).\n\nTip: Choose a CSV that has a "url" header OR paste URLs (one per line).');
-      return;
     }
 
-    const conc = Math.max(1, Number($('#concurrency').value || 3));
-    const delay = Math.max(0, Number($('#delay').value || 0));
+    // ---------- csv parsing ----------
+    function parseCsv(text) {
+      // Strip BOM
+      text = text.replace(/^\uFEFF/, '');
+      // Quick delimiter detect
+      const firstLine = (text.split(/\r?\n/, 1)[0] || '').toLowerCase();
+      let delim = ',';
+      if (firstLine.includes(';') && !firstLine.includes(',')) delim = ';';
 
-    logEl.textContent = '';
-    updateCounts(0,0,0);
-    await runIngest(urls, token, conc, delay);
-  });
+      const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+      if (!lines.length) return [];
 
-  $('#btnStop').addEventListener('click', () => {
-    stopFlag = true;
-    log('⏹️ Stop requested. Current requests will finish, then the queue stops.');
-  });
-})();
-</script>
+      // header
+      const head = splitCsvLine(lines[0], delim).map(s => s.trim().toLowerCase());
+      const urlIdx = head.indexOf('url');
+      const titleIdx = head.indexOf('title');
+
+      if (urlIdx === -1) {
+        // assume single column CSV (every line is a URL) – ignore header if it contains 'http'
+        if (/^https?:\/\//i.test(lines[0].trim())) {
+          return lines.map(l => ({ url: l.trim(), title: '' }));
+        } else {
+          // treat the rest as URLs
+          return lines.slice(1).map(l => ({ url: l.trim(), title: '' })).filter(r => r.url);
+        }
+      }
+
+      const rows = [];
+      for (let i=1; i<lines.length; i++) {
+        const cols = splitCsvLine(lines[i], delim);
+        const url = (cols[urlIdx] || '').trim();
+        if (!url) continue;
+        const title = titleIdx !== -1 ? (cols[titleIdx] || '').trim() : '';
+        rows.push({ url, title });
+      }
+      return rows;
+    }
+
+    function splitCsvLine(line, delim) {
+      const out = [];
+      let cur = '', inside = false;
+      for (let i=0; i<line.length; i++) {
+        const c = line[i];
+        if (c === '"') {
+          if (inside && line[i+1] === '"') { cur += '"'; i++; }
+          else { inside = !inside; }
+        } else if (c === delim && !inside) {
+          out.push(cur); cur = '';
+        } else {
+          cur += c;
+        }
+      }
+      out.push(cur);
+      return out;
+    }
+
+    // ---------- utils ----------
+    function readFileText(file) {
+      return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result || ''));
+        fr.onerror = (e) => reject(e);
+        fr.readAsText(file);
+      });
+    }
+  </script>
 </body>
 </html>
