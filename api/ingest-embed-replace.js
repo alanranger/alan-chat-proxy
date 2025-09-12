@@ -10,12 +10,16 @@ const supabase = createClient(
 );
 
 // Optional hard guard: set this in Vercel if you want to enforce a token.
-// If not set, we only require a Bearer header to be present.
 const REQUIRED_INGEST_TOKEN = process.env.INGEST_TOKEN || null;
 
-// Use a small embedding model -> 1536 dims (commonly used with Supabase vector(1536))
-const EMBEDDING_MODEL = 'text-embedding-3-small'; // OpenRouter forwards to OpenAI-compatible embeddings
+// Use OpenRouter model *name* (not OpenAI's)
+// Common: openai/text-embedding-3-small  -> 1536 dims
+const EMBEDDING_MODEL = 'openai/text-embedding-3-small';
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+
+// Optional but recommended for OpenRouter (see docs)
+const OPENROUTER_SITE = process.env.OPENROUTER_SITE || 'https://alan-chat-proxy.vercel.app';
+const OPENROUTER_TITLE = process.env.OPENROUTER_TITLE || 'AlanRanger Ingest';
 
 function asJson(res, body, status = 200) {
   return res
@@ -58,22 +62,28 @@ async function embedChunks(chunks) {
     throw new Error('Missing OPENROUTER_API_KEY');
   }
 
-  // OpenAI-compatible batch embeddings
+  // OpenRouter embeddings endpoint, include referer/title headers
   const resp = await fetch('https://openrouter.ai/api/v1/embeddings', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'HTTP-Referer': OPENROUTER_SITE,
+      'X-Title': OPENROUTER_TITLE
     },
     body: JSON.stringify({
-      model: EMBEDDING_MODEL,
-      input: chunks
+      model: EMBEDDING_MODEL,  // e.g. "openai/text-embedding-3-small"
+      input: chunks            // array of strings
     })
   });
 
-  const data = await resp.json().catch(() => ({}));
+  const raw = await resp.text();
+  let data = null;
+  try { data = JSON.parse(raw); } catch { /* keep null */ }
+
   if (!resp.ok || !data?.data) {
-    throw new Error(`Embedding error: ${resp.status} ${JSON.stringify(data)}`);
+    // include the raw body for debugging (trim to keep payload small)
+    throw new Error(`Embedding error: ${resp.status} ${raw.slice(0, 600)}`);
   }
 
   // data.data[i].embedding -> number[]
@@ -106,8 +116,8 @@ export default async function handler(req, res) {
     // 1) Delete existing rows for this URL
     const { error: delErr } = await supabase.from('page_chunks').delete().eq('url', url);
     if (delErr) {
-      // not fatal, but report
       console.warn('Supabase delete error:', delErr);
+      // not fatal, continue
     }
 
     // 2) Fetch page & chunk
@@ -116,6 +126,9 @@ export default async function handler(req, res) {
       return asJson(res, { error: 'too_short', detail: 'Page text too short' }, 400);
     }
     const chunks = chunkText(text, 900);
+    if (!chunks.length) {
+      return asJson(res, { error: 'no_chunks', detail: 'No chunks extracted' }, 400);
+    }
 
     // 3) Embed
     const embeddings = await embedChunks(chunks);
@@ -139,7 +152,12 @@ export default async function handler(req, res) {
       return asJson(res, { error: 'insert_failed', detail: insErr }, 500);
     }
 
-    return asJson(res, { ok: true, replaced: true, inserted: count ?? rows.length }, 200);
+    return asJson(res, {
+      ok: true,
+      replaced: true,
+      inserted: count ?? rows.length,
+      info: { chunks: chunks.length, model: EMBEDDING_MODEL }
+    }, 200);
   } catch (err) {
     console.error(err);
     return asJson(res, { error: 'server_error', detail: String(err) }, 500);
