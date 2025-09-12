@@ -1,12 +1,11 @@
 // api/ingest-embed-replace.js
-export const config = { runtime: 'nodejs' };
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36 AlanBot/1.0';
 
 export default async function handler(req, res) {
   try {
-    // Simple GET health/test mode:
+    // Simple GET health/test:
     if (req.method !== 'POST') {
       const url = req.query.url;
       if (!url) {
@@ -43,7 +42,7 @@ export default async function handler(req, res) {
     const upstream = await fetch(url, { headers: { 'user-agent': UA } });
     const html = await upstream.text();
 
-    // Minimal placeholder "ingest" that simply confirms we fetched the page.
+    // Minimal placeholder ingest result
     res.status(200).json({
       ok: true,
       url,
