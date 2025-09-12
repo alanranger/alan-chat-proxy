@@ -1,7 +1,4 @@
-// /api/embed-missing.js
-// Fills embeddings for rows where `embedding IS NULL` in batches.
-// Call it repeatedly until it returns processed: 0.
-
+// /api/embed-missing.js  — robust error handling + flexible body parsing
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -10,7 +7,19 @@ const supabase = createClient(
 );
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const EMBEDDING_MODEL = "openai/text-embedding-3-small"; // 1536 dims (matches your table)
+const EMBEDDING_MODEL = "openai/text-embedding-3-small"; // 1536 dims
+
+function readLimit(req) {
+  try {
+    if (typeof req.body === "string" && req.body.length) {
+      const parsed = JSON.parse(req.body);
+      return Math.min(Number(parsed?.limit) || 50, 200);
+    }
+    return Math.min(Number(req.body?.limit) || 50, 200);
+  } catch {
+    return 50;
+  }
+}
 
 async function getBatch(limit = 50) {
   const { data, error } = await supabase
@@ -31,7 +40,8 @@ async function embedBatch(texts) {
       Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       "Content-Type": "application/json",
       "HTTP-Referer": "https://alan-chat-proxy.vercel.app",
-      "X-Title": "Alan Ranger Embedding Backfill"
+      "X-Title": "Alan Ranger Embedding Backfill",
+      Accept: "application/json"
     },
     body: JSON.stringify({
       model: EMBEDDING_MODEL,
@@ -39,14 +49,30 @@ async function embedBatch(texts) {
     })
   });
 
-  const json = await resp.json();
+  const raw = await resp.text(); // read raw first to avoid JSON parse surprises
+
   if (!resp.ok) {
+    // surface the actual body for debugging (often HTML when blocked)
     throw new Error(
-      `embedding-api-failed: ${resp.status} ${JSON.stringify(json)}`
+      `embedding-api-failed: ${resp.status} ${raw.slice(0, 500)}`
+    );
+  }
+
+  let json;
+  try {
+    json = JSON.parse(raw);
+  } catch (e) {
+    throw new Error(
+      `embedding-parse-failed: ${String(e)} | body: ${raw.slice(0, 500)}`
     );
   }
 
   const embeddings = (json?.data || []).map((d) => d.embedding);
+  if (!embeddings.length) {
+    throw new Error(
+      `embedding-empty-response: ${raw.slice(0, 500)}`
+    );
+  }
   return embeddings;
 }
 
@@ -60,21 +86,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const limit = Math.min(Number(req.body?.limit) || 50, 200);
+    const limit = readLimit(req);
 
-    // 1) Fetch a batch with null embeddings
+    // 1) pull a batch needing embeddings
     const batch = await getBatch(limit);
     if (batch.length === 0) {
       return res.status(200).json({ processed: 0, note: "done" });
     }
 
-    // 2) Create embeddings (keep order)
+    // 2) create embeddings
     const texts = batch.map((b) => b.chunk_text);
-    const vectors = await embedBatch(texts); // array of float[1536]
+    const vectors = await embedBatch(texts); // number[1536][]
 
-    // 3) Update rows
-    // Supabase vector type accepts JS number arrays directly.
-    // Do serial updates to keep things simple & avoid row-level conflicts.
+    // 3) update rows
     for (let i = 0; i < batch.length; i++) {
       const id = batch[i].id;
       const vec = vectors[i];
@@ -87,10 +111,10 @@ export default async function handler(req, res) {
       }
     }
 
-    return res
-      .status(200)
-      .json({ processed: batch.length, model: EMBEDDING_MODEL });
+    return res.status(200).json({ processed: batch.length, model: EMBEDDING_MODEL });
   } catch (e) {
-    return res.status(500).json({ error: "embed-missing-failed", detail: String(e) });
+    return res
+      .status(500)
+      .json({ error: "embed-missing-failed", detail: String(e) });
   }
 }
