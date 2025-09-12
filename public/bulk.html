@@ -5,87 +5,132 @@
   <title>Upload URL List to Train AI Bot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:20px;color:#111}
-    h1{font-size:28px;margin:0 0 16px}
-    .row{display:flex;gap:16px;flex-wrap:wrap}
-    .box{padding:10px;border:1px solid #ddd;border-radius:8px}
-    input[type="text"],input[type="number"]{padding:8px;border:1px solid #ccc;border-radius:6px;width:320px}
-    input[type="file"]{padding:6px}
-    button{padding:8px 12px;border:1px solid #999;border-radius:6px;background:#f6f6f6;cursor:pointer}
-    button:hover{background:#eee}
-    .small{color:#555;font-size:12px}
-    .ok{color:#0a7f1a}
-    .fail{color:#b00020}
-    table{width:100%;border-collapse:collapse;margin-top:14px}
-    th,td{border-bottom:1px solid #eee;padding:8px;text-align:left;font-size:13px;vertical-align:top}
-    details{margin-top:14px}
-    .muted{color:#666}
-    a{color:#0a5; text-decoration:none}
+    :root{
+      --bg:#0b1220;
+      --panel:#121a2b;
+      --muted:#a8b3cf;
+      --text:#e6ecff;
+      --ok:#29cc7a;
+      --warn:#ffcc66;
+      --fail:#ff6b6b;
+      --brand:#4b8cff;
+      --brand-2:#7aa2ff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:24px;
+      font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:linear-gradient(160deg,#0a1135 0%,#0b0f1e 60%);
+      color:var(--text);
+    }
+    h1{margin:0 0 18px; font-size:26px}
+    .wrap{display:grid; gap:14px}
+    .row{display:flex; gap:14px; flex-wrap:wrap}
+    .card{
+      background:var(--panel);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:12px;
+      padding:14px;
+      box-shadow:0 1px 0 rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.02);
+    }
+    label{display:block; font-size:13px; color:var(--muted); margin-bottom:6px}
+    input[type="text"],input[type="number"],input[type="file"]{
+      width:320px; padding:9px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.12);
+      background:#0e1626; color:var(--text); outline:none;
+    }
+    input[type="text"]:focus,input[type="number"]:focus{border-color:var(--brand)}
+    .btn{
+      appearance:none; border:none; padding:9px 14px; border-radius:10px; cursor:pointer;
+      font-weight:600; letter-spacing:.2px; color:#fff;
+      background:linear-gradient(180deg,var(--brand),var(--brand-2));
+      box-shadow:0 6px 16px rgba(75,140,255,.35), inset 0 1px 0 rgba(255,255,255,.15);
+    }
+    .btn:hover{filter:brightness(1.08)}
+    .btn-secondary{
+      background:linear-gradient(180deg,#39445f,#232c44);
+      box-shadow:0 6px 16px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.08);
+      color:#dbe4ff;
+    }
+    .muted{color:var(--muted); font-size:12px}
+    details{margin-top:6px}
+    summary{cursor:pointer}
+    table{width:100%; border-collapse:collapse; margin-top:14px}
+    th,td{padding:10px 8px; border-bottom:1px solid rgba(255,255,255,.06); font-size:13px}
+    a{color:#94b8ff; text-decoration:none}
     a:hover{text-decoration:underline}
+    .ok{color:var(--ok); font-weight:600}
+    .fail{color:var(--fail); font-weight:600}
+    .stat{margin:6px 0 0; font-size:13px}
+    .grid-3{display:grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap:14px}
+    @media (max-width: 980px){ .grid-3{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
-  <h1>Upload URL List to Train AI Bot</h1>
+  <div class="wrap">
+    <h1>Upload URL List to Train AI Bot</h1>
 
-  <div class="row">
-    <div class="box">
-      <div><b>Ingest Token (Bearer)</b></div>
-      <input id="token" type="text" placeholder="paste your ingest token here..." />
-      <div class="small">Saved locally in your browser only. Sent as <code>Authorization: Bearer …</code> header.</div>
-    </div>
+    <div class="grid-3">
+      <div class="card">
+        <label>Ingest Token (Bearer)</label>
+        <input id="token" type="text" placeholder="paste your ingest token…" />
+        <div class="muted">Saved locally (browser only). Sent as <code>Authorization: Bearer …</code>.</div>
+      </div>
 
-    <div class="box">
-      <div><b>CSV file</b></div>
-      <input id="file" type="file" accept=".csv" />
-      <div class="small">CSV must include a <code>url</code> column (optional <code>title</code>).</div>
-      <div style="margin-top:8px;">
-        <button id="start">Start Ingest</button>
-        <button id="stop">Stop</button>
+      <div class="card">
+        <label>CSV file</label>
+        <input id="file" type="file" accept=".csv" />
+        <div class="muted" style="margin-top:6px">CSV must include a <code>url</code> column (optional <code>title</code>).</div>
+        <div style="margin-top:10px; display:flex; gap:8px">
+          <button id="start" class="btn">Start Ingest</button>
+          <button id="stop" class="btn btn-secondary">Stop</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="gap:12px">
+          <div>
+            <label>Concurrency</label>
+            <input id="conc" type="number" min="1" max="10" value="3" />
+          </div>
+          <div>
+            <label>Delay between requests (ms)</label>
+            <input id="delay" type="number" min="0" step="50" value="400" />
+          </div>
+        </div>
+        <div class="muted" style="margin-top:8px">
+          Each row goes to <code>/api/ingest-embed-replace</code> (server fetches, chunks, embeds, replaces).
+        </div>
       </div>
     </div>
 
-    <div class="box">
-      <div><b>Concurrency</b></div>
-      <input id="conc" type="number" min="1" max="10" value="3" />
-      <div><b>Delay between requests (ms)</b></div>
-      <input id="delay" type="number" min="0" step="50" value="400" />
-      <div class="small muted" style="margin-top:6px;">
-        Each row will be sent to <code>/api/ingest-embed-replace</code> (server fetches, chunks, replaces existing rows).
-      </div>
+    <details class="card">
+      <summary><b>CSV format</b> (click to expand)</summary>
+      <pre class="muted">url,title
+https://example.com/page-1,Optional page title
+https://example.com/page-2,</pre>
+    </details>
+
+    <div id="summary" class="stat muted"></div>
+
+    <div class="card">
+      <table id="results">
+        <thead><tr><th style="width:40px">#</th><th>URL</th><th>Result</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
   </div>
 
-  <details style="margin-top:12px;">
-    <summary><b>CSV format</b> (click to expand)</summary>
-    <pre>
-url,title
-https://example.com/page-1,Optional human title
-https://example.com/page-2,
-    </pre>
-  </details>
-
-  <div class="small muted" id="summary" style="margin-top:8px;"></div>
-
-  <table id="results">
-    <thead><tr><th>#</th><th>URL</th><th>Result</th></tr></thead>
-    <tbody></tbody>
-  </table>
-
 <script>
-/** ====== configurable defaults ====== **/
-const DEFAULT_TOKEN = "b6c3f0c9e6f44cce9e1a4f3f2d3a5c76"; // prefill as requested
+const DEFAULT_TOKEN = "b6c3f0c9e6f44cce9e1a4f3f2d3a5c76";
 const API_PATH = "/api/ingest-embed-replace";
 
-/** ====== tiny csv parser (url,title) ====== **/
 function parseCSV(text) {
   const rows = [];
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) return rows;
-
-  const header = lines[0].split(',').map(s => s.trim());
-  const urlIdx   = header.findIndex(h => h.toLowerCase() === 'url');
-  const titleIdx = header.findIndex(h => h.toLowerCase() === 'title');
-
+  const header = lines[0].split(',').map(s => s.trim().toLowerCase());
+  const urlIdx = header.indexOf('url');
+  const titleIdx = header.indexOf('title');
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(',').map(s => s.trim());
     const url = cols[urlIdx];
@@ -96,7 +141,6 @@ function parseCSV(text) {
   return rows;
 }
 
-/** ====== UI wiring ====== **/
 const els = {
   token:  document.getElementById('token'),
   file:   document.getElementById('file'),
@@ -104,19 +148,18 @@ const els = {
   stop:   document.getElementById('stop'),
   conc:   document.getElementById('conc'),
   delay:  document.getElementById('delay'),
-  table:  document.getElementById('results').querySelector('tbody'),
+  table:  document.querySelector('#results tbody'),
   summary:document.getElementById('summary'),
 };
 
-const saved = localStorage.getItem('ingest_token');
-els.token.value = saved || DEFAULT_TOKEN;
+els.token.value = localStorage.getItem('ingest_token') || DEFAULT_TOKEN;
 
 let stopFlag = false;
 els.stop.onclick = () => { stopFlag = true; };
 
 els.start.onclick = async () => {
   stopFlag = false;
-  const token = (els.token.value || '').trim();
+  const token = els.token.value.trim();
   if (!token) { alert('Missing token'); return; }
   localStorage.setItem('ingest_token', token);
 
@@ -148,8 +191,7 @@ els.start.onclick = async () => {
       if (my >= rows.length) break;
       const r = rows[my];
 
-      // POST only { url, title } — server fetches & chunks & replaces
-      let status = '';
+      let statusHtml = '';
       try {
         const resp = await fetch(API_PATH, {
           method: 'POST',
@@ -160,25 +202,23 @@ els.start.onclick = async () => {
           body: JSON.stringify({ url: r.url, title: r.title || '' })
         });
 
-        const bodyText = await resp.text();
+        const txt = await resp.text();
         let data;
-        try { data = JSON.parse(bodyText); } catch {
-          data = { error: 'non_json', preview: bodyText.slice(0, 180) };
-        }
+        try { data = JSON.parse(txt); } catch { data = { error:'non_json', preview: txt.slice(0,180) }; }
 
         if (resp.ok && data?.ok) {
           ok++;
-          status = `<span class="ok">OK</span> — replaced & inserted`;
+          statusHtml = `<span class="ok">OK</span> — replaced & inserted ${data?.inserted ?? ''}`;
         } else {
           fail++;
-          status = `<span class="fail">FAILED ${resp.status}</span> — ${JSON.stringify(data).replaceAll('"','&quot;')}`;
+          statusHtml = `<span class="fail">FAILED ${resp.status}</span> — ${JSON.stringify(data).replaceAll('"','&quot;')}`;
         }
       } catch (e) {
         fail++;
-        status = `<span class="fail">ERROR</span> — ${String(e).replaceAll('"','&quot;')}`;
+        statusHtml = `<span class="fail">ERROR</span> — ${String(e).replaceAll('"','&quot;')}`;
       }
 
-      addRow(my, r.url, status);
+      addRow(my, r.url, statusHtml);
       els.summary.innerHTML = `Loaded ${rows.length} rows. <span class="ok">Success: ${ok}</span>. <span class="fail">Failed: ${fail}</span>.`;
 
       if (delay) await new Promise(r => setTimeout(r, delay));
