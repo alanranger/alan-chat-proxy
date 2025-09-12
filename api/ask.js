@@ -4,6 +4,7 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -20,13 +21,15 @@ export default async function handler(req, res) {
         "X-Title": "Alan Ranger Chatbox"
       },
       body: JSON.stringify({
-        model: "openai/gpt-4.1", // or "anthropic/claude-3.5-sonnet"
+        model: "openai/gpt-4.1",   // or "anthropic/claude-3.5-sonnet"
+        max_tokens: 500,           // ✅ limit response length to stay within free tier
         messages: [
           {
             role: "system",
             content:
               "You are Alan Ranger’s website assistant. Be concise, friendly, and helpful. " +
-              "Prefer giving direct links to relevant pages on alanranger.com. If unsure, say so and offer 'Email Alan'."
+              "Prefer giving direct links to relevant pages on alanranger.com. " +
+              "If unsure, say so and offer 'Email Alan'."
           },
           { role: "user", content: input_text }
         ]
