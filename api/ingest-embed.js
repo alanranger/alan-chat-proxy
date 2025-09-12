@@ -1,0 +1,59 @@
+// /api/ingest-embed.js
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+export default async function handler(req, res) {
+  // CORS (optional)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  try {
+    const { url, title, chunks } = req.body || {};
+    if (!url || !title || !Array.isArray(chunks) || chunks.length === 0) {
+      return res.status(400).json({ error: "Provide url, title, and chunks: string[]"} );
+    }
+
+    // 1) Get embeddings via OpenRouter (OpenAI-compatible endpoint)
+    const er = await fetch("https://openrouter.ai/api/v1/embeddings", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://alan-chat-proxy.vercel.app",
+        "X-Title": "Alan Ranger Chatbox RAG"
+      },
+      body: JSON.stringify({
+        model: "openai/text-embedding-3-small", // 1,536-dim (matches our table)
+        input: chunks
+      })
+    });
+
+    const edata = await er.json();
+    if (!edata?.data) {
+      return res.status(500).json({ error: "Embedding request failed", detail: edata });
+    }
+
+    // 2) Insert into Supabase
+    const rows = edata.data.map((d, i) => ({
+      url,
+      title,
+      chunk_text: chunks[i],
+      embedding: d.embedding
+    }));
+
+    const { data, error } = await supabase.from("page_chunks").insert(rows).select("id");
+    if (error) throw error;
+
+    return res.status(200).json({ success: true, inserted: data.length, ids: data.map(r => r.id) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "ingest-embed failed", detail: String(err) });
+  }
+}
