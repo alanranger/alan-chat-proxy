@@ -1,11 +1,249 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Bulk Ingest – Smoke Test</title>
-  </head>
-  <body>
-    <h1>Bulk page is served ✅</h1>
-    <p>If you can see this, the static file is in the right place.</p>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bulk Ingest</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+    h1 { margin: 0 0 12px; }
+    .card { border: 1px solid #ccc; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    label { display:block; margin: 8px 0 4px; font-weight: 600; }
+    input[type="text"], input[type="number"] { width: 100%; max-width: 600px; padding: 8px; }
+    input[type="file"] { padding: 6px 0; }
+    button { padding: 10px 16px; border-radius: 6px; border: 1px solid #888; cursor: pointer; }
+    button.primary { background: #0a7; color: #fff; border-color: #0a7; }
+    button.warn { background: #c33; color: #fff; border-color: #c33; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+    .muted { opacity: .75; }
+    .ok { color: #0a7; font-weight: 600; }
+    .fail { color: #c33; font-weight: 600; }
+    progress { width: 100%; max-width: 640px; height: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+    th, td { border-bottom: 1px solid #e0e0e0; padding: 8px; vertical-align: top; }
+    th { text-align: left; background: rgba(0,0,0,.03); }
+    code.inline { background:#f3f3f3; padding:2px 6px; border-radius:4px; }
+    .hint { font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Bulk Ingest</h1>
+  <p class="muted">Upload a CSV (must include a <code class="inline">url</code> column; optional <code class="inline">title</code>). Each row will be sent to <code class="inline">/api/ingest-embed</code>.</p>
+
+  <div class="card">
+    <div class="row">
+      <div style="flex: 1 1 360px; max-width: 720px;">
+        <label for="token">Ingest Token (Bearer)</label>
+        <input id="token" type="text" placeholder="paste your ingest token here…" autocomplete="off" />
+        <div class="hint muted">Saved locally in your browser (localStorage). Not sent anywhere except as the <code class="inline">Authorization: Bearer …</code> header on your requests.</div>
+      </div>
+      <div style="min-width: 240px;">
+        <label for="concurrency">Concurrency</label>
+        <input id="concurrency" type="number" min="1" max="10" value="3" />
+      </div>
+      <div style="min-width: 240px;">
+        <label for="delay">Delay between requests (ms)</label>
+        <input id="delay" type="number" min="0" value="400" />
+      </div>
+    </div>
+
+    <label for="csv">CSV file</label>
+    <input id="csv" type="file" accept=".csv,text/csv" />
+
+    <div class="row" style="margin-top: 12px;">
+      <button id="start" class="primary" disabled>Start Ingest</button>
+      <button id="stop" class="warn" disabled>Stop</button>
+      <div id="counts" class="muted"></div>
+    </div>
+
+    <progress id="prog" value="0" max="1" style="display:none;"></progress>
+    <div id="status" class="muted" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary><strong>CSV format</strong> (click to expand)</summary>
+      <p>Minimum columns:</p>
+      <pre><code>url,title
+https://www.example.com/page-1,Example page 1
+https://www.example.com/page-2,Example page 2
+</code></pre>
+      <p>The <code class="inline">title</code> column is optional. If present, it’s forwarded to the API.</p>
+    </details>
+  </div>
+
+  <div class="card">
+    <strong>Results</strong>
+    <table id="results" aria-label="results table">
+      <thead>
+        <tr><th>#</th><th>URL</th><th>Result</th></tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    // ——— helpers ———
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // Very small CSV parser for simple files (url,title). Handles quoted commas.
+    function parseCSV(text) {
+      const lines = text.replace(/\r/g,'').split('\n').filter(Boolean);
+      if (!lines.length) return { headers: [], rows: [] };
+      const headers = splitCSVLine(lines[0]);
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cells = splitCSVLine(lines[i]);
+        if (!cells.length) continue;
+        const row = {};
+        headers.forEach((h, idx) => row[h.trim()] = (cells[idx] ?? '').trim());
+        rows.push(row);
+      }
+      return { headers, rows };
+    }
+    function splitCSVLine(line) {
+      const out = [];
+      let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"' ) {
+          if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+          else inQ = !inQ;
+        } else if (c === ',' && !inQ) {
+          out.push(cur); cur = '';
+        } else {
+          cur += c;
+        }
+      }
+      out.push(cur);
+      return out;
+    }
+
+    function $(id){ return document.getElementById(id); }
+
+    const tokenEl = $('token');
+    const csvEl = $('csv');
+    const startBtn = $('start');
+    const stopBtn = $('stop');
+    const countsEl = $('counts');
+    const progEl = $('prog');
+    const statusEl = $('status');
+    const tbody = $('tbody');
+    const delayEl = $('delay');
+    const concEl = $('concurrency');
+
+    // restore token
+    tokenEl.value = localStorage.getItem('bulk_ingest_token') || '';
+    tokenEl.addEventListener('input', () => {
+      localStorage.setItem('bulk_ingest_token', tokenEl.value.trim());
+      updateStartEnabled();
+    });
+
+    function updateStartEnabled() {
+      startBtn.disabled = !(csvEl.files?.length && tokenEl.value.trim());
+    }
+
+    csvEl.addEventListener('change', updateStartEnabled);
+
+    let abort = false;
+
+    stopBtn.addEventListener('click', () => { abort = true; stopBtn.disabled = true; statusEl.textContent = 'Stopping…'; });
+
+    startBtn.addEventListener('click', async () => {
+      const file = csvEl.files?.[0];
+      const token = tokenEl.value.trim();
+      if (!file || !token) return;
+
+      abort = false;
+      startBtn.disabled = true; stopBtn.disabled = false;
+      tbody.innerHTML = '';
+      statusEl.textContent = 'Parsing CSV…';
+
+      const text = await file.text();
+      const { headers, rows } = parseCSV(text);
+
+      if (!headers.includes('url')) { alert('CSV must include a "url" column'); startBtn.disabled = false; stopBtn.disabled = true; return; }
+
+      const items = rows
+        .map((r, i) => ({ idx: i+1, url: r.url?.trim(), title: r.title?.trim() }))
+        .filter(r => r.url);
+
+      const total = items.length;
+      if (!total) { alert('No URLs found in the CSV.'); startBtn.disabled = false; stopBtn.disabled = true; return; }
+
+      statusEl.textContent = `Loaded ${total} rows. Starting…`;
+      progEl.style.display = 'block';
+      progEl.max = total; progEl.value = 0;
+
+      let ok = 0, fail = 0;
+      updateCounts();
+
+      // simple throttle queue
+      const concurrency = Math.max(1, Math.min(10, +concEl.value || 3));
+      const delayMs = Math.max(0, +delayEl.value || 0);
+
+      let cursor = 0;
+      const workers = Array.from({length: concurrency}, () => worker());
+
+      await Promise.all(workers);
+
+      function updateCounts() {
+        countsEl.innerHTML = `Success: <span class="ok">${ok}</span> &nbsp;&nbsp; Failed: <span class="fail">${fail}</span> &nbsp;&nbsp; Total: ${total}`;
+      }
+
+      async function worker() {
+        while (!abort) {
+          const next = cursor++;
+          if (next >= total) break;
+          const item = items[next];
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${item.idx}</td><td><a href="${item.url}" target="_blank" rel="noopener">${item.url}</a></td><td class="muted">pending…</td>`;
+          tbody.appendChild(tr);
+
+          let resultText = '';
+          let okRow = false;
+
+          try {
+            const res = await fetch('/api/ingest-embed', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                url: item.url,
+                title: item.title || null
+              })
+            });
+
+            if (!res.ok) {
+              const txt = await res.text().catch(()=> '');
+              throw new Error(`${res.status} ${res.statusText} ${txt ? '— '+txt.slice(0,200) : ''}`);
+            }
+
+            const json = await res.json().catch(()=> ({}));
+            resultText = json?.message || json?.detail || 'ingested';
+            ok++; okRow = true;
+          } catch (err) {
+            fail++;
+            resultText = (err && err.message) ? err.message : String(err);
+          }
+
+          progEl.value++;
+          tr.cells[2].innerHTML = okRow ? `<span class="ok">OK</span> <span class="muted">${resultText}</span>` : `<span class="fail">FAILED</span> <span class="muted">${resultText}</span>`;
+          updateCounts();
+
+          if (delayMs) await sleep(delayMs);
+        }
+      }
+
+      stopBtn.disabled = true;
+      startBtn.disabled = false;
+      statusEl.textContent = abort ? 'Stopped.' : 'Done.';
+    });
+
+    updateStartEnabled();
+  </script>
+</body>
 </html>
