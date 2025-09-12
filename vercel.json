@@ -1,7 +1,9 @@
 {
   "version": 2,
-  "framework": null,
-  "builds": [
-    { "src": "api/**/*.js", "use": "@vercel/node" }
+  "builds": [{ "src": "api/**/*.js", "use": "@vercel/node" }],
+  "routes": [
+    { "src": "^/bulk$", "dest": "/public/bulk.html" },
+    { "src": "^/bulk.html$", "dest": "/public/bulk.html" },
+    { "src": "/(.*)", "dest": "/$1" }
   ]
 }
