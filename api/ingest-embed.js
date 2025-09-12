@@ -7,6 +7,7 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -25,11 +26,12 @@ export default async function handler(req, res) {
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
+        "Accept": "application/json", // force JSON (avoid HTML shell)
         "HTTP-Referer": "https://alan-chat-proxy.vercel.app",
         "X-Title": "Alan Ranger Chatbox RAG"
       },
       body: JSON.stringify({
-        model: "openai/text-embedding-3-small",
+        model: "openai/text-embedding-3-small", // 1536-dim
         input: chunks
       })
     });
@@ -39,16 +41,22 @@ export default async function handler(req, res) {
     try {
       edata = JSON.parse(rawText);
     } catch {
-      // Return the raw body so we can see the actual error page/text (e.g., HTML)
-      return res
-        .status(embRes.status || 500)
-        .json({ error: "embedding-json-parse-failed", status: embRes.status, raw: rawText.slice(0, 2000) });
+      return res.status(embRes.status || 500).json({
+        error: "embedding-json-parse-failed",
+        status: embRes.status,
+        note: "OpenRouter returned non-JSON (likely HTML/app shell).",
+        raw_preview: rawText.slice(0, 1000)
+      });
     }
     if (!embRes.ok || !edata?.data) {
-      return res.status(embRes.status || 500).json({ error: "embedding-request-failed", detail: edata });
+      return res.status(embRes.status || 500).json({
+        error: "embedding-request-failed",
+        status: embRes.status,
+        detail: edata
+      });
     }
 
-    // --- Insert rows
+    // --- Insert rows into Supabase
     const rows = edata.data.map((d, i) => ({
       url,
       title,
@@ -59,7 +67,7 @@ export default async function handler(req, res) {
     const { data, error } = await supabase.from("page_chunks").insert(rows).select("id");
     if (error) throw error;
 
-    return res.status(200).json({ success: true, inserted: data.length, ids: data.map((r) => r.id) });
+    return res.status(200).json({ success: true, inserted: data.length, ids: data.map(r => r.id) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "ingest-embed failed", detail: String(err) });
