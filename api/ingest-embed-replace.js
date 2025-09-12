@@ -1,165 +1,184 @@
-// api/ingest-embed-replace.js
-// Replace-per-URL ingest: delete existing rows for URL, fetch page, chunk, embed via OpenRouter,
-// insert into Supabase, and return JSON (always).
+// /api/ingest-embed-replace.ts
+export const runtime = 'nodejs';           // ensure Node runtime, not Edge
+export const dynamic = 'force-dynamic';
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// ---- ENV ----
+const SUPABASE_URL  = process.env.SUPABASE_URL!;
+const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!; // required
+const OPENROUTER_EMBED_URL = 'https://openrouter.ai/api/v1/embeddings';
+const EMBED_MODEL = 'openai/text-embedding-3-small';         // works via OpenRouter
 
-// Optional hard guard: set this in Vercel if you want to enforce a token.
-const REQUIRED_INGEST_TOKEN = process.env.INGEST_TOKEN || null;
-
-// Use OpenRouter model *name* (not OpenAI's)
-// Common: openai/text-embedding-3-small  -> 1536 dims
-const EMBEDDING_MODEL = 'openai/text-embedding-3-small';
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-
-// Optional but recommended for OpenRouter (see docs)
-const OPENROUTER_SITE = process.env.OPENROUTER_SITE || 'https://alan-chat-proxy.vercel.app';
-const OPENROUTER_TITLE = process.env.OPENROUTER_TITLE || 'AlanRanger Ingest';
-
-function asJson(res, body, status = 200) {
-  return res
-    .status(status)
-    .setHeader('Content-Type', 'application/json')
-    .send(JSON.stringify(body));
+// ---- helpers ----
+function errorRes(status: number, stage: string, detail: unknown) {
+  return new Response(
+    JSON.stringify({ error: 'server_error', status, stage, detail }),
+    { status, headers: { 'content-type': 'application/json' } }
+  );
 }
 
-// ultra-simple HTML -> text
-function htmlToText(html) {
-  if (!html) return '';
-  html = html.replace(/<script[\s\S]*?<\/script>/gi, '')
-             .replace(/<style[\s\S]*?<\/style>/gi, '');
-  const text = html.replace(/<\/?[^>]+(>|$)/g, ' ');
-  return text.replace(/\s+/g, ' ').trim();
-}
-
-function chunkText(text, maxLen = 900) {
-  const out = [];
-  for (let i = 0; i < text.length; i += maxLen) {
-    out.push(text.slice(i, i + maxLen));
-  }
-  return out;
-}
-
-async function fetchPageText(url) {
-  const resp = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) IngestBot',
-      'Accept': 'text/html,application/xhtml+xml'
-    }
+function okRes(payload: unknown) {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
   });
-  if (!resp.ok) throw new Error(`Fetch failed ${resp.status}`);
-  const html = await resp.text();
-  return htmlToText(html);
 }
 
-async function embedChunks(chunks) {
-  if (!OPENROUTER_API_KEY) {
-    throw new Error('Missing OPENROUTER_API_KEY');
-  }
+// very quick HTML -> text (good enough for workshop pages)
+function htmlToText(html: string) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-  // OpenRouter embeddings endpoint, include referer/title headers
-  const resp = await fetch('https://openrouter.ai/api/v1/embeddings', {
+// naive chunker (tokens ≈ chars/4; keep it simple here)
+function chunk(text: string, maxLen = 1200) {
+  const parts: string[] = [];
+  let i = 0;
+  while (i < text.length) {
+    parts.push(text.slice(i, i + maxLen));
+    i += maxLen;
+  }
+  return parts;
+}
+
+async function embedBatch(inputs: string[]) {
+  const body = { model: EMBED_MODEL, input: inputs };
+  const resp = await fetch(OPENROUTER_EMBED_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': OPENROUTER_SITE,
-      'X-Title': OPENROUTER_TITLE
     },
-    body: JSON.stringify({
-      model: EMBEDDING_MODEL,  // e.g. "openai/text-embedding-3-small"
-      input: chunks            // array of strings
-    })
+    body: JSON.stringify(body),
   });
 
   const raw = await resp.text();
-  let data = null;
-  try { data = JSON.parse(raw); } catch { /* keep null */ }
-
-  if (!resp.ok || !data?.data) {
-    // include the raw body for debugging (trim to keep payload small)
-    throw new Error(`Embedding error: ${resp.status} ${raw.slice(0, 600)}`);
+  let data: any;
+  try { data = JSON.parse(raw); } catch {
+    throw new Error(`Embedding non-JSON body (status ${resp.status}): ${raw.slice(0,400)}`);
   }
-
-  // data.data[i].embedding -> number[]
-  return data.data.map(d => d.embedding);
+  if (!resp.ok) {
+    throw new Error(`Embedding error ${resp.status}: ${JSON.stringify(data)}`);
+  }
+  if (!data?.data?.length) {
+    throw new Error(`Embedding empty result: ${JSON.stringify(data)}`);
+  }
+  // OpenAI-like shape via OpenRouter
+  return data.data.map((d: any) => d.embedding as number[]);
 }
 
-export default async function handler(req, res) {
+// ---- handler ----
+export async function POST(req: Request) {
   try {
-    if (req.method !== 'POST') {
-      return asJson(res, { error: 'method_not_allowed' }, 405);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: false },
+    });
+
+    let payload: any;
+    try {
+      payload = await req.json();
+    } catch {
+      return errorRes(400, 'parse_json', 'Body must be JSON { url, title? }');
     }
 
-    // Authorization
-    const auth = req.headers.authorization || '';
-    if (!auth.startsWith('Bearer ')) {
-      return asJson(res, { error: 'unauthorized', detail: 'Missing Bearer token' }, 401);
+    const url = String(payload?.url || '').trim();
+    const title = String(payload?.title || '').trim();
+
+    if (!url || !/^https?:\/\//i.test(url)) {
+      return errorRes(400, 'validate_input', 'Missing or invalid url');
     }
-    if (REQUIRED_INGEST_TOKEN) {
-      const token = auth.slice('Bearer '.length).trim();
-      if (token !== REQUIRED_INGEST_TOKEN) {
-        return asJson(res, { error: 'unauthorized', detail: 'Invalid ingest token' }, 401);
+
+    // 1) Fetch page
+    let html: string;
+    try {
+      const resp = await fetch(url, {
+        method: 'GET',
+        redirect: 'follow',
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+            '(KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      });
+      if (!resp.ok) {
+        const body = await resp.text().catch(() => '');
+        return errorRes(502, 'fetch_page', { status: resp.status, body: body.slice(0,400) });
       }
+      html = await resp.text();
+    } catch (e) {
+      return errorRes(502, 'fetch_page', String(e));
     }
 
-    const { url, title } = req.body || {};
-    if (!url || typeof url !== 'string') {
-      return asJson(res, { error: 'bad_request', detail: 'Provide { url }' }, 400);
+    // 2) Extract text and chunk
+    const text = htmlToText(html);
+    if (text.length < 50) {
+      return errorRes(422, 'extract_text', 'Page has too little text for embeddings');
     }
-
-    // 1) Delete existing rows for this URL
-    const { error: delErr } = await supabase.from('page_chunks').delete().eq('url', url);
-    if (delErr) {
-      console.warn('Supabase delete error:', delErr);
-      // not fatal, continue
-    }
-
-    // 2) Fetch page & chunk
-    const text = await fetchPageText(url);
-    if (!text || text.length < 50) {
-      return asJson(res, { error: 'too_short', detail: 'Page text too short' }, 400);
-    }
-    const chunks = chunkText(text, 900);
+    const chunks = chunk(text, 1200).slice(0, 100); // cap
     if (!chunks.length) {
-      return asJson(res, { error: 'no_chunks', detail: 'No chunks extracted' }, 400);
+      return errorRes(422, 'chunk_text', 'No chunks produced');
     }
 
-    // 3) Embed
-    const embeddings = await embedChunks(chunks);
-    if (embeddings.length !== chunks.length) {
-      throw new Error('Embedding count mismatch');
+    // 3) Embeddings (batch)
+    let vectors: number[][] = [];
+    try {
+      // batch in groups to keep payloads smaller
+      const batchSize = 16;
+      for (let i = 0; i < chunks.length; i += batchSize) {
+        const part = chunks.slice(i, i + batchSize);
+        const embs = await embedBatch(part);
+        vectors.push(...embs);
+      }
+    } catch (e) {
+      return errorRes(502, 'embed', String(e));
     }
 
-    // 4) Insert
-    const rows = chunks.map((chunk_text, i) => ({
-      url,
-      title: title || null,
-      chunk_text,
-      embedding: embeddings[i]
-    }));
-
-    const { error: insErr, count } = await supabase
-      .from('page_chunks')
-      .insert(rows, { count: 'exact' });
-
-    if (insErr) {
-      return asJson(res, { error: 'insert_failed', detail: insErr }, 500);
+    if (vectors.length !== chunks.length) {
+      return errorRes(500, 'embed_mismatch', { chunks: chunks.length, vectors: vectors.length });
     }
 
-    return asJson(res, {
-      ok: true,
-      replaced: true,
-      inserted: count ?? rows.length,
-      info: { chunks: chunks.length, model: EMBEDDING_MODEL }
-    }, 200);
-  } catch (err) {
-    console.error(err);
-    return asJson(res, { error: 'server_error', detail: String(err) }, 500);
+    // 4) Replace per URL: delete then insert
+    try {
+      const del = await supabase
+        .from('page_chunks')
+        .delete()
+        .eq('url', url);
+      if (del.error) throw del.error;
+    } catch (e:any) {
+      return errorRes(500, 'db_delete', e?.message || String(e));
+    }
+
+    let inserted = 0;
+    try {
+      // Prepare rows
+      const rows = chunks.map((text, i) => ({
+        url,
+        title: title || null,
+        chunk_text: text,
+        embedding: vectors[i],        // vector column (e.g., vector(1536))
+      }));
+
+      // Insert in slices to avoid payload limits
+      const slice = 100;
+      for (let i = 0; i < rows.length; i += slice) {
+        const part = rows.slice(i, i + slice);
+        const ins = await supabase.from('page_chunks').insert(part);
+        if (ins.error) throw ins.error;
+        inserted += part.length;
+      }
+    } catch (e:any) {
+      return errorRes(500, 'db_insert', e?.message || String(e));
+    }
+
+    return okRes({ ok: true, url, inserted, info: { chunks: chunks.length } });
+  } catch (e:any) {
+    return errorRes(500, 'unhandled', e?.message || String(e));
   }
 }
