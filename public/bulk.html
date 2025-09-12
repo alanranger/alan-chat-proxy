@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Bulk Ingest — Alan Chat Proxy</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 16px; }
+    h1 { margin: 0 0 8px; }
+    p  { margin: 0 0 16px; color: #6b7280; }
+    .card { border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px; margin: 18px 0; }
+    label { display: block; font-weight: 600; margin: 10px 0 6px; }
+    input[type="file"], input[type="password"], input[type="number"] {
+      width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 10px;
+    }
+    .row { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+    .row > div { display: flex; flex-direction: column; }
+    button {
+      padding: 12px 16px; border: 0; background: #111827; color: #fff; border-radius: 12px;
+      font-weight: 700; cursor: pointer;
+    }
+    button[disabled] { opacity: .6; cursor: not-allowed; }
+    pre {
+      white-space: pre-wrap; word-break: break-word; background: #0b1020; color: #e5e7eb;
+      padding: 14px; border-radius: 12px; min-height: 140px; overflow: auto;
+    }
+    .hint { font-size: 12px; color: #9ca3af; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Bulk Ingest</h1>
+  <p>Upload a CSV of URLs and send them to the server for ingestion.</p>
+
+  <div class="card">
+    <label for="csv">CSV file (must contain a <code>url</code> column; optional <code>title</code>)</label>
+    <input id="csv" type="file" accept=".csv" />
+
+    <div class="row">
+      <div>
+        <label for="token">Ingest Token (from Vercel env: <code>INGEST_TOKEN</code>)</label>
+        <input id="token" type="password" placeholder="paste token…" />
+        <div class="hint">We’ll send this in the request; it is never stored.</div>
+      </div>
+      <div>
+        <label for="delay">Delay per URL (ms)</label>
+        <input id="delay" type="number" min="0" step="100" value="400" />
+      </div>
+    </div>
+
+    <div style="display:flex; gap:12px; margin-top:14px;">
+      <button id="start">Upload &amp; Ingest</button>
+      <button id="stop" disabled>Stop</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>Progress</label>
+    <div id="progress">Idle</div>
+  </div>
+
+  <div class="card">
+    <label>Log</label>
+    <pre id="log"></pre>
+  </div>
+
+  <script>
+    const el = {
+      csv: document.getElementById('csv'),
+      token: document.getElementById('token'),
+      delay: document.getElementById('delay'),
+      start: document.getElementById('start'),
+      stop: document.getElementById('stop'),
+      progress: document.getElementById('progress'),
+      log: document.getElementById('log'),
+    };
+
+    let abortController = null;
+
+    function log(msg) {
+      const time = new Date().toLocaleTimeString();
+      el.log.textContent += `[${time}] ${msg}\n`;
+      el.log.scrollTop = el.log.scrollHeight;
+    }
+
+    el.stop.addEventListener('click', () => {
+      if (abortController) {
+        abortController.abort();
+        log('Stopping…');
+      }
+    });
+
+    el.start.addEventListener('click', async () => {
+      const file = el.csv.files?.[0];
+      const token = el.token.value.trim();
+      const delay = Number(el.delay.value || 0);
+
+      if (!file) return alert('Choose a CSV file first.');
+      if (!token) return alert('Enter your INGEST_TOKEN.');
+
+      // UI lock
+      el.start.disabled = true;
+      el.stop.disabled = false;
+      el.progress.textContent = 'Uploading…';
+      el.log.textContent = '';
+      abortController = new AbortController();
+
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('token', token);
+        form.append('delay', String(delay));
+
+        // NOTE: This endpoint will be created in the next step.
+        const res = await fetch('/api/bulk-upload', {
+          method: 'POST',
+          body: form,
+          signal: abortController.signal,
+        });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => '');
+          throw new Error(`Server error ${res.status}: ${text || res.statusText}`);
+        }
+
+        // Stream NDJSON lines from the server
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+
+          // split on newlines (each line is a JSON object)
+          let idx;
+          while ((idx = buf.indexOf('\n')) >= 0) {
+            const line = buf.slice(0, idx).trim();
+            buf = buf.slice(idx + 1);
+            if (!line) continue;
+            try {
+              const msg = JSON.parse(line);
+              if (msg.progress) el.progress.textContent = msg.progress;
+              if (msg.log) log(msg.log);
+            } catch {
+              // non-JSON line (ignore)
+            }
+          }
+        }
+
+        el.progress.textContent = 'Finished';
+        log('Done.');
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          el.progress.textContent = 'Stopped by user';
+          log('Stopped.');
+        } else {
+          el.progress.textContent = 'Error';
+          log(String(err));
+          alert(String(err));
+        }
+      } finally {
+        el.start.disabled = false;
+        el.stop.disabled = true;
+        abortController = null;
+      }
+    });
+  </script>
+</body>
+</html>
