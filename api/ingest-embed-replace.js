@@ -1,5 +1,6 @@
 // api/ingest-embed-replace.js
-// Replace per-URL flow: delete existing rows for URL, fetch + chunk page text, forward to existing /api/ingest-embed
+// Replace-per-URL ingest: delete existing rows for URL, fetch page, chunk, embed via OpenRouter,
+// insert into Supabase, and return JSON (always).
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -8,116 +9,139 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// very basic HTML -> text extractor
+// Optional hard guard: set this in Vercel if you want to enforce a token.
+// If not set, we only require a Bearer header to be present.
+const REQUIRED_INGEST_TOKEN = process.env.INGEST_TOKEN || null;
+
+// Use a small embedding model -> 1536 dims (commonly used with Supabase vector(1536))
+const EMBEDDING_MODEL = 'text-embedding-3-small'; // OpenRouter forwards to OpenAI-compatible embeddings
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+
+function asJson(res, body, status = 200) {
+  return res
+    .status(status)
+    .setHeader('Content-Type', 'application/json')
+    .send(JSON.stringify(body));
+}
+
+// ultra-simple HTML -> text
 function htmlToText(html) {
   if (!html) return '';
-  // drop script/style
   html = html.replace(/<script[\s\S]*?<\/script>/gi, '')
              .replace(/<style[\s\S]*?<\/style>/gi, '');
-  // strip tags
   const text = html.replace(/<\/?[^>]+(>|$)/g, ' ');
-  // collapse whitespace
   return text.replace(/\s+/g, ' ').trim();
 }
 
-function splitIntoChunks(text, maxLen = 900) {
-  const chunks = [];
-  let i = 0;
-  while (i < text.length) {
-    chunks.push(text.slice(i, i + maxLen));
-    i += maxLen;
+function chunkText(text, maxLen = 900) {
+  const out = [];
+  for (let i = 0; i < text.length; i += maxLen) {
+    out.push(text.slice(i, i + maxLen));
   }
-  return chunks;
+  return out;
 }
 
 async function fetchPageText(url) {
   const resp = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PowerShell', // keeps some hosts happy
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) IngestBot',
       'Accept': 'text/html,application/xhtml+xml'
     }
   });
-  if (!resp.ok) {
-    throw new Error(`Fetch ${url} failed: ${resp.status}`);
-  }
+  if (!resp.ok) throw new Error(`Fetch failed ${resp.status}`);
   const html = await resp.text();
   return htmlToText(html);
 }
 
-export default async function handler(req, res) {
-  // Always JSON
-  const json = (body, status = 200) =>
-    res.status(status).setHeader('Content-Type', 'application/json').send(JSON.stringify(body));
+async function embedChunks(chunks) {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error('Missing OPENROUTER_API_KEY');
+  }
 
+  // OpenAI-compatible batch embeddings
+  const resp = await fetch('https://openrouter.ai/api/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: EMBEDDING_MODEL,
+      input: chunks
+    })
+  });
+
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok || !data?.data) {
+    throw new Error(`Embedding error: ${resp.status} ${JSON.stringify(data)}`);
+  }
+
+  // data.data[i].embedding -> number[]
+  return data.data.map(d => d.embedding);
+}
+
+export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') {
-      return json({ error: 'method_not_allowed' }, 405);
+      return asJson(res, { error: 'method_not_allowed' }, 405);
     }
 
-    // auth passthrough — we reuse your existing /api/ingest-embed
+    // Authorization
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) {
-      return json({ error: 'unauthorized', detail: 'Missing Bearer token' }, 401);
+      return asJson(res, { error: 'unauthorized', detail: 'Missing Bearer token' }, 401);
+    }
+    if (REQUIRED_INGEST_TOKEN) {
+      const token = auth.slice('Bearer '.length).trim();
+      if (token !== REQUIRED_INGEST_TOKEN) {
+        return asJson(res, { error: 'unauthorized', detail: 'Invalid ingest token' }, 401);
+      }
     }
 
     const { url, title } = req.body || {};
     if (!url || typeof url !== 'string') {
-      return json({ error: 'bad_request', detail: 'Provide { url }' }, 400);
+      return asJson(res, { error: 'bad_request', detail: 'Provide { url }' }, 400);
     }
 
-    // 1) delete existing rows for this URL (replace semantics)
-    const { error: delErr } = await supabase
-      .from('page_chunks')
-      .delete()
-      .eq('url', url);
+    // 1) Delete existing rows for this URL
+    const { error: delErr } = await supabase.from('page_chunks').delete().eq('url', url);
     if (delErr) {
       // not fatal, but report
       console.warn('Supabase delete error:', delErr);
     }
 
-    // 2) fetch page & chunk
+    // 2) Fetch page & chunk
     const text = await fetchPageText(url);
     if (!text || text.length < 50) {
-      return json({ error: 'too_short', detail: 'Page text too short' }, 400);
+      return asJson(res, { error: 'too_short', detail: 'Page text too short' }, 400);
     }
-    const chunks = splitIntoChunks(text, 900);
+    const chunks = chunkText(text, 900);
 
-    // 3) forward to your existing /api/ingest-embed (it already embeds+inserts)
-    // get absolute base for the same deployment
-    const proto = req.headers['x-forwarded-proto'] || 'https';
-    const host  = req.headers['host'];
-    const base  = `${proto}://${host}`;
-
-    const forwardResp = await fetch(`${base}/api/ingest-embed`, {
-      method: 'POST',
-      headers: {
-        'Authorization': auth,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ url, title, chunks })
-    });
-
-    const textBody = await forwardResp.text();
-    let data;
-    try {
-      data = JSON.parse(textBody);
-    } catch {
-      // make it JSON no matter what
-      return json({
-        error: 'server_error',
-        detail: 'Downstream returned non-JSON',
-        status: forwardResp.status,
-        preview: textBody.slice(0, 200)
-      }, 502);
+    // 3) Embed
+    const embeddings = await embedChunks(chunks);
+    if (embeddings.length !== chunks.length) {
+      throw new Error('Embedding count mismatch');
     }
 
-    if (!forwardResp.ok) {
-      return json({ error: 'ingest_failed', status: forwardResp.status, detail: data }, forwardResp.status);
+    // 4) Insert
+    const rows = chunks.map((chunk_text, i) => ({
+      url,
+      title: title || null,
+      chunk_text,
+      embedding: embeddings[i]
+    }));
+
+    const { error: insErr, count } = await supabase
+      .from('page_chunks')
+      .insert(rows, { count: 'exact' });
+
+    if (insErr) {
+      return asJson(res, { error: 'insert_failed', detail: insErr }, 500);
     }
 
-    return json({ ok: true, replaced: true, inserted: data?.inserted ?? null });
+    return asJson(res, { ok: true, replaced: true, inserted: count ?? rows.length }, 200);
   } catch (err) {
     console.error(err);
-    return json({ error: 'server_error', detail: `${err}` }, 500);
+    return asJson(res, { error: 'server_error', detail: String(err) }, 500);
   }
 }
