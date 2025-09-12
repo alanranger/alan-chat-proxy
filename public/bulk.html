@@ -63,6 +63,7 @@
     .stat{margin:6px 0 0; font-size:13px}
     .grid-3{display:grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap:14px}
     @media (max-width: 980px){ .grid-3{grid-template-columns:1fr} }
+    pre#log {white-space:pre-wrap; font-size:12px; color:#cde1ff; margin:0}
   </style>
 </head>
 <body>
@@ -110,6 +111,11 @@ https://example.com/page-1,Optional page title
 https://example.com/page-2,</pre>
     </details>
 
+    <details class="card" open>
+      <summary><b>Debug console</b> (what the client sees)</summary>
+      <pre id="log"></pre>
+    </details>
+
     <div id="summary" class="stat muted"></div>
 
     <div class="card">
@@ -124,9 +130,15 @@ https://example.com/page-2,</pre>
 const DEFAULT_TOKEN = "b6c3f0c9e6f44cce9e1a4f3f2d3a5c76";
 const API_PATH = "/api/ingest-embed-replace";
 
+function log(msg){
+  const el = document.getElementById('log');
+  el.textContent += msg + "\\n";
+  el.parentElement.scrollTop = el.parentElement.scrollHeight;
+}
+
 function parseCSV(text) {
   const rows = [];
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const lines = text.split(/\\r?\\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) return rows;
   const header = lines[0].split(',').map(s => s.trim().toLowerCase());
   const urlIdx = header.indexOf('url');
@@ -155,7 +167,7 @@ const els = {
 els.token.value = localStorage.getItem('ingest_token') || DEFAULT_TOKEN;
 
 let stopFlag = false;
-els.stop.onclick = () => { stopFlag = true; };
+els.stop.onclick = () => { stopFlag = true; log('Stop requested by user.'); };
 
 els.start.onclick = async () => {
   stopFlag = false;
@@ -182,10 +194,11 @@ els.start.onclick = async () => {
     els.table.appendChild(tr);
   };
 
+  log(`Starting ingest: rows=${rows.length}, concurrency=${conc}, delay=${delay}ms`);
   els.summary.textContent = `Loaded ${rows.length} rows. Starting…`;
 
   let idx = 0;
-  const workers = new Array(conc).fill(0).map(async () => {
+  const workers = new Array(conc).fill(0).map(async (w) => {
     while (!stopFlag) {
       const my = idx++;
       if (my >= rows.length) break;
@@ -193,6 +206,7 @@ els.start.onclick = async () => {
 
       let statusHtml = '';
       try {
+        log(`[${my+1}] POST ${API_PATH} ${r.url}`);
         const resp = await fetch(API_PATH, {
           method: 'POST',
           headers: {
@@ -203,18 +217,21 @@ els.start.onclick = async () => {
         });
 
         const txt = await resp.text();
+        log(`[${my+1}] status=${resp.status} body=${txt.slice(0,180).replace(/\\n/g,' ')}`);
+
         let data;
         try { data = JSON.parse(txt); } catch { data = { error:'non_json', preview: txt.slice(0,180) }; }
 
         if (resp.ok && data?.ok) {
           ok++;
-          statusHtml = `<span class="ok">OK</span> — replaced & inserted ${data?.inserted ?? ''}`;
+          statusHtml = `<span class="ok">OK</span> — replaced & inserted ${data?.inserted ?? ''} (chunks: ${data?.info?.chunks ?? '?'})`;
         } else {
           fail++;
           statusHtml = `<span class="fail">FAILED ${resp.status}</span> — ${JSON.stringify(data).replaceAll('"','&quot;')}`;
         }
       } catch (e) {
         fail++;
+        log(`[${my+1}] fetch error: ${String(e)}`);
         statusHtml = `<span class="fail">ERROR</span> — ${String(e).replaceAll('"','&quot;')}`;
       }
 
@@ -227,6 +244,7 @@ els.start.onclick = async () => {
 
   await Promise.all(workers);
   if (stopFlag) els.summary.innerHTML += ' (stopped)';
+  log('Ingest complete.');
 };
 </script>
 </body>
