@@ -1,4 +1,4 @@
-// /api/debug-chunks.js
+// /api/debug-chunks.js  — count only
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -7,7 +7,6 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -15,16 +14,13 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { limit = 50 } = req.body || {};
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from("page_chunks")
-      .select("id,url,title,chunk_text")
-      .order("id", { ascending: true })
-      .limit(Math.min(Number(limit) || 50, 200));
+      .select("*", { count: "exact", head: true }); // HEAD + count only
 
-    if (error) return res.status(500).json({ error: "select-failed", detail: error.message });
-    return res.status(200).json({ count: data.length, rows: data });
+    if (error) return res.status(500).json({ error: "count-failed", detail: error.message });
+    return res.status(200).json({ total_chunks: count });
   } catch (e) {
-    return res.status(500).json({ error: "debug-chunks-failed", detail: String(e) });
+    return res.status(500).json({ error: "debug-count-failed", detail: String(e) });
   }
 }
