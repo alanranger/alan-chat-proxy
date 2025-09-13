@@ -1,194 +1,251 @@
-// api/ingest-embed-replace.js
-// ESM module (package.json has "type":"module")
+// /api/ingest-embed-replace.js
+// Complete replacement file
 
-import { createClient } from '@supabase/supabase-js';
-import { convert } from 'html-to-text';
-import crypto from 'crypto';
+import crypto from "node:crypto";
+import { createClient } from "@supabase/supabase-js";
+import { htmlToText } from "html-to-text";
 
-// ---------- CONFIG ----------
-export const config = { runtime: 'nodejs' }; // <- IMPORTANT: Vercel requires 'nodejs' now
+// -----------------------------
+// RUNTIME (Vercel: Node runtime)
+// -----------------------------
+export const config = { runtime: "nodejs" };
 
-const MODEL = 'text-embedding-3-small'; // 1536 dims
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/embeddings';
-
-// Rough chunking targets (characters ~4 chars per token)
-const MAX_CHARS = 4000;     // per chunk (≈ 1k tokens)
-const OVERLAP_CHARS = 500;  // overlap between chunks
-
-// ---------- helpers ----------
-const bad = (res, code, error, detail) => {
-  // Unified error shape so the UI can show it cleanly
-  return res.status(code).json({
-    ok: false,
-    error,                 // short machine-readable code
-    detail: detail ?? '',  // human-friendly (keep it a string)
-  });
-};
-
-const ok = (res, payload) => res.status(200).json({ ok: true, ...payload });
-
-const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
-
-function chunkByChars(text) {
-  const chunks = [];
-  let i = 0;
-  while (i < text.length) {
-    const end = Math.min(i + MAX_CHARS, text.length);
-    const slice = text.slice(i, end).trim();
-    if (slice.length) chunks.push(slice);
-    if (end === text.length) break;
-    i = end - OVERLAP_CHARS; // overlap
-    if (i < 0) i = 0;
-  }
-  return chunks;
+// -----------------------------
+// ENV validation
+// -----------------------------
+function requireEnv(name) {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing required environment variable: ${name}`);
+  return v;
 }
 
-function extractTitle(html) {
-  const m = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+// These must be present in your Vercel env
+const SUPABASE_URL = requireEnv("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+// Optional:
+// - OPENROUTER_API_KEY  (preferred)  or OPENAI_API_KEY (either provider works)
+// - PUBLIC_SITE_URL (for OpenRouter header)  e.g. https://alan-chat-proxy.vercel.app
+// - X_TITLE (for OpenRouter header)          e.g. Alan Chat Proxy
+// - EMBED_MODEL  (optional override)
+
+// Optional bearer token the UI sends (Authorization: Bearer <token>)
+const INGEST_BEARER = process.env.INGEST_BEARER || process.env.INGEST_TOKEN || "";
+
+// -----------------------------
+// Supabase
+// -----------------------------
+const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
+
+// -----------------------------
+// Utility
+// -----------------------------
+function okJson(res, data) {
+  res.setHeader("Content-Type", "application/json");
+  return res.status(200).end(JSON.stringify(data));
+}
+function bad(res, code, msg, detail) {
+  res.setHeader("Content-Type", "application/json");
+  return res
+    .status(code)
+    .end(JSON.stringify({ error: msg, detail: detail ?? null }));
+}
+
+function getTitleFromHtml(html) {
+  const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   return m ? m[1].trim() : null;
 }
 
-// ---------- OpenRouter embeddings ----------
-async function embedAll(chunks, apiKey) {
-  // Embeds in a single call. If it errors, return explicit message.
-  const r = await fetch(OPENROUTER_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      input: chunks,
-    }),
-  });
-
-  let body;
-  try {
-    body = await r.json();
-  } catch (e) {
-    throw new Error(`embedding_non_json (status ${r.status})`);
-  }
-
-  if (!r.ok) {
-    const msg = body?.error?.message || JSON.stringify(body);
-    throw new Error(`embedding_error: ${msg}`);
-  }
-
-  const embeddings = body.data?.map(d => d.embedding);
-  if (!embeddings || embeddings.length !== chunks.length) {
-    throw new Error('embedding_mismatch');
-  }
-  return embeddings;
+function normalizeWhitespace(s) {
+  return s.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").trim();
 }
 
-// ---------- main handler ----------
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return bad(res, 405, 'method_not_allowed', 'Use POST with JSON { url, title? }');
+function chunkText(text, maxLen = 1800, overlap = 200) {
+  const out = [];
+  let i = 0;
+  while (i < text.length) {
+    const end = Math.min(text.length, i + maxLen);
+    out.push(text.slice(i, end));
+    if (end >= text.length) break;
+    i = end - overlap;
+    if (i < 0) i = 0;
+  }
+  return out;
+}
+
+function sha256(str) {
+  return crypto.createHash("sha256").update(str).digest("hex");
+}
+
+// -----------------------------
+// Embeddings (OpenRouter or OpenAI)
+// -----------------------------
+async function getEmbedding(inputText) {
+  const useOpenRouter = !!process.env.OPENROUTER_API_KEY;
+  const baseUrl = useOpenRouter
+    ? "https://openrouter.ai/api/v1/embeddings"
+    : "https://api.openai.com/v1/embeddings";
+
+  // Correct model id per provider
+  const model =
+    process.env.EMBED_MODEL ||
+    (useOpenRouter ? "openai/text-embedding-3-small" : "text-embedding-3-small");
+
+  const headers = {
+    Authorization: `Bearer ${
+      useOpenRouter ? process.env.OPENROUTER_API_KEY : process.env.OPENAI_API_KEY
+    }`,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+
+  if (useOpenRouter) {
+    headers["HTTP-Referer"] =
+      process.env.PUBLIC_SITE_URL || "https://alan-chat-proxy.vercel.app";
+    headers["X-Title"] = process.env.X_TITLE || "Alan Chat Proxy";
   }
 
-  const { url, title: titleOverride } = (req.body ?? {});
-  if (!url || typeof url !== 'string') {
-    return bad(res, 400, 'bad_request', 'Missing "url" string in JSON body.');
-  }
-
-  // env
-  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENROUTER_API_KEY } = process.env;
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return bad(res, 500, 'server_env', 'Supabase env vars missing.');
-  }
-  if (!OPENROUTER_API_KEY) {
-    return bad(res, 500, 'server_env', 'OPENROUTER_API_KEY is missing.');
-  }
-
-  const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
+  const res = await fetch(baseUrl, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ model, input: inputText }),
   });
 
-  try {
-    console.log('[ingest] start', { url });
+  const ctype = res.headers.get("content-type") || "";
+  if (!ctype.includes("application/json")) {
+    const bodyPreview = await res.text().catch(() => "");
+    throw new Error(
+      `embedding_non_json (status ${res.status}) :: ${bodyPreview.slice(0, 200)}`
+    );
+  }
 
-    // 1) Fetch HTML
-    const resp = await fetch(url, {
+  const json = await res.json();
+  if (!json?.data?.[0]?.embedding) {
+    throw new Error(
+      `embedding_bad_payload :: ${JSON.stringify(json).slice(0, 200)}`
+    );
+  }
+  return json.data[0].embedding;
+}
+
+// -----------------------------
+// Main handler
+// -----------------------------
+export default async function handler(req, res) {
+  try {
+    if (req.method !== "POST") {
+      return bad(res, 405, "method_not_allowed");
+    }
+
+    // Bearer auth (optional)
+    if (INGEST_BEARER) {
+      const auth = req.headers.authorization || "";
+      const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+      if (!token || token !== INGEST_BEARER) {
+        return bad(res, 401, "unauthorized", "Invalid or missing bearer token.");
+      }
+    }
+
+    let body;
+    try {
+      body = req.body ?? JSON.parse(await streamToString(req));
+    } catch {
+      return bad(res, 400, "invalid_json");
+    }
+
+    const url = (body?.url || "").trim();
+    const titleOverride = (body?.title || "").trim();
+    if (!url || !/^https?:\/\//i.test(url)) {
+      return bad(res, 400, "invalid_url", "Provide a valid absolute URL.");
+    }
+
+    // 1) Fetch page
+    const pageRes = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; alan-chat-proxy/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
+        "User-Agent":
+          "Mozilla/5.0 (compatible; AlanCrawler/1.0; +https://alan-chat-proxy.vercel.app)",
+        Accept: "text/html,application/xhtml+xml",
       },
     });
 
-    const html = await resp.text();
-    if (!resp.ok) {
-      console.error('[ingest] fetch_failed', resp.status, html?.slice(0, 120));
-      return bad(res, 502, 'fetch_failed', `Status ${resp.status}`);
+    if (!pageRes.ok) {
+      return bad(res, 502, "fetch_failed", `status=${pageRes.status}`);
     }
 
-    // 2) Extract text & title
-    const title = titleOverride ?? extractTitle(html) ?? '';
-    const text = convert(html, {
-      selectors: [
-        { selector: 'script', format: 'skip' },
-        { selector: 'style', format: 'skip' },
-        { selector: 'noscript', format: 'skip' },
-      ],
-      wordwrap: false,
-    }).trim();
+    const html = await pageRes.text();
+    const pageTitle =
+      titleOverride || getTitleFromHtml(html) || new URL(url).hostname;
 
-    if (!text || text.length < 30) {
-      return bad(res, 422, 'no_content', 'Page had no extractable text.');
+    // 2) Extract text
+    const text = normalizeWhitespace(
+      htmlToText(html, {
+        wordwrap: false,
+        selectors: [
+          // remove nav/footer/script/style by default rules
+          { selector: "script", format: "skip" },
+          { selector: "style", format: "skip" },
+          { selector: "noscript", format: "skip" },
+        ],
+      })
+    );
+
+    if (!text || text.length < 20) {
+      return bad(res, 422, "no_text_extracted");
     }
 
     // 3) Chunk
-    const chunks = chunkByChars(text);
-    if (!chunks.length) {
-      return bad(res, 422, 'no_chunks', 'Unable to split page into chunks.');
+    const chunks = chunkText(text, 1800, 200);
+
+    // 4) Replace strategy: delete previous chunks for this URL
+    const del = await supa.from("page_chunks").delete().eq("url", url);
+    if (del.error) {
+      return bad(res, 500, "delete_failed", del.error.message);
     }
 
-    // 4) Embed all
-    const embeddings = await embedAll(chunks, OPENROUTER_API_KEY);
+    // 5) Embed + insert
+    const rows = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const chunkText = chunks[i];
+      const embedding = await getEmbedding(chunkText);
 
-    // 5) Replace rows for this URL
-    const { error: delErr } = await supa
-      .from('page_chunks')
-      .delete()
-      .eq('url', url);
+      // hash per chunk for dedupe/debug
+      const chunk_hash = sha256(`${url}::${i}::${chunkText.slice(0, 64)}`);
 
-    if (delErr) {
-      console.error('[ingest] supabase_delete_error', delErr);
-      return bad(res, 500, 'db_delete_error', delErr.message || String(delErr));
+      rows.push({
+        url,
+        title: pageTitle,
+        // table has both "content" and "chunk_text"; keep both consistent
+        content: chunkText,
+        chunk_text: chunkText,
+        embedding, // pgvector (vector) column
+        chunk_hash,
+        // created_at defaults to now() on the table
+      });
     }
 
-    // Build rows
-    const nowIso = new Date().toISOString();
-    const rows = chunks.map((content, idx) => ({
+    if (rows.length > 0) {
+      const ins = await supa.from("page_chunks").insert(rows);
+      if (ins.error) {
+        return bad(res, 500, "insert_failed", ins.error.message);
+      }
+    }
+
+    return okJson(res, {
+      ok: true,
       url,
-      title,
-      content,
-      embedding: embeddings[idx],
-      chunk_hash: sha256(url + '::' + idx + '::' + content.slice(0, 64)),
-      created_at: nowIso,
-    }));
-
-    const { data: inserted, error: insErr } = await supa
-      .from('page_chunks')
-      .insert(rows)
-      .select('id');
-
-    if (insErr) {
-      console.error('[ingest] supabase_insert_error', insErr);
-      return bad(res, 500, 'db_insert_error', insErr.message || String(insErr));
-    }
-
-    console.log('[ingest] done', { url, inserted: inserted?.length ?? 0 });
-
-    return ok(res, {
-      url,
-      title,
-      inserted: inserted?.length ?? 0,
-      chunks: chunks.length,
+      title: pageTitle,
+      chunks_inserted: rows.length,
     });
   } catch (err) {
-    console.error('[ingest] server_error', err);
-    return bad(res, 500, 'server_error', err?.message || String(err));
+    return bad(res, 500, "server_error", String(err));
   }
+}
+
+// For older runtimes that don’t auto-parse body
+async function streamToString(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  return Buffer.concat(chunks).toString("utf8");
 }
