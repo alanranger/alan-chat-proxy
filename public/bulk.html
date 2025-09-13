@@ -15,13 +15,11 @@
     button { background:#2563eb; color:white; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
     button:disabled{opacity:.5; cursor:not-allowed}
     .pill { padding:3px 8px; border-radius:999px; border:1px solid #1b2540; }
-    .ok  { color:#22c55e; }  /* green */
-    .bad { color:#ef4444; }  /* red   */
+    .ok  { color:#22c55e; } .bad { color:#ef4444; }
     .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace }
     table { width:100%; border-collapse:collapse; }
     th,td { padding:8px 10px; border-bottom:1px solid #1b2540; vertical-align:top; }
     pre { white-space:pre-wrap; word-break:break-word; }
-    /* make URL links white for readability */
     table a { color:#dbe4ff; text-decoration:underline; }
     table a:hover { opacity:.85; }
     @media (max-width:900px){ .row{ flex-direction:column; } }
@@ -34,7 +32,6 @@
 
 <h2>Upload URL List to Train AI Bot</h2>
 
-<!-- TOP CONTROLS -->
 <div class="row">
   <div class="card w-1">
     <div><small>INGEST TOKEN (BEARER)</small></div>
@@ -63,7 +60,6 @@
   </div>
 </div>
 
-<!-- SINGLE URL TEST -->
 <div class="card">
   <div><small>Test a Single URL</small></div>
   <div class="row">
@@ -73,7 +69,6 @@
   <pre id="debug" class="mono"></pre>
 </div>
 
-<!-- PASTE / BULK -->
 <div class="card">
   <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
   <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
@@ -87,13 +82,11 @@
   </div>
 </div>
 
-<!-- DEBUG CONSOLE -->
 <div class="card">
   <div><small>Debug console (what the client sees)</small></div>
   <pre id="console" class="mono"></pre>
 </div>
 
-<!-- RESULTS TABLE -->
 <div class="card">
   <table>
     <thead><tr><th style="width:60px">#</th><th>URL</th><th>Result <span class="muted">(includes DB verify)</span></th></tr></thead>
@@ -101,7 +94,6 @@
   </table>
 </div>
 
-<!-- SEARCH TESTER -->
 <div class="card">
   <h3 style="margin-top:4px;margin-bottom:8px">AI Search Tester</h3>
   <div class="row">
@@ -143,80 +135,59 @@ $('token').addEventListener('change', saveToken);
 $('token').addEventListener('input', saveToken);
 
 // ---------------- CSV handling ----------------
-let csvUrls = [];   // holds urls parsed from the CSV (deduped, trimmed)
+let csvUrls = [];
 
 function parseCSV(text) {
   const firstLine = text.split(/\r?\n/)[0] || '';
   let delim = ',';
-  const counts = [
-    [',', (firstLine.match(/,/g) || []).length],
-    [';', (firstLine.match(/;/g) || []).length],
-    ['\t', (firstLine.match(/\t/g) || []).length]
-  ].sort((a,b)=>b[1]-a[1]);
+  const counts = [[',', (firstLine.match(/,/g)||[]).length],[';', (firstLine.match(/;/g)||[]).length],['\t', (firstLine.match(/\t/g)||[]).length]].sort((a,b)=>b[1]-a[1]);
   if (counts[0][1] > 0) delim = counts[0][0];
-
-  const rows = [];
-  let row = [], val = '', inQ = false;
+  const rows = []; let row=[], val='', inQ=false;
   function pushVal(){ row.push(val); val=''; }
   function pushRow(){ rows.push(row); row=[]; }
-
   for (let i=0;i<text.length;i++){
-    const ch = text[i], nx = text[i+1];
+    const ch=text[i], nx=text[i+1];
     if (inQ){
-      if (ch === '"' && nx === '"'){ val += '"'; i++; }
-      else if (ch === '"'){ inQ = false; }
-      else { val += ch; }
+      if (ch==='"' && nx==='"'){ val+='"'; i++; }
+      else if (ch==='"'){ inQ=false; }
+      else { val+=ch; }
     } else {
-      if (ch === '"'){ inQ = true; }
-      else if (ch === delim){ pushVal(); }
-      else if (ch === '\n'){ pushVal(); pushRow(); }
-      else if (ch === '\r'){ /* ignore */ }
-      else { val += ch; }
+      if (ch==='"'){ inQ=true; }
+      else if (ch===delim){ pushVal(); }
+      else if (ch==='\n'){ pushVal(); pushRow(); }
+      else if (ch!=='\r'){ val+=ch; }
     }
   }
-  if (val.length || row.length) { pushVal(); pushRow(); }
-
-  if (rows.length === 0) return [];
-  const header = rows[0].map(h => (h||'').trim());
+  if (val.length || row.length){ pushVal(); pushRow(); }
+  if (!rows.length) return [];
+  const header = rows[0].map(h=>(h||'').trim());
   const data = rows.slice(1).map(r=>{
-    const obj = {};
-    for (let i=0;i<header.length;i++){
-      obj[header[i]] = (r[i]||'').trim();
-    }
-    return obj;
+    const o={}; for (let i=0;i<header.length;i++){ o[header[i]] = (r[i]||'').trim(); } return o;
   });
   data.__header = header;
   return data;
 }
-
 function updateLoadedPill() {
   const pasted = $('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const set = new Set([...csvUrls, ...pasted]);
   $('loaded').textContent = String(set.size);
 }
-
 $('csv').addEventListener('change', async (e)=>{
   const file = e.target.files && e.target.files[0];
-  if (!file) { csvUrls = []; updateLoadedPill(); return; }
+  if (!file) { csvUrls=[]; updateLoadedPill(); return; }
   try {
     const text = await file.text();
     const rows = parseCSV(text);
-    if (!rows.length) {
-      log('CSV parse: no data rows found'); csvUrls=[]; updateLoadedPill(); return;
-    }
+    if (!rows.length){ log('CSV parse: no data rows found'); csvUrls=[]; updateLoadedPill(); return; }
     const header = rows.__header || [];
-    const urlKey = header.find(h => h && h.toLowerCase().trim() === 'url');
-    if (!urlKey) {
-      log('CSV parse error: No "url" column found. Header: ['+header.join(', ')+']');
-      csvUrls = []; updateLoadedPill(); return;
-    }
+    const urlKey = header.find(h => h && h.toLowerCase().trim()==='url');
+    if (!urlKey){ log('CSV parse error: No "url" column. Header: ['+header.join(', ')+']'); csvUrls=[]; updateLoadedPill(); return; }
     const urls = rows.map(r => (r[urlKey]||'').trim()).filter(Boolean);
     csvUrls = [...new Set(urls)];
     log(`CSV loaded: ${csvUrls.length} URL(s) found in "url" column`);
     updateLoadedPill();
   } catch(err){
-    log('CSV read error: ' + (err?.message || err));
-    csvUrls = []; updateLoadedPill();
+    log('CSV read error: '+(err?.message||err)); csvUrls=[]; updateLoadedPill();
   }
 });
 $('paste').addEventListener('input', updateLoadedPill);
@@ -229,73 +200,89 @@ async function callIngest(url) {
     headers: { 'Authorization': 'Bearer ' + token, 'Content-Type':'application/json' },
     body: JSON.stringify({ url })
   });
-  let body;
-  try { body = await r.json(); } catch { body = { error:'embedding_non_json', raw_status:r.status }; }
-  return { ok: r.ok && body?.ok, status: r.status, body };
+  let body; try { body = await r.json(); } catch { body = { error:'embedding_non_json', raw_status:r.status }; }
+  return { ok: r.ok && body?.ok, status:r.status, body };
 }
-
 async function callVerify(url) {
   const token = $('token').value.trim();
   const r = await fetch('/api/tools?action=verify&url=' + encodeURIComponent(url), {
-    method: 'GET',
-    headers: { 'Authorization': 'Bearer ' + token }
+    method:'GET', headers:{ 'Authorization':'Bearer '+token }
   });
-  let body;
-  try { body = await r.json(); } catch { body = { error:'verify_non_json', raw_status:r.status }; }
-  return { ok: r.ok && body?.ok, status: r.status, body };
+  let body; try { body = await r.json(); } catch { body = { error:'verify_non_json', raw_status:r.status }; }
+  return { ok: r.ok && body?.ok, status:r.status, body };
 }
-
 async function callSearch(query, topK) {
   const token = $('token').value.trim();
   const r = await fetch('/api/tools?action=search', {
-    method: 'POST',
-    headers: { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+    method:'POST', headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
     body: JSON.stringify({ query, topK })
   });
-  let body;
-  try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
+  let body; try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
   return body;
 }
 
-// --------- Snippet helpers ----------
-function cleanSnippet(s) {
+// ---------------- Snippet helpers (improved) ----------------
+
+// keep human text from Markdown:  ![alt](url) -> "alt",  [text](url) -> "text"
+function normalizeMdLinks(s) {
   if (!s) return '';
-  s = s.replace(/!\[[^\]]*\]\([^)]+\)/g, ' ');
-  s = s.replace(/\[[^\]]*\]\([^)]+\)/g, ' ');
-  s = s.replace(/https?:\/\/\S+/g, (m)=> m.length>40 ? ' ' : m);
-  return s.replace(/\s+/g,' ').trim();
-}
-function makeSentenceSnippet(text) {
-  const t = cleanSnippet(text);
-  if (!t) return '';
-  const sentences = t.split(/(?<=[.!?])\s+/).filter(Boolean);
-  if (sentences.length === 0) return t;
-  let first = sentences[0], second = sentences[1] || '';
-  if (first.length < 60 && second) return (first + ' ' + second).trim();
-  return first.trim();
-}
-function containsAllTerms(snippet, terms) {
-  const hay = snippet.toLowerCase();
-  return terms.every(t => hay.includes(t));
+  s = s.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1'); // image alt
+  s = s.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');  // link text
+  return s;
 }
 
-// pick the best snippet from a chunk’s content, preferring one that contains the query terms
-function pickBestSnippet(content, queryTerms) {
-  const primary = makeSentenceSnippet(content);
-  if (!primary) return '';
-  if (!queryTerms.length) return primary;
+// clean text for snippet extraction
+function cleanText(s) {
+  s = normalizeMdLinks(s);
+  // collapse raw URLs
+  s = s.replace(/https?:\/\/\S+/g, ' ');
+  // collapse whitespace
+  s = s.replace(/\s+/g, ' ').trim();
+  return s;
+}
 
-  // Try to find a sentence containing all terms
-  const clean = cleanSnippet(content);
-  const sentences = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
-  const candidate = sentences.find(s => containsAllTerms(s, queryTerms));
-  if (candidate) {
-    // if very short, add the next sentence
-    const idx = sentences.indexOf(candidate);
-    if (candidate.length < 60 && sentences[idx+1]) return (candidate + ' ' + sentences[idx+1]).trim();
-    return candidate.trim();
+// trim leading junk chars (dangling punctuation/brackets/dashes)
+function tidyStart(s) {
+  return (s || '').replace(/^[\]\)\}\.,;:\/\\\-\u2022\s]+/, '').trim();
+}
+
+// pick a window around the first term match; if not found, a neat first window
+function windowSnippet(content, terms, windowSize = 300, lead = 140) {
+  const text = cleanText(content);
+  if (!text) return '';
+
+  const lc = text.toLowerCase();
+  let pos = -1;
+  if (terms.length) {
+    // find earliest occurrence of any term (min index > -1)
+    for (const t of terms) {
+      const i = lc.indexOf(t);
+      if (i !== -1) pos = (pos === -1) ? i : Math.min(pos, i);
+    }
   }
-  return primary;
+  // choose start/end
+  let start, end;
+  if (pos === -1) {
+    start = 0;
+    end   = Math.min(windowSize, text.length);
+  } else {
+    start = Math.max(0, pos - lead);
+    end   = Math.min(start + windowSize, text.length);
+  }
+  // expand to sentence-ish boundaries
+  const pre  = text.lastIndexOf('.', start);
+  const preQ = text.lastIndexOf('?', start);
+  const preE = text.lastIndexOf('!', start);
+  const leftBound = Math.max(0, pre, preQ, preE) + 1; // after punctuation
+  const post  = text.indexOf('.', end);
+  const postQ = text.indexOf('?', end);
+  const postE = text.indexOf('!', end);
+  const rightCand = [post, postQ, postE].filter(x=>x!==-1);
+  const rightBound = rightCand.length ? Math.min(...rightCand)+1 : end;
+
+  let out = text.slice(leftBound, rightBound).trim();
+  out = tidyStart(out);
+  return out;
 }
 
 // --- Single test
@@ -318,11 +305,11 @@ $('test').onclick = async () => {
   }
 };
 
-// --- Counters
+// counters
 function bumpSucc(){ const n = Number($('succ').textContent||'0')+1; $('succ').textContent = String(n); }
 function bumpFail(){ const n = Number($('fail').textContent||'0')+1; $('fail').textContent = String(n); }
 
-// --- Table rows with green/red result text; returns <tr>
+// results table rows
 function addRow(url, result, isOK) {
   const tr = document.createElement('tr');
   const cls = isOK ? 'ok' : 'bad';
@@ -331,8 +318,6 @@ function addRow(url, result, isOK) {
   [...$('rows').children].forEach((r,i)=>r.children[0].textContent=i+1);
   return tr;
 }
-
-// --- Append DB verify info to the result cell
 async function verifyAndAnnotate(url, tr) {
   const td = tr.children[2];
   td.innerHTML += ` <span class="muted">| verifying…</span>`;
@@ -347,24 +332,19 @@ async function verifyAndAnnotate(url, tr) {
   }
 }
 
-// --- Crawl & ingest (concurrency + delay)
+// crawl & ingest
 let stopFlag = false;
 $('stop').onclick = () => { stopFlag = true; $('stop').disabled = true; };
-
 $('crawl').onclick = async () => {
   stopFlag = false; $('stop').disabled = false;
-
   const pasted = $('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const combined = [...new Set([...csvUrls, ...pasted])];
   $('loaded').textContent = String(combined.length);
-
-  $('succ').textContent = '0';
-  $('fail').textContent = '0';
+  $('succ').textContent = '0'; $('fail').textContent = '0';
 
   const conc = Math.max(1, parseInt($('concurrency').value||'1',10));
   const delay = Math.max(0, parseInt($('delay').value||'0',10));
-
-  if (combined.length === 0) { log('No URLs to ingest (CSV+pasted is empty).'); $('stop').disabled = true; return; }
+  if (!combined.length) { log('No URLs to ingest (CSV+pasted is empty).'); $('stop').disabled = true; return; }
 
   const q = combined.slice();
   const runners = Array.from({length:conc}, ()=> (async function run(){
@@ -388,7 +368,7 @@ $('crawl').onclick = async () => {
   $('stop').disabled = true;
 };
 
-// --- Search tester (grouped by URL with better snippets)
+// search (grouped + improved snippets)
 $('runSearch').onclick = async () => {
   const query = $('query').value.trim();
   const topK = Math.max(1, Math.min(32, parseInt($('topk').value || '8', 10)));
@@ -400,36 +380,33 @@ $('runSearch').onclick = async () => {
   $('sraw').textContent = JSON.stringify(body, null, 2);
 
   const matches = (body && body.matches) || [];
-
-  // Group by URL
   const groups = new Map();
-  const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+
   for (const m of matches) {
     if (!m || !m.url) continue;
-    const g = groups.get(m.url) || { url:m.url, bestScore:0, chunks:0, snippets:[] };
-    g.bestScore = Math.max(g.bestScore || 0, Number(m.score||0));
+    const g = groups.get(m.url) || { url:m.url, bestScore:0, chunks:0, contents:[] };
+    g.bestScore = Math.max(g.bestScore||0, Number(m.score||0));
     g.chunks += 1;
-    const snip = pickBestSnippet(m.content||'', queryTerms);
-    if (snip) g.snippets.push(snip);
+    if (m.content) g.contents.push(m.content);
     groups.set(m.url, g);
   }
 
-  // Order by bestScore desc
   const grouped = Array.from(groups.values()).sort((a,b)=> (b.bestScore - a.bestScore));
 
-  // Render one row per URL, pick the strongest unique snippet
   for (const g of grouped) {
-    // keep unique snippets, prefer those containing terms
-    const uniq = [];
-    const seen = new Set();
-    for (const s of g.snippets) {
-      const key = s.toLowerCase();
-      if (!seen.has(key)) { seen.add(key); uniq.push(s); }
+    // try to build a single, clean snippet from all collected chunks
+    let chosen = '';
+    // prefer first chunk with a term match
+    let withMatch = g.contents.find(c => {
+      const t = cleanText(c).toLowerCase();
+      return terms.length && terms.every(term => t.includes(term));
+    });
+    if (withMatch) {
+      chosen = windowSnippet(withMatch, terms);
+    } else if (g.contents.length) {
+      chosen = windowSnippet(g.contents[0], []);
     }
-    // choose the first snippet containing terms, else first
-    let chosen = uniq.find(s => containsAllTerms(s, queryTerms)) || uniq[0] || '';
-    // short fallback: add next snippet if very short
-    if (chosen && chosen.length < 60 && uniq[1]) chosen = (chosen + ' ' + uniq[1]).trim();
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
