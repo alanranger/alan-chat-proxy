@@ -21,7 +21,10 @@
     table { width:100%; border-collapse:collapse; }
     th,td { padding:8px 10px; border-bottom:1px solid #1b2540; }
     pre { white-space:pre-wrap; word-break:break-word; }
-    @media (max-width: 900px) { .row { flex-direction:column; } }
+    /* make URL links white for readability */
+    table a { color:#dbe4ff; text-decoration:underline; }
+    table a:hover { opacity:.85; }
+    @media (max-width:900px){ .row{ flex-direction:column; } }
   </style>
 </head>
 <body>
@@ -91,7 +94,7 @@
   </table>
 </div>
 
-</div> <!-- /container -->
+</div><!-- /container -->
 
 <script>
 const $ = (id) => document.getElementById(id);
