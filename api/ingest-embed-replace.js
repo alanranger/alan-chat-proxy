@@ -1,294 +1,279 @@
-// /api/ingest-embed-replace.js
-// Complete, robust replacement (OpenRouter->OpenAI fallback if non-JSON)
+// api/ingest-embed-replace.js
+// Serverless function: crawl → chunk → embed → upsert (replace per URL)
+// Runtime: Node (so normal process.env works on Vercel)
 
-import crypto from "node:crypto";
-import { createClient } from "@supabase/supabase-js";
-import { htmlToText } from "html-to-text";
+import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
+import { htmlToText } from 'html-to-text';
 
-// -----------------------------
-// RUNTIME (Vercel: Node runtime)
-// -----------------------------
-export const config = { runtime: "nodejs" };
+export const config = { runtime: 'nodejs' };
 
-// -----------------------------
-// ENV validation
-// -----------------------------
-function requireEnv(name) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing required environment variable: ${name}`);
-  return v;
+// ───────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ───────────────────────────────────────────────────────────────────────────────
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const OPENROUTER_API_KEY =
+  process.env.OPENROUTER_API_KEY ||
+  process.env.OPENROUTER_APIKEY ||
+  process.env.OPENROUTER_KEY ||
+  '';
+const OPENAI_API_KEY =
+  process.env.OPENAI_API_KEY || process.env.OPENAI_APIKEY || '';
+
+const INGEST_TOKEN = process.env.INGEST_TOKEN || '';
+
+const EMBED_MODEL_OPENROUTER = 'openai/text-embedding-3-small'; // 1536 dims on OR
+const EMBED_MODEL_OPENAI = 'text-embedding-3-small';            // 1536 dims on OA
+
+function okJson(res, body) {
+  res.setHeader('content-type', 'application/json; charset=utf-8');
+  return res.status(200).json(body);
+}
+function badRequest(res, detail) {
+  res.setHeader('content-type', 'application/json; charset=utf-8');
+  return res.status(400).json({ error: 'bad_request', detail });
+}
+function serverError(res, detail) {
+  res.setHeader('content-type', 'application/json; charset=utf-8');
+  return res.status(500).json({ error: 'server_error', detail });
 }
 
-const SUPABASE_URL = requireEnv("SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
-
-// Optional: either (or both) providers
-const HAS_OPENROUTER = !!process.env.OPENROUTER_API_KEY;
-const HAS_OPENAI     = !!process.env.OPENAI_API_KEY;
-
-const PUBLIC_SITE_URL = process.env.PUBLIC_SITE_URL || "https://alan-chat-proxy.vercel.app";
-const X_TITLE         = process.env.X_TITLE || "Alan Chat Proxy";
-
-// Optional bearer for UI
-const INGEST_BEARER = process.env.INGEST_BEARER || process.env.INGEST_TOKEN || "";
-
-// Optional override for model id
-const EMBED_MODEL = process.env.EMBED_MODEL || null;
-
-// -----------------------------
-// Supabase
-// -----------------------------
-const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-});
-
-// -----------------------------
-// Utility
-// -----------------------------
-function okJson(res, data) {
-  res.setHeader("Content-Type", "application/json");
-  return res.status(200).end(JSON.stringify(data));
+function sha256(s) {
+  return crypto.createHash('sha256').update(s).digest('hex');
 }
-function bad(res, code, msg, detail) {
-  res.setHeader("Content-Type", "application/json");
-  return res.status(code).end(JSON.stringify({ error: msg, detail: detail ?? null }));
-}
-function getTitleFromHtml(html) {
-  const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  return m ? m[1].trim() : null;
-}
-function normalizeWhitespace(s) {
-  return s.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").trim();
-}
-function chunkText(text, maxLen = 1800, overlap = 200) {
-  const out = [];
+
+function chunkPlainText(text, maxChars = 2000, overlap = 200) {
+  const chunks = [];
   let i = 0;
   while (i < text.length) {
-    const end = Math.min(text.length, i + maxLen);
-    out.push(text.slice(i, end));
-    if (end >= text.length) break;
-    i = Math.max(0, end - overlap);
+    const end = Math.min(i + maxChars, text.length);
+    const slice = text.slice(i, end);
+    chunks.push(slice.trim());
+    i = end - overlap;
+    if (i < 0) i = 0;
+    if (i >= text.length) break;
   }
-  return out;
-}
-function sha256(str) {
-  return crypto.createHash("sha256").update(str).digest("hex");
+  // filter out any empty fragments
+  return chunks.filter((c) => c && c.length > 0);
 }
 
-// -----------------------------
-// Embeddings providers
-// -----------------------------
-async function callOpenRouterEmbedding(inputText) {
-  if (!HAS_OPENROUTER) throw new Error("missing_openrouter_key");
+async function embedTexts({ texts }) {
+  // Prefer OpenRouter if key is present; otherwise OpenAI
+  const useOpenRouter = !!OPENROUTER_API_KEY;
+  const provider = useOpenRouter ? 'openrouter' : OPENAI_API_KEY ? 'openai' : null;
 
-  // Model name: OpenAI family routed via OpenRouter
-  const model = EMBED_MODEL || "openai/text-embedding-3-small";
+  if (!provider) {
+    throw Object.assign(new Error('no_embedding_provider_configured'), {
+      code: 'no_embedding_provider_configured',
+      hint: 'Set OPENROUTER_API_KEY or OPENAI_API_KEY',
+    });
+  }
 
-  const res = await fetch("https://openrouter.ai/api/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      // OpenRouter prefers these:
-      Referer: PUBLIC_SITE_URL,
-      "HTTP-Referer": PUBLIC_SITE_URL,
-      "X-Title": X_TITLE,
-    },
-    body: JSON.stringify({ model, input: inputText }),
-  });
+  const url = useOpenRouter
+    ? 'https://openrouter.ai/api/v1/embeddings'
+    : 'https://api.openai.com/v1/embeddings';
 
-  const ctype = res.headers.get("content-type") || "";
-  if (!ctype.includes("application/json")) {
-    const preview = await res.text().catch(() => "");
-    // Important: bubble this up so the caller can decide to fallback
-    const err = new Error(
-      `openrouter_embedding_non_json (status ${res.status}) :: ${preview.slice(0, 300)}`
+  const model = useOpenRouter ? EMBED_MODEL_OPENROUTER : EMBED_MODEL_OPENAI;
+  const key = useOpenRouter ? OPENROUTER_API_KEY : OPENAI_API_KEY;
+
+  const headers = {
+    'content-type': 'application/json',
+    authorization: `Bearer ${key}`,
+  };
+
+  // OpenRouter likes these (harmless for OpenAI as well)
+  if (useOpenRouter) {
+    headers['HTTP-Referer'] = 'https://alan-chat-proxy.vercel.app';
+    headers['X-Title'] = 'AlanRanger Ingest';
+  }
+
+  const body = JSON.stringify({ input: texts, model });
+
+  const resp = await fetch(url, { method: 'POST', headers, body });
+
+  // We expect JSON — if we get HTML (status 200) it usually means missing/invalid key
+  const ctype = resp.headers.get('content-type') || '';
+  const isJson = ctype.toLowerCase().includes('application/json');
+
+  if (!isJson) {
+    const snippet = (await resp.text()).slice(0, 500);
+    const err = Object.assign(
+      new Error('embedding_non_json'),
+      {
+        code: 'embedding_non_json',
+        status: resp.status,
+        hint:
+          'Provider returned non-JSON response. Check API key and provider availability.',
+        snippet,
+      }
     );
-    err.status = res.status;
-    err.nonJson = true;
     throw err;
   }
 
-  const json = await res.json();
-  if (!json?.data?.[0]?.embedding) {
-    throw new Error(`openrouter_embedding_bad_payload :: ${JSON.stringify(json).slice(0, 300)}`);
-  }
-  return json.data[0].embedding;
-}
+  const json = await resp.json();
 
-async function callOpenAIEmbedding(inputText) {
-  if (!HAS_OPENAI) throw new Error("missing_openai_key");
-
-  const model = EMBED_MODEL || "text-embedding-3-small";
-  const res = await fetch("https://api.openai.com/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ model, input: inputText }),
-  });
-
-  const ctype = res.headers.get("content-type") || "";
-  if (!ctype.includes("application/json")) {
-    const preview = await res.text().catch(() => "");
-    const err = new Error(
-      `openai_embedding_non_json (status ${res.status}) :: ${preview.slice(0, 300)}`
-    );
-    err.status = res.status;
-    err.nonJson = true;
+  if (!resp.ok) {
+    const err = Object.assign(new Error('embedding_error'), {
+      code: 'embedding_error',
+      status: resp.status,
+      response: json,
+    });
     throw err;
   }
 
-  const json = await res.json();
-  if (!json?.data?.[0]?.embedding) {
-    throw new Error(`openai_embedding_bad_payload :: ${JSON.stringify(json).slice(0, 300)}`);
+  // OpenAI-compatible shape: { data: [{ embedding: [...]}, ...] }
+  if (!json?.data || !Array.isArray(json.data)) {
+    const err = Object.assign(new Error('embedding_shape_unexpected'), {
+      code: 'embedding_shape_unexpected',
+      response: json,
+    });
+    throw err;
   }
-  return json.data[0].embedding;
+
+  return json.data.map((row) => row.embedding);
 }
 
-/**
- * Unified embedding call:
- * - Try OpenRouter first (if configured).
- * - If response is non-JSON (your exact failure), automatically fall back to OpenAI (if configured).
- */
-async function getEmbedding(inputText) {
-  let firstError = null;
+async function upsertChunks({ supa, rows, replaceUrl }) {
+  const { url } = rows[0] || {};
+  if (!url) return;
 
-  if (HAS_OPENROUTER) {
-    try {
-      return await callOpenRouterEmbedding(inputText);
-    } catch (err) {
-      firstError = err;
-      // Only fallback on "non-json" (HTML page, Cloud/SaaS splash, etc.)
-      if (!(err && err.nonJson) && !HAS_OPENAI) {
-        throw new Error(`openrouter_failed_no_fallback :: ${String(err)}`);
-      }
-      // else try OpenAI
-    }
+  // Replace mode = delete current rows for URL then insert
+  if (replaceUrl) {
+    await supa.from('page_chunks').delete().eq('url', url);
   }
 
-  if (HAS_OPENAI) {
-    try {
-      return await callOpenAIEmbedding(inputText);
-    } catch (err) {
-      // If we previously tried OpenRouter, include that detail too.
-      if (firstError) {
-        throw new Error(
-          `openrouter_then_openai_failed :: first="${String(firstError)}" ; second="${String(err)}"`
-        );
-      }
-      throw err;
-    }
-  }
-
-  // No providers configured
-  throw new Error("no_embedding_provider_configured (set OPENROUTER_API_KEY or OPENAI_API_KEY)");
+  // Insert / upsert rows
+  const { error } = await supa.from('page_chunks').upsert(rows, {
+    onConflict: 'chunk_hash', // dedupe by hash
+  });
+  if (error) throw error;
 }
 
-// -----------------------------
+// ───────────────────────────────────────────────────────────────────────────────
 // Handler
-// -----------------------------
+// ───────────────────────────────────────────────────────────────────────────────
+
 export default async function handler(req, res) {
   try {
-    if (req.method !== "POST") return bad(res, 405, "method_not_allowed");
-
-    if (INGEST_BEARER) {
-      const auth = req.headers.authorization || "";
-      const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-      if (!token || token !== INGEST_BEARER) {
-        return bad(res, 401, "unauthorized", "Invalid or missing bearer token.");
-      }
+    if (req.method !== 'POST') {
+      return badRequest(res, 'Use POST');
     }
 
-    // Parse body (works with JSON body or raw stream)
-    let body = req.body;
-    if (!body || typeof body !== "object") {
-      body = JSON.parse(await streamToString(req));
+    // Simple bearer check so only your bulk page can call it
+    const auth = req.headers.authorization || '';
+    const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+    if (!INGEST_TOKEN || bearer !== INGEST_TOKEN) {
+      return badRequest(res, 'Invalid or missing ingest token');
     }
 
-    const url = (body?.url || "").trim();
-    const titleOverride = (body?.title || "").trim();
-    if (!url || !/^https?:\/\//i.test(url)) {
-      return bad(res, 400, "invalid_url", "Provide a valid absolute URL.");
+    let payload;
+    try {
+      payload = await req.json?.() ?? await new Response(req.body).json();
+    } catch {
+      payload = null;
     }
 
-    // 1) Fetch page HTML
-    const pageRes = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; AlanCrawler/1.0; +https://alan-chat-proxy.vercel.app)",
-        Accept: "text/html,application/xhtml+xml",
-      },
+    const url = payload?.url || req.query?.url; // allow query for quick tests
+    const title = payload?.title || null;
+    const replace = !!payload?.replace; // replace per URL if true
+
+    if (!url || typeof url !== 'string') {
+      return badRequest(res, 'Provide "url"');
+    }
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return serverError(res, 'Supabase env (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY) not set');
+    }
+
+    // 1) Fetch page
+    const pageResp = await fetch(url, {
+      headers: { 'user-agent': 'Mozilla/5.0 (IngestBot)' },
     });
-    if (!pageRes.ok) {
-      return bad(res, 502, "fetch_failed", `status=${pageRes.status}`);
-    }
-    const html = await pageRes.text();
 
-    const pageTitle =
-      titleOverride || getTitleFromHtml(html) || new URL(url).hostname;
+    if (!pageResp.ok) {
+      return serverError(res, `Fetch failed (${pageResp.status}) for ${url}`);
+    }
+
+    const html = await pageResp.text();
 
     // 2) Extract text
-    const text = normalizeWhitespace(
-      htmlToText(html, {
-        wordwrap: false,
-        selectors: [
-          { selector: "script", format: "skip" },
-          { selector: "style", format: "skip" },
-          { selector: "noscript", format: "skip" },
-        ],
-      })
-    );
-    if (!text || text.length < 20) {
-      return bad(res, 422, "no_text_extracted");
+    const text = htmlToText(html, {
+      wordwrap: false,
+      hideLinkHrefIfSameAsText: true,
+      selectors: [
+        { selector: 'script', format: 'skip' },
+        { selector: 'style', format: 'skip' },
+        { selector: 'noscript', format: 'skip' },
+      ],
+    }).trim();
+
+    if (!text) {
+      return serverError(res, 'No text extracted');
     }
 
     // 3) Chunk
-    const chunks = chunkText(text, 1800, 200);
+    const pieces = chunkPlainText(text, 2000, 200);
+    if (!pieces.length) {
+      return serverError(res, 'No chunks produced');
+    }
 
-    // 4) Replace per URL
-    const del = await supa.from("page_chunks").delete().eq("url", url);
-    if (del.error) return bad(res, 500, "delete_failed", del.error.message);
+    // 4) Embed
+    let embeddings;
+    try {
+      embeddings = await embedTexts({ texts: pieces });
+    } catch (e) {
+      // Normalize error for the UI console
+      if (e?.code === 'no_embedding_provider_configured') {
+        return serverError(res, `Error: no_embedding_provider_configured (set OPENROUTER_API_KEY or OPENAI_API_KEY)`);
+      }
+      if (e?.code === 'embedding_non_json') {
+        return serverError(
+          res,
+          `Error: embedding_non_json (status ${e.status}) :: ${e.snippet || ''}`.trim()
+        );
+      }
+      return serverError(res, `Error embedding: ${e?.message || String(e)}`);
+    }
 
-    // 5) Embed + insert
-    const rows = [];
-    for (let i = 0; i < chunks.length; i++) {
-      const chunkText = chunks[i];
-      const embedding = await getEmbedding(chunkText);
-      const chunk_hash = sha256(`${url}::${i}::${chunkText.slice(0, 64)}`);
+    // 5) Prepare rows for upsert
+    const nowIso = new Date().toISOString();
+    const rows = pieces.map((chunkText, idx) => {
+      const content = chunkText; // canonical field
+      const chunk_hash = sha256(`${url}::${idx}::${sha256(content)}`);
+      const embedding = embeddings[idx]; // vector(float[])
 
-      rows.push({
+      // approx tokens for visibility (len/4 heuristic)
+      const tokens = Math.ceil(content.length / 4);
+
+      return {
         url,
-        title: pageTitle,
-        content: chunkText,
-        chunk_text: chunkText,
+        title,
+        content,
+        chunk_text: content, // backfill, in case a viewer still uses chunk_text
         embedding,
+        tokens,
         chunk_hash,
-      });
-    }
+        created_at: nowIso,
+      };
+    });
 
-    if (rows.length) {
-      const ins = await supa.from("page_chunks").insert(rows);
-      if (ins.error) return bad(res, 500, "insert_failed", ins.error.message);
-    }
+    // 6) Upsert
+    const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+
+    await upsertChunks({ supa, rows, replaceUrl: replace });
 
     return okJson(res, {
       ok: true,
       url,
-      title: pageTitle,
-      chunks_inserted: rows.length,
-      provider: HAS_OPENROUTER ? (HAS_OPENAI ? "openrouter->maybe_fallback" : "openrouter") : "openai",
+      chunks: rows.length,
+      provider: OPENROUTER_API_KEY ? 'openrouter' : (OPENAI_API_KEY ? 'openai' : 'none'),
+      model: OPENROUTER_API_KEY ? EMBED_MODEL_OPENROUTER : EMBED_MODEL_OPENAI,
     });
   } catch (err) {
-    return bad(res, 500, "server_error", String(err));
+    return serverError(res, err?.message ?? String(err));
   }
-}
-
-async function streamToString(req) {
-  const chunks = [];
-  for await (const c of req) chunks.push(c);
-  return Buffer.concat(chunks).toString("utf8");
 }
