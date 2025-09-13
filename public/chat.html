@@ -1,7 +1,18 @@
 // /api/chat.js
 export const config = { runtime: 'nodejs' };
 
-import { createClient } from '@supabase/supabase-js';
+/**
+ * Chat endpoint that:
+ * 1) Calls your /api/search to retrieve topK context snippets
+ * 2) Asks the LLM to return STRICT JSON:
+ *    { answer, citations: string[], followUps: string[] }
+ * 3) Returns that JSON to the frontend
+ *
+ * It supports OpenRouter (preferred) or OpenAI — whichever key is present.
+ * ENV required:
+ *   - OPENROUTER_API_KEY (preferred)  OR  OPENAI_API_KEY
+ *   - VERCEL_URL (set automatically in prod) for calling /api/search
+ */
 
 const need = (k) => {
   const v = process.env[k];
@@ -15,7 +26,6 @@ const toJSON = (res, status, obj) => {
   res.status(status).send(JSON.stringify(obj));
 };
 
-// Simple helper to POST JSON
 async function postJSON(url, body, headers = {}) {
   const r = await fetch(url, {
     method: 'POST',
@@ -29,13 +39,10 @@ async function postJSON(url, body, headers = {}) {
   return r.json();
 }
 
-// Pick LLM provider (OpenRouter OR OpenAI), one source of truth is kept for embeddings already;
-// here we just pick whichever key you provided.
 function getLLMConfig() {
   const orKey = opt('OPENROUTER_API_KEY');
   const oaKey = opt('OPENAI_API_KEY');
   if (orKey) {
-    // OpenRouter: pick a reliable GPT-4o-mini compatible model name
     return {
       provider: 'openrouter',
       endpoint: 'https://openrouter.ai/api/v1/chat/completions',
@@ -44,7 +51,6 @@ function getLLMConfig() {
     };
   }
   if (oaKey) {
-    // OpenAI
     return {
       provider: 'openai',
       endpoint: 'https://api.openai.com/v1/chat/completions',
@@ -56,31 +62,23 @@ function getLLMConfig() {
 }
 
 const SYS_PROMPT = `
-You are "Alan Ranger Assistant", a helpful photography guide and course/workshop assistant.
-You must answer succinctly, friendly, and practically—like a patient tutor. Always:
-- Use clear headings or short paragraphs.
-- Prefer bullets for steps, tips, gear lists.
-- Include concrete next steps when helpful.
-- NEVER hallucinate; if unsure, say so and suggest a relevant action.
-- ONLY use the snippets provided as context—no outside knowledge beyond general photography basics.
-- Cite sources from provided context by listing URL chips (do not inline superscripts).
+You are "Alan Ranger Assistant", a helpful photography guide and workshop assistant.
+Write concise, friendly answers. Use bullets for tips/steps/gear. Provide concrete next steps.
+Only use the provided context snippets. If you aren't sure, say so and suggest an action.
 
-OUTPUT STRICT JSON with the shape:
+Return STRICT JSON ONLY:
 {
-  "answer": "markdown-friendly text (no HTML, use **bold**, *italic*, - bullets, 1. numbered lists, small code blocks allowed)",
-  "citations": ["https://...","https://..."],
-  "followUps": ["short clickable suggestion", "…", "…"]
+  "answer": "markdown-friendly text (no HTML; **bold** and - bullets ok)",
+  "citations": ["https://..."],
+  "followUps": ["short suggestion", "another suggestion"]
 }
-
-Do not include any extra keys or commentary. JSON only.
 `.trim();
 
 function buildUserPrompt(query, matches) {
-  // Turn DB snippets into compact context blocks
   const lines = matches.map((m, i) => {
     const cleaned = (m.content || '')
       .replace(/\s+/g, ' ')
-      .slice(0, 1400); // bound context per chunk
+      .slice(0, 1400);
     return `# Source ${i + 1}
 URL: ${m.url}
 Text: ${cleaned}`;
@@ -95,8 +93,12 @@ ${lines.join('\n\n')}
 }
 
 async function embedAndSearch(query, topK) {
-  // Reuse your /api/search for the same embedding model to keep single source of truth.
-  const r = await fetch(`${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : ''}/api/search`, {
+  // Prefer absolute URL in prod
+  const base =
+    process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : '';
+  const r = await fetch(`${base}/api/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, topK }),
@@ -115,14 +117,15 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return toJSON(res, 405, { error: 'method_not_allowed' });
 
     const { query, topK = 8 } = req.body || {};
-    if (!query || typeof query !== 'string') return toJSON(res, 400, { error: 'bad_request', detail: 'Provide "query" string.' });
+    if (!query || typeof query !== 'string') {
+      return toJSON(res, 400, { error: 'bad_request', detail: 'Provide "query" string.' });
+    }
 
-    // 1) Retrieve snippets with your RAG search
+    // 1) retrieve context
     const { matches } = await embedAndSearch(query, Math.max(1, Math.min(16, +topK || 8)));
 
-    // 2) Build LLM request with strict JSON output instruction
-    const { provider, endpoint, headers, model } = getLLMConfig();
-
+    // 2) call LLM
+    const { endpoint, headers, model } = getLLMConfig();
     const userPrompt = buildUserPrompt(query, matches);
 
     const body = {
@@ -136,15 +139,13 @@ export default async function handler(req, res) {
 
     const j = await postJSON(endpoint, body, headers);
 
-    // 3) Parse LLM JSON
     let raw = (j?.choices?.[0]?.message?.content || '').trim();
-    // Some providers wrap JSON in ```json fences—strip if present
-    raw = raw.replace(/^```json\s*|\s*```$/g, '');
+    raw = raw.replace(/^```json\s*|\s*```$/g, ''); // strip code fences if present
+
     let out;
     try {
       out = JSON.parse(raw);
     } catch {
-      // Last-resort fallback if the model returned a sentence—wrap it
       out = {
         answer: raw || "I couldn't produce an answer. Please try rephrasing your question.",
         citations: Array.from(new Set(matches.map(m => m.url))).slice(0, 5),
@@ -152,23 +153,17 @@ export default async function handler(req, res) {
       };
     }
 
-    // 4) Ensure citations only include known URLs
-    const knownURLs = new Set(matches.map(m => m.url));
+    // constrain citations to returned matches
+    const known = new Set(matches.map(m => m.url));
     out.citations = (Array.isArray(out.citations) ? out.citations : [])
-      .filter(u => knownURLs.has(u))
+      .filter(u => known.has(u))
       .slice(0, 6);
 
-    // 5) Sensible follow-ups if none
     if (!Array.isArray(out.followUps) || out.followUps.length === 0) {
-      out.followUps = ["Workshops near Coventry", "Which lens for landscape?", "How to prepare for a workshop"];
+      out.followUps = ["Workshops near Coventry", "Landscape lens tips", "How to prepare for a workshop"];
     }
 
-    return toJSON(res, 200, {
-      ok: true,
-      answer: out.answer || "I don't know.",
-      citations: out.citations,
-      followUps: out.followUps
-    });
+    return toJSON(res, 200, { ok: true, ...out });
   } catch (err) {
     return toJSON(res, 500, { error: 'server_error', detail: err?.message || String(err) });
   }
