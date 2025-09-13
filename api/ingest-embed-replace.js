@@ -1,65 +1,79 @@
-async function getEmbeddings(inputs) {
-  const orKey = process.env.OPENROUTER_API_KEY || '';
-  const oaKey = process.env.OPENAI_API_KEY || '';
-  if (!orKey && !oaKey) throw new Error('no_embedding_provider_configured');
-
-  // helper to safely parse JSON or throw with HTML snippet
-  const parseJSONorThrow = async (resp, providerTag) => {
-    const ct = resp.headers.get('content-type') || '';
-    const text = await resp.text(); // read once
-    if (!ct.toLowerCase().includes('application/json')) {
-      const snippet = text.slice(0, 300).replace(/\s+/g, ' ');
-      throw new Error(`${providerTag}_bad_content_type:${ct || '(none)'}:${snippet}`);
-    }
-    let j;
-    try { j = JSON.parse(text); } 
-    catch (e) {
-      const snippet = text.slice(0, 300).replace(/\s+/g, ' ');
-      throw new Error(`${providerTag}_bad_json:${String(e.message || e)}:${snippet}`);
-    }
-    return j;
+export default async function handler(req, res) {
+  // tiny helper to guarantee string details
+  const asString = (e) => {
+    if (!e) return '(unknown)';
+    if (typeof e === 'string') return e;
+    if (e.message && typeof e.message === 'string') return e.message;
+    try { return JSON.stringify(e); } catch { return String(e); }
   };
 
-  const body = JSON.stringify({ model: 'text-embedding-3-small', input: inputs });
+  const toJSON = (status, obj) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    // force detail to string and include stage if present
+    if (obj && 'detail' in obj) obj.detail = asString(obj.detail);
+    res.status(status).send(JSON.stringify(obj));
+  };
 
-  if (orKey) {
-    const resp = await fetch('https://openrouter.ai/api/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${orKey}`,
-        'Content-Type': 'application/json',
-        // These two headers help some gateways return proper JSON instead of HTML
-        'HTTP-Referer': 'https://alan-chat-proxy.vercel.app',
-        'X-Title': 'alan-chat-proxy'
-      },
-      redirect: 'follow',
-      body
-    });
-    if (!resp.ok) {
-      const t = await resp.text().catch(() => '');
-      throw new Error(`openrouter_error:${resp.status}:${t.slice(0,300)}`);
+  if (req.method !== 'POST') return toJSON(405, { error: 'method_not_allowed' });
+
+  let stage = 'start';
+  try {
+    const need = (k) => {
+      const v = process.env[k];
+      if (!v || !v.trim()) throw new Error(`missing_env:${k}`);
+      return v;
+    };
+
+    stage = 'auth';
+    const token = req.headers['authorization']?.trim();
+    if (token !== `Bearer ${need('INGEST_TOKEN')}`) {
+      return toJSON(401, { error: 'unauthorized', stage });
     }
-    const j = await parseJSONorThrow(resp, 'openrouter');
-    const out = (j?.data || []).map(d => d?.embedding);
-    if (!out.length) throw new Error('openrouter_empty_embeddings');
-    if (!Array.isArray(out[0]) || out[0].length !== 1536) throw new Error('openrouter_bad_embedding_dim');
-    return out;
-  }
 
-  // OpenAI path
-  const resp = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${oaKey}`, 'Content-Type': 'application/json' },
-    redirect: 'follow',
-    body
-  });
-  if (!resp.ok) {
-    const t = await resp.text().catch(() => '');
-    throw new Error(`openai_error:${resp.status}:${t.slice(0,300)}`);
+    stage = 'parse_body';
+    const { url } = req.body || {};
+    if (!url) return toJSON(400, { error: 'bad_request', detail: 'Provide "url"', stage });
+
+    stage = 'db_client';
+    const { createClient } = await import('@supabase/supabase-js');
+    const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
+
+    stage = 'fetch_page';
+    const { text } = await fetchPage(url);
+    if (!text || text.length < 10) {
+      return toJSON(422, { error: 'empty_content', stage });
+    }
+
+    stage = 'chunk';
+    const chunks = chunkText(text);
+    if (!chunks.length) return toJSON(422, { error: 'no_chunks', stage });
+
+    stage = 'embed';
+    const embeds = await getEmbeddings(chunks);
+
+    stage = 'prepare_rows';
+    const rows = chunks.map((content, i) => ({
+      url,
+      title: null,
+      content,
+      embedding: embeds[i],
+      tokens: Math.ceil(content.length / 4),
+      hash: sha1(`${url}#${i}:${content.slice(0, 128)}`),
+    }));
+
+    stage = 'upsert';
+    const { data, error } = await supa
+      .from('page_chunks')
+      .upsert(rows, { onConflict: 'hash' })
+      .select('id')
+      .order('id', { ascending: false });
+
+    if (error) return toJSON(500, { error: 'supabase_upsert_failed', detail: error.message || error, stage });
+
+    const firstId = data?.[0]?.id ?? null;
+    stage = 'done';
+    return toJSON(200, { ok: true, id: firstId, len: text.length, chunks: rows.length, stage });
+  } catch (err) {
+    return toJSON(500, { error: 'server_error', detail: asString(err), stage });
   }
-  const j = await parseJSONorThrow(resp, 'openai');
-  const out = (j?.data || []).map(d => d?.embedding);
-  if (!out.length) throw new Error('openai_empty_embeddings');
-  if (!Array.isArray(out[0]) || out[0].length !== 1536) throw new Error('openai_bad_embedding_dim');
-  return out;
 }
