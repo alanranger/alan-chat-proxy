@@ -1,4 +1,7 @@
-// /api/ingest-embed-replace.js — FULL FILE (ESM, robust OpenRouter→OpenAI fallback)
+// /api/ingest-embed-replace.js — FULL FILE (ESM) — OpenAI-only embeddings
+// Contract: POST { url } with Authorization: Bearer <INGEST_TOKEN>
+// Returns: { ok, id, len, chunks } or { error, detail, stage }
+// Runtime per project rule:
 export const config = { runtime: 'nodejs' };
 
 import crypto from 'node:crypto';
@@ -11,7 +14,6 @@ const need = (k) => {
   if (!v || !String(v).trim()) throw new Error(`missing_env:${k}`);
   return v;
 };
-const opt = (k) => process.env[k] || '';
 const sha1 = (s) => crypto.createHash('sha1').update(s).digest('hex');
 
 const chunkText = (txt, size = 3500, overlap = 300) => {
@@ -42,8 +44,8 @@ async function fetchPage(url) {
     headers: {
       'user-agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-    }
+      accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    },
   });
 
   if (!r.ok) {
@@ -58,116 +60,50 @@ async function fetchPage(url) {
       { selector: 'nav', format: 'skip' },
       { selector: 'footer', format: 'skip' },
       { selector: 'script', format: 'skip' },
-      { selector: 'style', format: 'skip' }
+      { selector: 'style', format: 'skip' },
     ],
-    wordwrap: false
+    wordwrap: false,
   }).trim();
 
   return { text };
 }
 
-// ---------- embeddings with fallback ----------
+// ---------- embeddings (OpenAI only) ----------
 async function getEmbeddings(inputs) {
-  const orKey = opt('OPENROUTER_API_KEY');
-  const oaKey = opt('OPENAI_API_KEY');
-  if (!orKey && !oaKey) throw new Error('no_embedding_provider_configured');
+  const oaKey = need('OPENAI_API_KEY');
 
-  const tryOpenRouter = async () => {
-    const body = JSON.stringify({ model: 'openai/text-embedding-3-small', input: inputs });
-    const resp = await fetch('https://openrouter.ai/api/v1/embeddings', {
-      method: 'POST',
-      redirect: 'manual', // surface redirects
-      headers: {
-        Authorization: `Bearer ${orKey}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Origin: 'https://alan-chat-proxy.vercel.app',
-        'HTTP-Referer': 'https://alan-chat-proxy.vercel.app',
-        'X-Title': 'alan-chat-proxy',
-        'user-agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      body
-    });
+  const body = JSON.stringify({ model: 'text-embedding-3-small', input: inputs });
+  const resp = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    redirect: 'follow',
+    headers: {
+      Authorization: `Bearer ${oaKey}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'user-agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    },
+    body,
+  });
 
-    if (resp.status >= 300 && resp.status < 400) {
-      const loc = resp.headers.get('location') || '(none)';
-      throw new Error(`openrouter_redirect:status=${resp.status}:url=${resp.url || '(unknown)'}:location=${loc}`);
-    }
-    const ct = (resp.headers.get('content-type') || '').toLowerCase();
-    const text = await resp.text();
-    if (!resp.ok) {
-      throw new Error(`openrouter_error:${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0,300)}`);
-    }
-    if (!ct.includes('application/json')) {
-      throw new Error(`openrouter_bad_content_type:${ct || '(none)'}:status=${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0,300)}`);
-    }
-    let j;
-    try { j = JSON.parse(text); }
-    catch (e) {
-      throw new Error(`openrouter_bad_json:${String(e?.message || e)}:status=${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0,300)}`);
-    }
-    const out = (j?.data || []).map(d => d?.embedding);
-    if (!out.length) throw new Error('openrouter_empty_embeddings');
-    if (!Array.isArray(out[0]) || out[0].length !== 1536)
-      throw new Error('openrouter_bad_embedding_dim');
-    return out;
-  };
+  const ct = (resp.headers.get('content-type') || '').toLowerCase();
+  const text = await resp.text();
 
-  const tryOpenAI = async () => {
-    const body = JSON.stringify({ model: 'text-embedding-3-small', input: inputs });
-    const resp = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      redirect: 'follow',
-      headers: {
-        Authorization: `Bearer ${oaKey}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        'user-agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      body
-    });
-    const ct = (resp.headers.get('content-type') || '').toLowerCase();
-    const text = await resp.text();
-    if (!resp.ok) {
-      throw new Error(`openai_error:${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0,300)}`);
-    }
-    if (!ct.includes('application/json')) {
-      throw new Error(`openai_bad_content_type:${ct || '(none)'}:status=${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0,300)}`);
-    }
-    let j;
-    try { j = JSON.parse(text); }
-    catch (e) {
-      throw new Error(`openai_bad_json:${String(e?.message || e)}:status=${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0,300)}`);
-    }
-    const out = (j?.data || []).map(d => d?.embedding);
-    if (!out.length) throw new Error('openai_empty_embeddings');
-    if (!Array.isArray(out[0]) || out[0].length !== 1536)
-      throw new Error('openai_bad_embedding_dim');
-    return out;
-  };
-
-  // prefer OpenRouter; on failure and if OpenAI key exists, fall back
-  if (orKey) {
-    try {
-      return await tryOpenRouter();
-    } catch (err) {
-      // If OpenAI key exists, fall back; include cause in thrown detail if fallback also fails
-      if (oaKey) {
-        try {
-          return await tryOpenAI();
-        } catch (err2) {
-          throw new Error(`embed_fallback_failed: openrouter→openai | cause1=${asString(err)} | cause2=${asString(err2)}`);
-        }
-      }
-      // No OpenAI key available; surface the OpenRouter error
-      throw err;
-    }
+  if (!resp.ok) {
+    throw new Error(`openai_error:${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
+  }
+  if (!ct.includes('application/json')) {
+    throw new Error(`openai_bad_content_type:${ct || '(none)'}:status=${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
   }
 
-  // No OpenRouter key; use OpenAI directly
-  return await tryOpenAI();
+  let j;
+  try { j = JSON.parse(text); }
+  catch (e) { throw new Error(`openai_bad_json:${String(e?.message || e)}`); }
+
+  const out = (j?.data || []).map(d => d?.embedding);
+  if (!out.length) throw new Error('openai_empty_embeddings');
+  if (!Array.isArray(out[0]) || out[0].length !== 1536) throw new Error('openai_bad_embedding_dim');
+  return out;
 }
 
 // ---------- handler ----------
@@ -209,7 +145,7 @@ export default async function handler(req, res) {
       content,
       embedding: embeds[i], // float[] for pgvector
       tokens: Math.ceil(content.length / 4),
-      hash: sha1(`${url}#${i}:${content.slice(0, 128)}`)
+      hash: sha1(`${url}#${i}:${content.slice(0, 128)}`),
     }));
 
     stage = 'upsert';
@@ -220,11 +156,7 @@ export default async function handler(req, res) {
       .order('id', { ascending: false });
 
     if (error) {
-      return sendJSON(res, 500, {
-        error: 'supabase_upsert_failed',
-        detail: error.message || error,
-        stage
-      });
+      return sendJSON(res, 500, { error: 'supabase_upsert_failed', detail: error.message || error, stage });
     }
 
     stage = 'done';
