@@ -9,7 +9,7 @@
     body { background:#0b1220; color:#dbe4ff; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:24px; }
     .container { max-width:1100px; margin:0 auto; }
     .row { display:flex; gap:16px; }
-    .card { background:#0f172a; border:1px solid #1b2540; border-radius:8px; padding:16px; }
+    .card { background:#0f172a; border:1px solid #1b2540; border-radius:8px; padding:16px; margin-bottom:16px; }
     .w-1 { flex:1 } .w-2 { flex:2 } .w-3 { flex:3 }
     input, textarea { width:100%; background:#0b1426; border:1px solid #1b2540; color:#dbe4ff; padding:10px 12px; border-radius:6px; }
     button { background:#2563eb; color:white; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
@@ -26,6 +26,7 @@
     table a:hover { opacity:.85; }
     @media (max-width:900px){ .row{ flex-direction:column; } }
     .muted { opacity:.8 }
+    .score { color:#22c55e; }
   </style>
 </head>
 <body>
@@ -33,6 +34,7 @@
 
 <h2>Upload URL List to Train AI Bot</h2>
 
+<!-- TOP CONTROLS -->
 <div class="row">
   <div class="card w-1">
     <div><small>INGEST TOKEN (BEARER)</small></div>
@@ -61,6 +63,7 @@
   </div>
 </div>
 
+<!-- SINGLE URL TEST -->
 <div class="card">
   <div><small>Test a Single URL</small></div>
   <div class="row">
@@ -70,6 +73,7 @@
   <pre id="debug" class="mono"></pre>
 </div>
 
+<!-- PASTE / BULK -->
 <div class="card">
   <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
   <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
@@ -83,16 +87,49 @@
   </div>
 </div>
 
+<!-- DEBUG CONSOLE -->
 <div class="card">
   <div><small>Debug console (what the client sees)</small></div>
   <pre id="console" class="mono"></pre>
 </div>
 
+<!-- RESULTS TABLE -->
 <div class="card">
   <table>
     <thead><tr><th style="width:60px">#</th><th>URL</th><th>Result <span class="muted">(includes DB verify)</span></th></tr></thead>
     <tbody id="rows"></tbody>
   </table>
+</div>
+
+<!-- SEARCH TESTER -->
+<div class="card">
+  <h3 style="margin-top:4px;margin-bottom:8px">AI Search Tester</h3>
+  <div class="row">
+    <div class="w-3">
+      <div><small>Query</small></div>
+      <input id="query" placeholder="e.g. photography workshops in Coventry"/>
+    </div>
+    <div class="w-1">
+      <div><small>topK</small></div>
+      <input id="topk" value="8"/>
+    </div>
+    <div class="w-1" style="display:flex;align-items:flex-end">
+      <button id="runSearch" style="width:100%">Run Search</button>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div><small>Search Results</small></div>
+  <table>
+    <thead><tr><th style="width:80px">Score</th><th>URL</th><th>Snippet</th></tr></thead>
+    <tbody id="srows"></tbody>
+  </table>
+</div>
+
+<div class="card">
+  <div><small>Search Raw Response</small></div>
+  <pre id="sraw" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
 </div>
 
 </div><!-- /container -->
@@ -127,6 +164,18 @@ async function callVerify(url) {
   let body;
   try { body = await r.json(); } catch { body = { error:'verify_non_json', raw_status:r.status }; }
   return { ok: r.ok && body?.ok, status: r.status, body };
+}
+
+async function callSearch(query, topK) {
+  const token = $('token').value.trim();
+  const r = await fetch('/api/tools?action=search', {
+    method: 'POST',
+    headers: { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+    body: JSON.stringify({ query, topK })
+  });
+  let body;
+  try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
+  return body;
 }
 
 // --- Single test
@@ -211,6 +260,30 @@ $('crawl').onclick = async () => {
   await Promise.all(runners);
   if (stopFlag) $('stopped').textContent = '1';
   $('stop').disabled = true;
+};
+
+// --- Search tester
+$('runSearch').onclick = async () => {
+  const query = $('query').value.trim();
+  const topK = Math.max(1, Math.min(32, parseInt($('topk').value || '8', 10)));
+  $('srows').innerHTML = '';
+  $('sraw').textContent = '';
+  if (!query) return;
+
+  const body = await callSearch(query, topK);
+  $('sraw').textContent = JSON.stringify(body, null, 2);
+
+  const matches = (body && body.matches) || [];
+  for (const m of matches) {
+    const snip = (m.content || '').slice(0, 280).replace(/\s+/g, ' ');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono score">${(m.score ?? 0).toFixed(3)}</td>
+      <td class="mono"><a href="${m.url}" target="_blank" rel="noopener noreferrer">${m.url}</a></td>
+      <td class="mono">${snip}${(m.content||'').length>280 ? '…' : ''}</td>
+    `;
+    $('srows').appendChild(tr);
+  }
 };
 
 $('single').value = 'https://www.alanranger.com/photography-workshops';
