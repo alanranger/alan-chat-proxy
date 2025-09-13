@@ -1,14 +1,10 @@
 // /api/ingest-embed-replace.js
-// Pin to Vercel's supported Node runtime (NOT edge)
-export const config = { runtime: 'nodejs20.x' };
 
 import { createHash } from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { htmlToText } from "html-to-text";
 
-/**
- * Utility: robust JSON body reader (works whether framework pre-parsed or not)
- */
+/** Read JSON body safely (works whether pre-parsed or stream). */
 async function readJsonBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
   let raw = "";
@@ -16,9 +12,7 @@ async function readJsonBody(req) {
   try { return raw ? JSON.parse(raw) : {}; } catch { return {}; }
 }
 
-/**
- * Fetch a page and return { html, finalUrl }
- */
+/** Fetch a page and return { html, finalUrl } */
 async function fetchHtml(targetUrl) {
   const r = await fetch(targetUrl, {
     redirect: "follow",
@@ -32,17 +26,13 @@ async function fetchHtml(targetUrl) {
   return { html, finalUrl: r.url || targetUrl };
 }
 
-/**
- * Extract a reasonable title from HTML
- */
+/** Extract a reasonable title from HTML */
 function extractTitle(html) {
   const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   return m ? m[1].trim() : null;
 }
 
-/**
- * Convert HTML -> plain text
- */
+/** Convert HTML -> plain text */
 function extractText(html) {
   return htmlToText(html, {
     wordwrap: false,
@@ -54,10 +44,7 @@ function extractText(html) {
   });
 }
 
-/**
- * Very simple paragraph-based chunking.
- * Aims for ~1200–1600 chars per chunk.
- */
+/** Very simple paragraph-based chunking (~1200–1600 chars). */
 function chunkText(text, { minChars = 800, maxChars = 1600 } = {}) {
   const paras = text
     .split(/\n{2,}/g)
@@ -83,9 +70,7 @@ function chunkText(text, { minChars = 800, maxChars = 1600 } = {}) {
   return chunks;
 }
 
-/**
- * Create embeddings via OpenRouter (preferred) or OpenAI as fallback.
- */
+/** Create embeddings via OpenRouter (preferred) or OpenAI fallback. */
 async function embedBatch(inputs) {
   const openRouterKey = process.env.OPENROUTER_API_KEY || "";
   const openAIKey = process.env.OPENAI_API_KEY || "";
@@ -133,9 +118,7 @@ async function embedBatch(inputs) {
   return json.data.map(d => d.embedding);
 }
 
-/**
- * Save chunks to Supabase (table: page_chunks)
- */
+/** Save chunks to Supabase (table: page_chunks). */
 async function saveChunksToSupabase({ url, title, chunks, vectors }) {
   const supa = createClient(
     process.env.SUPABASE_URL,
@@ -168,9 +151,7 @@ async function saveChunksToSupabase({ url, title, chunks, vectors }) {
   return data || [];
 }
 
-/**
- * Handler
- */
+/** Handler */
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
@@ -211,7 +192,7 @@ export default async function handler(req, res) {
       ok: true,
       id: firstId,
       len: text.length,
-      chunks: chunks.length,
+      chunks: chunks.length
     });
   } catch (err) {
     const status = err.status || 500;
