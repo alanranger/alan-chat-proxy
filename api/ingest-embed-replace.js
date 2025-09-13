@@ -79,17 +79,23 @@ async function getEmbeddings(inputs) {
 
   // helper to safely parse JSON or throw with HTML snippet
   const parseJSONorThrow = async (resp, tag) => {
+    const resolvedUrl = resp.url || '(unknown)';
+    const status = resp.status;
     const ct = (resp.headers.get('content-type') || '').toLowerCase();
     const text = await resp.text();
     if (!ct.includes('application/json')) {
       const snippet = text.slice(0, 300).replace(/\s+/g, ' ');
-      throw new Error(`${tag}_bad_content_type:${ct || '(none)'}:${snippet}`);
+      throw new Error(
+        `${tag}_bad_content_type:${ct || '(none)'}:status=${status}:url=${resolvedUrl}:${snippet}`
+      );
     }
     try {
       return JSON.parse(text);
     } catch (e) {
       const snippet = text.slice(0, 300).replace(/\s+/g, ' ');
-      throw new Error(`${tag}_bad_json:${String(e?.message || e)}:${snippet}`);
+      throw new Error(
+        `${tag}_bad_json:${String(e?.message || e)}:status=${status}:url=${resolvedUrl}:${snippet}`
+      );
     }
   };
 
@@ -102,6 +108,9 @@ async function getEmbeddings(inputs) {
       headers: {
         Authorization: `Bearer ${orKey}`,
         'Content-Type': 'application/json',
+        Accept: 'application/json',
+        // The following three help OpenRouter identify origin for server-side requests
+        Origin: 'https://alan-chat-proxy.vercel.app',
         'HTTP-Referer': 'https://alan-chat-proxy.vercel.app',
         'X-Title': 'alan-chat-proxy'
       },
@@ -110,7 +119,7 @@ async function getEmbeddings(inputs) {
     });
     if (!resp.ok) {
       const t = await resp.text().catch(() => '');
-      throw new Error(`openrouter_error:${resp.status}:${t.slice(0, 300)}`);
+      throw new Error(`openrouter_error:${resp.status}:url=${resp.url || '(unknown)'}:${t.slice(0, 300)}`);
     }
     const j = await parseJSONorThrow(resp, 'openrouter');
     const out = (j?.data || []).map(d => d?.embedding);
@@ -126,13 +135,17 @@ async function getEmbeddings(inputs) {
 
     const resp = await fetch('https://api.openai.com/v1/embeddings', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${oaKey}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${oaKey}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
       redirect: 'follow',
       body
     });
     if (!resp.ok) {
       const t = await resp.text().catch(() => '');
-      throw new Error(`openai_error:${resp.status}:${t.slice(0, 300)}`);
+      throw new Error(`openai_error:${resp.status}:url=${resp.url || '(unknown)'}:${t.slice(0, 300)}`);
     }
     const j = await parseJSONorThrow(resp, 'openai');
     const out = (j?.data || []).map(d => d?.embedding);
