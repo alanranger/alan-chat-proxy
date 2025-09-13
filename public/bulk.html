@@ -1,427 +1,239 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Upload URL List to Train AI Bot</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root {
-      --bg: #0f172a;
-      --panel: #111827;
-      --panel-2: #0b1220;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
-      --accent: #60a5fa;
-      --ok: #34d399;
-      --warn: #f59e0b;
-      --err: #f87171;
-      --line: #1f2937;
-      --chip: #1e293b;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    }
-    .wrap { max-width: 1200px; margin: 24px auto 56px; padding: 0 16px; }
-    h1 { font-size: 22px; margin: 0 0 16px; }
-    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 980px) {
-      .grid { grid-template-columns: 1.2fr 1fr 1fr; }
-    }
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
-    .title { font-weight: 600; margin-bottom: 8px; color: var(--muted); font-size: 12px; letter-spacing: .02em; text-transform: uppercase; }
-    input[type="text"], input[type="number"], textarea, .fileBox {
-      width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
-      border-radius: 8px; padding: 10px 12px; outline: none;
-    }
-    input[type="text"]::placeholder, textarea::placeholder { color: #6b7280; }
-    textarea { min-height: 96px; resize: vertical; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .btn {
-      border: 1px solid transparent; background: var(--chip); color: var(--text);
-      padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: 600;
-    }
-    .btn.primary { background: linear-gradient(180deg, #2563eb, #1d4ed8); border-color: #1e40af; }
-    .btn.stop { background: linear-gradient(180deg, #ef4444, #dc2626); border-color: #b91c1c; }
-    .btn:disabled { opacity: .55; cursor: not-allowed; }
-    .note { font-size: 12px; color: var(--muted); margin-top: 6px; }
-    .flex { display: flex; align-items: center; gap: 8px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .counts { display: flex; gap: 10px; align-items: center; margin: 12px 0; }
-    .chip { background: var(--chip); color: var(--text); border: 1px solid var(--line); padding: 6px 10px; border-radius: 999px; font-size: 12px; }
-    .chip.ok { color: var(--ok); }
-    .chip.err { color: var(--err); }
-    .chip.muted { color: var(--muted); }
-    details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-    details summary { cursor: pointer; color: var(--muted); margin: 4px 0; }
-    pre {
-      background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-      padding: 10px; overflow: auto; max-height: 260px; white-space: pre-wrap; word-break: break-word;
-    }
-    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 10px; border: 1px solid var(--line); }
-    th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
-    th { text-align: left; background: #0c1220; color: var(--muted); font-weight: 600; font-size: 12px; }
-    tbody tr:hover td { background: #0b1326; }
-    .status { font-weight: 600; }
-    .status.ok { color: var(--ok); }
-    .status.fail { color: var(--err); }
-    .hint { color: var(--muted); }
-    .w100 { width: 100%; }
-  </style>
+<meta charset="utf-8" />
+<title>Upload URL List to Train AI Bot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{--bg:#0f1623;--card:#131c2b;--muted:#96a0b5;--ok:#1db954;--err:#ff6b6b;--ink:#e8eefc}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif}
+  .wrap{max-width:1060px;margin:42px auto;padding:0 20px}
+  h1{font-size:22px;margin:0 0 18px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .card{background:var(--card);border-radius:10px;padding:18px}
+  .label{color:var(--muted);font-size:12px;margin-bottom:6px}
+  input[type=text],input[type=number],textarea,select{width:100%;border:1px solid #22314c;background:#0b1320;color:var(--ink);border-radius:8px;padding:10px 12px}
+  textarea{min-height:120px;resize:vertical}
+  button{border:0;background:#2764ff;color:white;border-radius:8px;padding:10px 14px;cursor:pointer}
+  button.secondary{background:#37455f}
+  .grid{display:grid;grid-template-columns:60px 1fr 220px;gap:10px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;vertical-align:middle}
+  .ok{background:#153a26;color:#7df2a0}.err{background:#3a1b1b;color:#ffb3b3}
+  pre.log{white-space:pre-wrap;background:#0b1320;border:1px solid #1f2a42;border-radius:8px;padding:12px;max-height:240px;overflow:auto}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid #1f2a42;padding:10px 8px;text-align:left}
+  .muted{color:var(--muted)}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Upload URL List to Train AI Bot</h1>
+<div class="wrap">
+  <h1>Upload URL List to Train AI Bot</h1>
 
-    <div class="grid">
-      <!-- TOKEN + SINGLE URL -->
-      <div class="card">
-        <div class="title">Ingest Token (Bearer)</div>
-        <input id="token" type="text" class="mono" placeholder="paste your ingest token…" />
-        <div class="note">Saved locally (browser only). Sent as <span class="mono">Authorization: Bearer …</span></div>
+  <div class="row">
+    <!-- Left column -->
+    <div class="card">
+      <div class="label">INGEST TOKEN (BEARER)</div>
+      <input id="token" type="text" placeholder="Bearer token" value="">
+      <div class="muted" style="margin-top:6px">Saved only in your browser. Sent as <code>Authorization: Bearer …</code></div>
 
-        <div style="height:10px"></div>
-        <div class="title">Test a Single URL</div>
-        <input id="singleUrl" type="text" class="mono" placeholder="https://example.com/page" />
-        <div class="btns" style="margin-top:8px">
-          <button id="btnSingle" class="btn primary">Test Single URL</button>
-        </div>
+      <div style="height:14px"></div>
 
-        <div class="note">Great for diagnosing one page end-to-end (fetch → extract → embed → replace).</div>
-      </div>
-
-      <!-- FILE + PASTE -->
-      <div class="card">
-        <div class="title">CSV file</div>
-        <input id="csv" type="file" accept=".csv,text/csv" class="fileBox" />
-        <div class="note">CSV must include a <span class="mono">url</span> column (optional <span class="mono">title</span>).</div>
-
-        <div style="height:10px"></div>
-        <div class="title">Paste URLs (one per line) — optional</div>
-        <textarea id="pasteBox" class="mono" placeholder="https://example.com/page-1
-https://example.com/page-2"></textarea>
-
-        <div class="btns" style="margin-top:10px">
-          <button id="btnStart" class="btn primary">Crawl &amp; Ingest</button>
-          <button id="btnStop" class="btn stop">Stop</button>
+      <div class="label">TEST A SINGLE URL</div>
+      <div class="grid">
+        <div></div>
+        <input id="singleUrl" type="text" placeholder="https://example.com/page" />
+        <div style="display:flex;gap:8px">
+          <button id="btnTest">Test Single URL</button>
         </div>
       </div>
 
-      <!-- SETTINGS -->
-      <div class="card">
-        <div class="title">Settings</div>
-        <div class="row">
-          <div>
-            <div class="title" style="margin-bottom:6px">Concurrency</div>
-            <input id="concurrency" type="number" min="1" max="10" value="3" />
-          </div>
-          <div>
-            <div class="title" style="margin-bottom:6px">Delay between requests (ms)</div>
-            <input id="delay" type="number" min="0" step="50" value="400" />
-          </div>
+      <div style="height:14px"></div>
+
+      <details>
+        <summary class="label">CSV format</summary>
+        <div class="muted" style="margin-top:8px">
+          CSV must include a column named <code>url</code>. Optional column <code>title</code> will be ignored by the API.
         </div>
-        <div class="note" style="margin-top:10px">Each request goes to <span class="mono">/api/ingest-embed-replace</span> (fetches, chunks, embeds, replaces existing rows).</div>
-      </div>
+      </details>
+
+      <div style="height:14px"></div>
+
+      <div class="label">Debug console <span class="muted">(what the client sees)</span></div>
+      <pre id="log" class="log"></pre>
     </div>
 
-    <details style="margin-top:18px">
-      <summary><strong>CSV format</strong> (click to expand)</summary>
-      <div class="note" style="margin:8px 0 2px">
-        CSV must include a header named <span class="mono">url</span>, for example:
+    <!-- Right column -->
+    <div class="card">
+      <div class="label">CSV file</div>
+      <input id="csv" type="file" accept=".csv" />
+
+      <div style="height:14px"></div>
+
+      <div class="label">PASTE URLS (ONE PER LINE) — OPTIONAL</div>
+      <textarea id="paste" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+
+      <div style="height:14px"></div>
+
+      <div class="row" style="grid-template-columns:1fr 1fr">
+        <div>
+          <div class="label">CONCURRENCY</div>
+          <input id="concurrency" type="number" min="1" max="10" value="3" />
+        </div>
+        <div>
+          <div class="label">DELAY BETWEEN REQUESTS (MS)</div>
+          <input id="delay" type="number" min="0" step="50" value="400" />
+        </div>
       </div>
-      <pre class="mono">url,title
-https://www.example.com/page-1,Optional title 1
-https://www.example.com/page-2,Optional title 2</pre>
-      <div class="note">Tip: You can also skip the CSV and paste URLs (one per line) in the box above.</div>
-    </details>
 
-    <details style="margin-top:12px" open>
-      <summary><strong>Debug console</strong> (what the client sees)</summary>
-      <pre id="debug" class="mono"></pre>
-    </details>
+      <div style="height:14px"></div>
 
-    <div class="counts">
-      <div class="chip muted"><span id="loadedCount">Loaded 0 rows</span>.</div>
-      <div class="chip ok">Success: <span id="okCount">0</span></div>
-      <div class="chip err">Failed: <span id="failCount">0</span></div>
-      <div class="chip muted">Stopped: <span id="stoppedFlag">0</span></div>
-    </div>
-
-    <div style="overflow:auto">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:64px">#</th>
-            <th>URL</th>
-            <th style="width:28%">Result</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
+      <div style="display:flex;gap:10px">
+        <button id="btnRun">Crawl &amp; Ingest</button>
+        <button id="btnStop" class="secondary">Stop</button>
+      </div>
     </div>
   </div>
 
-  <script>
-    // ---------- constants ----------
-    const API_PATH = '/api/ingest-embed-replace';
-    // Pre-fill token as requested (will be saved to localStorage). Keep private.
-    const DEFAULT_TOKEN = 'b6c30c9e6f44cce9e1a4f3f2d3a5c676';
+  <div style="height:16px"></div>
 
-    // ---------- el helpers ----------
-    const $ = (id) => document.getElementById(id);
-    const els = {
-      token: $('token'),
-      singleUrl: $('singleUrl'),
-      btnSingle: $('btnSingle'),
-      csv: $('csv'),
-      pasteBox: $('pasteBox'),
-      btnStart: $('btnStart'),
-      btnStop: $('btnStop'),
-      concurrency: $('concurrency'),
-      delay: $('delay'),
-      debug: $('debug'),
-      tbody: $('tbody'),
-      loadedCount: $('loadedCount'),
-      okCount: $('okCount'),
-      failCount: $('failCount'),
-      stoppedFlag: $('stoppedFlag'),
+  <div class="card">
+    <div class="label">Results</div>
+    <table id="table">
+      <thead>
+        <tr><th>#</th><th>URL</th><th>Result</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function() {
+  const $ = (id) => document.getElementById(id);
+  const log = (msg) => { const el = $("log"); el.textContent += msg + "\\n"; el.scrollTop = el.scrollHeight; };
+
+  // Persist token locally
+  (function restoreToken() {
+    const v = localStorage.getItem("INGEST_TOKEN") || "";
+    $("token").value = v;
+  })();
+  $("token").addEventListener("input", (e) => {
+    localStorage.setItem("INGEST_TOKEN", e.target.value.trim());
+  });
+
+  function toLines(text) {
+    return text.split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
+  }
+
+  async function callIngest(url, token) {
+    const endpoint = "/api/ingest-embed-replace";
+    const headers = {
+      "content-type": "application/json",
+      "authorization": "Bearer " + token
     };
 
-    // ---------- state ----------
-    let STOP = false;
-    let ok = 0, fail = 0;
+    // We capture text always, then JSON.parse fallback.
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ url })
+    });
 
-    // ---------- init ----------
-    (function init() {
-      const saved = localStorage.getItem('ingest_token');
-      els.token.value = saved || DEFAULT_TOKEN;
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); } catch { data = { raw }; }
 
-      els.btnStart.addEventListener('click', onStart);
-      els.btnStop.addEventListener('click', () => { STOP = true; els.stoppedFlag.textContent = '1'; log('⏹️ stop requested'); });
-      els.btnSingle.addEventListener('click', onSingle);
-
-      els.token.addEventListener('change', () => localStorage.setItem('ingest_token', els.token.value.trim()));
-      els.token.addEventListener('blur', () => localStorage.setItem('ingest_token', els.token.value.trim()));
-    })();
-
-    // ---------- logging ----------
-    function log(s) {
-      els.debug.textContent += (s.endsWith('\n') ? s : s + '\n');
-      els.debug.scrollTop = els.debug.scrollHeight;
+    if (!res.ok || data.error) {
+      const status = res.status;
+      const err = data.error || "server_error";
+      const detail = data.detail || data.raw || "";
+      throw { status, error: err, detail };
     }
-    function resetCounters(total) {
-      ok = 0; fail = 0; STOP = false;
-      els.okCount.textContent = '0';
-      els.failCount.textContent = '0';
-      els.stoppedFlag.textContent = '0';
-      els.loadedCount.textContent = `Loaded ${total} rows`;
-      els.tbody.innerHTML = '';
-    }
-    function addRow(i, url, resultHtml) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="mono hint">${i+1}</td>
-        <td class="mono">${escapeHtml(url)}</td>
-        <td>${resultHtml}</td>
-      `;
-      els.tbody.appendChild(tr);
-    }
-    function setOK(i, url, data) {
-      ok++; els.okCount.textContent = String(ok);
-      addRow(i, url, `<div class="status ok">OK</div><div class="hint mono">chunks: ${data?.chunks ?? '?'}</div>`);
-    }
-    function setFail(i, url, errText) {
-      fail++; els.failCount.textContent = String(fail);
-      addRow(i, url, `<div class="status fail">FAILED</div><div class="hint mono">${escapeHtml(errText)}</div>`);
-    }
-    function escapeHtml(s='') { return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    return data; // { ok:true, url, chunks, ...}
+  }
 
-    // ---------- single URL ----------
-    async function onSingle() {
-      const token = els.token.value.trim();
-      const url = els.singleUrl.value.trim();
-      if (!token) { alert('Missing token'); return; }
-      if (!url) { alert('Enter a URL'); return; }
-      resetCounters(1);
-      log(`Single test → ${url}`);
-      const [res, err] = await callIngest(url, null, token);
-      if (err) { setFail(0, url, err); log(`❌ ${url} → ${err}`); }
-      else { setOK(0, url, res); log(`✅ ${url} → chunks=${res?.chunks}`); }
+  function addRow(i, url, html) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = \`<td class="muted">\${i}</td><td>\${url}</td><td>\${html}</td>\`;
+    $("table").querySelector("tbody").appendChild(tr);
+  }
+
+  async function testSingle() {
+    const token = $("token").value.trim();
+    const url = $("singleUrl").value.trim();
+    $("table").querySelector("tbody").innerHTML = "";
+    if (!token) { log("✗ Please enter an ingest token."); return; }
+    if (!url) { log("✗ Please enter a URL."); return; }
+
+    log(\`Single test → \${url}\`);
+    try {
+      const out = await callIngest(url, token);
+      log("✓ " + url + " → ok: chunks=" + out.chunks);
+      addRow(1, url, \`<span class="badge ok">OK</span> chunks: \${out.chunks}\`);
+    } catch (e) {
+      const pretty = JSON.stringify(e, null, 2);
+      log("✗ " + url + " → " + pretty);
+      addRow(1, url, \`<span class="badge err">FAILED</span> \${e.error || ""}: \${(e.detail || "").toString().slice(0,200)}\`);
+    }
+  }
+
+  async function runBatch() {
+    const token = $("token").value.trim();
+    const conc = Math.max(1, Number($("concurrency").value || 3));
+    const delay = Math.max(0, Number($("delay").value || 400));
+
+    const urls = new Set();
+    // add pasted list
+    toLines($("paste").value).forEach(u => urls.add(u));
+
+    // add from CSV (optional)
+    const file = $("csv").files[0];
+    if (file) {
+      const text = await file.text();
+      // very forgiving CSV: look for a column named url
+      const lines = toLines(text);
+      const header = lines.shift();
+      const cols = header.split(",").map(s => s.trim().toLowerCase());
+      const idx = cols.indexOf("url");
+      if (idx >= 0) {
+        for (const line of lines) {
+          const parts = line.split(",");
+          if (parts[idx]) urls.add(parts[idx].trim());
+        }
+      }
     }
 
-    // ---------- start bulk ----------
-    async function onStart() {
-      const token = els.token.value.trim();
-      if (!token) { alert('Missing token'); return; }
-      localStorage.setItem('ingest_token', token);
+    const list = [...urls];
+    $("table").querySelector("tbody").innerHTML = "";
+    if (!token) { log("✗ Please enter an ingest token."); return; }
+    if (list.length === 0) { log("✗ No URLs provided."); return; }
 
-      let rows = [];
-      // CSV
-      const f = els.csv.files && els.csv.files[0];
-      if (f) {
+    let i = 0;
+    log(\`Starting ingest: rows=\${list.length}, concurrency=\${conc}, delay=\${delay}ms\`);
+    async function worker(id) {
+      while (i < list.length) {
+        const j = i++;
+        const url = list[j];
         try {
-          const text = await readFileText(f);
-          const parsed = parseCsv(text);
-          rows = rows.concat(parsed);
+          const out = await callIngest(url, token);
+          log("✓ " + url + " → chunks=" + out.chunks);
+          addRow(j+1, url, \`<span class="badge ok">OK</span> chunks: \${out.chunks}\`);
         } catch (e) {
-          alert('CSV parse failed: ' + e.message);
-          return;
+          const pretty = JSON.stringify(e, null, 2);
+          log("✗ " + url + " → " + pretty);
+          addRow(j+1, url, \`<span class="badge err">FAILED</span> \${e.error || ""}: \${(e.detail || "").toString().slice(0,200)}\`);
         }
-      }
-      // Pasted URLs (optional)
-      const pasted = els.pasteBox.value.trim();
-      if (pasted) {
-        const list = pasted.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-        rows = rows.concat(list.map(u => ({ url: u, title: '' })));
-      }
-
-      if (!rows.length) {
-        alert('No rows found (need url column or paste URLs).');
-        return;
-      }
-
-      resetCounters(rows.length);
-      const conc = Math.max(1, Math.min(10, parseInt(els.concurrency.value || '3', 10)));
-      const delay = Math.max(0, parseInt(els.delay.value || '0', 10));
-
-      log(`Starting ingest: rows=${rows.length}, concurrency=${conc}, delay=${delay}ms`);
-      await processQueue(rows, conc, delay, async (row, i) => {
-        if (STOP) return;
-        const [data, err] = await callIngest(row.url, row.title || null, token);
-        if (err) { setFail(i, row.url, err); log(`❌ [${i+1}/${rows.length}] ${row.url} → ${err}`); }
-        else { setOK(i, row.url, data); log(`✅ [${i+1}/${rows.length}] ${row.url} → chunks=${data?.chunks}`); }
-      });
-      log(`Ingest complete. ✅ ${ok}, ❌ ${fail}.`);
-    }
-
-    // ---------- queue w/ concurrency ----------
-    async function processQueue(items, concurrency, delayMs, worker) {
-      let i = 0;
-      const running = new Set();
-      const next = async () => {
-        if (STOP || i >= items.length) return;
-        const idx = i++; const item = items[idx];
-        const p = (async () => {
-          try { await worker(item, idx); }
-          catch (e) { setFail(idx, item.url || '(row)', String(e.message || e)); }
-          finally { running.delete(p); }
-        })();
-        running.add(p);
-        if (delayMs) await sleep(delayMs);
-        if (running.size < concurrency && i < items.length) await next();
-      };
-      // kick off initial batch
-      const kicks = Math.min(concurrency, items.length);
-      for (let k=0; k<kicks; k++) await next();
-      await Promise.allSettled([...running]);
-    }
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-    // ---------- call API ----------
-    async function callIngest(url, title, token) {
-      const body = { url };
-      if (title) body.title = title;
-
-      try {
-        const res = await fetch(API_PATH, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
-
-        const ct = (res.headers.get('content-type') || '').toLowerCase();
-        const raw = await res.text();
-
-        if (!ct.includes('application/json')) {
-          // The server responded with HTML or something else — show a snippet
-          const snippet = raw.slice(0, 220).replace(/\s+/g, ' ');
-          return [null, `server returned non-JSON (status ${res.status}) — ${snippet}`];
-        }
-
-        let data;
-        try { data = JSON.parse(raw); }
-        catch (e) { return [null, `response JSON parse failed (status ${res.status})`]; }
-
-        if (!res.ok || data?.error) {
-          return [null, `${data?.error || 'error'}: ${typeof data?.detail === 'string' ? data.detail : JSON.stringify(data?.detail || '')}`];
-        }
-        return [data, null];
-
-      } catch (e) {
-        return [null, String(e.message || e)];
+        if (delay) await new Promise(r => setTimeout(r, delay));
       }
     }
+    await Promise.all([...Array(conc)].map((_,k) => worker(k)));
+    log("Ingest complete.");
+  }
 
-    // ---------- csv parsing ----------
-    function parseCsv(text) {
-      // Strip BOM
-      text = text.replace(/^\uFEFF/, '');
-      // Quick delimiter detect
-      const firstLine = (text.split(/\r?\n/, 1)[0] || '').toLowerCase();
-      let delim = ',';
-      if (firstLine.includes(';') && !firstLine.includes(',')) delim = ';';
-
-      const lines = text.split(/\r?\n/).filter(l => l.trim().length);
-      if (!lines.length) return [];
-
-      // header
-      const head = splitCsvLine(lines[0], delim).map(s => s.trim().toLowerCase());
-      const urlIdx = head.indexOf('url');
-      const titleIdx = head.indexOf('title');
-
-      if (urlIdx === -1) {
-        // assume single column CSV (every line is a URL) – ignore header if it contains 'http'
-        if (/^https?:\/\//i.test(lines[0].trim())) {
-          return lines.map(l => ({ url: l.trim(), title: '' }));
-        } else {
-          // treat the rest as URLs
-          return lines.slice(1).map(l => ({ url: l.trim(), title: '' })).filter(r => r.url);
-        }
-      }
-
-      const rows = [];
-      for (let i=1; i<lines.length; i++) {
-        const cols = splitCsvLine(lines[i], delim);
-        const url = (cols[urlIdx] || '').trim();
-        if (!url) continue;
-        const title = titleIdx !== -1 ? (cols[titleIdx] || '').trim() : '';
-        rows.push({ url, title });
-      }
-      return rows;
-    }
-
-    function splitCsvLine(line, delim) {
-      const out = [];
-      let cur = '', inside = false;
-      for (let i=0; i<line.length; i++) {
-        const c = line[i];
-        if (c === '"') {
-          if (inside && line[i+1] === '"') { cur += '"'; i++; }
-          else { inside = !inside; }
-        } else if (c === delim && !inside) {
-          out.push(cur); cur = '';
-        } else {
-          cur += c;
-        }
-      }
-      out.push(cur);
-      return out;
-    }
-
-    // ---------- utils ----------
-    function readFileText(file) {
-      return new Promise((resolve, reject) => {
-        const fr = new FileReader();
-        fr.onload = () => resolve(String(fr.result || ''));
-        fr.onerror = (e) => reject(e);
-        fr.readAsText(file);
-      });
-    }
-  </script>
+  $("btnTest").addEventListener("click", testSingle);
+  $("btnRun").addEventListener("click", runBatch);
+  $("btnStop").addEventListener("click", () => { log("Stop requested (not implemented)."); });
+})();
+</script>
 </body>
 </html>
