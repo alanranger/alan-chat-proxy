@@ -1,7 +1,5 @@
 // api/ingest-embed-replace.js
-// Crawl → chunk → embed → upsert (replace-per-URL)
-// Accepts URL via JSON, x-www-form-urlencoded, querystring, or plain text body
-// Runtime: Node so env vars work normally on Vercel
+// Crawl → chunk → embed → upsert (replace per URL) with rock-solid JSON error responses.
 
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
@@ -27,20 +25,24 @@ const OPENAI_API_KEY =
 
 const INGEST_TOKEN = process.env.INGEST_TOKEN || '';
 
-const EMBED_MODEL_OPENROUTER = 'openai/text-embedding-3-small'; // 1536 dims on OR
-const EMBED_MODEL_OPENAI = 'text-embedding-3-small';            // 1536 dims on OA
+const EMBED_MODEL_OPENROUTER = 'openai/text-embedding-3-small'; // 1536 dims @ OpenRouter
+const EMBED_MODEL_OPENAI = 'text-embedding-3-small';            // 1536 dims @ OpenAI
 
 // ───────────────────────────────────────────────────────────────────────────────
-// Utils
+// Helpers
 // ───────────────────────────────────────────────────────────────────────────────
 
-function json(res, status, body) {
-  res.setHeader('content-type', 'application/json; charset=utf-8');
-  return res.status(status).json(body);
+function sendJSON(res, status, body) {
+  try {
+    res.setHeader('content-type', 'application/json; charset=utf-8');
+    res.setHeader('cache-control', 'no-store');
+  } catch {}
+  res.status(status).end(JSON.stringify(body));
 }
-const ok = (res, body) => json(res, 200, body);
-const bad = (res, msg) => json(res, 400, { error: 'bad_request', detail: msg });
-const boom = (res, msg) => json(res, 500, { error: 'server_error', detail: msg });
+
+const ok = (res, body) => sendJSON(res, 200, body);
+const bad = (res, msg) => sendJSON(res, 400, { error: 'bad_request', detail: String(msg || 'Bad request') });
+const boom = (res, msg) => sendJSON(res, 500, { error: 'server_error', detail: String(msg || 'Server error') });
 
 function sha256(s) {
   return crypto.createHash('sha256').update(s).digest('hex');
@@ -91,11 +93,11 @@ async function embedTexts({ texts }) {
     body: JSON.stringify({ input: texts, model }),
   });
 
-  const ct = (resp.headers.get('content-type') || '').toLowerCase();
+  const ct = String(resp.headers.get('content-type') || '').toLowerCase();
   const isJson = ct.includes('application/json');
 
   if (!isJson) {
-    const snippet = (await resp.text()).slice(0, 500);
+    const snippet = (await resp.text()).slice(0, 400);
     const e = new Error('embedding_non_json');
     e.code = 'embedding_non_json';
     e.status = resp.status;
@@ -105,17 +107,20 @@ async function embedTexts({ texts }) {
 
   const data = await resp.json();
   if (!resp.ok) {
-    const e = new Error('embedding_error');
+    // Provider returned JSON error — make sure we turn it into a string.
+    const msg = typeof data?.error === 'string'
+      ? data.error
+      : (typeof data?.error?.message === 'string' ? data.error.message : JSON.stringify(data).slice(0, 400));
+    const e = new Error(`embedding_error: ${msg}`);
     e.code = 'embedding_error';
     e.status = resp.status;
-    e.response = data;
     throw e;
   }
 
   if (!Array.isArray(data?.data)) {
     const e = new Error('embedding_shape_unexpected');
     e.code = 'embedding_shape_unexpected';
-    e.response = data;
+    e.payload = data;
     throw e;
   }
   return data.data.map((d) => d.embedding);
@@ -125,15 +130,14 @@ async function upsertChunks({ supa, rows, replaceUrl }) {
   const url = rows[0]?.url;
   if (!url) return;
   if (replaceUrl) {
-    await supa.from('page_chunks').delete().eq('url', url);
+    const { error: delErr } = await supa.from('page_chunks').delete().eq('url', url);
+    if (delErr) throw delErr;
   }
-  const { error } = await supa.from('page_chunks').upsert(rows, {
-    onConflict: 'chunk_hash',
-  });
+  const { error } = await supa.from('page_chunks').upsert(rows, { onConflict: 'chunk_hash' });
   if (error) throw error;
 }
 
-// Read full raw request body (Buffer → string)
+// Read raw request body safely
 async function readRawBody(req) {
   const chunks = [];
   for await (const c of req) chunks.push(c);
@@ -141,11 +145,10 @@ async function readRawBody(req) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-// Try to parse URL from anything: query, JSON, form, or plain text
+// Parse url/title/replace from query OR body (json, form, or plain text)
 async function getUrlTitleReplace(req) {
-  // 1) querystring (always available)
+  // query
   try {
-    // Vercel passes path+query in req.url
     const u = new URL(req.url, 'http://local');
     const qUrl = u.searchParams.get('url');
     const qTitle = u.searchParams.get('title');
@@ -153,12 +156,11 @@ async function getUrlTitleReplace(req) {
     if (qUrl) return { url: qUrl, title: qTitle || null, replace: qReplace === 'true' };
   } catch {}
 
-  // 2) body, depending on content-type
+  // body
   const ctype = (req.headers['content-type'] || '').toLowerCase();
   const raw = await readRawBody(req);
   if (!raw) return { url: null, title: null, replace: false };
 
-  // JSON
   if (ctype.includes('application/json')) {
     try {
       const obj = JSON.parse(raw);
@@ -167,10 +169,11 @@ async function getUrlTitleReplace(req) {
         title: obj?.title ?? null,
         replace: !!obj?.replace,
       };
-    } catch {}
+    } catch {
+      return { url: null, title: null, replace: false };
+    }
   }
 
-  // x-www-form-urlencoded
   if (ctype.includes('application/x-www-form-urlencoded')) {
     const params = new URLSearchParams(raw);
     const u = params.get('url');
@@ -179,7 +182,6 @@ async function getUrlTitleReplace(req) {
     return { url: u, title: t || null, replace: r === 'true' };
   }
 
-  // Fallback: if the body is just a URL
   const maybe = raw.trim();
   if (/^https?:\/\//i.test(maybe)) {
     return { url: maybe, title: null, replace: false };
@@ -197,28 +199,30 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(204).end();
     if (req.method !== 'POST') return bad(res, 'Use POST');
 
-    // Bearer token check
-    const auth = req.headers.authorization || '';
+    // Bearer token
+    const auth = String(req.headers.authorization || '');
     const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
     if (!INGEST_TOKEN || bearer !== INGEST_TOKEN) {
       return bad(res, 'Invalid or missing ingest token');
     }
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return boom(res, 'Supabase env (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY) not set');
+      return boom(res, 'SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing');
     }
 
     const { url, title, replace } = await getUrlTitleReplace(req);
     if (!url) return bad(res, 'Provide "url"');
 
     // Fetch page
-    const page = await fetch(url, {
-      headers: { 'user-agent': 'Mozilla/5.0 (IngestBot)' },
-    });
-    if (!page.ok) return boom(res, `Fetch failed (${page.status}) for ${url}`);
-    const html = await page.text();
+    let html;
+    try {
+      const page = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0 (IngestBot)' } });
+      if (!page.ok) return boom(res, `Fetch failed (${page.status}) for ${url}`);
+      html = await page.text();
+    } catch (e) {
+      return boom(res, `Fetch exception for ${url}: ${e?.message || String(e)}`);
+    }
 
-    // Extract text
     const text = htmlToText(html, {
       wordwrap: false,
       hideLinkHrefIfSameAsText: true,
@@ -228,44 +232,47 @@ export default async function handler(req, res) {
         { selector: 'noscript', format: 'skip' },
       ],
     }).trim();
+
     if (!text) return boom(res, 'No text extracted');
 
     // Chunk
     const pieces = chunkPlainText(text, 2000, 200);
     if (!pieces.length) return boom(res, 'No chunks produced');
 
-    // Embed
+    // Embed (strongly normalized errors)
     let vectors;
     try {
       vectors = await embedTexts({ texts: pieces });
     } catch (e) {
       if (e?.code === 'no_embedding_provider_configured') {
-        return boom(res, 'Error: no_embedding_provider_configured (set OPENROUTER_API_KEY or OPENAI_API_KEY)');
+        return boom(res, 'no_embedding_provider_configured (set OPENROUTER_API_KEY or OPENAI_API_KEY)');
       }
       if (e?.code === 'embedding_non_json') {
-        return boom(res, `Error: embedding_non_json (status ${e.status}) :: ${e.snippet || ''}`.trim());
+        const s = (e?.snippet || '').replace(/\s+/g, ' ').slice(0, 200);
+        return boom(res, `embedding_non_json status=${e?.status ?? '?'} snippet="${s}"`);
       }
-      return boom(res, `Error embedding: ${e?.message || String(e)}`);
+      const msg = e?.message || String(e);
+      return boom(res, msg);
     }
 
-    // Prepare rows
     const now = new Date().toISOString();
     const rows = pieces.map((content, i) => ({
       url,
       title,
-      content,               // canonical text
-      chunk_text: content,   // backfill for older views
+      content,
+      chunk_text: content,
       embedding: vectors[i],
       tokens: Math.ceil(content.length / 4),
       chunk_hash: sha256(`${url}::${i}::${sha256(content)}`),
       created_at: now,
     }));
 
-    // Upsert
-    const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
-    await upsertChunks({ supa, rows, replaceUrl: replace });
+    const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    try {
+      await upsertChunks({ supa, rows, replaceUrl: replace });
+    } catch (e) {
+      return boom(res, `supabase_upsert_error: ${e?.message || String(e)}`);
+    }
 
     return ok(res, {
       ok: true,
@@ -275,6 +282,7 @@ export default async function handler(req, res) {
       model: OPENROUTER_API_KEY ? EMBED_MODEL_OPENROUTER : EMBED_MODEL_OPENAI,
     });
   } catch (err) {
+    // Final safety net — always string detail
     return boom(res, err?.message ?? String(err));
   }
 }
