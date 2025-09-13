@@ -4,186 +4,278 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Alan Ranger — AI Bot</title>
+  <meta name="color-scheme" content="dark">
   <style>
     :root{
-      --bg:#0b1220; --card:#0f172a; --muted:#9aa7c7; --text:#dbe4ff; --line:#1b2540;
-      --btn:#2563eb; --btnText:#fff; --chip:#13203e;
+      --bg:#0b1220;
+      --card:#0f172a;
+      --muted:#9fb2d9;
+      --text:#e6edff;
+      --line:#1b2540;
+      --brand:#d98324; /* Alan orange */
+      --pill:#13203e;
+      --user:#1a2440;
+      --bot:#101a33;
+      --chip:#0e1831;
+      --chip-bd:#213055;
+      --shadow:0 8px 40px rgba(0,0,0,.45);
+      --radius:16px;
     }
     *{box-sizing:border-box}
-    body{margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}
-    .wrap{max-width:900px; margin:0 auto; padding:24px}
-    .card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px;}
-    .row{display:flex; gap:10px; align-items:center;}
-    .stack{display:flex; flex-direction:column; gap:12px;}
-    input, textarea{background:#0b1426; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:10px 12px; width:100%;}
-    button{background:var(--btn); color:var(--btnText); border:none; border-radius:10px; padding:10px 16px; cursor:pointer}
-    button:disabled{opacity:.6; cursor:not-allowed}
-    .muted{color:var(--muted)}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    .chat{display:flex; flex-direction:column; gap:14px; max-height:62vh; overflow:auto; padding-right:4px;}
-    .msg{display:flex; gap:10px}
-    .msg .bubble{background:#0b1426; border:1px solid var(--line); padding:12px 14px; border-radius:12px; max-width:80%}
-    .msg.user{justify-content:flex-end}
-    .msg.user .bubble{background:#1a2341}
-    .msg.assistant .bubble{background:#101a34}
-    .answer{white-space:pre-wrap}
-    .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
-    .chips a{display:inline-block; padding:6px 8px; border-radius:999px; border:1px solid var(--line); background:var(--chip); color:var(--text); text-decoration:none; font-size:12px}
-    .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px}
-    .brand{font-weight:600; letter-spacing:.2px}
-    .footer{margin-top:12px; font-size:12px}
-    @media (max-width:720px){ .wrap{padding:16px} .msg .bubble{max-width:100%} }
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;
+    }
+    .wrap{max-width:940px; margin:32px auto; padding:0 16px}
+    .card{
+      background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    /* header */
+    .brand{
+      display:flex; align-items:center; gap:14px;
+      padding:18px 18px; border-bottom:1px solid var(--line);
+      position:relative;
+    }
+    .brand::before{
+      content:""; position:absolute; left:0; top:0; right:0; height:6px; background:var(--brand);
+    }
+    .logo{
+      width:40px; height:40px; border-radius:50%; background:#0b1530; display:grid; place-items:center;
+      border:1px solid var(--line); overflow:hidden;
+    }
+    .logo img{width:100%; height:100%; object-fit:cover; display:block}
+    .logo .mono{
+      font-weight:700; font-size:18px; letter-spacing:.5px; color:#fff;
+    }
+    .title{font-weight:700; font-size:20px}
+    .status{margin-left:auto; font-size:13px; color:var(--muted)}
+
+    .lede{padding:0 18px 18px; color:var(--muted)}
+
+    /* chat window */
+    .chat{padding:18px; display:flex; flex-direction:column; gap:14px; min-height:50vh}
+    .row{display:flex; gap:8px}
+    .msg{
+      max-width:75%;
+      padding:12px 14px; border-radius:14px; border:1px solid var(--line);
+      box-shadow:0 2px 12px rgba(0,0,0,.25);
+      white-space:pre-wrap;
+    }
+    .bot{background:var(--bot)}
+    .user{background:var(--user); margin-left:auto}
+    .ghost{opacity:.85}
+    .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+    .chip{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border-radius:999px; background:var(--chip);
+      border:1px solid var(--chip-bd); color:var(--text); text-decoration:none;
+      font-size:13px;
+    }
+    .chip:hover{filter:brightness(1.05)}
+    .hint{font-size:13px; color:var(--muted); padding:0 18px 12px}
+
+    /* input bar */
+    .bar{display:flex; gap:10px; padding:12px; border-top:1px solid var(--line); background:#0c152b}
+    .bar input[type="number"]{
+      width:74px; text-align:center; background:#091127; color:var(--text);
+      border:1px solid var(--line); border-radius:10px; padding:10px 8px;
+    }
+    .bar textarea{
+      flex:1; min-height:46px; max-height:160px; resize:vertical;
+      background:#0a142b; color:var(--text); border:1px solid var(--line); border-radius:12px;
+      padding:12px 14px; outline:none;
+    }
+    .send{
+      background:var(--brand); border:none; color:#fff; font-weight:700;
+      border-radius:12px; padding:0 18px; min-width:88px; cursor:pointer;
+    }
+    .send:disabled{opacity:.6; cursor:not-allowed}
+    .subtle{opacity:.8}
+
+    .row-follow{display:flex; flex-wrap:wrap; gap:10px; padding:0 18px 12px}
+    .btn-follow{
+      background:var(--pill); border:1px solid var(--line); color:var(--text); border-radius:999px;
+      padding:8px 12px; cursor:pointer; font-size:14px;
+    }
+    .btn-follow:hover{filter:brightness(1.06)}
+    @media (max-width:720px){
+      .msg{max-width:100%}
+      .bar{flex-direction:column}
+      .send{height:46px}
+      .bar input[type="number"]{width:100%}
+    }
   </style>
 </head>
 <body>
-  <div class="wrap stack">
-
-    <!-- Top -->
-    <div class="topbar">
-      <div class="brand">Alan Ranger — AI Bot</div>
-      <div class="muted mono" id="connStatus">ready</div>
-    </div>
-
-    <!-- Token (hidden if already present) -->
-    <div id="tokenCard" class="card stack" style="display:none">
-      <div class="stack">
-        <label class="muted">Bearer token</label>
-        <input id="token" placeholder="Enter INGEST_TOKEN to enable chat"/>
-        <div class="muted" style="font-size:12px">Saved locally; sent as <span class="mono">Authorization: Bearer …</span></div>
-      </div>
-      <div><button id="saveToken">Save token</button></div>
-    </div>
-
-    <!-- Chat area -->
-    <div class="card stack">
-      <div class="chat" id="chat"></div>
-
-      <div class="row">
-        <textarea id="q" rows="2" placeholder="Ask a question… (Shift+Enter for newline)"></textarea>
-        <button id="send">Send</button>
-      </div>
-
-      <div class="row muted" style="justify-content:space-between">
-        <div>
-          <label>topK</label>
-          <input id="topk" class="mono" style="width:64px" value="8"/>
+  <div class="wrap">
+    <div class="card" id="shell">
+      <!-- header -->
+      <div class="brand">
+        <div class="logo" id="logo">
+          <!-- attempts to load /logo.png; falls back to monogram -->
+          <img id="logoImg" src="/logo.png" alt="logo" onerror="this.remove();document.getElementById('logo').insertAdjacentHTML('beforeend','<div class=&quot;mono&quot;>AR</div>')">
         </div>
-        <div class="footer">Answers cite sources; the assistant only uses your indexed pages.</div>
+        <div class="title">Alan Ranger Assistant</div>
+        <div class="status" id="status">ready</div>
+      </div>
+
+      <div class="lede">
+        Ask me about workshops, courses, tips, or photography gear — I’ll give concise, cited answers.
+      </div>
+
+      <!-- chat window -->
+      <div class="chat" id="chat">
+        <div class="row">
+          <div class="msg bot">Hi! I can help with workshops, tuition, and photography advice.</div>
+        </div>
+      </div>
+
+      <div class="row-follow" id="follows" style="display:none"></div>
+      <div class="hint">Answers cite sources; only your indexed pages are used.</div>
+
+      <!-- input -->
+      <div class="bar">
+        <textarea id="q" placeholder="Ask a question… (Shift+Enter for newline)"></textarea>
+        <input id="topk" type="number" min="1" max="16" value="8" title="topK (context docs)">
+        <button id="send" class="send">Send</button>
       </div>
     </div>
-
   </div>
 
-<script>
-(function(){
-  const $ = (id)=>document.getElementById(id);
-  const chat = $('chat');
-  const conn = $('connStatus');
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const chat = $('chat');
+    const statusEl = $('status');
+    const sendBtn = $('send');
+    const qEl = $('q');
+    const topkEl = $('topk');
+    const follows = $('follows');
 
-  // --- token handling (localStorage or ?token=...)
-  const urlToken = new URLSearchParams(location.search).get('token') || '';
-  if (urlToken) localStorage.setItem('ingest_token', urlToken);
-  const getToken = ()=> localStorage.getItem('ingest_token') || '';
-  function ensureTokenUI(){
-    const has = !!getToken();
-    $('tokenCard').style.display = has ? 'none' : 'block';
-  }
-  $('saveToken').onclick = ()=>{
-    const v = $('token').value.trim();
-    if (v) localStorage.setItem('ingest_token', v);
-    ensureTokenUI();
-  };
-  ensureTokenUI();
+    // Persist topK
+    topkEl.value = localStorage.getItem('chat_topk') || '8';
+    topkEl.addEventListener('change', () => {
+      let v = Math.max(1, Math.min(16, parseInt(topkEl.value||'8',10)));
+      topkEl.value = v.toString();
+      localStorage.setItem('chat_topk', v.toString());
+    });
 
-  // --- small helpers
-  const now = ()=> new Date().toLocaleTimeString();
-  const el = (html)=>{ const d=document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; };
-
-  function addUser(text){
-    chat.appendChild(el(`
-      <div class="msg user">
-        <div class="bubble mono">${escapeHtml(text)}</div>
-      </div>
-    `));
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function addAssistant(answer, citations){
-    const chips = (citations||[]).map(u=>`<a href="${u}" target="_blank" rel="noopener">${truncate(u,72)}</a>`).join('');
-    const block = el(`
-      <div class="msg assistant">
-        <div class="bubble">
-          <div class="answer mono">${escapeHtml(answer||'(no answer)')}</div>
-          ${chips ? `<div class="chips">${chips}</div>` : ''}
-        </div>
-      </div>
-    `);
-    chat.appendChild(block);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function addSystem(text){
-    chat.appendChild(el(`
-      <div class="msg assistant">
-        <div class="bubble muted mono">${escapeHtml(text)}</div>
-      </div>
-    `));
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])); }
-  function truncate(s,n){ if(!s) return ''; return s.length>n ? s.slice(0,n-1)+'…' : s; }
-
-  async function ask(q){
-    const token = getToken();
-    if (!token){ ensureTokenUI(); addSystem('Missing token. Enter token to enable chat.'); return; }
-
-    conn.textContent = 'thinking…';
-    $('send').disabled = true;
-
-    try{
-      const k = Math.max(1, Math.min(16, parseInt(($('topk').value||'8'),10)));
-      const r = await fetch('/api/chat', {
-        method:'POST',
-        headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
-        body: JSON.stringify({ query:q, topK:k })
+    // Helpers
+    function addUser(text){
+      const row = document.createElement('div'); row.className = 'row';
+      row.innerHTML = `<div class="msg user"></div>`;
+      row.querySelector('.msg').textContent = text;
+      chat.appendChild(row); chat.scrollTop = chat.scrollHeight;
+      return row;
+    }
+    function addBot(text, ghost=false){
+      const row = document.createElement('div'); row.className = 'row';
+      row.innerHTML = `<div class="msg bot${ghost?' ghost':''}"></div>`;
+      row.querySelector('.msg').textContent = text;
+      chat.appendChild(row); chat.scrollTop = chat.scrollHeight;
+      return row;
+    }
+    function addBotTyping(){
+      return addBot('…', true);
+    }
+    function setBotText(row, text){
+      const el = row.querySelector('.msg');
+      el.classList.remove('ghost');
+      el.textContent = text;
+    }
+    function typeText(row, finalText, speed=14){
+      const el = row.querySelector('.msg');
+      el.classList.remove('ghost');
+      el.textContent = '';
+      let i = 0;
+      const tick = () => {
+        i += 3; // chunked for quicker reveal
+        el.textContent = finalText.slice(0, i);
+        chat.scrollTop = chat.scrollHeight;
+        if (i < finalText.length) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+    function showCitations(urls){
+      if (!Array.isArray(urls) || !urls.length) { follows.style.display='none'; return; }
+      // Draw as link chips below the last answer bubble
+      const row = document.createElement('div'); row.className = 'row';
+      const holder = document.createElement('div'); holder.className = 'msg bot';
+      const chips = document.createElement('div'); chips.className = 'chips';
+      urls.forEach(u=>{
+        const a=document.createElement('a');
+        a.className='chip'; a.href=u; a.target='_blank'; a.rel='noopener noreferrer';
+        a.textContent=u;
+        chips.appendChild(a);
       });
-      let body; try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
+      holder.appendChild(chips); row.appendChild(holder);
+      chat.appendChild(row);
+      chat.scrollTop=chat.scrollHeight;
+    }
+    function showFollowUps(items){
+      follows.innerHTML='';
+      if (!Array.isArray(items) || !items.length) { follows.style.display='none'; return; }
+      items.slice(0,5).forEach(txt=>{
+        const b=document.createElement('button');
+        b.className='btn-follow'; b.textContent=txt;
+        b.onclick=()=>{ qEl.value=txt; send(); };
+        follows.appendChild(b);
+      });
+      follows.style.display='';
+    }
 
-      if (!r.ok || !body.ok){
-        addAssistant(`Sorry, I couldn't answer that. (${(body && (body.detail||body.error)) || r.status})`, []);
-      } else {
-        addAssistant(body.answer, Array.from(new Set(body.citations||[])));
+    async function send(){
+      const text = qEl.value.trim();
+      if (!text) return;
+      const k = Math.max(1, Math.min(16, parseInt(topkEl.value||'8',10)));
+      qEl.value = '';
+      sendBtn.disabled = true; statusEl.textContent = 'thinking…';
+
+      addUser(text);
+      const ghost = addBotTyping();
+
+      try{
+        const r = await fetch('/api/chat', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ query:text, topK:k })
+        });
+        let body = null;
+        try{ body = await r.json(); }catch{}
+        if (!r.ok || !body || !body.ok){
+          const msg = (body && (body.detail||body.error)) || `Server error (${r.status})`;
+          setBotText(ghost, `Sorry — ${msg}.`);
+          showFollowUps([]);
+          showCitations([]);
+          return;
+        }
+        const answer = (body.answer || '').toString();
+        // type out
+        typeText(ghost, answer);
+        showFollowUps(body.followUps || []);
+        showCitations(body.citations || []);
+      }catch(err){
+        setBotText(ghost, `Sorry — I had trouble contacting the server.`);
+        showFollowUps([]);
+        showCitations([]);
+      }finally{
+        sendBtn.disabled = false; statusEl.textContent = 'ready';
       }
-    } catch(err){
-      addAssistant(`Error: ${err?.message||String(err)}`, []);
-    } finally{
-      $('send').disabled = false;
-      conn.textContent = 'ready';
     }
-  }
 
-  // Welcome message (optional ?welcome=)
-  const welcome = new URLSearchParams(location.search).get('welcome') ||
-    'Hi! Ask me anything about workshops, courses, and tuition.';
-  addSystem(welcome);
+    // Events
+    sendBtn.addEventListener('click', send);
+    qEl.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        send();
+      }
+    });
 
-  // Input wiring
-  $('send').onclick = ()=>{
-    const txt = $('q').value.trim();
-    if (!txt) return;
-    $('q').value = '';
-    addUser(txt);
-    ask(txt);
-  };
-  $('q').addEventListener('keydown', (e)=>{
-    if (e.key === 'Enter' && !e.shiftKey){
-      e.preventDefault();
-      $('send').click();
-    }
-  });
-
-})();
-</script>
+    // Seed a helpful starter message if you like:
+    // addBot("Try asking: **Which workshops are best for beginners?** or **What lenses are good for landscapes?**");
+  </script>
 </body>
 </html>
