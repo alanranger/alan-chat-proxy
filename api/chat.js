@@ -1,7 +1,19 @@
 // /api/chat.js
-export const config = { runtime: 'nodejs' }; // Vercel Hobby expects 'nodejs'
+export const config = { runtime: 'nodejs' };
 
-import { createHash } from 'node:crypto';
+/**
+ * Chat endpoint that:
+ * 1) Calls /api/search to retrieve topK context snippets
+ * 2) Asks the LLM to return STRICT JSON:
+ *    { answer: string[], citations: string[], followUps: string[] }
+ * 3) Returns that JSON to the frontend
+ *
+ * Supports OpenRouter (preferred) or OpenAI — whichever key is present.
+ *
+ * Required env:
+ * - OPENROUTER_API_KEY (preferred) OR OPENAI_API_KEY
+ * - VERCEL_URL (set automatically in prod) for calling /api/search
+ */
 
 const need = (k) => {
   const v = process.env[k];
@@ -15,136 +27,136 @@ const toJSON = (res, status, obj) => {
   res.status(status).send(JSON.stringify(obj));
 };
 
-function hostBase(req) {
-  const proto = (req.headers['x-forwarded-proto'] || 'https').toString();
-  const host  = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
-  return `${proto}://${host}`;
-}
-
-async function searchMatches(req, query, topK) {
-  const base = hostBase(req);
-  const r = await fetch(`${base}/api/tools?action=search`, {
+async function postJSON(url, body, headers = {}) {
+  const r = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Authorization': req.headers['authorization'] || '',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ query, topK })
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(body),
   });
   if (!r.ok) {
-    return { ok: false, error: `search_failed:${r.status}` };
+    const text = await r.text().catch(() => '');
+    throw new Error(`llm_http_${r.status}:${text.slice(0, 2000)}`);
   }
-  const j = await r.json();
-  return { ok: true, data: j };
+  return r.json();
 }
 
-function buildPrompt(query, matches) {
-  const uniqueByUrl = [];
-  const seen = new Set();
-  (matches || []).forEach((m) => {
-    if (!m?.url) return;
-    if (seen.has(m.url)) return;
-    seen.add(m.url);
-    uniqueByUrl.push(m);
-  });
-
-  const contextBlocks = uniqueByUrl.map((m, i) => {
-    // cap context size per chunk to keep prompt small
-    const content = (m.content || '').slice(0, 1200);
-    return `[[${i+1}]] URL: ${m.url}\nCONTENT:\n${content}`;
-  }).join('\n\n');
-
-  const system = [
-    'You are the helpful assistant for alanranger.com.',
-    'Answer the user using ONLY the provided context blocks.',
-    'If the answer is not in the context, say you do not know.',
-    'Prefer concise, direct answers. Use bullet points if helpful.',
-    'At the end, list the sources as [1], [2], ... referencing the blocks.'
-  ].join(' ');
-
-  const user = [
-    `User question: ${query}`,
-    '',
-    'Context blocks:',
-    contextBlocks || '(no context available)'
-  ].join('\n');
-
-  const citations = uniqueByUrl.map((m) => m.url);
-
-  return { system, user, citations };
-}
-
-async function callLLM({ model, system, user }) {
-  const oaKey = opt('OPENAI_API_KEY');
+function getLLMConfig() {
   const orKey = opt('OPENROUTER_API_KEY');
+  const oaKey = opt('OPENAI_API_KEY');
+  if (!orKey && !oaKey) throw new Error('no_llm_provider_configured');
 
-  if (!oaKey && !orKey) {
-    throw new Error('no_llm_provider_configured');
+  if (orKey) {
+    return {
+      provider: 'openrouter',
+      endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+      headers: { Authorization: `Bearer ${orKey}` },
+      model: 'openai/gpt-4o-mini', // inexpensive, concise
+    };
   }
+  return {
+    provider: 'openai',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    headers: { Authorization: `Bearer ${oaKey}` },
+    model: 'gpt-4o-mini',
+  };
+}
 
-  if (oaKey) {
-    // OpenAI
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${oaKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: model || 'gpt-4o-mini',
-        temperature: 0.2,
-        max_tokens: 700,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user }
-        ]
-      })
-    });
-    if (!r.ok) throw new Error(`openai_error:${r.status} ${await r.text()}`);
-    const j = await r.json();
-    const answer = j?.choices?.[0]?.message?.content?.trim() || '';
-    return answer;
-  }
+const SYS_PROMPT = `
+You are "Alan Ranger Assistant", a helpful photography guide and workshop assistant.
+Write concise, friendly answers. Prefer short sections and bullet lists for tips/steps/gear.
+Cite only from the provided context (with URLs). If insufficient context, say so and suggest the
+best next step (e.g., "try a different question" or "share a specific page to ingest").
+Return STRICT JSON ONLY (no prose) in this shape:
 
-  // OpenRouter
-  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${orKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      // OpenRouter uses vendor-prefixed names for OpenAI models
-      model: 'openai/gpt-4o-mini',
-      temperature: 0.2,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user }
-      ]
-    })
+{
+  "answer": "markdown-friendly text (no HTML)",
+  "citations": ["https://...", "..."],
+  "followUps": ["next suggestion", "another suggestion"]
+}
+`.trim();
+
+function buildUserPrompt(query, matches) {
+  const lines = matches.map((m, i) => {
+    const clean = (m.content || '')
+      .replace(/\s+/g, ' ')
+      .slice(0, 1200); // keep context tidy but long enough
+    return `#${i + 1} ${m.url}\n${clean}\n`;
   });
-  if (!r.ok) throw new Error(`openrouter_error:${r.status} ${await r.text()}`);
-  const j = await r.json();
-  const answer = j?.choices?.[0]?.message?.content?.trim() || '';
-  return answer;
+  return `
+User question: ${query}
+
+Context snippets:
+${lines.join('\n')}
+`.trim();
 }
 
 export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') return toJSON(res, 405, { error: 'method_not_allowed' });
 
-    const token = req.headers['authorization']?.toString().trim() || '';
-    if (token !== `Bearer ${need('INGEST_TOKEN')}`) return toJSON(res, 401, { error: 'unauthorized' });
+    const { query, topK = 8 } = req.body || {};
+    if (!query || typeof query !== 'string') {
+      return toJSON(res, 400, { error: 'bad_request', detail: 'Provide "query" string.' });
+    }
 
-    const { query, topK } = req.body || {};
-    if (!query || typeof query !== 'string') return toJSON(res, 400, { error: 'bad_request', detail: 'Provide "query"' });
+    // 1) retrieve context
+    const base = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : '';
+    const searchURL = base ? `${base}/api/search` : '/api/search';
 
-    const k = Math.max(1, Math.min(16, parseInt(topK || 8, 10)));
+    const searchRes = await postJSON(searchURL, { query, topK });
+    const matches = Array.isArray(searchRes?.matches) ? searchRes.matches : [];
 
-    const sr = await searchMatches(req, query, k);
-    if (!sr.ok) return toJSON(res, 500, { error: sr.error || 'search_failed' });
+    // 2) call LLM
+    const { endpoint, headers, model } = getLLMConfig();
+    const userPrompt = buildUserPrompt(query, matches);
 
-    const matches = (sr.data && sr.data.matches) || [];
-    const { system, user, citations } = buildPrompt(query, matches);
+    const body = {
+      model,
+      temperature: 0.2,
+      messages: [
+        { role: 'system', content: SYS_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      response_format: { type: 'json_object' },
+    };
 
-    const answer = await callLLM({ model: 'gpt-4o-mini', system, user });
+    const j = await postJSON(endpoint, body, headers);
 
-    return toJSON(res, 200, { ok: true, answer, citations });
+    // 3) parse JSON output
+    const raw =
+      j?.choices?.[0]?.message?.content?.trim?.() ||
+      '';
+    let out;
+    try {
+      out = JSON.parse(raw);
+    } catch {
+      // if model returns a JSON-ish string in a code block, try to rescue it
+      const rescued = raw
+        .replace(/^```json\s*/i, '')
+        .replace(/```$/i, '')
+        .trim();
+      out = JSON.parse(rescued);
+    }
+
+    // constrain citations to ingested URLs only
+    const known = new Set(matches.map(m => m.url));
+    out.citations = (Array.isArray(out.citations) ? out.citations : [])
+      .filter(u => known.has(u))
+      .slice(0, 6);
+
+    // follow-ups are optional, keep short
+    out.followUps = Array.isArray(out.followUps) ? out.followUps.slice(0, 3) : [];
+
+    return toJSON(res, 200, {
+      ok: true,
+      query,
+      answer: out.answer || '',
+      citations: out.citations || [],
+      followUps: out.followUps || [],
+    });
   } catch (err) {
-    return toJSON(res, 500, { error: 'server_error', detail: err?.message || String(err) });
+    return toJSON(res, 500, { error: 'server_error', detail: String(err) });
   }
 }
