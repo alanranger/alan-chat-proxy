@@ -1,201 +1,319 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Upload URL List to Train AI Bot</title>
+  <link rel="stylesheet" href="/_next/static/css/081a0fca5a9bd20.css"/>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      margin: 20px;
-    }
-    h1 { color: #38bdf8; }
-    .section {
-      margin: 20px 0;
-      padding: 15px;
-      background: #1e293b;
-      border-radius: 8px;
-    }
-    label { display: block; margin-top: 10px; }
-    input, textarea, button, select {
-      margin-top: 5px;
-      padding: 8px;
-      border-radius: 4px;
-      border: 1px solid #334155;
-      background: #0f172a;
-      color: #e2e8f0;
-      width: 100%;
-    }
-    button {
-      cursor: pointer;
-      background: #2563eb;
-      color: white;
-      font-weight: bold;
-    }
-    button:hover { background: #1d4ed8; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-      font-size: 14px;
-    }
-    th, td {
-      border: 1px solid #334155;
-      padding: 8px;
-      text-align: left;
-      vertical-align: top;
-    }
-    th { background: #334155; }
-    .ok { color: #22c55e; font-weight: bold; }
-    .fail { color: #ef4444; font-weight: bold; }
-    .console {
-      background: #0f172a;
-      color: #e2e8f0;
-      font-family: monospace;
-      padding: 10px;
-      height: 200px;
-      overflow-y: scroll;
-      border: 1px solid #334155;
-      margin-top: 10px;
-      white-space: pre-wrap;
-    }
+    body { background:#0b1220; color:#dbe4ff; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:24px; }
+    .container { max-width:1100px; margin:0 auto; }
+    .row { display:flex; gap:16px; }
+    .card { background:#0f172a; border:1px solid #1b2540; border-radius:8px; padding:16px; margin-bottom:16px; }
+    .w-1 { flex:1 } .w-2 { flex:2 } .w-3 { flex:3 }
+    input, textarea { width:100%; background:#0b1426; border:1px solid #1b2540; color:#dbe4ff; padding:10px 12px; border-radius:6px; }
+    button { background:#2563eb; color:white; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
+    button:disabled{opacity:.5; cursor:not-allowed}
+    .pill { padding:3px 8px; border-radius:999px; border:1px solid #1b2540; }
+    .ok  { color:#22c55e; }  /* green */
+    .bad { color:#ef4444; }  /* red   */
+    .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:8px 10px; border-bottom:1px solid #1b2540; vertical-align:top; }
+    pre { white-space:pre-wrap; word-break:break-word; }
+    /* make URL links white for readability */
+    table a { color:#dbe4ff; text-decoration:underline; }
+    table a:hover { opacity:.85; }
+    @media (max-width:900px){ .row{ flex-direction:column; } }
+    .muted { opacity:.8 }
+    .score { color:#22c55e; }
   </style>
 </head>
 <body>
-  <h1>Upload URL List to Train AI Bot</h1>
+<div class="container">
 
-  <div class="section">
-    <label>Ingest Token (Bearer)
-      <input id="ingestToken" type="text" placeholder="Enter ingest token"/>
-    </label>
-    <label>CSV File
-      <input id="csvFile" type="file" />
-    </label>
-    <label>Concurrency
-      <input id="concurrency" type="number" value="3"/>
-    </label>
-    <label>Delay Between Requests (ms)
-      <input id="delay" type="number" value="400"/>
-    </label>
+<h2>Upload URL List to Train AI Bot</h2>
+
+<!-- TOP CONTROLS -->
+<div class="row">
+  <div class="card w-1">
+    <div><small>INGEST TOKEN (BEARER)</small></div>
+    <input id="token" placeholder="your token" />
+    <small>Saved locally; sent as <span class="mono">Authorization: Bearer …</span></small>
   </div>
 
-  <div class="section">
-    <label>Test a Single URL
-      <input id="singleUrl" type="text" placeholder="https://example.com/page-1"/>
-      <button onclick="testSingle()">Test Single URL</button>
-    </label>
+  <div class="card w-2">
+    <div><small>CSV FILE</small></div>
+    <input id="csv" type="file" accept=".csv" />
+    <small>Must include a <span class="mono">url</span> column (optional <span class="mono">title</span>).</small>
   </div>
 
-  <div class="section">
-    <label>Paste URLs (one per line) — OPTIONAL
-      <textarea id="urlList" rows="4" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
-    </label>
-    <button onclick="startCrawl()">Crawl & Ingest</button>
-    <button onclick="stopCrawl()">Stop</button>
-    <div>
-      Loaded <span id="loaded">0</span> rows | 
-      Success: <span id="success">0</span> | 
-      Failed: <span id="failed">0</span> | 
-      Stopped: <span id="stopped">0</span>
+  <div class="card w-1">
+    <div class="row">
+      <div class="w-1">
+        <div><small>CONCURRENCY</small></div>
+        <input id="concurrency" value="3" />
+      </div>
+      <div class="w-1">
+        <div><small>DELAY BETWEEN REQUESTS (MS)</small></div>
+        <input id="delay" value="400" />
+      </div>
     </div>
-    <table id="resultsTable">
-      <thead>
-        <tr>
-          <th>#</th><th>URL</th><th>Result (includes DB verify)</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <small>Each request goes to <span class="mono">/api/ingest-embed-replace</span>.</small>
   </div>
+</div>
 
-  <div class="section">
-    <h2>Debug Console (What the Client Sees)</h2>
-    <div id="console" class="console"></div>
+<!-- SINGLE URL TEST -->
+<div class="card">
+  <div><small>Test a Single URL</small></div>
+  <div class="row">
+    <input id="single" class="w-3" placeholder="https://example.com/page" />
+    <button id="test">Test Single URL</button>
   </div>
+  <pre id="debug" class="mono"></pre>
+</div>
 
-  <div class="section">
-    <h2>AI Search Tester</h2>
-    <label>Query
-      <input id="searchQuery" type="text" placeholder="Search query"/>
-    </label>
-    <label>topK
-      <input id="searchTopK" type="number" value="8"/>
-    </label>
-    <button onclick="runSearch()">Run Search</button>
-    <table id="searchResults">
-      <thead>
-        <tr><th>Score</th><th>URL</th><th>Snippet</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <h3>Search Raw Response</h3>
-    <pre id="searchRaw" class="console"></pre>
+<!-- PASTE / BULK -->
+<div class="card">
+  <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
+  <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+  <div style="margin-top:10px" class="row">
+    <button id="crawl">Crawl & Ingest</button>
+    <button id="stop" disabled>Stop</button>
+    <span class="pill">Loaded <span id="loaded">0</span> rows</span>
+    <span id="succPill" class="pill ok">Success: <span id="succ">0</span></span>
+    <span id="failPill" class="pill bad">Failed: <span id="fail">0</span></span>
+    <span class="pill">Stopped: <span id="stopped">0</span></span>
   </div>
+</div>
+
+<!-- DEBUG CONSOLE -->
+<div class="card">
+  <div><small>Debug console (what the client sees)</small></div>
+  <pre id="console" class="mono"></pre>
+</div>
+
+<!-- RESULTS TABLE -->
+<div class="card">
+  <table>
+    <thead><tr><th style="width:60px">#</th><th>URL</th><th>Result <span class="muted">(includes DB verify)</span></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<!-- SEARCH TESTER -->
+<div class="card">
+  <h3 style="margin-top:4px;margin-bottom:8px">AI Search Tester</h3>
+  <div class="row">
+    <div class="w-3">
+      <div><small>Query</small></div>
+      <input id="query" placeholder="e.g. photography workshops in Coventry"/>
+    </div>
+    <div class="w-1">
+      <div><small>topK</small></div>
+      <input id="topk" value="8"/>
+    </div>
+    <div class="w-1" style="display:flex;align-items:flex-end">
+      <button id="runSearch" style="width:100%">Run Search</button>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div><small>Search Results</small></div>
+  <table>
+    <thead><tr><th style="width:80px">Score</th><th>URL</th><th>Snippet</th></tr></thead>
+    <tbody id="srows"></tbody>
+  </table>
+</div>
+
+<div class="card">
+  <div><small>Search Raw Response</small></div>
+  <pre id="sraw" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
+</div>
+
+</div><!-- /container -->
 
 <script>
-let stopFlag = false;
+const $ = (id) => document.getElementById(id);
+const log = (s) => { const c = $('console'); c.textContent += s + "\\n"; c.scrollTop = c.scrollHeight; };
+const saveToken = () => localStorage.setItem('ingest_token', $('token').value || '');
+$('token').value = localStorage.getItem('ingest_token') || '';
+$('token').addEventListener('change', saveToken);
+$('token').addEventListener('input', saveToken);
 
-function log(msg) {
-  const c = document.getElementById("console");
-  c.textContent += msg + "\\n";
-  c.scrollTop = c.scrollHeight;
-}
-
-// Cleaner snippet function
-function cleanSnippet(s) {
-  if (!s) return '';
-  // Remove markdown-style links and image tags
-  s = s.replace(/!\\[[^\\]]*\\]\\([^)]*\\)/g, ''); 
-  s = s.replace(/\\[[^\\]]*\\]\\([^)]*\\)/g, ''); 
-  // Strip out long URLs
-  s = s.replace(/https?:\\/\\/\\S+/g, (m)=> m.length > 40 ? '' : m);
-  // Collapse whitespace
-  s = s.replace(/\\s+/g, ' ').trim();
-  // Prefer ending at a sentence boundary
-  const match = s.match(/^(.*?[\\.\\!\\?])\\s/);
-  return match ? match[1] : s;
-}
-
-async function testSingle() {
-  const url = document.getElementById("singleUrl").value;
-  const token = document.getElementById("ingestToken").value;
-  log("[Single test] " + url);
-
-  const res = await fetch("/api/ingest-embed-replace", {
-    method: "POST",
-    headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+// --- API helpers
+async function callIngest(url) {
+  const token = $('token').value.trim();
+  const r = await fetch('/api/ingest-embed-replace', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type':'application/json' },
     body: JSON.stringify({ url })
   });
-  const data = await res.json();
-  log(JSON.stringify(data, null, 2));
+  let body;
+  try { body = await r.json(); } catch { body = { error:'embedding_non_json', raw_status:r.status }; }
+  return { ok: r.ok && body?.ok, status: r.status, body };
 }
 
-async function runSearch() {
-  const q = document.getElementById("searchQuery").value;
-  const k = parseInt(document.getElementById("searchTopK").value, 10);
-  const token = document.getElementById("ingestToken").value;
-
-  const res = await fetch("/api/search", {
-    method: "POST",
-    headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
-    body: JSON.stringify({ query: q, topK: k })
+async function callVerify(url) {
+  const token = $('token').value.trim();
+  const r = await fetch('/api/tools?action=verify&url=' + encodeURIComponent(url), {
+    method: 'GET',
+    headers: { 'Authorization': 'Bearer ' + token }
   });
-  const data = await res.json();
-
-  const tbody = document.getElementById("searchResults").querySelector("tbody");
-  tbody.innerHTML = "";
-  (data.matches || []).forEach(m => {
-    const row = document.createElement("tr");
-    row.innerHTML = \`
-      <td>\${m.score.toFixed(3)}</td>
-      <td><a href="\${m.url}" target="_blank" style="color:#fff">\${m.url}</a></td>
-      <td>\${cleanSnippet(m.content)}</td>
-    \`;
-    tbody.appendChild(row);
-  });
-  document.getElementById("searchRaw").textContent = JSON.stringify(data, null, 2);
+  let body;
+  try { body = await r.json(); } catch { body = { error:'verify_non_json', raw_status:r.status }; }
+  return { ok: r.ok && body?.ok, status: r.status, body };
 }
+
+async function callSearch(query, topK) {
+  const token = $('token').value.trim();
+  const r = await fetch('/api/tools?action=search', {
+    method: 'POST',
+    headers: { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+    body: JSON.stringify({ query, topK })
+  });
+  let body;
+  try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
+  return body;
+}
+
+// --- Snippet helpers (improved)
+function cleanSnippet(s) {
+  if (!s) return '';
+  // remove markdown image/link, then long URLs
+  s = s.replace(/!\[[^\]]*\]\([^)]+\)/g, ' ');
+  s = s.replace(/\[[^\]]*\]\([^)]+\)/g, ' ');
+  s = s.replace(/https?:\/\/\S+/g, (m)=> m.length>40 ? ' ' : m);
+  // collapse whitespace
+  return s.replace(/\s+/g,' ').trim();
+}
+function makeSentenceSnippet(text) {
+  const t = cleanSnippet(text);
+  if (!t) return '';
+  // split on sentence boundaries
+  const sentences = t.split(/(?<=[.!?])\s+/).filter(Boolean);
+  if (sentences.length === 0) return t;
+  // choose first non-trivial sentence
+  let first = sentences[0];
+  let second = sentences[1] || '';
+  // prefer a first sentence with some substance
+  if (first.length < 60 && second) {
+    // join first two full sentences (no mid-word cuts)
+    return (first + ' ' + second).trim();
+  }
+  return first.trim();
+}
+
+// --- Single test
+$('test').onclick = async () => {
+  const url = $('single').value.trim();
+  if (!url) return;
+  log(`[${new Date().toLocaleTimeString()}] Single test → ${url}`);
+  const { ok, status, body } = await callIngest(url);
+  $('debug').textContent = JSON.stringify(body, null, 2);
+  if (ok) {
+    log(`✓ ${url} → { ok: true, id:${body.id}, len:${body.len}, chunks:${body.chunks} }`);
+    const tr = addRow(url, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
+    verifyAndAnnotate(url, tr);
+    bumpSucc();
+  } else {
+    const msg = (body && (body.detail || body.error)) || '(unknown)';
+    log(`✗ ${url} → server_error: ${msg} (status ${status})`);
+    addRow(url, `FAILED ${msg}`, false);
+    bumpFail();
+  }
+};
+
+// --- Counters
+function bumpSucc(){ const n = Number($('succ').textContent||'0')+1; $('succ').textContent = String(n); }
+function bumpFail(){ const n = Number($('fail').textContent||'0')+1; $('fail').textContent = String(n); }
+
+// --- Table rows with green/red result text; returns <tr>
+function addRow(url, result, isOK) {
+  const tr = document.createElement('tr');
+  const cls = isOK ? 'ok' : 'bad';
+  tr.innerHTML = `<td></td><td class="mono"><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></td><td class="mono ${cls}">${result}</td>`;
+  $('rows').appendChild(tr);
+  [...$('rows').children].forEach((r,i)=>r.children[0].textContent=i+1);
+  return tr;
+}
+
+// --- Append DB verify info to the result cell
+async function verifyAndAnnotate(url, tr) {
+  const td = tr.children[2];
+  td.innerHTML += ` <span class="muted">| verifying…</span>`;
+  const { ok, body } = await callVerify(url);
+  if (ok) {
+    td.innerHTML += ` <span class="muted">| DB: chunks=${body.chunks} len=${body.total_len}</span>`;
+    log(`DB verify ✓ ${url} → chunks=${body.chunks} len=${body.total_len}`);
+  } else {
+    const msg = (body && (body.detail || body.error)) || 'verify_failed';
+    td.innerHTML += ` <span class="muted">| DB verify failed: ${msg}</span>`;
+    log(`DB verify ✗ ${url} → ${msg}`);
+  }
+}
+
+// --- Crawl & ingest (concurrency + delay)
+let stopFlag = false;
+$('stop').onclick = () => { stopFlag = true; $('stop').disabled = true; };
+$('crawl').onclick = async () => {
+  stopFlag = false; $('stop').disabled = false;
+  const urls = $('paste').value.split('\\n').map(s=>s.trim()).filter(Boolean);
+  $('loaded').textContent = urls.length;
+  $('succ').textContent = '0';
+  $('fail').textContent = '0';
+
+  const conc = Math.max(1, parseInt($('concurrency').value||'1',10));
+  const delay = Math.max(0, parseInt($('delay').value||'0',10));
+
+  const q = urls.slice();
+  const runners = Array.from({length:conc}, ()=> (async function run(){
+    while (!stopFlag && q.length) {
+      const u = q.shift();
+      const { ok, status, body } = await callIngest(u);
+      if (ok) {
+        const tr = addRow(u, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
+        verifyAndAnnotate(u, tr);
+        bumpSucc();
+      } else {
+        const msg = (body && (body.detail || body.error)) || '(unknown)';
+        addRow(u, `FAILED ${msg}`, false);
+        bumpFail();
+      }
+      if (delay) await new Promise(r=>setTimeout(r, delay));
+    }
+  })());
+  await Promise.all(runners);
+  if (stopFlag) $('stopped').textContent = '1';
+  $('stop').disabled = true;
+};
+
+// --- Search tester
+$('runSearch').onclick = async () => {
+  const query = $('query').value.trim();
+  const topK = Math.max(1, Math.min(32, parseInt($('topk').value || '8', 10)));
+  $('srows').innerHTML = '';
+  $('sraw').textContent = '';
+  if (!query) return;
+
+  const body = await callSearch(query, topK);
+  $('sraw').textContent = JSON.stringify(body, null, 2);
+
+  const matches = (body && body.matches) || [];
+  for (const m of matches) {
+    const snip = makeSentenceSnippet(m.content);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono score">${(m.score ?? 0).toFixed(3)}</td>
+      <td class="mono"><a href="${m.url}" target="_blank" rel="noopener noreferrer">${m.url}</a></td>
+      <td class="mono">${snip}</td>
+    `;
+    $('srows').appendChild(tr);
+  }
+};
+
+$('single').value = 'https://www.alanranger.com/photography-workshops';
 </script>
 </body>
 </html>
