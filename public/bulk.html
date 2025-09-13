@@ -1,239 +1,140 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Upload URL List to Train AI Bot</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>
-  :root{--bg:#0f1623;--card:#131c2b;--muted:#96a0b5;--ok:#1db954;--err:#ff6b6b;--ink:#e8eefc}
-  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif}
-  .wrap{max-width:1060px;margin:42px auto;padding:0 20px}
-  h1{font-size:22px;margin:0 0 18px}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .card{background:var(--card);border-radius:10px;padding:18px}
-  .label{color:var(--muted);font-size:12px;margin-bottom:6px}
-  input[type=text],input[type=number],textarea,select{width:100%;border:1px solid #22314c;background:#0b1320;color:var(--ink);border-radius:8px;padding:10px 12px}
-  textarea{min-height:120px;resize:vertical}
-  button{border:0;background:#2764ff;color:white;border-radius:8px;padding:10px 14px;cursor:pointer}
-  button.secondary{background:#37455f}
-  .grid{display:grid;grid-template-columns:60px 1fr 220px;gap:10px}
-  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;vertical-align:middle}
-  .ok{background:#153a26;color:#7df2a0}.err{background:#3a1b1b;color:#ffb3b3}
-  pre.log{white-space:pre-wrap;background:#0b1320;border:1px solid #1f2a42;border-radius:8px;padding:12px;max-height:240px;overflow:auto}
-  table{width:100%;border-collapse:collapse}
-  th,td{border-bottom:1px solid #1f2a42;padding:10px 8px;text-align:left}
-  .muted{color:var(--muted)}
-</style>
+  <meta charset="utf-8" />
+  <title>Upload URL List to Train AI Bot — Single URL Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#0f1420; color:#e7ebf3; margin:0; padding:24px; }
+    h1 { font-size: 20px; margin: 0 0 16px; }
+    .card { background:#131a2a; border:1px solid #1f2940; border-radius:10px; padding:16px; margin-bottom:16px; }
+    label { display:block; font-size:12px; opacity:.85; margin-bottom:6px; }
+    input { width:100%; background:#0c111b; border:1px solid #21304a; color:#e7ebf3; border-radius:8px; padding:10px; outline:none; }
+    input:focus { border-color:#3466f6; }
+    button { background:#3466f6; color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    #debug { height:160px; overflow:auto; white-space:pre-wrap; background:#0c111b; border:1px solid #21304a; border-radius:8px; padding:10px; }
+    table { width:100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align:left; border-bottom:1px solid #1f2940; padding:8px; }
+    .ok { color:#4cd964; }
+    .err { color:#ff5757; }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Upload URL List to Train AI Bot</h1>
-
-  <div class="row">
-    <!-- Left column -->
-    <div class="card">
-      <div class="label">INGEST TOKEN (BEARER)</div>
-      <input id="token" type="text" placeholder="Bearer token" value="">
-      <div class="muted" style="margin-top:6px">Saved only in your browser. Sent as <code>Authorization: Bearer …</code></div>
-
-      <div style="height:14px"></div>
-
-      <div class="label">TEST A SINGLE URL</div>
-      <div class="grid">
-        <div></div>
-        <input id="singleUrl" type="text" placeholder="https://example.com/page" />
-        <div style="display:flex;gap:8px">
-          <button id="btnTest">Test Single URL</button>
-        </div>
-      </div>
-
-      <div style="height:14px"></div>
-
-      <details>
-        <summary class="label">CSV format</summary>
-        <div class="muted" style="margin-top:8px">
-          CSV must include a column named <code>url</code>. Optional column <code>title</code> will be ignored by the API.
-        </div>
-      </details>
-
-      <div style="height:14px"></div>
-
-      <div class="label">Debug console <span class="muted">(what the client sees)</span></div>
-      <pre id="log" class="log"></pre>
-    </div>
-
-    <!-- Right column -->
-    <div class="card">
-      <div class="label">CSV file</div>
-      <input id="csv" type="file" accept=".csv" />
-
-      <div style="height:14px"></div>
-
-      <div class="label">PASTE URLS (ONE PER LINE) — OPTIONAL</div>
-      <textarea id="paste" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
-
-      <div style="height:14px"></div>
-
-      <div class="row" style="grid-template-columns:1fr 1fr">
-        <div>
-          <div class="label">CONCURRENCY</div>
-          <input id="concurrency" type="number" min="1" max="10" value="3" />
-        </div>
-        <div>
-          <div class="label">DELAY BETWEEN REQUESTS (MS)</div>
-          <input id="delay" type="number" min="0" step="50" value="400" />
-        </div>
-      </div>
-
-      <div style="height:14px"></div>
-
-      <div style="display:flex;gap:10px">
-        <button id="btnRun">Crawl &amp; Ingest</button>
-        <button id="btnStop" class="secondary">Stop</button>
-      </div>
-    </div>
-  </div>
-
-  <div style="height:16px"></div>
+  <h1>Upload URL List to Train AI Bot — Single URL Test</h1>
 
   <div class="card">
-    <div class="label">Results</div>
-    <table id="table">
+    <div class="row">
+      <div>
+        <label for="token">Ingest Token (Bearer)</label>
+        <input id="token" placeholder="paste your token…" />
+      </div>
+      <div>
+        <label for="testUrl">Test a Single URL</label>
+        <input id="testUrl" placeholder="https://example.com/page" />
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <button id="btnTest">Test Single URL</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>Debug console (what the client sees)</label>
+    <div id="debug" class="mono"></div>
+  </div>
+
+  <div class="card">
+    <table class="mono">
       <thead>
-        <tr><th>#</th><th>URL</th><th>Result</th></tr>
+        <tr>
+          <th style="width: 44px;">#</th>
+          <th>URL</th>
+          <th>Result</th>
+        </tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="rows"></tbody>
     </table>
   </div>
-</div>
 
-<script>
-(function() {
-  const $ = (id) => document.getElementById(id);
-  const log = (msg) => { const el = $("log"); el.textContent += msg + "\\n"; el.scrollTop = el.scrollHeight; };
+  <script>
+    const elToken = document.getElementById('token');
+    const elUrl   = document.getElementById('testUrl');
+    const elBtn   = document.getElementById('btnTest');
+    const elDbg   = document.getElementById('debug');
+    const elRows  = document.getElementById('rows');
 
-  // Persist token locally
-  (function restoreToken() {
-    const v = localStorage.getItem("INGEST_TOKEN") || "";
-    $("token").value = v;
-  })();
-  $("token").addEventListener("input", (e) => {
-    localStorage.setItem("INGEST_TOKEN", e.target.value.trim());
-  });
+    // remember token between sessions (local only)
+    const KEY = 'ingest_token';
+    elToken.value = localStorage.getItem(KEY) || '';
+    elToken.addEventListener('input', () => localStorage.setItem(KEY, elToken.value));
 
-  function toLines(text) {
-    return text.split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
-  }
-
-  async function callIngest(url, token) {
-    const endpoint = "/api/ingest-embed-replace";
-    const headers = {
-      "content-type": "application/json",
-      "authorization": "Bearer " + token
-    };
-
-    // We capture text always, then JSON.parse fallback.
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ url })
-    });
-
-    const raw = await res.text();
-    let data;
-    try { data = JSON.parse(raw); } catch { data = { raw }; }
-
-    if (!res.ok || data.error) {
-      const status = res.status;
-      const err = data.error || "server_error";
-      const detail = data.detail || data.raw || "";
-      throw { status, error: err, detail };
+    function log(line, cls="") {
+      const span = document.createElement('div');
+      if (cls) span.className = cls;
+      span.textContent = line;
+      elDbg.appendChild(span);
+      elDbg.scrollTop = elDbg.scrollHeight;
     }
-    return data; // { ok:true, url, chunks, ...}
-  }
-
-  function addRow(i, url, html) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = \`<td class="muted">\${i}</td><td>\${url}</td><td>\${html}</td>\`;
-    $("table").querySelector("tbody").appendChild(tr);
-  }
-
-  async function testSingle() {
-    const token = $("token").value.trim();
-    const url = $("singleUrl").value.trim();
-    $("table").querySelector("tbody").innerHTML = "";
-    if (!token) { log("✗ Please enter an ingest token."); return; }
-    if (!url) { log("✗ Please enter a URL."); return; }
-
-    log(\`Single test → \${url}\`);
-    try {
-      const out = await callIngest(url, token);
-      log("✓ " + url + " → ok: chunks=" + out.chunks);
-      addRow(1, url, \`<span class="badge ok">OK</span> chunks: \${out.chunks}\`);
-    } catch (e) {
-      const pretty = JSON.stringify(e, null, 2);
-      log("✗ " + url + " → " + pretty);
-      addRow(1, url, \`<span class="badge err">FAILED</span> \${e.error || ""}: \${(e.detail || "").toString().slice(0,200)}\`);
+    function addRow(idx, url, html) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${idx}</td><td>${escapeHtml(url)}</td><td>${html}</td>`;
+      elRows.prepend(tr);
     }
-  }
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
 
-  async function runBatch() {
-    const token = $("token").value.trim();
-    const conc = Math.max(1, Number($("concurrency").value || 3));
-    const delay = Math.max(0, Number($("delay").value || 400));
+    async function testSingle() {
+      const token = elToken.value.trim();
+      const url = elUrl.value.trim();
+      if (!url) { alert('Provide a URL'); return; }
 
-    const urls = new Set();
-    // add pasted list
-    toLines($("paste").value).forEach(u => urls.add(u));
+      let rowIdx = elRows.children.length + 1;
 
-    // add from CSV (optional)
-    const file = $("csv").files[0];
-    if (file) {
-      const text = await file.text();
-      // very forgiving CSV: look for a column named url
-      const lines = toLines(text);
-      const header = lines.shift();
-      const cols = header.split(",").map(s => s.trim().toLowerCase());
-      const idx = cols.indexOf("url");
-      if (idx >= 0) {
-        for (const line of lines) {
-          const parts = line.split(",");
-          if (parts[idx]) urls.add(parts[idx].trim());
+      log(`Single test → ${url}`);
+      elBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/ingest-embed-replace', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+          },
+          body: JSON.stringify({ url })
+        });
+
+        let data;
+        try { data = await res.json(); }
+        catch { data = { error: 'non_json_response' }; }
+
+        if (!res.ok) {
+          const details = JSON.stringify(data, null, 2);
+          log(`✖ ${url} → ${details}`, 'err');
+          addRow(rowIdx, url, `<span class="err">${escapeHtml(details)}</span>`);
+          return;
         }
+
+        const details = JSON.stringify(data, null, 2);
+        log(`✔ ${url} → ${details}`, 'ok');
+        addRow(rowIdx, url,
+          `<span class="ok">OK</span> id=${data.id ?? '?'} len=${data.len ?? '?'}`
+        );
+
+      } catch (err) {
+        const details = String(err?.message || err);
+        log(`✖ ${url} → ${details}`, 'err');
+        addRow(rowIdx, url, `<span class="err">${escapeHtml(details)}</span>`);
+      } finally {
+        elBtn.disabled = false;
       }
     }
 
-    const list = [...urls];
-    $("table").querySelector("tbody").innerHTML = "";
-    if (!token) { log("✗ Please enter an ingest token."); return; }
-    if (list.length === 0) { log("✗ No URLs provided."); return; }
-
-    let i = 0;
-    log(\`Starting ingest: rows=\${list.length}, concurrency=\${conc}, delay=\${delay}ms\`);
-    async function worker(id) {
-      while (i < list.length) {
-        const j = i++;
-        const url = list[j];
-        try {
-          const out = await callIngest(url, token);
-          log("✓ " + url + " → chunks=" + out.chunks);
-          addRow(j+1, url, \`<span class="badge ok">OK</span> chunks: \${out.chunks}\`);
-        } catch (e) {
-          const pretty = JSON.stringify(e, null, 2);
-          log("✗ " + url + " → " + pretty);
-          addRow(j+1, url, \`<span class="badge err">FAILED</span> \${e.error || ""}: \${(e.detail || "").toString().slice(0,200)}\`);
-        }
-        if (delay) await new Promise(r => setTimeout(r, delay));
-      }
-    }
-    await Promise.all([...Array(conc)].map((_,k) => worker(k)));
-    log("Ingest complete.");
-  }
-
-  $("btnTest").addEventListener("click", testSingle);
-  $("btnRun").addEventListener("click", runBatch);
-  $("btnStop").addEventListener("click", () => { log("Stop requested (not implemented)."); });
-})();
-</script>
+    elBtn.addEventListener('click', testSingle);
+  </script>
 </body>
 </html>
