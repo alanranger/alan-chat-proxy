@@ -1,188 +1,307 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Upload URL List to Train AI Bot</title>
   <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: #0d1117;
-      color: #e6edf3;
-      margin: 0;
-      padding: 20px;
+    :root{
+      --bg:#0d1117; --panel:#161b22; --text:#e6edf3; --muted:#8b949e; --line:#30363d;
+      --green:#2ea043; --red:#da3633; --blue:#388bfd; --amber:#d29922;
     }
-    h1 { font-size: 1.5rem; margin-bottom: 1rem; }
-    button {
-      padding: 6px 12px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 600;
+    html,body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;margin:0;}
+    .wrap{max-width:1100px;margin:24px auto;padding:0 16px;}
+    h1{font-size:20px;margin:0 0 14px 0}
+    section{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin:14px 0;padding:14px}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input[type="text"], input[type="number"], textarea{
+      width:100%;background:#0b1320;color:var(--text);border:1px solid var(--line);
+      border-radius:6px;padding:8px 10px;outline:none
     }
-    .btn-green { background: #2ea043; color: #fff; }
-    .btn-red { background: #da3633; color: #fff; }
-    .btn-blue { background: #388bfd; color: #fff; }
-    .counter { font-weight: 600; margin-left: 4px; }
-    .ok { color: #2ea043; }
-    .fail { color: #da3633; }
-    .stopped { color: #8b949e; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { padding: 8px; border-bottom: 1px solid #30363d; }
-    th { text-align: left; color: #8b949e; }
-    .debug {
-      background: #161b22;
-      padding: 8px;
-      margin-top: 12px;
-      font-family: monospace;
-      white-space: pre-wrap;
-      border-radius: 4px;
+    input[type="number"]{width:80px}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .grow{flex:1}
+    small{color:var(--muted)}
+    button{
+      appearance:none;border:0;border-radius:6px;padding:7px 12px;font-weight:600;color:#fff;cursor:pointer
     }
+    .btn-green{background:var(--green)}
+    .btn-red{background:var(--red)}
+    .btn-blue{background:var(--blue)}
+    .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+    .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;margin-right:6px}
+    .ok{background:rgba(46,160,67,.15);color:var(--green)}
+    .fail{background:rgba(218,54,51,.15);color:var(--red)}
+    .stopped{background:rgba(139,148,158,.15);color:var(--muted)}
+    .muted{color:var(--muted)}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{color:var(--muted);text-align:left}
+    .debug{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0b1320;border:1px solid var(--line);
+      border-radius:6px;padding:10px;white-space:pre-wrap;max-height:220px;overflow:auto}
+    details{margin-top:8px}
+    .chip{
+      display:inline-flex;align-items:center;gap:6px;background:#0b1320;border:1px solid var(--line);
+      padding:6px 10px;border-radius:999px;margin:4px 6px 0 0;font-size:12px
+    }
+    .chip a{color:#9ccaff;text-decoration:none;max-width:560px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;display:inline-block}
+    .answer{background:#0b1320;border:1px solid var(--line);border-radius:8px;padding:12px}
   </style>
 </head>
 <body>
+<div class="wrap">
   <h1>Upload URL List to Train AI Bot</h1>
 
-  <div>
-    <label>INGEST TOKEN (BEARER)</label><br/>
-    <input id="bearer" type="text" placeholder="Bearer token" style="width: 40%">
-    <input id="csvFile" type="file" accept=".csv"/>
-    <br/><small>Saved locally (browser only). Sent as Authorization: Bearer …</small>
-  </div>
-  <br/>
+  <!-- Top controls -->
+  <section>
+    <div class="row">
+      <div class="grow">
+        <label>INGEST TOKEN (BEARER)</label>
+        <input id="bearer" type="text" placeholder="Bearer token">
+        <small>Saved locally (browser only). Sent as <code>Authorization: Bearer …</code></small>
+      </div>
+      <div>
+        <label>CSV FILE</label>
+        <input id="csvFile" type="file" accept=".csv">
+        <small>CSV must include a <code>url</code> column (optional <code>title</code>).</small>
+      </div>
+    </div>
+  </section>
 
-  <div>
-    <label>Test a Single URL</label><br/>
-    <input id="singleUrl" type="text" placeholder="https://example.com/page" style="width:60%">
-    <button class="btn-blue" onclick="testSingle()">Test Single URL</button>
-  </div>
-  <br/>
+  <!-- Single URL -->
+  <section>
+    <label>Test a Single URL</label>
+    <div class="row">
+      <input id="singleUrl" class="grow" type="text" placeholder="https://example.com/page">
+      <button class="btn-blue" onclick="testSingle()">Test Single URL</button>
+    </div>
+  </section>
 
-  <div>
-    <label>Paste URLs (one per line) — OPTIONAL</label><br/>
-    <textarea id="urlList" rows="4" style="width:60%" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
-    <br/><br/>
-    <button id="crawlBtn" class="btn-green" onclick="crawl()">Crawl & Ingest</button>
-    <button class="btn-red" onclick="stop()">Stop</button>
-    <span class="counter ok">Success: <span id="success">0</span></span>
-    <span class="counter fail">Failed: <span id="failed">0</span></span>
-    <span class="counter stopped">Stopped: <span id="stopped">0</span></span>
-    <span class="counter">Loaded <span id="loaded">0</span> rows</span>
-  </div>
+  <!-- Paste URLs + controls -->
+  <section>
+    <label>Paste URLs (one per line) — OPTIONAL</label>
+    <textarea id="urlList" rows="5" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
 
-  <div class="debug" id="debug"></div>
+    <div class="row" style="margin-top:10px">
+      <button id="btnIngest" class="btn-green" onclick="crawlAndIngest()">Crawl &amp; Ingest</button>
+      <button class="btn-red" onclick="stopQueue()">Stop</button>
 
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>URL</th>
-        <th>Result (includes DB verify)</th>
-      </tr>
-    </thead>
-    <tbody id="results"></tbody>
-  </table>
+      <span class="pill ok">Success: <span id="cntSuccess">0</span></span>
+      <span class="pill fail">Failed: <span id="cntFailed">0</span></span>
+      <span class="pill stopped">Stopped: <span id="cntStopped">0</span></span>
+      <span class="muted">Loaded <span id="cntLoaded">0</span> rows</span>
+    </div>
 
-  <h3>AI Search Tester</h3>
-  <input id="searchQuery" type="text" placeholder="e.g. photography workshops in Coventry" style="width:60%">
-  <input id="topk" type="number" value="8" style="width:60px">
-  <button class="btn-blue" onclick="search()">Run Search</button>
-  <pre class="debug" id="searchRaw" style="display:none"></pre>
-  <div id="searchResults"></div>
+    <div id="debug" class="debug" style="margin-top:10px"></div>
 
-  <h3>AI Bot (RAG)</h3>
-  <input id="askQuery" type="text" placeholder="Ask about workshops, tips, ..." style="width:60%">
-  <input id="askTopk" type="number" value="8" style="width:60px">
-  <button class="btn-blue" onclick="ask()">Ask</button>
-  <div id="askResult" class="debug"></div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:56px">#</th>
+          <th>URL</th>
+          <th>Result (includes DB verify)</th>
+        </tr>
+      </thead>
+      <tbody id="results"></tbody>
+    </table>
+  </section>
 
-  <script>
-    const debug = msg => {
-      const el = document.getElementById('debug');
-      el.textContent += msg + "\\n";
-      el.scrollTop = el.scrollHeight;
-    };
+  <!-- Search tester -->
+  <section>
+    <h3 style="margin:0 0 10px">AI Search Tester</h3>
+    <div class="row">
+      <input id="searchQuery" class="grow" type="text" placeholder="e.g. photography workshops in Coventry">
+      <input id="topk" type="number" value="8">
+      <button class="btn-blue" onclick="runSearch()">Run Search</button>
+    </div>
+    <details>
+      <summary class="muted">Search Raw Response</summary>
+      <pre id="searchRaw" class="debug"></pre>
+    </details>
+    <div id="searchTable"></div>
+  </section>
 
-    async function testSingle() {
-      const url = document.getElementById('singleUrl').value;
-      debug(`[Single test] ${url}`);
-      const r = await fetch('/api/ingest-embed-replace', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-                   Authorization: 'Bearer ' + document.getElementById('bearer').value },
-        body: JSON.stringify({ url })
-      });
+  <!-- RAG tester -->
+  <section>
+    <h3 style="margin:0 0 10px">AI Bot (RAG)</h3>
+    <div class="row">
+      <input id="askQuery" class="grow" type="text" placeholder="Ask about workshops, tips, ..." />
+      <input id="askTopk" type="number" value="8">
+      <button class="btn-blue" onclick="askBot()">Ask</button>
+    </div>
+    <div id="askOut" class="answer" style="margin-top:10px;display:none"></div>
+    <div id="askCites" style="margin-top:6px"></div>
+    <small class="muted">Answers cite sources; only your indexed pages are used.</small>
+  </section>
+</div>
+
+<script>
+/* ========================= Utilities & State ========================= */
+const $ = sel => document.querySelector(sel);
+const debug = (msg) => {
+  const el = $("#debug");
+  el.textContent += (typeof msg === "string" ? msg : JSON.stringify(msg)) + "\n";
+  el.scrollTop = el.scrollHeight;
+};
+const headers = () => {
+  const b = $("#bearer").value.trim();
+  return b ? { "Content-Type": "application/json", "Authorization": "Bearer " + b } :
+             { "Content-Type": "application/json" };
+};
+
+// persist bearer locally
+const saved = localStorage.getItem("ingest_bearer");
+if (saved) $("#bearer").value = saved;
+$("#bearer").addEventListener("input", () => {
+  localStorage.setItem("ingest_bearer", $("#bearer").value.trim());
+});
+
+// CSV loader (expects "url" column)
+let csvRows = [];
+$("#csvFile").addEventListener("change", async (e) => {
+  csvRows = [];
+  const f = e.target.files?.[0];
+  if (!f) { $("#cntLoaded").textContent = "0"; return; }
+  const text = await f.text();
+  const lines = text.split(/\r?\n/).filter(Boolean);
+  if (!lines.length) { $("#cntLoaded").textContent = "0"; return; }
+  const hdr = lines[0].split(",").map(s => s.trim().replace(/^"|"$/g,""));
+  const urlIdx = hdr.findIndex(h => h.toLowerCase() === "url");
+  if (urlIdx === -1) { alert("CSV must include a 'url' column"); $("#cntLoaded").textContent = "0"; return; }
+  for (let i=1;i<lines.length;i++){
+    const cols = splitCsvLine(lines[i]);
+    const url = (cols[urlIdx]||"").trim();
+    if (url) csvRows.push(url);
+  }
+  $("#cntLoaded").textContent = csvRows.length.toString();
+  debug(`CSV loaded: ${csvRows.length} URL(s) found in "url" column`);
+});
+
+function splitCsvLine(line){
+  // simple CSV splitter handling quoted commas
+  const out = []; let cur = ""; let q=false;
+  for (let i=0;i<line.length;i++){
+    const c=line[i];
+    if (c === '"' ){ if (line[i+1] === '"'){ cur+='"'; i++; } else q=!q; }
+    else if (c === ',' && !q){ out.push(cur); cur=""; }
+    else cur+=c;
+  }
+  out.push(cur);
+  return out;
+}
+
+/* ========================= Single Test ========================= */
+async function testSingle(){
+  const url = $("#singleUrl").value.trim();
+  if (!url) return;
+  debug(`[${ts()}] Single test → ${url}`);
+  try{
+    const r = await fetch("/api/ingest-embed-replace",{
+      method:"POST",headers:headers(),body:JSON.stringify({url})
+    });
+    const j = await r.json();
+    debug(j);
+  }catch(err){ debug(err.toString()); }
+}
+
+/* ========================= Crawl & Ingest (with DB verify) ========================= */
+let stopFlag=false;
+function stopQueue(){ stopFlag=true; $("#cntStopped").textContent = (+$("#cntStopped").textContent+1).toString(); }
+
+async function crawlAndIngest(){
+  stopFlag=false;
+  $("#cntSuccess").textContent="0";
+  $("#cntFailed").textContent="0";
+  // build list: textarea lines + CSV rows (de-duplicated)
+  const textLines = $("#urlList").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const list = Array.from(new Set([ ...textLines, ...csvRows ]));
+
+  const tbody = $("#results"); tbody.innerHTML="";
+  let idx=1;
+  for (const url of list){
+    if (stopFlag) break;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${idx++}</td><td><a href="${url}" target="_blank" rel="noreferrer noopener">${url}</a></td><td>Fetching…</td>`;
+    tbody.appendChild(tr);
+
+    try{
+      // 1) ingest
+      const r = await fetch("/api/ingest-embed-replace",{method:"POST",headers:headers(),body:JSON.stringify({url})});
       const j = await r.json();
-      debug(JSON.stringify(j,null,2));
-    }
 
-    async function crawl() {
-      const urls = document.getElementById('urlList').value.trim().split(/\\n+/);
-      const results = document.getElementById('results');
-      results.innerHTML = '';
-      let idx = 1;
-      for (let url of urls) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${idx++}</td><td>${url}</td><td>Processing…</td>`;
-        results.appendChild(tr);
-        try {
-          const r = await fetch('/api/ingest-embed-replace', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json',
-                       Authorization: 'Bearer ' + document.getElementById('bearer').value },
-            body: JSON.stringify({ url })
-          });
-          const j = await r.json();
-          if (j?.ok) {
-            // Verify against DB
-            const vr = await fetch('/api/db-verify?url=' + encodeURIComponent(url));
-            const vj = await vr.json();
-            if (vj?.ok) {
-              tr.cells[2].innerHTML = `OK id=${j.id} len=${j.len} chunks=${j.chunks} | DB: chunks=${vj.chunks} len=${vj.len}`;
-              tr.cells[2].classList.add('ok');
-            } else {
-              tr.cells[2].innerHTML = `OK id=${j.id} len=${j.len} chunks=${j.chunks} | DB verify failed`;
-              tr.cells[2].classList.add('fail');
-            }
-            document.getElementById('success').textContent++;
-          } else {
-            tr.cells[2].textContent = 'FAILED';
-            tr.cells[2].classList.add('fail');
-            document.getElementById('failed').textContent++;
-          }
-        } catch (e) {
-          tr.cells[2].textContent = 'ERROR';
-          tr.cells[2].classList.add('fail');
-        }
+      if (!j || !j.ok){
+        tr.cells[2].innerHTML = `<span class="fail pill">FAILED</span> ${escapeHtml(JSON.stringify(j))}`;
+        $("#cntFailed").textContent = (+$("#cntFailed").textContent+1).toString();
+        continue;
       }
-    }
 
-    async function search() {
-      const q = document.getElementById('searchQuery').value;
-      const k = document.getElementById('topk').value;
-      const r = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q, topk: parseInt(k) })
-      });
-      const j = await r.json();
-      document.getElementById('searchRaw').style.display = 'block';
-      document.getElementById('searchRaw').textContent = JSON.stringify(j,null,2);
-    }
+      // 2) DB verify
+      tr.cells[2].innerHTML = `OK id=${j.id} len=${j.len} chunks=${j.chunks} | <span class="muted">verifying…</span>`;
+      const rv = await fetch(`/api/db-verify?url=${encodeURIComponent(url)}`);
+      const v = await rv.json();
 
-    async function ask() {
-      const q = document.getElementById('askQuery').value;
-      const k = document.getElementById('askTopk').value;
-      const r = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q, topk: parseInt(k) })
-      });
-      const j = await r.json();
-      document.getElementById('askResult').textContent = JSON.stringify(j,null,2);
+      if (v && v.ok){
+        tr.cells[2].innerHTML = `OK id=${j.id} len=${j.len} chunks=${j.chunks} | <span class="ok">DB: chunks=${v.chunks} len=${v.len}</span>`;
+        $("#cntSuccess").textContent = (+$("#cntSuccess").textContent+1).toString();
+      }else{
+        tr.cells[2].innerHTML = `OK id=${j.id} len=${j.len} chunks=${j.chunks} | <span class="fail">DB verify failed</span>`;
+        $("#cntFailed").textContent = (+$("#cntFailed").textContent+1).toString();
+      }
+    }catch(err){
+      tr.cells[2].innerHTML = `<span class="fail pill">ERROR</span> ${escapeHtml(err.toString())}`;
+      $("#cntFailed").textContent = (+$("#cntFailed").textContent+1).toString();
     }
+  }
+}
 
-    function stop() { debug('Stopped by user.'); }
-  </script>
+/* ========================= Search Tester ========================= */
+async function runSearch(){
+  const query = $("#searchQuery").value.trim(); if (!query) return;
+  const topk = +$("#topk").value || 8;
+  const r = await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,topk})});
+  const j = await r.json();
+  $("#searchRaw").textContent = JSON.stringify(j,null,2);
+
+  // render compact table
+  const rows = (j?.matches||[]).map(m=>{
+    return `<tr>
+      <td style="width:90px">${(m.score??0).toFixed(3)}</td>
+      <td style="width:45%"><a href="${escapeHtml(m.url||'')}" target="_blank" rel="noreferrer noopener">${escapeHtml(m.url||'')}</a></td>
+      <td>${escapeHtml(trimSnippet(m.snippet||''))}</td>
+    </tr>`;
+  }).join("");
+  $("#searchTable").innerHTML = `
+    <table style="margin-top:10px">
+      <thead><tr><th style="width:90px">Score</th><th>URL</th><th>Snippet</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="3" class="muted">No results.</td></tr>'}</tbody>
+    </table>`;
+}
+
+/* ========================= RAG Ask ========================= */
+async function askBot(){
+  const query = $("#askQuery").value.trim(); if (!query) return;
+  const topk = +$("#askTopk").value || 8;
+
+  const r = await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,topk})});
+  const j = await r.json();
+
+  const ans = (j?.answer||"").trim();
+  $("#askOut").style.display = "block";
+  $("#askOut").textContent = ans || "(No answer returned.)";
+
+  const cites = (j?.citations||[]).map(u => `<span class="chip">🔗 <a target="_blank" rel="noreferrer noopener" href="${escapeHtml(u)}">${escapeHtml(u)}</a></span>`).join("");
+  $("#askCites").innerHTML = cites || "";
+}
+
+/* ========================= Helpers ========================= */
+function ts(){ return new Date().toTimeString().slice(0,8); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function trimSnippet(s){
+  // A readable snippet without cutting first word — normalize whitespace then trim to ~420 chars
+  const t = s.replace(/\s+/g,' ').trim();
+  return t.length>420 ? t.slice(0,420).trim()+"…" : t;
+}
+</script>
 </body>
 </html>
