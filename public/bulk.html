@@ -6,7 +6,8 @@
   <title>Upload URL List to Train AI Bot</title>
   <link rel="stylesheet" href="/_next/static/css/081a0fca5a9bd20.css"/>
   <style>
-    body { background:#0b1220; color:#dbe4ff; font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding:24px; }
+    body { background:#0b1220; color:#dbe4ff; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:24px; }
+    .container { max-width:1100px; margin:0 auto; }
     .row { display:flex; gap:16px; }
     .card { background:#0f172a; border:1px solid #1b2540; border-radius:8px; padding:16px; }
     .w-1 { flex:1 } .w-2 { flex:2 } .w-3 { flex:3 }
@@ -14,16 +15,17 @@
     button { background:#2563eb; color:white; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
     button:disabled{opacity:.5; cursor:not-allowed}
     .pill { padding:3px 8px; border-radius:999px; border:1px solid #1b2540; }
-    /* success/fail colors */
-    .ok  { color:#22c55e; }
-    .bad { color:#ef4444; }
-    .mono { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace }
+    .ok  { color:#22c55e; }  /* green */
+    .bad { color:#ef4444; }  /* red   */
+    .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace }
     table { width:100%; border-collapse:collapse; }
     th,td { padding:8px 10px; border-bottom:1px solid #1b2540; }
     pre { white-space:pre-wrap; word-break:break-word; }
+    @media (max-width: 900px) { .row { flex-direction:column; } }
   </style>
 </head>
 <body>
+<div class="container">
 
 <h2>Upload URL List to Train AI Bot</h2>
 
@@ -89,6 +91,8 @@
   </table>
 </div>
 
+</div> <!-- /container -->
+
 <script>
 const $ = (id) => document.getElementById(id);
 const log = (s) => { const c = $('console'); c.textContent += s + "\\n"; c.scrollTop = c.scrollHeight; };
@@ -97,7 +101,6 @@ $('token').value = localStorage.getItem('ingest_token') || '';
 $('token').addEventListener('change', saveToken);
 $('token').addEventListener('input', saveToken);
 
-// --- API call helper
 async function callIngest(url) {
   const token = $('token').value.trim();
   const r = await fetch('/api/ingest-embed-replace', {
@@ -110,7 +113,6 @@ async function callIngest(url) {
   return { ok: r.ok && body?.ok, status: r.status, body };
 }
 
-// --- Single test
 $('test').onclick = async () => {
   const url = $('single').value.trim();
   if (!url) return;
@@ -129,11 +131,9 @@ $('test').onclick = async () => {
   }
 };
 
-// --- Counters
 function bumpSucc(){ const n = Number($('succ').textContent||'0')+1; $('succ').textContent = String(n); }
 function bumpFail(){ const n = Number($('fail').textContent||'0')+1; $('fail').textContent = String(n); }
 
-// --- Table rows with green/red result text
 function addRow(url, result) {
   const tr = document.createElement('tr');
   const isOK = /^OK\b/i.test(result);
@@ -143,7 +143,6 @@ function addRow(url, result) {
   [...$('rows').children].forEach((r,i)=>r.children[0].textContent=i+1);
 }
 
-// --- Crawl & ingest (concurrency + delay)
 let stopFlag = false;
 $('stop').onclick = () => { stopFlag = true; $('stop').disabled = true; };
 $('crawl').onclick = async () => {
@@ -177,7 +176,6 @@ $('crawl').onclick = async () => {
   $('stop').disabled = true;
 };
 
-// preload convenience
 $('single').value = 'https://www.alanranger.com/photography-workshops';
 </script>
 </body>
