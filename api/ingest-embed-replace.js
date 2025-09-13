@@ -1,7 +1,4 @@
-// /api/ingest-embed-replace.js — FULL FILE (ESM) — OpenAI-only embeddings
-// Contract: POST { url } with Authorization: Bearer <INGEST_TOKEN>
-// Returns: { ok, id, len, chunks } or { error, detail, stage }
-// Runtime per project rule:
+// /api/ingest-embed-replace.js — FULL FILE (ESM) — OpenAI-only + robust page fetch
 export const config = { runtime: 'nodejs' };
 
 import crypto from 'node:crypto';
@@ -37,16 +34,37 @@ const sendJSON = (res, status, obj) => {
   res.status(status).send(JSON.stringify(obj));
 };
 
-// ---------- page fetcher ----------
-async function fetchPage(url) {
-  const r = await fetch(url, {
+// ---------- page fetcher (with retry & strong headers) ----------
+const PRIMARY_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const SECONDARY_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+async function fetchOnce(url, ua, referer) {
+  return fetch(url, {
     redirect: 'follow',
     headers: {
-      'user-agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    },
+      'User-Agent': ua,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-GB,en;q=0.9',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Upgrade-Insecure-Requests': '1',
+      ...(referer ? { 'Referer': referer } : {})
+    }
   });
+}
+
+async function fetchPage(url) {
+  const origin = (() => { try { return new URL(url).origin; } catch { return undefined; } })();
+
+  // First attempt
+  let r = await fetchOnce(url, PRIMARY_UA, origin);
+
+  // If blocked, try a second time with alternate UA + explicit referer
+  if ([401, 403, 429, 503].includes(r.status)) {
+    r = await fetchOnce(url, SECONDARY_UA, origin);
+  }
 
   if (!r.ok) {
     const body = await r.text().catch(() => '');
@@ -60,9 +78,9 @@ async function fetchPage(url) {
       { selector: 'nav', format: 'skip' },
       { selector: 'footer', format: 'skip' },
       { selector: 'script', format: 'skip' },
-      { selector: 'style', format: 'skip' },
+      { selector: 'style', format: 'skip' }
     ],
-    wordwrap: false,
+    wordwrap: false
   }).trim();
 
   return { text };
@@ -80,10 +98,9 @@ async function getEmbeddings(inputs) {
       Authorization: `Bearer ${oaKey}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      'user-agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'User-Agent': PRIMARY_UA
     },
-    body,
+    body
   });
 
   const ct = (resp.headers.get('content-type') || '').toLowerCase();
@@ -145,7 +162,7 @@ export default async function handler(req, res) {
       content,
       embedding: embeds[i], // float[] for pgvector
       tokens: Math.ceil(content.length / 4),
-      hash: sha1(`${url}#${i}:${content.slice(0, 128)}`),
+      hash: sha1(`${url}#${i}:${content.slice(0, 128)}`)
     }));
 
     stage = 'upsert';
