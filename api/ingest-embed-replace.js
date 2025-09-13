@@ -1,11 +1,10 @@
-// /api/ingest-embed-replace.js — FULL FILE (ESM) — OpenAI-only + robust page fetch
+// /api/ingest-embed-replace.js — FULL FILE (ESM) — OpenAI-only + robust fetch + REPLACE semantics
 export const config = { runtime: 'nodejs' };
 
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
 
-// ---------- utils ----------
 const need = (k) => {
   const v = process.env[k];
   if (!v || !String(v).trim()) throw new Error(`missing_env:${k}`);
@@ -58,13 +57,8 @@ async function fetchOnce(url, ua, referer) {
 async function fetchPage(url) {
   const origin = (() => { try { return new URL(url).origin; } catch { return undefined; } })();
 
-  // First attempt
   let r = await fetchOnce(url, PRIMARY_UA, origin);
-
-  // If blocked, try a second time with alternate UA + explicit referer
-  if ([401, 403, 429, 503].includes(r.status)) {
-    r = await fetchOnce(url, SECONDARY_UA, origin);
-  }
+  if ([401, 403, 429, 503].includes(r.status)) r = await fetchOnce(url, SECONDARY_UA, origin);
 
   if (!r.ok) {
     const body = await r.text().catch(() => '');
@@ -106,17 +100,11 @@ async function getEmbeddings(inputs) {
   const ct = (resp.headers.get('content-type') || '').toLowerCase();
   const text = await resp.text();
 
-  if (!resp.ok) {
-    throw new Error(`openai_error:${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
-  }
-  if (!ct.includes('application/json')) {
-    throw new Error(`openai_bad_content_type:${ct || '(none)'}:status=${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
-  }
+  if (!resp.ok) throw new Error(`openai_error:${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
+  if (!ct.includes('application/json')) throw new Error(`openai_bad_content_type:${ct || '(none)'}:status=${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
 
   let j;
-  try { j = JSON.parse(text); }
-  catch (e) { throw new Error(`openai_bad_json:${String(e?.message || e)}`); }
-
+  try { j = JSON.parse(text); } catch (e) { throw new Error(`openai_bad_json:${String(e?.message || e)}`); }
   const out = (j?.data || []).map(d => d?.embedding);
   if (!out.length) throw new Error('openai_empty_embeddings');
   if (!Array.isArray(out[0]) || out[0].length !== 1536) throw new Error('openai_bad_embedding_dim');
@@ -131,9 +119,7 @@ export default async function handler(req, res) {
   try {
     stage = 'auth';
     const token = req.headers['authorization']?.trim();
-    if (token !== `Bearer ${need('INGEST_TOKEN')}`) {
-      return sendJSON(res, 401, { error: 'unauthorized', stage });
-    }
+    if (token !== `Bearer ${need('INGEST_TOKEN')}`) return sendJSON(res, 401, { error: 'unauthorized', stage });
 
     stage = 'parse_body';
     const { url } = req.body || {};
@@ -144,9 +130,7 @@ export default async function handler(req, res) {
 
     stage = 'fetch_page';
     const { text } = await fetchPage(url);
-    if (!text || text.length < 10) {
-      return sendJSON(res, 422, { error: 'empty_content', stage });
-    }
+    if (!text || text.length < 10) return sendJSON(res, 422, { error: 'empty_content', stage });
 
     stage = 'chunk';
     const chunks = chunkText(text);
@@ -160,10 +144,15 @@ export default async function handler(req, res) {
       url,
       title: null,
       content,
-      embedding: embeds[i], // float[] for pgvector
+      embedding: embeds[i],
       tokens: Math.ceil(content.length / 4),
       hash: sha1(`${url}#${i}:${content.slice(0, 128)}`)
     }));
+
+    // NEW: replace semantics — delete existing rows for this URL before insert
+    stage = 'delete_old';
+    const { error: delErr } = await supa.from('page_chunks').delete().eq('url', url);
+    if (delErr) return sendJSON(res, 500, { error: 'supabase_delete_failed', detail: delErr.message || delErr, stage });
 
     stage = 'upsert';
     const { data, error } = await supa
@@ -172,9 +161,7 @@ export default async function handler(req, res) {
       .select('id')
       .order('id', { ascending: false });
 
-    if (error) {
-      return sendJSON(res, 500, { error: 'supabase_upsert_failed', detail: error.message || error, stage });
-    }
+    if (error) return sendJSON(res, 500, { error: 'supabase_upsert_failed', detail: error.message || error, stage });
 
     stage = 'done';
     const firstId = data?.[0]?.id ?? null;
