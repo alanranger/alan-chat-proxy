@@ -5,39 +5,78 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Upload URL List to Train AI Bot</title>
 <style>
+  /* ===== Theme ===== */
   :root{
-    --bg:#0b1220; --panel:#0f172a; --ink:#dbe4ff; --muted:#94a3b8; --line:#1b2540; --btn:#2563eb;
-  }
-  /* --- Base --- */
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
-  a{color:#93c5fd;text-decoration:none} a:hover{text-decoration:underline}
+    --bg:#0b1220;         /* page background */
+    --panel:#0f172a;      /* cards */
+    --ink:#e5edff;        /* main text */
+    --muted:#94a3b8;      /* secondary text */
+    --line:#1b2540;       /* borders */
 
-  /* <<< ONLY CHANGE THAT MATTERS: bring back fixed-width admin canvas >>> */
+    --blue:#3b82f6;       /* primary actions */
+    --blue-700:#2563eb;
+    --green:#16a34a;      /* success */
+    --green-700:#15803d;
+    --red:#ef4444;        /* danger/fail */
+    --red-700:#dc2626;
+    --gray:#64748b;       /* neutral/stopped */
+    --gray-700:#475569;
+    --amber:#f59e0b;      /* warn */
+  }
+
+  /* ===== Base ===== */
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif
+  }
+  a{color:#93c5fd;text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* Fixed width admin canvas (as before) */
   .container{max-width:980px;margin:24px auto;padding:0 16px}
 
   h2{margin:0 0 16px 0;font-weight:600}
+  h3{margin:0 0 8px 0;font-weight:600}
 
-  .row{display:flex;gap:16px}
-  .wrap{display:block}
+  .row{display:flex;gap:12px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:16px}
   .w-1{flex:1} .w-2{flex:2} .w-3{flex:3}
+  .wrap{display:block}
 
-  input,textarea{width:100%;background:#0b1426;border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:6px}
+  input,textarea{
+    width:100%;background:#0b1426;border:1px solid var(--line);color:var(--ink);
+    padding:10px 12px;border-radius:6px
+  }
   textarea{resize:vertical}
-  button{background:var(--btn);color:#fff;border:none;padding:10px 14px;border-radius:6px;cursor:pointer}
-  button:disabled{opacity:.5;cursor:not-allowed}
 
-  .pill{padding:3px 8px;border-radius:999px;border:1px solid var(--line)}
+  /* ===== Buttons with colors restored ===== */
+  .btn{border:none;color:#fff;padding:10px 14px;border-radius:6px;cursor:pointer;transition:.15s}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn--blue{background:var(--blue)} .btn--blue:hover{background:var(--blue-700)}
+  .btn--green{background:var(--green)} .btn--green:hover{background:var(--green-700)}
+  .btn--red{background:var(--red)} .btn--red:hover{background:var(--red-700)}
+  .btn--gray{background:var(--gray)} .btn--gray:hover{background:var(--gray-700)}
+
+  /* ===== Pills / counters with colors ===== */
+  .pill{padding:3px 8px;border-radius:999px;border:1px solid var(--line);display:inline-flex;gap:6px;align-items:center}
+  .pill--green{background:rgba(22,163,74,.12);color:#bbf7d0;border-color:rgba(22,163,74,.35)}
+  .pill--red{background:rgba(239,68,68,.12);color:#fecaca;border-color:rgba(239,68,68,.35)}
+  .pill--gray{background:rgba(100,116,139,.12);color:#cbd5e1;border-color:rgba(100,116,139,.35)}
+  .pill--neutral{background:rgba(148,163,184,.12);color:#cbd5e1;border-color:rgba(148,163,184,.35)}
+
   .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
   .muted{color:var(--muted)}
 
   table{width:100%;border-collapse:collapse}
   th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word}
+  td.ok{color:#86efac}              /* per-row result coloring */
+  td.fail{color:#fecaca}
 
   pre{white-space:pre-wrap;word-break:break-word;margin:8px 0 0}
 
-  /* Keep small controls from stretching the grid */
   .ctrl-narrow{max-width:140px}
 </style>
 </head>
@@ -46,6 +85,7 @@
 
   <h2>Upload URL List to Train AI Bot</h2>
 
+  <!-- Top controls -->
   <div class="row card">
     <div class="w-1">
       <div><small>INGEST TOKEN (BEARER)</small></div>
@@ -74,33 +114,38 @@
     </div>
   </div>
 
+  <!-- Single URL test -->
   <div class="card">
     <div><small>Test a Single URL</small></div>
     <div class="row">
       <input id="single" class="w-3" placeholder="https://example.com/page"/>
-      <button id="test">Test Single URL</button>
+      <button id="test" class="btn btn--blue">Test Single URL</button>
     </div>
     <pre id="debug" class="mono"></pre>
   </div>
 
+  <!-- Paste URLs -->
   <div class="card">
     <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
-    <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
-    <div class="row" style="margin-top:10px">
-      <button id="crawl">Crawl & Ingest</button>
-      <button id="stop" disabled>Stop</button>
-      <span class="pill">Loaded <span id="loaded">0</span> rows</span>
-      <span class="pill">Success: <span id="succ">0</span></span>
-      <span class="pill">Failed: <span id="fail">0</span></span>
-      <span class="pill">Stopped: <span id="stopped">0</span></span>
+    <textarea id="paste" rows="7" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+    <div class="row" style="margin-top:10px;align-items:center;flex-wrap:wrap">
+      <button id="crawl" class="btn btn--green">Crawl & Ingest</button>
+      <button id="stop" class="btn btn--red" disabled>Stop</button>
+
+      <span class="pill pill--neutral">Loaded <span id="loaded">0</span> rows</span>
+      <span class="pill pill--green">Success: <span id="succ">0</span></span>
+      <span class="pill pill--red">Failed: <span id="fail">0</span></span>
+      <span class="pill pill--gray">Stopped: <span id="stopped">0</span></span>
     </div>
   </div>
 
+  <!-- Client log -->
   <div class="card">
     <div><small>Debug console (what the client sees)</small></div>
     <pre id="console" class="mono" style="min-height:120px"></pre>
   </div>
 
+  <!-- Results table -->
   <div class="card">
     <table>
       <thead>
@@ -112,11 +157,11 @@
 
   <!-- Search tester -->
   <div class="card">
-    <h3 style="margin:0 0 8px 0;">AI Search Tester</h3>
+    <h3>AI Search Tester</h3>
     <div class="row">
       <input id="searchQuery" class="w-3" placeholder="e.g. photography workshops in Coventry"/>
-      <input id="searchTopk" class="ctrl-narrow" value="8"/>
-      <button id="runSearch">Run Search</button>
+      <input id="searchTopk" class="ctrl-narrow" value="8" title="topK"/>
+      <button id="runSearch" class="btn btn--blue">Run Search</button>
     </div>
     <div id="searchTable" class="mono" style="margin-top:10px;"></div>
     <details style="margin-top:8px;">
@@ -127,11 +172,11 @@
 
   <!-- Bot tester -->
   <div class="card">
-    <h3 style="margin:0 0 8px 0;">AI Bot (RAG)</h3>
+    <h3>AI Bot (RAG)</h3>
     <div class="row">
       <input id="botQuery" class="w-3" placeholder="Ask about workshops, tips…"/>
-      <input id="botTopk" class="ctrl-narrow" value="8"/>
-      <button id="askBot">Ask</button>
+      <input id="botTopk" class="ctrl-narrow" value="8" title="topK (context docs)"/>
+      <button id="askBot" class="btn btn--blue">Ask</button>
     </div>
     <div id="botAnswer" class="mono" style="margin-top:10px;"></div>
     <div id="botCitations" class="mono" style="margin-top:6px;"></div>
@@ -144,9 +189,11 @@
 const $ = (id) => document.getElementById(id);
 const log = (s) => { const c=$('console'); c.textContent += s + "\\n"; c.scrollTop=c.scrollHeight; };
 
+/* Persist token locally */
 $('token').value = localStorage.getItem('ingest_token') || '';
 $('token').addEventListener('input', () => localStorage.setItem('ingest_token', $('token').value || ''));
 
+/* Helpers */
 async function callIngest(url){
   const token = $('token').value.trim();
   const r = await fetch('/api/ingest-embed-replace',{
@@ -157,27 +204,29 @@ async function callIngest(url){
   let body; try{ body = await r.json(); }catch{ body={error:'non_json', status:r.status}; }
   return { ok: r.ok && body?.ok, status:r.status, body };
 }
-function addRow(url, result){
+function addRow(url, result, ok){
   const tr=document.createElement('tr');
-  tr.innerHTML=`<td></td><td class="mono">${url}</td><td class="mono">${result}</td>`;
+  tr.innerHTML=`<td></td><td class="mono">${url}</td><td class="mono ${ok?'ok':'fail'}">${result}</td>`;
   $('rows').appendChild(tr);
   [...$('rows').children].forEach((r,i)=>r.children[0].textContent=i+1);
 }
 
+/* Single test */
 $('test').onclick = async ()=>{
   const url=$('single').value.trim(); if(!url) return;
   log(`[${new Date().toLocaleTimeString()}] Single test → ${url}`);
   const {ok,status,body}=await callIngest(url);
   if(ok){
     $('debug').textContent=JSON.stringify({ok:true,id:body.id,len:body.len,chunks:body.chunks,stage:'done'},null,2);
-    addRow(url,`OK id=${body.id} len=${body.len} chunks=${body.chunks}`);
+    addRow(url,`OK id=${body.id} len=${body.len} chunks=${body.chunks}`,true);
   }else{
     const msg=(body&&(body.detail||body.error))||'(unknown)';
     $('debug').textContent=JSON.stringify(body,null,2);
-    addRow(url,`FAILED ${msg}`);
+    addRow(url,`FAILED ${msg}`,false);
   }
 };
 
+/* CSV → paste box */
 $('csv').addEventListener('change', async (e)=>{
   const file=e.target.files?.[0]; if(!file) return;
   const text=await file.text();
@@ -186,15 +235,16 @@ $('csv').addEventListener('change', async (e)=>{
   const headers=lines.shift().split(',').map(h=>h.trim().toLowerCase());
   const ui=headers.indexOf('url'); if(ui===-1){ alert('CSV requires a "url" column'); return; }
   const urls=lines.map(l=>l.split(',')[ui]?.trim()).filter(Boolean);
-  $('paste').value=urls.join('\n'); $('loaded').textContent=urls.length;
+  $('paste').value=urls.join('\\n'); $('loaded').textContent=urls.length;
   log(`CSV loaded: ${urls.length} URL(s) found in "url" column ✓`);
 });
 
+/* Crawl / ingest with concurrency */
 let stopFlag=false;
 $('stop').onclick=()=>{ stopFlag=true; $('stop').disabled=true; };
 $('crawl').onclick=async()=>{
   stopFlag=false; $('stop').disabled=false;
-  const urls=$('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const urls=$('paste').value.split('\\n').map(s=>s.trim()).filter(Boolean);
   $('loaded').textContent=urls.length;
   let succ=0,fail=0; $('succ').textContent='0'; $('fail').textContent='0';
 
@@ -206,8 +256,14 @@ $('crawl').onclick=async()=>{
     while(!stopFlag && q.length){
       const u=q.shift();
       const {ok,status,body}=await callIngest(u);
-      if(ok){ succ++; $('succ').textContent=String(succ); addRow(u,`OK id=${body.id} len=${body.len} chunks=${body.chunks}`); }
-      else { fail++; $('fail').textContent=String(fail); const msg=(body&&(body.detail||body.error))||'(unknown)'; addRow(u,`FAILED ${msg}`); }
+      if(ok){
+        succ++; $('succ').textContent=String(succ);
+        addRow(u,`OK id=${body.id} len=${body.len} chunks=${body.chunks}`,true);
+      }else{
+        fail++; $('fail').textContent=String(fail);
+        const msg=(body&&(body.detail||body.error))||'(unknown)';
+        addRow(u,`FAILED ${msg}`,false);
+      }
       if(delay) await new Promise(r=>setTimeout(r,delay));
     }
   })());
@@ -228,7 +284,7 @@ $('runSearch').onclick=async()=>{
     <tr>
       <td style="width:80px">${m.score?.toFixed?.(3) ?? ''}</td>
       <td style="width:40%"><a href="${m.url}" target="_blank" rel="noopener">${m.url}</a></td>
-      <td>${(m.content||'').replace(/\s+/g,' ').slice(0,220)}</td>
+      <td>${(m.content||'').replace(/\\s+/g,' ').slice(0,220)}</td>
     </tr>`).join('');
   $('searchTable').innerHTML = rows ? `<table>
     <thead><tr><th style="width:80px">Score</th><th>URL</th><th>Snippet</th></tr></thead>
