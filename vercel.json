@@ -1,10 +1,5 @@
 {
   "version": 2,
-  "functions": {
-    "api/**/*.js":  { "runtime": "nodejs22.x" },
-    "api/**/*.mjs": { "runtime": "nodejs22.x" },
-    "api/**/*.ts":  { "runtime": "nodejs22.x" }
-  },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" }
   ]
