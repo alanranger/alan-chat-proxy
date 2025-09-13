@@ -1,284 +1,188 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Upload URL List to Train AI Bot</title>
-<style>
-  :root{
-    --bg:#0b1220; --panel:#0f172a; --ink:#e5edff; --muted:#94a3b8; --line:#1b2540;
-    --blue:#3b82f6; --blue-700:#2563eb;
-    --green:#16a34a; --green-700:#15803d;
-    --red:#ef4444; --red-700:#dc2626;
-    --gray:#64748b; --gray-700:#475569;
-  }
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--ink);
-       font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
-  a{color:#93c5fd;text-decoration:none} a:hover{text-decoration:underline}
-
-  .container{max-width:980px;margin:24px auto;padding:0 16px}
-  h2{margin:0 0 16px 0;font-weight:600} h3{margin:0 0 8px 0;font-weight:600}
-  .row{display:flex;gap:12px} .card{background:var(--panel);border:1px solid var(--line);
-       border-radius:8px;padding:16px;margin-bottom:16px}
-  .w-1{flex:1} .w-2{flex:2} .w-3{flex:3}
-  input,textarea{width:100%;background:#0b1426;border:1px solid var(--line);
-                 color:var(--ink);padding:10px 12px;border-radius:6px}
-  textarea{resize:vertical}
-  .btn{border:none;color:#fff;padding:10px 14px;border-radius:6px;cursor:pointer;transition:.15s}
-  .btn:disabled{opacity:.55;cursor:not-allowed}
-  .btn--blue{background:var(--blue)} .btn--blue:hover{background:var(--blue-700)}
-  .btn--green{background:var(--green)} .btn--green:hover{background:var(--green-700)}
-  .btn--red{background:var(--red)} .btn--red:hover{background:var(--red-700)}
-  .btn--gray{background:var(--gray)} .btn--gray:hover{background:var(--gray-700)}
-  .pill{padding:3px 8px;border-radius:999px;border:1px solid var(--line);display:inline-flex;gap:6px;align-items:center}
-  .pill--green{background:rgba(22,163,74,.12);color:#bbf7d0;border-color:rgba(22,163,74,.35)}
-  .pill--red{background:rgba(239,68,68,.12);color:#fecaca;border-color:rgba(239,68,68,.35)}
-  .pill--gray{background:rgba(100,116,139,.12);color:#cbd5e1;border-color:rgba(100,116,139,.35)}
-  .pill--neutral{background:rgba(148,163,184,.12);color:#cbd5e1;border-color:rgba(148,163,184,.35)}
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
-  .muted{color:var(--muted)}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word}
-  td.ok{color:#86efac} td.fail{color:#fecaca}
-  pre{white-space:pre-wrap;word-break:break-word;margin:8px 0 0}
-  .ctrl-narrow{max-width:140px}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upload URL List to Train AI Bot</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+    button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-green { background: #2ea043; color: #fff; }
+    .btn-red { background: #da3633; color: #fff; }
+    .btn-blue { background: #388bfd; color: #fff; }
+    .counter { font-weight: 600; margin-left: 4px; }
+    .ok { color: #2ea043; }
+    .fail { color: #da3633; }
+    .stopped { color: #8b949e; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 8px; border-bottom: 1px solid #30363d; }
+    th { text-align: left; color: #8b949e; }
+    .debug {
+      background: #161b22;
+      padding: 8px;
+      margin-top: 12px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      border-radius: 4px;
+    }
+  </style>
 </head>
 <body>
-<div class="container">
-  <h2>Upload URL List to Train AI Bot</h2>
+  <h1>Upload URL List to Train AI Bot</h1>
 
-  <div class="row card">
-    <div class="w-1">
-      <div><small>INGEST TOKEN (BEARER)</small></div>
-      <input id="token" placeholder="Bearer token"/>
-      <small>Saved locally (browser only). Sent as <span class="mono">Authorization: Bearer …</span></small>
-    </div>
+  <div>
+    <label>INGEST TOKEN (BEARER)</label><br/>
+    <input id="bearer" type="text" placeholder="Bearer token" style="width: 40%">
+    <input id="csvFile" type="file" accept=".csv"/>
+    <br/><small>Saved locally (browser only). Sent as Authorization: Bearer …</small>
+  </div>
+  <br/>
 
-    <div class="w-2">
-      <div><small>CSV FILE</small></div>
-      <input id="csv" type="file" accept=".csv"/>
-      <small>CSV must include a <span class="mono">url</span> column (optional <span class="mono">title</span>).</small>
-    </div>
+  <div>
+    <label>Test a Single URL</label><br/>
+    <input id="singleUrl" type="text" placeholder="https://example.com/page" style="width:60%">
+    <button class="btn-blue" onclick="testSingle()">Test Single URL</button>
+  </div>
+  <br/>
 
-    <div class="w-1">
-      <div class="row">
-        <div class="w-1">
-          <div><small>CONCURRENCY</small></div>
-          <input id="concurrency" class="ctrl-narrow" value="3"/>
-        </div>
-        <div class="w-1">
-          <div><small>DELAY BETWEEN REQ (MS)</small></div>
-          <input id="delay" class="ctrl-narrow" value="400"/>
-        </div>
-      </div>
-      <small>Each request goes to <span class="mono">/api/ingest-embed-replace</span> (fetches, chunks, embeds, replaces existing rows).</small>
-    </div>
+  <div>
+    <label>Paste URLs (one per line) — OPTIONAL</label><br/>
+    <textarea id="urlList" rows="4" style="width:60%" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+    <br/><br/>
+    <button id="crawlBtn" class="btn-green" onclick="crawl()">Crawl & Ingest</button>
+    <button class="btn-red" onclick="stop()">Stop</button>
+    <span class="counter ok">Success: <span id="success">0</span></span>
+    <span class="counter fail">Failed: <span id="failed">0</span></span>
+    <span class="counter stopped">Stopped: <span id="stopped">0</span></span>
+    <span class="counter">Loaded <span id="loaded">0</span> rows</span>
   </div>
 
-  <div class="card">
-    <div><small>Test a Single URL</small></div>
-    <div class="row">
-      <input id="single" class="w-3" placeholder="https://example.com/page"/>
-      <button id="test" class="btn btn--blue">Test Single URL</button>
-    </div>
-    <pre id="debug" class="mono"></pre>
-  </div>
+  <div class="debug" id="debug"></div>
 
-  <div class="card">
-    <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
-    <textarea id="paste" rows="7" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
-    <div class="row" style="margin-top:10px;align-items:center;flex-wrap:wrap">
-      <button id="crawl" class="btn btn--green">Crawl & Ingest</button>
-      <button id="stop" class="btn btn--red" disabled>Stop</button>
-      <span class="pill pill--neutral">Loaded <span id="loaded">0</span> rows</span>
-      <span class="pill pill--green">Success: <span id="succ">0</span></span>
-      <span class="pill pill--red">Failed: <span id="fail">0</span></span>
-      <span class="pill pill--gray">Stopped: <span id="stopped">0</span></span>
-    </div>
-  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>URL</th>
+        <th>Result (includes DB verify)</th>
+      </tr>
+    </thead>
+    <tbody id="results"></tbody>
+  </table>
 
-  <div class="card">
-    <div><small>Debug console (what the client sees)</small></div>
-    <pre id="console" class="mono" style="min-height:120px"></pre>
-  </div>
+  <h3>AI Search Tester</h3>
+  <input id="searchQuery" type="text" placeholder="e.g. photography workshops in Coventry" style="width:60%">
+  <input id="topk" type="number" value="8" style="width:60px">
+  <button class="btn-blue" onclick="search()">Run Search</button>
+  <pre class="debug" id="searchRaw" style="display:none"></pre>
+  <div id="searchResults"></div>
 
-  <div class="card">
-    <table>
-      <thead><tr><th style="width:52px">#</th><th>URL</th><th>Result (includes DB verify)</th></tr></thead>
-      <tbody id="rows"></tbody>
-    </table>
-  </div>
+  <h3>AI Bot (RAG)</h3>
+  <input id="askQuery" type="text" placeholder="Ask about workshops, tips, ..." style="width:60%">
+  <input id="askTopk" type="number" value="8" style="width:60px">
+  <button class="btn-blue" onclick="ask()">Ask</button>
+  <div id="askResult" class="debug"></div>
 
-  <div class="card">
-    <h3>AI Search Tester</h3>
-    <div class="row">
-      <input id="searchQuery" class="w-3" placeholder="e.g. photography workshops in Coventry"/>
-      <input id="searchTopk" class="ctrl-narrow" value="8" title="topK"/>
-      <button id="runSearch" class="btn btn--blue">Run Search</button>
-    </div>
-    <div id="searchTable" class="mono" style="margin-top:10px;"></div>
-    <details style="margin-top:8px;">
-      <summary>Search Raw Response</summary>
-      <pre id="searchRaw" class="mono"></pre>
-    </details>
-  </div>
+  <script>
+    const debug = msg => {
+      const el = document.getElementById('debug');
+      el.textContent += msg + "\\n";
+      el.scrollTop = el.scrollHeight;
+    };
 
-  <div class="card">
-    <h3>AI Bot (RAG)</h3>
-    <div class="row">
-      <input id="botQuery" class="w-3" placeholder="Ask about workshops, tips…"/>
-      <input id="botTopk" class="ctrl-narrow" value="8" title="topK (context docs)"/>
-      <button id="askBot" class="btn btn--blue">Ask</button>
-    </div>
-    <div id="botAnswer" class="mono" style="margin-top:10px;"></div>
-    <div id="botCitations" class="mono" style="margin-top:6px;"></div>
-    <div class="muted" style="margin-top:6px">Answers cite sources; only your indexed pages are used.</div>
-  </div>
-</div>
-
-<script>
-const $ = (id) => document.getElementById(id);
-const log = (s) => { const c=$('console'); c.textContent += s + "\\n"; c.scrollTop=c.scrollHeight; };
-$('token').value = localStorage.getItem('ingest_token') || '';
-$('token').addEventListener('input', () => localStorage.setItem('ingest_token', $('token').value || ''));
-
-/* ========== helpers ========== */
-async function postJSON(url, body, headers={}) {
-  const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(body)});
-  let j=null; try{ j=await r.json(); }catch{}
-  return { r, j };
-}
-async function getJSON(url, headers={}) {
-  const r = await fetch(url,{headers});
-  let j=null; try{ j=await r.json(); }catch{}
-  return { r, j };
-}
-function addRow(url, text, ok){
-  const tr=document.createElement('tr');
-  tr.innerHTML=`<td></td><td class="mono">${url}</td><td class="mono ${ok?'ok':'fail'}">${text}</td>`;
-  $('rows').appendChild(tr);
-  [...$('rows').children].forEach((r,i)=>r.children[0].textContent=i+1);
-  return tr;
-}
-function updateRow(tr, text, className){
-  const td=tr.children[2];
-  td.textContent=text;
-  td.classList.remove('ok','fail');
-  if (className) td.classList.add(className);
-}
-
-/* ========== ingest one URL then verify in DB ========== */
-async function ingestAndVerify(url){
-  const token = $('token').value.trim();
-
-  // 1) Ingest
-  const { r, j } = await postJSON('/api/ingest-embed-replace', { url }, { Authorization: 'Bearer '+token });
-  if (!(r.ok && j?.ok)) {
-    const msg=(j&&(j.detail||j.error))||`http_${r.status}`;
-    addRow(url, `FAILED ${msg}`, false);
-    return { ok:false };
-  }
-
-  // show provisional row (pre-verify)
-  const baseText = `OK id=${j.id} len=${j.len} chunks=${j.chunks} | verifying…`;
-  const tr = addRow(url, baseText, true);
-
-  // 2) Verify in Supabase DB
-  try{
-    const { r:vr, j:vj } = await getJSON('/api/db-verify?url='+encodeURIComponent(url));
-    if (vr.ok && vj?.ok) {
-      updateRow(tr, `${baseText} | DB: chunks=${vj.chunks} len=${vj.len}`, 'ok');
-    } else {
-      updateRow(tr, `${baseText} | DB verify failed`, 'fail');
+    async function testSingle() {
+      const url = document.getElementById('singleUrl').value;
+      debug(`[Single test] ${url}`);
+      const r = await fetch('/api/ingest-embed-replace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json',
+                   Authorization: 'Bearer ' + document.getElementById('bearer').value },
+        body: JSON.stringify({ url })
+      });
+      const j = await r.json();
+      debug(JSON.stringify(j,null,2));
     }
-  }catch{
-    updateRow(tr, `${baseText} | DB verify error`, 'fail');
-  }
 
-  return { ok:true };
-}
-
-/* ========== single test ========== */
-$('test').onclick = async ()=>{
-  const url=$('single').value.trim(); if(!url) return;
-  log(`[${new Date().toLocaleTimeString()}] Single test → ${url}`);
-  await ingestAndVerify(url);
-};
-
-/* ========== CSV → paste ========== */
-$('csv').addEventListener('change', async (e)=>{
-  const file=e.target.files?.[0]; if(!file) return;
-  const text=await file.text();
-  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-  if(!lines.length) return;
-  const headers=lines.shift().split(',').map(h=>h.trim().toLowerCase());
-  const ui=headers.indexOf('url'); if(ui===-1){ alert('CSV requires a "url" column'); return; }
-  const urls=lines.map(l=>l.split(',')[ui]?.trim()).filter(Boolean);
-  $('paste').value=urls.join('\\n'); $('loaded').textContent=urls.length;
-  log(`CSV loaded: ${urls.length} URL(s) found in "url" column ✓`);
-});
-
-/* ========== bulk crawl/ingest with concurrency + verify ========== */
-let stopFlag=false;
-$('stop').onclick=()=>{ stopFlag=true; $('stop').disabled=true; };
-$('crawl').onclick=async()=>{
-  stopFlag=false; $('stop').disabled=false;
-  const urls=$('paste').value.split('\\n').map(s=>s.trim()).filter(Boolean);
-  $('loaded').textContent=urls.length;
-  let succ=0,fail=0; $('succ').textContent='0'; $('fail').textContent='0';
-
-  const conc=Math.max(1,parseInt($('concurrency').value||'1',10));
-  const delay=Math.max(0,parseInt($('delay').value||'0',10));
-  const q=urls.slice();
-
-  const runners=Array.from({length:conc},()=> (async function run(){
-    while(!stopFlag && q.length){
-      const u=q.shift();
-      const out = await ingestAndVerify(u);
-      if (out.ok){ succ++; $('succ').textContent=String(succ); }
-      else { fail++; $('fail').textContent=String(fail); }
-      if(delay) await new Promise(r=>setTimeout(r,delay));
+    async function crawl() {
+      const urls = document.getElementById('urlList').value.trim().split(/\\n+/);
+      const results = document.getElementById('results');
+      results.innerHTML = '';
+      let idx = 1;
+      for (let url of urls) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${idx++}</td><td>${url}</td><td>Processing…</td>`;
+        results.appendChild(tr);
+        try {
+          const r = await fetch('/api/ingest-embed-replace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json',
+                       Authorization: 'Bearer ' + document.getElementById('bearer').value },
+            body: JSON.stringify({ url })
+          });
+          const j = await r.json();
+          if (j?.ok) {
+            // Verify against DB
+            const vr = await fetch('/api/db-verify?url=' + encodeURIComponent(url));
+            const vj = await vr.json();
+            if (vj?.ok) {
+              tr.cells[2].innerHTML = `OK id=${j.id} len=${j.len} chunks=${j.chunks} | DB: chunks=${vj.chunks} len=${vj.len}`;
+              tr.cells[2].classList.add('ok');
+            } else {
+              tr.cells[2].innerHTML = `OK id=${j.id} len=${j.len} chunks=${j.chunks} | DB verify failed`;
+              tr.cells[2].classList.add('fail');
+            }
+            document.getElementById('success').textContent++;
+          } else {
+            tr.cells[2].textContent = 'FAILED';
+            tr.cells[2].classList.add('fail');
+            document.getElementById('failed').textContent++;
+          }
+        } catch (e) {
+          tr.cells[2].textContent = 'ERROR';
+          tr.cells[2].classList.add('fail');
+        }
+      }
     }
-  })());
 
-  await Promise.all(runners);
-  if(stopFlag) $('stopped').textContent='1';
-  $('stop').disabled=true;
-};
+    async function search() {
+      const q = document.getElementById('searchQuery').value;
+      const k = document.getElementById('topk').value;
+      const r = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q, topk: parseInt(k) })
+      });
+      const j = await r.json();
+      document.getElementById('searchRaw').style.display = 'block';
+      document.getElementById('searchRaw').textContent = JSON.stringify(j,null,2);
+    }
 
-/* ========== search tester ========== */
-$('runSearch').onclick=async()=>{
-  const q=$('searchQuery').value.trim();
-  const topK=parseInt($('searchTopk').value||'8',10);
-  if(!q) return;
-  const r=await fetch('/api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q,topK})});
-  const j=await r.json().catch(()=>({}));
-  $('searchRaw').textContent=JSON.stringify(j,null,2);
-  const rows=(j.matches||[]).map(m=>`
-    <tr>
-      <td style="width:80px">${m.score?.toFixed?.(3) ?? ''}</td>
-      <td style="width:40%"><a href="${m.url}" target="_blank" rel="noopener">${m.url}</a></td>
-      <td>${(m.content||'').replace(/\\s+/g,' ').slice(0,220)}</td>
-    </tr>`).join('');
-  $('searchTable').innerHTML = rows ? `<table>
-    <thead><tr><th style="width:80px">Score</th><th>URL</th><th>Snippet</th></tr></thead>
-    <tbody>${rows}</tbody></table>` : '<div class="muted">No results.</div>';
-};
+    async function ask() {
+      const q = document.getElementById('askQuery').value;
+      const k = document.getElementById('askTopk').value;
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q, topk: parseInt(k) })
+      });
+      const j = await r.json();
+      document.getElementById('askResult').textContent = JSON.stringify(j,null,2);
+    }
 
-/* ========== bot tester ========== */
-$('askBot').onclick=async()=>{
-  const query=$('botQuery').value.trim();
-  const topK=parseInt($('botTopk').value||'8',10);
-  if(!query) return;
-  $('botAnswer').textContent='Thinking…'; $('botCitations').textContent='';
-  const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query,topK})});
-  const j=await r.json().catch(()=>null);
-  if(!r.ok || !j?.ok){ $('botAnswer').textContent='Error: could not get an answer.'; return; }
-  $('botAnswer').textContent=j.answer||'(no answer)';
-  $('botCitations').innerHTML=(j.citations||[]).map(u=>`<a href="${u}" target="_blank" rel="noopener">${u}</a>`).join('<br/>');
-};
-</script>
+    function stop() { debug('Stopped by user.'); }
+  </script>
 </body>
 </html>
