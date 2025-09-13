@@ -5,131 +5,237 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Alan Ranger — AI Bot</title>
   <style>
+    /* ============= THEME ============= */
     :root{
-      --bg:#0b1220; --card:#0f172a; --muted:#9aa7c7; --text:#dbe4ff; --line:#1b2540;
-      --btn:#2563eb; --btnText:#fff; --chip:#13203e;
+      --brand:#C86E2B;            /* <— tweak to your orange */
+      --bg:#0b1220;
+      --panel:#0e162b;
+      --bubble:#101b36;
+      --bubble-user:#1a2547;
+      --line:#1c2744;
+      --text:#e7ecff;
+      --muted:#9fb0d9;
+      --chip:#13203e;
+      --btn:#2563eb;
+      --btnText:#fff;
     }
     *{box-sizing:border-box}
-    body{margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}
-    .wrap{max-width:900px; margin:0 auto; padding:24px}
-    .card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px;}
-    .row{display:flex; gap:10px; align-items:center;}
-    .stack{display:flex; flex-direction:column; gap:12px;}
-    input, textarea{background:#0b1426; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:10px 12px; width:100%;}
-    button{background:var(--btn); color:var(--btnText); border:none; border-radius:10px; padding:10px 16px; cursor:pointer}
-    button:disabled{opacity:.6; cursor:not-allowed}
-    .muted{color:var(--muted)}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    .chat{display:flex; flex-direction:column; gap:14px; max-height:62vh; overflow:auto; padding-right:4px;}
+    body{margin:0; background:var(--bg); color:var(--text);
+         font:16px/1.7 system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;}
+    .wrap{max-width:980px; margin:0 auto; padding:0 18px 28px}
+    a{color:#a9c7ff; text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    /* ============= TOP BAR ============= */
+    .topbar{
+      position:sticky; top:0; z-index:5;
+      background:linear-gradient(0deg,var(--panel),var(--panel));
+      border-bottom:1px solid var(--line);
+    }
+    .brandbar{
+      max-width:980px; margin:0 auto; padding:14px 18px;
+      display:flex; align-items:center; gap:12px;
+    }
+    .brandlogo{width:28px; height:28px; border-radius:50%; object-fit:cover;
+               border:2px solid #0003; background:#000}
+    .brandtitle{font-weight:700; letter-spacing:.2px}
+    .status{margin-left:auto; color:var(--muted); font-size:12px}
+
+    /* ============= CARD ============= */
+    .card{background:var(--panel); border:1px solid var(--line);
+          border-radius:14px; padding:16px}
+    .stack{display:flex; flex-direction:column; gap:14px}
+
+    /* ============= CHAT ============= */
+    .chat{display:flex; flex-direction:column; gap:16px;
+          max-height:62vh; overflow:auto; padding-right:2px}
     .msg{display:flex; gap:10px}
-    .msg .bubble{background:#0b1426; border:1px solid var(--line); padding:12px 14px; border-radius:12px; max-width:80%}
-    .msg.user{justify-content:flex-end}
-    .msg.user .bubble{background:#1a2341}
-    .msg.assistant .bubble{background:#101a34}
-    .answer{white-space:pre-wrap}
-    .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
-    .chips a{display:inline-block; padding:6px 8px; border-radius:999px; border:1px solid var(--line); background:var(--chip); color:var(--text); text-decoration:none; font-size:12px}
-    .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px}
-    .brand{font-weight:600; letter-spacing:.2px}
-    .footer{margin-top:12px; font-size:12px}
-    @media (max-width:720px){ .wrap{padding:16px} .msg .bubble{max-width:100%} }
+    .avatar{
+      width:34px; height:34px; flex:0 0 34px; border-radius:50%;
+      background:#000; overflow:hidden; border:2px solid #0004
+    }
+    .avatar>img{width:100%; height:100%; object-fit:cover}
+    .bubble{
+      background:var(--bubble); border:1px solid var(--line);
+      border-radius:16px; padding:14px 16px; max-width:720px;
+    }
+    .user .bubble{ background:var(--bubble-user) }
+    .msg.user{ justify-content:flex-end }
+    .msg.user .avatar{ display:none }
+
+    /* readable answer */
+    .answer{ font-size:16px }
+    .answer p{ margin:0 0 12px }
+    .answer ul{ margin:8px 0 12px 20px; padding:0 }
+    .answer li{ margin:4px 0 }
+    .answer strong{ font-weight:700 }
+
+    /* citations */
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px }
+    .chip{ display:inline-flex; align-items:center; gap:6px;
+           background:var(--chip); border:1px solid var(--line);
+           border-radius:999px; padding:6px 10px; font-size:12px }
+    .chip svg{ width:14px; height:14px; opacity:.8 }
+
+    /* ============= INPUT BAR ============= */
+    .inputbar{ display:flex; gap:10px; align-items:flex-end }
+    textarea{ background:#0b1426; color:var(--text); border:1px solid var(--line);
+              border-radius:12px; padding:12px 12px; width:100%; min-height:56px;
+              outline:none; resize:vertical }
+    button{ background:var(--brand); color:#fff; border:none; border-radius:12px;
+            padding:12px 18px; cursor:pointer; font-weight:600 }
+    button:disabled{ opacity:.6; cursor:not-allowed }
+
+    /* small row */
+    .smallrow{ display:flex; justify-content:space-between; align-items:center }
+    .small{ color:var(--muted); font-size:12px }
+    .topk{ width:64px; background:#0b1426; border:1px solid var(--line);
+           color:var(--text); border-radius:8px; padding:6px 8px }
+
+    /* optional quick prompts (we’ll flesh these out in next step) */
+    .prompts{ display:flex; flex-wrap:wrap; gap:10px }
+    .pill{ background:#1a2443; border:1px solid var(--line); color:var(--text);
+           border-radius:999px; padding:8px 12px; cursor:pointer; font-size:14px }
+    .welcome{ color:var(--muted); background:#0b1426; border:1px dashed var(--line);
+              border-radius:999px; padding:8px 12px; display:inline-block }
   </style>
 </head>
 <body>
-  <div class="wrap stack">
-
-    <div class="topbar">
-      <div class="brand">Alan Ranger — AI Bot</div>
-      <div class="muted mono" id="connStatus">ready</div>
+  <!-- Top brand bar -->
+  <div class="topbar">
+    <div class="brandbar">
+      <img src="/brand/alanranger-avatar.png" alt="AR" class="brandlogo" onerror="this.style.visibility='hidden'">
+      <div class="brandtitle">Alan Ranger Assistant</div>
+      <div class="status" id="connStatus">ready</div>
     </div>
+  </div>
 
+  <div class="wrap stack" style="margin-top:16px">
+    <!-- Token panel (hidden if present) -->
     <div id="tokenCard" class="card stack" style="display:none">
       <div class="stack">
-        <label class="muted">Bearer token</label>
-        <input id="token" placeholder="Enter INGEST_TOKEN to enable chat"/>
-        <div class="muted" style="font-size:12px">Saved locally; sent as <span class="mono">Authorization: Bearer …</span></div>
+        <div class="small">Bearer token</div>
+        <input id="token" placeholder="Enter INGEST_TOKEN to enable chat"
+               style="background:#0b1426; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px">
+        <div class="small">Saved locally; sent as <span style="font-family:ui-monospace">Authorization: Bearer …</span></div>
       </div>
       <div><button id="saveToken">Save token</button></div>
     </div>
 
+    <!-- Chat panel -->
     <div class="card stack">
+      <div class="prompts">
+        <span class="welcome">Hi! Ask me about workshops, courses, and tuition.</span>
+      </div>
+
       <div class="chat" id="chat"></div>
 
-      <div class="row">
-        <textarea id="q" rows="2" placeholder="Ask a question… (Shift+Enter for newline)"></textarea>
+      <div class="inputbar">
+        <textarea id="q" placeholder="Ask a question… (Shift+Enter for newline)"></textarea>
         <button id="send">Send</button>
       </div>
 
-      <div class="row muted" style="justify-content:space-between">
-        <div>
-          <label>topK</label>
-          <input id="topk" class="mono" style="width:64px" value="8"/>
+      <div class="smallrow">
+        <div class="small">
+          topK
+          <input id="topk" class="topk" value="8">
         </div>
-        <div class="footer">Answers cite sources; the assistant only uses your indexed pages.</div>
+        <div class="small">Answers cite sources; only your indexed pages are used.</div>
       </div>
     </div>
-
   </div>
 
 <script>
 (function(){
-  const $ = (id)=>document.getElementById(id);
+  /* ------- config ------- */
+  const AVATAR_URL = '/brand/alanranger-avatar.png';  // put file in /public/brand/
+  const USER_PLACEHOLDER = '';                        // leave empty to hide user avatar
+
+  /* ------- dom helpers ------- */
+  const $ = id => document.getElementById(id);
   const chat = $('chat');
   const conn = $('connStatus');
 
   const urlToken = new URLSearchParams(location.search).get('token') || '';
   if (urlToken) localStorage.setItem('ingest_token', urlToken);
   const getToken = ()=> localStorage.getItem('ingest_token') || '';
-  function ensureTokenUI(){
-    const has = !!getToken();
-    $('tokenCard').style.display = has ? 'none' : 'block';
-  }
-  $('saveToken').onclick = ()=>{
-    const v = $('token').value.trim();
-    if (v) localStorage.setItem('ingest_token', v);
-    ensureTokenUI();
-  };
+  function ensureTokenUI(){ $('tokenCard').style.display = getToken()? 'none':'block'; }
+  $('saveToken').onclick = ()=>{ const v=$('token').value.trim(); if(v){localStorage.setItem('ingest_token',v);} ensureTokenUI(); };
   ensureTokenUI();
 
-  const el = (html)=>{ const d=document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; };
   function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])); }
-  function truncate(s,n){ if(!s) return ''; return s.length>n ? s.slice(0,n-1)+'…' : s; }
+
+  // tiny markdown for readability: **bold**, lists (- ), links [t](u), blank-line paragraph
+  function mdLite(text){
+    if(!text) return '';
+    // protect HTML
+    let t = escapeHtml(text);
+
+    // links [label](url)
+    t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    // bold **x**
+    t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+    // lists: group consecutive lines starting with - 
+    const lines = t.split(/\r?\n/);
+    let out = [], inList = false;
+    for(let i=0;i<lines.length;i++){
+      const ln = lines[i];
+      if (/^\s*-\s+/.test(ln)){
+        if(!inList){ out.push('<ul>'); inList = true; }
+        out.push('<li>'+ln.replace(/^\s*-\s+/, '')+'</li>');
+      } else {
+        if(inList){ out.push('</ul>'); inList = false; }
+        if (ln.trim()===''){ out.push('<p></p>'); }
+        else out.push('<p>'+ln+'</p>');
+      }
+    }
+    if(inList) out.push('</ul>');
+    // remove empty paragraphs
+    return out.join('').replace(/<p>\s*<\/p>/g,'');
+  }
+
+  function msgHtml(role, inner){
+    const avatar = role==='assistant'
+      ? `<div class="avatar"><img src="${AVATAR_URL}" alt="AR" onerror="this.parentNode.style.display='none'"></div>`
+      : (USER_PLACEHOLDER ? `<div class="avatar"><img src="${USER_PLACEHOLDER}" alt=""></div>` : '<div class="avatar" style="display:none"></div>');
+    return `
+      <div class="msg ${role}">
+        ${avatar}
+        <div class="bubble">${inner}</div>
+      </div>
+    `;
+  }
 
   function addUser(text){
-    chat.appendChild(el(`
-      <div class="msg user">
-        <div class="bubble mono">${escapeHtml(text)}</div>
-      </div>
-    `));
+    chat.insertAdjacentHTML('beforeend', msgHtml('user', `<div class="answer">${escapeHtml(text)}</div>`));
     chat.scrollTop = chat.scrollHeight;
   }
 
   function addAssistant(answer, citations){
-    const chips = (citations||[]).map(u=>`<a href="${u}" target="_blank" rel="noopener">${truncate(u,72)}</a>`).join('');
-    const block = el(`
-      <div class="msg assistant">
-        <div class="bubble">
-          <div class="answer mono">${escapeHtml(answer||'(no answer)')}</div>
-          ${chips ? `<div class="chips">${chips}</div>` : ''}
-        </div>
-      </div>
-    `);
-    chat.appendChild(block);
+    const chips = (citations||[])
+      .filter(Boolean)
+      .filter((u,i,arr)=>arr.indexOf(u)===i)
+      .slice(0,8)
+      .map(u=>`<a class="chip" href="${u}" target="_blank" rel="noopener" title="${u}">
+                 <svg viewBox="0 0 24 24"><path fill="#c7d2fe" d="M10.59 13.41L9.17 12l4.24-4.24 1.41 1.42L12 13.41z"/></svg>
+                 <span>${u.length>48? u.slice(0,47)+'…' : u}</span>
+               </a>`).join('');
+    const inner = `
+      <div class="answer">${mdLite(answer)}</div>
+      ${chips? `<div class="chips">${chips}</div>`:''}
+    `;
+    chat.insertAdjacentHTML('beforeend', msgHtml('assistant', inner));
     chat.scrollTop = chat.scrollHeight;
   }
 
-  function addSystem(text){
-    chat.appendChild(el(`
-      <div class="msg assistant">
-        <div class="bubble muted mono">${escapeHtml(text)}</div>
-      </div>
-    `));
-    chat.scrollTop = chat.scrollHeight;
+  function addSystem(s){
+    addAssistant(s, []);
   }
 
   async function ask(q){
     const token = getToken();
-    if (!token){ ensureTokenUI(); addSystem('Missing token. Enter token to enable chat.'); return; }
+    if(!token){ ensureTokenUI(); addSystem('Missing token. Enter token to enable chat.'); return; }
 
     conn.textContent = 'thinking…';
     $('send').disabled = true;
@@ -144,36 +250,34 @@
       let body; try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
 
       if (!r.ok || !body.ok){
-        addAssistant(`Sorry, I couldn't answer that. (${(body && (body.detail||body.error)) || r.status})`, []);
+        addAssistant(`Sorry, I couldn't answer that. (${(body&&(body.detail||body.error))||r.status})`, []);
       } else {
-        addAssistant(body.answer, Array.from(new Set(body.citations||[])));
+        addAssistant(body.answer, body.citations||[]);
       }
     } catch(err){
-      addAssistant(`Error: ${err?.message||String(err)}`, []);
+      addAssistant('Error: '+(err?.message||String(err)), []);
     } finally{
       $('send').disabled = false;
       conn.textContent = 'ready';
     }
   }
 
-  const welcome = new URLSearchParams(location.search).get('welcome') ||
-    'Hi! Ask me anything about workshops, courses, and tuition.';
+  // Welcome
+  const welcome = new URLSearchParams(location.search).get('welcome')
+    || 'Hi! Ask me anything about workshops, tips, or anything else';
   addSystem(welcome);
 
+  // Send handlers
   $('send').onclick = ()=>{
     const txt = $('q').value.trim();
-    if (!txt) return;
+    if(!txt) return;
     $('q').value = '';
     addUser(txt);
     ask(txt);
   };
   $('q').addEventListener('keydown', (e)=>{
-    if (e.key === 'Enter' && !e.shiftKey){
-      e.preventDefault();
-      $('send').click();
-    }
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('send').click(); }
   });
-
 })();
 </script>
 </body>
