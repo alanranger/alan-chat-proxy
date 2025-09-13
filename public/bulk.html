@@ -2,43 +2,87 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Upload URL List to Train AI Bot — Single URL Test</title>
+  <title>Upload URL List to Train AI Bot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#0f1420; color:#e7ebf3; margin:0; padding:24px; }
     h1 { font-size: 20px; margin: 0 0 16px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
     .card { background:#131a2a; border:1px solid #1f2940; border-radius:10px; padding:16px; margin-bottom:16px; }
     label { display:block; font-size:12px; opacity:.85; margin-bottom:6px; }
-    input { width:100%; background:#0c111b; border:1px solid #21304a; color:#e7ebf3; border-radius:8px; padding:10px; outline:none; }
-    input:focus { border-color:#3466f6; }
+    input, textarea, select { width:100%; background:#0c111b; border:1px solid #21304a; color:#e7ebf3; border-radius:8px; padding:10px; outline:none; }
+    input:focus, textarea:focus, select:focus { border-color:#3466f6; }
+    textarea { min-height: 110px; resize: vertical; }
     button { background:#3466f6; color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
+    button.secondary { background:#22304f; }
     button:disabled { opacity:.6; cursor:not-allowed; }
     .row { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    #debug { height:160px; overflow:auto; white-space:pre-wrap; background:#0c111b; border:1px solid #21304a; border-radius:8px; padding:10px; }
+    #debug { height:180px; overflow:auto; white-space:pre-wrap; background:#0c111b; border:1px solid #21304a; border-radius:8px; padding:10px; }
     table { width:100%; border-collapse: collapse; font-size: 13px; }
     th, td { text-align:left; border-bottom:1px solid #1f2940; padding:8px; }
     .ok { color:#4cd964; }
     .err { color:#ff5757; }
+    .stats { display:flex; gap:8px; align-items:center; font-size:13px; }
+    .pill { padding:4px 8px; background:#0c111b; border:1px solid #21304a; border-radius:20px; }
   </style>
 </head>
 <body>
-  <h1>Upload URL List to Train AI Bot — Single URL Test</h1>
+  <h1>Upload URL List to Train AI Bot</h1>
 
-  <div class="card">
-    <div class="row">
-      <div>
-        <label for="token">Ingest Token (Bearer)</label>
-        <input id="token" placeholder="paste your token…" />
-      </div>
-      <div>
-        <label for="testUrl">Test a Single URL</label>
-        <input id="testUrl" placeholder="https://example.com/page" />
-      </div>
+  <div class="grid">
+    <div class="card">
+      <label for="token">Ingest Token (Bearer)</label>
+      <input id="token" placeholder="paste your token…" />
+      <small style="opacity:.7">Saved locally (browser only). Sent as Authorization: Bearer …</small>
     </div>
-    <div style="margin-top:12px;">
-      <button id="btnTest">Test Single URL</button>
+
+    <div class="card">
+      <label for="csv">CSV file</label>
+      <input id="csv" type="file" accept=".csv,text/csv" />
+      <small style="opacity:.7">CSV must include a <span class="mono">url</span> column (optional <span class="mono">title</span>).</small>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label for="concurrency">Concurrency</label>
+          <input id="concurrency" type="number" value="3" min="1" max="16" />
+        </div>
+        <div>
+          <label for="delay">Delay between requests (ms)</label>
+          <input id="delay" type="number" value="400" min="0" step="50" />
+        </div>
+      </div>
+      <small style="opacity:.7">Each request goes to <span class="mono">/api/ingest-embed-replace</span> (fetches, chunks, embeds, replaces existing rows).</small>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <label for="singleUrl">Test a Single URL</label>
+      <div class="row">
+        <input id="singleUrl" placeholder="https://example.com/page" />
+        <button id="btnTest">Test Single URL</button>
+      </div>
+      <small style="opacity:.7">Great for diagnosing one page end-to-end (fetch → extract → embed → replace).</small>
+    </div>
+
+    <div class="card" style="grid-column: span 2;">
+      <label for="paste">Paste URLs (one per line) — OPTIONAL</label>
+      <textarea id="paste" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+      <div style="margin-top:10px; display:flex; gap:8px;">
+        <button id="btnStart">Crawl &amp; Ingest</button>
+        <button id="btnStop" class="secondary">Stop</button>
+        <div class="stats">
+          <span class="pill">Loaded <span id="loaded">0</span> rows.</span>
+          <span class="pill ok">Success: <span id="succ">0</span></span>
+          <span class="pill err">Failed: <span id="fail">0</span></span>
+          <span class="pill">Stopped: <span id="stop">0</span></span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -61,22 +105,37 @@
   </div>
 
   <script>
+    // Elements
     const elToken = document.getElementById('token');
-    const elUrl   = document.getElementById('testUrl');
-    const elBtn   = document.getElementById('btnTest');
+    const elCSV   = document.getElementById('csv');
+    const elCon   = document.getElementById('concurrency');
+    const elDel   = document.getElementById('delay');
+    const elPaste = document.getElementById('paste');
+    const elTestU = document.getElementById('singleUrl');
+    const elBtnT  = document.getElementById('btnTest');
+    const elBtnS  = document.getElementById('btnStart');
+    const elBtnX  = document.getElementById('btnStop');
     const elDbg   = document.getElementById('debug');
     const elRows  = document.getElementById('rows');
+    const elLoaded= document.getElementById('loaded');
+    const elSucc  = document.getElementById('succ');
+    const elFail  = document.getElementById('fail');
+    const elStop  = document.getElementById('stop');
 
-    // remember token between sessions (local only)
+    // Persist token locally
     const KEY = 'ingest_token';
     elToken.value = localStorage.getItem(KEY) || '';
     elToken.addEventListener('input', () => localStorage.setItem(KEY, elToken.value));
 
+    // Utility
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
     function log(line, cls="") {
-      const span = document.createElement('div');
-      if (cls) span.className = cls;
-      span.textContent = line;
-      elDbg.appendChild(span);
+      const div = document.createElement('div');
+      if (cls) div.className = cls;
+      div.textContent = line;
+      elDbg.appendChild(div);
       elDbg.scrollTop = elDbg.scrollHeight;
     }
     function addRow(idx, url, html) {
@@ -84,57 +143,185 @@
       tr.innerHTML = `<td>${idx}</td><td>${escapeHtml(url)}</td><td>${html}</td>`;
       elRows.prepend(tr);
     }
-    function escapeHtml(s) {
-      return s.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    function parseLines(text) {
+      return text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     }
 
-    async function testSingle() {
+    // Very small CSV parser good enough for "url,title" style lists (handles quotes)
+    async function parseCSV(file) {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(x => x.trim().length);
+      if (!lines.length) return [];
+      // Extract header
+      const header = splitCSV(lines[0]).map(h => h.trim().toLowerCase());
+      const urlIdx = header.indexOf('url');
+      if (urlIdx === -1) {
+        throw new Error('CSV must include a "url" column');
+      }
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = splitCSV(lines[i]);
+        const url  = (cols[urlIdx] || '').trim();
+        if (url) rows.push(url);
+      }
+      return rows;
+    }
+    function splitCSV(line) {
+      const out = [];
+      let cur = '', inQ = false;
+      for (let i=0;i<line.length;i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+          else inQ = !inQ;
+        } else if (ch === ',' && !inQ) {
+          out.push(cur); cur='';
+        } else {
+          cur += ch;
+        }
+      }
+      out.push(cur);
+      return out;
+    }
+
+    // Call ingest API for one URL with clear error display
+    async function ingestOne(url, token) {
+      const res = await fetch('/api/ingest-embed-replace', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+        },
+        body: JSON.stringify({ url })
+      });
+      let data, raw;
+      try { data = await res.json(); }
+      catch { raw = await res.text(); data = { error: 'non_json_response', raw }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    // Single URL tester
+    elBtnT.addEventListener('click', async () => {
+      const url = elTestU.value.trim();
+      if (!url) return alert('Provide a URL');
       const token = elToken.value.trim();
-      const url = elUrl.value.trim();
-      if (!url) { alert('Provide a URL'); return; }
-
-      let rowIdx = elRows.children.length + 1;
-
+      const idx = elRows.children.length + 1;
       log(`Single test → ${url}`);
-      elBtn.disabled = true;
-
+      elBtnT.disabled = true;
       try {
-        const res = await fetch('/api/ingest-embed-replace', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          },
-          body: JSON.stringify({ url })
-        });
-
-        let data;
-        try { data = await res.json(); }
-        catch { data = { error: 'non_json_response' }; }
-
-        if (!res.ok) {
-          const details = JSON.stringify(data, null, 2);
+        const r = await ingestOne(url, token);
+        if (r.ok && r.data && (r.data.ok || r.data.id)) {
+          const id = r.data.id ?? '?';
+          const len = r.data.len ?? '?';
+          log(`✔ ${url} → ${JSON.stringify(r.data, null, 2)}`, 'ok');
+          addRow(idx, url, `<span class="ok">OK</span> id=${escapeHtml(id)} len=${escapeHtml(len)}`);
+          elSucc.textContent = Number(elSucc.textContent)+1;
+        } else {
+          const details = JSON.stringify(r.data, null, 2);
           log(`✖ ${url} → ${details}`, 'err');
-          addRow(rowIdx, url, `<span class="err">${escapeHtml(details)}</span>`);
+          addRow(idx, url, `<span class="err">${escapeHtml(details)}</span>`);
+          elFail.textContent = Number(elFail.textContent)+1;
+        }
+      } catch (err) {
+        const msg = String(err?.message || err);
+        log(`✖ ${url} → ${msg}`, 'err');
+        addRow(idx, url, `<span class="err">${escapeHtml(msg)}</span>`);
+        elFail.textContent = Number(elFail.textContent)+1;
+      } finally {
+        elBtnT.disabled = false;
+      }
+    });
+
+    // Queue / Concurrency
+    let stopping = false;
+    elBtnX.addEventListener('click', () => { stopping = true; });
+
+    elBtnS.addEventListener('click', async () => {
+      stopping = false;
+      elSucc.textContent = '0';
+      elFail.textContent = '0';
+      elStop.textContent = '0';
+
+      const token = elToken.value.trim();
+      const concurrency = Math.max(1, Math.min(16, Number(elCon.value || 3)));
+      const delayMs = Math.max(0, Number(elDel.value || 0));
+
+      // Gather URLs from CSV + pasted box
+      let urls = [];
+      if (elCSV.files && elCSV.files[0]) {
+        try {
+          const csvUrls = await parseCSV(elCSV.files[0]);
+          urls.push(...csvUrls);
+        } catch (e) {
+          log(`CSV error: ${e.message}`, 'err');
+          alert(e.message);
           return;
         }
-
-        const details = JSON.stringify(data, null, 2);
-        log(`✔ ${url} → ${details}`, 'ok');
-        addRow(rowIdx, url,
-          `<span class="ok">OK</span> id=${data.id ?? '?'} len=${data.len ?? '?'}`
-        );
-
-      } catch (err) {
-        const details = String(err?.message || err);
-        log(`✖ ${url} → ${details}`, 'err');
-        addRow(rowIdx, url, `<span class="err">${escapeHtml(details)}</span>`);
-      } finally {
-        elBtn.disabled = false;
       }
-    }
+      const pasted = parseLines(elPaste.value);
+      urls.push(...pasted);
 
-    elBtn.addEventListener('click', testSingle);
+      // Deduplicate while preserving order
+      const seen = new Set();
+      urls = urls.filter(u => { const k = u.trim(); if (!k || seen.has(k)) return false; seen.add(k); return true; });
+
+      elLoaded.textContent = urls.length;
+      if (!urls.length) { alert('No URLs found (CSV and Paste are both empty).'); return; }
+
+      log(`Starting ingest… rows=${urls.length}, concurrency=${concurrency}, delay=${delayMs}ms`);
+
+      elBtnS.disabled = true; elBtnX.disabled = false; elBtnT.disabled = true;
+
+      let index = 0;
+      let rowNo = elRows.children.length + 1;
+
+      async function worker(id) {
+        while (!stopping) {
+          const myIdx = index++;
+          if (myIdx >= urls.length) break;
+          const url = urls[myIdx];
+
+          // Call API
+          let r;
+          try {
+            r = await ingestOne(url, token);
+          } catch (err) {
+            const msg = String(err?.message || err);
+            log(`✖ ${url} → ${msg}`, 'err');
+            addRow(rowNo++, url, `<span class="err">${escapeHtml(msg)}</span>`);
+            elFail.textContent = Number(elFail.textContent)+1;
+            if (delayMs) await new Promise(res => setTimeout(res, delayMs));
+            continue;
+          }
+          if (r.ok && r.data && (r.data.ok || r.data.id)) {
+            const id = r.data.id ?? '?';
+            const len = r.data.len ?? '?';
+            log(`✔ ${url} → id=${id} len=${len}`, 'ok');
+            addRow(rowNo++, url, `<span class="ok">OK</span> id=${escapeHtml(id)} len=${escapeHtml(len)}`);
+            elSucc.textContent = Number(elSucc.textContent)+1;
+          } else {
+            const details = JSON.stringify(r.data, null, 2);
+            log(`✖ ${url} → ${details}`, 'err');
+            addRow(rowNo++, url, `<span class="err">${escapeHtml(details)}</span>`);
+            elFail.textContent = Number(elFail.textContent)+1;
+          }
+          if (delayMs) await new Promise(res => setTimeout(res, delayMs));
+        }
+      }
+
+      const pool = Array.from({length: concurrency}, (_, i) => worker(i));
+      await Promise.all(pool);
+
+      if (stopping) {
+        const remaining = Math.max(0, urls.length - index);
+        elStop.textContent = remaining;
+        log(`Stopped. Remaining: ${remaining}`, 'err');
+      } else {
+        log(`Done.`, 'ok');
+      }
+
+      elBtnS.disabled = false; elBtnX.disabled = true; elBtnT.disabled = false;
+    });
   </script>
 </body>
 </html>
