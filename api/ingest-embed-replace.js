@@ -4,7 +4,7 @@
 
 import crypto from "node:crypto";
 import { htmlToText } from "html-to-text";
-import fetch from "node-fetch"; // Vercel Node runtimes already have fetch; this is a safe fallback
+import fetch from "node-fetch"; // fallback; Vercel Node has global fetch
 import { createClient } from "@supabase/supabase-js";
 
 // ---------- Config & guards ----------
@@ -50,7 +50,6 @@ function chunkText(txt, target = 1800, overlap = 200) {
 
 // Try to be ultra-lenient in accepting URL from query/body
 async function readUrlFromRequest(req) {
-  // Vercel node serverless: req.url contains path+query
   let searchUrl;
   try {
     searchUrl = new URL(req.url, "http://local");
@@ -60,7 +59,6 @@ async function readUrlFromRequest(req) {
   const q = searchUrl?.searchParams?.get("url");
   if (q) return q;
 
-  // If nextjs/edge-like, req.body may be a Buffer/string/object
   let bodyText = "";
   if (typeof req.body === "string") {
     bodyText = req.body;
@@ -69,7 +67,6 @@ async function readUrlFromRequest(req) {
   } else if (req.body && typeof req.body === "object") {
     if (req.body.url) return String(req.body.url);
   } else {
-    // Try to read stream (when bodyParser is off)
     try {
       bodyText = await new Promise((resolve, reject) => {
         let data = "";
@@ -77,18 +74,14 @@ async function readUrlFromRequest(req) {
         req.on("end", () => resolve(data));
         req.on("error", reject);
       });
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
 
   if (bodyText) {
-    // JSON?
     try {
       const j = JSON.parse(bodyText);
       if (j?.url) return String(j.url);
     } catch {
-      // maybe url=...
       const m = bodyText.match(/(?:^|&)url=([^&]+)/i);
       if (m) return decodeURIComponent(m[1]);
     }
@@ -124,7 +117,6 @@ async function fetchPageAsText(url) {
       { selector: "noscript", format: "skip" },
     ],
   });
-  // naive title extraction
   const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const title = m ? m[1].trim() : null;
   return { text: text.trim(), title };
@@ -148,7 +140,6 @@ async function getEmbeddings(inputTexts) {
         "x-title": "AlanRanger-Indexer",
       },
       body: JSON.stringify({
-        // OpenRouter expects namespaced model IDs for OpenAI models:
         model: `openai/${EMBED_MODEL}`,
         input: inputTexts,
       }),
@@ -168,7 +159,6 @@ async function getEmbeddings(inputTexts) {
     return j.data.map((d) => d.embedding);
   }
 
-  // OpenAI
   const r = await fetch("https://api.openai.com/v1/embeddings", {
     method: "POST",
     headers: {
@@ -209,7 +199,6 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Bearer auth (simple)
     const auth = req.headers.authorization || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
     if (!INGEST_TOKEN || token !== INGEST_TOKEN) {
@@ -223,7 +212,6 @@ export default async function handler(req, res) {
       return;
     }
 
-    // 1) Fetch page and text
     const { text, title } = await fetchPageAsText(url);
     if (!text || text.length < 40) {
       res.status(422).json({
@@ -233,14 +221,12 @@ export default async function handler(req, res) {
       return;
     }
 
-    // 2) Chunk it
     const chunks = chunkText(text, 1800, 200);
     if (chunks.length === 0) {
       res.status(422).json({ error: "no_chunks" });
       return;
     }
 
-    // 3) Embed
     const embeddings = await getEmbeddings(chunks);
     if (embeddings.length !== chunks.length) {
       throw {
@@ -250,11 +236,8 @@ export default async function handler(req, res) {
       };
     }
 
-    // 4) Replace rows for that URL
-    // delete existing (if any)
     await supabase.from("page_chunks").delete().eq("url", url);
 
-    // insert in batches to be safe
     const rows = chunks.map((content, i) => ({
       url,
       title,
@@ -263,7 +246,6 @@ export default async function handler(req, res) {
       chunk_hash: sha1(content),
     }));
 
-    // batched insert (100 per)
     const batchSize = 100;
     for (let i = 0; i < rows.length; i += batchSize) {
       const batch = rows.slice(i, i + batchSize);
@@ -286,7 +268,6 @@ export default async function handler(req, res) {
       provider,
     });
   } catch (err) {
-    // Return clean, JSON errors so the UI can render something sensible
     const status = err?.status || 500;
     res.status(status).json({
       error: err?.error || "server_error",
@@ -296,4 +277,4 @@ export default async function handler(req, res) {
 }
 
 // Force Node runtime on Vercel (NOT edge)
-export const config = { runtime: "nodejs.x" };
+export const config = { runtime: "nodejs" };
