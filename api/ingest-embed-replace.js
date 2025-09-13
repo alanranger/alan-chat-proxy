@@ -244,6 +244,5 @@ export default async function handler(req, res) {
 }
 
 // Vercel runtime — keep Node (NOT Edge)
-export const config = {
-  runtime: 'nodejs18.x',
-};
+export const config = { runtime: 'nodejs' };
+// or: export const runtime = 'nodejs';
