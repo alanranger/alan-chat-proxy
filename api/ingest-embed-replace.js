@@ -1,6 +1,6 @@
 // /api/ingest-embed-replace.js
-// Node runtime (not Edge) so we can use Supabase + HTML parsing comfortably.
-export const config = { runtime: 'nodejs. };
+// Pin to Vercel's supported Node runtime (NOT edge)
+export const config = { runtime: 'nodejs20.x' };
 
 import { createHash } from "crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -60,7 +60,7 @@ function extractText(html) {
  */
 function chunkText(text, { minChars = 800, maxChars = 1600 } = {}) {
   const paras = text
-    .split(/\n{2,}/g)              // paragraphs
+    .split(/\n{2,}/g)
     .map(s => s.trim())
     .filter(Boolean);
 
@@ -76,7 +76,6 @@ function chunkText(text, { minChars = 800, maxChars = 1600 } = {}) {
   }
   if (cur) chunks.push(cur);
 
-  // merge very small trailing chunk
   if (chunks.length >= 2 && chunks[chunks.length - 1].length < minChars) {
     const last = chunks.pop();
     chunks[chunks.length - 1] = chunks[chunks.length - 1] + "\n\n" + last;
@@ -86,12 +85,10 @@ function chunkText(text, { minChars = 800, maxChars = 1600 } = {}) {
 
 /**
  * Create embeddings via OpenRouter (preferred) or OpenAI as fallback.
- * Model: text-embedding-3-small (1536 dims)
  */
 async function embedBatch(inputs) {
   const openRouterKey = process.env.OPENROUTER_API_KEY || "";
   const openAIKey = process.env.OPENAI_API_KEY || "";
-
   const useOpenRouter = !!openRouterKey;
   const apiKey = useOpenRouter ? openRouterKey : openAIKey;
 
@@ -116,7 +113,6 @@ async function embedBatch(inputs) {
     body: JSON.stringify({ model, input: inputs }),
   });
 
-  // Guard for a provider returning HTML or non-JSON error pages
   const ct = (r.headers.get("content-type") || "").toLowerCase();
   if (!ct.includes("application/json")) {
     const txt = await r.text();
@@ -139,15 +135,6 @@ async function embedBatch(inputs) {
 
 /**
  * Save chunks to Supabase (table: page_chunks)
- * Expected schema (any superset is fine):
- *   id bigserial PK
- *   url text
- *   title text
- *   content text
- *   chunk_text text
- *   embedding vector(1536)
- *   chunk_hash text unique
- *   created_at timestamptz default now()
  */
 async function saveChunksToSupabase({ url, title, chunks, vectors }) {
   const supa = createClient(
@@ -165,7 +152,6 @@ async function saveChunksToSupabase({ url, title, chunks, vectors }) {
     chunk_hash: createHash("sha256").update(`${url}|${i}|${content}`).digest("hex"),
   }));
 
-  // Upsert by chunk_hash (dedupe)
   const { data, error } = await supa
     .from("page_chunks")
     .upsert(rows, { onConflict: "chunk_hash" })
@@ -192,7 +178,6 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "method_not_allowed" });
     }
 
-    // Simple bearer auth
     const expected = process.env.INGEST_TOKEN || "";
     const auth = req.headers.authorization || "";
     if (!expected || auth !== `Bearer ${expected}`) {
@@ -203,19 +188,16 @@ export default async function handler(req, res) {
     const url = body?.url?.trim?.();
     if (!url) return res.status(400).json({ error: "bad_request", detail: `Provide "url"` });
 
-    // 1) fetch + parse
     const { html, finalUrl } = await fetchHtml(url);
     const title = extractTitle(html) || finalUrl;
     const text = extractText(html);
 
-    // 2) chunk + embed
     const chunks = chunkText(text);
     if (chunks.length === 0) {
       return res.status(200).json({ ok: true, id: null, len: 0, chunks: 0 });
     }
     const vectors = await embedBatch(chunks);
 
-    // 3) save
     const inserted = await saveChunksToSupabase({
       url: finalUrl,
       title,
@@ -223,14 +205,13 @@ export default async function handler(req, res) {
       vectors,
     });
 
-    // id of first affected row (for convenience)
     const firstId = inserted?.[0]?.id ?? null;
 
     return res.status(200).json({
       ok: true,
       id: firstId,
       len: text.length,
-      chunks: chunks.length, // <— NEW: expose chunk count
+      chunks: chunks.length,
     });
   } catch (err) {
     const status = err.status || 500;
