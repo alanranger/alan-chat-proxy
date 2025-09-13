@@ -15,11 +15,13 @@
     button { background:#2563eb; color:white; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
     button:disabled{opacity:.5; cursor:not-allowed}
     .pill { padding:3px 8px; border-radius:999px; border:1px solid #1b2540; }
-    .ok  { color:#22c55e; } .bad { color:#ef4444; }
+    .ok  { color:#22c55e; }  /* green */
+    .bad { color:#ef4444; }  /* red   */
     .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace }
     table { width:100%; border-collapse:collapse; }
     th,td { padding:8px 10px; border-bottom:1px solid #1b2540; vertical-align:top; }
     pre { white-space:pre-wrap; word-break:break-word; }
+    /* make URL links white for readability */
     table a { color:#dbe4ff; text-decoration:underline; }
     table a:hover { opacity:.85; }
     @media (max-width:900px){ .row{ flex-direction:column; } }
@@ -118,9 +120,9 @@
 </div>
 
 <div class="card">
-  <div><small>Search Results</small></div>
+  <div><small>Search Results (grouped by URL)</small></div>
   <table>
-    <thead><tr><th style="width:80px">Score</th><th>URL</th><th>Snippet</th></tr></thead>
+    <thead><tr><th style="width:120px">Best Score / Chunks</th><th>URL</th><th>Snippet</th></tr></thead>
     <tbody id="srows"></tbody>
   </table>
 </div>
@@ -143,9 +145,7 @@ $('token').addEventListener('input', saveToken);
 // ---------------- CSV handling ----------------
 let csvUrls = [];   // holds urls parsed from the CSV (deduped, trimmed)
 
-// naive but robust-ish CSV parser with quotes support; returns array of objects
 function parseCSV(text) {
-  // detect delimiter by header: comma, semicolon, or tab
   const firstLine = text.split(/\r?\n/)[0] || '';
   let delim = ',';
   const counts = [
@@ -174,7 +174,6 @@ function parseCSV(text) {
       else { val += ch; }
     }
   }
-  // tail
   if (val.length || row.length) { pushVal(); pushRow(); }
 
   if (rows.length === 0) return [];
@@ -205,11 +204,10 @@ $('csv').addEventListener('change', async (e)=>{
     if (!rows.length) {
       log('CSV parse: no data rows found'); csvUrls=[]; updateLoadedPill(); return;
     }
-    // find url column (case-insensitive)
     const header = rows.__header || [];
     const urlKey = header.find(h => h && h.toLowerCase().trim() === 'url');
     if (!urlKey) {
-      log('CSV parse error: No "url" column found in header: ['+header.join(', ')+']');
+      log('CSV parse error: No "url" column found. Header: ['+header.join(', ')+']');
       csvUrls = []; updateLoadedPill(); return;
     }
     const urls = rows.map(r => (r[urlKey]||'').trim()).filter(Boolean);
@@ -217,11 +215,10 @@ $('csv').addEventListener('change', async (e)=>{
     log(`CSV loaded: ${csvUrls.length} URL(s) found in "url" column`);
     updateLoadedPill();
   } catch(err){
-    log('CSV read error: ' + (err && err.message || err));
+    log('CSV read error: ' + (err?.message || err));
     csvUrls = []; updateLoadedPill();
   }
 });
-
 $('paste').addEventListener('input', updateLoadedPill);
 
 // ---------------- API helpers ----------------
@@ -260,7 +257,7 @@ async function callSearch(query, topK) {
   return body;
 }
 
-// --------- Snippet helpers (same as before) ----------
+// --------- Snippet helpers ----------
 function cleanSnippet(s) {
   if (!s) return '';
   s = s.replace(/!\[[^\]]*\]\([^)]+\)/g, ' ');
@@ -273,10 +270,32 @@ function makeSentenceSnippet(text) {
   if (!t) return '';
   const sentences = t.split(/(?<=[.!?])\s+/).filter(Boolean);
   if (sentences.length === 0) return t;
-  let first = sentences[0];
-  let second = sentences[1] || '';
+  let first = sentences[0], second = sentences[1] || '';
   if (first.length < 60 && second) return (first + ' ' + second).trim();
   return first.trim();
+}
+function containsAllTerms(snippet, terms) {
+  const hay = snippet.toLowerCase();
+  return terms.every(t => hay.includes(t));
+}
+
+// pick the best snippet from a chunk’s content, preferring one that contains the query terms
+function pickBestSnippet(content, queryTerms) {
+  const primary = makeSentenceSnippet(content);
+  if (!primary) return '';
+  if (!queryTerms.length) return primary;
+
+  // Try to find a sentence containing all terms
+  const clean = cleanSnippet(content);
+  const sentences = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
+  const candidate = sentences.find(s => containsAllTerms(s, queryTerms));
+  if (candidate) {
+    // if very short, add the next sentence
+    const idx = sentences.indexOf(candidate);
+    if (candidate.length < 60 && sentences[idx+1]) return (candidate + ' ' + sentences[idx+1]).trim();
+    return candidate.trim();
+  }
+  return primary;
 }
 
 // --- Single test
@@ -335,10 +354,9 @@ $('stop').onclick = () => { stopFlag = true; $('stop').disabled = true; };
 $('crawl').onclick = async () => {
   stopFlag = false; $('stop').disabled = false;
 
-  // combine CSV + paste (dedupe)
   const pasted = $('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const combined = [...new Set([...csvUrls, ...pasted])];
-  $('loaded').textContent = String(combined.length);  // reflect final queue size
+  $('loaded').textContent = String(combined.length);
 
   $('succ').textContent = '0';
   $('fail').textContent = '0';
@@ -370,7 +388,7 @@ $('crawl').onclick = async () => {
   $('stop').disabled = true;
 };
 
-// --- Search tester
+// --- Search tester (grouped by URL with better snippets)
 $('runSearch').onclick = async () => {
   const query = $('query').value.trim();
   const topK = Math.max(1, Math.min(32, parseInt($('topk').value || '8', 10)));
@@ -382,13 +400,42 @@ $('runSearch').onclick = async () => {
   $('sraw').textContent = JSON.stringify(body, null, 2);
 
   const matches = (body && body.matches) || [];
+
+  // Group by URL
+  const groups = new Map();
+  const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
   for (const m of matches) {
-    const snip = makeSentenceSnippet(m.content);
+    if (!m || !m.url) continue;
+    const g = groups.get(m.url) || { url:m.url, bestScore:0, chunks:0, snippets:[] };
+    g.bestScore = Math.max(g.bestScore || 0, Number(m.score||0));
+    g.chunks += 1;
+    const snip = pickBestSnippet(m.content||'', queryTerms);
+    if (snip) g.snippets.push(snip);
+    groups.set(m.url, g);
+  }
+
+  // Order by bestScore desc
+  const grouped = Array.from(groups.values()).sort((a,b)=> (b.bestScore - a.bestScore));
+
+  // Render one row per URL, pick the strongest unique snippet
+  for (const g of grouped) {
+    // keep unique snippets, prefer those containing terms
+    const uniq = [];
+    const seen = new Set();
+    for (const s of g.snippets) {
+      const key = s.toLowerCase();
+      if (!seen.has(key)) { seen.add(key); uniq.push(s); }
+    }
+    // choose the first snippet containing terms, else first
+    let chosen = uniq.find(s => containsAllTerms(s, queryTerms)) || uniq[0] || '';
+    // short fallback: add next snippet if very short
+    if (chosen && chosen.length < 60 && uniq[1]) chosen = (chosen + ' ' + uniq[1]).trim();
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="mono score">${(m.score ?? 0).toFixed(3)}</td>
-      <td class="mono"><a href="${m.url}" target="_blank" rel="noopener noreferrer">${m.url}</a></td>
-      <td class="mono">${snip}</td>
+      <td class="mono score">${g.bestScore.toFixed(3)} <span class="muted">/ ${g.chunks} chunk${g.chunks===1?'':'s'}</span></td>
+      <td class="mono"><a href="${g.url}" target="_blank" rel="noopener noreferrer">${g.url}</a></td>
+      <td class="mono">${chosen || ''}</td>
     `;
     $('srows').appendChild(tr);
   }
