@@ -120,7 +120,7 @@ async function callIngest(url) {
 
 async function callVerify(url) {
   const token = $('token').value.trim();
-  const r = await fetch('/api/verify-chunks?url=' + encodeURIComponent(url), {
+  const r = await fetch('/api/tools?action=verify&url=' + encodeURIComponent(url), {
     method: 'GET',
     headers: { 'Authorization': 'Bearer ' + token }
   });
@@ -139,7 +139,6 @@ $('test').onclick = async () => {
   if (ok) {
     log(`✓ ${url} → { ok: true, id:${body.id}, len:${body.len}, chunks:${body.chunks} }`);
     const tr = addRow(url, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
-    // verify in DB
     verifyAndAnnotate(url, tr);
     bumpSucc();
   } else {
