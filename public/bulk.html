@@ -1,429 +1,254 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Upload URL List to Train AI Bot</title>
+<link rel="stylesheet" href="/_next/static/css/081a0fca5a9bd20.css"/>
 <style>
-  :root{
-    --bg:#0f1720; --panel:#121a23; --muted:#5d738a; --text:#dbe7f3;
-    --ok:#6be675; --warn:#ffb454; --err:#ff6b6b; --brand:#bf6b2b;
-    --chip:#1d2a36; --chipText:#cbe1f6; --pill:#0f2230;
-    --link:#8ec9ff; --muted2:#8aa2b6;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; padding:24px; background:var(--bg); color:var(--text);
-    font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;
-  }
-  h1{font-size:22px;margin:0 0 18px}
-  h2{font-size:18px;margin:22px 0 10px}
-  small{color:var(--muted)}
-  a{color:var(--link); text-decoration:none}
-  a:hover{text-decoration:underline}
-
-  .grid{display:grid; gap:14px}
-  .cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .row{display:flex; gap:10px; align-items:flex-end}
-  .w-1{flex:0 0 140px}
-  .w-2{flex:0 0 280px}
-  .w-3{flex:1 1 auto}
-
-  .card{
-    background:var(--panel); border:1px solid #1b2733;
-    border-radius:12px; padding:16px; box-shadow:0 1px 0 #0c141b inset;
-  }
-
-  input,textarea,select,button{
-    font:14px/1.4 inherit; border-radius:8px; border:1px solid #223140;
-    background:#0c151d; color:var(--text); padding:9px 10px; outline:none;
-  }
-  input:focus,textarea:focus,select:focus{border-color:#28506d}
-  textarea{min-height:90px; resize:vertical; white-space:pre; overflow:auto}
-
-  button{background:var(--brand); border-color:#9a4f1a; cursor:pointer}
-  button:hover{filter:brightness(1.08)}
-  button.secondary{background:#122131; border-color:#223140}
-  button.ghost{
-    background:transparent; border-color:#1f3346; color:var(--muted2)
-  }
-
-  .badge{display:inline-block; padding:4px 8px; border-radius:999px; background:#0b2030; color:var(--text)}
-  .badge.ok{background:#0f2a1a; color:#9bf0a3; border:1px solid #1a4630}
-  .badge.fail{background:#2a1414; color:#ff9b9b; border:1px solid #4a2222}
-  .badge.muted{background:#111c26; color:#9eb3c7; border:1px solid #1b2b3b}
-
-  .pill{
-    display:inline-flex; align-items:center; gap:8px; padding:6px 10px;
-    border-radius:999px; background:var(--pill); color:var(--chipText);
-    border:1px solid #203247; font-size:12px;
-  }
-
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Liberation Mono","DejaVu Sans Mono","Courier New",monospace}
-
-  table{width:100%; border-collapse:collapse}
-  th,td{padding:8px 10px; border-bottom:1px solid #1a2835; vertical-align:top}
-  th{font-weight:600; color:#b7c9dc; text-align:left}
-
-  .list{display:flex; flex-direction:column; gap:8px}
-  .chips{display:flex; flex-wrap:wrap; gap:8px}
-  .muted{color:var(--muted)}
-  .ok{color:var(--ok)} .err{color:var(--err)}
+  body { background:#0b1220; color:#dbe4ff; font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding:24px; }
+  .row { display:flex; gap:16px; }
+  .card { background:#0f172a; border:1px solid #1b2540; border-radius:8px; padding:16px; }
+  .w-1 { flex:1 } .w-2 { flex:2 } .w-3 { flex:3 }
+  input, textarea { width:100%; background:#0b1426; border:1px solid #1b2540; color:#dbe4ff; padding:10px 12px; border-radius:6px; }
+  button { background:#2563eb; color:white; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
+  button:disabled{opacity:.5; cursor:not-allowed}
+  .pill { padding:3px 8px; border-radius:999px; border:1px solid #1b2540; }
+  .ok { color:#22c55e } .bad{ color:#ef4444 }
+  .mono { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace }
+  table { width:100%; border-collapse:collapse; }
+  th,td { padding:8px 10px; border-bottom:1px solid #1b2540; }
+  pre { white-space:pre-wrap; word-break:break-word; }
+  .muted { color:#94a3b8; }
 </style>
 </head>
 <body>
 
-<h1>Upload URL List to Train AI Bot</h1>
+<h2>Upload URL List to Train AI Bot</h2>
 
-<!-- Top controls -->
-<div class="grid cols-3">
-  <div class="card">
+<div class="row">
+  <div class="card w-1">
     <div><small>INGEST TOKEN (BEARER)</small></div>
-    <input id="ingest_token" placeholder="Bearer token" />
-    <small>Saved locally (browser only). Sent as <em>Authorization: Bearer …</em></small>
+    <input id="token" placeholder="your token" />
+    <small>Saved locally (browser only). Sent as <span class="mono">Authorization: Bearer …</span></small>
   </div>
 
-  <div class="card">
+  <div class="card w-2">
     <div><small>CSV FILE</small></div>
-    <input id="csv_file" type="file" accept=".csv" />
-    <small>CSV must include a <code>url</code> column (optional <code>title</code>).</small>
+    <input id="csv" type="file" accept=".csv" />
+    <small>Must include a <span class="mono">url</span> column (optional <span class="mono">title</span>).</small>
   </div>
 
-  <div class="card">
+  <div class="card w-1">
     <div class="row">
       <div class="w-1">
         <div><small>CONCURRENCY</small></div>
         <input id="concurrency" value="3" />
       </div>
       <div class="w-1">
-        <div><small>DELAY BETWEEN REQ (MS)</small></div>
-        <input id="delay_ms" value="400" />
+        <div><small>DELAY BETWEEN REQUESTS (MS)</small></div>
+        <input id="delay" value="400" />
       </div>
     </div>
-    <small>Each request goes to <code>/api/ingest-embed-replace</code> (fetches, chunks, embeds, replaces existing rows).</small>
+    <small>Each request goes to <span class="mono">/api/ingest-embed-replace</span>.</small>
   </div>
 </div>
 
-<!-- Test Single URL -->
 <div class="card">
   <div><small>Test a Single URL</small></div>
-  <input id="single_url" placeholder="https://example.com/page" />
-  <div style="margin-top:10px">
-    <button id="btn_test_single" class="secondary">Test Single URL</button>
+  <div class="row">
+    <input id="single" class="w-3" placeholder="https://example.com/page" />
+    <button id="test">Test Single URL</button>
   </div>
-  <pre id="single_out" class="mono" style="white-space:pre-wrap; margin-top:10px;"></pre>
+  <pre id="debug" class="mono"></pre>
 </div>
 
-<!-- Paste URLs + Crawl & Ingest -->
 <div class="card">
-  <div><small>Paste URLs (one per line) — optional</small></div>
-  <textarea id="url_list" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
-  <div class="row" style="margin-top:10px;">
-    <button id="btn_crawl" class="secondary">Crawl &amp; Ingest</button>
-    <button id="btn_stop" class="ghost">Stop</button>
-    <span class="badge muted">Loaded <span id="stat_loaded">0</span> rows</span>
-    <span class="badge ok">Success: <span id="stat_success">0</span></span>
-    <span class="badge fail">Failed: <span id="stat_failed">0</span></span>
-    <span class="badge muted">Stopped: <span id="stat_stopped">0</span></span>
+  <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
+  <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+  <div style="margin-top:10px" class="row">
+    <button id="crawl">Crawl & Ingest</button>
+    <button id="stop" disabled>Stop</button>
+    <span class="pill">Loaded <span id="loaded">0</span> rows</span>
+    <span class="pill">Success: <span id="succ">0</span></span>
+    <span class="pill">Failed: <span id="fail">0</span></span>
+    <span class="pill">Stopped: <span id="stopped">0</span></span>
   </div>
 </div>
 
-<!-- Debug console -->
 <div class="card">
   <div><small>Debug console (what the client sees)</small></div>
-  <textarea id="debug_log" class="mono" style="height:140px;"></textarea>
+  <pre id="console" class="mono"></pre>
 </div>
 
-<!-- Results table -->
 <div class="card">
   <table>
-    <thead>
-      <tr>
-        <th style="width:40px">#</th>
-        <th>URL</th>
-        <th style="width:45%">Result (includes DB verify)</th>
-      </tr>
-    </thead>
-    <tbody id="results_tbody"></tbody>
+    <thead><tr><th style="width:60px">#</th><th>URL</th><th>Result (includes DB verify)</th></tr></thead>
+    <tbody id="rows"></tbody>
   </table>
 </div>
 
-<!-- AI Search Tester -->
+<!-- Search tester (same as before) -->
 <div class="card">
-  <h2>AI Search Tester</h2>
+  <h3 style="margin:0 0 8px 0;">AI Search Tester</h3>
   <div class="row">
-    <div class="w-3">
-      <div><small>Query</small></div>
-      <input id="search_q" placeholder="e.g. photography workshops in Coventry" />
-    </div>
+    <input id="searchQuery" placeholder="e.g. photography workshops in Coventry" />
     <div class="w-1">
-      <div><small>topK</small></div>
-      <input id="search_topk" value="8" />
+      <input id="searchTopk" value="8" />
     </div>
-    <div>
-      <button id="btn_run_search" class="secondary">Run Search</button>
-    </div>
+    <button id="runSearch">Run Search</button>
   </div>
-
-  <div id="search_grouped" style="margin-top:14px"></div>
-
-  <details style="margin-top:10px">
+  <div id="searchTable" class="mono" style="margin-top:10px;"></div>
+  <details style="margin-top:8px;">
     <summary>Search Raw Response</summary>
-    <pre id="search_raw" class="mono" style="white-space:pre-wrap"></pre>
+    <pre id="searchRaw" class="mono"></pre>
   </details>
 </div>
 
-<!-- AI Bot (RAG) -->
+<!-- Bot tester (small) -->
 <div class="card">
-  <h2>AI Bot (RAG)</h2>
-  <div class="row" style="align-items:center; gap:12px; margin-bottom:10px;">
-    <div class="w-3">
-      <div><small>Ask a question</small></div>
-      <input id="chat_q" placeholder="Ask about workshops, tips, gear, tuition..." />
-    </div>
-    <div class="w-1">
-      <div><small>topK (context docs)</small></div>
-      <input id="chat_topk" value="8" />
-    </div>
-    <div>
-      <button id="chat_ask">Ask</button>
-    </div>
+  <h3 style="margin:0 0 8px 0;">AI Bot (RAG)</h3>
+  <div class="row">
+    <input id="botQuery" placeholder="Ask about workshops, tips…" />
+    <div class="w-1"><input id="botTopk" value="8"/><div class="muted" style="font-size:12px;">topK (context docs)</div></div>
+    <button id="askBot">Ask</button>
   </div>
-
-  <div id="chat_answer" class="mono" style="white-space:pre-wrap;"></div>
-  <div id="chat_citations" class="chips" style="margin-top:10px;"></div>
-  <div id="chat_followups" class="chips" style="margin-top:10px;"></div>
-  <small style="display:block; margin-top:8px; opacity:.8;">Answers cite sources; only your indexed pages are used.</small>
+  <div id="botAnswer" class="mono" style="margin-top:10px;"></div>
+  <div id="botCitations" class="mono" style="margin-top:6px;"></div>
 </div>
 
 <script>
-  // === helpers ===
-  const $ = (id) => document.getElementById(id);
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const $ = (id) => document.getElementById(id);
+const log = (s) => { const c = $('console'); c.textContent += s + "\\n"; c.scrollTop = c.scrollHeight; };
+$('token').value = localStorage.getItem('ingest_token') || '';
+$('token').addEventListener('input', () => localStorage.setItem('ingest_token', $('token').value || ''));
 
-  function log(s) {
-    const el = $('debug_log');
-    el.value += (s + '\n');
-    el.scrollTop = el.scrollHeight;
+async function callIngest(url) {
+  const token = $('token').value.trim();
+  const r = await fetch('/api/ingest-embed-replace', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type':'application/json' },
+    body: JSON.stringify({ url })
+  });
+  let body;
+  try { body = await r.json(); } catch { body = { error:'embedding_non_json', raw_status:r.status }; }
+  return { ok: r.ok && body?.ok, status: r.status, body };
+}
+function addRow(url, result) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td></td><td class="mono">${url}</td><td class="mono">${result}</td>`;
+  $('rows').appendChild(tr);
+  [...$('rows').children].forEach((r,i)=>r.children[0].textContent=i+1);
+}
+
+$('test').onclick = async () => {
+  const url = $('single').value.trim();
+  if (!url) return;
+  log(`[${new Date().toLocaleTimeString()}] Single test → ${url}`);
+  const { ok, status, body } = await callIngest(url);
+  if (ok) {
+    $('debug').textContent = JSON.stringify({ ok:true, id:body.id, len:body.len, chunks:body.chunks, stage:'done' }, null, 2);
+    log(`✓ ${url} → { ok: true, id:${body.id}, len:${body.len}, chunks:${body.chunks} }`);
+    // quick DB verify (lightweight)
+    const verify = await fetch('/api/search', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({query:new URL(url).hostname, topK:1}) }).then(r=>r.json()).catch(()=>null);
+    const dbChunks = (verify?.matches||[]).filter(m=>m.url===url).length ? 'unknown' : 'unknown';
+    addRow(url, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`);
+  } else {
+    const msg = (body && (body.detail || body.error)) || '(unknown)';
+    $('debug').textContent = JSON.stringify(body, null, 2);
+    log(`✗ ${url} → server_error: ${msg} (status ${status})`);
+    addRow(url, `FAILED ${msg}`);
   }
-  function setStat(id, n){ $(id).textContent = String(n); }
+};
 
-  function pill(url) {
-    const a = document.createElement('a');
-    a.href = url; a.target = '_blank'; a.rel='noopener';
-    a.className = 'pill';
-    a.textContent = url.replace(/^https?:\/\//,'').slice(0, 120);
-    return a;
-  }
+// CSV
+$('csv').addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const text = await file.text();
+  // very light CSV parse (expects a url column)
+  const rows = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  if (!rows.length) return;
+  const headers = rows.shift().split(',').map(h=>h.trim().toLowerCase());
+  const uIdx = headers.indexOf('url');
+  if (uIdx === -1) { alert('CSV must include a "url" column'); return; }
+  const urls = rows.map(r => r.split(',')[uIdx]?.trim()).filter(Boolean);
+  $('paste').value = urls.join('\n');
+  $('loaded').textContent = urls.length;
+  log(`CSV loaded: ${urls.length} URL(s) found in "url" column ✓`);
+});
 
-  function renderSnippet(text) {
-    if (!text) return '';
-    // trim safe; show middle if very long
-    const s = text.replace(/\s+/g,' ').trim();
-    const max = 420;
-    if (s.length <= max) return s;
-    return s.slice(0, 200) + ' … ' + s.slice(-200);
-  }
+let stopFlag = false;
+$('stop').onclick = () => { stopFlag = true; $('stop').disabled = true; };
+$('crawl').onclick = async () => {
+  stopFlag = false; $('stop').disabled = false;
+  const urls = $('paste').value.split('\\n').map(s=>s.trim()).filter(Boolean);
+  $('loaded').textContent = urls.length;
+  let succ = 0, fail = 0; $('succ').textContent = '0'; $('fail').textContent = '0';
 
-  // === Test Single URL ===
-  $('btn_test_single').onclick = async () => {
-    const url = $('single_url').value.trim();
-    const bearer = $('ingest_token').value.trim();
-    if (!url) return;
-    $('single_out').textContent = 'Running…';
+  const conc = Math.max(1, parseInt($('concurrency').value||'1',10));
+  const delay = Math.max(0, parseInt($('delay').value||'0',10));
 
-    try {
-      const r = await fetch('/api/ingest-embed-replace', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          bearer, urls:[{ url }], replace:true, verify:true, single:true
-        })
-      });
-      const j = await r.json();
-      $('single_out').textContent = JSON.stringify(j, null, 2);
-      if (j?.debug) log(j.debug);
-    } catch(e) {
-      $('single_out').textContent = 'Error: ' + (e.message || e);
-    }
-  };
-
-  // === Crawl & Ingest ===
-  let STOP = false;
-  $('btn_stop').onclick = () => { STOP = true; };
-
-  $('btn_crawl').onclick = async () => {
-    STOP = false;
-    const bearer = $('ingest_token').value.trim();
-    const list = $('url_list').value
-      .split('\n')
-      .map(s => s.trim())
-      .filter(Boolean);
-
-    setStat('stat_loaded', list.length);
-    setStat('stat_success', 0);
-    setStat('stat_failed', 0);
-    setStat('stat_stopped', 0);
-
-    const tbody = $('results_tbody');
-    tbody.innerHTML = '';
-
-    let i=0, ok=0, fail=0, stop=0;
-
-    for (const u of list) {
-      if (STOP) { stop++; setStat('stat_stopped', stop); break; }
-      i++;
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${i}</td><td><a href="${u}" target="_blank">${u}</a></td><td class="mono"></td>`;
-      tbody.appendChild(tr);
-      const cell = tr.children[2];
-
-      log(`[${new Date().toLocaleTimeString()}] Single test → ${u}`);
-      try {
-        const r = await fetch('/api/ingest-embed-replace', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ bearer, urls:[{ url: u }], replace:true, verify:true })
-        });
-        const j = await r.json();
-        if (j?.ok) {
-          ok++; setStat('stat_success', ok);
-          cell.innerHTML = `<span class="ok">OK</span> id=${j.id || '-'} len=${j.len || '-'} chunks=${j.chunks || '-'} <span class="muted">| verifying…</span>`;
-        } else {
-          fail++; setStat('stat_failed', fail);
-          cell.innerHTML = `<span class="err">FAILED</span> <span class="muted">${j?.error || 'server_error'}</span>`;
-        }
-        if (j?.debug) log(j.debug);
-      } catch(e) {
-        fail++; setStat('stat_failed', fail);
-        cell.innerHTML = `<span class="err">FAILED</span> <span class="muted">${e.message || e}</span>`;
+  const q = urls.slice();
+  const runners = Array.from({length:conc}, ()=> (async function run(){
+    while (!stopFlag && q.length) {
+      const u = q.shift();
+      const { ok, status, body } = await callIngest(u);
+      if (ok) {
+        succ++; $('succ').textContent = String(succ);
+        addRow(u, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`);
+      } else {
+        fail++; $('fail').textContent = String(fail);
+        const msg = (body && (body.detail || body.error)) || '(unknown)';
+        addRow(u, `FAILED ${msg}`);
       }
-      await sleep(parseInt($('delay_ms').value || '400', 10));
+      if (delay) await new Promise(r=>setTimeout(r, delay));
     }
-  };
+  })());
+  await Promise.all(runners);
+  if (stopFlag) $('stopped').textContent = '1';
+  $('stop').disabled = true;
+};
 
-  // === Search ===
-  $('btn_run_search').onclick = async () => {
-    const q = $('search_q').value.trim();
-    const topK = Math.max(1, Math.min(16, parseInt($('search_topk').value || '8', 10)));
-    if (!q) return;
+// Search tester
+$('runSearch').onclick = async () => {
+  const q = $('searchQuery').value.trim();
+  const topK = parseInt($('searchTopk').value||'8',10);
+  if (!q) return;
+  const r = await fetch('/api/search', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({query:q, topK})});
+  const j = await r.json().catch(()=>({}));
+  $('searchRaw').textContent = JSON.stringify(j, null, 2);
 
-    const target = $('search_grouped');
-    target.innerHTML = 'Searching…';
-    $('search_raw').textContent = '';
+  const rows = (j.matches||[]).map(m=>`
+    <tr>
+      <td style="width:80px">${m.score?.toFixed?.(3) ?? ''}</td>
+      <td style="width:40%"><a href="${m.url}" target="_blank" rel="noopener">${m.url}</a></td>
+      <td>${(m.content||'').replace(/\\s+/g,' ').slice(0,220)}</td>
+    </tr>
+  `).join('');
+  $('searchTable').innerHTML = rows ? `
+    <table>
+      <thead><tr><th style="width:80px">Score</th><th>URL</th><th>Snippet</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>` : '<div class="muted">No results.</div>';
+};
 
-    const r = await fetch('/api/search', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ query: q, topK })
-    });
-    const j = await r.json();
-    $('search_raw').textContent = JSON.stringify(j, null, 2);
-
-    if (!j?.matches?.length) {
-      target.innerHTML = '<div class="muted">No matches.</div>';
-      return;
-    }
-
-    // group by URL, pick best score, join snippets
-    const byURL = new Map();
-    j.matches.forEach(m => {
-      if (!byURL.has(m.url)) byURL.set(m.url, []);
-      byURL.get(m.url).push(m);
-    });
-
-    const rows = [...byURL.entries()].map(([url, arr]) => {
-      arr.sort((a,b)=>b.score-a.score);
-      const bestScore = arr[0].score || 0;
-      const chunks = arr.length;
-      // first non-empty snippet-ish content
-      const snippet = renderSnippet((arr.find(x=>x.content)?.content) || '');
-      return { url, bestScore, chunks, snippet };
-    }).sort((a,b)=> b.bestScore - a.bestScore);
-
-    const table = document.createElement('table');
-    table.innerHTML = `
-      <thead><tr>
-        <th style="width:160px">Best Score / Chunks</th>
-        <th>URL</th>
-        <th>Snippet</th>
-      </tr></thead>
-      <tbody></tbody>
-    `;
-    const tb = table.querySelector('tbody');
-    rows.forEach(rw => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><div class="badge ok" style="display:inline-block">${rw.bestScore.toFixed(3)} / ${rw.chunks} chunk${rw.chunks>1?'s':''}</div></td>
-        <td><a href="${rw.url}" target="_blank">${rw.url}</a></td>
-        <td>${rw.snippet || '<span class="muted">[no preview]</span>'}</td>
-      `;
-      tb.appendChild(tr);
-    });
-    target.innerHTML = '';
-    target.appendChild(table);
-  };
-
-  // === Chat ===
-  function renderMarkdown(md) {
-    if (!md || typeof md !== 'string') return '';
-    let s = md;
-    s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // **bold**
-    s = s.replace(/\*(.*?)\*/g, '<em>$1</em>'); // *italic*
-    s = s.replace(/`([^`]+?)`/g, '<code>$1</code>'); // `code`
-    s = s.replace(/(^|\n)-\s+(.*)/g, '$1• $2'); // bullets
-    return s;
+// Bot tester
+$('askBot').onclick = async () => {
+  const query = $('botQuery').value.trim();
+  const topK = parseInt($('botTopk').value||'8',10);
+  if (!query) return;
+  $('botAnswer').textContent = 'Thinking…';
+  $('botCitations').textContent = '';
+  const r = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({query, topK})});
+  const j = await r.json().catch(()=>null);
+  if (!r.ok || !j?.ok) {
+    $('botAnswer').textContent = 'Error: could not get an answer.';
+    return;
   }
-
-  $('chat_ask').onclick = async () => {
-    const q = $('chat_q').value.trim();
-    const topK = Math.max(1, Math.min(16, parseInt($('chat_topk').value || '8', 10)));
-    if (!q) return;
-
-    const ans = $('chat_answer');
-    const cits = $('chat_citations');
-    const fus = $('chat_followups');
-    ans.innerHTML = '…'; cits.innerHTML = ''; fus.innerHTML = '';
-
-    try {
-      const r = await fetch('/api/chat', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ query: q, topK })
-      });
-      const j = await r.json();
-      if (!r.ok || !j?.ok) {
-        ans.textContent = `Error: ${j?.detail || j?.error || 'unknown'}`;
-        return;
-      }
-      ans.innerHTML = renderMarkdown(j.answer || '');
-
-      (j.citations || []).forEach(u => cits.appendChild(pill(u)));
-      (j.followUps || []).forEach(f => {
-        const b = document.createElement('button');
-        b.className = 'secondary';
-        b.textContent = f;
-        b.onclick = () => { $('chat_q').value = f; $('chat_ask').click(); };
-        fus.appendChild(b);
-      });
-    } catch(e) {
-      ans.textContent = 'Error: ' + (e.message || e);
-    }
-  };
-
-  // restore token from local storage
-  (function init(){
-    const saved = localStorage.getItem('INGEST_TOKEN');
-    if (saved) $('ingest_token').value = saved;
-    $('ingest_token').addEventListener('input', e => {
-      localStorage.setItem('INGEST_TOKEN', e.target.value.trim());
-    });
-  })();
+  $('botAnswer').textContent = j.answer || '(no answer)';
+  $('botCitations').innerHTML = (j.citations||[]).map(u=>`<a href="${u}" target="_blank" rel="noopener">${u}</a>`).join('<br/>');
+};
 </script>
-
 </body>
 </html>
