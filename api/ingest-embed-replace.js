@@ -1,7 +1,7 @@
 // /api/ingest-embed-replace.js
 // ESM file (your package.json has "type":"module")
 
-export const config = { runtime: 'nodejs20.x' };
+export const config = { runtime: 'nodejs' };
 
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
