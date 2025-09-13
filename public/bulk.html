@@ -1,5 +1,183 @@
-<!-- === AI Bot (RAG) === -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Upload URL List to Train AI Bot</title>
+<style>
+  :root{
+    --bg:#0f1720; --panel:#121a23; --muted:#5d738a; --text:#dbe7f3;
+    --ok:#6be675; --warn:#ffb454; --err:#ff6b6b; --brand:#bf6b2b;
+    --chip:#1d2a36; --chipText:#cbe1f6; --pill:#0f2230;
+    --link:#8ec9ff; --muted2:#8aa2b6;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; padding:24px; background:var(--bg); color:var(--text);
+    font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;
+  }
+  h1{font-size:22px;margin:0 0 18px}
+  h2{font-size:18px;margin:22px 0 10px}
+  small{color:var(--muted)}
+  a{color:var(--link); text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .grid{display:grid; gap:14px}
+  .cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .row{display:flex; gap:10px; align-items:flex-end}
+  .w-1{flex:0 0 140px}
+  .w-2{flex:0 0 280px}
+  .w-3{flex:1 1 auto}
+
+  .card{
+    background:var(--panel); border:1px solid #1b2733;
+    border-radius:12px; padding:16px; box-shadow:0 1px 0 #0c141b inset;
+  }
+
+  input,textarea,select,button{
+    font:14px/1.4 inherit; border-radius:8px; border:1px solid #223140;
+    background:#0c151d; color:var(--text); padding:9px 10px; outline:none;
+  }
+  input:focus,textarea:focus,select:focus{border-color:#28506d}
+  textarea{min-height:90px; resize:vertical; white-space:pre; overflow:auto}
+
+  button{background:var(--brand); border-color:#9a4f1a; cursor:pointer}
+  button:hover{filter:brightness(1.08)}
+  button.secondary{background:#122131; border-color:#223140}
+  button.ghost{
+    background:transparent; border-color:#1f3346; color:var(--muted2)
+  }
+
+  .badge{display:inline-block; padding:4px 8px; border-radius:999px; background:#0b2030; color:var(--text)}
+  .badge.ok{background:#0f2a1a; color:#9bf0a3; border:1px solid #1a4630}
+  .badge.fail{background:#2a1414; color:#ff9b9b; border:1px solid #4a2222}
+  .badge.muted{background:#111c26; color:#9eb3c7; border:1px solid #1b2b3b}
+
+  .pill{
+    display:inline-flex; align-items:center; gap:8px; padding:6px 10px;
+    border-radius:999px; background:var(--pill); color:var(--chipText);
+    border:1px solid #203247; font-size:12px;
+  }
+
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Liberation Mono","DejaVu Sans Mono","Courier New",monospace}
+
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:8px 10px; border-bottom:1px solid #1a2835; vertical-align:top}
+  th{font-weight:600; color:#b7c9dc; text-align:left}
+
+  .list{display:flex; flex-direction:column; gap:8px}
+  .chips{display:flex; flex-wrap:wrap; gap:8px}
+  .muted{color:var(--muted)}
+  .ok{color:var(--ok)} .err{color:var(--err)}
+</style>
+</head>
+<body>
+
+<h1>Upload URL List to Train AI Bot</h1>
+
+<!-- Top controls -->
+<div class="grid cols-3">
+  <div class="card">
+    <div><small>INGEST TOKEN (BEARER)</small></div>
+    <input id="ingest_token" placeholder="Bearer token" />
+    <small>Saved locally (browser only). Sent as <em>Authorization: Bearer …</em></small>
+  </div>
+
+  <div class="card">
+    <div><small>CSV FILE</small></div>
+    <input id="csv_file" type="file" accept=".csv" />
+    <small>CSV must include a <code>url</code> column (optional <code>title</code>).</small>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="w-1">
+        <div><small>CONCURRENCY</small></div>
+        <input id="concurrency" value="3" />
+      </div>
+      <div class="w-1">
+        <div><small>DELAY BETWEEN REQ (MS)</small></div>
+        <input id="delay_ms" value="400" />
+      </div>
+    </div>
+    <small>Each request goes to <code>/api/ingest-embed-replace</code> (fetches, chunks, embeds, replaces existing rows).</small>
+  </div>
+</div>
+
+<!-- Test Single URL -->
 <div class="card">
+  <div><small>Test a Single URL</small></div>
+  <input id="single_url" placeholder="https://example.com/page" />
+  <div style="margin-top:10px">
+    <button id="btn_test_single" class="secondary">Test Single URL</button>
+  </div>
+  <pre id="single_out" class="mono" style="white-space:pre-wrap; margin-top:10px;"></pre>
+</div>
+
+<!-- Paste URLs + Crawl & Ingest -->
+<div class="card">
+  <div><small>Paste URLs (one per line) — optional</small></div>
+  <textarea id="url_list" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+  <div class="row" style="margin-top:10px;">
+    <button id="btn_crawl" class="secondary">Crawl &amp; Ingest</button>
+    <button id="btn_stop" class="ghost">Stop</button>
+    <span class="badge muted">Loaded <span id="stat_loaded">0</span> rows</span>
+    <span class="badge ok">Success: <span id="stat_success">0</span></span>
+    <span class="badge fail">Failed: <span id="stat_failed">0</span></span>
+    <span class="badge muted">Stopped: <span id="stat_stopped">0</span></span>
+  </div>
+</div>
+
+<!-- Debug console -->
+<div class="card">
+  <div><small>Debug console (what the client sees)</small></div>
+  <textarea id="debug_log" class="mono" style="height:140px;"></textarea>
+</div>
+
+<!-- Results table -->
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40px">#</th>
+        <th>URL</th>
+        <th style="width:45%">Result (includes DB verify)</th>
+      </tr>
+    </thead>
+    <tbody id="results_tbody"></tbody>
+  </table>
+</div>
+
+<!-- AI Search Tester -->
+<div class="card">
+  <h2>AI Search Tester</h2>
+  <div class="row">
+    <div class="w-3">
+      <div><small>Query</small></div>
+      <input id="search_q" placeholder="e.g. photography workshops in Coventry" />
+    </div>
+    <div class="w-1">
+      <div><small>topK</small></div>
+      <input id="search_topk" value="8" />
+    </div>
+    <div>
+      <button id="btn_run_search" class="secondary">Run Search</button>
+    </div>
+  </div>
+
+  <div id="search_grouped" style="margin-top:14px"></div>
+
+  <details style="margin-top:10px">
+    <summary>Search Raw Response</summary>
+    <pre id="search_raw" class="mono" style="white-space:pre-wrap"></pre>
+  </details>
+</div>
+
+<!-- AI Bot (RAG) -->
+<div class="card">
+  <h2>AI Bot (RAG)</h2>
   <div class="row" style="align-items:center; gap:12px; margin-bottom:10px;">
     <div class="w-3">
       <div><small>Ask a question</small></div>
@@ -15,88 +193,237 @@
   </div>
 
   <div id="chat_answer" class="mono" style="white-space:pre-wrap;"></div>
-
-  <div id="chat_citations" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px;"></div>
-
-  <div id="chat_followups" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;"></div>
-
+  <div id="chat_citations" class="chips" style="margin-top:10px;"></div>
+  <div id="chat_followups" class="chips" style="margin-top:10px;"></div>
   <small style="display:block; margin-top:8px; opacity:.8;">Answers cite sources; only your indexed pages are used.</small>
 </div>
 
 <script>
-// --- minimal markdown-ish renderer (bold, italics, bullets, inline code)
-function renderMarkdown(md) {
-  if (!md || typeof md !== 'string') return '';
-  let s = md;
-  s = s
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); // basic escape
-  // bold **text**
-  s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  // italic *text*
-  s = s.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  // inline code `x`
-  s = s.replace(/`([^`]+?)`/g, '<code>$1</code>');
-  // bullets: "- item"
-  s = s.replace(/(^|\n)-\s+(.*)/g, '$1• $2');
-  // numbered "1. item" keep as-is
-  return s;
-}
+  // === helpers ===
+  const $ = (id) => document.getElementById(id);
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-function chip(url) {
-  const a = document.createElement('a');
-  a.href = url; a.target = '_blank'; a.rel = 'noopener';
-  a.textContent = url.replace(/^https?:\/\//,'').slice(0, 120);
-  a.className = 'pill';
-  return a;
-}
+  function log(s) {
+    const el = $('debug_log');
+    el.value += (s + '\n');
+    el.scrollTop = el.scrollHeight;
+  }
+  function setStat(id, n){ $(id).textContent = String(n); }
 
-function followBtn(label) {
-  const b = document.createElement('button');
-  b.textContent = label;
-  b.onclick = () => {
-    document.getElementById('chat_q').value = label;
-    askChat();
+  function pill(url) {
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel='noopener';
+    a.className = 'pill';
+    a.textContent = url.replace(/^https?:\/\//,'').slice(0, 120);
+    return a;
+  }
+
+  function renderSnippet(text) {
+    if (!text) return '';
+    // trim safe; show middle if very long
+    const s = text.replace(/\s+/g,' ').trim();
+    const max = 420;
+    if (s.length <= max) return s;
+    return s.slice(0, 200) + ' … ' + s.slice(-200);
+  }
+
+  // === Test Single URL ===
+  $('btn_test_single').onclick = async () => {
+    const url = $('single_url').value.trim();
+    const bearer = $('ingest_token').value.trim();
+    if (!url) return;
+    $('single_out').textContent = 'Running…';
+
+    try {
+      const r = await fetch('/api/ingest-embed-replace', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          bearer, urls:[{ url }], replace:true, verify:true, single:true
+        })
+      });
+      const j = await r.json();
+      $('single_out').textContent = JSON.stringify(j, null, 2);
+      if (j?.debug) log(j.debug);
+    } catch(e) {
+      $('single_out').textContent = 'Error: ' + (e.message || e);
+    }
   };
-  return b;
-}
 
-async function askChat() {
-  const q = document.getElementById('chat_q').value.trim();
-  const topk = Math.max(1, Math.min(16, parseInt(document.getElementById('chat_topk').value || '8', 10)));
-  const ansEl = document.getElementById('chat_answer');
-  const citEl = document.getElementById('chat_citations');
-  const fuEl = document.getElementById('chat_followups');
+  // === Crawl & Ingest ===
+  let STOP = false;
+  $('btn_stop').onclick = () => { STOP = true; };
 
-  if (!q) return;
+  $('btn_crawl').onclick = async () => {
+    STOP = false;
+    const bearer = $('ingest_token').value.trim();
+    const list = $('url_list').value
+      .split('\n')
+      .map(s => s.trim())
+      .filter(Boolean);
 
-  ansEl.innerHTML = '…';
-  citEl.innerHTML = '';
-  fuEl.innerHTML = '';
+    setStat('stat_loaded', list.length);
+    setStat('stat_success', 0);
+    setStat('stat_failed', 0);
+    setStat('stat_stopped', 0);
 
-  try {
-    const r = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify({ query: q, topK: topk })
+    const tbody = $('results_tbody');
+    tbody.innerHTML = '';
+
+    let i=0, ok=0, fail=0, stop=0;
+
+    for (const u of list) {
+      if (STOP) { stop++; setStat('stat_stopped', stop); break; }
+      i++;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i}</td><td><a href="${u}" target="_blank">${u}</a></td><td class="mono"></td>`;
+      tbody.appendChild(tr);
+      const cell = tr.children[2];
+
+      log(`[${new Date().toLocaleTimeString()}] Single test → ${u}`);
+      try {
+        const r = await fetch('/api/ingest-embed-replace', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ bearer, urls:[{ url: u }], replace:true, verify:true })
+        });
+        const j = await r.json();
+        if (j?.ok) {
+          ok++; setStat('stat_success', ok);
+          cell.innerHTML = `<span class="ok">OK</span> id=${j.id || '-'} len=${j.len || '-'} chunks=${j.chunks || '-'} <span class="muted">| verifying…</span>`;
+        } else {
+          fail++; setStat('stat_failed', fail);
+          cell.innerHTML = `<span class="err">FAILED</span> <span class="muted">${j?.error || 'server_error'}</span>`;
+        }
+        if (j?.debug) log(j.debug);
+      } catch(e) {
+        fail++; setStat('stat_failed', fail);
+        cell.innerHTML = `<span class="err">FAILED</span> <span class="muted">${e.message || e}</span>`;
+      }
+      await sleep(parseInt($('delay_ms').value || '400', 10));
+    }
+  };
+
+  // === Search ===
+  $('btn_run_search').onclick = async () => {
+    const q = $('search_q').value.trim();
+    const topK = Math.max(1, Math.min(16, parseInt($('search_topk').value || '8', 10)));
+    if (!q) return;
+
+    const target = $('search_grouped');
+    target.innerHTML = 'Searching…';
+    $('search_raw').textContent = '';
+
+    const r = await fetch('/api/search', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ query: q, topK })
     });
     const j = await r.json();
-    if (!r.ok || !j?.ok) {
-      ansEl.textContent = `Error: ${j?.detail || j?.error || 'unknown'}`;
+    $('search_raw').textContent = JSON.stringify(j, null, 2);
+
+    if (!j?.matches?.length) {
+      target.innerHTML = '<div class="muted">No matches.</div>';
       return;
     }
 
-    ansEl.innerHTML = renderMarkdown(j.answer || '');
+    // group by URL, pick best score, join snippets
+    const byURL = new Map();
+    j.matches.forEach(m => {
+      if (!byURL.has(m.url)) byURL.set(m.url, []);
+      byURL.get(m.url).push(m);
+    });
 
-    // citations
-    (j.citations || []).forEach(u => citEl.appendChild(chip(u)));
+    const rows = [...byURL.entries()].map(([url, arr]) => {
+      arr.sort((a,b)=>b.score-a.score);
+      const bestScore = arr[0].score || 0;
+      const chunks = arr.length;
+      // first non-empty snippet-ish content
+      const snippet = renderSnippet((arr.find(x=>x.content)?.content) || '');
+      return { url, bestScore, chunks, snippet };
+    }).sort((a,b)=> b.bestScore - a.bestScore);
 
-    // follow-ups
-    (j.followUps || []).forEach(f => fuEl.appendChild(followBtn(f)));
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <thead><tr>
+        <th style="width:160px">Best Score / Chunks</th>
+        <th>URL</th>
+        <th>Snippet</th>
+      </tr></thead>
+      <tbody></tbody>
+    `;
+    const tb = table.querySelector('tbody');
+    rows.forEach(rw => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><div class="badge ok" style="display:inline-block">${rw.bestScore.toFixed(3)} / ${rw.chunks} chunk${rw.chunks>1?'s':''}</div></td>
+        <td><a href="${rw.url}" target="_blank">${rw.url}</a></td>
+        <td>${rw.snippet || '<span class="muted">[no preview]</span>'}</td>
+      `;
+      tb.appendChild(tr);
+    });
+    target.innerHTML = '';
+    target.appendChild(table);
+  };
 
-  } catch (e) {
-    ansEl.textContent = `Error: ${e.message || e}`;
+  // === Chat ===
+  function renderMarkdown(md) {
+    if (!md || typeof md !== 'string') return '';
+    let s = md;
+    s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // **bold**
+    s = s.replace(/\*(.*?)\*/g, '<em>$1</em>'); // *italic*
+    s = s.replace(/`([^`]+?)`/g, '<code>$1</code>'); // `code`
+    s = s.replace(/(^|\n)-\s+(.*)/g, '$1• $2'); // bullets
+    return s;
   }
-}
 
-document.getElementById('chat_ask').onclick = askChat;
+  $('chat_ask').onclick = async () => {
+    const q = $('chat_q').value.trim();
+    const topK = Math.max(1, Math.min(16, parseInt($('chat_topk').value || '8', 10)));
+    if (!q) return;
+
+    const ans = $('chat_answer');
+    const cits = $('chat_citations');
+    const fus = $('chat_followups');
+    ans.innerHTML = '…'; cits.innerHTML = ''; fus.innerHTML = '';
+
+    try {
+      const r = await fetch('/api/chat', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ query: q, topK })
+      });
+      const j = await r.json();
+      if (!r.ok || !j?.ok) {
+        ans.textContent = `Error: ${j?.detail || j?.error || 'unknown'}`;
+        return;
+      }
+      ans.innerHTML = renderMarkdown(j.answer || '');
+
+      (j.citations || []).forEach(u => cits.appendChild(pill(u)));
+      (j.followUps || []).forEach(f => {
+        const b = document.createElement('button');
+        b.className = 'secondary';
+        b.textContent = f;
+        b.onclick = () => { $('chat_q').value = f; $('chat_ask').click(); };
+        fus.appendChild(b);
+      });
+    } catch(e) {
+      ans.textContent = 'Error: ' + (e.message || e);
+    }
+  };
+
+  // restore token from local storage
+  (function init(){
+    const saved = localStorage.getItem('INGEST_TOKEN');
+    if (saved) $('ingest_token').value = saved;
+    $('ingest_token').addEventListener('input', e => {
+      localStorage.setItem('INGEST_TOKEN', e.target.value.trim());
+    });
+  })();
 </script>
+
+</body>
+</html>
