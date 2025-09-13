@@ -1,173 +1,249 @@
-// /api/ingest-embed-replace.js
-// Full file — drop-in replacement
-
+// api/ingest-embed-replace.js
 import { createClient } from '@supabase/supabase-js';
 import { htmlToText } from 'html-to-text';
+import crypto from 'node:crypto';
 
-// ====== Config ======
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// ---------- config ----------
+const EMBED_MODEL = 'text-embedding-3-small'; // 1536 dims
+const OPENAI_URL = 'https://api.openai.com/v1/embeddings';
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/embeddings';
 
-// token you type into the page is checked against this value
-const INGEST_BEARER_TOKEN = process.env.INGEST_BEARER_TOKEN || ''; 
+// Chunking targets (character-based heuristic)
+const TARGET_CHARS = 1200;
+const MAX_CHARS = 1800;
 
-// tables (change if your schema uses different names)
-const PAGES_TABLE  = 'pages';
-const CHUNKS_TABLE = 'chunks';
-
-// chunk size
-const MAX_CHARS_PER_CHUNK = 900;
-
-// ====== Helpers ======
-function requireEnv(name, value) {
-  if (!value) throw new Error(`Missing env var: ${name}`);
+// ---------- helpers ----------
+function env(name, required = true) {
+  const v = process.env[name];
+  if (required && !v) {
+    throw new Error(`Missing required env var: ${name}`);
+  }
+  return v;
 }
 
-function chunkString(str, size) {
+function sha256(s) {
+  return crypto.createHash('sha256').update(s).digest('hex');
+}
+
+function splitIntoChunks(text) {
   const chunks = [];
-  let i = 0;
-  while (i < str.length) {
-    chunks.push(str.slice(i, i + size));
-    i += size;
+  let start = 0;
+  const len = text.length;
+
+  while (start < len) {
+    let end = Math.min(start + TARGET_CHARS, len);
+
+    // try to end on a sentence boundary if within MAX_CHARS
+    if (end < len) {
+      const windowEnd = Math.min(start + MAX_CHARS, len);
+      let lastStop = -1;
+      const slice = text.slice(start, windowEnd);
+      // prefer punctuation breaks
+      const match = slice.match(/[\.\!\?]\s+[A-Z(“"'\[]/g);
+      if (match) {
+        const last = match[match.length - 1];
+        lastStop = slice.lastIndexOf(last) + (last ? last.length : 0);
+      }
+      // fallback: last space
+      if (lastStop === -1) {
+        lastStop = slice.lastIndexOf(' ');
+      }
+      if (lastStop > 0) {
+        end = start + lastStop;
+      } else {
+        end = windowEnd; // force cut
+      }
+    }
+
+    const piece = text.slice(start, end).trim();
+    if (piece.length > 0) chunks.push(piece);
+    start = end;
   }
   return chunks;
 }
 
-async function fetchHTML(url) {
-  const res = await fetch(url, {
+async function fetchPage(url) {
+  const response = await fetch(url, {
     headers: {
-      'user-agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36',
-      'accept': 'text/html,application/xhtml+xml'
-    }
+      'User-Agent':
+        'Mozilla/5.0 (compatible; alan-chat-proxy/1.0; +https://vercel.app)',
+      'Accept': 'text/html,application/xhtml+xml',
+    },
+    redirect: 'follow',
   });
-  // If site blocks non-JSON text with 200, we still get HTML here — that’s fine.
-  // We just need the body text.
-  const html = await res.text();
-  return { status: res.status, ok: res.ok, html };
-}
 
-function extractText(html) {
-  // Simple and robust: strip to readable text
-  return htmlToText(html, {
-    wordwrap: 0,
+  if (!response.ok) {
+    throw new Error(`Fetch failed (${response.status}) ${response.statusText}`);
+  }
+  const html = await response.text();
+
+  let title = '';
+  const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (m) title = m[1].trim();
+
+  const text = htmlToText(html, {
+    wordwrap: false,
     selectors: [
       { selector: 'script', format: 'skip' },
-      { selector: 'style',  format: 'skip' },
-      { selector: 'nav',    format: 'skip' },
-      { selector: 'footer', format: 'skip' }
-    ]
+      { selector: 'style', format: 'skip' },
+      { selector: 'noscript', format: 'skip' },
+    ],
   }).trim();
+
+  return { html, title, text };
 }
 
-async function upsertToSupabase({ url, title, chunks, dryRun }) {
-  requireEnv('SUPABASE_URL', SUPABASE_URL);
-  requireEnv('SUPABASE_SERVICE_ROLE_KEY', SUPABASE_SERVICE_ROLE_KEY);
+async function embedTexts(inputs) {
+  // Use OpenAI if available, else OpenRouter
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const openrouterKey = process.env.OPENROUTER_API_KEY;
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false }
+  const url = openaiKey ? OPENAI_URL : OPENROUTER_URL;
+  const key = openaiKey || openrouterKey;
+  if (!key) {
+    throw new Error(
+      'Missing embedding key. Set OPENAI_API_KEY or OPENROUTER_API_KEY.'
+    );
+  }
+
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: EMBED_MODEL,
+      input: inputs,
+    }),
   });
 
-  if (dryRun) {
-    return { pageId: null, inserted: 0, deleted: 0 };
+  if (!r.ok) {
+    const errTxt = await r.text().catch(() => '');
+    throw new Error(
+      `Embedding error: ${r.status} ${r.statusText} — ${errTxt?.slice(0, 500)}`
+    );
   }
 
-  // Make sure there is a page row for this URL; delete existing chunks for clean replace
-  const { data: pageRow, error: upsertErr } = await supabase
-    .from(PAGES_TABLE)
-    .upsert({ url, title }, { onConflict: 'url' })
-    .select('*')
-    .single();
-
-  if (upsertErr) throw upsertErr;
-
-  const pageId = pageRow.id;
-
-  const { error: delErr } = await supabase
-    .from(CHUNKS_TABLE)
-    .delete()
-    .eq('page_id', pageId);
-
-  if (delErr) throw delErr;
-
-  if (!chunks.length) {
-    return { pageId, inserted: 0, deleted: 0 };
+  const data = await r.json();
+  if (!data?.data || !Array.isArray(data.data)) {
+    throw new Error('Embedding response missing data array');
   }
-
-  const rows = chunks.map((content, idx) => ({
-    page_id: pageId,
-    url,
-    ord: idx,
-    content
-  }));
-
-  const { error: insErr } = await supabase
-    .from(CHUNKS_TABLE)
-    .insert(rows);
-
-  if (insErr) throw insErr;
-
-  return { pageId, inserted: rows.length, deleted: 0 };
+  // Return array of vectors
+  return data.data.map((d) => d.embedding);
 }
 
-function authOk(req) {
-  const header = req.headers.get('authorization') || '';
-  const token = header.toLowerCase().startsWith('bearer ')
-    ? header.slice(7).trim()
-    : '';
-  return INGEST_BEARER_TOKEN && token && token === INGEST_BEARER_TOKEN;
+function supabaseClient() {
+  const url = env('SUPABASE_URL');
+  // Service role recommended because this route deletes & inserts
+  const key = env('SUPABASE_SERVICE_ROLE');
+  return createClient(url, key, {
+    auth: { persistSession: false },
+  });
 }
 
-// ====== Handler ======
+// ---------- handler ----------
 export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'method_not_allowed' });
+  }
+
+  // Accept JSON { url, title? }  (title optional, we’ll also try to fetch it)
+  let url;
+  let providedTitle = '';
   try {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'method_not_allowed' });
+    const body = req.body ?? {};
+    url = body.url || req.query?.url;
+    providedTitle = body.title || '';
+  } catch {
+    // If someone posts raw text/plain, try to parse
+    try {
+      const txt = await new Response(req).text();
+      const parsed = JSON.parse(txt || '{}');
+      url = parsed.url;
+      providedTitle = parsed.title || '';
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'missing_url' });
+  }
+
+  const supa = supabaseClient();
+
+  try {
+    // Fetch page & extract text
+    const { title: fetchedTitle, text } = await fetchPage(url);
+    const title = providedTitle || fetchedTitle || '';
+
+    if (!text || text.length < 10) {
+      return res.status(400).json({
+        error: 'empty_text',
+        detail: 'Extracted zero/very small text from the page.',
+      });
     }
 
-    if (!authOk(req)) {
-      return res.status(401).json({ error: 'unauthorized' });
+    // Chunk & embed
+    const chunks = splitIntoChunks(text);
+    const vectors = await embedTexts(chunks);
+
+    // Replace per URL (first delete any existing)
+    const { error: delErr } = await supa.from('page_chunks').delete().eq('url', url);
+    if (delErr) {
+      throw new Error(`Delete failed: ${delErr.message ?? String(delErr)}`);
     }
 
-    const url = (req.query.url || '').toString().trim();
-    const dryRun = req.query.dryRun === '1';
+    // Prepare rows
+    const rows = chunks.map((c, i) => ({
+      url,
+      title,
+      content: c,
+      embedding: vectors[i],
+      chunk_hash: sha256(`${url}##${i}##${c.slice(0, 1024)}`),
+    }));
 
-    if (!url || !/^https?:\/\//i.test(url)) {
-      return res.status(400).json({ error: 'invalid_url' });
+    // Insert in small batches to be safe
+    const BATCH = 50;
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const slice = rows.slice(i, i + BATCH);
+      const { error: insErr } = await supa.from('page_chunks').insert(slice);
+      if (insErr) {
+        throw new Error(`Insert failed: ${insErr.message ?? String(insErr)}`);
+      }
     }
 
-    const { status, ok, html } = await fetchHTML(url);
-    if (!html || html.length < 25) {
-      return res.status(502).json({ error: 'empty_response', upstream_status: status });
+    // Count rows for this URL so UI can show chunks count
+    const { count, error: cntErr } = await supa
+      .from('page_chunks')
+      .select('id', { head: true, count: 'exact' })
+      .eq('url', url);
+
+    if (cntErr) {
+      return res.status(200).json({
+        ok: true,
+        url,
+        chunks: null,
+        warn: 'count_failed',
+        detail: cntErr.message ?? String(cntErr),
+      });
     }
 
-    const text = extractText(html);
-    const chunks = chunkString(text, MAX_CHARS_PER_CHUNK);
-
-    // Use <title> if we have it, otherwise the URL
-    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].trim() : url;
-
-    const supa = await upsertToSupabase({ url, title, chunks, dryRun });
-
-    // Return a clear, UI-friendly payload
     return res.status(200).json({
       ok: true,
       url,
-      upstream_status: status,
-      dryRun,
-      chunkSize: MAX_CHARS_PER_CHUNK,
-      chunks: chunks.length,   // <— UI can show this
-      pageId: supa.pageId,
-      inserted: supa.inserted,
+      chunks: count ?? 0,
     });
   } catch (err) {
     return res.status(500).json({
       error: 'server_error',
-      detail: err.message ?? String(err)
+      detail: err?.message ?? String(err),
     });
   }
 }
 
-// Vercel config — keep this on Node runtime
-export const config = { runtime: 'nodejs' };
+// Vercel runtime — keep Node (NOT Edge)
+export const config = {
+  runtime: 'nodejs18.x',
+};
