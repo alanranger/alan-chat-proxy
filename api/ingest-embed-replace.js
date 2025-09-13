@@ -296,4 +296,4 @@ export default async function handler(req, res) {
 }
 
 // Force Node runtime on Vercel (NOT edge)
-export const config = { runtime: "nodejs20.x" };
+export const config = { runtime: "nodejs.x" };
