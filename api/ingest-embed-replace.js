@@ -1,7 +1,7 @@
 // /api/ingest-embed-replace.js
 // ESM file (your package.json has "type":"module")
 
-export const config = { runtime: 'nodejs' };
+export const config = { runtime: 'nodejs20.x' };
 
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
@@ -15,19 +15,16 @@ const env = (k, req = true) => {
 };
 
 function json(res, status, obj) {
-  // Always respond as JSON
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.status(status).send(JSON.stringify(obj));
 }
 
 function chunkText(txt, targetChars = 3500, overlap = 300) {
-  // Simple char-based chunker (approx token chunks)
   const chunks = [];
   let i = 0;
   while (i < txt.length) {
     const end = Math.min(i + targetChars, txt.length);
     let chunk = txt.slice(i, end);
-    // trim boundaries a bit
     chunk = chunk.replace(/^\s+|\s+$/g, '');
     if (chunk) chunks.push(chunk);
     i = end - overlap;
@@ -37,7 +34,6 @@ function chunkText(txt, targetChars = 3500, overlap = 300) {
 }
 
 async function getEmbeddings(inputs) {
-  // Prefer OpenRouter; fall back to OpenAI if present
   const orKey = process.env.OPENROUTER_API_KEY;
   const oaKey = process.env.OPENAI_API_KEY;
 
@@ -53,7 +49,6 @@ async function getEmbeddings(inputs) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        // 1536-dim, matches your DB schema
         model: 'text-embedding-3-small',
         input: inputs
       })
@@ -68,7 +63,6 @@ async function getEmbeddings(inputs) {
     return out;
   }
 
-  // Fallback: OpenAI
   const resp = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
     headers: {
@@ -132,27 +126,24 @@ export default async function handler(req, res) {
     const SUPABASE_SERVICE_ROLE_KEY = env('SUPABASE_SERVICE_ROLE_KEY', true);
     const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // fetch + extract
     const { text } = await fetchPage(url);
     if (!text || text.length < 10) {
       return json(res, 422, { error: 'empty_content', detail: 'Page extracted no usable text' });
     }
 
     const totalLen = text.length;
-    const chunks = chunkText(text); // array of strings
+    const chunks = chunkText(text);
     const emb = await getEmbeddings(chunks);
 
-    // Upsert rows; unique on hash so we replace existing
     const rows = [];
     for (let i = 0; i < chunks.length; i++) {
       const content = chunks[i];
       const embedding = emb[i];
-      const tokens = Math.ceil(content.length / 4); // rough estimate
+      const tokens = Math.ceil(content.length / 4);
       const hash = sha1(`${url}#${i}:${content.slice(0, 128)}`);
       rows.push({ url, title: null, content, embedding, tokens, hash });
     }
 
-    // Use Supabase upsert on unique hash
     const { data, error } = await supa
       .from('page_chunks')
       .upsert(rows, { onConflict: 'hash' })
@@ -160,14 +151,12 @@ export default async function handler(req, res) {
       .order('id', { ascending: false });
 
     if (error) {
-      // Surface a clean error
       return json(res, 500, { error: 'supabase_upsert_failed', detail: error.message || String(error) });
     }
 
     const firstId = data && data.length ? data[0].id : null;
     return json(res, 200, { ok: true, id: firstId, len: totalLen, chunks: rows.length });
   } catch (err) {
-    // This catches EVERYTHING and always returns JSON
     const msg = err?.message || String(err);
     return json(res, 500, { error: 'server_error', detail: msg });
   }
