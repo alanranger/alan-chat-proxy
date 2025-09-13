@@ -1,288 +1,299 @@
-// api/ingest-embed-replace.js
-// Crawl → chunk → embed → upsert (replace per URL) with rock-solid JSON error responses.
+// /api/ingest-embed-replace.js
+// Node serverless API for: crawl => chunk => embed => replace rows in Supabase
+// ESM (package.json has "type": "module")
 
-import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
-import { htmlToText } from 'html-to-text';
+import crypto from "node:crypto";
+import { htmlToText } from "html-to-text";
+import fetch from "node-fetch"; // Vercel Node runtimes already have fetch; this is a safe fallback
+import { createClient } from "@supabase/supabase-js";
 
-export const config = { runtime: 'nodejs' };
+// ---------- Config & guards ----------
+const {
+  INGEST_TOKEN,
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY,
+  OPENROUTER_API_KEY,
+  OPENAI_API_KEY,
+} = process.env;
 
-// ───────────────────────────────────────────────────────────────────────────────
-// ENV
-// ───────────────────────────────────────────────────────────────────────────────
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const OPENROUTER_API_KEY =
-  process.env.OPENROUTER_API_KEY ||
-  process.env.OPENROUTER_APIKEY ||
-  process.env.OPENROUTER_KEY ||
-  '';
-
-const OPENAI_API_KEY =
-  process.env.OPENAI_API_KEY || process.env.OPENAI_APIKEY || '';
-
-const INGEST_TOKEN = process.env.INGEST_TOKEN || '';
-
-const EMBED_MODEL_OPENROUTER = 'openai/text-embedding-3-small'; // 1536 dims @ OpenRouter
-const EMBED_MODEL_OPENAI = 'text-embedding-3-small';            // 1536 dims @ OpenAI
-
-// ───────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ───────────────────────────────────────────────────────────────────────────────
-
-function sendJSON(res, status, body) {
-  try {
-    res.setHeader('content-type', 'application/json; charset=utf-8');
-    res.setHeader('cache-control', 'no-store');
-  } catch {}
-  res.status(status).end(JSON.stringify(body));
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env var.");
 }
 
-const ok = (res, body) => sendJSON(res, 200, body);
-const bad = (res, msg) => sendJSON(res, 400, { error: 'bad_request', detail: String(msg || 'Bad request') });
-const boom = (res, msg) => sendJSON(res, 500, { error: 'server_error', detail: String(msg || 'Server error') });
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
 
-function sha256(s) {
-  return crypto.createHash('sha256').update(s).digest('hex');
-}
+// Use OpenRouter if present; else OpenAI
+const provider = OPENROUTER_API_KEY
+  ? "openrouter"
+  : OPENAI_API_KEY
+  ? "openai"
+  : null;
 
-function chunkPlainText(text, maxChars = 2000, overlap = 200) {
-  const out = [];
+const EMBED_MODEL = "text-embedding-3-small"; // 1536 dims (matches your DB)
+const DIM = 1536;
+
+// Small/robust chunker (no tokenizers needed)
+function chunkText(txt, target = 1800, overlap = 200) {
+  const chunks = [];
   let i = 0;
-  while (i < text.length) {
-    const end = Math.min(i + maxChars, text.length);
-    const slice = text.slice(i, end).trim();
-    if (slice) out.push(slice);
+  while (i < txt.length) {
+    const end = Math.min(i + target, txt.length);
+    const slice = txt.slice(i, end).trim();
+    if (slice) chunks.push(slice);
     i = end - overlap;
     if (i < 0) i = 0;
   }
-  return out;
+  return chunks;
 }
 
-async function embedTexts({ texts }) {
-  const useOpenRouter = !!OPENROUTER_API_KEY;
-  const provider = useOpenRouter ? 'openrouter' : (OPENAI_API_KEY ? 'openai' : null);
-
-  if (!provider) {
-    const e = new Error('no_embedding_provider_configured');
-    e.code = 'no_embedding_provider_configured';
-    throw e;
-  }
-
-  const url = useOpenRouter
-    ? 'https://openrouter.ai/api/v1/embeddings'
-    : 'https://api.openai.com/v1/embeddings';
-
-  const model = useOpenRouter ? EMBED_MODEL_OPENROUTER : EMBED_MODEL_OPENAI;
-  const key = useOpenRouter ? OPENROUTER_API_KEY : OPENAI_API_KEY;
-
-  const headers = {
-    'content-type': 'application/json',
-    authorization: `Bearer ${key}`,
-  };
-  if (useOpenRouter) {
-    headers['HTTP-Referer'] = 'https://alan-chat-proxy.vercel.app';
-    headers['X-Title'] = 'AlanRanger Ingest';
-  }
-
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ input: texts, model }),
-  });
-
-  const ct = String(resp.headers.get('content-type') || '').toLowerCase();
-  const isJson = ct.includes('application/json');
-
-  if (!isJson) {
-    const snippet = (await resp.text()).slice(0, 400);
-    const e = new Error('embedding_non_json');
-    e.code = 'embedding_non_json';
-    e.status = resp.status;
-    e.snippet = snippet;
-    throw e;
-  }
-
-  const data = await resp.json();
-  if (!resp.ok) {
-    // Provider returned JSON error — make sure we turn it into a string.
-    const msg = typeof data?.error === 'string'
-      ? data.error
-      : (typeof data?.error?.message === 'string' ? data.error.message : JSON.stringify(data).slice(0, 400));
-    const e = new Error(`embedding_error: ${msg}`);
-    e.code = 'embedding_error';
-    e.status = resp.status;
-    throw e;
-  }
-
-  if (!Array.isArray(data?.data)) {
-    const e = new Error('embedding_shape_unexpected');
-    e.code = 'embedding_shape_unexpected';
-    e.payload = data;
-    throw e;
-  }
-  return data.data.map((d) => d.embedding);
-}
-
-async function upsertChunks({ supa, rows, replaceUrl }) {
-  const url = rows[0]?.url;
-  if (!url) return;
-  if (replaceUrl) {
-    const { error: delErr } = await supa.from('page_chunks').delete().eq('url', url);
-    if (delErr) throw delErr;
-  }
-  const { error } = await supa.from('page_chunks').upsert(rows, { onConflict: 'chunk_hash' });
-  if (error) throw error;
-}
-
-// Read raw request body safely
-async function readRawBody(req) {
-  const chunks = [];
-  for await (const c of req) chunks.push(c);
-  if (!chunks.length) return '';
-  return Buffer.concat(chunks).toString('utf8');
-}
-
-// Parse url/title/replace from query OR body (json, form, or plain text)
-async function getUrlTitleReplace(req) {
-  // query
+// Try to be ultra-lenient in accepting URL from query/body
+async function readUrlFromRequest(req) {
+  // Vercel node serverless: req.url contains path+query
+  let searchUrl;
   try {
-    const u = new URL(req.url, 'http://local');
-    const qUrl = u.searchParams.get('url');
-    const qTitle = u.searchParams.get('title');
-    const qReplace = u.searchParams.get('replace');
-    if (qUrl) return { url: qUrl, title: qTitle || null, replace: qReplace === 'true' };
-  } catch {}
+    searchUrl = new URL(req.url, "http://local");
+  } catch {
+    searchUrl = null;
+  }
+  const q = searchUrl?.searchParams?.get("url");
+  if (q) return q;
 
-  // body
-  const ctype = (req.headers['content-type'] || '').toLowerCase();
-  const raw = await readRawBody(req);
-  if (!raw) return { url: null, title: null, replace: false };
-
-  if (ctype.includes('application/json')) {
+  // If nextjs/edge-like, req.body may be a Buffer/string/object
+  let bodyText = "";
+  if (typeof req.body === "string") {
+    bodyText = req.body;
+  } else if (Buffer.isBuffer(req.body)) {
+    bodyText = req.body.toString("utf8");
+  } else if (req.body && typeof req.body === "object") {
+    if (req.body.url) return String(req.body.url);
+  } else {
+    // Try to read stream (when bodyParser is off)
     try {
-      const obj = JSON.parse(raw);
-      return {
-        url: obj?.url ?? null,
-        title: obj?.title ?? null,
-        replace: !!obj?.replace,
-      };
+      bodyText = await new Promise((resolve, reject) => {
+        let data = "";
+        req.on("data", (c) => (data += c));
+        req.on("end", () => resolve(data));
+        req.on("error", reject);
+      });
     } catch {
-      return { url: null, title: null, replace: false };
+      // ignore
     }
   }
 
-  if (ctype.includes('application/x-www-form-urlencoded')) {
-    const params = new URLSearchParams(raw);
-    const u = params.get('url');
-    const t = params.get('title');
-    const r = params.get('replace');
-    return { url: u, title: t || null, replace: r === 'true' };
+  if (bodyText) {
+    // JSON?
+    try {
+      const j = JSON.parse(bodyText);
+      if (j?.url) return String(j.url);
+    } catch {
+      // maybe url=...
+      const m = bodyText.match(/(?:^|&)url=([^&]+)/i);
+      if (m) return decodeURIComponent(m[1]);
+    }
   }
-
-  const maybe = raw.trim();
-  if (/^https?:\/\//i.test(maybe)) {
-    return { url: maybe, title: null, replace: false };
-  }
-
-  return { url: null, title: null, replace: false };
+  return undefined;
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Handler
-// ───────────────────────────────────────────────────────────────────────────────
+// Fetch page, convert to text
+async function fetchPageAsText(url) {
+  const res = await fetch(url, {
+    headers: {
+      "user-agent":
+        "Mozilla/5.0 (compatible; AlanCrawler/1.0; +https://alanranger.com)",
+      accept: "text/html,application/xhtml+xml",
+    },
+  });
+  if (!res.ok) {
+    const detail = `Fetch failed with status ${res.status}`;
+    const body = await res.text().catch(() => "");
+    throw {
+      status: res.status,
+      error: "fetch_failed",
+      detail,
+      snippet: body?.slice(0, 300),
+    };
+  }
+  const html = await res.text();
+  const text = htmlToText(html, {
+    wordwrap: false,
+    selectors: [
+      { selector: "script", format: "skip" },
+      { selector: "style", format: "skip" },
+      { selector: "noscript", format: "skip" },
+    ],
+  });
+  // naive title extraction
+  const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const title = m ? m[1].trim() : null;
+  return { text: text.trim(), title };
+}
 
+async function getEmbeddings(inputTexts) {
+  if (!provider) {
+    throw {
+      status: 500,
+      error: "no_embedding_provider_configured",
+      detail: "Set OPENROUTER_API_KEY or OPENAI_API_KEY.",
+    };
+  }
+
+  if (provider === "openrouter") {
+    const r = await fetch("https://openrouter.ai/api/v1/embeddings", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "x-title": "AlanRanger-Indexer",
+      },
+      body: JSON.stringify({
+        // OpenRouter expects namespaced model IDs for OpenAI models:
+        model: `openai/${EMBED_MODEL}`,
+        input: inputTexts,
+      }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j?.data) {
+      throw {
+        status: r.status || 500,
+        error: "embedding_non_json",
+        detail:
+          j?.error?.message ||
+          j?.message ||
+          "Unexpected embedding response from OpenRouter",
+        raw: j,
+      };
+    }
+    return j.data.map((d) => d.embedding);
+  }
+
+  // OpenAI
+  const r = await fetch("https://api.openai.com/v1/embeddings", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: EMBED_MODEL,
+      input: inputTexts,
+    }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j?.data) {
+    throw {
+      status: r.status || 500,
+      error: "embedding_non_json",
+      detail:
+        j?.error?.message ||
+        j?.message ||
+        "Unexpected embedding response from OpenAI",
+      raw: j,
+    };
+  }
+  return j.data.map((d) => d.embedding);
+}
+
+function sha1(s) {
+  return crypto.createHash("sha1").update(s).digest("hex");
+}
+
+// ---------- Handler ----------
 export default async function handler(req, res) {
   try {
-    if (req.method === 'OPTIONS') return res.status(204).end();
-    if (req.method !== 'POST') return bad(res, 'Use POST');
-
-    // Bearer token
-    const auth = String(req.headers.authorization || '');
-    const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
-    if (!INGEST_TOKEN || bearer !== INGEST_TOKEN) {
-      return bad(res, 'Invalid or missing ingest token');
+    if (req.method !== "POST") {
+      res
+        .status(405)
+        .json({ error: "method_not_allowed", detail: "Use POST." });
+      return;
     }
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return boom(res, 'SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing');
+    // Bearer auth (simple)
+    const auth = req.headers.authorization || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    if (!INGEST_TOKEN || token !== INGEST_TOKEN) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
     }
 
-    const { url, title, replace } = await getUrlTitleReplace(req);
-    if (!url) return bad(res, 'Provide "url"');
-
-    // Fetch page
-    let html;
-    try {
-      const page = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0 (IngestBot)' } });
-      if (!page.ok) return boom(res, `Fetch failed (${page.status}) for ${url}`);
-      html = await page.text();
-    } catch (e) {
-      return boom(res, `Fetch exception for ${url}: ${e?.message || String(e)}`);
+    const url = await readUrlFromRequest(req);
+    if (!url) {
+      res.status(400).json({ error: "bad_request", detail: 'Provide "url"' });
+      return;
     }
 
-    const text = htmlToText(html, {
-      wordwrap: false,
-      hideLinkHrefIfSameAsText: true,
-      selectors: [
-        { selector: 'script', format: 'skip' },
-        { selector: 'style', format: 'skip' },
-        { selector: 'noscript', format: 'skip' },
-      ],
-    }).trim();
-
-    if (!text) return boom(res, 'No text extracted');
-
-    // Chunk
-    const pieces = chunkPlainText(text, 2000, 200);
-    if (!pieces.length) return boom(res, 'No chunks produced');
-
-    // Embed (strongly normalized errors)
-    let vectors;
-    try {
-      vectors = await embedTexts({ texts: pieces });
-    } catch (e) {
-      if (e?.code === 'no_embedding_provider_configured') {
-        return boom(res, 'no_embedding_provider_configured (set OPENROUTER_API_KEY or OPENAI_API_KEY)');
-      }
-      if (e?.code === 'embedding_non_json') {
-        const s = (e?.snippet || '').replace(/\s+/g, ' ').slice(0, 200);
-        return boom(res, `embedding_non_json status=${e?.status ?? '?'} snippet="${s}"`);
-      }
-      const msg = e?.message || String(e);
-      return boom(res, msg);
+    // 1) Fetch page and text
+    const { text, title } = await fetchPageAsText(url);
+    if (!text || text.length < 40) {
+      res.status(422).json({
+        error: "empty_content",
+        detail: "Fetched page has no extractable text.",
+      });
+      return;
     }
 
-    const now = new Date().toISOString();
-    const rows = pieces.map((content, i) => ({
+    // 2) Chunk it
+    const chunks = chunkText(text, 1800, 200);
+    if (chunks.length === 0) {
+      res.status(422).json({ error: "no_chunks" });
+      return;
+    }
+
+    // 3) Embed
+    const embeddings = await getEmbeddings(chunks);
+    if (embeddings.length !== chunks.length) {
+      throw {
+        status: 500,
+        error: "embedding_mismatch",
+        detail: "Embeddings length != chunks length",
+      };
+    }
+
+    // 4) Replace rows for that URL
+    // delete existing (if any)
+    await supabase.from("page_chunks").delete().eq("url", url);
+
+    // insert in batches to be safe
+    const rows = chunks.map((content, i) => ({
       url,
       title,
       content,
-      chunk_text: content,
-      embedding: vectors[i],
-      tokens: Math.ceil(content.length / 4),
-      chunk_hash: sha256(`${url}::${i}::${sha256(content)}`),
-      created_at: now,
+      embedding: embeddings[i],
+      chunk_hash: sha1(content),
     }));
 
-    const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-    try {
-      await upsertChunks({ supa, rows, replaceUrl: replace });
-    } catch (e) {
-      return boom(res, `supabase_upsert_error: ${e?.message || String(e)}`);
+    // batched insert (100 per)
+    const batchSize = 100;
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const batch = rows.slice(i, i + batchSize);
+      const { error } = await supabase.from("page_chunks").insert(batch);
+      if (error) {
+        throw {
+          status: 500,
+          error: "db_insert_failed",
+          detail: error.message || String(error),
+        };
+      }
     }
 
-    return ok(res, {
+    res.status(200).json({
       ok: true,
       url,
+      title,
       chunks: rows.length,
-      provider: OPENROUTER_API_KEY ? 'openrouter' : (OPENAI_API_KEY ? 'openai' : 'none'),
-      model: OPENROUTER_API_KEY ? EMBED_MODEL_OPENROUTER : EMBED_MODEL_OPENAI,
+      dims: DIM,
+      provider,
     });
   } catch (err) {
-    // Final safety net — always string detail
-    return boom(res, err?.message ?? String(err));
+    // Return clean, JSON errors so the UI can render something sensible
+    const status = err?.status || 500;
+    res.status(status).json({
+      error: err?.error || "server_error",
+      detail: err?.detail || (err?.message ? String(err.message) : String(err)),
+    });
   }
 }
+
+// Force Node runtime on Vercel (NOT edge)
+export const config = { runtime: "nodejs20.x" };
