@@ -1,12 +1,7 @@
 // /api/ingest-embed-replace.js  — FULL FILE (ESM)
-// ---------------------------------------------------------------------------
 // Contract: POST { url } with Authorization: Bearer <INGEST_TOKEN>
-// Returns JSON: { ok, id, len, chunks } or { error, detail, stage }
-// Notes:
-// - Runtime flag uses `nodejs` (NOT nodejs20.x)
-// - Embedding model: text-embedding-3-small (OpenRouter or OpenAI)
-// - Upserts into public.page_chunks using unique content hash
-// ---------------------------------------------------------------------------
+// Returns: { ok, id, len, chunks } or { error, detail, stage }
+// Runtime flag uses `nodejs` per your rule.
 
 export const config = { runtime: 'nodejs' };
 
@@ -14,14 +9,13 @@ import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
 
-// ---------- small utils ----------
+// ---------- utils ----------
 const need = (k) => {
   const v = process.env[k];
   if (!v || !String(v).trim()) throw new Error(`missing_env:${k}`);
   return v;
 };
 const opt = (k) => process.env[k] || '';
-
 const sha1 = (s) => crypto.createHash('sha1').update(s).digest('hex');
 
 const chunkText = (txt, size = 3500, overlap = 300) => {
@@ -83,8 +77,6 @@ async function getEmbeddings(inputs) {
   const oaKey = opt('OPENAI_API_KEY');
   if (!orKey && !oaKey) throw new Error('no_embedding_provider_configured');
 
-  const body = JSON.stringify({ model: 'text-embedding-3-small', input: inputs });
-
   // helper to safely parse JSON or throw with HTML snippet
   const parseJSONorThrow = async (resp, tag) => {
     const ct = (resp.headers.get('content-type') || '').toLowerCase();
@@ -102,6 +94,9 @@ async function getEmbeddings(inputs) {
   };
 
   if (orKey) {
+    // IMPORTANT: OpenRouter needs provider-prefixed model id
+    const body = JSON.stringify({ model: 'openai/text-embedding-3-small', input: inputs });
+
     const resp = await fetch('https://openrouter.ai/api/v1/embeddings', {
       method: 'POST',
       headers: {
@@ -125,23 +120,27 @@ async function getEmbeddings(inputs) {
     return out;
   }
 
-  // OpenAI path
-  const resp = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${oaKey}`, 'Content-Type': 'application/json' },
-    redirect: 'follow',
-    body
-  });
-  if (!resp.ok) {
-    const t = await resp.text().catch(() => '');
-    throw new Error(`openai_error:${resp.status}:${t.slice(0, 300)}`);
+  // OpenAI path uses the plain model id
+  {
+    const body = JSON.stringify({ model: 'text-embedding-3-small', input: inputs });
+
+    const resp = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${oaKey}`, 'Content-Type': 'application/json' },
+      redirect: 'follow',
+      body
+    });
+    if (!resp.ok) {
+      const t = await resp.text().catch(() => '');
+      throw new Error(`openai_error:${resp.status}:${t.slice(0, 300)}`);
+    }
+    const j = await parseJSONorThrow(resp, 'openai');
+    const out = (j?.data || []).map(d => d?.embedding);
+    if (!out.length) throw new Error('openai_empty_embeddings');
+    if (!Array.isArray(out[0]) || out[0].length !== 1536)
+      throw new Error('openai_bad_embedding_dim');
+    return out;
   }
-  const j = await parseJSONorThrow(resp, 'openai');
-  const out = (j?.data || []).map(d => d?.embedding);
-  if (!out.length) throw new Error('openai_empty_embeddings');
-  if (!Array.isArray(out[0]) || out[0].length !== 1536)
-    throw new Error('openai_bad_embedding_dim');
-  return out;
 }
 
 // ---------- handler ----------
