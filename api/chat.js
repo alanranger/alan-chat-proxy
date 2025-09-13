@@ -1,14 +1,15 @@
 // /api/chat.js
 export const config = { runtime: 'nodejs' };
 
-/** Chat endpoint that:
- * 1) Calls our /api/tools?action=search to retrieve topK context snippets
- * 2) Asks the LLM to return STRICT JSON: { answer: string, citations: string[], followUps: string[] }
- * 3) Returns that JSON to the frontend
+/**
+ * Chat endpoint that:
+ *  1) Calls our /api/tools?action=search to retrieve topK context snippets
+ *  2) Asks the LLM to return STRICT JSON:
+ *     { answer: string, citations: string[], followUps: string[] }
+ *  3) Returns that JSON to the frontend
  *
  * It supports OpenRouter (preferred) or OpenAI — whichever key is present.
- * ENV required:  - OPENROUTER_API_KEY (preferred) OR OPENAI_API_KEY
- *                - VERCEL_URL (set automatically in prod) for calling /api/tools
+ * ENV required: OPENROUTER_API_KEY (preferred) OR OPENAI_API_KEY
  */
 
 const need = (k) => {
@@ -19,7 +20,7 @@ const need = (k) => {
 
 const toJSON = (res, status, obj) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.status(status).send(JSON.stringify(obj));
+  return res.status(status).send(JSON.stringify(obj));
 };
 
 async function postJSON(url, body, headers = {}) {
@@ -29,8 +30,8 @@ async function postJSON(url, body, headers = {}) {
     body: JSON.stringify(body),
   });
   if (!r.ok) {
-    const text = await r.text().catch(() => '');
-    throw new Error(`llm_http_${r.status}:${text.slice(0, 2000)}`);
+    const text = await r.text().catch(()=>'');
+    throw new Error(`llm_http_${r.status}:${text.slice(0,300)}`);
   }
   return r.json();
 }
@@ -38,123 +39,125 @@ async function postJSON(url, body, headers = {}) {
 function getLLMConfig() {
   const orKey = process.env.OPENROUTER_API_KEY;
   const oaKey = process.env.OPENAI_API_KEY;
-  if (!orKey && !oaKey) throw new Error('no_llm_provider_configured');
-
   if (orKey) {
     return {
       provider: 'openrouter',
       endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-      headers: { Authorization: `Bearer ${orKey}` },
-      model: 'openrouter/gpt-4o-mini', // light+cheap, tune to taste
+      headers: { 'Authorization': `Bearer ${orKey}` },
+      model: 'openai/gpt-4o-mini', // good, fast, inexpensive
     };
   }
-  return {
-    provider: 'openai',
-    endpoint: 'https://api.openai.com/v1/chat/completions',
-    headers: { Authorization: `Bearer ${oaKey}` },
-    model: 'gpt-4o-mini',
-  };
+  if (oaKey) {
+    return {
+      provider: 'openai',
+      endpoint: 'https://api.openai.com/v1/chat/completions',
+      headers: { 'Authorization': `Bearer ${oaKey}` },
+      model: 'gpt-4o-mini',
+    };
+  }
+  throw new Error('no_llm_provider_configured');
 }
 
 const SYS_PROMPT =
-  `You are "Alan Ranger Assistant", a helpful photography guide and workshop assistant. ` +
-  `Write concise, friendly answers. Use bullets for tips/steps/gear. Provide concrete next steps. ` +
-  `Only use the provided context snippets. If you aren't sure, say so and suggest an action. ` +
-  `Return STRICT JSON ONLY: {"answer": "...", "citations": ["..."], "followUps": ["..."]}`;
-
-function cleaned(m) {
-  return (m.content || '')
-    .replace(/\s+/g, ' ')
-    .slice(0, 1400); // keep the prompt small-ish
-}
+  `You are "Alan Ranger Assistant", a helpful photography guide and workshop assistant.
+Write concise, friendly answers. Use bullets for tips/steps/gear. Provide concrete next steps.
+Only use the provided context snippets. If you aren't sure, say so and suggest an action.
+Return STRICT JSON ONLY:
+{
+  "answer": "<markdown-friendly text (no HTML; **bold** allowed; lists OK)>",
+  "citations": ["https://..."],
+  "followUps": ["short suggestion", "another suggestion"]
+}`;
 
 function buildUserPrompt(query, matches) {
-  const lines = matches.map((m, i) =>
-    `# Source ${i + 1} — ${m.url}\n${cleaned(m)}\n`);
-  return [
-    `User question: ${query}`,
-    `Context snippets:\n${lines.join('\n')}`,
-    `Return JSON ONLY. Keys: "answer" (markdown ok, no HTML, **bold** ok), "citations" (unique URLs), "followUps" (<=3 short suggestions).`,
-  ].join('\n\n');
-}
+  const lines = matches.map((m, i) => {
+    const url = m?.url || '';
+    const text = (m?.content || '').replace(/\s+/g,' ').slice(0, 1200);
+    const score = m?.score ?? '';
+    return `### Source ${i+1} [score=${score}] [url=${url}]
+${text}`;
+  }).join('\n\n');
 
-async function embedAndSearch(req, topK) {
-  // Prefer absolute URL in prod
-  const base = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+  return `# User question:
+${query}
 
-  // IMPORTANT: forward the Authorization header from the client
-  const r = await fetch(`${base}/api/tools?action=search`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': req.headers.authorization || '',
-    },
-    body: JSON.stringify({ query: req.body?.query || '', topK }),
-  });
+# Context snippets:
+${lines}
 
-  const text = await r.text();
-  let json;
-  try { json = JSON.parse(text); } catch { json = { error: text.slice(0, 1000) }; }
-
-  if (!r.ok) throw new Error(`search_failed_${r.status}:${text.slice(0, 300)}`);
-  return json;
+# Instructions
+1) Answer using only the context above. If unknown, say "I do not know" and suggest 1 action.
+2) Be concise; prefer short paragraphs and bullet points.
+3) Include 2–5 citations chosen from the provided URLs (don't invent).
+4) Also include 1–3 follow-up suggestions.`;
 }
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== 'POST') return toJSON(res, 405, { error: 'method_not_allowed' });
+    if (req.method !== 'POST') return toJSON(res, 405, { ok:false, error: 'method_not_allowed' });
 
-    const query = (req.body?.query || '').trim();
-    const topK = Math.max(1, Math.min(12, parseInt(req.body?.topK || '8', 10)));
-    if (!query) return toJSON(res, 400, { error: 'bad_request', detail: 'Provide "query" string.' });
+    const { query, topK = 8 } = req.body || {};
+    if (!query || typeof query !== 'string') {
+      return toJSON(res, 400, { ok:false, error:'bad_request', detail:'Provide "query" string.' });
+    }
 
     // 1) retrieve context
-    const matches = await embedAndSearch(req, topK);
-    const seen = new Set();
-    const context = (Array.isArray(matches?.matches) ? matches.matches : [])
-      .slice(0, topK)
-      .map(m => ({ url: m.url, content: m.content }))
-      .filter(m => m.url && !seen.has(m.url) && seen.add(m.url));
+    const authHeader = req.headers.authorization || '';
+    const searchResp = await fetch(`${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : ''}/api/tools?action=search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':'application/json',
+        'Authorization': authHeader,  // forward Bearer from client
+      },
+      body: JSON.stringify({ query, topK }),
+    });
+
+    if (!searchResp.ok) {
+      const t = await searchResp.text().catch(()=> '');
+      return toJSON(res, 500, { ok:false, error:'search_failed_'+searchResp.status, detail:t.slice(0,500) });
+    }
+    const { matches = [] } = await searchResp.json();
 
     // 2) call LLM
-    const { endpoint, headers, model } = getLLMConfig();
-    const userPrompt = buildUserPrompt(query, context);
+    const cfg = getLLMConfig();
+    const userPrompt = buildUserPrompt(query, matches);
 
     const body = {
-      model,
+      model: cfg.model,
       temperature: 0.2,
       messages: [
-        { role: 'system', content: SYS_PROMPT },
-        { role: 'user', content: userPrompt },
+        { role:'system', content: SYS_PROMPT },
+        { role:'user', content: userPrompt },
       ],
       response_format: { type: 'json_object' },
     };
 
-    const j = await postJSON(endpoint, body, headers);
-    const raw = j?.choices?.[0]?.message?.content || '';
-    let out;
-    try {
-      out = JSON.parse(raw.trim());
-    } catch (e) {
-      // Try to salvage JSON if the model wrapped it in code fences
-      const m = raw.match(/\{[\s\S]*\}/);
-      out = m ? JSON.parse(m[0]) : null;
+    const llm = await postJSON(cfg.endpoint, body, cfg.headers);
+
+    // OpenRouter/OpenAI both put content here:
+    const raw = llm?.choices?.[0]?.message?.content || '';
+    let out = {};
+    try { out = JSON.parse(raw); } catch(e) {
+      // try to strip code fences if any
+      const cleaned = raw.replace(/```json\s*|\s*```/g,'').trim();
+      try { out = JSON.parse(cleaned); } catch { out = {}; }
     }
 
-    // Normalize
-    const citations = Array.isArray(out?.citations) ? out.citations : [];
-    const uniqCites = Array.from(new Set(citations.filter(Boolean))).slice(0, 6);
-    const followUps = Array.isArray(out?.followUps) ? out.followUps : [];
+    // constrain citations to known URLs
+    const known = new Set(matches.map(m => m?.url).filter(Boolean));
+    const citations = (Array.isArray(out.citations) ? out.citations : [])
+      .filter(u => known.has(u))
+      .slice(0, 6);
+
+    const followUps = Array.isArray(out.followUps) ? out.followUps.slice(0,3) : [];
 
     return toJSON(res, 200, {
       ok: true,
-      answer: out?.answer || 'I could not produce an answer. Please try rephrasing your question.',
-      citations: uniqCites,
-      followUps: followUps.slice(0, 3),
+      answer: out.answer || 'I do not know.',
+      citations,
+      followUps,
     });
+
   } catch (err) {
-    return toJSON(res, 500, { ok: false, error: 'server_error', detail: String(err) });
+    return toJSON(res, 500, { ok:false, error:'server_error', detail: String(err) });
   }
 }
