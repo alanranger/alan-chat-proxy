@@ -1,5 +1,5 @@
 // /api/health.js
-export const config = { runtime: 'nodejs20.x' };
+export const config = { runtime: 'nodejs' };
 
 import { createClient } from '@supabase/supabase-js';
 
