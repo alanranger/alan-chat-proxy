@@ -221,68 +221,92 @@ async function callSearch(query, topK) {
   return body;
 }
 
-// ---------------- Snippet helpers (improved) ----------------
+// ---------------- Snippet helpers (no more clipped starts) ----------------
 
-// keep human text from Markdown:  ![alt](url) -> "alt",  [text](url) -> "text"
+// Keep readable text from Markdown.
+//  - Images:  ![alt](url) -> "alt"
+//  - Links:   [text](url) -> "text"
 function normalizeMdLinks(s) {
   if (!s) return '';
-  s = s.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1'); // image alt
-  s = s.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');  // link text
+  s = s.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1');
+  s = s.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
   return s;
 }
 
-// clean text for snippet extraction
+// Normalize & clean text for sentence picking.
 function cleanText(s) {
-  s = normalizeMdLinks(s);
-  // collapse raw URLs
+  s = normalizeMdLinks(s || '');
+  // If the source had broken markdown, strip stray brackets.
+  s = s.replace(/[\[\]\(\)]/g, ' ');
+  // Strip raw URLs.
   s = s.replace(/https?:\/\/\S+/g, ' ');
-  // collapse whitespace
-  s = s.replace(/\s+/g, ' ').trim();
+  // Collapse whitespace.
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+// Find "sentence spans" [start,end,text] using ., !, ?, newline, and vertical bar as boundaries.
+function sentenceSpans(text) {
+  const spans = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '.' || ch === '!' || ch === '?' || ch === '\n' || ch === '|') {
+      const end = i + 1;
+      const seg = text.slice(start, end).trim();
+      if (seg) spans.push([start, end, seg]);
+      start = end;
+    }
+  }
+  if (start < text.length) {
+    const seg = text.slice(start).trim();
+    if (seg) spans.push([start, text.length, seg]);
+  }
+  return spans;
+}
+
+// Tidy the very beginning so it never starts with punctuation or half-words.
+function tidyStart(s) {
+  // remove leading punctuation/dashes/bullets/spaces
+  s = (s || '').replace(/^[\)\]\}\.,;:\/\\\-—–•\s]+/u, '').trim();
+  // if we still start mid-word (previous char likely missing), drop until next space
+  if (s && /^[a-z]{1,2}\b/i.test(s.slice(0,2)) === false && /^[a-z]/i.test(s[0]) === false) {
+    const sp = s.indexOf(' ');
+    if (sp > 0) s = s.slice(sp+1).trim();
+  }
   return s;
 }
 
-// trim leading junk chars (dangling punctuation/brackets/dashes)
-function tidyStart(s) {
-  return (s || '').replace(/^[\]\)\}\.,;:\/\\\-\u2022\s]+/, '').trim();
-}
-
-// pick a window around the first term match; if not found, a neat first window
-function windowSnippet(content, terms, windowSize = 300, lead = 140) {
+// Choose the sentence that contains the first term occurrence; extend with next if short.
+function sentenceSnippet(content, terms, minChars = 80) {
   const text = cleanText(content);
   if (!text) return '';
 
   const lc = text.toLowerCase();
   let pos = -1;
   if (terms.length) {
-    // find earliest occurrence of any term (min index > -1)
     for (const t of terms) {
       const i = lc.indexOf(t);
       if (i !== -1) pos = (pos === -1) ? i : Math.min(pos, i);
     }
   }
-  // choose start/end
-  let start, end;
-  if (pos === -1) {
-    start = 0;
-    end   = Math.min(windowSize, text.length);
-  } else {
-    start = Math.max(0, pos - lead);
-    end   = Math.min(start + windowSize, text.length);
-  }
-  // expand to sentence-ish boundaries
-  const pre  = text.lastIndexOf('.', start);
-  const preQ = text.lastIndexOf('?', start);
-  const preE = text.lastIndexOf('!', start);
-  const leftBound = Math.max(0, pre, preQ, preE) + 1; // after punctuation
-  const post  = text.indexOf('.', end);
-  const postQ = text.indexOf('?', end);
-  const postE = text.indexOf('!', end);
-  const rightCand = [post, postQ, postE].filter(x=>x!==-1);
-  const rightBound = rightCand.length ? Math.min(...rightCand)+1 : end;
 
-  let out = text.slice(leftBound, rightBound).trim();
-  out = tidyStart(out);
-  return out;
+  const spans = sentenceSpans(text);
+  if (!spans.length) return text;
+
+  // pick the span containing 'pos', else the first span
+  let idx = 0;
+  if (pos !== -1) {
+    for (let i=0;i<spans.length;i++){
+      const [s,e] = spans[i];
+      if (pos >= s && pos < e) { idx = i; break; }
+    }
+  }
+
+  let snippet = tidyStart(spans[idx][2]);
+  if (snippet.length < minChars && spans[idx+1]) {
+    snippet = (snippet + ' ' + tidyStart(spans[idx+1][2])).trim();
+  }
+  return snippet;
 }
 
 // --- Single test
@@ -309,7 +333,7 @@ $('test').onclick = async () => {
 function bumpSucc(){ const n = Number($('succ').textContent||'0')+1; $('succ').textContent = String(n); }
 function bumpFail(){ const n = Number($('fail').textContent||'0')+1; $('fail').textContent = String(n); }
 
-// results table rows
+// results table
 function addRow(url, result, isOK) {
   const tr = document.createElement('tr');
   const cls = isOK ? 'ok' : 'bad';
@@ -368,7 +392,7 @@ $('crawl').onclick = async () => {
   $('stop').disabled = true;
 };
 
-// search (grouped + improved snippets)
+// search (grouped + robust sentence snippets)
 $('runSearch').onclick = async () => {
   const query = $('query').value.trim();
   const topK = Math.max(1, Math.min(32, parseInt($('topk').value || '8', 10)));
@@ -395,18 +419,13 @@ $('runSearch').onclick = async () => {
   const grouped = Array.from(groups.values()).sort((a,b)=> (b.bestScore - a.bestScore));
 
   for (const g of grouped) {
-    // try to build a single, clean snippet from all collected chunks
-    let chosen = '';
-    // prefer first chunk with a term match
-    let withMatch = g.contents.find(c => {
+    // Prefer the chunk that actually contains query terms.
+    let contentForSnippet = g.contents.find(c => {
       const t = cleanText(c).toLowerCase();
       return terms.length && terms.every(term => t.includes(term));
-    });
-    if (withMatch) {
-      chosen = windowSnippet(withMatch, terms);
-    } else if (g.contents.length) {
-      chosen = windowSnippet(g.contents[0], []);
-    }
+    }) || g.contents[0] || '';
+
+    const chosen = sentenceSnippet(contentForSnippet, terms);
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
