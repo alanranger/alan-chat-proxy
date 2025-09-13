@@ -3,43 +3,42 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Alan Ranger — AI Bot</title>
+<title>Alan Ranger Assistant</title>
 <style>
-  :root{
-    --bg:#0b1220; --panel:#0f172a; --line:#1b2540; --text:#dbe4ff; --muted:#9fb3ff;
-    --brand:#b8743a; /* your warm orange-brown brand */
-    --accent:#2563eb; --ok:#22c55e; --bad:#ef4444;
+  :root {
+    --bg:#0b1220; --panel:#0f172a; --line:#1b2540; --text:#dbe4ff;
+    --muted:#9fb3ff; --brand:#E57200; --accent:#2563eb;
   }
-  html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;}
-  .wrap{max-width:900px;margin:0 auto;padding:20px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px}
-  .header{display:flex;align-items:center;gap:12px;padding:16px}
-  .logo{width:40px;height:40px;border-radius:10px;background:#1e293b;display:grid;place-items:center;font-weight:800}
-  .logo img{width:100%;height:100%;object-fit:cover;border-radius:10px}
-  .title{font-size:18px;font-weight:700}
-  .status{margin-left:auto;color:var(--muted);font-size:12px}
-  .hint{color:var(--muted);font-size:14px;margin:0 16px 12px}
-  .chat{padding:8px 16px 4px;max-height:70vh;overflow:auto;border-top:1px solid var(--line)}
-  .msg{display:flex;margin:12px 0;gap:10px}
-  .msg.user{justify-content:flex-end}
-  .bubble{max-width:78%;padding:12px 14px;border-radius:12px;white-space:pre-wrap}
-  .bubble.user{background:#1d2a48;border:1px solid var(--line)}
-  .bubble.bot{background:#0b1328;border:1px solid var(--line)}
-  .meta{color:var(--muted);font-size:12px;margin-top:6px}
-  .sources{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
-  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1328;border:1px solid var(--line);font-size:12px}
-  .chip a{color:#9ccaff;text-decoration:none;max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .quickbar{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
-  .quick{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:999px;padding:6px 10px;cursor:pointer}
-  .composer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
-  .composer input{flex:1;background:#0b1426;border:1px solid var(--line);border-radius:8px;color:var(--text);padding:12px}
-  .composer button{background:var(--accent);border:0;color:#fff;border-radius:8px;padding:0 16px;cursor:pointer}
-  .k{width:70px;background:#0b1426;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px 8px}
-  .system{padding:10px 16px;border-top:1px dashed var(--line);color:var(--muted);font-size:12px}
-  .brandbar{background:var(--brand);height:6px;border-top-left-radius:14px;border-top-right-radius:14px}
-  .typing{color:var(--muted);font-size:13px;margin:4px 16px 8px}
-  .hidden{display:none}
-  @media (max-width:720px){ .bubble{max-width:88%} .k{width:58px} }
+  body { margin:0; font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;
+    background:var(--bg); color:var(--text); }
+  .wrap { max-width:900px; margin:0 auto; padding:20px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .brandbar { background:var(--brand); height:6px; }
+  .header { display:flex; align-items:center; gap:12px; padding:16px; }
+  .logo img { width:40px; height:40px; border-radius:50%; }
+  .title { font-size:18px; font-weight:700; }
+  .status { margin-left:auto; font-size:12px; color:var(--muted); }
+  .hint { font-size:14px; color:var(--muted); padding:0 16px 12px; }
+  .chat { padding:16px; max-height:70vh; overflow-y:auto; }
+  .msg { display:flex; margin:12px 0; }
+  .msg.user { justify-content:flex-end; }
+  .bubble { max-width:75%; padding:12px 14px; border-radius:12px; white-space:pre-wrap;
+    animation:fadeInUp .25s ease; }
+  .bubble.user { background:#1d2a48; }
+  .bubble.bot { background:#0b1328; }
+  @keyframes fadeInUp { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+  .sources { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { background:#0b1426; border:1px solid var(--line); border-radius:999px;
+    padding:4px 10px; font-size:12px; }
+  .chip a { color:#9ccaff; text-decoration:none; }
+  .composer { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--line); }
+  .composer input { flex:1; background:#0b1426; border:1px solid var(--line); border-radius:8px;
+    padding:12px; color:var(--text); }
+  .composer button { background:var(--brand); border:0; color:#fff; border-radius:8px; padding:0 16px; cursor:pointer; }
+  .typing { color:var(--muted); font-size:13px; margin:0 16px; display:flex; gap:4px; }
+  .dot { width:6px; height:6px; background:var(--muted); border-radius:50%; animation:bounce 1s infinite; }
+  .dot:nth-child(2){animation-delay:0.2s} .dot:nth-child(3){animation-delay:0.4s}
+  @keyframes bounce { 0%,80%,100%{transform:scale(0.6)} 40%{transform:scale(1)} }
 </style>
 </head>
 <body>
@@ -47,110 +46,64 @@
   <div class="card">
     <div class="brandbar"></div>
     <div class="header">
-      <div class="logo" id="logoBox">R</div>
+      <div class="logo"><img src="/ALAN RANGER ICON WHITE on Black Circle1.png" alt="logo"></div>
       <div class="title">Alan Ranger Assistant</div>
       <div class="status" id="status">ready</div>
     </div>
-
-    <p class="hint">Hi! Ask me about workshops, tips, or anything else around photography — I’ll answer with concise, cited advice from Alan’s site.</p>
-
+    <p class="hint">Ask me about workshops, courses, tips, or photography gear — I’ll give concise, cited answers.</p>
     <div id="chat" class="chat"></div>
-    <div id="typing" class="typing hidden">Assistant is typing…</div>
-
-    <div class="quickbar" id="quickbar">
-      <button class="quick" onclick="sendQuick('What\'s the best workshop for a beginner?')">Beginner workshop?</button>
-      <button class="quick" onclick="sendQuick('What should I bring to a landscape workshop?')">What to bring?</button>
-      <button class="quick" onclick="sendQuick('Tips for photographing bluebells in woodland?')">Bluebell tips</button>
-      <button class="quick" onclick="sendQuick('How do your tuition sessions work?')">Tuition options</button>
+    <div id="typing" class="typing" style="display:none">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
     </div>
-
     <div class="composer">
-      <input id="q" autocomplete="off" placeholder="Ask a question… (Shift+Enter for newline)" />
-      <input id="topk" class="k" type="number" value="8" min="1" max="16" title="Context docs"/>
+      <input id="q" placeholder="Ask a question…" />
       <button id="send">Send</button>
     </div>
-    <div class="system">Answers cite sources; only your indexed pages are used.</div>
   </div>
 </div>
-
 <script>
-  // optional: place a 40x40 logo into the square
-  // document.getElementById('logoBox').innerHTML = '<img src="/ALAN RANGER ICON WHITE on Black Circle1.png" alt="logo">';
+const elChat=document.getElementById('chat');
+const elQ=document.getElementById('q');
+const elSend=document.getElementById('send');
+const elTyping=document.getElementById('typing');
+const elStatus=document.getElementById('status');
 
-  const elChat = document.getElementById('chat');
-  const elQ = document.getElementById('q');
-  const elK = document.getElementById('topk');
-  const elSend = document.getElementById('send');
-  const elTyping = document.getElementById('typing');
-  const elStatus = document.getElementById('status');
-
-  // UX helpers
-  function bubble(content, who='bot', sources){
-    const msg = document.createElement('div');
-    msg.className = 'msg '+(who==='user'?'user':'bot');
-    const b = document.createElement('div');
-    b.className = 'bubble '+(who==='user'?'user':'bot');
-    b.textContent = content;
-    msg.appendChild(b);
-
-    if (who==='bot' && Array.isArray(sources) && sources.length){
-      const src = document.createElement('div');
-      src.className = 'sources';
-      // unique + max 6 links
-      const uniq = Array.from(new Set(sources)).slice(0,6);
-      uniq.forEach(u=>{
-        const chip = document.createElement('span');
-        chip.className = 'chip';
-        const a = document.createElement('a');
-        a.href = u; a.target='_blank'; a.rel='noreferrer noopener';
-        a.textContent = u;
-        chip.append('🔗 ', a); src.appendChild(chip);
-      });
-      b.appendChild(src);
-    }
-
-    elChat.appendChild(msg);
-    elChat.scrollTop = elChat.scrollHeight;
+function bubble(content,who='bot',cites=[]){
+  const m=document.createElement('div'); m.className='msg '+who;
+  const b=document.createElement('div'); b.className='bubble '+who;
+  b.innerHTML=content;
+  if(who==='bot'&&cites.length){
+    const src=document.createElement('div'); src.className='sources';
+    cites.slice(0,6).forEach(u=>{
+      const chip=document.createElement('span'); chip.className='chip';
+      chip.innerHTML='<a href="'+u+'" target="_blank">'+u+'</a>';
+      src.appendChild(chip);
+    });
+    b.appendChild(src);
   }
+  m.appendChild(b); elChat.appendChild(m);
+  elChat.scrollTop=elChat.scrollHeight;
+}
+function setTyping(v){elTyping.style.display=v?'flex':'none'}
+function setReady(v){elStatus.textContent=v?'ready':'…'}
 
-  function setTyping(v){ elTyping.classList.toggle('hidden', !v); }
-  function setReady(v){ elStatus.textContent = v ? 'ready' : '…'; }
-
-  // send
-  async function send(){
-    const text = elQ.value.trim();
-    if (!text) return;
-    const k = Math.max(1, Math.min(16, parseInt(elK.value||'8', 10)));
-
-    bubble(text, 'user');
-    elQ.value = '';
-    setTyping(true); setReady(false);
-
-    try{
-      const r = await fetch('/api/chat', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ query: text, topK: k })
-      });
-      const j = await r.json();
-      const ans = (j && j.answer) ? j.answer : 'I do not know.';
-      const cites = (j && j.citations) || [];
-      bubble(ans, 'bot', cites);
-    }catch(err){
-      bubble('Sorry — something went wrong.', 'bot');
-    }finally{
-      setTyping(false); setReady(true);
-    }
-  }
-
-  function sendQuick(s){ elQ.value=s; send(); }
-  elSend.addEventListener('click', send);
-  elQ.addEventListener('keydown', (e)=>{
-    if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); }
-  });
-
-  // greet
-  bubble('Hi! Ask me anything about workshops, courses, and tuition.', 'bot');
+async function send(){
+  const text=elQ.value.trim(); if(!text)return;
+  bubble(text,'user'); elQ.value='';
+  setTyping(true); setReady(false);
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:text,topK:8})});
+    const j=await r.json();
+    const ans=j?.answer||'I do not know.'; const cites=j?.citations||[];
+    // simple markdown replace
+    const html=ans.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/^- (.*)$/gm,'• $1');
+    bubble(html,'bot',cites);
+  }catch(e){ bubble('Error contacting server.','bot'); }
+  finally{ setTyping(false); setReady(true); }
+}
+elSend.onclick=send;
+elQ.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+bubble('Hi! I can help with workshops, tuition, and photography advice.','bot');
 </script>
 </body>
 </html>
