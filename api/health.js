@@ -1,6 +1,4 @@
-// /api/health.js
-export const config = { runtime: 'nodejs' };
-
+// /api/health.js  (ESM; no runtime config on purpose)
 import { createClient } from '@supabase/supabase-js';
 
 const safe = (v) => Boolean(v && String(v).trim());
@@ -23,35 +21,27 @@ export default async function handler(req, res) {
     if (env.has_supabase_url && env.has_supabase_service_role_key) {
       try {
         const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-        // lightweight HEAD request that returns a row count if table exists
         const { count, error } = await supa
           .from('page_chunks')
           .select('id', { count: 'exact', head: true });
-        if (!error) {
-          db = { reachable: true, page_chunks_count: count ?? 0 };
-        } else {
-          db = { reachable: false, error: String(error.message || error) };
-        }
+        if (!error) db = { reachable: true, page_chunks_count: count ?? 0 };
+        else db = { reachable: false, error: String(error.message || error) };
       } catch (e) {
         db = { reachable: false, error: String(e?.message || e) };
       }
     }
 
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.status(200).send(
-      JSON.stringify({
-        ok: true,
-        env,
-        db,
-        missing: Object.entries(env)
-          .filter(([k, v]) => k.startsWith('has_') && v === false)
-          .map(([k]) => k.replace(/^has_/, '').toUpperCase())
-      })
-    );
+    res.status(200).send(JSON.stringify({
+      ok: true,
+      env,
+      db,
+      missing: Object.entries(env)
+        .filter(([k, v]) => k.startsWith('has_') && v === false)
+        .map(([k]) => k.replace(/^has_/, '').toUpperCase())
+    }));
   } catch (e) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res
-      .status(500)
-      .send(JSON.stringify({ ok: false, error: 'health_failed', detail: String(e?.message || e) }));
+    res.status(500).send(JSON.stringify({ ok:false, error:'health_failed', detail:String(e?.message || e) }));
   }
 }
