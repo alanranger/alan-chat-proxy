@@ -37,7 +37,6 @@
   .composer { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--line); }
   .composer input { flex:1; background:#0b1426; border:1px solid var(--line); border-radius:8px; padding:12px; color:var(--text); }
   .composer button { background:var(--brand); border:0; color:#fff; border-radius:8px; padding:0 16px; cursor:pointer; }
-  /* simple markdown-ish */
   .bubble.bot b { font-weight:700; }
   .bubble.bot ul { margin:6px 0 0 16px; padding:0; }
   .bubble.bot li { margin:4px 0; }
@@ -75,6 +74,9 @@ const sendBtn = document.getElementById('send');
 const typing = document.getElementById('typing');
 const statusEl = document.getElementById('status');
 
+/* Read token saved by bulk.html */
+const TOKEN = localStorage.getItem('ingest_token') || '';
+
 function addBubble(html, who='bot', cites=[]) {
   const m = document.createElement('div'); m.className = 'msg ' + who;
   const b = document.createElement('div'); b.className = 'bubble ' + who;
@@ -94,9 +96,7 @@ function addBubble(html, who='bot', cites=[]) {
 }
 
 function mdLight(s='') {
-  // bold **text**
   s = s.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-  // bullets lines starting with "-"
   s = s.replace(/(^|\n)-\s+/g, '$1• ');
   return s;
 }
@@ -114,13 +114,15 @@ async function ask() {
   try {
     const r = await fetch('/api/chat', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: {
+        'Content-Type':'application/json',
+        'Authorization': 'Bearer ' + TOKEN   /* <-- forward Bearer token */
+      },
       body: JSON.stringify({ query: text, topK: 8 })
     });
     const j = await r.json();
-    const ans = j?.answer || 'I do not know.';
-    const html = mdLight(ans);
-    addBubble(html, 'bot', Array.from(new Set(j?.citations || [])));
+    const ans = j && j.answer ? j.answer : 'I do not know.';
+    addBubble(mdLight(ans), 'bot', Array.from(new Set(j?.citations || [])));
   } catch (e) {
     addBubble('Sorry — I had trouble contacting the server.');
   } finally {
@@ -133,7 +135,6 @@ q.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); }
 });
 
-// friendly first message
 addBubble('Hi! I can help with workshops, tuition, and photography advice.', 'bot');
 </script>
 </body>
