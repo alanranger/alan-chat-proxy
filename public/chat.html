@@ -1,284 +1,175 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Alan Ranger — AI Bot</title>
-  <style>
-    /* ============= THEME ============= */
-    :root{
-      --brand:#C86E2B;            /* <— tweak to your orange */
-      --bg:#0b1220;
-      --panel:#0e162b;
-      --bubble:#101b36;
-      --bubble-user:#1a2547;
-      --line:#1c2744;
-      --text:#e7ecff;
-      --muted:#9fb0d9;
-      --chip:#13203e;
-      --btn:#2563eb;
-      --btnText:#fff;
-    }
-    *{box-sizing:border-box}
-    body{margin:0; background:var(--bg); color:var(--text);
-         font:16px/1.7 system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;}
-    .wrap{max-width:980px; margin:0 auto; padding:0 18px 28px}
-    a{color:#a9c7ff; text-decoration:none}
-    a:hover{text-decoration:underline}
+// /api/chat.js
+export const config = { runtime: 'nodejs' };
 
-    /* ============= TOP BAR ============= */
-    .topbar{
-      position:sticky; top:0; z-index:5;
-      background:linear-gradient(0deg,var(--panel),var(--panel));
-      border-bottom:1px solid var(--line);
-    }
-    .brandbar{
-      max-width:980px; margin:0 auto; padding:14px 18px;
-      display:flex; align-items:center; gap:12px;
-    }
-    .brandlogo{width:28px; height:28px; border-radius:50%; object-fit:cover;
-               border:2px solid #0003; background:#000}
-    .brandtitle{font-weight:700; letter-spacing:.2px}
-    .status{margin-left:auto; color:var(--muted); font-size:12px}
+import { createClient } from '@supabase/supabase-js';
 
-    /* ============= CARD ============= */
-    .card{background:var(--panel); border:1px solid var(--line);
-          border-radius:14px; padding:16px}
-    .stack{display:flex; flex-direction:column; gap:14px}
+const need = (k) => {
+  const v = process.env[k];
+  if (!v || !v.trim()) throw new Error(`missing_env:${k}`);
+  return v;
+};
+const opt = (k) => process.env[k] || '';
 
-    /* ============= CHAT ============= */
-    .chat{display:flex; flex-direction:column; gap:16px;
-          max-height:62vh; overflow:auto; padding-right:2px}
-    .msg{display:flex; gap:10px}
-    .avatar{
-      width:34px; height:34px; flex:0 0 34px; border-radius:50%;
-      background:#000; overflow:hidden; border:2px solid #0004
-    }
-    .avatar>img{width:100%; height:100%; object-fit:cover}
-    .bubble{
-      background:var(--bubble); border:1px solid var(--line);
-      border-radius:16px; padding:14px 16px; max-width:720px;
-    }
-    .user .bubble{ background:var(--bubble-user) }
-    .msg.user{ justify-content:flex-end }
-    .msg.user .avatar{ display:none }
+const toJSON = (res, status, obj) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.status(status).send(JSON.stringify(obj));
+};
 
-    /* readable answer */
-    .answer{ font-size:16px }
-    .answer p{ margin:0 0 12px }
-    .answer ul{ margin:8px 0 12px 20px; padding:0 }
-    .answer li{ margin:4px 0 }
-    .answer strong{ font-weight:700 }
-
-    /* citations */
-    .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px }
-    .chip{ display:inline-flex; align-items:center; gap:6px;
-           background:var(--chip); border:1px solid var(--line);
-           border-radius:999px; padding:6px 10px; font-size:12px }
-    .chip svg{ width:14px; height:14px; opacity:.8 }
-
-    /* ============= INPUT BAR ============= */
-    .inputbar{ display:flex; gap:10px; align-items:flex-end }
-    textarea{ background:#0b1426; color:var(--text); border:1px solid var(--line);
-              border-radius:12px; padding:12px 12px; width:100%; min-height:56px;
-              outline:none; resize:vertical }
-    button{ background:var(--brand); color:#fff; border:none; border-radius:12px;
-            padding:12px 18px; cursor:pointer; font-weight:600 }
-    button:disabled{ opacity:.6; cursor:not-allowed }
-
-    /* small row */
-    .smallrow{ display:flex; justify-content:space-between; align-items:center }
-    .small{ color:var(--muted); font-size:12px }
-    .topk{ width:64px; background:#0b1426; border:1px solid var(--line);
-           color:var(--text); border-radius:8px; padding:6px 8px }
-
-    /* optional quick prompts (we’ll flesh these out in next step) */
-    .prompts{ display:flex; flex-wrap:wrap; gap:10px }
-    .pill{ background:#1a2443; border:1px solid var(--line); color:var(--text);
-           border-radius:999px; padding:8px 12px; cursor:pointer; font-size:14px }
-    .welcome{ color:var(--muted); background:#0b1426; border:1px dashed var(--line);
-              border-radius:999px; padding:8px 12px; display:inline-block }
-  </style>
-</head>
-<body>
-  <!-- Top brand bar -->
-  <div class="topbar">
-    <div class="brandbar">
-      <img src="/brand/alanranger-avatar.png" alt="AR" class="brandlogo" onerror="this.style.visibility='hidden'">
-      <div class="brandtitle">Alan Ranger Assistant</div>
-      <div class="status" id="connStatus">ready</div>
-    </div>
-  </div>
-
-  <div class="wrap stack" style="margin-top:16px">
-    <!-- Token panel (hidden if present) -->
-    <div id="tokenCard" class="card stack" style="display:none">
-      <div class="stack">
-        <div class="small">Bearer token</div>
-        <input id="token" placeholder="Enter INGEST_TOKEN to enable chat"
-               style="background:#0b1426; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px">
-        <div class="small">Saved locally; sent as <span style="font-family:ui-monospace">Authorization: Bearer …</span></div>
-      </div>
-      <div><button id="saveToken">Save token</button></div>
-    </div>
-
-    <!-- Chat panel -->
-    <div class="card stack">
-      <div class="prompts">
-        <span class="welcome">Hi! Ask me about workshops, courses, and tuition.</span>
-      </div>
-
-      <div class="chat" id="chat"></div>
-
-      <div class="inputbar">
-        <textarea id="q" placeholder="Ask a question… (Shift+Enter for newline)"></textarea>
-        <button id="send">Send</button>
-      </div>
-
-      <div class="smallrow">
-        <div class="small">
-          topK
-          <input id="topk" class="topk" value="8">
-        </div>
-        <div class="small">Answers cite sources; only your indexed pages are used.</div>
-      </div>
-    </div>
-  </div>
-
-<script>
-(function(){
-  /* ------- config ------- */
-  const AVATAR_URL = '/brand/alanranger-avatar.png';  // put file in /public/brand/
-  const USER_PLACEHOLDER = '';                        // leave empty to hide user avatar
-
-  /* ------- dom helpers ------- */
-  const $ = id => document.getElementById(id);
-  const chat = $('chat');
-  const conn = $('connStatus');
-
-  const urlToken = new URLSearchParams(location.search).get('token') || '';
-  if (urlToken) localStorage.setItem('ingest_token', urlToken);
-  const getToken = ()=> localStorage.getItem('ingest_token') || '';
-  function ensureTokenUI(){ $('tokenCard').style.display = getToken()? 'none':'block'; }
-  $('saveToken').onclick = ()=>{ const v=$('token').value.trim(); if(v){localStorage.setItem('ingest_token',v);} ensureTokenUI(); };
-  ensureTokenUI();
-
-  function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])); }
-
-  // tiny markdown for readability: **bold**, lists (- ), links [t](u), blank-line paragraph
-  function mdLite(text){
-    if(!text) return '';
-    // protect HTML
-    let t = escapeHtml(text);
-
-    // links [label](url)
-    t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-    // bold **x**
-    t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
-    // lists: group consecutive lines starting with - 
-    const lines = t.split(/\r?\n/);
-    let out = [], inList = false;
-    for(let i=0;i<lines.length;i++){
-      const ln = lines[i];
-      if (/^\s*-\s+/.test(ln)){
-        if(!inList){ out.push('<ul>'); inList = true; }
-        out.push('<li>'+ln.replace(/^\s*-\s+/, '')+'</li>');
-      } else {
-        if(inList){ out.push('</ul>'); inList = false; }
-        if (ln.trim()===''){ out.push('<p></p>'); }
-        else out.push('<p>'+ln+'</p>');
-      }
-    }
-    if(inList) out.push('</ul>');
-    // remove empty paragraphs
-    return out.join('').replace(/<p>\s*<\/p>/g,'');
-  }
-
-  function msgHtml(role, inner){
-    const avatar = role==='assistant'
-      ? `<div class="avatar"><img src="${AVATAR_URL}" alt="AR" onerror="this.parentNode.style.display='none'"></div>`
-      : (USER_PLACEHOLDER ? `<div class="avatar"><img src="${USER_PLACEHOLDER}" alt=""></div>` : '<div class="avatar" style="display:none"></div>');
-    return `
-      <div class="msg ${role}">
-        ${avatar}
-        <div class="bubble">${inner}</div>
-      </div>
-    `;
-  }
-
-  function addUser(text){
-    chat.insertAdjacentHTML('beforeend', msgHtml('user', `<div class="answer">${escapeHtml(text)}</div>`));
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function addAssistant(answer, citations){
-    const chips = (citations||[])
-      .filter(Boolean)
-      .filter((u,i,arr)=>arr.indexOf(u)===i)
-      .slice(0,8)
-      .map(u=>`<a class="chip" href="${u}" target="_blank" rel="noopener" title="${u}">
-                 <svg viewBox="0 0 24 24"><path fill="#c7d2fe" d="M10.59 13.41L9.17 12l4.24-4.24 1.41 1.42L12 13.41z"/></svg>
-                 <span>${u.length>48? u.slice(0,47)+'…' : u}</span>
-               </a>`).join('');
-    const inner = `
-      <div class="answer">${mdLite(answer)}</div>
-      ${chips? `<div class="chips">${chips}</div>`:''}
-    `;
-    chat.insertAdjacentHTML('beforeend', msgHtml('assistant', inner));
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function addSystem(s){
-    addAssistant(s, []);
-  }
-
-  async function ask(q){
-    const token = getToken();
-    if(!token){ ensureTokenUI(); addSystem('Missing token. Enter token to enable chat.'); return; }
-
-    conn.textContent = 'thinking…';
-    $('send').disabled = true;
-
-    try{
-      const k = Math.max(1, Math.min(16, parseInt(($('topk').value||'8'),10)));
-      const r = await fetch('/api/chat', {
-        method:'POST',
-        headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
-        body: JSON.stringify({ query:q, topK:k })
-      });
-      let body; try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
-
-      if (!r.ok || !body.ok){
-        addAssistant(`Sorry, I couldn't answer that. (${(body&&(body.detail||body.error))||r.status})`, []);
-      } else {
-        addAssistant(body.answer, body.citations||[]);
-      }
-    } catch(err){
-      addAssistant('Error: '+(err?.message||String(err)), []);
-    } finally{
-      $('send').disabled = false;
-      conn.textContent = 'ready';
-    }
-  }
-
-  // Welcome
-  const welcome = new URLSearchParams(location.search).get('welcome')
-    || 'Hi! Ask me anything about workshops, tips, or anything else';
-  addSystem(welcome);
-
-  // Send handlers
-  $('send').onclick = ()=>{
-    const txt = $('q').value.trim();
-    if(!txt) return;
-    $('q').value = '';
-    addUser(txt);
-    ask(txt);
-  };
-  $('q').addEventListener('keydown', (e)=>{
-    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('send').click(); }
+// Simple helper to POST JSON
+async function postJSON(url, body, headers = {}) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(body),
   });
-})();
-</script>
-</body>
-</html>
+  if (!r.ok) {
+    const text = await r.text().catch(() => '');
+    throw new Error(`llm_http_${r.status}:${text.slice(0, 400)}`);
+  }
+  return r.json();
+}
+
+// Pick LLM provider (OpenRouter OR OpenAI), one source of truth is kept for embeddings already;
+// here we just pick whichever key you provided.
+function getLLMConfig() {
+  const orKey = opt('OPENROUTER_API_KEY');
+  const oaKey = opt('OPENAI_API_KEY');
+  if (orKey) {
+    // OpenRouter: pick a reliable GPT-4o-mini compatible model name
+    return {
+      provider: 'openrouter',
+      endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+      headers: { Authorization: `Bearer ${orKey}` },
+      model: 'openai/gpt-4o-mini',
+    };
+  }
+  if (oaKey) {
+    // OpenAI
+    return {
+      provider: 'openai',
+      endpoint: 'https://api.openai.com/v1/chat/completions',
+      headers: { Authorization: `Bearer ${oaKey}` },
+      model: 'gpt-4o-mini',
+    };
+  }
+  throw new Error('no_llm_provider_configured');
+}
+
+const SYS_PROMPT = `
+You are "Alan Ranger Assistant", a helpful photography guide and course/workshop assistant.
+You must answer succinctly, friendly, and practically—like a patient tutor. Always:
+- Use clear headings or short paragraphs.
+- Prefer bullets for steps, tips, gear lists.
+- Include concrete next steps when helpful.
+- NEVER hallucinate; if unsure, say so and suggest a relevant action.
+- ONLY use the snippets provided as context—no outside knowledge beyond general photography basics.
+- Cite sources from provided context by listing URL chips (do not inline superscripts).
+
+OUTPUT STRICT JSON with the shape:
+{
+  "answer": "markdown-friendly text (no HTML, use **bold**, *italic*, - bullets, 1. numbered lists, small code blocks allowed)",
+  "citations": ["https://...","https://..."],
+  "followUps": ["short clickable suggestion", "…", "…"]
+}
+
+Do not include any extra keys or commentary. JSON only.
+`.trim();
+
+function buildUserPrompt(query, matches) {
+  // Turn DB snippets into compact context blocks
+  const lines = matches.map((m, i) => {
+    const cleaned = (m.content || '')
+      .replace(/\s+/g, ' ')
+      .slice(0, 1400); // bound context per chunk
+    return `# Source ${i + 1}
+URL: ${m.url}
+Text: ${cleaned}`;
+  });
+
+  return `
+User question: ${query}
+
+Context snippets:
+${lines.join('\n\n')}
+`.trim();
+}
+
+async function embedAndSearch(query, topK) {
+  // Reuse your /api/search for the same embedding model to keep single source of truth.
+  const r = await fetch(`${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : ''}/api/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, topK }),
+  });
+  if (!r.ok) {
+    const text = await r.text().catch(() => '');
+    throw new Error(`search_failed_${r.status}:${text.slice(0, 300)}`);
+  }
+  const j = await r.json();
+  if (!j || !Array.isArray(j.matches)) return { matches: [] };
+  return j;
+}
+
+export default async function handler(req, res) {
+  try {
+    if (req.method !== 'POST') return toJSON(res, 405, { error: 'method_not_allowed' });
+
+    const { query, topK = 8 } = req.body || {};
+    if (!query || typeof query !== 'string') return toJSON(res, 400, { error: 'bad_request', detail: 'Provide "query" string.' });
+
+    // 1) Retrieve snippets with your RAG search
+    const { matches } = await embedAndSearch(query, Math.max(1, Math.min(16, +topK || 8)));
+
+    // 2) Build LLM request with strict JSON output instruction
+    const { provider, endpoint, headers, model } = getLLMConfig();
+
+    const userPrompt = buildUserPrompt(query, matches);
+
+    const body = {
+      model,
+      temperature: 0.2,
+      messages: [
+        { role: 'system', content: SYS_PROMPT },
+        { role: 'user', content: userPrompt }
+      ]
+    };
+
+    const j = await postJSON(endpoint, body, headers);
+
+    // 3) Parse LLM JSON
+    let raw = (j?.choices?.[0]?.message?.content || '').trim();
+    // Some providers wrap JSON in ```json fences—strip if present
+    raw = raw.replace(/^```json\s*|\s*```$/g, '');
+    let out;
+    try {
+      out = JSON.parse(raw);
+    } catch {
+      // Last-resort fallback if the model returned a sentence—wrap it
+      out = {
+        answer: raw || "I couldn't produce an answer. Please try rephrasing your question.",
+        citations: Array.from(new Set(matches.map(m => m.url))).slice(0, 5),
+        followUps: ["Show workshops near me", "Beginner camera settings", "Tuition and mentoring options"]
+      };
+    }
+
+    // 4) Ensure citations only include known URLs
+    const knownURLs = new Set(matches.map(m => m.url));
+    out.citations = (Array.isArray(out.citations) ? out.citations : [])
+      .filter(u => knownURLs.has(u))
+      .slice(0, 6);
+
+    // 5) Sensible follow-ups if none
+    if (!Array.isArray(out.followUps) || out.followUps.length === 0) {
+      out.followUps = ["Workshops near Coventry", "Which lens for landscape?", "How to prepare for a workshop"];
+    }
+
+    return toJSON(res, 200, {
+      ok: true,
+      answer: out.answer || "I don't know.",
+      citations: out.citations,
+      followUps: out.followUps
+    });
+  } catch (err) {
+    return toJSON(res, 500, { error: 'server_error', detail: err?.message || String(err) });
+  }
+}
