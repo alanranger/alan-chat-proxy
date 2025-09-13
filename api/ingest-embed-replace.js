@@ -1,148 +1,126 @@
-// /api/ingest-embed-replace.js
-// ESM file (your package.json has "type":"module")
-
-export const config = { runtime: 'nodejs' };
+// /api/ingest-embed-replace.js  (ESM file; package.json has "type":"module")
+export const config = { runtime: 'nodejs20.x' };
 
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
 
-// ---------- helpers ----------
-const env = (k, req = true) => {
+const need = (k) => {
   const v = process.env[k];
-  if (req && (!v || v.trim() === '')) throw new Error(`missing_env:${k}`);
-  return v || '';
+  if (!v || !v.trim()) throw new Error(`missing_env:${k}`);
+  return v;
+};
+const opt = (k) => process.env[k] || '';
+
+const toJSON = (res, status, obj) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  const safe = (x) => (typeof x === 'string' ? x : JSON.stringify(x));
+  if (obj && 'detail' in obj) obj.detail = safe(obj.detail);
+  res.status(status).send(JSON.stringify(obj));
 };
 
-function json(res, status, obj) {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.status(status).send(JSON.stringify(obj));
-}
+const sha1 = (s) => crypto.createHash('sha1').update(s).digest('hex');
 
-function chunkText(txt, targetChars = 3500, overlap = 300) {
-  const chunks = [];
-  let i = 0;
-  while (i < txt.length) {
-    const end = Math.min(i + targetChars, txt.length);
-    let chunk = txt.slice(i, end);
-    chunk = chunk.replace(/^\s+|\s+$/g, '');
-    if (chunk) chunks.push(chunk);
-    i = end - overlap;
-    if (i < 0) i = 0;
+const chunkText = (txt, size = 3500, overlap = 300) => {
+  const out = [];
+  for (let i = 0; i < txt.length; i += (size - overlap)) {
+    out.push(txt.slice(i, Math.min(i + size, txt.length)).trim());
   }
-  return chunks;
-}
-
-async function getEmbeddings(inputs) {
-  const orKey = process.env.OPENROUTER_API_KEY;
-  const oaKey = process.env.OPENAI_API_KEY;
-
-  if (!orKey && !oaKey) {
-    throw new Error('no_embedding_provider_configured (set OPENROUTER_API_KEY or OPENAI_API_KEY)');
-  }
-
-  if (orKey) {
-    const resp = await fetch('https://openrouter.ai/api/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${orKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'text-embedding-3-small',
-        input: inputs
-      })
-    });
-    if (!resp.ok) {
-      const t = await resp.text();
-      throw new Error(`openrouter_error status=${resp.status} ${t}`);
-    }
-    const j = await resp.json();
-    const out = (j?.data || []).map(d => d?.embedding);
-    if (!out.length) throw new Error('openrouter_empty_embeddings');
-    return out;
-  }
-
-  const resp = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${oaKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'text-embedding-3-small',
-      input: inputs
-    })
-  });
-  if (!resp.ok) {
-    const t = await resp.text();
-    throw new Error(`openai_error status=${resp.status} ${t}`);
-  }
-  const j = await resp.json();
-  const out = (j?.data || []).map(d => d?.embedding);
-  if (!out.length) throw new Error('openai_empty_embeddings');
-  return out;
-}
-
-function sha1(s) {
-  return crypto.createHash('sha1').update(s).digest('hex');
-}
+  return out.filter(Boolean);
+};
 
 async function fetchPage(url) {
-  const r = await fetch(url, { redirect: 'follow' });
-  if (!r.ok) throw new Error(`fetch_failed status=${r.status}`);
+  const r = await fetch(url, {
+    redirect: 'follow',
+    headers: {
+      'user-agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    },
+  });
+  if (!r.ok) {
+    const body = await r.text().catch(() => '');
+    const snippet = (body || '').slice(0, 240).replace(/\s+/g, ' ');
+    throw new Error(`fetch_failed:${r.status}:${snippet}`);
+  }
   const html = await r.text();
   const text = htmlToText(html, {
     selectors: [
       { selector: 'nav', format: 'skip' },
       { selector: 'footer', format: 'skip' },
       { selector: 'script', format: 'skip' },
-      { selector: 'style', format: 'skip' }
+      { selector: 'style', format: 'skip' },
     ],
-    wordwrap: false
+    wordwrap: false,
   }).trim();
-  return { html, text };
+  return { text };
 }
 
-// ---------- main handler ----------
+async function getEmbeddings(inputs) {
+  const orKey = opt('OPENROUTER_API_KEY');
+  const oaKey = opt('OPENAI_API_KEY');
+  if (!orKey && !oaKey) throw new Error('no_embedding_provider_configured');
+
+  const body = JSON.stringify({ model: 'text-embedding-3-small', input: inputs });
+
+  if (orKey) {
+    const resp = await fetch('https://openrouter.ai/api/v1/embeddings', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${orKey}`, 'Content-Type': 'application/json' },
+      body,
+    });
+    if (!resp.ok) {
+      const t = await resp.text().catch(() => '');
+      throw new Error(`openrouter_error:${resp.status}:${t.slice(0,300)}`);
+    }
+    const j = await resp.json();
+    const out = (j?.data || []).map((d) => d?.embedding);
+    if (!out.length) throw new Error('openrouter_empty_embeddings');
+    return out;
+  }
+
+  const resp = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${oaKey}`, 'Content-Type': 'application/json' },
+    body,
+  });
+  if (!resp.ok) {
+    const t = await resp.text().catch(() => '');
+    throw new Error(`openai_error:${resp.status}:${t.slice(0,300)}`);
+  }
+  const j = await resp.json();
+  const out = (j?.data || []).map((d) => d?.embedding);
+  if (!out.length) throw new Error('openai_empty_embeddings');
+  return out;
+}
+
 export default async function handler(req, res) {
   try {
-    if (req.method !== 'POST') {
-      return json(res, 405, { error: 'method_not_allowed' });
-    }
+    if (req.method !== 'POST') return toJSON(res, 405, { error: 'method_not_allowed' });
 
-    const bearer = (req.headers['authorization'] || '').trim();
-    const ingestToken = env('INGEST_TOKEN', true);
-    if (bearer !== `Bearer ${ingestToken}`) {
-      return json(res, 401, { error: 'unauthorized' });
-    }
+    const token = req.headers['authorization']?.trim();
+    if (token !== `Bearer ${need('INGEST_TOKEN')}`) return toJSON(res, 401, { error: 'unauthorized' });
 
-    const { url } = (req.body || {});
-    if (!url || typeof url !== 'string') {
-      return json(res, 400, { error: 'bad_request', detail: 'Provide "url"' });
-    }
+    const { url } = req.body || {};
+    if (!url) return toJSON(res, 400, { error: 'bad_request', detail: 'Provide "url"' });
 
-    const SUPABASE_URL = env('SUPABASE_URL', true);
-    const SUPABASE_SERVICE_ROLE_KEY = env('SUPABASE_SERVICE_ROLE_KEY', true);
-    const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
 
     const { text } = await fetchPage(url);
-    if (!text || text.length < 10) {
-      return json(res, 422, { error: 'empty_content', detail: 'Page extracted no usable text' });
-    }
+    if (!text || text.length < 10) return toJSON(res, 422, { error: 'empty_content' });
 
     const totalLen = text.length;
     const chunks = chunkText(text);
-    const emb = await getEmbeddings(chunks);
+    const embeds = await getEmbeddings(chunks);
 
-    const rows = [];
-    for (let i = 0; i < chunks.length; i++) {
-      const content = chunks[i];
-      const embedding = emb[i];
-      const tokens = Math.ceil(content.length / 4);
-      const hash = sha1(`${url}#${i}:${content.slice(0, 128)}`);
-      rows.push({ url, title: null, content, embedding, tokens, hash });
-    }
+    const rows = chunks.map((content, i) => ({
+      url,
+      title: null,
+      content,
+      embedding: embeds[i],
+      tokens: Math.ceil(content.length / 4),
+      hash: sha1(`${url}#${i}:${content.slice(0, 128)}`),
+    }));
 
     const { data, error } = await supa
       .from('page_chunks')
@@ -150,14 +128,11 @@ export default async function handler(req, res) {
       .select('id')
       .order('id', { ascending: false });
 
-    if (error) {
-      return json(res, 500, { error: 'supabase_upsert_failed', detail: error.message || String(error) });
-    }
+    if (error) return toJSON(res, 500, { error: 'supabase_upsert_failed', detail: error.message });
 
-    const firstId = data && data.length ? data[0].id : null;
-    return json(res, 200, { ok: true, id: firstId, len: totalLen, chunks: rows.length });
+    const firstId = data?.[0]?.id ?? null;
+    return toJSON(res, 200, { ok: true, id: firstId, len: totalLen, chunks: rows.length });
   } catch (err) {
-    const msg = err?.message || String(err);
-    return json(res, 500, { error: 'server_error', detail: msg });
+    return toJSON(res, 500, { error: 'server_error', detail: err?.message || String(err) });
   }
 }
