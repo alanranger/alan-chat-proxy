@@ -1,6 +1,6 @@
 // /api/ingest-embed-replace.js
 // Node runtime (not Edge) so we can use Supabase + HTML parsing comfortably.
-export const config = { runtime: 'nodejs18.x' };
+export const config = { runtime: 'nodejs.x' };
 
 import { createHash } from "crypto";
 import { createClient } from "@supabase/supabase-js";
