@@ -1,145 +1,156 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Alan Ranger — AI Bot</title>
-  <style>
-    :root {
-      --bg: #0b1220;
-      --panel: #0f172a;
-      --ink: #dbe4ff;
-      --muted: #94a3b8;
-      --brand: #b96f35; /* Alan Ranger tan/orange tone */
-      --chip: #1b2540;
-      --ok: #22c55e;
-    }
-    body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    .wrap { max-width:900px; margin:40px auto; padding:0 16px; }
-    .card { background:var(--panel); border:1px solid var(--chip); border-radius:12px; padding:16px; }
-    .row { display:flex; gap:12px; align-items:center; }
-    .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-    .brand { display:flex; gap:10px; align-items:center; }
-    .brand img { width:36px; height:36px; border-radius:50%; }
-    .pill { font-size:12px; padding:4px 10px; border-radius:999px; background:#102041; border:1px solid var(--chip); color:var(--muted); }
-    .log { margin-top:10px; height:60vh; overflow:auto; border:1px solid var(--chip); border-radius:10px; padding:12px; background:#0b1426; }
-    .bubble { max-width:68ch; padding:12px 14px; border-radius:14px; white-space:pre-wrap; word-break:break-word; }
-    .me { background:#1b2540; margin:8px 0 8px auto; }
-    .bot { background:#0b1426; border:1px solid var(--chip); margin:8px 0; }
-    .muted { color:var(--muted); font-size:12px; }
-    .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
-    .chip { background:var(--chip); color:var(--ink); border:1px solid #263354; border-radius:999px; padding:6px 10px; font-size:12px; text-decoration:none; }
-    .chip:hover { background:#203055; }
-    .controls { display:flex; gap:10px; margin-top:12px; }
-    input[type="text"] { flex:1; background:#0b1426; border:1px solid var(--chip); color:var(--ink); padding:12px 14px; border-radius:10px; }
-    button { background:var(--brand); color:white; border:none; padding:12px 16px; border-radius:10px; cursor:pointer; }
-    button:disabled{ opacity:.6; cursor:not-allowed; }
-    a { color:#93c5fd; text-decoration:none; }
-    a:hover { text-decoration:underline; }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Alan Ranger — AI Bot</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#0f172a; --line:#1b2540; --text:#dbe4ff; --muted:#9fb3ff;
+    --brand:#b8743a; /* your warm orange-brown brand */
+    --accent:#2563eb; --ok:#22c55e; --bad:#ef4444;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:900px;margin:0 auto;padding:20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+  .header{display:flex;align-items:center;gap:12px;padding:16px}
+  .logo{width:40px;height:40px;border-radius:10px;background:#1e293b;display:grid;place-items:center;font-weight:800}
+  .logo img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+  .title{font-size:18px;font-weight:700}
+  .status{margin-left:auto;color:var(--muted);font-size:12px}
+  .hint{color:var(--muted);font-size:14px;margin:0 16px 12px}
+  .chat{padding:8px 16px 4px;max-height:70vh;overflow:auto;border-top:1px solid var(--line)}
+  .msg{display:flex;margin:12px 0;gap:10px}
+  .msg.user{justify-content:flex-end}
+  .bubble{max-width:78%;padding:12px 14px;border-radius:12px;white-space:pre-wrap}
+  .bubble.user{background:#1d2a48;border:1px solid var(--line)}
+  .bubble.bot{background:#0b1328;border:1px solid var(--line)}
+  .meta{color:var(--muted);font-size:12px;margin-top:6px}
+  .sources{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1328;border:1px solid var(--line);font-size:12px}
+  .chip a{color:#9ccaff;text-decoration:none;max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .quickbar{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+  .quick{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:999px;padding:6px 10px;cursor:pointer}
+  .composer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+  .composer input{flex:1;background:#0b1426;border:1px solid var(--line);border-radius:8px;color:var(--text);padding:12px}
+  .composer button{background:var(--accent);border:0;color:#fff;border-radius:8px;padding:0 16px;cursor:pointer}
+  .k{width:70px;background:#0b1426;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px 8px}
+  .system{padding:10px 16px;border-top:1px dashed var(--line);color:var(--muted);font-size:12px}
+  .brandbar{background:var(--brand);height:6px;border-top-left-radius:14px;border-top-right-radius:14px}
+  .typing{color:var(--muted);font-size:13px;margin:4px 16px 8px}
+  .hidden{display:none}
+  @media (max-width:720px){ .bubble{max-width:88%} .k{width:58px} }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="topbar">
-        <div class="brand">
-          <img src="/ALAN%20RANGER%20ICON%20WHITE%20on%20Black%20Circle1.png" alt="AR"/>
-          <div>
-            <div style="font-weight:600;">Alan Ranger Assistant</div>
-            <div class="muted">Answers cite your site’s pages</div>
-          </div>
-        </div>
-        <span class="pill" id="status">ready</span>
-      </div>
-
-      <div id="log" class="log"></div>
-
-      <div class="controls">
-        <input id="q" type="text" placeholder="Ask a question… (Shift+Enter for newline)">
-        <button id="send">Send</button>
-      </div>
-      <div class="muted" style="margin-top:6px;">
-        Tips: be specific (e.g., “best tripod for landscape travel”). Shift+Enter for a new line.
-      </div>
+<div class="wrap">
+  <div class="card">
+    <div class="brandbar"></div>
+    <div class="header">
+      <div class="logo" id="logoBox">R</div>
+      <div class="title">Alan Ranger Assistant</div>
+      <div class="status" id="status">ready</div>
     </div>
+
+    <p class="hint">Hi! Ask me about workshops, tips, or anything else around photography — I’ll answer with concise, cited advice from Alan’s site.</p>
+
+    <div id="chat" class="chat"></div>
+    <div id="typing" class="typing hidden">Assistant is typing…</div>
+
+    <div class="quickbar" id="quickbar">
+      <button class="quick" onclick="sendQuick('What\'s the best workshop for a beginner?')">Beginner workshop?</button>
+      <button class="quick" onclick="sendQuick('What should I bring to a landscape workshop?')">What to bring?</button>
+      <button class="quick" onclick="sendQuick('Tips for photographing bluebells in woodland?')">Bluebell tips</button>
+      <button class="quick" onclick="sendQuick('How do your tuition sessions work?')">Tuition options</button>
+    </div>
+
+    <div class="composer">
+      <input id="q" autocomplete="off" placeholder="Ask a question… (Shift+Enter for newline)" />
+      <input id="topk" class="k" type="number" value="8" min="1" max="16" title="Context docs"/>
+      <button id="send">Send</button>
+    </div>
+    <div class="system">Answers cite sources; only your indexed pages are used.</div>
   </div>
+</div>
 
-  <script>
-    const $ = (id) => document.getElementById(id);
-    const log = $('log'), q = $('q'), send = $('send'), statusEl = $('status');
+<script>
+  // optional: place a 40x40 logo into the square
+  // document.getElementById('logoBox').innerHTML = '<img src="/ALAN RANGER ICON WHITE on Black Circle1.png" alt="logo">';
 
-    function addBubble(text, who) {
-      const div = document.createElement('div');
-      div.className = 'bubble ' + (who === 'me' ? 'me' : 'bot');
-      div.textContent = text;
-      log.appendChild(div);
-      log.scrollTop = log.scrollHeight;
-    }
-    function addCitations(urls) {
-      if (!urls || !urls.length) return;
-      const box = document.createElement('div');
-      box.className = 'chips';
-      urls.forEach(u => {
+  const elChat = document.getElementById('chat');
+  const elQ = document.getElementById('q');
+  const elK = document.getElementById('topk');
+  const elSend = document.getElementById('send');
+  const elTyping = document.getElementById('typing');
+  const elStatus = document.getElementById('status');
+
+  // UX helpers
+  function bubble(content, who='bot', sources){
+    const msg = document.createElement('div');
+    msg.className = 'msg '+(who==='user'?'user':'bot');
+    const b = document.createElement('div');
+    b.className = 'bubble '+(who==='user'?'user':'bot');
+    b.textContent = content;
+    msg.appendChild(b);
+
+    if (who==='bot' && Array.isArray(sources) && sources.length){
+      const src = document.createElement('div');
+      src.className = 'sources';
+      // unique + max 6 links
+      const uniq = Array.from(new Set(sources)).slice(0,6);
+      uniq.forEach(u=>{
+        const chip = document.createElement('span');
+        chip.className = 'chip';
         const a = document.createElement('a');
-        a.href = u; a.target = '_blank'; a.rel = 'noopener';
-        a.className = 'chip';
-        a.textContent = new URL(u).hostname.replace('www.','') + ' …';
-        a.title = u;
-        box.appendChild(a);
+        a.href = u; a.target='_blank'; a.rel='noreferrer noopener';
+        a.textContent = u;
+        chip.append('🔗 ', a); src.appendChild(chip);
       });
-      log.appendChild(box);
-      log.scrollTop = log.scrollHeight;
+      b.appendChild(src);
     }
-    function addFollowUps(items) {
-      if (!items || !items.length) return;
-      const box = document.createElement('div');
-      box.className = 'chips';
-      items.forEach(txt => {
-        const a = document.createElement('button');
-        a.className = 'chip';
-        a.textContent = txt;
-        a.onclick = () => { q.value = txt; send.click(); };
-        box.appendChild(a);
+
+    elChat.appendChild(msg);
+    elChat.scrollTop = elChat.scrollHeight;
+  }
+
+  function setTyping(v){ elTyping.classList.toggle('hidden', !v); }
+  function setReady(v){ elStatus.textContent = v ? 'ready' : '…'; }
+
+  // send
+  async function send(){
+    const text = elQ.value.trim();
+    if (!text) return;
+    const k = Math.max(1, Math.min(16, parseInt(elK.value||'8', 10)));
+
+    bubble(text, 'user');
+    elQ.value = '';
+    setTyping(true); setReady(false);
+
+    try{
+      const r = await fetch('/api/chat', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ query: text, topK: k })
       });
-      log.appendChild(box);
-      log.scrollTop = log.scrollHeight;
+      const j = await r.json();
+      const ans = (j && j.answer) ? j.answer : 'I do not know.';
+      const cites = (j && j.citations) || [];
+      bubble(ans, 'bot', cites);
+    }catch(err){
+      bubble('Sorry — something went wrong.', 'bot');
+    }finally{
+      setTyping(false); setReady(true);
     }
+  }
 
-    async function ask() {
-      const query = q.value.trim();
-      if (!query) return;
-      addBubble(query, 'me');
-      q.value = '';
-      send.disabled = true; statusEl.textContent = 'thinking…';
+  function sendQuick(s){ elQ.value=s; send(); }
+  elSend.addEventListener('click', send);
+  elQ.addEventListener('keydown', (e)=>{
+    if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); }
+  });
 
-      try {
-        const r = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, topK: 8 })
-        });
-        const j = await r.json().catch(()=>null);
-        if (!r.ok || !j?.ok) {
-          throw new Error(j?.detail || 'server_error');
-        }
-        addBubble(j.answer || '(no answer)', 'bot');
-        addCitations(j.citations || []);
-        addFollowUps(j.followUps || []);
-      } catch (err) {
-        addBubble('Sorry — I could not produce an answer. Try rephrasing your question.', 'bot');
-        console.error(err);
-      } finally {
-        send.disabled = false; statusEl.textContent = 'ready';
-      }
-    }
-
-    q.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); }
-    });
-    send.onclick = ask;
-
-    // Warm-up message
-    addBubble('Hi! Ask me anything about workshops, tips, or anything else.', 'bot');
-  </script>
+  // greet
+  bubble('Hi! Ask me anything about workshops, courses, and tuition.', 'bot');
+</script>
 </body>
 </html>
