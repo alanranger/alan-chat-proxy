@@ -19,12 +19,13 @@
     .bad { color:#ef4444; }  /* red   */
     .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace }
     table { width:100%; border-collapse:collapse; }
-    th,td { padding:8px 10px; border-bottom:1px solid #1b2540; }
+    th,td { padding:8px 10px; border-bottom:1px solid #1b2540; vertical-align:top; }
     pre { white-space:pre-wrap; word-break:break-word; }
     /* make URL links white for readability */
     table a { color:#dbe4ff; text-decoration:underline; }
     table a:hover { opacity:.85; }
     @media (max-width:900px){ .row{ flex-direction:column; } }
+    .muted { opacity:.8 }
   </style>
 </head>
 <body>
@@ -89,7 +90,7 @@
 
 <div class="card">
   <table>
-    <thead><tr><th style="width:60px">#</th><th>URL</th><th>Result</th></tr></thead>
+    <thead><tr><th style="width:60px">#</th><th>URL</th><th>Result <span class="muted">(includes DB verify)</span></th></tr></thead>
     <tbody id="rows"></tbody>
   </table>
 </div>
@@ -104,6 +105,7 @@ $('token').value = localStorage.getItem('ingest_token') || '';
 $('token').addEventListener('change', saveToken);
 $('token').addEventListener('input', saveToken);
 
+// --- API helpers
 async function callIngest(url) {
   const token = $('token').value.trim();
   const r = await fetch('/api/ingest-embed-replace', {
@@ -116,6 +118,18 @@ async function callIngest(url) {
   return { ok: r.ok && body?.ok, status: r.status, body };
 }
 
+async function callVerify(url) {
+  const token = $('token').value.trim();
+  const r = await fetch('/api/verify-chunks?url=' + encodeURIComponent(url), {
+    method: 'GET',
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  let body;
+  try { body = await r.json(); } catch { body = { error:'verify_non_json', raw_status:r.status }; }
+  return { ok: r.ok && body?.ok, status: r.status, body };
+}
+
+// --- Single test
 $('test').onclick = async () => {
   const url = $('single').value.trim();
   if (!url) return;
@@ -124,28 +138,48 @@ $('test').onclick = async () => {
   $('debug').textContent = JSON.stringify(body, null, 2);
   if (ok) {
     log(`✓ ${url} → { ok: true, id:${body.id}, len:${body.len}, chunks:${body.chunks} }`);
-    addRow(url, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`);
+    const tr = addRow(url, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
+    // verify in DB
+    verifyAndAnnotate(url, tr);
     bumpSucc();
   } else {
     const msg = (body && (body.detail || body.error)) || '(unknown)';
     log(`✗ ${url} → server_error: ${msg} (status ${status})`);
-    addRow(url, `FAILED ${msg}`);
+    addRow(url, `FAILED ${msg}`, false);
     bumpFail();
   }
 };
 
+// --- Counters
 function bumpSucc(){ const n = Number($('succ').textContent||'0')+1; $('succ').textContent = String(n); }
 function bumpFail(){ const n = Number($('fail').textContent||'0')+1; $('fail').textContent = String(n); }
 
-function addRow(url, result) {
+// --- Table rows with green/red result text; returns <tr>
+function addRow(url, result, isOK) {
   const tr = document.createElement('tr');
-  const isOK = /^OK\b/i.test(result);
   const cls = isOK ? 'ok' : 'bad';
   tr.innerHTML = `<td></td><td class="mono"><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></td><td class="mono ${cls}">${result}</td>`;
   $('rows').appendChild(tr);
   [...$('rows').children].forEach((r,i)=>r.children[0].textContent=i+1);
+  return tr;
 }
 
+// --- Append DB verify info to the result cell
+async function verifyAndAnnotate(url, tr) {
+  const td = tr.children[2];
+  td.innerHTML += ` <span class="muted">| verifying…</span>`;
+  const { ok, body } = await callVerify(url);
+  if (ok) {
+    td.innerHTML += ` <span class="muted">| DB: chunks=${body.chunks} len=${body.total_len}</span>`;
+    log(`DB verify ✓ ${url} → chunks=${body.chunks} len=${body.total_len}`);
+  } else {
+    const msg = (body && (body.detail || body.error)) || 'verify_failed';
+    td.innerHTML += ` <span class="muted">| DB verify failed: ${msg}</span>`;
+    log(`DB verify ✗ ${url} → ${msg}`);
+  }
+}
+
+// --- Crawl & ingest (concurrency + delay)
 let stopFlag = false;
 $('stop').onclick = () => { stopFlag = true; $('stop').disabled = true; };
 $('crawl').onclick = async () => {
@@ -164,12 +198,13 @@ $('crawl').onclick = async () => {
       const u = q.shift();
       const { ok, status, body } = await callIngest(u);
       if (ok) {
+        const tr = addRow(u, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
+        verifyAndAnnotate(u, tr);
         bumpSucc();
-        addRow(u, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`);
       } else {
-        bumpFail();
         const msg = (body && (body.detail || body.error)) || '(unknown)';
-        addRow(u, `FAILED ${msg}`);
+        addRow(u, `FAILED ${msg}`, false);
+        bumpFail();
       }
       if (delay) await new Promise(r=>setTimeout(r, delay));
     }
