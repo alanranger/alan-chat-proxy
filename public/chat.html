@@ -1,164 +1,140 @@
-// /api/chat.js
-export const config = { runtime: 'nodejs' };
-
-/**
- * RAG Chat endpoint:
- * 1) Calls /api/search to retrieve topK context snippets
- * 2) Asks the LLM to answer with markdown (+ citations)
- * 3) If the LLM returns nothing, fall back to a summary of the search matches
- *
- * Requires either:
- * - OPENROUTER_API_KEY (preferred)
- * - or OPENAI_API_KEY (and uses OpenAI directly)
- */
-
-const base = (k) => {
-  const v = process.env[k];
-  if (!v || !v.trim()) throw new Error(`missing_env:${k}`);
-  return v;
-};
-
-const postJSON = async (url, body, headers = {}) => {
-  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
-  if (!r.ok) {
-    const t = await r.text().catch(() => '');
-    throw new Error(`llm_http_${r.status}:${t.slice(0, 400)}`);
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Alan Ranger Assistant</title>
+<style>
+  :root {
+    --bg:#0b1220; --panel:#0f172a; --line:#1b2540; --text:#dbe4ff;
+    --muted:#9fb3ff; --brand:#E57200;
   }
-  return r.json();
-};
+  * { box-sizing:border-box }
+  body { margin:0; font:15px/1.55 system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  .wrap { max-width:920px; margin:0 auto; padding:24px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .brandbar { background:var(--brand); height:6px; }
+  .header { display:flex; align-items:center; gap:12px; padding:16px; }
+  .logo { width:40px; height:40px; border-radius:50%; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; }
+  .logo img { width:40px; height:40px; display:block; }
+  .title { font-size:18px; font-weight:700; }
+  .status { margin-left:auto; font-size:12px; color:var(--muted); }
+  .hint { font-size:14px; color:var(--muted); padding:0 16px 12px; }
+  .chat { padding:16px; max-height:68vh; overflow-y:auto; }
+  .msg { display:flex; margin:12px 0; }
+  .msg.user { justify-content:flex-end; }
+  .bubble { max-width:76%; padding:12px 14px; border-radius:12px; white-space:pre-wrap; animation:fadeInUp .25s ease; }
+  .bubble.user { background:#13203e; }
+  .bubble.bot { background:#0b1328; }
+  @keyframes fadeInUp { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+  .sources { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { background:#0b1426; border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12px; }
+  .chip a { color:#9ccaff; text-decoration:none; }
+  .typing { color:var(--muted); font-size:13px; margin:2px 16px 10px; display:flex; gap:4px; }
+  .dot { width:6px; height:6px; background:var(--muted); border-radius:50%; animation:bounce 1s infinite; }
+  .dot:nth-child(2){animation-delay:0.2s} .dot:nth-child(3){animation-delay:0.4s}
+  @keyframes bounce { 0%,80%,100%{transform:scale(0.6)} 40%{transform:scale(1)} }
+  .composer { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--line); }
+  .composer input { flex:1; background:#0b1426; border:1px solid var(--line); border-radius:8px; padding:12px; color:var(--text); }
+  .composer button { background:var(--brand); border:0; color:#fff; border-radius:8px; padding:0 16px; cursor:pointer; }
+  /* simple markdown-ish */
+  .bubble.bot b { font-weight:700; }
+  .bubble.bot ul { margin:6px 0 0 16px; padding:0; }
+  .bubble.bot li { margin:4px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="brandbar"></div>
+    <div class="header">
+      <div class="logo">
+        <img src="/alanranger_bot_avatar_v2.png" alt="Alan Ranger" onerror="this.src='/ALAN%20RANGER%20ICON%20WHITE%20on%20Black%20Circle1.png'">
+      </div>
+      <div class="title">Alan Ranger Assistant</div>
+      <div class="status" id="status">ready</div>
+    </div>
+    <p class="hint">Ask me about workshops, courses, tips, or photography gear — I’ll give concise, cited answers.</p>
 
-function getLLMConfig() {
-  const orKey = process.env.OPENROUTER_API_KEY;
-  const oaKey = process.env.OPENAI_API_KEY;
-  if (orKey) {
-    return {
-      provider: 'openrouter',
-      endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-      headers: { Authorization: `Bearer ${orKey}` },
-      model: 'gpt-4o-mini', // change if you want another OpenRouter model
-    };
-  }
-  if (oaKey) {
-    return {
-      provider: 'openai',
-      endpoint: 'https://api.openai.com/v1/chat/completions',
-      headers: { Authorization: `Bearer ${oaKey}` },
-      model: 'gpt-4o-mini', // change to something you have access to
-    };
-  }
-  throw new Error('no_llm_provider_configured');
-}
+    <div id="chat" class="chat"></div>
+    <div id="typing" class="typing" style="display:none">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
 
-// Prompt used for the assistant
-const SYS_PROMPT =
-  `You are "Alan Ranger Assistant", a helpful photography guide and workshop assistant for alanranger.com.
-Write concise, friendly answers. Use bullet points for tips/steps/gear.
-Provide context but *only* from the supplied page snippets.
-Always include a short "Sources:" list with numeric markers [1], [2], … and return the actual URLs separately in "citations".
-If the user is vague, ask 1 follow-up question at the end to clarify.`;
+    <div class="composer">
+      <input id="q" placeholder="Ask a question… (Shift+Enter for newline)"/>
+      <button id="send">Send</button>
+    </div>
+  </div>
+</div>
 
-function buildUserPrompt(query, matches) {
-  const items = matches.map((m, i) => {
-    const u = m.url || '';
-    const content = (m.content || '').replace(/\s+/g, ' ').trim();
-    return `### Doc ${i + 1}\nURL: ${u}\nText:\n${content}\n`;
-  }).join('\n');
+<script>
+const chat = document.getElementById('chat');
+const q = document.getElementById('q');
+const sendBtn = document.getElementById('send');
+const typing = document.getElementById('typing');
+const statusEl = document.getElementById('status');
 
-  return `User question: ${query}
-
-Context snippets:
-${items}
-
-INSTRUCTIONS:
-- If the answer is present in the context, answer succinctly in markdown (bold, bullets ok).
-- Include "Sources: [k]" markers inline, where k refers to the doc number(s) you used.
-- Do not invent URLs. Do not cite anything not in the snippets.
-- Then stop.`;
-}
-
-function fallbackFromMatches(matches, query) {
-  if (!Array.isArray(matches) || !matches.length) {
-    return {
-      answer: "I couldn't find enough information in the indexed pages to answer that. Try rephrasing your question, or ask something about workshops, tuition, or photography tips.",
-      citations: [],
-      followUps: [],
-      ok: true,
-    };
-  }
-
-  // Make a terse answer by extracting 3–5 bullet lines from top matches
-  const bullets = [];
-  const urls = new Set();
-  for (const m of matches.slice(0, 5)) {
-    const text = (m.content || '').replace(/\s+/g, ' ').trim();
-    if (text) {
-      bullets.push(`- ${text.slice(0, 200)}…`);
-    }
-    if (m.url) urls.add(m.url);
-  }
-
-  const answer =
-`**Here’s what I can gather from the site for "${query}":**
-
-${bullets.join('\n')}
-
-_Sources: ${[...urls].map((_, i) => `[${i + 1}]`).join(' ')}_`;
-  return {
-    answer,
-    citations: [...urls],
-    followUps: [],
-    ok: true,
-  };
-}
-
-export default async function handler(req, res) {
-  try {
-    if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'method_not_allowed' });
-    const { query, topK = 8 } = (await req.json?.().catch(() => req.body)) || req.body || {};
-    if (!query || typeof query !== 'string') {
-      return res.status(400).json({ ok: false, error: 'bad_request', detail: 'Provide "query" string.' });
-    }
-
-    // 1) Retrieve context via your search API
-    const searchUrl = `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ''}/api/search`;
-    const searchRes = await postJSON(searchUrl, { query, topK: Math.max(1, Math.min(16, Number(topK) || 8)) });
-    const matches = Array.isArray(searchRes?.matches) ? searchRes.matches : [];
-
-    if (!matches.length) {
-      // Nothing found -> safe fallback
-      return res.json(fallbackFromMatches([], query));
-    }
-
-    // 2) Try LLM with context
-    const { endpoint, headers, model } = getLLMConfig();
-    const userPrompt = buildUserPrompt(query, matches);
-    const body = {
-      model,
-      temperature: 0.2,
-      messages: [
-        { role: 'system', content: SYS_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-    };
-    const j = await postJSON(endpoint, body, headers);
-    const raw = (j?.choices?.[0]?.message?.content || '').trim();
-
-    // Extract answer + collect citations from URLs present in matches we used
-    const known = new Set(matches.map(m => m.url).filter(Boolean));
-    const citations = [...known].slice(0, 6);
-
-    // If the LLM gave basically nothing, use fallback summary so we never say "I do not know."
-    if (!raw || raw.length < 30) {
-      return res.json(fallbackFromMatches(matches, query));
-    }
-
-    return res.json({
-      ok: true,
-      answer: raw,
-      citations,
-      followUps: [], // you can add generated follow-ups later
+function addBubble(html, who='bot', cites=[]) {
+  const m = document.createElement('div'); m.className = 'msg ' + who;
+  const b = document.createElement('div'); b.className = 'bubble ' + who;
+  b.innerHTML = html;
+  if (who === 'bot' && cites.length) {
+    const src = document.createElement('div'); src.className = 'sources';
+    cites.slice(0,6).forEach(u => {
+      const chip = document.createElement('span'); chip.className='chip';
+      chip.innerHTML = `<a href="${u}" target="_blank" rel="noopener">${u}</a>`;
+      src.appendChild(chip);
     });
-  } catch (err) {
-    return res.status(500).json({ ok: false, error: 'server_error', detail: String(err) });
+    b.appendChild(src);
+  }
+  m.appendChild(b);
+  chat.appendChild(m);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function mdLight(s='') {
+  // bold **text**
+  s = s.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+  // bullets lines starting with "-"
+  s = s.replace(/(^|\n)-\s+/g, '$1• ');
+  return s;
+}
+
+function setTyping(v){ typing.style.display = v ? 'flex' : 'none'; }
+function setReady(v){ statusEl.textContent = v ? 'ready' : '…'; }
+
+async function ask() {
+  const text = q.value.trim();
+  if (!text) return;
+  addBubble(text, 'user');
+  q.value = '';
+  setTyping(true); setReady(false);
+
+  try {
+    const r = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ query: text, topK: 8 })
+    });
+    const j = await r.json();
+    const ans = j?.answer || 'I do not know.';
+    const html = mdLight(ans);
+    addBubble(html, 'bot', Array.from(new Set(j?.citations || [])));
+  } catch (e) {
+    addBubble('Sorry — I had trouble contacting the server.');
+  } finally {
+    setTyping(false); setReady(true);
   }
 }
+
+sendBtn.onclick = ask;
+q.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); }
+});
+
+// friendly first message
+addBubble('Hi! I can help with workshops, tuition, and photography advice.', 'bot');
+</script>
+</body>
+</html>
