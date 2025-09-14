@@ -1,118 +1,121 @@
 // /api/extract.js
-// Unified JSON-LD extractor API
-// - GET or POST with { url } and optional ?kind=events|articles|products|services|all
-// - "all" now truly returns events + articles + products + services.
+// Unified JSON-LD extractor API.
+//
+// Query params:
+//   ?type=events|articles|products|services|all   (default: all)
+//   ?url=<absolute-url>
+//
+// Returns JSON with extracted items. "all" includes events + articles + products + services.
 
-export const config = { runtime: 'nodejs' };
+import { NextResponse } from "next/server";
 
-import { extractEventItemsFromUrl } from './json/events-extract.js';
+// NOTE: our helpers live in /api/json/*
+import { extractEventItemsFromUrl } from "./json/events-extract.js";
 import {
-  extractAllFromUrl as extractAPSFromUrl, // Articles/Products/Services
-} from './json/content-extract.js';
+  extractArticlesFromUrl,
+  extractProductsFromUrl,
+  extractServicesFromUrl,
+  extractAllFromUrl as extractContentAllFromUrl,
+} from "./json/content-extract.js";
 
+// Small helper to send JSON nicely
 function send(res, status, obj) {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.status(status).send(JSON.stringify(obj, null, 2));
+  return new NextResponse(JSON.stringify(obj, null, 2), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
 }
 
-function readUrl(req) {
-  // POST body or query ?url=...
-  try {
-    if (req.method === 'POST') {
-      const b = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-      if (b && b.url) return String(b.url).trim();
-    }
-  } catch { /* ignore */ }
-
-  const q = req.query?.url || req.query?.u;
-  return q ? String(q).trim() : '';
-}
+// Edge/Node compatibility
+export const config = { runtime: "nodejs" };
 
 export default async function handler(req, res) {
-  // Simple CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-
-  if (req.method !== 'GET' && req.method !== 'POST') {
-    return send(res, 405, { error: 'method_not_allowed' });
-  }
-
-  const url = readUrl(req);
-  const kind = String(req.query?.kind || 'all').toLowerCase();
-
-  if (!url) return send(res, 400, { error: 'bad_request', detail: 'Provide ?url=… or body { url }' });
-
   try {
-    // Always fetch APS first (Articles/Products/Services).
-    const aps = await extractAPSFromUrl(url);
+    // Support both Next 13+ (Edge/Node) and old Vercel style
+    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+    const type = (urlObj.searchParams.get("type") || "all").toLowerCase();
+    const target = urlObj.searchParams.get("url");
 
-    // Optionally fetch events
-    let events = [];
-    if (kind === 'events' || kind === 'all') {
-      try {
-        events = await extractEventItemsFromUrl(url);
-      } catch (e) {
-        // don’t explode the whole request if events fail
-        events = [];
-      }
+    if (!target) {
+      return send(res, 400, { error: "bad_request", detail: "Provide ?url=" });
     }
 
-    // Return subsets if a specific kind was requested
-    if (kind === 'events') {
-      return send(res, 200, {
-        ok: true,
-        url,
-        events,
-        counts: { events: events.length }
-      });
+    // CORS (useful for our static tester pages)
+    const origin = req.headers.get?.("origin") || req.headers.origin || "*";
+    const baseHeaders = {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    };
+    if (req.method === "OPTIONS") {
+      return new NextResponse(null, { status: 200, headers: baseHeaders });
     }
-    if (kind === 'articles') {
-      return send(res, 200, {
-        ok: true,
-        url,
-        articles: aps.articles,
-        counts: { articles: aps.articles.length }
-      });
+    if (req.method !== "GET") {
+      return new NextResponse(
+        JSON.stringify({ error: "method_not_allowed" }),
+        { status: 405, headers: baseHeaders }
+      );
     }
-    if (kind === 'products') {
+
+    // Route by type
+    if (type === "events" || type === "event" || type === "courses") {
+      const items = await extractEventItemsFromUrl(target);
       return send(res, 200, {
         ok: true,
-        url,
-        products: aps.products,
-        counts: { products: aps.products.length }
-      });
-    }
-    if (kind === 'services') {
-      return send(res, 200, {
-        ok: true,
-        url,
-        services: aps.services,
-        counts: { services: aps.services.length }
+        url: target,
+        count: items.length,
+        items,
       });
     }
 
-    // kind === 'all' → merge everything
+    if (type === "articles") {
+      const items = await extractArticlesFromUrl(target);
+      return send(res, 200, { ok: true, url: target, articles: items, count: items.length });
+    }
+
+    if (type === "products") {
+      const items = await extractProductsFromUrl(target);
+      return send(res, 200, { ok: true, url: target, products: items, count: items.length });
+    }
+
+    if (type === "services") {
+      const items = await extractServicesFromUrl(target);
+      return send(res, 200, { ok: true, url: target, services: items, count: items.length });
+    }
+
+    // ---------- ALL (now includes EVENTS too) ----------
+    // content-extract's extractAllFromUrl returns {articles,products,services}
+    // add events from events-extract and return one combined object
+    const [contentAll, events] = await Promise.all([
+      extractContentAllFromUrl(target), // {articles,products,services}
+      extractEventItemsFromUrl(target), // EventItem[]
+    ]);
+
     const out = {
       ok: true,
-      url,
-      articles: aps.articles,
-      products: aps.products,
-      services: aps.services,
+      url: target,
       events,
+      articles: contentAll.articles || [],
+      products: contentAll.products || [],
+      services: contentAll.services || [],
       counts: {
-        articles: aps.articles.length,
-        products: aps.products.length,
-        services: aps.services.length,
-        events: events.length
-      }
+        events: (events || []).length,
+        articles: (contentAll.articles || []).length,
+        products: (contentAll.products || []).length,
+        services: (contentAll.services || []).length,
+      },
     };
+
     return send(res, 200, out);
-  } catch (e) {
+  } catch (err) {
     return send(res, 500, {
-      error: 'server_error',
-      detail: String(e?.message || e)
+      error: "server_error",
+      detail: String(err?.message || err),
+      stack:
+        process.env.NODE_ENV === "production" ? undefined : String(err?.stack || ""),
     });
   }
 }
