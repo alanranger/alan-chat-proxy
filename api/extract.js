@@ -1,5 +1,6 @@
 // /api/extract.js
 // Read-only tester endpoint that exposes JSON-LD extraction helpers.
+//
 // Actions (GET):
 //   - action=events-extract&url=...
 //   - action=articles-extract&url=...
@@ -9,7 +10,7 @@
 //
 // This does NOT write to the database. Safe to use from bulk.html.
 
-import { extractEventItemsFromUrl }   from '../json/events-extract.js';
+import { extractEventItemsFromUrl } from '../json/events-extract.js';
 import {
   extractArticleItemsFromUrl,
   extractProductItemsFromUrl,
@@ -22,7 +23,14 @@ function send(res, status, obj) {
   res.status(status).send(JSON.stringify(obj));
 }
 
-function isHttpUrl(u) { try { const x = new URL(String(u)); return x.protocol === 'http:' || x.protocol === 'https:'; } catch { return false; } }
+function isHttpUrl(u) {
+  try {
+    const x = new URL(String(u));
+    return x.protocol === 'http:' || x.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 export default async function handler(req, res) {
   // CORS (read-only)
@@ -30,13 +38,18 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
+  if (req.method !== 'GET')
+    return send(res, 405, { error: 'method_not_allowed' });
 
   const action = String(req.query?.action || '').toLowerCase();
-  const url    = String(req.query?.url || '').trim();
+  const url = String(req.query?.url || '').trim();
 
   if (!action) return send(res, 400, { error: 'missing_action' });
-  if (!url || !isHttpUrl(url)) return send(res, 400, { error: 'missing_or_bad_url', detail: 'Provide ?url=https://...' });
+  if (!url || !isHttpUrl(url))
+    return send(res, 400, {
+      error: 'missing_or_bad_url',
+      detail: 'Provide ?url=https://...',
+    });
 
   try {
     if (action === 'events-extract') {
@@ -61,6 +74,9 @@ export default async function handler(req, res) {
     }
     return send(res, 400, { error: 'unknown_action', action });
   } catch (e) {
-    return send(res, 500, { error: 'extract_failed', detail: String(e?.message || e) });
+    return send(res, 500, {
+      error: 'extract_failed',
+      detail: String(e?.message || e),
+    });
   }
 }
