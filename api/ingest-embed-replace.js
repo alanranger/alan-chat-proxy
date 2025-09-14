@@ -1,17 +1,30 @@
-// /api/ingest-embed-replace.js — single-file, JSON-LD + HTML, REPLACE semantics
+// /api/ingest-embed-replace.js — embeds + JSON-LD → page_chunks + page_entities (REPLACE)
 export const config = { runtime: 'nodejs' };
 
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
 
-/* ------------------------- tiny utils ------------------------- */
 const need = (k) => {
   const v = process.env[k];
   if (!v || !String(v).trim()) throw new Error(`missing_env:${k}`);
   return v;
 };
 const sha1 = (s) => crypto.createHash('sha1').update(s).digest('hex');
+const nowIso = () => new Date().toISOString();
+
+const PRIMARY_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const SECONDARY_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+const chunkText = (txt, size = 3500, overlap = 300) => {
+  const out = [];
+  for (let i = 0; i < txt.length; i += (size - overlap)) {
+    out.push(txt.slice(i, Math.min(i + size, txt.length)).trim());
+  }
+  return out.filter(Boolean);
+};
 
 const asString = (e) => {
   if (!e) return '(unknown)';
@@ -26,22 +39,7 @@ const sendJSON = (res, status, obj) => {
   res.status(status).send(JSON.stringify(obj));
 };
 
-const chunkText = (txt, size = 3500, overlap = 300) => {
-  const out = [];
-  if (!txt) return out;
-  for (let i = 0; i < txt.length; i += (size - overlap)) {
-    const slice = txt.slice(i, Math.min(i + size, txt.length)).trim();
-    if (slice) out.push(slice);
-  }
-  return out;
-};
-
-/* --------------------- page fetch (robust) --------------------- */
-const UA_PRIMARY =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-const UA_SECONDARY =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-
+// ---------- fetch page ----------
 async function fetchOnce(url, ua, referer) {
   return fetch(url, {
     redirect: 'follow',
@@ -56,221 +54,157 @@ async function fetchOnce(url, ua, referer) {
     }
   });
 }
-
-async function fetchHTML(url) {
+async function fetchPage(url) {
   const origin = (() => { try { return new URL(url).origin; } catch { return undefined; } })();
-
-  let r = await fetchOnce(url, UA_PRIMARY, origin);
-  if ([401, 403, 429, 503].includes(r.status)) r = await fetchOnce(url, UA_SECONDARY, origin);
-
+  let r = await fetchOnce(url, PRIMARY_UA, origin);
+  if ([401,403,429,503].includes(r.status)) r = await fetchOnce(url, SECONDARY_UA, origin);
   if (!r.ok) {
-    const body = await r.text().catch(() => '');
-    const snippet = (body || '').slice(0, 240).replace(/\s+/g, ' ');
+    const body = await r.text().catch(()=> '');
+    const snippet = (body || '').slice(0, 240).replace(/\s+/g,' ');
     throw new Error(`fetch_failed:${r.status}:${snippet}`);
   }
-  return await r.text();
-}
-
-/* ---------------- JSON-LD extraction (inline) ------------------ */
-/** Extracts raw <script type="application/ld+json"> blocks */
-function extractJsonLdBlocks(html) {
-  const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
-  const out = [];
-  let m;
-  while ((m = re.exec(html)) !== null) {
-    const raw = (m[1] || '').trim();
-    if (raw) out.push(raw);
-  }
-  return out;
-}
-
-/** A very small "loose" JSON parser (removes comments, trailing commas) */
-function looseParse(jsonText) {
-  let s = (jsonText || '').trim();
-  // Remove BOM, comments, and trailing commas
-  s = s.replace(/^\uFEFF/, '');
-  s = s.replace(/\/\*[\s\S]*?\*\//g, ''); // /* ... */
-  s = s.replace(/(^|\s)\/\/.*$/gm, '');  // // ...
-  s = s.replace(/,\s*([\]}])/g, '$1');   // trailing commas
-  // Sometimes sites HTML-entity encode quotes. Quick fix:
-  s = s.replace(/&quot;/g, '"').replace(/&#39;/g, '\'');
-  return JSON.parse(s);
-}
-
-/** Ensure we always return an array of JSON objects */
-function flattenLd(ld) {
-  if (ld == null) return [];
-  if (Array.isArray(ld)) return ld.flatMap(flattenLd);
-  if (typeof ld === 'object' && Array.isArray(ld['@graph'])) return flattenLd(ld['@graph']);
-  return [ld];
-}
-
-const hasType = (obj, names) => {
-  const set = Array.isArray(names) ? names.map(x => String(x).toLowerCase()) : [String(names).toLowerCase()];
-  const t = obj && obj['@type'];
-  const norm = Array.isArray(t) ? t.map(String).map(s => s.toLowerCase()) : [String(t || '').toLowerCase()];
-  return norm.some(v => set.includes(v));
-};
-
-/** Normalise a few common schema.org types to text chunks */
-function jsonldObjectsToChunks(url, objs) {
-  const chunks = [];
-  for (const o of objs) {
-    try {
-      // ARTICLE / BLOGPOSTING
-      if (hasType(o, ['Article', 'BlogPosting', 'NewsArticle'])) {
-        const title = o.headline || o.name || '';
-        const desc  = o.description || '';
-        const dateP = o.datePublished || o.dateCreated || '';
-        const dateM = o.dateModified || '';
-        const author = (typeof o.author === 'string')
-          ? o.author
-          : (o.author && (o.author.name || (Array.isArray(o.author) && o.author[0]?.name))) || '';
-        const source = o.url || url;
-
-        chunks.push(
-`[ARTICLE]
-title: ${title}
-author: ${author}
-date_published: ${dateP}
-date_modified: ${dateM}
-source_url: ${source}
-description: ${desc}`.trim()
-        );
-      }
-
-      // PRODUCT
-      if (hasType(o, 'Product')) {
-        const title = o.name || '';
-        const desc  = o.description || '';
-        const sku   = o.sku || '';
-        let price = '', currency = '', availability = '';
-        const offers = Array.isArray(o.offers) ? o.offers[0] : o.offers;
-        if (offers && typeof offers === 'object') {
-          price = offers.price ?? '';
-          currency = offers.priceCurrency ?? '';
-          availability = (offers.availability || '').split('/').pop();
-        }
-        const source = o.url || url;
-
-        chunks.push(
-`[PRODUCT]
-title: ${title}
-sku: ${sku}
-price: ${price}
-priceCurrency: ${currency}
-availability: ${availability}
-source_url: ${source}
-description: ${desc}`.trim()
-        );
-      }
-
-      // SERVICE
-      if (hasType(o, 'Service')) {
-        const title = o.name || '';
-        const desc  = o.description || '';
-        const provider = (typeof o.provider === 'string')
-          ? o.provider
-          : (o.provider && (o.provider.name || '')) || '';
-        const area = o.areaServed || '';
-        const source = o.url || url;
-
-        chunks.push(
-`[SERVICE]
-title: ${title}
-provider: ${provider}
-areaServed: ${typeof area === 'string' ? area : JSON.stringify(area)}
-source_url: ${source}
-description: ${desc}`.trim()
-        );
-      }
-
-      // EVENT (incl. EducationEvent)
-      if (hasType(o, ['Event', 'EducationEvent'])) {
-        const title = o.name || '';
-        const desc  = o.description || '';
-        const start = o.startDate || '';
-        const end   = o.endDate || '';
-        const source = o.url || url;
-
-        // Location formatting
-        let location = '';
-        const loc = o.location;
-        if (typeof loc === 'string') location = loc;
-        else if (loc && typeof loc === 'object') {
-          const name = loc.name || '';
-          const addr = loc.address;
-          if (typeof addr === 'string') location = `${name} | ${addr}`.trim();
-          else if (addr && typeof addr === 'object') {
-            const parts = [addr.streetAddress, addr.addressLocality, addr.addressRegion, addr.postalCode, addr.addressCountry]
-              .filter(Boolean).join(', ');
-            location = [name, parts].filter(Boolean).join(' | ');
-          } else location = name;
-        }
-
-        chunks.push(
-`[EVENT]
-title: ${title}
-date_start: ${start}
-date_end: ${end}
-location: ${location}
-source_url: ${source}
-description: ${desc}`.trim()
-        );
-      }
-    } catch {
-      // ignore malformed node
-    }
-  }
-  return chunks.filter(Boolean);
-}
-
-/* -------------- HTML -> plain text extraction ----------------- */
-function htmlToPlainText(html) {
-  return htmlToText(html, {
+  const html = await r.text();
+  const text = htmlToText(html, {
     selectors: [
-      { selector: 'nav', format: 'skip' },
-      { selector: 'footer', format: 'skip' },
-      { selector: 'script', format: 'skip' },
-      { selector: 'style', format: 'skip' }
+      { selector:'nav', format:'skip' },
+      { selector:'footer', format:'skip' },
+      { selector:'script', format:'skip' },
+      { selector:'style', format:'skip' }
     ],
     wordwrap: false
   }).trim();
+  return { html, text };
 }
 
-/* ------------------------ embeddings -------------------------- */
+// ---------- embeddings (OpenAI) ----------
 async function getEmbeddings(inputs) {
-  const key = need('OPENAI_API_KEY');
+  const oaKey = need('OPENAI_API_KEY');
   const body = JSON.stringify({ model: 'text-embedding-3-small', input: inputs });
-
   const resp = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
+    redirect: 'follow',
     headers: {
-      Authorization: `Bearer ${key}`,
+      Authorization: `Bearer ${oaKey}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      'User-Agent': UA_PRIMARY
+      'User-Agent': PRIMARY_UA
     },
     body
   });
-
-  const ct = (resp.headers.get('content-type') || '').toLowerCase();
+  const ct = (resp.headers.get('content-type')||'').toLowerCase();
   const text = await resp.text();
-
-  if (!resp.ok)
-    throw new Error(`openai_error:${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
-  if (!ct.includes('application/json'))
-    throw new Error(`openai_bad_content_type:${ct || '(none)'}:status=${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
-
-  let j;
-  try { j = JSON.parse(text); } catch (e) { throw new Error(`openai_bad_json:${String(e?.message || e)}`); }
-  const out = (j?.data || []).map(d => d?.embedding);
+  if (!resp.ok) throw new Error(`openai_error:${resp.status}:${text.slice(0,300)}`);
+  if (!ct.includes('application/json')) throw new Error(`openai_bad_content_type:${ct||'(none)'}:${text.slice(0,300)}`);
+  let j; try { j = JSON.parse(text); } catch(e){ throw new Error(`openai_bad_json:${e?.message||e}`); }
+  const out = (j?.data||[]).map(d => d?.embedding);
   if (!out.length) throw new Error('openai_empty_embeddings');
   if (!Array.isArray(out[0]) || out[0].length !== 1536) throw new Error('openai_bad_embedding_dim');
   return out;
 }
 
-/* ------------------------- handler ---------------------------- */
+// ---------- JSON-LD extraction (no imports) ----------
+function getJsonLdBlocks(html){
+  const out = [];
+  const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m; while ((m = re.exec(html))){ const raw = (m[1]||'').trim(); if (raw) out.push(raw); }
+  return out;
+}
+function arrayify(x){ return Array.isArray(x) ? x : (x != null ? [x] : []); }
+function lastSeg(s){ if(!s) return s; const i = s.lastIndexOf('/'); return i>=0 ? s.slice(i+1) : s; }
+function toNumber(x){ const n = Number(x); return Number.isFinite(n) ? n : null; }
+function toDate(x){ if(!x) return null; const d = new Date(x); return isNaN(d.getTime()) ? null : d.toISOString(); }
+
+function flattenLD(node, out=[]) {
+  if (!node || typeof node !== 'object') return out;
+  if (Array.isArray(node)) { node.forEach(n => flattenLD(n, out)); return out; }
+  const types = arrayify(node['@type']).map(String);
+  if (types.length) out.push(node);
+  for (const k of Object.keys(node)) {
+    const v = node[k];
+    if (v && typeof v === 'object') flattenLD(v, out);
+  }
+  return out;
+}
+
+function normaliseEntity(n, sourceUrl){
+  const types = arrayify(n['@type']).map(String);
+  const kind = ['Event','Product','Service','Article','Course','CourseInstance']
+    .find(t => types.some(tt => tt.toLowerCase().includes(t.toLowerCase())));
+  if (!kind) return null;
+
+  const offers = n.offers || {};
+  const loc = n.location || {};
+  const url = n.url || n.mainEntityOfPage || sourceUrl;
+
+  const price = toNumber(offers.price ?? n.price);
+  const priceCurrency = offers.priceCurrency ?? n.priceCurrency ?? null;
+  const availability = lastSeg(offers.availability ?? n.availability ?? '') || null;
+
+  const location =
+    (typeof loc === 'string' && loc) ||
+    loc.name || (loc.address && (loc.address.streetAddress || loc.address.addressLocality || loc.address)) || null;
+
+  const title = n.name || n.headline || n.title || null;
+
+  const row = {
+    url,                              // canonical url of the entity (if present)
+    source_url: sourceUrl,            // page where we found it (REPLACE by this)
+    kind: (kind === 'CourseInstance' ? 'Event' : (kind === 'Course' ? 'Service' : kind)).toLowerCase(), // event/product/service/article
+    title,
+    description: n.description || null,
+    date_start: toDate(n.startDate || n.datePublished || null),
+    date_end:   toDate(n.endDate   || n.dateModified  || null),
+    location,
+    price,
+    price_currency: priceCurrency,
+    availability,
+    sku: n.sku || null,
+    provider: (n.provider?.name || n.brand?.name || n.organizer?.name || null),
+    raw: n,
+    entity_hash: sha1(JSON.stringify({url, sourceUrl, kind, title, date_start: n.startDate, date_end: n.endDate, price, priceCurrency})),
+    last_seen: nowIso(),
+  };
+  return row;
+}
+
+function extractEntitiesFromHtml(html, sourceUrl){
+  const blocks = getJsonLdBlocks(html);
+  const rows = [];
+  for (const raw of blocks){
+    try {
+      const parsed = JSON.parse(raw);
+      const nodes = flattenLD(parsed);
+      for (const n of nodes){
+        const r = normaliseEntity(n, sourceUrl);
+        if (r) rows.push(r);
+      }
+    } catch { /* ignore bad JSON-LD */ }
+  }
+  // de-dupe by entity_hash
+  const uniq = new Map();
+  for (const r of rows){ if (!uniq.has(r.entity_hash)) uniq.set(r.entity_hash, r); }
+  return Array.from(uniq.values());
+}
+
+// Build short summaries to prepend into the page text (helps retrieval)
+function summariesForChunks(entities){
+  const lines = [];
+  for (const e of entities){
+    if (e.kind === 'event') {
+      const ds = e.date_start ? new Date(e.date_start).toISOString().slice(0,10) : '';
+      lines.push(`[EVENT] ${e.title || 'Event'}${ds?` — ${ds}`:''}${e.location?` — ${e.location}`:''}${e.price?` — £${e.price}`:''} ${e.url||e.source_url||''}`);
+    } else if (e.kind === 'product') {
+      lines.push(`[PRODUCT] ${e.title || 'Product'}${e.price?` — £${e.price}`:''} ${e.url||e.source_url||''}`);
+    } else if (e.kind === 'service') {
+      lines.push(`[SERVICE] ${e.title || 'Service'} ${e.url||e.source_url||''}`);
+    } else if (e.kind === 'article') {
+      lines.push(`[ARTICLE] ${e.title || 'Article'} ${e.url||e.source_url||''}`);
+    }
+  }
+  return lines.length ? (lines.join('\n') + '\n\n') : '';
+}
+
+// ---------- handler ----------
 export default async function handler(req, res) {
   if (req.method !== 'POST') return sendJSON(res, 405, { error: 'method_not_allowed' });
 
@@ -287,71 +221,81 @@ export default async function handler(req, res) {
     stage = 'db_client';
     const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
 
-    // 1) Fetch HTML
-    stage = 'fetch_html';
-    const html = await fetchHTML(url);
+    stage = 'fetch_page';
+    const { html, text: baseText } = await fetchPage(url);
+    if (!baseText || baseText.length < 10) return sendJSON(res, 422, { error: 'empty_content', stage });
 
-    // 2) Extract JSON-LD chunks (short, structured) — put these FIRST
     stage = 'extract_jsonld';
-    const ldBlocks = extractJsonLdBlocks(html);
-    let jsonChunks = [];
-    for (const raw of ldBlocks) {
-      try {
-        const parsed = looseParse(raw);
-        const objs = flattenLd(parsed);
-        jsonChunks.push(...jsonldObjectsToChunks(url, objs));
-      } catch {
-        // ignore individual bad blocks
-      }
-    }
-    // de-dupe JSON chunks (sometimes multiple scripts repeat)
-    jsonChunks = Array.from(new Set(jsonChunks));
+    const entities = extractEntitiesFromHtml(html, url);
 
-    // 3) Extract plain text & chunk
-    stage = 'html_to_text';
-    const text = htmlToPlainText(html);
-    const textChunks = chunkText(text);
+    // Put concise JSON-LD summaries before the page text so chunks carry them
+    const text = summariesForChunks(entities) + baseText;
 
-    const allChunks = [...jsonChunks, ...textChunks];
-    if (!allChunks.length) return sendJSON(res, 422, { error: 'no_chunks', stage });
+    stage = 'chunk';
+    const chunks = chunkText(text);
+    if (!chunks.length) return sendJSON(res, 422, { error: 'no_chunks', stage });
 
-    // 4) Embed
     stage = 'embed';
-    const embeddings = await getEmbeddings(allChunks);
+    const embeds = await getEmbeddings(chunks);
 
-    // 5) Prepare rows
     stage = 'prepare_rows';
-    const rows = allChunks.map((content, i) => ({
+    const rows = chunks.map((content, i) => ({
       url,
       title: null,
       content,
-      embedding: embeddings[i],
+      embedding: embeds[i],
       tokens: Math.ceil(content.length / 4),
       hash: sha1(`${url}#${i}:${content.slice(0, 128)}`)
     }));
 
-    // 6) REPLACE semantics — wipe then insert
-    stage = 'delete_old';
-    const del = await supa.from('page_chunks').delete().eq('url', url);
-    if (del.error) return sendJSON(res, 500, { error: 'supabase_delete_failed', detail: del.error.message || del.error, stage });
+    // ---------- REPLACE CHUNKS ----------
+    stage = 'delete_old_chunks';
+    { const { error: delErr } = await supa.from('page_chunks').delete().eq('url', url);
+      if (delErr) return sendJSON(res, 500, { error: 'supabase_delete_failed', detail: delErr.message || delErr, stage });
+    }
 
-    stage = 'upsert';
-    const ins = await supa.from('page_chunks')
-      .upsert(rows, { onConflict: 'hash' })
-      .select('id')
-      .order('id', { ascending: false });
+    stage = 'upsert_chunks';
+    {
+      const { data, error } = await supa
+        .from('page_chunks')
+        .upsert(rows, { onConflict: 'hash' })
+        .select('id')
+        .order('id', { ascending: false });
+      if (error) return sendJSON(res, 500, { error: 'supabase_upsert_failed', detail: error.message || error, stage });
+    }
 
-    if (ins.error) return sendJSON(res, 500, { error: 'supabase_upsert_failed', detail: ins.error.message || ins.error, stage });
+    // ---------- REPLACE ENTITIES ----------
+    stage = 'replace_entities';
+    {
+      // Replace “what we found on this page”
+      const { error: delE } = await supa.from('page_entities').delete().eq('source_url', url);
+      if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
+
+      if (entities.length) {
+        const { error: insE } = await supa.from('page_entities').insert(entities.map(e => ({
+          url: e.url,
+          source_url: e.source_url,
+          kind: e.kind,
+          title: e.title,
+          description: e.description,
+          date_start: e.date_start,
+          date_end: e.date_end,
+          location: e.location,
+          price: e.price,
+          price_currency: e.price_currency,
+          availability: e.availability,
+          sku: e.sku,
+          provider: e.provider,
+          raw: e.raw,
+          entity_hash: e.entity_hash,
+          last_seen: e.last_seen
+        })));
+        if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
+      }
+    }
 
     stage = 'done';
-    const firstId = ins.data?.[0]?.id ?? null;
-    return sendJSON(res, 200, {
-      ok: true,
-      id: firstId,
-      len: text.length,
-      chunks: rows.length,
-      stage
-    });
+    return sendJSON(res, 200, { ok: true, len: text.length, chunks: rows.length, entities: entities.length, stage });
   } catch (err) {
     return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
   }
