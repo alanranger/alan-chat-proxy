@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Alan Ranger Assistant</title>
+  <link rel="stylesheet" href="/_next/static/css/081a0fca5a9bd20.css"/>
+  <style>
+    :root{--bg:#0b1220;--card:#0f172a;--border:#1b2540;--text:#dbe4ff;--muted:#93a4bf;--brand:#2563eb}
+    *{box-sizing:border-box}
+    body{background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:24px}
+    .container{max-width:900px;margin:0 auto}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+    .header{display:flex;gap:12px;align-items:center;margin-bottom:16px}
+    .logo{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--border)}
+    .title{font-size:24px;font-weight:700;margin:0}
+    .muted{color:var(--muted)}
+    input,button{font:inherit}
+    input[type="text"]{width:100%;background:#0b1426;border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px}
+    button{background:var(--brand);color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .row{display:flex;gap:10px}
+    .askbar{display:flex;gap:12px}
+    .askbar > *{flex:1}
+    .answer{white-space:pre-wrap}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:6px 10px;background:#0b1426;color:var(--text);cursor:pointer}
+    .chip:hover{background:#13203e}
+    .citations{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .citations a{border:1px solid var(--border);border-radius:999px;padding:6px 10px;color:var(--text);text-decoration:none}
+    .citations a:hover{background:#13203e}
+    .section{margin-top:16px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <div class="logo">R</div>
+      <div>
+        <h1 class="title">Alan Ranger Assistant</h1>
+        <div class="muted">Trained on alanranger.com content to help with workshops, tuition and photography questions.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="askbar">
+        <input id="q" type="text" placeholder="Ask a question… (Shift+Enter for newline)"/>
+        <button id="ask">Ask</button>
+      </div>
+
+      <div class="section">
+        <div class="muted" style="margin-bottom:6px"><small>Answer</small></div>
+        <div id="answer" class="answer mono"></div>
+      </div>
+
+      <div class="section" id="suggestionWrap" style="display:none">
+        <div class="muted" style="margin-bottom:6px"><small>Suggestions</small></div>
+        <div id="chips" class="chips"></div>
+      </div>
+
+      <div class="section" id="citesWrap" style="display:none">
+        <div class="muted" style="margin-bottom:6px"><small>Citations</small></div>
+        <div id="citations" class="citations"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    // --- helpers
+    function normalizeUrl(u=""){ try{ return new URL(u).pathname.toLowerCase(); }catch{ return String(u||"").toLowerCase(); } }
+    function hasAny(s, arr){ s = (s||"").toLowerCase(); return arr.some(w => s.includes(w)); }
+    function dedupe(arr){ return Array.from(new Set(arr)).filter(Boolean); }
+
+    // Suggestion engine — uses query + answer + citations (paths) to pick relevant chips
+    function suggestChips(query, answer, citations){
+      const q = (query||"").toLowerCase();
+      const a = (answer||"").toLowerCase();
+      const paths = (citations||[]).map(normalizeUrl);
+
+      const isWorkshop = hasAny(q+a, ["workshop","course","event"]) || paths.some(p => p.includes("workshop"));
+      const isBlog     = hasAny(paths.join(" "), ["/blog-on-photography","/blog"]) || hasAny(q+a, ["article","guide","blog"]);
+      const isService  = hasAny(paths.join(" "), ["/photography-lessons","/tuition","/coaching"]) || hasAny(q+a, ["lesson","tuition","service","coaching"]);
+      const isProduct  = hasAny(q+a, ["product","voucher","gift"]) || paths.some(p => p.includes("/product"));
+
+      let chips = [];
+
+      if (isWorkshop){
+        // Try to pull a location/topic from the question if present
+        const mLoc = q.match(/\b(chesterton|coventry|peak|dartmoor|cotswolds|heathers?|windmill)\b/i);
+        const loc  = mLoc ? mLoc[0] : "this workshop";
+        chips.push(
+          `Next dates for ${loc}`,
+          "Price & availability",
+          "What’s included and skill level?",
+          "What should I bring?",
+          "How to book?"
+        );
+      }
+
+      if (isService){
+        chips.push(
+          "1-2-1 tuition prices",
+          "Book a trial session",
+          "Is it suitable for beginners?"
+        );
+      }
+
+      if (isBlog){
+        chips.push(
+          "Explain this for a beginner",
+          "Show related services",
+          "Recommend the next article"
+        );
+      }
+
+      if (isProduct){
+        chips.push("What’s included?", "Can I get a voucher?", "Refund policy");
+      }
+
+      // Generic fallbacks
+      if (chips.length < 3){
+        chips.push(
+          "Compare options",
+          "Show dates near me",
+          "Where should I start?"
+        );
+      }
+
+      return dedupe(chips).slice(0, 6); // keep it tidy
+    }
+
+    // Render chips
+    function renderChips(chips){
+      const wrap = $("suggestionWrap");
+      const host = $("chips");
+      host.innerHTML = "";
+      if (!chips.length){ wrap.style.display = "none"; return; }
+      wrap.style.display = "";
+      for (const label of chips){
+        const b = document.createElement("button");
+        b.className = "chip";
+        b.textContent = label;
+        b.onclick = () => submit(label);
+        host.appendChild(b);
+      }
+    }
+
+    // Render citations as neat links
+    function renderCitations(list){
+      const wrap = $("citesWrap");
+      const host = $("citations");
+      host.innerHTML = "";
+      const uniq = dedupe(list || []);
+      if (!uniq.length){ wrap.style.display = "none"; return; }
+      wrap.style.display = "";
+      for (const u of uniq){
+        const a = document.createElement("a");
+        a.href = u; a.target = "_blank"; a.rel = "noopener noreferrer";
+        a.textContent = u;
+        host.appendChild(a);
+      }
+    }
+
+    async function callChat(question, topK){
+      const token = localStorage.getItem("ingest_token") || ""; // optional; add if your /api/chat expects a bearer
+      const r = await fetch("/api/chat", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", ...(token?{Authorization:"Bearer "+token}:{}) },
+        body: JSON.stringify({ query: question, topK })
+      });
+      let j; try{ j = await r.json(); }catch{ j = { ok:false, error:"non_json", status:r.status }; }
+      return j;
+    }
+
+    async function submit(qText){
+      const inp = $("q");
+      const askBtn = $("ask");
+      const topK = 8;
+
+      inp.value = qText || inp.value.trim();
+      if (!inp.value) return;
+
+      askBtn.disabled = true;
+      $("answer").textContent = "Thinking…";
+      renderChips([]);
+      renderCitations([]);
+
+      const res = await callChat(inp.value, topK);
+
+      if (!res || !res.ok){
+        $("answer").textContent = (res && (res.detail || res.error)) || "chat_failed";
+        askBtn.disabled = false;
+        return;
+      }
+
+      const answer = res.answer || "";
+      const citations = Array.from(new Set(res.citations || []));
+      $("answer").textContent = answer;
+      renderCitations(citations);
+
+      // Build and render dynamic suggestions
+      const chips = suggestChips(inp.value, answer, citations);
+      renderChips(chips);
+
+      askBtn.disabled = false;
+    }
+
+    // Wire UI
+    $("ask").onclick = () => submit();
+    $("q").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); submit(); }
+    });
+  </script>
+</body>
+</html>
