@@ -268,17 +268,16 @@ async function callExtractAll(url){
   const headers = {};
   const token = getToken();
   if (token) headers['Authorization'] = 'Bearer ' + token;
-  // robust: accept either ?action=extract-all or legacy
   const u = `${EXTRACT_ENDPOINT}?action=${encodeURIComponent('extract-all')}&url=${encodeURIComponent(url)}`;
   const r = await fetch(u, { headers });
   const raw = await r.text().catch(()=> '');
   try { return JSON.parse(raw); } catch { return { error:'non_json', raw: raw.slice(0,200) }; }
 }
 
-/* ===== Structured enrichment (generic) ===== */
+/* ===== Structured enrichment (tight scoped) ===== */
 function parseISODate(s){
   if (!s || typeof s !== 'string') return null;
-  if (/^Y{2,4}-M{1,2}-D{1,2}/i.test(s)) return null; // ignore placeholders like YYYY-MM-DD
+  if (/^Y{2,4}-M{1,2}-D{1,2}$/i.test(s)) return null; // ignore placeholders like YYYY-MM-DD
   const d = new Date(s);
   return isNaN(d.getTime()) ? null : d;
 }
@@ -299,7 +298,6 @@ function money(price, cur){
 }
 
 function normalizeEntities(payload){
-  // Accept a variety of shapes and return a flat array of entities
   if (!payload) return [];
   const pick = (x)=>Array.isArray(x)?x: (x&&Array.isArray(x.items)?x.items: (x&&Array.isArray(x.events)?x.events: []));
   let arr = [];
@@ -312,7 +310,6 @@ function normalizeEntities(payload){
       ...(Array.isArray(payload.entities)?payload.entities:[])
     ];
   }
-  // Map keys defensively
   return arr.map(e=>({
     kind: (e.kind||e.type||e['@type']||'').toString().toLowerCase(),
     title: e.title || e.name || '',
@@ -325,8 +322,12 @@ function normalizeEntities(payload){
   }));
 }
 
-async function enrichFromCitations(citations){
-  // Top 3 citations to keep it fast
+function tokenize(s){
+  return (s||'').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length>=4);
+}
+
+/* Keep only events that match the intent in question + cited slugs; future 18 months only */
+async function enrichFromCitations(citations, question){
   const top = unique(citations).slice(0,3);
   const results = await Promise.allSettled(top.map(u=>callExtractAll(u)));
   const entities = results.flatMap(r => r.status==='fulfilled' ? normalizeEntities(r.value) : []);
@@ -334,10 +335,53 @@ async function enrichFromCitations(citations){
 
   if (!events.length) return null;
 
-  // Aggregate dates (dedupe by ISO day), prices, location hints
+  // Build focus tokens from citations & question
+  const slugTokens = top.flatMap(u => {
+    try { return tokenize(new URL(u).pathname); } catch { return tokenize(u); }
+  });
+  const qTokens = tokenize(question);
+  // tokens that appear in both question and at least one citation slug
+  let focus = [...new Set(slugTokens.filter(t => qTokens.includes(t)))];
+  // Guarantee we keep strong discriminators if present (e.g., "bluebell")
+  const must = ['bluebell','woodland'];
+  must.forEach(m => { if (slugTokens.includes(m)) focus.push(m); });
+  focus = [...new Set(focus)];
+
+  // Fallback to frequent slug tokens if intersection is empty
+  if (!focus.length){
+    const freq = {};
+    slugTokens.forEach(t => freq[t]=(freq[t]||0)+1);
+    const threshold = Math.max(2, Math.ceil(top.length/2));
+    focus = Object.entries(freq).filter(([,c])=>c>=threshold).map(([t])=>t);
+  }
+
+  // Date window
+  const now = new Date();
+  const max = new Date(now); max.setMonth(max.getMonth()+18);
+
+  // Filter events: must match focus tokens in title/location/url, keep only upcoming within window
+  const matchesFocus = (e) => {
+    const hay = ((e.title||'')+' '+(e.location||'')+' '+(e.source_url||'')).toLowerCase();
+    // if "bluebell" is a focus token, insist on it
+    if (focus.includes('bluebell') && !hay.includes('bluebell')) return false;
+    // need at least one focus token match overall (or two if we have many)
+    let hits = 0; for (const t of focus){ if (hay.includes(t)) hits++; }
+    if (focus.length >= 2 && hits < 2) return false;
+    if (!focus.length && hits < 1) return false;
+    return true;
+  };
+
+  const filtered = events.filter(e => matchesFocus(e)).filter(e => {
+    const d = parseISODate(e.date_start);
+    return d && d >= now && d <= max;
+  });
+
+  if (!filtered.length) return null;
+
+  // Aggregate dates (dedupe by ISO day)
   const dates = [];
   const dateKey = new Set();
-  for (const e of events){
+  for (const e of filtered){
     const d = parseISODate(e.date_start);
     if (d){
       const key = d.toISOString().slice(0,10);
@@ -346,24 +390,23 @@ async function enrichFromCitations(citations){
   }
   dates.sort((a,b)=>a-b);
 
-  // Price: prefer explicit price, use min/max if multiple
-  const prices = events.map(e=>({p:e.price, c:e.price_currency})).filter(x=>x.p!=null && x.p!=='');
+  // Price
+  const prices = filtered.map(e=>({p:e.price, c:e.price_currency})).filter(x=>x.p!=null && x.p!=='');
   let priceText = null;
   if (prices.length){
     const nums = prices.map(x=>Number(x.p)).filter(x=>!isNaN(x));
     if (nums.length){
-      const min = Math.min(...nums), max = Math.max(...nums);
+      const min = Math.min(...nums), maxv = Math.max(...nums);
       const cur = (prices.find(x=>!isNaN(Number(x.p)))?.c || 'GBP');
-      priceText = min===max ? money(min,cur) : `${money(min,cur)} – ${money(max,cur)}`;
+      priceText = min===maxv ? money(min,cur) : `${money(min,cur)} – ${money(maxv,cur)}`;
     }else{
-      // fall back to first textual price
       const first = prices[0];
       priceText = money(first.p, first.c);
     }
   }
 
-  const loc = events.find(e=>e.location)?.location || null;
-  const src = events.find(e=>e.source_url)?.source_url || null;
+  const loc = filtered.find(e=>e.location)?.location || null;
+  const src = filtered.find(e=>e.source_url)?.source_url || top[0] || null;
 
   return { dates, priceText, location: loc, source: src };
 }
@@ -403,8 +446,6 @@ function renderAnswer(payload, question){
 
   if (!liIds.length) addChips(holder, inferChips(question, raw, cites));
 
-  // Async enrichment for events: price + all dates
-  // Show a subtle loader line that disappears once enrichment arrives.
   const infoLine = document.createElement('div');
   infoLine.style.color = '#9eb2d3';
   infoLine.style.fontSize = '12px';
@@ -412,7 +453,7 @@ function renderAnswer(payload, question){
   infoLine.textContent = 'Fetching dates & price…';
   holder.appendChild(infoLine);
 
-  enrichFromCitations(cites).then(data=>{
+  enrichFromCitations(cites, question).then(data=>{
     infoLine.remove();
     if (data) renderEnrichment(holder, data);
   }).catch(()=>{ infoLine.remove(); });
