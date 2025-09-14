@@ -1,203 +1,175 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Alan Ranger Assistant</title>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1;
-      --bubble:#1B2A44; --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
-      --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
-    }
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
-    .wrap{max-width:980px;margin:28px auto;padding:0 16px}
-    .card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
-    .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
-    .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
-    .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
-    .sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
-    .pills{display:flex;gap:10px;margin:12px 0 4px}
-    .pill{
-      appearance:none;border:0;border-radius:28px;
-      padding:8px 12px; font-weight:600; font-size:14px;  /* ~25% smaller */
-      color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px
-    }
-    .pill--brand{background:var(--brand)}
-    .pill--wa{background:var(--wa)}
-    .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
-    .thread{display:flex;flex-direction:column;gap:12px}
-    .bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
-    .bubble.user{align-self:flex-end;background:#13223a}
-    .fallback .pills{margin-top:10px}
-    .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-    .composer input{
-      flex:1;background:var(--input-bg); color:var(--input-text);
-      border:1px solid var(--input-border); border-radius:10px; padding:12px 14px; outline:0
-    }
-    .composer input::placeholder{color:var(--input-ph)}
-    .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
-    .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
-    .cite{margin-top:8px;color:#9eb2d3;font-size:13px}
-
-    /* Debug panel */
-    details.debug{
-      margin-top:14px; background:#0f1828; border:1px solid #15223a; border-radius:10px; padding:10px 12px;
-    }
-    details.debug summary{
-      cursor:pointer; color:#9eb2d3; font-weight:600; outline:none;
-    }
-    .kv{display:grid; grid-template-columns:140px 1fr; gap:8px; margin-top:10px}
-    .kv label{color:#93A4C1}
-    pre.json{
-      white-space:pre-wrap; word-break:break-word; margin:0; padding:8px; background:#0b1422; border:1px solid #15223a; border-radius:8px;
-      color:#cfe3ff; font-size:12px; line-height:1.4;
-    }
-
-    @media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      <div class="header">
-        <!-- Works even with space in file name -->
-        <img class="logo" src="./chat%20white.png" alt="AR logo">
-        <h2 class="title">Alan Ranger Assistant</h2>
-        <p class="sub">
-          I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
-          photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:
-        </p>
-        <div class="pills">
-          <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-          <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
-        </div>
-      </div>
-
-      <div class="chat">
-        <div id="thread" class="thread">
-          <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
-        </div>
-
-        <!-- Collapsible Debug Panel -->
-        <details id="debugPanel" class="debug">
-          <summary>🔎 Show debug</summary>
-          <div class="kv"><label>Endpoint</label><div id="dbg-endpoint">/api/ask</div></div>
-          <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
-          <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
-          <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
-        </details>
-
-        <div class="composer">
-          <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
-          <button id="send" class="send">Send</button>
-        </div>
-      </div>
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Alan Ranger Assistant</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1726;--panel:#121C2D;--text:#DDE7F6;--muted:#93A4C1;--bubble:#1B2A44;--brand:#E57200;--wa:#25D366;--ring:rgba(229,114,0,.35);--input-bg:#E9EEF5;--input-text:#0b0f16;--input-border:#CBD5E1;--input-ph:#6b7280}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
+.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
+.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
+.pills{display:flex;gap:10px;margin:12px 0 4px}
+.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill--brand{background:var(--brand)}.pill--wa{background:var(--wa)}
+.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
+.thread{display:flex;flex-direction:column;gap:12px}
+.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
+.bubble.user{align-self:flex-end;background:#13223a}
+.fallback .pills{margin-top:10px}
+.composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
+.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
+.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
+.cite{margin-top:8px;color:#9eb2d3;font-size:13px}
+/* Debug panel */
+details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
+details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
+.kv label{color:#93A4C1}
+pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
+@media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
+</style>
+</head><body>
+<div class="wrap"><div class="card">
+  <div class="header">
+    <img class="logo" src="./chat%20white.png" alt="AR logo">
+    <h2 class="title">Alan Ranger Assistant</h2>
+    <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:</p>
+    <div class="pills">
+      <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+      <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
     </div>
   </div>
 
-  <script>
-    // Use the same endpoint/shape as bulk; send BOTH 'q' and 'question'.
-    const ASK_ENDPOINT = '/api/ask';
-    const ASK_PARAMS = { topK: 8, useRag: true, includeSources: true, returnConfidence: true, temperature: 0.2 };
+  <div class="chat">
+    <div id="thread" class="thread">
+      <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
+    </div>
 
-    // Auto-open debug if ?debug=1 is in URL
-    const urlParams = new URLSearchParams(location.search);
-    if (urlParams.get('debug') === '1') {
-      requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
-    }
+    <details id="debugPanel" class="debug">
+      <summary>🔎 Show debug</summary>
+      <div class="kv"><label>Endpoint</label><div id="dbg-endpoint">/api/ask</div></div>
+      <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
+      <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
+      <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
+    </details>
 
-    const thread = document.getElementById('thread');
-    const input  = document.getElementById('q');
-    const sendBtn= document.getElementById('send');
+    <div class="composer">
+      <input id="q" placeholder="Ask a question… (Shift+Enter for newline)"/>
+      <button id="send" class="send">Send</button>
+    </div>
+  </div>
+</div></div>
 
-    const dbgEndpoint = document.getElementById('dbg-endpoint');
-    const dbgStatus   = document.getElementById('dbg-status');
-    const dbgReq      = document.getElementById('dbg-req');
-    const dbgRes      = document.getElementById('dbg-res');
+<script>
+const ASK_ENDPOINT = '/api/ask';
+// Include both camelCase and snake_case switches to match any handler
+const ASK_PARAMS = {
+  topK: 8, top_k: 8,
+  useRag: true, use_rag: true,
+  includeSources: true, include_sources: true,
+  returnConfidence: true, return_confidence: true,
+  temperature: 0.2
+};
 
-    function setDebug({endpoint, status, req, res}){
-      if (endpoint) dbgEndpoint.textContent = endpoint;
-      if (status !== undefined) dbgStatus.textContent = String(status);
-      if (req !== undefined)    dbgReq.textContent = safeJSONString(req);
-      if (res !== undefined)    dbgRes.textContent = safeJSONString(res);
-    }
-    function safeJSONString(v){
-      try { return JSON.stringify(v, null, 2); } catch { return String(v); }
-    }
+// Auto-open debug with ?debug=1
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.get('debug') === '1') { requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; }); }
 
-    function addBubble(html, opts={}) {
-      const div = document.createElement('div');
-      div.className = 'bubble' + (opts.user ? ' user' : '');
-      div.innerHTML = html;
-      thread.appendChild(div);
-      div.scrollIntoView({behavior:'smooth', block:'end'});
-    }
+const thread = document.getElementById('thread');
+const input  = document.getElementById('q');
+const sendBtn= document.getElementById('send');
 
-    function fallbackBlock(){
-      return `
-        <div class="fallback">
-          <p>I don’t have a confident answer to that yet. I’m trained on Alan’s site, so I may miss things.</p>
-          <p>If you’d like to follow up, please reach out:</p>
-          <div class="pills">
-            <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-            <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
-          </div>
-        </div>`;
-    }
+const dbgEndpoint = document.getElementById('dbg-endpoint');
+const dbgStatus   = document.getElementById('dbg-status');
+const dbgReq      = document.getElementById('dbg-req');
+const dbgRes      = document.getElementById('dbg-res');
 
-    async function askRag(question){
-      const body = { q: question, question, ...ASK_PARAMS };
-      setDebug({endpoint: ASK_ENDPOINT, status: '…', req: body, res: 'waiting'});
-      const res = await fetch(ASK_ENDPOINT, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(body)
-      });
-      const status = res.status;
-      let json;
-      try { json = await res.json(); } catch { json = { error: 'Non-JSON response' }; }
-      setDebug({status, res: json});
-      if(!res.ok) throw new Error('API error');
-      return json;
-    }
+function setDebug({endpoint, status, req, res}){
+  if (endpoint) dbgEndpoint.textContent = endpoint;
+  if (status !== undefined) dbgStatus.textContent = String(status);
+  if (req !== undefined) dbgReq.textContent = safeJSONString(req);
+  if (res !== undefined) dbgRes.textContent = safeJSONString(res);
+}
+function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
 
-    function renderAnswer(payload){
-      const answer = payload?.answer ?? payload?.text ?? '';
-      const citations = payload?.citations ?? payload?.sources ?? [];
-      if ((!answer || !answer.trim()) && (!citations || !citations.length)) {
-        addBubble(fallbackBlock());
-        return;
-      }
-      let html = answer || '';
-      if (citations && citations.length){
-        const items = citations.map(u=>`<div><a class="cite" href="${u}" target="_blank" rel="noopener">${u}</a></div>`).join('');
-        html += `<div class="cite">${items}</div>`;
-      }
-      if (!html.trim()) html = 'Here are some relevant links:';
-      addBubble(html);
-    }
+function addBubble(html, opts={}) {
+  const div = document.createElement('div');
+  div.className = 'bubble' + (opts.user ? ' user' : '');
+  div.innerHTML = html;
+  thread.appendChild(div);
+  div.scrollIntoView({behavior:'smooth', block:'end'});
+}
 
-    async function handleSend(){
-      const q = input.value.trim();
-      if(!q) return;
-      addBubble(q.replace(/</g,'&lt;'), {user:true});
-      input.value = '';
-      try{
-        const data = await askRag(q);
-        renderAnswer(data);
-      }catch{
-        addBubble(fallbackBlock());
-      }
-    }
+function fallbackBlock(){
+  return `
+    <div class="fallback">
+      <p>I don’t have a confident answer to that yet. I’m trained on Alan’s site, so I may miss things.</p>
+      <p>If you’d like to follow up, please reach out:</p>
+      <div class="pills">
+        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+      </div>
+    </div>`;
+}
 
-    sendBtn.addEventListener('click', handleSend);
-    input.addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
-    });
-  </script>
-</body>
-</html>
+async function askRag(question){
+  const body = {
+    input_text: question,     // ← REQUIRED by your /api/ask
+    q: question,
+    question,
+    ...ASK_PARAMS
+  };
+  setDebug({endpoint: ASK_ENDPOINT, status: '…', req: body, res: 'waiting'});
+  const res = await fetch(ASK_ENDPOINT, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const status = res.status;
+  let json; try { json = await res.json(); } catch { json = { error: 'Non-JSON response' }; }
+  setDebug({status, res: json});
+  if(!res.ok) throw new Error('API error');
+  return json;
+}
+
+function renderAnswer(payload){
+  // Accept common shapes
+  const answer = payload?.answer ?? payload?.text ?? payload?.message ?? payload?.data ?? '';
+  const citations = payload?.citations ?? payload?.sources ?? payload?.links ?? [];
+  if ((!answer || !answer.toString().trim()) && (!citations || !citations.length)) {
+    addBubble(fallbackBlock()); return;
+  }
+  let html = (typeof answer === 'string') ? answer : safeJSONString(answer);
+  if (citations && citations.length){
+    const items = citations.map(u=>`<div><a class="cite" href="${u}" target="_blank" rel="noopener">${u}</a></div>`).join('');
+    html += `<div class="cite">${items}</div>`;
+  }
+  addBubble(html);
+}
+
+async function handleSend(){
+  const q = input.value.trim();
+  if(!q) return;
+  addBubble(q.replace(/</g,'&lt;'), {user:true});
+  input.value = '';
+  try{
+    const data = await askRag(q);
+    renderAnswer(data);
+  }catch{
+    addBubble(fallbackBlock());
+  }
+}
+
+sendBtn.addEventListener('click', handleSend);
+input.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
+});
+</script>
+</body></html>
