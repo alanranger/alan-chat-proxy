@@ -54,8 +54,9 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
     <details id="debugPanel" class="debug">
       <summary>🔎 Show debug</summary>
-      <div class="kv"><label>Endpoint</label><div id="dbg-endpoint">/api/ask</div></div>
+      <div class="kv"><label>Endpoint</label><div id="dbg-endpoint">/api/chat</div></div>
       <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
+      <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
       <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
       <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
     </details>
@@ -68,37 +69,33 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </div></div>
 
 <script>
-const p = new URLSearchParams(location.search);
-// Allow overrides via URL: ?chat=site&ns=website&index=prod
-const CHAT_ID  = p.get('chat')  || 'default';
-const NAMESPACE= p.get('ns')    || undefined;
-const INDEX    = p.get('index') || undefined;
+// ——— Match bulk.html exactly ———
+const CHAT_ENDPOINT = '/api/chat';
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
-const ASK_ENDPOINT = '/api/ask';
-const ASK_PARAMS = {
-  topK: 8, top_k: 8,
-  useRag: true, use_rag: true,
-  includeSources: true, include_sources: true,
-  returnConfidence: true, return_confidence: true,
-  temperature: 0.2
-};
-
-if (p.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
+// The same token source as bulk.html (localStorage key "ingest_token").
+// You can also pass ?token=... to test quickly.
+function getToken(){
+  const qp = urlParams.get('token');
+  if (qp) return qp.trim();
+  try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
+}
 
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
 const sendBtn= document.getElementById('send');
 
-const dbgEndpoint = document.getElementById('dbg-endpoint');
 const dbgStatus   = document.getElementById('dbg-status');
 const dbgReq      = document.getElementById('dbg-req');
 const dbgRes      = document.getElementById('dbg-res');
+const dbgHeaders  = document.getElementById('dbg-headers');
 
-function setDebug({endpoint, status, req, res}){
-  if (endpoint) dbgEndpoint.textContent = endpoint;
+function setDebug({status, req, res, headers}){
   if (status !== undefined) dbgStatus.textContent = String(status);
   if (req !== undefined) dbgReq.textContent = safeJSONString(req);
   if (res !== undefined) dbgRes.textContent = safeJSONString(res);
+  if (headers !== undefined) dbgHeaders.textContent = safeJSONString(headers);
 }
 function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
 
@@ -122,48 +119,33 @@ function fallbackBlock(){
     </div>`;
 }
 
-async function askRag(question){
-  const body = {
-    // REQUIRED by your API:
-    input_text: question,
-    // Compatibility keys:
-    q: question, question,
-    // Collection/namespace targeting (align with bulk.html):
-    chat_id: CHAT_ID,
-    namespace: NAMESPACE,
-    index: INDEX,
-    // RAG flags:
-    ...ASK_PARAMS
-  };
-  setDebug({endpoint: ASK_ENDPOINT, status: '…', req: body, res: 'waiting'});
-  const res = await fetch(ASK_ENDPOINT, {
-    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
-  });
+async function callChat(question, topK=8){
+  const token = getToken(); // REQUIRED like bulk.html
+  const headers = { 'Content-Type':'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
+  const body = { query: question, topK };  // same as bulk.html
+  setDebug({status:'…', req: body, headers: headers});
+
+  const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
   const status = res.status;
-  let json; try { json = await res.json(); } catch { json = { error: 'Non-JSON response' }; }
+  let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
   setDebug({status, res: json});
   if(!res.ok) throw new Error('API error');
   return json;
 }
 
 function renderAnswer(payload){
-  // Accept all likely keys from your handler
-  const answer =
-      payload?.reply ??
-      payload?.answer ??
-      payload?.text ??
-      payload?.message ??
-      payload?.data ?? '';
-
-  const citations = payload?.citations ?? payload?.sources ?? payload?.links ?? [];
-  if ((!answer || !String(answer).trim()) && (!citations || !citations.length)) {
+  if (!payload || payload.ok === false){
     addBubble(fallbackBlock()); return;
   }
-  let html = (typeof answer === 'string') ? answer : safeJSONString(answer);
-  if (citations && citations.length){
-    const items = citations.map(u=>`<div><a class="cite" href="${u}" target="_blank" rel="noopener">${u}</a></div>`).join('');
-    html += `<div class="cite">${items}</div>`;
+  let html = payload.answer || payload.reply || payload.text || '';
+  const cites = Array.from(new Set(payload.citations || payload.sources || []));
+  if (cites.length){
+    const chips = cites.map(u=>`<div><a class="cite" href="${u}" target="_blank" rel="noopener">${u}</a></div>`).join('');
+    html += `<div class="cite">${chips}</div>`;
   }
+  if (!html.trim()) html = 'Here are some relevant links:';
   addBubble(html);
 }
 
@@ -173,7 +155,7 @@ async function handleSend(){
   addBubble(q.replace(/</g,'&lt;'), {user:true});
   input.value = '';
   try{
-    const data = await askRag(q);
+    const data = await callChat(q, 8);
     renderAnswer(data);
   }catch{
     addBubble(fallbackBlock());
