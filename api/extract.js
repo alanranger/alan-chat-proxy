@@ -1,121 +1,120 @@
 // /api/extract.js
-// Unified JSON-LD extractor API.
-//
-// Query params:
-//   ?type=events|articles|products|services|all   (default: all)
-//   ?url=<absolute-url>
-//
-// Returns JSON with extracted items. "all" includes events + articles + products + services.
+// Unified JSON-LD extraction gateway with robust error responses.
 
-import { NextResponse } from "next/server";
-
-// NOTE: our helpers live in /api/json/*
-import { extractEventItemsFromUrl } from "./json/events-extract.js";
-import {
-  extractArticlesFromUrl,
-  extractProductsFromUrl,
-  extractServicesFromUrl,
-  extractAllFromUrl as extractContentAllFromUrl,
-} from "./json/content-extract.js";
-
-// Small helper to send JSON nicely
-function send(res, status, obj) {
-  return new NextResponse(JSON.stringify(obj, null, 2), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-    },
-  });
-}
-
-// Edge/Node compatibility
 export const config = { runtime: "nodejs" };
 
+function sendJSON(res, status, obj) {
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.status(status).end(JSON.stringify(obj));
+}
+
+function badReq(res, msg) {
+  sendJSON(res, 400, { ok: false, error: "bad_request", detail: msg });
+}
+
 export default async function handler(req, res) {
+  // CORS (keep simple for the tester page)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "GET") return sendJSON(res, 405, { ok: false, error: "method_not_allowed" });
+
+  const url = String(req.query.url || "").trim();
+  const action = String(req.query.action || "").trim(); // e.g. events-extract, articles-extract, extract-all, ...
+
+  if (!url) return badReq(res, 'Missing "url"');
+  if (!action) return badReq(res, 'Missing "action"');
+
+  let out = null;
+
   try {
-    // Support both Next 13+ (Edge/Node) and old Vercel style
-    const urlObj = new URL(req.url, `http://${req.headers.host}`);
-    const type = (urlObj.searchParams.get("type") || "all").toLowerCase();
-    const target = urlObj.searchParams.get("url");
+    // Lazy import to keep cold start minimal
+    const { extractEventsFromUrl } = await import("./json/events-extract.js");
+    const {
+      extractArticlesFromUrl,
+      extractProductsFromUrl,
+      extractServicesFromUrl,
+      extractAllFromUrl,
+    } = await import("./json/content-extract.js");
 
-    if (!target) {
-      return send(res, 400, { error: "bad_request", detail: "Provide ?url=" });
+    switch (action) {
+      case "events-extract": {
+        const items = await extractEventsFromUrl(url);
+        out = {
+          ok: true,
+          url,
+          items,
+          count: Array.isArray(items) ? items.length : 0,
+        };
+        break;
+      }
+      case "articles-extract": {
+        const articles = await extractArticlesFromUrl(url);
+        out = {
+          ok: true,
+          url,
+          articles,
+          counts: { articles: Array.isArray(articles) ? articles.length : 0 },
+        };
+        break;
+      }
+      case "products-extract": {
+        const products = await extractProductsFromUrl(url);
+        out = {
+          ok: true,
+          url,
+          products,
+          counts: { products: Array.isArray(products) ? products.length : 0 },
+        };
+        break;
+      }
+      case "services-extract": {
+        const services = await extractServicesFromUrl(url);
+        out = {
+          ok: true,
+          url,
+          services,
+          counts: { services: Array.isArray(services) ? services.length : 0 },
+        };
+        break;
+      }
+      case "extract-all": {
+        // Use the generic "extractAllFromUrl" — this avoids importing missing per-type files.
+        const all = await extractAllFromUrl(url);
+        // Expected shape from content-extract: { articles:[], products:[], services:[] } (and optionally others)
+        const articles = all?.articles || [];
+        const products = all?.products || [];
+        const services = all?.services || [];
+        out = {
+          ok: true,
+          url,
+          articles,
+          products,
+          services,
+          counts: {
+            articles: articles.length,
+            products: products.length,
+            services: services.length,
+          },
+        };
+        break;
+      }
+      default: {
+        return badReq(res, `Unknown action "${action}"`);
+      }
     }
 
-    // CORS (useful for our static tester pages)
-    const origin = req.headers.get?.("origin") || req.headers.origin || "*";
-    const baseHeaders = {
-      "Access-Control-Allow-Origin": origin,
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    };
-    if (req.method === "OPTIONS") {
-      return new NextResponse(null, { status: 200, headers: baseHeaders });
-    }
-    if (req.method !== "GET") {
-      return new NextResponse(
-        JSON.stringify({ error: "method_not_allowed" }),
-        { status: 405, headers: baseHeaders }
-      );
-    }
-
-    // Route by type
-    if (type === "events" || type === "event" || type === "courses") {
-      const items = await extractEventItemsFromUrl(target);
-      return send(res, 200, {
-        ok: true,
-        url: target,
-        count: items.length,
-        items,
-      });
-    }
-
-    if (type === "articles") {
-      const items = await extractArticlesFromUrl(target);
-      return send(res, 200, { ok: true, url: target, articles: items, count: items.length });
-    }
-
-    if (type === "products") {
-      const items = await extractProductsFromUrl(target);
-      return send(res, 200, { ok: true, url: target, products: items, count: items.length });
-    }
-
-    if (type === "services") {
-      const items = await extractServicesFromUrl(target);
-      return send(res, 200, { ok: true, url: target, services: items, count: items.length });
-    }
-
-    // ---------- ALL (now includes EVENTS too) ----------
-    // content-extract's extractAllFromUrl returns {articles,products,services}
-    // add events from events-extract and return one combined object
-    const [contentAll, events] = await Promise.all([
-      extractContentAllFromUrl(target), // {articles,products,services}
-      extractEventItemsFromUrl(target), // EventItem[]
-    ]);
-
-    const out = {
-      ok: true,
-      url: target,
-      events,
-      articles: contentAll.articles || [],
-      products: contentAll.products || [],
-      services: contentAll.services || [],
-      counts: {
-        events: (events || []).length,
-        articles: (contentAll.articles || []).length,
-        products: (contentAll.products || []).length,
-        services: (contentAll.services || []).length,
-      },
-    };
-
-    return send(res, 200, out);
+    return sendJSON(res, 200, out || { ok: true, url });
   } catch (err) {
-    return send(res, 500, {
+    // Never crash the function; give a helpful JSON error out
+    const detail =
+      (err && (err.message || String(err))) ||
+      "unexpected_error";
+    return sendJSON(res, 500, {
+      ok: false,
       error: "server_error",
-      detail: String(err?.message || err),
-      stack:
-        process.env.NODE_ENV === "production" ? undefined : String(err?.stack || ""),
+      detail,
     });
   }
 }
