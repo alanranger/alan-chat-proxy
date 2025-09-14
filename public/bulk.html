@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Upload URL List to Train AI Bot — v0.3.1</title>
+  <title>Upload URL List to Train AI Bot — v0.3.2</title>
   <link rel="stylesheet" href="/_next/static/css/081a0fca5a9bd20.css"/>
   <style>
     body { background:#0b1220; color:#dbe4ff; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:24px; }
@@ -31,6 +31,12 @@
     .header { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:16px; }
     .header h2 { margin:0; }
     .ver { background:#13203e; border-color:#26406f; }
+
+    /* Collapsible console */
+    details.console{border:1px solid #1b2540; border-radius:8px; background:#0b1426;}
+    details.console summary{cursor:pointer; list-style:none; padding:10px 12px; font-weight:700; color:#c7d7ff;}
+    details.console summary::-webkit-details-marker{display:none}
+    .console-body{border-top:1px solid #1b2540; padding:10px 12px;}
   </style>
 </head>
 <body>
@@ -38,7 +44,7 @@
 
   <div class="header">
     <h2>Upload URL List to Train AI Bot</h2>
-    <span id="ver" class="pill ver mono">v0.3.1</span>
+    <span id="ver" class="pill ver mono">v0.3.2</span>
   </div>
 
   <!-- top controls -->
@@ -94,10 +100,14 @@
     </div>
   </div>
 
-  <!-- debug console -->
+  <!-- debug console (collapsed by default) -->
   <div class="card">
-    <div><small>Debug console (what the client sees)</small></div>
-    <pre id="console" class="mono"></pre>
+    <details id="consoleWrap" class="console">
+      <summary>Debug console (what the client sees)</summary>
+      <div class="console-body">
+        <pre id="console" class="mono"></pre>
+      </div>
+    </details>
   </div>
 
   <!-- results table -->
@@ -192,7 +202,7 @@
 
 <script>
 /* ====== Version badge ====== */
-const VERSION = 'v0.3.1';
+const VERSION = 'v0.3.2';
 document.title = `Upload URL List to Train AI Bot — ${VERSION}`;
 window.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('ver');
@@ -233,9 +243,7 @@ function parseCSV(text) {
   if (val.length || row.length){ pushVal(); pushRow(); }
   if (!rows.length) return [];
   const header = rows[0].map(h=>(h||'').trim());
-  const data = rows.slice(1).map(r=>{
-    const o={}; for (let i=0;i<header.length;i++){ o[header[i]] = (r[i]||'').trim(); } return o;
-  });
+  const data = rows.slice(1).map(r=>{ const o={}; for (let i=0;i<header.length;i++){ o[header[i]] = (r[i]||'').trim(); } return o; });
   data.__header = header;
   return data;
 }
