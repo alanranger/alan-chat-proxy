@@ -2,7 +2,7 @@
 // Step 2A: Pure helper to extract Event/Course data from JSON-LD into unified EventItem objects.
 // No DB writes here. Step 2B will expose a read-only API route that calls these functions.
 
-import { coerceFutureISODate, isHttpUrl } from './json/workshops-schema.js';
+import { coerceFutureISODate, isHttpUrl } from './api/json/workshops-schema.js';
 
 /** Accept Event-like @type values (string or array) */
 const EVENT_TYPES = new Set([
