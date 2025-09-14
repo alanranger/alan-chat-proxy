@@ -1,483 +1,365 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Upload URL List to Train AI Bot — v0.3.2</title>
-  <link rel="stylesheet" href="/_next/static/css/081a0fca5a9bd20.css"/>
+  <meta charset="utf-8" />
+  <title>Upload URL List to Train AI Bot — bulk (v0.3.3)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body { background:#0b1220; color:#dbe4ff; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:24px; }
-    .container { max-width:1100px; margin:0 auto; }
-    .row { display:flex; gap:16px; }
-    .card { background:#0f172a; border:1px solid #1b2540; border-radius:8px; padding:16px; margin-bottom:16px; }
-    .w-1 { flex:1 } .w-2 { flex:2 } .w-3 { flex:3 }
-    input, textarea { width:100%; background:#0b1426; border:1px solid #1b2540; color:#dbe4ff; padding:10px 12px; border-radius:6px; }
-    button { background:#2563eb; color:#fff; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
-    button:disabled{opacity:.5; cursor:not-allowed}
-    .pill { padding:3px 10px; border-radius:999px; border:1px solid #1b2540; background:#0b1426; font-weight:600; letter-spacing:.2px; }
-    .ok  { color:#22c55e; } .bad { color:#ef4444; }
-    .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace }
-    table { width:100%; border-collapse:collapse; }
-    th,td { padding:8px 10px; border-bottom:1px solid #1b2540; vertical-align:top; }
-    pre { white-space:pre-wrap; word-break:break-word; }
-    table a { color:#dbe4ff; text-decoration:underline; }
-    table a:hover { opacity:.85; }
-    @media (max-width:900px){ .row{ flex-direction:column; } }
-    .muted { opacity:.8 }
-    .score { color:#22c55e; }
-    .answer { white-space:pre-wrap; }
-    .chips a { display:inline-block; margin-right:6px; margin-bottom:6px; border:1px solid #1b2540; border-radius:999px; padding:4px 8px; color:#dbe4ff; text-decoration:none; }
-    .chips a:hover { background:#13203e; }
-    .header { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:16px; }
-    .header h2 { margin:0; }
-    .ver { background:#13203e; border-color:#26406f; }
-
-    /* Collapsible console */
-    details.console{border:1px solid #1b2540; border-radius:8px; background:#0b1426;}
-    details.console summary{cursor:pointer; list-style:none; padding:10px 12px; font-weight:700; color:#c7d7ff;}
-    details.console summary::-webkit-details-marker{display:none}
-    .console-body{border-top:1px solid #1b2540; padding:10px 12px;}
+    :root {
+      --bg: #0f172a;         /* slate-900 */
+      --panel: #111827;      /* gray-900 */
+      --muted: #94a3b8;      /* slate-400 */
+      --txt: #e5e7eb;        /* gray-200 */
+      --ok: #22c55e;         /* green-500 */
+      --warn: #f97316;       /* orange-500 */
+      --err: #ef4444;        /* red-500 */
+      --accent: #3b82f6;     /* blue-500 */
+      --border: #1f2937;     /* gray-800 */
+    }
+    html, body {
+      margin: 0; padding: 0; background: var(--bg); color: var(--txt);
+      font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    .wrap { max-width: 1100px; margin: 20px auto 80px; padding: 0 14px; }
+    h1 { font-size: 20px; margin: 0 0 14px; display:flex; align-items:center; gap:10px; }
+    .version { font-size: 12px; padding:2px 6px; border-radius: 6px; background: #0b1220; color: var(--muted); border: 1px solid var(--border); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .card { background: var(--panel); border:1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .row { display:flex; gap: 10px; align-items:center; }
+    label { color: var(--muted); font-size: 12px; }
+    input[type=text], input[type=number] {
+      width: 100%; background: #0b1220; border:1px solid var(--border); color: var(--txt);
+      padding: 10px 12px; border-radius: 10px; outline: none;
+    }
+    input[type=file] {
+      width: 100%; color: var(--txt);
+    }
+    textarea {
+      width: 100%; min-height: 140px; background: #0b1220; border:1px solid var(--border); color: var(--txt);
+      padding: 10px 12px; border-radius: 10px; outline: none; resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    button {
+      background: var(--accent); color: white; border: none; border-radius: 10px; padding: 10px 14px; cursor: pointer;
+      font-weight: 600;
+    }
+    button.secondary { background: #374151; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; background:#0b1220; border:1px solid var(--border); color: var(--muted); font-size: 12px; }
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { border-bottom:1px solid var(--border); padding: 10px; text-align: left; vertical-align: top; }
+    .table th { color: var(--muted); font-weight: 600; }
+    .ok { color: var(--ok); font-weight: 700; }
+    .err { color: var(--err); font-weight: 700; }
+    details { border:1px solid var(--border); border-radius: 12px; background: var(--panel); }
+    summary { padding: 12px 14px; cursor: pointer; color: var(--muted); user-select: none; }
+    .console { padding: 12px 14px; border-top:1px solid var(--border); max-height: 260px; overflow:auto; }
+    .log { font-family: ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; margin: 0 0 8px; }
+    .log.err { color: var(--err); }
+    .statbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    a { color: #93c5fd; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .muted { color: var(--muted); }
   </style>
 </head>
 <body>
-<div class="container">
+  <div class="wrap">
+    <h1>Upload URL List to Train AI Bot <span class="version">v0.3.3</span></h1>
 
-  <div class="header">
-    <h2>Upload URL List to Train AI Bot</h2>
-    <span id="ver" class="pill ver mono">v0.3.2</span>
-  </div>
-
-  <!-- top controls -->
-  <div class="row">
-    <div class="card w-1">
-      <div><small>INGEST TOKEN (BEARER)</small></div>
-      <input id="token" placeholder="your token" />
-      <small>Saved locally; sent as <span class="mono">Authorization: Bearer …</span></small>
-    </div>
-
-    <div class="card w-2">
-      <div><small>CSV FILE</small></div>
-      <input id="csv" type="file" accept=".csv" />
-      <small>Must include a <span class="mono">url</span> column (optional <span class="mono">title</span>).</small>
-    </div>
-
-    <div class="card w-1">
-      <div class="row">
-        <div class="w-1">
-          <div><small>CONCURRENCY</small></div>
-          <input id="concurrency" value="3" />
+    <!-- Controls -->
+    <div class="grid">
+      <div class="card">
+        <div class="row" style="gap:12px; align-items:flex-end;">
+          <div style="flex:1;">
+            <label>INGEST TOKEN (BEARER)</label>
+            <input id="token" type="text" placeholder="Bearer token…" />
+            <div class="muted" id="tokenSaved" style="margin-top:4px;"></div>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button id="saveToken" class="secondary">Save</button>
+          </div>
         </div>
-        <div class="w-1">
-          <div><small>DELAY BETWEEN REQUESTS (MS)</small></div>
-          <input id="delay" value="400" />
+
+        <div class="row" style="margin-top:12px; gap:12px;">
+          <div style="flex:1;">
+            <label>CSV FILE</label>
+            <input id="csv" type="file" accept=".csv" />
+            <div class="muted">Must include a <strong>url</strong> column (optional <code>title</code>).</div>
+          </div>
+          <div style="width: 220px;">
+            <label>CONCURRENCY</label>
+            <input id="concurrency" type="number" min="1" max="10" value="3" />
+          </div>
+          <div style="width: 260px;">
+            <label>DELAY BETWEEN REQUESTS (MS)</label>
+            <input id="delay" type="number" min="0" step="50" value="400" />
+          </div>
         </div>
       </div>
-      <small>Each request goes to <span class="mono">/api/ingest-embed-replace</span>.</small>
-    </div>
-  </div>
 
-  <!-- single test -->
-  <div class="card">
-    <div><small>Test a Single URL</small></div>
-    <div class="row">
-      <input id="single" class="w-3" placeholder="https://example.com/page" />
-      <button id="test">Test Single URL</button>
-    </div>
-    <pre id="debug" class="mono"></pre>
-  </div>
-
-  <!-- paste + crawl -->
-  <div class="card">
-    <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
-    <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
-    <div style="margin-top:10px" class="row">
-      <button id="crawl">Crawl & Ingest</button>
-      <button id="stop" disabled>Stop</button>
-      <span class="pill">Loaded <span id="loaded">0</span> rows</span>
-      <span id="succPill" class="pill ok">Success: <span id="succ">0</span></span>
-      <span id="failPill" class="pill bad">Failed: <span id="fail">0</span></span>
-      <span class="pill">Stopped: <span id="stopped">0</span></span>
-    </div>
-  </div>
-
-  <!-- debug console (collapsed by default) -->
-  <div class="card">
-    <details id="consoleWrap" class="console">
-      <summary>Debug console (what the client sees)</summary>
-      <div class="console-body">
-        <pre id="console" class="mono"></pre>
+      <div class="card">
+        <label>Test a Single URL</label>
+        <div class="row" style="gap:12px;">
+          <input id="singleUrl" type="text" placeholder="https://example.com/page" />
+          <button id="btnSingle">Test Single URL</button>
+        </div>
+        <pre id="singleOut" class="log" style="margin-top:12px; background:#0b1220; border:1px solid var(--border); padding:12px; border-radius:10px;"></pre>
       </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <label>Paste URLs (one per line) — OPTIONAL</label>
+      <textarea id="urls" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+      <div class="row" style="gap:10px; margin-top:10px;">
+        <button id="btnRun">Crawl &amp; Ingest</button>
+        <button id="btnStop" class="secondary">Stop</button>
+        <div class="statbar">
+          <span class="pill">Loaded <span id="loaded">0</span> rows</span>
+          <span class="pill">Success: <span id="okCount">0</span></span>
+          <span class="pill">Failed: <span id="failCount">0</span></span>
+          <span class="pill">Stopped: <span id="stopped">0</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <table class="table" id="results">
+        <thead>
+          <tr>
+            <th style="width:50px;">#</th>
+            <th>URL</th>
+            <th>Result <span class="muted">(includes DB verify)</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <details style="margin-top:18px;" id="dbg">
+      <summary>Debug console (failed only)</summary>
+      <div class="console" id="console"></div>
     </details>
   </div>
 
-  <!-- results table -->
-  <div class="card">
-    <table>
-      <thead><tr><th style="width:60px">#</th><th>URL</th><th>Result <span class="muted">(includes DB verify)</span></th></tr></thead>
-      <tbody id="rows"></tbody>
-    </table>
-  </div>
+  <script>
+    // ---------------- State ----------------
+    const els = {
+      token: document.getElementById('token'),
+      tokenSaved: document.getElementById('tokenSaved'),
+      saveToken: document.getElementById('saveToken'),
+      csv: document.getElementById('csv'),
+      concurrency: document.getElementById('concurrency'),
+      delay: document.getElementById('delay'),
+      singleUrl: document.getElementById('singleUrl'),
+      btnSingle: document.getElementById('btnSingle'),
+      singleOut: document.getElementById('singleOut'),
+      urls: document.getElementById('urls'),
+      btnRun: document.getElementById('btnRun'),
+      btnStop: document.getElementById('btnStop'),
+      loaded: document.getElementById('loaded'),
+      okCount: document.getElementById('okCount'),
+      failCount: document.getElementById('failCount'),
+      stopped: document.getElementById('stopped'),
+      results: document.getElementById('results').querySelector('tbody'),
+      console: document.getElementById('console'),
+      dbg: document.getElementById('dbg')
+    };
 
-  <!-- search tester -->
-  <div class="card">
-    <h3 style="margin-top:4px;margin-bottom:8px">AI Search Tester</h3>
-    <div class="row">
-      <div class="w-3">
-        <div><small>Query</small></div>
-        <input id="query" placeholder="e.g. photography workshops in Coventry"/>
-      </div>
-      <div class="w-1">
-        <div><small>topK</small></div>
-        <input id="topk" value="8"/>
-      </div>
-      <div class="w-1" style="display:flex;align-items:flex-end">
-        <button id="runSearch" style="width:100%">Run Search</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div><small>Search Results (grouped by URL)</small></div>
-    <table>
-      <thead><tr><th style="width:120px">Best Score / Chunks</th><th>URL</th><th>Snippet</th></tr></thead>
-      <tbody id="srows"></tbody>
-    </table>
-  </div>
-
-  <div class="card">
-    <div><small>Search Raw Response</small></div>
-    <pre id="sraw" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
-  </div>
-
-  <!-- JSON-LD extraction tester -->
-  <div class="card">
-    <h3 style="margin:4px 0 12px">Extract structured content (JSON-LD)</h3>
-    <div class="row">
-      <div class="w-3">
-        <div><small>URL</small></div>
-        <input id="exUrl" placeholder="https://www.alanranger.com/some-page" />
-      </div>
-      <div class="w-1" style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap">
-        <button id="exEvents">Events/Courses</button>
-        <button id="exArticles">Articles</button>
-        <button id="exProducts">Products</button>
-        <button id="exServices">Services</button>
-        <button id="exAll">All</button>
-      </div>
-    </div>
-    <div style="margin-top:10px">
-      <div class="muted" style="margin-bottom:6px"><small>Result</small></div>
-      <pre id="exOut" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
-    </div>
-  </div>
-
-  <!-- AI Bot (RAG) -->
-  <div class="card">
-    <h3 style="margin:4px 0 12px">AI Bot (RAG)</h3>
-    <div class="row">
-      <div class="w-3">
-        <div><small>Ask a question</small></div>
-        <input id="chatQ" placeholder="e.g. Which workshops are best for beginners?" />
-      </div>
-      <div class="w-1">
-        <div><small>topK (context docs)</small></div>
-        <input id="chatTopK" value="8" />
-      </div>
-      <div class="w-1" style="display:flex;align-items:flex-end">
-        <button id="ask" style="width:100%">Ask</button>
-      </div>
-    </div>
-
-    <div style="margin-top:14px">
-      <div class="muted" style="margin-bottom:6px"><small>Answer</small></div>
-      <div id="answer" class="answer mono"></div>
-    </div>
-    <div style="margin-top:12px">
-      <div class="muted" style="margin-bottom:6px"><small>Citations</small></div>
-      <div id="citations" class="chips"></div>
-    </div>
-  </div>
-
-</div><!-- /container -->
-
-<script>
-/* ====== Version badge ====== */
-const VERSION = 'v0.3.2';
-document.title = `Upload URL List to Train AI Bot — ${VERSION}`;
-window.addEventListener('DOMContentLoaded', () => {
-  const el = document.getElementById('ver');
-  if (el) el.textContent = VERSION;
-});
-
-/* ====== Helpers & state ====== */
-const $ = (id) => document.getElementById(id);
-const log = (s) => { const c = $('console'); c.textContent += s + "\\n"; c.scrollTop = c.scrollHeight; };
-const saveToken = () => localStorage.setItem('ingest_token', $('token').value || '');
-$('token').value = localStorage.getItem('ingest_token') || '';
-$('token').addEventListener('change', saveToken);
-$('token').addEventListener('input', saveToken);
-
-/* ---------- CSV handling ---------- */
-let csvUrls = [];
-function parseCSV(text) {
-  const firstLine = text.split(/\r?\n/)[0] || '';
-  let delim = ',';
-  const counts = [[',', (firstLine.match(/,/g)||[]).length],[';', (firstLine.match(/;/g)||[]).length],['\t', (firstLine.match(/\t/g)||[]).length]].sort((a,b)=>b[1]-a[1]);
-  if (counts[0][1] > 0) delim = counts[0][0];
-  const rows = []; let row=[], val='', inQ=false;
-  function pushVal(){ row.push(val); val=''; }
-  function pushRow(){ rows.push(row); row=[]; }
-  for (let i=0;i<text.length;i++){
-    const ch=text[i], nx=text[i+1];
-    if (inQ){
-      if (ch==='"' && nx==='"'){ val+='"'; i++; }
-      else if (ch==='"'){ inQ=false; }
-      else { val+=ch; }
-    } else {
-      if (ch==='"'){ inQ=true; }
-      else if (ch===delim){ pushVal(); }
-      else if (ch==='\n'){ pushVal(); pushRow(); }
-      else if (ch!=='\r'){ val+=ch; }
+    const logs = []; // { level:'error', msg:string }
+    function logError(msg) { logs.push({level:'error', msg}); renderConsole(); }
+    function renderConsole() {
+      // Only show failed/error logs
+      const out = logs.filter(l => l.level === 'error').map(l => `<div class="log err">• ${escapeHtml(l.msg)}</div>`).join('');
+      els.console.innerHTML = out || '<div class="muted">No errors.</div>';
     }
-  }
-  if (val.length || row.length){ pushVal(); pushRow(); }
-  if (!rows.length) return [];
-  const header = rows[0].map(h=>(h||'').trim());
-  const data = rows.slice(1).map(r=>{ const o={}; for (let i=0;i<header.length;i++){ o[header[i]] = (r[i]||'').trim(); } return o; });
-  data.__header = header;
-  return data;
-}
-function updateLoadedPill() {
-  const pasted = $('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  const set = new Set([...csvUrls, ...pasted]);
-  $('loaded').textContent = String(set.size);
-}
-$('csv').addEventListener('change', async (e)=>{
-  const file = e.target.files && e.target.files[0];
-  if (!file) { csvUrls=[]; updateLoadedPill(); return; }
-  try {
-    const text = await file.text();
-    const rows = parseCSV(text);
-    if (!rows.length){ log('CSV parse: no data rows found'); csvUrls=[]; updateLoadedPill(); return; }
-    const header = rows.__header || [];
-    const urlKey = header.find(h => h && h.toLowerCase().trim()==='url');
-    if (!urlKey){ log('CSV parse error: No "url" column. Header: ['+header.join(', ')+']'); csvUrls=[]; updateLoadedPill(); return; }
-    const urls = rows.map(r => (r[urlKey]||'').trim()).filter(Boolean);
-    csvUrls = [...new Set(urls)];
-    log(`CSV loaded: ${csvUrls.length} URL(s) found in "url" column`);
-    updateLoadedPill();
-  } catch(err){
-    log('CSV read error: '+(err?.message||err)); csvUrls=[]; updateLoadedPill();
-  }
-});
-$('paste').addEventListener('input', updateLoadedPill);
+    function escapeHtml(s){return String(s).replace(/[&<>"]/g, c=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));}
 
-/* ---------- API helpers ---------- */
-async function callIngest(url) {
-  const token = $('token').value.trim();
-  const r = await fetch('/api/ingest-embed-replace', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type':'application/json' },
-    body: JSON.stringify({ url })
-  });
-  let body; try { body = await r.json(); } catch { body = { error:'embedding_non_json', raw_status:r.status }; }
-  return { ok: r.ok && body?.ok, status:r.status, body };
-}
-async function callVerify(url) {
-  const token = $('token').value.trim();
-  const r = await fetch('/api/tools?action=verify&url=' + encodeURIComponent(url), {
-    method:'GET', headers:{ 'Authorization':'Bearer '+token }
-  });
-  let body; try { body = await r.json(); } catch { body = { error:'verify_non_json', raw_status:r.status }; }
-  return { ok: r.ok && body?.ok, status:r.status, body };
-}
-async function callSearch(query, topK) {
-  const token = $('token').value.trim();
-  const r = await fetch('/api/tools?action=search', {
-    method:'POST', headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
-    body: JSON.stringify({ query, topK })
-  });
-  let body; try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
-  return body;
-}
-async function callChat(question, topK) {
-  const token = $('token').value.trim();
-  const r = await fetch('/api/chat', {
-    method:'POST',
-    headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
-    body: JSON.stringify({ query: question, topK })
-  });
-  let body; try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
-  return body;
-}
-async function callExtract(action, url) {
-  const r = await fetch(`/api/extract?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`);
-  const raw = await r.text().catch(()=> '');
-  let j; try { j = JSON.parse(raw); } catch { j = { error:'non_json', raw: raw.slice(0, 400) }; }
-  return j;
-}
+    // ---------------- Token ----------------
+    const LS_TOKEN = 'ingest_token';
+    (function initToken(){
+      const t = localStorage.getItem(LS_TOKEN) || '';
+      if (t) { els.token.value = t; els.tokenSaved.textContent = 'Saved locally; sent as Authorization: Bearer …'; }
+    })();
+    els.saveToken.addEventListener('click', ()=>{
+      localStorage.setItem(LS_TOKEN, els.token.value.trim());
+      els.tokenSaved.textContent = 'Saved locally; sent as Authorization: Bearer …';
+    });
 
-/* ---------- ingest test ---------- */
-$('test').onclick = async () => {
-  const url = $('single').value.trim();
-  if (!url) return;
-  log(`[${new Date().toLocaleTimeString()}] Single test → ${url}`);
-  const { ok, status, body } = await callIngest(url);
-  $('debug').textContent = JSON.stringify(body, null, 2);
-  if (ok) {
-    log(`✓ ${url} → { ok: true, id:${body.id}, len:${body.len}, chunks:${body.chunks} }`);
-    const tr = addRow(url, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
-    verifyAndAnnotate(url, tr);
-    bumpSucc();
-  } else {
-    const msg = (body && (body.detail || body.error)) || '(unknown)';
-    log(`✗ ${url} → server_error: ${msg} (status ${status})`);
-    addRow(url, `FAILED ${msg}`, false);
-    bumpFail();
-  }
-};
-function bumpSucc(){ const n = Number($('succ').textContent||'0')+1; $('succ').textContent = String(n); }
-function bumpFail(){ const n = Number($('fail').textContent||'0')+1; $('fail').textContent = String(n); }
-function addRow(url, result, isOK) {
-  const tr = document.createElement('tr');
-  const cls = isOK ? 'ok' : 'bad';
-  tr.innerHTML = `<td></td><td class="mono"><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></td><td class="mono ${cls}">${result}</td>`;
-  $('rows').appendChild(tr);
-  [...$('rows').children].forEach((r,i)=>r.children[0].textContent=i+1);
-  return tr;
-}
-async function verifyAndAnnotate(url, tr) {
-  const td = tr.children[2];
-  td.innerHTML += ` <span class="muted">| verifying…</span>`;
-  const { ok, body } = await callVerify(url);
-  if (ok) {
-    td.innerHTML += ` <span class="muted">| DB: chunks=${body.chunks} len=${body.total_len}</span>`;
-    log(`DB verify ✓ ${url} → chunks=${body.chunks} len=${body.total_len}`);
-  } else {
-    const msg = (body && (body.detail || body.error)) || 'verify_failed';
-    td.innerHTML += ` <span class="muted">| DB verify failed: ${msg}</span>`;
-    log(`DB verify ✗ ${url} → ${msg}`);
-  }
-}
+    // ---------------- Helpers ----------------
+    function bearer() {
+      const t = (els.token.value || '').trim();
+      return t ? `Bearer ${t}` : '';
+    }
 
-/* ---------- crawl ---------- */
-let stopFlag = false;
-$('stop').onclick = () => { stopFlag = true; $('stop').disabled = true; };
-$('crawl').onclick = async () => {
-  stopFlag = false; $('stop').disabled = false;
-  const pasted = $('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  const combined = [...new Set([...csvUrls, ...pasted])];
-  $('loaded').textContent = String(combined.length);
-  $('succ').textContent = '0'; $('fail').textContent = '0';
+    function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-  const conc = Math.max(1, parseInt($('concurrency').value||'1',10));
-  const delay = Math.max(0, parseInt($('delay').value||'0',10));
-  if (!combined.length) { log('No URLs to ingest (CSV+pasted is empty).'); $('stop').disabled = true; return; }
-
-  const q = combined.slice();
-  const runners = Array.from({length:conc}, ()=> (async function run(){
-    while (!stopFlag && q.length) {
-      const u = q.shift();
-      const { ok, body } = await callIngest(u);
-      if (ok) {
-        const tr = addRow(u, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
-        verifyAndAnnotate(u, tr);
-        bumpSucc();
-      } else {
-        const msg = (body && (body.detail || body.error)) || '(unknown)';
-        addRow(u, `FAILED ${msg}`, false);
-        bumpFail();
+    // naive but safe-enough CSV parser (handles quoted commas)
+    function parseCsv(text) {
+      const rows = [];
+      let i = 0, cur = '', row = [], inQ = false;
+      const push = () => { row.push(cur); cur=''; };
+      const endRow = () => { rows.push(row); row=[]; };
+      while (i < text.length) {
+        const ch = text[i++];
+        if (inQ) {
+          if (ch === '"') {
+            if (text[i] === '"') { cur += '"'; i++; }
+            else inQ = false;
+          } else cur += ch;
+        } else {
+          if (ch === '"') inQ = true;
+          else if (ch === ',') push();
+          else if (ch === '\n') { push(); endRow(); }
+          else if (ch === '\r') { /* ignore */ }
+          else cur += ch;
+        }
       }
-      if (delay) await new Promise(r=>setTimeout(r, delay));
+      push(); endRow();
+      return rows;
     }
-  })());
-  await Promise.all(runners);
-  if (stopFlag) $('stopped').textContent = '1';
-  $('stop').disabled = true;
-};
 
-/* ---------- search tester ---------- */
-function normalizeMdLinks(s){ if(!s) return ''; s=s.replace(/!\[([^\]]*)\]\([^)]+\)/g,'$1'); s=s.replace(/\[([^\]]+)\]\([^)]+\)/g,'$1'); return s; }
-function cleanText(s){ s=normalizeMdLinks(s||''); s=s.replace(/[\[\]\(\)]/g,' '); s=s.replace(/https?:\/\/\S+/g,' '); return s.replace(/\s+/g,' ').trim(); }
-function sentenceSpans(text){ const spans=[]; let start=0; for(let i=0;i<text.length;i++){ const ch=text[i]; if(ch==='.'||ch==='!'||ch==='?'||ch==='\n'||ch==='|'){ const end=i+1; const seg=text.slice(start,end).trim(); if(seg)spans.push([start,end,seg]); start=end; } } if(start<text.length){ const seg=text.slice(start).trim(); if(seg)spans.push([start,text.length,seg]); } return spans; }
-function tidyStart(s){ s=(s||'').replace(/^[\)\]\}\.,;:\/\\\-—–•\s]+/u,'').trim(); const sp=s.indexOf(' '); if(s && !/^[A-Za-z0-9]/.test(s[0]) && sp>0) s=s.slice(sp+1).trim(); return s; }
-function sentenceSnippet(content,terms,minChars=80){ const text=cleanText(content); if(!text) return ''; const lc=text.toLowerCase(); let pos=-1; if(terms.length){ for(const t of terms){ const i=lc.indexOf(t); if(i!==-1) pos=(pos===-1)?i:Math.min(pos,i);} } const spans=sentenceSpans(text); if(!spans.length) return text; let idx=0; if(pos!==-1){ for(let i=0;i<spans.length;i++){ const[s,e]=spans[i]; if(pos>=s && pos<e){ idx=i; break; } } } let snippet=tidyStart(spans[idx][2]); if(snippet.length<minChars && spans[idx+1]) snippet=(snippet+' '+tidyStart(spans[idx+1][2])).trim(); return snippet; }
+    function extractUrlsFromCsv(text) {
+      const rows = parseCsv(text).filter(r => r.length && r.some(x => String(x).trim() !== ''));
+      if (!rows.length) return [];
+      const header = rows[0].map(x => String(x).trim().toLowerCase());
+      const uIdx = header.indexOf('url');
+      if (uIdx === -1) return [];
+      return rows.slice(1).map(r => (r[uIdx] || '').trim()).filter(Boolean);
+    }
 
-$('runSearch').onclick = async () => {
-  const query = $('query').value.trim();
-  const topK = Math.max(1, Math.min(32, parseInt($('topk').value || '8', 10)));
-  $('srows').innerHTML = '';
-  $('sraw').textContent = '';
-  if (!query) return;
+    function rowEl(i, url) {
+      const tr = document.createElement('tr');
+      const n = document.createElement('td'); n.textContent = String(i+1);
+      const u = document.createElement('td');
+      const a = document.createElement('a'); a.href=url; a.target='_blank'; a.textContent=url; u.appendChild(a);
+      const r = document.createElement('td'); r.innerHTML = '<span class="muted">Queued…</span>';
+      tr.appendChild(n); tr.appendChild(u); tr.appendChild(r);
+      els.results.appendChild(tr);
+      return { tr, rcell: r };
+    }
 
-  const body = await callSearch(query, topK);
-  $('sraw').textContent = JSON.stringify(body, null, 2);
+    async function callIngest(url){
+      // small client-side retry for transient upstream 503s
+      const headers = { 'Content-Type':'application/json', 'Authorization': bearer() };
+      const body = JSON.stringify({ url });
+      const max = 2;
+      for (let attempt=0; attempt<=max; attempt++){
+        try{
+          const res = await fetch('/api/ingest-embed-replace', { method:'POST', headers, body });
+          const txt = await res.text();
+          let j;
+          try { j = JSON.parse(txt); } catch { j = { ok:false, error:'bad_json', detail:txt }; }
+          if (!res.ok || j?.ok === false){
+            const detail = (j?.detail || j?.error || res.statusText || 'unknown').toString();
+            const transient = /openai_error:503|upstream connect error|connection termination|ECONNRESET|ETIMEDOUT/i.test(detail);
+            if (transient && attempt < max) {
+              await delay(600 * (attempt+1));
+              continue;
+            }
+            throw new Error(detail);
+          }
+          return j;
+        } catch (e) {
+          if (attempt === max) throw e;
+          await delay(600 * (attempt+1));
+        }
+      }
+    }
 
-  const matches = (body && body.matches) || [];
-  const groups = new Map();
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    async function verifyUrl(url){
+      try {
+        const res = await fetch(`/api/tools?action=verify&url=${encodeURIComponent(url)}`, {
+          headers: { 'Authorization': bearer() }
+        });
+        const j = await res.json().catch(()=>null);
+        return j || {};
+      } catch {
+        return {};
+      }
+    }
 
-  for (const m of matches) {
-    if (!m || !m.url) continue;
-    const g = groups.get(m.url) || { url:m.url, bestScore:0, chunks:0, contents:[] };
-    g.bestScore = Math.max(g.bestScore||0, Number(m.score||0));
-    g.chunks += 1;
-    if (m.content) g.contents.push(m.content);
-    groups.set(m.url, g);
-  }
+    // ---------------- Single URL ----------------
+    els.btnSingle.addEventListener('click', async ()=>{
+      const url = els.singleUrl.value.trim();
+      if (!url) return;
+      els.singleOut.textContent = '…';
+      try {
+        const data = await callIngest(url);
+        els.singleOut.textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        const msg = `Single ingest failed for ${url}\n${e && e.message ? e.message : e}`;
+        logError(msg);
+        els.singleOut.textContent = JSON.stringify({ ok:false, error:String(e?.message||e) }, null, 2);
+      }
+    });
 
-  const grouped = Array.from(groups.values()).sort((a,b)=> (b.bestScore - a.bestScore));
-  for (const g of grouped) {
-    let contentForSnippet = g.contents.find(c => {
-      const t = cleanText(c).toLowerCase();
-      return terms.length && terms.every(term => t.includes(term));
-    }) || g.contents[0] || '';
+    // ---------------- Batch runner ----------------
+    let stopFlag = false;
+    els.btnStop.addEventListener('click', ()=>{ stopFlag = true; els.stopped.textContent = String( Number(els.stopped.textContent)+1 ); });
 
-    const chosen = sentenceSnippet(contentForSnippet, terms);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="mono score">${g.bestScore.toFixed(3)} <span class="muted">/ ${g.chunks} chunk${g.chunks===1?'':'s'}</span></td>
-      <td class="mono"><a href="${g.url}" target="_blank" rel="noopener noreferrer">${g.url}</a></td>
-      <td class="mono">${chosen || ''}</td>
-    `;
-    $('srows').appendChild(tr);
-  }
-};
+    async function* urlSource(){
+      // from CSV
+      const f = els.csv.files[0];
+      if (f) {
+        const text = await f.text();
+        const urls = extractUrlsFromCsv(text);
+        for (const u of urls) yield u;
+      }
+      // and pasted
+      for (const u of (els.urls.value || '').split(/\r?\n/).map(s=>s.trim()).filter(Boolean)) {
+        yield u;
+      }
+    }
 
-/* ---------- Chat ---------- */
-$('ask').onclick = async () => {
-  const q = $('chatQ').value.trim();
-  const k = Math.max(1, Math.min(16, parseInt($('chatTopK').value || '8', 10)));
-  $('answer').textContent = '';
-  $('citations').innerHTML = '';
-  if (!q) return;
+    els.btnRun.addEventListener('click', async ()=>{
+      stopFlag = false;
+      els.results.innerHTML = '';
+      els.okCount.textContent = '0';
+      els.failCount.textContent = '0';
 
-  const res = await callChat(q, k);
-  if (!res || !res.ok) {
-    $('answer').textContent = (res && (res.detail || res.error)) || 'chat_failed';
-    return;
-  }
-  $('answer').textContent = res.answer || '';
-  const cites = Array.from(new Set(res.citations || []));
-  $('citations').innerHTML = cites.map(u => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`).join('');
-};
+      const conc = Math.max(1, Math.min(10, Number(els.concurrency.value || 3)));
+      const gap = Math.max(0, Number(els.delay.value || 0));
 
-/* ---------- Extract tester bindings ---------- */
-async function runExtract(action){
-  const url = $('exUrl').value.trim();
-  if (!url) { $('exOut').textContent = 'Please enter a URL.'; return; }
-  $('exOut').textContent = 'Fetching…';
-  const out = await callExtract(action, url);
-  $('exOut').textContent = JSON.stringify(out, null, 2);
-}
-$('exEvents').onclick   = () => runExtract('events-extract');
-$('exArticles').onclick = () => runExtract('articles-extract');
-$('exProducts').onclick = () => runExtract('products-extract');
-$('exServices').onclick = () => runExtract('services-extract');
-$('exAll').onclick      = () => runExtract('extract-all');
+      // gather URLs
+      const all = [];
+      for await (const u of urlSource()) all.push(u);
+      els.loaded.textContent = String(all.length);
 
-/* sensible default single test url */
-$('single').value = 'https://www.alanranger.com/photography-workshops';
-</script>
+      let idx = 0;
+      const runNext = async () => {
+        if (stopFlag) return;
+        const i = idx++;
+        if (i >= all.length) return;
+        const url = all[i];
+        const row = rowEl(i, url);
+
+        try {
+          await delay(gap * (i % conc)); // light staggering
+          const ingest = await callIngest(url);
+          // optional verify
+          const v = await verifyUrl(url);
+          const dbText = v && v.ok ? ` | DB: chunks=${v.chunks ?? '?'} len=${v.len ?? '?'}` : '';
+          row.rcell.innerHTML = `<span class="ok">OK</span> id=${ingest.id ?? '—'} len=${ingest.len ?? '—'} chunks=${ingest.chunks ?? '—'}${dbText}`;
+          els.okCount.textContent = String(Number(els.okCount.textContent)+1);
+        } catch (e) {
+          const msg = `FAILED ${url} — ${e && e.message ? e.message : e}`;
+          row.rcell.innerHTML = `<span class="err">FAILED</span> ${escapeHtml(String(e?.message||e))}`;
+          els.failCount.textContent = String(Number(els.failCount.textContent)+1);
+          logError(msg);
+        } finally {
+          // schedule another
+          await runNext();
+        }
+      };
+
+      // start pool
+      const starters = Array.from({length: conc}, () => runNext());
+      await Promise.all(starters);
+    });
+
+    // start collapsed
+    els.dbg.open = false;
+  </script>
 </body>
 </html>
