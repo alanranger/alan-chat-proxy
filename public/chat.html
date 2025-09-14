@@ -147,6 +147,7 @@ function addTyping() {
   return () => el && el.remove();
 }
 function unique(arr){ return Array.from(new Set((arr||[]).filter(Boolean))); }
+const byDate = (a,b)=> (a>b?1:a<b?-1:0);
 
 /* ===== Mini Markdown renderer ===== */
 function mdToHtml(md){
@@ -174,30 +175,118 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
+/* ===== Extractor calls (events + products) ===== */
+async function fetchExtract(action, url){
+  try{
+    const r = await fetch(`/api/extract?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`);
+    const raw = await r.text();
+    let j; try{ j = JSON.parse(raw); }catch{ j = { error:'non_json', raw: raw?.slice(0,400)||'' }; }
+    return j;
+  }catch{ return { error:'fetch_failed' }; }
+}
+
+function normaliseEvents(ex){
+  const arr = []
+    .concat(ex?.events||[])
+    .concat(ex?.entities||[])
+    .concat(Array.isArray(ex)?ex:[])
+    .filter(x=>x && (x.kind==='event' || x['@type']==='Event' || x.date_start || x.startDate));
+
+  const out = [];
+  for (const e of arr){
+    const raw = e.raw || e;
+    const ds = e.date_start || raw.startDate || raw.start_date || raw.date || null;
+    const url = e.source_url || e.url || raw?.url || raw?.['@id'] || null;
+    const title = e.title || raw.name || raw.title || null;
+    let price = e.price || raw.price || null;
+    let currency = e.price_currency || raw.priceCurrency || raw.currency || null;
+    const offer = Array.isArray(raw.offers) ? raw.offers[0] : raw.offers;
+    if (offer){
+      price = price ?? offer.price ?? null;
+      currency = currency ?? (offer.priceCurrency || offer.currency || null);
+    }
+    if (ds) out.push({ date_start: ds, url, title, price, currency });
+  }
+  return out.sort((a,b)=> byDate(a.date_start,b.date_start));
+}
+
+function normaliseProducts(ex){
+  const arr = []
+    .concat(ex?.products||[])
+    .concat(ex?.entities||[])
+    .concat(Array.isArray(ex)?ex:[])
+    .filter(x=>x && (x.kind==='product' || x['@type']==='Product' || x.price || (x.raw && x.raw.price)));
+
+  const out=[];
+  for (const p of arr){
+    const raw = p.raw || p;
+    const url = p.source_url || p.url || raw?.url || raw?.['@id'] || null;
+    const price = p.price ?? raw.price ?? null;
+    const currency = p.price_currency || raw.priceCurrency || raw.currency || null;
+    out.push({ url, price, currency });
+  }
+  return out;
+}
+
+function fmtGBP(p, cur){
+  if (!p && p!==0) return null;
+  const n = Number(p);
+  if (!isFinite(n)) return (cur||'£') + String(p);
+  try { return new Intl.NumberFormat('en-GB',{style:'currency',currency:(cur||'GBP')}).format(n); }
+  catch { return '£'+String(p); }
+}
+
+function pickBestUrl(urls){
+  for (const u of urls||[]) { if (u) return u; }
+  return null;
+}
+
+function samePageBase(a,b){
+  try{
+    const A=new URL(a), B=new URL(b);
+    return A.origin===B.origin && A.pathname.split('/').slice(0,3).join('/')===B.pathname.split('/').slice(0,3).join('/');
+  }catch{ return false; }
+}
+
+/* Merge prices from products into events if missing. */
+function mergePricesIntoEvents(events, products){
+  if (!products.length) return events;
+  return events.map(ev=>{
+    if (ev.price) return ev;
+    const bySame = products.find(p=> p.url && ev.url && samePageBase(p.url, ev.url));
+    const any = bySame || products[0];
+    if (any && any.price){
+      return {...ev, price:any.price, currency:any.currency || ev.currency};
+    }
+    return ev;
+  });
+}
+
 /* ===== Context-aware suggestion pills ===== */
-function inferChips(question, answer, citations){
-  const q = (question||'').toLowerCase();
-  const a = (answer||'').toLowerCase();
+function buildSmartChips(question, answer, citations, primaryUrls){
   const chips = [];
 
-  const citeChips = unique(citations).slice(0,4).map(u => {
-    const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
-    return { label: label.length>32 ? label.slice(0,29)+'…' : label, href: u };
-  });
-  chips.push(...citeChips);
+  // primary urls derived from entities (event & product)
+  if (primaryUrls.event) chips.push({label:'Upcoming dates', href:primaryUrls.event});
+  if (primaryUrls.product && primaryUrls.product!==primaryUrls.event) chips.push({label:'Prices', href:primaryUrls.product});
 
-  const push = (label, href) => chips.push({label, href});
-  if (/price|cost|how much|£|\bgbp\b|\bfee/.test(q+a)) {
-    push('Prices', 'https://www.alanranger.com/photography-workshops-near-me');
+  // Top citations for quick navigation
+  unique(citations).slice(0,3).forEach(u=>{
+    const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
+    chips.push({label: label.length>32?label.slice(0,29)+'…':label, href:u});
+  });
+
+  // Overview pages if relevant words present
+  const qa=(question+' '+answer).toLowerCase();
+  if (/workshop|course|class/.test(qa)) chips.push({label:'Workshops overview', href:'https://www.alanranger.com/photography-workshops-near-me'});
+  if (/bluebell/.test(qa)) chips.push({label:'bluebell-woods-near-me', href:'https://www.alanranger.com/bluebell-woods-near-me'});
+
+  // dedupe by href then by label
+  const seen=new Set(); const out=[];
+  for (const c of chips){
+    const k=c.href; if(seen.has(k)) continue; seen.add(k); out.push(c);
   }
-  if (/date|when|next|schedule|start|time/.test(q+a)) {
-    push('Upcoming dates', 'https://www.alanranger.com/photography-workshops-near-me');
-  }
-  if (/workshop|course|class|tuition|lesson/.test(q+a)) {
-    push('Workshops overview', 'https://www.alanranger.com/photography-workshops-near-me');
-    push('Tuition & coaching', 'https://www.alanranger.com/photography-lessons-online-121');
-  }
-  return unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
+  return out.slice(0,6);
 }
 
 function addChips(container, chips){
@@ -213,68 +302,35 @@ function addChips(container, chips){
   container.appendChild(wrap);
 }
 
-/* ===== Entity enrichment (events + prices from JSON-LD) ===== */
-async function fetchExtract(action, url){
-  try{
-    const r = await fetch(`/api/extract?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`);
-    const raw = await r.text();
-    let j; try{ j = JSON.parse(raw); }catch{ j = { error:'non_json', raw: raw?.slice(0,400)||'' }; }
-    return j;
-  }catch{ return { error:'fetch_failed' }; }
-}
-
-// normalise any extractor shape into {events:[{date_start, url, title, price, currency}]}
-function normaliseEvents(ex){
-  const arr = []
-    .concat(ex?.events||[])
-    .concat(ex?.entities||[])
-    .concat(Array.isArray(ex)?ex:[])
-    .filter(x=>x && (x.kind==='event' || x['@type']==='Event' || x.date_start || x.startDate));
-
-  const out = [];
-  for (const e of arr){
-    const raw = e.raw || e;
-    const ds = e.date_start || raw.startDate || raw.start_date || raw.date || null;
-    const url = e.source_url || e.url || raw?.url || raw?.['@id'] || null;
-    const title = e.title || raw.name || raw.title || null;
-
-    // If price is on offers (Product/Offer), capture it
-    let price = e.price || raw.price || null;
-    let currency = e.price_currency || raw.priceCurrency || raw.currency || null;
-    const offer = Array.isArray(raw.offers) ? raw.offers[0] : raw.offers;
-    if (offer){
-      price = price ?? offer.price ?? null;
-      currency = currency ?? (offer.priceCurrency || offer.currency || null);
-    }
-    out.push({ date_start: ds, url, title, price, currency });
-  }
-
-  // keep only items that have a date
-  return out.filter(x=>x.date_start).sort((a,b)=> (a.date_start>b.date_start?1:-1));
-}
-
-function fmtGBP(p, cur){
-  if (!p) return null;
-  const n = Number(p);
-  if (!isFinite(n)) return (cur||'£') + String(p);
-  return new Intl.NumberFormat('en-GB',{style:'currency',currency: (cur||'GBP')}).format(n);
-}
-
-// Append a canonical section built from events/products
-async function augmentWithEntities(container, citations){
-  const top = (citations||[]).slice(0,3); // don’t over-call
-  let events = [];
+/* ===== Enrichment: add ALL dates + prices (from JSON-LD) and smart pills ===== */
+async function enrichFromEntities(container, citations, question, modelAnswer){
+  const top = (citations||[]).slice(0,3); // limit calls
+  let events=[]; let products=[];
   for (const u of top){
-    const ex = await fetchExtract('events-extract', u);
-    const list = normaliseEvents(ex);
-    if (list.length) events = events.concat(list);
+    const exE = await fetchExtract('events-extract', u);
+    const exP = await fetchExtract('products-extract', u);
+    const e = normaliseEvents(exE);
+    const p = normaliseProducts(exP);
+    if (e.length) events = events.concat(e);
+    if (p.length) products = products.concat(p);
   }
-  if (!events.length) return; // nothing to add
+  if (!events.length && !products.length) return;
 
-  // dedupe by (date_start,url)
-  const key = (e)=>`${e.date_start}@@${e.url||''}`;
-  const seen = new Set(); events = events.filter(e=> (seen.has(key(e))?false:(seen.add(key(e)),true)));
+  events = mergePricesIntoEvents(events, products);
 
+  // dates list (dedupe by date+url)
+  const uniqKey = new Set(); const allDates=[];
+  for (const ev of events){
+    const k = (ev.date_start||'')+'@@'+(ev.url||'');
+    if (!uniqKey.has(k)){ uniqKey.add(k); allDates.push(ev); }
+  }
+  allDates.sort((a,b)=> byDate(a.date_start,b.date_start));
+
+  // primary urls for pills
+  const primaryEventUrl   = pickBestUrl([allDates[0]?.url, citations[0]]);
+  const primaryProductUrl = pickBestUrl([products[0]?.url, primaryEventUrl, citations[0]]);
+
+  // Render enriched section (dates + prices)
   const wrap = document.createElement('div');
   wrap.innerHTML = `
     <h3>Next Available Dates (from structured data)</h3>
@@ -287,8 +343,7 @@ async function augmentWithEntities(container, citations){
   const ul = wrap.querySelector('#evList');
   const ulP= wrap.querySelector('#evPrice');
 
-  // Dates with per-date link
-  for (const e of events){
+  for (const e of allDates){
     const d = new Date(e.date_start);
     const nice = isFinite(d) ? d.toLocaleDateString('en-GB',{weekday:'short', day:'2-digit', month:'short', year:'numeric'}) : e.date_start;
     const li = document.createElement('li');
@@ -296,22 +351,16 @@ async function augmentWithEntities(container, citations){
     ul.appendChild(li);
   }
 
-  // Aggregate price lines (if any)
-  const prices = [];
-  for (const e of events){
-    if (e.price){
-      const line = fmtGBP(e.price, e.currency)||null;
-      if (line) prices.push(line);
-    }
-  }
-  const uniqPrices = unique(prices);
-  if (uniqPrices.length){
-    uniqPrices.forEach(p=>{
-      const li = document.createElement('li'); li.textContent = p; ulP.appendChild(li);
-    });
+  // Collect unique price strings
+  const priceStrings = unique(allDates.map(e => e.price ? fmtGBP(e.price, e.currency) : null).filter(Boolean));
+  if (priceStrings.length){
+    priceStrings.forEach(p => { const li=document.createElement('li'); li.textContent=p; ulP.appendChild(li); });
   }else{
-    const li = document.createElement('li'); li.textContent = '£TBD (not specified in JSON-LD)'; ulP.appendChild(li);
+    const li=document.createElement('li'); li.textContent='£TBD (not specified in JSON-LD)'; ulP.appendChild(li);
   }
+
+  // Smart pills
+  addChips(container, buildSmartChips(question, modelAnswer, citations, {event:primaryEventUrl, product:primaryProductUrl}));
 }
 
 /* ===== API ===== */
@@ -330,21 +379,6 @@ async function callChat(question, topK=8){
 }
 
 /* ===== Render ===== */
-function renderAnswer(payload, question){
-  if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
-  const raw = payload.answer || payload.reply || payload.text || '';
-  const cites = unique(payload.citations || payload.sources || []);
-  const { html, liIds, items } = mdToHtml(raw);
-  const holder = addBubble(html);
-
-  // Add pills from intent/citations
-  addChips(holder, inferChips(question, raw, cites));
-
-  // Enrich with *real* event dates + per-date links + prices (from JSON-LD)
-  augmentWithEntities(holder, cites); // fire-and-forget
-}
-
-/* ===== Fallback ===== */
 function fallbackBlock(){
   return `
     <div class="fallback">
@@ -355,6 +389,17 @@ function fallbackBlock(){
         <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
       </div>
     </div>`;
+}
+
+function renderAnswer(payload, question){
+  if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
+  const raw = payload.answer || payload.reply || payload.text || '';
+  const cites = unique(payload.citations || payload.sources || []);
+  const { html } = mdToHtml(raw);
+  const holder = addBubble(html);
+
+  // Enrich (ALL dates + prices + smart pills) from JSON-LD for cited pages
+  enrichFromEntities(holder, cites, question, raw);
 }
 
 /* ===== Events ===== */
