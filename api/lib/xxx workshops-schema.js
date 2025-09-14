@@ -1,4 +1,4 @@
-// /api/lib/workshops-schema.js
+// /api/workshops-schema.js
 export const isHttpUrl = (u) => /^https?:\/\/[^\s]+$/i.test(String(u || ''));
 
 const z2 = (n) => String(n).padStart(2, '0');
