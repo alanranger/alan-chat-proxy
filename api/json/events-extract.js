@@ -1,8 +1,8 @@
-// /json/events-extract.js
+// /api/json/events-extract.js
 // Step 2A: Pure helper to extract Event/Course data from JSON-LD into unified EventItem objects.
-// No DB writes here. Step 2B will expose a read-only API route that calls these functions.
+// No DB writes here. Step 2B uses this from /api/extract.js.
 
-import { coerceFutureISODate, isHttpUrl } from './api/json/workshops-schema.js';
+import { coerceFutureISODate, isHttpUrl } from './workshops-schema.js';
 
 /** Accept Event-like @type values (string or array) */
 const EVENT_TYPES = new Set([
@@ -152,7 +152,7 @@ function normaliseEventNode(node, pageUrl, today = new Date()) {
     }
   };
 
-  // Minimal validation (we’ll enforce more in Step 2D before upserting)
+  // Minimal validation
   if (!out.title) return null;
   if (!out.date_start) return null; // must have a usable date
   if (!isHttpUrl(out.url) && !isHttpUrl(out.source_url)) return null;
@@ -208,10 +208,7 @@ export function extractEventItemsFromHtml(html, pageUrl, today = new Date()) {
   return dedup;
 }
 
-/**
- * Convenience (optional): fetch a URL and extract events.
- * Keep side-effect free: no DB here.
- */
+/** Convenience: fetch a URL and extract events. No DB here. */
 export async function extractEventItemsFromUrl(url, today = new Date()) {
   const res = await fetch(url, { headers: { 'User-Agent': 'alanranger-bot/1.0 (+events-extract)' } });
   const html = await res.text();
