@@ -1,9 +1,15 @@
-// /api/ingest-embed-replace.js — FULL FILE (ESM) — OpenAI-only + robust fetch + REPLACE semantics
+// /api/ingest-embed-replace.js — OpenAI embeddings + REPLACE semantics
+// Now also extracts JSON-LD and persists to `page_entities`.
+
 export const config = { runtime: 'nodejs' };
 
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
+
+// IMPORTANT: our JSON-LD helpers live in /json/content-extract.js
+// (you already have this file; it exposes extractAllFromUrl(url))
+import { extractAllFromUrl } from '../json/content-extract.js';
 
 const need = (k) => {
   const v = process.env[k];
@@ -72,7 +78,7 @@ async function fetchPage(url) {
       { selector: 'nav', format: 'skip' },
       { selector: 'footer', format: 'skip' },
       { selector: 'script', format: 'skip' },
-      { selector: 'style', format: 'skip' }
+      { selector: 'style',  format: 'skip' }
     ],
     wordwrap: false
   }).trim();
@@ -109,6 +115,61 @@ async function getEmbeddings(inputs) {
   if (!out.length) throw new Error('openai_empty_embeddings');
   if (!Array.isArray(out[0]) || out[0].length !== 1536) throw new Error('openai_bad_embedding_dim');
   return out;
+}
+
+// ---------- helpers for entity upsert ----------
+function normalizeEntityRows(url, extracted) {
+  const rows = [];
+
+  const push = (kind, item) => {
+    // determine a stable hash from the meaningful fields
+    const keyBits = [
+      kind,
+      item?.title || item?.name || '',
+      item?.date_start || item?.raw?.startDate || '',
+      item?.price || '',
+      item?.sku || ''
+    ].join('|');
+    const entity_hash = sha1(keyBits);
+
+    rows.push({
+      url,
+      kind,
+      title: item?.title || item?.name || null,
+      description: item?.description || null,
+      date_start: item?.date_start || null,
+      date_end: item?.date_end || null,
+      location: item?.location || null,
+      price: (item?.price != null ? Number(item.price) : null),
+      price_currency: item?.priceCurrency || null,
+      availability: item?.availability || null,
+      sku: item?.sku || null,
+      provider: item?.provider || null,
+      source_url: item?.source_url || null,
+      raw: item?.raw || item || {},
+      entity_hash
+    });
+  };
+
+  // The extractors you already have return arrays keyed by plural names
+  for (const ev of extracted?.events || [])   push('event',   ev);
+  for (const pr of extracted?.products || []) push('product', pr);
+  for (const sv of extracted?.services || []) push('service', sv);
+  for (const ar of extracted?.articles || []) push('article', ar);
+
+  return rows;
+}
+
+async function replaceEntitiesForUrl(supa, url, extracted) {
+  const rows = normalizeEntityRows(url, extracted);
+  // REPLACE semantics: wipe existing then insert fresh
+  const del = await supa.from('page_entities').delete().eq('url', url);
+  if (del.error) throw new Error(`supabase_delete_entities_failed: ${del.error.message}`);
+
+  if (!rows.length) return { inserted: 0 };
+  const ins = await supa.from('page_entities').upsert(rows, { onConflict: 'url,entity_hash' }).select('id');
+  if (ins.error) throw new Error(`supabase_upsert_entities_failed: ${ins.error.message}`);
+  return { inserted: ins.data?.length || 0 };
 }
 
 // ---------- handler ----------
@@ -149,23 +210,55 @@ export default async function handler(req, res) {
       hash: sha1(`${url}#${i}:${content.slice(0, 128)}`)
     }));
 
-    // NEW: replace semantics — delete existing rows for this URL before insert
-    stage = 'delete_old';
-    const { error: delErr } = await supa.from('page_chunks').delete().eq('url', url);
-    if (delErr) return sendJSON(res, 500, { error: 'supabase_delete_failed', detail: delErr.message || delErr, stage });
+    // REPLACE semantics for chunks
+    stage = 'delete_old_chunks';
+    const delOld = await supa.from('page_chunks').delete().eq('url', url);
+    if (delOld.error) return sendJSON(res, 500, { error: 'supabase_delete_failed', detail: delOld.error.message, stage });
 
-    stage = 'upsert';
-    const { data, error } = await supa
-      .from('page_chunks')
+    stage = 'upsert_chunks';
+    const up = await supa.from('page_chunks')
       .upsert(rows, { onConflict: 'hash' })
       .select('id')
       .order('id', { ascending: false });
 
-    if (error) return sendJSON(res, 500, { error: 'supabase_upsert_failed', detail: error.message || error, stage });
+    if (up.error) return sendJSON(res, 500, { error: 'supabase_upsert_failed', detail: up.error.message, stage });
+
+    // NEW: extract structured JSON-LD and store it
+    stage = 'extract_jsonld';
+    let extracted = {};
+    try {
+      extracted = await extractAllFromUrl(url);
+    } catch (e) {
+      // non-fatal: store chunks even if extract failed
+      extracted = { error: String(e) };
+    }
+
+    stage = 'store_entities';
+    try {
+      if (!extracted?.error) {
+        await replaceEntitiesForUrl(supa, url, extracted);
+      }
+    } catch (e) {
+      // also non-fatal: we still return success for chunks
+      // but we’ll include the entity error in the response
+      return sendJSON(res, 200, {
+        ok: true,
+        id: up.data?.[0]?.id ?? null,
+        len: text.length,
+        chunks: rows.length,
+        stage,
+        entity_store_error: String(e)
+      });
+    }
 
     stage = 'done';
-    const firstId = data?.[0]?.id ?? null;
-    return sendJSON(res, 200, { ok: true, id: firstId, len: text.length, chunks: rows.length, stage });
+    return sendJSON(res, 200, {
+      ok: true,
+      id: up.data?.[0]?.id ?? null,
+      len: text.length,
+      chunks: rows.length,
+      stage
+    });
   } catch (err) {
     return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
   }
