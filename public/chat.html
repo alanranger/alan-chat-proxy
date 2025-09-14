@@ -44,8 +44,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 /* Composer */
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
-.composer input::placeholder{color:var(--input-ph)}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:#6b7280}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
@@ -111,7 +111,7 @@ if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElem
 
 function getToken(){
   const qp = (urlParams.get('token')||'').trim();
-  if (HARDCODED) return HARDCODED; // comment this line if you want to use stored/query token instead
+  if (HARDCODED) return HARDCODED;
   if (qp) return qp;
   try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
 }
@@ -151,6 +151,7 @@ function addTyping() {
 }
 
 /* ===== Mini Markdown renderer (kept) ===== */
+function stripTags(s){ return (s||'').replace(/<[^>]+>/g,''); }
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -164,9 +165,9 @@ function mdToHtml(md){
     const m = line.match(/^\s*-\s+(.*)$/);
     if (m){
       if(!inList){ out += '<ul>'; inList=true; }
-      const text = m[1].trim();
+      const text = stripTags(m[1].trim()); // store PLAIN TEXT for parsing
       const id = `li_${++idx}`; liIds.push(id); items.push(text);
-      out += `<li id="${id}">${text}</li>`;
+      out += `<li id="${id}">${m[1].trim()}</li>`; // keep original (may include <strong>)
     }else{
       flush();
       out += line.trim() ? `<p>${line}</p>` : '';
@@ -199,7 +200,7 @@ function inferChips(question, answer, citations){
   return unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
 }
 function addChips(container, chips){
-  if (!chips.length) return;
+  if (!chips.length || container.dataset.chipsAdded==='1') return;
   const wrap = document.createElement('div');
   wrap.className = 'chips';
   chips.forEach(({label, href})=>{
@@ -209,21 +210,22 @@ function addChips(container, chips){
     wrap.appendChild(a);
   });
   container.appendChild(wrap);
+  container.dataset.chipsAdded = '1';
 }
 
 /* ===== Date + price helpers ===== */
 const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
 function toISODate(y,m,d){ const mm=String(m).padStart(2,'0'), dd=String(d).padStart(2,'0'); return `${y}-${mm}-${dd}`; }
 function parseDateFromText(s){
-  // e.g. "April 24, 2026" or "24 Apr 2026"
-  const a = s.match(/\b(\d{1,2})\s+([A-Za-z]{3,})\.?,?\s+(\d{4})\b/);
+  s = stripTags(s||'');
+  const a = s.match(/\b(\d{1,2})\s+([A-Za-z]{3,})\.?,?\s+(\d{4})\b/); // 24 Apr 2026
   if (a) { const d=+a[1], m=MONTHS[a[2].toLowerCase().slice(0,3)], y=+a[3]; if(m) return toISODate(y,m,d); }
-  const b = s.match(/\b([A-Za-z]{3,})\.?\s+(\d{1,2}),?\s+(\d{4})\b/);
+  const b = s.match(/\b([A-Za-z]{3,})\.?\s+(\d{1,2}),?\s+(\d{4})\b/); // April 24, 2026
   if (b) { const m=MONTHS[b[1].toLowerCase().slice(0,3)], d=+b[2], y=+b[3]; if(m) return toISODate(y,m,d); }
   return null;
 }
 function currencySymbol(ccy){ if(!ccy) return ''; const c=ccy.toUpperCase(); if(c==='GBP') return '£'; if(c==='USD') return '$'; if(c==='EUR') return '€'; return c+' '; }
-function fmtPrice(p, ccy){ if(!p) return null; const sym=currencySymbol(ccy); return `${sym}${p}`; }
+function fmtPrice(p, ccy){ if(p==null||p==='') return null; const sym=currencySymbol(ccy); return `${sym}${p}`; }
 
 /* ===== Structured events from citations ===== */
 async function fetchEventsFromUrl(url, token){
@@ -232,14 +234,32 @@ async function fetchEventsFromUrl(url, token){
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     const t = await r.text();
-    try { return JSON.parse(t); } catch { return []; }
+    let j; try { j = JSON.parse(t); } catch { j = t; }
+    // normalize shapes
+    let arr = Array.isArray(j) ? j :
+              Array.isArray(j?.events) ? j.events :
+              Array.isArray(j?.entities) ? j.entities :
+              Array.isArray(j?.items) ? j.items :
+              Array.isArray(j?.data) ? j.data : [];
+    // light mapping
+    return arr.map(e=>({
+      kind: e.kind || e['@type'] || 'event',
+      title: e.title || e.name || '',
+      date_start: e.date_start || e.startDate || '',
+      date_end: e.date_end || e.endDate || '',
+      location: e.location || '',
+      price: e.price ?? (e.offers?.price ?? null),
+      price_currency: e.price_currency || e.offers?.priceCurrency || null,
+      source_url: e.source_url || e.url || e['@id'] || url,
+      url: e.url || e.source_url || url
+    }));
   }catch{ return []; }
 }
 function tokensFromQuestion(q){
   return (q||'')
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter(w=>w && w.length>=3 && !['what','when','where','workshop','course','class','the','and','for','date','next','price','cost','much','gbp'].includes(w));
+    .filter(w=>w && w.length>=3 && !['what','when','where','workshop','course','class','the','and','for','date','next','price','cost','much','gbp','include','please','bluebell','woodland','workshop'].includes(w));
 }
 function matchesQuestion(ev, toks){
   if (!toks.length) return true;
@@ -269,11 +289,10 @@ function addLinksToBulletsWithEvents(container, liIds, items, events){
     const iso = parseDateFromText(items[i]||'');
     let url = null;
     if (iso && byISO.has(iso)) {
-      // prefer the first matching event for that date
       const e = byISO.get(iso)[0];
       url = e.source_url || e.url || null;
     }
-    if (!url) return; // no match -> don't add misleading link
+    if (!url) return;
     const a = document.createElement('a');
     a.href = url; a.target='_blank'; a.rel='noopener';
     a.textContent = ' Link';
@@ -315,22 +334,19 @@ async function callChat(question, topK=8){
 async function enrichWithStructured(question, container, liIds, items, citations){
   const token = getToken();
   const toks = tokensFromQuestion(question);
-  // fetch events from each cited page and flatten
   const all = (await Promise.all(unique(citations).map(u=>fetchEventsFromUrl(u, token))))
     .flat()
     .filter(x=>x && (x.kind==='event' || x['@type']==='event' || x.date_start))
     .filter(e=>isUpcoming(e.date_start))
     .filter(e=>matchesQuestion(e, toks));
 
-  if (!all.length) return;
+  // add correct link per bullet date (if any bullets)
+  if (liIds.length && all.length) addLinksToBulletsWithEvents(container, liIds, items, all);
 
-  // add correct link per bullet date
-  addLinksToBulletsWithEvents(container, liIds, items, all);
+  // add price row if not already present
+  if (all.length) appendPriceIfMissing(container, container.innerHTML, all);
 
-  // add price row if not in answer already
-  appendPriceIfMissing(container, container.innerHTML, all);
-
-  // intent-aware chips
+  // pills: always add (intent + citations), not only when events found
   addChips(container, inferChips(question, container.textContent, citations));
 }
 
@@ -340,9 +356,12 @@ function renderAnswer(payload, question){
   const cites = unique(payload.citations || payload.sources || []);
   const { html, liIds, items } = mdToHtml(raw);
   const holder = addBubble(html);
-  // Enrich asynchronously (don’t block UI)
-  enrichWithStructured(question, holder, liIds, items, cites).catch(()=>{});
-  // If no list items were present, still show pills (based on intent/citations)
+  // Enrich asynchronously
+  enrichWithStructured(question, holder, liIds, items, cites).catch(()=>{
+    // even if enrichment fails, ensure pills exist
+    addChips(holder, inferChips(question, holder.textContent, cites));
+  });
+  // If there were no list items at all, add pills immediately
   if (!liIds.length) addChips(holder, inferChips(question, raw, cites));
 }
 
