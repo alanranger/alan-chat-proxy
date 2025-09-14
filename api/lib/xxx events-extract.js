@@ -1,4 +1,4 @@
-// /api/lib/events-extract.js
+// /api/events-extract.js
 // Step 2A: Pure helper to extract Event/Course data from JSON-LD into unified EventItem objects.
 // No DB writes here. Step 2B will expose a read-only API route that calls these functions.
 
