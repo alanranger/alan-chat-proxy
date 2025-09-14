@@ -10,6 +10,7 @@
     :root{
       --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1;
       --bubble:#1B2A44; --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
+      --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
     }
     *{box-sizing:border-box} html,body{height:100%}
     body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
@@ -20,7 +21,12 @@
     .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
     .sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
     .pills{display:flex;gap:10px;margin:12px 0 4px}
-    .pill{appearance:none;border:0;border-radius:28px;padding:10px 16px;font-weight:600;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+    .pill{
+      appearance:none;border:0;border-radius:28px;
+      padding:8px 12px;                      /* smaller */
+      font-weight:600;font-size:14px;        /* smaller */
+      color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px
+    }
     .pill--brand{background:var(--brand)}
     .pill--wa{background:var(--wa)}
     .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
@@ -29,7 +35,13 @@
     .bubble.user{align-self:flex-end;background:#13223a}
     .fallback .pills{margin-top:10px}
     .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-    .composer input{flex:1;background:#0f1828;border:1px solid #15223a;color:var(--text);border-radius:10px;padding:12px 14px;outline:0}
+    .composer input{
+      flex:1;background:var(--input-bg);     /* light */
+      color:var(--input-text);               /* dark text */
+      border:1px solid var(--input-border);
+      border-radius:10px;padding:12px 14px;outline:0;
+    }
+    .composer input::placeholder{color:var(--input-ph)}
     .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
     .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
     .cite{margin-top:8px;color:#9eb2d3;font-size:13px}
@@ -70,16 +82,11 @@
   </div>
 
   <script>
-    // —— IMPORTANT: Match bulk.html exactly ——
-    const ASK_ENDPOINT = '/api/ask';        // use the RAG endpoint (same as bulk tool)
+    // Match bulk.html exactly
+    const ASK_ENDPOINT = '/api/ask';
     const ASK_PARAMS = {
-      topK: 8,
-      useRag: true,
-      includeSources: true,   // return citations like the bulk tester
-      returnConfidence: true, // expose confidence so we don't over-fallback
-      temperature: 0.2
+      topK: 8, useRag: true, includeSources: true, returnConfidence: true, temperature: 0.2
     };
-    // Lower bar so answers that appear in bulk don't get discarded here
     const MIN_CONFIDENCE = 0.10;
 
     const thread = document.getElementById('thread');
@@ -118,8 +125,6 @@
     }
 
     function renderAnswer(payload){
-      // Expecting something like:
-      // { answer, citations: string[], confidence: number }
       const { answer, citations = [], confidence = 1 } = payload || {};
       dbg.textContent = `confidence=${confidence?.toFixed?.(3) ?? 'n/a'} | cites=${citations.length}`;
       if (dbg.textContent) dbg.style.display = 'block';
@@ -128,7 +133,6 @@
         addBubble(fallbackBlock());
         return;
       }
-      // If there is an answer or any citations, we’ll show it unless confidence is extremely low
       if (confidence !== undefined && confidence < MIN_CONFIDENCE && !citations.length){
         addBubble(fallbackBlock());
         return;
