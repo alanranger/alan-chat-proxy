@@ -99,10 +99,10 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </div></div>
 
 <script>
-/* ===== Config / helpers ===== */
+/* ===== Config ===== */
 const CHAT_ENDPOINT = '/api/chat';
-const EXTRACT_ENDPOINT = '/api/extract'; // we'll use action=extract-all
-const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // ingest token (optional)
+const EXTRACT_ENDPOINT = '/api/extract';
+const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // optional bearer (same as bulk tool)
 
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
@@ -114,6 +114,7 @@ function getToken(){
   try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
 }
 
+/* ===== DOM ===== */
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
 const sendBtn= document.getElementById('send');
@@ -122,6 +123,7 @@ const dbgReq      = document.getElementById('dbg-req');
 const dbgRes      = document.getElementById('dbg-res');
 const dbgHeaders  = document.getElementById('dbg-headers');
 
+/* ===== Helpers ===== */
 function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
 function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
 function setDebug({status, req, res, headers}){
@@ -134,7 +136,6 @@ function setDebug({status, req, res, headers}){
   }
 }
 
-/* ===== UI helpers ===== */
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
   div.className = 'bubble' + (opts.user ? ' user' : '');
@@ -147,9 +148,9 @@ function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
   return () => el && el.remove();
 }
-
-/* ===== Markdown ===== */
 function stripTags(s){ return (s||'').replace(/<[^>]+>/g,''); }
+
+/* ===== Mini Markdown → HTML (capture list items) ===== */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -163,8 +164,8 @@ function mdToHtml(md){
     const m = line.match(/^\s*-\s+(.*)$/);
     if (m){
       if(!inList){ out += '<ul>'; inList=true; }
-      const text = stripTags(m[1].trim());
-      const id = `li_${++idx}`; liIds.push(id); items.push(text);
+      const plain = stripTags(m[1].trim());
+      const id = `li_${++idx}`; liIds.push(id); items.push(plain);
       out += `<li id="${id}">${m[1].trim()}</li>`;
     }else{
       flush();
@@ -175,44 +176,29 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Chips & utilities ===== */
+/* ===== Chips ===== */
 function unique(arr){ return Array.from(new Set(arr.filter(Boolean))); }
-function bestUrlFor(text, urls){
-  const t = text.toLowerCase();
-  const tokens = t.split(/[^a-z0-9]+/).filter(w=>w.length>3);
-  let best=null, score=-1;
-  for (const u of urls){
-    const slug = (u.split('/').pop()||'').toLowerCase();
-    let s=0; for(const k of tokens){ if(slug.includes(k)) s+=2; if(u.toLowerCase().includes(k)) s+=1; }
-    if(s>score){ score=s; best=u; }
-  }
-  return best || urls[0] || null;
-}
 function inferChips(question, answer, citations){
-  const q = (question||'').toLowerCase();
-  const a = (answer||'').toLowerCase();
-  const chips = [];
+  const q=(question||'').toLowerCase(), a=(answer||'').toLowerCase();
+  const chips=[];
   const push=(label,href)=>chips.push({label,href});
   unique(citations).slice(0,4).forEach(u=>{
     const label=(u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
-    chips.push({label:label.length>32?label.slice(0,29)+'…':label, href:u});
+    chips.push({label:label.length>32?label.slice(0,29)+'…':label,href:u});
   });
-  if (/price|cost|how much|£|\bgbp\b|\bfee/.test(q+a)) push('Prices','https://www.alanranger.com/photography-workshops-near-me');
-  if (/date|when|next|schedule|start|time/.test(q+a)) push('Upcoming dates','https://www.alanranger.com/photography-workshops-near-me');
-  if (/workshop|course|class|tuition|lesson/.test(q+a)) {
-    push('Workshops overview','https://www.alanranger.com/photography-workshops-near-me');
-    push('Tuition & coaching','https://www.alanranger.com/photography-lessons-online-121');
-  }
+  if(/price|cost|how much|£|\bgbp\b|\bfee/.test(q+a)) push('Prices','https://www.alanranger.com/photography-workshops-near-me');
+  if(/date|when|next|schedule|start|time/.test(q+a)) push('Upcoming dates','https://www.alanranger.com/photography-workshops-near-me');
+  if(/workshop|course|class|tuition|lesson/.test(q+a)){ push('Workshops overview','https://www.alanranger.com/photography-workshops-near-me'); push('Tuition & coaching','https://www.alanranger.com/photography-lessons-online-121'); }
   return unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
 }
 function addChips(container, chips){
-  if (!chips.length || container.dataset.chipsAdded==='1') return;
+  if(!chips.length || container.dataset.chipsAdded==='1') return;
   const wrap=document.createElement('div'); wrap.className='chips';
   chips.forEach(({label,href})=>{ const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent=label; wrap.appendChild(a); });
   container.appendChild(wrap); container.dataset.chipsAdded='1';
 }
 
-/* ===== Date & price helpers ===== */
+/* ===== Dates & prices ===== */
 const MONTHS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
 function toISODate(y,m,d){ return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
 function parseDateFromText(s){
@@ -224,8 +210,15 @@ function parseDateFromText(s){
   return null;
 }
 function currencySymbol(ccy){ if(!ccy) return ''; const c=ccy.toUpperCase(); if(c==='GBP') return '£'; if(c==='USD') return '$'; if(c==='EUR') return '€'; return c+' '; }
-function fmtPrice(p,ccy){ if(p==null||p==='') return null; return `${currencySymbol(ccy)}${p}`; }
-function isUpcoming(iso){ if(!iso) return false; const d=new Date(iso); const t=new Date(); t.setHours(0,0,0,0); return d>=t; }
+function fmtAnyPrice(price,ccy){
+  if(price==null || price==='') return ccy?(`${currencySymbol(ccy)}TBD`):'TBD';
+  const sym = ccy ? currencySymbol(ccy) : '';
+  return `${sym}${String(price)}`;
+}
+function isListingUrl(u){
+  const p=(u||'').toLowerCase();
+  return p.includes('near-me') || p.endsWith('/blog') || p.includes('/blog-on-photography') || p.endsWith('/photography-workshops-near-me');
+}
 
 /* ===== Structured extraction ===== */
 async function fetchStructuredFromUrl(url, token){
@@ -242,28 +235,53 @@ async function fetchStructuredFromUrl(url, token){
               Array.isArray(j?.items) ? j.items :
               Array.isArray(j?.data) ? j.data : [];
 
-    // normalize
     return arr.map(e=>{
-      const offers = Array.isArray(e.offers) ? e.offers[0] : e.offers || {};
+      const offersArr = Array.isArray(e.offers) ? e.offers : (e.offers ? [e.offers] : []);
+      const normOffers = offersArr.map(o=>({
+        url: o?.url ?? null,
+        name: o?.name ?? o?.category ?? null,
+        price: (o?.price ?? null),
+        priceCurrency: (o?.priceCurrency ?? e?.priceCurrency ?? null),
+        availability: o?.availability ?? null
+      }));
       return {
         kind: (e.kind || e['@type'] || '').toString().toLowerCase(),
         title: e.title || e.name || '',
         date_start: e.date_start || e.startDate || '',
         date_end: e.date_end || e.endDate || '',
         location: e.location?.name || e.location || '',
-        price: e.price ?? offers.price ?? null,
-        price_currency: e.price_currency || offers.priceCurrency || null,
+        price: (e.price ?? null),
+        price_currency: (e.price_currency ?? e.priceCurrency ?? null),
         url: e.url || e.source_url || e['@id'] || url,
         source_url: e.source_url || e.url || url,
+        offers: normOffers
       };
     });
   }catch{ return []; }
 }
 
-/* ===== Enrichment: link each bullet + show price + add pills ===== */
-function addLinksToBulletsWithEventsOrFallback(container, liIds, items, events, citations){
+/* ===== Linker & pricing enrichment ===== */
+function pickBestUrlForEntity(entity, fallbackList=[]){
+  const candidates = [];
+
+  // 1) offer URLs first (date pages usually live here)
+  (entity.offers||[]).forEach(o=>{ if(o.url) candidates.push(o.url); });
+
+  // 2) entity page(s)
+  if (entity.source_url) candidates.push(entity.source_url);
+  if (entity.url && entity.url !== entity.source_url) candidates.push(entity.url);
+
+  // 3) finally, anything from citations
+  candidates.push(...fallbackList);
+
+  // pick the first that doesn't look like a listing
+  for (const c of candidates){ if (c && !isListingUrl(c)) return c; }
+  return candidates.find(Boolean) || null;
+}
+
+function addLinksToBulletsUsingEntities(container, liIds, items, entities, citations){
   const byISO = new Map();
-  events.forEach(e=>{
+  entities.forEach(e=>{
     const iso=(e.date_start||'').slice(0,10);
     if(!iso) return;
     if(!byISO.has(iso)) byISO.set(iso, []);
@@ -275,19 +293,67 @@ function addLinksToBulletsWithEventsOrFallback(container, liIds, items, events, 
     if(!li) return;
     const iso = parseDateFromText(items[i]||'');
     let url=null;
-    if(iso && byISO.has(iso)) url = byISO.get(iso)[0]?.source_url || byISO.get(iso)[0]?.url;
-    if(!url) url = bestUrlFor(items[i]||'', citations); // fallback so every bullet gets a link
+
+    if(iso && byISO.has(iso)) {
+      const match = byISO.get(iso)[0];
+      url = pickBestUrlForEntity(match, citations);
+    }
+
+    if(!url) {
+      // as a fallback, try all entities (some pages don’t repeat date on entity)
+      for(const e of entities){
+        url = pickBestUrlForEntity(e, citations);
+        if(url && !isListingUrl(url)) break;
+      }
+    }
+
+    if(!url && citations && citations.length){
+      url = citations.find(u=>!isListingUrl(u)) || citations[0];
+    }
     if(!url) return;
+
     const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener'; a.textContent=' Link'; a.style.marginLeft='6px';
     li.appendChild(a);
   });
 }
+
 function appendPriceIfMissing(container, answerHtml, entities){
-  const hasPriceInAnswer = /£|\bGBP\b|price/i.test(answerHtml);
-  const prices = unique(entities.map(e=>fmtPrice(e.price,e.price_currency)).filter(Boolean));
-  if(!prices.length || hasPriceInAnswer) return;
-  const block=document.createElement('div'); block.innerHTML=`<p><strong>Price:</strong> ${prices.join(' · ')}</p>`;
-  container.appendChild(block);
+  const alreadyShowsMoney = /£|\$|€/.test(answerHtml||'');
+  const lines = [];
+
+  entities.forEach(e=>{
+    if (e.offers?.length){
+      e.offers.forEach(o=>{
+        const priceLine = fmtAnyPrice(o.price, o.priceCurrency || e.price_currency);
+        const label = o.name || '';
+        lines.push(label ? `${label}: ${priceLine}` : priceLine);
+      });
+    }else{
+      const priceLine = fmtAnyPrice(e.price, e.price_currency);
+      if (priceLine && priceLine !== 'TBD') lines.push(priceLine);
+    }
+  });
+
+  const uniq = unique(lines);
+  if (!uniq.length || alreadyShowsMoney) return;
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `<p><strong>Price:</strong></p><ul>` + uniq.map(s=>`<li>${s}</li>`).join('') + `</ul>`;
+  container.appendChild(wrap);
+}
+
+async function enrich(question, container, liIds, items, citations){
+  const token = getToken();
+  const structured = (await Promise.all(unique(citations).map(u=>fetchStructuredFromUrl(u, token)))).flat();
+
+  // Link each bullet to the most date-specific page we can find
+  addLinksToBulletsUsingEntities(container, liIds, items, structured, citations);
+
+  // If the LLM didn’t include cost, add a Price section from Product/Offer data
+  appendPriceIfMissing(container, container.innerHTML, structured);
+
+  // Context chips
+  addChips(container, inferChips(question, container.textContent, citations));
 }
 
 /* ===== API ===== */
@@ -306,16 +372,16 @@ async function callChat(question, topK=8){
 }
 
 /* ===== Render ===== */
-async function enrich(question, container, liIds, items, citations){
-  const token = getToken();
-  const structured = (await Promise.all(unique(citations).map(u=>fetchStructuredFromUrl(u, token)))).flat();
-
-  // prefer events, but also allow products/courses for price
-  const upcoming = structured.filter(e=>isUpcoming(e.date_start));
-  addLinksToBulletsWithEventsOrFallback(container, liIds, items, upcoming, citations);
-  appendPriceIfMissing(container, container.innerHTML, structured);
-
-  addChips(container, inferChips(question, container.textContent, citations));
+function fallbackBlock(){
+  return `
+    <div class="fallback">
+      <p>I don’t have a confident answer to that yet. I’m trained on Alan’s site, so I may miss things.</p>
+      <p>If you’d like to follow up, please reach out:</p>
+      <div class="pills">
+        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+      </div>
+    </div>`;
 }
 function renderAnswer(payload, question){
   if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
@@ -327,19 +393,6 @@ function renderAnswer(payload, question){
     addChips(holder, inferChips(question, holder.textContent, cites));
   });
   if (!liIds.length) addChips(holder, inferChips(question, raw, cites));
-}
-
-/* ===== Fallback ===== */
-function fallbackBlock(){
-  return `
-    <div class="fallback">
-      <p>I don’t have a confident answer to that yet. I’m trained on Alan’s site, so I may miss things.</p>
-      <p>If you’d like to follow up, please reach out:</p>
-      <div class="pills">
-        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
-      </div>
-    </div>`;
 }
 
 /* ===== Events ===== */
