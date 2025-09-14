@@ -135,7 +135,6 @@ function setDebug({status, req, res, headers}){
     dbgHeaders.textContent = safeJSONString(h);
   }
 }
-
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
   div.className = 'bubble' + (opts.user ? ' user' : '');
@@ -221,60 +220,63 @@ function isListingUrl(u){
 }
 
 /* ===== Structured extraction ===== */
-async function fetchStructuredFromUrl(url, token){
-  try{
-    const r = await fetch(`${EXTRACT_ENDPOINT}?action=extract-all&url=${encodeURIComponent(url)}`, {
+/* Try DB first: /api/extract?action=entities-db&url=..., then fallback to extract-all */
+async function fetchEntitiesFrom(url, token){
+  async function call(action){
+    const r = await fetch(`${EXTRACT_ENDPOINT}?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`, {
       headers: token ? {Authorization:`Bearer ${token}`} : {}
     });
-    const raw = await r.text().catch(()=> '');
-    let j; try { j = JSON.parse(raw); } catch { j = raw; }
+    const text = await r.text().catch(()=> '');
+    try { return JSON.parse(text); } catch { return null; }
+  }
 
-    let arr = Array.isArray(j) ? j :
-              Array.isArray(j?.entities) ? j.entities :
-              Array.isArray(j?.events) ? j.events :
-              Array.isArray(j?.items) ? j.items :
-              Array.isArray(j?.data) ? j.data : [];
+  const tryDb = await call('entities-db');    // expects {entities:[...]} or [...]
+  let dbArr = null;
+  if (Array.isArray(tryDb)) dbArr = tryDb;
+  else if (tryDb && Array.isArray(tryDb.entities)) dbArr = tryDb.entities;
 
-    return arr.map(e=>{
-      const offersArr = Array.isArray(e.offers) ? e.offers : (e.offers ? [e.offers] : []);
-      const normOffers = offersArr.map(o=>({
-        url: o?.url ?? null,
-        name: o?.name ?? o?.category ?? null,
-        price: (o?.price ?? null),
-        priceCurrency: (o?.priceCurrency ?? e?.priceCurrency ?? null),
-        availability: o?.availability ?? null
-      }));
-      return {
-        kind: (e.kind || e['@type'] || '').toString().toLowerCase(),
-        title: e.title || e.name || '',
-        date_start: e.date_start || e.startDate || '',
-        date_end: e.date_end || e.endDate || '',
-        location: e.location?.name || e.location || '',
-        price: (e.price ?? null),
-        price_currency: (e.price_currency ?? e.priceCurrency ?? null),
-        url: e.url || e.source_url || e['@id'] || url,
-        source_url: e.source_url || e.url || url,
-        offers: normOffers
-      };
-    });
-  }catch{ return []; }
+  if (dbArr && dbArr.length) return dbArr;
+
+  const tryAll = await call('extract-all');
+  if (Array.isArray(tryAll)) return tryAll;
+  if (tryAll && Array.isArray(tryAll.entities)) return tryAll.entities;
+  if (tryAll && Array.isArray(tryAll.data)) return tryAll.data;
+  return [];
+}
+
+/* Normalise an entity into a stable shape, pulling offers from either .offers or .raw.offers */
+function normaliseEntity(e, pageUrl){
+  const offersSrc = Array.isArray(e.offers) ? e.offers :
+                    Array.isArray(e.raw?.offers) ? e.raw.offers : [];
+  const offers = offersSrc.map(o=>({
+    url: o?.url ?? null,
+    name: o?.name ?? o?.category ?? o?.description ?? null,
+    price: (o?.price ?? null),
+    priceCurrency: (o?.priceCurrency ?? e?.priceCurrency ?? e?.price_currency ?? null),
+    availability: o?.availability ?? null
+  }));
+
+  return {
+    kind: (e.kind || e['@type'] || '').toString().toLowerCase(),
+    title: e.title || e.name || '',
+    date_start: e.date_start || e.startDate || '',
+    date_end: e.date_end || e.endDate || '',
+    location: e.location?.name || e.location || '',
+    price: (e.price ?? null),
+    price_currency: (e.price_currency ?? e.priceCurrency ?? null),
+    url: e.url || e.source_url || e['@id'] || pageUrl,
+    source_url: e.source_url || e.url || pageUrl,
+    offers
+  };
 }
 
 /* ===== Linker & pricing enrichment ===== */
 function pickBestUrlForEntity(entity, fallbackList=[]){
   const candidates = [];
-
-  // 1) offer URLs first (date pages usually live here)
   (entity.offers||[]).forEach(o=>{ if(o.url) candidates.push(o.url); });
-
-  // 2) entity page(s)
   if (entity.source_url) candidates.push(entity.source_url);
   if (entity.url && entity.url !== entity.source_url) candidates.push(entity.url);
-
-  // 3) finally, anything from citations
   candidates.push(...fallbackList);
-
-  // pick the first that doesn't look like a listing
   for (const c of candidates){ if (c && !isListingUrl(c)) return c; }
   return candidates.find(Boolean) || null;
 }
@@ -299,14 +301,12 @@ function addLinksToBulletsUsingEntities(container, liIds, items, entities, citat
       url = pickBestUrlForEntity(match, citations);
     }
 
-    if(!url) {
-      // as a fallback, try all entities (some pages don’t repeat date on entity)
+    if(!url) { // fallback scan
       for(const e of entities){
         url = pickBestUrlForEntity(e, citations);
         if(url && !isListingUrl(url)) break;
       }
     }
-
     if(!url && citations && citations.length){
       url = citations.find(u=>!isListingUrl(u)) || citations[0];
     }
@@ -317,15 +317,13 @@ function addLinksToBulletsUsingEntities(container, liIds, items, entities, citat
   });
 }
 
-function appendPriceIfMissing(container, answerHtml, entities){
-  const alreadyShowsMoney = /£|\$|€/.test(answerHtml||'');
-  const lines = [];
-
+function buildOfferLines(entities){
+  const lines=[];
   entities.forEach(e=>{
     if (e.offers?.length){
       e.offers.forEach(o=>{
         const priceLine = fmtAnyPrice(o.price, o.priceCurrency || e.price_currency);
-        const label = o.name || '';
+        const label = o.name ? o.name.replace(/\s*\|\s*/g,' – ') : '';
         lines.push(label ? `${label}: ${priceLine}` : priceLine);
       });
     }else{
@@ -333,26 +331,37 @@ function appendPriceIfMissing(container, answerHtml, entities){
       if (priceLine && priceLine !== 'TBD') lines.push(priceLine);
     }
   });
+  return unique(lines);
+}
 
-  const uniq = unique(lines);
-  if (!uniq.length || alreadyShowsMoney) return;
+function appendPriceIfMissing(container, entities){
+  const alreadyShowsMoney = /£|\$|€/.test(container.innerHTML||'');
+  const lines = buildOfferLines(entities);
+  if (!lines.length) return;
 
+  // If the LLM printed a price that might be wrong, we still append a canonical "Price" section from DB.
   const wrap = document.createElement('div');
-  wrap.innerHTML = `<p><strong>Price:</strong></p><ul>` + uniq.map(s=>`<li>${s}</li>`).join('') + `</ul>`;
+  wrap.innerHTML = `<p><strong>Price:</strong></p><ul>` + lines.map(s=>`<li>${s}</li>`).join('') + `</ul>`;
   container.appendChild(wrap);
 }
 
+/* Main enrichment: prefer DB; fallback to JSON-LD */
 async function enrich(question, container, liIds, items, citations){
   const token = getToken();
-  const structured = (await Promise.all(unique(citations).map(u=>fetchStructuredFromUrl(u, token)))).flat();
+
+  // Collect and normalise entities from all citation pages
+  const pageEntities = (await Promise.all(unique(citations).map(async (u)=>{
+    const raw = await fetchEntitiesFrom(u, token);
+    return raw.map(e=>normaliseEntity(e, u));
+  }))).flat();
 
   // Link each bullet to the most date-specific page we can find
-  addLinksToBulletsUsingEntities(container, liIds, items, structured, citations);
+  addLinksToBulletsUsingEntities(container, liIds, items, pageEntities, citations);
 
-  // If the LLM didn’t include cost, add a Price section from Product/Offer data
-  appendPriceIfMissing(container, container.innerHTML, structured);
+  // Append canonical prices from DB/json-ld offers
+  appendPriceIfMissing(container, pageEntities);
 
-  // Context chips
+  // Context pills
   addChips(container, inferChips(question, container.textContent, citations));
 }
 
