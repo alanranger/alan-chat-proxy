@@ -1,30 +1,19 @@
-// /api/ingest-embed-replace.js — embeds + JSON-LD → page_chunks + page_entities (REPLACE)
+// /api/ingest-embed-replace.js
+// Single-file ingest that also parses JSON-LD and stores "entities" + enriched chunks.
+
 export const config = { runtime: 'nodejs' };
 
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
 
+/* ========== utils ========== */
 const need = (k) => {
   const v = process.env[k];
   if (!v || !String(v).trim()) throw new Error(`missing_env:${k}`);
   return v;
 };
 const sha1 = (s) => crypto.createHash('sha1').update(s).digest('hex');
-const nowIso = () => new Date().toISOString();
-
-const PRIMARY_UA =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-const SECONDARY_UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-
-const chunkText = (txt, size = 3500, overlap = 300) => {
-  const out = [];
-  for (let i = 0; i < txt.length; i += (size - overlap)) {
-    out.push(txt.slice(i, Math.min(i + size, txt.length)).trim());
-  }
-  return out.filter(Boolean);
-};
 
 const asString = (e) => {
   if (!e) return '(unknown)';
@@ -39,7 +28,20 @@ const sendJSON = (res, status, obj) => {
   res.status(status).send(JSON.stringify(obj));
 };
 
-// ---------- fetch page ----------
+const chunkText = (txt, size = 3500, overlap = 300) => {
+  const out = [];
+  for (let i = 0; i < txt.length; i += (size - overlap)) {
+    out.push(txt.slice(i, Math.min(i + size, txt.length)).trim());
+  }
+  return out.filter(Boolean);
+};
+
+/* ========== page fetch (HTML + plain text) ========== */
+const PRIMARY_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const SECONDARY_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
 async function fetchOnce(url, ua, referer) {
   return fetch(url, {
     redirect: 'follow',
@@ -54,31 +56,218 @@ async function fetchOnce(url, ua, referer) {
     }
   });
 }
+
 async function fetchPage(url) {
   const origin = (() => { try { return new URL(url).origin; } catch { return undefined; } })();
+
   let r = await fetchOnce(url, PRIMARY_UA, origin);
-  if ([401,403,429,503].includes(r.status)) r = await fetchOnce(url, SECONDARY_UA, origin);
+  if ([401, 403, 429, 503].includes(r.status)) r = await fetchOnce(url, SECONDARY_UA, origin);
+
   if (!r.ok) {
-    const body = await r.text().catch(()=> '');
-    const snippet = (body || '').slice(0, 240).replace(/\s+/g,' ');
+    const body = await r.text().catch(() => '');
+    const snippet = (body || '').slice(0, 240).replace(/\s+/g, ' ');
     throw new Error(`fetch_failed:${r.status}:${snippet}`);
   }
+
   const html = await r.text();
   const text = htmlToText(html, {
     selectors: [
-      { selector:'nav', format:'skip' },
-      { selector:'footer', format:'skip' },
-      { selector:'script', format:'skip' },
-      { selector:'style', format:'skip' }
+      { selector: 'nav', format: 'skip' },
+      { selector: 'footer', format: 'skip' },
+      { selector: 'script', format: 'skip' },
+      { selector: 'style', format: 'skip' }
     ],
     wordwrap: false
   }).trim();
+
   return { html, text };
 }
 
-// ---------- embeddings (OpenAI) ----------
+/* ========== JSON-LD extraction (inline) ========== */
+function* findJsonLdBlocks(html) {
+  const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const raw = (m[1] || '').trim();
+    if (!raw) continue;
+    yield raw;
+  }
+}
+
+function parseAnyJson(s) {
+  // Some sites wrap with <!-- --> or have stray characters; try tolerant parsing.
+  const cleaned = s.replace(/^\s*<!--/, '').replace(/-->\s*$/, '');
+  try { return JSON.parse(cleaned); } catch { return null; }
+}
+
+function flattenJsonLd(node) {
+  const out = [];
+  const push = (x) => { if (x && typeof x === 'object') out.push(x); };
+  const walk = (x) => {
+    if (!x) return;
+    if (Array.isArray(x)) x.forEach(walk);
+    else if (typeof x === 'object') {
+      if (x['@type']) push(x);
+      // walk potential children
+      for (const k of Object.keys(x)) {
+        const v = x[k];
+        if (v && typeof v === 'object') walk(v);
+      }
+    }
+  };
+  walk(node);
+  return out;
+}
+
+function normText(x) {
+  if (x == null) return null;
+  if (typeof x === 'string') return x.trim();
+  if (typeof x === 'object' && x.name) return String(x.name).trim();
+  return null;
+}
+
+function firstOf(...vals) {
+  for (const v of vals) if (v != null && String(v).trim() !== '') return String(v).trim();
+  return null;
+}
+
+function normalizeEntity(item, pageUrl) {
+  const type = Array.isArray(item['@type']) ? item['@type'][0] : item['@type'];
+  const t = String(type || '').toLowerCase();
+
+  // Common fields
+  const url = firstOf(item.url, item['@id'], pageUrl);
+  const title = normText(firstOf(item.name, item.headline, item.title));
+  const description = normText(item.description);
+  const provider = normText(item.provider) || normText(item.brand) || normText(item.author);
+
+  let kind = null;
+  let date_start = null;
+  let date_end = null;
+  let location = null;
+  let price = null;
+  let price_currency = null;
+  let availability = normText(item.availability);
+  let sku = normText(item.sku);
+
+  // Map types
+  if (t === 'event' || t === 'course' || /event$/i.test(type || '')) {
+    kind = 'event';
+    date_start = firstOf(item.startDate);
+    date_end = firstOf(item.endDate);
+    // location can be string or Place
+    location = firstOf(
+      item.location?.name,
+      item.location?.address?.streetAddress && item.location?.address?.addressLocality
+        ? `${item.location.address.streetAddress}, ${item.location.address.addressLocality}`
+        : item.location?.address?.addressLocality,
+      item.location?.address?.addressRegion,
+      item.location?.address
+    );
+    // Offer
+    const offer = Array.isArray(item.offers) ? item.offers[0] : item.offers;
+    if (offer) {
+      price = offer.price != null ? String(offer.price) : null;
+      price_currency = offer.priceCurrency || null;
+      availability = availability || normText(offer.availability);
+      sku = sku || normText(offer.sku);
+    }
+  } else if (t === 'product') {
+    kind = 'product';
+    const offer = Array.isArray(item.offers) ? item.offers[0] : item.offers;
+    if (offer) {
+      price = offer.price != null ? String(offer.price) : null;
+      price_currency = offer.priceCurrency || null;
+      availability = availability || normText(offer.availability);
+      sku = sku || normText(offer.sku);
+    }
+  } else if (t === 'service') {
+    kind = 'service';
+  } else if (t === 'article' || t === 'blogposting' || t === 'newsarticle') {
+    kind = 'article';
+    date_start = firstOf(item.datePublished, item.dateCreated);
+    date_end = firstOf(item.dateModified);
+    // no price/offer expected
+  } else {
+    return null; // ignore unrelated types
+  }
+
+  const raw = item; // keep full JSON for reference
+  const entity_hash = sha1(`${pageUrl}::${kind}::${title || ''}::${date_start || ''}::${date_end || ''}`);
+
+  return {
+    url: pageUrl,
+    kind,
+    title,
+    description,
+    date_start,
+    date_end,
+    location,
+    price,
+    price_currency,
+    availability,
+    sku,
+    provider,
+    source_url: url,
+    raw,
+    entity_hash,
+    last_seen: new Date().toISOString()
+  };
+}
+
+function extractEntitiesFromHtml(html, pageUrl) {
+  const entities = [];
+  for (const raw of findJsonLdBlocks(html)) {
+    const parsed = parseAnyJson(raw);
+    if (!parsed) continue;
+    const candidates = flattenJsonLd(parsed);
+    for (const node of candidates) {
+      const ent = normalizeEntity(node, pageUrl);
+      if (ent) entities.push(ent);
+    }
+  }
+  return entities;
+}
+
+function entitySnippets(entities) {
+  // Short labeled lines to prepend to content to bias retrieval
+  const lines = [];
+  for (const e of entities) {
+    if (e.kind === 'event') {
+      lines.push(
+        `[EVENT] ${e.title || ''}${e.date_start ? ` • Date: ${e.date_start}` : ''}${
+          e.location ? ` • Location: ${e.location}` : ''
+        }${e.price ? ` • Price: ${e.price}${e.price_currency ? ' ' + e.price_currency : ''}` : ''}${
+          e.source_url ? ` • URL: ${e.source_url}` : ''
+        }`
+      );
+    } else if (e.kind === 'article') {
+      lines.push(
+        `[ARTICLE] ${e.title || ''}${e.date_start ? ` • Published: ${e.date_start}` : ''}${
+          e.source_url ? ` • URL: ${e.source_url}` : ''
+        }`
+      );
+    } else if (e.kind === 'product') {
+      lines.push(
+        `[PRODUCT] ${e.title || ''}${e.price ? ` • Price: ${e.price}${e.price_currency ? ' ' + e.price_currency : ''}` : ''}${
+          e.availability ? ` • Availability: ${e.availability}` : ''
+        }${e.source_url ? ` • URL: ${e.source_url}` : ''}`
+      );
+    } else if (e.kind === 'service') {
+      lines.push(
+        `[SERVICE] ${e.title || ''}${e.provider ? ` • Provider: ${e.provider}` : ''}${
+          e.source_url ? ` • URL: ${e.source_url}` : ''
+        }`
+      );
+    }
+  }
+  return lines.length ? lines.join('\n') + '\n\n' : '';
+}
+
+/* ========== embeddings (OpenAI) ========== */
 async function getEmbeddings(inputs) {
   const oaKey = need('OPENAI_API_KEY');
+
   const body = JSON.stringify({ model: 'text-embedding-3-small', input: inputs });
   const resp = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
@@ -91,120 +280,22 @@ async function getEmbeddings(inputs) {
     },
     body
   });
-  const ct = (resp.headers.get('content-type')||'').toLowerCase();
+
+  const ct = (resp.headers.get('content-type') || '').toLowerCase();
   const text = await resp.text();
-  if (!resp.ok) throw new Error(`openai_error:${resp.status}:${text.slice(0,300)}`);
-  if (!ct.includes('application/json')) throw new Error(`openai_bad_content_type:${ct||'(none)'}:${text.slice(0,300)}`);
-  let j; try { j = JSON.parse(text); } catch(e){ throw new Error(`openai_bad_json:${e?.message||e}`); }
-  const out = (j?.data||[]).map(d => d?.embedding);
+
+  if (!resp.ok) throw new Error(`openai_error:${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
+  if (!ct.includes('application/json')) throw new Error(`openai_bad_content_type:${ct || '(none)'}:status=${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
+
+  let j;
+  try { j = JSON.parse(text); } catch (e) { throw new Error(`openai_bad_json:${String(e?.message || e)}`); }
+  const out = (j?.data || []).map(d => d?.embedding);
   if (!out.length) throw new Error('openai_empty_embeddings');
   if (!Array.isArray(out[0]) || out[0].length !== 1536) throw new Error('openai_bad_embedding_dim');
   return out;
 }
 
-// ---------- JSON-LD extraction (no imports) ----------
-function getJsonLdBlocks(html){
-  const out = [];
-  const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
-  let m; while ((m = re.exec(html))){ const raw = (m[1]||'').trim(); if (raw) out.push(raw); }
-  return out;
-}
-function arrayify(x){ return Array.isArray(x) ? x : (x != null ? [x] : []); }
-function lastSeg(s){ if(!s) return s; const i = s.lastIndexOf('/'); return i>=0 ? s.slice(i+1) : s; }
-function toNumber(x){ const n = Number(x); return Number.isFinite(n) ? n : null; }
-function toDate(x){ if(!x) return null; const d = new Date(x); return isNaN(d.getTime()) ? null : d.toISOString(); }
-
-function flattenLD(node, out=[]) {
-  if (!node || typeof node !== 'object') return out;
-  if (Array.isArray(node)) { node.forEach(n => flattenLD(n, out)); return out; }
-  const types = arrayify(node['@type']).map(String);
-  if (types.length) out.push(node);
-  for (const k of Object.keys(node)) {
-    const v = node[k];
-    if (v && typeof v === 'object') flattenLD(v, out);
-  }
-  return out;
-}
-
-function normaliseEntity(n, sourceUrl){
-  const types = arrayify(n['@type']).map(String);
-  const kind = ['Event','Product','Service','Article','Course','CourseInstance']
-    .find(t => types.some(tt => tt.toLowerCase().includes(t.toLowerCase())));
-  if (!kind) return null;
-
-  const offers = n.offers || {};
-  const loc = n.location || {};
-  const url = n.url || n.mainEntityOfPage || sourceUrl;
-
-  const price = toNumber(offers.price ?? n.price);
-  const priceCurrency = offers.priceCurrency ?? n.priceCurrency ?? null;
-  const availability = lastSeg(offers.availability ?? n.availability ?? '') || null;
-
-  const location =
-    (typeof loc === 'string' && loc) ||
-    loc.name || (loc.address && (loc.address.streetAddress || loc.address.addressLocality || loc.address)) || null;
-
-  const title = n.name || n.headline || n.title || null;
-
-  const row = {
-    url,                              // canonical url of the entity (if present)
-    source_url: sourceUrl,            // page where we found it (REPLACE by this)
-    kind: (kind === 'CourseInstance' ? 'Event' : (kind === 'Course' ? 'Service' : kind)).toLowerCase(), // event/product/service/article
-    title,
-    description: n.description || null,
-    date_start: toDate(n.startDate || n.datePublished || null),
-    date_end:   toDate(n.endDate   || n.dateModified  || null),
-    location,
-    price,
-    price_currency: priceCurrency,
-    availability,
-    sku: n.sku || null,
-    provider: (n.provider?.name || n.brand?.name || n.organizer?.name || null),
-    raw: n,
-    entity_hash: sha1(JSON.stringify({url, sourceUrl, kind, title, date_start: n.startDate, date_end: n.endDate, price, priceCurrency})),
-    last_seen: nowIso(),
-  };
-  return row;
-}
-
-function extractEntitiesFromHtml(html, sourceUrl){
-  const blocks = getJsonLdBlocks(html);
-  const rows = [];
-  for (const raw of blocks){
-    try {
-      const parsed = JSON.parse(raw);
-      const nodes = flattenLD(parsed);
-      for (const n of nodes){
-        const r = normaliseEntity(n, sourceUrl);
-        if (r) rows.push(r);
-      }
-    } catch { /* ignore bad JSON-LD */ }
-  }
-  // de-dupe by entity_hash
-  const uniq = new Map();
-  for (const r of rows){ if (!uniq.has(r.entity_hash)) uniq.set(r.entity_hash, r); }
-  return Array.from(uniq.values());
-}
-
-// Build short summaries to prepend into the page text (helps retrieval)
-function summariesForChunks(entities){
-  const lines = [];
-  for (const e of entities){
-    if (e.kind === 'event') {
-      const ds = e.date_start ? new Date(e.date_start).toISOString().slice(0,10) : '';
-      lines.push(`[EVENT] ${e.title || 'Event'}${ds?` — ${ds}`:''}${e.location?` — ${e.location}`:''}${e.price?` — £${e.price}`:''} ${e.url||e.source_url||''}`);
-    } else if (e.kind === 'product') {
-      lines.push(`[PRODUCT] ${e.title || 'Product'}${e.price?` — £${e.price}`:''} ${e.url||e.source_url||''}`);
-    } else if (e.kind === 'service') {
-      lines.push(`[SERVICE] ${e.title || 'Service'} ${e.url||e.source_url||''}`);
-    } else if (e.kind === 'article') {
-      lines.push(`[ARTICLE] ${e.title || 'Article'} ${e.url||e.source_url||''}`);
-    }
-  }
-  return lines.length ? (lines.join('\n') + '\n\n') : '';
-}
-
-// ---------- handler ----------
+/* ========== handler ========== */
 export default async function handler(req, res) {
   if (req.method !== 'POST') return sendJSON(res, 405, { error: 'method_not_allowed' });
 
@@ -221,18 +312,34 @@ export default async function handler(req, res) {
     stage = 'db_client';
     const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
 
+    /* 1) Fetch page */
     stage = 'fetch_page';
-    const { html, text: baseText } = await fetchPage(url);
-    if (!baseText || baseText.length < 10) return sendJSON(res, 422, { error: 'empty_content', stage });
+    const { html, text: rawText } = await fetchPage(url);
+    if (!rawText || rawText.length < 10) return sendJSON(res, 422, { error: 'empty_content', stage });
 
-    stage = 'extract_jsonld';
+    /* 2) Extract JSON-LD entities */
+    stage = 'extract_entities';
     const entities = extractEntitiesFromHtml(html, url);
 
-    // Put concise JSON-LD summaries before the page text so chunks carry them
-    const text = summariesForChunks(entities) + baseText;
+    /* 3) REPLACE entities for this URL */
+    stage = 'replace_entities';
+    {
+      const { error: delE } = await supa.from('page_entities').delete().eq('url', url);
+      if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
+
+      if (entities.length) {
+        const { error: insE } = await supa.from('page_entities').upsert(entities, { onConflict: 'entity_hash' });
+        if (insE) return sendJSON(res, 500, { error: 'supabase_entities_upsert_failed', detail: insE.message || insE, stage });
+      }
+    }
+
+    /* 4) Enrich text with entity snippets, then chunk + embed */
+    stage = 'prepare_text';
+    const preface = entitySnippets(entities);
+    const fullText = preface + rawText;
 
     stage = 'chunk';
-    const chunks = chunkText(text);
+    const chunks = chunkText(fullText);
     if (!chunks.length) return sendJSON(res, 422, { error: 'no_chunks', stage });
 
     stage = 'embed';
@@ -248,54 +355,36 @@ export default async function handler(req, res) {
       hash: sha1(`${url}#${i}:${content.slice(0, 128)}`)
     }));
 
-    // ---------- REPLACE CHUNKS ----------
+    /* 5) REPLACE chunks for this URL */
     stage = 'delete_old_chunks';
-    { const { error: delErr } = await supa.from('page_chunks').delete().eq('url', url);
-      if (delErr) return sendJSON(res, 500, { error: 'supabase_delete_failed', detail: delErr.message || delErr, stage });
+    {
+      const { error: delC } = await supa.from('page_chunks').delete().eq('url', url);
+      if (delC) return sendJSON(res, 500, { error: 'supabase_delete_failed', detail: delC.message || delC, stage });
     }
 
     stage = 'upsert_chunks';
+    let firstChunkId = null;
     {
-      const { data, error } = await supa
+      const { data: ins, error } = await supa
         .from('page_chunks')
         .upsert(rows, { onConflict: 'hash' })
         .select('id')
         .order('id', { ascending: false });
+
       if (error) return sendJSON(res, 500, { error: 'supabase_upsert_failed', detail: error.message || error, stage });
+      firstChunkId = ins?.[0]?.id ?? null;
     }
 
-    // ---------- REPLACE ENTITIES ----------
-    stage = 'replace_entities';
-    {
-      // Replace “what we found on this page”
-      const { error: delE } = await supa.from('page_entities').delete().eq('source_url', url);
-      if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
-
-      if (entities.length) {
-        const { error: insE } = await supa.from('page_entities').insert(entities.map(e => ({
-          url: e.url,
-          source_url: e.source_url,
-          kind: e.kind,
-          title: e.title,
-          description: e.description,
-          date_start: e.date_start,
-          date_end: e.date_end,
-          location: e.location,
-          price: e.price,
-          price_currency: e.price_currency,
-          availability: e.availability,
-          sku: e.sku,
-          provider: e.provider,
-          raw: e.raw,
-          entity_hash: e.entity_hash,
-          last_seen: e.last_seen
-        })));
-        if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
-      }
-    }
-
+    /* 6) Done */
     stage = 'done';
-    return sendJSON(res, 200, { ok: true, len: text.length, chunks: rows.length, entities: entities.length, stage });
+    return sendJSON(res, 200, {
+      ok: true,
+      id: firstChunkId,
+      len: fullText.length,
+      chunks: rows.length,
+      entities: entities.length,
+      stage
+    });
   } catch (err) {
     return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
   }
