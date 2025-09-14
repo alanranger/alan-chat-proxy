@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Upload URL List to Train AI Bot — v0.12</title>
+  <title>Upload URL List to Train AI Bot — v0.3.1</title>
   <link rel="stylesheet" href="/_next/static/css/081a0fca5a9bd20.css"/>
   <style>
     body { background:#0b1220; color:#dbe4ff; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:24px; }
@@ -12,9 +12,9 @@
     .card { background:#0f172a; border:1px solid #1b2540; border-radius:8px; padding:16px; margin-bottom:16px; }
     .w-1 { flex:1 } .w-2 { flex:2 } .w-3 { flex:3 }
     input, textarea { width:100%; background:#0b1426; border:1px solid #1b2540; color:#dbe4ff; padding:10px 12px; border-radius:6px; }
-    button { background:#2563eb; color:white; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
+    button { background:#2563eb; color:#fff; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
     button:disabled{opacity:.5; cursor:not-allowed}
-    .pill { padding:3px 8px; border-radius:999px; border:1px solid #1b2540; }
+    .pill { padding:3px 10px; border-radius:999px; border:1px solid #1b2540; background:#0b1426; font-weight:600; letter-spacing:.2px; }
     .ok  { color:#22c55e; } .bad { color:#ef4444; }
     .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace }
     table { width:100%; border-collapse:collapse; }
@@ -28,165 +28,178 @@
     .answer { white-space:pre-wrap; }
     .chips a { display:inline-block; margin-right:6px; margin-bottom:6px; border:1px solid #1b2540; border-radius:999px; padding:4px 8px; color:#dbe4ff; text-decoration:none; }
     .chips a:hover { background:#13203e; }
-    .toolbar { display:flex; align-items:center; gap:10px; }
-    .ver { font-size:12px; opacity:.75; padding-left:6px; }
-    .btns button { margin-right:8px; margin-bottom:8px; }
+    .header { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:16px; }
+    .header h2 { margin:0; }
+    .ver { background:#13203e; border-color:#26406f; }
   </style>
 </head>
 <body>
 <div class="container">
 
-<h2 class="toolbar">
-  Upload URL List to Train AI Bot
-  <span class="ver">v0.12</span>
-</h2>
-
-<!-- top controls -->
-<div class="row">
-  <div class="card w-1">
-    <div><small>INGEST TOKEN (BEARER)</small></div>
-    <input id="token" placeholder="your token" />
-    <small>Saved locally; sent as <span class="mono">Authorization: Bearer …</span></small>
+  <div class="header">
+    <h2>Upload URL List to Train AI Bot</h2>
+    <span id="ver" class="pill ver mono">v0.3.1</span>
   </div>
 
-  <div class="card w-2">
-    <div><small>CSV FILE</small></div>
-    <input id="csv" type="file" accept=".csv" />
-    <small>Must include a <span class="mono">url</span> column (optional <span class="mono">title</span>).</small>
+  <!-- top controls -->
+  <div class="row">
+    <div class="card w-1">
+      <div><small>INGEST TOKEN (BEARER)</small></div>
+      <input id="token" placeholder="your token" />
+      <small>Saved locally; sent as <span class="mono">Authorization: Bearer …</span></small>
+    </div>
+
+    <div class="card w-2">
+      <div><small>CSV FILE</small></div>
+      <input id="csv" type="file" accept=".csv" />
+      <small>Must include a <span class="mono">url</span> column (optional <span class="mono">title</span>).</small>
+    </div>
+
+    <div class="card w-1">
+      <div class="row">
+        <div class="w-1">
+          <div><small>CONCURRENCY</small></div>
+          <input id="concurrency" value="3" />
+        </div>
+        <div class="w-1">
+          <div><small>DELAY BETWEEN REQUESTS (MS)</small></div>
+          <input id="delay" value="400" />
+        </div>
+      </div>
+      <small>Each request goes to <span class="mono">/api/ingest-embed-replace</span>.</small>
+    </div>
   </div>
 
-  <div class="card w-1">
+  <!-- single test -->
+  <div class="card">
+    <div><small>Test a Single URL</small></div>
     <div class="row">
-      <div class="w-1">
-        <div><small>CONCURRENCY</small></div>
-        <input id="concurrency" value="3" />
+      <input id="single" class="w-3" placeholder="https://example.com/page" />
+      <button id="test">Test Single URL</button>
+    </div>
+    <pre id="debug" class="mono"></pre>
+  </div>
+
+  <!-- paste + crawl -->
+  <div class="card">
+    <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
+    <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+    <div style="margin-top:10px" class="row">
+      <button id="crawl">Crawl & Ingest</button>
+      <button id="stop" disabled>Stop</button>
+      <span class="pill">Loaded <span id="loaded">0</span> rows</span>
+      <span id="succPill" class="pill ok">Success: <span id="succ">0</span></span>
+      <span id="failPill" class="pill bad">Failed: <span id="fail">0</span></span>
+      <span class="pill">Stopped: <span id="stopped">0</span></span>
+    </div>
+  </div>
+
+  <!-- debug console -->
+  <div class="card">
+    <div><small>Debug console (what the client sees)</small></div>
+    <pre id="console" class="mono"></pre>
+  </div>
+
+  <!-- results table -->
+  <div class="card">
+    <table>
+      <thead><tr><th style="width:60px">#</th><th>URL</th><th>Result <span class="muted">(includes DB verify)</span></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <!-- search tester -->
+  <div class="card">
+    <h3 style="margin-top:4px;margin-bottom:8px">AI Search Tester</h3>
+    <div class="row">
+      <div class="w-3">
+        <div><small>Query</small></div>
+        <input id="query" placeholder="e.g. photography workshops in Coventry"/>
       </div>
       <div class="w-1">
-        <div><small>DELAY BETWEEN REQUESTS (MS)</small></div>
-        <input id="delay" value="400" />
+        <div><small>topK</small></div>
+        <input id="topk" value="8"/>
+      </div>
+      <div class="w-1" style="display:flex;align-items:flex-end">
+        <button id="runSearch" style="width:100%">Run Search</button>
       </div>
     </div>
-    <small>Each request goes to <span class="mono">/api/ingest-embed-replace</span>.</small>
   </div>
-</div>
 
-<!-- single test -->
-<div class="card">
-  <div><small>Test a Single URL</small></div>
-  <div class="row">
-    <input id="single" class="w-3" placeholder="https://example.com/page" />
-    <button id="test">Test Single URL</button>
+  <div class="card">
+    <div><small>Search Results (grouped by URL)</small></div>
+    <table>
+      <thead><tr><th style="width:120px">Best Score / Chunks</th><th>URL</th><th>Snippet</th></tr></thead>
+      <tbody id="srows"></tbody>
+    </table>
   </div>
-  <pre id="debug" class="mono"></pre>
-</div>
 
-<!-- paste + crawl -->
-<div class="card">
-  <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
-  <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
-  <div style="margin-top:10px" class="row">
-    <button id="crawl">Crawl & Ingest</button>
-    <button id="stop" disabled>Stop</button>
-    <span class="pill">Loaded <span id="loaded">0</span> rows</span>
-    <span id="succPill" class="pill ok">Success: <span id="succ">0</span></span>
-    <span id="failPill" class="pill bad">Failed: <span id="fail">0</span></span>
-    <span class="pill">Stopped: <span id="stopped">0</span></span>
+  <div class="card">
+    <div><small>Search Raw Response</small></div>
+    <pre id="sraw" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
   </div>
-</div>
 
-<!-- debug -->
-<div class="card">
-  <div><small>Debug console (what the client sees)</small></div>
-  <pre id="console" class="mono"></pre>
-</div>
-
-<!-- results table -->
-<div class="card">
-  <table>
-    <thead><tr><th style="width:60px">#</th><th>URL</th><th>Result <span class="muted">(includes DB verify)</span></th></tr></thead>
-    <tbody id="rows"></tbody>
-  </table>
-</div>
-
-<!-- search tester (kept) -->
-<div class="card">
-  <h3 style="margin-top:4px;margin-bottom:8px">AI Search Tester</h3>
-  <div class="row">
-    <div class="w-3">
-      <div><small>Query</small></div>
-      <input id="query" placeholder="e.g. photography workshops in Coventry"/>
+  <!-- JSON-LD extraction tester -->
+  <div class="card">
+    <h3 style="margin:4px 0 12px">Extract structured content (JSON-LD)</h3>
+    <div class="row">
+      <div class="w-3">
+        <div><small>URL</small></div>
+        <input id="exUrl" placeholder="https://www.alanranger.com/some-page" />
+      </div>
+      <div class="w-1" style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap">
+        <button id="exEvents">Events/Courses</button>
+        <button id="exArticles">Articles</button>
+        <button id="exProducts">Products</button>
+        <button id="exServices">Services</button>
+        <button id="exAll">All</button>
+      </div>
     </div>
-    <div class="w-1">
-      <div><small>topK</small></div>
-      <input id="topk" value="8"/>
-    </div>
-    <div class="w-1" style="display:flex;align-items:flex-end">
-      <button id="runSearch" style="width:100%">Run Search</button>
-    </div>
-  </div>
-</div>
-
-<div class="card">
-  <div><small>Search Results (grouped by URL)</small></div>
-  <table>
-    <thead><tr><th style="width:120px">Best Score / Chunks</th><th>URL</th><th>Snippet</th></tr></thead>
-    <tbody id="srows"></tbody>
-  </table>
-</div>
-
-<div class="card">
-  <div><small>Search Raw Response</small></div>
-  <pre id="sraw" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
-</div>
-
-<!-- AI Bot (RAG) -->
-<div class="card">
-  <h3 style="margin:4px 0 12px">AI Bot (RAG)</h3>
-  <div class="row">
-    <div class="w-3">
-      <div><small>Ask a question</small></div>
-      <input id="chatQ" placeholder="e.g. Which workshops are best for beginners?" />
-    </div>
-    <div class="w-1">
-      <div><small>topK (context docs)</small></div>
-      <input id="chatTopK" value="8" />
-    </div>
-    <div class="w-1" style="display:flex;align-items:flex-end">
-      <button id="ask" style="width:100%">Ask</button>
+    <div style="margin-top:10px">
+      <div class="muted" style="margin-bottom:6px"><small>Result</small></div>
+      <pre id="exOut" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
     </div>
   </div>
 
-  <div style="margin-top:14px">
-    <div class="muted" style="margin-bottom:6px"><small>Answer</small></div>
-    <div id="answer" class="answer mono"></div>
-  </div>
+  <!-- AI Bot (RAG) -->
+  <div class="card">
+    <h3 style="margin:4px 0 12px">AI Bot (RAG)</h3>
+    <div class="row">
+      <div class="w-3">
+        <div><small>Ask a question</small></div>
+        <input id="chatQ" placeholder="e.g. Which workshops are best for beginners?" />
+      </div>
+      <div class="w-1">
+        <div><small>topK (context docs)</small></div>
+        <input id="chatTopK" value="8" />
+      </div>
+      <div class="w-1" style="display:flex;align-items:flex-end">
+        <button id="ask" style="width:100%">Ask</button>
+      </div>
+    </div>
 
-  <div style="margin-top:12px">
-    <div class="muted" style="margin-bottom:6px"><small>Citations</small></div>
-    <div id="citations" class="chips"></div>
+    <div style="margin-top:14px">
+      <div class="muted" style="margin-bottom:6px"><small>Answer</small></div>
+      <div id="answer" class="answer mono"></div>
+    </div>
+    <div style="margin-top:12px">
+      <div class="muted" style="margin-bottom:6px"><small>Citations</small></div>
+      <div id="citations" class="chips"></div>
+    </div>
   </div>
-</div>
-
-<!-- JSON-LD extractor (NEW) -->
-<div class="card">
-  <h3 style="margin:4px 0 12px">Extract structured content (JSON-LD)</h3>
-  <div><small>URL</small></div>
-  <input id="jlUrl" placeholder="https://example.com/some-page"/>
-  <div class="btns" style="margin-top:10px">
-    <button id="btnEvents">Events/Courses</button>
-    <button id="btnArticles">Articles</button>
-    <button id="btnProducts">Products</button>
-    <button id="btnServices">Services</button>
-    <button id="btnAll">All (includes Events)</button>
-  </div>
-  <div style="margin-top:10px"><small>Result</small></div>
-  <pre id="jlOut" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
-</div>
 
 </div><!-- /container -->
 
 <script>
-/* ---------- util ---------- */
+/* ====== Version badge ====== */
+const VERSION = 'v0.3.1';
+document.title = `Upload URL List to Train AI Bot — ${VERSION}`;
+window.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('ver');
+  if (el) el.textContent = VERSION;
+});
+
+/* ====== Helpers & state ====== */
 const $ = (id) => document.getElementById(id);
 const log = (s) => { const c = $('console'); c.textContent += s + "\\n"; c.scrollTop = c.scrollHeight; };
 const saveToken = () => localStorage.setItem('ingest_token', $('token').value || '');
@@ -197,9 +210,9 @@ $('token').addEventListener('input', saveToken);
 /* ---------- CSV handling ---------- */
 let csvUrls = [];
 function parseCSV(text) {
-  const firstLine = text.split(/\\r?\\n/)[0] || '';
+  const firstLine = text.split(/\r?\n/)[0] || '';
   let delim = ',';
-  const counts = [[',', (firstLine.match(/,/g)||[]).length],[';', (firstLine.match(/;/g)||[]).length],['\\t', (firstLine.match(/\\t/g)||[]).length]].sort((a,b)=>b[1]-a[1]);
+  const counts = [[',', (firstLine.match(/,/g)||[]).length],[';', (firstLine.match(/;/g)||[]).length],['\t', (firstLine.match(/\t/g)||[]).length]].sort((a,b)=>b[1]-a[1]);
   if (counts[0][1] > 0) delim = counts[0][0];
   const rows = []; let row=[], val='', inQ=false;
   function pushVal(){ row.push(val); val=''; }
@@ -213,8 +226,8 @@ function parseCSV(text) {
     } else {
       if (ch==='"'){ inQ=true; }
       else if (ch===delim){ pushVal(); }
-      else if (ch==='\\n'){ pushVal(); pushRow(); }
-      else if (ch!=='\\r'){ val+=ch; }
+      else if (ch==='\n'){ pushVal(); pushRow(); }
+      else if (ch!=='\r'){ val+=ch; }
     }
   }
   if (val.length || row.length){ pushVal(); pushRow(); }
@@ -227,7 +240,7 @@ function parseCSV(text) {
   return data;
 }
 function updateLoadedPill() {
-  const pasted = $('paste').value.split('\\n').map(s=>s.trim()).filter(Boolean);
+  const pasted = $('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const set = new Set([...csvUrls, ...pasted]);
   $('loaded').textContent = String(set.size);
 }
@@ -289,10 +302,11 @@ async function callChat(question, topK) {
   let body; try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
   return body;
 }
-async function callExtract(kind, url) {
-  const r = await fetch(`/api/extract?type=${encodeURIComponent(kind)}&url=${encodeURIComponent(url)}`);
-  let body; try { body = await r.json(); } catch { body = { error:'non_json' }; }
-  return body;
+async function callExtract(action, url) {
+  const r = await fetch(`/api/extract?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`);
+  const raw = await r.text().catch(()=> '');
+  let j; try { j = JSON.parse(raw); } catch { j = { error:'non_json', raw: raw.slice(0, 400) }; }
+  return j;
 }
 
 /* ---------- ingest test ---------- */
@@ -343,7 +357,7 @@ let stopFlag = false;
 $('stop').onclick = () => { stopFlag = true; $('stop').disabled = true; };
 $('crawl').onclick = async () => {
   stopFlag = false; $('stop').disabled = false;
-  const pasted = $('paste').value.split('\\n').map(s=>s.trim()).filter(Boolean);
+  const pasted = $('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const combined = [...new Set([...csvUrls, ...pasted])];
   $('loaded').textContent = String(combined.length);
   $('succ').textContent = '0'; $('fail').textContent = '0';
@@ -356,7 +370,7 @@ $('crawl').onclick = async () => {
   const runners = Array.from({length:conc}, ()=> (async function run(){
     while (!stopFlag && q.length) {
       const u = q.shift();
-      const { ok, status, body } = await callIngest(u);
+      const { ok, body } = await callIngest(u);
       if (ok) {
         const tr = addRow(u, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
         verifyAndAnnotate(u, tr);
@@ -375,10 +389,10 @@ $('crawl').onclick = async () => {
 };
 
 /* ---------- search tester ---------- */
-function normalizeMdLinks(s){ if(!s) return ''; s=s.replace(/!\\[([^\\]]*)\\]\\([^)]+\\)/g,'$1'); s=s.replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g,'$1'); return s; }
-function cleanText(s){ s=normalizeMdLinks(s||''); s=s.replace(/[\\[\\]\\(\\)]/g,' '); s=s.replace(/https?:\\/\\/\\S+/g,' '); return s.replace(/\\s+/g,' ').trim(); }
-function sentenceSpans(text){ const spans=[]; let start=0; for(let i=0;i<text.length;i++){ const ch=text[i]; if(ch==='.'||ch==='!'||ch==='?'||ch==='\\n'||ch==='|'){ const end=i+1; const seg=text.slice(start,end).trim(); if(seg)spans.push([start,end,seg]); start=end; } } if(start<text.length){ const seg=text.slice(start).trim(); if(seg)spans.push([start,text.length,seg]); } return spans; }
-function tidyStart(s){ s=(s||'').replace(/^[\\)\\]\\}\\.,;:\\/\\\\\\-—–•\\s]+/u,'').trim(); const sp=s.indexOf(' '); if(s && !/^[A-Za-z0-9]/.test(s[0]) && sp>0) s=s.slice(sp+1).trim(); return s; }
+function normalizeMdLinks(s){ if(!s) return ''; s=s.replace(/!\[([^\]]*)\]\([^)]+\)/g,'$1'); s=s.replace(/\[([^\]]+)\]\([^)]+\)/g,'$1'); return s; }
+function cleanText(s){ s=normalizeMdLinks(s||''); s=s.replace(/[\[\]\(\)]/g,' '); s=s.replace(/https?:\/\/\S+/g,' '); return s.replace(/\s+/g,' ').trim(); }
+function sentenceSpans(text){ const spans=[]; let start=0; for(let i=0;i<text.length;i++){ const ch=text[i]; if(ch==='.'||ch==='!'||ch==='?'||ch==='\n'||ch==='|'){ const end=i+1; const seg=text.slice(start,end).trim(); if(seg)spans.push([start,end,seg]); start=end; } } if(start<text.length){ const seg=text.slice(start).trim(); if(seg)spans.push([start,text.length,seg]); } return spans; }
+function tidyStart(s){ s=(s||'').replace(/^[\)\]\}\.,;:\/\\\-—–•\s]+/u,'').trim(); const sp=s.indexOf(' '); if(s && !/^[A-Za-z0-9]/.test(s[0]) && sp>0) s=s.slice(sp+1).trim(); return s; }
 function sentenceSnippet(content,terms,minChars=80){ const text=cleanText(content); if(!text) return ''; const lc=text.toLowerCase(); let pos=-1; if(terms.length){ for(const t of terms){ const i=lc.indexOf(t); if(i!==-1) pos=(pos===-1)?i:Math.min(pos,i);} } const spans=sentenceSpans(text); if(!spans.length) return text; let idx=0; if(pos!==-1){ for(let i=0;i<spans.length;i++){ const[s,e]=spans[i]; if(pos>=s && pos<e){ idx=i; break; } } } let snippet=tidyStart(spans[idx][2]); if(snippet.length<minChars && spans[idx+1]) snippet=(snippet+' '+tidyStart(spans[idx+1][2])).trim(); return snippet; }
 
 $('runSearch').onclick = async () => {
@@ -393,7 +407,7 @@ $('runSearch').onclick = async () => {
 
   const matches = (body && body.matches) || [];
   const groups = new Map();
-  const terms = query.toLowerCase().split(/\\s+/).filter(Boolean);
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
 
   for (const m of matches) {
     if (!m || !m.url) continue;
@@ -435,25 +449,24 @@ $('ask').onclick = async () => {
     $('answer').textContent = (res && (res.detail || res.error)) || 'chat_failed';
     return;
   }
-
   $('answer').textContent = res.answer || '';
   const cites = Array.from(new Set(res.citations || []));
   $('citations').innerHTML = cites.map(u => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`).join('');
 };
 
-/* ---------- JSON-LD extractor section ---------- */
-async function runExtract(kind){
-  const url = $('jlUrl').value.trim();
-  if(!url){ $('jlOut').textContent = 'Enter a URL.'; return; }
-  $('jlOut').textContent = 'Fetching…';
-  const body = await callExtract(kind, url);
-  $('jlOut').textContent = JSON.stringify(body, null, 2);
+/* ---------- Extract tester bindings ---------- */
+async function runExtract(action){
+  const url = $('exUrl').value.trim();
+  if (!url) { $('exOut').textContent = 'Please enter a URL.'; return; }
+  $('exOut').textContent = 'Fetching…';
+  const out = await callExtract(action, url);
+  $('exOut').textContent = JSON.stringify(out, null, 2);
 }
-$('btnEvents').onclick   = () => runExtract('events');
-$('btnArticles').onclick = () => runExtract('articles');
-$('btnProducts').onclick = () => runExtract('products');
-$('btnServices').onclick = () => runExtract('services');
-$('btnAll').onclick      = () => runExtract('all');
+$('exEvents').onclick   = () => runExtract('events-extract');
+$('exArticles').onclick = () => runExtract('articles-extract');
+$('exProducts').onclick = () => runExtract('products-extract');
+$('exServices').onclick = () => runExtract('services-extract');
+$('exAll').onclick      = () => runExtract('extract-all');
 
 /* sensible default single test url */
 $('single').value = 'https://www.alanranger.com/photography-workshops';
