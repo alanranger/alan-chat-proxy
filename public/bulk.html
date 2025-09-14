@@ -27,7 +27,8 @@
     .header{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:16px; }
     .header h2{ margin:0 }
     .pill.ver{ background:#13203e; border-color:#26406f }
-    /* Collapsible console (failed only) */
+
+    /* Collapsible console (FAILED ONLY) */
     details.console{border:1px solid #1b2540; border-radius:8px; background:#0b1426;}
     details.console summary{cursor:pointer; list-style:none; padding:10px 12px; font-weight:700; color:#c7d7ff;}
     details.console summary::-webkit-details-marker{display:none}
@@ -96,7 +97,7 @@
     </div>
   </div>
 
-  <!-- debug console (FAILED ONLY) -->
+  <!-- debug console (FAILED ONLY; collapsed until the first error) -->
   <div class="card">
     <details id="consoleWrap" class="console">
       <summary>Debug console (what the client sees)</summary>
@@ -212,9 +213,12 @@ const escapeHtml = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&
 const saveToken = () => localStorage.setItem('ingest_token', $('token').value || '');
 $('token').value = localStorage.getItem('ingest_token') || '';
 
-/* Failed-only console */
+/* Failed-only console (collapsed until first error) */
 const consoleWrap = $('consoleWrap'); consoleWrap.open = false;
-const logError = (s) => { const c=$('console'); c.textContent += s + "\n"; c.scrollTop = c.scrollHeight; };
+const logError = (s) => {
+  if (!consoleWrap.open) consoleWrap.open = true; // auto-open on first fail
+  const c=$('console'); c.textContent += s + "\n"; c.scrollTop = c.scrollHeight;
+};
 
 /* ---------- CSV handling ---------- */
 let csvUrls = [];
@@ -243,9 +247,7 @@ function parseCSV(text) {
   if (!rows.length) return [];
 
   const header = rows[0].map(h => (h||'').trim().toLowerCase());
-  const data = rows.slice(1).map(r => {
-    const o = {}; for (let i=0;i<header.length;i++){ o[header[i]] = (r[i]||'').trim(); } return o;
-  });
+  const data = rows.slice(1).map(r => { const o = {}; for (let i=0;i<header.length;i++){ o[header[i]] = (r[i]||'').trim(); } return o; });
   data.__header = header;
   return data;
 }
@@ -263,16 +265,13 @@ $('csv').addEventListener('change', async (e)=>{
   const h = rows.__header || [];
   const idx = h.indexOf('url');
   if (idx !== -1) {
-    for (const r of rows) {
-      if (r.url) csvUrls.push(r.url.trim());
-      else if (Array.isArray(r)) { /* parser rows variant: ignore */ }
-    }
+    for (const r of rows) if (r.url) csvUrls.push(r.url.trim());
   }
   updateLoadedPill();
 });
 $('paste').addEventListener('input', updateLoadedPill);
 
-/* ---------- fetch helpers (light retry for 503) ---------- */
+/* ---------- fetch helpers (retry for transient 503/OpenAI hiccups) ---------- */
 const bearer = () => {
   const tok = $('token').value.trim();
   return tok ? { 'Authorization': `Bearer ${tok}` } : {};
@@ -301,11 +300,11 @@ async function callIngest(url){
 async function callVerify(url){
   return fetchJson(`/api/tools?action=verify&url=${encodeURIComponent(url)}`, { headers: { ...bearer() } });
 }
-async function callSearch(query, topk){
+async function callSearch(query, topK){
   return fetchJson('/api/tools?action=search', {
     method:'POST',
     headers:{ 'Content-Type':'application/json', ...bearer() },
-    body: JSON.stringify({ q: query, topK: Number(topk||8) })
+    body: JSON.stringify({ q: query, topK: Number(topK||8) })
   });
 }
 async function callExtract(action, url){
@@ -321,22 +320,7 @@ async function callChat(q, topK){
   });
 }
 
-/* ---------- ingest single ---------- */
-$('test').onclick = async () => {
-  saveToken();
-  const u = $('single').value.trim();
-  if (!u) return;
-  $('debug').textContent = '…';
-  try {
-    const body = await callIngest(u);
-    $('debug').textContent = JSON.stringify(body, null, 2);
-  } catch (e) {
-    $('debug').textContent = JSON.stringify({ ok:false, error: String(e?.message||e) }, null, 2);
-    logError(`Single ingest FAILED for ${u} — ${e && e.message ? e.message : e}`);
-  }
-};
-
-/* ---------- results table helpers ---------- */
+/* ---------- table helpers ---------- */
 function addRow(url, text, ok){
   const tr = document.createElement('tr');
   tr.innerHTML = `<td class="mono"></td>
@@ -346,18 +330,35 @@ function addRow(url, text, ok){
   tr.firstChild.textContent = String($('rows').children.length);
   return tr;
 }
-async function verifyAndAnnotate(url, trCell){
+async function verifyAndAnnotate(url, tr){
   try {
     const v = await callVerify(url);
     const extra = (v && v.ok) ? ` | DB: chunks=${v.chunks ?? '?'} len=${v.len ?? '?'}` : '';
-    trCell.lastChild.innerHTML += escapeHtml(extra);
+    tr.lastChild.innerHTML += escapeHtml(extra);
   } catch(e) {
-    // only failures go to console
     logError(`DB verify FAILED for ${url} — ${e && e.message ? e.message : e}`);
   }
 }
 
-/* ---------- crawl & ingest ---------- */
+/* ---------- ingest single (same behavior as batch: table + DB verify) ---------- */
+$('test').onclick = async () => {
+  saveToken();
+  const u = $('single').value.trim();
+  if (!u) return;
+  $('debug').textContent = '…';
+  try {
+    const body = await callIngest(u);
+    $('debug').textContent = JSON.stringify(body, null, 2);
+    const tr = addRow(u, `id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
+    verifyAndAnnotate(u, tr);
+  } catch (e) {
+    $('debug').textContent = JSON.stringify({ ok:false, error: String(e?.message||e) }, null, 2);
+    addRow(u, String(e?.message||e), false);
+    logError(`Single ingest FAILED for ${u} — ${e && e.message ? e.message : e}`);
+  }
+};
+
+/* ---------- crawl & ingest (concurrency + delay) ---------- */
 let stopFlag = false;
 $('stop').onclick = () => { stopFlag = true; $('stop').disabled = true; };
 $('crawl').onclick = async () => {
