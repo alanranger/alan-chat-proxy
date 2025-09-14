@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Upload URL List to Train AI Bot</title>
+  <title>Upload URL List to Train AI Bot — v0.12</title>
   <link rel="stylesheet" href="/_next/static/css/081a0fca5a9bd20.css"/>
   <style>
     body { background:#0b1220; color:#dbe4ff; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:24px; }
@@ -28,15 +28,85 @@
     .answer { white-space:pre-wrap; }
     .chips a { display:inline-block; margin-right:6px; margin-bottom:6px; border:1px solid #1b2540; border-radius:999px; padding:4px 8px; color:#dbe4ff; text-decoration:none; }
     .chips a:hover { background:#13203e; }
-    .ver { font-size:12px; opacity:.8; margin-left:8px }
+    .toolbar { display:flex; align-items:center; gap:10px; }
+    .ver { font-size:12px; opacity:.75; padding-left:6px; }
+    .btns button { margin-right:8px; margin-bottom:8px; }
   </style>
 </head>
 <body>
 <div class="container">
 
-<h2>Upload URL List to Train AI Bot <span class="ver">v0.11</span></h2>
+<h2 class="toolbar">
+  Upload URL List to Train AI Bot
+  <span class="ver">v0.12</span>
+</h2>
 
-<!-- (everything else on your page stays as-is) -->
+<!-- top controls -->
+<div class="row">
+  <div class="card w-1">
+    <div><small>INGEST TOKEN (BEARER)</small></div>
+    <input id="token" placeholder="your token" />
+    <small>Saved locally; sent as <span class="mono">Authorization: Bearer …</span></small>
+  </div>
+
+  <div class="card w-2">
+    <div><small>CSV FILE</small></div>
+    <input id="csv" type="file" accept=".csv" />
+    <small>Must include a <span class="mono">url</span> column (optional <span class="mono">title</span>).</small>
+  </div>
+
+  <div class="card w-1">
+    <div class="row">
+      <div class="w-1">
+        <div><small>CONCURRENCY</small></div>
+        <input id="concurrency" value="3" />
+      </div>
+      <div class="w-1">
+        <div><small>DELAY BETWEEN REQUESTS (MS)</small></div>
+        <input id="delay" value="400" />
+      </div>
+    </div>
+    <small>Each request goes to <span class="mono">/api/ingest-embed-replace</span>.</small>
+  </div>
+</div>
+
+<!-- single test -->
+<div class="card">
+  <div><small>Test a Single URL</small></div>
+  <div class="row">
+    <input id="single" class="w-3" placeholder="https://example.com/page" />
+    <button id="test">Test Single URL</button>
+  </div>
+  <pre id="debug" class="mono"></pre>
+</div>
+
+<!-- paste + crawl -->
+<div class="card">
+  <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
+  <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+  <div style="margin-top:10px" class="row">
+    <button id="crawl">Crawl & Ingest</button>
+    <button id="stop" disabled>Stop</button>
+    <span class="pill">Loaded <span id="loaded">0</span> rows</span>
+    <span id="succPill" class="pill ok">Success: <span id="succ">0</span></span>
+    <span id="failPill" class="pill bad">Failed: <span id="fail">0</span></span>
+    <span class="pill">Stopped: <span id="stopped">0</span></span>
+  </div>
+</div>
+
+<!-- debug -->
+<div class="card">
+  <div><small>Debug console (what the client sees)</small></div>
+  <pre id="console" class="mono"></pre>
+</div>
+
+<!-- results table -->
+<div class="card">
+  <table>
+    <thead><tr><th style="width:60px">#</th><th>URL</th><th>Result <span class="muted">(includes DB verify)</span></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
 
 <!-- search tester (kept) -->
 <div class="card">
@@ -69,49 +139,324 @@
   <pre id="sraw" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
 </div>
 
-<!-- NEW: JSON-LD Extractor tester (unchanged markup, but remember: "All" now returns everything) -->
+<!-- AI Bot (RAG) -->
+<div class="card">
+  <h3 style="margin:4px 0 12px">AI Bot (RAG)</h3>
+  <div class="row">
+    <div class="w-3">
+      <div><small>Ask a question</small></div>
+      <input id="chatQ" placeholder="e.g. Which workshops are best for beginners?" />
+    </div>
+    <div class="w-1">
+      <div><small>topK (context docs)</small></div>
+      <input id="chatTopK" value="8" />
+    </div>
+    <div class="w-1" style="display:flex;align-items:flex-end">
+      <button id="ask" style="width:100%">Ask</button>
+    </div>
+  </div>
+
+  <div style="margin-top:14px">
+    <div class="muted" style="margin-bottom:6px"><small>Answer</small></div>
+    <div id="answer" class="answer mono"></div>
+  </div>
+
+  <div style="margin-top:12px">
+    <div class="muted" style="margin-bottom:6px"><small>Citations</small></div>
+    <div id="citations" class="chips"></div>
+  </div>
+</div>
+
+<!-- JSON-LD extractor (NEW) -->
 <div class="card">
   <h3 style="margin:4px 0 12px">Extract structured content (JSON-LD)</h3>
   <div><small>URL</small></div>
-  <input id="xurl" placeholder="https://example.com/some-page"/>
-
-  <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
-    <button class="xbtn" data-kind="events">Events/Courses</button>
-    <button class="xbtn" data-kind="articles">Articles</button>
-    <button class="xbtn" data-kind="products">Products</button>
-    <button class="xbtn" data-kind="services">Services</button>
-    <button class="xbtn" data-kind="all">All (includes Events)</button>
+  <input id="jlUrl" placeholder="https://example.com/some-page"/>
+  <div class="btns" style="margin-top:10px">
+    <button id="btnEvents">Events/Courses</button>
+    <button id="btnArticles">Articles</button>
+    <button id="btnProducts">Products</button>
+    <button id="btnServices">Services</button>
+    <button id="btnAll">All (includes Events)</button>
   </div>
-
   <div style="margin-top:10px"><small>Result</small></div>
-  <pre id="xout" class="mono"></pre>
+  <pre id="jlOut" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
 </div>
 
 </div><!-- /container -->
 
 <script>
-// (The existing JS on your page remains the same; below is just the small bit
-// that posts to /api/extract and shows the JSON.)
+/* ---------- util ---------- */
+const $ = (id) => document.getElementById(id);
+const log = (s) => { const c = $('console'); c.textContent += s + "\\n"; c.scrollTop = c.scrollHeight; };
+const saveToken = () => localStorage.setItem('ingest_token', $('token').value || '');
+$('token').value = localStorage.getItem('ingest_token') || '';
+$('token').addEventListener('change', saveToken);
+$('token').addEventListener('input', saveToken);
 
-document.querySelectorAll('.xbtn').forEach(btn=>{
-  btn.addEventListener('click', async ()=>{
-    const url = document.getElementById('xurl').value.trim();
-    const kind = btn.dataset.kind || 'all';
-    const out = document.getElementById('xout');
-    out.textContent = '…fetching…';
-    try {
-      const r = await fetch('/api/extract?kind='+encodeURIComponent(kind), {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ url })
-      });
-      const j = await r.json().catch(()=>({ error:'non_json', status:r.status }));
-      out.textContent = JSON.stringify(j, null, 2);
-    } catch (e) {
-      out.textContent = JSON.stringify({ error:'fetch_failed', detail:String(e) }, null, 2);
+/* ---------- CSV handling ---------- */
+let csvUrls = [];
+function parseCSV(text) {
+  const firstLine = text.split(/\\r?\\n/)[0] || '';
+  let delim = ',';
+  const counts = [[',', (firstLine.match(/,/g)||[]).length],[';', (firstLine.match(/;/g)||[]).length],['\\t', (firstLine.match(/\\t/g)||[]).length]].sort((a,b)=>b[1]-a[1]);
+  if (counts[0][1] > 0) delim = counts[0][0];
+  const rows = []; let row=[], val='', inQ=false;
+  function pushVal(){ row.push(val); val=''; }
+  function pushRow(){ rows.push(row); row=[]; }
+  for (let i=0;i<text.length;i++){
+    const ch=text[i], nx=text[i+1];
+    if (inQ){
+      if (ch==='"' && nx==='"'){ val+='"'; i++; }
+      else if (ch==='"'){ inQ=false; }
+      else { val+=ch; }
+    } else {
+      if (ch==='"'){ inQ=true; }
+      else if (ch===delim){ pushVal(); }
+      else if (ch==='\\n'){ pushVal(); pushRow(); }
+      else if (ch!=='\\r'){ val+=ch; }
     }
+  }
+  if (val.length || row.length){ pushVal(); pushRow(); }
+  if (!rows.length) return [];
+  const header = rows[0].map(h=>(h||'').trim());
+  const data = rows.slice(1).map(r=>{
+    const o={}; for (let i=0;i<header.length;i++){ o[header[i]] = (r[i]||'').trim(); } return o;
   });
+  data.__header = header;
+  return data;
+}
+function updateLoadedPill() {
+  const pasted = $('paste').value.split('\\n').map(s=>s.trim()).filter(Boolean);
+  const set = new Set([...csvUrls, ...pasted]);
+  $('loaded').textContent = String(set.size);
+}
+$('csv').addEventListener('change', async (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if (!file) { csvUrls=[]; updateLoadedPill(); return; }
+  try {
+    const text = await file.text();
+    const rows = parseCSV(text);
+    if (!rows.length){ log('CSV parse: no data rows found'); csvUrls=[]; updateLoadedPill(); return; }
+    const header = rows.__header || [];
+    const urlKey = header.find(h => h && h.toLowerCase().trim()==='url');
+    if (!urlKey){ log('CSV parse error: No "url" column. Header: ['+header.join(', ')+']'); csvUrls=[]; updateLoadedPill(); return; }
+    const urls = rows.map(r => (r[urlKey]||'').trim()).filter(Boolean);
+    csvUrls = [...new Set(urls)];
+    log(`CSV loaded: ${csvUrls.length} URL(s) found in "url" column`);
+    updateLoadedPill();
+  } catch(err){
+    log('CSV read error: '+(err?.message||err)); csvUrls=[]; updateLoadedPill();
+  }
 });
+$('paste').addEventListener('input', updateLoadedPill);
+
+/* ---------- API helpers ---------- */
+async function callIngest(url) {
+  const token = $('token').value.trim();
+  const r = await fetch('/api/ingest-embed-replace', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type':'application/json' },
+    body: JSON.stringify({ url })
+  });
+  let body; try { body = await r.json(); } catch { body = { error:'embedding_non_json', raw_status:r.status }; }
+  return { ok: r.ok && body?.ok, status:r.status, body };
+}
+async function callVerify(url) {
+  const token = $('token').value.trim();
+  const r = await fetch('/api/tools?action=verify&url=' + encodeURIComponent(url), {
+    method:'GET', headers:{ 'Authorization':'Bearer '+token }
+  });
+  let body; try { body = await r.json(); } catch { body = { error:'verify_non_json', raw_status:r.status }; }
+  return { ok: r.ok && body?.ok, status:r.status, body };
+}
+async function callSearch(query, topK) {
+  const token = $('token').value.trim();
+  const r = await fetch('/api/tools?action=search', {
+    method:'POST', headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+    body: JSON.stringify({ query, topK })
+  });
+  let body; try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
+  return body;
+}
+async function callChat(question, topK) {
+  const token = $('token').value.trim();
+  const r = await fetch('/api/chat', {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+    body: JSON.stringify({ query: question, topK })
+  });
+  let body; try { body = await r.json(); } catch { body = { error:'non_json', status:r.status }; }
+  return body;
+}
+async function callExtract(kind, url) {
+  const r = await fetch(`/api/extract?type=${encodeURIComponent(kind)}&url=${encodeURIComponent(url)}`);
+  let body; try { body = await r.json(); } catch { body = { error:'non_json' }; }
+  return body;
+}
+
+/* ---------- ingest test ---------- */
+$('test').onclick = async () => {
+  const url = $('single').value.trim();
+  if (!url) return;
+  log(`[${new Date().toLocaleTimeString()}] Single test → ${url}`);
+  const { ok, status, body } = await callIngest(url);
+  $('debug').textContent = JSON.stringify(body, null, 2);
+  if (ok) {
+    log(`✓ ${url} → { ok: true, id:${body.id}, len:${body.len}, chunks:${body.chunks} }`);
+    const tr = addRow(url, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
+    verifyAndAnnotate(url, tr);
+    bumpSucc();
+  } else {
+    const msg = (body && (body.detail || body.error)) || '(unknown)';
+    log(`✗ ${url} → server_error: ${msg} (status ${status})`);
+    addRow(url, `FAILED ${msg}`, false);
+    bumpFail();
+  }
+};
+function bumpSucc(){ const n = Number($('succ').textContent||'0')+1; $('succ').textContent = String(n); }
+function bumpFail(){ const n = Number($('fail').textContent||'0')+1; $('fail').textContent = String(n); }
+function addRow(url, result, isOK) {
+  const tr = document.createElement('tr');
+  const cls = isOK ? 'ok' : 'bad';
+  tr.innerHTML = `<td></td><td class="mono"><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></td><td class="mono ${cls}">${result}</td>`;
+  $('rows').appendChild(tr);
+  [...$('rows').children].forEach((r,i)=>r.children[0].textContent=i+1);
+  return tr;
+}
+async function verifyAndAnnotate(url, tr) {
+  const td = tr.children[2];
+  td.innerHTML += ` <span class="muted">| verifying…</span>`;
+  const { ok, body } = await callVerify(url);
+  if (ok) {
+    td.innerHTML += ` <span class="muted">| DB: chunks=${body.chunks} len=${body.total_len}</span>`;
+    log(`DB verify ✓ ${url} → chunks=${body.chunks} len=${body.total_len}`);
+  } else {
+    const msg = (body && (body.detail || body.error)) || 'verify_failed';
+    td.innerHTML += ` <span class="muted">| DB verify failed: ${msg}</span>`;
+    log(`DB verify ✗ ${url} → ${msg}`);
+  }
+}
+
+/* ---------- crawl ---------- */
+let stopFlag = false;
+$('stop').onclick = () => { stopFlag = true; $('stop').disabled = true; };
+$('crawl').onclick = async () => {
+  stopFlag = false; $('stop').disabled = false;
+  const pasted = $('paste').value.split('\\n').map(s=>s.trim()).filter(Boolean);
+  const combined = [...new Set([...csvUrls, ...pasted])];
+  $('loaded').textContent = String(combined.length);
+  $('succ').textContent = '0'; $('fail').textContent = '0';
+
+  const conc = Math.max(1, parseInt($('concurrency').value||'1',10));
+  const delay = Math.max(0, parseInt($('delay').value||'0',10));
+  if (!combined.length) { log('No URLs to ingest (CSV+pasted is empty).'); $('stop').disabled = true; return; }
+
+  const q = combined.slice();
+  const runners = Array.from({length:conc}, ()=> (async function run(){
+    while (!stopFlag && q.length) {
+      const u = q.shift();
+      const { ok, status, body } = await callIngest(u);
+      if (ok) {
+        const tr = addRow(u, `OK id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
+        verifyAndAnnotate(u, tr);
+        bumpSucc();
+      } else {
+        const msg = (body && (body.detail || body.error)) || '(unknown)';
+        addRow(u, `FAILED ${msg}`, false);
+        bumpFail();
+      }
+      if (delay) await new Promise(r=>setTimeout(r, delay));
+    }
+  })());
+  await Promise.all(runners);
+  if (stopFlag) $('stopped').textContent = '1';
+  $('stop').disabled = true;
+};
+
+/* ---------- search tester ---------- */
+function normalizeMdLinks(s){ if(!s) return ''; s=s.replace(/!\\[([^\\]]*)\\]\\([^)]+\\)/g,'$1'); s=s.replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g,'$1'); return s; }
+function cleanText(s){ s=normalizeMdLinks(s||''); s=s.replace(/[\\[\\]\\(\\)]/g,' '); s=s.replace(/https?:\\/\\/\\S+/g,' '); return s.replace(/\\s+/g,' ').trim(); }
+function sentenceSpans(text){ const spans=[]; let start=0; for(let i=0;i<text.length;i++){ const ch=text[i]; if(ch==='.'||ch==='!'||ch==='?'||ch==='\\n'||ch==='|'){ const end=i+1; const seg=text.slice(start,end).trim(); if(seg)spans.push([start,end,seg]); start=end; } } if(start<text.length){ const seg=text.slice(start).trim(); if(seg)spans.push([start,text.length,seg]); } return spans; }
+function tidyStart(s){ s=(s||'').replace(/^[\\)\\]\\}\\.,;:\\/\\\\\\-—–•\\s]+/u,'').trim(); const sp=s.indexOf(' '); if(s && !/^[A-Za-z0-9]/.test(s[0]) && sp>0) s=s.slice(sp+1).trim(); return s; }
+function sentenceSnippet(content,terms,minChars=80){ const text=cleanText(content); if(!text) return ''; const lc=text.toLowerCase(); let pos=-1; if(terms.length){ for(const t of terms){ const i=lc.indexOf(t); if(i!==-1) pos=(pos===-1)?i:Math.min(pos,i);} } const spans=sentenceSpans(text); if(!spans.length) return text; let idx=0; if(pos!==-1){ for(let i=0;i<spans.length;i++){ const[s,e]=spans[i]; if(pos>=s && pos<e){ idx=i; break; } } } let snippet=tidyStart(spans[idx][2]); if(snippet.length<minChars && spans[idx+1]) snippet=(snippet+' '+tidyStart(spans[idx+1][2])).trim(); return snippet; }
+
+$('runSearch').onclick = async () => {
+  const query = $('query').value.trim();
+  const topK = Math.max(1, Math.min(32, parseInt($('topk').value || '8', 10)));
+  $('srows').innerHTML = '';
+  $('sraw').textContent = '';
+  if (!query) return;
+
+  const body = await callSearch(query, topK);
+  $('sraw').textContent = JSON.stringify(body, null, 2);
+
+  const matches = (body && body.matches) || [];
+  const groups = new Map();
+  const terms = query.toLowerCase().split(/\\s+/).filter(Boolean);
+
+  for (const m of matches) {
+    if (!m || !m.url) continue;
+    const g = groups.get(m.url) || { url:m.url, bestScore:0, chunks:0, contents:[] };
+    g.bestScore = Math.max(g.bestScore||0, Number(m.score||0));
+    g.chunks += 1;
+    if (m.content) g.contents.push(m.content);
+    groups.set(m.url, g);
+  }
+
+  const grouped = Array.from(groups.values()).sort((a,b)=> (b.bestScore - a.bestScore));
+  for (const g of grouped) {
+    let contentForSnippet = g.contents.find(c => {
+      const t = cleanText(c).toLowerCase();
+      return terms.length && terms.every(term => t.includes(term));
+    }) || g.contents[0] || '';
+
+    const chosen = sentenceSnippet(contentForSnippet, terms);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono score">${g.bestScore.toFixed(3)} <span class="muted">/ ${g.chunks} chunk${g.chunks===1?'':'s'}</span></td>
+      <td class="mono"><a href="${g.url}" target="_blank" rel="noopener noreferrer">${g.url}</a></td>
+      <td class="mono">${chosen || ''}</td>
+    `;
+    $('srows').appendChild(tr);
+  }
+};
+
+/* ---------- Chat ---------- */
+$('ask').onclick = async () => {
+  const q = $('chatQ').value.trim();
+  const k = Math.max(1, Math.min(16, parseInt($('chatTopK').value || '8', 10)));
+  $('answer').textContent = '';
+  $('citations').innerHTML = '';
+  if (!q) return;
+
+  const res = await callChat(q, k);
+  if (!res || !res.ok) {
+    $('answer').textContent = (res && (res.detail || res.error)) || 'chat_failed';
+    return;
+  }
+
+  $('answer').textContent = res.answer || '';
+  const cites = Array.from(new Set(res.citations || []));
+  $('citations').innerHTML = cites.map(u => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`).join('');
+};
+
+/* ---------- JSON-LD extractor section ---------- */
+async function runExtract(kind){
+  const url = $('jlUrl').value.trim();
+  if(!url){ $('jlOut').textContent = 'Enter a URL.'; return; }
+  $('jlOut').textContent = 'Fetching…';
+  const body = await callExtract(kind, url);
+  $('jlOut').textContent = JSON.stringify(body, null, 2);
+}
+$('btnEvents').onclick   = () => runExtract('events');
+$('btnArticles').onclick = () => runExtract('articles');
+$('btnProducts').onclick = () => runExtract('products');
+$('btnServices').onclick = () => runExtract('services');
+$('btnAll').onclick      = () => runExtract('all');
+
+/* sensible default single test url */
+$('single').value = 'https://www.alanranger.com/photography-workshops';
 </script>
 </body>
 </html>
