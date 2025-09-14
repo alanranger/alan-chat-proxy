@@ -1,5 +1,5 @@
 // /api/json/events-extract.js
-// Step 2A: Pure helper to extract Event/Course data from JSON-LD into unified EventItem objects.
+// Step 2A: Pure helper,  to extract Event/Course data from JSON-LD into unified EventItem objects.
 // No DB writes here. Step 2B uses this from /api/extract.js.
 
 import { coerceFutureISODate, isHttpUrl } from './workshops-schema.js';
