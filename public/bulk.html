@@ -312,11 +312,13 @@ async function callExtract(action, url){
     headers: { ...bearer() }
   });
 }
-async function callChat(q, topK){
+
+/* >>>>>>>>>>>>>  FIXED HERE: send { query, topK }  <<<<<<<<<<<<< */
+async function callChat(query, topK){
   return fetchJson('/api/chat', {
     method:'POST',
     headers:{ 'Content-Type':'application/json', ...bearer() },
-    body: JSON.stringify({ q, topK: Number(topK||8) })
+    body: JSON.stringify({ query, topK: Number(topK||8) })
   });
 }
 
@@ -471,11 +473,11 @@ $('exAll').onclick      = () => runExtract('extract-all');
 /* ---------- RAG chat ---------- */
 $('ask').onclick = async () => {
   saveToken();
-  const q = $('chatQ').value.trim(); if(!q) return;
+  const query = $('chatQ').value.trim(); if(!query) return;
   const topK = Number($('chatTopK').value||8);
   $('answer').textContent = '…'; $('citations').innerHTML = '';
   try{
-    const res = await callChat(q, topK);
+    const res = await callChat(query, topK);
     if (!res || res.error || res.detail) {
       $('answer').textContent = (res && (res.detail || res.error)) || 'chat_failed';
       return;
