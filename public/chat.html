@@ -10,6 +10,7 @@
 :root{
   --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
   --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
+  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
   --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
   --user-bg:#e6edf7; --user-text:#0b0f16;
 }
@@ -43,8 +44,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 /* Composer */
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:#E9EEF5;color:#0b0f16;border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
-.composer input::placeholder{color:#6b7280}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
@@ -99,10 +100,9 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </div></div>
 
 <script>
-/* ===== Config ===== */
+/* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
-const EXTRACT_ENDPOINT = '/api/extract';
-const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // optional bearer (same as bulk tool)
+const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // ingest token (optional)
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
@@ -113,7 +113,6 @@ function getToken(){
   try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
 }
 
-/* ===== DOM ===== */
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
 const sendBtn= document.getElementById('send');
@@ -122,7 +121,6 @@ const dbgReq      = document.getElementById('dbg-req');
 const dbgRes      = document.getElementById('dbg-res');
 const dbgHeaders  = document.getElementById('dbg-headers');
 
-/* ===== Helpers ===== */
 function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
 function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
 function setDebug({status, req, res, headers}){
@@ -134,6 +132,8 @@ function setDebug({status, req, res, headers}){
     dbgHeaders.textContent = safeJSONString(h);
   }
 }
+
+/* ===== UI helpers ===== */
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
   div.className = 'bubble' + (opts.user ? ' user' : '');
@@ -146,9 +146,9 @@ function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
   return () => el && el.remove();
 }
-function stripTags(s){ return (s||'').replace(/<[^>]+>/g,''); }
+function unique(arr){ return Array.from(new Set((arr||[]).filter(Boolean))); }
 
-/* ===== Mini Markdown → HTML (capture list items) ===== */
+/* ===== Mini Markdown renderer ===== */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -162,9 +162,9 @@ function mdToHtml(md){
     const m = line.match(/^\s*-\s+(.*)$/);
     if (m){
       if(!inList){ out += '<ul>'; inList=true; }
-      const plain = stripTags(m[1].trim());
-      const id = `li_${++idx}`; liIds.push(id); items.push(plain);
-      out += `<li id="${id}">${m[1].trim()}</li>`;
+      const text = m[1].trim();
+      const id = `li_${++idx}`; liIds.push(id); items.push(text);
+      out += `<li id="${id}">${text}</li>`;
     }else{
       flush();
       out += line.trim() ? `<p>${line}</p>` : '';
@@ -174,226 +174,144 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Chips ===== */
-function unique(arr){ return Array.from(new Set(arr.filter(Boolean))); }
+/* ===== Context-aware suggestion pills ===== */
 function inferChips(question, answer, citations){
-  const q=(question||'').toLowerCase(), a=(answer||'').toLowerCase();
-  const chips=[]; const push=(label,href)=>chips.push({label,href});
-  unique(citations).slice(0,4).forEach(u=>{
-    const label=(u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
-    chips.push({label:label.length>32?label.slice(0,29)+'…':label,href:u});
+  const q = (question||'').toLowerCase();
+  const a = (answer||'').toLowerCase();
+  const chips = [];
+
+  const citeChips = unique(citations).slice(0,4).map(u => {
+    const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
+    return { label: label.length>32 ? label.slice(0,29)+'…' : label, href: u };
   });
-  if(/price|cost|how much|£|\bgbp\b|\bfee/.test(q+a)) push('Prices','https://www.alanranger.com/photography-workshops-near-me');
-  if(/date|when|next|schedule|start|time/.test(q+a)) push('Upcoming dates','https://www.alanranger.com/photography-workshops-near-me');
-  if(/workshop|course|class|tuition|lesson/.test(q+a)){ push('Workshops overview','https://www.alanranger.com/photography-workshops-near-me'); push('Tuition & coaching','https://www.alanranger.com/photography-lessons-online-121'); }
+  chips.push(...citeChips);
+
+  const push = (label, href) => chips.push({label, href});
+  if (/price|cost|how much|£|\bgbp\b|\bfee/.test(q+a)) {
+    push('Prices', 'https://www.alanranger.com/photography-workshops-near-me');
+  }
+  if (/date|when|next|schedule|start|time/.test(q+a)) {
+    push('Upcoming dates', 'https://www.alanranger.com/photography-workshops-near-me');
+  }
+  if (/workshop|course|class|tuition|lesson/.test(q+a)) {
+    push('Workshops overview', 'https://www.alanranger.com/photography-workshops-near-me');
+    push('Tuition & coaching', 'https://www.alanranger.com/photography-lessons-online-121');
+  }
   return unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
 }
+
 function addChips(container, chips){
-  if(!chips.length || container.dataset.chipsAdded==='1') return;
-  const wrap=document.createElement('div'); wrap.className='chips';
-  chips.forEach(({label,href})=>{ const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent=label; wrap.appendChild(a); });
-  container.appendChild(wrap); container.dataset.chipsAdded='1';
+  if (!chips.length) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'chips';
+  chips.forEach(({label, href})=>{
+    const a = document.createElement('a');
+    a.href = href; a.target = '_blank'; a.rel='noopener';
+    a.textContent = label;
+    wrap.appendChild(a);
+  });
+  container.appendChild(wrap);
 }
 
-/* ===== Dates & price utils ===== */
-const MONTHS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
-function toISODate(y,m,d){ return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
-function parseDateFromText(s){
-  s = stripTags(s||'');
-  const a = s.match(/\b(\d{1,2})\s+([A-Za-z]{3,})\.?,?\s+(\d{4})\b/);
-  if (a){ const d=+a[1], m=MONTHS[a[2].toLowerCase().slice(0,3)], y=+a[3]; if(m) return toISODate(y,m,d); }
-  const b = s.match(/\b([A-Za-z]{3,})\.?\s+(\d{1,2}),?\s+(\d{4})\b/);
-  if (b){ const m=MONTHS[b[1].toLowerCase().slice(0,3)], d=+b[2], y=+b[3]; if(m) return toISODate(y,m,d); }
-  return null;
-}
-function currencySymbol(ccy){ if(!ccy) return ''; const c=ccy.toUpperCase(); if(c==='GBP') return '£'; if(c==='USD') return '$'; if(c==='EUR') return '€'; return c+' '; }
-function fmtAnyPrice(price,ccy){
-  if(price==null || price==='') return ccy?(`${currencySymbol(ccy)}TBD`):'TBD';
-  const sym = ccy ? currencySymbol(ccy) : '';
-  return `${sym}${String(price)}`;
-}
-function isListingUrl(u){
-  const p=(u||'').toLowerCase();
-  return p.includes('near-me') || p.endsWith('/blog') || p.includes('/blog-on-photography') || p.endsWith('/photography-workshops-near-me');
+/* ===== Entity enrichment (events + prices from JSON-LD) ===== */
+async function fetchExtract(action, url){
+  try{
+    const r = await fetch(`/api/extract?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`);
+    const raw = await r.text();
+    let j; try{ j = JSON.parse(raw); }catch{ j = { error:'non_json', raw: raw?.slice(0,400)||'' }; }
+    return j;
+  }catch{ return { error:'fetch_failed' }; }
 }
 
-/* ===== Structured extraction ===== */
-async function fetchEntitiesFrom(url, token){
-  async function call(action){
-    const r = await fetch(`${EXTRACT_ENDPOINT}?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`, {
-      headers: token ? {Authorization:`Bearer ${token}`} : {}
-    });
-    const text = await r.text().catch(()=> '');
-    try { return JSON.parse(text); } catch { return null; }
-  }
-  // Prefer DB if available
-  const tryDb = await call('entities-db');
-  let dbArr = null;
-  if (Array.isArray(tryDb)) dbArr = tryDb;
-  else if (tryDb && Array.isArray(tryDb.entities)) dbArr = tryDb.entities;
-  if (dbArr && dbArr.length) return dbArr;
+// normalise any extractor shape into {events:[{date_start, url, title, price, currency}]}
+function normaliseEvents(ex){
+  const arr = []
+    .concat(ex?.events||[])
+    .concat(ex?.entities||[])
+    .concat(Array.isArray(ex)?ex:[])
+    .filter(x=>x && (x.kind==='event' || x['@type']==='Event' || x.date_start || x.startDate));
 
-  // Fallback to tolerant JSON-LD scrape
-  const tryAll = await call('extract-all');
-  if (Array.isArray(tryAll)) return tryAll;
-  if (tryAll && Array.isArray(tryAll.entities)) return tryAll.entities;
-  if (tryAll && Array.isArray(tryAll.data)) return tryAll.data;
-  return [];
-}
+  const out = [];
+  for (const e of arr){
+    const raw = e.raw || e;
+    const ds = e.date_start || raw.startDate || raw.start_date || raw.date || null;
+    const url = e.source_url || e.url || raw?.url || raw?.['@id'] || null;
+    const title = e.title || raw.name || raw.title || null;
 
-function normaliseEntity(e, pageUrl){
-  const offersSrc = Array.isArray(e.offers) ? e.offers :
-                    Array.isArray(e.raw?.offers) ? e.raw.offers : [];
-  const offers = offersSrc.map(o=>({
-    url: o?.url ?? null,
-    name: o?.name ?? o?.category ?? o?.description ?? null,
-    price: (o?.price ?? null),
-    priceCurrency: (o?.priceCurrency ?? e?.priceCurrency ?? e?.price_currency ?? null),
-    availability: o?.availability ?? null
-  }));
-
-  return {
-    kind: (e.kind || e['@type'] || '').toString().toLowerCase(),
-    title: e.title || e.name || '',
-    date_start: e.date_start || e.startDate || '',
-    date_end: e.date_end || e.endDate || '',
-    location: e.location?.name || e.location?.address?.addressLocality || e.location || '',
-    price: (e.price ?? null),
-    price_currency: (e.price_currency ?? e.priceCurrency ?? null),
-    url: e.url || e.source_url || e['@id'] || pageUrl,
-    source_url: e.source_url || e.url || pageUrl,
-    offers
-  };
-}
-function pickBestUrlForEntity(entity, fallbackList=[]){
-  const candidates = [];
-  (entity.offers||[]).forEach(o=>{ if(o.url) candidates.push(o.url); });
-  if (entity.source_url) candidates.push(entity.source_url);
-  if (entity.url && entity.url !== entity.source_url) candidates.push(entity.url);
-  candidates.push(...fallbackList);
-  for (const c of candidates){ if (c && !isListingUrl(c)) return c; }
-  return candidates.find(Boolean) || null;
-}
-
-/* ===== Canonical schedule + prices (independent of model wording) ===== */
-function renderCanonicalSchedule(container, events, citations){
-  if (!events.length) return;
-
-  // sessions: one per date
-  const sessions = events
-    .map(e=>({ iso:(e.date_start||'').slice(0,10), e }))
-    .filter(s=>s.iso)
-    .sort((a,b)=> a.iso.localeCompare(b.iso));
-
-  // de-duplicate by date (keep first with a solid URL)
-  const byDate = new Map();
-  for (const s of sessions){
-    if (!byDate.has(s.iso)){
-      byDate.set(s.iso, s.e);
-    }else{
-      const cur = byDate.get(s.iso);
-      const curUrl = pickBestUrlForEntity(cur, citations);
-      const newUrl = pickBestUrlForEntity(s.e, citations);
-      if (!curUrl && newUrl) byDate.set(s.iso, s.e);
+    // If price is on offers (Product/Offer), capture it
+    let price = e.price || raw.price || null;
+    let currency = e.price_currency || raw.priceCurrency || raw.currency || null;
+    const offer = Array.isArray(raw.offers) ? raw.offers[0] : raw.offers;
+    if (offer){
+      price = price ?? offer.price ?? null;
+      currency = currency ?? (offer.priceCurrency || offer.currency || null);
     }
+    out.push({ date_start: ds, url, title, price, currency });
   }
 
-  // Build list HTML
-  const list = document.createElement('div');
-  list.innerHTML = `<p><strong>All available dates:</strong></p>`;
-  const ul = document.createElement('ul');
+  // keep only items that have a date
+  return out.filter(x=>x.date_start).sort((a,b)=> (a.date_start>b.date_start?1:-1));
+}
 
-  for (const [iso, ev] of Array.from(byDate.entries())){
-    // Fri, 24 Apr 2026
-    const d = new Date(iso+'T09:00:00Z');
-    const day = d.toLocaleDateString('en-GB',{weekday:'short'});
-    const dt  = d.toLocaleDateString('en-GB',{day:'2-digit', month:'short', year:'numeric'});
+function fmtGBP(p, cur){
+  if (!p) return null;
+  const n = Number(p);
+  if (!isFinite(n)) return (cur||'£') + String(p);
+  return new Intl.NumberFormat('en-GB',{style:'currency',currency: (cur||'GBP')}).format(n);
+}
+
+// Append a canonical section built from events/products
+async function augmentWithEntities(container, citations){
+  const top = (citations||[]).slice(0,3); // don’t over-call
+  let events = [];
+  for (const u of top){
+    const ex = await fetchExtract('events-extract', u);
+    const list = normaliseEvents(ex);
+    if (list.length) events = events.concat(list);
+  }
+  if (!events.length) return; // nothing to add
+
+  // dedupe by (date_start,url)
+  const key = (e)=>`${e.date_start}@@${e.url||''}`;
+  const seen = new Set(); events = events.filter(e=> (seen.has(key(e))?false:(seen.add(key(e)),true)));
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <h3>Next Available Dates (from structured data)</h3>
+    <ul id="evList"></ul>
+    <h4>Price</h4>
+    <ul id="evPrice"></ul>
+  `;
+  container.appendChild(wrap);
+
+  const ul = wrap.querySelector('#evList');
+  const ulP= wrap.querySelector('#evPrice');
+
+  // Dates with per-date link
+  for (const e of events){
+    const d = new Date(e.date_start);
+    const nice = isFinite(d) ? d.toLocaleDateString('en-GB',{weekday:'short', day:'2-digit', month:'short', year:'numeric'}) : e.date_start;
     const li = document.createElement('li');
-    li.textContent = `${day}, ${dt}`;
-    const url = pickBestUrlForEntity(ev, citations);
-    if (url){
-      const a = document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener'; a.textContent=' Link';
-      a.style.marginLeft='6px'; li.appendChild(a);
-    }
+    li.innerHTML = `${nice} ${e.url?`<a href="${e.url}" target="_blank" rel="noopener">Link</a>`:''}`;
     ul.appendChild(li);
   }
-  list.appendChild(ul);
-  container.appendChild(list);
 
-  // Prices from offers across all events
-  const priceLines = [];
-  const seen = new Set();
-  for (const ev of events){
-    const ccy = ev.price_currency || ev.offers?.find(o=>o.priceCurrency)?.priceCurrency || 'GBP';
-    if (ev.offers && ev.offers.length){
-      for (const o of ev.offers){
-        const label = o.name ? o.name.replace(/\s*\|\s*/g,' – ') : 'Price';
-        const line = `${label}: ${fmtAnyPrice(o.price, o.priceCurrency || ccy)}`;
-        if (!seen.has(line)){ seen.add(line); priceLines.push(line); }
-      }
-    }else if (ev.price != null){
-      const line = fmtAnyPrice(ev.price, ev.price_currency || 'GBP');
-      if (!seen.has(line)){ seen.add(line); priceLines.push(line); }
+  // Aggregate price lines (if any)
+  const prices = [];
+  for (const e of events){
+    if (e.price){
+      const line = fmtGBP(e.price, e.currency)||null;
+      if (line) prices.push(line);
     }
   }
-  if (priceLines.length){
-    const p = document.createElement('div');
-    p.innerHTML = `<p><strong>Price:</strong></p>` + `<ul>${priceLines.map(s=>`<li>${s}</li>`).join('')}</ul>`;
-    container.appendChild(p);
-  }
-}
-
-/* Enrich the model answer using (DB → JSON-LD) entities */
-async function enrich(question, container, liIds, items, citations){
-  const token = getToken();
-  const pageEntities = (await Promise.all(unique(citations).map(async (u)=>{
-    const raw = await fetchEntitiesFrom(u, token);
-    return raw.map(e=>normaliseEntity(e, u));
-  }))).flat();
-
-  // Prefer Event entities for canonical schedule
-  const events = pageEntities.filter(e => (e.kind||'').includes('event'));
-  if (events.length){
-    renderCanonicalSchedule(container, events, citations);
-  }
-
-  // If the model produced date bullets, try to link them to specific pages
-  if (liIds.length){
-    const byISO = new Map();
-    events.forEach(e=>{
-      const iso=(e.date_start||'').slice(0,10);
-      if(!iso) return;
-      if(!byISO.has(iso)) byISO.set(iso, []);
-      byISO.get(iso).push(e);
+  const uniqPrices = unique(prices);
+  if (uniqPrices.length){
+    uniqPrices.forEach(p=>{
+      const li = document.createElement('li'); li.textContent = p; ulP.appendChild(li);
     });
-
-    liIds.forEach((id,i)=>{
-      const li = container.querySelector('#'+CSS.escape(id));
-      if(!li) return;
-      const iso = parseDateFromText(items[i]||'');
-      let url=null;
-      if(iso && byISO.has(iso)){
-        const match = byISO.get(iso)[0];
-        url = pickBestUrlForEntity(match, citations);
-      }
-      if(!url){
-        for(const e of events){
-          url = pickBestUrlForEntity(e, citations);
-          if(url && !isListingUrl(url)) break;
-        }
-      }
-      if(!url && citations && citations.length){
-        url = citations.find(u=>!isListingUrl(u)) || citations[0];
-      }
-      if(url){
-        const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener'; a.textContent=' Link'; a.style.marginLeft='6px';
-        li.appendChild(a);
-      }
-    });
+  }else{
+    const li = document.createElement('li'); li.textContent = '£TBD (not specified in JSON-LD)'; ulP.appendChild(li);
   }
-
-  // Chips based on intent + citations
-  addChips(container, inferChips(question, container.textContent, citations));
 }
 
 /* ===== API ===== */
@@ -412,6 +330,21 @@ async function callChat(question, topK=8){
 }
 
 /* ===== Render ===== */
+function renderAnswer(payload, question){
+  if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
+  const raw = payload.answer || payload.reply || payload.text || '';
+  const cites = unique(payload.citations || payload.sources || []);
+  const { html, liIds, items } = mdToHtml(raw);
+  const holder = addBubble(html);
+
+  // Add pills from intent/citations
+  addChips(holder, inferChips(question, raw, cites));
+
+  // Enrich with *real* event dates + per-date links + prices (from JSON-LD)
+  augmentWithEntities(holder, cites); // fire-and-forget
+}
+
+/* ===== Fallback ===== */
 function fallbackBlock(){
   return `
     <div class="fallback">
@@ -422,15 +355,6 @@ function fallbackBlock(){
         <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
       </div>
     </div>`;
-}
-function renderAnswer(payload, question){
-  if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
-  const raw = payload.answer || payload.reply || payload.text || '';
-  const cites = unique(payload.citations || payload.sources || []);
-  const { html, liIds, items } = mdToHtml(raw);
-  const holder = addBubble(html);
-  enrich(question, holder, liIds, items, cites).catch(()=>{ /* non-fatal */ });
-  if (!liIds.length) addChips(holder, inferChips(question, raw, cites));
 }
 
 /* ===== Events ===== */
