@@ -1,81 +1,118 @@
 // /api/extract.js
-// JSON-LD extraction tester for bulk.html
-// Actions: events-extract | articles-extract | products-extract | services-extract | extract-all
+// Unified JSON-LD extractor API
+// - GET or POST with { url } and optional ?kind=events|articles|products|services|all
+// - "all" now truly returns events + articles + products + services.
+
 export const config = { runtime: 'nodejs' };
 
-function send(res, code, obj) {
-  res.status(code).setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.end(JSON.stringify(obj));
+import { extractEventItemsFromUrl } from './json/events-extract.js';
+import {
+  extractAllFromUrl as extractAPSFromUrl, // Articles/Products/Services
+} from './json/content-extract.js';
+
+function send(res, status, obj) {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.status(status).send(JSON.stringify(obj, null, 2));
 }
 
-// Lazy import so bundling/import errors show up as JSON
-async function loadExtractors() {
+function readUrl(req) {
+  // POST body or query ?url=...
   try {
-    const events = await import('./json/events-extract.js');
-    const content = await import('./json/content-extract.js');
-    return {
-      extractEventItemsFromUrl: events.extractEventItemsFromUrl,
-      extractArticleItemsFromUrl: content.extractArticleItemsFromUrl,
-      extractProductItemsFromUrl: content.extractProductItemsFromUrl,
-      extractServiceItemsFromUrl: content.extractServiceItemsFromUrl,
-      extractAllFromUrl: content.extractAllFromUrl,
-    };
-  } catch (e) {
-    throw new Error('extractor_import_failed: ' + (e?.message || String(e)));
-  }
+    if (req.method === 'POST') {
+      const b = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+      if (b && b.url) return String(b.url).trim();
+    }
+  } catch { /* ignore */ }
+
+  const q = req.query?.url || req.query?.u;
+  return q ? String(q).trim() : '';
 }
 
 export default async function handler(req, res) {
+  // Simple CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return send(res, 405, { error: 'method_not_allowed' });
+  }
+
+  const url = readUrl(req);
+  const kind = String(req.query?.kind || 'all').toLowerCase();
+
+  if (!url) return send(res, 400, { error: 'bad_request', detail: 'Provide ?url=… or body { url }' });
+
   try {
-    if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
+    // Always fetch APS first (Articles/Products/Services).
+    const aps = await extractAPSFromUrl(url);
 
-    const url = String(req.query.url || '').trim();
-    const action = String(req.query.action || '').trim();
-    if (!url)    return send(res, 400, { error: 'bad_request', detail: 'Missing ?url=' });
-    if (!action) return send(res, 400, { error: 'bad_request', detail: 'Missing ?action=' });
+    // Optionally fetch events
+    let events = [];
+    if (kind === 'events' || kind === 'all') {
+      try {
+        events = await extractEventItemsFromUrl(url);
+      } catch (e) {
+        // don’t explode the whole request if events fail
+        events = [];
+      }
+    }
 
-    const {
-      extractEventItemsFromUrl,
-      extractArticleItemsFromUrl,
-      extractProductItemsFromUrl,
-      extractServiceItemsFromUrl,
-      extractAllFromUrl,
-    } = await loadExtractors();
-
-    if (action === 'events-extract') {
-      const items = await extractEventItemsFromUrl(url);
-      return send(res, 200, { ok: true, url, count: items.length, items });
-    }
-    if (action === 'articles-extract') {
-      const items = await extractArticleItemsFromUrl(url);
-      return send(res, 200, { ok: true, url, count: items.length, items });
-    }
-    if (action === 'products-extract') {
-      const items = await extractProductItemsFromUrl(url);
-      return send(res, 200, { ok: true, url, count: items.length, items });
-    }
-    if (action === 'services-extract') {
-      const items = await extractServiceItemsFromUrl(url);
-      return send(res, 200, { ok: true, url, count: items.length, items });
-    }
-    if (action === 'extract-all') {
-      const out = await extractAllFromUrl(url);
+    // Return subsets if a specific kind was requested
+    if (kind === 'events') {
       return send(res, 200, {
-        ok: true, url, ...out,
-        counts: {
-          articles: out.articles?.length || 0,
-          products: out.products?.length || 0,
-          services: out.services?.length || 0,
-        }
+        ok: true,
+        url,
+        events,
+        counts: { events: events.length }
+      });
+    }
+    if (kind === 'articles') {
+      return send(res, 200, {
+        ok: true,
+        url,
+        articles: aps.articles,
+        counts: { articles: aps.articles.length }
+      });
+    }
+    if (kind === 'products') {
+      return send(res, 200, {
+        ok: true,
+        url,
+        products: aps.products,
+        counts: { products: aps.products.length }
+      });
+    }
+    if (kind === 'services') {
+      return send(res, 200, {
+        ok: true,
+        url,
+        services: aps.services,
+        counts: { services: aps.services.length }
       });
     }
 
-    return send(res, 400, { error: 'bad_request', detail: `Unknown action "${action}"` });
-  } catch (err) {
+    // kind === 'all' → merge everything
+    const out = {
+      ok: true,
+      url,
+      articles: aps.articles,
+      products: aps.products,
+      services: aps.services,
+      events,
+      counts: {
+        articles: aps.articles.length,
+        products: aps.products.length,
+        services: aps.services.length,
+        events: events.length
+      }
+    };
+    return send(res, 200, out);
+  } catch (e) {
     return send(res, 500, {
       error: 'server_error',
-      detail: err?.message || String(err),
-      stack: (err?.stack || '').split('\n').slice(0, 6).join('\n'),
+      detail: String(e?.message || e)
     });
   }
 }
