@@ -8,7 +8,8 @@
   --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
   --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
   --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
-  --chip-bg:#13203e; --chip-br:#1b2540;
+  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#c9e6ff;
+  --user-bg:#e6edf7; --user-text:#0b0f16; /* user bubble colour in history */
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
@@ -25,12 +26,14 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
 .thread{display:flex;flex-direction:column;gap:12px}
 .bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
-.bubble.user{align-self:flex-end;background:#13223a}
+.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
 .fallback .pills{margin-top:10px}
 .answer h1,.answer h2,.answer h3{margin:.2em 0}
 .answer p{margin:.5em 0}
 .answer ul{margin:.4em 0 .6em 1.25em}
 .answer li{margin:.15em 0}
+.answer a{color:var(--link);text-decoration:underline}
+.answer a:hover{color:var(--link-hover)}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chips a{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
@@ -95,11 +98,9 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <script>
 /* ---------- Endpoint + Auth (match bulk) ---------- */
 const CHAT_ENDPOINT = '/api/chat';
+const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // ingest token
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
-
-// Token precedence: hard-coded → ?token=… → localStorage.ingest_token
-const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
 function getToken(){
   const qp = (urlParams.get('token')||'').trim();
   if (HARDCODED) return HARDCODED;
@@ -143,6 +144,106 @@ function addTyping() {
   return () => el && el.remove();
 }
 
+/* ---------- Minimal Markdown → HTML ---------- */
+function mdToHtml(md){
+  if (!md) return { html:'', liIds:[] };
+  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>').replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
+
+  const lines = s.split(/\r?\n/);
+  let out = '', inList = false, liIds = [], liIdx=0;
+  const flush = ()=>{ if(inList){ out += '</ul>'; inList=false; } };
+  for (const line of lines){
+    const m = line.match(/^\s*-\s+(.*)$/);
+    if (m){
+      if(!inList){ out += '<ul>'; inList=true; }
+      const id = `li_${++liIdx}`;
+      liIds.push(id);
+      out += `<li id="${id}">${m[1]}</li>`;
+    }else{
+      flush();
+      out += line.trim() ? `<p>${line}</p>` : '';
+    }
+  }
+  flush();
+  return { html:`<div class="answer">${out}</div>`, liIds };
+}
+
+/* ---------- Post-link bullets with citations ---------- */
+function addLinksToBullets(container, liIds, citations){
+  if (!liIds.length || !citations || !citations.length) return;
+
+  // Try weak mapping for chips: half-day / one-day / residential
+  const chips = [];
+  const labelFor = (u)=>{
+    const l = u.toLowerCase();
+    if (/(sunset|walk|evening|half[-\s]?day)/.test(l)) return 'Half-day';
+    if (/(one[-\s]?day|woodlands|dartmoor|yorkshire|workshop)(?!.*residential)/.test(l)) return 'One-day';
+    if (/(residential|wales|betws-y-coed)/.test(l)) return 'Residential';
+    return 'Link';
+    };
+  // Attach a “Link” to each <li> in order
+  liIds.forEach((id, i)=>{
+    const li = container.querySelector('#'+CSS.escape(id));
+    if (!li) return;
+    const href = citations[Math.min(i, citations.length-1)];
+    const a = document.createElement('a');
+    a.href = href; a.target='_blank'; a.rel='noopener';
+    a.textContent = ' Link'; a.style.marginLeft = '6px';
+    li.appendChild(a);
+    chips.push({href, label: labelFor(href)});
+  });
+
+  // If we have at least 3 citations, show quick chips too
+  const uniq = Array.from(new Map(citations.map(u=>[u,u])).values()).slice(0,3);
+  if (uniq.length){
+    const chipWrap = document.createElement('div'); chipWrap.className = 'chips';
+    uniq.forEach((u, idx)=>{
+      const a = document.createElement('a'); a.href = u; a.target='_blank'; a.rel='noopener';
+      a.textContent = labelFor(u);
+      chipWrap.appendChild(a);
+    });
+    container.appendChild(chipWrap);
+  }
+}
+
+/* ---------- API ---------- */
+async function callChat(question, topK=8){
+  const token = getToken();
+  const headers = { 'Content-Type':'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const body = { query: question, topK };
+  setDebug({status:'…', req: body, headers});
+  const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
+  const status = res.status;
+  let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
+  setDebug({status, res: json});
+  if(!res.ok) throw new Error('API error');
+  return json;
+}
+
+/* ---------- Render ---------- */
+function renderAnswer(payload){
+  if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
+  const raw = payload.answer || payload.reply || payload.text || '';
+  const cites = Array.from(new Set(payload.citations || payload.sources || []));
+  const { html, liIds } = mdToHtml(raw);
+  const holder = addBubble(html);
+  if (liIds.length) addLinksToBullets(holder, liIds, cites);
+  else if (cites.length){
+    // fall back: show chips under plain answer
+    const chipWrap = document.createElement('div'); chipWrap.className = 'chips';
+    cites.slice(0,3).forEach(u => {
+      const a = document.createElement('a'); a.href = u; a.target='_blank'; a.rel='noopener';
+      a.textContent = 'Link';
+      chipWrap.appendChild(a);
+    });
+    holder.appendChild(chipWrap);
+  }
+}
+
 function fallbackBlock(){
   return `
     <div class="fallback">
@@ -155,78 +256,19 @@ function fallbackBlock(){
     </div>`;
 }
 
-/* ---------- Very small Markdown renderer ---------- */
-function renderMarkdown(md){
-  if (!md) return '';
-  // Escape HTML first
-  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  // Links [text](url)
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
-  // Bold **text**
-  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  // Italic *text* or _text_
-  s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>').replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
-  // Lists: lines starting with "- "
-  const lines = s.split(/\r?\n/);
-  let out = '', inList = false;
-  const flush = ()=>{ if(inList){ out += '</ul>'; inList=false; } };
-  for (const line of lines){
-    const m = line.match(/^\s*-\s+(.*)$/);
-    if (m){
-      if(!inList){ out += '<ul>'; inList=true; }
-      out += `<li>${m[1]}</li>`;
-    }else{
-      flush();
-      out += line.trim() ? `<p>${line}</p>` : '';
-    }
-  }
-  flush();
-  return `<div class="answer">${out}</div>`;
-}
-
-/* ---------- API ---------- */
-async function callChat(question, topK=8){
-  const token = getToken();
-  const headers = { 'Content-Type':'application/json' };
-  if (token) headers['Authorization'] = 'Bearer ' + token;
-  const body = { query: question, topK };
-  setDebug({status:'…', req: body, headers});
-  const res = await fetch('/api/chat', { method:'POST', headers, body: JSON.stringify(body) });
-  const status = res.status;
-  let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
-  setDebug({status, res: json});
-  if(!res.ok) throw new Error('API error');
-  return json;
-}
-
-/* ---------- Render ---------- */
-function renderAnswer(payload){
-  if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
-  const raw = payload.answer || payload.reply || payload.text || '';
-  let html = renderMarkdown(raw);
-  // citation chips like bulk
-  const cites = Array.from(new Set(payload.citations || payload.sources || []));
-  if (cites.length){
-    const chips = cites.map(u=>`<a href="${u}" target="_blank" rel="noopener">${u}</a>`).join('');
-    html += `<div class="chips">${chips}</div>`;
-  }
-  if (!raw || !raw.trim()) html = 'Here are some relevant links:';
-  addBubble(html);
-}
-
 /* ---------- Events ---------- */
 async function handleSend(){
   const q = input.value.trim();
   if(!q) return;
   addBubble(q.replace(/</g,'&lt;'), {user:true});
   input.value = '';
-  const removeTyping = addTyping();
+  const stopTyping = addTyping();
   try{
     const data = await callChat(q, 8);
-    removeTyping();
+    stopTyping();
     renderAnswer(data);
   }catch{
-    removeTyping();
+    stopTyping();
     addBubble(fallbackBlock());
   }
 }
