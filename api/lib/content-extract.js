@@ -1,4 +1,4 @@
-// /api/lib/content-extract.js
+// /api/content-extract.js
 // Unified, dependency-free JSON-LD extractor for Events/Courses, Articles, Products, and Services.
 // No DB writes. Step 2B will expose read-only tester endpoints that call these functions.
 
