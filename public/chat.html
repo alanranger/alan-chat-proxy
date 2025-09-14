@@ -103,7 +103,6 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 const CHAT_ENDPOINT = '/api/chat';
 const EXTRACT_ENDPOINT = '/api/extract';
 const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // optional bearer (same as bulk tool)
-
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
@@ -179,8 +178,7 @@ function mdToHtml(md){
 function unique(arr){ return Array.from(new Set(arr.filter(Boolean))); }
 function inferChips(question, answer, citations){
   const q=(question||'').toLowerCase(), a=(answer||'').toLowerCase();
-  const chips=[];
-  const push=(label,href)=>chips.push({label,href});
+  const chips=[]; const push=(label,href)=>chips.push({label,href});
   unique(citations).slice(0,4).forEach(u=>{
     const label=(u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
     chips.push({label:label.length>32?label.slice(0,29)+'…':label,href:u});
@@ -197,7 +195,7 @@ function addChips(container, chips){
   container.appendChild(wrap); container.dataset.chipsAdded='1';
 }
 
-/* ===== Dates & prices ===== */
+/* ===== Dates & price utils ===== */
 const MONTHS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
 function toISODate(y,m,d){ return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
 function parseDateFromText(s){
@@ -220,7 +218,6 @@ function isListingUrl(u){
 }
 
 /* ===== Structured extraction ===== */
-/* Try DB first: /api/extract?action=entities-db&url=..., then fallback to extract-all */
 async function fetchEntitiesFrom(url, token){
   async function call(action){
     const r = await fetch(`${EXTRACT_ENDPOINT}?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`, {
@@ -229,14 +226,14 @@ async function fetchEntitiesFrom(url, token){
     const text = await r.text().catch(()=> '');
     try { return JSON.parse(text); } catch { return null; }
   }
-
-  const tryDb = await call('entities-db');    // expects {entities:[...]} or [...]
+  // Prefer DB if available
+  const tryDb = await call('entities-db');
   let dbArr = null;
   if (Array.isArray(tryDb)) dbArr = tryDb;
   else if (tryDb && Array.isArray(tryDb.entities)) dbArr = tryDb.entities;
-
   if (dbArr && dbArr.length) return dbArr;
 
+  // Fallback to tolerant JSON-LD scrape
   const tryAll = await call('extract-all');
   if (Array.isArray(tryAll)) return tryAll;
   if (tryAll && Array.isArray(tryAll.entities)) return tryAll.entities;
@@ -244,7 +241,6 @@ async function fetchEntitiesFrom(url, token){
   return [];
 }
 
-/* Normalise an entity into a stable shape, pulling offers from either .offers or .raw.offers */
 function normaliseEntity(e, pageUrl){
   const offersSrc = Array.isArray(e.offers) ? e.offers :
                     Array.isArray(e.raw?.offers) ? e.raw.offers : [];
@@ -261,7 +257,7 @@ function normaliseEntity(e, pageUrl){
     title: e.title || e.name || '',
     date_start: e.date_start || e.startDate || '',
     date_end: e.date_end || e.endDate || '',
-    location: e.location?.name || e.location || '',
+    location: e.location?.name || e.location?.address?.addressLocality || e.location || '',
     price: (e.price ?? null),
     price_currency: (e.price_currency ?? e.priceCurrency ?? null),
     url: e.url || e.source_url || e['@id'] || pageUrl,
@@ -269,8 +265,6 @@ function normaliseEntity(e, pageUrl){
     offers
   };
 }
-
-/* ===== Linker & pricing enrichment ===== */
 function pickBestUrlForEntity(entity, fallbackList=[]){
   const candidates = [];
   (entity.offers||[]).forEach(o=>{ if(o.url) candidates.push(o.url); });
@@ -281,87 +275,124 @@ function pickBestUrlForEntity(entity, fallbackList=[]){
   return candidates.find(Boolean) || null;
 }
 
-function addLinksToBulletsUsingEntities(container, liIds, items, entities, citations){
-  const byISO = new Map();
-  entities.forEach(e=>{
-    const iso=(e.date_start||'').slice(0,10);
-    if(!iso) return;
-    if(!byISO.has(iso)) byISO.set(iso, []);
-    byISO.get(iso).push(e);
-  });
+/* ===== Canonical schedule + prices (independent of model wording) ===== */
+function renderCanonicalSchedule(container, events, citations){
+  if (!events.length) return;
 
-  liIds.forEach((id,i)=>{
-    const li = container.querySelector('#'+CSS.escape(id));
-    if(!li) return;
-    const iso = parseDateFromText(items[i]||'');
-    let url=null;
+  // sessions: one per date
+  const sessions = events
+    .map(e=>({ iso:(e.date_start||'').slice(0,10), e }))
+    .filter(s=>s.iso)
+    .sort((a,b)=> a.iso.localeCompare(b.iso));
 
-    if(iso && byISO.has(iso)) {
-      const match = byISO.get(iso)[0];
-      url = pickBestUrlForEntity(match, citations);
-    }
-
-    if(!url) { // fallback scan
-      for(const e of entities){
-        url = pickBestUrlForEntity(e, citations);
-        if(url && !isListingUrl(url)) break;
-      }
-    }
-    if(!url && citations && citations.length){
-      url = citations.find(u=>!isListingUrl(u)) || citations[0];
-    }
-    if(!url) return;
-
-    const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener'; a.textContent=' Link'; a.style.marginLeft='6px';
-    li.appendChild(a);
-  });
-}
-
-function buildOfferLines(entities){
-  const lines=[];
-  entities.forEach(e=>{
-    if (e.offers?.length){
-      e.offers.forEach(o=>{
-        const priceLine = fmtAnyPrice(o.price, o.priceCurrency || e.price_currency);
-        const label = o.name ? o.name.replace(/\s*\|\s*/g,' – ') : '';
-        lines.push(label ? `${label}: ${priceLine}` : priceLine);
-      });
+  // de-duplicate by date (keep first with a solid URL)
+  const byDate = new Map();
+  for (const s of sessions){
+    if (!byDate.has(s.iso)){
+      byDate.set(s.iso, s.e);
     }else{
-      const priceLine = fmtAnyPrice(e.price, e.price_currency);
-      if (priceLine && priceLine !== 'TBD') lines.push(priceLine);
+      const cur = byDate.get(s.iso);
+      const curUrl = pickBestUrlForEntity(cur, citations);
+      const newUrl = pickBestUrlForEntity(s.e, citations);
+      if (!curUrl && newUrl) byDate.set(s.iso, s.e);
     }
-  });
-  return unique(lines);
+  }
+
+  // Build list HTML
+  const list = document.createElement('div');
+  list.innerHTML = `<p><strong>All available dates:</strong></p>`;
+  const ul = document.createElement('ul');
+
+  for (const [iso, ev] of Array.from(byDate.entries())){
+    // Fri, 24 Apr 2026
+    const d = new Date(iso+'T09:00:00Z');
+    const day = d.toLocaleDateString('en-GB',{weekday:'short'});
+    const dt  = d.toLocaleDateString('en-GB',{day:'2-digit', month:'short', year:'numeric'});
+    const li = document.createElement('li');
+    li.textContent = `${day}, ${dt}`;
+    const url = pickBestUrlForEntity(ev, citations);
+    if (url){
+      const a = document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener'; a.textContent=' Link';
+      a.style.marginLeft='6px'; li.appendChild(a);
+    }
+    ul.appendChild(li);
+  }
+  list.appendChild(ul);
+  container.appendChild(list);
+
+  // Prices from offers across all events
+  const priceLines = [];
+  const seen = new Set();
+  for (const ev of events){
+    const ccy = ev.price_currency || ev.offers?.find(o=>o.priceCurrency)?.priceCurrency || 'GBP';
+    if (ev.offers && ev.offers.length){
+      for (const o of ev.offers){
+        const label = o.name ? o.name.replace(/\s*\|\s*/g,' – ') : 'Price';
+        const line = `${label}: ${fmtAnyPrice(o.price, o.priceCurrency || ccy)}`;
+        if (!seen.has(line)){ seen.add(line); priceLines.push(line); }
+      }
+    }else if (ev.price != null){
+      const line = fmtAnyPrice(ev.price, ev.price_currency || 'GBP');
+      if (!seen.has(line)){ seen.add(line); priceLines.push(line); }
+    }
+  }
+  if (priceLines.length){
+    const p = document.createElement('div');
+    p.innerHTML = `<p><strong>Price:</strong></p>` + `<ul>${priceLines.map(s=>`<li>${s}</li>`).join('')}</ul>`;
+    container.appendChild(p);
+  }
 }
 
-function appendPriceIfMissing(container, entities){
-  const alreadyShowsMoney = /£|\$|€/.test(container.innerHTML||'');
-  const lines = buildOfferLines(entities);
-  if (!lines.length) return;
-
-  // If the LLM printed a price that might be wrong, we still append a canonical "Price" section from DB.
-  const wrap = document.createElement('div');
-  wrap.innerHTML = `<p><strong>Price:</strong></p><ul>` + lines.map(s=>`<li>${s}</li>`).join('') + `</ul>`;
-  container.appendChild(wrap);
-}
-
-/* Main enrichment: prefer DB; fallback to JSON-LD */
+/* Enrich the model answer using (DB → JSON-LD) entities */
 async function enrich(question, container, liIds, items, citations){
   const token = getToken();
-
-  // Collect and normalise entities from all citation pages
   const pageEntities = (await Promise.all(unique(citations).map(async (u)=>{
     const raw = await fetchEntitiesFrom(u, token);
     return raw.map(e=>normaliseEntity(e, u));
   }))).flat();
 
-  // Link each bullet to the most date-specific page we can find
-  addLinksToBulletsUsingEntities(container, liIds, items, pageEntities, citations);
+  // Prefer Event entities for canonical schedule
+  const events = pageEntities.filter(e => (e.kind||'').includes('event'));
+  if (events.length){
+    renderCanonicalSchedule(container, events, citations);
+  }
 
-  // Append canonical prices from DB/json-ld offers
-  appendPriceIfMissing(container, pageEntities);
+  // If the model produced date bullets, try to link them to specific pages
+  if (liIds.length){
+    const byISO = new Map();
+    events.forEach(e=>{
+      const iso=(e.date_start||'').slice(0,10);
+      if(!iso) return;
+      if(!byISO.has(iso)) byISO.set(iso, []);
+      byISO.get(iso).push(e);
+    });
 
-  // Context pills
+    liIds.forEach((id,i)=>{
+      const li = container.querySelector('#'+CSS.escape(id));
+      if(!li) return;
+      const iso = parseDateFromText(items[i]||'');
+      let url=null;
+      if(iso && byISO.has(iso)){
+        const match = byISO.get(iso)[0];
+        url = pickBestUrlForEntity(match, citations);
+      }
+      if(!url){
+        for(const e of events){
+          url = pickBestUrlForEntity(e, citations);
+          if(url && !isListingUrl(url)) break;
+        }
+      }
+      if(!url && citations && citations.length){
+        url = citations.find(u=>!isListingUrl(u)) || citations[0];
+      }
+      if(url){
+        const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener'; a.textContent=' Link'; a.style.marginLeft='6px';
+        li.appendChild(a);
+      }
+    });
+  }
+
+  // Chips based on intent + citations
   addChips(container, inferChips(question, container.textContent, citations));
 }
 
@@ -398,9 +429,7 @@ function renderAnswer(payload, question){
   const cites = unique(payload.citations || payload.sources || []);
   const { html, liIds, items } = mdToHtml(raw);
   const holder = addBubble(html);
-  enrich(question, holder, liIds, items, cites).catch(()=>{
-    addChips(holder, inferChips(question, holder.textContent, cites));
-  });
+  enrich(question, holder, liIds, items, cites).catch(()=>{ /* non-fatal */ });
   if (!liIds.length) addChips(holder, inferChips(question, raw, cites));
 }
 
