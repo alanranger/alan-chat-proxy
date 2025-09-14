@@ -1,16 +1,20 @@
 // /api/extract.js
-// Read-only tester endpoint that exposes JSON-LD extraction helpers.
+// Single API for JSON-LD extraction tests used by bulk.html.
+// Actions:
+//   - events-extract
+//   - articles-extract
+//   - products-extract
+//   - services-extract
+//   - extract-all
 //
-// Actions (GET):
-//   - action=events-extract&url=...
-//   - action=articles-extract&url=...
-//   - action=products-extract&url=...
-//   - action=services-extract&url=...
-//   - action=extract-all&url=...
-//
-// This does NOT write to the database. Safe to use from bulk.html.
+// NOTE: This file expects helper modules in /json (sibling of /api)
 
-import { extractEventItemsFromUrl } from '../json/events-extract.js';
+export const config = { runtime: 'nodejs' };
+
+import {
+  extractEventItemsFromUrl,
+} from '../json/events-extract.js';
+
 import {
   extractArticleItemsFromUrl,
   extractProductItemsFromUrl,
@@ -18,65 +22,64 @@ import {
   extractAllFromUrl,
 } from '../json/content-extract.js';
 
-function send(res, status, obj) {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.status(status).send(JSON.stringify(obj));
-}
-
-function isHttpUrl(u) {
-  try {
-    const x = new URL(String(u));
-    return x.protocol === 'http:' || x.protocol === 'https:';
-  } catch {
-    return false;
+function send(res, code, obj) {
+  res.status(code).setHeader('Content-Type', 'application/json; charset=utf-8');
+  // ensure any thrown errors end up as strings
+  if (obj && obj.detail && typeof obj.detail !== 'string') {
+    try { obj.detail = String(obj.detail); } catch {}
   }
+  res.end(JSON.stringify(obj));
 }
 
 export default async function handler(req, res) {
-  // CORS (read-only)
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET')
-    return send(res, 405, { error: 'method_not_allowed' });
-
-  const action = String(req.query?.action || '').toLowerCase();
-  const url = String(req.query?.url || '').trim();
-
-  if (!action) return send(res, 400, { error: 'missing_action' });
-  if (!url || !isHttpUrl(url))
-    return send(res, 400, {
-      error: 'missing_or_bad_url',
-      detail: 'Provide ?url=https://...',
-    });
-
   try {
+    if (req.method !== 'GET') {
+      return send(res, 405, { error: 'method_not_allowed' });
+    }
+
+    const url = String(req.query.url || '').trim();
+    const action = String(req.query.action || '').trim();
+
+    if (!url) return send(res, 400, { error: 'bad_request', detail: 'Missing ?url=' });
+    if (!action) return send(res, 400, { error: 'bad_request', detail: 'Missing ?action=' });
+
+    // Route actions
     if (action === 'events-extract') {
-      const events = await extractEventItemsFromUrl(url);
-      return send(res, 200, { ok: true, url, count: events.length, events });
+      const items = await extractEventItemsFromUrl(url);
+      return send(res, 200, { ok: true, url, count: items.length, items });
     }
+
     if (action === 'articles-extract') {
-      const articles = await extractArticleItemsFromUrl(url);
-      return send(res, 200, { ok: true, url, count: articles.length, articles });
+      const items = await extractArticleItemsFromUrl(url);
+      return send(res, 200, { ok: true, url, count: items.length, items });
     }
+
     if (action === 'products-extract') {
-      const products = await extractProductItemsFromUrl(url);
-      return send(res, 200, { ok: true, url, count: products.length, products });
+      const items = await extractProductItemsFromUrl(url);
+      return send(res, 200, { ok: true, url, count: items.length, items });
     }
+
     if (action === 'services-extract') {
-      const services = await extractServiceItemsFromUrl(url);
-      return send(res, 200, { ok: true, url, count: services.length, services });
+      const items = await extractServiceItemsFromUrl(url);
+      return send(res, 200, { ok: true, url, count: items.length, items });
     }
+
     if (action === 'extract-all') {
-      const all = await extractAllFromUrl(url);
-      return send(res, 200, { ok: true, url, ...all });
+      const out = await extractAllFromUrl(url);
+      return send(res, 200, { ok: true, url, ...out, counts: {
+        articles: out.articles?.length || 0,
+        products: out.products?.length || 0,
+        services: out.services?.length || 0,
+      }});
     }
-    return send(res, 400, { error: 'unknown_action', action });
-  } catch (e) {
+
+    return send(res, 400, { error: 'bad_request', detail: `Unknown action "${action}"` });
+  } catch (err) {
+    // Make failures visible to the UI instead of generic 500
     return send(res, 500, {
-      error: 'extract_failed',
-      detail: String(e?.message || e),
+      error: 'server_error',
+      detail: err?.message || String(err),
+      stack: (err?.stack || '').split('\n').slice(0, 5).join('\n'),
     });
   }
 }
