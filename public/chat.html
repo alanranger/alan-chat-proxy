@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Alan Ranger Assistant</title>
 
-  <!-- Favicon: use a small white logo so the tab doesn't look like it's loading -->
+  <!-- Favicon so the tab never “spins” waiting on an image -->
   <link rel="icon" href="/ALAN%20RANGER%20LOGO%20and%20Icon%20WHITE.png" type="image/png"/>
 
   <style>
@@ -22,9 +22,7 @@
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;
-      background:var(--bg);
-      color:var(--text);
+      margin:0;background:var(--bg);color:var(--text);
       font:15px/1.6 system-ui,-apple-system,Segoe UI,Inter,Roboto,Helvetica Neue,Arial,sans-serif;
     }
 
@@ -38,93 +36,69 @@
     }
     .brandbar{height:6px;background:var(--brand)}
 
-    /* Header block (centered) */
-    .header{
-      text-align:center;
-      padding:20px 18px 12px;
-    }
+    /* Header (center) */
+    .header{ text-align:center; padding:22px 18px 10px; position:relative; }
     .logoWrap{
-      width:76px;height:76px;margin:0 auto 12px;
-      border-radius:50%;
-      border:1px solid var(--line);
-      display:grid;place-items:center;
-      background:#000;
-      overflow:hidden;
+      width:92px;height:92px;margin:0 auto 14px;
+      border-radius:50%; border:1px solid var(--line);
+      display:grid; place-items:center; background:#000; overflow:hidden;
     }
-    .logoWrap img{
-      width:100%;height:100%;
-      object-fit:contain;
-      display:block;
-      background:transparent;
+    .logoWrap img{ width:100%; height:100%; object-fit:contain; display:block; background:transparent; }
+    .title{ font-weight:800; letter-spacing:.2px; font-size:28px; margin:2px 0 8px; }
+    .intro{ color:var(--muted); margin:6px auto 6px; max-width:760px; font-size:15px; }
+
+    /* Pills */
+    .pills{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:10px 0 6px; }
+    .pill{
+      display:inline-block; font-size:13px; color:#fff; text-decoration:none;
+      background:transparent; border:1px solid var(--line); border-radius:999px;
+      padding:8px 14px;
     }
-    .title{
-      font-weight:800;
-      letter-spacing:.2px;
-      font-size:22px;
-    }
-    .status{
-      font-size:12px;color:var(--muted);
-      position:absolute;right:18px;top:10px;
-    }
-    .intro{
-      color:var(--muted);
-      margin:8px auto 4px;
-      max-width:720px;
-      font-size:14px;
-    }
+    .pill:hover{ background:#0b1426; }
 
     /* Chat area */
-    .chat{padding:16px;max-height:68vh;overflow-y:auto}
-    .msg{display:flex;margin:12px 0}
-    .msg.user{justify-content:flex-end}
+    .chat{ padding:16px; max-height:68vh; overflow-y:auto }
+    .msg{ display:flex; margin:12px 0 }
+    .msg.user{ justify-content:flex-end }
     .bubble{
-      max-width:76%;
-      padding:12px 14px;
-      border-radius:12px;
-      white-space:pre-wrap;
+      max-width:76%; padding:12px 14px; border-radius:12px; white-space:pre-wrap;
       animation:fadeInUp .25s ease;
     }
-    .bubble.user{background:var(--bubble-user)}
-    .bubble.bot{background:var(--bubble-bot)}
-    @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .bubble.user{ background:var(--bubble-user) }
+    .bubble.bot{ background:var(--bubble-bot) }
+    @keyframes fadeInUp{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
     /* Simple markdown cues */
-    .bubble.bot b{font-weight:700}
-    .bubble.bot ul{margin:6px 0 0 16px;padding:0}
-    .bubble.bot li{margin:4px 0}
+    .bubble.bot b{ font-weight:700 }
+    .bubble.bot ul{ margin:6px 0 0 16px; padding:0 }
+    .bubble.bot li{ margin:4px 0 }
 
-    /* Citation chips */
-    .sources{
-      margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;
-    }
-    .chip{
-      background:#0b1426;border:1px solid var(--line);
-      border-radius:999px;padding:4px 10px;font-size:12px
-    }
-    .chip a{color:#9ccaff;text-decoration:none}
+    /* Citations */
+    .sources{ margin-top:10px; display:flex; flex-wrap:wrap; gap:8px }
+    .chip{ background:#0b1426; border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12px }
+    .chip a{ color:#9ccaff; text-decoration:none }
 
     /* Composer */
-    .composer{
-      display:flex;gap:10px;padding:12px 16px;border-top:1px solid var(--line)
-    }
+    .composer{ display:flex; gap:10px; padding:12px 16px; border-top:1px solid var(--line) }
     .composer input{
-      flex:1;background:#0b1426;border:1px solid var(--line);
-      border-radius:10px;padding:12px;color:var(--text)
+      flex:1; background:#0b1426; border:1px solid var(--line);
+      border-radius:10px; padding:12px; color:var(--text)
     }
     .composer button{
-      background:var(--brand);border:0;color:#fff;border-radius:10px;
-      padding:0 18px;font-weight:700;cursor:pointer
+      background:var(--brand); border:0; color:#fff; border-radius:10px;
+      padding:0 18px; font-weight:700; cursor:pointer
     }
 
-    /* Typing three dots */
-    .typing{color:var(--muted);font-size:13px;margin:2px 16px 10px;display:none;gap:4px}
-    .dot{width:6px;height:6px;background:var(--muted);border-radius:50%;animation:bounce 1s infinite}
-    .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
-    @keyframes bounce{0%,80%,100%{transform:scale(.6)}40%{transform:scale(1)}}
+    /* Typing dots */
+    .typing{ color:var(--muted); font-size:13px; margin:2px 16px 10px; display:none; gap:4px }
+    .dot{ width:6px; height:6px; background:var(--muted); border-radius:50%; animation:bounce 1s infinite }
+    .dot:nth-child(2){ animation-delay:.2s } .dot:nth-child(3){ animation-delay:.4s }
+    @keyframes bounce{ 0%,80%,100%{transform:scale(.6)} 40%{transform:scale(1)} }
 
     @media (max-width:720px){
-      .bubble{max-width:88%}
-      .wrap{padding:16px}
+      .bubble{ max-width:88% }
+      .wrap{ padding:16px }
+      .title{ font-size:24px }
     }
   </style>
 </head>
@@ -132,19 +106,25 @@
   <div class="wrap">
     <div class="panel">
       <div class="brandbar"></div>
-      <div class="status" id="status">ready</div>
 
       <div class="header">
         <div class="logoWrap">
-          <!-- try preferred logo, then alt path, then text fallback via onerror -->
-          <img id="logo" src="/ALAN%20RANGER%20LOGO%20and%20Icon%20WHITE.png"
-               alt="Alan Ranger"
-               onerror="this.onerror=null; this.src='/chat%20white.png';">
+          <!-- Multi-step fallback: try several names, then show “AR” -->
+          <img id="logo" alt="Alan Ranger">
         </div>
+
         <div class="title">Alan Ranger Assistant</div>
-        <p class="intro">
-          Ask me about workshops, courses, tips, or photography gear — I’ll give concise, cited answers.
+
+        <p class="intro" id="intro">
+          I’m Alan’s AI assistant, trained on the content of this website to help with workshops, tuition, and photography questions.
+          I won’t always get everything right — if I can’t help, please reach out to Alan directly using the contact options below.
         </p>
+
+        <div class="pills" id="pills">
+          <a class="pill" href="https://www.alanranger.com/contact-us-alan-ranger-photography" target="_blank" rel="noopener">Contact form</a>
+          <!-- WhatsApp pill appears only if a number is configured below -->
+          <a class="pill" id="wa-pill" href="#" target="_blank" rel="noopener" style="display:none">WhatsApp</a>
+        </div>
       </div>
 
       <div id="chat" class="chat"></div>
@@ -161,19 +141,45 @@
   </div>
 
   <script>
+    // ---------- CONFIG ----------
+    // Set your WhatsApp number (E.164 format, no spaces). Example: "447700900123"
+    const WHATSAPP_NUMBER = "447817017994"; // ← add your number; leaves pill hidden if empty
+    // Logo candidates (URL-encoded names to handle spaces):
+    const LOGO_CANDIDATES = [
+      "/alanranger_bot_avatar_v2.png",
+      "/ALAN%20RANGER%20ICON%20WHITE%20on%20Black%20Circle1.png",
+      "/ALAN%20RANGER%20LOGO%20and%20Icon%20WHITE.png"
+    ];
+    // ----------------------------
+
     const chat   = document.getElementById('chat');
     const q      = document.getElementById('q');
     const sendBtn= document.getElementById('send');
     const typing = document.getElementById('typing');
-    const statusEl = document.getElementById('status');
 
-    // Final logo fallback: if both images fail, show simple initials
-    (function ensureLogo(){
+    // Load logo with graceful fallbacks
+    (function loadLogo(){
       const img = document.getElementById('logo');
-      img.addEventListener('error', () => {
-        const wrap = img.parentElement;
-        wrap.innerHTML = '<span style="font-weight:800;color:#fff">AR</span>';
-      }, { once:true });
+      let idx = 0;
+      function tryNext(){
+        if (idx < LOGO_CANDIDATES.length){
+          img.src = LOGO_CANDIDATES[idx++];
+        } else {
+          // last resort: show “AR”
+          const wrap = img.parentElement;
+          wrap.innerHTML = '<span style="font-weight:800;color:#fff;font-size:28px;">AR</span>';
+        }
+      }
+      img.onerror = tryNext;
+      tryNext();
+    })();
+
+    // WhatsApp pill toggling
+    (function setupWhatsApp(){
+      if (!WHATSAPP_NUMBER) return;
+      const wa = document.getElementById('wa-pill');
+      wa.href = "https://wa.me/" + WHATSAPP_NUMBER;
+      wa.style.display = "inline-block";
     })();
 
     function addBubble(html, who='bot', cites=[]){
@@ -196,22 +202,19 @@
     }
 
     function mdLight(s=''){
-      // **bold**
-      s = s.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-      // "- " to bullets •
-      s = s.replace(/(^|\n)-\s+/g, '$1• ');
+      s = s.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');     // **bold**
+      s = s.replace(/(^|\n)-\s+/g, '$1• ');             // - bullets
       return s;
     }
 
     function setTyping(v){ typing.style.display = v ? 'flex' : 'none'; }
-    function setReady(v){ statusEl.textContent = v ? 'ready' : '…'; }
 
     async function ask(){
       const text = q.value.trim();
       if (!text) return;
       addBubble(text, 'user');
       q.value = '';
-      setTyping(true); setReady(false);
+      setTyping(true);
 
       try{
         const r = await fetch('/api/chat', {
@@ -225,7 +228,7 @@
       }catch(e){
         addBubble('Sorry — I had trouble contacting the server.', 'bot');
       }finally{
-        setTyping(false); setReady(true);
+        setTyping(false);
       }
     }
 
