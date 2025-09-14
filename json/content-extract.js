@@ -1,23 +1,24 @@
 // /json/content-extract.js
-// Unified, dependency-free JSON-LD extractor for Events/Courses, Articles, Products, and Services.
-// No DB writes. Step 2B will expose read-only tester endpoints that call these functions.
+// Generic JSON-LD extractors for Article, Product, and Service,
+// plus a convenience `extractAllFromUrl`.
+// Pure helpers — NO DB writes. Safe to import from /api routes.
 
-import { coerceFutureISODate, isHttpUrl } from './json/workshops-schema.js';
+//
+// ---------- tiny utils ----------
+//
+function isHttpUrl(u) {
+  try { const x = new URL(String(u)); return x.protocol === "http:" || x.protocol === "https:"; }
+  catch { return false; }
+}
 
-/* ------------------------------- Type sets -------------------------------- */
-const EVENT_TYPES   = new Set(['Event', 'EducationEvent', 'Course', 'EventSeries']);
-const ARTICLE_TYPES = new Set(['Article', 'BlogPosting', 'NewsArticle']);
-const PRODUCT_TYPES = new Set(['Product']);
-const SERVICE_TYPES = new Set(['Service']);
-
-/* ---------------------------- JSON-LD utilities --------------------------- */
-function tryParseJSON(text, index = 0) {
+function tryParseJSON(text, idx = 0) {
   try { return JSON.parse(text); }
   catch {
-    const cleaned = text.replace(/<!--.*?-->/gs, '').trim();
-    try { return JSON.parse(cleaned); }
-    catch (err) {
-      console.error('[content-extract] JSON-LD parse error @ block', index, err?.message);
+    try {
+      const cleaned = text.replace(/<!--[\s\S]*?-->/g, "").trim();
+      return JSON.parse(cleaned);
+    } catch (e2) {
+      console.error("[content-extract] JSON-LD parse failed at block", idx, e2?.message);
       return null;
     }
   }
@@ -26,312 +27,223 @@ function tryParseJSON(text, index = 0) {
 function extractJsonLdBlocks(html) {
   const blocks = [];
   const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
-  let m; while ((m = re.exec(html)) !== null) blocks.push(m[1]);
+  let m;
+  while ((m = re.exec(html)) !== null) blocks.push(m[1]);
   return blocks;
 }
 
-function collectNodesByType(node, typeSet, out = []) {
-  if (!node || typeof node !== 'object') return out;
+function normaliseText(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v.trim();
+  if (typeof v === "number") return String(v);
+  return "";
+}
 
-  // @graph arrays
-  if (Array.isArray(node['@graph'])) node['@graph'].forEach(n => collectNodesByType(n, typeSet, out));
+function asArray(x) { return Array.isArray(x) ? x : (x ? [x] : []); }
+
+function fetchHtml(url) {
+  return fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-GB,en;q=0.9",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache",
+      "Referer": (() => { try { return new URL(url).origin; } catch { return undefined; } })(),
+    },
+    redirect: "follow",
+  }).then(async (r) => {
+    if (!r.ok) {
+      const body = await r.text().catch(() => "");
+      throw new Error(`fetch_failed:${r.status}:${body.slice(0, 240)}`);
+    }
+    return r.text();
+  });
+}
+
+//
+// ---------- collectors (generic) ----------
+//
+const TYPE = {
+  ARTICLE: new Set(["Article", "NewsArticle", "BlogPosting"]),
+  PRODUCT: new Set(["Product"]),
+  SERVICE: new Set(["Service"]),
+};
+
+function hasAnyType(node, typeSet) {
+  const t = node && node["@type"];
+  const arr = Array.isArray(t) ? t : (t ? [t] : []);
+  return arr.some((x) => typeSet.has(String(x)));
+}
+
+function collectNodesByType(root, typeSet, out = []) {
+  if (!root || typeof root !== "object") return out;
+
+  // handle @graph
+  if (Array.isArray(root["@graph"])) {
+    root["@graph"].forEach((n) => collectNodesByType(n, typeSet, out));
+  }
 
   // this node
-  const t = node['@type'];
-  if (t) {
-    const arr = Array.isArray(t) ? t : [t];
-    if (arr.some(x => typeSet.has(String(x)))) out.push(node);
-  }
+  if (hasAnyType(root, typeSet)) out.push(root);
 
-  // recurse generic
-  if (Array.isArray(node)) {
-    node.forEach(n => collectNodesByType(n, typeSet, out));
+  // recurse
+  if (Array.isArray(root)) {
+    root.forEach((n) => collectNodesByType(n, typeSet, out));
   } else {
-    for (const k of Object.keys(node)) {
-      if (k === '@graph') continue;
-      const v = node[k];
-      if (v && typeof v === 'object') collectNodesByType(v, typeSet, out);
+    for (const k of Object.keys(root)) {
+      if (k === "@graph") continue;
+      const v = root[k];
+      if (v && typeof v === "object") collectNodesByType(v, typeSet, out);
     }
   }
   return out;
 }
 
-/* ------------------------------ Tiny helpers ------------------------------ */
-function firstString(v) {
-  if (!v) return '';
-  if (Array.isArray(v)) return firstString(v[0]);
-  if (typeof v === 'object') return firstString(v.name || v['@id'] || v.url);
-  return String(v || '').trim();
-}
-function normaliseLocation(loc) {
-  if (!loc || typeof loc !== 'object') return '';
-  const nm = loc.name || '';
-  const addr = loc.address;
-  if (typeof addr === 'string') return nm ? `${nm} | ${addr}` : addr;
-  if (addr && typeof addr === 'object') {
-    const parts = [
-      addr.name, addr.streetAddress, addr.addressLocality,
-      addr.addressRegion, addr.postalCode, addr.addressCountry
-    ].filter(Boolean);
-    const addrStr = parts.join(', ');
-    return nm ? `${nm}${addrStr ? ' | ' + addrStr : ''}` : addrStr;
+//
+// ---------- normalisers per type ----------
+//
+function normaliseUrlPref(node, pageUrl) {
+  const cands = [
+    node?.url,
+    node?.["@id"],
+    node?.mainEntityOfPage,
+    node?.item?.["@id"],
+    pageUrl,
+  ];
+  for (const c of cands) {
+    const s = typeof c === "string" ? c : (typeof c === "object" ? c?.["@id"] : "");
+    if (isHttpUrl(s)) return s.trim();
   }
-  return String(nm || '');
+  return pageUrl;
 }
 
-/* --------------------------------- Events --------------------------------- */
-function mapEventType(schemaType = '') {
-  const t = String(schemaType || '').toLowerCase();
-  if (t.includes('course')) return 'course';
-  if (t.includes('educationevent')) return 'course';
-  if (t.includes('eventseries')) return 'event';
-  if (t.includes('event')) return 'event';
-  return 'event';
-}
-function guessWorkshopCategory({ url = '', title = '' }) {
-  const s = `${url} ${title}`.toLowerCase();
-  if (/(residential|multi[-\s]?day|betws|wales|fairy[-\s]?glen)/.test(s)) return 'residential';
-  if (/(one[-\s]?day|dartmoor|yorkshire|woodland(?!.*walk)|cotswolds)/.test(s)) return 'one-day';
-  if (/(half[-\s]?day|walk|evening|sunset|golden hour|oakley|coombe|warwick)/.test(s)) return 'half-day';
-  return undefined;
-}
-function normaliseEventNode(node, pageUrl, today = new Date()) {
-  const title = firstString(node.name || node.headline || node['@id']);
-  const startRaw = node.startDate || node.startTime || node.start || '';
-  const endRaw   = node.endDate   || node.endTime   || node.end   || '';
-  const date_start = coerceFutureISODate(startRaw, today);
-  const date_end   = endRaw ? coerceFutureISODate(endRaw, today) : undefined;
-  const location   = normaliseLocation(node.location) || normaliseLocation(node['@location']) || '';
-  const url = (isHttpUrl(node.url) && node.url)
-           || (isHttpUrl(node['@id']) && node['@id'])
-           || (isHttpUrl(pageUrl) && pageUrl) || '';
-
-  const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type'] || ''];
-  const event_type = mapEventType(types.join(','));
-  const category = event_type === 'event' ? guessWorkshopCategory({ url, title }) : undefined;
-
+// Article / BlogPosting
+function normaliseArticle(node, pageUrl) {
   const out = {
-    kind: 'event', event_type, category,
-    title, date_start, date_end, location, url,
-    source_url: pageUrl, last_seen: new Date().toISOString(),
-    raw: { '@type': node['@type'], name: node.name || undefined, startDate: node.startDate || undefined }
+    kind: "article",
+    title: normaliseText(node?.headline || node?.name || node?.title),
+    url: normaliseUrlPref(node, pageUrl),
+    description: normaliseText(node?.description),
+    author: normaliseText(
+      node?.author?.name ||
+      (Array.isArray(node?.author) ? node.author.map(a => a?.name).filter(Boolean).join(", ") : "")
+    ),
+    date_published: normaliseText(node?.datePublished || node?.dateCreated),
+    date_modified: normaliseText(node?.dateModified),
+    source_url: pageUrl,
+    raw: { "@type": node?.["@type"], headline: node?.headline, datePublished: node?.datePublished },
   };
-  if (!out.title || !out.date_start) return null;
-  if (!isHttpUrl(out.url) && !isHttpUrl(out.source_url)) return null;
+  if (!out.title) out.title = normaliseText(node?.name) || "(untitled)";
   return out;
 }
-export function extractEventItemsFromHtml(html, pageUrl, today = new Date()) {
-  const items = [];
-  extractJsonLdBlocks(html).forEach((txt, i) => {
-    const data = tryParseJSON(txt, i); if (!data) return;
-    (Array.isArray(data) ? data : [data]).forEach(root => {
-      collectNodesByType(root, EVENT_TYPES, []).forEach(n => {
-        const norm = normaliseEventNode(n, pageUrl, today);
-        if (norm) items.push(norm);
-      });
-    });
-  });
-  const seen = new Set(), dedup = [];
-  for (const it of items) {
-    const k = `${it.title}|${it.date_start}|${it.url}`;
-    if (!seen.has(k)) { seen.add(k); dedup.push(it); }
-  }
-  return dedup;
-}
-export async function extractEventItemsFromUrl(url, today = new Date()) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'alanranger-bot/1.0 (+content-extract)' } });
-  const html = await res.text();
-  return extractEventItemsFromHtml(html, url, today);
-}
 
-/* -------------------------------- Articles -------------------------------- */
-function normaliseArticleNode(node, pageUrl) {
-  const title = firstString(node.headline || node.name);
-  const url = (isHttpUrl(node.url) && node.url)
-           || (isHttpUrl(firstString(node.mainEntityOfPage)) && firstString(node.mainEntityOfPage))
-           || (isHttpUrl(pageUrl) && pageUrl) || '';
-  const date_published = firstString(node.datePublished || node.dateCreated);
-  const date_modified  = firstString(node.dateModified);
-  const author  = firstString(node.author || node.creator);
-  const section = firstString(node.articleSection || node.section || node.genre);
-  const keywords = Array.isArray(node.keywords)
-    ? node.keywords.map(k => String(k))
-    : (typeof node.keywords === 'string' ? node.keywords.split(',').map(s => s.trim()).filter(Boolean) : []);
-  const image = firstString(node.image);
-
+// Product
+function normaliseProduct(node, pageUrl) {
+  const offers = Array.isArray(node?.offers) ? node.offers[0] : node?.offers || {};
   const out = {
-    kind: 'article',
-    title, url,
-    date_published: date_published || undefined,
-    date_modified:  date_modified  || undefined,
-    author: author || undefined,
-    section: section || undefined,
-    tags: keywords,
-    image: isHttpUrl(image) ? image : undefined,
-    source_url: pageUrl, last_seen: new Date().toISOString(),
-    raw: { '@type': node['@type'], headline: node.headline || undefined }
+    kind: "product",
+    title: normaliseText(node?.name),
+    url: normaliseUrlPref(node, pageUrl),
+    description: normaliseText(node?.description),
+    sku: normaliseText(node?.sku),
+    price: (offers && (offers.price || offers.lowPrice || offers.highPrice)) ?? undefined,
+    priceCurrency: normaliseText(offers?.priceCurrency),
+    availability: normaliseText(offers?.availability),
+    source_url: pageUrl,
+    raw: { "@type": node?.["@type"], offers: !!node?.offers },
   };
-  if (!out.title) return null;
-  if (!isHttpUrl(out.url) && !isHttpUrl(out.source_url)) return null;
+  if (!out.title) out.title = "(untitled product)";
   return out;
 }
-export function extractArticleItemsFromHtml(html, pageUrl) {
-  const items = [];
-  extractJsonLdBlocks(html).forEach((txt, i) => {
-    const data = tryParseJSON(txt, i); if (!data) return;
-    (Array.isArray(data) ? data : [data]).forEach(root => {
-      collectNodesByType(root, ARTICLE_TYPES, []).forEach(n => {
-        const norm = normaliseArticleNode(n, pageUrl);
-        if (norm) items.push(norm);
-      });
-    });
-  });
-  const seen = new Set(), dedup = [];
-  for (const it of items) {
-    const k = `${it.title}|${it.url}`;
-    if (!seen.has(k)) { seen.add(k); dedup.push(it); }
-  }
-  return dedup;
-}
-export async function extractArticleItemsFromUrl(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'alanranger-bot/1.0 (+content-extract)' } });
-  const html = await res.text();
-  return extractArticleItemsFromHtml(html, url);
+
+// Service
+function normaliseService(node, pageUrl) {
+  const areaServed = node?.areaServed;
+  const area = typeof areaServed === "string"
+    ? areaServed
+    : (Array.isArray(areaServed) ? areaServed.map(a => a?.name || a).filter(Boolean).join(", ") : normaliseText(areaServed?.name));
+  const out = {
+    kind: "service",
+    title: normaliseText(node?.name || node?.serviceType),
+    url: normaliseUrlPref(node, pageUrl),
+    description: normaliseText(node?.description),
+    serviceType: normaliseText(node?.serviceType),
+    areaServed: normaliseText(area),
+    provider: normaliseText(node?.provider?.name),
+    source_url: pageUrl,
+    raw: { "@type": node?.["@type"] },
+  };
+  if (!out.title) out.title = "(service)";
+  return out;
 }
 
-/* -------------------------------- Products -------------------------------- */
-function normaliseBrand(brand) {
-  if (!brand) return undefined;
-  if (typeof brand === 'string') return brand;
-  if (typeof brand === 'object') return brand.name || brand['@id'] || undefined;
-}
-function pickBestOffer(node) {
-  const offers = node.offers;
-  if (!offers) return null;
-  const arr = Array.isArray(offers) ? offers : [offers];
-  let best = null;
-  for (const o of arr) {
-    const availability = firstString(o.availability);
-    const price = Number(o.price || o.priceSpecification?.price || NaN);
-    const currency = o.priceCurrency || o.priceSpecification?.priceCurrency || undefined;
-    const url = firstString(o.url) || firstString(o.itemOffered?.url);
-    const candidate = { price: isNaN(price) ? undefined : price, price_currency: currency, availability, offer_url: isHttpUrl(url) ? url : undefined };
-    if (!best) best = candidate;
-    // prefer in-stock; then lowest price
-    const availScore = /instock/i.test(candidate.availability || '') ? 2 : /preorder|pre-sale/i.test(candidate.availability || '') ? 1 : 0;
-    const bestAvailScore = /instock/i.test(best.availability || '') ? 2 : /preorder|pre-sale/i.test(best.availability || '') ? 1 : 0;
-    if (availScore > bestAvailScore) best = candidate;
-    else if (availScore === bestAvailScore) {
-      if (candidate.price !== undefined && (best.price === undefined || candidate.price < best.price)) best = candidate;
+//
+// ---------- extract from HTML ----------
+//
+function extractFromHtml(html, pageUrl) {
+  const scripts = extractJsonLdBlocks(html);
+  const articles = [];
+  const products = [];
+  const services = [];
+
+  scripts.forEach((jsonText, idx) => {
+    const data = tryParseJSON(jsonText, idx);
+    if (!data) return;
+
+    const roots = Array.isArray(data) ? data : [data];
+
+    for (const root of roots) {
+      const aNodes = collectNodesByType(root, TYPE.ARTICLE, []);
+      const pNodes = collectNodesByType(root, TYPE.PRODUCT, []);
+      const sNodes = collectNodesByType(root, TYPE.SERVICE, []);
+      aNodes.forEach((n) => articles.push(normaliseArticle(n, pageUrl)));
+      pNodes.forEach((n) => products.push(normaliseProduct(n, pageUrl)));
+      sNodes.forEach((n) => services.push(normaliseService(n, pageUrl)));
     }
-  }
-  return best;
-}
-function normaliseProductNode(node, pageUrl) {
-  const name = firstString(node.name);
-  const url  = (isHttpUrl(node.url) && node.url) || (isHttpUrl(pageUrl) && pageUrl) || '';
-  const out = {
-    kind: 'product',
-    name,
-    description: firstString(node.description) || undefined,
-    brand: normaliseBrand(node.brand),
-    sku: firstString(node.sku) || undefined,
-    gtin: firstString(node.gtin || node.gtin13 || node.gtin14 || node.gtin12) || undefined,
-    url,
-    image: isHttpUrl(firstString(node.image)) ? firstString(node.image) : undefined,
-    category: firstString(node.category) || undefined,
-    offers: pickBestOffer(node) || undefined,
-    source_url: pageUrl,
-    last_seen: new Date().toISOString(),
-    raw: { '@type': node['@type'] }
-  };
-  if (!out.name) return null;
-  if (!isHttpUrl(out.url) && !isHttpUrl(out.source_url)) return null;
-  return out;
-}
-export function extractProductItemsFromHtml(html, pageUrl) {
-  const items = [];
-  extractJsonLdBlocks(html).forEach((txt, i) => {
-    const data = tryParseJSON(txt, i); if (!data) return;
-    (Array.isArray(data) ? data : [data]).forEach(root => {
-      collectNodesByType(root, PRODUCT_TYPES, []).forEach(n => {
-        const norm = normaliseProductNode(n, pageUrl);
-        if (norm) items.push(norm);
-      });
-    });
   });
-  const seen = new Set(), dedup = [];
-  for (const it of items) {
-    const k = `${it.name}|${it.url}`;
-    if (!seen.has(k)) { seen.add(k); dedup.push(it); }
+
+  // Dedup by title+url to avoid repeats
+  function dedup(arr) {
+    const seen = new Set(); const out = [];
+    for (const it of arr) {
+      const key = `${it.title}|${it.url}`;
+      if (!seen.has(key)) { seen.add(key); out.push(it); }
+    }
+    return out;
   }
-  return dedup;
-}
-export async function extractProductItemsFromUrl(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'alanranger-bot/1.0 (+content-extract)' } });
-  const html = await res.text();
-  return extractProductItemsFromHtml(html, url);
-}
 
-/* -------------------------------- Services -------------------------------- */
-function normaliseServiceNode(node, pageUrl) {
-  const name = firstString(node.name);
-  const url  = (isHttpUrl(node.url) && node.url) || (isHttpUrl(pageUrl) && pageUrl) || '';
-  // price can be under offers similar to product; also serviceType/areaServed may be objects/arrays
-  const offer = pickBestOffer(node);
-  const areaServed = Array.isArray(node.areaServed)
-    ? node.areaServed.map(firstString).filter(Boolean)
-    : [firstString(node.areaServed)].filter(Boolean);
-  const serviceType = firstString(node.serviceType);
-
-  const out = {
-    kind: 'service',
-    name,
-    description: firstString(node.description) || undefined,
-    serviceType: serviceType || undefined,
-    areaServed: areaServed,
-    url,
-    offers: offer || undefined,
-    source_url: pageUrl,
-    last_seen: new Date().toISOString(),
-    raw: { '@type': node['@type'] }
-  };
-  if (!out.name) return null;
-  if (!isHttpUrl(out.url) && !isHttpUrl(out.source_url)) return null;
-  return out;
-}
-export function extractServiceItemsFromHtml(html, pageUrl) {
-  const items = [];
-  extractJsonLdBlocks(html).forEach((txt, i) => {
-    const data = tryParseJSON(txt, i); if (!data) return;
-    (Array.isArray(data) ? data : [data]).forEach(root => {
-      collectNodesByType(root, SERVICE_TYPES, []).forEach(n => {
-        const norm = normaliseServiceNode(n, pageUrl);
-        if (norm) items.push(norm);
-      });
-    });
-  });
-  const seen = new Set(), dedup = [];
-  for (const it of items) {
-    const k = `${it.name}|${it.url}`;
-    if (!seen.has(k)) { seen.add(k); dedup.push(it); }
-  }
-  return dedup;
-}
-export async function extractServiceItemsFromUrl(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'alanranger-bot/1.0 (+content-extract)' } });
-  const html = await res.text();
-  return extractServiceItemsFromHtml(html, url);
-}
-
-/* -------------------------- One-shot convenience API ---------------------- */
-export async function extractAllFromUrl(url, today = new Date()) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'alanranger-bot/1.0 (+content-extract)' } });
-  const html = await res.text();
   return {
-    events:   extractEventItemsFromHtml(html, url, today),
-    articles: extractArticleItemsFromHtml(html, url),
-    products: extractProductItemsFromHtml(html, url),
-    services: extractServiceItemsFromHtml(html, url),
+    articles: dedup(articles),
+    products: dedup(products),
+    services: dedup(services),
   };
+}
+
+//
+// ---------- public helpers (URL -> items) ----------
+//
+export async function extractArticleItemsFromUrl(url) {
+  if (!isHttpUrl(url)) throw new Error("bad_url");
+  const html = await fetchHtml(url);
+  return extractFromHtml(html, url).articles;
+}
+
+export async function extractProductItemsFromUrl(url) {
+  if (!isHttpUrl(url)) throw new Error("bad_url");
+  const html = await fetchHtml(url);
+  return extractFromHtml(html, url).products;
+}
+
+export async function extractServiceItemsFromUrl(url) {
+  if (!isHttpUrl(url)) throw new Error("bad_url");
+  const html = await fetchHtml(url);
+  return extractFromHtml(html, url).services;
+}
+
+export async function extractAllFromUrl(url) {
+  if (!isHttpUrl(url)) throw new Error("bad_url");
+  const html = await fetchHtml(url);
+  return extractFromHtml(html, url);
 }
