@@ -2,7 +2,7 @@
 // Unified, dependency-free JSON-LD extractor for Events/Courses, Articles, Products, and Services.
 // No DB writes. Step 2B will expose read-only tester endpoints that call these functions.
 
-import { coerceFutureISODate, isHttpUrl } from './workshops-schema.js';
+import { coerceFutureISODate, isHttpUrl } from './json/workshops-schema.js';
 
 /* ------------------------------- Type sets -------------------------------- */
 const EVENT_TYPES   = new Set(['Event', 'EducationEvent', 'Course', 'EventSeries']);
