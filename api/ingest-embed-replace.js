@@ -1,5 +1,6 @@
 // /api/ingest-embed-replace.js
 // Single-file ingest that also parses JSON-LD and stores "entities" + enriched chunks.
+// Updated to align with DB: page_entities UNIQUE (url, entity_hash), page_chunks requires chunk_hash NOT NULL.
 
 export const config = { runtime: 'nodejs' };
 
@@ -95,7 +96,6 @@ function* findJsonLdBlocks(html) {
 }
 
 function parseAnyJson(s) {
-  // Some sites wrap with <!-- --> or have stray characters; try tolerant parsing.
   const cleaned = s.replace(/^\s*<!--/, '').replace(/-->\s*$/, '');
   try { return JSON.parse(cleaned); } catch { return null; }
 }
@@ -108,7 +108,6 @@ function flattenJsonLd(node) {
     if (Array.isArray(x)) x.forEach(walk);
     else if (typeof x === 'object') {
       if (x['@type']) push(x);
-      // walk potential children
       for (const k of Object.keys(x)) {
         const v = x[k];
         if (v && typeof v === 'object') walk(v);
@@ -155,7 +154,6 @@ function normalizeEntity(item, pageUrl) {
     kind = 'event';
     date_start = firstOf(item.startDate);
     date_end = firstOf(item.endDate);
-    // location can be string or Place
     location = firstOf(
       item.location?.name,
       item.location?.address?.streetAddress && item.location?.address?.addressLocality
@@ -164,7 +162,6 @@ function normalizeEntity(item, pageUrl) {
       item.location?.address?.addressRegion,
       item.location?.address
     );
-    // Offer
     const offer = Array.isArray(item.offers) ? item.offers[0] : item.offers;
     if (offer) {
       price = offer.price != null ? String(offer.price) : null;
@@ -187,13 +184,12 @@ function normalizeEntity(item, pageUrl) {
     kind = 'article';
     date_start = firstOf(item.datePublished, item.dateCreated);
     date_end = firstOf(item.dateModified);
-    // no price/offer expected
   } else {
     return null; // ignore unrelated types
   }
 
   const raw = item; // keep full JSON for reference
-  const entity_hash = sha1(`${pageUrl}::${kind}::${title || ''}::${date_start || ''}::${date_end || ''}`);
+  const entity_hash = sha1(`${pageUrl}::${kind}::${title || ''}::${date_start || ''}::${date_end || ''}::${JSON.stringify(raw || {})}`);
 
   return {
     url: pageUrl,
@@ -230,22 +226,17 @@ function extractEntitiesFromHtml(html, pageUrl) {
 }
 
 function entitySnippets(entities) {
-  // Short labeled lines to prepend to content to bias retrieval
   const lines = [];
   for (const e of entities) {
     if (e.kind === 'event') {
       lines.push(
-        `[EVENT] ${e.title || ''}${e.date_start ? ` • Date: ${e.date_start}` : ''}${
-          e.location ? ` • Location: ${e.location}` : ''
-        }${e.price ? ` • Price: ${e.price}${e.price_currency ? ' ' + e.price_currency : ''}` : ''}${
-          e.source_url ? ` • URL: ${e.source_url}` : ''
-        }`
+        `[EVENT] ${e.title || ''}${e.date_start ? ` • Date: ${e.date_start}` : ''}${e.location ? ` • Location: ${e.location}` : ''}${
+          e.price ? ` • Price: ${e.price}${e.price_currency ? ' ' + e.price_currency : ''}` : ''
+        }${e.source_url ? ` • URL: ${e.source_url}` : ''}`
       );
     } else if (e.kind === 'article') {
       lines.push(
-        `[ARTICLE] ${e.title || ''}${e.date_start ? ` • Published: ${e.date_start}` : ''}${
-          e.source_url ? ` • URL: ${e.source_url}` : ''
-        }`
+        `[ARTICLE] ${e.title || ''}${e.date_start ? ` • Published: ${e.date_start}` : ''}${e.source_url ? ` • URL: ${e.source_url}` : ''}`
       );
     } else if (e.kind === 'product') {
       lines.push(
@@ -255,9 +246,7 @@ function entitySnippets(entities) {
       );
     } else if (e.kind === 'service') {
       lines.push(
-        `[SERVICE] ${e.title || ''}${e.provider ? ` • Provider: ${e.provider}` : ''}${
-          e.source_url ? ` • URL: ${e.source_url}` : ''
-        }`
+        `[SERVICE] ${e.title || ''}${e.provider ? ` • Provider: ${e.provider}` : ''}${e.source_url ? ` • URL: ${e.source_url}` : ''}`
       );
     }
   }
@@ -319,17 +308,27 @@ export default async function handler(req, res) {
 
     /* 2) Extract JSON-LD entities */
     stage = 'extract_entities';
-    const entities = extractEntitiesFromHtml(html, url);
+    const entitiesRaw = extractEntitiesFromHtml(html, url);
 
-    /* 3) REPLACE entities for this URL */
+    // Dedupe entities within this batch by entity_hash to avoid UNIQUE (url, entity_hash) collisions
+    const seen = new Set();
+    const entities = [];
+    for (const e of entitiesRaw) {
+      if (!e?.entity_hash) continue;
+      if (seen.has(e.entity_hash)) continue;
+      seen.add(e.entity_hash);
+      entities.push(e);
+    }
+
+    /* 3) REPLACE entities for this URL (delete → insert) */
     stage = 'replace_entities';
     {
       const { error: delE } = await supa.from('page_entities').delete().eq('url', url);
       if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
 
       if (entities.length) {
-        const { error: insE } = await supa.from('page_entities').upsert(entities, { onConflict: 'entity_hash' });
-        if (insE) return sendJSON(res, 500, { error: 'supabase_entities_upsert_failed', detail: insE.message || insE, stage });
+        const { error: insE } = await supa.from('page_entities').insert(entities); // DB has UNIQUE (url, entity_hash)
+        if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
       }
     }
 
@@ -346,32 +345,38 @@ export default async function handler(req, res) {
     const embeds = await getEmbeddings(chunks);
 
     stage = 'prepare_rows';
-    const rows = chunks.map((content, i) => ({
-      url,
-      title: null,
-      content,
-      embedding: embeds[i],
-      tokens: Math.ceil(content.length / 4),
-      hash: sha1(`${url}#${i}:${content.slice(0, 128)}`)
-    }));
+    const rows = chunks.map((content, i) => {
+      const chunk_hash = sha1(`${url}|${content}`); // stable by url+content
+      return {
+        url,
+        title: null,
+        chunk_text: content,  // NEW: store chunk text explicitly
+        content,
+        embedding: embeds[i],
+        tokens: Math.ceil(content.length / 4),
+        chunk_hash,           // NEW: NOT NULL, matches unique (url, chunk_hash)
+        hash: chunk_hash      // mirror for legacy 'hash' reads
+      };
+    });
 
-    /* 5) REPLACE chunks for this URL */
+    /* 5) REPLACE chunks for this URL (delete → insert) */
     stage = 'delete_old_chunks';
     {
       const { error: delC } = await supa.from('page_chunks').delete().eq('url', url);
       if (delC) return sendJSON(res, 500, { error: 'supabase_delete_failed', detail: delC.message || delC, stage });
     }
 
-    stage = 'upsert_chunks';
+    stage = 'insert_chunks';
     let firstChunkId = null;
     {
+      // We deleted first, so a plain insert is correct (no ON CONFLICT)
       const { data: ins, error } = await supa
         .from('page_chunks')
-        .upsert(rows, { onConflict: 'hash' })
+        .insert(rows)
         .select('id')
         .order('id', { ascending: false });
 
-      if (error) return sendJSON(res, 500, { error: 'supabase_upsert_failed', detail: error.message || error, stage });
+      if (error) return sendJSON(res, 500, { error: 'supabase_insert_failed', detail: error.message || error, stage });
       firstChunkId = ins?.[0]?.id ?? null;
     }
 
