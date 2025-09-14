@@ -1,9 +1,12 @@
-// /api/ingest-embed-replace.js — OpenAI-only, REPLACE semantics, no /json imports
+// /api/ingest-embed-replace.js — OpenAI-only, REPLACE semantics, now with JSON-LD support
 export const config = { runtime: 'nodejs' };
 
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
+
+// 🔹 NEW: import JSON extract helper
+import { extractAllFromUrl } from '../json/content-extract.js';
 
 const need = (k) => {
   const v = process.env[k];
@@ -128,17 +131,37 @@ export default async function handler(req, res) {
     stage = 'db_client';
     const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
 
+    // 🔹 Step 1: fetch HTML text
     stage = 'fetch_page';
     const { text } = await fetchPage(url);
-    if (!text || text.length < 10) return sendJSON(res, 422, { error: 'empty_content', stage });
 
+    // 🔹 Step 2: fetch JSON-LD structured data (NEW)
+    stage = 'fetch_json';
+    let jsonText = '';
+    try {
+      const extracted = await extractAllFromUrl(url);
+      if (extracted && typeof extracted === 'object') {
+        jsonText = JSON.stringify(extracted, null, 2);
+      }
+    } catch (err) {
+      // non-fatal
+      console.warn(`json_extract_failed:${url}`, err);
+    }
+
+    // 🔹 Step 3: combine text + JSON
+    const combinedText = [text, jsonText].filter(Boolean).join('\n\n');
+    if (!combinedText || combinedText.length < 10) return sendJSON(res, 422, { error: 'empty_content', stage });
+
+    // 🔹 Step 4: chunk everything
     stage = 'chunk';
-    const chunks = chunkText(text);
+    const chunks = chunkText(combinedText);
     if (!chunks.length) return sendJSON(res, 422, { error: 'no_chunks', stage });
 
+    // 🔹 Step 5: embed
     stage = 'embed';
     const embeds = await getEmbeddings(chunks);
 
+    // 🔹 Step 6: prep rows
     stage = 'prepare_rows';
     const rows = chunks.map((content, i) => ({
       url,
@@ -149,7 +172,7 @@ export default async function handler(req, res) {
       hash: sha1(`${url}#${i}:${content.slice(0, 128)}`)
     }));
 
-    // REPLACE semantics — wipe then insert
+    // 🔹 Step 7: REPLACE semantics
     stage = 'delete_old';
     const { error: delErr } = await supa.from('page_chunks').delete().eq('url', url);
     if (delErr) return sendJSON(res, 500, { error: 'supabase_delete_failed', detail: delErr.message || delErr, stage });
@@ -165,7 +188,7 @@ export default async function handler(req, res) {
 
     stage = 'done';
     const firstId = data?.[0]?.id ?? null;
-    return sendJSON(res, 200, { ok: true, id: firstId, len: text.length, chunks: rows.length, stage });
+    return sendJSON(res, 200, { ok: true, id: firstId, len: combinedText.length, chunks: rows.length, stage });
   } catch (err) {
     return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
   }
