@@ -6,7 +6,7 @@
   <title>Alan Ranger Assistant</title>
 
   <!-- Favicon so the tab never “spins” waiting on an image -->
-  <link rel="icon" href="/ALAN%20RANGER%20LOGO%20and%20Icon%20WHITE.png" type="image/png"/>
+  <link rel="icon" href="/chat%20white.png" type="image/png"/>
 
   <style>
     :root{
@@ -16,6 +16,7 @@
       --text:#e6ecff;      /* primary text */
       --muted:#9fb3ff;     /* secondary text */
       --brand:#E57200;     /* Alan orange */
+      --wa:#25D366;        /* WhatsApp green */
       --bubble-user:#13203e;
       --bubble-bot:#0b1328;
     }
@@ -49,12 +50,15 @@
 
     /* Pills */
     .pills{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:10px 0 6px; }
+    .pills-inline{ justify-content:flex-start; margin-top:10px }
     .pill{
-      display:inline-block; font-size:13px; color:#fff; text-decoration:none;
-      background:transparent; border:1px solid var(--line); border-radius:999px;
-      padding:8px 14px;
+      display:inline-block; font-size:13px; text-decoration:none;
+      border-radius:999px; padding:8px 14px; border:1px solid var(--line);
+      color:#fff; background:transparent;
     }
-    .pill:hover{ background:#0b1426; }
+    .pill:hover{ filter:brightness(1.06) }
+    .pill--contact{ background:var(--brand); border:none; color:#fff }
+    .pill--wa{ background:var(--wa); border:none; color:#fff }
 
     /* Chat area */
     .chat{ padding:16px; max-height:68vh; overflow-y:auto }
@@ -121,9 +125,8 @@
         </p>
 
         <div class="pills" id="pills">
-          <a class="pill" href="https://www.alanranger.com/contact-us-alan-ranger-photography" target="_blank" rel="noopener">Contact form</a>
-          <!-- WhatsApp pill appears only if a number is configured below -->
-          <a class="pill" id="wa-pill" href="#" target="_blank" rel="noopener" style="display:none">WhatsApp</a>
+          <a class="pill pill--contact" href="https://www.alanranger.com/contact-us-alan-ranger-photography" target="_blank" rel="noopener">Contact form</a>
+          <a class="pill pill--wa" id="wa-pill" href="#" target="_blank" rel="noopener" style="display:none">WhatsApp</a>
         </div>
       </div>
 
@@ -142,10 +145,11 @@
 
   <script>
     // ---------- CONFIG ----------
-    // Set your WhatsApp number (E.164 format, no spaces). Example: "447700900123"
-    const WHATSAPP_NUMBER = "447817017994"; // ← add your number; leaves pill hidden if empty
+    // Set your WhatsApp number (E.164, no spaces). Example: "447700900123"
+    const WHATSAPP_NUMBER = ""; // <— add your number to show the WA pill
     // Logo candidates (URL-encoded names to handle spaces):
     const LOGO_CANDIDATES = [
+      "/chat%20white.png",
       "/alanranger_bot_avatar_v2.png",
       "/ALAN%20RANGER%20ICON%20WHITE%20on%20Black%20Circle1.png",
       "/ALAN%20RANGER%20LOGO%20and%20Icon%20WHITE.png"
@@ -207,7 +211,26 @@
       return s;
     }
 
+    function contactPillsInline(){
+      const hasWA = !!WHATSAPP_NUMBER;
+      const waHtml = hasWA
+        ? `<a class="pill pill--wa" href="https://wa.me/${WHATSAPP_NUMBER}" target="_blank" rel="noopener">WhatsApp</a>`
+        : '';
+      return `
+        <div class="pills pills-inline">
+          <a class="pill pill--contact" href="https://www.alanranger.com/contact-us-alan-ranger-photography" target="_blank" rel="noopener">Contact form</a>
+          ${waHtml}
+        </div>`;
+    }
+
     function setTyping(v){ typing.style.display = v ? 'flex' : 'none'; }
+
+    function looksUnknown(text=''){
+      const t = text.trim().toLowerCase();
+      return !t || /^i\s*(do|don't|cannot|can't)\s*(not\s*)?know/.test(t)
+          || /^i'?m not sure/.test(t)
+          || /^sorry/.test(t);
+    }
 
     async function ask(){
       const text = q.value.trim();
@@ -223,10 +246,18 @@
           body: JSON.stringify({ query: text, topK: 8 })
         });
         const j = await r.json();
-        const ansHtml = mdLight(j?.answer || 'I do not know.');
-        addBubble(ansHtml, 'bot', j?.citations || []);
+
+        let ans = j?.answer || '';
+        if (!j?.ok || looksUnknown(ans)){
+          const help = `I don’t have a confident answer to that one yet. I’m trained on Alan’s site, so I may miss things. If you’d like to follow up, please reach out:`;
+          addBubble(help + contactPillsInline(), 'bot');
+        } else {
+          const ansHtml = mdLight(ans);
+          addBubble(ansHtml, 'bot', j?.citations || []);
+        }
       }catch(e){
-        addBubble('Sorry — I had trouble contacting the server.', 'bot');
+        const help = `Sorry — I had trouble contacting the server. If it persists, please reach out:`;
+        addBubble(help + contactPillsInline(), 'bot');
       }finally{
         setTyping(false);
       }
