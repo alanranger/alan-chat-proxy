@@ -68,8 +68,13 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </div></div>
 
 <script>
+const p = new URLSearchParams(location.search);
+// Allow overrides via URL: ?chat=site&ns=website&index=prod
+const CHAT_ID  = p.get('chat')  || 'default';
+const NAMESPACE= p.get('ns')    || undefined;
+const INDEX    = p.get('index') || undefined;
+
 const ASK_ENDPOINT = '/api/ask';
-// Include both camelCase and snake_case switches to match any handler
 const ASK_PARAMS = {
   topK: 8, top_k: 8,
   useRag: true, use_rag: true,
@@ -78,9 +83,7 @@ const ASK_PARAMS = {
   temperature: 0.2
 };
 
-// Auto-open debug with ?debug=1
-const urlParams = new URLSearchParams(location.search);
-if (urlParams.get('debug') === '1') { requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; }); }
+if (p.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
@@ -121,16 +124,20 @@ function fallbackBlock(){
 
 async function askRag(question){
   const body = {
-    input_text: question,     // ← REQUIRED by your /api/ask
-    q: question,
-    question,
+    // REQUIRED by your API:
+    input_text: question,
+    // Compatibility keys:
+    q: question, question,
+    // Collection/namespace targeting (align with bulk.html):
+    chat_id: CHAT_ID,
+    namespace: NAMESPACE,
+    index: INDEX,
+    // RAG flags:
     ...ASK_PARAMS
   };
   setDebug({endpoint: ASK_ENDPOINT, status: '…', req: body, res: 'waiting'});
   const res = await fetch(ASK_ENDPOINT, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(body)
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
   });
   const status = res.status;
   let json; try { json = await res.json(); } catch { json = { error: 'Non-JSON response' }; }
@@ -140,10 +147,16 @@ async function askRag(question){
 }
 
 function renderAnswer(payload){
-  // Accept common shapes
-  const answer = payload?.answer ?? payload?.text ?? payload?.message ?? payload?.data ?? '';
+  // Accept all likely keys from your handler
+  const answer =
+      payload?.reply ??
+      payload?.answer ??
+      payload?.text ??
+      payload?.message ??
+      payload?.data ?? '';
+
   const citations = payload?.citations ?? payload?.sources ?? payload?.links ?? [];
-  if ((!answer || !answer.toString().trim()) && (!citations || !citations.length)) {
+  if ((!answer || !String(answer).trim()) && (!citations || !citations.length)) {
     addBubble(fallbackBlock()); return;
   }
   let html = (typeof answer === 'string') ? answer : safeJSONString(answer);
