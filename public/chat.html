@@ -8,8 +8,8 @@
   --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
   --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
   --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
-  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#c9e6ff;
-  --user-bg:#e6edf7; --user-text:#0b0f16; /* user bubble colour in history */
+  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
+  --user-bg:#e6edf7; --user-text:#0b0f16;
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
@@ -96,7 +96,6 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </div></div>
 
 <script>
-/* ---------- Endpoint + Auth (match bulk) ---------- */
 const CHAT_ENDPOINT = '/api/chat';
 const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // ingest token
 const urlParams = new URLSearchParams(location.search);
@@ -108,7 +107,12 @@ function getToken(){
   try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
 }
 
-/* ---------- DOM ---------- */
+const CATEGORY_LINKS = {
+  'half-day': 'https://www.alanranger.com/landscape-photography-workshops',
+  'one-day': 'https://www.alanranger.com/one-day-landscape-photography-workshops',
+  'residential': 'https://www.alanranger.com/photography-workshops-near-me',
+};
+
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
 const sendBtn= document.getElementById('send');
@@ -117,7 +121,6 @@ const dbgReq      = document.getElementById('dbg-req');
 const dbgRes      = document.getElementById('dbg-res');
 const dbgHeaders  = document.getElementById('dbg-headers');
 
-/* ---------- Helpers ---------- */
 function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
 function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
 function setDebug({status, req, res, headers}){
@@ -144,72 +147,84 @@ function addTyping() {
   return () => el && el.remove();
 }
 
-/* ---------- Minimal Markdown → HTML ---------- */
+/* ---- MD renderer ---- */
 function mdToHtml(md){
-  if (!md) return { html:'', liIds:[] };
+  if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>').replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
-
   const lines = s.split(/\r?\n/);
-  let out = '', inList = false, liIds = [], liIdx=0;
+  let out = '', inList = false, liIds = [], items=[], idx=0;
   const flush = ()=>{ if(inList){ out += '</ul>'; inList=false; } };
   for (const line of lines){
     const m = line.match(/^\s*-\s+(.*)$/);
     if (m){
       if(!inList){ out += '<ul>'; inList=true; }
-      const id = `li_${++liIdx}`;
-      liIds.push(id);
-      out += `<li id="${id}">${m[1]}</li>`;
+      const text = m[1].trim();
+      const id = `li_${++idx}`; liIds.push(id); items.push(text);
+      out += `<li id="${id}">${text}</li>`;
     }else{
       flush();
       out += line.trim() ? `<p>${line}</p>` : '';
     }
   }
   flush();
-  return { html:`<div class="answer">${out}</div>`, liIds };
+  return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ---------- Post-link bullets with citations ---------- */
-function addLinksToBullets(container, liIds, citations){
-  if (!liIds.length || !citations || !citations.length) return;
+/* ---- smart match: bullet text ↔ citation URL ---- */
+function pickBestUrlFor(text, urls){
+  if (!urls || !urls.length) return null;
+  const t = text.toLowerCase();
+  const keywords = [
+    ...t.split(/[^a-z0-9]+/).filter(w=>w.length>3),
+    ...(t.match(/\boakley\b|\bbetws\b|\bcoed\b|\bcoventry\b|\bleamington\b|\byorkshire\b|\bwales\b|\bwoodland\b|\blavender\b|\bdartmoor\b/g)||[])
+  ];
+  let best = null, bestScore = -1;
+  for(const u of urls){
+    const slug = (u.split('/').pop()||'').toLowerCase();
+    let score = 0;
+    for(const k of keywords){
+      if (slug.includes(k)) score += 2;
+      if (u.toLowerCase().includes(k)) score += 1;
+    }
+    // small boost if domain path includes category hints
+    if (/(residential|betws|wales)/.test(u)) score += 1;
+    if (/(walk|half|sunset)/.test(u)) score += 1;
+    if (/(one-day|woodland|dartmoor|yorkshire)/.test(u)) score += 1;
+    if (score > bestScore){ bestScore = score; best = u; }
+  }
+  return best;
+}
 
-  // Try weak mapping for chips: half-day / one-day / residential
-  const chips = [];
-  const labelFor = (u)=>{
-    const l = u.toLowerCase();
-    if (/(sunset|walk|evening|half[-\s]?day)/.test(l)) return 'Half-day';
-    if (/(one[-\s]?day|woodlands|dartmoor|yorkshire|workshop)(?!.*residential)/.test(l)) return 'One-day';
-    if (/(residential|wales|betws-y-coed)/.test(l)) return 'Residential';
-    return 'Link';
-    };
-  // Attach a “Link” to each <li> in order
+function addLinksToBullets(container, liIds, items, citations){
+  const FALLBACKS = [
+    CATEGORY_LINKS['one-day'],
+    CATEGORY_LINKS['half-day'],
+    CATEGORY_LINKS['residential'],
+  ];
   liIds.forEach((id, i)=>{
     const li = container.querySelector('#'+CSS.escape(id));
     if (!li) return;
-    const href = citations[Math.min(i, citations.length-1)];
+    const best = pickBestUrlFor(items[i]||'', citations) || FALLBACKS[i % FALLBACKS.length];
     const a = document.createElement('a');
-    a.href = href; a.target='_blank'; a.rel='noopener';
+    a.href = best; a.target='_blank'; a.rel='noopener';
     a.textContent = ' Link'; a.style.marginLeft = '6px';
     li.appendChild(a);
-    chips.push({href, label: labelFor(href)});
   });
 
-  // If we have at least 3 citations, show quick chips too
-  const uniq = Array.from(new Map(citations.map(u=>[u,u])).values()).slice(0,3);
-  if (uniq.length){
-    const chipWrap = document.createElement('div'); chipWrap.className = 'chips';
-    uniq.forEach((u, idx)=>{
-      const a = document.createElement('a'); a.href = u; a.target='_blank'; a.rel='noopener';
-      a.textContent = labelFor(u);
-      chipWrap.appendChild(a);
-    });
-    container.appendChild(chipWrap);
-  }
+  // Category chips
+  const chipWrap = document.createElement('div'); chipWrap.className = 'chips';
+  Object.entries(CATEGORY_LINKS).forEach(([label, href])=>{
+    const a = document.createElement('a'); a.href = href; a.target='_blank'; a.rel='noopener';
+    a.textContent = label.replace('-', ' ').replace(/\b\w/g,c=>c.toUpperCase());
+    chipWrap.appendChild(a);
+  });
+  container.appendChild(chipWrap);
 }
 
-/* ---------- API ---------- */
+/* ---- API ---- */
 async function callChat(question, topK=8){
   const token = getToken();
   const headers = { 'Content-Type':'application/json' };
@@ -224,26 +239,28 @@ async function callChat(question, topK=8){
   return json;
 }
 
-/* ---------- Render ---------- */
+function setDebug(o){ // defined earlier
+  const {status, req, res, headers} = o;
+  if (status !== undefined) dbgStatus.textContent = String(status);
+  if (req !== undefined) dbgReq.textContent = safeJSONString(req);
+  if (res !== undefined) dbgRes.textContent = safeJSONString(res);
+  if (headers !== undefined) {
+    const h = {...headers}; if (h.Authorization) h.Authorization = 'Bearer ' + maskToken((h.Authorization.split(' ')[1]||'')); 
+    dbgHeaders.textContent = safeJSONString(h);
+  }
+}
+
+/* ---- Render ---- */
 function renderAnswer(payload){
   if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
   const raw = payload.answer || payload.reply || payload.text || '';
   const cites = Array.from(new Set(payload.citations || payload.sources || []));
-  const { html, liIds } = mdToHtml(raw);
+  const { html, liIds, items } = mdToHtml(raw);
   const holder = addBubble(html);
-  if (liIds.length) addLinksToBullets(holder, liIds, cites);
-  else if (cites.length){
-    // fall back: show chips under plain answer
-    const chipWrap = document.createElement('div'); chipWrap.className = 'chips';
-    cites.slice(0,3).forEach(u => {
-      const a = document.createElement('a'); a.href = u; a.target='_blank'; a.rel='noopener';
-      a.textContent = 'Link';
-      chipWrap.appendChild(a);
-    });
-    holder.appendChild(chipWrap);
-  }
+  if (liIds.length) addLinksToBullets(holder, liIds, items, cites);
 }
 
+/* ---- Fallback ---- */
 function fallbackBlock(){
   return `
     <div class="fallback">
@@ -256,13 +273,13 @@ function fallbackBlock(){
     </div>`;
 }
 
-/* ---------- Events ---------- */
+/* ---- Events ---- */
 async function handleSend(){
   const q = input.value.trim();
   if(!q) return;
   addBubble(q.replace(/</g,'&lt;'), {user:true});
   input.value = '';
-  const stopTyping = addTyping();
+  const stopTyping = (function(){ const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`); return ()=>el.remove();})();
   try{
     const data = await callChat(q, 8);
     stopTyping();
