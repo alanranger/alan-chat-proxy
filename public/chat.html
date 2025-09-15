@@ -23,24 +23,22 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
 .sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
 .pills{display:flex;gap:10px;margin:12px 0 4px}
-.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:700;font-size:13px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
 .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
 .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
 .thread{display:flex;flex-direction:column;gap:12px}
 .bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
 .bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
-.fallback .pills{margin-top:10px}
 .answer h1,.answer h2,.answer h3{margin:.2em 0}
 .answer p{margin:.5em 0}
 .answer ul{margin:.4em 0 .6em 1.25em}
 .answer li{margin:.15em 0}
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
-
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--brand);color:#0b0f16;text-decoration:none;font-weight:700}
-.chips a.is-secondary{background:var(--chip-bg);color:#cfe3ff}
+.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
+.chips a.brand{background:var(--brand);color:#111;border-color:transparent;font-weight:800}
 
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
 .composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
@@ -53,14 +51,12 @@ details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
-
 .typing{position:relative;display:inline-block}
 .typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
 .typing .dot:nth-child(2){animation-delay:.15s}
 .typing .dot:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
-
-.small{color:#9eb2d3;font-size:12px;margin-top:8px}
+@media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -68,7 +64,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
   <div class="header">
     <img class="logo" src="./chat%20white.png" alt="AR logo">
     <h2 class="title">Alan Ranger Assistant</h2>
-    <p class="sub">I’m Alan’s AI assistant, trained on this website to help with workshops, tuition, and photography questions. If I can’t help, please contact Alan directly:</p>
+    <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:</p>
     <div class="pills">
       <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
       <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
@@ -97,9 +93,8 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </div></div>
 
 <script>
-/* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
-const HARDCODED = ''; // optionally place a token here for local testing
+const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // ingest token (optional)
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
@@ -129,9 +124,7 @@ function setDebug({status, req, res, headers}){
     dbgHeaders.textContent = safeJSONString(h);
   }
 }
-const uniq = (arr) => Array.from(new Set((arr||[]).filter(Boolean)));
 
-/* ===== UI helpers ===== */
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
   div.className = 'bubble' + (opts.user ? ' user' : '');
@@ -144,13 +137,16 @@ function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
   return () => el && el.remove();
 }
+function money(n, c){ if(n==null) return null; try{ return new Intl.NumberFormat('en-GB',{style:'currency',currency:c||'GBP'}).format(Number(n)); }catch{ return `${n} ${c||'GBP'}`; } }
+function uniq(arr){ return Array.from(new Set((arr||[]).filter(Boolean))); }
 
-/* ===== very small MD renderer (bold/links/lists/paras) ===== */
+/* ========= tiny MD renderer (preserves list items for link injection) ======== */
 function mdToHtml(md){
-  if (!md) return { html:'', liIds:[], items:[] };
+  if (!md) return { html: '', liIds: [], items: [] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>').replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
   const lines = s.split(/\r?\n/);
   let out = '', inList = false, liIds = [], items=[], idx=0;
   const flush = ()=>{ if(inList){ out += '</ul>'; inList=false; } };
@@ -170,106 +166,73 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Link + pill helpers ===== */
-function bestUrlFor(text, urls){
-  const cands = uniq(urls);
-  if (!cands.length) return null;
-  const t = (text||'').toLowerCase();
-
-  // try: numeric day-of-month in URL (…-24, …-25, etc.)
-  const day = (t.match(/\b([12]?\d|3[01])\b/)||[])[1];
-  if (day){
-    const hit = cands.find(u => new RegExp(`[-/]${day}(?:[/\\-]|$)`).test(u));
-    if (hit) return hit;
-  }
-
-  // try: bluebell slug first
-  const blue = cands.find(u => /bluebell/i.test(u));
-  if (blue) return blue;
-
-  // fallback same hostname as first
-  try{
-    const host = new URL(cands[0]).host;
-    const same = cands.find(u => { try { return new URL(u).host === host; } catch { return false; } });
-    if (same) return same;
-  }catch{}
-  return cands[0];
+/* ===== Build action pills (brand = orange), with safe defaults ===== */
+function buildPills(struct){
+  const pills = [];
+  const urls = uniq((struct?.events||[]).map(e => e.url || e.source_url));
+  const base = urls[0] || 'https://www.alanranger.com/photography-workshops-near-me';
+  const add = (label, href, brand=false) => pills.push({label, href, brand});
+  add('Prices', base + '#prices', true);
+  add('Upcoming dates', base + '#upcoming-dates', true);
+  add('Workshops overview', 'https://www.alanranger.com/photography-workshops-near-me', true);
+  // include top two event pages as normal chips
+  urls.slice(0,2).forEach(u => add(new URL(u).pathname.split('/').pop().replace(/-/g,' ').slice(0,28), u, false));
+  return pills.slice(0,6);
 }
-function addChips(container, chips){
-  if (!chips.length) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'chips';
-  chips.forEach(({label, href, secondary})=>{
+
+function addChips(container, pills){
+  if (!pills.length) return;
+  const wrap = document.createElement('div'); wrap.className='chips';
+  for (const p of pills){
     const a = document.createElement('a');
-    a.href = href; a.target = '_blank'; a.rel = 'noopener';
-    a.textContent = label;
-    if (secondary) a.classList.add('is-secondary');
+    a.href = p.href; a.target='_blank'; a.rel='noopener';
+    a.className = p.brand ? 'brand' : '';
+    a.textContent = p.label;
     wrap.appendChild(a);
-  });
+  }
   container.appendChild(wrap);
 }
 
-/* ===== Build orange pills from context/citations ===== */
-function buildPills(struct, citations){
-  const out = [];
-
-  // Contextual quick actions
-  out.push({ label: 'Prices', href: 'https://www.alanranger.com/photography-workshops-near-me' });
-  out.push({ label: 'Upcoming dates', href: 'https://www.alanranger.com/photography-workshops-near-me' });
-  out.push({ label: 'Workshops overview', href: 'https://www.alanranger.com/photography-workshops-near-me' });
-
-  // Top two citations as secondary pills
-  uniq(citations).slice(0,2).forEach(u => out.push({ label: (u.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]||'Open'), href: u, secondary:true }));
-
-  return out;
-}
-
-/* ===== Structured block (events + products) ===== */
-function asGBP(p, c){ if(!p) return ''; const cur = (c||'').toUpperCase(); return cur==='GBP' || cur==='£' || !cur ? `£${p}` : `${p} ${cur}`; }
-
-function renderStructured(holder, struct, citations){
-  if (!struct || (!struct.events && !struct.products)) return;
-
-  const events = Array.isArray(struct.events) ? struct.events : [];
-  const products = Array.isArray(struct.products) ? struct.products : [];
-
-  // Map products by title to fish out half/full options when available
-  let half=null, full=null;
-  for (const p of products){
-    if (!p) continue;
-    const label = (p.title||'').toLowerCase();
-    const price = asGBP(p.price, p.price_currency);
-    if (!price) continue;
-    if (/full|day/.test(label)) full = full || price;
-    else if (/4\s*hour|half/.test(label)) half = half || price;
-    else if (!full) full = price; // single product
-  }
-
-  // Build events list (date + link)
-  const dateRows = [];
-  const eventLinks = uniq(citations);
-  for (const e of events){
-    const d0 = e.date_start || e.date || '';
-    const d = d0 ? (new Date(d0)).toDateString() : '';
-    const label = d ? d.replace(/^.*? (.*)$/,'$1') : (e.title || 'Date');
-    const link = bestUrlFor(label, [e.source_url, ...eventLinks].filter(Boolean));
-    dateRows.push({ label, link });
-  }
-
-  if (!dateRows.length && !half && !full) return;
+/* ===== Render a structured workshop block (dates with LINKS + prices) ===== */
+function renderWorkshopBlock(holder, question, payload){
+  const struct = payload?.structured || {};
+  const events = (struct.events||[]).slice(0, 20);
+  const byDay = events.map(e => ({
+    date: e.date_start ? new Date(e.date_start) : null,
+    url: e.url || e.source_url,
+    title: e.title || '',
+    offers: Array.isArray(e.offers) ? e.offers : []
+  })).filter(x => x.date);
 
   const wrap = document.createElement('div');
-  let html = `<div class="small"><strong>Structured data</strong></div>`;
-
-  if (dateRows.length){
-    html += `<div style="margin-top:6px"><em>All available dates</em></div><ul>`;
-    for (const r of dateRows){
-      html += `<li>${r.label}${r.link ? ` <a href="${r.link}" target="_blank" rel="noopener">Link</a>`:''}</li>`;
+  let html = `<h3>Upcoming Bluebell Workshop Dates:</h3>`;
+  if (byDay.length){
+    html += `<ul>`;
+    for (const d of byDay){
+      const ds = d.date.toLocaleDateString('en-GB', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+      const href = d.url || '#';
+      html += `<li><strong>${ds}</strong> — <a href="${href}" target="_blank" rel="noopener">Link</a></li>`;
     }
     html += `</ul>`;
+  } else {
+    html += `<p>No specific event dates were found in context.</p>`;
   }
-  if (half || full){
-    html += `<div style="margin-top:6px"><em>Price options</em></div><ul>`;
+
+  // Consolidated price lines from offers (half/full if recognisable)
+  const allOffers = byDay.flatMap(x => x.offers || []);
+  let half=null, full=null;
+  for (const o of allOffers){
+    const label = (o.label||'').toLowerCase();
+    if (!half && /4\s*hour|half/.test(label)) half = money(o.price, o.currency);
+    if (!full && /full|1\s*day|day/.test(label))  full = money(o.price, o.currency);
+  }
+  if (!half && !full) {
+    // fallback: if any single price present, show the most common
+    const prices = allOffers.map(o => money(o.price, o.currency)).filter(Boolean);
+    const main = prices[0] || null;
+    if (main) html += `<p><strong>Price:</strong> ${main} (from product schema)</p>`;
+  } else {
+    html += `<h4>Price options:</h4><ul>`;
     if (half) html += `<li>4 hours: ${half}</li>`;
     if (full) html += `<li>Full day: ${full}</li>`;
     html += `</ul>`;
@@ -278,11 +241,10 @@ function renderStructured(holder, struct, citations){
   wrap.innerHTML = html;
   holder.appendChild(wrap);
 
-  // Orange pills
-  addChips(holder, buildPills(struct, citations));
+  addChips(holder, buildPills(struct));
 }
 
-/* ===== API ===== */
+/* ============================ API & wiring ============================ */
 async function callChat(question, topK=8){
   const token = getToken();
   const headers = { 'Content-Type':'application/json' };
@@ -290,58 +252,23 @@ async function callChat(question, topK=8){
   const body = { query: question, topK };
   setDebug({status:'…', req: body, headers});
   const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
-  const status = res.status;
-  let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
+  const status = res.status; let json;
+  try { json = await res.json(); } catch { json = { ok:false, error:'non_json', status }; }
   setDebug({status, res: json});
-  if(!res.ok) throw new Error('API error');
+  if (!res.ok) throw new Error(json?.error || 'api_error');
   return json;
 }
 
-/* ===== Render ===== */
 function renderAnswer(payload, question){
-  if (!payload || payload.ok === false){
-    addBubble(fallbackBlock());
-    return;
-  }
-  const raw = payload.answer || payload.reply || payload.text || '';
-  const cites = uniq(payload.citations || payload.sources || []);
-  const { html, liIds, items } = mdToHtml(raw);
+  const raw = payload?.answer || '';
+  const { html } = mdToHtml(raw);
   const holder = addBubble(html);
-
-  // Linkify list bullets to best matching source
-  liIds.forEach((id,i)=>{
-    const el = holder.querySelector('#'+CSS.escape(id));
-    if (!el) return;
-    const best = bestUrlFor(items[i], cites);
-    if (best){
-      const a = document.createElement('a');
-      a.href = best; a.target='_blank'; a.rel='noopener';
-      a.textContent = ' Link'; a.style.marginLeft = '6px';
-      el.appendChild(a);
-    }
-  });
-
-  // Show structured enrichment (dates + prices + pills)
-  renderStructured(holder, payload.structured||{}, cites);
-
-  // If no bullets existed, still add pills
-  if (!liIds.length) addChips(holder, buildPills(payload.structured||{}, cites));
+  // structured enrichment (dates with links + prices + brand pills)
+  if (payload?.structured?.events?.length) {
+    renderWorkshopBlock(holder, question, payload);
+  }
 }
 
-/* ===== Fallback ===== */
-function fallbackBlock(){
-  return `
-    <div class="fallback">
-      <p>I don’t have a confident answer to that yet. I’m trained on Alan’s site, so I may miss things.</p>
-      <p>If you’d like to follow up, please reach out:</p>
-      <div class="pills">
-        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
-      </div>
-    </div>`;
-}
-
-/* ===== Events ===== */
 async function handleSend(){
   const q = input.value.trim();
   if(!q) return;
@@ -354,13 +281,13 @@ async function handleSend(){
     renderAnswer(data, q);
   }catch{
     stopTyping();
-    addBubble(fallbackBlock());
+    addBubble(`<p>Sorry — I couldn’t retrieve that just now.</p>`);
   }
 }
+
 sendBtn.addEventListener('click', handleSend);
-input.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
-});
+input.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); } });
+
 </script>
 </body>
 </html>
