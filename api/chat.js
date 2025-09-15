@@ -1,245 +1,273 @@
-// /api/chat.js
+// /api/chat.ts (or /app/api/chat/route.ts for Next.js 13+)
+// Runtime: edge (recommended), Node also fine.
+
+export const config = { runtime: 'edge' };
+
 import { createClient } from '@supabase/supabase-js';
 
-export const config = { runtime: 'edge' }; // or 'nodejs' if you prefer
+type Env = {
+  OPENAI_API_KEY: string;
+  SUPABASE_URL: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
+};
 
-function env(name, fallback = '') {
-  const v = process.env[name] ?? fallback;
+function need(name: keyof Env): string {
+  const v = process.env[name as string];
   if (!v) throw new Error(`Missing env ${name}`);
   return v;
 }
 
-const supa = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'));
+const OPENAI_API_KEY = need('OPENAI_API_KEY');
+const SUPABASE_URL = need('SUPABASE_URL');
+const SUPABASE_KEY = need('SUPABASE_SERVICE_ROLE_KEY');
 
-// --- tiny helpers
-const lowerIncludes = (s, needle) => (s || '').toString().toLowerCase().includes(needle);
-const coalesce = (...vals) => vals.find(v => v !== undefined && v !== null && v !== '') ?? null;
-const normUrl = (u) => {
-  try {
-    const x = new URL(u);
-    // strip tracking junk
-    x.hash = ''; x.search = '';
-    // remove trailing slash
-    const p = x.pathname.replace(/\/+$/, '');
-    x.pathname = p || '/';
-    return x.toString();
-  } catch { return u || null; }
+const openai = {
+  async chat(system: string, user: string) {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.1,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`OpenAI ${res.status}`);
+    const json = await res.json();
+    return json.choices?.[0]?.message?.content || '';
+  },
 };
 
-function isEvent(row) {
-  const t = (coalesce(row.schema_type, row.kind, row.type, row['@type']) || '').toString().toLowerCase();
-  return t.includes('event');
-}
-function isProduct(row) {
-  const t = (coalesce(row.schema_type, row.kind, row.type, row['@type']) || '').toString().toLowerCase();
-  return t.includes('product') || t.includes('offer');
+function tokens(x: string) {
+  return (x || '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
 }
 
-function firstOffer(row) {
-  // common JSON-LD shapes
-  const arr = Array.isArray(row.offers) ? row.offers : (row.offers && typeof row.offers === 'object' ? [row.offers] : []);
-  if (!arr.length) return null;
-  return arr.find(o => o && (o.price != null || o.priceCurrency)) || arr[0];
+function preferBluebell(query: string) {
+  const t = tokens(query);
+  return t.includes('bluebell') || t.includes('bluebells');
 }
 
-function mapEvent(row) {
-  const url = normUrl(coalesce(row.url, row.source_url, row.canonical_url, row.page_url, row.link, row.page));
-  const title = coalesce(row.title, row.name);
-  const date_start = coalesce(row.date_start, row.startDate, row.start_date, row.date, row.start);
-  const date_end = coalesce(row.date_end, row.endDate, row.end_date);
-  return { title, url, date_start, date_end };
+function uniq<T>(arr: T[]) {
+  return Array.from(new Set(arr.filter(Boolean) as T[]));
 }
 
-function mapProduct(row) {
-  const url = normUrl(coalesce(row.url, row.source_url, row.canonical_url, row.page_url, row.link, row.page));
-  const title = coalesce(row.title, row.name);
-  let price = row.price ?? null;
-  let price_currency = row.price_currency ?? row.priceCurrency ?? null;
-  if (price == null || !price_currency) {
-    const ofr = firstOffer(row);
-    if (ofr) {
-      price = price ?? ofr.price ?? null;
-      price_currency = price_currency ?? ofr.priceCurrency ?? null;
+function pickUrl(row: any): string | null {
+  return (row?.source_url || row?.url || null) as string | null;
+}
+
+function mapEvent(r: any) {
+  return {
+    title: r.title || null,
+    description: r.description || null,
+    date_start: r.date_start || null,
+    date_end: r.date_end || null,
+    location: r.location || null,
+    price: r.price ?? null,
+    price_currency: r.price_currency || null,
+    availability: r.availability || null,
+    url: pickUrl(r),
+    raw: r.raw ?? null,
+  };
+}
+
+function mapProduct(r: any) {
+  return {
+    title: r.title || null,
+    description: r.description || null,
+    price: r.price ?? null,
+    price_currency: r.price_currency || null,
+    availability: r.availability || null,
+    sku: r.sku || null,
+    provider: r.provider || null,
+    url: pickUrl(r),
+    raw: r.raw ?? null,
+  };
+}
+
+async function retrieveChunks(supa: any, query: string, topK = 8) {
+  // Build an OR filter for page_chunks: title/chunk_text/url ilike %token%
+  const t = uniq(tokens(query)).slice(0, 6);
+  const ors: string[] = [];
+  if (t.length === 0) {
+    ors.push('title.ilike.%workshop%,chunk_text.ilike.%workshop%');
+  } else {
+    for (const k of t) {
+      ors.push(`title.ilike.%${k}%,chunk_text.ilike.%${k}%,url.ilike.%${k}%`);
     }
   }
-  return { title, url, price, price_currency };
-}
+  const orFilter = ors.join(',');
 
-// try to label URLs succinctly
-function labelFromUrl(u) {
-  try {
-    const x = new URL(u);
-    const parts = x.pathname.split('/').filter(Boolean);
-    return parts.slice(-1)[0] || x.hostname;
-  } catch { return u; }
-}
+  // Prefer bluebell pages if the question says "bluebell"
+  const bluebellBias = preferBluebell(query) ? '%bluebell%' : null;
 
-// simple chunk fetch (no assumptions beyond typical columns)
-async function fetchChunks(query, topK = 8) {
-  // Prefer “bluebell” if present to keep the results tight
-  const q = query.toLowerCase();
-  const must = q.includes('bluebell') ? 'bluebell' : null;
+  let q = supa
+    .from('page_chunks')
+    .select('url,title,chunk_text', { count: 'exact' })
+    .or(orFilter)
+    .limit(Math.max(topK * 3, 24));
 
-  // Try a couple of quick heuristics: title/content search
-  // (If you have pgvector embeddings, replace this with similarity search.)
-  const { data, error } = await supa
-    .from('chunks')
-    .select('id, title, content, url, source_url')
-    .limit(50);
+  if (bluebellBias) q = q.ilike('url', bluebellBias);
 
+  const { data, error } = await q;
   if (error) throw error;
 
-  const scored = (data || []).map(r => {
-    const url = normUrl(coalesce(r.url, r.source_url));
-    const title = r.title || '';
-    const content = r.content || '';
-    const text = `${title}\n${content}`.toLowerCase();
-
-    // quick-and-dirty scoring
-    let score = 0;
-    query.toLowerCase().split(/\s+/).forEach(tok => { if (tok && text.includes(tok)) score += 1; });
-    if (must && !text.includes(must)) score -= 100; // push irrelevant down
-    if (url && url.includes('bluebell')) score += 3;
-    if (title.toLowerCase().includes('bluebell')) score += 2;
-
-    return { ...r, url, score };
-  }).sort((a, b) => b.score - a.score);
-
-  // topK non-empty
-  const rows = scored.filter(r => r.score > -50).slice(0, topK);
-  return rows;
+  // Deduplicate by URL while keeping good coverage
+  const seen = new Set<string>();
+  const rows = [];
+  for (const r of data || []) {
+    if (!r?.url) continue;
+    if (seen.has(r.url)) continue;
+    seen.add(r.url);
+    rows.push(r);
+    if (rows.length >= Math.max(topK, 8)) break;
+  }
+  return rows as { url: string; title: string; chunk_text: string }[];
 }
 
-async function fetchEntitiesForUrls(urls, topicWord /* e.g., 'bluebell' */) {
-  // We purposely select '*' to avoid column-name mismatches.
-  const { data, error } = await supa.from('page_entities').select('*').limit(2000);
-  if (error) throw error;
+async function fetchEntitiesForUrls(supa: any, urls: string[]) {
+  if (!urls.length) return { events: [], products: [] };
 
-  const tried = [];
-  const byUrl = (row) => normUrl(coalesce(row.url, row.source_url, row.canonical_url, row.page_url, row.link, row.page));
+  // 1) url in urls
+  let { data: d1, error: e1 } = await supa
+    .from('page_entities')
+    .select('*')
+    .in('url', urls);
+  if (e1) throw e1;
 
-  // If we have specific URLs, prefer those; otherwise filter by topic word to avoid “every event”.
-  const whitelist = new Set((urls || []).map(normUrl).filter(Boolean));
-  const topic = (topicWord || '').toLowerCase();
+  // 2) source_url in urls (some extractors store canonical here)
+  let { data: d2, error: e2 } = await supa
+    .from('page_entities')
+    .select('*')
+    .in('source_url', urls);
+  if (e2) throw e2;
 
-  const keepRow = (row) => {
-    const u = byUrl(row);
-    if (u) tried.push(u);
-    if (whitelist.size) return u && whitelist.has(u);
-    // fallback: topic filter on url/title/kind
-    const t = (coalesce(row.title, row.name, '')).toString().toLowerCase();
-    const k = (coalesce(row.schema_type, row.kind, row.type, row['@type'], '')).toString().toLowerCase();
-    return (u && u.toLowerCase().includes(topic)) || t.includes(topic) || k.includes(topic);
-  };
+  const all = [...(d1 || []), ...(d2 || [])];
 
-  const rows = (data || []).filter(keepRow);
+  const events = all.filter((r) => (r.kind || '').toLowerCase() === 'event').map(mapEvent);
+  const products = all.filter((r) => (r.kind || '').toLowerCase() === 'product').map(mapProduct);
 
-  const events = rows.filter(isEvent).map(mapEvent);
-  const products = rows.filter(isProduct).map(mapProduct);
-
-  // de-dupe by (url + title/price)
-  const dedupe = (arr, keyFn) => {
-    const seen = new Set();
-    const out = [];
-    for (const x of arr) {
-      const k = keyFn(x);
-      if (seen.has(k)) continue;
-      seen.add(k);
-      out.push(x);
-    }
-    return out;
-  };
-
-  return {
-    tried: Array.from(new Set(tried.filter(Boolean))).slice(0, 20),
-    events: dedupe(events, e => `${e.url}::${e.date_start || ''}::${e.title || ''}`),
-    products: dedupe(products, p => `${p.url}::${p.price || ''}::${p.title || ''}`),
-  };
+  return { events, products };
 }
 
-function buildPrompt(query, context) {
-  const ctx = context.map((r, i) => `# Doc ${i + 1} — ${r.title || '(untitled)'}\n${r.content || ''}`).join('\n\n');
-  const sys = `You are a helpful assistant grounded ONLY in the provided context.
-- Cite nothing yourself; the API will attach citations.
-- If date/price are present in context/entities, show them clearly.
-- Be concise and structured for end users.`;
+function buildPrompt(query: string, chunks: { url: string; title: string; chunk_text: string }[], entities: { events: any[]; products: any[] }) {
+  // Collate concise context
+  const ctxLines: string[] = [];
+  for (const c of chunks) {
+    const clean = (c.chunk_text || '').replace(/\s+/g, ' ').trim();
+    if (clean) ctxLines.push(`- (${c.url}) ${clean.slice(0, 400)}`);
+  }
 
-  const user = `Question: ${query}\n\nContext:\n${ctx}`;
+  // Entity hints: dates & prices if present
+  const eventHints = entities.events
+    .map((e) => {
+      const ds = e.date_start ? new Date(e.date_start).toUTCString() : null;
+      const pr =
+        e.price != null
+          ? `${e.price_currency || 'GBP'} ${e.price}`
+          : null;
+      return `• Event: ${e.title || ''} @ ${e.location || ''} ${ds ? `on ${ds}` : ''} ${pr ? `price ${pr}` : ''} ${e.url ? `(${e.url})` : ''}`.trim();
+    })
+    .slice(0, 12);
 
-  return { sys, user };
+  const productHints = entities.products
+    .map((p) => {
+      const pr =
+        p.price != null
+          ? `${p.price_currency || 'GBP'} ${p.price}`
+          : null;
+      return `• Product: ${p.title || ''} ${pr ? `price ${pr}` : ''} ${p.url ? `(${p.url})` : ''}`.trim();
+    })
+    .slice(0, 12);
+
+  const system = `You are a helpful assistant grounded ONLY in the provided context. 
+- If the user asks about Bluebell workshops, prioritise pages and entities that clearly relate to "bluebell". 
+- If explicit prices are present in entities, use them; otherwise say price wasn't given.
+- Keep answers concise and structured with bullets, include dates (dd Mon yyyy) and a single "Location:" line.
+- Do not invent links; the UI will attach them.`;
+
+  const user = `Question: ${query}
+
+Context (excerpts):
+${ctxLines.join('\n')}
+
+Entities:
+${eventHints.concat(productHints).join('\n')}
+
+Answer in bullet points:
+- For dates, list each upcoming date on its own bullet (format "Thu, 24 Apr 2026").
+- Add a "Location:" line (one line).
+- Add a "Price:" line with GBP if given; otherwise note it's not specified.
+- Add "Max participants" if given.
+- Keep it brief.`;
+
+  return { system, user };
 }
 
-export default async function handler(req) {
+function asProvenance(citations: string[], entities: { events: any[]; products: any[] }) {
+  const fromEntities = uniq(
+    []
+      .concat(entities.events.map((e) => e.url).filter(Boolean))
+      .concat(entities.products.map((p) => p.url).filter(Boolean))
+  );
+  const tried = uniq(citations);
+  return { tried, events: entities.events, products: entities.products };
+}
+
+export default async function handler(req: Request) {
   try {
     if (req.method !== 'POST') {
       return new Response(JSON.stringify({ ok: false, error: 'method_not_allowed' }), { status: 405 });
     }
 
-    const { query, topK = 8 } = await req.json().catch(() => ({}));
-    if (!query || typeof query !== 'string') {
-      return new Response(JSON.stringify({ ok: false, error: 'invalid_query' }), { status: 400 });
-    }
+    const { query, topK = 8 } = await req.json();
 
-    // 1) Retrieve chunks (context)
-    const rows = await fetchChunks(query, Math.max(3, Math.min(12, topK)));
-    const citations = Array.from(new Set(rows.map(r => r.url).filter(Boolean)));
+    const supa = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: false },
+    });
 
-    // 2) Fetch structured entities for those URLs (fallback to topic filter)
-    const bluebellIntent = /bluebell/i.test(query);
-    const entities = await fetchEntitiesForUrls(citations, bluebellIntent ? 'bluebell' : '');
+    // 1) retrieve site chunks
+    const chunks = await retrieveChunks(supa, query, topK);
+    const urls = uniq(chunks.map((c) => c.url));
 
-    // 3) Ask the model using only the chunk text
-    const { sys, user } = buildPrompt(query, rows);
+    // 2) fetch entities for those URLs (events & products)
+    const entities = await fetchEntitiesForUrls(supa, urls);
 
-    const completion = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${env('OPENAI_API_KEY')}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: 0.1,
-        messages: [{ role: 'system', content: sys }, { role: 'user', content: user }],
+    // 3) build prompt and ask OpenAI
+    const { system, user } = buildPrompt(query, chunks, entities);
+    const answer = await openai.chat(system, user);
+
+    // 4) citations: prioritize entity urls first, then chunk urls
+    const citations = uniq(
+      []
+        .concat(entities.events.map((e) => e.url).filter(Boolean))
+        .concat(entities.products.map((p) => p.url).filter(Boolean))
+        .concat(urls)
+    );
+
+    const structured = asProvenance(citations, entities);
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        answer,
+        citations,
+        structured, // { tried, events, products } → your debug panel & UI can use this directly
       }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (err: any) {
+    return new Response(JSON.stringify({ ok: false, error: String(err?.message || err) }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
-
-    if (!completion.ok) {
-      const txt = await completion.text();
-      return new Response(JSON.stringify({ ok: false, error: `openai_${completion.status}`, detail: txt.slice(0, 400) }), { status: 502 });
-    }
-    const cjson = await completion.json();
-    const answer = cjson.choices?.[0]?.message?.content?.trim() || 'Sorry — I could not answer that.';
-
-    // 4) Build a clean response
-    const structured = {
-      events: entities.events,
-      products: entities.products,
-    };
-
-    const structured_debug = {
-      tried: entities.tried,
-      events_from: entities.events,
-      products_from: entities.products,
-    };
-
-    // Prefer Bluebell-ish citations first
-    const sortedCitations = [...citations].sort((a, b) => {
-      const ab = +(a.toLowerCase().includes('bluebell'));
-      const bb = +(b.toLowerCase().includes('bluebell'));
-      return bb - ab;
-    });
-
-    return new Response(JSON.stringify({
-      ok: true,
-      answer,
-      citations: sortedCitations,
-      structured,
-      structured_debug,
-      followups: [
-        'Check the workshop page for booking details.',
-        'Consider bringing your camera gear for the workshop.',
-      ],
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-
-  } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: err.message || 'server_error' }), { status: 500 });
   }
 }
