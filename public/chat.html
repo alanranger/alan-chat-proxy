@@ -69,7 +69,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap"><div class="card">
-  <div class="ver" id="ver">v0.9.4</div>
+  <div class="ver" id="ver">v0.9.6</div>
   <div class="header">
     <img class="logo" src="./chat%20white.png" alt="AR logo">
     <h2 class="title">Alan Ranger Assistant</h2>
@@ -105,8 +105,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <script>
 /* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
-// Optional: allow ?token= and ?v= on the URL. If you want a fixed token, set HARDCODED below.
-const HARDCODED = ''; // e.g. 'b6c3...'; if empty, uses ?token= or localStorage('ingest_token').
+const HARDCODED = ''; // optional fixed token
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 if (urlParams.get('v')) document.getElementById('ver').textContent = 'v' + urlParams.get('v');
@@ -156,7 +155,7 @@ function addTyping() {
   return () => el && el.remove();
 }
 
-/* ===== Mini Markdown renderer (captures <li> ids for linking) ===== */
+/* ===== Markdown (capture <li> IDs) ===== */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -182,105 +181,180 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Scoring: best link for a bullet from citations or structured events ===== */
-function tokenize(s){ return (s||'').toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2); }
-function scoreUrlForText(url, text){
-  const tokens = tokenize(text), slug = (url.split('/').pop()||'').toLowerCase();
+/* ===== Intent filters & anchor selection ===== */
+const STOP = new Set(['the','and','or','in','on','for','of','to','a','an','with','workshop','workshops','course','courses']);
+function tokenize(s){
+  return (s||'').toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2 && !STOP.has(w));
+}
+function slugKeyFromUrl(u){
+  try{
+    const p = new URL(u).pathname.replace(/\/+/g,'/').replace(/^\/|\/$/g,'');
+    const last = (p.split('/').pop()||'').toLowerCase();
+    return last.replace(/-\d+$/,''); // strip numeric suffixes
+  }catch{ return ''; }
+}
+function scoreUrlForTokens(u, tokens){
+  const slug = slugKeyFromUrl(u);
   let score = 0;
-  for(const k of tokens){
-    if (slug.includes(k)) score += 2;
-    if (url.toLowerCase().includes(k)) score += 1;
-  }
+  tokens.forEach(k => { if (slug.includes(k)) score += 3; if (u.includes(k)) score += 1; });
+  if (/photographic-workshops-near-me/.test(u)) score += 1; // category bias
+  if (/alanranger\.com/.test(u)) score += 1; // same domain bias
   return score;
 }
+function pickAnchor(citations, struct, question){
+  const toks = new Set(tokenize(question));
+  (struct?.events||[]).forEach(e => tokenize(e?.title||'').forEach(t=>toks.add(t)));
+  (struct?.products||[]).forEach(p => tokenize(p?.title||'').forEach(t=>toks.add(t)));
 
-function mapBulletsToEventLinks(items, struct){
-  // Try to map lines that *look* like dates to matching event.date_start
-  const out = {};
-  const events = (struct?.events||[]).filter(e => e?.date_start && (e?.url || e?.source_url));
-  const norm = s => new Date(s).toDateString();
-  const fmt  = s => {
-    try { return new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
-    catch { return s; }
-  };
-  events.forEach(e=>{
-    const d = new Date(e.date_start);
-    const variants = unique([
-      d.toDateString(),
-      fmt(e.date_start),
-      d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}),
-      d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})
-    ]);
-    items.forEach((line,i)=>{
-      const L = line.toLowerCase();
-      if (variants.some(v => L.includes(v.toLowerCase()))){
-        out[i] = e.url || e.source_url;
-      }
-    });
-  });
-  return out; // key: bullet index, val: URL
-}
+  // strong hints: bluebell/woodland/woods
+  ['bluebell','bluebells','woodland','woods'].forEach(t=>toks.add(t));
 
-function bestUrlFor(text, urls){
-  if (!urls || !urls.length) return null;
-  let best = null, bestScore = -1;
-  for (const u of urls){
-    const s = scoreUrlForText(u, text);
+  const list = (citations||[]).filter(u=>/alanranger\.com/.test(u));
+  let best = list[0] || '';
+  let bestScore = -1;
+  for (const u of list){
+    const s = scoreUrlForTokens(u, Array.from(toks));
     if (s > bestScore){ bestScore = s; best = u; }
   }
-  return best;
+  return { anchorUrl: best, anchorKey: slugKeyFromUrl(best), tokens: Array.from(toks) };
 }
 
-/* ===== Context-aware suggestion pills ===== */
+function filterStructured(struct, anchorKey, tokens){
+  if (!struct) return {events:[], products:[]};
+  const match = (txt,u) => {
+    const s = (txt||'').toLowerCase();
+    if (anchorKey && slugKeyFromUrl(u||'').includes(anchorKey)) return true;
+    return tokens.some(t => s.includes(t));
+  };
+  const events = (struct.events||[]).filter(e => {
+    return (e?.url || e?.source_url) && (match(e?.title, e?.url||e?.source_url) || match(e?.location||e?.location_name, e?.url||e?.source_url));
+  });
+  const products = (struct.products||[]).filter(p => {
+    return (p?.url || p?.source_url) && match(p?.title, p?.url||p?.source_url);
+  });
+  return {events, products};
+}
+function filterCitations(cites, anchorKey, tokens){
+  const keep = (u)=>{
+    const k = slugKeyFromUrl(u);
+    if (anchorKey && k.includes(anchorKey)) return true;
+    return tokens.some(t => k.includes(t));
+  };
+  const out = (cites||[]).filter(u=>keep(u));
+  return out.length ? out : cites||[];
+}
+
+/* ===== Build structured block (dates/prices) ===== */
+function formatGBP(v) {
+  if (v == null || v === '') return null;
+  const n = typeof v === 'number' ? v : Number(String(v).replace(/[^\d.]/g,''));
+  if (!isFinite(n)) return null;
+  return new Intl.NumberFormat('en-GB', { style:'currency', currency:'GBP', maximumFractionDigits:0 }).format(n);
+}
+
+function buildStructuredHTML(struct, citations=[]) {
+  const ev = (struct?.events||[]).slice();
+  const pr = (struct?.products||[]).slice();
+  if (!ev.length && !pr.length) return '';
+
+  ev.sort((a,b)=> (Date.parse(a?.date_start)||Infinity) - (Date.parse(b?.date_start)||Infinity));
+
+  const dateLis = ev.slice(0, 30).map(e=>{
+    const d = new Date(e.date_start);
+    const dateStr = isFinite(d) ? d.toLocaleDateString('en-GB',{ weekday:'short', day:'numeric', month:'short', year:'numeric' }) : (e.date_start||'');
+    const href = e.url || e.source_url || '';
+    return `<li><strong>${dateStr}</strong>${href ? ` <a href="${href}" target="_blank" rel="noopener">Link</a>` : ''}</li>`;
+  }).join('');
+
+  // Price inference
+  let half = null, full = null;
+  const trySet = (title, amt) => {
+    const tidy = formatGBP(amt);
+    if (!tidy) return;
+    const t = (title||'').toLowerCase();
+    if ((/half|4\s*hour/.test(t)) && !half) half = tidy;
+    if ((/full|1\s*day|full\s*day|day/.test(t)) && !full) full = tidy;
+  };
+  pr.forEach(p => trySet(p?.title||'', p?.price_amount ?? p?.price));
+  ev.forEach(e => trySet(e?.title||'', e?.price_amount ?? e?.price));
+
+  const hasOffers = (citations||[]).some(u => /special-offers/i.test(u));
+  const priceHTML = (half || full || hasOffers)
+    ? `<div><strong>Price:</strong>${[
+        half ? ` 4 hours: ${half}` : null,
+        full ? ` Full day: ${full}` : null,
+        (!half && !full && hasOffers) ? ` See special offers for current discounts.` : null
+      ].filter(Boolean).join(' • ')}</div>`
+    : '';
+
+  const loc = ev.find(e => e?.location || e?.location_name)?.location
+           || ev.find(e => e?.location_name)?.location_name || '';
+
+  return `
+  <div class="answer">
+    <h3>Upcoming Workshops</h3>
+    ${dateLis ? `<ul>${dateLis}</ul>` : '<p><em>Dates are available on the workshop page.</em></p>'}
+    ${loc ? `<div><strong>Location:</strong> ${loc}</div>` : ''}
+    ${priceHTML}
+  </div>`;
+}
+
+/* ===== Chips and link mapping ===== */
 function niceLabel(u){
   try{
     const o = new URL(u);
     const parts = o.pathname.replace(/^\/+|\/+$/g,'').split('/');
     const label = parts.slice(0).pop() || o.hostname;
-    return label.replace(/[-_]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).slice(0,36);
+    return label.replace(/[-_]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).slice(0,42);
   }catch{ return 'Open'; }
 }
+function pickBySlug(cites, rx){ return (cites||[]).find(u => rx.test(u)) || null; }
 
-function pickBySlug(cites, slugRx){
-  return (cites||[]).find(u => slugRx.test(u)) || null;
-}
-
-function buildPills(struct, question='', answer='', citations=[]){
+function buildPills(struct, anchor, citations){
   const chips = [];
-  const cites = unique(citations);
-  const q = (question||'').toLowerCase();
-  const a = (answer||'').toLowerCase();
-  const events = struct?.events || [];
-  const products = struct?.products || [];
+  const anchorUrl = anchor.anchorUrl || '';
+  const events = struct?.events||[];
+  const products = struct?.products||[];
 
-  // Prefer specific workshop page from citations
-  const workshopPage = pickBySlug(cites, /(bluebell|workshop)/i) || cites[0] || '';
-
-  // Prices chip -> product url or special-offers
-  const specialOffers = pickBySlug(cites, /special-offers/i);
-  const priceUrl = (products.find(p=>p?.url)?.url) || specialOffers || workshopPage;
+  const priceUrl = (products.find(p=>p?.url)?.url)
+                || pickBySlug(citations,/special-offers/i)
+                || anchorUrl;
   if (priceUrl) chips.push({label:'Prices', href: priceUrl, primary:true});
 
-  // Upcoming dates -> a page that lists dates or first event url
-  const nextEventUrl = events[0]?.url || workshopPage || cites[0] || '';
-  if (nextEventUrl) chips.push({label:'Upcoming dates', href: nextEventUrl, primary:true});
+  const datesUrl = (events[0]?.url) || anchorUrl;
+  if (datesUrl) chips.push({label:'Upcoming dates', href: datesUrl, primary:true});
 
-  // Overview -> top category page if present
-  const overviewUrl = pickBySlug(cites, /(photography-workshops-near-me|workshops-near-me|photography-workshops)/i) || workshopPage;
-  if (overviewUrl) chips.push({label:'Workshops overview', href: overviewUrl, primary:true});
+  const overview = pickBySlug(citations, /(photography-)?workshops(-near-me)?/i) || anchorUrl;
+  if (overview) chips.push({label:'Workshops overview', href: overview, primary:true});
 
-  // Add up to 2 more *distinct* useful citations
-  cites.slice(0,6).forEach(u=>{
+  // 3 extra diverse citations
+  (citations||[]).slice(0,6).forEach(u=>{
     if (!chips.some(c=>c.href===u)) chips.push({label:niceLabel(u), href:u, primary:false});
   });
 
-  // Keep at most 6, preserve order, dedupe
   const uniq = [];
-  for (const c of chips){
-    if (!uniq.some(x=>x.href===c.href)) uniq.push(c);
-    if (uniq.length>=6) break;
-  }
+  for (const c of chips){ if (!uniq.some(x=>x.href===c.href)) uniq.push(c); if (uniq.length>=6) break; }
   return uniq;
+}
+
+function mapBulletsToEventLinks(items, struct){
+  const out = {};
+  const events = (struct?.events||[]).filter(e => e?.date_start && (e?.url || e?.source_url));
+  const variantsFor = (iso)=>{
+    const d = new Date(iso);
+    return unique([
+      d.toDateString(),
+      d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}),
+      d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),
+      d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})
+    ].filter(Boolean).map(s=>s.toLowerCase()));
+  };
+  items.forEach((line,i)=>{
+    const L = (line||'').toLowerCase();
+    const hit = events.find(e => variantsFor(e.date_start).some(v => L.includes(v)));
+    if (hit) out[i] = hit.url || hit.source_url;
+  });
+  return out;
 }
 
 function addChips(container, chips){
@@ -297,82 +371,18 @@ function addChips(container, chips){
   container.appendChild(wrap);
 }
 
-/* ===== Structured enrichment (dates + prices + location) ===== */
-function formatGBP(v) {
-  if (v == null || v === '') return null;
-  const n = typeof v === 'number' ? v : Number(String(v).replace(/[^\d.]/g,''));
-  if (!isFinite(n)) return null;
-  return new Intl.NumberFormat('en-GB', { style:'currency', currency:'GBP', maximumFractionDigits:0 }).format(n);
-}
-
-function buildStructuredHTML(struct, citations=[]) {
-  if (!struct || (!Array.isArray(struct.events) && !Array.isArray(struct.products))) return '';
-  const ev = (struct.events || []).filter(e => e?.date_start && (e?.url || e?.source_url));
-  const pr = (struct.products || []);
-
-  // Sort events by start
-  ev.sort((a,b)=> (Date.parse(a?.date_start)||Infinity) - (Date.parse(b?.date_start)||Infinity));
-
-  // Build list of dates with links
-  const dateLis = ev.slice(0, 20).map(e=>{
-    const d = new Date(e.date_start);
-    const dateStr = isFinite(d) ? d.toLocaleDateString('en-GB',{ weekday:'short', day:'numeric', month:'short', year:'numeric' }) : (e.date_start||'');
-    const href = e.url || e.source_url || '';
-    return `<li><strong>${dateStr}</strong>${href ? ` <a href="${href}" target="_blank" rel="noopener">Link</a>` : ''}</li>`;
-  }).join('');
-
-  // Location
-  const loc = ev.find(e => e?.location || e?.location_name)?.location
-            || ev.find(e => e?.location_name)?.location_name || '';
-
-  // Price inference
-  let half = null, full = null;
-  const trySet = (title, amt, curr) => {
-    const tidy = formatGBP(amt);
-    if (!tidy) return;
-    if (/half|4\s*hour/i.test(title) && !half) half = tidy;
-    if (/full|day/i.test(title) && !full)  full = tidy;
-  };
-  pr.forEach(p => trySet(p?.title||'', p?.price_amount ?? p?.price, p?.price_currency||'GBP'));
-  ev.forEach(e => trySet(e?.title||'', e?.price_amount ?? e?.price, e?.price_currency||'GBP'));
-
-  const hasOffers = (citations||[]).some(u => /special-offers/i.test(u));
-  const priceHTML = (half || full || hasOffers)
-    ? `<div><strong>Price:</strong>${[
-        half ? ` 4 hours: ${half}` : null,
-        full ? ` Full day: ${full}` : null,
-        (!half && !full && hasOffers) ? ` See special offers for current discounts.` : null
-      ].filter(Boolean).join(' • ')}</div>`
-    : '';
-
-  if (!dateLis && !priceHTML && !loc) return '';
-
-  return `
-  <div class="answer">
-    <h3>Upcoming Workshops</h3>
-    ${dateLis ? `<ul>${dateLis}</ul>` : '<p><em>Dates are available on the workshop page.</em></p>'}
-    ${loc ? `<div><strong>Location:</strong> ${loc}</div>` : ''}
-    ${priceHTML}
-  </div>`;
-}
-
-/* ===== Attach links to bullet list items and add chips ===== */
-function addLinksToBullets(container, liIds, items, citations, question, answer, struct){
+function addLinksToBullets(container, liIds, items, citations, struct){
   const idxToEventUrl = mapBulletsToEventLinks(items, struct);
   liIds.forEach((id, i)=>{
     const li = container.querySelector('#'+CSS.escape(id));
     if (!li) return;
-    const fromEvent = idxToEventUrl[i];
-    const best = fromEvent || bestUrlFor(items[i]||'', citations);
+    const best = idxToEventUrl[i] || citations[0];
     if (!best) return;
     const a = document.createElement('a');
     a.href = best; a.target='_blank'; a.rel='noopener';
     a.textContent = ' Link'; a.style.marginLeft = '6px';
     li.appendChild(a);
   });
-
-  // dynamic, intent-aware suggestion pills
-  addChips(container, buildPills(struct, question, answer, citations));
 }
 
 /* ===== API ===== */
@@ -385,27 +395,29 @@ async function callChat(question, topK=8){
   const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
   const status = res.status;
   let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
+  if(!res.ok){ setDebug({status, res: json}); throw new Error('API error'); }
+
+  // Anchor + filters
+  const anchor = pickAnchor(json?.citations||[], json?.structured||{}, question);
+  const filteredStruct = filterStructured(json?.structured||{}, anchor.anchorKey, anchor.tokens);
+  const filteredCites  = filterCitations(json?.citations||[], anchor.anchorKey, anchor.tokens);
+
   const prov = {
-    citations: json?.citations || [],
-    structured: {
-      events: (json?.structured?.events||[]).map(e=>({
-        title:e?.title, url:e?.url||e?.source_url, date_start:e?.date_start, price:e?.price||e?.price_amount, currency:e?.price_currency, location:e?.location||e?.location_name
-      })),
-      products: (json?.structured?.products||[]).map(p=>({
-        title:p?.title, url:p?.url||p?.source_url, price:p?.price||p?.price_amount, currency:p?.price_currency
-      }))
-    }
+    anchor,
+    citations_filtered: filteredCites,
+    events_kept: (filteredStruct.events||[]).map(e=>({title:e?.title,url:e?.url||e?.source_url,date_start:e?.date_start})),
+    products_kept: (filteredStruct.products||[]).map(p=>({title:p?.title,url:p?.url||p?.source_url,price:p?.price||p?.price_amount,currency:p?.price_currency}))
   };
   setDebug({status, res: json, provenance: prov});
-  if(!res.ok) throw new Error('API error');
-  return json;
+
+  return {...json, citations: filteredCites, structured: filteredStruct, _anchor: anchor};
 }
 
 /* ===== Render ===== */
 function renderAnswer(payload, question){
   if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
 
-  // 1) Structured enrichment first (so the clean list of dates/prices is visible)
+  // 1) Structured (filtered)
   const structuredBlock = buildStructuredHTML(payload.structured, payload.citations || []);
   if (structuredBlock) addBubble(structuredBlock);
 
@@ -415,11 +427,13 @@ function renderAnswer(payload, question){
   const { html, liIds, items } = mdToHtml(raw);
   const holder = addBubble(html);
 
-  // 3) Linkify bullets + context chips (using structured + citations)
-  addLinksToBullets(holder, liIds, items, cites, question, raw, payload.structured);
-
-  // 4) If there were no bullets, still show chips
-  if (!liIds.length) addChips(holder, buildPills(payload.structured, question, raw, cites));
+  // 3) Linkify bullets + chips
+  addLinksToBullets(holder, liIds, items, cites, payload.structured);
+  if (!liIds.length){
+    addChips(holder, buildPills(payload.structured, payload._anchor||{}, cites));
+  }else{
+    addChips(holder, buildPills(payload.structured, payload._anchor||{}, cites));
+  }
 }
 
 /* ===== Fallback ===== */
