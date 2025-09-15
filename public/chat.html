@@ -1,108 +1,81 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Alan Ranger Assistant</title>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Alan Ranger Assistant</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
+  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
+  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
+  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
+  --user-bg:#e6edf7; --user-text:#0b0f16;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px}
+.card{position:relative;background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
+.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
+.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
+.pills{display:flex;gap:10px;margin:12px 0 4px}
+.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
-  <!-- discourage browser caching while iterating (does not affect CDN headers) -->
-  <meta http-equiv="Cache-Control" content="no-store, max-age=0, must-revalidate">
+.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
+.thread{display:flex;flex-direction:column;gap:12px}
+.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
+.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
+.answer h1,.answer h2,.answer h3{margin:.2em 0}
+.answer p{margin:.5em 0}
+.answer ul{margin:.4em 0 .6em 1.25em}
+.answer li{margin:.15em 0}
+.answer a{color:var(--link);text-decoration:underline}
+.answer a:hover{color:var(--link-hover)}
 
-  <style>
-    :root{
-      --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
-      --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
-      --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
-      --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
-      --user-bg:#e6edf7; --user-text:#0b0f16;
-    }
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chips a{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
+.chips a:hover{opacity:.9}
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;background:var(--bg);color:var(--text);
-      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      -webkit-font-smoothing:antialiased;line-height:1.45
-    }
+/* Composer */
+.composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
+.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
+.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
-    .wrap{max-width:980px;margin:28px auto;padding:0 16px}
-    .card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+/* Debug panel */
+details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
+details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
+.kv label{color:#93A4C1}
+pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
 
-    .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
-    .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
-    .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
-    .sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
-    .pills{display:flex;gap:10px;margin:12px 0 4px}
-    .pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
-    .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
+/* Typing dots */
+.typing{position:relative;display:inline-block}
+.typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
+.typing .dot:nth-child(2){animation-delay:.15s}
+.typing .dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
-    .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
-    .thread{display:flex;flex-direction:column;gap:12px}
-    .bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
-    .bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
-
-    .answer h1,.answer h2,.answer h3{margin:.2em 0}
-    .answer p{margin:.5em 0}
-    .answer ul{margin:.4em 0 .6em 1.25em}
-    .answer li{margin:.15em 0}
-    .answer a{color:var(--link);text-decoration:underline}
-    .answer a:hover{color:var(--link-hover)}
-
-    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-    .chips a{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
-    .chips a:hover{opacity:.9}
-    .chips .act{background:var(--brand);color:#0b0f16;border-color:transparent;font-weight:700}
-
-    .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-    .composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
-    .composer input::placeholder{color:var(--input-ph)}
-    .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
-    .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
-
-    details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
-    details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
-    .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
-    .kv label{color:#93A4C1}
-    pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
-
-    .typing{position:relative;display:inline-block}
-    .typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
-    .typing .dot:nth-child(2){animation-delay:.15s}
-    .typing .dot:nth-child(3){animation-delay:.3s}
-    @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
-
-    @media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
-
-    /* ——— tiny build/version badge ——— */
-    .ver-badge{
-      position: fixed;
-      top: 10px;
-      right: 12px;
-      background: #13203e;
-      border: 1px solid #26406f;
-      color: #cfe3ff;
-      font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      padding: 4px 8px;
-      border-radius: 999px;
-      opacity: .75;
-      z-index: 9999;
-      box-shadow: 0 2px 10px rgba(0,0,0,.3);
-      pointer-events: none;
-    }
-    .ver-badge:hover{ opacity: 1; }
-  </style>
+/* Version badge (top-right of card) */
+.verbadge{position:absolute;top:10px;right:12px;background:#0b1422;border:1px solid #223358;color:#cfe3ff;
+  font:600 12px/1 Inter,system-ui,sans-serif;padding:4px 8px;border-radius:999px;opacity:.85}
+@media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <div class="wrap"><div class="card">
+  <span id="verBadge" class="verbadge">—</span>
+
   <div class="header">
-    <img class="logo" src="./chat%20white.png" alt="AR logo" onerror="this.style.display='none'">
+    <img class="logo" src="./chat%20white.png" alt="AR logo">
     <h2 class="title">Alan Ranger Assistant</h2>
-    <p class="sub">
-      I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography
-      questions. I won’t always get everything right — if I can’t help, please contact Alan directly:
-    </p>
+    <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:</p>
     <div class="pills">
       <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
       <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
@@ -116,7 +89,6 @@
 
     <details id="debugPanel" class="debug">
       <summary>🔎 Show debug</summary>
-
       <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
       <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
       <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
@@ -132,31 +104,20 @@
   </div>
 </div></div>
 
-<!-- Build/version badge -->
-<div id="verBadge" class="ver-badge" aria-label="Build version"></div>
-
 <script>
+/* ===== Version ===== */
+const VERSION = 'v0.3.4';
+document.addEventListener('DOMContentLoaded', () => {
+  const b = document.getElementById('verBadge'); if (b) b.textContent = VERSION;
+});
+
 /* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
-
-// Optional hard-stamp for deploy tagging; or pass ?v=something in the URL
-// window.CHAT_UI_VERSION = 'chat v0.4.7';
-
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
-function versionBadge(){
-  const qs = new URLSearchParams(location.search);
-  const override = qs.get('v');            // e.g. /chat.html?v=chat v0.4.7
-  const base     = override || (window.CHAT_UI_VERSION || 'chat.html');
-  const stamp    = new Date(document.lastModified).toISOString().replace('T',' ').slice(0,16); // UTC
-  const label    = `${base} • ${stamp} UTC`;
-  const el = document.getElementById('verBadge');
-  if (el) { el.textContent = label; el.title = label; }
-}
-versionBadge();
-
 function getToken(){
+  // Query param ?token= takes precedence; otherwise use localStorage if you save it elsewhere in your app.
   const qp = (urlParams.get('token')||'').trim();
   if (qp) return qp;
   try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
@@ -165,7 +126,6 @@ function getToken(){
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
 const sendBtn= document.getElementById('send');
-
 const dbgStatus   = document.getElementById('dbg-status');
 const dbgReq      = document.getElementById('dbg-req');
 const dbgRes      = document.getElementById('dbg-res');
@@ -174,17 +134,19 @@ const dbgProv     = document.getElementById('dbg-prov');
 
 function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
 function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
-
-function setDebug({status, req, res, headers, prov}){
+function setDebug({status, req, res, headers, provenance}){
   if (status !== undefined) dbgStatus.textContent = String(status);
-  if (req !== undefined)    dbgReq.textContent = safeJSONString(req);
-  if (res !== undefined)    dbgRes.textContent = safeJSONString(res);
-  if (prov !== undefined)   dbgProv.textContent = safeJSONString(prov);
+  if (req !== undefined) dbgReq.textContent = safeJSONString(req);
+  if (res !== undefined) dbgRes.textContent = safeJSONString(res);
   if (headers !== undefined) {
     const h = {...headers};
-    if (h.Authorization) h.Authorization = 'Bearer ' + maskToken((h.Authorization.split(' ')[1]||'')); 
+    if (h.Authorization) {
+      const parts = h.Authorization.split(' ');
+      h.Authorization = (parts[0]||'Bearer') + ' ' + maskToken(parts[1]||'');
+    }
     dbgHeaders.textContent = safeJSONString(h);
   }
+  if (provenance !== undefined) dbgProv.textContent = provenance.length ? provenance.join('\n') : '–';
 }
 
 /* ===== UI helpers ===== */
@@ -201,7 +163,7 @@ function addTyping() {
   return () => el && el.remove();
 }
 
-/* ===== Mini Markdown renderer ===== */
+/* ===== Mini Markdown renderer (bullets preserved) ===== */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -227,11 +189,11 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Link helpers & chips ===== */
-const unique = (arr) => Array.from(new Set((arr||[]).filter(Boolean)));
+/* ===== Link mapping & chips ===== */
+function unique(arr){ return Array.from(new Set(arr.filter(Boolean))); }
 function bestUrlFor(text, urls){
   if (!urls || !urls.length) return null;
-  const t = (text||'').toLowerCase();
+  const t = text.toLowerCase();
   const tokens = t.split(/[^a-z0-9]+/).filter(w=>w.length>3);
   let best = null, bestScore = -1;
   for (const u of urls){
@@ -250,23 +212,29 @@ function inferChips(question, answer, citations){
   const q = (question||'').toLowerCase();
   const a = (answer||'').toLowerCase();
   const chips = [];
-  const citeChips = unique(citations).slice(0,4).map(u => {
-    const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
-    return { label: label.length>32 ? label.slice(0,29)+'…' : label, href: u };
-  });
-  chips.push(...citeChips);
-
   const push = (label, href) => chips.push({label, href});
+
+  // Heuristics from content
   if (/price|cost|how much|£|\bgbp\b|\bfee/.test(q+a)) {
-    push('Prices','https://www.alanranger.com/photography-workshops-near-me');
+    push('Prices', 'https://www.alanranger.com/photography-workshops-near-me');
   }
   if (/date|when|next|schedule|start|time/.test(q+a)) {
-    push('Upcoming dates','https://www.alanranger.com/photography-workshops-near-me');
+    push('Upcoming dates', 'https://www.alanranger.com/photography-workshops-near-me');
   }
   if (/workshop|course|class|tuition|lesson/.test(q+a)) {
-    push('Workshops overview','https://www.alanranger.com/photography-workshops-near-me');
+    push('Workshops overview', 'https://www.alanranger.com/photography-workshops-near-me');
   }
-  return unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
+
+  // Also surface top two citations if present
+  unique(citations).slice(0,2).forEach(u=>{
+    let label = u.replace(/^https?:\/\//,'').replace(/www\./,'');
+    label = label.length>28 ? label.slice(0,25)+'…' : label;
+    push(label, u);
+  });
+
+  // Keep max 6
+  const dedup = unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
+  return dedup;
 }
 
 function addChips(container, chips){
@@ -277,7 +245,8 @@ function addChips(container, chips){
     const a = document.createElement('a');
     a.href = href; a.target = '_blank'; a.rel='noopener';
     a.textContent = label;
-    if (i < 3 && /^https?:\/\//.test(href)) a.classList.add('act'); // make first few stand out
+    // make the first 3 actiony chips brand coloured for visibility
+    if (i < 3) { a.style.background = '#FFB04A'; a.style.color = '#0b0f16'; a.style.borderColor = '#B86D13'; }
     wrap.appendChild(a);
   });
   container.appendChild(wrap);
@@ -303,31 +272,42 @@ async function callChat(question, topK=8){
   const headers = { 'Content-Type':'application/json' };
   if (token) headers['Authorization'] = 'Bearer ' + token;
   const body = { query: question, topK };
-
   setDebug({status:'…', req: body, headers});
   const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
   const status = res.status;
   let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
-  setDebug({status, res: json});
+  setDebug({
+    status,
+    res: json,
+    provenance: collectProvenance(json)
+  });
   if(!res.ok) throw new Error('API error');
   return json;
 }
 
-/* ===== Render ===== */
-function provenanceFromPayload(p){
-  const prov = {};
-  if (p && Array.isArray(p.citations)) prov.citations = p.citations;
-  if (p && p.structured){
-    const E = (p.structured.events   || []);
-    const P = (p.structured.products || []);
-    prov.structured = {
-      events:   Array.isArray(E) ? E.length : 0,
-      products: Array.isArray(P) ? P.length : 0
-    };
-  }
-  return prov;
+/* Pull provenance URLs from the payload so you can trace source pages */
+function collectProvenance(payload){
+  const prov = [];
+  try{
+    if (payload && Array.isArray(payload.citations)) prov.push(...payload.citations);
+    const S = payload && payload.structured;
+    if (S && Array.isArray(S.events)){
+      S.events.forEach(e => {
+        if (e && e.source_url) prov.push(e.source_url);
+        if (e && e.url) prov.push(e.url);
+      });
+    }
+    if (S && Array.isArray(S.products)){
+      S.products.forEach(p => {
+        if (p && p.source_url) prov.push(p.source_url);
+        if (p && p.url) prov.push(p.url);
+      });
+    }
+  }catch{}
+  return unique(prov);
 }
 
+/* ===== Render ===== */
 function renderAnswer(payload, question){
   if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
 
@@ -335,19 +315,17 @@ function renderAnswer(payload, question){
   const cites = unique(payload.citations || payload.sources || []);
   const { html, liIds, items } = mdToHtml(raw);
   const holder = addBubble(html);
+
   addLinksToBullets(holder, liIds, items, cites, question, raw);
 
-  // show chips even when there were no bullets
+  // If no bullet list, still show some helpful pills
   if (!liIds.length) addChips(holder, inferChips(question, raw, cites));
-
-  // update provenance block in debug
-  setDebug({ prov: provenanceFromPayload(payload) });
 }
 
-/* ===== Fallback ===== */
+/* ===== Fallback block ===== */
 function fallbackBlock(){
   return `
-    <div class="fallback">
+    <div class="answer">
       <p>I don’t have a confident answer to that yet. I’m trained on Alan’s site, so I may miss things.</p>
       <p>If you’d like to follow up, please reach out:</p>
       <div class="pills">
@@ -374,7 +352,9 @@ async function handleSend(){
   }
 }
 sendBtn.addEventListener('click', handleSend);
-input.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }});
+input.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
+});
 </script>
 </body>
 </html>
