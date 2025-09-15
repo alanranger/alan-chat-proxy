@@ -9,7 +9,7 @@
 <style>
 :root{
   --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
-  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
+  --brand:#E57200; --brand-ink:#0b0f16; --wa:#25D366; --ring:rgba(229,114,0,.35);
   --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
   --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
   --user-bg:#e6edf7; --user-text:#0b0f16;
@@ -18,12 +18,13 @@
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
 .wrap{max-width:980px;margin:28px auto;padding:0 16px}
 .card{position:relative;background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.ver{position:absolute;top:10px;right:12px;opacity:.6;font-size:12px;color:#cfe3ff}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
 .sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
 .pills{display:flex;gap:10px;margin:12px 0 4px}
-.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:var(--brand-ink);cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
 .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
 .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
@@ -38,7 +39,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer a:hover{color:var(--link-hover)}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.chips a{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
+.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
+.chips a.act{background:var(--brand);border-color:transparent;color:var(--brand-ink);font-weight:700}
 .chips a:hover{opacity:.9}
 
 /* Composer */
@@ -46,12 +48,12 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
 .composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
-.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
+.send{background:var(--brand);color:var(--brand-ink);font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
 /* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
 details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
-.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
+.kv{display:grid;grid-template-columns:160px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
 
@@ -62,16 +64,12 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 .typing .dot:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
-/* Version badge (top-right of card) */
-.verbadge{position:absolute;top:10px;right:12px;background:#0b1422;border:1px solid #223358;color:#cfe3ff;
-  font:600 12px/1 Inter,system-ui,sans-serif;padding:4px 8px;border-radius:999px;opacity:.85}
 @media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap"><div class="card">
-  <span id="verBadge" class="verbadge">—</span>
-
+  <div class="ver" id="ver">v0.9.4</div>
   <div class="header">
     <img class="logo" src="./chat%20white.png" alt="AR logo">
     <h2 class="title">Alan Ranger Assistant</h2>
@@ -105,20 +103,17 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </div></div>
 
 <script>
-/* ===== Version ===== */
-const VERSION = 'v0.3.4';
-document.addEventListener('DOMContentLoaded', () => {
-  const b = document.getElementById('verBadge'); if (b) b.textContent = VERSION;
-});
-
 /* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
+// Optional: allow ?token= and ?v= on the URL. If you want a fixed token, set HARDCODED below.
+const HARDCODED = ''; // e.g. 'b6c3...'; if empty, uses ?token= or localStorage('ingest_token').
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
+if (urlParams.get('v')) document.getElementById('ver').textContent = 'v' + urlParams.get('v');
 
 function getToken(){
-  // Query param ?token= takes precedence; otherwise use localStorage if you save it elsewhere in your app.
   const qp = (urlParams.get('token')||'').trim();
+  if (HARDCODED) return HARDCODED;
   if (qp) return qp;
   try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
 }
@@ -134,19 +129,17 @@ const dbgProv     = document.getElementById('dbg-prov');
 
 function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
 function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
+function unique(arr){ return Array.from(new Set((arr||[]).filter(Boolean))); }
 function setDebug({status, req, res, headers, provenance}){
   if (status !== undefined) dbgStatus.textContent = String(status);
   if (req !== undefined) dbgReq.textContent = safeJSONString(req);
   if (res !== undefined) dbgRes.textContent = safeJSONString(res);
   if (headers !== undefined) {
     const h = {...headers};
-    if (h.Authorization) {
-      const parts = h.Authorization.split(' ');
-      h.Authorization = (parts[0]||'Bearer') + ' ' + maskToken(parts[1]||'');
-    }
+    if (h.Authorization) h.Authorization = 'Bearer ' + maskToken((h.Authorization.split(' ')[1]||''));
     dbgHeaders.textContent = safeJSONString(h);
   }
-  if (provenance !== undefined) dbgProv.textContent = provenance.length ? provenance.join('\n') : '–';
+  if (provenance !== undefined) dbgProv.textContent = safeJSONString(provenance);
 }
 
 /* ===== UI helpers ===== */
@@ -163,7 +156,7 @@ function addTyping() {
   return () => el && el.remove();
 }
 
-/* ===== Mini Markdown renderer (bullets preserved) ===== */
+/* ===== Mini Markdown renderer (captures <li> ids for linking) ===== */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -189,81 +182,197 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Link mapping & chips ===== */
-function unique(arr){ return Array.from(new Set(arr.filter(Boolean))); }
+/* ===== Scoring: best link for a bullet from citations or structured events ===== */
+function tokenize(s){ return (s||'').toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2); }
+function scoreUrlForText(url, text){
+  const tokens = tokenize(text), slug = (url.split('/').pop()||'').toLowerCase();
+  let score = 0;
+  for(const k of tokens){
+    if (slug.includes(k)) score += 2;
+    if (url.toLowerCase().includes(k)) score += 1;
+  }
+  return score;
+}
+
+function mapBulletsToEventLinks(items, struct){
+  // Try to map lines that *look* like dates to matching event.date_start
+  const out = {};
+  const events = (struct?.events||[]).filter(e => e?.date_start && (e?.url || e?.source_url));
+  const norm = s => new Date(s).toDateString();
+  const fmt  = s => {
+    try { return new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+    catch { return s; }
+  };
+  events.forEach(e=>{
+    const d = new Date(e.date_start);
+    const variants = unique([
+      d.toDateString(),
+      fmt(e.date_start),
+      d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}),
+      d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})
+    ]);
+    items.forEach((line,i)=>{
+      const L = line.toLowerCase();
+      if (variants.some(v => L.includes(v.toLowerCase()))){
+        out[i] = e.url || e.source_url;
+      }
+    });
+  });
+  return out; // key: bullet index, val: URL
+}
+
 function bestUrlFor(text, urls){
   if (!urls || !urls.length) return null;
-  const t = text.toLowerCase();
-  const tokens = t.split(/[^a-z0-9]+/).filter(w=>w.length>3);
   let best = null, bestScore = -1;
   for (const u of urls){
-    const slug = (u.split('/').pop()||'').toLowerCase();
-    let score = 0;
-    for (const k of tokens){
-      if (slug.includes(k)) score += 2;
-      if (u.toLowerCase().includes(k)) score += 1;
-    }
-    if (score > bestScore){ bestScore = score; best = u; }
+    const s = scoreUrlForText(u, text);
+    if (s > bestScore){ bestScore = s; best = u; }
   }
   return best;
 }
 
-function inferChips(question, answer, citations){
+/* ===== Context-aware suggestion pills ===== */
+function niceLabel(u){
+  try{
+    const o = new URL(u);
+    const parts = o.pathname.replace(/^\/+|\/+$/g,'').split('/');
+    const label = parts.slice(0).pop() || o.hostname;
+    return label.replace(/[-_]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).slice(0,36);
+  }catch{ return 'Open'; }
+}
+
+function pickBySlug(cites, slugRx){
+  return (cites||[]).find(u => slugRx.test(u)) || null;
+}
+
+function buildPills(struct, question='', answer='', citations=[]){
+  const chips = [];
+  const cites = unique(citations);
   const q = (question||'').toLowerCase();
   const a = (answer||'').toLowerCase();
-  const chips = [];
-  const push = (label, href) => chips.push({label, href});
+  const events = struct?.events || [];
+  const products = struct?.products || [];
 
-  // Heuristics from content
-  if (/price|cost|how much|£|\bgbp\b|\bfee/.test(q+a)) {
-    push('Prices', 'https://www.alanranger.com/photography-workshops-near-me');
-  }
-  if (/date|when|next|schedule|start|time/.test(q+a)) {
-    push('Upcoming dates', 'https://www.alanranger.com/photography-workshops-near-me');
-  }
-  if (/workshop|course|class|tuition|lesson/.test(q+a)) {
-    push('Workshops overview', 'https://www.alanranger.com/photography-workshops-near-me');
-  }
+  // Prefer specific workshop page from citations
+  const workshopPage = pickBySlug(cites, /(bluebell|workshop)/i) || cites[0] || '';
 
-  // Also surface top two citations if present
-  unique(citations).slice(0,2).forEach(u=>{
-    let label = u.replace(/^https?:\/\//,'').replace(/www\./,'');
-    label = label.length>28 ? label.slice(0,25)+'…' : label;
-    push(label, u);
+  // Prices chip -> product url or special-offers
+  const specialOffers = pickBySlug(cites, /special-offers/i);
+  const priceUrl = (products.find(p=>p?.url)?.url) || specialOffers || workshopPage;
+  if (priceUrl) chips.push({label:'Prices', href: priceUrl, primary:true});
+
+  // Upcoming dates -> a page that lists dates or first event url
+  const nextEventUrl = events[0]?.url || workshopPage || cites[0] || '';
+  if (nextEventUrl) chips.push({label:'Upcoming dates', href: nextEventUrl, primary:true});
+
+  // Overview -> top category page if present
+  const overviewUrl = pickBySlug(cites, /(photography-workshops-near-me|workshops-near-me|photography-workshops)/i) || workshopPage;
+  if (overviewUrl) chips.push({label:'Workshops overview', href: overviewUrl, primary:true});
+
+  // Add up to 2 more *distinct* useful citations
+  cites.slice(0,6).forEach(u=>{
+    if (!chips.some(c=>c.href===u)) chips.push({label:niceLabel(u), href:u, primary:false});
   });
 
-  // Keep max 6
-  const dedup = unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
-  return dedup;
+  // Keep at most 6, preserve order, dedupe
+  const uniq = [];
+  for (const c of chips){
+    if (!uniq.some(x=>x.href===c.href)) uniq.push(c);
+    if (uniq.length>=6) break;
+  }
+  return uniq;
 }
 
 function addChips(container, chips){
   if (!chips.length) return;
   const wrap = document.createElement('div');
   wrap.className = 'chips';
-  chips.forEach(({label, href}, i)=>{
+  chips.forEach(({label, href, primary})=>{
     const a = document.createElement('a');
     a.href = href; a.target = '_blank'; a.rel='noopener';
     a.textContent = label;
-    // make the first 3 actiony chips brand coloured for visibility
-    if (i < 3) { a.style.background = '#FFB04A'; a.style.color = '#0b0f16'; a.style.borderColor = '#B86D13'; }
+    if (primary) a.classList.add('act');
     wrap.appendChild(a);
   });
   container.appendChild(wrap);
 }
 
-function addLinksToBullets(container, liIds, items, citations, question, answer){
+/* ===== Structured enrichment (dates + prices + location) ===== */
+function formatGBP(v) {
+  if (v == null || v === '') return null;
+  const n = typeof v === 'number' ? v : Number(String(v).replace(/[^\d.]/g,''));
+  if (!isFinite(n)) return null;
+  return new Intl.NumberFormat('en-GB', { style:'currency', currency:'GBP', maximumFractionDigits:0 }).format(n);
+}
+
+function buildStructuredHTML(struct, citations=[]) {
+  if (!struct || (!Array.isArray(struct.events) && !Array.isArray(struct.products))) return '';
+  const ev = (struct.events || []).filter(e => e?.date_start && (e?.url || e?.source_url));
+  const pr = (struct.products || []);
+
+  // Sort events by start
+  ev.sort((a,b)=> (Date.parse(a?.date_start)||Infinity) - (Date.parse(b?.date_start)||Infinity));
+
+  // Build list of dates with links
+  const dateLis = ev.slice(0, 20).map(e=>{
+    const d = new Date(e.date_start);
+    const dateStr = isFinite(d) ? d.toLocaleDateString('en-GB',{ weekday:'short', day:'numeric', month:'short', year:'numeric' }) : (e.date_start||'');
+    const href = e.url || e.source_url || '';
+    return `<li><strong>${dateStr}</strong>${href ? ` <a href="${href}" target="_blank" rel="noopener">Link</a>` : ''}</li>`;
+  }).join('');
+
+  // Location
+  const loc = ev.find(e => e?.location || e?.location_name)?.location
+            || ev.find(e => e?.location_name)?.location_name || '';
+
+  // Price inference
+  let half = null, full = null;
+  const trySet = (title, amt, curr) => {
+    const tidy = formatGBP(amt);
+    if (!tidy) return;
+    if (/half|4\s*hour/i.test(title) && !half) half = tidy;
+    if (/full|day/i.test(title) && !full)  full = tidy;
+  };
+  pr.forEach(p => trySet(p?.title||'', p?.price_amount ?? p?.price, p?.price_currency||'GBP'));
+  ev.forEach(e => trySet(e?.title||'', e?.price_amount ?? e?.price, e?.price_currency||'GBP'));
+
+  const hasOffers = (citations||[]).some(u => /special-offers/i.test(u));
+  const priceHTML = (half || full || hasOffers)
+    ? `<div><strong>Price:</strong>${[
+        half ? ` 4 hours: ${half}` : null,
+        full ? ` Full day: ${full}` : null,
+        (!half && !full && hasOffers) ? ` See special offers for current discounts.` : null
+      ].filter(Boolean).join(' • ')}</div>`
+    : '';
+
+  if (!dateLis && !priceHTML && !loc) return '';
+
+  return `
+  <div class="answer">
+    <h3>Upcoming Workshops</h3>
+    ${dateLis ? `<ul>${dateLis}</ul>` : '<p><em>Dates are available on the workshop page.</em></p>'}
+    ${loc ? `<div><strong>Location:</strong> ${loc}</div>` : ''}
+    ${priceHTML}
+  </div>`;
+}
+
+/* ===== Attach links to bullet list items and add chips ===== */
+function addLinksToBullets(container, liIds, items, citations, question, answer, struct){
+  const idxToEventUrl = mapBulletsToEventLinks(items, struct);
   liIds.forEach((id, i)=>{
     const li = container.querySelector('#'+CSS.escape(id));
     if (!li) return;
-    const best = bestUrlFor(items[i]||'', citations);
+    const fromEvent = idxToEventUrl[i];
+    const best = fromEvent || bestUrlFor(items[i]||'', citations);
     if (!best) return;
     const a = document.createElement('a');
     a.href = best; a.target='_blank'; a.rel='noopener';
     a.textContent = ' Link'; a.style.marginLeft = '6px';
     li.appendChild(a);
   });
-  addChips(container, inferChips(question, answer, citations));
+
+  // dynamic, intent-aware suggestion pills
+  addChips(container, buildPills(struct, question, answer, citations));
 }
 
 /* ===== API ===== */
@@ -276,53 +385,44 @@ async function callChat(question, topK=8){
   const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
   const status = res.status;
   let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
-  setDebug({
-    status,
-    res: json,
-    provenance: collectProvenance(json)
-  });
+  const prov = {
+    citations: json?.citations || [],
+    structured: {
+      events: (json?.structured?.events||[]).map(e=>({
+        title:e?.title, url:e?.url||e?.source_url, date_start:e?.date_start, price:e?.price||e?.price_amount, currency:e?.price_currency, location:e?.location||e?.location_name
+      })),
+      products: (json?.structured?.products||[]).map(p=>({
+        title:p?.title, url:p?.url||p?.source_url, price:p?.price||p?.price_amount, currency:p?.price_currency
+      }))
+    }
+  };
+  setDebug({status, res: json, provenance: prov});
   if(!res.ok) throw new Error('API error');
   return json;
-}
-
-/* Pull provenance URLs from the payload so you can trace source pages */
-function collectProvenance(payload){
-  const prov = [];
-  try{
-    if (payload && Array.isArray(payload.citations)) prov.push(...payload.citations);
-    const S = payload && payload.structured;
-    if (S && Array.isArray(S.events)){
-      S.events.forEach(e => {
-        if (e && e.source_url) prov.push(e.source_url);
-        if (e && e.url) prov.push(e.url);
-      });
-    }
-    if (S && Array.isArray(S.products)){
-      S.products.forEach(p => {
-        if (p && p.source_url) prov.push(p.source_url);
-        if (p && p.url) prov.push(p.url);
-      });
-    }
-  }catch{}
-  return unique(prov);
 }
 
 /* ===== Render ===== */
 function renderAnswer(payload, question){
   if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
 
+  // 1) Structured enrichment first (so the clean list of dates/prices is visible)
+  const structuredBlock = buildStructuredHTML(payload.structured, payload.citations || []);
+  if (structuredBlock) addBubble(structuredBlock);
+
+  // 2) Model answer
   const raw = payload.answer || payload.reply || payload.text || '';
   const cites = unique(payload.citations || payload.sources || []);
   const { html, liIds, items } = mdToHtml(raw);
   const holder = addBubble(html);
 
-  addLinksToBullets(holder, liIds, items, cites, question, raw);
+  // 3) Linkify bullets + context chips (using structured + citations)
+  addLinksToBullets(holder, liIds, items, cites, question, raw, payload.structured);
 
-  // If no bullet list, still show some helpful pills
-  if (!liIds.length) addChips(holder, inferChips(question, raw, cites));
+  // 4) If there were no bullets, still show chips
+  if (!liIds.length) addChips(holder, buildPills(payload.structured, question, raw, cites));
 }
 
-/* ===== Fallback block ===== */
+/* ===== Fallback ===== */
 function fallbackBlock(){
   return `
     <div class="answer">
