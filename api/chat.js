@@ -1,211 +1,470 @@
-// api/chat.js — Vercel serverless function (Node)
-// No hard-coded prices or titles. Combines event + product data.
+// /api/chat.js
+// Site-wide AI chat endpoint with Bluebell golden path,
+// dynamic canonical resolver (Option A), and structured debug.
+// Runtime: Node.js on Vercel (not nodejs18.x)
 
 export const config = { runtime: "nodejs" };
 
-function env(name) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env var: ${name}`);
-  return v;
-}
+import { createClient } from "@supabase/supabase-js";
 
-async function getSupabase() {
-  const { createClient } = await import("@supabase/supabase-js");
-  return createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
+// ---- Helpers ---------------------------------------------------------------
+
+function supabaseAdmin() {
+  const url = process.env.SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error("Missing SUPABASE_URL or SUPABASE_*_KEY");
+  }
+  return createClient(url, key, {
     auth: { persistSession: false },
   });
 }
 
-function extractTopicTerm(query) {
-  const s = (query || "").toLowerCase();
-  // expand as needed
-  const terms = [
-    "bluebell",
-    "poppy",
-    "poppy fields",
-    "district",
-    "woodland",
-    "sunrise",
-    "sunset",
-  ];
-  for (const t of terms) if (s.includes(t)) return t;
-  // last resort: single keyword that looks like a subject
-  const m = s.match(/\b[ a-z]{3,}\b/gi);
-  return (m && m[0]) || "workshop";
+function fmtDateLondon(ts) {
+  try {
+    const d = new Date(ts);
+    return new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "Europe/London",
+    }).format(d);
+  } catch {
+    return ts;
+  }
 }
 
-function titleCase(s) {
-  return s
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w[0]?.toUpperCase() + w.slice(1))
-    .join(" ");
+function uniq(arr) {
+  return [...new Set(arr.filter(Boolean))];
 }
 
-function dateLabel(iso) {
-  if (!iso) return "Date TBC";
-  const d = new Date(iso);
-  if (isNaN(d)) return "Date TBC";
-  return d.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+function dedupeBy(arr, keyFn) {
+  const seen = new Set();
+  const out = [];
+  for (const x of arr) {
+    const k = keyFn(x);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(x);
+  }
+  return out;
 }
 
-function asGBP(n, currency) {
-  const cur = (currency || "GBP").toUpperCase();
-  const sym = cur === "GBP" ? "£" : cur + " ";
-  return typeof n === "number" && isFinite(n) ? `${sym}${Math.round(n)}` : `${sym}?`;
+function linkShort(url) {
+  if (!url) return "";
+  return `[Link](${url})`;
 }
 
-function wantsDatesOrPrices(query) {
-  const s = (query || "").toLowerCase();
-  return /(date|when|schedule|time)/.test(s) || /(price|cost|£|\bgbp\b|fee)/.test(s);
+function toGBP(n) {
+  if (n == null || isNaN(Number(n))) return null;
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0,
+  }).format(Number(n));
 }
+
+function pickUrl(row) {
+  return row?.source_url || row?.page_url || row?.url || null;
+}
+
+// Extract simple topic from query (for now, support "bluebell" explicitly).
+function getTopicFromQuery(query) {
+  const q = (query || "").toLowerCase();
+  if (q.includes("bluebell")) return "bluebell";
+  return null; // fallback generic paths (not implemented in this task)
+}
+
+// Option A canonical resolver:
+// Prefer explicit keys (raw.canonical=true, raw.topic, raw.role),
+// else accept tag array raw.tags containing "canonical" + topic + role.
+async function resolveCanonicalsOptionA(client, topic) {
+  const canonicals = { product: null, landing: null, debug: {} };
+
+  // A2: explicit keys first
+  const { data: prodA2, error: prodA2Err } = await client
+    .from("page_entities")
+    .select("*")
+    .eq("kind", "product")
+    .eq("raw->>canonical", "true")
+    .eq("raw->>topic", topic)
+    .eq("raw->>role", "product")
+    .order("last_seen", { ascending: false })
+    .limit(1);
+
+  const { data: landA2, error: landA2Err } = await client
+    .from("page_entities")
+    .select("*")
+    .in("kind", ["article", "page"])
+    .eq("raw->>canonical", "true")
+    .eq("raw->>topic", topic)
+    .eq("raw->>role", "landing")
+    .order("last_seen", { ascending: false })
+    .limit(1);
+
+  canonicals.debug.explicitErrors = {
+    prodA2Err,
+    landA2Err,
+  };
+
+  const explicitProduct = prodA2?.[0] || null;
+  const explicitLanding = landA2?.[0] || null;
+
+  // A1: tags fallback (requires raw.tags to be a string array)
+  let tagsProduct = null;
+  let tagsLanding = null;
+
+  if (!explicitProduct || !explicitLanding) {
+    const { data: prodA1, error: prodA1Err } = await client
+      .from("page_entities")
+      .select("*")
+      .eq("kind", "product")
+      .contains("raw->tags", ["canonical", topic, "product"])
+      .order("last_seen", { ascending: false })
+      .limit(1);
+
+    const { data: landA1, error: landA1Err } = await client
+      .from("page_entities")
+      .select("*")
+      .in("kind", ["article", "page"])
+      .contains("raw->tags", ["canonical", topic, "landing"])
+      .order("last_seen", { ascending: false })
+      .limit(1);
+
+    canonicals.debug.tagsErrors = { prodA1Err, landA1Err };
+    tagsProduct = prodA1?.[0] || null;
+    tagsLanding = landA1?.[0] || null;
+  }
+
+  canonicals.product = explicitProduct || tagsProduct || null;
+  canonicals.landing = explicitLanding || tagsLanding || null;
+
+  canonicals.debug.selected = {
+    product: canonicals.product?.id || null,
+    landing: canonicals.landing?.id || null,
+  };
+
+  return canonicals;
+}
+
+// Build option lines for a set of product rows sharing a page_url.
+// Rule: show each option separately; dedupe by (name, price).
+// If multiple rows share identical name, collapse to "£99 • £150" for that name.
+function buildOptionLines(productsForPage) {
+  // Name: prefer raw.name, else title; Price from row.price
+  const options = productsForPage
+    .map((p) => {
+      const name =
+        (p.raw && (p.raw.name || p.raw?.["@name"])) ||
+        p.title ||
+        "Option";
+      const price = p.price != null ? Number(p.price) : null;
+      return { name: String(name).trim(), price, row: p };
+    })
+    .filter((x) => x.name || x.price != null);
+
+  // Dedupe by (name, price)
+  const deduped = dedupeBy(
+    options,
+    (x) => `${x.name}__${x.price != null ? x.price : "null"}`
+  );
+
+  // Group by name
+  const byName = new Map();
+  for (const opt of deduped) {
+    if (!byName.has(opt.name)) byName.set(opt.name, []);
+    byName.get(opt.name).push(opt);
+  }
+
+  // Build lines: if a name has multiple different prices, show as "£99 • £150"
+  const lines = [];
+  for (const [name, arr] of byName.entries()) {
+    const prices = arr
+      .map((o) => o.price)
+      .filter((v) => v != null)
+      .sort((a, b) => a - b);
+
+    if (prices.length === 0) continue;
+    const priceBits = prices.map((p) => toGBP(p)).filter(Boolean);
+
+    if (arr.length === 1) {
+      lines.push(`${name} — ${priceBits[0]}`);
+    } else {
+      // Multiple, same name: collapse to bullets separated by •
+      lines.push(`${name} — ${priceBits.join(" • ")}`);
+    }
+  }
+
+  return lines;
+}
+
+// Chips builder: first Book Now (if resolvable), then up to 3 more intent links.
+// Omit any chip we cannot resolve; dedupe by URL.
+function buildChips({ bookNowUrl, intentLinks = [] }) {
+  const chips = [];
+  const used = new Set();
+
+  function add(label, url) {
+    const u = url || "";
+    if (!label || !u) return;
+    if (used.has(u)) return;
+    used.add(u);
+    chips.push({ label, url: u });
+  }
+
+  add("Book Now", bookNowUrl);
+
+  for (const c of intentLinks) {
+    if (chips.length >= 4) break;
+    add(c.label, c.url);
+  }
+
+  return chips;
+}
+
+// ---- Core Bluebell Flow ----------------------------------------------------
+
+async function answerBluebell({ query, client }) {
+  const nowIso = new Date().toISOString();
+
+  // 1) Resolve canonicals dynamically (Option A)
+  const canon = await resolveCanonicalsOptionA(client, "bluebell");
+
+  // 2) Events (future) — title/page_url contains bluebell
+  const { data: events, error: evErr } = await client
+    .from("page_entities")
+    .select(
+      "id, title, page_url, source_url, date_start, date_end, location, raw"
+    )
+    .eq("kind", "event")
+    .or("title.ilike.%bluebell%,page_url.ilike.%bluebell%")
+    .gte("date_start", nowIso)
+    .order("date_start", { ascending: true })
+    .limit(100); // we will cap presentation to 10
+
+  if (evErr) {
+    return {
+      ok: false,
+      error: "event_query_failed",
+      where: "events",
+      hint: evErr.message,
+    };
+  }
+
+  // 3) Collect page_urls → fetch products for those pages
+  const pageUrls = uniq((events || []).map((e) => e.page_url).filter(Boolean));
+
+  let products = [];
+  let prodErr = null;
+
+  if (pageUrls.length > 0) {
+    const { data: prods, error: pErr } = await client
+      .from("page_entities")
+      .select("*")
+      .eq("kind", "product")
+      .in("page_url", pageUrls);
+
+    products = prods || [];
+    prodErr = pErr || null;
+  }
+
+  // Also, if there are no events found, we might still want products for the topic (optional)
+  if ((!events || events.length === 0) && products.length === 0) {
+    const { data: prodsFallback } = await client
+      .from("page_entities")
+      .select("*")
+      .eq("kind", "product")
+      .or("title.ilike.%bluebell%,page_url.ilike.%bluebell%")
+      .order("last_seen", { ascending: false })
+      .limit(10);
+    products = prodsFallback || [];
+  }
+
+  if (prodErr) {
+    return {
+      ok: false,
+      error: "product_query_failed",
+      where: "products",
+      hint: prodErr.message,
+    };
+  }
+
+  // 4) Build bullets for up to 10 upcoming events
+  const bullets = [];
+  const bulletCitations = [];
+  const perEventOptionLines = [];
+
+  const eventList = (events || []).slice(0, 10);
+  for (const ev of eventList) {
+    const when = fmtDateLondon(ev.date_start);
+    const where = ev.location ? ` — ${ev.location}` : "";
+    const evUrl = pickUrl(ev);
+    const line = `- ${when} — ${linkShort(evUrl)}${where}`;
+    bullets.push(line);
+    if (evUrl) bulletCitations.push(evUrl);
+
+    // attach option lines (products sharing this page_url)
+    const productsForPage = (products || []).filter(
+      (p) => p.page_url && ev.page_url && p.page_url === ev.page_url
+    );
+
+    const optionLines = buildOptionLines(productsForPage);
+    if (optionLines.length > 0) {
+      perEventOptionLines.push({ eventId: ev.id, lines: optionLines });
+    }
+  }
+
+  if (bullets.length === 0) {
+    bullets.push("- (no upcoming dates found)");
+  }
+
+  // 5) Book Now link: prefer first product attached to the first listed event
+  let bookNowUrl = null;
+  if (eventList.length > 0) {
+    const firstEv = eventList[0];
+    const firstProducts = (products || []).filter(
+      (p) => p.page_url && firstEv.page_url && p.page_url === firstEv.page_url
+    );
+    if (firstProducts.length > 0) {
+      bookNowUrl = pickUrl(firstProducts[0]);
+    }
+  }
+  // Fallback to canonical product if unresolved
+  if (!bookNowUrl && canon.product) {
+    bookNowUrl = pickUrl(canon.product);
+  }
+
+  // 6) Chips: Book Now first; add up to 3 more intent links if helpful
+  const intentLinks = [];
+  // Use landing canonical if available
+  if (canon.landing) {
+    intentLinks.push({
+      label: "Bluebell info",
+      url: pickUrl(canon.landing),
+    });
+  }
+  // Add first upcoming event page as "Upcoming dates"
+  if (eventList[0]) {
+    intentLinks.push({
+      label: "Upcoming dates",
+      url: pickUrl(eventList[0]),
+    });
+  }
+  // Add another helpful product/event if available (different URL)
+  const another =
+    products.find((p) => pickUrl(p) && pickUrl(p) !== bookNowUrl) ||
+    eventList.find((e) => pickUrl(e) && pickUrl(e) !== bookNowUrl);
+  if (another) {
+    intentLinks.push({ label: "More details", url: pickUrl(another) });
+  }
+
+  const chips = buildChips({ bookNowUrl, intentLinks });
+
+  // 7) Build answer markdown
+  const parts = [];
+  parts.push(`### Upcoming Bluebell Workshops`);
+  parts.push(bullets.join("\n"));
+
+  // Attach option lines under each event (in order)
+  for (const ev of eventList) {
+    const opt = perEventOptionLines.find((x) => x.eventId === ev.id);
+    if (!opt) continue;
+    parts.push(
+      opt.lines.map((line) => `  - ${line}`).join("\n")
+    );
+  }
+
+  if (bookNowUrl) {
+    parts.push(`\n**Booking:** [Book Now](${bookNowUrl})`);
+  }
+
+  const answer_markdown = parts.filter(Boolean).join("\n");
+
+  // 8) Citations: canonicals (if resolved) + all event/product links used
+  const citations = uniq([
+    pickUrl(canon.landing),
+    pickUrl(canon.product),
+    ...bulletCitations,
+    ...chips.map((c) => c.url),
+  ]).filter(Boolean);
+
+  // 9) Structured debug
+  const structured = {
+    topic: "bluebell",
+    events: eventList,
+    products,
+    canonicals: {
+      product: canon.product || null,
+      landing: canon.landing || null,
+      debug: canon.debug,
+    },
+    chips,
+  };
+
+  return {
+    ok: true,
+    answer_markdown,
+    citations,
+    structured,
+  };
+}
+
+// ---- HTTP Handler ----------------------------------------------------------
 
 export default async function handler(req, res) {
-  const t0 = Date.now();
+  const started = Date.now();
   try {
     if (req.method !== "POST") {
-      res.setHeader("Allow", "POST");
-      return res.status(405).json({ ok: false, error: "Method not allowed" });
+      res
+        .status(405)
+        .json({ ok: false, error: "method_not_allowed", where: "http" });
+      return;
     }
 
-    let body = {};
-    try {
-      body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
-    } catch {}
+    const { query, topK } = req.body || {};
+    const client = supabaseAdmin();
 
-    const query = (body.query || "").trim();
-    const topK = Number(body.topK || 8);
+    const topic = getTopicFromQuery(query);
 
-    // If the user is asking for dates/prices, hit events+products
-    if (wantsDatesOrPrices(query)) {
-      const term = extractTopicTerm(query); // e.g., "bluebell"
-      const topic = titleCase(term);
-
-      const supabase = await getSupabase();
-
-      // 1) Primary fetch: combined events+products RPC (you created earlier)
-      const { data: events, error: rpcErr } = await supabase.rpc("events_products", {
-        q: term, // match by title/page for this topic
-        from_date: new Date().toISOString(),
-        max_rows: Math.max(6, Math.min(topK * 3, 30)),
+    // For now we implement just the Bluebell golden path in this task.
+    if (topic === "bluebell") {
+      const result = await answerBluebell({ query, client });
+      res.status(result.ok ? 200 : 500).json({
+        ...result,
+        meta: {
+          duration_ms: Date.now() - started,
+          endpoint: "/api/chat",
+          topK: topK || null,
+        },
       });
-      if (rpcErr) throw rpcErr;
-
-      const rows = Array.isArray(events) ? events : [];
-
-      // Gather page URLs for a secondary price lookup if needed
-      const pageUrls = new Set();
-      const anyMissingPrice = rows.some((r) => !(typeof r.price === "number" && isFinite(r.price)));
-      if (anyMissingPrice) {
-        rows.forEach((r) => {
-          // Both event and product are typically keyed by page URL in your schema
-          if (r.page_url) pageUrls.add(r.page_url);
-          else if (r.event_url) pageUrls.add(r.event_url);
-        });
-      }
-
-      // 2) Secondary enrichment: pull product prices by page_url when missing
-      let priceByPage = new Map();
-      if (anyMissingPrice && pageUrls.size) {
-        const { data: prodRows, error: prodErr } = await supabase
-          .from("page_entities")
-          .select("page_url, price, price_currency")
-          .eq("kind", "product")
-          .in("page_url", Array.from(pageUrls))
-          .not("price", "is", null);
-        if (prodErr) throw prodErr;
-        (prodRows || []).forEach((p) => {
-          if (typeof p.price === "number" && isFinite(p.price)) {
-            priceByPage.set(p.page_url, { price: p.price, currency: p.price_currency || "GBP" });
-          }
-        });
-      }
-
-      // Build answer
-      const bullets = [];
-      const citations = new Set();
-      const structuredEvents = [];
-      const allPrices = [];
-
-      for (const r of rows) {
-        const p =
-          typeof r.price === "number" && isFinite(r.price)
-            ? { price: r.price, currency: r.price_currency || "GBP" }
-            : priceByPage.get(r.page_url || r.event_url) || null;
-
-        if (p) allPrices.push(p.price);
-
-        const eventUrl = r.event_url || r.page_url || r.product_url || null;
-        const productUrl = r.product_url || null;
-        const when = dateLabel(r.date_start);
-
-        bullets.push(`- ${when} — [Workshop Link](${eventUrl})`);
-        if (eventUrl) citations.add(eventUrl);
-        if (productUrl) citations.add(productUrl);
-
-        structuredEvents.push({
-          title: r.title || `${topic} Workshop`,
-          date_start: r.date_start || null,
-          date_end: r.date_end || null,
-          source_url: eventUrl,
-          price: p ? p.price : null,
-          price_currency: p ? (p.currency || "GBP").toUpperCase() : null,
-        });
-      }
-
-      // Price line (no hard-coded numbers)
-      let priceLine = "";
-      if (allPrices.length) {
-        const uniq = Array.from(new Set(allPrices)).sort((a, b) => a - b);
-        priceLine =
-          uniq.length === 1
-            ? `\n\n**Prices:** ${asGBP(uniq[0], "GBP")}`
-            : `\n\n**Prices:** ${asGBP(uniq[0], "GBP")} – ${asGBP(
-                uniq[uniq.length - 1],
-                "GBP"
-              )}`;
-      } else {
-        priceLine = `\n\n**Prices:** See the booking link for current pricing.`;
-      }
-
-      const heading = `### Upcoming ${topic} Workshop Dates and Prices`;
-      const answer =
-        (rows.length ? `${heading}\n\n` : "") +
-        (rows.length ? `**Dates:**\n${bullets.join("\n")}` : "No upcoming dates were found.") +
-        priceLine +
-        (rows.length ? "\n\nFor booking/details, open the link next to each date." : "");
-
-      if (!citations.size) {
-        citations.add("https://www.alanranger.com/photography-workshops-near-me");
-      }
-
-      return res.status(200).json({
-        ok: true,
-        answer,
-        citations: Array.from(citations),
-        structured: { events: structuredEvents },
-        took_ms: Date.now() - t0,
-      });
+      return;
     }
 
-    // Generic fallback
-    return res.status(200).json({
+    // Generic fallback (to be expanded in future tasks).
+    res.status(200).json({
       ok: true,
-      answer:
-        "I can help with workshops, tuition, equipment, and photography advice. Ask about upcoming dates, prices, or specific workshop types.",
-      citations: ["https://www.alanranger.com/photography-workshops-near-me"],
-      structured: {},
-      took_ms: Date.now() - t0,
+      answer_markdown:
+        "I don’t have a specific answer for that yet. Please try asking about workshops, courses, kit, or a location — or ask for Bluebell dates and prices.",
+      citations: [],
+      structured: {
+        topic: null,
+        note: "Generic path will be implemented in subsequent tasks.",
+      },
+      meta: {
+        duration_ms: Date.now() - started,
+        endpoint: "/api/chat",
+        topK: topK || null,
+      },
     });
   } catch (err) {
-    return res
-      .status(500)
-      .json({ ok: false, error: String(err && err.message ? err.message : err) });
+    res.status(500).json({
+      ok: false,
+      error: "unhandled_exception",
+      where: "handler",
+      hint: String(err?.message || err),
+      meta: { duration_ms: Date.now() - started, endpoint: "/api/chat" },
+    });
   }
 }
