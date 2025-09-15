@@ -16,8 +16,7 @@
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
-.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.version{position:absolute;right:6px;top:-8px;font-size:12px;color:#9db2d6;background:#0b1422;border:1px solid #1e2d4a;border-radius:8px;padding:2px 6px;opacity:.75}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px}
 .card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
@@ -31,6 +30,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .thread{display:flex;flex-direction:column;gap:12px}
 .bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
 .bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
+.fallback .pills{margin-top:10px}
 .answer h1,.answer h2,.answer h3{margin:.2em 0}
 .answer p{margin:.5em 0}
 .answer ul{margin:.4em 0 .6em 1.25em}
@@ -39,8 +39,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer a:hover{color:var(--link-hover)}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
-.chips a.act{background:var(--brand);color:#0b0f16;border-color:transparent;font-weight:700}
+.chips a{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
 .chips a:hover{opacity:.9}
 
 /* Composer */
@@ -53,9 +52,11 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 /* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
 details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
-.kv{display:grid;grid-template-columns:160px 1fr;gap:8px;margin-top:10px}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
+.prov-block a{color:#b8d7ff;text-decoration:underline}
+.prov-block div{margin-bottom:4px}
 
 /* Typing dots */
 .typing{position:relative;display:inline-block}
@@ -65,52 +66,53 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
 @media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
+.badge{display:inline-block;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;margin-right:6px}
+.small{font-size:12px;color:#9eb2d3}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <span class="version" id="ver">v0.9.6</span>
-  <div class="card">
-    <div class="header">
-      <img class="logo" src="./chat%20white.png" alt="AR logo">
-      <h2 class="title">Alan Ranger Assistant</h2>
-      <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:</p>
-      <div class="pills">
-        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
-      </div>
-    </div>
-
-    <div class="chat">
-      <div id="thread" class="thread">
-        <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
-      </div>
-
-      <details id="debugPanel" class="debug">
-        <summary>🔎 Show debug</summary>
-        <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
-        <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
-        <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
-        <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
-        <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
-        <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
-      </details>
-
-      <div class="composer">
-        <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
-        <button id="send" class="send">Send</button>
-      </div>
+<div class="wrap"><div class="card">
+  <div class="header">
+    <img class="logo" src="./chat%20white.png" alt="AR logo">
+    <h2 class="title">Alan Ranger Assistant</h2>
+    <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:</p>
+    <div class="pills">
+      <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+      <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
     </div>
   </div>
-</div>
+
+  <div class="chat">
+    <div id="thread" class="thread">
+      <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
+    </div>
+
+    <details id="debugPanel" class="debug">
+      <summary>🔎 Show debug</summary>
+      <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
+      <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
+      <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
+      <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
+      <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
+
+      <!-- Provenance -->
+      <div class="kv">
+        <label>Provenance</label>
+        <div id="prov" class="prov-block small">–</div>
+      </div>
+    </details>
+
+    <div class="composer">
+      <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
+      <button id="send" class="send">Send</button>
+    </div>
+  </div>
+</div></div>
 
 <script>
 /* ===== Config / helpers ===== */
-const VERSION = 'v0.9.6';
-document.getElementById('ver').textContent = VERSION;
-
 const CHAT_ENDPOINT = '/api/chat';
-const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // optional
+const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // optional bearer
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
@@ -120,7 +122,6 @@ function getToken(){
   if (qp) return qp;
   try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
 }
-const stopwords = new Set(['photography','photographic','workshop','workshops','photo','near','me','warwickshire','uk','lesson','tuition','course','courses','class','classes','overview','prices','price','dates','date','next','latest','session','sessions','day','full','half','hours','hour','am','pm','with','and','for','the','nearby','around']);
 
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
@@ -129,11 +130,11 @@ const dbgStatus   = document.getElementById('dbg-status');
 const dbgReq      = document.getElementById('dbg-req');
 const dbgRes      = document.getElementById('dbg-res');
 const dbgHeaders  = document.getElementById('dbg-headers');
-const dbgProv     = document.getElementById('dbg-prov');
+const provEl      = document.getElementById('prov');
 
 function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
 function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
-function setDebug({status, req, res, headers, provenance}){
+function setDebug({status, req, res, headers}){
   if (status !== undefined) dbgStatus.textContent = String(status);
   if (req !== undefined) dbgReq.textContent = safeJSONString(req);
   if (res !== undefined) dbgRes.textContent = safeJSONString(res);
@@ -141,7 +142,6 @@ function setDebug({status, req, res, headers, provenance}){
     const h = {...headers}; if (h.Authorization) h.Authorization = 'Bearer ' + maskToken((h.Authorization.split(' ')[1]||'')); 
     dbgHeaders.textContent = safeJSONString(h);
   }
-  if (provenance !== undefined) dbgProv.textContent = safeJSONString(provenance);
 }
 
 /* ===== UI helpers ===== */
@@ -158,7 +158,7 @@ function addTyping() {
   return () => el && el.remove();
 }
 
-/* ===== Markdown (simple) ===== */
+/* ===== Mini Markdown renderer ===== */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -184,202 +184,75 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Topic inference (generic) ===== */
-function tokensOf(s){
-  return (s||'').toLowerCase().split(/[^a-z0-9]+/).filter(t=>t && t.length>=5 && !stopwords.has(t));
-}
-function slugTokens(url){
-  try{
-    const u = new URL(url);
-    return u.pathname.split('/').filter(Boolean).flatMap(seg => seg.toLowerCase().split(/[^a-z0-9]+/)).filter(t=>t.length>=5 && !stopwords.has(t));
-  }catch{ return []; }
-}
-function inferTopic(question, citations, struct, answer){
-  const counts = new Map();
-  const bump=(t)=> counts.set(t, (counts.get(t)||0)+1);
-
-  tokensOf(question).forEach(bump);
-  (citations||[]).forEach(u=> slugTokens(u).forEach(bump));
-  (struct?.events||[]).forEach(e=> { tokensOf(e.title).forEach(bump); slugTokens(e.url||e.source_url).forEach(bump); });
-  (struct?.products||[]).forEach(p=> { tokensOf(p.title).forEach(bump); slugTokens(p.url||p.source_url).forEach(bump); });
-  tokensOf(answer).forEach(bump);
-
-  let best=null, score=-1;
-  counts.forEach((v,k)=>{ if (v>score){ score=v; best=k; } });
-  const confidence = score>=2 ? 'high' : (score===1 ? 'low' : 'none');
-  return { key: best, confidence, counts: Object.fromEntries([...counts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8)) };
-}
-
-/* ===== Filtering (strict when topic is known) ===== */
-function matchTopic(s, key){ if(!key) return true; return (s||'').toLowerCase().includes(key.toLowerCase()); }
-function keepByTopic(item, key){
-  const t = (item?.title||'') + ' ' + (item?.name||'');
-  const u = item?.url || item?.source_url || '';
-  return matchTopic(t, key) || matchTopic(u, key);
-}
-
-function filterStructured(struct, topic){
-  if (!struct) return {events:[], products:[]};
-  const eventsAll = struct.events||[];
-  const productsAll = struct.products||[];
-
-  const eventsKept   = topic.key ? eventsAll.filter(e=>keepByTopic(e, topic.key)) : eventsAll;
-  const productsKept = topic.key ? productsAll.filter(p=>keepByTopic(p, topic.key)) : productsAll;
-
-  return { events: eventsKept, products: productsKept, _rawCounts:{
-    in_events:eventsAll.length, kept_events:eventsKept.length,
-    in_products:productsAll.length, kept_products:productsKept.length
-  }};
-}
-function filterCitations(cites, topic){
-  const all = cites||[];
-  if (!topic.key) return all;
-  const kept = all.filter(u=>matchTopic(u, topic.key));
-  return kept;
-}
-
-/* ===== Dates + prices formatting ===== */
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function formatDate(d){
-  try{
-    const dt = (d instanceof Date)? d : new Date(d);
-    const day = dt.getUTCDate(); const mon = MONTHS[dt.getUTCMonth()]; const yr = dt.getUTCFullYear();
-    return `${mon} ${String(day).padStart(2,'0')}, ${yr}`;
-  }catch{ return d||''; }
-}
-function groupByDate(events){
-  const map = new Map();
-  for (const e of events){
-    const iso = e.date_start || e.date || e.start || e.datetime || '';
-    const dayKey = iso ? (new Date(iso)).toISOString().slice(0,10) : (e.title||'').trim();
-    const arr = map.get(dayKey)||[];
-    arr.push(e); map.set(dayKey, arr);
-  }
-  // sort by actual date if available; otherwise keep insertion
-  const items = [...map.entries()].map(([k,arr])=>({key:k, date: new Date(arr[0].date_start||arr[0].date||arr[0].start||Date.now()), events:arr}));
-  items.sort((a,b)=>a.date-b.date);
-  return items;
-}
-
-function pickMoney(x){
-  // schema-first: variants → price_amount → price → amount
-  const v = (x?.variants||[]).map(v=>v.price_amount ?? v.price ?? v.amount).filter(n=>Number.isFinite(+n));
-  if (v.length) return Math.min(...v.map(Number));
-  const top = [x?.price_amount, x?.price, x?.amount, x?.min_price].find(n=>Number.isFinite(+n));
-  return top ?? null;
-}
-function currencyOf(x){
-  return x?.price_currency || x?.currency || x?.curr || 'GBP';
-}
-function formatGBP(n){ try{ return new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0}).format(+n); }catch{ return `£${(+n).toFixed(0)}`; } }
-
-function splitHalfFull(products){
-  // Try to separate "4 hour / half day" vs "full day"
-  const out = { half:null, full:null, any:null, halfLink:null, fullLink:null, anyLink:null };
-  for (const p of products){
-    const price = pickMoney(p);
-    const link  = p.url || p.source_url || '';
-    const title = (p.title||'').toLowerCase();
-    if (price==null) continue;
-    if (/half|4\s*hour|4hr|4\s*hrs/.test(title)){ if (out.half==null || price<out.half){ out.half = price; out.halfLink = link; } }
-    else if (/full|day\b/.test(title)){ if (out.full==null || price<out.full){ out.full = price; out.fullLink = link; } }
-    else { if (out.any==null || price<out.any){ out.any = price; out.anyLink = link; } }
-  }
-  return out;
-}
-
-/* ===== Link labelling ===== */
-function niceLabel(u){
-  try{
-    const url = new URL(u);
-    const parts = url.pathname.split('/').filter(Boolean).slice(-2).join(' / ') || url.hostname;
-    return (parts.length>40 ? parts.slice(0,37)+'…' : parts);
-  }catch{ return 'Open'; }
-}
-
-/* ===== Build answer block ===== */
-function buildAnswerHTML({question, answer, citations, structured}){
-  const topic = inferTopic(question, citations, structured, answer);
-  const filtered = filterStructured(structured, topic);
-  const citesKept = filterCitations(citations, topic);
-
-  // Build HTML
-  let html = '';
-  if (topic.key) html += `<p><strong>Topic detected:</strong> ${topic.key}</p>`;
-
-  // Dates
-  const ev = filtered.events||[];
-  if (ev.length){
-    html += `<h3>Upcoming ${topic.key ? (topic.key[0].toUpperCase()+topic.key.slice(1)+' ') : ''}Workshop Dates:</h3><ul>`;
-    const groups = groupByDate(ev);
-    for (const g of groups){
-      // choose a representative link from the group
-      const link = g.events.find(e=>e.url || e.source_url) || g.events[0];
-      const href = link?.url || link?.source_url || '#';
-      const dateText = formatDate(g.date);
-      html += `<li><strong>${dateText}</strong> <a href="${href}" target="_blank" rel="noopener">Link</a></li>`;
+/* ===== Bullet → best citation link (and mapping) ===== */
+function bestUrlFor(text, urls){
+  if (!urls || !urls.length) return null;
+  const t = (text||'').toLowerCase();
+  const tokens = t.split(/[^a-z0-9]+/).filter(w=>w.length>2);
+  let best = null, bestScore = -1;
+  for (const u of urls){
+    const low = u.toLowerCase();
+    const slug = (u.split('/').pop()||'').toLowerCase();
+    let score = 0;
+    for (const k of tokens){
+      if (slug.includes(k)) score += 2;
+      if (low.includes(k))  score += 1;
     }
-    html += `</ul>`;
+    if (score > bestScore){ bestScore = score; best = u; }
   }
-
-  // Price block
-  const pr = filtered.products||[];
-  if (pr.length){
-    const {half, full, any, halfLink, fullLink, anyLink} = splitHalfFull(pr);
-    const curr = currencyOf(pr[0]) || 'GBP';
-    html += `<h3>Price:</h3><ul>`;
-    if (half!=null){ html += `<li>4 hours: ${curr==='GBP'?formatGBP(half):half} <a href="${halfLink||'#'}" target="_blank" rel="noopener">Link</a></li>`; }
-    if (full!=null){ html += `<li>Full day: ${curr==='GBP'?formatGBP(full):full} <a href="${fullLink||'#'}" target="_blank" rel="noopener">Link</a></li>`; }
-    if (half==null && full==null && any!=null){ html += `<li>From: ${curr==='GBP'?formatGBP(any):any} <a href="${anyLink||'#'}" target="_blank" rel="noopener">Link</a></li>`; }
-    if (half==null && full==null && any==null){ html += `<li>Not specified in the provided context.</li>`; }
-    html += `</ul>`;
-  }
-
-  // If nothing structured, just render the LLM answer
-  if (!ev.length && !pr.length){
-    const md = mdToHtml(answer||'');
-    html += md.html;
-  }
-
-  // Context pills (only from filtered assets)
-  const chips = [];
-  // Prefer event/product links
-  const firstEvent  = (filtered.events||[]).find(e=>e.url||e.source_url);
-  const firstProd   = (filtered.products||[]).find(p=>p.url||p.source_url);
-  const firstCite   = (citesKept||[])[0];
-
-  if (firstProd) chips.push({label:'Prices', href:firstProd.url || firstProd.source_url, act:true});
-  if (firstEvent) chips.push({label:'Upcoming dates', href:firstEvent.url || firstEvent.source_url, act:true});
-  if (firstCite) chips.push({label:'Workshops overview', href:firstCite, act:true});
-  // Add remaining filtered citations (up to 6 total)
-  (citesKept||[]).slice(0,6).forEach(u=>{
-    if (!chips.some(c=>c.href===u)) chips.push({label:niceLabel(u), href:u});
-  });
-
-  const wrap = document.createElement('div');
-  const holder = addBubble(html);
-  if (chips.length){
-    const bar = document.createElement('div');
-    bar.className='chips';
-    chips.slice(0,6).forEach(c=>{
+  return best;
+}
+function addLinksToBullets(container, liIds, items, citations){
+  const mapping = [];
+  liIds.forEach((id, i)=>{
+    const li = container.querySelector('#'+CSS.escape(id));
+    if (!li) return;
+    const best = bestUrlFor(items[i]||'', citations);
+    if (best){
       const a = document.createElement('a');
-      a.textContent = c.label; a.href=c.href; a.target='_blank'; a.rel='noopener';
-      if (c.act) a.classList.add('act');
-      bar.appendChild(a);
-    });
-    holder.appendChild(bar);
-  }
+      a.href = best; a.target='_blank'; a.rel='noopener';
+      a.textContent = ' Link'; a.style.marginLeft = '6px';
+      li.appendChild(a);
+      mapping.push({ text: items[i], url: best });
+    }
+  });
+  return mapping;
+}
 
-  // Provenance for debug
-  setDebug({ provenance: {
-    version: VERSION,
-    topic,
-    counts: filtered._rawCounts,
-    citations_in: citations||[],
-    citations_filtered: citesKept,
-    events_kept: (filtered.events||[]).map(e=>({title:e.title, url:e.url||e.source_url, date_start:e.date_start||e.date||e.start||null})),
-    products_kept: (filtered.products||[]).map(p=>({title:p.title, url:p.url||p.source_url, price: pickMoney(p), currency: currencyOf(p)}))
-  }});
+/* ===== Chips (context-aware) ===== */
+function unique(arr){ return Array.from(new Set(arr.filter(Boolean))); }
+function inferChips(question, answer, citations){
+  const q = (question||'').toLowerCase();
+  const a = (answer||'').toLowerCase();
+  const chips = [];
+  const push = (label, href) => chips.push({label, href});
+
+  unique(citations).slice(0,2).forEach(u=>{
+    const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
+    push(label.length>32?label.slice(0,29)+'…':label, u);
+  });
+  if (/price|cost|£|\bgbp\b|fee/.test(q+a)) push('Prices','https://www.alanranger.com/photography-workshops-near-me');
+  if (/date|when|schedule|start/.test(q+a)) push('Upcoming dates','https://www.alanranger.com/photography-workshops-near-me');
+  if (/workshop|course|class|tuition|lesson/.test(q+a)) {
+    push('Workshops overview','https://www.alanranger.com/photography-workshops-near-me');
+    push('Tuition & coaching','https://www.alanranger.com/photography-lessons-online-121');
+  }
+  return unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
+}
+function addChips(container, chips){
+  if (!chips.length) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'chips';
+  chips.forEach(({label, href})=>{
+    const a = document.createElement('a');
+    a.href = href; a.target='_blank'; a.rel='noopener';
+    a.textContent = label;
+    // orange emphasis
+    a.style.background = 'var(--brand)';
+    a.style.color = '#0b0f16';
+    wrap.appendChild(a);
+  });
+  container.appendChild(wrap);
 }
 
 /* ===== API ===== */
@@ -397,7 +270,120 @@ async function callChat(question, topK=8){
   return json;
 }
 
-/* ===== Events ===== */
+/* ===== Provenance renderer (always shows sources) ===== */
+function renderProvenance({ payload, citations, bulletMap }){
+  const sd = payload.structured_debug || {};
+  const structured = payload.structured || {};
+  const tried = sd.tried || structured.tried || [];
+
+  const eventsFrom = sd.events_from || (Array.isArray(structured.events) ? structured.events.map(e=>({
+    date_start:e.date_start, date_end:e.date_end, url:e.source_url||e.url||e.page_url, title:e.title
+  })) : []);
+  const productsFrom = sd.products_from || (Array.isArray(structured.products) ? structured.products.map(p=>({
+    price:p.price, price_currency:p.price_currency, url:p.source_url||p.url||p.page_url, title:p.title
+  })) : []);
+
+  const lines = [];
+
+  // Citations (always visible)
+  lines.push(`<div><span class="badge">Citations</span></div>`);
+  if (citations && citations.length){
+    citations.forEach(u=> lines.push(`<div>• <a href="${u}" target="_blank" rel="noopener">${u}</a></div>`));
+  } else {
+    lines.push(`<div>• none</div>`);
+  }
+
+  // JSON-LD sources for events/products if present
+  if (tried && tried.length){
+    lines.push(`<div style="margin-top:6px"><span class="badge">Tried (JSON-LD pages)</span></div>`);
+    tried.forEach(u=> lines.push(`<div>• <a href="${u}" target="_blank" rel="noopener">${u}</a></div>`));
+  }
+  if (eventsFrom && eventsFrom.length){
+    lines.push(`<div style="margin-top:6px"><span class="badge">Events (from JSON-LD)</span></div>`);
+    eventsFrom.forEach(e=>{
+      const ds = e.date_start || '—', de = e.date_end ? ` → ${e.date_end}` : '';
+      const link = e.url ? ` — <a href="${e.url}" target="_blank" rel="noopener">${e.url}</a>` : '';
+      lines.push(`<div>• ${ds}${de}${link}</div>`);
+    });
+  }
+  if (productsFrom && productsFrom.length){
+    lines.push(`<div style="margin-top:6px"><span class="badge">Products (from JSON-LD)</span></div>`);
+    productsFrom.forEach(p=>{
+      const price = p.price ? `${p.price} ${p.price_currency||''}`.trim() : '—';
+      const link = p.url ? ` — <a href="${p.url}" target="_blank" rel="noopener">${p.url}</a>` : '';
+      lines.push(`<div>• Price: ${price}${link}</div>`);
+    });
+  }
+
+  // Bullet mapping (what each bullet linked to)
+  if (bulletMap && bulletMap.length){
+    lines.push(`<div style="margin-top:6px"><span class="badge">Bullet → URL map</span></div>`);
+    bulletMap.forEach(m=>{
+      const txt = (m.text||'').replace(/</g,'&lt;');
+      lines.push(`<div>• ${txt} — <a href="${m.url}" target="_blank" rel="noopener">${m.url}</a></div>`);
+    });
+  }
+
+  provEl.innerHTML = lines.join('') || '–';
+}
+
+/* ===== Structured data visualisation (optional in bubble) ===== */
+function renderStructuredInto(holder, structured){
+  if (!structured) return;
+  const hasE = Array.isArray(structured.events) && structured.events.length;
+  const hasP = Array.isArray(structured.products) && structured.products.length;
+  if (!hasE && !hasP) return;
+
+  const box = document.createElement('div');
+  box.className = 'small';
+  box.style.marginTop = '10px';
+  let html = '<div><strong>Structured data</strong></div>';
+
+  if (hasE){
+    html += '<div style="margin-top:6px"><em>Events</em></div><ul>';
+    structured.events.forEach(e=>{
+      const ds = e.date_start || '';
+      const de = e.date_end ? ` → ${e.date_end}` : '';
+      const url = e.source_url || e.url || e.page_url;
+      html += `<li>${ds}${de}${url?` — <a href="${url}" target="_blank" rel="noopener">Open</a>`:''}</li>`;
+    });
+    html += '</ul>';
+  }
+  if (hasP){
+    html += '<div style="margin-top:6px"><em>Products</em></div><ul>';
+    structured.products.forEach(p=>{
+      const price = p.price ? `${p.price} ${p.price_currency||''}`.trim() : '—';
+      const url = p.source_url || p.url || p.page_url;
+      html += `<li>£/Price: ${price}${url?` — <a href="${url}" target="_blank" rel="noopener">Open</a>`:''}</li>`;
+    });
+    html += '</ul>';
+  }
+  box.innerHTML = html;
+  holder.appendChild(box);
+}
+
+/* ===== Render ===== */
+function renderAnswer(payload, question){
+  if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
+  const raw = payload.answer || payload.reply || payload.text || '';
+  const citations = unique(payload.citations || payload.sources || []);
+  const { html, liIds, items } = mdToHtml(raw);
+  const holder = addBubble(html);
+
+  // Bullet → best-link heuristic + mapping
+  const bulletMap = addLinksToBullets(holder, liIds, items, citations) || [];
+
+  // Pills
+  addChips(holder, inferChips(question, raw, citations));
+
+  // Optional: visualise structured events/products when present
+  try { renderStructuredInto(holder, payload.structured); } catch {}
+
+  // Provenance in debug panel
+  renderProvenance({ payload, citations, bulletMap });
+}
+
+/* ===== Fallback ===== */
 function fallbackBlock(){
   return `
     <div class="fallback">
@@ -410,6 +396,7 @@ function fallbackBlock(){
     </div>`;
 }
 
+/* ===== Events ===== */
 async function handleSend(){
   const q = input.value.trim();
   if(!q) return;
@@ -419,19 +406,16 @@ async function handleSend(){
   try{
     const data = await callChat(q, 8);
     stopTyping();
-    buildAnswerHTML({
-      question: q,
-      answer: data.answer || data.reply || data.text || '',
-      citations: data.citations || data.sources || [],
-      structured: data.structured || {events:[],products:[]}
-    });
+    renderAnswer(data, q);
   }catch{
     stopTyping();
     addBubble(fallbackBlock());
   }
 }
 sendBtn.addEventListener('click', handleSend);
-input.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }});
+input.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
+});
 </script>
 </body>
 </html>
