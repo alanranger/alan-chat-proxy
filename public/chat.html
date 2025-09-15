@@ -16,8 +16,9 @@
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
-.wrap{max-width:980px;margin:28px auto;padding:0 16px}
-.card{position:relative;background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
+.version{position:absolute;top:-8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
@@ -25,8 +26,6 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
 .pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
 .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
-
-.ver{position:absolute;top:10px;right:12px;font-size:11px;color:#9eb2d3;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px}
 
 .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
 .thread{display:flex;flex-direction:column;gap:12px}
@@ -41,6 +40,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chips a{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
+.chips a.brand{background:var(--brand);color:#0b0f16;border-color:transparent}
 .chips a:hover{opacity:.9}
 
 /* Composer */
@@ -56,8 +56,6 @@ details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
-.prov-block a{color:#b8d7ff;text-decoration:underline}
-.prov-block div{margin-bottom:4px}
 
 /* Typing dots */
 .typing{position:relative;display:inline-block}
@@ -70,80 +68,61 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </style>
 </head>
 <body>
-<div class="wrap"><div class="card">
-  <div class="ver">v0.9.7</div>
-  <div class="header">
-    <img class="logo" src="./chat%20white.png" alt="AR logo">
-    <h2 class="title">Alan Ranger Assistant</h2>
-    <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:</p>
-    <div class="pills">
-      <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-      <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+<div class="wrap">
+  <span class="version">v0.9.9</span>
+  <div class="card">
+    <div class="header">
+      <img class="logo" src="./chat%20white.png" alt="AR logo">
+      <h2 class="title">Alan Ranger Assistant</h2>
+      <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:</p>
+      <div class="pills">
+        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+      </div>
+    </div>
+
+    <div class="chat">
+      <div id="thread" class="thread">
+        <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
+      </div>
+
+      <details id="debugPanel" class="debug">
+        <summary>🔎 Show debug</summary>
+        <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
+        <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
+        <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
+        <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
+        <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
+        <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
+        <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
+      </details>
+
+      <div class="composer">
+        <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
+        <button id="send" class="send">Send</button>
+      </div>
     </div>
   </div>
-
-  <div class="chat">
-    <div id="thread" class="thread">
-      <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
-    </div>
-
-    <details id="debugPanel" class="debug">
-      <summary>🔎 Show debug</summary>
-      <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
-      <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
-      <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
-      <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
-      <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
-      <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
-      <div class="kv"><label>Provenance</label><div id="prov" class="prov-block">–</div></div>
-    </details>
-
-    <div class="composer">
-      <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
-      <button id="send" class="send">Send</button>
-    </div>
-  </div>
-</div></div>
+</div>
 
 <script>
-/* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
-const EXTRACT_ENDPOINT = '/api/extract';
-const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // optional bearer
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
-
-function getToken(){
-  const qp = (urlParams.get('token')||'').trim();
-  if (HARDCODED) return HARDCODED;
-  if (qp) return qp;
-  try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
-}
 
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
 const sendBtn= document.getElementById('send');
-const dbgStatus   = document.getElementById('dbg-status');
-const dbgReq      = document.getElementById('dbg-req');
-const dbgRes      = document.getElementById('dbg-res');
-const dbgHeaders  = document.getElementById('dbg-headers');
-const dbgStruct   = document.getElementById('dbg-struct');
-const provEl      = document.getElementById('prov');
 
-function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
-function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
-function setDebug({status, req, res, headers, struct}){
-  if (status !== undefined) dbgStatus.textContent = String(status);
-  if (req !== undefined) dbgReq.textContent = safeJSONString(req);
-  if (res !== undefined) dbgRes.textContent = safeJSONString(res);
-  if (struct !== undefined) dbgStruct.textContent = safeJSONString(struct);
-  if (headers !== undefined) {
-    const h = {...headers}; if (h.Authorization) h.Authorization = 'Bearer ' + maskToken((h.Authorization.split(' ')[1]||'')); 
-    dbgHeaders.textContent = safeJSONString(h);
-  }
-}
+const dbgStatus = document.getElementById('dbg-status');
+const dbgReq    = document.getElementById('dbg-req');
+const dbgRes    = document.getElementById('dbg-res');
+const dbgHeaders= document.getElementById('dbg-headers');
+const dbgStruct = document.getElementById('dbg-struct');
+const dbgProv   = document.getElementById('dbg-prov');
 
-/* ===== UI helpers ===== */
+function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
+
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
   div.className = 'bubble' + (opts.user ? ' user' : '');
@@ -154,383 +133,118 @@ function addBubble(html, opts={}) {
 }
 function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
-  return () => el && el.remove();
+  return ()=> el && el.remove();
 }
 
-/* ===== Mini Markdown renderer (IDs for bullets) ===== */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>').replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
   const lines = s.split(/\r?\n/);
-  let out = '', inList = false, liIds = [], items=[], idx=0;
-  const flush = ()=>{ if(inList){ out += '</ul>'; inList=false; } };
+  let out='', inList=false, liIds=[], items=[], idx=0;
+  const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
   for (const line of lines){
     const m = line.match(/^\s*-\s+(.*)$/);
     if (m){
-      if(!inList){ out += '<ul>'; inList=true; }
+      if(!inList){ out+='<ul>'; inList=true; }
       const text = m[1].trim();
       const id = `li_${++idx}`; liIds.push(id); items.push(text);
       out += `<li id="${id}">${text}</li>`;
-    }else{
+    } else {
       flush();
-      out += line.trim() ? `<p>${line}</p>` : '';
+      out += line.trim()? `<p>${line}</p>` : '';
     }
   }
   flush();
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Helpers: date + price formatting ===== */
-const monthNames = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-function normDateKey(d){
-  try{
-    const dt = (d instanceof Date)? d : new Date(d);
-    if (isNaN(dt)) return null;
-    const dd = String(dt.getUTCDate()).padStart(2,'0');
-    const m3 = monthNames[dt.getUTCMonth()];
-    const yyyy = dt.getUTCFullYear();
-    return `${dd}-${m3}-${yyyy}`; // 24-apr-2026
-  }catch{ return null; }
-}
-function dateStringVariants(dt){
-  try{
-    const d = (dt instanceof Date)? dt : new Date(dt);
-    if (isNaN(d)) return [];
-    const day = d.getUTCDate();
-    const dd = String(day).padStart(2,'0');
-    const m = d.getUTCMonth();
-    const yyyy = d.getUTCFullYear();
-    const m3 = monthNames[m];
-    const mFull = ["January","February","March","April","May","June","July","August","September","October","November","December"][m];
-    const wd3 = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getUTCDay()];
-    return [
-      `${wd3}, ${dd} ${m3} ${yyyy}`,
-      `${wd3}, ${day} ${mFull} ${yyyy}`,
-      `${dd} ${m3} ${yyyy}`,
-      `${day} ${mFull} ${yyyy}`,
-      `${mFull} ${day}, ${yyyy}`,
-      `${m3} ${day}, ${yyyy}`
-    ].map(x=>x.toLowerCase());
-  }catch{ return []; }
-}
-function asGBP(n, currency){
-  const cur = (currency||'GBP').toUpperCase();
-  const sym = cur==='GBP' ? '£' : (cur==='USD'?'$':cur+' ');
-  const num = (isFinite(n)? Number(n).toFixed(0): String(n));
-  return sym + num;
-}
-
-/* ===== API ===== */
-async function callChat(question, topK=8){
-  const token = getToken();
-  const headers = { 'Content-Type':'application/json' };
-  if (token) headers['Authorization'] = 'Bearer ' + token;
-  const body = { query: question, topK };
-  setDebug({status:'…', req: body, headers});
-  const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
-  const status = res.status;
-  let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
-  setDebug({status, res: json});
-  if(!res.ok) throw new Error('API error');
-  return json;
-}
-
-async function callExtract(action, url){
-  const r = await fetch(`${EXTRACT_ENDPOINT}?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`);
-  const raw = await r.text().catch(()=> '');
-  try { return JSON.parse(raw); } catch { return { error:'non_json', raw: raw.slice(0,400) }; }
-}
-
-/* ===== Structured retrieval (with topic scoping) ===== */
-function detectTopic(question, answer){
-  const q = (question||'').toLowerCase();
-  const a = (answer||'').toLowerCase();
-  const kw = ['bluebell','district','poppy','woodland','woodlands'];
-  for (const k of kw){ if (q.includes(k) || a.includes(k)) return k; }
-  return ''; // unknown
-}
-
-function urlLooksLikeTopic(u, topic){
-  if (!topic) return true;
-  const L = u.toLowerCase();
-  if (topic==='bluebell') {
-    if (/(poppy|district)/.test(L)) return false;
-    return /bluebell/.test(L);
-  }
-  if (topic==='district') return /district/.test(L) && !/bluebell|poppy/.test(L);
-  if (topic==='poppy') return /poppy/.test(L) && !/bluebell|district/.test(L);
-  return true;
-}
-
-function eventLooksLikeTopic(e, topic){
-  const t = ((e.title||'') + ' ' + (e.name||'') + ' ' + (e.description||'') + ' ' + (e.source_url||e.url||'')).toLowerCase();
-  if (!topic) return true;
-  if (topic==='bluebell') return /bluebell/.test(t) && !/poppy|district/.test(t);
-  if (topic==='district') return /district/.test(t) && !/bluebell|poppy/.test(t);
-  if (topic==='poppy') return /poppy/.test(t) && !/bluebell|district/.test(t);
-  return true;
-}
-
-async function getStructuredFromCitations(citations, topic){
-  const urls = Array.from(new Set((citations||[]).filter(Boolean).filter(u=>urlLooksLikeTopic(u, topic)))).slice(0,4);
-  const out = { tried: urls, events: [], products: [] };
-  for (const u of urls){
-    const ev = await callExtract('events-extract', u);
-    if (ev && Array.isArray(ev.events)) out.events.push(...ev.events.filter(e=>eventLooksLikeTopic(e, topic)));
-    const pr = await callExtract('products-extract', u);
-    if (pr && Array.isArray(pr.products)) out.products.push(...pr.products);
-  }
-  // clean offers
-  out.events.forEach(e=>{
-    if (Array.isArray(e.offers)) e.offers = e.offers.filter(o=>o && (o.price!=null || o.priceCurrency));
-  });
-  out.products.forEach(p=>{
-    if (Array.isArray(p.offers)) p.offers = p.offers.filter(o=>o && (o.price!=null || o.priceCurrency));
-  });
-  setDebug({struct: out});
-  return out;
-}
-
-/* ===== Chips (context-aware) ===== */
-function unique(arr){ return Array.from(new Set(arr.filter(Boolean))); }
-function inferChips(question, answer, citations, topic){
-  const q = (question||'').toLowerCase();
-  const a = (answer||'').toLowerCase();
+function buildChips(question, citations){
   const chips = [];
-  const push = (label, href) => chips.push({label, href});
+  const blue = (citations||[]).find(u=> /bluebell/i.test(u)) || citations?.[0];
 
-  const base = 'https://www.alanranger.com';
-  const bluebellPage = `${base}/bluebell-woods-near-me`;
-  const overview = `${base}/photography-workshops-near-me`;
-  const tuition = `${base}/photography-lessons-online-121`;
+  // Brand orange context chips
+  if (blue) chips.push({label:'bluebell-woods-near-me', href: blue, brand:true});
+  chips.push({label:'Prices', href: blue || 'https://www.alanranger.com/photography-workshops-near-me', brand:true});
+  chips.push({label:'Upcoming dates', href: blue || 'https://www.alanranger.com/photography-workshops-near-me', brand:true});
+  chips.push({label:'Workshops overview', href:'https://www.alanranger.com/photography-workshops-near-me', brand:false});
 
-  if (topic==='bluebell') push('bluebell-woods-near-me', bluebellPage);
+  // Add up to 2 raw citations (non-brand)
+  (citations||[]).slice(0,2).forEach(u=>{
+    try {
+      const nice = u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ');
+      chips.push({label: nice.length>32?nice.slice(0,29)+'…':nice, href:u, brand:false});
+    } catch {}
+  });
 
-  if (/price|cost|how much|£|\bgbp\b|\bfee/.test(q+a)) push('Prices', overview);
-  if (/date|when|next|schedule|start|time/.test(q+a)) push('Upcoming dates', overview);
-  if (/workshop|course|class|tuition|lesson/.test(q+a)) {
-    push('Workshops overview', overview);
-    push('Tuition & coaching', tuition);
+  // De-dup
+  const seen = new Set(); const out=[];
+  for (const c of chips){
+    const key = `${c.label}|${c.href}`;
+    if (!seen.has(key)){ out.push(c); seen.add(key); }
   }
-
-  // Two most relevant from citations
-  unique(citations).slice(0,2).forEach(u=>{
-    const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
-    chips.push({ label: label.length>32 ? label.slice(0,29)+'…' : label, href: u });
-  });
-
-  // Orange emphasis on first 3 chips in rendering
-  return unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
-}
-function addChips(container, chips){
-  if (!chips.length) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'chips';
-  chips.forEach(({label, href}, i)=>{
-    const a = document.createElement('a');
-    a.href = href; a.target='_blank'; a.rel='noopener';
-    a.textContent = label;
-    if (i < 3) { a.style.background = 'var(--brand)'; a.style.color = '#0b0f16'; }
-    wrap.appendChild(a);
-  });
-  container.appendChild(wrap);
+  return out.slice(0,6);
 }
 
-/* ===== Bullet linking + price insertion ===== */
-function attachLinksAndPrices(holder, liIds, items, struct, question, rawAnswer){
-  // Build date→url map
-  const dateMap = new Map();
-  for (const ev of struct.events||[]){
-    const url = ev.source_url || ev.url || ev.link || null;
-    const k = normDateKey(ev.date_start || ev.startDate || ev.date || ev.start);
-    if (url && k) dateMap.set(k, url);
-  }
-
-  // For each bullet that contains a date, attach "Link"
-  liIds.forEach((id, i)=>{
-    const li = holder.querySelector('#'+CSS.escape(id));
-    if (!li) return;
-    const text = (items[i]||'').toLowerCase();
-
-    // find by variant match across all events
-    let chosenUrl = null;
-    for (const ev of struct.events||[]){
-      const d = ev.date_start || ev.startDate || ev.date || ev.start;
-      const variants = dateStringVariants(d);
-      if (variants.some(v=> text.includes(v))){
-        chosenUrl = ev.source_url || ev.url || ev.link || null;
-        if (chosenUrl) break;
-      }
-    }
-    // fallback by simple key
-    if (!chosenUrl){
-      for (const [k,u] of dateMap.entries()){
-        const [dd, m3, yyyy] = k.split('-');
-        if (text.includes(`${Number(dd)} ${m3} ${yyyy}`) || text.includes(`${dd} ${m3} ${yyyy}`)){
-          chosenUrl = u; break;
-        }
-      }
-    }
-    if (chosenUrl){
-      const a = document.createElement('a');
-      a.href = chosenUrl; a.target='_blank'; a.rel='noopener';
-      a.textContent = ' Link'; a.style.marginLeft = '6px';
-      li.appendChild(a);
-    }
-  });
-
-  // Price computation: prefer GBP; consider events.offers + products.offers + product root price fields
-  const offers = [];
-  const pushOffer = (amount, currency)=> {
-    if (amount==null) return;
-    const cur = (currency||'GBP').toUpperCase();
-    const n = Number(amount);
-    if (isFinite(n)) offers.push({amount:n, currency:cur});
-  };
-
-  (struct.events||[]).forEach(e=>{
-    (e.offers||[]).forEach(o=> pushOffer(o.price, o.priceCurrency||o.price_currency));
-  });
-  (struct.products||[]).forEach(p=>{
-    (p.offers||[]).forEach(o=> pushOffer(o.price, o.priceCurrency||o.price_currency));
-    // also try root fields
-    if (p.price!=null) pushOffer(p.price, p.priceCurrency||p.price_currency);
-    if (p.lowPrice!=null) pushOffer(p.lowPrice, p.priceCurrency||p.price_currency);
-    if (p.highPrice!=null) pushOffer(p.highPrice, p.priceCurrency||p.price_currency);
-  });
-
-  const gbp = offers.filter(o=>o.currency==='GBP');
-  const use = gbp.length ? gbp : offers;
-  if (use.length){
-    const nums = Array.from(new Set(use.map(o=>o.amount))).sort((a,b)=>a-b);
-    let priceText = '';
-    if (nums.length===1) priceText = asGBP(nums[0], use[0].currency);
-    else priceText = `${asGBP(nums[0], use[0].currency)} – ${asGBP(nums[nums.length-1], use[0].currency)}`;
-
-    // Replace existing Price line if present OR inject near the top
-    let replaced = false;
-    for (const id of liIds){
-      const li = holder.querySelector('#'+CSS.escape(id));
-      if (!li) continue;
-      const t = li.textContent.trim().toLowerCase();
-      if (t.startsWith('price') || /^price:/i.test(t)){
-        li.innerHTML = `<strong>Price:</strong> ${priceText}`;
-        replaced = true; break;
-      }
-    }
-    if (!replaced){
-      const ul = holder.querySelector('ul');
-      if (ul){
-        const li = document.createElement('li');
-        li.innerHTML = `<strong>Price:</strong> ${priceText}`;
-        ul.insertBefore(li, ul.firstChild);
-      }
-    }
-  }
-}
-
-/* ===== Provenance in debug ===== */
-function renderProvenance({ payload, citations, struct, bulletMap }){
-  const tried = (struct && struct.tried) || [];
-  const lines = [];
-
-  lines.push(`<div><span style="display:inline-block;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;margin-right:6px">Citations</span></div>`);
-  if (citations && citations.length){
-    citations.forEach(u=> lines.push(`<div>• <a href="${u}" target="_blank" rel="noopener">${u}</a></div>`));
-  } else {
-    lines.push(`<div>• none</div>`);
-  }
-
-  if (tried.length){
-    lines.push(`<div style="margin-top:6px"><span style="display:inline-block;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;margin-right:6px">Tried (JSON-LD pages)</span></div>`);
-    tried.forEach(u=> lines.push(`<div>• <a href="${u}" target="_blank" rel="noopener">${u}</a></div>`));
-  }
-
-  if (struct && Array.isArray(struct.events) && struct.events.length){
-    lines.push(`<div style="margin-top:6px"><span style="display:inline-block;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;margin-right:6px">Events (JSON-LD)</span></div>`);
-    struct.events.slice(0,12).forEach(e=>{
-      const ds = e.date_start || e.startDate || '—';
-      const link = (e.source_url||e.url) ? ` — <a href="${e.source_url||e.url}" target="_blank" rel="noopener">open</a>` : '';
-      lines.push(`<div>• ${ds}${link}</div>`);
-    });
-  }
-
-  if (struct && Array.isArray(struct.products) && struct.products.length){
-    lines.push(`<div style="margin-top:6px"><span style="display:inline-block;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;margin-right:6px">Products (JSON-LD)</span></div>`);
-    struct.products.slice(0,12).forEach(p=>{
-      const price = p.price!=null ? asGBP(p.price, p.priceCurrency||p.price_currency) : (p.lowPrice!=null||p.highPrice!=null ? `${p.lowPrice||''} – ${p.highPrice||''}` : '—');
-      const link = (p.source_url||p.url) ? ` — <a href="${p.source_url||p.url}" target="_blank" rel="noopener">open</a>` : '';
-      lines.push(`<div>• Price: ${price}${link}</div>`);
-    });
-  }
-
-  if (bulletMap && bulletMap.length){
-    lines.push(`<div style="margin-top:6px"><span style="display:inline-block;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;margin-right:6px">Bullet → URL map</span></div>`);
-    bulletMap.forEach(m=>{
-      const txt = (m.text||'').replace(/</g,'&lt;');
-      lines.push(`<div>• ${txt} — <a href="${m.url}" target="_blank" rel="noopener">${m.url}</a></div>`);
-    });
-  }
-
-  provEl.innerHTML = lines.join('') || '–';
-}
-
-/* ===== Render ===== */
 function renderAnswer(payload, question){
-  if (!payload || payload.ok === false){
-    addBubble(`<div class="answer"><p>I don’t have a confident answer to that yet. Please try rephrasing — or contact Alan directly via the buttons above.</p></div>`);
-    return;
-  }
-  const raw = payload.answer || payload.reply || payload.text || '';
-  const citations = unique(payload.citations || payload.sources || []);
-  const topic = detectTopic(question, raw); // e.g., "bluebell"
-
-  const { html, liIds, items } = mdToHtml(raw);
+  const { html } = mdToHtml(payload.answer || '');
   const holder = addBubble(html);
 
-  // If no citations, still add helpful chips
-  if (!citations.length){
-    addChips(holder, inferChips(question, raw, [], topic));
-    return;
+  // Chips
+  const chips = buildChips(question, payload.citations || []);
+  if (chips.length){
+    const wrap = document.createElement('div');
+    wrap.className = 'chips';
+    chips.forEach(c=>{
+      const a = document.createElement('a');
+      a.href = c.href; a.target='_blank'; a.rel='noopener';
+      a.textContent = c.label;
+      if (c.brand) a.classList.add('brand');
+      wrap.appendChild(a);
+    });
+    holder.appendChild(wrap);
   }
 
-  // Fetch structured, scoped to topic, wire links + prices, render chips & provenance
-  getStructuredFromCitations(citations, topic)
-    .then(struct => {
-      attachLinksAndPrices(holder, liIds, items, struct, question, raw);
-      addChips(holder, inferChips(question, raw, struct.tried||citations, topic));
-      // Minimal bullet→URL map (from dateMap step we can’t easily expose; skip)
-      renderProvenance({ payload, citations, struct, bulletMap: [] });
-    })
-    .catch(() => {
-      addChips(holder, inferChips(question, raw, citations, topic));
-      renderProvenance({ payload, citations, struct: { tried: citations }, bulletMap: [] });
-    });
+  // Debug
+  dbgStruct.textContent = safeJSONString(payload.structured || {});
+  const prov = [];
+  prov.push('Citations:');
+  (payload.citations||[]).forEach(u=> prov.push(`• ${u}`));
+  dbgProv.textContent = prov.join('\n') || '–';
 }
 
-/* ===== Events ===== */
+async function callChat(question) {
+  const headers = {'Content-Type':'application/json'};
+  const body = { query: question, topK: 8 };
+  dbgReq.textContent = safeJSONString(body);
+  dbgHeaders.textContent = safeJSONString(headers);
+  dbgStatus.textContent = '…';
+  const r = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
+  const json = await r.json().catch(()=>({}));
+  dbgStatus.textContent = String(r.status);
+  dbgRes.textContent = safeJSONString(json);
+  return { ok:r.ok, json };
+}
+
 async function handleSend(){
   const q = input.value.trim();
-  if(!q) return;
+  if (!q) return;
   addBubble(q.replace(/</g,'&lt;'), {user:true});
   input.value = '';
-  const stopTyping = addTyping();
-  try{
-    const data = await callChat(q, 8);
-    stopTyping();
-    renderAnswer(data, q);
-  }catch{
-    stopTyping();
-    addBubble(`<div class="answer"><p>Sorry — I hit a snag talking to the server. Please try again in a moment.</p></div>`);
+  const stop = addTyping();
+  try {
+    const { ok, json } = await callChat(q);
+    stop();
+    if (ok && json?.ok) renderAnswer(json, q);
+    else addBubble(`<div class="answer"><p>Sorry — I couldn’t fetch that right now.</p></div>`);
+  } catch {
+    stop();
+    addBubble(`<div class="answer"><p>Sorry — I hit a snag. Please try again.</p></div>`);
   }
 }
+
 sendBtn.addEventListener('click', handleSend);
-input.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
-});
+input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }});
 </script>
 </body>
 </html>
