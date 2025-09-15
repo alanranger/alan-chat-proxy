@@ -22,7 +22,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
 .sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
-.pills{display:flex;gap:10px;margin:12px 0 4px}
+.pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
 .pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
 .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
@@ -30,7 +30,6 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .thread{display:flex;flex-direction:column;gap:12px}
 .bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
 .bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
-.fallback .pills{margin-top:10px}
 .answer h1,.answer h2,.answer h3{margin:.2em 0}
 .answer p{margin:.5em 0}
 .answer ul{margin:.4em 0 .6em 1.25em}
@@ -44,12 +43,12 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 /* Composer */
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
-.composer input::placeholder{color:#6b7280}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
-/* Debug */
+/* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
 details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
@@ -90,6 +89,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
       <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
       <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
       <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
+      <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
     </details>
 
     <div class="composer">
@@ -102,7 +102,8 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <script>
 /* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
-const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // bearer (optional override)
+const EXTRACT_ENDPOINT = '/api/extract';
+const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // ingest token (optional)
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
@@ -120,19 +121,22 @@ const dbgStatus   = document.getElementById('dbg-status');
 const dbgReq      = document.getElementById('dbg-req');
 const dbgRes      = document.getElementById('dbg-res');
 const dbgHeaders  = document.getElementById('dbg-headers');
+const dbgStruct   = document.getElementById('dbg-struct');
 
 function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
 function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
-function setDebug({status, req, res, headers}){
+function setDebug({status, req, res, headers, struct}){
   if (status !== undefined) dbgStatus.textContent = String(status);
   if (req !== undefined) dbgReq.textContent = safeJSONString(req);
   if (res !== undefined) dbgRes.textContent = safeJSONString(res);
+  if (struct !== undefined) dbgStruct.textContent = safeJSONString(struct);
   if (headers !== undefined) {
     const h = {...headers}; if (h.Authorization) h.Authorization = 'Bearer ' + maskToken((h.Authorization.split(' ')[1]||'')); 
     dbgHeaders.textContent = safeJSONString(h);
   }
 }
 
+/* ===== UI helpers ===== */
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
   div.className = 'bubble' + (opts.user ? ' user' : '');
@@ -145,15 +149,13 @@ function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
   return () => el && el.remove();
 }
-function unique(arr){ return Array.from(new Set((arr||[]).filter(Boolean))); }
-const byDate = (a,b)=> (a>b?1:a<b?-1:0);
 
-/* ===== Minimal MD renderer ===== */
+/* ===== Mini Markdown renderer (kept + IDs for bullets) ===== */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
-  s = s.replace(/\*\*(.+?))\*\*/g,'<strong>$1</strong>');
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>').replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
   const lines = s.split(/\r?\n/);
   let out = '', inList = false, liIds = [], items=[], idx=0;
@@ -174,256 +176,46 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== /api/extract with AUTH ===== */
-async function fetchExtract(action, url){
+/* ===== Helpers: date + price formatting ===== */
+const monthNames = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+function normDateKey(d){
   try{
-    const auth = getToken();
-    const r = await fetch(`/api/extract?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`, {
-      headers: auth ? { 'Authorization':'Bearer '+auth } : {}
-    });
-    const raw = await r.text();
-    let j; try{ j = JSON.parse(raw); }catch{ j = { error:'non_json', raw: raw?.slice(0,400)||'' }; }
-    return j;
-  }catch{ return { error:'fetch_failed' }; }
-}
-
-/* ===== PROXY HTML fetch (server-side to avoid CORS) ===== */
-async function fetchHtmlViaProxy(url){
-  try{
-    const r = await fetch(`/api/json/proxy?url=${encodeURIComponent(url)}`);
-    if (!r.ok) return null;
-    return await r.text();
+    const dt = (d instanceof Date)? d : new Date(d);
+    if (isNaN(dt)) return null;
+    const dd = String(dt.getUTCDate()).padStart(2,'0');
+    const m3 = monthNames[dt.getUTCMonth()];
+    const yyyy = dt.getUTCFullYear();
+    return `${dd}-${m3}-${yyyy}`; // 24-apr-2026
   }catch{ return null; }
 }
-
-/* ===== Normalisers ===== */
-function normaliseEvents(ex){
-  const arr = []
-    .concat(ex?.events||[])
-    .concat(ex?.entities||[])
-    .concat(Array.isArray(ex)?ex:[])
-    .filter(x=>x && (x.kind==='event' || x['@type']==='Event' || x.date_start || x.startDate));
-  const out = [];
-  for (const e of arr){
-    const raw = e.raw || e;
-    const ds = e.date_start || raw.startDate || raw.start_date || raw.date || null;
-    const url = e.source_url || e.url || raw?.url || raw?.['@id'] || null;
-    const title = e.title || raw.name || raw.title || null;
-    let price = e.price || raw.price || null;
-    let currency = e.price_currency || raw.priceCurrency || raw.currency || null;
-    const offer = Array.isArray(raw.offers) ? raw.offers[0] : raw.offers;
-    if (offer){
-      price = price ?? offer.price ?? null;
-      currency = currency ?? (offer.priceCurrency || offer.currency || null);
-    }
-    if (ds) out.push({ date_start: ds, url, title, price, currency });
-  }
-  return out.sort((a,b)=> byDate(a.date_start,b.date_start));
-}
-function normaliseProducts(ex){
-  const arr = []
-    .concat(ex?.products||[])
-    .concat(ex?.entities||[])
-    .concat(Array.isArray(ex)?ex:[])
-    .filter(x=>x && (x.kind==='product' || x['@type']==='Product' || x.price || (x.raw && x.raw.price)));
-  const out=[];
-  for (const p of arr){
-    const raw = p.raw || p;
-    const url = p.source_url || p.url || raw?.url || raw?.['@id'] || null;
-    const price = p.price ?? raw.price ?? null;
-    const currency = p.price_currency || raw.priceCurrency || raw.currency || null;
-    out.push({ url, price, currency });
-  }
-  return out;
-}
-function fmtGBP(p, cur){
-  if (!p && p!==0) return null;
-  const n = Number(p);
-  if (!isFinite(n)) return (cur||'£') + String(p);
-  try { return new Intl.NumberFormat('en-GB',{style:'currency',currency:(cur||'GBP')}).format(n); }
-  catch { return '£'+String(p); }
-}
-function samePageBase(a,b){
+function dateStringVariants(dt){
   try{
-    const A=new URL(a), B=new URL(b);
-    return A.origin===B.origin && A.pathname.split('/').slice(0,3).join('/')===B.pathname.split('/').slice(0,3).join('/');
-  }catch{ return false; }
-}
-function mergePricesIntoEvents(events, products){
-  if (!products.length) return events;
-  return events.map(ev=>{
-    if (ev.price) return ev;
-    const bySame = products.find(p=> p.url && ev.url && samePageBase(p.url, ev.url));
-    const any = bySame || products[0];
-    if (any && any.price){
-      return {...ev, price:any.price, currency:any.currency || ev.currency};
-    }
-    return ev;
-  });
-}
-
-/* ===== Fallback scraping (date links + GBP prices) ===== */
-function grabDateLinksFromHTML(html, baseUrl){
-  try{
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const anchors = Array.from(doc.querySelectorAll('a'));
-    const dateRe = /\b(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s*)?(\d{1,2})\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s*(20\d{2})\b/i;
-    const out=[];
-    for (const a of anchors){
-      const t = (a.textContent||'').replace(/\s+/g,' ').trim();
-      const m = t.match(dateRe);
-      if (m){
-        let u = a.getAttribute('href')||'';
-        try{ u = new URL(u, baseUrl).toString(); }catch{}
-        const ds = `${m[2]} ${m[3]} ${m[4]}`;
-        out.push({date_start: ds, url: u});
-      }
-    }
-    // de-dupe by date + url
-    const seen = new Set(); const list=[];
-    out.forEach(e=>{ const k=(e.date_start||'')+'@@'+(e.url||''); if(!seen.has(k)){ seen.add(k); list.push(e); } });
-    return list.sort((a,b)=> byDate(a.date_start,b.date_start));
+    const d = (dt instanceof Date)? dt : new Date(dt);
+    if (isNaN(d)) return [];
+    const day = d.getUTCDate();
+    const dd = String(day).padStart(2,'0');
+    const m = d.getUTCMonth();
+    const yyyy = d.getUTCFullYear();
+    const m3 = monthNames[m];
+    const mFull = ["January","February","March","April","May","June","July","August","September","October","November","December"][m];
+    const wd3 = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getUTCDay()];
+    return [
+      `${wd3}, ${dd} ${m3} ${yyyy}`,
+      `${wd3}, ${day} ${mFull} ${yyyy}`,
+      `${dd} ${m3} ${yyyy}`,
+      `${day} ${mFull} ${yyyy}`,
+      `${mFull} ${day}, ${yyyy}`,
+      `${m3} ${day}, ${yyyy}`
+    ].map(x=>x.toLowerCase());
   }catch{ return []; }
 }
-function grabPricesFromHTML(html){
-  const matches = html.match(/£\s?\d+(?:\.\d{2})?/g) || [];
-  // return distinct first two prices
-  const seen=new Set(); const out=[];
-  for (const m of matches){
-    if(seen.has(m)) continue; seen.add(m); out.push(m.replace(/\s+/g,'')); if(out.length>=2) break;
-  }
-  return out;
+function asGBP(n, currency){
+  const cur = (currency||'GBP').toUpperCase();
+  const sym = cur==='GBP' ? '£' : (cur==='USD'?'$':cur+' ');
+  return sym + (isFinite(n)? Number(n).toFixed(0): String(n));
 }
 
-/* Build pills */
-function buildSmartChips(question, answer, urlsTried, primaryUrls){
-  const chips = [];
-  if (primaryUrls.event) chips.push({label:'Upcoming dates', href:primaryUrls.event});
-  if (primaryUrls.product && primaryUrls.product!==primaryUrls.event) chips.push({label:'Prices', href:primaryUrls.product});
-  unique(urlsTried).slice(0,3).forEach(u=>{
-    const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
-    chips.push({label: label.length>32?label.slice(0,29)+'…':label, href:u});
-  });
-  const qa=(question+' '+answer).toLowerCase();
-  if (/workshop|course|class/.test(qa)) chips.push({label:'Workshops overview', href:'https://www.alanranger.com/photography-workshops-near-me'});
-  if (/bluebell/.test(qa)) chips.push({label:'bluebell-woods-near-me', href:'https://www.alanranger.com/bluebell-woods-near-me'});
-  const seen=new Set(); const out=[]; for (const c of chips){ const k=c.href; if(seen.has(k)) continue; seen.add(k); out.push(c); }
-  return out.slice(0,6);
-}
-function addChips(container, chips){
-  if (!chips.length) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'chips';
-  chips.forEach(({label, href})=>{
-    const a = document.createElement('a');
-    a.href = href; a.target = '_blank'; a.rel='noopener';
-    a.textContent = label;
-    wrap.appendChild(a);
-  });
-  container.appendChild(wrap);
-}
-
-/* ===== Enrichment (citations + anchors) with fallback scraping ===== */
-async function enrichFromEntities(container, seedUrls, question, modelAnswer){
-  const seeds = unique(seedUrls).slice(0,6);
-  let events=[]; let products=[];
-  for (const u of seeds){
-    const exE = await fetchExtract('events-extract', u);
-    const exP = await fetchExtract('products-extract', u);
-    const e = normaliseEvents(exE);
-    const p = normaliseProducts(exP);
-    if (e.length) events = events.concat(e);
-    if (p.length) products = products.concat(p);
-  }
-  events = mergePricesIntoEvents(events, products);
-
-  // Debug panel
-  const box = document.createElement('div');
-  box.innerHTML = `
-    <div style="margin-top:12px;padding:10px;border:1px solid #1b2540;border-radius:8px;background:#0b1426">
-      <div style="color:#9eb2d3;font-weight:600;margin-bottom:6px">Structured data</div>
-      <div style="color:#93A4C1" id="sdSummary"></div>
-      <div style="color:#93A4C1;margin-top:6px">Tried URLs:</div>
-      <ul style="margin-top:4px">${seeds.map(u=>`<li><a href="${u}" target="_blank" rel="noopener">${u}</a></li>`).join('')}</ul>
-      <div id="sdBody"></div>
-    </div>`;
-  container.appendChild(box);
-  const body = box.querySelector('#sdBody');
-  const summary = box.querySelector('#sdSummary');
-
-  const setCounts = (eCount,pCount) => summary.textContent = `Found events: ${eCount} · products: ${pCount}`;
-
-  if (events.length || products.length){
-    setCounts(events.length, products.length);
-  }else{
-    setCounts(0,0);
-    // Fallback: scrape date anchors + prices from HTML
-    let scrapedDates=[]; let scrapedPrices=[];
-    for (const u of seeds){
-      const html = await fetchHtmlViaProxy(u);
-      if (!html) continue;
-      const ds = grabDateLinksFromHTML(html, u);
-      if (ds.length) scrapedDates = scrapedDates.concat(ds);
-      const ps = grabPricesFromHTML(html);
-      if (ps.length) scrapedPrices = scrapedPrices.concat(ps);
-    }
-    // De-dupe scraped
-    const seenD=new Set(); const allDates=[];
-    scrapedDates.forEach(e=>{ const k=(e.date_start||'')+'@@'+(e.url||''); if(!seenD.has(k)){ seenD.add(k); allDates.push(e); } });
-    const seenP=new Set(); scrapedPrices = scrapedPrices.filter(p=> (seenP.has(p)?false:(seenP.add(p),true)));
-
-    // Render scraped results
-    if (allDates.length){
-      const ulDates = document.createElement('ul');
-      ulDates.style.marginTop='8px';
-      allDates.sort((a,b)=> byDate(a.date_start,b.date_start));
-      for (const e of allDates){
-        const li = document.createElement('li');
-        li.innerHTML = `${e.date_start} ${e.url?`<a href="${e.url}" target="_blank" rel="noopener">Link</a>`:''}`;
-        ulDates.appendChild(li);
-      }
-      body.appendChild(ulDates);
-    }else{
-      body.innerHTML = `<div style="margin-top:6px;color:#93A4C1">No JSON-LD found; page also didn’t expose date anchors.</div>`;
-    }
-
-    if (scrapedPrices.length){
-      const p = document.createElement('div');
-      p.style.marginTop='8px';
-      p.style.color='#cfe3ff';
-      p.textContent = `Prices seen on page: ${scrapedPrices.slice(0,2).join(' · ')}`;
-      body.appendChild(p);
-    }
-    // Add pills from seeds anyway
-    addChips(container, buildSmartChips(question, modelAnswer, seeds, {event: seeds[0], product: seeds[0]}));
-    return;
-  }
-
-  // If extractor gave us events/products:
-  const uniqKey = new Set(); const allDates=[];
-  for (const ev of events){
-    const k = (ev.date_start||'')+'@@'+(ev.url||'');
-    if (!uniqKey.has(k)){ uniqKey.add(k); allDates.push(ev); }
-  }
-  allDates.sort((a,b)=> byDate(a.date_start,b.date_start));
-
-  const ulDates = document.createElement('ul');
-  ulDates.style.marginTop='8px';
-  for (const e of allDates){
-    const d = new Date(e.date_start);
-    const nice = isFinite(d) ? d.toLocaleDateString('en-GB',{weekday:'short', day:'2-digit', month:'short', year:'numeric'}) : e.date_start;
-    const li = document.createElement('li');
-    li.innerHTML = `${nice} ${e.url?`<a href="${e.url}" target="_blank" rel="noopener">Link</a>`:''}` + (e.price ? ` — ${fmtGBP(e.price, e.currency)}` : '');
-    ulDates.appendChild(li);
-  }
-  body.appendChild(ulDates);
-
-  const primaryEventUrl   = allDates[0]?.url || seeds[0];
-  const primaryProductUrl = (products[0]?.url) || primaryEventUrl;
-  addChips(container, buildSmartChips(question, modelAnswer, seeds, {event:primaryEventUrl, product:primaryProductUrl}));
-}
-
-/* ===== API ===== */
+/* ===== Call APIs ===== */
 async function callChat(question, topK=8){
   const token = getToken();
   const headers = { 'Content-Type':'application/json' };
@@ -438,34 +230,211 @@ async function callChat(question, topK=8){
   return json;
 }
 
-/* ===== Render ===== */
-function fallbackBlock(){
-  return `
-    <div class="fallback">
-      <p>I don’t have a confident answer to that yet. I’m trained on Alan’s site, so I may miss things.</p>
-      <p>If you’d like to follow up, please reach out:</p>
-      <div class="pills">
-        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
-      </div>
-    </div>`;
+async function callExtract(action, url){
+  const r = await fetch(`${EXTRACT_ENDPOINT}?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`);
+  const raw = await r.text().catch(()=> '');
+  try { return JSON.parse(raw); } catch { return { error:'non_json', raw: raw.slice(0,400) }; }
 }
+
+async function getStructuredFromCitations(citations){
+  // limit to first 4 unique URLs
+  const urls = Array.from(new Set((citations||[]).filter(Boolean))).slice(0,4);
+  const out = { tried: urls, events: [], products: [] };
+  for (const u of urls){
+    const ev = await callExtract('events-extract', u);
+    if (ev && Array.isArray(ev.events)) out.events.push(...ev.events);
+    const pr = await callExtract('products-extract', u);
+    if (pr && Array.isArray(pr.products)) out.products.push(...pr.products);
+  }
+  // Normalise offers
+  out.events.forEach(e=>{
+    if (Array.isArray(e.offers)) e.offers = e.offers.filter(o=>o && (o.price||o.priceCurrency));
+  });
+  out.products.forEach(p=>{
+    if (Array.isArray(p.offers)) p.offers = p.offers.filter(o=>o && (o.price||o.priceCurrency));
+  });
+  setDebug({struct: out});
+  return out;
+}
+
+/* ===== Chips ===== */
+function unique(arr){ return Array.from(new Set(arr.filter(Boolean))); }
+function inferChips(question, answer, citations){
+  const q = (question||'').toLowerCase();
+  const a = (answer||'').toLowerCase();
+  const chips = [];
+  const push = (label, href) => chips.push({label, href});
+
+  // From intent
+  if (/price|cost|how much|£|\bgbp\b|\bfee/.test(q+a)) {
+    push('Prices', 'https://www.alanranger.com/photography-workshops-near-me');
+  }
+  if (/date|when|next|schedule|start|time/.test(q+a)) {
+    push('Upcoming dates', 'https://www.alanranger.com/photography-workshops-near-me');
+  }
+  if (/workshop|course|class|tuition|lesson/.test(q+a)) {
+    push('Workshops overview', 'https://www.alanranger.com/photography-workshops-near-me');
+  }
+
+  // From citations (2 most relevant pretty labels)
+  unique(citations).slice(0,2).forEach(u=>{
+    const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
+    chips.push({ label: label.length>32 ? label.slice(0,29)+'…' : label, href: u });
+  });
+
+  return unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
+}
+function addChips(container, chips){
+  if (!chips.length) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'chips';
+  chips.forEach(({label, href})=>{
+    const a = document.createElement('a');
+    a.href = href; a.target = '_blank'; a.rel='noopener';
+    a.textContent = label;
+    wrap.appendChild(a);
+  });
+  container.appendChild(wrap);
+}
+
+/* ===== Wire dates + prices into the rendered bullets ===== */
+function attachLinksAndPrices(holder, liIds, items, struct, question, rawAnswer){
+  // 1) Build date → url map from events
+  const dateMap = new Map(); // key (24-apr-2026) -> url
+  for (const ev of struct.events||[]){
+    const url = ev.source_url || ev.url || ev.link || null;
+    const k = normDateKey(ev.date_start || ev.startDate || ev.date || ev.start);
+    if (url && k) dateMap.set(k, url);
+  }
+
+  // 2) For each list item that looks like a date, add a “Link” to the mapped event
+  liIds.forEach((id, i)=>{
+    const li = holder.querySelector('#'+CSS.escape(id));
+    if (!li) return;
+    const text = (items[i]||'').toLowerCase();
+    // quick date pick: look for any event whose variant appears in the text
+    let chosenUrl = null;
+    for (const ev of struct.events||[]){
+      const d = ev.date_start || ev.startDate || ev.date || ev.start;
+      const variants = dateStringVariants(d);
+      if (variants.some(v=> text.includes(v))){
+        chosenUrl = ev.source_url || ev.url || ev.link || null;
+        if (chosenUrl) break;
+      }
+    }
+    // fallback by map key scanning
+    if (!chosenUrl){
+      for (const [k,u] of dateMap.entries()){
+        const [dd, m3, yyyy] = k.split('-'); // 24-apr-2026
+        if (text.includes(`${Number(dd)} ${m3} ${yyyy}`) || text.includes(`${dd} ${m3} ${yyyy}`)){
+          chosenUrl = u; break;
+        }
+      }
+    }
+    if (chosenUrl){
+      const a = document.createElement('a');
+      a.href = chosenUrl; a.target='_blank'; a.rel='noopener';
+      a.textContent = ' Link'; a.style.marginLeft = '6px';
+      li.appendChild(a);
+    }
+  });
+
+  // 3) Populate a “Price:” line if missing/ETBD using offers from events/products
+  const prices = [];
+  const preferGBP = (o)=> (o && (String(o.priceCurrency||'').toUpperCase()==='GBP'));
+  const addOffer = (o)=> {
+    if (!o) return;
+    const cur = (o.priceCurrency||'GBP');
+    if (o.price!=null) prices.push({amount:o.price, currency:cur});
+  };
+  for (const ev of struct.events||[]) (ev.offers||[]).forEach(addOffer);
+  for (const pr of struct.products||[]) (pr.offers||[]).forEach(addOffer);
+  const gbp = prices.filter(p=>String(p.currency).toUpperCase()==='GBP');
+  const use = gbp.length ? gbp : prices;
+  if (use.length){
+    // choose min and max distinct
+    const nums = Array.from(new Set(use.map(p=>Number(p.amount)).filter(n=>isFinite(n)))).sort((a,b)=>a-b);
+    if (nums.length){
+      let priceText = '';
+      if (nums.length===1) priceText = asGBP(nums[0], use[0].currency);
+      else priceText = `${asGBP(nums[0], use[0].currency)} – ${asGBP(nums[nums.length-1], use[0].currency)}`;
+
+      // Find an existing “Price:” bullet or inject one near the top
+      let found = null;
+      for (const id of liIds){
+        const li = holder.querySelector('#'+CSS.escape(id));
+        if (!li) continue;
+        if (/^price:/i.test(li.textContent.trim()) || li.textContent.toLowerCase().includes('price')){
+          found = li; break;
+        }
+      }
+      if (!found){
+        // insert a Price bullet at the top (after first paragraph if any)
+        const ul = holder.querySelector('ul');
+        if (ul){
+          const li = document.createElement('li');
+          li.innerHTML = `<strong>Price:</strong> ${priceText}`;
+          ul.insertBefore(li, ul.firstChild);
+          found = li;
+        }
+      }else{
+        // augment existing
+        if (!/£|\bgbp\b/i.test(found.textContent)) found.appendChild(document.createTextNode(' ' + priceText));
+      }
+    }
+  }
+
+  // 4) Chips
+  addChips(holder, inferChips(question, rawAnswer, (struct.tried||[])));
+}
+
+/* ===== Render ===== */
 function renderAnswer(payload, question){
-  if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
+  if (!payload || payload.ok === false){
+    addBubble(`<div class="answer"><p>I don’t have a confident answer to that yet. Please try rephrasing — or contact Alan directly via the buttons above.</p></div>`);
+    return;
+  }
   const raw = payload.answer || payload.reply || payload.text || '';
   const cites = unique(payload.citations || payload.sources || []);
-  const { html } = mdToHtml(raw);
+
+  const { html, liIds, items } = mdToHtml(raw);
   const holder = addBubble(html);
 
-  // Harvest anchors in model answer as seeds as well
-  const anchors = Array.from(holder.querySelectorAll('a'))
-    .map(a=>a.href)
-    .filter(h=>/^https?:\/\//.test(h));
+  // If there are no citations we still add generic chips
+  if (!cites.length){
+    addChips(holder, inferChips(question, raw, []));
+    return;
+  }
 
-  const seeds = unique(cites.concat(anchors));
-
-  // Enrich using extractor + fallback scraping
-  enrichFromEntities(holder, seeds, question, raw);
+  // Use citations to fetch JSON-LD (events + products), then link dates + prices
+  getStructuredFromCitations(cites).then(struct=>{
+    attachLinksAndPrices(holder, liIds, items, struct, question, raw);
+  }).catch(()=>{
+    // chips only if structured fetch failed
+    addChips(holder, inferChips(question, raw, cites));
+  });
 }
 
-/* ===== Events =====
+/* ===== Events ===== */
+async function handleSend(){
+  const q = input.value.trim();
+  if(!q) return;
+  addBubble(q.replace(/</g,'&lt;'), {user:true});
+  input.value = '';
+  const stopTyping = addTyping();
+  try{
+    const data = await callChat(q, 8);
+    stopTyping();
+    renderAnswer(data, q);
+  }catch{
+    stopTyping();
+    addBubble(`<div class="answer"><p>Sorry — I hit a snag talking to the server. Please try again in a moment.</p></div>`);
+  }
+}
+sendBtn.addEventListener('click', handleSend);
+input.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
+});
+</script>
+</body>
+</html>
