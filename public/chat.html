@@ -55,6 +55,8 @@ details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
+.prov-block a{color:#b8d7ff;text-decoration:underline}
+.prov-block div{margin-bottom:4px}
 
 /* Typing dots */
 .typing{position:relative;display:inline-block}
@@ -93,10 +95,10 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
       <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
       <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
 
-      <!-- Provenance block -->
-      <div class="kv" id="prov-wrap" style="display:none">
+      <!-- Provenance -->
+      <div class="kv">
         <label>Provenance</label>
-        <div id="prov-body"></div>
+        <div id="prov" class="prov-block small">–</div>
       </div>
     </details>
 
@@ -128,6 +130,7 @@ const dbgStatus   = document.getElementById('dbg-status');
 const dbgReq      = document.getElementById('dbg-req');
 const dbgRes      = document.getElementById('dbg-res');
 const dbgHeaders  = document.getElementById('dbg-headers');
+const provEl      = document.getElementById('prov');
 
 function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
 function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
@@ -155,7 +158,7 @@ function addTyping() {
   return () => el && el.remove();
 }
 
-/* ===== Mini Markdown renderer (kept) ===== */
+/* ===== Mini Markdown renderer ===== */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -181,7 +184,7 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Bullet → best citation link (RESTORED) ===== */
+/* ===== Bullet → best citation link (and mapping) ===== */
 function bestUrlFor(text, urls){
   if (!urls || !urls.length) return null;
   const t = (text||'').toLowerCase();
@@ -200,16 +203,20 @@ function bestUrlFor(text, urls){
   return best;
 }
 function addLinksToBullets(container, liIds, items, citations){
+  const mapping = [];
   liIds.forEach((id, i)=>{
     const li = container.querySelector('#'+CSS.escape(id));
     if (!li) return;
     const best = bestUrlFor(items[i]||'', citations);
-    if (!best) return;
-    const a = document.createElement('a');
-    a.href = best; a.target='_blank'; a.rel='noopener';
-    a.textContent = ' Link'; a.style.marginLeft = '6px';
-    li.appendChild(a);
+    if (best){
+      const a = document.createElement('a');
+      a.href = best; a.target='_blank'; a.rel='noopener';
+      a.textContent = ' Link'; a.style.marginLeft = '6px';
+      li.appendChild(a);
+      mapping.push({ text: items[i], url: best });
+    }
   });
+  return mapping;
 }
 
 /* ===== Chips (context-aware) ===== */
@@ -259,62 +266,68 @@ async function callChat(question, topK=8){
   const status = res.status;
   let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
   setDebug({status, res: json});
-  try { renderProvenance(json); } catch {}
   if(!res.ok) throw new Error('API error');
   return json;
 }
 
-/* ===== Provenance (NEW) ===== */
-function renderProvenance(payload){
-  const provWrap = document.getElementById('prov-wrap');
-  const provBody = document.getElementById('prov-body');
-  provBody.innerHTML = '';
-  let printed = false;
-
+/* ===== Provenance renderer (always shows sources) ===== */
+function renderProvenance({ payload, citations, bulletMap }){
   const sd = payload.structured_debug || {};
-  const tried = sd.tried || payload.structured?.tried || [];
-  if (tried && tried.length){
-    const h = document.createElement('div');
-    h.innerHTML = `<div class="badge">Tried</div>` + tried.map(u=>`<a href="${u}" target="_blank" rel="noopener">${u}</a>`).join('<br>');
-    provBody.appendChild(h);
-    printed = true;
+  const structured = payload.structured || {};
+  const tried = sd.tried || structured.tried || [];
+
+  const eventsFrom = sd.events_from || (Array.isArray(structured.events) ? structured.events.map(e=>({
+    date_start:e.date_start, date_end:e.date_end, url:e.source_url||e.url||e.page_url, title:e.title
+  })) : []);
+  const productsFrom = sd.products_from || (Array.isArray(structured.products) ? structured.products.map(p=>({
+    price:p.price, price_currency:p.price_currency, url:p.source_url||p.url||p.page_url, title:p.title
+  })) : []);
+
+  const lines = [];
+
+  // Citations (always visible)
+  lines.push(`<div><span class="badge">Citations</span></div>`);
+  if (citations && citations.length){
+    citations.forEach(u=> lines.push(`<div>• <a href="${u}" target="_blank" rel="noopener">${u}</a></div>`));
+  } else {
+    lines.push(`<div>• none</div>`);
   }
 
-  const eventsFrom = sd.events_from || (payload.structured?.events || []).map(e => ({
-    title: e.title, date_start: e.date_start, date_end: e.date_end, url: e.source_url || e.url || e.page_url
-  }));
-  const productsFrom = sd.products_from || (payload.structured?.products || []).map(p => ({
-    title: p.title, price: p.price, price_currency: p.price_currency, url: p.source_url || p.url || p.page_url
-  }));
-
+  // JSON-LD sources for events/products if present
+  if (tried && tried.length){
+    lines.push(`<div style="margin-top:6px"><span class="badge">Tried (JSON-LD pages)</span></div>`);
+    tried.forEach(u=> lines.push(`<div>• <a href="${u}" target="_blank" rel="noopener">${u}</a></div>`));
+  }
   if (eventsFrom && eventsFrom.length){
-    const ev = document.createElement('div');
-    ev.style.marginTop = '8px';
-    ev.innerHTML = `<div class="badge">Events</div>` + eventsFrom.map(e=>{
+    lines.push(`<div style="margin-top:6px"><span class="badge">Events (from JSON-LD)</span></div>`);
+    eventsFrom.forEach(e=>{
       const ds = e.date_start || '—', de = e.date_end ? ` → ${e.date_end}` : '';
-      const t = (e.title || '').replace(/</g,'&lt;');
-      const link = e.url ? ` &nbsp; <a href="${e.url}" target="_blank" rel="noopener">${e.url}</a>` : '';
-      return `<div>• ${ds}${de} — <strong>${t}</strong>${link}</div>`;
-    }).join('');
-    provBody.appendChild(ev);
-    printed = true;
+      const link = e.url ? ` — <a href="${e.url}" target="_blank" rel="noopener">${e.url}</a>` : '';
+      lines.push(`<div>• ${ds}${de}${link}</div>`);
+    });
   }
   if (productsFrom && productsFrom.length){
-    const pr = document.createElement('div');
-    pr.style.marginTop = '8px';
-    pr.innerHTML = `<div class="badge">Products</div>` + productsFrom.map(p=>{
-      const price = p.price ? `${p.price} ${p.price_currency || ''}`.trim() : '—';
-      const t = (p.title || '').replace(/</g,'&lt;');
-      const link = p.url ? ` &nbsp; <a href="${p.url}" target="_blank" rel="noopener">${p.url}</a>` : '';
-      return `<div>• £/Price: <strong>${price}</strong> — ${t}${link}</div>`;
-    }).join('');
-    provBody.appendChild(pr);
-    printed = true;
+    lines.push(`<div style="margin-top:6px"><span class="badge">Products (from JSON-LD)</span></div>`);
+    productsFrom.forEach(p=>{
+      const price = p.price ? `${p.price} ${p.price_currency||''}`.trim() : '—';
+      const link = p.url ? ` — <a href="${p.url}" target="_blank" rel="noopener">${p.url}</a>` : '';
+      lines.push(`<div>• Price: ${price}${link}</div>`);
+    });
   }
-  provWrap.style.display = printed ? '' : 'none';
+
+  // Bullet mapping (what each bullet linked to)
+  if (bulletMap && bulletMap.length){
+    lines.push(`<div style="margin-top:6px"><span class="badge">Bullet → URL map</span></div>`);
+    bulletMap.forEach(m=>{
+      const txt = (m.text||'').replace(/</g,'&lt;');
+      lines.push(`<div>• ${txt} — <a href="${m.url}" target="_blank" rel="noopener">${m.url}</a></div>`);
+    });
+  }
+
+  provEl.innerHTML = lines.join('') || '–';
 }
 
-/* ===== Structured data renderer (optional visualisation) ===== */
+/* ===== Structured data visualisation (optional in bubble) ===== */
 function renderStructuredInto(holder, structured){
   if (!structured) return;
   const hasE = Array.isArray(structured.events) && structured.events.length;
@@ -353,18 +366,21 @@ function renderStructuredInto(holder, structured){
 function renderAnswer(payload, question){
   if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
   const raw = payload.answer || payload.reply || payload.text || '';
-  const cites = unique(payload.citations || payload.sources || []);
+  const citations = unique(payload.citations || payload.sources || []);
   const { html, liIds, items } = mdToHtml(raw);
   const holder = addBubble(html);
 
-  // Restore bullet → best-link heuristic
-  try { addLinksToBullets(holder, liIds, items, cites); } catch {}
+  // Bullet → best-link heuristic + mapping
+  const bulletMap = addLinksToBullets(holder, liIds, items, citations) || [];
 
-  // Context-aware pills
-  addChips(holder, inferChips(question, raw, cites));
+  // Pills
+  addChips(holder, inferChips(question, raw, citations));
 
   // Optional: visualise structured events/products when present
   try { renderStructuredInto(holder, payload.structured); } catch {}
+
+  // Provenance in debug panel
+  renderProvenance({ payload, citations, bulletMap });
 }
 
 /* ===== Fallback ===== */
