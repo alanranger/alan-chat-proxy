@@ -1,5 +1,5 @@
 // /api/chat.js
-// Site-wide AI chat endpoint (Bluebell path updated to use topic-level product lookup)
+// Site-wide AI chat endpoint (generic, no hard-wired topics)
 // Runtime: NodeJS (Vercel)
 export const config = { runtime: "nodejs" };
 
@@ -8,7 +8,8 @@ import { createClient } from "@supabase/supabase-js";
 /* ---------------------------- Supabase client ---------------------------- */
 function supabaseAdmin() {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
   if (!url || !key) throw new Error("Missing SUPABASE_URL or SUPABASE_*_KEY");
   return createClient(url, key, { auth: { persistSession: false } });
 }
@@ -30,103 +31,235 @@ function fmtDateLondon(ts) {
     return ts;
   }
 }
-function uniq(arr) { return [...new Set((arr || []).filter(Boolean))]; }
-function toGBP(n) {
+function uniq(arr) {
+  return [...new Set((arr || []).filter(Boolean))];
+}
+function toGBP(n, frac = 0) {
   if (n == null || isNaN(Number(n))) return null;
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(n));
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: frac,
+  }).format(Number(n));
 }
-function pickUrl(row) { return row?.source_url || row?.page_url || row?.url || null; }
-
-/* ----------------------- Topic detection (simple) ------------------------ */
-function getTopicFromQuery(query) {
-  const q = (query || "").toLowerCase();
-  if (q.includes("bluebell")) return "bluebell";
-  return null;
+function pickUrl(row) {
+  return row?.source_url || row?.page_url || row?.url || null;
 }
 
-/* --------- Canonical resolver (Option A) – tolerant if missing ---------- */
-// If explicit flags exist (raw.canonical=true/raw.topic/raw.role), use them.
-// If not present or tags aren’t JSON, simply return nulls (we omit those chips).
-async function resolveCanonicalsOptionA(client, topic) {
+/* ----------------------- Query intent/topic helpers ---------------------- */
+
+/** Very light topic extraction: nouns/keywords from the user query. */
+function topicTokensFromQuery(q) {
+  const stop = new Set(
+    [
+      "the",
+      "a",
+      "an",
+      "of",
+      "in",
+      "for",
+      "to",
+      "and",
+      "or",
+      "with",
+      "please",
+      "next",
+      "upcoming",
+      "workshop",
+      "workshops",
+      "course",
+      "courses",
+      "class",
+      "classes",
+      "dates",
+      "date",
+      "price",
+      "prices",
+      "cost",
+      "how",
+      "when",
+      "where",
+      "is",
+      "are",
+      "what",
+      "alan",
+      "ranger",
+      "photography",
+      "book",
+      "booking",
+      "info",
+      "information",
+      "show",
+      "give",
+      "me",
+      "on",
+      "run",
+      "running",
+      "do",
+      "get",
+      "certificate",
+    ].map((w) => w.toLowerCase())
+  );
+  return (q || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w && !stop.has(w))
+    .slice(0, 4); // keep it short for ILIKE OR clauses
+}
+
+/** Is user asking for “next/upcoming” */
+function wantsUpcoming(q) {
+  const s = (q || "").toLowerCase();
+  return /next|upcoming|soon|dates|schedule|when/i.test(s);
+}
+
+/* ------------------------ Canonical resolver (safe) ---------------------- */
+// Uses explicit raw flags if present; otherwise returns nulls without error.
+async function resolveCanonicals(client, topicTokens) {
   const out = { product: null, landing: null, debug: {} };
+  // Try match canonicals by explicit flags + fuzzy topic tokens (best-effort)
+  const tokOr = (topicTokens || [])
+    .map((t) => `title.ilike.%${t}%,page_url.ilike.%${t}%`)
+    .join(",");
 
-  // explicit keys
-  const { data: prodA2, error: prodErr } = await client
+  const prodQuery = client
     .from("page_entities")
     .select("*")
     .eq("kind", "product")
     .eq("raw->>canonical", "true")
-    .eq("raw->>topic", topic)
-    .eq("raw->>role", "product")
     .order("last_seen", { ascending: false })
     .limit(1);
 
-  const { data: landA2, error: landErr } = await client
+  const landQuery = client
     .from("page_entities")
     .select("*")
     .in("kind", ["article", "page"])
     .eq("raw->>canonical", "true")
-    .eq("raw->>topic", topic)
-    .eq("raw->>role", "landing")
     .order("last_seen", { ascending: false })
     .limit(1);
 
-  out.product = prodA2?.[0] || null;
-  out.landing = landA2?.[0] || null;
+  // If we have tokens, include them in an OR clause to bias the canonical
+  if (tokOr) {
+    prodQuery.or(tokOr);
+    landQuery.or(tokOr);
+  }
+
+  const { data: prodA, error: prodErr } = await prodQuery;
+  const { data: landA, error: landErr } = await landQuery;
+
+  out.product = prodA?.[0] || null;
+  out.landing = landA?.[0] || null;
   out.debug.explicitErrors = { prodErr, landErr };
   out.debug.selected = {
     product: out.product?.id || null,
     landing: out.landing?.id || null,
   };
-
-  // We intentionally **do not** run a raw->tags contains() here because your data
-  // isn’t guaranteed to store tags as a JSON array (which threw 22P02 in your log).
   return out;
 }
 
-/* ----------------------- Option line construction ----------------------- */
-// Show each product option separately; dedupe by (name, price).
-// If same name with multiple prices → collapse to "£99 • £150".
+/* ------------------ Extract product details & prices --------------------- */
+function parseParticipantsFitness(rawOrDescription) {
+  const text =
+    typeof rawOrDescription === "string"
+      ? rawOrDescription
+      : rawOrDescription?.description || "";
+  let participants = null;
+  let fitness = null;
+
+  // Look for lines like "Participants: Max 6" and "Fitness: 1. Easy"
+  if (text) {
+    const pMatch =
+      /Participants\s*:\s*([^\r\n]+)/i.exec(text) ||
+      /Participants\s*\n\s*([^\r\n]+)/i.exec(text);
+    const fMatch =
+      /Fitness\s*:\s*([^\r\n]+)/i.exec(text) ||
+      /Fitness\s*\n\s*([^\r\n]+)/i.exec(text);
+
+    if (pMatch) participants = pMatch[1].trim();
+    if (fMatch) fitness = fMatch[1].trim();
+  }
+  return { participants, fitness };
+}
+
 function buildOptionLines(products) {
   const items = (products || [])
-    .map(p => {
+    .map((p) => {
       const name =
         (p.raw && (p.raw.name || p.raw?.["@name"])) ||
-        (p.title || "Option");
-      const price = p.price != null ? Number(p.price) : null;
-      return { name: String(name).trim(), price, row: p };
-    })
-    .filter(x => x.price != null);
+        p.title ||
+        "Option";
+      const offer = p.offer || p.raw?.offers || p.raw?.offer || {};
+      // Two possibilities in your data:
+      // - Offer { price }
+      // - AggregateOffer { lowPrice, highPrice }
+      const priceSingle =
+        offer?.price != null ? Number(offer.price) : null;
+      const priceLow =
+        offer?.lowPrice != null ? Number(offer.lowPrice) : null;
+      const priceHigh =
+        offer?.highPrice != null ? Number(offer.highPrice) : null;
 
-  // dedupe by name+price
+      return {
+        name: String(name).trim(),
+        priceSingle,
+        priceLow,
+        priceHigh,
+        row: p,
+      };
+    })
+    // keep if any price info present
+    .filter(
+      (x) =>
+        x.priceSingle != null || x.priceLow != null || x.priceHigh != null
+    );
+
+  // Deduplicate by (name + price signature)
+  const sig = (x) =>
+    `${x.name}__${x.priceSingle ?? ""}__${x.priceLow ?? ""}__${
+      x.priceHigh ?? ""
+    }`;
   const seen = new Set();
   const uniqItems = [];
   for (const it of items) {
-    const key = `${it.name}__${it.price}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const k = sig(it);
+    if (seen.has(k)) continue;
+    seen.add(k);
     uniqItems.push(it);
   }
 
-  // group by name
-  const byName = new Map();
+  // Build display lines, include participants/fitness when we have them
+  const lines = [];
   for (const it of uniqItems) {
-    if (!byName.has(it.name)) byName.set(it.name, []);
-    byName.get(it.name).push(it);
+    const { participants, fitness } = parseParticipantsFitness(
+      it.row?.description || it.row?.raw?.description || ""
+    );
+
+    let priceText = "";
+    if (it.priceSingle != null) priceText = toGBP(it.priceSingle);
+    else {
+      const bits = [];
+      if (it.priceLow != null) bits.push(toGBP(it.priceLow));
+      if (it.priceHigh != null) bits.push(toGBP(it.priceHigh));
+      priceText = bits.join(" • ");
+    }
+
+    const extras = [];
+    if (participants) extras.push(`Participants: ${participants}`);
+    if (fitness) extras.push(`Fitness: ${fitness}`);
+
+    lines.push(
+      extras.length
+        ? `${it.name} — ${priceText}\n${extras.map((e) => `- ${e}`).join("\n")}`
+        : `${it.name} — ${priceText}`
+    );
   }
 
-  const lines = [];
-  for (const [name, arr] of byName.entries()) {
-    const prices = arr.map(a => a.price).sort((a,b)=>a-b);
-    const priceBits = prices.map(p => toGBP(p)).filter(Boolean);
-    if (!priceBits.length) continue;
-    lines.push(arr.length === 1 ? `${name} — ${priceBits[0]}` : `${name} — ${priceBits.join(" • ")}`);
-  }
   return lines;
 }
 
 /* ----------------------------- Chips builder ---------------------------- */
-function buildChips({ bookNowUrl, landingUrl, anotherUrl }) {
+function buildChips({ bookNowUrl, landingUrl, firstEventUrl }) {
   const chips = [];
   const used = new Set();
   const add = (label, url) => {
@@ -135,49 +268,58 @@ function buildChips({ bookNowUrl, landingUrl, anotherUrl }) {
     used.add(url);
     chips.push({ label, url });
   };
-
   add("Book Now", bookNowUrl);
-  add("Bluebell info", landingUrl);
-  add("Upcoming dates", anotherUrl); // first event page
-  // cap at 4 total, but we only add up to 3 above (+ Book Now)
+  if (firstEventUrl) add("Upcoming dates", firstEventUrl);
+  if (landingUrl) add("Info", landingUrl);
   return chips.slice(0, 4);
 }
 
-/* ------------------------------- Bluebell -------------------------------- */
-async function answerBluebell({ query, client }) {
+/* ------------------------- Core generic answering ------------------------ */
+async function answerWorkshopsGeneric({ query, client }) {
   const nowIso = new Date().toISOString();
+  const tokens = topicTokensFromQuery(query);
 
-  // 1) Resolve canonicals if present (no errors if missing)
-  const canon = await resolveCanonicalsOptionA(client, "bluebell");
+  // 1) Canonicals (best-effort)
+  const canon = await resolveCanonicals(client, tokens);
 
-  // 2) Future events (topic by title/page_url)
-  const { data: events, error: evErr } = await client
+  // 2) Find *future* events, filtered by tokens if present
+  const evBase = client
     .from("page_entities")
-    .select("id, title, page_url, source_url, date_start, date_end, location, raw")
+    .select(
+      "id, kind, title, page_url, source_url, date_start, date_end, location, raw"
+    )
     .eq("kind", "event")
-    .or("title.ilike.%bluebell%,page_url.ilike.%bluebell%")
     .gte("date_start", nowIso)
     .order("date_start", { ascending: true })
     .limit(100);
 
+  if (tokens.length) {
+    evBase.or(tokens.map((t) => `title.ilike.%${t}%,page_url.ilike.%${t}%`).join(","));
+  }
+
+  const { data: events, error: evErr } = await evBase;
   if (evErr) {
     return { ok: false, error: "event_query_failed", where: "events", hint: evErr.message };
   }
 
-  // 3) Products by topic (NOT by page_url)
-  const { data: products, error: prodErr } = await client
+  // 3) Products that look relevant to the same tokens
+  const prodBase = client
     .from("page_entities")
     .select("*")
     .eq("kind", "product")
-    .or("title.ilike.%bluebell%,page_url.ilike.%bluebell%")
     .order("last_seen", { ascending: false })
     .limit(50);
 
+  if (tokens.length) {
+    prodBase.or(tokens.map((t) => `title.ilike.%${t}%,page_url.ilike.%${t}%`).join(","));
+  }
+
+  const { data: products, error: prodErr } = await prodBase;
   if (prodErr) {
     return { ok: false, error: "product_query_failed", where: "products", hint: prodErr.message };
   }
 
-  // 4) Build events list (cap 10) and citations
+  // 4) Build event bullets (cap 10)
   const eventList = (events || []).slice(0, 10);
   const bullets = [];
   const bulletCitations = [];
@@ -188,12 +330,14 @@ async function answerBluebell({ query, client }) {
     bullets.push(`- ${when} — [Link](${evUrl})${where}`);
     if (evUrl) bulletCitations.push(evUrl);
   }
-  if (bullets.length === 0) bullets.push("- (no upcoming dates found)");
+  if (!bullets.length && wantsUpcoming(query)) {
+    bullets.push("- (no upcoming dates found for that topic)");
+  }
 
-  // 5) Build workshop option lines (topic-level)
+  // 5) Workshop option lines (merge single/low/high prices; include participants/fitness)
   const optionLines = buildOptionLines(products || []);
 
-  // 6) Book Now URL: first product (topic-level) → fallback: first event
+  // 6) Book Now URL: prefer first product, fallback to first event
   let bookNowUrl = pickUrl(products?.[0]);
   if (!bookNowUrl && eventList[0]) bookNowUrl = pickUrl(eventList[0]);
 
@@ -201,16 +345,18 @@ async function answerBluebell({ query, client }) {
   const chips = buildChips({
     bookNowUrl,
     landingUrl: pickUrl(canon.landing),
-    anotherUrl: pickUrl(eventList[0]),
+    firstEventUrl: pickUrl(eventList[0]),
   });
 
-  // 8) Compose answer
+  // 8) Compose answer — no duplicate headings or lists
   const parts = [];
-  parts.push(`### Upcoming Bluebell Workshops`);
-  parts.push(bullets.join("\n"));
+  if (bullets.length) {
+    parts.push(`### Upcoming Workshops`);
+    parts.push(bullets.join("\n"));
+  }
   if (optionLines.length) {
     parts.push(`\n**Workshop Options:**`);
-    parts.push(optionLines.map(l => `- ${l}`).join("\n"));
+    parts.push(optionLines.map((l) => `- ${l}`).join("\n"));
   }
   if (bookNowUrl) parts.push(`\n**Booking:** [Book Now](${bookNowUrl})`);
 
@@ -225,15 +371,18 @@ async function answerBluebell({ query, client }) {
   ]).filter(Boolean);
 
   // 10) Structured debug
-  const structured = {
-    topic: "bluebell",
-    events: eventList,
-    products: products || [],
-    canonicals: { product: canon.product || null, landing: canon.landing || null, debug: canon.debug },
-    chips,
+  return {
+    ok: true,
+    answer_markdown: answer_markdown || "I couldn’t find matching events or products for that yet.",
+    citations,
+    structured: {
+      topic_tokens: tokens,
+      events: eventList,
+      products: products || [],
+      canonicals: { product: canon.product || null, landing: canon.landing || null, debug: canon.debug },
+      chips,
+    },
   };
-
-  return { ok: true, answer_markdown, citations, structured };
 }
 
 /* -------------------------------- Handler -------------------------------- */
@@ -241,32 +390,24 @@ export default async function handler(req, res) {
   const started = Date.now();
   try {
     if (req.method !== "POST") {
-      res.status(405).json({ ok: false, error: "method_not_allowed", where: "http" });
+      res
+        .status(405)
+        .json({ ok: false, error: "method_not_allowed", where: "http" });
       return;
     }
 
     const { query, topK } = req.body || {};
     const client = supabaseAdmin();
 
-    const topic = getTopicFromQuery(query);
-
-    if (topic === "bluebell") {
-      const result = await answerBluebell({ query, client });
-      res.status(result.ok ? 200 : 500).json({
-        ...result,
-        meta: { duration_ms: Date.now() - started, endpoint: "/api/chat", topK: topK || null },
-      });
-      return;
-    }
-
-    // Generic fallback — to be expanded later
-    res.status(200).json({
-      ok: true,
-      answer_markdown:
-        "I don’t have a specific answer for that yet. Try asking about workshops, tuition, kit, or locations — for example, “When are the next Bluebell dates?”",
-      citations: [],
-      structured: { topic: null },
-      meta: { duration_ms: Date.now() - started, endpoint: "/api/chat", topK: topK || null },
+    // Single unified path (no hard-coded topic)
+    const result = await answerWorkshopsGeneric({ query, client });
+    res.status(result.ok ? 200 : 500).json({
+      ...result,
+      meta: {
+        duration_ms: Date.now() - started,
+        endpoint: "/api/chat",
+        topK: topK || null,
+      },
     });
   } catch (err) {
     res.status(500).json({
