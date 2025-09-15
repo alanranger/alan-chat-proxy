@@ -153,7 +153,7 @@ function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
-  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  s = s.replace(/\*\*(.+?))\*\*/g,'<strong>$1</strong>');
   s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>').replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
   const lines = s.split(/\r?\n/);
   let out = '', inList = false, liIds = [], items=[], idx=0;
@@ -174,7 +174,7 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== /api/extract helpers (WITH AUTH) ===== */
+/* ===== /api/extract with AUTH ===== */
 async function fetchExtract(action, url){
   try{
     const auth = getToken();
@@ -187,6 +187,16 @@ async function fetchExtract(action, url){
   }catch{ return { error:'fetch_failed' }; }
 }
 
+/* ===== PROXY HTML fetch (server-side to avoid CORS) ===== */
+async function fetchHtmlViaProxy(url){
+  try{
+    const r = await fetch(`/api/json/proxy?url=${encodeURIComponent(url)}`);
+    if (!r.ok) return null;
+    return await r.text();
+  }catch{ return null; }
+}
+
+/* ===== Normalisers ===== */
 function normaliseEvents(ex){
   const arr = []
     .concat(ex?.events||[])
@@ -210,7 +220,6 @@ function normaliseEvents(ex){
   }
   return out.sort((a,b)=> byDate(a.date_start,b.date_start));
 }
-
 function normaliseProducts(ex){
   const arr = []
     .concat(ex?.products||[])
@@ -227,7 +236,6 @@ function normaliseProducts(ex){
   }
   return out;
 }
-
 function fmtGBP(p, cur){
   if (!p && p!==0) return null;
   const n = Number(p);
@@ -235,19 +243,12 @@ function fmtGBP(p, cur){
   try { return new Intl.NumberFormat('en-GB',{style:'currency',currency:(cur||'GBP')}).format(n); }
   catch { return '£'+String(p); }
 }
-
-function pickBestUrl(urls){
-  for (const u of urls||[]) { if (u) return u; }
-  return null;
-}
-
 function samePageBase(a,b){
   try{
     const A=new URL(a), B=new URL(b);
     return A.origin===B.origin && A.pathname.split('/').slice(0,3).join('/')===B.pathname.split('/').slice(0,3).join('/');
   }catch{ return false; }
 }
-
 function mergePricesIntoEvents(events, products){
   if (!products.length) return events;
   return events.map(ev=>{
@@ -259,6 +260,39 @@ function mergePricesIntoEvents(events, products){
     }
     return ev;
   });
+}
+
+/* ===== Fallback scraping (date links + GBP prices) ===== */
+function grabDateLinksFromHTML(html, baseUrl){
+  try{
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const anchors = Array.from(doc.querySelectorAll('a'));
+    const dateRe = /\b(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s*)?(\d{1,2})\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s*(20\d{2})\b/i;
+    const out=[];
+    for (const a of anchors){
+      const t = (a.textContent||'').replace(/\s+/g,' ').trim();
+      const m = t.match(dateRe);
+      if (m){
+        let u = a.getAttribute('href')||'';
+        try{ u = new URL(u, baseUrl).toString(); }catch{}
+        const ds = `${m[2]} ${m[3]} ${m[4]}`;
+        out.push({date_start: ds, url: u});
+      }
+    }
+    // de-dupe by date + url
+    const seen = new Set(); const list=[];
+    out.forEach(e=>{ const k=(e.date_start||'')+'@@'+(e.url||''); if(!seen.has(k)){ seen.add(k); list.push(e); } });
+    return list.sort((a,b)=> byDate(a.date_start,b.date_start));
+  }catch{ return []; }
+}
+function grabPricesFromHTML(html){
+  const matches = html.match(/£\s?\d+(?:\.\d{2})?/g) || [];
+  // return distinct first two prices
+  const seen=new Set(); const out=[];
+  for (const m of matches){
+    if(seen.has(m)) continue; seen.add(m); out.push(m.replace(/\s+/g,'')); if(out.length>=2) break;
+  }
+  return out;
 }
 
 /* Build pills */
@@ -289,9 +323,9 @@ function addChips(container, chips){
   container.appendChild(wrap);
 }
 
-/* ===== Enrichment using SEED URLS (citations + links found in answer) ===== */
+/* ===== Enrichment (citations + anchors) with fallback scraping ===== */
 async function enrichFromEntities(container, seedUrls, question, modelAnswer){
-  const seeds = unique(seedUrls).slice(0,5);
+  const seeds = unique(seedUrls).slice(0,6);
   let events=[]; let products=[];
   for (const u of seeds){
     const exE = await fetchExtract('events-extract', u);
@@ -303,34 +337,75 @@ async function enrichFromEntities(container, seedUrls, question, modelAnswer){
   }
   events = mergePricesIntoEvents(events, products);
 
-  // Always show what we tried
+  // Debug panel
   const box = document.createElement('div');
-  const eCount = events.length, pCount = products.length;
   box.innerHTML = `
     <div style="margin-top:12px;padding:10px;border:1px solid #1b2540;border-radius:8px;background:#0b1426">
       <div style="color:#9eb2d3;font-weight:600;margin-bottom:6px">Structured data</div>
-      <div style="color:#93A4C1">Found events: <strong>${eCount}</strong> · products: <strong>${pCount}</strong></div>
+      <div style="color:#93A4C1" id="sdSummary"></div>
       <div style="color:#93A4C1;margin-top:6px">Tried URLs:</div>
       <ul style="margin-top:4px">${seeds.map(u=>`<li><a href="${u}" target="_blank" rel="noopener">${u}</a></li>`).join('')}</ul>
       <div id="sdBody"></div>
     </div>`;
   container.appendChild(box);
   const body = box.querySelector('#sdBody');
+  const summary = box.querySelector('#sdSummary');
 
-  if (!eCount && !pCount){
-    body.innerHTML = `<div style="margin-top:6px;color:#93A4C1">No JSON-LD events/products detected on tried pages.</div>`;
+  const setCounts = (eCount,pCount) => summary.textContent = `Found events: ${eCount} · products: ${pCount}`;
+
+  if (events.length || products.length){
+    setCounts(events.length, products.length);
+  }else{
+    setCounts(0,0);
+    // Fallback: scrape date anchors + prices from HTML
+    let scrapedDates=[]; let scrapedPrices=[];
+    for (const u of seeds){
+      const html = await fetchHtmlViaProxy(u);
+      if (!html) continue;
+      const ds = grabDateLinksFromHTML(html, u);
+      if (ds.length) scrapedDates = scrapedDates.concat(ds);
+      const ps = grabPricesFromHTML(html);
+      if (ps.length) scrapedPrices = scrapedPrices.concat(ps);
+    }
+    // De-dupe scraped
+    const seenD=new Set(); const allDates=[];
+    scrapedDates.forEach(e=>{ const k=(e.date_start||'')+'@@'+(e.url||''); if(!seenD.has(k)){ seenD.add(k); allDates.push(e); } });
+    const seenP=new Set(); scrapedPrices = scrapedPrices.filter(p=> (seenP.has(p)?false:(seenP.add(p),true)));
+
+    // Render scraped results
+    if (allDates.length){
+      const ulDates = document.createElement('ul');
+      ulDates.style.marginTop='8px';
+      allDates.sort((a,b)=> byDate(a.date_start,b.date_start));
+      for (const e of allDates){
+        const li = document.createElement('li');
+        li.innerHTML = `${e.date_start} ${e.url?`<a href="${e.url}" target="_blank" rel="noopener">Link</a>`:''}`;
+        ulDates.appendChild(li);
+      }
+      body.appendChild(ulDates);
+    }else{
+      body.innerHTML = `<div style="margin-top:6px;color:#93A4C1">No JSON-LD found; page also didn’t expose date anchors.</div>`;
+    }
+
+    if (scrapedPrices.length){
+      const p = document.createElement('div');
+      p.style.marginTop='8px';
+      p.style.color='#cfe3ff';
+      p.textContent = `Prices seen on page: ${scrapedPrices.slice(0,2).join(' · ')}`;
+      body.appendChild(p);
+    }
+    // Add pills from seeds anyway
+    addChips(container, buildSmartChips(question, modelAnswer, seeds, {event: seeds[0], product: seeds[0]}));
     return;
   }
 
+  // If extractor gave us events/products:
   const uniqKey = new Set(); const allDates=[];
   for (const ev of events){
     const k = (ev.date_start||'')+'@@'+(ev.url||'');
     if (!uniqKey.has(k)){ uniqKey.add(k); allDates.push(ev); }
   }
   allDates.sort((a,b)=> byDate(a.date_start,b.date_start));
-
-  const primaryEventUrl   = pickBestUrl([allDates[0]?.url, seeds[0]]);
-  const primaryProductUrl = pickBestUrl([products[0]?.url, primaryEventUrl, seeds[0]]);
 
   const ulDates = document.createElement('ul');
   ulDates.style.marginTop='8px';
@@ -343,6 +418,8 @@ async function enrichFromEntities(container, seedUrls, question, modelAnswer){
   }
   body.appendChild(ulDates);
 
+  const primaryEventUrl   = allDates[0]?.url || seeds[0];
+  const primaryProductUrl = (products[0]?.url) || primaryEventUrl;
   addChips(container, buildSmartChips(question, modelAnswer, seeds, {event:primaryEventUrl, product:primaryProductUrl}));
 }
 
@@ -373,7 +450,6 @@ function fallbackBlock(){
       </div>
     </div>`;
 }
-
 function renderAnswer(payload, question){
   if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
   const raw = payload.answer || payload.reply || payload.text || '';
@@ -381,37 +457,15 @@ function renderAnswer(payload, question){
   const { html } = mdToHtml(raw);
   const holder = addBubble(html);
 
-  // NEW: also harvest any anchors in the model’s answer as seed URLs
+  // Harvest anchors in model answer as seeds as well
   const anchors = Array.from(holder.querySelectorAll('a'))
     .map(a=>a.href)
     .filter(h=>/^https?:\/\//.test(h));
 
   const seeds = unique(cites.concat(anchors));
 
-  // Enrich from JSON-LD using seeds (citations + links found in answer)
+  // Enrich using extractor + fallback scraping
   enrichFromEntities(holder, seeds, question, raw);
 }
 
-/* ===== Events ===== */
-async function handleSend(){
-  const q = input.value.trim();
-  if(!q) return;
-  addBubble(q.replace(/</g,'&lt;'), {user:true});
-  input.value = '';
-  const stopTyping = addTyping();
-  try{
-    const data = await callChat(q, 8);
-    stopTyping();
-    renderAnswer(data, q);
-  }catch{
-    stopTyping();
-    addBubble(fallbackBlock());
-  }
-}
-sendBtn.addEventListener('click', handleSend);
-input.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
-});
-</script>
-</body>
-</html>
+/* ===== Events =====
