@@ -6,6 +6,10 @@
   <title>Alan Ranger Assistant</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <!-- discourage browser caching while iterating (does not affect CDN headers) -->
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0, must-revalidate">
+
   <style>
     :root{
       --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
@@ -14,15 +18,23 @@
       --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
       --user-bg:#e6edf7; --user-text:#0b0f16;
     }
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;background:var(--bg);color:var(--text);
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;line-height:1.45
+    }
+
     .wrap{max-width:980px;margin:28px auto;padding:0 16px}
     .card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+
     .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
     .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
     .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
     .sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
-    .pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
+    .pills{display:flex;gap:10px;margin:12px 0 4px}
     .pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
     .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
@@ -30,7 +42,7 @@
     .thread{display:flex;flex-direction:column;gap:12px}
     .bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
     .bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
-    .fallback .pills{margin-top:10px}
+
     .answer h1,.answer h2,.answer h3{margin:.2em 0}
     .answer p{margin:.5em 0}
     .answer ul{margin:.4em 0 .6em 1.25em}
@@ -41,41 +53,56 @@
     .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
     .chips a{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
     .chips a:hover{opacity:.9}
+    .chips .act{background:var(--brand);color:#0b0f16;border-color:transparent;font-weight:700}
 
-    /* Composer */
     .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
     .composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
     .composer input::placeholder{color:var(--input-ph)}
     .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
     .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
-    /* Debug panel */
     details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
     details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
-    .kv{display:grid;grid-template-columns:160px 1fr;gap:8px;margin-top:10px}
+    .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
     .kv label{color:#93A4C1}
     pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
-    .prov{display:grid;grid-template-columns:160px 1fr;gap:8px;margin-top:8px}
-    .prov label{color:#93A4C1}
-    .prov ul{margin:.25em 0 .5em 1.25em}
-    .prov li{margin:.15em 0}
 
-    /* Typing dots */
     .typing{position:relative;display:inline-block}
     .typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
     .typing .dot:nth-child(2){animation-delay:.15s}
     .typing .dot:nth-child(3){animation-delay:.3s}
     @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
-    @media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv,.prov{grid-template-columns:1fr}}
+    @media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
+
+    /* ——— tiny build/version badge ——— */
+    .ver-badge{
+      position: fixed;
+      top: 10px;
+      right: 12px;
+      background: #13203e;
+      border: 1px solid #26406f;
+      color: #cfe3ff;
+      font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      padding: 4px 8px;
+      border-radius: 999px;
+      opacity: .75;
+      z-index: 9999;
+      box-shadow: 0 2px 10px rgba(0,0,0,.3);
+      pointer-events: none;
+    }
+    .ver-badge:hover{ opacity: 1; }
   </style>
 </head>
 <body>
 <div class="wrap"><div class="card">
   <div class="header">
-    <img class="logo" src="./chat%20white.png" alt="AR logo">
+    <img class="logo" src="./chat%20white.png" alt="AR logo" onerror="this.style.display='none'">
     <h2 class="title">Alan Ranger Assistant</h2>
-    <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:</p>
+    <p class="sub">
+      I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography
+      questions. I won’t always get everything right — if I can’t help, please contact Alan directly:
+    </p>
     <div class="pills">
       <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
       <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
@@ -89,20 +116,13 @@
 
     <details id="debugPanel" class="debug">
       <summary>🔎 Show debug</summary>
+
       <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
       <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
       <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
       <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
       <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
-
-      <!-- Structured summary -->
-      <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
-
-      <!-- Provenance (human-readable) -->
-      <div id="provWrap" class="prov" style="display:none">
-        <label>Provenance</label>
-        <div id="provBody"></div>
-      </div>
+      <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
     </details>
 
     <div class="composer">
@@ -112,16 +132,32 @@
   </div>
 </div></div>
 
+<!-- Build/version badge -->
+<div id="verBadge" class="ver-badge" aria-label="Build version"></div>
+
 <script>
 /* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
-const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // optional bearer
+
+// Optional hard-stamp for deploy tagging; or pass ?v=something in the URL
+// window.CHAT_UI_VERSION = 'chat v0.4.7';
+
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
+function versionBadge(){
+  const qs = new URLSearchParams(location.search);
+  const override = qs.get('v');            // e.g. /chat.html?v=chat v0.4.7
+  const base     = override || (window.CHAT_UI_VERSION || 'chat.html');
+  const stamp    = new Date(document.lastModified).toISOString().replace('T',' ').slice(0,16); // UTC
+  const label    = `${base} • ${stamp} UTC`;
+  const el = document.getElementById('verBadge');
+  if (el) { el.textContent = label; el.title = label; }
+}
+versionBadge();
+
 function getToken(){
   const qp = (urlParams.get('token')||'').trim();
-  if (HARDCODED) return HARDCODED;
   if (qp) return qp;
   try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
 }
@@ -134,20 +170,19 @@ const dbgStatus   = document.getElementById('dbg-status');
 const dbgReq      = document.getElementById('dbg-req');
 const dbgRes      = document.getElementById('dbg-res');
 const dbgHeaders  = document.getElementById('dbg-headers');
-const dbgStruct   = document.getElementById('dbg-struct');
-const provWrap    = document.getElementById('provWrap');
-const provBody    = document.getElementById('provBody');
+const dbgProv     = document.getElementById('dbg-prov');
 
 function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
 function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
-function setDebug({status, req, res, headers, structured}){
+
+function setDebug({status, req, res, headers, prov}){
   if (status !== undefined) dbgStatus.textContent = String(status);
-  if (req !== undefined) dbgReq.textContent = safeJSONString(req);
-  if (res !== undefined) dbgRes.textContent = safeJSONString(res);
-  if (structured !== undefined) dbgStruct.textContent = safeJSONString(structured);
+  if (req !== undefined)    dbgReq.textContent = safeJSONString(req);
+  if (res !== undefined)    dbgRes.textContent = safeJSONString(res);
+  if (prov !== undefined)   dbgProv.textContent = safeJSONString(prov);
   if (headers !== undefined) {
     const h = {...headers};
-    if (h.Authorization) h.Authorization = 'Bearer ' + maskToken((h.Authorization.split(' ')[1]||''));
+    if (h.Authorization) h.Authorization = 'Bearer ' + maskToken((h.Authorization.split(' ')[1]||'')); 
     dbgHeaders.textContent = safeJSONString(h);
   }
 }
@@ -192,86 +227,74 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Helpers for links/pills ===== */
-function unique(arr){ return Array.from(new Set(arr.filter(Boolean))); }
-const good = (u)=>{ try{ new URL(u); return true; }catch{return false;} };
-
-function bestEventForDate(events, text){
-  if (!Array.isArray(events) || !events.length) return null;
-  // match "April 24, 2026" etc
-  const m = text.match(/([A-Z][a-z]+ \d{1,2}, \d{4})/);
-  if (!m) return null;
-  const dateStr = m[1].toLowerCase();
-  // relax: also allow weekday prefixes, we compare only the yyyy-mm-dd if provided
+/* ===== Link helpers & chips ===== */
+const unique = (arr) => Array.from(new Set((arr||[]).filter(Boolean)));
+function bestUrlFor(text, urls){
+  if (!urls || !urls.length) return null;
+  const t = (text||'').toLowerCase();
+  const tokens = t.split(/[^a-z0-9]+/).filter(w=>w.length>3);
   let best = null, bestScore = -1;
-  for (const e of events){
-    const when = (e.date || e.start_date || e.date_start || '').toLowerCase();
-    const url  = e.url || e.source_url || e.link || '';
-    if (!url) continue;
+  for (const u of urls){
+    const slug = (u.split('/').pop()||'').toLowerCase();
     let score = 0;
-    if (when && dateStr.includes(new Date(when).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}).toLowerCase())) score += 4;
-    if (when && dateStr.includes(when)) score += 3;
-    // tiny bump if text also contains part of the url slug
-    const slug = (url.split('/').pop()||'').toLowerCase();
-    const tokens = dateStr.split(/\s+/);
-    for (const t of tokens){ if (slug.includes(t)) score += 0.1; }
-    if (score > bestScore){ bestScore = score; best = e; }
+    for (const k of tokens){
+      if (slug.includes(k)) score += 2;
+      if (u.toLowerCase().includes(k)) score += 1;
+    }
+    if (score > bestScore){ bestScore = score; best = u; }
   }
-  return (bestScore>0)? best : null;
+  return best;
+}
+
+function inferChips(question, answer, citations){
+  const q = (question||'').toLowerCase();
+  const a = (answer||'').toLowerCase();
+  const chips = [];
+  const citeChips = unique(citations).slice(0,4).map(u => {
+    const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
+    return { label: label.length>32 ? label.slice(0,29)+'…' : label, href: u };
+  });
+  chips.push(...citeChips);
+
+  const push = (label, href) => chips.push({label, href});
+  if (/price|cost|how much|£|\bgbp\b|\bfee/.test(q+a)) {
+    push('Prices','https://www.alanranger.com/photography-workshops-near-me');
+  }
+  if (/date|when|next|schedule|start|time/.test(q+a)) {
+    push('Upcoming dates','https://www.alanranger.com/photography-workshops-near-me');
+  }
+  if (/workshop|course|class|tuition|lesson/.test(q+a)) {
+    push('Workshops overview','https://www.alanranger.com/photography-workshops-near-me');
+  }
+  return unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
 }
 
 function addChips(container, chips){
   if (!chips.length) return;
   const wrap = document.createElement('div');
   wrap.className = 'chips';
-  chips.forEach(({label, href})=>{
+  chips.forEach(({label, href}, i)=>{
     const a = document.createElement('a');
     a.href = href; a.target = '_blank'; a.rel='noopener';
     a.textContent = label;
-    if (href && /alanranger\.com/.test(href) && /prices|price|cost/i.test(label)) {
-      a.classList.add('pill','pill--brand'); // emphasize prices
-      a.style.color = '#0b0f16';
-    }
+    if (i < 3 && /^https?:\/\//.test(href)) a.classList.add('act'); // make first few stand out
     wrap.appendChild(a);
   });
   container.appendChild(wrap);
 }
 
-function buildPillsFromContext(question, answer, citations, structured){
-  const q = (question||'').toLowerCase();
-  const a = (answer||'').toLowerCase();
-  const out = [];
-
-  const citeChips = unique(citations).slice(0,4).map(u => {
-    const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
-    return { label: label.length>36 ? label.slice(0,33)+'…' : label, href: u };
+function addLinksToBullets(container, liIds, items, citations, question, answer){
+  liIds.forEach((id, i)=>{
+    const li = container.querySelector('#'+CSS.escape(id));
+    if (!li) return;
+    const best = bestUrlFor(items[i]||'', citations);
+    if (!best) return;
+    const a = document.createElement('a');
+    a.href = best; a.target='_blank'; a.rel='noopener';
+    a.textContent = ' Link'; a.style.marginLeft = '6px';
+    li.appendChild(a);
   });
-  out.push(...citeChips);
-
-  // price/date intent
-  if (/price|cost|how much|£|\bgbp\b|\bfee/.test(q+a)) {
-    const priceLinks = []
-    ;(structured?.products||[]).forEach(p => { if (good(p.url)) priceLinks.push({label:'Prices', href:p.url}); });
-    if (priceLinks.length) out.push(priceLinks[0]);
-    else out.push({label:'Prices', href:'https://www.alanranger.com/photography-workshops-near-me'});
-  }
-  if (/date|when|schedule|start|time/.test(q+a)) {
-    // Prefer earliest event URL
-    const evs = structured?.events||[];
-    const first = evs.slice().sort((a,b)=>(new Date(a.date||a.start_date||a.date_start||0))-(new Date(b.date||b.start_date||b.date_start||0)))[0];
-    if (first?.url) out.push({label:'Upcoming dates', href:first.url});
-  }
-  // General helpers
-  out.push({label:'Workshops overview', href:'https://www.alanranger.com/photography-workshops-near-me'});
-  out.push({label:'bluebell-woods-near-me', href:'https://www.alanranger.com/bluebell-woods-near-me'});
-
-  // dedupe & cap
-  const dedup = new Map();
-  for (const c of out){
-    if (!c?.href) continue;
-    if (!dedup.has(c.href)) dedup.set(c.href, c);
-  }
-  return Array.from(dedup.values()).slice(0,6);
+  addChips(container, inferChips(question, answer, citations));
 }
 
 /* ===== API ===== */
@@ -280,119 +303,48 @@ async function callChat(question, topK=8){
   const headers = { 'Content-Type':'application/json' };
   if (token) headers['Authorization'] = 'Bearer ' + token;
   const body = { query: question, topK };
+
   setDebug({status:'…', req: body, headers});
   const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
   const status = res.status;
   let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
-  setDebug({status, res: json, structured: json?.structured});
-  return { ok: res.ok, json };
-}
-
-/* ===== Provenance renderer (debug) ===== */
-function renderProvenance(structured){
-  const s = structured || {};
-  const events = Array.isArray(s.events)? s.events : [];
-  const products = Array.isArray(s.products)? s.products : [];
-  const tried = Array.isArray(s.tried)? s.tried : [];
-
-  const lines = [];
-  lines.push(`<div style="margin-bottom:6px;color:#cfe3ff"><strong>Found</strong>: ${events.length} event(s), ${products.length} product(s)</div>`);
-
-  if (events.length){
-    const ev = events.map(e=>{
-      const d = e.date || e.start_date || e.date_start || '';
-      const u = e.url || e.source_url || e.link || '';
-      return `<li><code>${d||'unknown date'}</code> → <a href="${u}" target="_blank" rel="noopener">${u||'—'}</a></li>`;
-    }).join('');
-    lines.push(`<div><em>Events</em><ul>${ev}</ul></div>`);
-  }
-  if (products.length){
-    const pr = products.map(p=>{
-      const t = p.title || p.name || 'product';
-      const u = p.url || p.source_url || p.link || '';
-      const price = p.price || p.price_amount || '';
-      const cur = p.price_currency || '';
-      const tag = price ? ` — <code>${price} ${cur}</code>` : '';
-      return `<li>${t}${tag} → <a href="${u}" target="_blank" rel="noopener">${u||'—'}</a></li>`;
-    }).join('');
-    lines.push(`<div><em>Products</em><ul>${pr}</ul></div>`);
-  }
-  if (tried.length){
-    const li = tried.map(u=>`<li><a href="${u}" target="_blank" rel="noopener">${u}</a></li>`).join('');
-    lines.push(`<div><em>Tried URLs</em><ul>${li}</ul></div>`);
-  }
-
-  if (lines.length){
-    provBody.innerHTML = lines.join('');
-    provWrap.style.display = '';
-  }else{
-    provBody.innerHTML = '';
-    provWrap.style.display = 'none';
-  }
+  setDebug({status, res: json});
+  if(!res.ok) throw new Error('API error');
+  return json;
 }
 
 /* ===== Render ===== */
+function provenanceFromPayload(p){
+  const prov = {};
+  if (p && Array.isArray(p.citations)) prov.citations = p.citations;
+  if (p && p.structured){
+    const E = (p.structured.events   || []);
+    const P = (p.structured.products || []);
+    prov.structured = {
+      events:   Array.isArray(E) ? E.length : 0,
+      products: Array.isArray(P) ? P.length : 0
+    };
+  }
+  return prov;
+}
+
 function renderAnswer(payload, question){
-  // fallback
   if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
 
   const raw = payload.answer || payload.reply || payload.text || '';
   const cites = unique(payload.citations || payload.sources || []);
-  const structured = payload.structured || {};
-
-  // main text
   const { html, liIds, items } = mdToHtml(raw);
   const holder = addBubble(html);
+  addLinksToBullets(holder, liIds, items, cites, question, raw);
 
-  // link date bullets to event URLs
-  const evts = Array.isArray(structured.events) ? structured.events : [];
-  liIds.forEach((id, i)=>{
-    const li = holder.querySelector('#'+CSS.escape(id));
-    if (!li) return;
-    const match = bestEventForDate(evts, items[i]||'');
-    const url = match?.url || match?.source_url || '';
-    if (url){
-      const a = document.createElement('a');
-      a.href = url; a.target='_blank'; a.rel='noopener';
-      a.textContent = ' Link';
-      a.style.marginLeft = '6px';
-      li.appendChild(a);
-    }
-  });
+  // show chips even when there were no bullets
+  if (!liIds.length) addChips(holder, inferChips(question, raw, cites));
 
-  // price summary from products
-  const products = Array.isArray(structured.products) ? structured.products : [];
-  let half=null, full=null;
-  for (const p of products){
-    const label = (p.title||p.name||'').toLowerCase();
-    const price = p.price || p.price_amount || null;
-    const cur = p.price_currency || '';
-    if (!price) continue;
-    if (/half|4\s*hour/.test(label)) half = `${price} ${cur}`.trim();
-    if (/full|1\s*day|day/.test(label)) full = `${price} ${cur}`.trim();
-  }
-  if (!half && !full && products.length){
-    // fall back to first product if nothing matched
-    const p0 = products[0];
-    const price = p0.price || p0.price_amount;
-    const cur = p0.price_currency || '';
-    if (price) full = `${price} ${cur}`.trim();
-  }
-  if (half || full){
-    const wrap = document.createElement('div');
-    wrap.innerHTML = `<div style="margin-top:6px"><em>Price options</em></div><ul>` +
-      (half ? `<li>4 hours: ${half}</li>` : '') +
-      (full ? `<li>Full day: ${full}</li>` : '') + `</ul>`;
-    holder.appendChild(wrap);
-  }
-
-  // orange pills (context aware)
-  addChips(holder, buildPillsFromContext(question, raw, cites, structured));
-
-  // debug provenance
-  renderProvenance(structured);
+  // update provenance block in debug
+  setDebug({ prov: provenanceFromPayload(payload) });
 }
 
+/* ===== Fallback ===== */
 function fallbackBlock(){
   return `
     <div class="fallback">
@@ -413,19 +365,16 @@ async function handleSend(){
   input.value = '';
   const stopTyping = addTyping();
   try{
-    const { ok, json } = await callChat(q, 8);
+    const data = await callChat(q, 8);
     stopTyping();
-    if (!ok){ addBubble(fallbackBlock()); return; }
-    renderAnswer(json, q);
+    renderAnswer(data, q);
   }catch{
     stopTyping();
     addBubble(fallbackBlock());
   }
 }
 sendBtn.addEventListener('click', handleSend);
-input.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
-});
+input.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }});
 </script>
 </body>
 </html>
