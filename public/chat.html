@@ -175,10 +175,13 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Extractor calls (events + products) ===== */
+/* ===== Extractor calls (events + products) WITH AUTH ===== */
 async function fetchExtract(action, url){
   try{
-    const r = await fetch(`/api/extract?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`);
+    const auth = getToken();
+    const r = await fetch(`/api/extract?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`, {
+      headers: auth ? { 'Authorization':'Bearer '+auth } : {}
+    });
     const raw = await r.text();
     let j; try{ j = JSON.parse(raw); }catch{ j = { error:'non_json', raw: raw?.slice(0,400)||'' }; }
     return j;
@@ -191,7 +194,6 @@ function normaliseEvents(ex){
     .concat(ex?.entities||[])
     .concat(Array.isArray(ex)?ex:[])
     .filter(x=>x && (x.kind==='event' || x['@type']==='Event' || x.date_start || x.startDate));
-
   const out = [];
   for (const e of arr){
     const raw = e.raw || e;
@@ -216,7 +218,6 @@ function normaliseProducts(ex){
     .concat(ex?.entities||[])
     .concat(Array.isArray(ex)?ex:[])
     .filter(x=>x && (x.kind==='product' || x['@type']==='Product' || x.price || (x.raw && x.raw.price)));
-
   const out=[];
   for (const p of arr){
     const raw = p.raw || p;
@@ -265,27 +266,16 @@ function mergePricesIntoEvents(events, products){
 /* ===== Context-aware suggestion pills ===== */
 function buildSmartChips(question, answer, citations, primaryUrls){
   const chips = [];
-
-  // primary urls derived from entities (event & product)
   if (primaryUrls.event) chips.push({label:'Upcoming dates', href:primaryUrls.event});
   if (primaryUrls.product && primaryUrls.product!==primaryUrls.event) chips.push({label:'Prices', href:primaryUrls.product});
-
-  // Top citations for quick navigation
   unique(citations).slice(0,3).forEach(u=>{
     const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
     chips.push({label: label.length>32?label.slice(0,29)+'…':label, href:u});
   });
-
-  // Overview pages if relevant words present
   const qa=(question+' '+answer).toLowerCase();
   if (/workshop|course|class/.test(qa)) chips.push({label:'Workshops overview', href:'https://www.alanranger.com/photography-workshops-near-me'});
   if (/bluebell/.test(qa)) chips.push({label:'bluebell-woods-near-me', href:'https://www.alanranger.com/bluebell-woods-near-me'});
-
-  // dedupe by href then by label
-  const seen=new Set(); const out=[];
-  for (const c of chips){
-    const k=c.href; if(seen.has(k)) continue; seen.add(k); out.push(c);
-  }
+  const seen=new Set(); const out=[]; for (const c of chips){ const k=c.href; if(seen.has(k)) continue; seen.add(k); out.push(c); }
   return out.slice(0,6);
 }
 
@@ -302,9 +292,9 @@ function addChips(container, chips){
   container.appendChild(wrap);
 }
 
-/* ===== Enrichment: add ALL dates + prices (from JSON-LD) and smart pills ===== */
+/* ===== Enrichment: add ALL dates + prices and smart pills ===== */
 async function enrichFromEntities(container, citations, question, modelAnswer){
-  const top = (citations||[]).slice(0,3); // limit calls
+  const top = (citations||[]).slice(0,3);
   let events=[]; let products=[];
   for (const u of top){
     const exE = await fetchExtract('events-extract', u);
@@ -314,11 +304,26 @@ async function enrichFromEntities(container, citations, question, modelAnswer){
     if (e.length) events = events.concat(e);
     if (p.length) products = products.concat(p);
   }
-  if (!events.length && !products.length) return;
-
   events = mergePricesIntoEvents(events, products);
 
-  // dates list (dedupe by date+url)
+  // Structured data box (always shown, so you can see counts)
+  const box = document.createElement('div');
+  const eCount = events.length, pCount = products.length;
+  box.innerHTML = `
+    <div style="margin-top:12px;padding:10px;border:1px solid #1b2540;border-radius:8px;background:#0b1426">
+      <div style="color:#9eb2d3;font-weight:600;margin-bottom:6px">Structured data</div>
+      <div style="color:#93A4C1">Found events: <strong>${eCount}</strong> · products: <strong>${pCount}</strong></div>
+      <div id="sdBody"></div>
+    </div>`;
+  container.appendChild(box);
+  const body = box.querySelector('#sdBody');
+
+  if (!eCount && !pCount){
+    body.innerHTML = `<div style="margin-top:6px;color:#93A4C1">No JSON-LD events/products detected on cited pages.</div>`;
+    return;
+  }
+
+  // Render lists from events
   const uniqKey = new Set(); const allDates=[];
   for (const ev of events){
     const k = (ev.date_start||'')+'@@'+(ev.url||'');
@@ -326,38 +331,19 @@ async function enrichFromEntities(container, citations, question, modelAnswer){
   }
   allDates.sort((a,b)=> byDate(a.date_start,b.date_start));
 
-  // primary urls for pills
   const primaryEventUrl   = pickBestUrl([allDates[0]?.url, citations[0]]);
   const primaryProductUrl = pickBestUrl([products[0]?.url, primaryEventUrl, citations[0]]);
 
-  // Render enriched section (dates + prices)
-  const wrap = document.createElement('div');
-  wrap.innerHTML = `
-    <h3>Next Available Dates (from structured data)</h3>
-    <ul id="evList"></ul>
-    <h4>Price</h4>
-    <ul id="evPrice"></ul>
-  `;
-  container.appendChild(wrap);
-
-  const ul = wrap.querySelector('#evList');
-  const ulP= wrap.querySelector('#evPrice');
-
+  const ulDates = document.createElement('ul');
+  ulDates.style.marginTop='8px';
   for (const e of allDates){
     const d = new Date(e.date_start);
     const nice = isFinite(d) ? d.toLocaleDateString('en-GB',{weekday:'short', day:'2-digit', month:'short', year:'numeric'}) : e.date_start;
     const li = document.createElement('li');
-    li.innerHTML = `${nice} ${e.url?`<a href="${e.url}" target="_blank" rel="noopener">Link</a>`:''}`;
-    ul.appendChild(li);
+    li.innerHTML = `${nice} ${e.url?`<a href="${e.url}" target="_blank" rel="noopener">Link</a>`:''}` + (e.price ? ` — ${fmtGBP(e.price, e.currency)}` : '');
+    ulDates.appendChild(li);
   }
-
-  // Collect unique price strings
-  const priceStrings = unique(allDates.map(e => e.price ? fmtGBP(e.price, e.currency) : null).filter(Boolean));
-  if (priceStrings.length){
-    priceStrings.forEach(p => { const li=document.createElement('li'); li.textContent=p; ulP.appendChild(li); });
-  }else{
-    const li=document.createElement('li'); li.textContent='£TBD (not specified in JSON-LD)'; ulP.appendChild(li);
-  }
+  body.appendChild(ulDates);
 
   // Smart pills
   addChips(container, buildSmartChips(question, modelAnswer, citations, {event:primaryEventUrl, product:primaryProductUrl}));
@@ -370,7 +356,7 @@ async function callChat(question, topK=8){
   if (token) headers['Authorization'] = 'Bearer ' + token;
   const body = { query: question, topK };
   setDebug({status:'…', req: body, headers});
-  const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
+  const res = await fetch('/api/chat', { method:'POST', headers, body: JSON.stringify(body) });
   const status = res.status;
   let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
   setDebug({status, res: json});
