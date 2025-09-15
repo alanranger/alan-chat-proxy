@@ -17,7 +17,7 @@
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
 .wrap{max-width:980px;margin:28px auto;padding:0 16px}
-.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.card{position:relative;background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
@@ -68,10 +68,14 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 @media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
 .badge{display:inline-block;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;margin-right:6px}
 .small{font-size:12px;color:#9eb2d3}
+
+/* Version badge (top-right of card) */
+.ver{position:absolute;right:12px;top:8px;opacity:.65}
 </style>
 </head>
 <body>
 <div class="wrap"><div class="card">
+  <span id="ver" class="ver small"></span>
   <div class="header">
     <img class="logo" src="./chat%20white.png" alt="AR logo">
     <h2 class="title">Alan Ranger Assistant</h2>
@@ -113,6 +117,9 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 /* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
 const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // optional bearer
+const VERSION = 'v0.9.7';
+document.getElementById('ver').textContent = VERSION;
+
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
