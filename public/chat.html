@@ -53,6 +53,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 /* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
 details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
+.debug-actions{display:flex;justify-content:flex-end;margin:8px 0 6px}
+.debug-actions button{padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
@@ -69,7 +71,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <span class="version">v0.9.11</span>
+  <span class="version">v0.9.12</span>
   <div class="card">
     <div class="header">
       <img class="logo" src="./chat%20white.png" alt="AR logo">
@@ -88,6 +90,12 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
       <details id="debugPanel" class="debug">
         <summary>🔎 Show debug</summary>
+
+        <!-- Moved to top of debug log -->
+        <div class="debug-actions">
+          <button id="dbg-copy">Copy all</button>
+        </div>
+
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
         <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
         <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
@@ -95,7 +103,6 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
         <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
         <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
         <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
-        <button id="dbg-copy" style="margin-top:10px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
       </details>
 
       <div class="composer">
@@ -134,7 +141,10 @@ dbgCopy?.addEventListener('click', ()=>{
     'Structured:\n'+dbgStruct.textContent,
     'Provenance:\n'+dbgProv.textContent,
   ].join('\n\n');
-  navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
+  navigator.clipboard.writeText(all).then(()=>{
+    dbgCopy.textContent='Copied!';
+    setTimeout(()=>dbgCopy.textContent='Copy all',1500);
+  });
 });
 
 /* ---------- UI helpers ---------- */
@@ -208,12 +218,10 @@ function createChips(structured, citations){
   const firstEventUrl = events.find(e=>e?.page_url||e?.source_url)?.page_url || events.find(e=>e?.source_url)?.source_url || null;
   const productUrl    = products.find(p=>p?.url||p?.page_url)?.url || products.find(p=>p?.page_url)?.page_url || null;
 
-  // Potential “overview/info” candidate: first citation that isn’t the event or product
   const uniq = (arr)=>Array.from(new Set(arr.filter(Boolean)));
   const allCites = uniq([...(citations||[]), firstEventUrl, productUrl]);
   const infoUrl = allCites.find(u=>u && u!==firstEventUrl && u!==productUrl) || null;
 
-  // Compose chips; remove duplicates and empty hrefs.
   const rawChips = [
     {label:'Book Now', href:productUrl, brand:true},
     {label:'Prices',   href:productUrl ? productUrl+'#prices' : infoUrl || firstEventUrl, brand:true},
