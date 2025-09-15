@@ -22,16 +22,14 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
 .sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
-.pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
+.pills{display:flex;gap:10px;margin:12px 0 4px}
 .pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
-.pill--brand{background:var(--brand)}
-.pill--wa{background:var(--wa)}
+.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
 .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
 .thread{display:flex;flex-direction:column;gap:12px}
 .bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
 .bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
-.fallback .pills{margin-top:10px}
 .answer h1,.answer h2,.answer h3{margin:.2em 0}
 .answer p{margin:.5em 0}
 .answer ul{margin:.4em 0 .6em 1.25em}
@@ -40,25 +38,22 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer a:hover{color:var(--link-hover)}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none;font-weight:600}
-.chips a.brand{background:var(--brand);color:#0b0f16;border-color:#c86000}
-.chips a:hover{opacity:.92}
+.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
+.chips a:hover{opacity:.9}
+.chips .act{background:var(--brand);color:#0b0f16;border-color:transparent;font-weight:700}
 
-/* Composer */
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
 .composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
 .composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
-/* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
 details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
 
-/* Typing dots */
 .typing{position:relative;display:inline-block}
 .typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
 .typing .dot:nth-child(2){animation-delay:.15s}
@@ -105,16 +100,14 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 /* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
 const EXTRACT_ENDPOINT = '/api/extract';
-const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // optional: if you want token wired in
+const CITATION_LIMIT = 10;                   // ↑ from 3 → 10
+const FORCED_EVENT_URLS = [
+  // Always check the Bluebell landing page for Events as a catch-all
+  'https://www.alanranger.com/bluebell-woods-near-me'
+];
+
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
-
-function getToken(){
-  const qp = (urlParams.get('token')||'').trim();
-  if (HARDCODED) return HARDCODED;
-  if (qp) return qp;
-  try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
-}
 
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
@@ -125,16 +118,11 @@ const dbgRes      = document.getElementById('dbg-res');
 const dbgHeaders  = document.getElementById('dbg-headers');
 
 function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
-function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
 function setDebug({status, req, res, headers}){
   if (status !== undefined) dbgStatus.textContent = String(status);
   if (req !== undefined) dbgReq.textContent = safeJSONString(req);
   if (res !== undefined) dbgRes.textContent = safeJSONString(res);
-  if (headers !== undefined) {
-    const h = {...headers};
-    if (h.Authorization) h.Authorization = 'Bearer ' + maskToken((h.Authorization.split(' ')[1]||''));
-    dbgHeaders.textContent = safeJSONString(h);
-  }
+  if (headers !== undefined) dbgHeaders.textContent = safeJSONString(headers);
 }
 
 /* ===== UI helpers ===== */
@@ -151,7 +139,7 @@ function addTyping() {
   return () => el && el.remove();
 }
 
-/* ===== Mini Markdown renderer (kept) ===== */
+/* ===== Mini Markdown renderer ===== */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -177,11 +165,78 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Calls ===== */
+/* ===== Utilities ===== */
+const unique = arr => Array.from(new Set(arr.filter(Boolean)));
+const fmtMoney = (n,c='GBP') => (n==null||n==='') ? '£TBD' : (c==='GBP'?'£':'') + String(n);
+
+/* Expand a date range to daily entries (inclusive) if per-day Events are missing */
+function expandRange(startISO, endISO){
+  const s = new Date(startISO), e = new Date(endISO);
+  if (!isFinite(s) || !isFinite(e) || e < s) return [];
+  const out = [];
+  for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)){
+    const iso = d.toISOString().slice(0,10);
+    out.push({ startDate: iso });
+  }
+  return out;
+}
+
+/* Derive price strings from products/offers */
+function pickPriceStrings(products=[]){
+  let half = null, full = null;
+  for (const p of products){
+    const offers = Array.isArray(p.offers)?p.offers:(p.offers?[p.offers]:[]);
+    for (const o of offers){
+      const name = (o.name||'').toLowerCase();
+      const label = name || (p.name||'').toLowerCase();
+      const price = o.price ?? p.price;
+      const curr  = o.priceCurrency || p.priceCurrency || 'GBP';
+      if (!half && (label.includes('4 hour') || label.includes('half'))) half = fmtMoney(price, curr);
+      if (!full && (label.includes('full') || label.includes('1 day') || label.includes('full day'))) full = fmtMoney(price, curr);
+    }
+  }
+  return { half, full };
+}
+
+/* Suggestion pills (orange actions + cited pages) */
+function inferChips(question, answer, citations){
+  const q = (question||'').toLowerCase();
+  const a = (answer||'').toLowerCase();
+  const chips = [];
+
+  const pushAct = (label, href) => chips.push({label, href, act:true});
+  const pushCite = (url) => {
+    const label = (url.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
+    chips.push({label: label.length>34 ? label.slice(0,31)+'…' : label, href:url});
+  };
+
+  // Action pills
+  if (/price|cost|gbp|£|fee/.test(q+a))      pushAct('Prices','https://www.alanranger.com/photography-workshops-near-me');
+  if (/date|when|schedule|time|next/.test(q+a)) pushAct('Upcoming dates','https://www.alanranger.com/photography-workshops-near-me');
+  if (/workshop|course|class|tuition/.test(q+a)) pushAct('Workshops overview','https://www.alanranger.com/photography-workshops-near-me');
+
+  // Top citations
+  unique(citations).slice(0,4).forEach(pushCite);
+  return chips.slice(0,7);
+}
+
+function addChips(container, chips){
+  if (!chips.length) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'chips';
+  chips.forEach(({label, href, act})=>{
+    const a = document.createElement('a');
+    a.href = href; a.target = '_blank'; a.rel='noopener';
+    a.textContent = label;
+    if (act) a.classList.add('act');
+    wrap.appendChild(a);
+  });
+  container.appendChild(wrap);
+}
+
+/* ===== API ===== */
 async function callChat(question, topK=8){
-  const token = getToken();
-  const headers = { 'Content-Type':'application/json' };
-  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const headers = { 'Content-Type':'application/json', 'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76' };
   const body = { query: question, topK };
   setDebug({status:'…', req: body, headers});
   const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
@@ -192,175 +247,101 @@ async function callChat(question, topK=8){
   return json;
 }
 
-async function callExtractAll(url){
-  // Uses server extract to grab JSON-LD from the page (events/products)
-  const qs = `?action=${encodeURIComponent('extract-all')}&url=${encodeURIComponent(url)}`;
-  const r = await fetch(EXTRACT_ENDPOINT + qs);
+async function callExtract(action, url){
+  const r = await fetch(`${EXTRACT_ENDPOINT}?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`);
   const raw = await r.text().catch(()=> '');
-  let j; try { j = JSON.parse(raw); } catch { j = { error:'non_json', raw: raw.slice(0, 400) }; }
-  return j;
+  try { return JSON.parse(raw); } catch { return { error:'non_json', raw: raw.slice(0,300) }; }
 }
 
-/* ===== Struct merge/helpers ===== */
-const toArray = (v)=> Array.isArray(v) ? v : (v ? [v] : []);
-function asGBP(price, currency){
-  if (!price) return null;
-  const cur = (currency||'GBP').toUpperCase();
-  return cur==='GBP' ? `£${String(price).replace(/^£/,'')}` : `${price} ${cur}`;
-}
-function normaliseDate(d){
-  // Returns YYYY-MM-DD if possible
-  const dt = (typeof d === 'string') ? new Date(d) : d;
-  if (!dt || isNaN(+dt)) return null;
-  const y = dt.getUTCFullYear();
-  const m = String(dt.getUTCMonth()+1).padStart(2,'0');
-  const dd= String(dt.getUTCDate()).padStart(2,'0');
-  return `${y}-${m}-${dd}`;
-}
+/* Fetch structured data from multiple pages (citations + forced landing) */
+async function fetchStructured(citations){
+  const urls = unique([...(citations||[])].slice(0,CITATION_LIMIT).concat(FORCED_EVENT_URLS));
+  const results = await Promise.all(urls.map(async u=>{
+    const ev  = await callExtract('events-extract', u).catch(()=> ({}));
+    const prod= await callExtract('products-extract', u).catch(()=> ({}));
+    return { url:u, events: ev.events||[], products: prod.products||[] };
+  }));
 
-function pickPriceStrings(products=[]){
-  // Attempt to pick "half day" and "full day" based on offer names / product names
-  let half=null, full=null;
-
-  for (const p of products){
-    const name = String(p.name||'').toLowerCase();
-    const offers = toArray(p.offers);
-    for (const off of offers){
-      const label = String(off.name||name||'').toLowerCase();
-      const price = asGBP(off.price, off.priceCurrency);
-      if (!price) continue;
-      if (/(4\s*hour|half\s*day|4hr)/i.test(label) && !half) half = price;
-      if (/(full\s*day|1\s*day|all\s*day|whole\s*day)/i.test(label) && !full) full = price;
+  // Merge
+  const struct = { events:[], products:[], tried: urls };
+  for (const r of results){
+    for (const e of (r.events||[])){
+      const item = {
+        title: e.title||e.name||'',
+        startDate: e.startDate||e.date||null,
+        endDate: e.endDate||null,
+        url: e.url||e.source||r.url||null,
+        location: e.location||null
+      };
+      struct.events.push(item);
+    }
+    for (const p of (r.products||[])){
+      struct.products.push(p);
     }
   }
-  return { half, full };
+  return struct;
 }
 
-function mergeStructuredFromCitations(cites){
-  // Returns { events: [...], products: [...] }
-  return (async ()=>{
-    const top = (cites||[]).slice(0,3);
-    const out = { events:[], products:[] };
-    if (!top.length) return out;
+/* Expand/normalize events → per-day list with best links */
+function normalizeEvents(struct, fallbackUrl){
+  const out = [];
+  const byDay = new Map();
 
-    const results = await Promise.allSettled(top.map(u => callExtractAll(u)));
-    for (const r of results){
-      if (r.status!=='fulfilled' || !r.value) continue;
-      const e = toArray(r.value.events).filter(Boolean);
-      const p = toArray(r.value.products).filter(Boolean);
-      // Normalize event url + dates
-      e.forEach(ev=>{
-        ev.url = ev.url || ev['@id'] || r.value.url || top[0];
-        ev.startDate = ev.startDate || ev.start || ev.date || ev['start_date'];
-        ev.endDate   = ev.endDate   || ev.end   || ev['end_date'];
-      });
-      out.events.push(...e);
-      out.products.push(...p);
-    }
-    return out;
-  })();
-}
+  const add = (d, url, title) => {
+    if (!d) return;
+    const key = d.slice(0,10);
+    if (!byDay.has(key)) byDay.set(key, { date:key, url:(url||fallbackUrl||null), title:title||'' });
+  };
 
-/* ===== Pills ===== */
-function unique(arr){ return Array.from(new Set(arr.filter(Boolean))); }
-function niceLabelFromUrl(url){
-  try{
-    const u = new URL(url);
-    const tail = u.pathname.replace(/^\/+/,'').split('/').slice(1).join(' / ') || u.hostname.replace(/^www\./,'');
-    return tail.length>40 ? tail.slice(0,37)+'…' : tail;
-  }catch{ return url; }
-}
-function buildPills(struct, citations=[]){
-  const pills = [];
-
-  // Brand-orange: core tasks
-  pills.push({label:'Prices', href:'https://www.alanranger.com/photography-workshops-near-me', brand:true});
-  pills.push({label:'Upcoming dates', href:'https://www.alanranger.com/photography-workshops-near-me', brand:true});
-  pills.push({label:'Workshops overview', href:'https://www.alanranger.com/photography-workshops-near-me', brand:true});
-
-  // If bluebell is involved, add specific landing page
-  const bluebell = citations.find(u=>/bluebell/i.test(u)) || 'https://www.alanranger.com/bluebell-woods-near-me';
-  pills.push({label:'bluebell-woods-near-me', href: bluebell});
-
-  // Top citations as extras
-  for (const u of (citations||[]).slice(0,2)){
-    pills.push({label: niceLabelFromUrl(u), href: u});
-  }
-
-  // De-dup
-  return unique(pills.map(p=>JSON.stringify(p))).map(s=>JSON.parse(s));
-}
-function addChips(container, chips){
-  if (!chips.length) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'chips';
-  chips.forEach(({label, href, brand})=>{
-    const a = document.createElement('a');
-    a.href = href; a.target = '_blank'; a.rel='noopener';
-    a.textContent = label;
-    if (brand) a.classList.add('brand');
-    wrap.appendChild(a);
-  });
-  container.appendChild(wrap);
-}
-
-/* ===== Structured card renderer ===== */
-function renderStructuredCard(holder, struct, citations){
-  const { events=[], products=[] } = struct || {};
-  if (!events.length && !products.length) return false;
-
-  const wrap = document.createElement('div');
-  let html = `<div style="margin-bottom:6px"><strong>Bluebell Woodland Workshop Details:</strong></div>`;
-
-  // Dates (list all)
-  if (events.length){
-    // Sort by start date
-    const withDates = events
-      .map(ev=>{
-        const d = normaliseDate(ev.startDate);
-        return { d, url: ev.url || ev.source_url || citations[0] || '#', raw: ev };
-      })
-      .filter(x=>x.d);
-
-    if (withDates.length){
-      withDates.sort((a,b)=> a.d.localeCompare(b.d));
-      html += `<div><strong>Dates:</strong></div><ul>`;
-      for (const x of withDates){
-        // Try to build a friendly date
-        const dt = new Date(x.d+'T00:00:00Z');
-        const nice = dt.toLocaleDateString('en-GB', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
-        html += `<li>${nice} <a href="${x.url}" target="_blank" rel="noopener">Link</a></li>`;
+  // Per-day events from schema
+  for (const e of struct.events){
+    if (e.startDate && !e.endDate){
+      add(e.startDate, e.url, e.title);
+    }else if (e.startDate && e.endDate){
+      // Date range → expand to daily bullets
+      for (const day of expandRange(e.startDate, e.endDate)){
+        add(day.startDate, e.url, e.title);
       }
-      html += `</ul>`;
     }
   }
 
-  // Location (1st event with location)
-  const evWithLoc = (events.find(e=>e.location && (e.location.name || e.location.address)) || null);
-  if (evWithLoc){
-    const locBits = [
-      evWithLoc.location?.name,
-      evWithLoc.location?.address?.addressLocality,
-      evWithLoc.location?.address?.addressRegion
-    ].filter(Boolean).join(', ');
-    if (locBits){
-      const locUrl = evWithLoc.url || citations[0] || '#';
-      html += `<div><strong>Location:</strong> ${locBits} <a href="${locUrl}" target="_blank" rel="noopener">Link</a></div>`;
-    }
+  const days = Array.from(byDay.values()).sort((a,b)=> a.date.localeCompare(b.date));
+  return days;
+}
+
+/* ===== Structured block renderer ===== */
+function renderStructured(holder, question, citations, struct){
+  const wrap = document.createElement('div');
+  const bestLanding = citations[0] || FORCED_EVENT_URLS[0];
+
+  const { half, full } = pickPriceStrings(struct.products);
+  const perDay = normalizeEvents(struct, bestLanding);
+
+  let html = `<h3 style="margin:0 0 8px">Bluebell Woodland Workshop Details:</h3>`;
+  if (perDay.length){
+    const first = perDay[0].date, last = perDay[perDay.length-1].date;
+    html += `<p><strong>Dates:</strong> ${new Date(first).toLocaleDateString()} – ${new Date(last).toLocaleDateString()}</p>`;
   }
 
-  // Prices (from products/offers)
-  const { half, full } = pickPriceStrings(products);
+  html += `<ul>`;
   if (half || full){
-    html += `<div style="margin-top:6px"><strong>Price:</strong></div><ul>`;
-    if (half) html += `<li>4 hours: ${half}</li>`;
-    if (full) html += `<li>Full day: ${full}</li>`;
+    html += `<li><strong>Price:</strong> ${full? `${full} for a full day` : ''}${(full&&half)?' or ':''}${half? `${half} for a 4-hour session` : ''}.</li>`;
+  }else{
+    html += `<li><strong>Price:</strong> Not specified in the provided context.</li>`;
+  }
+  html += `</ul>`;
+
+  // Dates list with links (per-day)
+  if (perDay.length){
+    html += `<div style="margin-top:10px"><strong>Next Available Dates:</strong></div><ul>`;
+    perDay.slice(0,14).forEach(d=>{
+      const dlabel = new Date(d.date).toLocaleDateString(undefined,{weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+      html += `<li>${dlabel} ${d.url?`<a href="${d.url}" target="_blank" rel="noopener">Link</a>`:''}</li>`;
+    });
     html += `</ul>`;
-  } else {
-    html += `<div style="margin-top:6px"><strong>Price:</strong> ETBD (specific price not provided)</div>`;
   }
 
-  // Generic schedule bullets (kept from earlier answer style)
+  // Workshop schedule (static, but helpful)
   html += `<div style="margin-top:10px"><strong>Workshop Schedule:</strong></div>
   <ul>
     <li>Sessions available:</li>
@@ -368,58 +349,31 @@ function renderStructuredCard(holder, struct, citations){
     <li>Full day: 5:45 am – 2:30 pm</li>
   </ul>`;
 
-  // Extras
-  html += `<div style="margin-top:10px"><strong>Additional Info:</strong></div>
-  <ul>
-    <li>Max participants: 6</li>
-    <li>Easy fitness level</li>
-    <li>Brunch not included between sessions.</li>
-  </ul>`;
-
   wrap.innerHTML = html;
   holder.appendChild(wrap);
 
-  // Brand-orange pills + top citations
-  addChips(holder, buildPills(struct, citations));
-  return true;
+  // Orange action pills + top citations
+  addChips(holder, inferChips(question, '', citations));
 }
 
-/* ===== Render ===== */
+/* ===== Render LLM + Structure ===== */
 function renderAnswer(payload, question){
-  const raw = payload?.answer || payload?.reply || payload?.text || '';
-  const citations = unique(payload?.citations || payload?.sources || []);
-  const { html, liIds, items } = mdToHtml(raw);
+  const raw = payload.answer || payload.reply || payload.text || '';
+  const citations = unique(payload.citations || payload.sources || []);
+
+  const { html } = mdToHtml(raw);
   const holder = addBubble(html);
 
-  // Try to draw enhanced structured card
-  const struct = payload?.struct;
-  if (struct && (struct.events?.length || struct.products?.length)) {
-    renderStructuredCard(holder, struct, citations);
-  } else {
-    // If payload did not include struct, try to augment from citations quickly
-    augmentFromCitations(citations).then(aug=>{
-      if (aug && (aug.events.length || aug.products.length)){
-        renderStructuredCard(holder, aug, citations);
-      } else {
-        // fallback pills only
-        addChips(holder, buildPills({}, citations));
-      }
-    }).catch(()=> {
-      addChips(holder, buildPills({}, citations));
-    });
-  }
-}
-
-async function augmentFromCitations(citations){
-  try{
-    return await mergeStructuredFromCitations(citations||[]);
-  }catch{ return {events:[],products:[]}; }
+  // Fetch structured data from more pages and render enhanced block
+  fetchStructured(citations).then(struct=>{
+    renderStructured(holder, question, citations, struct);
+  }).catch(()=>{ /* ignore structured failures */ });
 }
 
 /* ===== Fallback ===== */
 function fallbackBlock(){
   return `
-    <div class="fallback">
+    <div class="answer">
       <p>I don’t have a confident answer to that yet. I’m trained on Alan’s site, so I may miss things.</p>
       <p>If you’d like to follow up, please reach out:</p>
       <div class="pills">
@@ -429,7 +383,7 @@ function fallbackBlock(){
     </div>`;
 }
 
-/* ===== Send flow ===== */
+/* ===== Events ===== */
 async function handleSend(){
   const q = input.value.trim();
   if(!q) return;
@@ -439,7 +393,7 @@ async function handleSend(){
   try{
     const data = await callChat(q, 8);
     stopTyping();
-    renderAnswer(data, q);
+    if (!data || data.ok === false) addBubble(fallbackBlock()); else renderAnswer(data, q);
   }catch{
     stopTyping();
     addBubble(fallbackBlock());
