@@ -1,256 +1,360 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Chat</title>
-  <style>
-    :root {
-      --bg: #0f172a;         /* slate-900 */
-      --panel: #111827;      /* gray-900 */
-      --muted: #94a3b8;      /* slate-400 */
-      --text: #e5e7eb;       /* gray-200 */
-      --accent: #f59e0b;     /* amber-500 */
-      --chip: #1f2937;       /* gray-800 */
-      --chip-border: #334155;/* slate-700 */
-      --border: #1f2937;     /* gray-800 */
-      --success: #22c55e;
-      --error: #ef4444;
-    }
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
-    }
-    .wrap {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 20px 16px 120px;
-    }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-    }
-    .messages {
-      display: grid;
-      gap: 16px;
-      max-height: 70vh;
-      overflow: auto;
-      padding-right: 8px;
-    }
-    .msg {
-      border-radius: 12px;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      background: #0b1220;
-    }
-    .msg.user { background: #0a0f1a; }
-    .msg.assistant { background: #0b1220; }
-    .msg h3, .msg h4 { margin: 0.2rem 0 0.6rem; }
-    .msg p { margin: 0.4rem 0; }
-    .chips {
-      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
-    }
-    .chip {
-      background: var(--chip);
-      border: 1px solid var(--chip-border);
-      color: var(--text);
-      padding: 8px 12px;
-      border-radius: 999px;
-      text-decoration: none;
-      transition: transform .05s ease;
-    }
-    .chip:hover { transform: translateY(-1px); }
-    .footer {
-      position: fixed; left: 0; right: 0; bottom: 0;
-      background: linear-gradient(180deg, rgba(15,23,42,0), rgba(15,23,42,0.9) 24%, rgba(15,23,42,1) 70%);
-      padding: 16px 12px 22px;
-      border-top: 1px solid var(--border);
-    }
-    .footer-inner { max-width: 960px; margin: 0 auto; display: grid; gap: 8px; }
-    .row {
-      display: grid; grid-template-columns: 1fr auto; gap: 8px;
-      background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 8px;
-    }
-    textarea {
-      width: 100%; min-height: 48px; max-height: 140px; resize: vertical;
-      background: transparent; border: 0; outline: none; color: var(--text);
-      font: inherit; padding: 6px 10px;
-    }
-    button {
-      appearance: none; border: 1px solid var(--chip-border); background: var(--chip);
-      color: var(--text); border-radius: 12px; padding: 10px 14px; cursor: pointer;
-    }
-    button.primary { border-color: var(--accent); background: #1b2333; }
-    .debug {
-      margin-top: 14px; border: 1px dashed var(--chip-border); border-radius: 10px; overflow: hidden;
-    }
-    .debug summary {
-      list-style: none; cursor: pointer; padding: 10px 12px; user-select: none;
-      background: #0b1220; border-bottom: 1px dashed var(--chip-border);
-    }
-    .debug summary::-webkit-details-marker { display:none; }
-    .debug-body { padding: 10px 12px; }
-    .debug-actions { display:flex; gap:8px; margin-bottom:10px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; color: var(--muted); }
-    .status { font-size: 12px; margin-left: 8px; }
-    .hr { height: 1px; background: var(--border); margin: 12px 0; }
-    .small { color: var(--muted); font-size: 12px; }
-    .hidden { display:none; }
-    a { color: #93c5fd; }
-    .assistant .msg-markdown ul { padding-left: 1.25rem; }
-    .assistant .msg-markdown h3 { margin-top: 0; }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Alan Ranger Assistant</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
+  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
+  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
+  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
+  --user-bg:#e6edf7; --user-text:#0b0f16;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
+.version{position:absolute;top:-8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
+.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
+.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
+.pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
+.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
+
+.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
+.thread{display:flex;flex-direction:column;gap:12px}
+.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
+.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
+.answer h1,.answer h2,.answer h3{margin:.2em 0}
+.answer p{margin:.5em 0}
+.answer ul{margin:.4em 0 .6em 1.25em}
+.answer li{margin:.15em 0}
+.answer a{color:var(--link);text-decoration:underline}
+.answer a:hover{color:var(--link-hover)}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none;font-weight:600}
+.chips a.brand{background:var(--brand);color:#0b0f16;border-color:transparent}
+.chips a:hover{opacity:.9}
+
+/* Composer */
+.composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
+.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
+.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
+
+/* Debug panel */
+details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
+details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
+.kv label{color:#93A4C1}
+pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
+
+/* Typing dots */
+.typing{position:relative;display:inline-block}
+.typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
+.typing .dot:nth-child(2){animation-delay:.15s}
+.typing .dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+
+@media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1 style="margin:0 0 14px">AI Chat</h1>
-    <div class="panel">
-      <div id="messages" class="messages"></div>
-
-      <details class="debug" id="debug">
-        <summary>▸ Show debug</summary>
-        <div class="debug-body">
-          <div class="debug-actions">
-            <button id="copyDebug" class="primary">Copy all debug</button>
-            <span id="copyStatus" class="status"></span>
-          </div>
-          <div class="hr"></div>
-          <div class="mono" id="debugJson">(no debug yet)</div>
-        </div>
-      </details>
-    </div>
-  </div>
-
-  <div class="footer">
-    <div class="footer-inner">
-      <div class="row">
-        <textarea id="q" placeholder="Ask a question… (Shift+Enter for newline)"></textarea>
-        <button id="send" class="primary">Send</button>
+<div class="wrap">
+  <span class="version">v0.9.11</span>
+  <div class="card">
+    <div class="header">
+      <img class="logo" src="./chat%20white.png" alt="AR logo">
+      <h2 class="title">Alan Ranger Assistant</h2>
+      <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:</p>
+      <div class="pills">
+        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
       </div>
-      <div class="small">Tip: ask about workshops, tuition, kit, or locations. Example: “When are the next Bluebell dates?”</div>
+    </div>
+
+    <div class="chat">
+      <div id="thread" class="thread">
+        <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
+      </div>
+
+      <details id="debugPanel" class="debug">
+        <summary>🔎 Show debug</summary>
+        <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
+        <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
+        <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
+        <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
+        <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
+        <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
+        <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
+        <button id="dbg-copy" style="margin-top:10px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
+      </details>
+
+      <div class="composer">
+        <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
+        <button id="send" class="send">Send</button>
+      </div>
     </div>
   </div>
+</div>
 
-  <script>
-    const elMsgs = document.getElementById('messages');
-    const elQ = document.getElementById('q');
-    const elSend = document.getElementById('send');
-    const elDebugJson = document.getElementById('debugJson');
-    const elCopy = document.getElementById('copyDebug');
-    const elCopyStatus = document.getElementById('copyStatus');
+<script>
+const CHAT_ENDPOINT = '/api/chat';
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
-    const history = [];
+const thread = document.getElementById('thread');
+const input  = document.getElementById('q');
+const sendBtn= document.getElementById('send');
 
-    function pushMessage(role, html, chips=[]) {
-      const outer = document.createElement('div');
-      outer.className = `msg ${role}`;
+const dbgStatus = document.getElementById('dbg-status');
+const dbgReq    = document.getElementById('dbg-req');
+const dbgRes    = document.getElementById('dbg-res');
+const dbgHeaders= document.getElementById('dbg-headers');
+const dbgStruct = document.getElementById('dbg-struct');
+const dbgProv   = document.getElementById('dbg-prov');
+const dbgCopy   = document.getElementById('dbg-copy');
 
-      const inner = document.createElement('div');
-      inner.className = 'msg-markdown';
-      inner.innerHTML = html;
-      outer.appendChild(inner);
+function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
 
-      if (role === 'assistant' && chips && chips.length) {
-        const bar = document.createElement('div');
-        bar.className = 'chips';
-        chips.forEach(c => {
-          const a = document.createElement('a');
-          a.className = 'chip';
-          a.href = c.url;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          a.textContent = c.label;
-          bar.appendChild(a);
-        });
-        outer.appendChild(bar);
-      }
+dbgCopy?.addEventListener('click', ()=>{
+  const all = [
+    'Status: '+dbgStatus.textContent,
+    'Headers:\n'+dbgHeaders.textContent,
+    'Request:\n'+dbgReq.textContent,
+    'Response:\n'+dbgRes.textContent,
+    'Structured:\n'+dbgStruct.textContent,
+    'Provenance:\n'+dbgProv.textContent,
+  ].join('\n\n');
+  navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
+});
 
-      elMsgs.appendChild(outer);
-      elMsgs.scrollTop = elMsgs.scrollHeight;
+/* ---------- UI helpers ---------- */
+function addBubble(html, opts={}) {
+  const div = document.createElement('div');
+  div.className = 'bubble' + (opts.user ? ' user' : '');
+  div.innerHTML = html;
+  thread.appendChild(div);
+  div.scrollIntoView({behavior:'smooth', block:'end'});
+  return div;
+}
+function addTyping() {
+  const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
+  return ()=> el && el.remove();
+}
+
+function mdToHtml(md){
+  if (!md) return { html:'', liIds:[], items:[] };
+  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  const lines = s.split(/\r?\n/);
+  let out='', inList=false, liIds=[], items=[], idx=0;
+  const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
+  for (const line of lines){
+    const m = line.match(/^\s*-\s+(.*)$/);
+    if (m){
+      if(!inList){ out+='<ul>'; inList=true; }
+      const text = m[1].trim();
+      const id = `li_${++idx}`; liIds.push(id); items.push(text);
+      out += `<li id="${id}">${text}</li>`;
+    } else {
+      flush();
+      out += line.trim()? `<p>${line}</p>` : '';
     }
+  }
+  flush();
+  return { html:`<div class="answer">${out}</div>`, liIds, items };
+}
 
-    function mdToHtml(md) {
-      try { return marked.parse(md || ''); }
-      catch { return (md || '').replace(/\\n/g, '<br>'); }
-    }
+function fmtDate(iso){
+  try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
+}
 
-    async function ask(query) {
-      // show user message immediately
-      pushMessage('user', mdToHtml(query));
-      elQ.value = '';
+/* Pull generic details (works for any “product-ish” description block) */
+function extractKeyDetails(desc){
+  if(!desc) return { bullets:[], location:null, sessions:[] };
+  const lines = desc.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  let location=null; const bullets=[], sessions=[];
+  for(const ln of lines){
+    if(/^Location:/i.test(ln)) location=ln.replace(/^Location:\s*/i,'').trim();
+    if(/^(?:\d+\s*hrs?|\d+\s*hour|OR\s*\d+\s*day|\d+\s*day)/i.test(ln)){ bullets.push(ln); sessions.push(ln); }
+    if(/^Participants:/i.test(ln)) bullets.push(ln);
+    if(/^Fitness:/i.test(ln)) bullets.push(ln);
+  }
+  return { bullets, location, sessions };
+}
+function priceTextFromProduct(prod){
+  if(!prod) return '';
+  if(prod.price!=null) return `£${String(prod.price).replace(/\.00$/,'')}`;
+  const low=prod?.raw?.offers?.lowPrice??prod?.raw?.offers?.lowprice;
+  const high=prod?.raw?.offers?.highPrice??prod?.raw?.offers?.highprice;
+  if(low!=null && high!=null) return `£${low}–£${high}`;
+  return '';
+}
 
-      // call API
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ query })
+/* Build chips *generically* from what we have */
+function createChips(structured, citations){
+  const events=structured?.events||[];
+  const products=structured?.products||[];
+
+  const firstEventUrl = events.find(e=>e?.page_url||e?.source_url)?.page_url || events.find(e=>e?.source_url)?.source_url || null;
+  const productUrl    = products.find(p=>p?.url||p?.page_url)?.url || products.find(p=>p?.page_url)?.page_url || null;
+
+  // Potential “overview/info” candidate: first citation that isn’t the event or product
+  const uniq = (arr)=>Array.from(new Set(arr.filter(Boolean)));
+  const allCites = uniq([...(citations||[]), firstEventUrl, productUrl]);
+  const infoUrl = allCites.find(u=>u && u!==firstEventUrl && u!==productUrl) || null;
+
+  // Compose chips; remove duplicates and empty hrefs.
+  const rawChips = [
+    {label:'Book Now', href:productUrl, brand:true},
+    {label:'Prices',   href:productUrl ? productUrl+'#prices' : infoUrl || firstEventUrl, brand:true},
+    {label:'Upcoming dates', href:firstEventUrl || productUrl || infoUrl, brand:true},
+    infoUrl ? {label:'Info', href:infoUrl, brand:true} : null,
+    firstEventUrl ? {label:'Event page', href:firstEventUrl, brand:false} : null,
+    productUrl ? {label:'Product page', href:productUrl, brand:false} : null,
+  ].filter(Boolean);
+
+  const out=[], seen=new Set();
+  for(const c of rawChips){
+    if(!c.href) continue;
+    if(seen.has(c.href)) continue;
+    out.push(c); seen.add(c.href);
+  }
+  return out;
+}
+
+/* Render a concise structured block that works for any topic */
+function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
+  const container=document.createElement('div'); container.className='answer';
+
+  // Product / options (generic)
+  const products=structured?.products||[];
+  const prod=(products.find(p=>p.price!=null)||products[0])||null;
+  if(prod){
+    const details=extractKeyDetails(prod.description||'');
+    const priceTx=priceTextFromProduct(prod);
+    const h=document.createElement('h3'); h.textContent='Workshop Options:'; container.appendChild(h);
+    const p=document.createElement('p');
+    p.innerHTML=`<strong>${prod.title||'Options'}</strong>${priceTx?' — '+priceTx:''}`;
+    container.appendChild(p);
+    const ul=document.createElement('ul');
+    if(details.location){ const li=document.createElement('li'); li.innerHTML=`<strong>Location:</strong> ${details.location}`; ul.appendChild(li); }
+    details.sessions.forEach(s=>{ const li=document.createElement('li'); li.textContent=s; ul.appendChild(li); });
+    details.bullets.filter(b=>/^Participants:|^Fitness:/i.test(b)).forEach(b=>{ const li=document.createElement('li'); li.textContent=b; ul.appendChild(li); });
+    if(ul.children.length) container.appendChild(ul);
+  }
+
+  // Upcoming events (generic)
+  const now=new Date();
+  const future=(structured?.events||[])
+    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
+    .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
+    .slice(0,12);
+
+  if(future.length){
+    const heading = structured?.topic ? `Upcoming ${structured.topic.toString().trim()} Workshops` : fallbackHeading;
+    const h2=document.createElement('h3'); h2.textContent=heading; container.appendChild(h2);
+    const ul=document.createElement('ul');
+    future.forEach(e=>{
+      const li=document.createElement('li');
+      const when=fmtDate(e.date_start);
+      const href=e.page_url||e.source_url||'#';
+      const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent='Link';
+      li.innerHTML=`${when} — `; li.appendChild(a);
+      li.insertAdjacentText('beforeend',` — ${e.location||''}`);
+      ul.appendChild(li);
+    });
+    container.appendChild(ul);
+  }
+
+  return {node:container};
+}
+
+/* ---------- Render answer end-to-end ---------- */
+function renderAnswer(payload){
+  // 1) Primary markdown from API (if present)
+  const md=payload.answer_markdown||payload.answer||'';
+  if(md){ const {html}=mdToHtml(md); addBubble(html); }
+
+  // 2) Structured augmentation (generic)
+  if(payload.structured){
+    const {node}=renderStructured(payload.structured);
+    const bubble=addBubble(node.outerHTML);
+
+    // 3) Smart chips (no duplicates; generic labels)
+    const chips=createChips(payload.structured, payload.citations||[]);
+    if(chips.length){
+      const wrap=document.createElement('div'); wrap.className='chips';
+      chips.forEach(c=>{
+        const a=document.createElement('a');
+        a.href=c.href; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
+        if(c.brand) a.classList.add('brand');
+        wrap.appendChild(a);
       });
-
-      const payload = await res.json().catch(() => ({}));
-      // store debug (entire API payload)
-      try {
-        elDebugJson.textContent = JSON.stringify(payload, null, 2);
-      } catch {
-        elDebugJson.textContent = '(failed to stringify debug)';
-      }
-
-      if (!payload || payload.ok === false) {
-        const msg = payload && payload.hint ? payload.hint : 'Sorry, something went wrong.';
-        pushMessage('assistant', `<p style="color:var(--error)">${escapeHtml(msg)}</p>`);
-        return;
-      }
-
-      // Only render answer_markdown — avoids duplicate lists
-      const html = mdToHtml(payload.answer_markdown || '');
-      const chips = Array.isArray(payload.structured?.chips) ? payload.structured.chips : [];
-      pushMessage('assistant', html, chips);
+      bubble.appendChild(wrap);
     }
+  }
 
-    function escapeHtml(s) {
-      return (s || '').replace(/[&<>"']/g, m => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-      }[m]));
+  // Debug dump
+  dbgStruct.textContent=safeJSONString(payload.structured||{});
+}
+
+/* ---------- Networking ---------- */
+async function sendQuery(query){
+  const req = { query, topK: 8 };
+  dbgReq.textContent = safeJSONString(req);
+  const closeTyping = addTyping();
+  try{
+    const res = await fetch(CHAT_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(req)
+    });
+    dbgStatus.textContent = res.status;
+    const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
+    dbgHeaders.textContent = safeJSONString(headers);
+
+    const data = await res.json();
+    dbgRes.textContent = safeJSONString(data);
+    dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
+
+    closeTyping();
+    if (data && (data.answer_markdown || data.structured)) {
+      renderAnswer(data);
+    } else {
+      addBubble(`<div class="answer"><p>Sorry — I couldn't find anything for that.</p></div>`);
     }
+  } catch (err){
+    closeTyping();
+    dbgStatus.textContent = 'error';
+    addBubble(`<div class="answer"><p>Something went wrong: ${String(err)}</p></div>`);
+  }
+}
 
-    // send handlers
-    elSend.addEventListener('click', () => {
-      const q = elQ.value.trim();
-      if (!q) return;
-      ask(q);
-    });
-    elQ.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        const q = elQ.value.trim();
-        if (!q) return;
-        ask(q);
-      }
-    });
+/* ---------- Wire up composer ---------- */
+function submit(){
+  const val = input.value.trim();
+  if(!val) return;
+  addBubble(val, {user:true});
+  input.value='';
+  sendQuery(val);
+}
+sendBtn.addEventListener('click', submit);
+input.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
+});
 
-    // copy debug
-    elCopy.addEventListener('click', async () => {
-      const text = elDebugJson.textContent || '';
-      try {
-        await navigator.clipboard.writeText(text);
-        elCopyStatus.textContent = 'Copied';
-        elCopyStatus.style.color = 'var(--success)';
-        setTimeout(() => { elCopyStatus.textContent = ''; }, 1500);
-      } catch {
-        elCopyStatus.textContent = 'Copy failed';
-        elCopyStatus.style.color = 'var(--error)';
-        setTimeout(() => { elCopyStatus.textContent = ''; }, 1500);
-      }
-    });
-
-    // greet once
-    pushMessage('assistant', mdToHtml("Hi! I can help with workshops, tuition, kit, and locations. Ask me something like **“give me the next bluebell workshop dates and prices.”**"));
-  </script>
+// Example starter (optional): comment out if you don’t want a prefilled query
+// sendQuery("give me the next workshop dates and prices");
+</script>
 </body>
 </html>
