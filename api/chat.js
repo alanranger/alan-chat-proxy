@@ -2,7 +2,7 @@
 // Vercel Serverless Function (Node runtime)
 // Returns: { ok, answer, citations, structured, took_ms } for your public/chat.html
 
-export const config = { runtime: "nodejs18.x" };
+export const config = { runtime: "nodejs" };
 
 function env(name) {
   const v = process.env[name];
