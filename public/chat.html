@@ -17,8 +17,11 @@
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
 .wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.version{position:absolute;top:-8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
-.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px;position:relative}
+
+/* version badge now sits INSIDE the card, just below the orange bar */
+.version{position:absolute;top:6px;right:10px;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
@@ -53,8 +56,6 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 /* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
 details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
-.debug-actions{display:flex;justify-content:flex-end;margin:8px 0 6px}
-.debug-actions button{padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
@@ -71,8 +72,8 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <span class="version">v0.9.12</span>
   <div class="card">
+    <span class="version">v0.9.11</span>
     <div class="header">
       <img class="logo" src="./chat%20white.png" alt="AR logo">
       <h2 class="title">Alan Ranger Assistant</h2>
@@ -91,9 +92,9 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
       <details id="debugPanel" class="debug">
         <summary>🔎 Show debug</summary>
 
-        <!-- Moved to top of debug log -->
-        <div class="debug-actions">
-          <button id="dbg-copy">Copy all</button>
+        <!-- Copy-all button moved to TOP -->
+        <div style="margin:8px 0 10px">
+          <button id="dbg-copy" style="padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
         </div>
 
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
@@ -141,10 +142,7 @@ dbgCopy?.addEventListener('click', ()=>{
     'Structured:\n'+dbgStruct.textContent,
     'Provenance:\n'+dbgProv.textContent,
   ].join('\n\n');
-  navigator.clipboard.writeText(all).then(()=>{
-    dbgCopy.textContent='Copied!';
-    setTimeout(()=>dbgCopy.textContent='Copy all',1500);
-  });
+  navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
 });
 
 /* ---------- UI helpers ---------- */
@@ -289,16 +287,16 @@ function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
 
 /* ---------- Render answer end-to-end ---------- */
 function renderAnswer(payload){
-  // 1) Primary markdown from API (if present)
-  const md=payload.answer_markdown||payload.answer||'';
-  if(md){ const {html}=mdToHtml(md); addBubble(html); }
+  // If we have structured, we skip Markdown to avoid duplicate content.
+  if(!payload.structured){
+    const md=payload.answer_markdown||payload.answer||'';
+    if(md){ const {html}=mdToHtml(md); addBubble(html); }
+  }
 
-  // 2) Structured augmentation (generic)
   if(payload.structured){
     const {node}=renderStructured(payload.structured);
     const bubble=addBubble(node.outerHTML);
 
-    // 3) Smart chips (no duplicates; generic labels)
     const chips=createChips(payload.structured, payload.citations||[]);
     if(chips.length){
       const wrap=document.createElement('div'); wrap.className='chips';
@@ -312,7 +310,6 @@ function renderAnswer(payload){
     }
   }
 
-  // Debug dump
   dbgStruct.textContent=safeJSONString(payload.structured||{});
 }
 
@@ -336,7 +333,7 @@ async function sendQuery(query){
     dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
 
     closeTyping();
-    if (data && (data.answer_markdown || data.structured)) {
+    if (data && (data.answer_markdown !== undefined || data.structured)) {
       renderAnswer(data);
     } else {
       addBubble(`<div class="answer"><p>Sorry — I couldn't find anything for that.</p></div>`);
@@ -361,7 +358,7 @@ input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
 
-// Example starter (optional): comment out if you don’t want a prefilled query
+// Example starter (optional)
 // sendQuery("give me the next workshop dates and prices");
 </script>
 </body>
