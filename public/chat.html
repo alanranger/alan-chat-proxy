@@ -17,11 +17,8 @@
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
 .wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px;position:relative}
-
-/* version badge now sits INSIDE the card, just below the orange bar */
-.version{position:absolute;top:6px;right:10px;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
-
+.card{position:relative;background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.version{position:absolute;top:10px;right:10px;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
@@ -73,7 +70,8 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <body>
 <div class="wrap">
   <div class="card">
-    <span class="version">v0.9.11</span>
+    <span class="version">v0.9.12</span>
+
     <div class="header">
       <img class="logo" src="./chat%20white.png" alt="AR logo">
       <h2 class="title">Alan Ranger Assistant</h2>
@@ -91,12 +89,9 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
       <details id="debugPanel" class="debug">
         <summary>🔎 Show debug</summary>
-
-        <!-- Copy-all button moved to TOP -->
-        <div style="margin:8px 0 10px">
+        <div style="display:flex;justify-content:flex-end;margin:6px 0 2px">
           <button id="dbg-copy" style="padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
         </div>
-
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
         <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
         <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
@@ -186,26 +181,63 @@ function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
 
-/* Pull generic details (works for any “product-ish” description block) */
-function extractKeyDetails(desc){
-  if(!desc) return { bullets:[], location:null, sessions:[] };
-  const lines = desc.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  let location=null; const bullets=[], sessions=[];
-  for(const ln of lines){
-    if(/^Location:/i.test(ln)) location=ln.replace(/^Location:\s*/i,'').trim();
-    if(/^(?:\d+\s*hrs?|\d+\s*hour|OR\s*\d+\s*day|\d+\s*day)/i.test(ln)){ bullets.push(ln); sessions.push(ln); }
-    if(/^Participants:/i.test(ln)) bullets.push(ln);
-    if(/^Fitness:/i.test(ln)) bullets.push(ln);
-  }
-  return { bullets, location, sessions };
-}
+/* -------- Schema-aware extraction -------- */
 function priceTextFromProduct(prod){
   if(!prod) return '';
-  if(prod.price!=null) return `£${String(prod.price).replace(/\.00$/,'')}`;
-  const low=prod?.raw?.offers?.lowPrice??prod?.raw?.offers?.lowprice;
-  const high=prod?.raw?.offers?.highPrice??prod?.raw?.offers?.highprice;
-  if(low!=null && high!=null) return `£${low}–£${high}`;
+  const r = prod.raw || {};
+  const currency = (r?.offers?.priceCurrency || r?.offers?.pricecurrency || 'GBP').toUpperCase();
+  const symbol = currency === 'GBP' ? '£' : '';
+  const single = prod.price ?? r.price ?? null;
+  const low = r?.offers?.lowPrice ?? r?.offers?.lowprice ?? null;
+  const high = r?.offers?.highPrice ?? r?.offers?.highprice ?? null;
+
+  if (single != null) return `${symbol}${String(single).replace(/\.00$/,'')}`;
+  if (low != null && high != null) return `${symbol}${low}–${symbol}${high}`;
+  if (low != null) return `${symbol}${low}`;
+  if (high != null) return `${symbol}${high}`;
   return '';
+}
+
+function extractKeyDetails(desc, raw){
+  const out = { bullets:[], location:null, sessions:[], participants:null, fitness:null, availability:null };
+  // Fallback: parse description
+  if(desc){
+    const lines = desc.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    for(const ln of lines){
+      if(/^Location:/i.test(ln)) out.location = ln.replace(/^Location:\s*/i,'').trim();
+      if(/^(?:\d+\s*hrs?|\d+\s*hour|OR\s*\d+\s*day|\d+\s*day)/i.test(ln)){ out.bullets.push(ln); out.sessions.push(ln); }
+      if(/^Participants:/i.test(ln)) { out.bullets.push(ln); out.participants = ln.replace(/^Participants:\s*/i,'').trim(); }
+      if(/^Fitness:/i.test(ln)) { out.bullets.push(ln); out.fitness = ln.replace(/^Fitness:\s*/i,'').trim(); }
+    }
+  }
+  const r = raw || {};
+  if (r.location) out.location = r.location;
+  if (r.participants) out.participants = r.participants;
+  if (r.fitness) out.fitness = r.fitness;
+
+  const sess = [];
+  if (r.session_4hrs){
+    const t = r.session_4hrs_time ? ` - ${r.session_4hrs_time}` : '';
+    sess.push(`4hrs${t}`.trim());
+  }
+  if (r.session_1day){
+    const t = r.session_1day_time ? ` - ${r.session_1day_time}` : '';
+    sess.push(`OR 1 day${t}`.trim());
+  }
+  if (sess.length){
+    out.sessions = sess;
+    out.bullets = [
+      ...sess,
+      ...(out.participants ? [`Participants: ${out.participants}`] : []),
+      ...(out.fitness ? [`Fitness: ${out.fitness}`] : []),
+    ];
+  }
+  const avail = r?.offers?.availability;
+  if (typeof avail === 'string'){
+    const tail = avail.split('/').pop();
+    if (tail) out.availability = tail.replace(/([A-Z])/g,' $1').trim();
+  }
+  return out;
 }
 
 /* Build chips *generically* from what we have */
@@ -242,20 +274,25 @@ function createChips(structured, citations){
 function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
   const container=document.createElement('div'); container.className='answer';
 
-  // Product / options (generic)
+  // Product / options (generic + schema-aware)
   const products=structured?.products||[];
   const prod=(products.find(p=>p.price!=null)||products[0])||null;
   if(prod){
-    const details=extractKeyDetails(prod.description||'');
+    const details=extractKeyDetails(prod.description||'', prod.raw);
     const priceTx=priceTextFromProduct(prod);
+    const displayTitle = prod.title || (prod.raw?.name || prod.raw?.['@name'] || 'Options');
+
     const h=document.createElement('h3'); h.textContent='Workshop Options:'; container.appendChild(h);
     const p=document.createElement('p');
-    p.innerHTML=`<strong>${prod.title||'Options'}</strong>${priceTx?' — '+priceTx:''}`;
+    p.innerHTML=`<strong>${displayTitle}</strong>${priceTx?' — '+priceTx:''}`;
     container.appendChild(p);
+
     const ul=document.createElement('ul');
+    if(details.sessions?.length){ details.sessions.forEach(s=>{ const li=document.createElement('li'); li.textContent=s; ul.appendChild(li); }); }
     if(details.location){ const li=document.createElement('li'); li.innerHTML=`<strong>Location:</strong> ${details.location}`; ul.appendChild(li); }
-    details.sessions.forEach(s=>{ const li=document.createElement('li'); li.textContent=s; ul.appendChild(li); });
-    details.bullets.filter(b=>/^Participants:|^Fitness:/i.test(b)).forEach(b=>{ const li=document.createElement('li'); li.textContent=b; ul.appendChild(li); });
+    if(details.participants){ const li=document.createElement('li'); li.innerHTML=`<strong>Participants:</strong> ${details.participants}`; ul.appendChild(li); }
+    if(details.fitness){ const li=document.createElement('li'); li.innerHTML=`<strong>Fitness:</strong> ${details.fitness}`; ul.appendChild(li); }
+    if(details.availability){ const li=document.createElement('li'); li.innerHTML=`<strong>Availability:</strong> ${details.availability}`; ul.appendChild(li); }
     if(ul.children.length) container.appendChild(ul);
   }
 
@@ -287,16 +324,16 @@ function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
 
 /* ---------- Render answer end-to-end ---------- */
 function renderAnswer(payload){
-  // If we have structured, we skip Markdown to avoid duplicate content.
-  if(!payload.structured){
-    const md=payload.answer_markdown||payload.answer||'';
-    if(md){ const {html}=mdToHtml(md); addBubble(html); }
-  }
+  // 1) Primary markdown from API (if present)
+  const md=payload.answer_markdown||payload.answer||'';
+  if(md){ const {html}=mdToHtml(md); addBubble(html); }
 
+  // 2) Structured augmentation (generic)
   if(payload.structured){
     const {node}=renderStructured(payload.structured);
     const bubble=addBubble(node.outerHTML);
 
+    // 3) Smart chips (no duplicates; generic labels)
     const chips=createChips(payload.structured, payload.citations||[]);
     if(chips.length){
       const wrap=document.createElement('div'); wrap.className='chips';
@@ -310,6 +347,7 @@ function renderAnswer(payload){
     }
   }
 
+  // Debug dump
   dbgStruct.textContent=safeJSONString(payload.structured||{});
 }
 
@@ -333,7 +371,7 @@ async function sendQuery(query){
     dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
 
     closeTyping();
-    if (data && (data.answer_markdown !== undefined || data.structured)) {
+    if (data && (data.answer_markdown || data.structured)) {
       renderAnswer(data);
     } else {
       addBubble(`<div class="answer"><p>Sorry — I couldn't find anything for that.</p></div>`);
@@ -358,7 +396,7 @@ input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
 
-// Example starter (optional)
+// Example starter (optional): comment out if you don’t want a prefilled query
 // sendQuery("give me the next workshop dates and prices");
 </script>
 </body>
