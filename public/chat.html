@@ -1,285 +1,366 @@
-// /api/json/chat.js
-// RAG chat + server-side enrichment from Supabase page_entities.
-// Returns: { ok, answer, citations[], structured: { events[], products[] } }
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Alan Ranger Assistant</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
+  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
+  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
+  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
+  --user-bg:#e6edf7; --user-text:#0b0f16;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
+.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
+.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
+.pills{display:flex;gap:10px;margin:12px 0 4px}
+.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
-export const config = { runtime: 'nodejs' };
+.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
+.thread{display:flex;flex-direction:column;gap:12px}
+.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
+.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
+.fallback .pills{margin-top:10px}
+.answer h1,.answer h2,.answer h3{margin:.2em 0}
+.answer p{margin:.5em 0}
+.answer ul{margin:.4em 0 .6em 1.25em}
+.answer li{margin:.15em 0}
+.answer a{color:var(--link);text-decoration:underline}
+.answer a:hover{color:var(--link-hover)}
 
-import { createClient } from '@supabase/supabase-js';
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--brand);color:#0b0f16;text-decoration:none;font-weight:700}
+.chips a.is-secondary{background:var(--chip-bg);color:#cfe3ff}
 
-/* =========================
-   Utilities
-========================= */
-const need = (k) => {
-  const v = process.env[k];
-  if (!v || !String(v).trim()) throw new Error(`missing_env:${k}`);
-  return v;
-};
-const asString = (e) => {
-  if (!e) return '(unknown)';
-  if (typeof e === 'string') return e;
-  if (e.message) return e.message;
-  try { return JSON.stringify(e); } catch { return String(e); }
-};
+.composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
+.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
+.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
-const send = (res, status, body) => {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.status(status).send(JSON.stringify(body));
-};
+details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
+details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
+.kv label{color:#93A4C1}
+pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
 
-const dedupe = (arr) => Array.from(new Set(arr.filter(Boolean)));
+.typing{position:relative;display:inline-block}
+.typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
+.typing .dot:nth-child(2){animation-delay:.15s}
+.typing .dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
-const words = (s) =>
-  (s || '')
-    .toLowerCase()
-    .split(/[^a-z0-9]+/g)
-    .filter((w) => w.length >= 3);
+.small{color:#9eb2d3;font-size:12px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+  <div class="header">
+    <img class="logo" src="./chat%20white.png" alt="AR logo">
+    <h2 class="title">Alan Ranger Assistant</h2>
+    <p class="sub">I’m Alan’s AI assistant, trained on this website to help with workshops, tuition, and photography questions. If I can’t help, please contact Alan directly:</p>
+    <div class="pills">
+      <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+      <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+    </div>
+  </div>
 
-const siteOf = (u) => {
-  try { return new URL(u).origin; } catch { return ''; }
-};
+  <div class="chat">
+    <div id="thread" class="thread">
+      <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
+    </div>
 
-const samePageish = (a, b) => {
-  // Same origin and share at least first path segment
-  try {
-    const A = new URL(a), B = new URL(b);
-    if (A.origin !== B.origin) return false;
-    const aa = A.pathname.split('/').filter(Boolean);
-    const bb = B.pathname.split('/').filter(Boolean);
-    return aa[0] && bb[0] && aa[0] === bb[0];
-  } catch {
-    return false;
+    <details id="debugPanel" class="debug">
+      <summary>🔎 Show debug</summary>
+      <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
+      <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
+      <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
+      <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
+      <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
+    </details>
+
+    <div class="composer">
+      <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
+      <button id="send" class="send">Send</button>
+    </div>
+  </div>
+</div></div>
+
+<script>
+/* ===== Config / helpers ===== */
+const CHAT_ENDPOINT = '/api/chat';
+const HARDCODED = ''; // optionally place a token here for local testing
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
+
+function getToken(){
+  const qp = (urlParams.get('token')||'').trim();
+  if (HARDCODED) return HARDCODED;
+  if (qp) return qp;
+  try { return (localStorage.getItem('ingest_token')||'').trim(); } catch { return ''; }
+}
+
+const thread = document.getElementById('thread');
+const input  = document.getElementById('q');
+const sendBtn= document.getElementById('send');
+const dbgStatus   = document.getElementById('dbg-status');
+const dbgReq      = document.getElementById('dbg-req');
+const dbgRes      = document.getElementById('dbg-res');
+const dbgHeaders  = document.getElementById('dbg-headers');
+
+function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
+function maskToken(t){ if(!t) return ''; return t.length<=8 ? '••••' : t.slice(0,4)+'•••'+t.slice(-4); }
+function setDebug({status, req, res, headers}){
+  if (status !== undefined) dbgStatus.textContent = String(status);
+  if (req !== undefined) dbgReq.textContent = safeJSONString(req);
+  if (res !== undefined) dbgRes.textContent = safeJSONString(res);
+  if (headers !== undefined) {
+    const h = {...headers}; if (h.Authorization) h.Authorization = 'Bearer ' + maskToken((h.Authorization.split(' ')[1]||'')); 
+    dbgHeaders.textContent = safeJSONString(h);
   }
-};
+}
+const uniq = (arr) => Array.from(new Set((arr||[]).filter(Boolean)));
 
-function scoreTitleMatch(a, b) {
-  const ta = new Set(words(a));
-  const tb = new Set(words(b));
-  let s = 0;
-  for (const w of ta) if (tb.has(w)) s++;
-  return s;
+/* ===== UI helpers ===== */
+function addBubble(html, opts={}) {
+  const div = document.createElement('div');
+  div.className = 'bubble' + (opts.user ? ' user' : '');
+  div.innerHTML = html;
+  thread.appendChild(div);
+  div.scrollIntoView({behavior:'smooth', block:'end'});
+  return div;
+}
+function addTyping() {
+  const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
+  return () => el && el.remove();
 }
 
-/* =========================
-   OpenAI helpers
-========================= */
-
-async function openaiChat({ system, user }) {
-  const key = need('OPENAI_API_KEY');
-  const r = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      temperature: 0.1,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-    }),
-  });
-
-  const text = await r.text();
-  if (!r.ok) throw new Error(`openai_error:${r.status}:${text.slice(0, 400)}`);
-  let j; try { j = JSON.parse(text); } catch { throw new Error('openai_bad_json'); }
-  const out = j?.choices?.[0]?.message?.content || '';
-  return out.trim();
-}
-
-/* =========================
-   Retrieval (Supabase)
-========================= */
-function buildOrIlike(column, tokens) {
-  // returns e.g. content.ilike.%foo%,content.ilike.%bar%
-  return tokens.map((t) => `${column}.ilike.%${t}%`).join(',');
-}
-
-async function retrieveChunks(supa, query, limit = 12) {
-  // Simple FTS-ish OR search on content/title; stable without pgvector dependency.
-  const toks = dedupe(words(query));
-  if (!toks.length) return [];
-
-  const orExpr = buildOrIlike('content', toks) + ',' + buildOrIlike('title', toks);
-
-  const { data, error } = await supa
-    .from('page_chunks')
-    .select('url, title, content')
-    .or(orExpr)
-    .limit(limit);
-
-  if (error) throw error;
-  return data || [];
-}
-
-/* =========================
-   Structured enrichment
-========================= */
-
-async function fetchEntities(supa, query) {
-  const toks = dedupe(words(query));
-  if (!toks.length) return { events: [], products: [] };
-
-  // Build OR over title/description/url for both event and product
-  const orA =
-    buildOrIlike('title', toks) + ',' +
-    buildOrIlike('description', toks) + ',' +
-    buildOrIlike('url', toks) + ',' +
-    buildOrIlike('source_url', toks);
-
-  const { data, error } = await supa
-    .from('page_entities')
-    .select('kind, title, description, url, source_url, date_start, date_end, price, price_currency, availability')
-    .or(orA);
-
-  if (error) throw error;
-
-  const events = [];
-  const products = [];
-  for (const r of data || []) {
-    if (!r) continue;
-    if ((r.kind || '').toLowerCase() === 'event') events.push(r);
-    else if ((r.kind || '').toLowerCase() === 'product') products.push(r);
-  }
-
-  return { events, products };
-}
-
-function normalizeUrl(u) {
-  // Prefer source_url when it exists (often the canonical/booking page)
-  return u?.trim() || null;
-}
-
-function pickEventLink(e) {
-  // Choose the best link for an event
-  return normalizeUrl(e.source_url) || normalizeUrl(e.url);
-}
-
-function mapProducts(products) {
-  return products.map((p) => ({
-    title: p.title || null,
-    url: normalizeUrl(p.source_url) || normalizeUrl(p.url),
-    price: p.price ?? null,
-    currency: p.price_currency || null,
-    availability: p.availability || null,
-  }));
-}
-
-function attachPricesToEvents(events, products) {
-  // For each event, try to attach price from best matching product
-  const out = [];
-  for (const e of events) {
-    let link = pickEventLink(e);
-    let price = e.price ?? null;
-    let currency = e.price_currency || null;
-
-    // If no price on event, try to match a product by:
-    // 1) exact/same page-ish
-    // 2) title overlap
-    if (price == null) {
-      let best = null, bestScore = -1;
-      for (const p of products) {
-        const samePg = (link && (samePageish(link, p.source_url) || samePageish(link, p.url))) ? 2 : 0;
-        const score = samePg + scoreTitleMatch(e.title || '', p.title || '');
-        if (score > bestScore) { bestScore = score; best = p; }
-      }
-      if (best && (best.price != null)) {
-        price = best.price;
-        currency = best.price_currency || best.currency || currency || null;
-      }
+/* ===== very small MD renderer (bold/links/lists/paras) ===== */
+function mdToHtml(md){
+  if (!md) return { html:'', liIds:[], items:[] };
+  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  const lines = s.split(/\r?\n/);
+  let out = '', inList = false, liIds = [], items=[], idx=0;
+  const flush = ()=>{ if(inList){ out += '</ul>'; inList=false; } };
+  for (const line of lines){
+    const m = line.match(/^\s*-\s+(.*)$/);
+    if (m){
+      if(!inList){ out += '<ul>'; inList=true; }
+      const text = m[1].trim();
+      const id = `li_${++idx}`; liIds.push(id); items.push(text);
+      out += `<li id="${id}">${text}</li>`;
+    }else{
+      flush();
+      out += line.trim() ? `<p>${line}</p>` : '';
     }
-
-    out.push({
-      title: e.title || null,
-      url: link,
-      date_start: e.date_start || null,
-      date_end: e.date_end || null,
-      price,
-      currency,
-    });
   }
+  flush();
+  return { html:`<div class="answer">${out}</div>`, liIds, items };
+}
+
+/* ===== Link + pill helpers ===== */
+function bestUrlFor(text, urls){
+  const cands = uniq(urls);
+  if (!cands.length) return null;
+  const t = (text||'').toLowerCase();
+
+  // try: numeric day-of-month in URL (…-24, …-25, etc.)
+  const day = (t.match(/\b([12]?\d|3[01])\b/)||[])[1];
+  if (day){
+    const hit = cands.find(u => new RegExp(`[-/]${day}(?:[/\\-]|$)`).test(u));
+    if (hit) return hit;
+  }
+
+  // try: bluebell slug first
+  const blue = cands.find(u => /bluebell/i.test(u));
+  if (blue) return blue;
+
+  // fallback same hostname as first
+  try{
+    const host = new URL(cands[0]).host;
+    const same = cands.find(u => { try { return new URL(u).host === host; } catch { return false; } });
+    if (same) return same;
+  }catch{}
+  return cands[0];
+}
+function addChips(container, chips){
+  if (!chips.length) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'chips';
+  chips.forEach(({label, href, secondary})=>{
+    const a = document.createElement('a');
+    a.href = href; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = label;
+    if (secondary) a.classList.add('is-secondary');
+    wrap.appendChild(a);
+  });
+  container.appendChild(wrap);
+}
+
+/* ===== Build orange pills from context/citations ===== */
+function buildPills(struct, citations){
+  const out = [];
+
+  // Contextual quick actions
+  out.push({ label: 'Prices', href: 'https://www.alanranger.com/photography-workshops-near-me' });
+  out.push({ label: 'Upcoming dates', href: 'https://www.alanranger.com/photography-workshops-near-me' });
+  out.push({ label: 'Workshops overview', href: 'https://www.alanranger.com/photography-workshops-near-me' });
+
+  // Top two citations as secondary pills
+  uniq(citations).slice(0,2).forEach(u => out.push({ label: (u.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]||'Open'), href: u, secondary:true }));
+
   return out;
 }
 
-/* =========================
-   Handler
-========================= */
+/* ===== Structured block (events + products) ===== */
+function asGBP(p, c){ if(!p) return ''; const cur = (c||'').toUpperCase(); return cur==='GBP' || cur==='£' || !cur ? `£${p}` : `${p} ${cur}`; }
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return send(res, 405, { ok: false, error: 'method_not_allowed' });
+function renderStructured(holder, struct, citations){
+  if (!struct || (!struct.events && !struct.products)) return;
 
-  let stage = 'start';
-  try {
-    stage = 'auth';
-    const token = (req.headers['authorization'] || '').trim();
-    const needToken = process.env.INGEST_TOKEN;
-    if (needToken && token !== `Bearer ${needToken}`) {
-      return send(res, 401, { ok: false, error: 'unauthorized', stage });
+  const events = Array.isArray(struct.events) ? struct.events : [];
+  const products = Array.isArray(struct.products) ? struct.products : [];
+
+  // Map products by title to fish out half/full options when available
+  let half=null, full=null;
+  for (const p of products){
+    if (!p) continue;
+    const label = (p.title||'').toLowerCase();
+    const price = asGBP(p.price, p.price_currency);
+    if (!price) continue;
+    if (/full|day/.test(label)) full = full || price;
+    else if (/4\s*hour|half/.test(label)) half = half || price;
+    else if (!full) full = price; // single product
+  }
+
+  // Build events list (date + link)
+  const dateRows = [];
+  const eventLinks = uniq(citations);
+  for (const e of events){
+    const d0 = e.date_start || e.date || '';
+    const d = d0 ? (new Date(d0)).toDateString() : '';
+    const label = d ? d.replace(/^.*? (.*)$/,'$1') : (e.title || 'Date');
+    const link = bestUrlFor(label, [e.source_url, ...eventLinks].filter(Boolean));
+    dateRows.push({ label, link });
+  }
+
+  if (!dateRows.length && !half && !full) return;
+
+  const wrap = document.createElement('div');
+  let html = `<div class="small"><strong>Structured data</strong></div>`;
+
+  if (dateRows.length){
+    html += `<div style="margin-top:6px"><em>All available dates</em></div><ul>`;
+    for (const r of dateRows){
+      html += `<li>${r.label}${r.link ? ` <a href="${r.link}" target="_blank" rel="noopener">Link</a>`:''}</li>`;
     }
+    html += `</ul>`;
+  }
+  if (half || full){
+    html += `<div style="margin-top:6px"><em>Price options</em></div><ul>`;
+    if (half) html += `<li>4 hours: ${half}</li>`;
+    if (full) html += `<li>Full day: ${full}</li>`;
+    html += `</ul>`;
+  }
 
-    stage = 'parse';
-    const { query, topK = 8 } = req.body || {};
-    if (!query || typeof query !== 'string') return send(res, 400, { ok: false, error: 'Provide "query" string.' });
+  wrap.innerHTML = html;
+  holder.appendChild(wrap);
 
-    stage = 'db';
-    const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
+  // Orange pills
+  addChips(holder, buildPills(struct, citations));
+}
 
-    /* 1) Retrieve chunks (simple OR/ILIKE) */
-    stage = 'retrieve';
-    const rows = await retrieveChunks(supa, query, Math.max(6, Math.min(24, Number(topK) || 8)));
-    const citations = dedupe(rows.map((r) => r.url));
+/* ===== API ===== */
+async function callChat(question, topK=8){
+  const token = getToken();
+  const headers = { 'Content-Type':'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const body = { query: question, topK };
+  setDebug({status:'…', req: body, headers});
+  const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
+  const status = res.status;
+  let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
+  setDebug({status, res: json});
+  if(!res.ok) throw new Error('API error');
+  return json;
+}
 
-    const context = rows
-      .map((r, i) => `# Doc ${i + 1} — ${r.title || r.url}\n${r.content}`)
-      .join('\n\n');
+/* ===== Render ===== */
+function renderAnswer(payload, question){
+  if (!payload || payload.ok === false){
+    addBubble(fallbackBlock());
+    return;
+  }
+  const raw = payload.answer || payload.reply || payload.text || '';
+  const cites = uniq(payload.citations || payload.sources || []);
+  const { html, liIds, items } = mdToHtml(raw);
+  const holder = addBubble(html);
 
-    /* 2) Ask OpenAI with the retrieved context */
-    stage = 'answer';
-    const system =
-      'You are a helpful assistant grounded ONLY in the provided context. ' +
-      'Cite nothing yourself; the API will attach citations. If date/price not present in context, say it is not specified. ' +
-      'Be concise and structured for end users.';
-    const user =
-      `Question: ${query}\n\n` +
-      `Context (excerpts):\n` +
-      `${context || '(no context found)'}`;
+  // Linkify list bullets to best matching source
+  liIds.forEach((id,i)=>{
+    const el = holder.querySelector('#'+CSS.escape(id));
+    if (!el) return;
+    const best = bestUrlFor(items[i], cites);
+    if (best){
+      const a = document.createElement('a');
+      a.href = best; a.target='_blank'; a.rel='noopener';
+      a.textContent = ' Link'; a.style.marginLeft = '6px';
+      el.appendChild(a);
+    }
+  });
 
-    const answer = await openaiChat({ system, user });
+  // Show structured enrichment (dates + prices + pills)
+  renderStructured(holder, payload.structured||{}, cites);
 
-    /* 3) Structured enrichment from page_entities */
-    stage = 'entities';
-    const { events, products } = await fetchEntities(supa, query);
+  // If no bullets existed, still add pills
+  if (!liIds.length) addChips(holder, buildPills(payload.structured||{}, cites));
+}
 
-    // Map products (normalize)
-    const productsOut = mapProducts(products);
+/* ===== Fallback ===== */
+function fallbackBlock(){
+  return `
+    <div class="fallback">
+      <p>I don’t have a confident answer to that yet. I’m trained on Alan’s site, so I may miss things.</p>
+      <p>If you’d like to follow up, please reach out:</p>
+      <div class="pills">
+        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+      </div>
+    </div>`;
+}
 
-    // Attach prices to events when possible + choose best link
-    let eventsOut = attachPricesToEvents(events, products);
-
-    // Sort events by date_start if present
-    eventsOut = eventsOut.sort((a, b) => {
-      const da = a.date_start ? Date.parse(a.date_start) : Infinity;
-      const db = b.date_start ? Date.parse(b.date_start) : Infinity;
-      return da - db;
-    });
-
-    // Add event links to citations (so UI can show per-date links)
-    const eventUrls = dedupe(eventsOut.map((e) => e.url).filter(Boolean));
-    const finalCitations = dedupe([...(citations || []), ...eventUrls]);
-
-    /* 4) Done */
-    stage = 'done';
-    return send(res, 200, {
-      ok: true,
-      answer,
-      citations: finalCitations,
-      structured: {
-        events: eventsOut,
-        products: productsOut,
-      },
-    });
-  } catch (err) {
-    return send(res, 500, { ok: false, error: asString(err), stage });
+/* ===== Events ===== */
+async function handleSend(){
+  const q = input.value.trim();
+  if(!q) return;
+  addBubble(q.replace(/</g,'&lt;'), {user:true});
+  input.value = '';
+  const stopTyping = addTyping();
+  try{
+    const data = await callChat(q, 8);
+    stopTyping();
+    renderAnswer(data, q);
+  }catch{
+    stopTyping();
+    addBubble(fallbackBlock());
   }
 }
+sendBtn.addEventListener('click', handleSend);
+input.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
+});
+</script>
+</body>
+</html>
