@@ -1,408 +1,285 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Alan Ranger Assistant</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
-  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
-  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
-  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
-  --user-bg:#e6edf7; --user-text:#0b0f16;
-}
-*{box-sizing:border-box} html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
-.wrap{max-width:980px;margin:28px auto;padding:0 16px}
-.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
-.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
-.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
-.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
-.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
-.pills{display:flex;gap:10px;margin:12px 0 4px}
-.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
-.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
+// /api/json/chat.js
+// RAG chat + server-side enrichment from Supabase page_entities.
+// Returns: { ok, answer, citations[], structured: { events[], products[] } }
 
-.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
-.thread{display:flex;flex-direction:column;gap:12px}
-.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
-.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
-.answer h1,.answer h2,.answer h3{margin:.2em 0}
-.answer p{margin:.5em 0}
-.answer ul{margin:.4em 0 .6em 1.25em}
-.answer li{margin:.15em 0}
-.answer a{color:var(--link);text-decoration:underline}
-.answer a:hover{color:var(--link-hover)}
+export const config = { runtime: 'nodejs' };
 
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
-.chips a:hover{opacity:.9}
-.chips .act{background:var(--brand);color:#0b0f16;border-color:transparent;font-weight:700}
+import { createClient } from '@supabase/supabase-js';
 
-.composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
-.composer input::placeholder{color:var(--input-ph)}
-.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
-.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
+/* =========================
+   Utilities
+========================= */
+const need = (k) => {
+  const v = process.env[k];
+  if (!v || !String(v).trim()) throw new Error(`missing_env:${k}`);
+  return v;
+};
+const asString = (e) => {
+  if (!e) return '(unknown)';
+  if (typeof e === 'string') return e;
+  if (e.message) return e.message;
+  try { return JSON.stringify(e); } catch { return String(e); }
+};
 
-details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
-details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
-.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
-.kv label{color:#93A4C1}
-pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
+const send = (res, status, body) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.status(status).send(JSON.stringify(body));
+};
 
-.typing{position:relative;display:inline-block}
-.typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
-.typing .dot:nth-child(2){animation-delay:.15s}
-.typing .dot:nth-child(3){animation-delay:.3s}
-@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+const dedupe = (arr) => Array.from(new Set(arr.filter(Boolean)));
 
-@media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-<div class="wrap"><div class="card">
-  <div class="header">
-    <img class="logo" src="./chat%20white.png" alt="AR logo">
-    <h2 class="title">Alan Ranger Assistant</h2>
-    <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:</p>
-    <div class="pills">
-      <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-      <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
-    </div>
-  </div>
+const words = (s) =>
+  (s || '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/g)
+    .filter((w) => w.length >= 3);
 
-  <div class="chat">
-    <div id="thread" class="thread">
-      <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
-    </div>
+const siteOf = (u) => {
+  try { return new URL(u).origin; } catch { return ''; }
+};
 
-    <details id="debugPanel" class="debug">
-      <summary>🔎 Show debug</summary>
-      <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
-      <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
-      <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
-      <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
-      <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
-    </details>
-
-    <div class="composer">
-      <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
-      <button id="send" class="send">Send</button>
-    </div>
-  </div>
-</div></div>
-
-<script>
-/* ===== Config / helpers ===== */
-const CHAT_ENDPOINT = '/api/chat';
-const EXTRACT_ENDPOINT = '/api/extract';
-const CITATION_LIMIT = 10;                   // ↑ from 3 → 10
-const FORCED_EVENT_URLS = [
-  // Always check the Bluebell landing page for Events as a catch-all
-  'https://www.alanranger.com/bluebell-woods-near-me'
-];
-
-const urlParams = new URLSearchParams(location.search);
-if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
-
-const thread = document.getElementById('thread');
-const input  = document.getElementById('q');
-const sendBtn= document.getElementById('send');
-const dbgStatus   = document.getElementById('dbg-status');
-const dbgReq      = document.getElementById('dbg-req');
-const dbgRes      = document.getElementById('dbg-res');
-const dbgHeaders  = document.getElementById('dbg-headers');
-
-function safeJSONString(v){ try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
-function setDebug({status, req, res, headers}){
-  if (status !== undefined) dbgStatus.textContent = String(status);
-  if (req !== undefined) dbgReq.textContent = safeJSONString(req);
-  if (res !== undefined) dbgRes.textContent = safeJSONString(res);
-  if (headers !== undefined) dbgHeaders.textContent = safeJSONString(headers);
-}
-
-/* ===== UI helpers ===== */
-function addBubble(html, opts={}) {
-  const div = document.createElement('div');
-  div.className = 'bubble' + (opts.user ? ' user' : '');
-  div.innerHTML = html;
-  thread.appendChild(div);
-  div.scrollIntoView({behavior:'smooth', block:'end'});
-  return div;
-}
-function addTyping() {
-  const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
-  return () => el && el.remove();
-}
-
-/* ===== Mini Markdown renderer ===== */
-function mdToHtml(md){
-  if (!md) return { html:'', liIds:[], items:[] };
-  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
-  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>').replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
-  const lines = s.split(/\r?\n/);
-  let out = '', inList = false, liIds = [], items=[], idx=0;
-  const flush = ()=>{ if(inList){ out += '</ul>'; inList=false; } };
-  for (const line of lines){
-    const m = line.match(/^\s*-\s+(.*)$/);
-    if (m){
-      if(!inList){ out += '<ul>'; inList=true; }
-      const text = m[1].trim();
-      const id = `li_${++idx}`; liIds.push(id); items.push(text);
-      out += `<li id="${id}">${text}</li>`;
-    }else{
-      flush();
-      out += line.trim() ? `<p>${line}</p>` : '';
-    }
+const samePageish = (a, b) => {
+  // Same origin and share at least first path segment
+  try {
+    const A = new URL(a), B = new URL(b);
+    if (A.origin !== B.origin) return false;
+    const aa = A.pathname.split('/').filter(Boolean);
+    const bb = B.pathname.split('/').filter(Boolean);
+    return aa[0] && bb[0] && aa[0] === bb[0];
+  } catch {
+    return false;
   }
-  flush();
-  return { html:`<div class="answer">${out}</div>`, liIds, items };
+};
+
+function scoreTitleMatch(a, b) {
+  const ta = new Set(words(a));
+  const tb = new Set(words(b));
+  let s = 0;
+  for (const w of ta) if (tb.has(w)) s++;
+  return s;
 }
 
-/* ===== Utilities ===== */
-const unique = arr => Array.from(new Set(arr.filter(Boolean)));
-const fmtMoney = (n,c='GBP') => (n==null||n==='') ? '£TBD' : (c==='GBP'?'£':'') + String(n);
+/* =========================
+   OpenAI helpers
+========================= */
 
-/* Expand a date range to daily entries (inclusive) if per-day Events are missing */
-function expandRange(startISO, endISO){
-  const s = new Date(startISO), e = new Date(endISO);
-  if (!isFinite(s) || !isFinite(e) || e < s) return [];
+async function openaiChat({ system, user }) {
+  const key = need('OPENAI_API_KEY');
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      temperature: 0.1,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    }),
+  });
+
+  const text = await r.text();
+  if (!r.ok) throw new Error(`openai_error:${r.status}:${text.slice(0, 400)}`);
+  let j; try { j = JSON.parse(text); } catch { throw new Error('openai_bad_json'); }
+  const out = j?.choices?.[0]?.message?.content || '';
+  return out.trim();
+}
+
+/* =========================
+   Retrieval (Supabase)
+========================= */
+function buildOrIlike(column, tokens) {
+  // returns e.g. content.ilike.%foo%,content.ilike.%bar%
+  return tokens.map((t) => `${column}.ilike.%${t}%`).join(',');
+}
+
+async function retrieveChunks(supa, query, limit = 12) {
+  // Simple FTS-ish OR search on content/title; stable without pgvector dependency.
+  const toks = dedupe(words(query));
+  if (!toks.length) return [];
+
+  const orExpr = buildOrIlike('content', toks) + ',' + buildOrIlike('title', toks);
+
+  const { data, error } = await supa
+    .from('page_chunks')
+    .select('url, title, content')
+    .or(orExpr)
+    .limit(limit);
+
+  if (error) throw error;
+  return data || [];
+}
+
+/* =========================
+   Structured enrichment
+========================= */
+
+async function fetchEntities(supa, query) {
+  const toks = dedupe(words(query));
+  if (!toks.length) return { events: [], products: [] };
+
+  // Build OR over title/description/url for both event and product
+  const orA =
+    buildOrIlike('title', toks) + ',' +
+    buildOrIlike('description', toks) + ',' +
+    buildOrIlike('url', toks) + ',' +
+    buildOrIlike('source_url', toks);
+
+  const { data, error } = await supa
+    .from('page_entities')
+    .select('kind, title, description, url, source_url, date_start, date_end, price, price_currency, availability')
+    .or(orA);
+
+  if (error) throw error;
+
+  const events = [];
+  const products = [];
+  for (const r of data || []) {
+    if (!r) continue;
+    if ((r.kind || '').toLowerCase() === 'event') events.push(r);
+    else if ((r.kind || '').toLowerCase() === 'product') products.push(r);
+  }
+
+  return { events, products };
+}
+
+function normalizeUrl(u) {
+  // Prefer source_url when it exists (often the canonical/booking page)
+  return u?.trim() || null;
+}
+
+function pickEventLink(e) {
+  // Choose the best link for an event
+  return normalizeUrl(e.source_url) || normalizeUrl(e.url);
+}
+
+function mapProducts(products) {
+  return products.map((p) => ({
+    title: p.title || null,
+    url: normalizeUrl(p.source_url) || normalizeUrl(p.url),
+    price: p.price ?? null,
+    currency: p.price_currency || null,
+    availability: p.availability || null,
+  }));
+}
+
+function attachPricesToEvents(events, products) {
+  // For each event, try to attach price from best matching product
   const out = [];
-  for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)){
-    const iso = d.toISOString().slice(0,10);
-    out.push({ startDate: iso });
+  for (const e of events) {
+    let link = pickEventLink(e);
+    let price = e.price ?? null;
+    let currency = e.price_currency || null;
+
+    // If no price on event, try to match a product by:
+    // 1) exact/same page-ish
+    // 2) title overlap
+    if (price == null) {
+      let best = null, bestScore = -1;
+      for (const p of products) {
+        const samePg = (link && (samePageish(link, p.source_url) || samePageish(link, p.url))) ? 2 : 0;
+        const score = samePg + scoreTitleMatch(e.title || '', p.title || '');
+        if (score > bestScore) { bestScore = score; best = p; }
+      }
+      if (best && (best.price != null)) {
+        price = best.price;
+        currency = best.price_currency || best.currency || currency || null;
+      }
+    }
+
+    out.push({
+      title: e.title || null,
+      url: link,
+      date_start: e.date_start || null,
+      date_end: e.date_end || null,
+      price,
+      currency,
+    });
   }
   return out;
 }
 
-/* Derive price strings from products/offers */
-function pickPriceStrings(products=[]){
-  let half = null, full = null;
-  for (const p of products){
-    const offers = Array.isArray(p.offers)?p.offers:(p.offers?[p.offers]:[]);
-    for (const o of offers){
-      const name = (o.name||'').toLowerCase();
-      const label = name || (p.name||'').toLowerCase();
-      const price = o.price ?? p.price;
-      const curr  = o.priceCurrency || p.priceCurrency || 'GBP';
-      if (!half && (label.includes('4 hour') || label.includes('half'))) half = fmtMoney(price, curr);
-      if (!full && (label.includes('full') || label.includes('1 day') || label.includes('full day'))) full = fmtMoney(price, curr);
+/* =========================
+   Handler
+========================= */
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return send(res, 405, { ok: false, error: 'method_not_allowed' });
+
+  let stage = 'start';
+  try {
+    stage = 'auth';
+    const token = (req.headers['authorization'] || '').trim();
+    const needToken = process.env.INGEST_TOKEN;
+    if (needToken && token !== `Bearer ${needToken}`) {
+      return send(res, 401, { ok: false, error: 'unauthorized', stage });
     }
-  }
-  return { half, full };
-}
 
-/* Suggestion pills (orange actions + cited pages) */
-function inferChips(question, answer, citations){
-  const q = (question||'').toLowerCase();
-  const a = (answer||'').toLowerCase();
-  const chips = [];
+    stage = 'parse';
+    const { query, topK = 8 } = req.body || {};
+    if (!query || typeof query !== 'string') return send(res, 400, { ok: false, error: 'Provide "query" string.' });
 
-  const pushAct = (label, href) => chips.push({label, href, act:true});
-  const pushCite = (url) => {
-    const label = (url.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
-    chips.push({label: label.length>34 ? label.slice(0,31)+'…' : label, href:url});
-  };
+    stage = 'db';
+    const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
 
-  // Action pills
-  if (/price|cost|gbp|£|fee/.test(q+a))      pushAct('Prices','https://www.alanranger.com/photography-workshops-near-me');
-  if (/date|when|schedule|time|next/.test(q+a)) pushAct('Upcoming dates','https://www.alanranger.com/photography-workshops-near-me');
-  if (/workshop|course|class|tuition/.test(q+a)) pushAct('Workshops overview','https://www.alanranger.com/photography-workshops-near-me');
+    /* 1) Retrieve chunks (simple OR/ILIKE) */
+    stage = 'retrieve';
+    const rows = await retrieveChunks(supa, query, Math.max(6, Math.min(24, Number(topK) || 8)));
+    const citations = dedupe(rows.map((r) => r.url));
 
-  // Top citations
-  unique(citations).slice(0,4).forEach(pushCite);
-  return chips.slice(0,7);
-}
+    const context = rows
+      .map((r, i) => `# Doc ${i + 1} — ${r.title || r.url}\n${r.content}`)
+      .join('\n\n');
 
-function addChips(container, chips){
-  if (!chips.length) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'chips';
-  chips.forEach(({label, href, act})=>{
-    const a = document.createElement('a');
-    a.href = href; a.target = '_blank'; a.rel='noopener';
-    a.textContent = label;
-    if (act) a.classList.add('act');
-    wrap.appendChild(a);
-  });
-  container.appendChild(wrap);
-}
+    /* 2) Ask OpenAI with the retrieved context */
+    stage = 'answer';
+    const system =
+      'You are a helpful assistant grounded ONLY in the provided context. ' +
+      'Cite nothing yourself; the API will attach citations. If date/price not present in context, say it is not specified. ' +
+      'Be concise and structured for end users.';
+    const user =
+      `Question: ${query}\n\n` +
+      `Context (excerpts):\n` +
+      `${context || '(no context found)'}`;
 
-/* ===== API ===== */
-async function callChat(question, topK=8){
-  const headers = { 'Content-Type':'application/json', 'Authorization': 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76' };
-  const body = { query: question, topK };
-  setDebug({status:'…', req: body, headers});
-  const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers, body: JSON.stringify(body) });
-  const status = res.status;
-  let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
-  setDebug({status, res: json});
-  if(!res.ok) throw new Error('API error');
-  return json;
-}
+    const answer = await openaiChat({ system, user });
 
-async function callExtract(action, url){
-  const r = await fetch(`${EXTRACT_ENDPOINT}?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`);
-  const raw = await r.text().catch(()=> '');
-  try { return JSON.parse(raw); } catch { return { error:'non_json', raw: raw.slice(0,300) }; }
-}
+    /* 3) Structured enrichment from page_entities */
+    stage = 'entities';
+    const { events, products } = await fetchEntities(supa, query);
 
-/* Fetch structured data from multiple pages (citations + forced landing) */
-async function fetchStructured(citations){
-  const urls = unique([...(citations||[])].slice(0,CITATION_LIMIT).concat(FORCED_EVENT_URLS));
-  const results = await Promise.all(urls.map(async u=>{
-    const ev  = await callExtract('events-extract', u).catch(()=> ({}));
-    const prod= await callExtract('products-extract', u).catch(()=> ({}));
-    return { url:u, events: ev.events||[], products: prod.products||[] };
-  }));
+    // Map products (normalize)
+    const productsOut = mapProducts(products);
 
-  // Merge
-  const struct = { events:[], products:[], tried: urls };
-  for (const r of results){
-    for (const e of (r.events||[])){
-      const item = {
-        title: e.title||e.name||'',
-        startDate: e.startDate||e.date||null,
-        endDate: e.endDate||null,
-        url: e.url||e.source||r.url||null,
-        location: e.location||null
-      };
-      struct.events.push(item);
-    }
-    for (const p of (r.products||[])){
-      struct.products.push(p);
-    }
-  }
-  return struct;
-}
+    // Attach prices to events when possible + choose best link
+    let eventsOut = attachPricesToEvents(events, products);
 
-/* Expand/normalize events → per-day list with best links */
-function normalizeEvents(struct, fallbackUrl){
-  const out = [];
-  const byDay = new Map();
-
-  const add = (d, url, title) => {
-    if (!d) return;
-    const key = d.slice(0,10);
-    if (!byDay.has(key)) byDay.set(key, { date:key, url:(url||fallbackUrl||null), title:title||'' });
-  };
-
-  // Per-day events from schema
-  for (const e of struct.events){
-    if (e.startDate && !e.endDate){
-      add(e.startDate, e.url, e.title);
-    }else if (e.startDate && e.endDate){
-      // Date range → expand to daily bullets
-      for (const day of expandRange(e.startDate, e.endDate)){
-        add(day.startDate, e.url, e.title);
-      }
-    }
-  }
-
-  const days = Array.from(byDay.values()).sort((a,b)=> a.date.localeCompare(b.date));
-  return days;
-}
-
-/* ===== Structured block renderer ===== */
-function renderStructured(holder, question, citations, struct){
-  const wrap = document.createElement('div');
-  const bestLanding = citations[0] || FORCED_EVENT_URLS[0];
-
-  const { half, full } = pickPriceStrings(struct.products);
-  const perDay = normalizeEvents(struct, bestLanding);
-
-  let html = `<h3 style="margin:0 0 8px">Bluebell Woodland Workshop Details:</h3>`;
-  if (perDay.length){
-    const first = perDay[0].date, last = perDay[perDay.length-1].date;
-    html += `<p><strong>Dates:</strong> ${new Date(first).toLocaleDateString()} – ${new Date(last).toLocaleDateString()}</p>`;
-  }
-
-  html += `<ul>`;
-  if (half || full){
-    html += `<li><strong>Price:</strong> ${full? `${full} for a full day` : ''}${(full&&half)?' or ':''}${half? `${half} for a 4-hour session` : ''}.</li>`;
-  }else{
-    html += `<li><strong>Price:</strong> Not specified in the provided context.</li>`;
-  }
-  html += `</ul>`;
-
-  // Dates list with links (per-day)
-  if (perDay.length){
-    html += `<div style="margin-top:10px"><strong>Next Available Dates:</strong></div><ul>`;
-    perDay.slice(0,14).forEach(d=>{
-      const dlabel = new Date(d.date).toLocaleDateString(undefined,{weekday:'short', day:'2-digit', month:'short', year:'numeric'});
-      html += `<li>${dlabel} ${d.url?`<a href="${d.url}" target="_blank" rel="noopener">Link</a>`:''}</li>`;
+    // Sort events by date_start if present
+    eventsOut = eventsOut.sort((a, b) => {
+      const da = a.date_start ? Date.parse(a.date_start) : Infinity;
+      const db = b.date_start ? Date.parse(b.date_start) : Infinity;
+      return da - db;
     });
-    html += `</ul>`;
-  }
 
-  // Workshop schedule (static, but helpful)
-  html += `<div style="margin-top:10px"><strong>Workshop Schedule:</strong></div>
-  <ul>
-    <li>Sessions available:</li>
-    <li>4 hours: 5:45 am – 9:45 am or 10:30 am – 2:30 pm</li>
-    <li>Full day: 5:45 am – 2:30 pm</li>
-  </ul>`;
+    // Add event links to citations (so UI can show per-date links)
+    const eventUrls = dedupe(eventsOut.map((e) => e.url).filter(Boolean));
+    const finalCitations = dedupe([...(citations || []), ...eventUrls]);
 
-  wrap.innerHTML = html;
-  holder.appendChild(wrap);
-
-  // Orange action pills + top citations
-  addChips(holder, inferChips(question, '', citations));
-}
-
-/* ===== Render LLM + Structure ===== */
-function renderAnswer(payload, question){
-  const raw = payload.answer || payload.reply || payload.text || '';
-  const citations = unique(payload.citations || payload.sources || []);
-
-  const { html } = mdToHtml(raw);
-  const holder = addBubble(html);
-
-  // Fetch structured data from more pages and render enhanced block
-  fetchStructured(citations).then(struct=>{
-    renderStructured(holder, question, citations, struct);
-  }).catch(()=>{ /* ignore structured failures */ });
-}
-
-/* ===== Fallback ===== */
-function fallbackBlock(){
-  return `
-    <div class="answer">
-      <p>I don’t have a confident answer to that yet. I’m trained on Alan’s site, so I may miss things.</p>
-      <p>If you’d like to follow up, please reach out:</p>
-      <div class="pills">
-        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
-      </div>
-    </div>`;
-}
-
-/* ===== Events ===== */
-async function handleSend(){
-  const q = input.value.trim();
-  if(!q) return;
-  addBubble(q.replace(/</g,'&lt;'), {user:true});
-  input.value = '';
-  const stopTyping = addTyping();
-  try{
-    const data = await callChat(q, 8);
-    stopTyping();
-    if (!data || data.ok === false) addBubble(fallbackBlock()); else renderAnswer(data, q);
-  }catch{
-    stopTyping();
-    addBubble(fallbackBlock());
+    /* 4) Done */
+    stage = 'done';
+    return send(res, 200, {
+      ok: true,
+      answer,
+      citations: finalCitations,
+      structured: {
+        events: eventsOut,
+        products: productsOut,
+      },
+    });
+  } catch (err) {
+    return send(res, 500, { ok: false, error: asString(err), stage });
   }
 }
-sendBtn.addEventListener('click', handleSend);
-input.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
-});
-</script>
-</body>
-</html>
