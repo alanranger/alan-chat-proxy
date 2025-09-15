@@ -49,14 +49,14 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
-/* Debug panel */
+/* Debug */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
 details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
 
-/* Typing dots */
+/* Typing */
 .typing{position:relative;display:inline-block}
 .typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
 .typing .dot:nth-child(2){animation-delay:.15s}
@@ -102,7 +102,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <script>
 /* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
-const HARDCODED = ''; // leave blank to use ?token=… or localStorage token
+const HARDCODED = ''; // optional override
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
@@ -132,7 +132,6 @@ function setDebug({status, req, res, headers}){
     dbgHeaders.textContent = safeJSONString(h);
   }
 }
-
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
   div.className = 'bubble' + (opts.user ? ' user' : '');
@@ -157,34 +156,25 @@ const toGBP = (p, c) => {
   const sym = (cc === 'GBP' || cc === 'UKP' || cc === 'GB£') ? '£' : (cc + ' ');
   return sym + n.toFixed(0);
 };
-const parseDate = (s) => {
-  if (!s) return null;
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? null : d;
-};
+const parseDate = (s) => { if (!s) return null; const d = new Date(s); return isNaN(d.getTime()) ? null : d; };
 
+/* ===== URL scoring ===== */
 function bestUrlFrom(list, ...hints){
   const cand = asArray(list).filter(Boolean);
   if (!cand.length) return null;
   const scored = cand.map(u=>{
-    const L = u.toLowerCase();
-    let score = 0;
-    for (const h of hints){
-      if (!h) continue;
-      const t = h.toLowerCase();
-      if (L.includes(t)) score += 2;
-      for (const w of t.split(/[^\w]+/).filter(x=>x.length>3)){
-        if (L.includes(w)) score += 1;
-      }
+    const L = u.toLowerCase(); let score = 0;
+    for (const h of hints){ if (!h) continue;
+      const t = h.toLowerCase(); if (L.includes(t)) score += 2;
+      for (const w of t.split(/[^\w]+/).filter(x=>x.length>3)){ if (L.includes(w)) score += 1; }
     }
-    // prefer deeper URLs slightly (likely more specific)
-    score += Math.min(3, (u.split('/').length - 3));
+    score += Math.min(3, (u.split('/').length - 3)); // deeper looks more specific
     return {u, score};
   }).sort((a,b)=>b.score-a.score);
   return scored[0]?.u || cand[0];
 }
 
-/* ==== Extract structured (events/products/offers) from API payload ==== */
+/* ===== Extract structured from payload ===== */
 function extractStructured(payload){
   const cites = asArray(payload?.citations).filter(Boolean);
   const struct = payload?.structured || {};
@@ -198,8 +188,6 @@ function extractStructured(payload){
     price: e.price ?? null,
     price_currency: normStr(e.price_currency),
   }));
-
-  // products and their offers
   let productsRaw = asArray(struct.products);
   const products = productsRaw.map(p=>{
     const offers = asArray(p.offers || p.offer);
@@ -214,43 +202,30 @@ function extractStructured(payload){
         name: normStr(o.name || o.title || ''),
         price: o.price ?? null,
         price_currency: normStr(o.priceCurrency || o.price_currency),
-        url: normStr(o.url || o.source_url || p.url || p.source_url)
+        url: normStr(o.url || o.source_url || p.url || p.source_url),
+        description: normStr(o.description || '')
       }))
     };
   });
 
-  // If events missing URLs, try to borrow from citations/products
+  // populate missing event URLs from the best known page
   const hint = bestUrlFrom(
     [...events.map(e=>e.url), ...events.map(e=>e.source_url), ...products.map(p=>p.url || p.source_url), ...cites],
     'workshop', 'bluebell', 'photography'
   );
-  events = events.map(e=>{
-    if (e.url) return e;
-    return {...e, url: hint || e.source_url};
-  });
+  events = events.map(e=> (e.url ? e : {...e, url: hint || e.source_url}) );
 
   return { events, products, citations: cites };
 }
 
-/* ==== Price mining (wider tolerance) ==== */
+/* ===== Price detection (half/full/offers/generic) ===== */
 function minePrices({events, products}){
   let half=null, full=null, generic=[], currency='GBP';
-
-  // From events directly
   for (const e of events){
-    if (e.price != null){
-      const v = toGBP(e.price, e.price_currency); if (v) generic.push(v);
-      if (e.price_currency) currency = e.price_currency;
-    }
+    if (e.price != null){ const v = toGBP(e.price, e.price_currency); if (v && !generic.includes(v)) generic.push(v); if (e.price_currency) currency=e.price_currency; }
   }
-
-  // From products + offers
   for (const p of products){
-    if (p.price != null){
-      const v = toGBP(p.price, p.price_currency);
-      if (v && !generic.includes(v)) generic.push(v);
-      if (p.price_currency) currency = p.price_currency;
-    }
+    if (p.price != null){ const v = toGBP(p.price, p.price_currency); if (v && !generic.includes(v)) generic.push(v); if (p.price_currency) currency=p.price_currency; }
     for (const o of asArray(p.offers)){
       const label = (o.name || '').toLowerCase();
       const v = toGBP(o.price, o.price_currency);
@@ -259,62 +234,62 @@ function minePrices({events, products}){
       if (/(^|\b)(full|1 day|day|full day)(\b|$)/.test(label))       full = full || v;
       if (!half && /4:? ?(h|hr)/.test(label)) half = v;
       if (!full && /(full|1\s*day)/.test(label)) full = v;
-      if (!half && !full) {
-        // no label hints — keep as generic if not already
-        if (!generic.includes(v)) generic.push(v);
-      }
+      if (!half && !full && !generic.includes(v)) generic.push(v);
     }
   }
-
-  // De-dupe generic; if we found labeled prices, remove them from generic
   generic = generic.filter(v => v !== half && v !== full);
-
   return { half, full, generic, currency };
 }
 
-/* ==== Build orange + context pills ==== */
+/* ===== Time window extraction (from offer names/descriptions only) ===== */
+function timesFromOffers(products){
+  const re = /\b(?:[01]?\d|2[0-3]):?[0-5]\d\s?(?:am|pm)\b/gi; // 5:45 am, 10:30am etc
+  const windows = new Set();
+  for (const p of products){
+    for (const o of asArray(p.offers)){
+      const text = (o.name + ' ' + (o.description||'')).toLowerCase();
+      const hits = (text.match(re)||[]).map(s=>s.replace(/\s+/g,' ').replace(/am|pm/g,m=>' '+m));
+      if (hits.length >= 2){
+        // pair adjacent hits as ranges
+        for (let i=0;i<hits.length-1;i+=2){
+          windows.add(`${hits[i]} – ${hits[i+1]}`);
+        }
+      }
+    }
+  }
+  return Array.from(windows);
+}
+
+/* ===== Context pills ===== */
 function buildPills({events, products, citations}){
   const pills = [];
-  const pref = (label, urls, brand=false) => {
-    const u = bestUrlFrom(urls, 'workshop', 'prices', 'bluebell');
-    if (u) pills.push({label, href:u, brand});
-  };
-
   const productUrls = products.map(p=>p.url || p.source_url).filter(Boolean);
   const eventUrls   = events.map(e=>e.url || e.source_url).filter(Boolean);
   const allUrls     = [...eventUrls, ...productUrls, ...citations].filter(Boolean);
-
-  pref('Prices',            [...productUrls, ...allUrls], true);
-  pref('Upcoming dates',    [...eventUrls,   ...allUrls], true);
-  pref('Workshops overview',[...allUrls],                  true);
-
-  // a couple of useful related links (non-brand)
+  const push = (label, urls, brand=false) => {
+    const u = bestUrlFrom(urls, 'workshop','prices','bluebell');
+    if (u) pills.push({label, href:u, brand});
+  };
+  push('Prices',            [...productUrls, ...allUrls], true);
+  push('Upcoming dates',    [...eventUrls,   ...allUrls], true);
+  push('Workshops overview',[...allUrls],                  true);
   const bluebell = bestUrlFrom(allUrls, 'bluebell');
   if (bluebell) pills.push({label:'bluebell-woods-near-me', href:bluebell, brand:false});
-
-  // keep max 6, de-dupe
   const uniq = new Map();
-  for (const p of pills){
-    if (!uniq.has(p.href)) uniq.set(p.href, p);
-    if (uniq.size >= 6) break;
-  }
+  for (const p of pills){ if (!uniq.has(p.href)) uniq.set(p.href, p); if (uniq.size>=6) break; }
   return Array.from(uniq.values());
 }
 function addChips(holder, chips){
   if (!chips.length) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'chips';
-  chips.forEach(c=>{
-    const a = document.createElement('a');
-    a.href = c.href; a.target = '_blank'; a.rel='noopener';
-    a.className = c.brand ? 'brand' : '';
-    a.textContent = c.label;
-    wrap.appendChild(a);
-  });
+  const wrap = document.createElement('div'); wrap.className='chips';
+  for (const c of chips){
+    const a=document.createElement('a'); a.href=c.href; a.target='_blank'; a.rel='noopener';
+    a.className=c.brand?'brand':''; a.textContent=c.label; wrap.appendChild(a);
+  }
   holder.appendChild(wrap);
 }
 
-/* ==== Render a structured workshop answer ==== */
+/* ===== Structured render (no hard-coded times; no duplicates) ===== */
 function renderStructured(payload, question){
   const holder = addBubble('<div class="answer"></div>');
   const wrap = holder.querySelector('.answer');
@@ -322,23 +297,21 @@ function renderStructured(payload, question){
   const struct = extractStructured(payload);
   const { events, products, citations } = struct;
 
-  // Sort upcoming (today+)
+  // upcoming events
   const now = new Date(); now.setHours(0,0,0,0);
   const upcoming = events
     .map(e=>({ ...e, _start: parseDate(e.date_start) }))
     .filter(e=>e._start && e._start >= now)
     .sort((a,b)=>a._start - b._start);
 
-  // Find primary workshop/page link as fallback
   const primaryLink = bestUrlFrom(
     [...upcoming.map(e=>e.url), ...products.map(p=>p.url || p.source_url), ...citations],
-    'bluebell', 'workshop', 'photography'
+    'bluebell','workshop','photography'
   );
 
-  // Price mining (wider)
   const prices = minePrices(struct);
+  const slots  = timesFromOffers(products); // only if present in product offers
 
-  // Build
   let html = '';
   html += `<h3>Upcoming Bluebell Workshop Dates:</h3>`;
   if (upcoming.length){
@@ -346,19 +319,17 @@ function renderStructured(payload, question){
     for (const e of upcoming){
       const label = e._start.toLocaleDateString(undefined, { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
       const url = e.url || e.source_url || primaryLink || '#';
-      const safe = url ? `<a href="${url}" target="_blank" rel="noopener">Link</a>` : '';
-      html += `<li><strong>${label}</strong> ${safe}</li>`;
+      const link = url ? `<a href="${url}" target="_blank" rel="noopener">Link</a>` : '';
+      html += `<li><strong>${label}</strong> ${link}</li>`;
     }
     html += `</ul>`;
   } else {
     html += `<p>No dated sessions found in the structured data for this page.</p>`;
   }
 
-  // Location (first available)
   const loc = upcoming.find(e=>e.location)?.location || events.find(e=>e.location)?.location || '';
   if (loc) html += `<p><strong>Location:</strong> ${loc}</p>`;
 
-  // Prices (half/full/generic)
   if (prices.half || prices.full || prices.generic.length){
     html += `<p><strong>Price:</strong></p><ul>`;
     if (prices.half) html += `<li>4 hours: ${prices.half}</li>`;
@@ -366,26 +337,37 @@ function renderStructured(payload, question){
     for (const g of prices.generic) html += `<li>${g}</li>`;
     html += `</ul>`;
   } else {
-    html += `<p><strong>Price:</strong> ETBD (not found in structured data returned with this answer).</p>`;
+    html += `<p><strong>Price:</strong> ETBD (not present in structured data returned with this answer).</p>`;
   }
 
-  // Simple schedule/notes (static text – not hard-coding prices or links)
-  html += `<h4>Workshop Options:</h4><ul>
-    <li>4 hours: 5:45 am – 9:45 am or 10:30 am – 2:30 pm</li>
-    <li>1 day: 5:45 am – 2:30 pm (includes a 45 min break)</li>
-  </ul>`;
+  if (slots.length){
+    html += `<h4>Workshop Schedule</h4><ul>`;
+    for (const s of slots) html += `<li>${s}</li>`;
+    html += `</ul>`;
+  }
 
   if (primaryLink){
-    html += `<p>For details and booking, see <a href="${primaryLink}" target="_blank" rel="noopener">the workshop page</a>.</p>`;
+    html += `<p>For more information or to book, visit: <a href="${primaryLink}" target="_blank" rel="noopener">the workshop page</a>.</p>`;
   }
 
   wrap.innerHTML = html;
-
-  // Orange/context pills
   addChips(holder, buildPills(struct));
 }
 
-/* ===== API ===== */
+/* ===== Fallback ===== */
+function fallbackBlock(){
+  return `
+    <div class="answer">
+      <p>I don’t have a confident answer yet. Please visit Alan’s site for details:</p>
+      <div class="chips">
+        <a class="brand" target="_blank" rel="noopener" href="https://www.alanranger.com/photography-workshops-near-me">Workshops overview</a>
+        <a class="brand" target="_blank" rel="noopener" href="https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops">Bluebell workshop</a>
+        <a class="brand" target="_blank" rel="noopener" href="https://www.alanranger.com/photography-workshops-near-me#prices">Prices</a>
+      </div>
+    </div>`;
+}
+
+/* ===== API & orchestrator ===== */
 async function callChat(question, topK=8){
   const token = getToken();
   const headers = { 'Content-Type':'application/json' };
@@ -400,30 +382,13 @@ async function callChat(question, topK=8){
   return json;
 }
 
-/* ===== Fallback block ===== */
-function fallbackBlock(){
-  return `
-    <div class="answer">
-      <p>I don’t have a confident answer yet. Please visit Alan’s site for details:</p>
-      <div class="chips">
-        <a class="brand" target="_blank" rel="noopener" href="https://www.alanranger.com/photography-workshops-near-me">Workshops overview</a>
-        <a class="brand" target="_blank" rel="noopener" href="https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops">Bluebell workshop</a>
-        <a class="brand" target="_blank" rel="noopener" href="https://www.alanranger.com/photography-workshops-near-me#prices">Prices</a>
-      </div>
-    </div>`;
-}
-
-/* ===== Orchestrate answer render ===== */
 function renderAnswer(payload, question){
-  // Prefer structured render when we have events/products or citations
   const hasStructured = (payload?.structured && (asArray(payload.structured.events).length || asArray(payload.structured.products).length));
-  if (hasStructured || asArray(payload?.citations).length){
-    try { renderStructured(payload, question); return; } catch (e) { /* fall through */ }
-  }
+  if (hasStructured || asArray(payload?.citations).length){ try { renderStructured(payload, question); return; } catch {} }
   addBubble(fallbackBlock());
 }
 
-/* ===== Send handling ===== */
+/* ===== Send ===== */
 async function handleSend(){
   const q = input.value.trim();
   if(!q) return;
