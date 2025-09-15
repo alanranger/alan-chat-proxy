@@ -45,8 +45,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 /* Composer */
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
-.composer input::placeholder{color:#6b7280}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
@@ -56,6 +56,9 @@ details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
+.copy-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.copy-btn{background:#0b1422;border:1px solid #1b2540;color:#cfe3ff;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
+.copy-btn:hover{opacity:.9}
 
 /* Typing dots */
 .typing{position:relative;display:inline-block}
@@ -69,7 +72,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <span class="version">v0.9.11</span>
+  <span class="version">v0.9.12</span>
   <div class="card">
     <div class="header">
       <img class="logo" src="./chat%20white.png" alt="AR logo">
@@ -88,8 +91,10 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
       <details id="debugPanel" class="debug">
         <summary>🔎 Show debug</summary>
-        <button id="copyDebug" class="pill" style="margin-left:8px" onclick="copyAllDebug()">Copy all</button>
-
+        <div class="copy-row">
+          <button id="copyAll" class="copy-btn">Copy all</button>
+          <span id="copyNote" style="font-size:12px;color:#93A4C1"></span>
+        </div>
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
         <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
         <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
@@ -109,6 +114,8 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
 <script>
 const CHAT_ENDPOINT = '/api/chat';
+const OVERVIEW_URL = 'https://www.alanranger.com/photography-workshops-near-me';
+
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
@@ -122,6 +129,8 @@ const dbgRes    = document.getElementById('dbg-res');
 const dbgHeaders= document.getElementById('dbg-headers');
 const dbgStruct = document.getElementById('dbg-struct');
 const dbgProv   = document.getElementById('dbg-prov');
+const copyAllBtn= document.getElementById('copyAll');
+const copyNote  = document.getElementById('copyNote');
 
 function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
 
@@ -138,17 +147,10 @@ function addTyping() {
   return ()=> el && el.remove();
 }
 
-/* -------- Minimal markdown to HTML: bullets, bold, links -------- */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
-  // Escape HTML first
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  // Bold
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  // Markdown links [text](url) -> <a href="url">text</a>
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
-
-  // Lists + paragraphs
   const lines = s.split(/\r?\n/);
   let out='', inList=false, liIds=[], items=[], idx=0;
   const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
@@ -159,6 +161,9 @@ function mdToHtml(md){
       const text = m[1].trim();
       const id = `li_${++idx}`; liIds.push(id); items.push(text);
       out += `<li id="${id}">${text}</li>`;
+    } else if (/^#{1,6}\s+/.test(line)) {
+      flush();
+      out += `<h3>${line.replace(/^#{1,6}\s+/,'')}</h3>`;
     } else {
       flush();
       out += line.trim()? `<p>${line}</p>` : '';
@@ -168,51 +173,152 @@ function mdToHtml(md){
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-function buildChips(question, citations){
+function fmtDate(iso){
+  try{
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined,{weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+  }catch{ return iso; }
+}
+
+function extractKeyDetails(desc){
+  if(!desc) return [];
+  const lines = desc.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const picks = [];
+  const want = [/^4hrs/i,/^OR 1 day/i,/^1 day/i,/^Participants/i,/^Fitness/i,/^Location/i,/^Sessions/i];
+  for (const ln of lines){
+    if (want.some(rx=>rx.test(ln))) picks.push(ln.replace(/^:/,'').trim());
+  }
+  return picks;
+}
+
+function buildBrandChips(structured, citations){
   const chips = [];
-  const blue = (citations||[]).find(u=> /bluebell/i.test(u)) || citations?.[0];
+  const events = structured?.events || [];
+  const products = structured?.products || [];
+  const firstEventUrl = events[0]?.page_url || events[0]?.source_url || null;
+  const productUrl = products[0]?.page_url || products[0]?.url || null;
 
-  if (blue) chips.push({label:'bluebell-woods-near-me', href: blue, brand:true});
-  chips.push({label:'Prices', href: blue || 'https://www.alanranger.com/photography-workshops-near-me', brand:true});
-  chips.push({label:'Upcoming dates', href: blue || 'https://www.alanranger.com/photography-workshops-near-me', brand:true});
-  chips.push({label:'Workshops overview', href:'https://www.alanranger.com/photography-workshops-near-me', brand:false});
+  let landing = null;
+  // try structured canonicals first (if backend ever sets them)
+  landing = structured?.canonicals?.landing || landing;
+  // otherwise scan citations for a bluebell landing
+  landing = landing || (citations||[]).find(u=>/bluebell-woods/i.test(u));
+  // fallback to overview
+  landing = landing || OVERVIEW_URL;
 
+  chips.push({label:'bluebell-woods-near-me', href: landing, brand:true});
+  chips.push({label:'Prices', href: productUrl || OVERVIEW_URL, brand:true});
+  chips.push({label:'Upcoming dates', href: firstEventUrl || OVERVIEW_URL, brand:true});
+  chips.push({label:'Workshops overview', href: OVERVIEW_URL, brand:true});
+
+  // Add up to 2 raw citations as secondary (non-brand)
   (citations||[]).slice(0,2).forEach(u=>{
-    try {
-      const nice = u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ');
-      chips.push({label: nice.length>32?nice.slice(0,29)+'…':nice, href:u, brand:false});
-    } catch {}
+    const nice = u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ');
+    chips.push({label: nice.length>32?nice.slice(0,29)+'…':nice, href:u, brand:false});
   });
 
+  // De-dup
   const seen = new Set(); const out=[];
   for (const c of chips){
     const key = `${c.label}|${c.href}`;
-    if (!seen.has(key)){ out.push(c); seen.add(key); }
+    if (!seen.has(key) && c.href) { out.push(c); seen.add(key); }
   }
   return out.slice(0,6);
 }
 
-function renderAnswer(payload, question){
-  // IMPORTANT: use answer_markdown (field name from API)
-  const { html } = mdToHtml(payload.answer_markdown || payload.answer || '');
-  const holder = addBubble(html);
+function renderStructured(structured){
+  const holder = document.createElement('div');
+  holder.className = 'answer';
 
-  // Chips
-  const chips = buildChips(question, payload.citations || []);
-  if (chips.length){
-    const wrap = document.createElement('div');
-    wrap.className = 'chips';
-    chips.forEach(c=>{
-      const a = document.createElement('a');
-      a.href = c.href; a.target='_blank'; a.rel='noopener';
-      a.textContent = c.label;
-      if (c.brand) a.classList.add('brand');
-      wrap.appendChild(a);
-    });
-    holder.appendChild(wrap);
+  // EVENTS: future only, cap 10, dedupe by date+url
+  const now = new Date();
+  const future = (structured?.events||[])
+    .filter(e=>e?.date_start && new Date(e.date_start) >= now)
+    .sort((a,b)=> new Date(a.date_start) - new Date(b.date_start));
+
+  const deduped = [];
+  const seen = new Set();
+  for (const e of future){
+    const key = `${e.title}|${e.page_url||e.source_url}`;
+    if (!seen.has(key)){ deduped.push(e); seen.add(key); }
+    if (deduped.length>=10) break;
   }
 
-  // Debug
+  if (deduped.length){
+    const h = document.createElement('h3'); h.textContent = 'Upcoming Bluebell Workshops';
+    holder.appendChild(h);
+    const ul = document.createElement('ul');
+    deduped.forEach(e=>{
+      const li = document.createElement('li');
+      const when = fmtDate(e.date_start);
+      const a = document.createElement('a');
+      a.href = e.page_url || e.source_url; a.target='_blank'; a.rel='noopener'; a.textContent='Link';
+      li.innerHTML = `${when} — `;
+      li.appendChild(a);
+      li.insertAdjacentText('beforeend', ` — ${e.location || '—'}`);
+      ul.appendChild(li);
+    });
+    holder.appendChild(ul);
+  }
+
+  // PRODUCT: pick best (with price if possible)
+  const products = structured?.products||[];
+  let prod = products.find(p=>p.price!=null) || products[0];
+  if (prod){
+    const h = document.createElement('h3'); h.textContent = 'Workshop Options:';
+    holder.appendChild(h);
+    const p = document.createElement('p');
+    const priceText = (()=>{
+      if (prod.price!=null) return `£${String(prod.price).replace(/\.00$/,'')}`;
+      const low = prod.raw?.offers?.lowPrice; const high = prod.raw?.offers?.highPrice;
+      if (low!=null && high!=null) return `£${low} – £${high}`;
+      return 'See page for prices';
+    })();
+    p.innerHTML = `<strong>${prod.title}</strong> — ${priceText}`;
+    holder.appendChild(p);
+
+    const ul = document.createElement('ul');
+    const details = extractKeyDetails(prod.description || '');
+    details.forEach(t=>{ const li=document.createElement('li'); li.textContent=t; ul.appendChild(li); });
+    if (details.length) holder.appendChild(ul);
+
+    const a = document.createElement('a');
+    a.href = prod.page_url || prod.url; a.target='_blank'; a.rel='noopener'; a.textContent='Book Now';
+    holder.appendChild(document.createElement('p')).appendChild(a);
+  }
+
+  return holder;
+}
+
+function renderAnswer(payload, question){
+  // 1) Answer markdown (if any)
+  const md = payload.answer_markdown || payload.answer || '';
+  if (md){
+    const { html } = mdToHtml(md);
+    addBubble(html);
+  }
+
+  // 2) Structured rendering (dates + product)
+  if (payload.structured){
+    const block = renderStructured(payload.structured);
+    const holder = addBubble(block.outerHTML);
+    // 3) Chips
+    const chips = buildBrandChips(payload.structured, payload.citations || []);
+    if (chips.length){
+      const wrap = document.createElement('div');
+      wrap.className = 'chips';
+      chips.forEach(c=>{
+        const a = document.createElement('a');
+        a.href = c.href; a.target='_blank'; a.rel='noopener';
+        a.textContent = c.label;
+        if (c.brand) a.classList.add('brand');
+        wrap.appendChild(a);
+      });
+      holder.appendChild(wrap);
+    }
+  }
+
+  // Debug side
   dbgStruct.textContent = safeJSONString(payload.structured || {});
   const prov = [];
   prov.push('Citations:');
@@ -253,25 +359,33 @@ async function handleSend(){
 sendBtn.addEventListener('click', handleSend);
 input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }});
 
-/* -------- Debug: Copy-all helper -------- */
-function copyAllDebug(){
-  const get = id => (document.getElementById(id)?.textContent || '').trim();
-  const dump = [
-    `Endpoint: /api/chat`,
-    `Status: ${get('dbg-status')}`,
-    `Headers:\n${get('dbg-headers')}`,
-    `Request:\n${get('dbg-req')}`,
-    `Response:\n${get('dbg-res')}`,
-    `Structured:\n${get('dbg-struct') || '–'}`,
-    `Provenance (text):\n${get('dbg-prov') || '–'}`
-  ].join("\n\n");
-  navigator.clipboard.writeText(dump).then(()=>{
-    const b = document.getElementById('copyDebug');
-    if (!b) return;
-    const old = b.textContent; b.textContent = "Copied!";
-    setTimeout(()=> b.textContent = old, 1000);
-  });
-}
+// Copy-all debug
+copyAllBtn.addEventListener('click', async ()=>{
+  const parts = [
+    `Endpoint: ${CHAT_ENDPOINT}`,
+    `Status: ${dbgStatus.textContent}`,
+    `Headers:\n${dbgHeaders.textContent}`,
+    `Request:\n${dbgReq.textContent}`,
+    `Response:\n${dbgRes.textContent}`,
+    `Structured:\n${dbgStruct.textContent}`,
+    `Provenance (text):\n${dbgProv.textContent}`
+  ];
+  const blob = new Blob([parts.join('\n\n')], {type:'text/plain'});
+  try{
+    await navigator.clipboard.writeText(await blob.text());
+    copyNote.textContent = 'Copied!';
+    setTimeout(()=>copyNote.textContent='', 1500);
+  }catch{
+    // fallback: download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'debug.txt';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    copyNote.textContent = 'Saved debug.txt';
+    setTimeout(()=>copyNote.textContent='', 2000);
+  }
+});
 </script>
 </body>
 </html>
