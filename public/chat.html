@@ -30,6 +30,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .thread{display:flex;flex-direction:column;gap:12px}
 .bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
 .bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
+.fallback .pills{margin-top:10px}
 .answer h1,.answer h2,.answer h3{margin:.2em 0}
 .answer p{margin:.5em 0}
 .answer ul{margin:.4em 0 .6em 1.25em}
@@ -38,8 +39,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer a:hover{color:var(--link-hover)}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
-.chips a.brand{background:var(--brand);color:#0b0f16;border-color:#c66000}
+.chips a{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none}
 .chips a:hover{opacity:.9}
 
 /* Composer */
@@ -49,14 +49,14 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
-/* Debug */
+/* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
 details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
 
-/* Typing */
+/* Typing dots */
 .typing{position:relative;display:inline-block}
 .typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
 .typing .dot:nth-child(2){animation-delay:.15s}
@@ -64,6 +64,8 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
 @media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
+.badge{display:inline-block;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;margin-right:6px}
+.small{font-size:12px;color:#9eb2d3}
 </style>
 </head>
 <body>
@@ -90,10 +92,16 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
       <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
       <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
       <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
+
+      <!-- Provenance block -->
+      <div class="kv" id="prov-wrap" style="display:none">
+        <label>Provenance</label>
+        <div id="prov-body"></div>
+      </div>
     </details>
 
     <div class="composer">
-      <input id="q" placeholder="Ask a question… (Shift+Enter for newline)"/>
+      <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
       <button id="send" class="send">Send</button>
     </div>
   </div>
@@ -102,7 +110,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <script>
 /* ===== Config / helpers ===== */
 const CHAT_ENDPOINT = '/api/chat';
-const HARDCODED = ''; // optional override
+const HARDCODED = 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76'; // optional bearer
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
@@ -132,6 +140,8 @@ function setDebug({status, req, res, headers}){
     dbgHeaders.textContent = safeJSONString(h);
   }
 }
+
+/* ===== UI helpers ===== */
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
   div.className = 'bubble' + (opts.user ? ' user' : '');
@@ -145,229 +155,100 @@ function addTyping() {
   return () => el && el.remove();
 }
 
-/* ===== Normalisers ===== */
-const asArray = (v) => Array.isArray(v) ? v : (v ? [v] : []);
-const normStr = (s) => (s==null) ? '' : String(s).trim();
-const toGBP = (p, c) => {
-  if (p == null || p === '') return null;
-  let n = (typeof p === 'number') ? p : parseFloat(String(p).replace(/[^\d.]/g,''));
-  if (!isFinite(n)) return null;
-  const cc = (normStr(c) || 'GBP').toUpperCase();
-  const sym = (cc === 'GBP' || cc === 'UKP' || cc === 'GB£') ? '£' : (cc + ' ');
-  return sym + n.toFixed(0);
-};
-const parseDate = (s) => { if (!s) return null; const d = new Date(s); return isNaN(d.getTime()) ? null : d; };
-
-/* ===== URL scoring ===== */
-function bestUrlFrom(list, ...hints){
-  const cand = asArray(list).filter(Boolean);
-  if (!cand.length) return null;
-  const scored = cand.map(u=>{
-    const L = u.toLowerCase(); let score = 0;
-    for (const h of hints){ if (!h) continue;
-      const t = h.toLowerCase(); if (L.includes(t)) score += 2;
-      for (const w of t.split(/[^\w]+/).filter(x=>x.length>3)){ if (L.includes(w)) score += 1; }
+/* ===== Mini Markdown renderer (kept) ===== */
+function mdToHtml(md){
+  if (!md) return { html:'', liIds:[], items:[] };
+  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>').replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
+  const lines = s.split(/\r?\n/);
+  let out = '', inList = false, liIds = [], items=[], idx=0;
+  const flush = ()=>{ if(inList){ out += '</ul>'; inList=false; } };
+  for (const line of lines){
+    const m = line.match(/^\s*-\s+(.*)$/);
+    if (m){
+      if(!inList){ out += '<ul>'; inList=true; }
+      const text = m[1].trim();
+      const id = `li_${++idx}`; liIds.push(id); items.push(text);
+      out += `<li id="${id}">${text}</li>`;
+    }else{
+      flush();
+      out += line.trim() ? `<p>${line}</p>` : '';
     }
-    score += Math.min(3, (u.split('/').length - 3)); // deeper looks more specific
-    return {u, score};
-  }).sort((a,b)=>b.score-a.score);
-  return scored[0]?.u || cand[0];
+  }
+  flush();
+  return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ===== Extract structured from payload ===== */
-function extractStructured(payload){
-  const cites = asArray(payload?.citations).filter(Boolean);
-  const struct = payload?.structured || {};
-  let events = asArray(struct.events).map(e=>({
-    title: normStr(e.title),
-    url: normStr(e.url || e.source_url),
-    source_url: normStr(e.source_url || e.url),
-    date_start: normStr(e.date_start),
-    date_end: normStr(e.date_end),
-    location: normStr(e.location),
-    price: e.price ?? null,
-    price_currency: normStr(e.price_currency),
-  }));
-  let productsRaw = asArray(struct.products);
-  const products = productsRaw.map(p=>{
-    const offers = asArray(p.offers || p.offer);
-    return {
-      title: normStr(p.title || p.name),
-      url: normStr(p.url || p.source_url),
-      source_url: normStr(p.source_url || p.url),
-      price: p.price ?? null,
-      price_currency: normStr(p.price_currency || p.currency),
-      availability: normStr(p.availability),
-      offers: offers.map(o=>({
-        name: normStr(o.name || o.title || ''),
-        price: o.price ?? null,
-        price_currency: normStr(o.priceCurrency || o.price_currency),
-        url: normStr(o.url || o.source_url || p.url || p.source_url),
-        description: normStr(o.description || '')
-      }))
-    };
+/* ===== Bullet → best citation link (RESTORED) ===== */
+function bestUrlFor(text, urls){
+  if (!urls || !urls.length) return null;
+  const t = (text||'').toLowerCase();
+  const tokens = t.split(/[^a-z0-9]+/).filter(w=>w.length>2);
+  let best = null, bestScore = -1;
+  for (const u of urls){
+    const low = u.toLowerCase();
+    const slug = (u.split('/').pop()||'').toLowerCase();
+    let score = 0;
+    for (const k of tokens){
+      if (slug.includes(k)) score += 2;
+      if (low.includes(k))  score += 1;
+    }
+    if (score > bestScore){ bestScore = score; best = u; }
+  }
+  return best;
+}
+function addLinksToBullets(container, liIds, items, citations){
+  liIds.forEach((id, i)=>{
+    const li = container.querySelector('#'+CSS.escape(id));
+    if (!li) return;
+    const best = bestUrlFor(items[i]||'', citations);
+    if (!best) return;
+    const a = document.createElement('a');
+    a.href = best; a.target='_blank'; a.rel='noopener';
+    a.textContent = ' Link'; a.style.marginLeft = '6px';
+    li.appendChild(a);
   });
-
-  // populate missing event URLs from the best known page
-  const hint = bestUrlFrom(
-    [...events.map(e=>e.url), ...events.map(e=>e.source_url), ...products.map(p=>p.url || p.source_url), ...cites],
-    'workshop', 'bluebell', 'photography'
-  );
-  events = events.map(e=> (e.url ? e : {...e, url: hint || e.source_url}) );
-
-  return { events, products, citations: cites };
 }
 
-/* ===== Price detection (half/full/offers/generic) ===== */
-function minePrices({events, products}){
-  let half=null, full=null, generic=[], currency='GBP';
-  for (const e of events){
-    if (e.price != null){ const v = toGBP(e.price, e.price_currency); if (v && !generic.includes(v)) generic.push(v); if (e.price_currency) currency=e.price_currency; }
+/* ===== Chips (context-aware) ===== */
+function unique(arr){ return Array.from(new Set(arr.filter(Boolean))); }
+function inferChips(question, answer, citations){
+  const q = (question||'').toLowerCase();
+  const a = (answer||'').toLowerCase();
+  const chips = [];
+  const push = (label, href) => chips.push({label, href});
+
+  unique(citations).slice(0,2).forEach(u=>{
+    const label = (u.replace(/^https?:\/\//,'').replace(/www\./,'').split('/').slice(1).join(' / ')||'Open');
+    push(label.length>32?label.slice(0,29)+'…':label, u);
+  });
+  if (/price|cost|£|\bgbp\b|fee/.test(q+a)) push('Prices','https://www.alanranger.com/photography-workshops-near-me');
+  if (/date|when|schedule|start/.test(q+a)) push('Upcoming dates','https://www.alanranger.com/photography-workshops-near-me');
+  if (/workshop|course|class|tuition|lesson/.test(q+a)) {
+    push('Workshops overview','https://www.alanranger.com/photography-workshops-near-me');
+    push('Tuition & coaching','https://www.alanranger.com/photography-lessons-online-121');
   }
-  for (const p of products){
-    if (p.price != null){ const v = toGBP(p.price, p.price_currency); if (v && !generic.includes(v)) generic.push(v); if (p.price_currency) currency=p.price_currency; }
-    for (const o of asArray(p.offers)){
-      const label = (o.name || '').toLowerCase();
-      const v = toGBP(o.price, o.price_currency);
-      if (!v) continue;
-      if (/(^|\b)(half|4h|4-hour|4 hours|4hr|half day)(\b|$)/.test(label)) half = half || v;
-      if (/(^|\b)(full|1 day|day|full day)(\b|$)/.test(label))       full = full || v;
-      if (!half && /4:? ?(h|hr)/.test(label)) half = v;
-      if (!full && /(full|1\s*day)/.test(label)) full = v;
-      if (!half && !full && !generic.includes(v)) generic.push(v);
-    }
-  }
-  generic = generic.filter(v => v !== half && v !== full);
-  return { half, full, generic, currency };
+  return unique(chips.map(c=>JSON.stringify(c))).slice(0,6).map(s=>JSON.parse(s));
 }
-
-/* ===== Time window extraction (from offer names/descriptions only) ===== */
-function timesFromOffers(products){
-  const re = /\b(?:[01]?\d|2[0-3]):?[0-5]\d\s?(?:am|pm)\b/gi; // 5:45 am, 10:30am etc
-  const windows = new Set();
-  for (const p of products){
-    for (const o of asArray(p.offers)){
-      const text = (o.name + ' ' + (o.description||'')).toLowerCase();
-      const hits = (text.match(re)||[]).map(s=>s.replace(/\s+/g,' ').replace(/am|pm/g,m=>' '+m));
-      if (hits.length >= 2){
-        // pair adjacent hits as ranges
-        for (let i=0;i<hits.length-1;i+=2){
-          windows.add(`${hits[i]} – ${hits[i+1]}`);
-        }
-      }
-    }
-  }
-  return Array.from(windows);
-}
-
-/* ===== Context pills ===== */
-function buildPills({events, products, citations}){
-  const pills = [];
-  const productUrls = products.map(p=>p.url || p.source_url).filter(Boolean);
-  const eventUrls   = events.map(e=>e.url || e.source_url).filter(Boolean);
-  const allUrls     = [...eventUrls, ...productUrls, ...citations].filter(Boolean);
-  const push = (label, urls, brand=false) => {
-    const u = bestUrlFrom(urls, 'workshop','prices','bluebell');
-    if (u) pills.push({label, href:u, brand});
-  };
-  push('Prices',            [...productUrls, ...allUrls], true);
-  push('Upcoming dates',    [...eventUrls,   ...allUrls], true);
-  push('Workshops overview',[...allUrls],                  true);
-  const bluebell = bestUrlFrom(allUrls, 'bluebell');
-  if (bluebell) pills.push({label:'bluebell-woods-near-me', href:bluebell, brand:false});
-  const uniq = new Map();
-  for (const p of pills){ if (!uniq.has(p.href)) uniq.set(p.href, p); if (uniq.size>=6) break; }
-  return Array.from(uniq.values());
-}
-function addChips(holder, chips){
+function addChips(container, chips){
   if (!chips.length) return;
-  const wrap = document.createElement('div'); wrap.className='chips';
-  for (const c of chips){
-    const a=document.createElement('a'); a.href=c.href; a.target='_blank'; a.rel='noopener';
-    a.className=c.brand?'brand':''; a.textContent=c.label; wrap.appendChild(a);
-  }
-  holder.appendChild(wrap);
+  const wrap = document.createElement('div');
+  wrap.className = 'chips';
+  chips.forEach(({label, href})=>{
+    const a = document.createElement('a');
+    a.href = href; a.target='_blank'; a.rel='noopener';
+    a.textContent = label;
+    // orange emphasis
+    a.style.background = 'var(--brand)';
+    a.style.color = '#0b0f16';
+    wrap.appendChild(a);
+  });
+  container.appendChild(wrap);
 }
 
-/* ===== Structured render (no hard-coded times; no duplicates) ===== */
-function renderStructured(payload, question){
-  const holder = addBubble('<div class="answer"></div>');
-  const wrap = holder.querySelector('.answer');
-
-  const struct = extractStructured(payload);
-  const { events, products, citations } = struct;
-
-  // upcoming events
-  const now = new Date(); now.setHours(0,0,0,0);
-  const upcoming = events
-    .map(e=>({ ...e, _start: parseDate(e.date_start) }))
-    .filter(e=>e._start && e._start >= now)
-    .sort((a,b)=>a._start - b._start);
-
-  const primaryLink = bestUrlFrom(
-    [...upcoming.map(e=>e.url), ...products.map(p=>p.url || p.source_url), ...citations],
-    'bluebell','workshop','photography'
-  );
-
-  const prices = minePrices(struct);
-  const slots  = timesFromOffers(products); // only if present in product offers
-
-  let html = '';
-  html += `<h3>Upcoming Bluebell Workshop Dates:</h3>`;
-  if (upcoming.length){
-    html += `<ul>`;
-    for (const e of upcoming){
-      const label = e._start.toLocaleDateString(undefined, { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
-      const url = e.url || e.source_url || primaryLink || '#';
-      const link = url ? `<a href="${url}" target="_blank" rel="noopener">Link</a>` : '';
-      html += `<li><strong>${label}</strong> ${link}</li>`;
-    }
-    html += `</ul>`;
-  } else {
-    html += `<p>No dated sessions found in the structured data for this page.</p>`;
-  }
-
-  const loc = upcoming.find(e=>e.location)?.location || events.find(e=>e.location)?.location || '';
-  if (loc) html += `<p><strong>Location:</strong> ${loc}</p>`;
-
-  if (prices.half || prices.full || prices.generic.length){
-    html += `<p><strong>Price:</strong></p><ul>`;
-    if (prices.half) html += `<li>4 hours: ${prices.half}</li>`;
-    if (prices.full) html += `<li>Full day: ${prices.full}</li>`;
-    for (const g of prices.generic) html += `<li>${g}</li>`;
-    html += `</ul>`;
-  } else {
-    html += `<p><strong>Price:</strong> ETBD (not present in structured data returned with this answer).</p>`;
-  }
-
-  if (slots.length){
-    html += `<h4>Workshop Schedule</h4><ul>`;
-    for (const s of slots) html += `<li>${s}</li>`;
-    html += `</ul>`;
-  }
-
-  if (primaryLink){
-    html += `<p>For more information or to book, visit: <a href="${primaryLink}" target="_blank" rel="noopener">the workshop page</a>.</p>`;
-  }
-
-  wrap.innerHTML = html;
-  addChips(holder, buildPills(struct));
-}
-
-/* ===== Fallback ===== */
-function fallbackBlock(){
-  return `
-    <div class="answer">
-      <p>I don’t have a confident answer yet. Please visit Alan’s site for details:</p>
-      <div class="chips">
-        <a class="brand" target="_blank" rel="noopener" href="https://www.alanranger.com/photography-workshops-near-me">Workshops overview</a>
-        <a class="brand" target="_blank" rel="noopener" href="https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops">Bluebell workshop</a>
-        <a class="brand" target="_blank" rel="noopener" href="https://www.alanranger.com/photography-workshops-near-me#prices">Prices</a>
-      </div>
-    </div>`;
-}
-
-/* ===== API & orchestrator ===== */
+/* ===== API ===== */
 async function callChat(question, topK=8){
   const token = getToken();
   const headers = { 'Content-Type':'application/json' };
@@ -378,17 +259,128 @@ async function callChat(question, topK=8){
   const status = res.status;
   let json; try { json = await res.json(); } catch { json = { error:'non_json', status }; }
   setDebug({status, res: json});
+  try { renderProvenance(json); } catch {}
   if(!res.ok) throw new Error('API error');
   return json;
 }
 
-function renderAnswer(payload, question){
-  const hasStructured = (payload?.structured && (asArray(payload.structured.events).length || asArray(payload.structured.products).length));
-  if (hasStructured || asArray(payload?.citations).length){ try { renderStructured(payload, question); return; } catch {} }
-  addBubble(fallbackBlock());
+/* ===== Provenance (NEW) ===== */
+function renderProvenance(payload){
+  const provWrap = document.getElementById('prov-wrap');
+  const provBody = document.getElementById('prov-body');
+  provBody.innerHTML = '';
+  let printed = false;
+
+  const sd = payload.structured_debug || {};
+  const tried = sd.tried || payload.structured?.tried || [];
+  if (tried && tried.length){
+    const h = document.createElement('div');
+    h.innerHTML = `<div class="badge">Tried</div>` + tried.map(u=>`<a href="${u}" target="_blank" rel="noopener">${u}</a>`).join('<br>');
+    provBody.appendChild(h);
+    printed = true;
+  }
+
+  const eventsFrom = sd.events_from || (payload.structured?.events || []).map(e => ({
+    title: e.title, date_start: e.date_start, date_end: e.date_end, url: e.source_url || e.url || e.page_url
+  }));
+  const productsFrom = sd.products_from || (payload.structured?.products || []).map(p => ({
+    title: p.title, price: p.price, price_currency: p.price_currency, url: p.source_url || p.url || p.page_url
+  }));
+
+  if (eventsFrom && eventsFrom.length){
+    const ev = document.createElement('div');
+    ev.style.marginTop = '8px';
+    ev.innerHTML = `<div class="badge">Events</div>` + eventsFrom.map(e=>{
+      const ds = e.date_start || '—', de = e.date_end ? ` → ${e.date_end}` : '';
+      const t = (e.title || '').replace(/</g,'&lt;');
+      const link = e.url ? ` &nbsp; <a href="${e.url}" target="_blank" rel="noopener">${e.url}</a>` : '';
+      return `<div>• ${ds}${de} — <strong>${t}</strong>${link}</div>`;
+    }).join('');
+    provBody.appendChild(ev);
+    printed = true;
+  }
+  if (productsFrom && productsFrom.length){
+    const pr = document.createElement('div');
+    pr.style.marginTop = '8px';
+    pr.innerHTML = `<div class="badge">Products</div>` + productsFrom.map(p=>{
+      const price = p.price ? `${p.price} ${p.price_currency || ''}`.trim() : '—';
+      const t = (p.title || '').replace(/</g,'&lt;');
+      const link = p.url ? ` &nbsp; <a href="${p.url}" target="_blank" rel="noopener">${p.url}</a>` : '';
+      return `<div>• £/Price: <strong>${price}</strong> — ${t}${link}</div>`;
+    }).join('');
+    provBody.appendChild(pr);
+    printed = true;
+  }
+  provWrap.style.display = printed ? '' : 'none';
 }
 
-/* ===== Send ===== */
+/* ===== Structured data renderer (optional visualisation) ===== */
+function renderStructuredInto(holder, structured){
+  if (!structured) return;
+  const hasE = Array.isArray(structured.events) && structured.events.length;
+  const hasP = Array.isArray(structured.products) && structured.products.length;
+  if (!hasE && !hasP) return;
+
+  const box = document.createElement('div');
+  box.className = 'small';
+  box.style.marginTop = '10px';
+  let html = '<div><strong>Structured data</strong></div>';
+
+  if (hasE){
+    html += '<div style="margin-top:6px"><em>Events</em></div><ul>';
+    structured.events.forEach(e=>{
+      const ds = e.date_start || '';
+      const de = e.date_end ? ` → ${e.date_end}` : '';
+      const url = e.source_url || e.url || e.page_url;
+      html += `<li>${ds}${de}${url?` — <a href="${url}" target="_blank" rel="noopener">Open</a>`:''}</li>`;
+    });
+    html += '</ul>';
+  }
+  if (hasP){
+    html += '<div style="margin-top:6px"><em>Products</em></div><ul>';
+    structured.products.forEach(p=>{
+      const price = p.price ? `${p.price} ${p.price_currency||''}`.trim() : '—';
+      const url = p.source_url || p.url || p.page_url;
+      html += `<li>£/Price: ${price}${url?` — <a href="${url}" target="_blank" rel="noopener">Open</a>`:''}</li>`;
+    });
+    html += '</ul>';
+  }
+  box.innerHTML = html;
+  holder.appendChild(box);
+}
+
+/* ===== Render ===== */
+function renderAnswer(payload, question){
+  if (!payload || payload.ok === false){ addBubble(fallbackBlock()); return; }
+  const raw = payload.answer || payload.reply || payload.text || '';
+  const cites = unique(payload.citations || payload.sources || []);
+  const { html, liIds, items } = mdToHtml(raw);
+  const holder = addBubble(html);
+
+  // Restore bullet → best-link heuristic
+  try { addLinksToBullets(holder, liIds, items, cites); } catch {}
+
+  // Context-aware pills
+  addChips(holder, inferChips(question, raw, cites));
+
+  // Optional: visualise structured events/products when present
+  try { renderStructuredInto(holder, payload.structured); } catch {}
+}
+
+/* ===== Fallback ===== */
+function fallbackBlock(){
+  return `
+    <div class="fallback">
+      <p>I don’t have a confident answer to that yet. I’m trained on Alan’s site, so I may miss things.</p>
+      <p>If you’d like to follow up, please reach out:</p>
+      <div class="pills">
+        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+      </div>
+    </div>`;
+}
+
+/* ===== Events ===== */
 async function handleSend(){
   const q = input.value.trim();
   if(!q) return;
