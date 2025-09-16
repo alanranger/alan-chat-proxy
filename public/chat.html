@@ -45,8 +45,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 /* Composer */
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
-.composer input::placeholder{color:#6b7280}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
@@ -70,7 +70,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <body>
 <div class="wrap">
   <!-- Keeps the badge under the orange rule -->
-  <div class="badge-wrap"><span class="version">v0.9.17</span></div>
+  <div class="badge-wrap"><span class="version">v0.9.18</span></div>
 
   <div class="card">
     <div class="header">
@@ -189,7 +189,7 @@ function uniqueByHref(arr){
   const seen=new Set(); return arr.filter(x=>{ if(!x.href) return false; const k=x.href; if(seen.has(k)) return false; seen.add(k); return true; });
 }
 
-/* ---------------- Product merging & parsing (robust) ---------------- */
+/* ---------------- Product merging & parsing ---------------- */
 function mergeProducts(list){
   if(!Array.isArray(list) || !list.length) return [];
   const map = new Map();
@@ -212,7 +212,6 @@ function mergeProducts(list){
   return [...map.values()];
 }
 
-/* Clean description, remove date-like lines and keep array of lines */
 function cleanDescToLines(desc){
   const lines = String(desc||'').split(/\r?\n/);
   const out = [];
@@ -224,8 +223,6 @@ function cleanDescToLines(desc){
   }
   return out;
 }
-
-/* Grab label value; if empty inline, look ahead to next non-empty line */
 function grabLabel(lines, label){
   const labRe = new RegExp(`^\\s*${label}\\s*:?\\s*(.*)$`,'i');
   const isOtherLabel = (s)=>/^\s*(Location|Participants|Fitness|Availability)\s*:?\s*$/i.test(s);
@@ -246,7 +243,6 @@ function grabLabel(lines, label){
   }
   return null;
 }
-
 function extractFacts(prod){
   const lines = cleanDescToLines(prod?.description||'');
   const location     = grabLabel(lines,'Location');
@@ -276,7 +272,6 @@ function extractFacts(prod){
 
   return { location, participants, fitness, availability, optionLines, meta };
 }
-
 function currency(amount, ccy){
   if(amount==null || amount==='') return null;
   const n = Number(amount); if(!isFinite(n)) return null;
@@ -321,65 +316,51 @@ function deriveOptions(prod, facts){
   return opts;
 }
 
-/* --------- Pill URL derivation (no hard-coding to bluebells) --------- */
+/* --------- Pill URL derivation (client fallback only) --------- */
 function findWorkshopsIndexUrl(productUrl, eventUrl){
   const u = tryUrl(productUrl) || tryUrl(eventUrl);
   if(!u) return null;
   const segs = u.pathname.split('/').filter(Boolean);
-  // find the first segment that mentions "workshop"
   const idx = segs.findIndex(s => /workshop/i.test(s));
   if (idx >= 0){
     const rootPath = '/' + segs.slice(0, idx+1).join('/') + '/';
     return u.origin + rootPath;
   }
-  // otherwise use the parent directory of the product/event page
   const base = u.pathname.endsWith('/') ? u.pathname.slice(0,-1) : u.pathname;
   const parent = base.substring(0, base.lastIndexOf('/')+1);
   return u.origin + (parent || '/');
 }
-
 function findPhotosUrl(payload, topic, productUrl, eventUrl){
   const base = tryUrl(productUrl) || tryUrl(eventUrl);
   if(!base) return null;
   const origin = base.origin;
-
-  // 1) Try citations that look like galleries on same origin
-  const cits = Array.isArray(payload?.citations) ? payload.citations : [];
-  const gallery = cits.find(href => {
-    try{
-      const cu = new URL(href);
-      return cu.origin === origin && /gallery|fine-?art|portfolio/i.test(cu.pathname);
-    }catch{ return false; }
-  });
-  if (gallery) return gallery;
-
-  // 2) Fallback to site search for topic
-  const q = encodeURIComponent((topic||'').toString().trim() || 'photography');
+  const q = encodeURIComponent((topic||'gallery') || 'gallery');
   return `${origin}/search?query=${q}`;
 }
 
-/* Chips from payload (render once, at the end) */
+/* Prefer backend-provided pills; else build fallback */
 function buildActionPills(payload, structured, prod){
-  const chips=[];
+  if (Array.isArray(structured?.pills) && structured.pills.length){
+    // server-provided: render as-is
+    return structured.pills
+      .map(p => ({ label: String(p.label||'').trim(), href: String(p.url||'').trim() }))
+      .filter(p => p.label && p.href);
+  }
 
+  // Fallback (client-side derivation)
+  const chips=[];
   const productUrl = prod?.url || prod?.page_url || prod?.source_url || structured?.products?.[0]?.url || null;
   const eventUrl   = (structured?.events?.[0]?.page_url || structured?.events?.[0]?.source_url) || null;
 
-  // Book Now (product)
   if(productUrl) chips.push({label:'Book Now', href:productUrl});
+  if(eventUrl)   chips.push({label:'Event Listing', href:eventUrl});
 
-  // Event Listing (first event page)
-  if(eventUrl) chips.push({label:'Event Listing', href:eventUrl});
-
-  // More Workshops (derive workshops index/root)
   const more = findWorkshopsIndexUrl(productUrl, eventUrl);
   if(more) chips.push({label:'More Workshops', href:more});
 
-  // Photos (try gallery or search on-site for topic)
   const photos = findPhotosUrl(payload, structured?.topic, productUrl, eventUrl);
   if(photos) chips.push({label:'Photos', href:photos});
 
-  // Ensure no duplicate hrefs
   return uniqueByHref(chips);
 }
 
@@ -410,7 +391,6 @@ function renderProductCard(prod){
     </div>
   `;
 }
-
 function renderEventsBlock(structured){
   const now=new Date();
   const future=(structured?.events||[])
@@ -455,7 +435,7 @@ function renderAnswer(payload){
     const evHTML = renderEventsBlock(s);
     if(evHTML) addBubble(evHTML);
 
-    // single pill row at the end
+    // Prefer backend-provided pills
     const pills = buildActionPills(payload, s, prod);
     if(pills.length){
       const wrap = document.createElement('div');
@@ -522,10 +502,6 @@ sendBtn.addEventListener('click', submit);
 input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
-
-/* Optional sanity query during dev
-// sendQuery("give me the next bluebell workshop dates and prices");
-*/
 </script>
 </body>
 </html>
