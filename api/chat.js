@@ -43,6 +43,9 @@ function toGBP(n) {
 function pickUrl(row) {
   return row?.source_url || row?.page_url || row?.url || null;
 }
+function urlSafe(u) {
+  try { return u ? new URL(u) : null; } catch { return null; }
+}
 
 /* ----------------------- Topic detection (simple) ------------------------ */
 function getTopicFromQuery(query) {
@@ -229,23 +232,87 @@ function buildProductPanelMarkdown(products) {
   return lines.join("\n");
 }
 
-/* ----------------------------- Chips builder ---------------------------- */
-function buildChips({ bookNowUrl, landingUrl, anotherUrl }) {
-  const chips = [];
-  const used = new Set();
-  const add = (label, url, brand = false) => {
-    if (!label || !url) return;
-    if (used.has(url)) return;
-    used.add(url);
-    chips.push({ label, url, brand });
-  };
+/* --------------------- Backend pills (Book/Event/More/Photos) -------------------- */
 
-  add("Book Now", bookNowUrl, true);
-  add("Prices", bookNowUrl ? bookNowUrl + "#prices" : landingUrl || anotherUrl, true);
-  add("Upcoming dates", anotherUrl || bookNowUrl || landingUrl, true);
-  if (landingUrl) add("Info", landingUrl, false);
+/** Derive a "More Workshops" index URL from a product/event URL (same-origin, no hard-coding). */
+function deriveWorkshopsIndex(productUrl, eventUrl) {
+  const u = urlSafe(productUrl) ?? urlSafe(eventUrl);
+  if (!u) return null;
+  const segs = u.pathname.split('/').filter(Boolean);
+  const idx = segs.findIndex((s) => /workshop/i.test(s));
+  if (idx >= 0) {
+    const path = '/' + segs.slice(0, idx + 1).join('/') + '/';
+    return u.origin + path;
+  }
+  const base = u.pathname.endsWith('/') ? u.pathname.slice(0, -1) : u.pathname;
+  const parent = base.substring(0, base.lastIndexOf('/') + 1);
+  return u.origin + (parent || '/');
+}
 
-  return chips.slice(0, 4);
+/** Helper to pull strings from Supabase selects */
+async function pickUrlsFromSelect(q) {
+  const { data, error } = await q;
+  if (error) return [];
+  const out = [];
+  for (const row of data || []) {
+    for (const k of Object.keys(row)) {
+      const v = row[k];
+      if (typeof v === "string" && v) out.push(v);
+    }
+  }
+  return out;
+}
+
+/** Find best gallery landing URL on same origin, fallback to /search?query=gallery */
+async function findPhotosUrl(client, productUrl, eventUrl) {
+  const origin = (urlSafe(productUrl) ?? urlSafe(eventUrl))?.origin || null;
+
+  const buckets = await Promise.all([
+    pickUrlsFromSelect(client.from("page_entities").select("url, page_url, source_url").ilike("url", "%/gallery%")),
+    pickUrlsFromSelect(client.from("page_entities_clean").select("url, page_url, source_url").ilike("url", "%/gallery%")),
+    pickUrlsFromSelect(client.from("page_entities_backup_utc").select("url, page_url, source_url").ilike("url", "%/gallery%")),
+    pickUrlsFromSelect(client.from("page_chunks").select("url").ilike("url", "%/gallery%")),
+    pickUrlsFromSelect(client.from("chunks").select("url, source_url").or("url.ilike.%/gallery%,source_url.ilike.%/gallery%")),
+    pickUrlsFromSelect(client.from("events_enriched").select("url, page_url, source_url").or("url.ilike.%/gallery%,page_url.ilike.%/gallery%,source_url.ilike.%/gallery%")),
+  ]);
+
+  const all = [...new Set(buckets.flat().filter(Boolean))];
+
+  const sameOrigin = all.filter(u => !origin || urlSafe(u)?.origin === origin);
+  sameOrigin.sort((a, b) => {
+    const sa = scoreGallery(a), sb = scoreGallery(b);
+    return sa - sb || a.length - b.length;
+  });
+
+  if (sameOrigin.length) return sameOrigin[0];
+  if (origin) return `${origin}/search?query=gallery`;
+  return "https://www.alanranger.com/search?query=gallery";
+}
+function scoreGallery(u) {
+  const s = String(u).toLowerCase();
+  if (s.includes("gallery-image-portfolios")) return 0; // your hub page
+  if (/\/gallery(\/|$)/.test(s)) return 1;              // clean /gallery root
+  return 2;                                              // other gallery paths
+}
+
+/** Main pill builder */
+async function buildPills({ client, product, firstEvent }) {
+  const productUrl = product?.url || product?.page_url || product?.source_url || null;
+  const eventUrl   = firstEvent?.page_url || firstEvent?.source_url || null;
+
+  const pills = [];
+  if (productUrl) pills.push({ label: "Book Now", url: productUrl, brand: true });
+  if (eventUrl)   pills.push({ label: "Event Listing", url: eventUrl, brand: true });
+
+  const more = deriveWorkshopsIndex(productUrl, eventUrl);
+  if (more) pills.push({ label: "More Workshops", url: more });
+
+  const photos = await findPhotosUrl(client, productUrl, eventUrl);
+  if (photos) pills.push({ label: "Photos", url: photos });
+
+  // de-dup
+  const seen = new Set();
+  return pills.filter(p => (p.url && !seen.has(p.url) && seen.add(p.url))).slice(0, 4);
 }
 
 /* -------------------------------- Bluebell -------------------------------- */
@@ -276,14 +343,22 @@ async function answerBluebell({ client }) {
   // Product panel only (no events mixed in)
   const productPanel = buildProductPanelMarkdown(products || []);
 
-  // Chips
-  const firstEventUrl = pickUrl((events || [])[0]);
-  let bookNowUrl = pickUrl(products?.[0]) || firstEventUrl;
-  const chips = buildChips({
-    bookNowUrl,
-    landingUrl: pickUrl(canon.landing),
-    anotherUrl: firstEventUrl,
-  });
+  // Event list for structure/citations
+  const eventList = (events || [])
+    .map((e) => ({ ...e, when: fmtDateLondon(e.date_start) }))
+    .slice(0, 12);
+
+  // Representative product & first event (for pills)
+  const product =
+    (products || []).find((p) => p && pickUrl(p)) ||
+    (products || [])[0] || null;
+  const firstEvent =
+    (events || [])
+      .filter((e) => e && e.date_start)
+      .sort((a, b) => new Date(a.date_start) - new Date(b.date_start))[0] || null;
+
+  // Backend pills
+  const pills = await buildPills({ client, product, firstEvent });
 
   // Citations
   const citations = uniq([
@@ -294,10 +369,6 @@ async function answerBluebell({ client }) {
   ]).filter(Boolean);
 
   // Structure
-  const eventList = (events || [])
-    .map((e) => ({ ...e, when: fmtDateLondon(e.date_start) }))
-    .slice(0, 12);
-
   const structured = {
     topic: "bluebell",
     events: eventList,
@@ -307,7 +378,10 @@ async function answerBluebell({ client }) {
       landing: canon.landing || null,
       debug: canon.debug,
     },
-    chips,
+    // New: backend-provided pills for the UI
+    pills,
+    // Mirror as 'chips' for any older frontends still expecting this field
+    chips: pills,
   };
 
   return { ok: true, answer_markdown: productPanel, citations, structured };
