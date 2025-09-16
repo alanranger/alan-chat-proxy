@@ -246,7 +246,7 @@ function composeEventPills({ origin, topic, products, events }) {
 
   return pills.slice(0,4);
 }
-function composeAdvicePillsFromArticle({ origin, query, article, events }) {
+function composeAdvicePillsFromArticle({ origin, query, article, topic }) {
   const pills = [];
   const used = new Set();
   const add = (label, url, brand=false) => {
@@ -269,11 +269,12 @@ function composeAdvicePillsFromArticle({ origin, query, article, events }) {
   const ctx = pickContextLink(links, [topUrl, pdf?.url].filter(Boolean));
   if (ctx) add(ctx.label, ctx.url);
 
-  // fill to 4 with sensible defaults
+  // fill to 4 with safe defaults (never pick a random single event)
   if (pills.length < 4) {
-    const e = (events||[])[0];
-    const evUrl = e ? pickUrl(e) : `${origin}/search?query=workshops`;
-    add("Events", evUrl);
+    const evSearch = topic
+      ? `${origin}/search?query=${encodeURIComponent(topic + " workshop")}`
+      : `${origin}/search?query=workshops`;
+    add("Events", evSearch);
   }
   if (pills.length < 4) add("Photos", `${origin}${GALLERY_HUB}`);
 
@@ -317,21 +318,77 @@ async function fetchProducts(client, topic) {
   }
   return rows;
 }
+
+/* ----------------------- Smarter article retrieval ----------------------- */
+const STOP_WORDS = new Set([
+  "a","an","and","are","as","at","be","by","can","do","does","for","from","how","i","in","is","it","me","more","my","of","on","or","out","tell","that","the","this","to","what","when","where","which","who","why","with","you","your","about"
+]);
+
+function tokenize(q) {
+  return (q||"")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g," ")
+    .split(/\s+/)
+    .filter(t => t && !STOP_WORDS.has(t) && t.length > 2)
+    .slice(0, 8);
+}
+
+function expandTokens(tokens) {
+  const set = new Set(tokens);
+  const s = tokens.join(" ");
+  if (s.includes("long exposure") || (tokens.includes("long") && tokens.includes("exposure"))) {
+    set.add("long exposure"); set.add("nd"); set.add("filters"); set.add("neutral density"); set.add("10 stop"); set.add("slow shutter");
+  }
+  if (set.has("tripod") || set.has("tripods")) {
+    set.add("tripod"); set.add("benro"); set.add("manfrotto"); set.add("gitzo"); set.add("head"); set.add("legs");
+  }
+  if (set.has("astro") || set.has("astrophotography")) {
+    set.add("astrophotography"); set.add("night"); set.add("milky way");
+  }
+  return [...set];
+}
+
+function scoreArticle(row, tokens) {
+  const url = pickUrl(row) || row.url || "";
+  const title = (row.title || "").toLowerCase();
+  const body = stripHtml(row.html || row.raw?.html || "").toLowerCase();
+
+  let score = 0;
+
+  // phrase boosts
+  if (body.includes("long exposure") || title.includes("long exposure")) score += 8;
+  if (title.includes("tripod")) score += 6;
+
+  // token scoring
+  for (const t of tokens) {
+    if (!t) continue;
+    if (title.includes(t)) score += 3;
+    if (url.includes(t))   score += 2;
+    if (body.includes(t))  score += 1;
+  }
+  return score;
+}
+
 async function fetchArticles(client, query) {
   const { data } = await client
     .from("page_entities")
-    .select("id, title, page_url, source_url, url, html, raw")
+    .select("id, title, page_url, source_url, url, html, raw, last_seen, kind")
     .in("kind", ["article","blog","page"])
     .order("last_seen", { ascending: false })
-    .limit(120);
-  const q = (query||"").toLowerCase();
-  // lightweight filter by query tokens
-  const tokens = q.split(/\s+/).filter(Boolean).slice(0,6);
-  const rows = (data||[]).filter(r=>{
-    const hay = [r.title, r.page_url, r.source_url, r.url, stripHtml(r.html||r.raw?.html||"")].join(" ").toLowerCase();
-    return tokens.every(t => hay.includes(t));
-  });
-  return rows.slice(0, 12);
+    .limit(300);
+
+  const rows = data || [];
+  const toks = expandTokens(tokenize(query));
+
+  // score all, keep top results with score > 0
+  const scored = rows
+    .map(r => ({ row: r, s: scoreArticle(r, toks) }))
+    .filter(x => x.s > 0)
+    .sort((a,b) => b.s - a.s)
+    .slice(0, 12)
+    .map(x => x.row);
+
+  return scored;
 }
 
 /* ----------------------------- Resolvers -------------------------------- */
@@ -368,12 +425,11 @@ async function resolveEventsOrProduct({ client, query }) {
 async function resolveAdvice({ client, query }) {
   const topic = detectTopic(query) || null;
   const articles = await fetchArticles(client, query);
-  const eventsForContext = await fetchFutureEvents(client, topic);
 
-  const origin = pickOriginFromRows(articles.length?articles:eventsForContext);
+  const origin = pickOriginFromRows(articles);
   const top = articles[0] || null;
 
-  // brief markdown with neat list of article links
+  // neat list of article links (markdown)
   const md = articles.length
     ? [
         "Here are Alan’s guides that match your question:",
@@ -382,7 +438,7 @@ async function resolveAdvice({ client, query }) {
       ].join("\n")
     : "I couldn’t find a specific guide for that yet.";
 
-  const pills = composeAdvicePillsFromArticle({ origin, query, article: top, events: eventsForContext });
+  const pills = composeAdvicePillsFromArticle({ origin, query, article: top, topic });
 
   const citations = uniq(articles.map(pickUrl)).filter(Boolean);
 
