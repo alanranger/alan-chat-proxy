@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Alan Chat – Testbench v0.1.0</title>
+  <style>
+    :root{--bg:#0b1220;--card:#0f172a;--muted:#A9B8E8;--line:#1b2540;--fg:#dbe4ff;--brand:#ea9800;--ok:#16a34a;--bad:#ef4444;}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    h1{margin:0 0 8px}
+    .ver{background:#13203e;border:1px solid #26406f;border-radius:999px;padding:2px 8px;font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#c7d7ff}
+    .row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+    .w-1{flex:1 1 220px}.w-2{flex:2 1 360px}.w-3{flex:3 1 520px}
+    textarea,input,select{width:100%;background:#0b1426;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:10px 12px}
+    button{background:#2563eb;border:none;color:#fff;border-radius:8px;padding:10px 14px;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .muted{color:var(--muted)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid var(--line);padding:8px 10px;vertical-align:top;text-align:left}
+    .pill{border:1px solid var(--line);background:#0b1426;border-radius:999px;padding:4px 10px;display:inline-block}
+    .pill.ok{border-color:#1d4d2b;background:#0e2f1b;color:#c7ffd5}
+    .pill.bad{border-color:#5d1b1b;background:#2e1212;color:#ffc7c7}
+    details summary{cursor:pointer;list-style:none}
+    details summary::-webkit-details-marker{display:none}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .badge.ok{background:#12351f;color:#7dffad;border:1px solid #1d4d2b}
+    .badge.bad{background:#3a1515;color:#ffc3c3;border:1px solid #5d1b1b}
+    .grid{display:grid;grid-template-columns:120px 1fr;gap:8px}
+    .btn-ghost{background:#13203e;border:1px solid #26406f}
+    .btn-warn{background:var(--brand);color:#000}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .nowrap{white-space:nowrap}
+    .small{font-size:12px}
+    .hl{color:#ffe08a}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="row" style="align-items:baseline;margin-bottom:8px">
+    <h1 class="w-3">Alan Chat – Testbench</h1>
+    <span class="ver">v0.1.0</span>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <div class="toolbar">
+      <div class="w-3">
+        <label class="small muted">Test cases (one per line). Optional expectations with " ⇒ " (events|advice|product).</label>
+        <textarea id="cases" rows="8"></textarea>
+      </div>
+      <div class="w-1">
+        <label class="small muted">topK</label>
+        <input id="topk" value="8"/>
+      </div>
+      <div class="w-1">
+        <label class="small muted">Concurrency</label>
+        <input id="conc" value="4"/>
+      </div>
+      <div class="w-1" style="display:flex;gap:8px;align-items:flex-end">
+        <button id="runAll" style="flex:1">Run all</button>
+        <button id="stop" class="btn-ghost" disabled>Stop</button>
+      </div>
+      <div class="w-1" style="display:flex;gap:8px;align-items:flex-end">
+        <button id="exportCsv" class="btn-ghost" style="flex:1">Export CSV</button>
+        <button id="exportJson" class="btn-ghost">JSON</button>
+      </div>
+    </div>
+    <div class="small muted" style="margin-top:8px">
+      Heuristics mark a test <span class="badge ok">PASS</span> when output matches expectation.
+      Click a row to inspect the full response.
+    </div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+      <tr>
+        <th style="width:42px">#</th>
+        <th>Query</th>
+        <th style="width:120px">Expected</th>
+        <th style="width:110px">Detected</th>
+        <th style="width:90px">Events</th>
+        <th style="width:90px">Articles</th>
+        <th style="width:140px">Pills</th>
+        <th style="width:90px">Result</th>
+        <th style="width:110px">Actions</th>
+      </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary><strong>Selected response</strong> <span id="selLabel" class="muted small"></span></summary>
+      <div id="sel" class="grid" style="margin-top:10px">
+        <div class="muted small">Answer</div><div id="selAnswer" class="mono"></div>
+        <div class="muted small">Citations</div><div id="selCites" class="mono"></div>
+        <div class="muted small">Structured</div><div id="selStruct" class="mono"></div>
+        <div class="muted small">Meta</div><div id="selMeta" class="mono"></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="small muted" style="margin-top:12px">
+    Tips: you can paste a different test-set and re-run. CSV/JSON include raw payloads for offline review.
+  </div>
+</div>
+
+<script>
+/* ----------------- defaults ----------------- */
+const DEFAULT_CASES = [
+  "whens the next bluebell workshops and whats the cost ⇒ events",
+  "when is the next devon workshop? ⇒ events",
+  "what is your next workshop date and where is it? ⇒ events",
+  "when are your next Autumn workshops and where are they? ⇒ events",
+  "How much is a residential photography course and does it include B&B? ⇒ events",
+  "what tripod do you recommend? ⇒ advice",
+  "What tripod do you recommend? ⇒ advice",
+  "Do you I get a certificate with the photography course? ⇒ advice",
+  "What sort of camera do I need for your camera course? ⇒ advice",
+  "Do I need a laptop for the lightroom course? ⇒ advice",
+  "Do you do astrophotography workshops? ⇒ events",
+  "How do I get personalised feedback on my images? ⇒ advice",
+  "Is the online photography course really free? ⇒ advice",
+  "Can my 14yr old attend your workshop? ⇒ advice",
+  "What is long exposure and how can I find out more about it? ⇒ advice",
+  "My pictures never seem sharp. Can you advise on what I am doing wrong? ⇒ advice",
+].join("\n");
+
+const FALLBACK_SNIPPETS = [
+  "I couldn’t find a specific guide",
+  "I don’t have a specific answer for that yet",
+];
+
+/* ----------------- dom helpers ----------------- */
+const $ = (id) => document.getElementById(id);
+function dl(filename, text, type="text/plain"){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type}));
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ----------------- tiny pool ----------------- */
+async function pool(all, limit, worker){
+  const q = all.slice();
+  let active=0, i=0;
+  const out = [];
+  return new Promise(resolve=>{
+    const tick = () => {
+      if (!q.length && active===0) return resolve(out);
+      while (active < limit && q.length){
+        const item = q.shift(); const idx = i++;
+        active++;
+        Promise.resolve(worker(item, idx))
+          .then(val => out[idx]=val)
+          .catch(err => out[idx]={error:String(err)})
+          .finally(()=>{ active--; tick(); });
+      }
+    };
+    tick();
+  });
+}
+
+/* ----------------- call /api/chat ----------------- */
+async function callChat(query, topK){
+  const res = await fetch('/api/chat', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ query, topK:Number(topK||8) })
+  });
+  const txt = await res.text();
+  let json=null; try{ json=JSON.parse(txt) }catch{ json=null }
+  if (!res.ok || !json) throw new Error(json?.error || json?.detail || `${res.status} ${res.statusText}`);
+  return json;
+}
+
+/* ----------------- evaluate heuristics ----------------- */
+function detectIntentFromResponse(r){
+  const s = r?.structured || {};
+  // Prefer explicit meta intent if present
+  const m = r?.meta?.intent || s.intent || null;
+  if (m) return m;
+  // Inference
+  if ((s.events||[]).length) return 'events';
+  if ((s.products||[]).length) return 'product';
+  if ((s.articles||[]).length) return 'advice';
+  return null;
+}
+function looksLikeFallback(answer){
+  const s = (answer||'').toLowerCase();
+  return FALLBACK_SNIPPETS.some(p=>s.includes(p.toLowerCase()));
+}
+function passFail(expected, r){
+  const s = r?.structured || {};
+  const intent = detectIntentFromResponse(r);
+  const events = (s.events||[]).length;
+  const articles = (s.articles||[]).length;
+  const pills = (s.pills||s.chips||[]).length;
+  const fallback = looksLikeFallback(r?.answer_markdown);
+  let pass=false, reason='';
+  const exp = (expected||'').trim().toLowerCase();
+
+  if (exp==='events'){
+    pass = events>0 && !fallback;
+    if (!pass) reason = fallback ? 'fallback' : 'no events';
+  } else if (exp==='advice'){
+    pass = (articles>0 || !fallback);
+    if (!pass) reason = 'no articles';
+  } else if (exp==='product'){
+    pass = (s.products||[]).length>0 || events>0; // product or event OK
+    if (!pass) reason = 'no product';
+  } else {
+    pass = !fallback; // generic
+    if (!pass) reason = 'fallback';
+  }
+  return { intent, events, articles, pills, pass, reason };
+}
+
+/* ----------------- table rendering ----------------- */
+const rowsEl = $('rows');
+let RUN_STOP=false;
+function addRow(idx, q, expected){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="mono">${idx+1}</td>
+    <td><div class="mono">${q.replace(/</g,'&lt;')}</div></td>
+    <td class="mono">${expected||''}</td>
+    <td class="mono" data-col="det">…</td>
+    <td class="mono" data-col="ev">–</td>
+    <td class="mono" data-col="ar">–</td>
+    <td class="mono" data-col="pi">–</td>
+    <td data-col="res"><span class="badge">…</span></td>
+    <td>
+      <button class="btn-ghost small" data-act="inspect">Inspect</button>
+      <button class="btn-ghost small" data-act="rerun">Re-run</button>
+    </td>`;
+  rowsEl.appendChild(tr);
+  return tr;
+}
+function updateRow(tr, evalRes){
+  tr.querySelector('[data-col="det"]').textContent = evalRes.intent || '—';
+  tr.querySelector('[data-col="ev"]').textContent = evalRes.events;
+  tr.querySelector('[data-col="ar"]').textContent = evalRes.articles;
+  tr.querySelector('[data-col="pi"]').textContent = evalRes.pills;
+  const cell = tr.querySelector('[data-col="res"] .badge');
+  cell.textContent = evalRes.pass ? 'PASS' : `FAIL ${evalRes.reason?'- '+evalRes.reason:''}`;
+  cell.className = 'badge ' + (evalRes.pass ? 'ok':'bad');
+}
+
+/* ----------------- selection panel ----------------- */
+const sel = {
+  label: $('selLabel'),
+  ans: $('selAnswer'),
+  cites: $('selCites'),
+  struct: $('selStruct'),
+  meta: $('selMeta'),
+};
+function showSelection(q, res){
+  sel.label.textContent = '— ' + q;
+  sel.ans.textContent = res?.answer_markdown || '';
+  const c = Array.from(new Set(res?.citations || [])).join('\n');
+  sel.cites.textContent = c || '(none)';
+  sel.struct.textContent = JSON.stringify(res?.structured||{}, null, 2);
+  sel.meta.textContent = JSON.stringify(res?.meta||{}, null, 2);
+}
+
+/* ----------------- export helpers ----------------- */
+function collectTable(){
+  const out=[];
+  [...rowsEl.children].forEach(tr=>{
+    const tds=tr.querySelectorAll('td');
+    out.push({
+      idx: tds[0].textContent.trim(),
+      query: tds[1].innerText.trim(),
+      expected: tds[2].textContent.trim(),
+      detected: tr.querySelector('[data-col="det"]').textContent.trim(),
+      events: tr.querySelector('[data-col="ev"]').textContent.trim(),
+      articles: tr.querySelector('[data-col="ar"]').textContent.trim(),
+      pills: tr.querySelector('[data-col="pi"]').textContent.trim(),
+      result: tr.querySelector('[data-col="res"]').innerText.trim(),
+      raw: tr.__raw || null
+    });
+  });
+  return out;
+}
+$('exportCsv').onclick = () => {
+  const rows = collectTable();
+  const head = ['idx','query','expected','detected','events','articles','pills','result'];
+  const csv = [head.join(',')].concat(rows.map(r=>head.map(k=>JSON.stringify(String(r[k]??'').replace(/\n/g,' '))).join(','))).join('\n');
+  dl('chat-testbench.csv', csv, 'text/csv');
+};
+$('exportJson').onclick = () => dl('chat-testbench.json', JSON.stringify(collectTable(),null,2), 'application/json');
+
+/* ----------------- wire up ----------------- */
+$('cases').value = DEFAULT_CASES;
+
+async function runOne(tr, query, expected, topK){
+  const res = await callChat(query, topK);
+  tr.__raw = res;
+  const ev = passFail(expected, res);
+  updateRow(tr, ev);
+  return res;
+}
+
+$('runAll').onclick = async () => {
+  RUN_STOP=false; $('stop').disabled=false;
+  rowsEl.innerHTML='';
+  const topK = Number($('topk').value||8);
+  const conc = Math.max(1, Number($('conc').value||4));
+  const lines = $('cases').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const items = lines.map((l,i)=>{
+    const m = l.split('⇒'); // allow "query ⇒ expected"
+    return { idx:i, q: m[0].trim(), expected: (m[1]||'').trim().toLowerCase() };
+  });
+
+  const nodeByIdx = new Map();
+  items.forEach(it => nodeByIdx.set(it.idx, addRow(it.idx, it.q, it.expected)));
+
+  await pool(items, conc, async (it) => {
+    if (RUN_STOP) return;
+    const tr = nodeByIdx.get(it.idx);
+    try{
+      const res = await runOne(tr, it.q, it.expected, topK);
+      // first row becomes selection for convenience
+      if (it.idx===0) showSelection(it.q, res);
+    }catch(e){
+      updateRow(tr, {intent:'—',events:0,articles:0,pills:0,pass:false,reason:String(e?.message||e)});
+    }
+  });
+
+  $('stop').disabled=true;
+};
+
+$('stop').onclick = () => { RUN_STOP=true; $('stop').disabled=true; };
+
+rowsEl.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  const tr = e.target.closest('tr'); if(!tr) return;
+  const idx = Number(tr.firstChild.textContent)-1;
+  const query = tr.children[1].innerText.trim();
+  const expected = tr.children[2].textContent.trim();
+  const topK = Number($('topk').value||8);
+
+  if (btn.dataset.act==='inspect'){
+    if (tr.__raw) showSelection(query, tr.__raw);
+  } else if (btn.dataset.act==='rerun'){
+    btn.disabled=true;
+    try{
+      const res = await runOne(tr, query, expected, topK);
+      showSelection(query, res);
+    }finally{
+      btn.disabled=false;
+    }
+  }
+});
+</script>
+</body>
+</html>
