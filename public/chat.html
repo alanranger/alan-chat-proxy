@@ -7,20 +7,22 @@
   <style>
     :root{
       --bg:#0e1620;
-      --panel:#1a2636;
-      --panel-2:#202f45;
-      --text:#e6edf3;
-      --muted:#9fb0c3;
+      --panel:#172234;
+      --panel-2:#1c2a41;
+      --text:#eaf2ff;
+      --muted:#a9bed5;
       --brand:#f6a10a;
       --brand-2:#ffb21a;
       --pill:#ffad1f;
       --pillText:#111;
-      --accent:#3aa981;
+      --accent:#39b389;
       --error:#ff5c5c;
       --ok:#78d48c;
-      --border:#253449;
+      --border:#2b3d58;
+      --border-strong:#354b6b;
       --code:#0c121a;
       --link:#9fd2ff;
+      --shadow: 0 2px 0 rgba(0,0,0,.35), 0 0 0 1px var(--border);
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -31,79 +33,78 @@
     a{color:var(--link); text-decoration:none}
     a:hover{text-decoration:underline}
 
-    /* top bar w/ orange trim */
+    /* orange trim */
     .trim{height:8px; background:linear-gradient(90deg,var(--brand),#ff8c00)}
+
     header{
-      position:relative; padding:28px 20px 16px; text-align:center;
+      position:relative; padding:28px 16px 14px; text-align:center;
     }
+    /* Restored circular logo “R” */
     .logo{
-      width:72px; height:72px; border-radius:50%;
-      background:#182233; margin:0 auto 12px; display:grid; place-items:center;
-      box-shadow:0 2px 0 #000 inset,0 0 0 2px #2a3a52;
-      font-weight:800; font-size:34px;
+      width:76px; height:76px; margin:0 auto 10px; border-radius:50%;
+      display:grid; place-items:center;
+      background:#0d1420;
+      color:#fff; font-weight:800; font-size:36px;
+      box-shadow: inset 0 0 0 2px #2b3a52, 0 2px 0 rgba(0,0,0,.4);
     }
-    .title{font-size:30px; font-weight:700; letter-spacing:.2px}
-    .subtitle{max-width:820px; margin:8px auto 14px; color:var(--muted)}
-    .cta-row{display:flex; gap:10px; justify-content:center; margin:6px 0 10px}
+    .title{font-size:28px; font-weight:800; letter-spacing:.2px}
+    .subtitle{max-width:880px; margin:8px auto 12px; color:var(--muted)}
+    .cta-row{display:flex; gap:10px; justify-content:center}
     .chip{
-      background:var(--brand); color:#111; padding:8px 12px; border-radius:999px; font-weight:700;
-      border:0; cursor:pointer;
-      box-shadow:0 1px 0 rgba(0,0,0,.25);
+      background:var(--brand); color:#111; padding:8px 14px; border-radius:999px; font-weight:800;
+      border:0; cursor:pointer; box-shadow:0 1px 0 rgba(0,0,0,.25);
     }
     .chip.green{background:var(--accent); color:#03140e}
 
-    /* version pinned under the orange line */
+    /* version pinned under orange bar */
     .version{
       position:absolute; top:-16px; right:10px;
-      background:#1b2231; color:#9cb0c6; padding:2px 8px; border-radius:8px;
+      background:#121a29; color:#9cb0c6; padding:2px 8px; border-radius:8px;
       font-size:12px; border:1px solid #2b3a52;
     }
 
     main{max-width:980px; margin:0 auto; padding:0 14px 80px}
     .panel{
-      background:var(--panel); border:1px solid var(--border); border-radius:12px;
-      box-shadow:0 2px 0 rgba(0,0,0,.3); padding:14px 16px; margin:12px 0;
+      background:var(--panel); border:1px solid var(--border-strong); border-radius:14px;
+      box-shadow:var(--shadow); padding:14px 16px; margin:12px 0;
     }
     .panel.dark{background:var(--panel-2)}
-    .assist-banner{background:#152033; color:var(--muted)}
+    .assist-banner{background:#16233a; color:#c7d6e8; border-color:#304766}
     .ask-row{display:flex; gap:10px; align-items:center}
     .ask-input{
       flex:1; background:#0f1723; color:var(--text); border:1px solid #2a3a4a;
-      padding:12px 14px; border-radius:9px;
+      padding:12px 14px; border-radius:10px; box-shadow:0 1px 0 rgba(0,0,0,.3) inset;
     }
     .send{background:var(--brand); color:#171003; border:0; border-radius:10px; padding:10px 16px; font-weight:800; cursor:pointer}
     .send:disabled{opacity:.5; cursor:default}
 
-    /* section headings */
-    h3{margin:0 0 8px; font-size:15px; color:#b8c7da; letter-spacing:.08em; text-transform:uppercase}
-    .hline{height:1px; background:#253449; margin:10px 0}
-
     /* product card */
     .product{
-      background:#1a2333; border:1px solid #2a3b53; border-radius:10px; padding:14px 14px;
+      background:#18243a; border:1px solid #2f4567; border-radius:12px; padding:14px;
+      box-shadow: 0 1px 0 rgba(0,0,0,.25) inset;
     }
     .product h4{
-      margin:0; font-size:16px; font-weight:800;
+      margin:0; font-size:15px; font-weight:900; letter-spacing:.01em
     }
-    .product .subtitle-line{color:#b7c6d9; margin-top:4px}
+    .subtitle-line{color:#c4d2e5; margin-top:6px}
     .kv{
-      display:grid; grid-template-columns:130px 1fr; gap:8px 14px; margin:10px 0 6px;
+      display:grid; grid-template-columns:130px 1fr; gap:8px 14px; margin:10px 0 2px;
     }
-    .kv .k{color:#9fb0c3; font-weight:700}
+    .kv .k{color:#9fb0c3; font-weight:800}
     .price-list{margin:6px 0 0 0; padding-left:20px}
     .price-list li{margin:4px 0}
-    .summary{margin-top:8px; color:#cdd8e7}
 
     .pills{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
     .pill{
       background:var(--pill); color:var(--pillText); border-radius:999px; padding:8px 12px; font-weight:800;
-      display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none
+      display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none;
+      box-shadow:0 1px 0 rgba(0,0,0,.25);
     }
     .pill a{color:inherit; text-decoration:none}
-    .pill svg{width:16px;height:16px}
 
-    /* events list */
-    .events ul{margin:4px 0 0 0; padding-left:22px}
+    /* events */
+    h3{margin:0 0 8px; font-size:15px; color:#cfe0f7; letter-spacing:.08em; text-transform:uppercase}
+    .events ul{margin:6px 0 0 0; padding-left:22px}
     .events li{margin:6px 0}
 
     /* debug */
@@ -116,15 +117,13 @@
     }
 
     .mute{color:var(--muted)}
-    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .spacer{height:10px}
     .hidden{display:none !important}
   </style>
 </head>
 <body>
   <div class="trim"></div>
   <header>
-    <div class="version" id="version">v0.9.14</div>
+    <div class="version" id="version">v0.9.15</div>
     <div class="logo">R</div>
     <div class="title">Alan Ranger Assistant</div>
     <div class="subtitle">
@@ -149,14 +148,14 @@
       </div>
     </div>
 
-    <!-- RESPONSE RENDER TARGETS -->
+    <!-- Render target -->
     <section id="results"></section>
 
     <!-- Debug -->
     <details class="panel debug" id="debug">
       <summary class="hdr">🔎 Show debug</summary>
-      <div class="row">
-        <button id="copyAll" class="btn">Copy all</button>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button id="copyAll" class="debug btn">Copy all</button>
         <span class="mute">Endpoint: <code>/api/chat</code></span>
       </div>
       <pre id="dbgHeaders" class="hidden"></pre>
@@ -168,310 +167,222 @@
   </main>
 
   <script>
-  ;(() => {
-    const qs = sel => document.querySelector(sel);
-    const elResults = qs('#results');
-    const elAsk = qs('#ask');
-    const elSend = qs('#send');
-    const elCopy = qs('#copyAll');
+  ;(()=> {
+    const $ = s=>document.querySelector(s);
+    const elResults = $('#results');
+    const elAsk = $('#ask');
+    const elSend = $('#send');
+    const elCopy = $('#copyAll');
 
-    // --- helpers ------------------------------------------------------------
-    const money = v => (v==null || v==='' || isNaN(v)) ? null : `£${Number(v).toLocaleString('en-GB', {maximumFractionDigits:0})}`;
+    // ---------- helpers ----------
+    const money = v => (v==null || v==='' || isNaN(v)) ? null : `£${Number(v).toLocaleString('en-GB',{maximumFractionDigits:0})}`;
 
-    // Parse fields from product description/chunk text
     function pluckMetaFromDescription(desc=''){
       const out = {};
-      // Location
-      let m = desc.match(/Location:\s*([^\n]+?)(?:\n|$)/i);
-      if(m) out.location = m[1].trim();
-      // Participants
-      m = desc.match(/Participants:\s*([^\n]+?)(?:\n|$)/i);
-      if(m) out.participants = m[1].trim();
-      // Fitness
-      m = desc.match(/Fitness:\s*([^\n]+?)(?:\n|$)/i);
-      if(m) out.fitness = m[1].trim();
-      // Availability
-      m = desc.match(/Availability:\s*([^\n]+?)(?:\n|$)/i);
-      if(m) out.availability = m[1].trim();
+      let m;
+      m = desc.match(/Location:\s*([^\n]+?)(?:\n|$)/i); if(m) out.location = m[1].trim();
+      m = desc.match(/Participants:\s*([^\n]+?)(?:\n|$)/i); if(m) out.participants = m[1].trim();
+      m = desc.match(/Fitness:\s*([^\n]+?)(?:\n|$)/i); if(m) out.fitness = m[1].trim();
+      m = desc.match(/Availability:\s*([^\n]+?)(?:\n|$)/i); if(m) out.availability = m[1].trim();
       return out;
     }
 
-    // Extract option price lines like "4hrs — ... — £125" / "1 day — ... — £150"
     function findOptionPriceLines(desc=''){
-      const lines = [];
-      const bulletRegex = /(?:^|\n)\s*(?:-|\u2022)?\s*(\d+\s*hr(?:s)?|1\s*day|half[-\s]*day|full[-\s]*day)\s*[—-]\s*([^\n£]*?)\s*[—-]\s*£?(\d+(?:\.\d{1,2})?)/gi;
-      let m;
-      while ((m = bulletRegex.exec(desc)) !== null) {
-        const label = m[1].replace(/\s+/g,' ').trim();
-        const time = m[2].replace(/\s+/g,' ').trim();
-        const price = m[3];
-        lines.push({label, time, price});
+      const out = [];
+      const re = /(?:^|\n)\s*(?:-|\u2022)?\s*(\d+\s*hr(?:s)?|1\s*day|half[-\s]*day|full[-\s]*day)\s*[—-]\s*([^\n£]*?)\s*[—-]\s*£?(\d+(?:\.\d{1,2})?)/gi;
+      let m; while((m=re.exec(desc))!==null){
+        const label=m[1].replace(/\s+/g,' ').trim();
+        const time=(m[2]||'').replace(/\s+/g,' ').trim();
+        const price=m[3];
+        out.push({label,time,price});
       }
-      return lines;
+      return out;
     }
 
-    // Prefer a single product (merge duplicates on URL/title)
     function selectPrimaryProduct(products=[]){
       if(!products.length) return null;
-      // Prefer one with numeric price; else AggregateOffer; else first
-      const withStdPrice = products.find(p => p.price || (p.raw && p.raw.offers && p.raw.offers.price));
-      if(withStdPrice) return withStdPrice;
-      // else prefer one with aggregate low/high price
-      const withAgg = products.find(p => p.raw && p.raw.offers && (p.raw.offers.lowPrice||p.raw.offers.highPrice));
+      const withStd = products.find(p => p.price || p?.raw?.offers?.price);
+      if(withStd) return withStd;
+      const withAgg = products.find(p => p?.raw?.offers?.lowPrice || p?.raw?.offers?.highPrice);
       return withAgg || products[0];
     }
 
     function getPriceSummary(p){
-      // Standard product offer
-      let std = null;
-      if(p?.price) std = money(p.price);
-      else if(p?.raw?.offers?.price) std = money(p.raw.offers.price);
-      // Aggregate range
-      let low = p?.raw?.offers?.lowPrice, high = p?.raw?.offers?.highPrice;
-      const range = (low||high) ? `${low?money(low):''}${(low&&high)?'–':''}${high?money(high):''}` : null;
+      let std=null; if(p?.price) std=money(p.price); else if(p?.raw?.offers?.price) std=money(p.raw.offers.price);
+      const low=p?.raw?.offers?.lowPrice, high=p?.raw?.offers?.highPrice;
+      const range=(low||high)?`${low?money(low):''}${(low&&high)?'–':''}${high?money(high):''}`:null;
       return {std, range};
     }
 
-    // Deduplicate events by start date/title (defensive)
-    function dedupeEvents(events = []){
-      const seen = new Set();
-      return events.filter(ev => {
-        const key = (ev.date_start || ev.when || ev.title);
-        if(seen.has(key)) return false;
-        seen.add(key);
-        return true;
+    function dedupeEvents(events=[]){
+      const seen=new Set();
+      return events.filter(ev=>{
+        const key=(ev.date_start||ev.when||ev.title);
+        if(seen.has(key)) return false; seen.add(key); return true;
       });
     }
 
-    // Build DOM nodes ---------------------------------------------------------
     function pill(label, href, brand=false){
-      const d = document.createElement('span');
+      const d=document.createElement('span');
       d.className='pill';
-      d.innerHTML = `<a href="${href||'#'}" target="_blank" rel="noopener">${label}</a>`;
-      if(!href){ d.classList.add('hidden'); }
+      d.innerHTML=`<a href="${href||'#'}" target="_blank" rel="noopener">${label}</a>`;
       if(brand){ d.style.background='var(--brand)'; d.style.color='#111'; }
+      if(!href) d.classList.add('hidden');
       return d;
     }
 
-    function renderProductCard(product, chips=[]){
-      const host = document.createElement('div');
-      host.className = 'panel';
-      const card = document.createElement('div');
-      card.className = 'product';
+    function renderProduct(product, chips=[]){
+      const wrap=document.createElement('div'); wrap.className='panel';
+      const card=document.createElement('div'); card.className='product';
 
-      const {std, range} = getPriceSummary(product);
-      const title = product?.title || 'Workshop';
-      const priceLabelParts = [];
-      if(std) priceLabelParts.push(std);
-      if(range) priceLabelParts.push(range);
-      const priceLabel = priceLabelParts.join(' • ');
+      const {std,range}=getPriceSummary(product);
+      const title=product?.title||'Workshop';
+      const priceParts=[]; if(std) priceParts.push(std); if(range) priceParts.push(range);
+      const priceLabel=priceParts.join(' • ');
 
-      // Parse Description for meta + option prices
-      const desc = (product?.description || product?.raw?.description || '').trim();
-      const meta = pluckMetaFromDescription(desc);
-      const options = findOptionPriceLines(desc);
+      const desc=(product?.description || product?.raw?.description || '').trim();
+      const meta=pluckMetaFromDescription(desc);
+      const options=findOptionPriceLines(desc);
 
-      // Build header
-      const h = document.createElement('h4');
-      h.textContent = `${title} — ${priceLabel}`;
-      const sub = document.createElement('div');
-      sub.className='subtitle-line';
-      sub.textContent = (desc.split('\n')[0] || '').replace(/^Summary\s*:?/i,'').trim();
+      const h=document.createElement('h4');
+      h.textContent = priceLabel ? `${title} — ${priceLabel}` : title;
 
-      // Key/values grid
-      const kv = document.createElement('div');
-      kv.className='kv';
-      const addKV = (k,v)=>{ if(!v) return;
-        const kdiv = document.createElement('div'); kdiv.className='k'; kdiv.textContent = k;
-        const vdiv = document.createElement('div'); vdiv.textContent = v;
+      const sub=document.createElement('div'); sub.className='subtitle-line';
+      sub.textContent=(desc.split('\n')[0]||'').replace(/^Summary\s*:?/i,'').trim();
+
+      // Strip giant date list from sub if it slipped in
+      if(/Mon|Tue|Wed|Thu|Fri|Sat|Sun/i.test(sub.textContent)){
+        sub.textContent=sub.textContent.replace(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[^\n]+/ig,'').trim();
+      }
+
+      const kv=document.createElement('div'); kv.className='kv';
+      const addKV=(k,v)=>{ if(!v) return;
+        const kdiv=document.createElement('div'); kdiv.className='k'; kdiv.textContent=k;
+        const vdiv=document.createElement('div'); vdiv.textContent=v;
         kv.appendChild(kdiv); kv.appendChild(vdiv);
       };
       addKV('Location', meta.location);
       addKV('Participants', meta.participants);
       addKV('Fitness', meta.fitness);
-      addKV('Availability', (product?.availability?.replace(/^.*\/|http:\/\/schema\.org\/|https:\/\/schema\.org\//,'') || meta.availability || '').replace(/([A-Z])/g, ' $1').trim());
+      const avail = (product?.availability||'').replace(/^.*\/|https?:\/\/schema\.org\//,'');
+      addKV('Availability', meta.availability || (avail?avail.replace(/([A-Z])/g,' $1').trim():''));
 
-      // Option pricing (shown once)
-      const ul = document.createElement('ul'); ul.className='price-list';
+      const ul=document.createElement('ul'); ul.className='price-list';
       if(options.length){
         options.forEach(op=>{
-          const li = document.createElement('li');
-          const line = [`${op.label}`];
-          if(op.time) line.push(`— ${op.time}`);
-          if(op.price) line.push(`— £${op.price}`);
-          li.textContent = line.join(' ');
-          ul.appendChild(li);
+          const li=document.createElement('li');
+          const bits=[op.label]; if(op.time) bits.push(`— ${op.time}`); if(op.price) bits.push(`— £${op.price}`);
+          li.textContent=bits.join(' '); ul.appendChild(li);
         });
       }
 
-      // Pills row from chips (unique, brand first)
-      const pillRow = document.createElement('div'); pillRow.className='pills';
-      // Build a fast map to avoid duplicate pill labels
-      const seen = new Set();
+      const row=document.createElement('div'); row.className='pills';
+      const seen=new Set();
       chips.forEach(c=>{
-        const key = (c.label||'').toLowerCase();
-        if(!key || seen.has(key)) return;
-        seen.add(key);
-        pillRow.appendChild(pill(c.label, c.url, !!c.brand));
+        const key=(c.label||'').toLowerCase(); if(!key||seen.has(key)) return; seen.add(key);
+        row.appendChild(pill(c.label, c.url, !!c.brand));
       });
 
       card.appendChild(h);
       if(sub.textContent) card.appendChild(sub);
       if(kv.childElementCount) card.appendChild(kv);
       if(ul.childElementCount) card.appendChild(ul);
-      card.appendChild(pillRow);
-      host.appendChild(card);
-      return host;
-    }
-
-    function renderEventsBlock(events = []){
-      const evs = dedupeEvents(events);
-      if(!evs.length) return null;
-
-      const wrap = document.createElement('div');
-      wrap.className = 'panel dark';
-      wrap.innerHTML = `<h3>Upcoming bluebell Workshops</h3>`;
-      const ul = document.createElement('ul');
-
-      evs.forEach(ev=>{
-        const li = document.createElement('li');
-        const when = ev.when || new Date(ev.date_start||Date.now()).toLocaleDateString('en-GB',{weekday:'short', day:'2-digit', month:'short', year:'numeric'});
-        const loc = ev.location || ev.raw?.location?.name || '';
-        const url = ev.page_url || ev.source_url || ev.raw?.url || '#';
-        li.innerHTML = `${when} — <a href="${url}" target="_blank" rel="noopener">Link</a>${loc?` — ${loc}`:''}`;
-        ul.appendChild(li);
-      });
-
-      wrap.appendChild(ul);
-      // contextual pills
-      const chips = document.createElement('div'); chips.className='pills';
-      chips.appendChild(pill('Book Now', evs[0]?.page_url || evs[0]?.source_url, true));
-      // best guess for "Upcoming dates" is first event page
-      chips.appendChild(pill('Upcoming dates', evs[0]?.page_url || evs[0]?.source_url, false));
-      wrap.appendChild(chips);
+      card.appendChild(row);
+      wrap.appendChild(card);
       return wrap;
     }
 
-    function renderFallbackTips(){
-      const panel = document.createElement('div');
-      panel.className = 'panel dark';
-      panel.innerHTML = `
-        <div style="font-size:18px; font-weight:700; margin-bottom:6px;">I don’t have a specific answer for that yet.</div>
-        <div class="mute">Try asking about workshops, tuition, kit, or locations — for example, <em>“When are the next Bluebell dates?”</em></div>
-      `;
-      return panel;
+    function renderEvents(events=[]){
+      const evs=dedupeEvents(events);
+      if(!evs.length) return null;
+      const wrap=document.createElement('div'); wrap.className='panel dark events';
+      wrap.innerHTML=`<h3>Upcoming bluebell Workshops</h3>`;
+      const ul=document.createElement('ul');
+      evs.forEach(ev=>{
+        const when=ev.when||new Date(ev.date_start||Date.now()).toLocaleDateString('en-GB',{weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+        const loc=ev.location || ev.raw?.location?.name || '';
+        const url=ev.page_url || ev.source_url || ev.raw?.url || '#';
+        const li=document.createElement('li');
+        li.innerHTML=`${when} — <a href="${url}" target="_blank" rel="noopener">Link</a>${loc?` — ${loc}`:''}`;
+        ul.appendChild(li);
+      });
+      wrap.appendChild(ul);
+
+      const pills=document.createElement('div'); pills.className='pills';
+      pills.appendChild(pill('Book Now', evs[0]?.page_url||evs[0]?.source_url, true));
+      pills.appendChild(pill('Upcoming dates', evs[0]?.page_url||evs[0]?.source_url, false));
+      wrap.appendChild(pills);
+
+      return wrap;
     }
 
-    // --- request/response ----------------------------------------------------
-    async function ask(query){
-      // render skeleton while waiting
-      elSend.disabled = true;
-
-      const payload = { query, topK: 8 };
-      const reqInit = {
-        method:'POST',
-        headers:{'content-type':'application/json'},
-        body: JSON.stringify(payload)
-      };
-
-      let res, data, text;
-      try{
-        res = await fetch('/api/chat', reqInit);
-        text = await res.text();
-        data = JSON.parse(text);
-      }catch(e){
-        console.error(e);
-        elResults.prepend(errorPanel('Network or parse error.'));
-        elSend.disabled = false;
-        return;
-      }
-
-      // Debug fill
-      fillDebug(res, payload, data);
-
-      // Render
-      const {answer_markdown, structured={}} = data || {};
-      const {products=[], events=[], chips=[]} = structured;
-
-      // Clear previous blocks for new question
-      const blockWrap = document.createElement('div');
-
-      // Merge/dedupe product representations and show ONE block
-      const product = selectPrimaryProduct(products);
-      if(product){
-        // Strip huge date paragraph from summary by removing lines starting with date-like tokens
-        const p = JSON.parse(JSON.stringify(product));
-        if(p.description){
-          const lines = p.description.split('\n').filter(line=>{
-            return !/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[-,\s]/i.test(line) &&
-                   !/^\s*(\d{1,2}[-/][A-Za-z]{3}[-/]\d{2,4})/.test(line) &&
-                   !/^\s*(Mon|Tue|Wed)/i.test(line);
-          });
-          p.description = lines.join('\n').trim();
-        }
-        blockWrap.appendChild(renderProductCard(p, chips));
-      }
-
-      // Events block
-      if(events.length){
-        blockWrap.appendChild(renderEventsBlock(events));
-      }
-
-      // If nothing useful, show tips (but still add any raw answer text if present)
-      if(!product && !events.length){
-        blockWrap.appendChild(renderFallbackTips());
-      }
-
-      elResults.prepend(blockWrap);
-      elSend.disabled = false;
-    }
-
-    function errorPanel(msg){
-      const p = document.createElement('div');
-      p.className='panel';
-      p.style.borderColor='var(--error)';
-      p.textContent = msg;
+    function renderFallback(){
+      const p=document.createElement('div'); p.className='panel dark';
+      p.innerHTML=`<div style="font-size:18px;font-weight:800;margin-bottom:6px;">I don’t have a specific answer for that yet.</div>
+      <div class="mute">Try asking about workshops, tuition, kit, or locations — e.g., <em>“When are the next Bluebell dates?”</em></div>`;
       return p;
     }
 
-    function fillDebug(res, reqPayload, data){
-      const h = Object.fromEntries(res.headers.entries());
-      show('#dbgHeaders', h);
-      show('#dbgReq', reqPayload);
-      show('#dbgRes', data);
-      show('#dbgStructured', data?.structured || {});
-      show('#dbgProv', data?.provenance || data?.citations || {});
-    }
     function show(sel, obj){
-      const el = document.querySelector(sel);
-      el.textContent = (typeof obj==='string')?obj:JSON.stringify(obj, null, 2);
+      const el=document.querySelector(sel);
+      el.textContent=(typeof obj==='string')?obj:JSON.stringify(obj,null,2);
       el.classList.remove('hidden');
     }
+    function fillDebug(res, payload, data){
+      const headers=Object.fromEntries(res.headers.entries());
+      show('#dbgHeaders', headers);
+      show('#dbgReq', payload);
+      show('#dbgRes', data);
+      show('#dbgStructured', data?.structured||{});
+      show('#dbgProv', data?.provenance||data?.citations||{});
+    }
 
-    // --- events --------------------------------------------------------------
-    elSend.addEventListener('click', () => {
-      const q = elAsk.value.trim();
+    async function ask(q){
       if(!q) return;
-      ask(q);
-    });
-    elAsk.addEventListener('keydown', (e)=>{
-      if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); elSend.click(); }
-    });
-
-    elCopy.addEventListener('click', async ()=>{
-      const blocks = ['dbgHeaders','dbgReq','dbgRes','dbgStructured','dbgProv']
-        .map(id => `## ${id}\n${document.getElementById(id).textContent}` )
-        .join('\n\n');
+      elSend.disabled=true;
+      const payload={query:q, topK:8};
+      let res, data, raw;
       try{
-        await navigator.clipboard.writeText(blocks);
-        elCopy.textContent = 'Copied!';
-        setTimeout(()=>elCopy.textContent='Copy all', 1200);
+        res=await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+        raw=await res.text(); data=JSON.parse(raw);
       }catch(e){
-        alert('Copy failed');
+        const p=document.createElement('div'); p.className='panel'; p.style.borderColor='var(--error)'; p.textContent='Network error.';
+        elResults.prepend(p); elSend.disabled=false; return;
       }
+      fillDebug(res, payload, data);
+
+      const zone=document.createElement('div');
+      const st=data?.structured||{};
+      const product = selectPrimaryProduct(st.products||[]);
+      if(product){
+        // prune date sludge from product.description
+        const copy=JSON.parse(JSON.stringify(product));
+        if(copy.description){
+          const lines=copy.description.split('\n').filter(line => !/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(line));
+          copy.description=lines.join('\n').trim();
+        }
+        zone.appendChild(renderProduct(copy, st.chips||[]));
+      }
+      const evBlock = renderEvents(st.events||[]);
+      if(evBlock) zone.appendChild(evBlock);
+
+      if(!product && !evBlock) zone.appendChild(renderFallback());
+
+      elResults.prepend(zone);
+      elSend.disabled=false;
+    }
+
+    $('#send').addEventListener('click', ()=> ask($('#ask').value.trim()));
+    $('#ask').addEventListener('keydown', e=>{
+      if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('#send').click(); }
     });
 
-    // --- demo seed query (optional, keep off for prod) -----------------------
+    $('#copyAll').addEventListener('click', async ()=>{
+      const blocks=['dbgHeaders','dbgReq','dbgRes','dbgStructured','dbgProv'].map(id=>`## ${id}\n${document.getElementById(id).textContent}`).join('\n\n');
+      try{ await navigator.clipboard.writeText(blocks); const b=$('#copyAll'); b.textContent='Copied!'; setTimeout(()=>b.textContent='Copy all',1200);}catch(e){ alert('Copy failed'); }
+    });
+
+    // Optional seed for testing:
     // ask('give me the next bluebell workshop dates and prices');
   })();
   </script>
