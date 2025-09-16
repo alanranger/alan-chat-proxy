@@ -17,7 +17,8 @@
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
 .wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.version{position:absolute;top:-8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.badge-wrap{position:relative;height:0}
+.version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
 .card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
@@ -38,10 +39,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
 
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none;font-weight:600}
-.chips a.brand{background:var(--brand);color:#0b0f16;border-color:transparent}
-.chips a:hover{opacity:.9}
+/* Global pill row at end */
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.actions .pill{background:var(--brand);color:#0b0f16;border:none}
 
 /* Composer */
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
@@ -69,7 +69,9 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <span class="version">v0.9.15</span>
+  <!-- Keeps the badge under the orange rule -->
+  <div class="badge-wrap"><span class="version">v0.9.15</span></div>
+
   <div class="card">
     <div class="header">
       <img class="logo" src="./chat%20white.png" alt="AR logo">
@@ -135,7 +137,7 @@ dbgCopy?.addEventListener('click', ()=>{
     'Response:\n'+dbgRes.textContent,
     'Structured:\n'+dbgStruct.textContent,
     'Provenance:\n'+dbgProv.textContent,
-    'Note:\n'+dbgNote.textContent,
+    'Note:\n'+dbgNote.textContent
   ].join('\n\n');
   navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
 });
@@ -162,13 +164,8 @@ function mdToHtml(md){
   const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
   for (const line of lines){
     const m = line.match(/^\s*-\s+(.*)$/);
-    if (m){
-      if(!inList){ out+='<ul>'; inList=true; }
-      out += `<li>${m[1].trim()}</li>`;
-    } else {
-      flush();
-      out += line.trim()? `<p>${line}</p>` : '';
-    }
+    if (m){ if(!inList){ out+='<ul>'; inList=true; } out += `<li>${m[1].trim()}</li>`; }
+    else { flush(); out += line.trim()? `<p>${line}</p>` : ''; }
   }
   flush();
   return { html:`<div class="answer">${out}</div>` };
@@ -177,277 +174,217 @@ function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
 
-/* ----------------- A. Product merge & dedupe ----------------- */
-const canon = s => (s||'').trim().toLowerCase()
-  .replace(/^https?:\/\//,'').replace(/[#?].*$/,'').replace(/\/$/,'');
-const titleKey = s => canon(String(s||'').replace(/\s+/g,' '));
-
-function mergeProducts(products=[]){
-  const buckets = new Map();
-  for(const p of products){
-    const key = canon(p.url||p.page_url) || titleKey(p.title);
-    if(!key) continue;
-    if(!buckets.has(key)) buckets.set(key, []);
-    buckets.get(key).push(p);
+/* ---------------- Product merging & parsing (generic) ---------------- */
+function mergeProducts(list){
+  if(!Array.isArray(list) || !list.length) return [];
+  const map = new Map();
+  for(const p of list){
+    const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
+    if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
+    const m = map.get(key);
+    // Precedence: keep existing, fill gaps from p
+    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
+    // Keep richer offers
+    const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
+    const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
+    if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = p.raw.offers; }
+    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
   }
-
-  const merged = [];
-  for(const [key, items] of buckets){
-    const out = { kind:'product', url: items.find(i=>i.url)?.url || items.find(i=>i.page_url)?.page_url, title: items.find(i=>i.title)?.title };
-    // Prefer richer description
-    out.description = (items.map(i=>i.description||i?.raw?.description||'').sort((a,b)=>b.length-a.length)[0]) || '';
-
-    // Offers: base (Offer) + range (AggregateOffer)
-    const offers = items.map(i=>i.raw?.offers||{}); // may mix
-    const base = offers.find(o=>o && (o.price!=null));
-    const agg  = offers.find(o=>o && (o.lowPrice!=null || o.highPrice!=null || o.lowprice!=null || o.highprice!=null));
-
-    if(base){
-      out.price = Number(base.price);
-      out.price_currency = base.priceCurrency || 'GBP';
-    }
-    if(agg){
-      out.range = {
-        low: Number(agg.lowPrice ?? agg.lowprice ?? ''),
-        high: Number(agg.highPrice ?? agg.highprice ?? ''),
-        ccy:  agg.priceCurrency || 'GBP'
-      };
-    }
-
-    // Availability (union; prefer explicit schema)
-    out.availability = items.map(i=>i.availability || i?.raw?.offers?.availability)
-      .filter(Boolean).sort((a,b)=>String(a).length<String(b).length?1:-1)[0] || '';
-
-    // Keep a canonical raw (first)
-    out.raw = items.find(i=>i.raw)?.raw || {};
-    merged.push(out);
-  }
-  return merged;
+  return [...map.values()];
 }
 
-/* ----------------- B. Facts extraction ----------------- */
-function extractFacts(desc=''){
-  const out = {};
-  const lines = String(desc).split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  // Normalise: accept "Label" or "Label: value"
-  const get = (labels)=> {
-    for(const label of labels){
-      const re = new RegExp(`^${label}\\s*:??\\s*(.+)$`,'i');
-      const m = lines.find(l=>re.test(l));
-      if(m){ return m.replace(re,'$1').trim(); }
-    }
-    return null;
+function extractFacts(desc){
+  const txt = String(desc||'')
+    // strip the “Dates (are subject…)” paragraph and any dated lines
+    .split(/\r?\n/).filter(l=>{
+      if(/^dates\s*\(/i.test(l)) return false;
+      if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
+      if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
+      return true;
+    });
+
+  const grab = (label)=>{
+    const r = new RegExp(`^\\s*${label}\\s*:?\\s*(.+)$`,'i');
+    const m = txt.find(l=>r.test(l));
+    return m ? m.replace(r,'$1').trim() : null;
   };
-  out.location     = get(['Location']);
-  out.participants = get(['Participants']);
-  out.fitness      = get(['Fitness']);
-  out.availability = get(['Availability']);
-  return out;
+
+  const location     = grab('Location');
+  const participants = grab('Participants');
+  const fitness      = grab('Fitness');
+  const availability = grab('Availability');
+
+  // option/times lines
+  const optionLines = txt.filter(l =>
+    /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
+    /^\s*OR\s*1\s*day\b/i.test(l)
+  ).slice(0,4);
+
+  return {location, participants, fitness, availability, optionLines};
 }
 
-/* ----------------- C. Option pricing & times ----------------- */
-function parseOptions(desc=''){
-  const out=[];
-  const text = desc.replace(/\r/g,'');
-  // bullets or lines like: "4hrs — 5:45 am to 9:45 am or 10:30 am to 2:30 pm — £125"
-  const re = /(?:^|\n)\s*(?:[-•]\s*)?((?:\d+\s*(?:hr|hrs|hour|hours)|half\s*day|1\s*day|full\s*day|day))\s*(?:[-–—]\s*)?([^£\n]*?)\s*(?:[-–—]\s*)?(?:£\s?(\d+(?:\.\d{1,2})?))?/gim;
-  let m; while((m=re.exec(text))!==null){
-    let label = m[1].replace(/\s+/g,' ').trim();
-    if(/^4\s*hr/.test(label)) label='4 hours';
-    if(/^half\s*day/i.test(label)) label='Half day';
-    if(/^full\s*day/i.test(label) || /^day$/i.test(label)) label='Full day';
-    if(/^1\s*day/i.test(label)) label='1 day';
-    const time = (m[2]||'').replace(/\s+/g,' ').replace(/^—/,'').trim();
-    const price = m[3] ? `£${Number(m[3]).toLocaleString('en-GB',{maximumFractionDigits:0})}` : null;
-    out.push({label, time, price});
-  }
-  return out;
+function currency(amount, ccy){
+  if(amount==null || amount==='') return null;
+  const n = Number(amount); if(!isFinite(n)) return null;
+  try{ return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n); }
+  catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
 }
+function deriveOptions(prod, facts){
+  const ccy = prod.price_currency || prod?.raw?.offers?.priceCurrency || 'GBP';
+  const base = prod.price ?? prod?.raw?.offers?.price;
+  const low  = prod?.raw?.offers?.lowPrice;
+  const high = prod?.raw?.offers?.highPrice;
 
-/* ----------------- D. Strip dates from product text ----------------- */
-function stripDateNoise(desc=''){
-  if(!desc) return desc;
-  const lines = desc.split(/\r?\n/);
-  const filtered = [];
-  const dateToken = /(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i;
-  const shortDate = /\b\d{2}[-/](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-/]\d{2}\b/i;
-  const longParaStart = /^Dates\s*\(.*\)/i;
-  let skipping=false;
-  for(const ln of lines){
-    if(longParaStart.test(ln)){ skipping=true; continue; }
-    if(skipping){
-      // stop skipping if blank line
-      if(!ln.trim()) { skipping=false; }
-      continue;
+  // Decide labels from text if we can
+  const text = (facts.optionLines||[]).join('\n').toLowerCase();
+  const has4h  = /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
+  const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
+
+  const opts = [];
+
+  // Use AggregateOffer as range mapping when both labels exist
+  if(low!=null && high!=null && has4h && has1d){
+    opts.push({label:'4 hours', price:currency(low,ccy)});
+    opts.push({label:'1 day',   price:currency(high,ccy)});
+  } else {
+    if(base!=null) opts.push({label:'Standard', price:currency(base,ccy)});
+    if(low!=null || high!=null){
+      const range = [low,high].filter(v=>v!=null).map(v=>currency(v,ccy)).join(' – ');
+      if(range) opts.push({label:'Pricing', price:range});
     }
-    if(dateToken.test(ln) || shortDate.test(ln)) continue;
-    filtered.push(ln);
   }
-  return filtered.join('\n').trim();
+
+  // try to add time windows from option lines
+  const timePat = /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
+  for(const ln of facts.optionLines||[]){
+    const label = ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
+    const tm = ln.match(timePat);
+    const window = tm ? `${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}` : null;
+    // only add if not already present with same label
+    if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){
+      opts.push({label, time:window});
+    } else if(window){
+      const o = opts.find(o=>o.label.toLowerCase()===label.toLowerCase());
+      if(o && !o.time) o.time = window;
+    }
+  }
+  return opts;
 }
 
-/* ----------------- E. Single action pills ----------------- */
-function buildChips(structured, product){
-  const chips = [];
-  const prodUrl = product?.url || product?.raw?.url || null;
-  const evUrl = (structured?.events||[]).find(e=>e.page_url||e.source_url)?.page_url || (structured?.events||[]).find(e=>e.source_url)?.source_url || null;
+/* Chips from structured (render once, at the end) */
+function buildActionPills(structured, prod){
+  const chips=[];
+  const productUrl = prod?.url || prod?.page_url || prod?.source_url || structured?.products?.[0]?.url || null;
+  const priceUrl   = productUrl ? `${productUrl}#prices` : null;
+  const upcoming   = (structured?.events?.[0]?.page_url || structured?.events?.[0]?.source_url) || null;
+  const infoUrl    = productUrl ? `${productUrl}#info` : productUrl;
 
-  if(prodUrl) chips.push({label:'Book Now', href:prodUrl, brand:true});
-  if(evUrl)   chips.push({label:'Upcoming dates', href:evUrl, brand:false});
+  if(productUrl) chips.push({label:'Book Now', href:productUrl});
+  if(priceUrl)   chips.push({label:'Prices', href:priceUrl});
+  if(upcoming)   chips.push({label:'Upcoming dates', href:upcoming});
+  if(infoUrl)    chips.push({label:'Info', href:infoUrl});
+
   return chips;
 }
 
-/* ----------------- F. Router / query upgrader ----------------- */
-function upgradeQuery(q){
-  const base = q.trim();
+/* ---------------- Renderers ---------------- */
+function renderProductCard(prod){
+  const facts = extractFacts(prod.description||'');
+  const options = deriveOptions(prod, facts);
 
-  const isNextWorkshop = /\b(next|upcoming)\b.*\bworkshop/i.test(base);
-  const isDevon = /\b(devon|dartmoor|exmoor|sidmouth|south\s*west)\b/i.test(base);
-  const isCourses = /\b(course|courses|class|classes|tuition)\b/i.test(base);
+  const infoP = [];
+  if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
+  if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
+  if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
+  if(facts.availability) infoP.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
 
-  let resolver = 'default';
-  let query = base;
+  const li = options.map(o=>{
+    const bits = [o.label, o.time ? `— ${o.time}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
+    return `<li>${bits}</li>`;
+  }).join('');
 
-  if(isNextWorkshop && !/date|bluebell/i.test(base)){
-    resolver = 'soonest-workshop';
-    query += ' site:alanranger.com "Event" "workshop" date';
-  }
-  if(isDevon){
-    resolver = 'region-filter';
-    query += ' devon dartmoor exmoor sidmouth "workshop"';
-  }
-  if(isCourses){
-    resolver = 'courses';
-    query += ' site:alanranger.com course courses photography pricing';
-  }
-  return {query, resolver};
-}
-
-/* ----------------- G. Guardrails note ----------------- */
-function setDebugNote({resolver, mergedCount, eventsCount, pillsCount}){
-  const note = { resolver, merged_products: mergedCount, events_found: eventsCount, pills_rendered: pillsCount };
-  dbgNote.textContent = safeJSONString(note);
-}
-
-/* -------------- Currency helper -------------- */
-function fmtMoney(v, ccy='GBP'){
-  if(v==null || v==='' || Number.isNaN(Number(v))) return null;
-  try{
-    return new Intl.NumberFormat('en-GB',{style:'currency',currency:ccy,maximumFractionDigits:0}).format(Number(v));
-  }catch{
-    return `£${String(v)}`;
-  }
-}
-
-/* -------- Renderers -------- */
-function renderProductCard(prod, structured){
-  // Clean description of date spam
-  const cleanDesc = stripDateNoise(prod.description||'');
-  const facts = extractFacts(cleanDesc);
-  const options = parseOptions(cleanDesc);
-
-  // Pricing summary line (base + range if useful)
-  const pieces = [];
-  if(prod.price!=null) pieces.push(fmtMoney(prod.price, prod.price_currency||'GBP'));
-  if(prod.range && (Number.isFinite(prod.range.low)||Number.isFinite(prod.range.high))){
-    const lo = Number.isFinite(prod.range.low) ? fmtMoney(prod.range.low, prod.range.ccy||'GBP') : '';
-    const hi = Number.isFinite(prod.range.high)? fmtMoney(prod.range.high, prod.range.ccy||'GBP') : '';
-    if(lo||hi) pieces.push([lo,hi].filter(Boolean).join('–'));
-  }
-  const priceTrail = pieces.length? ` — ${pieces.join(' • ')}` : '';
-
-  // Build facts/option list
-  const list = [];
-  // Option lines first (if we captured explicit times/prices)
-  options.forEach(op=>{
-    const bits = [ `<strong>${op.label}</strong>` ];
-    if(op.time)  bits.push(`— ${op.time}`);
-    if(op.price) bits.push(`— ${op.price}`);
-    list.push(`<li>${bits.join(' ')}</li>`);
-  });
-  // Fallback: if no explicit option prices but we do have base/range, show succinct
-  if(!options.length && (prod.price!=null || (prod.range && (prod.range.low||prod.range.high)))){
-    list.push(`<li><strong>Pricing:</strong> ${pieces.join(' • ')}</li>`);
-  }
-
-  if(facts.location)     list.push(`<li><strong>Location:</strong> ${facts.location}</li>`);
-  if(facts.participants) list.push(`<li><strong>Participants:</strong> ${facts.participants}</li>`);
-  if(facts.fitness)      list.push(`<li><strong>Fitness:</strong> ${facts.fitness}</li>`);
-  if(facts.availability){
-    const norm = facts.availability;
-    list.push(`<li><strong>Availability:</strong> ${norm}</li>`);
-  }else if (prod.availability){
-    const norm = /instock/i.test(prod.availability) ? 'In Stock' : /outofstock/i.test(prod.availability) ? 'Out of Stock' : null;
-    if(norm) list.push(`<li><strong>Availability:</strong> ${norm}</li>`);
-  }
-
-  // Summary line: first non-empty sentence from description
-  const firstLine = cleanDesc.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)[0] || '';
-
-  const card = `
+  return `
     <div class="answer">
-      <h3>${(prod.title||'Workshop')}${priceTrail}</h3>
-      ${ firstLine ? `<p>${firstLine}</p>` : '' }
-      ${ list.length ? `<ul>${list.join('')}</ul>` : '' }
+      <h3>${prod.title || 'Workshop'}</h3>
+      ${infoP.join('')}
+      ${li? `<ul>${li}</ul>`:''}
     </div>
   `;
-  const bubble = addBubble(card);
-
-  // Single set of pills
-  const chips = buildChips(structured, prod);
-  const pillsWrap = document.createElement('div');
-  pillsWrap.className='chips';
-  chips.forEach(c=>{
-    const a=document.createElement('a');
-    a.href=c.href; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
-    if(c.brand) a.classList.add('brand');
-    pillsWrap.appendChild(a);
-  });
-  if(chips.length) bubble.appendChild(pillsWrap);
-
-  return {chipsCount: chips.length};
 }
 
 function renderEventsBlock(structured){
-  const now = new Date();
-  const future = (structured?.events||[])
-    .filter(e=> e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
-    .sort((a,b)=> new Date(a.date_start)-new Date(b.date_start))
+  const now=new Date();
+  const future=(structured?.events||[])
+    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
+    .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
     .slice(0,12);
 
-  if(!future.length) return 0;
+  if(!future.length) return '';
 
-  const hTitle = structured?.topic ? `Upcoming ${String(structured.topic).trim()} Workshops` : 'Upcoming Workshops';
-  const li = future.map(e=>{
-    const when = fmtDate(e.date_start);
-    const href = e.page_url||e.source_url||'#';
-    const loc  = e.location || e?.raw?.location?.name || '';
-    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${loc?` — ${loc}`:''}</li>`;
+  const topic = (structured?.topic||'').toString().trim();
+  const title = topic ? `Upcoming ${topic} Workshops` : 'Upcoming Workshops';
+
+  const lis = future.map(e=>{
+    const when=fmtDate(e.date_start);
+    const href=e.page_url||e.source_url||'#';
+    const loc=e.location||'';
+    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a> — ${loc}</li>`;
   }).join('');
 
-  const html = `
-    <div class="answer">
-      <h3>${hTitle}</h3>
-      <ul>${li}</ul>
-    </div>`;
-  addBubble(html);
-  return future.length;
+  return `<div class="answer"><h3>${title}</h3><ul>${lis}</ul></div>`;
 }
 
-function renderMarkdownFallback(payload){
-  const md = payload.answer_markdown || payload.answer || '';
-  if(md){ const {html}=mdToHtml(md); addBubble(html); }
-  else{
-    addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about workshops, tuition, kit, or locations — for example, <em>“When are the next Bluebell dates?”</em></p></div>`);
+/* Full render */
+function renderAnswer(payload){
+  const s = payload.structured||{};
+  const merged = mergeProducts(s.products||[]);
+  const note = {
+    resolver: 'default',
+    merged_products: merged.length,
+    events_found: (s.events||[]).length,
+    pills_rendered: 0
+  };
+
+  if(merged.length || (s.events||[]).length){
+    // pick richest product
+    let prod = merged.find(p=>p?.price!=null) ||
+               merged.find(p=>p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null) ||
+               merged[0];
+
+    if(prod){
+      addBubble(renderProductCard(prod));
+    }
+    const evHTML = renderEventsBlock(s);
+    if(evHTML) addBubble(evHTML);
+
+    // single pill row at the end
+    const pills = buildActionPills(s, prod);
+    if(pills.length){
+      const wrap = document.createElement('div');
+      wrap.className='actions';
+      pills.forEach(p=>{
+        const a=document.createElement('a'); a.className='pill'; a.textContent=p.label;
+        a.href=p.href; a.target='_blank'; a.rel='noopener';
+        wrap.appendChild(a);
+      });
+      thread.appendChild(wrap);
+      note.pills_rendered = pills.length;
+    }
+  } else {
+    // generic markdown fallback
+    const md = payload.answer_markdown || payload.answer || '';
+    if(md){ const {html}=mdToHtml(md); addBubble(html); }
   }
+
+  // Debug dumps
+  dbgStruct.textContent = safeJSONString(payload.structured||{});
+  dbgNote.textContent   = safeJSONString(note);
 }
 
-/* ---------- Networking / Orchestration ---------- */
-async function sendQuery(userQuery){
-  const {query, resolver} = upgradeQuery(userQuery);
+/* ---------------- Networking ---------------- */
+async function sendQuery(query){
   const req = { query, topK: 8 };
-  dbgReq.textContent = safeJSONString({resolver, ...req});
-
+  dbgReq.textContent = safeJSONString(req);
   const closeTyping = addTyping();
   try{
     const res = await fetch(CHAT_ENDPOINT, {
@@ -459,40 +396,16 @@ async function sendQuery(userQuery){
     const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
     dbgHeaders.textContent = safeJSONString(headers);
 
-    const dataText = await res.text();
-    let data; try{ data = JSON.parse(dataText); }catch{ data={ answer_markdown:dataText }; }
+    const data = await res.json();
     dbgRes.textContent = safeJSONString(data);
-    dbgStruct.textContent = safeJSONString(data.structured||{});
     dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
 
     closeTyping();
-
-    const s = data.structured || {};
-    let mergedCount=0, eventsCount=0, pillsCount=0;
-
-    if(s.products?.length || s.events?.length){
-      // Merge & dedupe products
-      const merged = mergeProducts(s.products||[]);
-      mergedCount = merged.length;
-
-      // Render first merged product (single card)
-      if(merged.length){
-        const {chipsCount} = renderProductCard(merged[0], {...s, products: merged});
-        pillsCount = chipsCount;
-      }
-
-      // Events block
-      eventsCount = renderEventsBlock(s);
-
-      // If nothing visible, fallback to markdown
-      if(!merged.length && !eventsCount){
-        renderMarkdownFallback(data);
-      }
-    }else{
-      renderMarkdownFallback(data);
+    if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length)))) {
+      renderAnswer(data);
+    } else {
+      addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about workshops, tuition, kit, or locations — for example, <em>“When are the next Bluebell dates?”</em></p></div>`);
     }
-
-    setDebugNote({resolver, mergedCount, eventsCount, pillsCount});
   } catch (err){
     closeTyping();
     dbgStatus.textContent = 'error';
@@ -500,7 +413,7 @@ async function sendQuery(userQuery){
   }
 }
 
-/* ---------- Wire up composer ---------- */
+/* ---------------- Wire up composer ---------------- */
 function submit(){
   const val = input.value.trim();
   if(!val) return;
@@ -513,8 +426,9 @@ input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
 
-// Optional: seed for testing
-// sendQuery("give me the next bluebell workshop dates and prices");
+/* Optional: prefill a quick sanity query during dev
+   sendQuery("give me the next bluebell workshop dates and prices");
+*/
 </script>
 </body>
 </html>
