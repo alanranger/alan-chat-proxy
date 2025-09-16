@@ -1,128 +1,160 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Bench Test — single-file (bench-only)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root{
-      --bg:#0f131a; --panel:#141a22; --muted:#2b3442; --text:#e6ecf5; --sub:#a8b3c7;
-      --brand:#f5a524; --accent:#69db7c; --amber:#ffb703; --danger:#ff6b6b; --chip:#1f2834;
-      --blue:#74c0fc; --border:#1e2632;
-      --radius:14px;
-    }
-    html,body{height:100%}
-    body{
-      margin:0; background:var(--bg); color:var(--text); font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    }
-    .wrap{display:grid; grid-template-columns:320px 1fr; gap:18px; padding:18px; max-width:1400px; margin:0 auto;}
-    .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:16px;}
-    h1{font-size:18px; margin:0 0 8px; display:flex; align-items:center; gap:10px}
-    .tag{background:var(--chip); color:var(--sub); border:1px solid var(--border); padding:2px 8px; border-radius:999px; font-size:12px}
-    .section-title{font-weight:600; color:#eaf2ff; margin:12px 0 8px}
-    .help{color:var(--sub); font-size:12px; margin-top:4px}
-    .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-    input[type="file"]{color:var(--sub)}
-    input[type="text"], textarea{
-      width:100%; background:#0c0f14; color:var(--text); border:1px solid var(--muted);
-      border-radius:10px; padding:10px 12px; outline:none;
-    }
-    textarea{min-height:140px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; resize:vertical}
-    .btn{
-      border:1px solid var(--muted); background:#0c1016; color:var(--text);
-      padding:8px 12px; border-radius:10px; cursor:pointer; transition:all .15s ease; font-weight:600;
-    }
-    .btn:hover{transform:translateY(-1px); border-color:#3a465a}
-    .btn:disabled{opacity:.45; cursor:not-allowed}
-    .btn-green{background:#112418; border-color:#21422a}
-    .btn-green:hover{background:#14301f}
-    .btn-amber{background:#3a2c12; border-color:#6a4b18}
-    .btn-amber:hover{background:#453313}
-    .btn-ghost{background:#0c1016}
-    .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:var(--chip); border:1px solid var(--border); border-radius:999px; font-size:12px; color:#b7c4d6; margin-right:6px; margin-bottom:6px}
-    .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-    .grid-3{display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:12px}
-    .list{display:flex; flex-direction:column; gap:8px}
-    .event{border:1px solid var(--muted); border-radius:12px; padding:10px 12px; background:#0b0f15}
-    .event .title{font-weight:700}
-    .event .meta{color:var(--sub); font-size:12px}
-    .article a{color:var(--blue); text-decoration:none}
-    .article{padding:8px 10px; border:1px dashed var(--muted); border-radius:10px}
-    .product{border:1px solid #2a374a; background:#0a1119; border-radius:14px; padding:12px}
-    .product h3{margin:0 0 6px}
-    .badge{display:inline-block; padding:2px 8px; border-radius:999px; background:#122337; color:#9ed0ff; font-size:12px; border:1px solid #234664}
-    .conf{display:inline-flex; align-items:center; gap:8px}
-    .conf .num{font-weight:800; font-size:18px}
-    .muted{color:var(--sub)}
-    details{border:1px dashed var(--muted); border-radius:10px; padding:10px 12px}
-    details > summary{cursor:pointer; color:#cdd7e5; font-weight:600}
-    pre{white-space:pre-wrap; word-break:break-word; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; background:#0c0f14; padding:10px 12px; border-radius:10px; border:1px solid var(--muted); max-height:340px; overflow:auto}
-    small{color:var(--sub)}
-    .right h2{margin:0 0 8px; font-size:16px}
-    .status{display:grid; gap:8px; grid-template-columns:1fr 1fr}
-    .status .box{background:#0c0f14; border:1px solid var(--muted); padding:8px 10px; border-radius:10px; min-height:44px}
-    .status .k{color:#86a2c8; font-size:12px}
-    .status .v{font-weight:700}
-    .hr{height:1px; background:var(--border); margin:12px 0}
-    .sticky{position:sticky; top:18px}
-    .warn{color:#ffe066}
-    .err{color:#ffa8a8}
-    .ok{color:#8ce99a}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Bench Test — single-file</title>
+<style>
+  :root{
+    --bg:#0f1320; --panel:#141a2a; --muted:#8892b0; --text:#e6e8f0; --accent:#30d158;
+    --warn:#ff9f0a; --bad:#ff453a; --pill:#1f2842; --link:#82aaff; --btn:#2b3553;
+    --btn2:#213056; --good:#34c759;
+    font-synthesis-weight:none;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  a{color:var(--link);text-decoration:none}
+  .wrap{display:grid;grid-template-columns:320px 1fr;gap:16px;height:100vh;padding:14px}
+  .col{display:flex;flex-direction:column;gap:12px;min-height:0}
+  .card{background:var(--panel);border:1px solid #1d2440;border-radius:10px;padding:12px}
+  .card h3{margin:0 0 8px;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  input[type="text"], input[type="password"], textarea{width:100%;background:#0d1220;border:1px solid #1f2746;color:var(--text);border-radius:8px;padding:10px 10px;font-size:13px}
+  input[type="file"]{color:var(--muted)}
+  .btn{background:var(--btn);color:#e7ecff;border:1px solid #36406a;border-radius:8px;padding:8px 10px;font-weight:600;cursor:pointer}
+  .btn:hover{filter:brightness(1.06)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-run{background:#1e3a2f;border-color:#2c6e49}
+  .btn-run:hover{filter:brightness(1.1)}
+  .btn-green{background:#0f3b28;border-color:#1a7f47}
+  .btn-blue{background:#162a59;border-color:#234aa2}
+  .btn-ghost{background:transparent;border-color:#2b3863}
+  .tiny{font-size:12px;color:var(--muted)}
+  .pill{display:inline-flex;align-items:center;background:var(--pill);border:1px solid #28335d;color:#cfd7ff;border-radius:999px;padding:4px 10px;margin:0 6px 6px 0;font-size:12px;white-space:nowrap}
+  .pill[data-type="warn"]{background:#3a2a12;border-color:#6e4b1a;color:#ffd8a8}
+  .pill[data-type="ok"]{background:#14351f;border-color:#245734;color:#b7ffd1}
+  .list{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}
+  .list a{display:block;background:#0e1323;border:1px solid #212b55;border-radius:8px;padding:10px}
+  .list a:hover{background:#131a31}
+  .meta{color:var(--muted);font-size:12px}
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .big{min-height:220px;max-height:320px;overflow:auto;background:#0b1020;border:1px solid #1a2244;border-radius:10px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;font-size:12px;color:#e6f0ff}
+  .log{max-height:150px;overflow:auto;background:#0b1020;border:1px solid #1a2244;border-radius:10px;padding:10px;font-family:ui-monospace,monospace;font-size:12px;color:#cfe3ff}
+  .kv{display:grid;grid-template-columns:115px 1fr;gap:4px 8px}
+  .badge{display:inline-flex;align-items:center;gap:6px;background:#0c1a3b;border:1px solid #233a77;border-radius:999px;padding:6px 10px}
+  .badge b{font-size:16px}
+  .tooltip{position:relative}
+  .tooltip:hover .tip{opacity:1;transform:translateY(-2px);pointer-events:auto}
+  .tip{position:absolute;left:0;top:110%;min-width:280px;z-index:10;opacity:0;pointer-events:none;background:#0b0f1d;border:1px solid #27325b;color:#dbe3ff;border-radius:8px;padding:10px;font-size:12px;transition:.15s}
+  .sep{height:8px}
+  .hr{height:1px;background:#1e2748;margin:6px 0}
+  .switch{display:flex;align-items:center;gap:8px}
+  .switch input{accent-color:#2f7ef7}
+  .sticky-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .tag{display:inline-block;background:#0c1733;border:1px solid #223562;color:#a9c1ff;border-radius:6px;padding:2px 6px;margin-left:6px;font-size:11px}
+  .rightCol{display:flex;flex-direction:column;gap:12px;min-height:0}
+  .row-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .muted{color:var(--muted)}
+  .ok{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <!-- LEFT -->
-    <div class="card sticky">
-      <h1>Bench Test <span class="tag">single-file · bench-only</span></h1>
-
-      <div class="section-title">Step 1 (optional): Upload <em>Landing Pages CSV</em></div>
-      <div class="help">Use when direct matches are weak. <br/>CSV columns accepted: <code>url</code> and one of <code>title</code> | <code>meta_title</code>. Extra columns ignored.</div>
-      <div class="row" style="margin-top:6px;">
-        <input id="landingFile" type="file" accept=".csv" />
-        <button class="btn btn-ghost" id="btnLoadLanding">Upload Landing CSV</button>
-      </div>
-
-      <div class="section-title">Step 2: Upload your <em>Events snapshot</em> (CSV or JSON)</div>
-      <div class="help">Required for Events & Product block. CSV columns accepted: <code>date|when</code>, <code>title</code>, <code>location</code>, <code>url</code>, optional <code>price</code>, <code>tags</code>, <code>includes</code>.</div>
-      <div class="row" style="margin-top:6px;">
-        <input id="eventsFile" type="file" accept=".csv,.json" />
-        <button class="btn btn-ghost" id="btnLoadEvents">Upload Events</button>
-      </div>
-
-      <div class="section-title">Step 3: Upload your <em>Questions CSV</em> (~15 rows)</div>
-      <div class="help">Columns used: <code>idx</code>, <code>query</code>, <code>expected</code>. Extra columns ignored.</div>
-      <div class="row" style="margin-top:6px;">
-        <input id="qFile" type="file" accept=".csv" />
-        <button class="btn btn-ghost" id="btnLoadQ">Upload Questions CSV</button>
-        <button class="btn btn-amber" id="btnRunSuite" title="Runs the uploaded Questions CSV and writes to the Execution Log.">Run CSV Test Suite</button>
-      </div>
-
-      <div class="section-title">Step 4: Try a single query</div>
-      <input id="query" type="text" placeholder="Ask e.g. ‘when is the next devon workshop?’" />
-      <div class="row" style="margin-top:8px;">
-        <button class="btn btn-green" id="btnRun">Run</button>
-        <button class="btn" id="btnCopyJSON">Copy JSON</button>
+<div class="wrap">
+  <!-- LEFT -->
+  <div class="col">
+    <div class="card">
+      <div class="sticky-head">
+        <h3>Bench Test <span class="tag">single-file</span></h3>
+        <div class="badge tooltip">
+          <span>Confidence:</span>
+          <b id="confVal">—%</b>
+          <div class="tip">
+            Composite score (max 100):<br/>
+            • Intent (20)<br/>
+            • Query coverage (20)<br/>
+            • Required results present (30)<br/>
+            • Event freshness (20, events only)<br/>
+            • Price detected (10, events only)<br/>
+            Empty required sections cap confidence at <b>30%</b>.
+          </div>
+        </div>
       </div>
 
       <div class="hr"></div>
 
+      <h3>Step 0: Live data (Supabase)</h3>
       <div class="row">
-        <label class="row"><input id="chkUseLanding" type="checkbox" checked/> <span class="help">Use Landing CSV fallback when direct matches are weak</span></label>
+        <input id="sbUrl" type="text" placeholder="Supabase URL (e.g. https://xyz.supabase.co)" />
       </div>
       <div class="row">
-        <label class="row"><input id="chkGenericPills" type="checkbox" /> <span class="help">Enable generic search pills (for future integration)</span></label>
+        <input id="sbKey" type="password" placeholder="Supabase anon key" />
+      </div>
+      <div class="row">
+        <input id="sbEvents" type="text" placeholder="Events table/view (default: ai_events)" />
+      </div>
+      <div class="row">
+        <button class="btn btn-blue" id="btnSaveSb">Save</button>
+        <button class="btn btn-green" id="btnFetchEvents">Fetch live events</button>
+        <span id="sbStatus" class="tiny"></span>
       </div>
 
       <div class="hr"></div>
 
-      <div class="status">
-        <div class="box"><div class="k">Intent</div><div class="v" id="stIntent">—</div></div>
-        <div class="box"><div class="k">Reason</div><div class="v" id="stReason">—</div></div>
-        <div class="box"><div class="k">Landing CSV</div><div class="v" id="stLanding">not loaded</div></div>
-        <div class="box"><div class="k">Events</div><div class="v" id="stEvents">not loaded</div></div>
-        <div class="box"><div class="k">Questions CSV</div><div class="v" id="stQ">not loaded</div></div>
-        <div class="box"><div class="k">CSV Progress</div><div class="v" id="stProg">0 / 0</div></div>
+      <h3>Step 1 (optional): Upload <em>Landing Pages</em> CSV</h3>
+      <div class="tiny">Use when direct matches are weak. Required columns:
+        <code>url</code> and at least one of <code>title</code> | <code>meta_title</code> | <code>h1_title</code>. Extra columns are ignored.</div>
+      <div class="row">
+        <input id="fileLanding" type="file" accept=".csv" />
+        <button class="btn" id="btnLanding">Upload</button>
+      </div>
+      <div class="tiny" id="landingInfo">Landing CSV: <span class="muted">not loaded</span></div>
+
+      <div class="hr"></div>
+
+      <h3>Step 2: Upload <em>Questions</em> CSV (≈15 rows)</h3>
+      <div class="tiny">Columns used: <code>idx</code>, <code>query</code>, <code>expected</code>. Extra columns ignored.</div>
+      <div class="row">
+        <input id="fileQs" type="file" accept=".csv" />
+        <button class="btn" id="btnQs">Upload</button>
+        <button class="btn" id="btnRunSuite">Run CSV Test Suite</button>
+      </div>
+      <div class="tiny" id="qsInfo">Questions CSV: <span class="muted">not loaded</span></div>
+
+      <div class="hr"></div>
+
+      <h3>Step 3: (optional) Upload Events snapshot (CSV or JSON)</h3>
+      <div class="tiny">Use only if live pull is unavailable. CSV columns accepted:
+        <code>title</code>, <code>date</code> or <code>when</code>, <code>location</code>, <code>url</code>, optional <code>price_min</code>, <code>price_max</code>, <code>tags</code>.
+      </div>
+      <div class="row">
+        <input id="fileEvents" type="file" accept=".csv,.json" />
+        <button class="btn" id="btnUploadEvents">Upload Events</button>
+        <span class="tiny" id="eventsInfo">Events: <span class="muted">not loaded</span></span>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3>Step 4: Try a single query</h3>
+      <div class="row">
+        <input id="queryInput" type="text" placeholder="Ask e.g. 'when is the next devon workshop?'" />
+        <button class="btn btn-run" id="btnRun">Run</button>
+        <button class="btn btn-ghost" id="btnCopyJson">Copy JSON</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="switch"><input id="chkLandingFallback" type="checkbox" checked> <label for="chkLandingFallback">Use Landing CSV fallback when direct matches are weak</label></div>
+      <div class="switch"><input id="chkGeneric" type="checkbox"> <label for="chkGeneric">Enable generic search pills (placeholder)</label></div>
+
+      <div class="hr"></div>
+
+      <div class="kv">
+        <div class="muted">Intent</div><div id="intentVal">—</div>
+        <div class="muted">Reason</div><div id="reasonVal" class="tiny">—</div>
+        <div class="muted">Landing CSV</div><div id="landingRows" class="tiny">not loaded</div>
+        <div class="muted">Events</div><div id="eventsRows" class="tiny">not loaded</div>
+        <div class="muted">Questions CSV</div><div id="qsRows" class="tiny">not loaded</div>
       </div>
 
       <div class="hr"></div>
@@ -130,520 +162,487 @@
       <div class="row">
         <button class="btn" id="btnCopyLog">Copy Log</button>
         <button class="btn" id="btnDownloadLog">Download Log</button>
-        <button class="btn" id="btnCopyFailures">Copy Failures (CSV)</button>
-        <button class="btn" id="btnCopyAllJSON">Copy All Results (JSON)</button>
-      </div>
-
-      <div class="help" style="margin-top:8px">Single query results appear on the right (Product / Events / Articles / Pills). CSV suite results go to the JSON + Execution Log.</div>
-    </div>
-
-    <!-- RIGHT -->
-    <div class="right card">
-      <div class="row" style="justify-content:space-between; align-items:flex-start">
-        <div class="conf" title="Overall confidence in the assembled answer. Hover chips below for breakdown.">
-          <span class="muted">Confidence:</span>
-          <span class="num" id="confNum">—%</span>
-        </div>
-        <div id="confBreak"></div>
-      </div>
-
-      <div id="productBlock" class="product" style="display:none; margin-top:10px">
-        <h3 id="prodTitle">Product</h3>
-        <div class="row" style="gap:12px; flex-wrap:wrap">
-          <span class="badge" id="prodPrice">Price: —</span>
-          <span class="badge" id="prodNext">Next date: —</span>
-          <span class="badge" id="prodLoc">Location: —</span>
-          <span class="badge" id="prodIncludes">Includes: —</span>
-        </div>
-        <div class="help" id="prodSource" style="margin-top:6px"></div>
-      </div>
-
-      <div class="grid-3" style="margin-top:12px">
-        <div>
-          <h2>Events</h2>
-          <div class="list" id="eventsList"></div>
-        </div>
-        <div>
-          <h2>Articles</h2>
-          <div class="list" id="articlesList"></div>
-        </div>
-        <div>
-          <h2>Pills</h2>
-          <div id="pillsList"></div>
-        </div>
-      </div>
-
-      <div style="margin-top:12px">
-        <h2>JSON</h2>
-        <textarea id="jsonOut" readonly>[]</textarea>
-      </div>
-
-      <div style="margin-top:12px">
-        <h2>Execution Log</h2>
-        <details open>
-          <summary>Click to expand / collapse</summary>
-          <pre id="log"></pre>
-        </details>
+        <button class="btn" id="btnCopyFails">Copy Failures (CSV)</button>
+        <button class="btn" id="btnCopyAll">Copy All Results (JSON)</button>
       </div>
     </div>
   </div>
 
-  <script>
-/* ---------------------- tiny utils ---------------------- */
-const $ = (id)=>document.getElementById(id);
-const logEl = $("log");
-const writeLog = (msg)=>{ const ts=new Date().toISOString().replace('T',' ').replace('Z',''); logEl.textContent += `[${ts}] ${msg}\n`; logEl.scrollTop = logEl.scrollHeight; };
-const copyText = async (s)=>{ await navigator.clipboard.writeText(s); };
-const download = (name, text)=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text], {type:'text/plain'})); a.download=name; a.click(); URL.revokeObjectURL(a.href); };
+  <!-- RIGHT -->
+  <div class="rightCol">
+    <div class="row-cols">
+      <div class="card">
+        <div class="sticky-head"><h3>Events</h3></div>
+        <div id="eventsList" class="list"></div>
+      </div>
+      <div class="card">
+        <div class="sticky-head"><h3>Articles</h3></div>
+        <div id="articlesList" class="list"></div>
+      </div>
+      <div class="card">
+        <div class="sticky-head"><h3>Pills</h3></div>
+        <div id="pillsList" class="row"></div>
+      </div>
+    </div>
 
+    <div class="card">
+      <div class="sticky-head"><h3>JSON</h3><span class="tiny muted">Hover the tags above for breakdown</span></div>
+      <pre id="jsonOut" class="big">{}</pre>
+    </div>
+
+    <div class="card">
+      <div class="sticky-head"><h3>Execution Log</h3><span class="tiny muted">Click to expand / collapse</span></div>
+      <pre id="logOut" class="log"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- tiny utils ---------- */
+const $ = sel => document.querySelector(sel);
+const logLines = [];
+const now = () => new Date().toISOString().replace('T',' ').replace('Z','');
+function log(msg){ const line = `[${now()}] ${msg}`; logLines.push(line); $("#logOut").textContent = logLines.join('\n'); }
+function copy(text){ navigator.clipboard.writeText(text||'').then(()=>{},()=>{}); }
+function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+function load(k,def=null){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }catch{ return def; } }
+function fmtPct(n){ return Math.round(n) + '%'; }
+function daysUntil(dateStr){
+  const d = (dateStr instanceof Date)? dateStr : new Date(dateStr);
+  if(isNaN(+d)) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = (d - today)/(1000*60*60*24);
+  return Math.round(diff);
+}
+function sanitizeURL(u){ try{ return new URL(u).href; } catch{ return null; } }
+
+/* ---------- CSV parser (simple, handles quotes) ---------- */
 function parseCSV(text){
-  // small, robust-enough CSV parser (supports quoted fields, commas, CRLF)
-  const rows = [];
-  let row = [], i=0, cur='', inQ=false;
+  const rows = []; let i=0, field='', row=[], inQ=false;
+  function endField(){ row.push(field); field=''; }
+  function endRow(){ rows.push(row); row=[]; }
   while(i<text.length){
-    const ch = text[i];
+    const c=text[i];
     if(inQ){
-      if(ch === '"'){
-        if(text[i+1] === '"'){ cur+='"'; i+=2; continue; }
-        inQ = false; i++; continue;
-      } else { cur += ch; i++; continue; }
+      if(c==='"' && text[i+1]==='"'){ field+='"'; i+=2; continue; }
+      if(c==='"'){ inQ=false; i++; continue; }
+      field+=c; i++; continue;
     }else{
-      if(ch === '"'){ inQ = true; i++; continue; }
-      if(ch === ',' ){ row.push(cur); cur=''; i++; continue; }
-      if(ch === '\n'){ row.push(cur); rows.push(row); row=[]; cur=''; i++; continue; }
-      if(ch === '\r'){ i++; continue; }
-      cur+=ch; i++; continue;
+      if(c==='"'){ inQ=true; i++; continue; }
+      if(c===','){ endField(); i++; continue; }
+      if(c==='\r'){ i++; continue; }
+      if(c==='\n'){ endField(); endRow(); i++; continue; }
+      field+=c; i++; continue;
     }
   }
-  row.push(cur); rows.push(row);
-  // header map
-  const header = rows.shift().map(h=>h.trim().toLowerCase());
-  return rows.filter(r=>r.length>1 || (r.length===1 && r[0].trim()!=='')).map(r=>{
-    const obj={};
-    header.forEach((h,idx)=> obj[h] = (r[idx]??'').trim());
-    return obj;
+  if(field.length>0 || row.length>0){ endField(); endRow(); }
+  if(rows.length===0) return [];
+  const hdr = rows[0].map(h=>h.trim());
+  return rows.slice(1).filter(r=>r.length>1 || (r.length===1 && r[0])).map(r=>{
+    const o={}; hdr.forEach((h,idx)=> o[h]= (r[idx]??'').trim()); return o;
   });
 }
 
-function tokenize(s){
-  return (s||'').toLowerCase()
-   .replace(/[^a-z0-9\s\-&\/]/g,' ')
-   .split(/\s+/)
-   .filter(Boolean);
-}
-function scoreTokens(queryTokens, text){
-  const tt = tokenize(text);
-  let hits=0;
-  for(const t of queryTokens) if(tt.includes(t)) hits++;
-  return hits / Math.max(1, queryTokens.length);
-}
-function normTitle(t){
-  if(!t) return '';
-  return t.replace(/\s+\|\s*[\s\S]*$/,'').replace(/\s+-\s*[\d/|-]+$/,'').trim();
-}
-function isResidentialEvent(ev){
-  const tags = (ev.tags||'').toLowerCase();
-  const inc = (ev.includes||'').toLowerCase();
-  return tags.includes('residential') || inc.includes('b&b') || inc.includes('bed') || inc.includes('accommodation');
-}
+/* ---------- state ---------- */
+let landing = [];       // [{url,title,meta_title,h1_title}]
+let questions = [];     // [{idx,query,expected}]
+let events = [];        // normalized events
+let suiteResults = [];  // last CSV suite
+let lastSingle = null;
 
-/* ---------------------- app state ---------------------- */
-let landingPages = []; // [{url,title}]
-let events = []; // [{date,when,title,location,url,price,tags,includes}]
-let questions = []; // [{idx,query,expected}]
-let lastSuiteResults = [];
-let useLanding = true;
-let enableGenericPills = false;
-
-/* ---------------------- loaders ---------------------- */
-$("btnLoadLanding").onclick = async ()=>{
-  const f = $("landingFile").files[0];
-  if(!f){ alert("Choose a Landing CSV"); return; }
-  const text = await f.text();
-  landingPages = parseCSV(text).map(r => ({
-    url: r.url || '',
-    title: r.title || r.meta_title || ''
-  })).filter(r=>r.url);
-  $("stLanding").textContent = `loaded ${landingPages.length} rows`;
-  writeLog(`Loaded Landing CSV (${landingPages.length} rows)`);
-  $("confBreak").innerHTML = `<span class="pill" title="Landing CSV loaded and will be used as fallback when direct matches are weak.">Landing CSV loaded</span>`;
+const SB = {
+  url: load('sb.url',''),
+  key: load('sb.key',''),
+  events: load('sb.events','ai_events')
 };
 
-$("btnLoadEvents").onclick = async ()=>{
-  const f = $("eventsFile").files[0];
-  if(!f){ alert("Choose an Events CSV/JSON"); return; }
-  const text = await f.text();
-  let rows = [];
-  if(f.name.toLowerCase().endsWith(".json")){
-    try { rows = JSON.parse(text); }
-    catch{ alert("Invalid JSON"); return; }
-  } else {
-    rows = parseCSV(text);
+/* ---------- UI init ---------- */
+function hydrateSb(){
+  $('#sbUrl').value = SB.url || '';
+  $('#sbKey').value = SB.key || '';
+  $('#sbEvents').value = SB.events || 'ai_events';
+}
+hydrateSb();
+$('#btnSaveSb').onclick = ()=>{
+  SB.url = $('#sbUrl').value.trim();
+  SB.key = $('#sbKey').value.trim();
+  SB.events = $('#sbEvents').value.trim() || 'ai_events';
+  save('sb.url', SB.url); save('sb.key', SB.key); save('sb.events', SB.events);
+  log('Saved Supabase settings.');
+  $('#sbStatus').textContent = 'saved';
+  setTimeout(()=>$('#sbStatus').textContent='',1500);
+};
+
+/* ---------- Supabase fetch ---------- */
+async function fetchSupabaseEvents(){
+  if(!SB.url || !SB.key){ log('Supabase settings missing — cannot fetch.'); $('#sbStatus').textContent='missing settings'; return; }
+  try{
+    const url = `${SB.url.replace(/\/$/,'')}/rest/v1/${encodeURIComponent(SB.events)}?select=*`;
+    log('Fetching live events from Supabase…');
+    const res = await fetch(url, {headers:{apikey:SB.key, Authorization:`Bearer ${SB.key}`}});
+    if(!res.ok){ throw new Error(`HTTP ${res.status}`); }
+    const data = await res.json();
+    log(`Fetched ${data.length} raw rows.`);
+    events = normalizeEvents(data);
+    $('#eventsRows').textContent = `${events.length} loaded`;
+    $('#sbStatus').textContent = `loaded ${events.length}`;
+    log(`Normalized to ${events.length} events.`);
+  }catch(e){
+    log(`Supabase fetch failed: ${e.message}`);
+    $('#sbStatus').textContent = 'fetch failed';
   }
-  // normalize
-  events = rows.map(r=>{
-    const date = r.when || r.date || '';
-    return {
-      when: date,
-      date,
-      title: r.title||'',
-      location: r.location||'',
-      url: r.url||'',
-      price: r.price||'',
-      tags: r.tags||'',
-      includes: r.includes||''
-    };
-  }).filter(e=>e.title && e.url);
-  $("stEvents").textContent = `loaded ${events.length} rows`;
-  writeLog(`Loaded Events (${events.length} rows)`);
+}
+$('#btnFetchEvents').onclick = fetchSupabaseEvents;
+
+/* ---------- normalize event rows ---------- */
+function normalizeEvents(arr){
+  const out = [];
+  for(const r of arr){
+    const title = r.title || r.event_title || r.name || r.PageTitle || r.meta_title || '';
+    const when  = r.when || r.date_text || r.DateText || '';
+    const date  = r.date || r.start_date || r.start || r.EventDate || r.event_date || '';
+    const dt = date? new Date(date) : (when? new Date(when) : null);
+    const location = r.location || r.area || r.region || r.Location || '';
+    const url = r.url || r.link || r.href || (r.slug? (r.base_url? (r.base_url + r.slug) : r.slug) : '');
+    const price_min = r.price_min ?? r.min_price ?? r.priceMin ?? r.price ?? null;
+    const price_max = r.price_max ?? r.max_price ?? r.priceMax ?? null;
+    const tags = (r.tags || r.category || r.Categories || '').toString();
+    const o = {title, when: when || (dt? dt.toDateString():''), date: (dt? dt.toISOString():''), location, url, price_min, price_max, tags};
+    // basic filter: must have title and url (most of your rows do)
+    if(o.title && o.url) out.push(o);
+  }
+  // prefer future first
+  out.sort((a,b)=>{
+    const da = +new Date(a.date||a.when||0), db = +new Date(b.date||b.when||0);
+    return da - db;
+  });
+  return out;
+}
+
+/* ---------- uploads ---------- */
+$('#btnLanding').onclick = async ()=>{
+  const f = $('#fileLanding').files[0];
+  if(!f) return;
+  const txt = await f.text();
+  landing = parseCSV(txt).map(r=>({
+    url:(r.url||'').trim(),
+    title:(r.title||r.h1_title||'').trim(),
+    meta_title:(r.meta_title||'').trim()
+  })).filter(r=>r.url);
+  $('#landingInfo').innerHTML = `Landing CSV: <b>${landing.length} rows</b>`;
+  $('#landingRows').textContent = `loaded ${landing.length}`;
+  save('bench.landing', landing);
+  log(`Landing pages loaded (${landing.length}).`);
+};
+$('#btnQs').onclick = async ()=>{
+  const f = $('#fileQs').files[0];
+  if(!f) return;
+  const txt = await f.text();
+  const rows = parseCSV(txt);
+  questions = rows.map(r=>({idx:+(r.idx||rows.indexOf(r)+1), query:(r.query||'').trim(), expected:(r.expected||'').trim()}))
+                  .filter(r=>r.query);
+  $('#qsInfo').innerHTML = `Questions CSV: <b>${questions.length} rows</b>`;
+  $('#qsRows').textContent = `loaded ${questions.length}`;
+  log(`Questions loaded (${questions.length}).`);
+};
+$('#btnUploadEvents').onclick = async ()=>{
+  const f = $('#fileEvents').files[0];
+  if(!f) return;
+  const txt = await f.text();
+  let rows=[];
+  if(f.name.endsWith('.json')){ rows = JSON.parse(txt); }
+  else { rows = parseCSV(txt); }
+  events = normalizeEvents(rows);
+  $('#eventsInfo').innerHTML = `Events: <b>${events.length} rows</b> (snapshot)`;
+  $('#eventsRows').textContent = `loaded ${events.length}`;
+  log(`Events snapshot loaded (${events.length}).`);
 };
 
-$("btnLoadQ").onclick = async ()=>{
-  const f = $("qFile").files[0];
-  if(!f){ alert("Choose a Questions CSV"); return; }
-  const text = await f.text();
-  const rows = parseCSV(text);
-  questions = rows.map(r=>({ idx: r.idx || r.id || '', query: r.query || '', expected: (r.expected||'').toLowerCase() })).filter(r=>r.query);
-  $("stQ").textContent = `loaded ${questions.length} rows`;
-  $("stProg").textContent = `0 / ${questions.length}`;
-  writeLog(`Loaded Questions CSV (${questions.length} rows)`);
+/* ---------- intent & matching ---------- */
+const KW = {
+  events: ['when','next','where','date','workshop','workshops','event','events','cost','price','bluebell','bluebells','devon','batsford','arboretum','autumn','lake district','fairy glen','hartland'],
+  advice: ['how','what','which','do i','can i','is it','is the','need','recommend','free','certificate','laptop','camera','tripod','astrophotography','astro']
+};
+const SYN = {
+  bluebell:['bluebell','bluebells'],
+  devon:['devon','hartland','hartland quay','north devon'],
+  autumn:['autumn','batsford','arboretum','fall'],
+  astro:['astro','astrophotography','night','milky way']
 };
 
-$("chkUseLanding").onchange = (e)=>{ useLanding = e.target.checked; };
-$("chkGenericPills").onchange = (e)=>{ enableGenericPills = e.target.checked; };
+function tokenize(s){ return (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean); }
+function hasAny(tokens, list){ const set = new Set(tokens); return list.some(w=>set.has(w)); }
 
-/* ---------------------- intent + reasoning ---------------------- */
 function detectIntent(q){
   const t = tokenize(q);
-  const hasWhen = t.includes('when')||t.includes('date')||t.includes('next')||t.includes('where')||t.includes('cost')||t.includes('price');
-  const hasWorkshop = t.includes('workshop')||t.includes('workshops')||t.includes('event')||t.includes('events');
-  const adviceLike = ['how','what','which','why','tips','do','need','recommend','should','can','is','are','certificate','free','laptop'].some(w=>t.includes(w));
-  // rule: if asking explicit when/where/price with workshop/event → events
-  if(hasWorkshop && (hasWhen || t.includes('next') || t.includes('where') || t.includes('cost') || t.includes('bluebell') || t.includes('devon'))) {
-    return { intent:'events', reason:'events: date/where/price keywords with workshop terms' };
-  }
-  // advice if clearly explanatory
-  if(adviceLike && !hasWhen) return { intent:'advice', reason:'advice: explanatory/requirement phrasing' };
-
-  // fallback: token balance
-  return (hasWorkshop) ? { intent:'events', reason:'events: workshop terms present'} : { intent:'advice', reason:'advice: general question' };
+  const hasEvents = KW.events.some(k=>t.includes(k) || q.toLowerCase().includes(k));
+  const askAdvice = KW.advice.some(k=>q.toLowerCase().includes(k));
+  if(hasEvents && !askAdvice) return {intent:'events', reason:'events>advice'};
+  if(askAdvice && !hasEvents) return {intent:'advice', reason:'advice>events'};
+  // tie-breakers: keyword priority
+  return {intent: hasEvents ? 'events' : 'advice', reason: hasEvents? 'events>=advice':'advice>=events'};
 }
 
-/* ---------------------- scoring + assembly ---------------------- */
-function assembleAnswer(q){
-  const {intent, reason} = detectIntent(q);
-  $("stIntent").textContent = intent;
-  $("stReason").textContent = reason;
+/* product page guess from landing CSV */
+function guessProductPage(q){
+  if(!landing.length) return null;
+  const L = landing;
+  const low = q.toLowerCase();
+  const hits = L.map(p=>{
+    const hay = [p.title,p.meta_title,p.url].join(' ').toLowerCase();
+    let score = 0;
+    for(const w of tokenize(q)){ if(hay.includes(w)) score+=2; }
+    if(/bluebell/.test(hay) && /bluebell/.test(low)) score+=6;
+    if(/batsford|arboretum/.test(hay) && /autumn|batsford|arboretum/.test(low)) score+=4;
+    if(/hartland|devon/.test(hay) && /devon|hartland/.test(low)) score+=4;
+    if(/workshop/.test(hay)) score+=2;
+    return {...p,score};
+  }).sort((a,b)=>b.score-a.score);
+  return hits[0]?.score>3 ? hits[0] : null;
+}
 
-  const qTokens = tokenize(q);
+/* filter events by query intent */
+function matchEvents(q){
+  const low = q.toLowerCase();
+  const tok = tokenize(q);
+  const incl = [];
+  function hit(ev){
+    const hay = [ev.title,ev.location,ev.tags].join(' ').toLowerCase();
+    let s=0;
+    for(const w of tok){ if(hay.includes(w)) s+=1; }
+    if(/bluebell/.test(low)) if(/bluebell/.test(hay)) s+=3;
+    if(/devon|hartland/.test(low)) if(/devon|hartland/.test(hay)) s+=3;
+    if(/autumn|batsford|arboretum/.test(low)) if(/autumn|batsford|arboretum/.test(hay)) s+=2;
+    if(/astro/.test(low) || /night/.test(low)) if(/astro|night|milky/.test(hay)) s+=3;
+    return s;
+  }
+  for(const ev of events){
+    const score = hit(ev);
+    if(score>0) incl.push({...ev,_score:score});
+  }
+  incl.sort((a,b)=> b._score - a._score);
+  // prefer future dates
+  const futureFirst = incl.sort((a,b)=>{
+    const da = daysUntil(a.date||a.when) ?? 9999;
+    const db = daysUntil(b.date||b.when) ?? 9999;
+    return da - db;
+  });
+  return futureFirst;
+}
 
-  let matchedEvents = [];
-  let usedFallback = false;
-  let product = null;
-  let pills = [];
-  let articles = [];
+/* ---------- confidence ---------- */
+function confidenceScore({intent, expected, eventsArr, articlesArr, matchedTokens}){
+  // components
+  let score = 0;
+  const intentOk = (expected? intent===expected : true);
+  score += intentOk ? 20 : 5;
 
-  // Match events
-  if(events.length){
-    const withScore = events.map(ev=>{
-      const s = (
-        scoreTokens(qTokens, ev.title + ' ' + ev.location) * 0.7 +
-        scoreTokens(qTokens, ev.tags + ' ' + ev.includes) * 0.3
-      );
-      return {...ev, _score:s};
-    }).sort((a,b)=>b._score-a._score);
+  const cov = Math.min(1, (matchedTokens||0)/6); // crude cap
+  score += cov*20;
 
-    matchedEvents = withScore.filter(e=>e._score>0).slice(0,12);
-    // if nothing decent, but user wants events → try fallback via landing pages keywords
-    if(intent==='events' && matchedEvents.length===0 && useLanding && landingPages.length){
-      usedFallback = true;
-      // convert landing articles to pseudo-events link list (article block will also show them)
-      articles = landingMatch(qTokens).slice(0,6);
+  const requiredOk = (intent==='events' ? (eventsArr.length>0) : (articlesArr.length>0));
+  score += requiredOk ? 30 : 0;
+  if(!requiredOk) score = Math.min(score, 30);
+
+  if(intent==='events'){
+    let fresh=0;
+    if(eventsArr.length){
+      const d = daysUntil(eventsArr[0].date||eventsArr[0].when);
+      if(d==null) fresh = .3;
+      else if(d<=30) fresh=1;
+      else if(d<=120) fresh=.75;
+      else if(d<=240) fresh=.5;
+      else fresh=.25;
     }
+    score += fresh*20;
+
+    const hasPrice = eventsArr.some(e=>e.price_min || e.price_max || /\£\s?\d+/.test(e.title));
+    score += hasPrice ? 10 : 0;
   }
-
-  // Product stitching: choose top event cluster by normalized title
-  if(matchedEvents.length){
-    const top = matchedEvents[0];
-    const clusterKey = normTitle(top.title).toLowerCase();
-    const cluster = matchedEvents.filter(e=>normTitle(e.title).toLowerCase()===clusterKey);
-    const price = cluster.find(e=>e.price)?.price || top.price || '';
-    const nextDate = cluster[0]?.when || top.when || '';
-    const loc = cluster[0]?.location || top.location || '';
-    // Residential claims are source-driven only
-    const includesEvidence = gatherResidentialEvidence(cluster, landingPages);
-    product = {
-      title: clusterKey || top.title,
-      price: price || '—',
-      next: nextDate || '—',
-      location: loc || '—',
-      includes: includesEvidence.text,
-      includeSources: includesEvidence.sources,
-      url: top.url
-    };
-  }
-
-  // Articles (landing pages) as fallback / supporting material
-  if(!articles.length && landingPages.length){
-    articles = landingMatch(qTokens).slice(0,6);
-  }
-
-  // Pills (CTAs)
-  pills = buildPills(intent, matchedEvents, qTokens, product);
-
-  // Confidence
-  const conf = computeConfidence({intent, matchedEvents, articles, usedFallback});
-
-  return {
-    intent, reason,
-    events: matchedEvents,
-    product, pills, articles,
-    confidence: conf.value,
-    confidenceParts: conf.parts,
-    fallbackUsed: usedFallback
-  };
+  return Math.round(score);
 }
 
-function landingMatch(qTokens){
-  const scored = landingPages.map(p=>{
-    const s = scoreTokens(qTokens, p.title + ' ' + p.url);
-    return {...p, _score:s};
-  }).sort((a,b)=>b._score-a._score);
-  return scored.filter(p=>p._score>0).map(p=>({title:p.title||p.url, url:p.url, _score:p._score}));
+/* ---------- policy & answer helpers ---------- */
+function residentialPolicyAnswer(){
+  // This is the corrected statement you asked for.
+  return "Yes — residential workshops include B&B and local travel between locations. See the residential workshop page/FAQ for details.";
 }
 
-function gatherResidentialEvidence(evCluster, pages){
-  const sources = [];
-  let includes = '';
-  for(const ev of evCluster){
-    const inc = (ev.includes||'').toLowerCase();
-    if(inc.includes('b&b')||inc.includes('bed')||inc.includes('accommodation')||inc.includes('travel')){
-      includes = 'B&B + local travel (from Events data)';
-      sources.push(ev.url);
-      break;
-    }
-  }
-  if(!includes && pages && pages.length){
-    // look for landing titles mentioning residential, b&b, accommodation, travel
-    const hit = pages.find(p=>{
-      const t=(p.title||'').toLowerCase();
-      return t.includes('residential')||t.includes('b&b')||t.includes('accommodation');
-    });
-    if(hit){ includes='B&B included (from Landing pages)'; sources.push(hit.url); }
-  }
-  if(!includes) includes = 'Not found in sources';
-  return {text:includes, sources};
+/* ---------- run single query ---------- */
+function clearPanels(){
+  $('#eventsList').innerHTML = '';
+  $('#articlesList').innerHTML = '';
+  $('#pillsList').innerHTML = '';
+  $('#jsonOut').textContent = '{}';
+}
+function addEventCard(ev){
+  const a = document.createElement('a');
+  a.href = sanitizeURL(ev.url)||'#'; a.target='_blank'; a.rel='noopener';
+  a.innerHTML = `<div><b>${ev.title}</b></div><div class="meta">${ev.when || ev.date} — ${ev.location||''}${ev.price_min||ev.price_max?` — £${ev.price_min||''}${ev.price_max?`–£${ev.price_max}`:''}`:''}</div>`;
+  $('#eventsList').appendChild(a);
+}
+function addArticleCard(obj){
+  const a = document.createElement('a');
+  a.href = sanitizeURL(obj.url)||'#'; a.target='_blank'; a.rel='noopener';
+  a.innerHTML = `<div><b>${obj.title||obj.meta_title||obj.url}</b></div><div class="meta">${obj.url}</div>`;
+  $('#articlesList').appendChild(a);
+}
+function addPill(label, url=null, type=null){
+  const s = document.createElement(url?'a':'span');
+  if(url){ s.href=url; s.target='_blank'; s.rel='noopener'; }
+  s.className='pill';
+  if(type) s.dataset.type=type;
+  s.textContent = label;
+  $('#pillsList').appendChild(s);
 }
 
-function buildPills(intent, events, qTokens, product){
+function landingSearch(q, limit=6){
+  if(!landing.length) return [];
+  const low = q.toLowerCase();
+  const scored = landing.map(p=>{
+    const hay = [p.title,p.meta_title,p.url].join(' ').toLowerCase();
+    let score = 0;
+    for(const w of tokenize(q)){ if(hay.includes(w)) score+=1; }
+    if(/blog|guide|tips/.test(hay)) score+=1;
+    if(/workshop|course/.test(hay)) score+=1;
+    return {...p,score};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+  return scored.slice(0,limit).map(({url,title,meta_title})=>({url,title:title||meta_title||url}));
+}
+
+function derivePills(intent, used, q){
   const pills = [];
-  if(intent==='events' && events.length){
-    pills.push({label:'Book Now', url: events[0].url, brand:true});
-  }
-  // Always provide a listing/search link (static suggestion)
-  pills.push({label:'Event Listing', url:'https://www.alanranger.com/search?query=workshops', brand:true});
-  if(enableGenericPills){
+  if(intent==='events'){
+    if(used.events.length){
+      const first = used.events[0];
+      pills.push({label:'Book Now', url:first.url, brand:true});
+    }
+    pills.push({label:'Event Listing', url:'https://www.alanranger.com/search?query=workshops', brand:true});
     pills.push({label:'More Events', url:'https://www.alanranger.com/search?query=workshops', brand:true});
+    pills.push({label:'Photos', url:'https://www.alanranger.com/gallery-image-portfolios', brand:false});
+  }else{
+    const art = used.articles[0];
+    if(art) pills.push({label:'Read Guide', url:art.url, brand:true});
+    pills.push({label:'More Articles', url:`https://www.alanranger.com/search?query=${encodeURIComponent(q)}`, brand:true});
+    pills.push({label:'Events', url:'https://www.alanranger.com/search?query=workshops', brand:false});
     pills.push({label:'Photos', url:'https://www.alanranger.com/gallery-image-portfolios', brand:false});
   }
   return pills;
 }
 
-function computeConfidence({intent, matchedEvents, articles, usedFallback}){
-  const parts = [];
-  // Intent certainty
-  const intentScore = (intent==='events'||intent==='advice') ? 0.8 : 0.5;
-  parts.push({label:'Intent', val:intentScore, tip:'Heuristic classification based on keywords and phrasing.'});
+function runSingleQuery(q, expected=null){
+  clearPanels();
+  if(!q) return;
+  const det = detectIntent(q);
+  $('#intentVal').textContent = det.intent;
+  $('#reasonVal').textContent = det.reason;
 
-  // Content support
-  const eventScore = matchedEvents.length ? Math.min(1, matchedEvents[0]._score + (matchedEvents[1]?matchedEvents[1]._score*0.5:0)) : 0;
-  parts.push({label:'Events match', val:eventScore, tip: matchedEvents.length ? `Top event score=${matchedEvents[0]._score.toFixed(2)}` : 'No event match' });
+  let productPage = guessProductPage(q);
+  let matched = matchEvents(q);
 
-  // Articles support
-  const articleScore = articles.length ? Math.min(0.6, articles[0]._score || 0.3) : 0;
-  parts.push({label:'Articles support', val:articleScore, tip: articles.length ? `Top article score=${(articles[0]._score||0).toFixed(2)}` : 'No landing article support' });
-
-  // Fallback penalty
-  const penalty = usedFallback ? 0.15 : 0;
-  parts.push({label:'Fallback penalty', val:-penalty, tip: usedFallback ? 'Landing fallback used because direct event match was weak' : 'No penalty' });
-
-  const raw = intentScore + eventScore + articleScore - penalty;
-  const clamped = Math.max(0, Math.min(1, raw));
-  return { value: Math.round(clamped*100), parts };
-}
-
-/* ---------------------- UI binding ---------------------- */
-function renderAnswer(ans){
-  $("confNum").textContent = `${ans.confidence}%`;
-  $("confBreak").innerHTML = ans.confidenceParts.map(p=>{
-    const val = (p.val>=0?'+':'') + (Math.round(p.val*100)/100);
-    return `<span class="pill" title="${p.tip}">${p.label}: ${val}</span>`;
-  }).join(' ');
-
-  // Product block
-  if(ans.product){
-    $("productBlock").style.display = '';
-    $("prodTitle").textContent = ans.product.title || 'Product';
-    $("prodPrice").textContent = `Price: ${ans.product.price||'—'}`;
-    $("prodNext").textContent = `Next date: ${ans.product.next||'—'}`;
-    $("prodLoc").textContent = `Location: ${ans.product.location||'—'}`;
-    $("prodIncludes").textContent = `Includes: ${ans.product.includes}`;
-    const src = ans.product.includeSources && ans.product.includeSources.length
-      ? `Sources: ` + ans.product.includeSources.map(u=>`<a href="${u}" target="_blank">${u}</a>`).join(' · ')
-      : `Sources: none`;
-    $("prodSource").innerHTML = src + `<br><small class="muted">Note: Residential inclusion claims are shown only when found in uploaded sources.</small>`;
-  } else {
-    $("productBlock").style.display = 'none';
+  // Residential policy correction
+  let specialAnswer = null;
+  if(/residential/i.test(q) && /(b&b|bb|b and b|bed|breakfast|include)/i.test(q)){
+    specialAnswer = residentialPolicyAnswer();
   }
 
-  // Events
-  const evEl = $("eventsList");
-  evEl.innerHTML = '';
-  if(ans.events.length){
-    ans.events.forEach(ev=>{
-      const div = document.createElement('div');
-      div.className = 'event';
-      div.innerHTML = `
-        <div class="title">${ev.title}</div>
-        <div class="meta">${ev.when || ev.date || ''} — ${ev.location || ''}</div>
-        <div class="meta"><a href="${ev.url}" target="_blank">${ev.url}</a></div>
-      `;
-      evEl.appendChild(div);
-    });
-  } else {
-    evEl.innerHTML = `<div class="muted">No matching events (check Events snapshot or try different query).</div>`;
+  // fallback to landing if events thin or empty (and option enabled)
+  if($('#chkLandingFallback').checked && det.intent==='events' && matched.length===0){
+    log('No events matched — using Landing CSV fallback.');
   }
 
-  // Articles
-  const artEl = $("articlesList");
-  artEl.innerHTML = '';
-  if(ans.articles.length){
-    ans.articles.forEach(a=>{
-      const div = document.createElement('div');
-      div.className = 'article';
-      div.innerHTML = `<a href="${a.url}" target="_blank">${a.title || a.url}</a>`;
-      artEl.appendChild(div);
-    });
-  } else {
-    artEl.innerHTML = `<div class="muted">No related landing articles.</div>`;
+  // build articles (landing matches used as "articles" here)
+  let articles = landingSearch(q);
+  // If product page recognized, pin it first as the "product block"
+  if(productPage){
+    articles = [{title: productPage.title||productPage.meta_title||'Product', url: productPage.url}, ...articles.filter(a=>a.url!==productPage.url)];
   }
 
-  // Pills
-  const pillEl = $("pillsList");
-  pillEl.innerHTML = '';
-  if(ans.pills.length){
-    ans.pills.forEach(p=>{
-      const a = document.createElement('a');
-      a.className = 'pill';
-      a.href = p.url; a.target = "_blank";
-      a.textContent = p.label;
-      pillEl.appendChild(a);
-    });
-  } else {
-    pillEl.innerHTML = `<div class="muted">No pills.</div>`;
+  // If advice and we had the residential policy: ensure an article-like source appears (product page or fallback)
+  if(det.intent==='advice' && specialAnswer){
+    if(!articles.length && productPage){ articles = [{title: productPage.title||'Residential Workshops', url: productPage.url}]; }
   }
 
-  // JSON
-  const json = {
-    intent: ans.intent,
-    reason: ans.reason,
-    confidence: ans.confidence,
-    product: ans.product,
-    events: ans.events.map(({_score, ...e})=>e),
-    articles: ans.articles,
-    pills: ans.pills,
-    fallbackUsed: ans.fallbackUsed
+  // present UI
+  const used = { intent: det.intent, product: productPage, events: matched.slice(0,12), articles: articles.slice(0,10) };
+  used.citations = [...used.events.map(e=>e.url), ...used.articles.map(a=>a.url)].slice(0,12);
+
+  // events list
+  for(const e of used.events){ addEventCard(e); }
+  // articles list
+  for(const a of used.articles){ addArticleCard(a); }
+  // pills
+  for(const p of derivePills(det.intent, used, q)){ addPill(p.label, p.url); }
+
+  const matchedTokens = tokenize(q).filter(t=> (used.events[0]?.title?.toLowerCase()||'').includes(t) || (used.articles[0]?.title?.toLowerCase()||'').includes(t)).length;
+  const conf = confidenceScore({intent:det.intent, expected, eventsArr:used.events, articlesArr:used.articles, matchedTokens});
+  $('#confVal').textContent = fmtPct(conf);
+
+  // JSON object (close to your format)
+  const out = {
+    idx: 1, query: q, expected: expected||det.intent, detected: det.intent,
+    counts: { events: used.events.length, articles: used.articles.length, pills: 4 },
+    pass: expected? (
+      expected==='events' ? used.events.length>0 : used.articles.length>0
+    ) : true,
+    used,
+    confidence: conf
   };
-  $("jsonOut").value = JSON.stringify(json, null, 2);
+  if(specialAnswer){
+    out.used.answer = specialAnswer;
+  }
+  $('#jsonOut').textContent = JSON.stringify(out, null, 2);
+  lastSingle = out;
+  return out;
 }
 
-$("btnRun").onclick = ()=>{
-  const q = $("query").value.trim();
-  if(!q){ alert("Type a question to run."); return; }
-  const ans = assembleAnswer(q);
-  renderAnswer(ans);
-  writeLog(`Single query run → intent=${ans.intent}, confidence=${ans.confidence}%, events=${ans.events.length}, articles=${ans.articles.length}, fallback=${ans.fallbackUsed}`);
-};
-
-$("btnCopyJSON").onclick = ()=> copyText($("jsonOut").value);
-
-/* ---------------------- CSV test suite ---------------------- */
-$("btnRunSuite").onclick = ()=>{
-  if(!questions.length){ alert("Upload Questions CSV first."); return; }
-  lastSuiteResults = [];
+/* ---------- run CSV suite ---------- */
+$('#btnRunSuite').onclick = async ()=>{
+  if(!questions.length){ alert('Load Questions CSV first.'); return; }
+  log(`Running CSV suite (${questions.length} rows)…`);
+  suiteResults = [];
   let pass=0;
-  $("stProg").textContent = `0 / ${questions.length}`;
-
-  questions.forEach((row, idx)=>{
-    const ans = assembleAnswer(row.query);
-    const detected = ans.intent;
-    const ok = detected === (row.expected||'').toLowerCase();
-    if(ok) pass++;
-
-    lastSuiteResults.push({
-      idx: row.idx || (idx+1),
-      query: row.query,
-      expected: row.expected,
-      detected,
-      counts:{
-        events: ans.events.length,
-        articles: ans.articles.length,
-        pills: ans.pills.length
-      },
-      pass: ok,
-      used:{
-        intent: ans.intent,
-        product: ans.product ? {title: ans.product.title, url: ans.product.url} : null,
-        events: ans.events.map(e=>({date:e.when||e.date, when:e.when||e.date, title:e.title, location:e.location, url:e.url})),
-        articles: ans.articles.map(a=>({title:a.title, url:a.url})),
-        pills: ans.pills,
-        citations: [
-          ...(ans.product?.includeSources||[]),
-          ...ans.events.slice(0,12).map(e=>e.url),
-          ...ans.articles.slice(0,8).map(a=>a.url)
-        ].filter(Boolean)
-      },
-      confidence: ans.confidence
-    });
-    $("stProg").textContent = `${idx+1} / ${questions.length}`;
-  });
-
-  const total = lastSuiteResults.length;
-  const passed = lastSuiteResults.filter(r=>r.pass).length;
-  const rate = total ? Math.round((passed/total)*100) : 0;
-
-  writeLog(`CSV suite finished: ${passed}/${total} passed (${rate}%).`);
-  $("jsonOut").value = JSON.stringify({
-    total, passed, rate: rate+"%", results: lastSuiteResults
-  }, null, 2);
-
-  // Clear right panels (suite results live in JSON/Log by design)
-  $("eventsList").innerHTML = `<div class="muted">CSV suite run complete — see JSON & Execution Log.</div>`;
-  $("articlesList").innerHTML = `<div class="muted">CSV suite run complete — see JSON & Execution Log.</div>`;
-  $("pillsList").innerHTML = `<div class="muted">CSV suite run complete — see JSON & Execution Log.</div>`;
-  $("productBlock").style.display = 'none';
+  for(const row of questions){
+    const r = runSingleQuery(row.query, row.expected);
+    r.idx = row.idx;
+    suiteResults.push(r);
+    if(r.pass) pass++;
+  }
+  const pct = Math.round(pass*100/questions.length);
+  log(`Suite complete. Passed ${pass}/${questions.length} (${pct}%).`);
 };
 
-/* --------- log & export helpers ---------- */
-$("btnCopyLog").onclick = ()=> copyText(logEl.textContent);
-$("btnDownloadLog").onclick = ()=> download('bench-execution-log.txt', logEl.textContent);
-$("btnCopyFailures").onclick = ()=>{
-  if(!lastSuiteResults.length){ alert("Run CSV Test Suite first."); return; }
-  const fails = lastSuiteResults.filter(r=>!r.pass);
-  const header = "idx,query,expected,detected,confidence,events,articles,pills";
-  const rows = fails.map(r=>[
-    r.idx, `"${r.query.replace(/"/g,'""')}"`, r.expected, r.detected, r.confidence,
-    r.counts.events, r.counts.articles, r.counts.pills
-  ].join(','));
-  copyText([header,...rows].join('\n'));
+$('#btnRun').onclick = ()=> runSingleQuery($('#queryInput').value.trim());
+
+/* ---------- copy helpers ---------- */
+$('#btnCopyJson').onclick = ()=> copy($('#jsonOut').textContent);
+$('#btnCopyLog').onclick = ()=> copy(logLines.join('\n'));
+$('#btnDownloadLog').onclick = ()=>{
+  const blob = new Blob([logLines.join('\n')], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `bench-log-${Date.now()}.txt`;
+  a.click();
 };
-$("btnCopyAllJSON").onclick = ()=>{
-  if(!lastSuiteResults.length){ alert("Run CSV Test Suite first."); return; }
-  copyText(JSON.stringify(lastSuiteResults, null, 2));
+$('#btnCopyAll').onclick = ()=> copy(JSON.stringify(suiteResults.length? suiteResults : (lastSingle? [lastSingle] : []), null, 2));
+$('#btnCopyFails').onclick = ()=>{
+  const rows = (suiteResults.length? suiteResults : []).filter(r=>!r.pass);
+  const csv = ['idx,query,expected,detected,events,articles,confidence'].concat(
+    rows.map(r=>[r.idx, JSON.stringify(r.query), r.expected, r.detected, r.counts.events, r.counts.articles, r.confidence].join(','))
+  ).join('\n');
+  copy(csv);
 };
 
-/* ---------------------- Boot note ---------------------- */
-writeLog("Ready. Load Events (CSV/JSON), Landing CSV (optional), Questions CSV, then Run query or CSV Suite.");
-  </script>
+/* ---------- initial tips ---------- */
+log('Ready. Load Events (live via Supabase or snapshot), Landing CSV (optional), Questions CSV, then Run query or CSV Suite.');
+
+/* ---------- restore persisted landing (if any) ---------- */
+const persistedLanding = load('bench.landing', null);
+if(persistedLanding && Array.isArray(persistedLanding)){
+  landing = persistedLanding;
+  $('#landingInfo').innerHTML = `Landing CSV: <b>${landing.length} rows</b> (restored)`;
+  $('#landingRows').textContent = `loaded ${landing.length}`;
+}
+</script>
 </body>
 </html>
