@@ -3,282 +3,228 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Chat Testbench — v0.4.0</title>
+  <title>Chat Testbench — v0.4.1</title>
   <style>
-    :root { --bg:#0b1220; --panel:#0f172a; --muted:#9aa7c7; --fg:#dbe4ff; --line:#1b2540; --ok:#22c55e; --bad:#ef4444; --pill:#15203b; --brand:#dc8800; }
-    html,body { background:var(--bg); color:var(--fg); font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; margin:0; }
-    .wrap { max-width:1200px; margin:0 auto; padding:24px; }
-    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
-    .card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:14px; }
-    .w-1{ flex:1 } .w-2{ flex:2 } .w-3{ flex:3 }
-    h1{ margin:6px 0 10px; font-weight:700; }
-    small{ color:var(--muted) }
-    input[type="text"], input[type="number"], input[type="file"]{ width:100%; background:#0b1426; border:1px solid var(--line); color:var(--fg); padding:10px 12px; border-radius:8px; }
-    button{ background:#2563eb; color:#fff; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
-    button:disabled{ opacity:.55; cursor:not-allowed }
-    .pill{ display:inline-block; padding:3px 10px; border-radius:999px; border:1px solid var(--line); background:var(--pill); font-weight:600; letter-spacing:.2px; }
-    .brand { background:var(--brand); border-color:#a85f00; color:#000; }
-    table{ width:100%; border-collapse:collapse; }
-    th,td{ padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
-    .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace }
-    .ok{ color:var(--ok); font-weight:700 }
-    .bad{ color:var(--bad); font-weight:700 }
-    .btn-sm{ padding:6px 10px; font-size:12px }
-    .muted{ color:var(--muted) }
-
-    /* Modal */
-    .modal{ position:fixed; inset:0; display:none; background:rgba(0,0,0,.55); z-index:50; }
-    .modal.open{ display:block; }
-    .sheet{ position:absolute; inset:auto 0 0 0; margin:auto; max-width:980px; background:var(--panel); border:1px solid var(--line); border-radius:12px 12px 0 0; padding:16px; max-height:86vh; overflow:auto; }
-    .sheet h3{ margin:0 0 8px; }
-    .kv{ display:grid; grid-template-columns:160px 1fr; gap:10px; }
-    .chips a{ display:inline-block; margin:0 6px 6px 0; border:1px solid var(--line); border-radius:999px; padding:4px 8px; color:var(--fg); text-decoration:none; }
-    .chips a:hover{ background:#13203e; }
-    details{ border:1px solid var(--line); border-radius:8px; padding:10px; }
-    details summary{ cursor:pointer; font-weight:700; }
-    pre{ white-space:pre-wrap; word-break:break-word; }
+    :root{--bg:#0b1220;--card:#0f172a;--muted:#9fb3ff;--line:#1b2540;--pill:#13203e;--ok:#22c55e;--bad:#ef4444;--fg:#dbe4ff;--brand:#3b82f6;}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    h1{margin:0 0 12px} .ver{background:var(--pill);padding:2px 8px;border-radius:999px;border:1px solid #26406f}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+    .w-1{flex:1} .w-2{flex:2} .w-3{flex:3}
+    input,textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:#0b1426;color:var(--fg)}
+    button{padding:10px 14px;border:none;border-radius:8px;background:var(--brand);color:#fff;cursor:pointer}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:#0b1426}
+    .ok{color:var(--ok)} .bad{color:var(--bad)}
+    details summary{cursor:pointer}
+    .muted{color:var(--muted)}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Chat Testbench <span class="pill">v0.4.0</span></h1>
+  <div style="display:flex;align-items:baseline;gap:10px;justify-content:space-between">
+    <h1>Chat Testbench</h1>
+    <span class="ver mono">v0.4.1</span>
+  </div>
 
   <div class="card">
     <div class="row">
-      <div class="w-3">
-        <small>CSV (columns: <span class="mono">query</span>, <span class="mono">expected</span>)</small>
-        <input id="csv" type="file" accept=".csv" />
+      <div class="w-2">
+        <div><small>CSV (columns: <span class="mono">query, expected</span>)</small></div>
+        <input id="csv" type="file" accept=".csv"/>
+        <div class="muted" style="margin-top:6px"><small>Parsed rows: <span id="rowCount">0</span></small></div>
       </div>
       <div class="w-1">
-        <small>topK</small>
-        <input id="topk" type="number" value="8"/>
+        <div><small>topK</small></div>
+        <input id="topk" value="8"/>
       </div>
-      <div class="w-1" style="display:flex; gap:8px">
-        <button id="runAll" class="w-1">Run All</button>
-        <button id="clear" class="w-1" style="background:#334155">Clear</button>
+      <div class="w-1" style="display:flex;gap:8px">
+        <button id="run">Run All</button>
+        <button id="clear" type="button" style="background:#475569">Clear</button>
       </div>
     </div>
-    <small class="muted">We’ll call <span class="mono">/api/chat</span> with each query and show detected intent, counts, and an Inspect panel with URLs.</small>
+    <details style="margin-top:10px">
+      <summary>Paste mode (one query per line; optionally “ | expected” after it)</summary>
+      <textarea id="paste" rows="6" placeholder="what tripod do you recommend? | advice&#10;whens the next bluebell workshops and whats the cost | events"></textarea>
+      <div style="margin-top:8px"><button id="loadPaste" type="button">Load pasted queries</button></div>
+    </details>
   </div>
 
   <div class="card">
     <table>
       <thead>
-      <tr>
-        <th style="width:36px">#</th>
-        <th>Query</th>
-        <th style="width:90px">Expected</th>
-        <th style="width:90px">Detected</th>
-        <th style="width:60px">Events</th>
-        <th style="width:60px">Articles</th>
-        <th style="width:60px">Pills</th>
-        <th style="width:70px">Result</th>
-        <th style="width:160px">Actions</th>
-      </tr>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>Query</th>
+          <th>Expected</th>
+          <th>Detected</th>
+          <th>Events</th>
+          <th>Articles</th>
+          <th>Pills</th>
+          <th>Result</th>
+          <th>Actions</th>
+        </tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
   </div>
 </div>
 
-<!-- Modal (Inspect) -->
-<div id="modal" class="modal" aria-hidden="true">
-  <div class="sheet">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-      <h3 id="mTitle">Inspect</h3>
-      <button id="mClose" class="btn-sm" style="background:#334155">Close</button>
-    </div>
-
-    <div class="kv" style="margin-bottom:10px">
-      <div class="muted">Query</div><div id="mQuery"></div>
-      <div class="muted">Expected</div><div id="mExpected"></div>
-      <div class="muted">Detected</div><div id="mDetected"></div>
-    </div>
-
-    <details open>
-      <summary>Answer (first 800 chars)</summary>
-      <pre id="mAnswer" class="mono"></pre>
-    </details>
-
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:12px 0">
-      <div>
-        <h4>Events</h4>
-        <div id="mEvents" class="mono muted">—</div>
-      </div>
-      <div>
-        <h4>Articles</h4>
-        <div id="mArticles" class="mono muted">—</div>
-      </div>
-    </div>
-
-    <h4>Pills</h4>
-    <div id="mPills" class="chips muted">—</div>
-
-    <h4>Citations</h4>
-    <div id="mCitations" class="chips muted">—</div>
-
-    <details style="margin-top:12px">
-      <summary>Raw JSON</summary>
-      <pre id="mRaw" class="mono"></pre>
-    </details>
-  </div>
-</div>
-
 <script>
-/* ---------- Utilities ---------- */
-const $ = (id) => document.getElementById(id);
-const escapeHtml = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $ = (id)=>document.getElementById(id);
+let tests = [];
+
+function autodetectDelimiter(firstLine){
+  const counts = [[',',(firstLine.match(/,/g)||[]).length],[';',(firstLine.match(/;/g)||[]).length],['\t',(firstLine.match(/\t/g)||[]).length]];
+  counts.sort((a,b)=>b[1]-a[1]);
+  return counts[0][1] ? counts[0][0] : ',';
+}
 function parseCSV(text){
-  // tiny tolerant CSV (handles , ; \t and quotes)
-  const first = text.split(/\r?\n/)[0] || '';
-  const delim = [',',';','\t'].map(d=>[d,(first.match(new RegExp(`\\${d}`,'g'))||[]).length])
-     .sort((a,b)=>b[1]-a[1])[0][0];
-  const rows=[]; let row=[], val='', qq=false;
-  const pushV=()=>{ row.push(val); val=''; }, pushR=()=>{ rows.push(row); row=[]; };
-  for(let i=0;i<text.length;i++){
+  // strip BOM
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const first = (text.split(/\r?\n/)[0]||'');
+  const delim = autodetectDelimiter(first);
+  const rows=[]; let row=[], val='', inQ=false;
+  function pushVal(){ row.push(val); val=''; }
+  function pushRow(){ rows.push(row); row=[]; }
+  for (let i=0;i<text.length;i++){
     const ch=text[i];
-    if(qq){ if(ch=='"'){ if(text[i+1]=='"'){ val+='"'; i++; } else qq=false; } else val+=ch; }
-    else{ if(ch=='"') qq=true; else if(ch==delim) pushV(); else if(ch=='\n'){ pushV(); pushR(); }
-      else if(ch!='\r') val+=ch; }
+    if (inQ){
+      if (ch === '"'){ if (text[i+1] === '"'){ val+='"'; i++; } else { inQ = false; } }
+      else val += ch;
+    } else {
+      if (ch === '"'){ inQ = true; }
+      else if (ch === delim){ pushVal(); }
+      else if (ch === '\n'){ pushVal(); pushRow(); }
+      else if (ch !== '\r'){ val += ch; }
+    }
   }
-  if(val.length||row.length){ pushV(); pushR(); }
-  if(!rows.length) return [];
-  const header=(rows[0]||[]).map(h=>(h||'').trim().toLowerCase());
-  return rows.slice(1).map(r=>{const o={}; for(let i=0;i<header.length;i++) o[header[i]]=(r[i]||'').trim(); return o;});
+  if (val.length || row.length){ pushVal(); pushRow(); }
+  if (!rows.length) return [];
+  const header = rows[0].map(h => (h||'').trim().toLowerCase());
+  const qi = header.indexOf('query');
+  const ei = header.indexOf('expected');
+  if (qi === -1){ return []; }
+  const out = rows.slice(1).map(r => {
+    const q = (r[qi]||'').trim();
+    const e = (ei>-1 ? (r[ei]||'').trim() : '');
+    return q ? { query:q, expected:e||'' } : null;
+  }).filter(Boolean);
+  return out;
 }
-function chipsHtml(arr){
-  if(!arr || !arr.length) return '<span class="muted">—</span>';
-  return arr.map(x=>{
-    const url=x.url||x; const label=x.label? escapeHtml(x.label) : escapeHtml(String(url));
-    return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
-  }).join('');
-}
-function eventsHtml(evts){
-  if(!evts || !evts.length) return '<span class="muted">—</span>';
-  return '<ul>'+evts.map(e=>{
-    const u = e.page_url || e.source_url || e.url || '';
-    const t = escapeHtml(e.title || '');
-    const w = e.when || e.date_start || '';
-    return `<li>${t}${w?` — <span class="muted">${escapeHtml(w)}</span>`:''}${u?` — <a href="${escapeHtml(u)}" target="_blank" rel="noopener">Link</a>`:''}</li>`;
-  }).join('')+'</ul>';
-}
-function articlesHtml(arts){
-  if(!arts || !arts.length) return '<span class="muted">—</span>';
-  return '<ul>'+arts.map(a=>{
-    const t = escapeHtml(a.title||'Article');
-    const u = escapeHtml(a.url||'');
-    return `<li>${t} — <a href="${u}" target="_blank" rel="noopener">Link</a></li>`;
-  }).join('')+'</ul>';
-}
-function decidePass(expected, detected, events, articles){
-  const exp=(expected||'').toLowerCase();
-  const det=(detected||'').toLowerCase();
-  if(exp==='events')  return (det==='events' && (events||[]).length>0) ? 'PASS' : 'FAIL';
-  if(exp==='advice')  return (det==='advice' && ((articles||[]).length>0)) ? 'PASS' : 'FAIL';
-  return det ? 'PASS' : 'FAIL';
-}
-
-/* ---------- State ---------- */
-let rows = [];         // [{query, expected}]
-let results = new Map(); // idx -> last response
-
-/* ---------- UI ---------- */
-function renderTable(){
-  const tb = $('rows'); tb.innerHTML='';
-  rows.forEach((r,idx)=>{
-    const res = results.get(idx) || {};
-    const structured = res.structured||{};
-    const detected = (res.meta && res.meta.intent) || structured.intent || '';
-    const events = structured.events || [];
-    const articles = structured.articles || [];
-    const pills = (structured.pills || structured.chips || []).length;
-    const verdict = res.ok ? decidePass(r.expected, detected, events, articles) : 'FAIL';
-
+function loadTable(){
+  const tbody = $('rows'); tbody.innerHTML='';
+  tests.forEach((t,i)=>{
     const tr=document.createElement('tr');
-    tr.innerHTML = `
-      <td class="mono">${idx+1}</td>
-      <td>${escapeHtml(r.query)}</td>
-      <td class="mono">${escapeHtml(r.expected||'')}</td>
-      <td class="mono">${escapeHtml(detected||'')}</td>
-      <td class="mono">${events.length}</td>
-      <td class="mono">${articles.length}</td>
-      <td class="mono">${pills||0}</td>
-      <td>${verdict==='PASS'?'<span class="ok">PASS</span>':'<span class="bad">FAIL</span>'}</td>
-      <td>
-        <button class="btn-sm" data-act="inspect" data-idx="${idx}">Inspect</button>
-        <button class="btn-sm" data-act="rerun" data-idx="${idx}" style="background:#334155">ReRun</button>
-      </td>`;
-    tb.appendChild(tr);
+    tr.innerHTML=`
+      <td class="mono">${i+1}</td>
+      <td>${escapeHtml(t.query)}</td>
+      <td class="mono">${escapeHtml(t.expected||'')}</td>
+      <td class="mono" id="det-${i}">–</td>
+      <td class="mono" id="ev-${i}">0</td>
+      <td class="mono" id="ar-${i}">0</td>
+      <td class="mono" id="pi-${i}">0</td>
+      <td id="rs-${i}">–</td>
+      <td><button data-i="${i}" class="inspect">Inspect</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('button.inspect').forEach(btn=>{
+    btn.onclick = ()=> showInspect(parseInt(btn.dataset.i,10));
   });
 }
-$('rows').addEventListener('click', async (e)=>{
-  const btn=e.target.closest('button'); if(!btn) return;
-  const idx=Number(btn.dataset.idx); if(Number.isNaN(idx)) return;
-  const act=btn.dataset.act;
-  if(act==='rerun'){ await runOne(idx); return; }
-  if(act==='inspect'){ openInspect(idx); }
-});
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
-/* ---------- Inspect modal ---------- */
-function openInspect(idx){
-  const row = rows[idx]; const res = results.get(idx) || {};
-  const structured = res.structured||{};
-  const detected = (res.meta && res.meta.intent) || structured.intent || '';
-  $('mTitle').textContent = `Inspect #${idx+1}`;
-  $('mQuery').textContent = row.query || '';
-  $('mExpected').textContent = row.expected || '';
-  $('mDetected').textContent = detected || '';
-  $('mAnswer').textContent = (res.answer_markdown || res.answer || '').slice(0,800);
-  $('mEvents').innerHTML = eventsHtml(structured.events || []);
-  $('mArticles').innerHTML = articlesHtml(structured.articles || []);
-  const pills = structured.pills || structured.chips || [];
-  $('mPills').innerHTML = chipsHtml(pills.map(p=>({label:p.label,url:p.url})));
-  $('mCitations').innerHTML = chipsHtml((res.citations||[]));
-  $('mRaw').textContent = JSON.stringify(res, null, 2);
-  $('modal').classList.add('open');
-}
-$('mClose').onclick = ()=> $('modal').classList.remove('open');
-$('modal').addEventListener('click', (e)=>{ if(e.target.id==='modal') $('modal').classList.remove('open'); });
-
-/* ---------- API ---------- */
 async function callChat(query, topK){
-  const res = await fetch('/api/chat', {
+  const res = await fetch('/api/chat',{
     method:'POST',
-    headers:{ 'Content-Type':'application/json' },
+    headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ query, topK: Number(topK||8) })
   });
-  const text = await res.text();
-  try { return JSON.parse(text); } catch { return { ok:false, error:'bad_json', raw:text }; }
+  const txt = await res.text();
+  let j=null; try{ j=JSON.parse(txt);}catch{ j={ ok:false, error:'bad_json', raw:txt }; }
+  if (!res.ok) j = { ok:false, error:`${res.status} ${res.statusText}`, ...(j||{}) };
+  return j;
+}
+function setCell(id, html){ const el=$(id); if (el) el.innerHTML = html; }
+function mark(i, pass, reason){
+  setCell(`rs-${i}`, pass ? `<span class="ok">PASS</span>` : `<span class="bad">FAIL</span> <span class="muted mono">${escapeHtml(reason||'')}</span>`);
 }
 
-/* ---------- Runner ---------- */
-async function runOne(idx){
-  const q = rows[idx]?.query?.trim(); if(!q) return;
-  const topK = Number($('topk').value||8);
-  results.set(idx, { ok:false, running:true });
-  renderTable();
-  const out = await callChat(q, topK);
-  results.set(idx, out || { ok:false, error:'no_response' });
-  renderTable();
-}
-async function runAll(){
-  for(let i=0;i<rows.length;i++){ // sequential for easier rate limiting/trace
-    await runOne(i);
-  }
+const DETAILS = new Map();
+function showInspect(i){
+  const row = document.querySelectorAll('#rows tr')[i];
+  const after = row.nextSibling;
+  // remove existing detail rows
+  document.querySelectorAll('tr.details').forEach(n=>n.remove());
+  const data = DETAILS.get(i);
+  const tr = document.createElement('tr'); tr.className='details';
+  const pretty = escapeHtml(JSON.stringify(data||{}, null, 2));
+  tr.innerHTML = `<td colspan="9"><details open>
+      <summary>Response & debug for row ${i+1}</summary>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+        <div class="card"><div class="muted"><small>answer_markdown</small></div><pre class="mono" style="white-space:pre-wrap">${escapeHtml((data&&data.answer_markdown)||'')}</pre></div>
+        <div class="card"><div class="muted"><small>citations</small></div><div>${((data&&data.citations)||[]).map(u=>`<span class="pill mono">${escapeHtml(u)}</span>`).join(' ')||'<span class="muted">none</span>'}</div></div>
+        <div class="card" style="grid-column:1/-1"><div class="muted"><small>structured</small></div><pre class="mono" style="white-space:pre-wrap">${pretty}</pre></div>
+      </div>
+    </details></td>`;
+  row.parentNode.insertBefore(tr, after);
 }
 
-/* ---------- Load CSV ---------- */
 $('csv').addEventListener('change', async (e)=>{
-  const f = e.target.files && e.target.files[0]; if(!f) return;
-  const txt = await f.text();
-  const parsed = parseCSV(txt);
-  rows = parsed.filter(r=>r.query);
-  results = new Map();
-  renderTable();
+  const f = e.target.files && e.target.files[0];
+  if (!f){ tests=[]; $('rowCount').textContent='0'; loadTable(); return; }
+  const text = await f.text();
+  tests = parseCSV(text);
+  $('rowCount').textContent = String(tests.length);
+  loadTable();
 });
-$('runAll').onclick = runAll;
-$('clear').onclick = ()=>{ rows=[]; results=new Map(); $('csv').value=''; renderTable(); };
 
+$('loadPaste').onclick = ()=>{
+  const lines = $('paste').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  tests = lines.map(line=>{
+    const parts = line.split('|');
+    return { query: parts[0].trim(), expected: (parts[1]||'').trim() };
+  }).filter(t=>t.query);
+  $('rowCount').textContent = String(tests.length);
+  loadTable();
+};
+
+$('clear').onclick = ()=>{
+  $('csv').value=''; $('paste').value=''; tests=[]; $('rowCount').textContent='0'; loadTable();
+};
+
+$('run').onclick = async ()=>{
+  if (!tests.length){ alert('No rows loaded. Make sure your CSV has a header "query,expected" or use Paste mode.'); return; }
+  const topK = $('topk').value || 8;
+  for (let i=0;i<tests.length;i++){
+    const q = tests[i];
+    setCell(`det-${i}`, '…'); setCell(`ev-${i}`, '0'); setCell(`ar-${i}`, '0'); setCell(`pi-${i}`, '0'); setCell(`rs-${i}`, '…');
+    try{
+      const r = await callChat(q.query, topK);
+      DETAILS.set(i, r && r.structured ? r : {answer_markdown:r.answer_markdown,citations:r.citations,structured:r.structured,meta:r.meta});
+      const intent = (r.meta && r.meta.intent) || (r.structured && r.structured.intent) || '—';
+      const events = (r.structured && r.structured.events && r.structured.events.length) || 0;
+      const articles = (r.structured && r.structured.articles && r.structured.articles.length) || 0;
+      const pills = (r.structured && r.structured.pills && r.structured.pills.length) || 0;
+      setCell(`det-${i}`, escapeHtml(intent));
+      setCell(`ev-${i}`, String(events));
+      setCell(`ar-${i}`, String(articles));
+      setCell(`pi-${i}`, String(pills));
+      const exp = (q.expected||'').trim().toLowerCase();
+      if (!exp){ mark(i,true,''); }
+      else {
+        const ok = intent.toLowerCase() === exp;
+        mark(i, ok, ok ? '' : `expected ${exp} got ${intent}`);
+      }
+    }catch(err){
+      mark(i,false, String(err && err.message || err));
+    }
+  }
+};
 </script>
 </body>
 </html>
