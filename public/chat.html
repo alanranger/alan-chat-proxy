@@ -17,14 +17,14 @@
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
 .wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.card{position:relative;background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
-.version{position:absolute;right:10px;top:10px;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.version{position:absolute;top:8px;right:12px;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
 .sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
 .pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
-.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:var(--user-text);cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
 .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
 .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
@@ -37,9 +37,6 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer li{margin:.15em 0}
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
-.answer .facts{margin:.25rem 0 .5rem}
-.answer .facts div{margin:.15rem 0}
-.answer .facts b{display:inline-block;min-width:110px}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none;font-weight:600}
@@ -51,7 +48,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
 .composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
-.send{background:var(--brand);color:var(--user-text);font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
+.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
 /* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
@@ -72,8 +69,8 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
+  <span class="version">v0.9.13</span>
   <div class="card">
-    <span class="version">v0.9.13</span>
     <div class="header">
       <img class="logo" src="./chat%20white.png" alt="AR logo">
       <h2 class="title">Alan Ranger Assistant</h2>
@@ -91,7 +88,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
       <details id="debugPanel" class="debug">
         <summary>🔎 Show debug</summary>
-        <button id="dbg-copy" style="margin:8px 0 10px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
+        <button id="dbg-copy" style="margin:8px 0 6px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
         <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
         <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
@@ -153,6 +150,7 @@ function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
   return ()=> el && el.remove();
 }
+
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -175,244 +173,80 @@ function mdToHtml(md){
   flush();
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
+
 function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
-function toGBP(n){
-  if (n == null || isNaN(Number(n))) return null;
-  return new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP",maximumFractionDigits:0}).format(Number(n));
-}
-/* Tiny cleaners */
-const clean = {
-  normSpaces(s){ return String(s||'').replace(/\s+/g,' ').trim(); },
-  stripSummaryHdr(s){ return String(s||'').replace(/^\s*summary\s*:?\s*/i,''); },
-  dedupeLines(s){
-    const lines = String(s||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-    const seen = new Set(); const out=[];
-    for(const l of lines){ const k=l.toLowerCase(); if(seen.has(k)) continue; seen.add(k); out.push(l); }
-    return out.join('\n');
-  }
-};
 
-/* --------- Parse product details (generic) ---------- */
-function deriveFromDescription(descRaw){
-  if(!descRaw) return {};
-  const desc = clean.dedupeLines(descRaw);
-  const lines = desc.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  let location=null, participants=null, fitness=null;
-  const sessions=[];
-  for (const ln of lines){
-    const l = ln.replace(/^Summary\s*:?\s*/i,'').trim();
-    if(/^Location\s*:/i.test(l)) location = clean.normSpaces(l.replace(/^Location\s*:\s*/i,''));
-    if(/^Participants\s*:/i.test(l)) participants = clean.normSpaces(l.replace(/^Participants\s*:\s*/i,''));
-    if(/^Fitness\s*:/i.test(l)) fitness = clean.normSpaces(l.replace(/^Fitness\s*:\s*/i,''));
-    if(/^\d+\s*hrs?/.test(l) || /^OR\s*\d+\s*day/i.test(l) || /^1\s*day/i.test(l) || /Full\s*day/i.test(l)){
-      sessions.push(l.replace(/^OR\s*/,'').replace(/\s{2,}/g,' ').trim());
-    }
-  }
-  // Build a short, single-sentence summary from the first non-label line
-  const summary = lines.find(x => !/^(Location|Participants|Fitness)\s*:/i.test(x) && !/^\d+\s*hrs?/i.test(x) && !/^1\s*day/i.test(x) && !/^OR\s*/i.test(x)) || '';
-  return { summary: clean.stripSummaryHdr(summary), location, participants, fitness, sessions, availability: null };
-}
+/* ---------- Render answer end-to-end ---------- */
+function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
+  const container=document.createElement('div'); container.className='answer';
 
-function mapPricesToSessions(prod, sessions){
-  // Try AggregateOffer first
-  const agg = prod?.raw?.offers;
-  const single = Number(prod?.price);
-  const low = Number(agg?.lowPrice ?? agg?.lowprice);
-  const high = Number(agg?.highPrice ?? agg?.highprice);
-  const offers = Array.isArray(prod?.raw?.offers) ? prod.raw.offers : null;
+  const wantProduct = structured.__showProduct !== false;
 
-  const fmt = n => toGBP(n);
-
-  // Case A: explicit multiple offers with price
-  if (offers && offers.length){
-    const priced = offers
-      .map(o => ({ price: Number(o?.price), name: o?.name || o?.description || null }))
-      .filter(x => x.price && !isNaN(x.price))
-      .sort((a,b)=>a.price-b.price);
-
-    if (priced.length){
-      const lines=[];
-      // Pair cheapest→shortest, etc.
-      const orderedSessions = sessions.slice().sort((a,b)=> a.length - b.length);
-      priced.forEach((p,i)=>{
-        const label = orderedSessions[i] || orderedSessions[orderedSessions.length-1] || 'Option';
-        lines.push({ label, price: p.price });
-      });
-      return { lines, headlinePrice: priced.length===1 ? fmt(priced[0].price) : (fmt(priced[0].price)+' – '+fmt(priced[priced.length-1].price)) };
-    }
-  }
-
-  // Case B: single price
-  if (!isNaN(single) && single){
-    return {
-      lines: sessions.map(s => ({ label:s, price: single })),
-      headlinePrice: fmt(single)
-    };
-  }
-
-  // Case C: aggregate low/high with 2+ sessions → map low→short, high→long
-  if (!isNaN(low) && !isNaN(high) && sessions.length){
-    const ordered = sessions.slice().sort((a,b)=> a.length - b.length);
-    const out=[];
-    if (ordered[0]) out.push({ label: ordered[0], price: low });
-    if (ordered[1]) out.push({ label: ordered[1], price: high });
-    // Any remainder get nearest price (high)
-    for (let i=2;i<ordered.length;i++) out.push({ label: ordered[i], price: high });
-    return { lines: out, headlinePrice: fmt(low)+' • '+fmt(high) };
-  }
-
-  // Fallback: no prices we can pair
-  return { lines: sessions.map(s=>({label:s, price:null})), headlinePrice: null };
-}
-
-function productSummaryNode(prod){
-  const wrap = document.createElement('div'); wrap.className='answer';
-
-  const title = clean.normSpaces(prod?.title || prod?.raw?.name || 'Workshop');
-  const fromDesc = deriveFromDescription(prod?.description || prod?.raw?.description || '');
-  const sessions = fromDesc.sessions.length ? fromDesc.sessions : [];
-
-  // prices
-  const pricing = mapPricesToSessions(prod, sessions);
-
-  // Headline
-  const h = document.createElement('h3');
-  const headlinePrice = pricing.headlinePrice || toGBP(prod?.price) || '';
-  h.innerHTML = `<strong>${title}</strong>${headlinePrice ? ` — ${headlinePrice}` : ''}`;
-  wrap.appendChild(h);
-
-  // One-sentence summary
-  if (fromDesc.summary){
-    const p = document.createElement('p');
-    p.textContent = fromDesc.summary;
-    wrap.appendChild(p);
-  }
-
-  // Key facts (inline labels, no bullets)
-  const facts = document.createElement('div'); facts.className='facts';
-  const addFact = (label,val)=>{ if(!val) return; const d=document.createElement('div'); d.innerHTML=`<b>${label}:</b> ${val}`; facts.appendChild(d); };
-  addFact('Location', fromDesc.location);
-  // Participants: prefer numeric if present
-  addFact('Participants', fromDesc.participants);
-  addFact('Fitness', fromDesc.fitness);
-  const avail = prod?.availability || prod?.raw?.offers?.availability || null;
-  addFact('Availability', (typeof avail==='string') ? (avail.includes('InStock')?'In Stock':avail) : null);
-  if (facts.children.length) wrap.appendChild(facts);
-
-  // Sessions & prices (bulleted)
-  if (pricing.lines.length){
-    const ul = document.createElement('ul');
-    pricing.lines.forEach(x=>{
-      const li = document.createElement('li');
-      const label = x.label
-        .replace(/^OR\s*/,'')
-        .replace(/^\d+\s*hrs?\b/i, m=>m.replace('hrs','hours'))
-        .replace(/\s*-\s*/g,' - ')
-        .replace(/\s–\s/g,' – ');
-      li.innerHTML = `<strong>${label.replace(/\s*-\s*\d.*$/,'').trim()}</strong>`; // bold option name (e.g., "4 hours", "1 day")
-      const timesText = label.replace(/^\s*[^-–]+[-–]\s*/,''); // after dash
-      if (timesText) li.insertAdjacentText('beforeend', ` — ${timesText}`);
-      if (x.price!=null) li.insertAdjacentHTML('beforeend', ` — <strong>${toGBP(x.price)}</strong>`);
-      ul.appendChild(li);
-    });
-    wrap.appendChild(ul);
-  }
-
-  return wrap;
-}
-
-/* Build chips *generically* from what we have */
-function createChips(structured, citations){
-  const events=structured?.events||[];
+  // Product (only if requested)
   const products=structured?.products||[];
-
-  const firstEventUrl = events.find(e=>e?.page_url||e?.source_url)?.page_url || events.find(e=>e?.source_url)?.source_url || null;
-  const productUrl    = products.find(p=>p?.url||p?.page_url)?.url || products.find(p=>p?.page_url)?.page_url || null;
-
-  const uniq = (arr)=>Array.from(new Set(arr.filter(Boolean)));
-  const allCites = uniq([...(citations||[]), firstEventUrl, productUrl]);
-  const infoUrl = allCites.find(u=>u && u!==firstEventUrl && u!==productUrl) || null;
-
-  const rawChips = [
-    {label:'Book Now', href:productUrl, brand:true},
-    {label:'Prices',   href:productUrl ? productUrl+'#prices' : infoUrl || firstEventUrl, brand:true},
-    {label:'Upcoming dates', href:firstEventUrl || productUrl || infoUrl, brand:true},
-    infoUrl ? {label:'Info', href:infoUrl, brand:true} : null,
-    firstEventUrl ? {label:'Event page', href:firstEventUrl, brand:false} : null,
-    productUrl ? {label:'Product page', href:productUrl, brand:false} : null,
-  ].filter(Boolean);
-
-  const out=[], seen=new Set();
-  for(const c of rawChips){
-    if(!c.href) continue;
-    if(seen.has(c.href)) continue;
-    out.push(c); seen.add(c.href);
+  const prod=(products.find(p=>p.price!=null)||products[0])||null;
+  if(wantProduct && prod){
+    // Server already formatted rich product markdown in answer_markdown.
+    // Here we only show a small header (defensive; usually skipped).
+    const h=document.createElement('h3'); h.textContent='Workshop Options:'; container.appendChild(h);
+    const p=document.createElement('p');
+    p.innerHTML=`<strong>${prod.title||'Options'}</strong>`;
+    container.appendChild(p);
   }
-  return out;
-}
 
-/* Render events block */
-function renderEvents(structured){
+  // Upcoming events
   const now=new Date();
   const future=(structured?.events||[])
     .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
     .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
     .slice(0,12);
 
-  if(!future.length) return null;
+  if(future.length){
+    const heading = structured?.topic ? `Upcoming ${structured.topic.toString().trim()} Workshops` : fallbackHeading;
+    const h2=document.createElement('h3'); h2.textContent=heading; container.appendChild(h2);
+    const ul=document.createElement('ul');
+    future.forEach(e=>{
+      const li=document.createElement('li');
+      const when=fmtDate(e.date_start);
+      const href=e.page_url||e.source_url||'#';
+      const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent='Link';
+      li.innerHTML=`${when} — `; li.appendChild(a);
+      li.insertAdjacentText('beforeend',` — ${e.location||''}`);
+      ul.appendChild(li);
+    });
+    container.appendChild(ul);
+  }
 
-  const wrap = document.createElement('div'); wrap.className='answer';
-  const heading = structured?.topic ? `Upcoming ${structured.topic.toString().trim()} Workshops` : 'Upcoming Dates';
-  const h2=document.createElement('h3'); h2.textContent=heading; wrap.appendChild(h2);
-  const ul=document.createElement('ul');
-  future.forEach(e=>{
-    const li=document.createElement('li');
-    const when=fmtDate(e.date_start);
-    const href=e.page_url||e.source_url||'#';
-    const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent='Link';
-    li.innerHTML=`${when} — `; li.appendChild(a);
-    if (e.location) li.insertAdjacentText('beforeend',` — ${e.location}`);
-    ul.appendChild(li);
-  });
-  wrap.appendChild(ul);
-  return wrap;
+  return {node:container};
 }
 
-/* ---------- Render answer end-to-end ---------- */
 function renderAnswer(payload){
+  // 1) Product + events markdown from API (product panel is here)
   const md=payload.answer_markdown||payload.answer||'';
   if(md){ const {html}=mdToHtml(md); addBubble(html); }
 
+  // 2) Structured augmentation — only events (avoid product duplication)
   if(payload.structured){
-    // Product first
-    const products = payload.structured.products || [];
-    const mainProd = products.find(p=>p.price!=null) || products[0] || null;
-    if (mainProd){
-      const node = productSummaryNode(mainProd);
-      addBubble(node.outerHTML);
-    }
+    const {node}=renderStructured({ ...payload.structured, __showProduct:false });
+    const bubble=addBubble(node.outerHTML);
 
-    // Events block
-    const evNode = renderEvents(payload.structured);
-    let bubble = null;
-    if (evNode) bubble = addBubble(evNode.outerHTML);
-
-    // Chips
-    const chips=createChips(payload.structured, payload.citations||[]);
+    // 3) Smart chips
+    const chips=(payload.structured.chips||[]);
     if(chips.length){
-      const chipWrap=document.createElement('div'); chipWrap.className='chips';
+      const wrap=document.createElement('div'); wrap.className='chips';
       chips.forEach(c=>{
         const a=document.createElement('a');
-        a.href=c.href; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
+        a.href=c.url; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
         if(c.brand) a.classList.add('brand');
-        chipWrap.appendChild(a);
+        wrap.appendChild(a);
       });
-      (bubble || thread.lastElementChild).appendChild(chipWrap);
+      bubble.appendChild(wrap);
     }
   }
 
+  // Debug dump
   dbgStruct.textContent=safeJSONString(payload.structured||{});
 }
 
@@ -460,9 +294,6 @@ sendBtn.addEventListener('click', submit);
 input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
-
-// Optional starter
-// sendQuery("give me the next workshop dates and prices");
 </script>
 </body>
 </html>
