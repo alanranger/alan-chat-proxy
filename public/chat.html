@@ -45,7 +45,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 /* Composer */
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
 .composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
@@ -70,7 +70,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <body>
 <div class="wrap">
   <!-- Keeps the badge under the orange rule -->
-  <div class="badge-wrap"><span class="version">v0.9.17</span></div>
+  <div class="badge-wrap"><span class="version">v0.9.19</span></div>
 
   <div class="card">
     <div class="header">
@@ -155,10 +155,21 @@ function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
   return ()=> el && el.remove();
 }
+
+/* Minimal Markdown → HTML with links + lists + bold */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
+
+  // Escape first
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Convert [text](https://url) to anchors (after escaping so we don't re-escape <a>)
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+  // Bold
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+
+  // Lists & paragraphs
   const lines = s.split(/\r?\n/);
   let out='', inList=false;
   const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
@@ -170,6 +181,7 @@ function mdToHtml(md){
   flush();
   return { html:`<div class="answer">${out}</div>` };
 }
+
 function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
@@ -262,21 +274,19 @@ function deriveOptions(prod, facts){
   return opts;
 }
 
-/* Pills from server (preferred), else legacy fallback */
+/* Prefer server-provided pills; fallback if missing */
 function buildActionPills(structured, prod){
-  // Prefer server-provided pills (structured.pills or structured.chips)
   const fromServer = (structured?.pills && Array.isArray(structured.pills) && structured.pills.length)
       ? structured.pills
       : (structured?.chips && Array.isArray(structured.chips) && structured.chips.length ? structured.chips : []);
 
   if (fromServer.length){
-    // normalise {label, url|href}
     return fromServer.slice(0,4).map(c=>{
       return { label: c.label || c.text, href: c.url || c.href };
     }).filter(p=>p.label && p.href);
   }
 
-  // Fallback (should rarely run)
+  // Fallback (rare)
   const chips=[];
   const productUrl = prod?.url || prod?.page_url || prod?.source_url || structured?.products?.[0]?.url || null;
   const upcoming   = (structured?.events?.[0]?.page_url || structured?.events?.[0]?.source_url) || null;
@@ -287,6 +297,10 @@ function buildActionPills(structured, prod){
 }
 
 /* ---------------- Renderers ---------------- */
+function fmtDate(iso){
+  try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
+}
+
 function renderProductCard(prod){
   const facts = extractFacts(prod.description||'');
   const options = deriveOptions(prod, facts);
@@ -370,7 +384,7 @@ function renderAnswer(payload){
       note.pills_rendered = pills.length;
     }
   } else {
-    // generic markdown fallback
+    // advice / article-only answers render via markdown
     const md = payload.answer_markdown || payload.answer || '';
     if(md){ const {html}=mdToHtml(md); addBubble(html); }
     else{
@@ -428,10 +442,9 @@ input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
 
-/* Dev sanity helper:
-   // sendQuery("when is the next Devon workshop?");
-   // sendQuery("what tripod do you recommend?");
-*/
+/* (Future) Email transcript: plan is to append a tiny button under the Copy-all
+   that POSTs the current thread HTML + structured JSON to /api/email-chat.
+   Leaving out for now per your note. */
 </script>
 </body>
 </html>
