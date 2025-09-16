@@ -143,11 +143,8 @@ dbgCopy?.addEventListener('click', ()=>{
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
   div.className = 'bubble' + (opts.user ? ' user' : '');
-  if (html instanceof Node) {
-    div.appendChild(html);
-  } else {
-    div.innerHTML = html;
-  }
+  if (html instanceof Node) div.appendChild(html);
+  else div.innerHTML = html;
   thread.appendChild(div);
   div.scrollIntoView({behavior:'smooth', block:'end'});
   return div;
@@ -190,7 +187,6 @@ function toGBP(n){
 
 /* ---------- Product helpers ---------- */
 function mergeProductsByPageUrl(products){
-  // Merge multiple product rows pointing to the same page_url
   const byUrl = new Map();
   (products||[]).forEach(p=>{
     const key = p.page_url || p.url || p.source_url;
@@ -198,21 +194,17 @@ function mergeProductsByPageUrl(products){
     if(!byUrl.has(key)) byUrl.set(key, JSON.parse(JSON.stringify(p)));
     else {
       const tgt = byUrl.get(key);
-      // prefer explicit price if missing
       if (tgt.price==null && p.price!=null) tgt.price = p.price;
       if (!tgt.price_currency && p.price_currency) tgt.price_currency = p.price_currency;
-      // prefer richer description
       if ((tgt.description||'').length < (p.description||'').length) tgt.description = p.description;
-      // merge raw.offers content
       try{
-        const to = tgt.raw?.offers || tgt.raw?.Offers || {};
-        const po = p.raw?.offers || p.raw?.Offers || {};
+        const to = tgt.raw?.offers || {};
+        const po = p.raw?.offers || {};
         tgt.raw = tgt.raw || {};
         tgt.raw.offers = Object.assign({}, to, po);
       }catch{}
     }
   });
-  // choose the "best" product: prefer one with any price info
   const merged = [...byUrl.values()];
   merged.sort((a,b)=>{
     const ap = hasAnyPrice(a); const bp = hasAnyPrice(b);
@@ -230,29 +222,23 @@ function mergeProductsByPageUrl(products){
 }
 
 function extractKeyDetails(desc){
-  // Robust parser for Location / Participants / Fitness / Availability / Sessions
-  if(!desc) return { bullets:[], location:null, sessions:[], participants:null, fitness:null, availability:null };
+  if(!desc) return { location:null, sessions:[], participants:null, fitness:null, availability:null };
   const lines = desc.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   let location=null, participants=null, fitness=null, availability=null;
   const sessions=[];
   for(const ln of lines){
-    const low = ln.toLowerCase();
     if(/^location:/i.test(ln)) location = ln.replace(/^location:\s*/i,'').trim();
     if(/^participants:/i.test(ln)) participants = ln.replace(/^participants:\s*/i,'').trim();
     if(/^fitness:/i.test(ln)) fitness = ln.replace(/^fitness:\s*/i,'').trim();
     if(/^availability:/i.test(ln)) availability = ln.replace(/^availability:\s*/i,'').trim();
-    // sessions like "4hrs - 5:45 am to 9:45 am or 10:30 am to 2:30 pm"
     if(/(^|\b)(\d+\s*hrs?|\d+\s*hour|1\s*day|full\s*day)/i.test(ln)) sessions.push(ln);
-    // also accept "OR 1 day - ..." lines
     if(/^or\s+1\s*day\b/i.test(ln)) sessions.push(ln);
-    // short "4hrs - ..." line capture even without prefix
     if(/^\s*\d+\s*hrs?\s*-\s*/i.test(ln)) sessions.push(ln);
   }
   return { location, sessions: Array.from(new Set(sessions)), participants, fitness, availability };
 }
 
 function deriveOptionPrices(prod, sessions){
-  // Map option prices from Offer / AggregateOffer generically
   const offers = (prod?.raw && (prod.raw.offers || prod.raw.Offers)) || {};
   const hasRange = (offers.lowPrice!=null || offers.highPrice!=null);
   const singlePrice = prod?.price!=null ? Number(prod.price) : (offers.price!=null ? Number(offers.price) : null);
@@ -261,7 +247,6 @@ function deriveOptionPrices(prod, sessions){
 
   return sessions.map(s=>{
     let price = null;
-    const txt = s.toLowerCase();
     if (hasRange){
       if (/^(\s*4\s*hrs?\b|\bhalf\b|\b4hr\b)/i.test(s)) price = low;
       else if (/1\s*day|full\s*day/i.test(s)) price = high;
@@ -305,13 +290,11 @@ function renderProductTop(structured){
   const products=structured?.products||[];
   if(!products.length) return null;
 
-  // Merge same-page products to get price+range+rich description
   const prod = mergeProductsByPageUrl(products);
   if(!prod) return null;
 
   const container=document.createElement('div'); container.className='answer';
 
-  // Title line with price summary
   const h = document.createElement('h3');
   const rangeLow = prod?.raw?.offers?.lowPrice ?? null;
   const rangeHigh= prod?.raw?.offers?.highPrice ?? null;
@@ -322,11 +305,9 @@ function renderProductTop(structured){
   if (rangeLow!=null || rangeHigh!=null){
     priceBits.push(`${toGBP(rangeLow)||''}${rangeLow!=null&&rangeHigh!=null?' • ':''}${toGBP(rangeHigh)||''}`.trim());
   }
-
   h.textContent = `${prod.title||'Workshop'}${priceBits.length?' — '+priceBits.join(' • '):''}`;
   container.appendChild(h);
 
-  // One-sentence summary (first sentence of description)
   const lead = (prod.description||'').split(/\.\s/)[0] || '';
   if (lead) {
     const p = document.createElement('p');
@@ -334,24 +315,27 @@ function renderProductTop(structured){
     container.appendChild(p);
   }
 
-  // Parse details from description
   const det = extractKeyDetails(prod.description||'');
 
-  // Availability
-  if (det.availability){
-    const p = document.createElement('p');
-    p.innerHTML = `<strong>Availability:</strong> ${det.availability}`;
-    container.appendChild(p);
-  }
-
-  // Location
   if (det.location){
     const p = document.createElement('p');
-    p.innerHTML = `<strong>Location:</strong> ${det.location}`;
+    p.innerHTML = `<strong>Location:</strong> ${escapeHtml(det.location)}`;
     container.appendChild(p);
   }
+  if (det.participants || det.fitness || det.availability){
+    const ul = document.createElement('ul');
+    if (det.participants){
+      const li=document.createElement('li'); li.innerHTML=`<strong>Participants:</strong> ${escapeHtml(det.participants)}`; ul.appendChild(li);
+    }
+    if (det.fitness){
+      const li=document.createElement('li'); li.innerHTML=`<strong>Fitness:</strong> ${escapeHtml(det.fitness)}`; ul.appendChild(li);
+    }
+    if (det.availability){
+      const li=document.createElement('li'); li.innerHTML=`<strong>Availability:</strong> ${escapeHtml(det.availability)}`; ul.appendChild(li);
+    }
+    container.appendChild(ul);
+  }
 
-  // Sessions with mapped prices
   if (det.sessions.length){
     const ul = document.createElement('ul');
     const withPrices = deriveOptionPrices(prod, det.sessions);
@@ -360,18 +344,6 @@ function renderProductTop(structured){
       li.innerHTML = `${escapeHtml(it.text)}${it.price!=null ? ' — <strong>'+toGBP(it.price)+'</strong>' : ''}`;
       ul.appendChild(li);
     });
-    container.appendChild(ul);
-  }
-
-  // Participants / Fitness
-  if (det.participants || det.fitness){
-    const ul = document.createElement('ul');
-    if (det.participants){
-      const li=document.createElement('li'); li.innerHTML=`<strong>Participants:</strong> ${escapeHtml(det.participants)}`; ul.appendChild(li);
-    }
-    if (det.fitness){
-      const li=document.createElement('li'); li.innerHTML=`<strong>Fitness:</strong> ${escapeHtml(det.fitness)}`; ul.appendChild(li);
-    }
     container.appendChild(ul);
   }
 
@@ -409,21 +381,19 @@ function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({ '&':'&amp;','<
 
 /* ---------- Render answer end-to-end ---------- */
 function renderAnswer(payload){
-  // 0) Decide whether to show model markdown (avoid duplication of "Upcoming ..." lists)
-  const md = payload.answer_markdown || payload.answer || '';
-  const shouldSkipMd = !!(md && /###\s+Upcoming/i.test(md) && (payload.structured?.events||[]).length);
-  if(md && !shouldSkipMd){
-    const {html}=mdToHtml(md); addBubble(html);
-  }
+  // 1) Product top block first
+  let productRendered = false;
+  let productUrlForChips = null;
 
-  // 1) Product top block (merged + parsed)
   if(payload.structured){
     const top = renderProductTop(payload.structured);
     if (top){
       const bubble = addBubble(top.node);
-      // 1a) Chips (Book Now etc.)
+      productRendered = true;
+      productUrlForChips = top.productUrl;
+
+      // Chips
       const chips=createChips(payload.structured, payload.citations||[]);
-      // Replace any long "Book Now" text link inside product: we show only as chip
       if(chips.length){
         const wrap=document.createElement('div'); wrap.className='chips';
         chips.forEach(c=>{
@@ -435,8 +405,16 @@ function renderAnswer(payload){
         bubble.appendChild(wrap);
       }
     }
+  }
 
-    // 2) Upcoming events (single list only)
+  // 2) Only render answer_markdown when NO product block was rendered.
+  const md = payload.answer_markdown || payload.answer || '';
+  if(!productRendered && md){
+    const {html}=mdToHtml(md); addBubble(html);
+  }
+
+  // 3) Upcoming events list (always, if present)
+  if(payload.structured){
     const ev = renderEventsBlock(payload.structured);
     addBubble(ev.node);
   }
@@ -489,9 +467,6 @@ sendBtn.addEventListener('click', submit);
 input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
-
-// Example starter (optional)
-// sendQuery("give me the next bluebell workshop dates and prices");
 </script>
 </body>
 </html>
