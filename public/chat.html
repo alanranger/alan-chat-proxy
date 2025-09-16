@@ -37,6 +37,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer li{margin:.15em 0}
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
+.answer .kv{display:grid;grid-template-columns:132px 1fr;gap:0 .75rem;margin:.5rem 0}
+.answer .kv strong{color:#cfe3ff}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none;font-weight:600}
@@ -45,34 +47,36 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 /* Composer */
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #e0e6f0;border-radius:10px;padding:12px 14px;outline:0}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
 .composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
-/* Debug */
+/* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
 details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
-#dbg-copy{margin:10px 0 6px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer}
+.debug-actions{display:flex;justify-content:flex-end}
+.debug-actions button{margin-bottom:8px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer}
 
+/* Typing dots */
 .typing{position:relative;display:inline-block}
 .typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
 .typing .dot:nth-child(2){animation-delay:.15s}
 .typing .dot:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
-@media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
+@media (max-width:540px){
+  .title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <!-- Version badge sits below the orange border -->
-    <span class="version">v0.9.13</span>
-
+    <span class="version">v0.9.14</span>
     <div class="header">
       <img class="logo" src="./chat%20white.png" alt="AR logo">
       <h2 class="title">Alan Ranger Assistant</h2>
@@ -90,7 +94,9 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
       <details id="debugPanel" class="debug">
         <summary>🔎 Show debug</summary>
-        <button id="dbg-copy">Copy all</button>
+        <div class="debug-actions">
+          <button id="dbg-copy">Copy all</button>
+        </div>
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
         <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
         <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
@@ -110,13 +116,13 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
 <script>
 const CHAT_ENDPOINT = '/api/chat';
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
+
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
 const sendBtn= document.getElementById('send');
-const urlParams = new URLSearchParams(location.search);
-if (urlParams.get('debug')==='1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
-/* Debug refs */
 const dbgStatus = document.getElementById('dbg-status');
 const dbgReq    = document.getElementById('dbg-req');
 const dbgRes    = document.getElementById('dbg-res');
@@ -124,7 +130,9 @@ const dbgHeaders= document.getElementById('dbg-headers');
 const dbgStruct = document.getElementById('dbg-struct');
 const dbgProv   = document.getElementById('dbg-prov');
 const dbgCopy   = document.getElementById('dbg-copy');
-const safeJSONString=v=>{ try{return JSON.stringify(v,null,2);}catch{return String(v);} };
+
+function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
+
 dbgCopy?.addEventListener('click', ()=>{
   const all = [
     'Status: '+dbgStatus.textContent,
@@ -137,281 +145,330 @@ dbgCopy?.addEventListener('click', ()=>{
   navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
 });
 
-/* UI helpers */
+/* ---------- UI helpers ---------- */
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
   div.className = 'bubble' + (opts.user ? ' user' : '');
-  if (html instanceof Node) div.appendChild(html);
-  else div.innerHTML = html;
+  div.innerHTML = html;
   thread.appendChild(div);
   div.scrollIntoView({behavior:'smooth', block:'end'});
   return div;
 }
-function addTyping(){
+function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
   return ()=> el && el.remove();
 }
-function toGBP(n){ if(n==null||isNaN(Number(n))) return null; return new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0}).format(Number(n)); }
-function fmtDate(iso){ try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; } }
-function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 
-/* Markdown (fallback) */
 function mdToHtml(md){
-  if(!md) return {html:''};
+  if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   const lines = s.split(/\r?\n/);
-  let out='', inList=false;
-  const flush=()=>{ if(inList){ out+='</ul>'; inList=false; } };
-  for(const line of lines){
-    const m=line.match(/^\s*-\s+(.*)$/);
-    if(m){ if(!inList){ out+='<ul>'; inList=true; } out+=`<li>${m[1]}</li>`; }
-    else { flush(); if(line.trim()) out+=`<p>${line}</p>`; }
+  let out='', inList=false, liIds=[], items=[], idx=0;
+  const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
+  for (const line of lines){
+    const m = line.match(/^\s*-\s+(.*)$/);
+    if (m){
+      if(!inList){ out+='<ul>'; inList=true; }
+      const text = m[1].trim();
+      const id = `li_${++idx}`; liIds.push(id); items.push(text);
+      out += `<li id="${id}">${text}</li>`;
+    } else {
+      flush();
+      out += line.trim()? `<p>${line}</p>` : '';
+    }
   }
   flush();
-  return {html:`<div class="answer">${out}</div>`};
+  return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
 
-/* ---------- Product merging & parsing ---------- */
-function mergeProductsByPageUrl(products){
-  const byUrl=new Map();
-  (products||[]).forEach(p=>{
-    const key=p.page_url||p.url||p.source_url; if(!key) return;
-    if(!byUrl.has(key)) byUrl.set(key, JSON.parse(JSON.stringify(p)));
-    else{
-      const t=byUrl.get(key);
-      if(t.price==null && p.price!=null) t.price=Number(p.price);
-      if(!t.price_currency && p.price_currency) t.price_currency=p.price_currency;
-      if((t.description||'').length < (p.description||'').length) t.description=p.description;
-      t.raw=t.raw||{}; t.raw.offers=Object.assign({},t.raw.offers||{},p.raw?.offers||{});
-    }
-  });
-  const arr=[...byUrl.values()];
-  arr.sort((a,b)=>{
-    const ap=(a.price!=null||(a.raw?.offers?.price!=null||a.raw?.offers?.lowPrice!=null||a.raw?.offers?.highPrice!=null))?1:0;
-    const bp=(b.price!=null||(b.raw?.offers?.price!=null||b.raw?.offers?.lowPrice!=null||b.raw?.offers?.highPrice!=null))?1:0;
-    if(ap!==bp) return bp-ap;
-    return (b.description||'').length-(a.description||'').length;
-  });
-  return arr[0] || (products||[])[0] || null;
+function fmtDate(iso){
+  try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
 
-function firstMeaningfulLine(desc){
-  if(!desc) return '';
-  // prefer first non-empty line
-  const line = desc.split(/\r?\n/).map(s=>s.trim()).find(Boolean) || '';
-  if(line.length>280){
-    // trim to first sentence-ish
-    const m = line.match(/^(.{60,220}?)([.!?])\s|$/);
-    return (m ? (m[1]+(m[2]||'')) : line).trim();
+/* ---------- Product helpers (generic) ---------- */
+function money(v){
+  if(v==null || v==='') return '';
+  const n = Number(v); if(!isFinite(n)) return String(v);
+  return '£'+n.toString();
+}
+function priceFromProduct(prod){
+  if(!prod) return {headline:'', low:null, high:null, single:null};
+  if (prod.price!=null) return {headline:money(prod.price), low:null, high:null, single:prod.price};
+  const low = prod?.raw?.offers?.lowPrice ?? prod?.raw?.offers?.lowprice ?? null;
+  const high= prod?.raw?.offers?.highPrice ?? prod?.raw?.offers?.highprice ?? null;
+  if(low!=null && high!=null) return {headline:`${money(low)}–${money(high)}`, low, high, single:null};
+  return {headline:'', low:null, high:null, single:null};
+}
+function extractDetails(desc){
+  // Keep concise, drop “date walls”
+  const lines = (desc||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const keep = [];
+  let location=null, participants=null, fitness=null, availability=null;
+  const dateLike = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[^A-Za-z]*\d{1,2}/i;
+
+  for(const ln of lines){
+    if(dateLike.test(ln)) continue; // drop calendar rows in product block
+    if(/^Summary:?$/i.test(ln)) continue;
+
+    let m;
+    if((m=ln.match(/^Location:\s*(.+)$/i))) { location=m[1].trim(); continue; }
+    if((m=ln.match(/^Participants:\s*(.+)$/i))) { participants=m[1].trim(); continue; }
+    if((m=ln.match(/^Fitness:\s*(.+)$/i))) { fitness=m[1].trim(); continue; }
+    if((m=ln.match(/^Availability:\s*(.+)$/i))) { availability=m[1].trim(); continue; }
+    keep.push(ln);
   }
-  return line;
+  return {clean:keep, location, participants, fitness, availability};
+}
+function extractOptionTimes(desc){
+  // Try to pull the two time options without prices
+  if(!desc) return [];
+  const lines = desc.split(/\r?\n/).map(s=>s.trim());
+  const hits=[];
+  const timeLine = /(4\s*hrs?|4\s*hours?|half[-\s]*day).*?(\d{1,2}[:.]\d{2}\s*am).*?(\d{1,2}[:.]\d{2}\s*pm)/i;
+  const dayLine  = /(1\s*day|full[-\s]*day).*?(\d{1,2}[:.]\d{2}\s*am).*?(\d{1,2}[:.]\d{2}\s*pm)/i;
+  for(const ln of lines){
+    let m;
+    if((m=ln.match(timeLine))) hits.push({label:'4hrs', text:ln});
+    else if((m=ln.match(dayLine))) hits.push({label:'1 day', text:ln});
+  }
+  // Fallback to known patterns in your copy
+  if(hits.length===0){
+    const four = lines.find(s=>/4hrs?\s*-\s*5:45\s*am/i); if(four) hits.push({label:'4hrs', text:four});
+    const one  = lines.find(s=>/1\s*day\s*-\s*5:45\s*am/i); if(one)  hits.push({label:'1 day', text:one});
+  }
+  return hits;
+}
+function extractPerOptionPrices(desc){
+  // Look for lines that start with option label and have a £
+  const out=[];
+  if(!desc) return out;
+  const lines = desc.split(/\r?\n/).map(s=>s.trim());
+  const pairs = [
+    [/^(?:4\s*hrs?|4\s*hours?|half[-\s]*day)\b/i,'4hrs'],
+    [/^(?:1\s*day|full[-\s]*day)\b/i,'1 day']
+  ];
+  for(const ln of lines){
+    for(const [rx,label] of pairs){
+      if(rx.test(ln) && /£\s*\d+/.test(ln)) {
+        const price = (ln.match(/£\s*\d+/)||[''])[0].replace(/\s+/g,'');
+        out.push({label, price});
+      }
+    }
+  }
+  // Deduplicate by label
+  const uniq=new Map();
+  for(const p of out) if(!uniq.has(p.label)) uniq.set(p.label,p);
+  return [...uniq.values()];
 }
 
-function extractKeyDetails(desc){
-  const d = (desc||'');
-  // Regexes that work mid-paragraph
-  const grab = (label)=> {
-    const m = d.match(new RegExp(label+':\\s*([^\\n]+)', 'i'));
-    return m ? m[1].trim() : null;
-  };
-  const location = grab('Location');
-  const participants = grab('Participants');
-  const fitness = grab('Fitness');
-  const availability = grab('Availability');
-
-  // Sessions: gather lines with 4hrs/half-day and 1 day/full day anywhere
-  const sessions = [];
-  const add=(s)=>{ if(s && !sessions.includes(s)) sessions.push(s.trim()); };
-
-  // split on newlines first
-  d.split(/\r?\n/).forEach(line=>{
-    if(/(^|\b)(4\s*hrs?|half-?day)/i.test(line)) add(line);
-    if(/(^|\b)(1\s*day|full\s*day)/i.test(line)) add(line);
-  });
-  // also sweep whole blob for common patterns
-  (d.match(/(?:4\s*hrs?.+?(?:£\d+)?|1\s*day.+?(?:£\d+)?)/gi)||[]).forEach(add);
-
-  return { location, participants, fitness, availability, sessions };
-}
-
-function deriveOptionPrices(prod, sessions){
-  const offers = (prod?.raw && (prod.raw.offers || prod.raw.Offers)) || {};
-  const hasRange = (offers.lowPrice!=null || offers.highPrice!=null);
-  const low  = offers.lowPrice!=null ? Number(offers.lowPrice) : null;
-  const high = offers.highPrice!=null ? Number(offers.highPrice) : null;
-  const single = prod?.price!=null ? Number(prod.price) : (offers.price!=null ? Number(offers.price) : null);
-
-  return sessions.map(s=>{
-    let price=null;
-    if(hasRange){
-      if(/(^|\b)(4\s*hrs?|half-?day)/i.test(s)) price=low;
-      else if(/(1\s*day|full\s*day)/i.test(s)) price=high;
-    }else if(single!=null){ price=single; }
-    return { text:s, price };
-  });
-}
-
-/* ---------- Chips ---------- */
-function createChips(structured, citations){
+/* Build chips safely */
+function createChips(structured){
   const events=structured?.events||[];
   const products=structured?.products||[];
+
   const firstEventUrl = events.find(e=>e?.page_url||e?.source_url)?.page_url || events.find(e=>e?.source_url)?.source_url || null;
   const productUrl    = products.find(p=>p?.url||p?.page_url)?.url || products.find(p=>p?.page_url)?.page_url || null;
+  const infoUrl = productUrl || firstEventUrl || 'https://www.alanranger.com/photographic-workshops-uk';
 
-  const uniq=(arr)=>Array.from(new Set(arr.filter(Boolean)));
-  const allCites=uniq([...(citations||[]), firstEventUrl, productUrl]);
-  const infoUrl=allCites.find(u=>u && u!==firstEventUrl && u!==productUrl) || null;
-
-  const raw=[
+  const rawChips = [
     {label:'Book Now', href:productUrl, brand:true},
-    {label:'Prices', href:productUrl? productUrl+'#prices' : infoUrl||firstEventUrl, brand:true},
-    {label:'Upcoming dates', href:firstEventUrl||productUrl||infoUrl, brand:true},
-    infoUrl? {label:'Info', href:infoUrl, brand:true} : null
-  ].filter(Boolean);
+    {label:'Prices',   href:productUrl, brand:true},
+    {label:'Upcoming dates', href:firstEventUrl || productUrl, brand:true},
+    {label:'Info', href:infoUrl, brand:false}
+  ].filter(c=>!!c.href);
 
   const out=[], seen=new Set();
-  for(const c of raw){ if(!c.href) continue; if(seen.has(c.href)) continue; out.push(c); seen.add(c.href); }
+  for(const c of rawChips){ if(!seen.has(c.href)){ out.push(c); seen.add(c.href);} }
   return out;
 }
 
-/* ---------- Rendering ---------- */
-function renderProductTop(structured){
-  const products=structured?.products||[];
+/* Render a single merged product block */
+function renderProductBlock(structured){
+  const products = structured?.products||[];
   if(!products.length) return null;
-  const prod = mergeProductsByPageUrl(products);
-  if(!prod) return null;
 
-  const container=document.createElement('div'); container.className='answer';
+  // Choose the richer row, then merge pricing/span info from the other.
+  let primary = products.find(p=>p.price!=null) || products[0];
+  const alt   = products.find(p=>p!==primary) || null;
 
-  // Heading with price(s)
-  const h3=document.createElement('h3');
-  const o = prod.raw?.offers || {};
-  const parts=[];
-  if(prod.price!=null) parts.push(toGBP(prod.price));
-  if(o.lowPrice!=null || o.highPrice!=null){
-    const low = toGBP(o.lowPrice); const high=toGBP(o.highPrice);
-    parts.push(low && high ? `${low} • ${high}` : (low||high));
+  // Pricing headline & per-option
+  const pMain = priceFromProduct(primary);
+  const pAlt  = alt ? priceFromProduct(alt) : {headline:'', low:null, high:null, single:null};
+  const headline = [money(primary.price)||'', pAlt.headline].filter(Boolean).join(' • ') || pMain.headline || pAlt.headline;
+
+  const title = primary.title || primary.raw?.name || 'Workshop Options';
+  const desc  = primary.description || primary.raw?.description || '';
+  const details = extractDetails(desc);
+  const options = extractOptionTimes(desc);
+  const perOpt  = extractPerOptionPrices(desc);
+
+  // Build DOM
+  const wrap = document.createElement('div');
+  wrap.className='answer';
+
+  const h = document.createElement('h3');
+  h.textContent = `${title} — ${headline}`.replace(/\s+—\s+$/, '');
+  wrap.appendChild(h);
+
+  // Short intro line (first kept line if helpful)
+  const intro = details.clean.find(s=>s.length>20) || '';
+  if(intro){
+    const p = document.createElement('p'); p.textContent = intro; wrap.appendChild(p);
   }
-  h3.textContent = `${prod.title||'Workshop'}${parts.length? ' — '+parts.join(' • ') : ''}`;
-  container.appendChild(h3);
 
-  // One-line summary (no long "Dates..." block)
-  const summary = firstMeaningfulLine(prod.description||'');
-  if(summary){
-    const p=document.createElement('p'); p.textContent=summary; container.appendChild(p);
-  }
+  // Key/Value rows
+  const kv = document.createElement('div'); kv.className='kv';
+  const addKV=(k,v)=>{ if(!v) return; const s=document.createElement('div'); s.innerHTML=`<strong>${k}</strong>`; kv.appendChild(s); const d=document.createElement('div'); d.textContent=v; kv.appendChild(d);};
+  addKV('Location:', details.location);
+  addKV('Participants:', details.participants);
+  addKV('Fitness:', details.fitness);
+  addKV('Availability:', details.availability);
+  if(kv.children.length) wrap.appendChild(kv);
 
-  // Parse details from description robustly
-  const det = extractKeyDetails(prod.description||'');
-
-  if(det.location){ const p=document.createElement('p'); p.innerHTML=`<strong>Location:</strong> ${escapeHtml(det.location)}`; container.appendChild(p); }
-  if(det.participants){ const p=document.createElement('p'); p.innerHTML=`<strong>Participants:</strong> ${escapeHtml(det.participants)}`; container.appendChild(p); }
-  if(det.fitness){ const p=document.createElement('p'); p.innerHTML=`<strong>Fitness:</strong> ${escapeHtml(det.fitness)}`; container.appendChild(p); }
-  if(det.availability){ const p=document.createElement('p'); p.innerHTML=`<strong>Availability:</strong> ${escapeHtml(det.availability)}`; container.appendChild(p); }
-
-  // Session options with mapped prices
-  const opts = deriveOptionPrices(prod, det.sessions||[]);
-  if(opts.length){
+  // Option list with de-dup logic
+  if(options.length){
     const ul=document.createElement('ul');
-    opts.forEach(o=>{
+    options.forEach(op=>{
       const li=document.createElement('li');
-      li.innerHTML = `${escapeHtml(o.text)}${o.price!=null ? ' — <strong>'+toGBP(o.price)+'</strong>' : ''}`;
+      // If we have per-option price (e.g., 4hrs £99 / 1 day £150), use that;
+      // otherwise, do NOT echo the headline price again.
+      const match = perOpt.find(x=>x.label.toLowerCase()===op.label.toLowerCase());
+      const priceTx = match ? ` — ${match.price}` : '';
+      li.innerHTML = `<strong>${op.label}</strong> — ${op.text.replace(/^.*?-\s*/,'')}${priceTx}`;
       ul.appendChild(li);
     });
-    container.appendChild(ul);
+    wrap.appendChild(ul);
   }
 
-  return { node:container, productUrl: prod.page_url || prod.url || prod.source_url || null };
+  return wrap;
 }
 
-function renderEventsBlock(structured){
-  const container=document.createElement('div'); container.className='answer';
+/* Render upcoming events */
+function renderEvents(structured, fallbackHeading='Upcoming Workshops'){
   const now=new Date();
   const future=(structured?.events||[])
     .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
     .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
     .slice(0,12);
 
-  if(future.length){
-    const heading = structured?.topic ? `Upcoming ${structured.topic} Workshops` : 'Upcoming Workshops';
-    const h=document.createElement('h3'); h.textContent=heading; container.appendChild(h);
-    const ul=document.createElement('ul');
-    future.forEach(e=>{
-      const li=document.createElement('li');
-      const when=fmtDate(e.date_start);
-      const href=e.page_url||e.source_url||'#';
-      const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent='Link';
-      li.innerHTML=`${when} — `; li.appendChild(a);
-      if(e.location) li.insertAdjacentText('beforeend',` — ${e.location}`);
-      ul.appendChild(li);
-    });
-    container.appendChild(ul);
-  }
-  return {node:container};
+  if(!future.length) return null;
+
+  const container=document.createElement('div'); container.className='answer';
+  const heading = structured?.topic ? `Upcoming ${structured.topic.toString().trim()} Workshops` : fallbackHeading;
+  const h2=document.createElement('h3'); h2.textContent=heading; container.appendChild(h2);
+  const ul=document.createElement('ul');
+  future.forEach(e=>{
+    const li=document.createElement('li');
+    const when=fmtDate(e.date_start);
+    const href=e.page_url||e.source_url||'#';
+    const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent='Link';
+    li.innerHTML=`${when} — `; li.appendChild(a);
+    li.insertAdjacentText('beforeend',` — ${e.location||''}`);
+    ul.appendChild(li);
+  });
+  container.appendChild(ul);
+  return container;
 }
 
+/* Graceful fallback when we have nothing useful */
+function renderFallback(){
+  const div=document.createElement('div'); div.className='answer';
+  div.innerHTML = `
+    <p>Sorry — I couldn’t find exact dates for that just now.</p>
+    <ul>
+      <li><a target="_blank" rel="noopener" href="https://www.alanranger.com/photographic-workshops-uk">Browse all workshops</a></li>
+      <li><a target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Ask Alan via the contact form</a> or <a target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a></li>
+    </ul>`;
+  return div;
+}
+
+/* ---------- Render end-to-end ---------- */
 function renderAnswer(payload){
-  // render product first
-  let renderedProduct=false;
+  let bubbleToChip = null;
+
+  // 1) Primary markdown (if any)
+  const md=payload.answer_markdown||payload.answer||'';
+  if(md){ const {html}=mdToHtml(md); addBubble(html); }
+
+  // 2) Structured: Product (merged)
   if(payload.structured){
-    const top=renderProductTop(payload.structured);
-    if(top){
-      const b=addBubble(top.node);
-      renderedProduct=true;
-      const chips=createChips(payload.structured, payload.citations||[]);
-      if(chips.length){
-        const wrap=document.createElement('div'); wrap.className='chips';
-        chips.forEach(c=>{
-          const a=document.createElement('a'); a.href=c.href; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
-          if(c.brand) a.classList.add('brand'); wrap.appendChild(a);
-        });
-        b.appendChild(wrap);
-      }
+    const prodNode=renderProductBlock(payload.structured);
+    if(prodNode){ bubbleToChip = addBubble(prodNode.outerHTML); }
+
+    // 3) Events
+    const evNode=renderEvents(payload.structured);
+    if(evNode){ bubbleToChip = addBubble(evNode.outerHTML); }
+
+    // 4) Chips
+    const chips=createChips(payload.structured);
+    if(chips.length && bubbleToChip){
+      const wrap=document.createElement('div'); wrap.className='chips';
+      chips.forEach(c=>{
+        const a=document.createElement('a'); a.href=c.href; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
+        if(c.brand) a.classList.add('brand');
+        wrap.appendChild(a);
+      });
+      bubbleToChip.appendChild(wrap);
     }
   }
 
-  // only show markdown if NO product was rendered
-  if(!renderedProduct){
-    const md = payload.answer_markdown || payload.answer || '';
-    if(md){ const {html}=mdToHtml(md); addBubble(html); }
+  // 5) Fallback when nothing structured/markdown
+  if(!md && (!payload.structured || ((!payload.structured.events||!payload.structured.events.length) && (!payload.structured.products||!payload.structured.products.length)))){
+    addBubble(renderFallback().outerHTML);
   }
 
-  // always show events (if present)
-  if(payload.structured){
-    const ev=renderEventsBlock(payload.structured);
-    addBubble(ev.node);
-  }
-
-  // debug
+  // Debug dump
   dbgStruct.textContent=safeJSONString(payload.structured||{});
 }
 
-/* Network */
+/* ---------- Networking ---------- */
 async function sendQuery(query){
-  const req={query, topK:8};
-  dbgReq.textContent=safeJSONString(req);
-  const closeTyping=addTyping();
+  const req = { query, topK: 8 };
+  dbgReq.textContent = safeJSONString(req);
+  const closeTyping = addTyping();
   try{
-    const res=await fetch(CHAT_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req)});
-    dbgStatus.textContent=res.status;
-    const headers={}; res.headers.forEach((v,k)=>headers[k]=v); dbgHeaders.textContent=safeJSONString(headers);
-    const data=await res.json(); dbgRes.textContent=safeJSONString(data); dbgProv.textContent=safeJSONString({citations:data.citations||[]});
+    const res = await fetch(CHAT_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(req)
+    });
+    dbgStatus.textContent = res.status;
+    const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
+    dbgHeaders.textContent = safeJSONString(headers);
+
+    const data = await res.json();
+    dbgRes.textContent = safeJSONString(data);
+    dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
+
     closeTyping();
-    if(data) renderAnswer(data);
-  }catch(err){
-    closeTyping(); dbgStatus.textContent='error';
-    addBubble(`<div class="answer"><p>Something went wrong: ${escapeHtml(String(err))}</p></div>`);
+    if (data && (data.answer_markdown || data.structured)) {
+      renderAnswer(data);
+    } else {
+      addBubble(renderFallback().outerHTML);
+    }
+  } catch (err){
+    closeTyping();
+    dbgStatus.textContent = 'error';
+    addBubble(`<div class="answer"><p>Something went wrong: ${String(err)}</p></div>`);
   }
 }
 
-/* Composer */
+/* ---------- Wire up composer ---------- */
 function submit(){
-  const val=input.value.trim(); if(!val) return;
-  addBubble(val,{user:true}); input.value=''; sendQuery(val);
+  const val = input.value.trim();
+  if(!val) return;
+  addBubble(val, {user:true});
+  input.value='';
+  sendQuery(val);
 }
 sendBtn.addEventListener('click', submit);
-input.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); submit(); }});
+input.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
+});
+
+// optional starter
+// sendQuery("give me the next workshop dates and prices");
 </script>
 </body>
 </html>
