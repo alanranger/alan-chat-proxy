@@ -4,7 +4,6 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Alan Ranger Assistant</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -16,22 +15,22 @@
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
-.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.version{position:absolute;top:8px;right:12px;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
-.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px}
+.card{position:relative;background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.version{position:absolute;top:6px;right:10px;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
-.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.logo{height:72px}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
 .sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
 .pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
-.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:var(--user-text);cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill{border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:var(--user-text);text-decoration:none}
 .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
 .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
 .thread{display:flex;flex-direction:column;gap:12px}
 .bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
 .bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
-.answer h1,.answer h2,.answer h3{margin:.2em 0}
+.answer h1,.answer h2,.answer h3{margin:.25em 0}
 .answer p{margin:.5em 0}
 .answer ul{margin:.4em 0 .6em 1.25em}
 .answer li{margin:.15em 0}
@@ -52,25 +51,21 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 /* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
-details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
+details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
 
-/* Typing dots */
-.typing{position:relative;display:inline-block}
 .typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
 .typing .dot:nth-child(2){animation-delay:.15s}
 .typing .dot:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
-
-@media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <span class="version">v0.9.13</span>
   <div class="card">
+    <span class="version">v0.9.13</span>
     <div class="header">
       <img class="logo" src="./chat%20white.png" alt="AR logo">
       <h2 class="title">Alan Ranger Assistant</h2>
@@ -88,6 +83,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
       <details id="debugPanel" class="debug">
         <summary>🔎 Show debug</summary>
+        <!-- Copy all pinned at the top -->
         <button id="dbg-copy" style="margin:8px 0 6px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
         <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
@@ -108,9 +104,6 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
 <script>
 const CHAT_ENDPOINT = '/api/chat';
-const urlParams = new URLSearchParams(location.search);
-if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
-
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
 const sendBtn= document.getElementById('send');
@@ -150,53 +143,34 @@ function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
   return ()=> el && el.remove();
 }
-
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   const lines = s.split(/\r?\n/);
-  let out='', inList=false, liIds=[], items=[], idx=0;
+  let out='', inList=false;
   const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
   for (const line of lines){
     const m = line.match(/^\s*-\s+(.*)$/);
     if (m){
       if(!inList){ out+='<ul>'; inList=true; }
-      const text = m[1].trim();
-      const id = `li_${++idx}`; liIds.push(id); items.push(text);
-      out += `<li id="${id}">${text}</li>`;
+      out += `<li>${m[1].trim()}</li>`;
     } else {
       flush();
       out += line.trim()? `<p>${line}</p>` : '';
     }
   }
   flush();
-  return { html:`<div class="answer">${out}</div>`, liIds, items };
+  return { html:`<div class="answer">${out}</div>` };
 }
-
 function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
 
-/* ---------- Render answer end-to-end ---------- */
-function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
+/* ---------- Render structured (events only; avoid product duplication) --- */
+function renderEventsOnly(structured, headingFallback='Upcoming Workshops'){
   const container=document.createElement('div'); container.className='answer';
 
-  const wantProduct = structured.__showProduct !== false;
-
-  // Product (only if requested)
-  const products=structured?.products||[];
-  const prod=(products.find(p=>p.price!=null)||products[0])||null;
-  if(wantProduct && prod){
-    // Server already formatted rich product markdown in answer_markdown.
-    // Here we only show a small header (defensive; usually skipped).
-    const h=document.createElement('h3'); h.textContent='Workshop Options:'; container.appendChild(h);
-    const p=document.createElement('p');
-    p.innerHTML=`<strong>${prod.title||'Options'}</strong>`;
-    container.appendChild(p);
-  }
-
-  // Upcoming events
   const now=new Date();
   const future=(structured?.events||[])
     .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
@@ -204,50 +178,22 @@ function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
     .slice(0,12);
 
   if(future.length){
-    const heading = structured?.topic ? `Upcoming ${structured.topic.toString().trim()} Workshops` : fallbackHeading;
+    const heading = structured?.topic ? `Upcoming ${structured.topic} Workshops` : headingFallback;
     const h2=document.createElement('h3'); h2.textContent=heading; container.appendChild(h2);
     const ul=document.createElement('ul');
     future.forEach(e=>{
       const li=document.createElement('li');
-      const when=fmtDate(e.date_start);
-      const href=e.page_url||e.source_url||'#';
-      const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent='Link';
-      li.innerHTML=`${when} — `; li.appendChild(a);
-      li.insertAdjacentText('beforeend',` — ${e.location||''}`);
+      const a=document.createElement('a');
+      a.href=e.page_url||e.source_url||'#'; a.target='_blank'; a.rel='noopener'; a.textContent='Link';
+      li.textContent = fmtDate(e.date_start)+' — ';
+      li.appendChild(a);
+      li.insertAdjacentText('beforeend', ` — ${e.location||''}`);
       ul.appendChild(li);
     });
     container.appendChild(ul);
   }
 
-  return {node:container};
-}
-
-function renderAnswer(payload){
-  // 1) Product + events markdown from API (product panel is here)
-  const md=payload.answer_markdown||payload.answer||'';
-  if(md){ const {html}=mdToHtml(md); addBubble(html); }
-
-  // 2) Structured augmentation — only events (avoid product duplication)
-  if(payload.structured){
-    const {node}=renderStructured({ ...payload.structured, __showProduct:false });
-    const bubble=addBubble(node.outerHTML);
-
-    // 3) Smart chips
-    const chips=(payload.structured.chips||[]);
-    if(chips.length){
-      const wrap=document.createElement('div'); wrap.className='chips';
-      chips.forEach(c=>{
-        const a=document.createElement('a');
-        a.href=c.url; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
-        if(c.brand) a.classList.add('brand');
-        wrap.appendChild(a);
-      });
-      bubble.appendChild(wrap);
-    }
-  }
-
-  // Debug dump
-  dbgStruct.textContent=safeJSONString(payload.structured||{});
+  return container;
 }
 
 /* ---------- Networking ---------- */
@@ -270,10 +216,32 @@ async function sendQuery(query){
     dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
 
     closeTyping();
-    if (data && (data.answer_markdown || data.structured)) {
-      renderAnswer(data);
-    } else {
-      addBubble(`<div class="answer"><p>Sorry — I couldn't find anything for that.</p></div>`);
+
+    // 1) Render server-provided markdown (product panel only)
+    if (data.answer_markdown) {
+      const { html } = mdToHtml(data.answer_markdown);
+      addBubble(html);
+    }
+
+    // 2) Render events list separately (no duplication of product)
+    if (data.structured) {
+      const evNode = renderEventsOnly(data.structured);
+      const bubble = addBubble(evNode.outerHTML);
+
+      // Chips
+      const chips = (data.structured.chips || []);
+      if (chips.length){
+        const wrap=document.createElement('div'); wrap.className='chips';
+        chips.forEach(c=>{
+          const a=document.createElement('a');
+          a.href=c.url; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
+          if(c.brand) a.classList.add('brand');
+          wrap.appendChild(a);
+        });
+        bubble.appendChild(wrap);
+      }
+
+      dbgStruct.textContent = safeJSONString(data.structured);
     }
   } catch (err){
     closeTyping();
@@ -282,7 +250,7 @@ async function sendQuery(query){
   }
 }
 
-/* ---------- Wire up composer ---------- */
+/* ---------- Composer ---------- */
 function submit(){
   const val = input.value.trim();
   if(!val) return;
