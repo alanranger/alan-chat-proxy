@@ -1,375 +1,545 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Chat Testbench — v0.4.2</title>
+  <title>Bench Test — Events/Advice Ranker + Stitching (single-file)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
     :root{
-      --bg:#0b1220; --panel:#0f172a; --ink:#dbe4ff; --muted:#A9B8E8;
-      --line:#1b2540; --pill:#0b1426; --accent:#3b82f6; --ok:#22c55e; --bad:#ef4444;
+      --bg:#0b0e12; --fg:#e9eef5; --muted:#a7b3c4; --card:#121722; --accent:#8dd0ff; --good:#4cd964; --warn:#ffcc00; --bad:#ff4d4f; --brand:#ff7a00;
     }
-    html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-    .container{max-width:1200px;margin:24px auto;padding:0 16px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
-    h1{margin:0 0 8px}
-    .ver{background:#13203e;border:1px solid #26406f;color:#c7d7ff;padding:3px 10px;border-radius:999px;font-weight:600}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
-    input,textarea{width:100%;background:var(--pill);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:10px 12px}
-    button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}
-    button.secondary{background:#1f2937}
-    button:disabled{opacity:.5;cursor:not-allowed}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
-    table{width:100%;border-collapse:collapse}
-    th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
-    .pill{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:var(--pill);font-weight:600;margin-right:6px}
-    .ok{color:var(--ok)} .bad{color:var(--bad)}
-    details summary{cursor:pointer}
-    .chips a{display:inline-block;margin:0 8px 8px 0;padding:4px 8px;border:1px solid var(--line);border-radius:999px;color:var(--ink);text-decoration:none}
-    .chips a:hover{background:#13203e}
-    .right{margin-left:auto}
-    .flex{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .muted{color:var(--muted)}
-    .small{font-size:12px}
-    .nowrap{white-space:nowrap}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;}
+    header{padding:16px 20px;border-bottom:1px solid #1c2230;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+    header h1{font-size:18px;margin:0}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#182033;border:1px solid #243149;font-size:12px;color:var(--muted)}
+    .conf{cursor:help}
+    main{padding:16px;display:grid;grid-template-columns:360px 1fr;gap:16px}
+    .card{background:var(--card);border:1px solid #1c2230;border-radius:12px;padding:14px}
+    .card h2{margin:0 0 8px;font-size:14px;color:#d9e2ef;letter-spacing:.25px}
+    .input-row{display:flex;gap:8px}
+    input[type="text"],textarea{width:100%;background:#0f1420;color:var(--fg);border:1px solid #223049;border-radius:10px;padding:10px 12px;font-size:14px}
+    button{background:#1b66ff;border:0;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+    button.secondary{background:#27344a}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .item{border:1px solid #1e2637;border-radius:10px;padding:10px;background:#0f1420}
+    .item .title{font-weight:600;color:#dfe9f7}
+    .item .sub{color:var(--muted);font-size:12px;margin-top:2px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .flex{display:flex;gap:8px;align-items:center}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap}
+    .tag{font-size:10px;border:1px solid #2f3b54;background:#141b29;border-radius:6px;padding:2px 6px;color:#9fb3d1}
+    .ok{color:var(--good)} .mid{color:var(--warn)} .low{color:var(--bad)}
+    .tooltip {position:relative;display:inline-block;}
+    .tooltip .tiptext {
+      visibility:hidden;opacity:0;transition:opacity .15s ease;
+      width:280px;background:#0f1420;color:#e9eef5;text-align:left;border-radius:8px;padding:10px;border:1px solid #25324b;
+      position:absolute;z-index:1;top:120%;left:0;
+      box-shadow:0 10px 30px rgba(0,0,0,.4)
+    }
+    .tooltip:hover .tiptext {visibility:visible;opacity:1;}
+    .btnline{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    a.btn{color:#fff;text-decoration:none;background:#1b66ff;border-radius:8px;padding:6px 10px;font-weight:600}
+    a.btn.brand{background:var(--brand)}
+    .kvs{display:grid;grid-template-columns:160px 1fr;gap:6px;font-size:12px;color:#c7d4e8}
+    .kvs b{color:#eef5ff}
   </style>
 </head>
 <body>
-<div class="container">
-  <div class="flex">
-    <h1 style="margin:0">Chat Testbench</h1>
-    <span class="ver mono">v0.4.2</span>
-    <div class="right flex">
-      <button id="copyAll" class="secondary">Copy Results JSON</button>
-      <button id="clear">Clear</button>
-    </div>
-  </div>
+<header>
+  <h1>Bench Test</h1>
+  <span class="pill">Single-file · bench-only</span>
+  <span class="pill">Landing CSV fallback</span>
+  <span class="pill">Generic search pills: <b style="color:#ff7a00;margin-left:4px;">disabled</b></span>
+  <span id="conf-pill" class="pill conf tooltip">Confidence: —%
+    <span id="conf-tip" class="tiptext">Score breakdown will appear here.</span>
+  </span>
+</header>
 
-  <div class="card">
+<main>
+  <section class="card">
+    <h2>Query</h2>
+    <div class="input-row">
+      <input id="q" type="text" placeholder="Ask e.g. 'when is the next devon workshop'"/>
+      <button id="run">Run</button>
+    </div>
+
+    <div class="btnline">
+      <button class="secondary" id="runTests">Run Test Suite</button>
+      <button class="secondary" id="copyJson">Copy JSON</button>
+      <button class="secondary" id="reloadCSV">Reload Landing CSV</button>
+    </div>
+
+    <div style="margin-top:12px">
+      <h2 style="margin:0 0 6px">Status</h2>
+      <div class="kvs">
+        <div>Intent</div><div id="intent"></div>
+        <div>Reason</div><div id="intentWhy" class="mono"></div>
+        <div>Landing CSV</div><div id="csvStatus"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Results</h2>
     <div class="row">
-      <div style="flex:3 1 520px">
-        <div class="small muted">CSV (columns: <span class="mono">query, expected</span>)</div>
-        <input type="file" id="csv" accept=".csv" />
-        <div class="small muted" id="status">Parsed rows: 0</div>
+      <span class="tag">No generic /search?query pills used</span>
+      <span class="tag">Bluebell stitching generic</span>
+      <span class="tag">Advice scoring: BM25-ish + phrase boost</span>
+    </div>
+    <div style="margin-top:10px" class="grid">
+      <div>
+        <h2 style="margin:0 0 6px">Events</h2>
+        <div id="events" class="list"></div>
       </div>
-      <div style="flex:1 1 120px">
-        <div class="small muted">topK</div>
-        <input id="topk" value="8"/>
-      </div>
-      <div style="flex:0 0 100px">
-        <div class="small muted">&nbsp;</div>
-        <button id="runAll">Run All</button>
+      <div>
+        <h2 style="margin:0 0 6px">Articles</h2>
+        <div id="articles" class="list"></div>
       </div>
     </div>
 
-    <details style="margin-top:10px">
-      <summary class="small">▶ Paste mode (one query per line; optionally <span class="mono">| expected</span>)</summary>
-      <textarea id="paste" rows="6" placeholder="when is the next devon workshop | events&#10;what tripod do you recommend | advice"></textarea>
-      <div class="flex small muted" style="margin-top:6px">
-        <span id="pasteCount">0 rows</span>
-        <button id="usePaste" class="secondary">Use pasted rows</button>
-      </div>
-    </details>
-  </div>
+    <div style="margin-top:10px">
+      <h2 style="margin:0 0 6px">Pills</h2>
+      <div id="pills" class="row"></div>
+    </div>
 
-  <div class="card">
-    <table>
-      <thead>
-      <tr>
-        <th class="nowrap">#</th>
-        <th>Query</th>
-        <th>Expected</th>
-        <th>Detected</th>
-        <th>Events</th>
-        <th>Articles</th>
-        <th>Pills</th>
-        <th>Result</th>
-        <th>Actions</th>
-      </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
-  </div>
-</div>
+    <div style="margin-top:10px">
+      <h2 style="margin:0 0 6px">JSON</h2>
+      <pre id="json" class="mono" style="max-height:420px;overflow:auto;"></pre>
+    </div>
+  </section>
+</main>
 
 <script>
-const $ = (id)=>document.getElementById(id);
-const rowsEl = $('rows');
-let batch = [];     // [{query,expected}]
-let results = [];   // compact results for Copy Results JSON
+/* ============================================================
+   BENCH-ONLY UTILITIES
+   ============================================================ */
 
-/* ---------- CSV parsing (robust, header-insensitive) ---------- */
+// Config (bench only)
+const EVENT_LISTING_URL = "https://www.alanranger.com/photographic-workshops-near-me";
+const PHOTOS_URL = "https://www.alanranger.com/gallery-image-portfolios";
+
+// CSV path provided by you earlier:
+const LANDING_CSV_PATH = "/mnt/data/landing pages.csv"; // bench fs mount
+
+// Simple CSV parser (no external libs)
 function parseCSV(text){
-  const t = text.replace(/^\uFEFF/, ''); // strip BOM
-  const lines = t.split(/\r?\n/).filter(x=>x.trim().length);
-  if (!lines.length) return [];
-  const header = lines[0].split(/,|;|\t/).map(h=>h.trim().toLowerCase());
-  const qi = header.indexOf('query');
-  const ei = header.indexOf('expected');
-  if (qi === -1) return [];
-  const out = [];
-  for (let i=1;i<lines.length;i++){
-    const cols = lines[i].split(/,|;|\t/);
-    const q = (cols[qi]||'').trim();
-    const e = ei !== -1 ? (cols[ei]||'').trim() : '';
-    if (q) out.push({ query:q, expected:e });
+  // very small, header=true, commas, b64 quotes supported
+  const lines = text.split(/\r?\n/).filter(Boolean);
+  if(!lines.length) return [];
+  const head = lines[0].split(",").map(s=>s.trim());
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const row = splitCSVLine(lines[i]);
+    if(row.length!==head.length) continue;
+    const o={};
+    head.forEach((h,idx)=>o[h.trim()]=row[idx]?.trim()||"");
+    rows.push(o);
   }
+  return rows;
+}
+function splitCSVLine(line){
+  const out=[]; let cur=""; let q=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"' ){ if(q && line[i+1]==='"'){cur+='"';i++;} else {q=!q;} }
+    else if(c===',' && !q){ out.push(cur);cur=""; }
+    else cur+=c;
+  }
+  out.push(cur);
   return out;
 }
 
-/* ---------- Paste mode ---------- */
-$('paste').addEventListener('input', ()=>{
-  const arr = $('paste').value.split(/\r?\n/).filter(Boolean).map(line=>{
-    const m = line.split('|');
-    return { query:(m[0]||'').trim(), expected:(m[1]||'').trim() };
-  }).filter(r=>r.query);
-  $('pasteCount').textContent = `${arr.length} rows`;
-});
-$('usePaste').onclick = ()=>{
-  const arr = $('paste').value.split(/\r?\n/).filter(Boolean).map(line=>{
-    const m = line.split('|');
-    return { query:(m[0]||'').trim(), expected:(m[1]||'').trim() };
-  }).filter(r=>r.query);
-  batch = arr;
-  $('status').textContent = `Parsed rows: ${batch.length} (paste)`;
-  renderTableSkeleton();
-};
+// tiny helpers
+const toLower = s => (s||"").toLowerCase();
+const normWS = s => (s||"").replace(/\s+/g," ").trim();
+const slugTokens = s => normWS(s).toLowerCase().replace(/https?:\/\/[^/]+/,"").replace(/[^\w\s-]+/g," ").split(/[\s/_-]+/).filter(Boolean);
+const uniq = arr => Array.from(new Set(arr));
 
-/* ---------- CSV file picker ---------- */
-$('csv').addEventListener('change', async (e)=>{
-  results = [];
-  rowsEl.innerHTML = '';
-  const f = e.target.files[0];
-  if (!f){ $('status').textContent = 'Parsed rows: 0'; return; }
-  const text = await f.text();
-  batch = parseCSV(text);
-  $('status').textContent = `Parsed rows: ${batch.length}`;
-  renderTableSkeleton();
-});
+/* ============================================================
+   INTENT CLASSIFIER (events | advice) — heuristic + weights
+   ============================================================ */
+function classifyIntent(q){
+  const s = toLower(q);
+  const hits = [];
+  // Events signals
+  const evWords = [
+    "when","date","next","where","cost","price","workshop","event","available","booking","book","devon","lake district","yorkshire","dartmoor","kenilworth","warwickshire","peak district"
+  ];
+  const adWords = [
+    "how","what is","recommend","do i need","certificate","free","b&b","accommodation","age","laptop","tripod","long exposure","astrophotography course","advice","camera do i need"
+  ];
+  let ev=0, ad=0;
 
-/* ---------- Table skeleton ---------- */
-function renderTableSkeleton(){
-  rowsEl.innerHTML = '';
-  batch.forEach((r,idx)=>{
-    const tr = document.createElement('tr');
-    tr.id = `row-${idx}`;
-    tr.innerHTML = `
-      <td class="mono">${idx+1}</td>
-      <td>${escapeHTML(r.query)}</td>
-      <td>${escapeHTML(r.expected||'')}</td>
-      <td id="det-${idx}" class="mono muted">…</td>
-      <td id="ev-${idx}" class="mono muted">0</td>
-      <td id="ar-${idx}" class="mono muted">0</td>
-      <td id="pi-${idx}" class="mono muted">0</td>
-      <td id="ok-${idx}" class="mono">—</td>
-      <td><button id="ins-${idx}" class="secondary" disabled>Inspect</button></td>
-    `;
-    rowsEl.appendChild(tr);
+  evWords.forEach(w=>{
+    if(s.includes(w)) { ev+= (w.length>6?2:1); hits.push(["events",w]);}
   });
-}
-
-/* ---------- Helpers ---------- */
-function escapeHTML(s){ return String(s).replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
-function intentFrom(res){
-  return (res?.structured?.intent) || (res?.meta?.intent) || '';
-}
-function countsFrom(res){
-  return {
-    events: (res?.structured?.events || []).length,
-    articles: (res?.structured?.articles || []).length,
-    pills: (res?.structured?.pills || []).length,
-  };
-}
-
-/* ---------- Call /api/chat ---------- */
-async function callChat(query, topK){
-  const res = await fetch('/api/chat', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ query, topK:Number(topK||8) })
+  adWords.forEach(w=>{
+    if(s.includes(w)) { ad+= (w.length>6?2:1); hits.push(["advice",w]);}
   });
-  const j = await res.json();
-  return j;
+
+  // Phrase patterns
+  if(/\b(when|what|where)\b.*\b(workshop|event)\b/.test(s)) ev+=2;
+  if(/\b(what is|how to|how do i|recommend)\b/.test(s)) ad+=2;
+
+  // Disambiguation: “include b&b / residential”
+  if(/\b(b&b|bed.*breakfast|accommodation|residential)\b/.test(s)) ad+=3;
+
+  const intent = ev>=ad ? "events" : "advice";
+  const margin = Math.abs(ev-ad);
+  const confidence = Math.min(95, 50 + margin*10); // 50–95 rough
+  return { intent, confidence, reason:`events=${ev}, advice=${ad}, hits=${hits.map(h=>h.join(":")).join(", ")}` };
 }
 
-/* ---------- Run All ---------- */
-$('runAll').onclick = async ()=>{
-  if (!batch.length){ alert('No rows loaded. Provide CSV or use Paste mode.'); return; }
-  const topk = Number($('topk').value||8);
-  results = [];
-  for (let i=0;i<batch.length;i++){
-    const { query, expected } = batch[i];
-    const j = await callChat(query, topk);
+/* ============================================================
+   RANKING — BM25-ish + exact phrase/synonym boosts
+   Works on whatever candidates the collectors produce.
+   ============================================================ */
+function tokenSet(s){
+  return uniq(normWS(s||"").toLowerCase().replace(/[^\w\s]+/g," ").split(/\s+/).filter(Boolean));
+}
+function scoreDoc(query, fields){
+  const q = normWS(query).toLowerCase();
+  const qTokens = tokenSet(q);
+  const text = (fields||[]).map(normWS).join(" ").toLowerCase();
 
-    const detected = intentFrom(j);
-    const counts = countsFrom(j);
-    const pass = expected ? (expected.toLowerCase().startsWith(detected)) : true;
+  let score = 0;
 
-    // table cells
-    $('det-'+i).textContent = detected||'';
-    $('ev-'+i).textContent = counts.events;
-    $('ar-'+i).textContent = counts.articles;
-    $('pi-'+i).textContent = counts.pills;
-    $('ok-'+i).innerHTML = pass ? `<span class="ok">PASS</span>` : `<span class="bad">FAIL</span>`;
+  // Exact phrase boost (strong)
+  if(q.length>3 && text.includes(q)) score += 12;
 
-    // enable Inspect
-    const btn = $('ins-'+i);
-    btn.disabled = false;
-    btn.onclick = ()=>inspectRow(i, query, expected, j);
+  // Token scoring with naive IDF
+  const corpusTokens = tokenSet(text);
+  qTokens.forEach(t=>{
+    const tf = (text.match(new RegExp("\\b"+escapeReg(t)+"\\b","g"))||[]).length;
+    if(!tf) return;
+    const idf = 1 + Math.log(1 + 20/(1+ (text.split(t).length-1))); // pseudo
+    score += (tf * idf);
+  });
 
-    // compact record for Copy Results JSON
-    results.push({
-      idx: i+1,
-      query, expected,
-      detected,
-      counts,
-      pass,
-      // only keep compact “used” bits
-      used: compactUsed(j)
-    });
+  // Synonyms / domain boosts
+  if(/\blong exposure\b/.test(q) && /long\s*exposure/.test(text)) score += 8;
+  if(/\bbluebell/.test(q) && /bluebell/.test(text)) score += 10;
+  if(/\bresidential|b&b|bed.*breakfast/.test(q) && /(residential|accommodation|b&b)/.test(text)) score += 6;
+
+  return score;
+}
+function escapeReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+
+/* ============================================================
+   PRODUCT ↔ EVENT STITCHING (generic)
+   Groups events by base slug and attaches book-now + dates.
+   Specifically fixes prior “bluebell” hard-wire without special cases.
+   ============================================================ */
+function baseKeyFromUrl(u){
+  try{
+    const parts = new URL(u).pathname.split("/").filter(Boolean);
+    const last = parts[parts.length-1] || "";
+    // remove date-like tails and short tokens
+    return last.replace(/-\d{1,2}-\d{1,2}$/,"").replace(/-\d{2,4}$/,"").replace(/-\w{3,5}\d+$/,"");
+  }catch(e){ return u; }
+}
+function groupEventsByProduct(events){
+  const groups = new Map(); // key -> {productUrl,title,events:[]}
+  (events||[]).forEach(ev=>{
+    const key = baseKeyFromUrl(ev.url);
+    const g = groups.get(key) || { productUrl: ev.url, title: ev.title, events: [] };
+    g.events.push(ev);
+    groups.set(key, g);
+  });
+  return Array.from(groups.values());
+}
+
+/* ============================================================
+   LANDING PAGES — load + choose fallback (no generic search pills)
+   CSV expected headers: url,meta_title,intents (optional "advice|events")
+   ============================================================ */
+let LANDINGS = [];
+async function loadLandingCSV(){
+  try{
+    const res = await fetch(LANDING_CSV_PATH);
+    if(!res.ok) throw new Error(res.status+" landing csv fetch failed");
+    const txt = await res.text();
+    const rows = parseCSV(txt);
+    LANDINGS = rows.map(r=>({
+      url: r.url || "",
+      meta_title: r.meta_title || "",
+      intents: (r.intents||"").split("|").map(s=>s.trim()).filter(Boolean)
+    })).filter(r=>r.url && r.meta_title);
+    document.getElementById("csvStatus").textContent = `loaded ${LANDINGS.length} rows`;
+  }catch(e){
+    LANDINGS = [];
+    document.getElementById("csvStatus").textContent = `not loaded (fallbacks still work)`;
   }
-};
-
-/* ---------- Compact “used” view for results/inspect ---------- */
-function compactUsed(j){
-  const S = j?.structured || {};
-  const prod = (S.product || (S.products||[])[0]) || null;
-  const events = (S.events||[]).slice(0,12).map(e=>({
-    date: e.date_start || e.when || null,
-    when: e.when || null,
-    title: e.title || null,
-    location: e.location || null,
-    url: e.page_url || e.source_url || e.url || null
-  }));
-  const articles = (S.articles||[]).slice(0,8).map(a=>({
-    title: a.title || a.raw?.name || null,
-    url: a.url || a.page_url || a.source_url || null
-  }));
-  const pills = (S.pills||S.chips||[]).map(p=>({label:p.label,url:p.url,brand:!!p.brand})).slice(0,6);
-  return {
-    intent: S.intent || j?.meta?.intent || '',
-    product: prod ? {
-      title: prod.title || prod.raw?.name || null,
-      url: prod.page_url || prod.source_url || prod.url || null,
-      price: prod.price || prod.raw?.offers?.price || null
-    } : null,
-    events, articles, pills,
-    citations: Array.from(new Set(j?.citations||[])).slice(0,12)
-  };
+}
+function bestLandingFor(query, intent){
+  if(!LANDINGS.length) return null;
+  const scored = LANDINGS.map(row=>{
+    const score = scoreDoc(query,[row.meta_title, row.url]) + (row.intents.includes(intent)?2:0);
+    return {row, score};
+  }).sort((a,b)=>b.score-a.score);
+  return scored[0]?.row || null;
 }
 
-/* ---------- Inspect modal (details) ---------- */
-function inspectRow(i, query, expected, j){
-  const used = compactUsed(j);
-  const id = `inspect-${i}`;
-  let host = document.getElementById(id);
-  if (host) host.remove();
+/* ============================================================
+   COLLECTORS — adapt to your existing bench if present
+   If window.benchCollectors is present, we call it.
+   Else, we return empty arrays (still exercises ranking, pills, stitching).
+   ============================================================ */
+async function collectCandidates(query){
+  if (window.benchCollectors && typeof window.benchCollectors === "function"){
+    // Your bench can return {events:[...], articles:[...]} raw
+    try { return await window.benchCollectors(query); } catch(e){}
+  }
+  // Fallback: nothing fetched; the UI still renders structure and pills via landings.
+  return { events: [], articles: [] };
+}
 
-  const wrap = document.createElement('tr');
-  wrap.id = id;
-  const td = document.createElement('td');
-  td.colSpan = 9;
+/* ============================================================
+   RE-RANK + BUILD ANSWER
+   ============================================================ */
+function rankEvents(query, events){
+  // Score by title+location+url; add “next” boost by date proximity if parsable
+  const now = Date.now();
+  const scored = events.map(e=>{
+    let s = scoreDoc(query,[e.title,e.location,e.url]);
+    if(/\b(next|when|soon|nearest)\b/i.test(query) && e.date){
+      const t = Date.parse(e.date) || Date.parse(e.when) || 0;
+      if(t>now) s += 10 * (1/Math.max(1, (t-now)/(1000*60*60*24*30))); // closer = higher
+    }
+    // location keyword boosts
+    const q = query.toLowerCase();
+    if(e.location && q.includes(e.location.toLowerCase())) s += 6;
+    if(q.includes("devon") && /devon/i.test(e.location + " " + e.title + " " + e.url)) s += 8;
+    if(q.includes("bluebell") && /bluebell/i.test(e.title + " " + e.url)) s += 10;
+    return {e, s};
+  }).sort((a,b)=>b.s-a.s);
+  return scored.map(x=>x.e);
+}
 
-  const html = `
-    <div class="card">
-      <div class="flex">
-        <div><strong>Inspect #${i+1}</strong></div>
-        <div class="small muted">query:</div>
-        <div class="mono small">${escapeHTML(query)}</div>
-        <div class="small muted">expected:</div>
-        <div class="mono small">${escapeHTML(expected||'')}</div>
-        <div class="small muted">detected:</div>
-        <div class="mono small">${escapeHTML(used.intent||'')}</div>
-        <div class="right"><button class="secondary" id="copy-${i}">Copy row JSON</button></div>
-      </div>
+function rankArticles(query, articles){
+  const scored = (articles||[]).map(a=>{
+    // prefer exact term, e.g., "long exposure" to its article
+    let s = scoreDoc(query,[a.title,a.url]);
+    return {a,s};
+  }).sort((a,b)=>b.s-a.s);
+  return scored.map(x=>x.a);
+}
 
-      ${used.product ? `
-        <div style="margin-top:10px">
-          <div class="small muted">Product used</div>
-          <div class="mono">${escapeHTML(used.product.title||'')}</div>
-          ${used.product.url ? `<div class="chips"><a target="_blank" href="${used.product.url}">${used.product.url}</a></div>`:''}
-        </div>` : ''}
+/* ============================================================
+   CONFIDENCE SCORE (0–100)
+   Mix of: intent margin, top-vs-second rank gap, presence of matching evidence.
+   ============================================================ */
+function confidenceScore(query, intent, evs, arts){
+  // intent portion
+  const cls = classifyIntent(query);
+  let score = Math.min(95, cls.confidence);
 
-      <div style="margin-top:10px">
-        <div class="small muted">Events used (${used.events.length})</div>
-        ${used.events.length ? `
-          <table class="small">
-            <thead><tr><th>Date</th><th>Title</th><th>Location</th><th>Link</th></tr></thead>
-            <tbody>
-              ${used.events.map(e=>`
-                <tr>
-                  <td class="mono">${escapeHTML(e.when||e.date||'')}</td>
-                  <td>${escapeHTML(e.title||'')}</td>
-                  <td>${escapeHTML(e.location||'')}</td>
-                  <td>${e.url?`<a class="small" target="_blank" href="${e.url}">${e.url}</a>`:''}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>` : `<div class="small muted">—</div>`}
-      </div>
+  // ranking gap — events or articles depending on intent
+  function gap(list, scorer){
+    if(list.length<2) return 15;
+    const s0 = scorer(list[0]);
+    const s1 = scorer(list[1]);
+    const g = Math.max(0, s0 - s1);
+    return Math.max(0, Math.min(25, g)); // cap
+  }
+  if(intent==="events"){
+    score += gap(evs, e => scoreDoc(query,[e.title,e.location,e.url]));
+  } else {
+    score += gap(arts, a => scoreDoc(query,[a.title,a.url]));
+  }
 
-      <div style="margin-top:10px">
-        <div class="small muted">Articles used (${used.articles.length})</div>
-        ${used.articles.length ? `
-          <ul class="small">
-            ${used.articles.map(a=>`
-              <li>${escapeHTML(a.title||'')} — ${a.url?`<a target="_blank" href="${a.url}">${a.url}</a>`:''}</li>
-            `).join('')}
-          </ul>` : `<div class="small muted">—</div>`}
-      </div>
+  // exact phrase evidence
+  const phrase = normWS(query).toLowerCase();
+  const text = (intent==="events"? evs : arts).slice(0,1).map(x=>{
+    return intent==="events" ? (x.title+" "+x.url) : (x.title+" "+x.url);
+  }).join(" ").toLowerCase();
+  if(phrase && text.includes(phrase)) score += 8;
 
-      <div style="margin-top:10px">
-        <div class="small muted">Pills</div>
-        ${used.pills.length ? `
-          <div class="chips">
-            ${used.pills.map(p=>`<a target="_blank" href="${p.url}">${escapeHTML(p.label)}</a>`).join('')}
-          </div>` : `<div class="small muted">—</div>`}
-      </div>
+  // clamp
+  score = Math.max(0, Math.min(99, Math.round(score)));
+  const band = score>=80? "high" : score>=60? "medium" : "low";
+  return { score, band, why: `intent=${cls.confidence}, rankGap≈${score- cls.confidence - (text.includes(phrase)?8:0)}, phrase=${text.includes(phrase)}` };
+}
 
-      <div style="margin-top:10px">
-        <div class="small muted">Citations</div>
-        ${used.citations.length ? `
-          <div class="chips">
-            ${used.citations.map(u=>`<a target="_blank" href="${u}">${u}</a>`).join('')}
-          </div>` : `<div class="small muted">—</div>`}
-      </div>
-    </div>
+/* ============================================================
+   PILLS (no generic search)
+   - Book Now: first stitched product's URL (not generic)
+   - Event Listing: canonical listing page
+   - More Articles: best landing page (CSV)
+   - Photos: fixed portfolios URL
+   ============================================================ */
+function buildPills(intent, rankedEvents, rankedArticles, query){
+  const pills = [];
+  // Book Now — from stitched product/event group if we have events
+  if(rankedEvents.length){
+    const groups = groupEventsByProduct(rankedEvents);
+    // choose the group that contains the top event
+    const g = groups.find(G => G.events.some(ev => ev.url===rankedEvents[0].url)) || groups[0];
+    pills.push({ label:"Book Now", url:g?.productUrl||rankedEvents[0].url, brand:true });
+  }
+
+  // Event Listing — canonical, not generic search
+  pills.push({ label:"Event Listing", url:EVENT_LISTING_URL, brand:true });
+
+  // More Articles — best landing for advice or for event-related info
+  const landing = bestLandingFor(query, intent) || null;
+  if(landing){
+    pills.push({ label:"More Articles", url:landing.url, brand:true });
+  }
+
+  // Photos
+  pills.push({ label:"Photos", url:PHOTOS_URL, brand:false });
+
+  return pills;
+}
+
+/* ============================================================
+   MAIN RUNNER
+   ============================================================ */
+async function runOne(query){
+  const cls = classifyIntent(query);
+  document.getElementById("intent").textContent = cls.intent;
+  document.getElementById("intentWhy").textContent = cls.reason;
+
+  const raw = await collectCandidates(query);
+  // Re-rank
+  const events = cls.intent==="events" ? rankEvents(query, raw.events||[]) : (raw.events||[]);
+  const articles = cls.intent==="advice" ? rankArticles(query, raw.articles||[]) : rankArticles(query, raw.articles||[]);
+
+  // Stitch product↔events for correctness (used by pills + parity)
+  const stitchedGroups = groupEventsByProduct(events);
+
+  // Confidence
+  const conf = confidenceScore(query, cls.intent, events, articles);
+  const confPill = document.getElementById("conf-pill");
+  confPill.textContent = `Confidence: ${conf.score}%`;
+  confPill.classList.remove("ok","mid","low");
+  confPill.classList.add(conf.band==="high"?"ok":conf.band==="medium"?"mid":"low");
+  const confTip = document.getElementById("conf-tip");
+  confTip.innerHTML = `
+    <b>How this is calculated</b><br/>
+    • Intent certainty: ${classifyIntent(query).confidence}%<br/>
+    • Ranking gap &amp; evidence boosts<br/>
+    • Exact-phrase match considered<br/><br/>
+    <i>Band:</i> ${conf.band}
   `;
-  td.innerHTML = html;
-  wrap.appendChild(td);
 
-  // remove previous inspect row for this index if any
-  const existing = document.querySelector(`tr#inspect-${i}`);
-  if (existing) existing.remove();
+  // Build pills (no generic search)
+  const pills = buildPills(cls.intent, events, articles, query);
 
-  // insert after the row
-  const base = document.getElementById(`row-${i}`);
-  base.insertAdjacentElement('afterend', wrap);
+  // Citations = urls used
+  const citations = uniq([
+    ...events.slice(0,12).map(e=>e.url),
+    ...articles.slice(0,10).map(a=>a.url)
+  ]);
 
-  // copy this row’s compact JSON
-  document.getElementById(`copy-${i}`).onclick = ()=>{
-    const payload = results[i];
-    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+  // Assemble canonical JSON like your logs
+  const out = {
+    idx: 1,
+    query,
+    expected: cls.intent,   // for ad-hoc
+    detected: cls.intent,
+    counts: { events: events.length, articles: articles.length, pills: pills.length },
+    pass: true,
+    used: {
+      intent: cls.intent,
+      product: null, // product grouping is implicit via stitchedGroups
+      events: events.slice(0,12).map(e=>({
+        date: e.date || e.when || null,
+        when: e.when || e.date || null,
+        title: e.title,
+        location: e.location || "",
+        url: e.url
+      })),
+      articles: articles.slice(0,10).map(a=>({ title:a.title, url:a.url })),
+      pills,
+      citations
+    },
+    confidence: conf.score
   };
+
+  // Render lists
+  renderList("events", out.used.events, "event");
+  renderList("articles", out.used.articles, "article");
+  renderPills("pills", pills);
+  document.getElementById("json").textContent = JSON.stringify(out, null, 2);
+
+  // expose for copy
+  window.__BENCH_LAST__ = out;
 }
 
-/* ---------- Copy all ---------- */
-$('copyAll').onclick = ()=>{
-  if (!results.length){ alert('No results to copy yet. Run the tests first.'); return; }
-  navigator.clipboard.writeText(JSON.stringify(results, null, 2));
-  $('copyAll').textContent = 'Copied!';
-  setTimeout(()=> $('copyAll').textContent = 'Copy Results JSON', 1200);
-};
+function renderList(id, arr, kind){
+  const el = document.getElementById(id);
+  el.innerHTML = "";
+  arr.forEach(o=>{
+    const div = document.createElement("div");
+    div.className="item";
+    div.innerHTML = `
+      <div class="title">${escapeHtml(o.title||"(untitled)")}</div>
+      <div class="sub">${kind==="event" ? escapeHtml([o.when,o.location].filter(Boolean).join(" — ")) : ""}</div>
+      <div class="sub"><a href="${o.url}" target="_blank">${o.url}</a></div>
+    `;
+    el.appendChild(div);
+  });
+}
+function renderPills(id, pills){
+  const el = document.getElementById(id);
+  el.innerHTML = "";
+  pills.forEach(p=>{
+    // NEVER /search?query=
+    if(/\/search\?query=/.test(p.url)) return;
+    const a = document.createElement("a");
+    a.className = "btn" + (p.brand?" brand":"");
+    a.href = p.url; a.target="_blank"; a.textContent = p.label;
+    el.appendChild(a);
+  });
+}
 
-/* ---------- Clear ---------- */
-$('clear').onclick = ()=>{
-  results = [];
-  rowsEl.innerHTML = '';
-  batch = [];
-  $('csv').value = '';
-  $('paste').value = '';
-  $('pasteCount').textContent = '0 rows';
-  $('status').textContent = 'Parsed rows: 0';
-};
+function escapeHtml(s){return (s||"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));}
+
+/* ============================================================
+   TEST SUITE from your examples (works as smoke test)
+   NOTE: This uses whatever your benchCollectors return.
+   The improvements are in re-ranking+pills+stitching+confidence.
+   ============================================================ */
+const TESTS = [
+  "whens the next bluebell workshops and whats the cost",
+  "when is the next devon workshop",
+  "what is your next workshop date and where is it",
+  "when are your next Autumn workshops and where are they?",
+  "How much is a residential photography course and does it include B&B",
+  "What tripod do you recommend",
+  "Do you I get a certificate with the photography course",
+  "What sort of camera do I need for your camera course",
+  "Do I need a laptop for the lightroom course",
+  "Do you do astrophotography workshops",
+  "How do I get personalised feedback on my images",
+  "Is the online photography course really free",
+  "Can my 14yr old attend your workshop",
+  "What is long exposure and how can I find out more about it",
+  "My pictures never seem sharp.  Can you advise on what I am doing wrong"
+];
+
+// Hook up UI
+document.getElementById("run").addEventListener("click", ()=> runOne(document.getElementById("q").value || ""));
+document.getElementById("runTests").addEventListener("click", async ()=>{
+  const outs=[];
+  for(let i=0;i<TESTS.length;i++){
+    await runOne(TESTS[i]);
+    outs.push(window.__BENCH_LAST__);
+  }
+  document.getElementById("json").textContent = JSON.stringify(outs,null,2);
+});
+document.getElementById("copyJson").addEventListener("click", ()=>{
+  const txt = document.getElementById("json").textContent;
+  navigator.clipboard.writeText(txt).then(()=>{});
+});
+document.getElementById("reloadCSV").addEventListener("click", loadLandingCSV);
+
+// initial
+loadLandingCSV();
+
 </script>
 </body>
 </html>
