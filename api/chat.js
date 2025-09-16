@@ -55,15 +55,18 @@ function normaliseQuery(q) {
     .trim();
 }
 function tokensFromQuery(q) {
-  const stop = new Set(["the","a","an","of","on","to","in","for","with","and","or","next","dates","workshop","workshops","course","courses"]);
+  const stop = new Set([
+    "the","a","an","of","on","to","in","for","with","and","or",
+    "when","is","are","next","dates","date",
+    "workshop","workshops","course","courses","class","classes","tuition"
+  ]);
   return normaliseQuery(q)
     .toLowerCase()
     .split(" ")
     .filter(t => t && !stop.has(t))
-    .slice(0, 6);
+    .slice(0, 8);
 }
 function buildIlikeOr(parts, cols) {
-  // builds Supabase .or() string like: title.ilike.%devon%,page_url.ilike.%devon%,title.ilike.%batsford% ...
   const terms = [];
   for (const p of parts) {
     const pat = `%${p}%`;
@@ -71,9 +74,27 @@ function buildIlikeOr(parts, cols) {
   }
   return terms.join(",");
 }
+function scoreTextByTokens(text, toks) {
+  if (!toks?.length || !text) return 0;
+  const s = text.toLowerCase();
+  let score = 0;
+  for (const t of toks) {
+    if (!t) continue;
+    if (s.includes(t)) score += 1;
+  }
+  return score;
+}
 
 /* ----------------------- Product description parsing -------------------- */
-function extractFromDescription(desc) {
+function normalizeAvailabilityToken(a) {
+  if (!a) return null;
+  const s = String(a).toLowerCase();
+  if (s.includes("instock") || s.includes("in stock")) return "In Stock";
+  if (s.includes("outofstock") || s.includes("out of stock")) return "Out of Stock";
+  return null;
+}
+
+function extractFromDescription(desc, productRawOffers) {
   const out = {
     location: null,
     participants: null,
@@ -82,7 +103,12 @@ function extractFromDescription(desc) {
     summary: null,
     sessions: [],
   };
-  if (!desc) return out;
+  if (!desc) {
+    // fall back availability from offers if description absent
+    out.availability = normalizeAvailabilityToken(productRawOffers?.availability) ||
+                       normalizeAvailabilityToken(productRawOffers?.Availability);
+    return out;
+  }
 
   const lines = desc.split(/\r?\n/).map((s) => s.trim());
   const nonEmpty = lines.filter(Boolean);
@@ -100,26 +126,22 @@ function extractFromDescription(desc) {
   for (let i = 0; i < lines.length; i++) {
     const ln = lines[i];
 
-    if (/^location:/i.test(ln)) {
-      const v = ln.replace(/^location:\s*/i, "").trim() || nextVal(i);
-      if (v) out.location = v;
-      continue;
-    }
-    if (/^participants:/i.test(ln)) {
-      const v = ln.replace(/^participants:\s*/i, "").trim() || nextVal(i);
-      if (v) out.participants = v;
-      continue;
-    }
-    if (/^fitness:/i.test(ln)) {
-      const v = ln.replace(/^fitness:\s*/i, "").trim() || nextVal(i);
-      if (v) out.fitness = v;
-      continue;
-    }
-    if (/^availability:/i.test(ln)) {
-      const v = ln.replace(/^availability:\s*/i, "").trim() || nextVal(i);
-      if (v) out.availability = v;
-      continue;
-    }
+    // Labels: colon optional, value may be on same or next line
+    const mLoc = ln.match(/^\s*location\s*:?\s*(.*)$/i);
+    if (mLoc) { out.location = mLoc[1].trim() || nextVal(i); continue; }
+
+    const mPart = ln.match(/^\s*participants?\s*:?\s*(.*)$/i);
+    if (mPart) { out.participants = mPart[1].trim() || nextVal(i); continue; }
+
+    const mFit = ln.match(/^\s*fitness\s*:?\s*(.*)$/i);
+    if (mFit) { out.fitness = mFit[1].trim() || nextVal(i); continue; }
+
+    const mAvail = ln.match(/^\s*availability\s*:?\s*(.*)$/i);
+    if (mAvail) { out.availability = mAvail[1].trim() || nextVal(i); continue; }
+
+    // Participants fallback like "Max 6"
+    const mMax = ln.match(/\bmax\s*(\d{1,2})\b/i);
+    if (mMax && !out.participants) out.participants = `Max ${mMax[1]}`;
 
     // Generic session rows:
     // "4hrs - 5:45 am to 9:45 am or 10:30 am to 2:30 pm"
@@ -131,6 +153,14 @@ function extractFromDescription(desc) {
       out.sessions.push({ label: rawLabel, time, price: null });
       continue;
     }
+  }
+
+  // Availability fallback from offers if still blank
+  if (!out.availability && productRawOffers) {
+    out.availability =
+      normalizeAvailabilityToken(productRawOffers.availability) ||
+      normalizeAvailabilityToken(productRawOffers.Availability) ||
+      null;
   }
 
   if (out.summary && /^summary$/i.test(out.summary.trim())) {
@@ -174,7 +204,8 @@ function buildProductPanelMarkdown(products) {
 
   const info =
     extractFromDescription(
-      primary.description || primary?.raw?.description || ""
+      primary.description || primary?.raw?.description || "",
+      primary?.raw?.offers
     ) || {};
 
   // Attach prices to sessions: two sessions → low/high; else fallback single
@@ -212,7 +243,6 @@ function buildProductPanelMarkdown(products) {
     }
   }
 
-  // No raw "Book Now" link; pills handle it.
   return lines.join("\n");
 }
 
@@ -290,6 +320,45 @@ async function buildPills({ client, product, firstEvent }) {
   return pills.filter(p => (p.url && !seen.has(p.url) && seen.add(p.url))).slice(0, 4);
 }
 
+/* ----------------------- Relevance scoring & filtering ------------------- */
+function scoreEventRelevance(e, toks) {
+  if (!toks?.length) return 0;
+  const title = e?.title || "";
+  const loc = e?.location || "";
+  const urls = `${e?.page_url || ""} ${e?.source_url || ""}`;
+  // Heavier weight for location matches
+  return scoreTextByTokens(loc, toks) * 2 +
+         scoreTextByTokens(title, toks) +
+         Math.min(1, scoreTextByTokens(urls, toks));
+}
+function scoreProductRelevance(p, toks) {
+  if (!toks?.length) return 0;
+  const title = p?.title || "";
+  const desc = p?.description || p?.raw?.description || "";
+  const urls = `${p?.page_url || ""} ${p?.source_url || ""}`;
+  return scoreTextByTokens(title, toks) * 2 +
+         scoreTextByTokens(desc, toks) +
+         Math.min(1, scoreTextByTokens(urls, toks));
+}
+function filterAndOrderByRelevance(items, scorer, toks) {
+  if (!Array.isArray(items) || !items.length) return [];
+  const scored = items.map(it => ({ it, s: scorer(it, toks) }));
+  const maxS = scored.reduce((m, r) => Math.max(m, r.s), 0);
+  if (maxS <= 0) {
+    // nothing matched: return original order
+    return items;
+  }
+  // Keep only matches with score >= 1, sort by score desc, then by date if present
+  const filtered = scored.filter(r => r.s >= 1);
+  filtered.sort((a, b) => {
+    if (b.s !== a.s) return b.s - a.s;
+    const da = a.it.date_start ? new Date(a.it.date_start).getTime() : Infinity;
+    const db = b.it.date_start ? new Date(b.it.date_start).getTime() : Infinity;
+    return da - db;
+  });
+  return filtered.map(r => r.it);
+}
+
 /* ------------------------- Generic search resolver ----------------------- */
 async function answerByQuery({ client, query }) {
   const nowIso = new Date().toISOString();
@@ -301,24 +370,29 @@ async function answerByQuery({ client, query }) {
     "url",
   ]);
 
-  // Future events that match the query tokens
-  const { data: events } = await client
+  // Future events that match the query tokens (broad fetch first)
+  const { data: eventsRaw } = await client
     .from("page_entities")
     .select("id, title, page_url, source_url, date_start, date_end, location, raw")
     .eq("kind", "event")
     .gte("date_start", nowIso)
     .or(orClause)
     .order("date_start", { ascending: true })
-    .limit(100);
+    .limit(200);
 
   // Products that match the query tokens
-  const { data: products } = await client
+  const { data: productsRaw } = await client
     .from("page_entities")
     .select("*")
     .eq("kind", "product")
     .or(orClause)
     .order("last_seen", { ascending: false })
-    .limit(50);
+    .limit(100);
+
+  // Relevance filtering
+  const events = filterAndOrderByRelevance(eventsRaw || [], scoreEventRelevance, toks)
+    .slice(0, 50); // keep a reasonable amount before UI trim
+  const products = filterAndOrderByRelevance(productsRaw || [], scoreProductRelevance, toks);
 
   const productPanel = buildProductPanelMarkdown(products || []);
 
@@ -343,11 +417,11 @@ async function answerByQuery({ client, query }) {
   ]).filter(Boolean);
 
   const structured = {
-    topic: null, // unknown/generic topic
+    topic: null,
     events: eventList,
     products: products || [],
     pills,
-    chips: pills, // backward-compat
+    chips: pills, // backward-compat for older UI
   };
 
   return { ok: true, answer_markdown: productPanel, citations, structured };
