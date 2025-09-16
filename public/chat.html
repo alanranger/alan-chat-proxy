@@ -45,7 +45,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 /* Composer */
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
 .composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
@@ -70,7 +70,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <body>
 <div class="wrap">
   <!-- Keeps the badge under the orange rule -->
-  <div class="badge-wrap"><span class="version">v0.9.19</span></div>
+  <div class="badge-wrap"><span class="version">v0.9.20</span></div>
 
   <div class="card">
     <div class="header">
@@ -155,21 +155,10 @@ function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
   return ()=> el && el.remove();
 }
-
-/* Minimal Markdown → HTML with links + lists + bold */
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
-
-  // Escape first
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-  // Convert [text](https://url) to anchors (after escaping so we don't re-escape <a>)
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-
-  // Bold
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-
-  // Lists & paragraphs
   const lines = s.split(/\r?\n/);
   let out='', inList=false;
   const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
@@ -181,12 +170,37 @@ function mdToHtml(md){
   flush();
   return { html:`<div class="answer">${out}</div>` };
 }
-
 function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
 
-/* ---------------- Product merging & parsing (generic safety net) ---------------- */
+/* ---------- Text extraction helpers for product facts ---------- */
+function htmlToText(s){
+  if(!s) return '';
+  let t = String(s);
+  // convert common HTML line breaks to newlines
+  t = t.replace(/<\s*br\s*\/?>/gi, '\n');
+  t = t.replace(/<\/\s*p\s*>/gi, '\n');
+  t = t.replace(/<\/\s*li\s*>/gi, '\n');
+  // drop list containers and other tags
+  t = t.replace(/<\s*\/?\s*(ul|ol)\b[^>]*>/gi, '');
+  // remove remaining tags
+  t = t.replace(/<[^>]+>/g,'');
+  // decode a few entities
+  t = t.replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+  // normalise newlines/whitespace
+  t = t.replace(/\r/g,'').split('\n').map(s=>s.trim()).join('\n');
+  return t;
+}
+function normaliseAvailability(s){
+  if(!s) return null;
+  const q = s.toLowerCase();
+  if (q.includes('instock') || q.includes('in stock')) return 'In Stock';
+  if (q.includes('outofstock') || q.includes('out of stock')) return 'Out of Stock';
+  return s;
+}
+
+/* ---------------- Product merging & parsing (generic) ---------------- */
 function mergeProducts(list){
   if(!Array.isArray(list) || !list.length) return [];
   const map = new Map();
@@ -204,25 +218,40 @@ function mergeProducts(list){
 }
 
 function extractFacts(desc){
-  const txt = String(desc||'')
-    .split(/\r?\n/).filter(l=>{
-      if(/^dates\s*\(/i.test(l)) return false;
-      if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
-      if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
-      return true;
-    });
+  const plain = htmlToText(desc||'');
+  const lines = plain.split('\n').filter(Boolean);
+
+  // strip date-like lines/paragraphs
+  const txt = lines.filter(l=>{
+    if(/^dates\s*\(/i.test(l)) return false;
+    if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
+    if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
+    return true;
+  });
 
   const grab = (label)=>{
-    const r = new RegExp(`^\\s*${label}\\s*:?\\s*(.+)$`,'i');
-    const m = txt.find(l=>r.test(l));
-    return m ? m.replace(r,'$1').trim() : null;
+    const r = new RegExp(`^\\s*${label}\\s*:?\\s*(.*)$`,'i');
+    for(let i=0;i<txt.length;i++){
+      const m = txt[i].match(r);
+      if(m){
+        let v = (m[1]||'').trim();
+        if(!v){ // value on the next non-empty line
+          for(let j=i+1;j<txt.length;j++){
+            const t = txt[j].trim(); if(t){ v = t; break; }
+          }
+        }
+        return v || null;
+      }
+    }
+    return null;
   };
 
   const location     = grab('Location');
-  const participants = grab('Participants') || (txt.find(l=>/\bMax\s*\d{1,2}\b/i.test(l))?.match(/\bMax\s*\d{1,2}\b/i)?.[0] || null);
+  const participants = grab('Participants');
   const fitness      = grab('Fitness');
-  const availability = grab('Availability');
+  const availability = normaliseAvailability(grab('Availability'));
 
+  // option/times lines
   const optionLines = txt.filter(l =>
     /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
     /^\s*OR\s*1\s*day\b/i.test(l)
@@ -274,55 +303,42 @@ function deriveOptions(prod, facts){
   return opts;
 }
 
-/* Prefer server-provided pills; fallback if missing */
+/* Prefer server-provided pills; else fallback build */
 function buildActionPills(structured, prod){
-  const fromServer = (structured?.pills && Array.isArray(structured.pills) && structured.pills.length)
-      ? structured.pills
-      : (structured?.chips && Array.isArray(structured.chips) && structured.chips.length ? structured.chips : []);
+  if (structured?.pills?.length) return structured.pills;
 
-  if (fromServer.length){
-    return fromServer.slice(0,4).map(c=>{
-      return { label: c.label || c.text, href: c.url || c.href };
-    }).filter(p=>p.label && p.href);
-  }
-
-  // Fallback (rare)
   const chips=[];
   const productUrl = prod?.url || prod?.page_url || prod?.source_url || structured?.products?.[0]?.url || null;
-  const upcoming   = (structured?.events?.[0]?.page_url || structured?.events?.[0]?.source_url) || null;
+  const firstEvent = (structured?.events?.[0]?.page_url || structured?.events?.[0]?.source_url) || null;
+  const origin = (()=>{ try{ return new URL(productUrl||firstEvent||location.href).origin }catch{ return null } })();
+  const photos = structured?.gallery_url || (origin? `${origin}/gallery-image-portfolios` : null);
+
   if(productUrl) chips.push({label:'Book Now', href:productUrl});
-  if(upcoming)   chips.push({label:'Event Listing', href:upcoming});
-  if(productUrl) chips.push({label:'More Events', href:productUrl});
+  if(firstEvent) chips.push({label:'Event Listing', href:firstEvent});
+  if(origin)     chips.push({label:'More Events', href:`${origin}/search?query=workshops`});
+  if(photos)     chips.push({label:'Photos', href:photos});
+
   return chips.slice(0,4);
 }
 
 /* ---------------- Renderers ---------------- */
-function fmtDate(iso){
-  try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
-}
-
 function renderProductCard(prod){
-  const facts = extractFacts(prod.description||'');
+  const facts = extractFacts(prod.description||prod.raw?.description||'');
   const options = deriveOptions(prod, facts);
 
   const infoP = [];
-  if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
-  if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
-  if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
-  if(facts.availability) infoP.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
+  infoP.push(`<h3>${prod.title || 'Workshop'}</h3>`);
+  infoP.push(`<p><strong>Location:</strong> ${facts.location??''}</p>`);
+  infoP.push(`<p><strong>Participants:</strong> ${facts.participants??''}</p>`);
+  infoP.push(`<p><strong>Fitness:</strong> ${facts.fitness??''}</p>`);
+  if (facts.availability) infoP.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
 
   const li = options.map(o=>{
     const bits = [o.label, o.time ? `— ${o.time}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
     return `<li>${bits}</li>`;
   }).join('');
 
-  return `
-    <div class="answer">
-      <h3>${prod.title || 'Workshop'}</h3>
-      ${infoP.join('')}
-      ${li? `<ul>${li}</ul>`:''}
-    </div>
-  `;
+  return `<div class="answer">${infoP.join('')}${li? `<ul>${li}</ul>`:''}</div>`;
 }
 
 function renderEventsBlock(structured){
@@ -331,7 +347,6 @@ function renderEventsBlock(structured){
     .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
     .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
     .slice(0,12);
-
   if(!future.length) return '';
 
   const topic = (structured?.topic||'').toString().trim();
@@ -347,6 +362,13 @@ function renderEventsBlock(structured){
   return `<div class="answer"><h3>${title}</h3><ul>${lis}</ul></div>`;
 }
 
+function renderArticlesList(structured){
+  const arts = structured?.articles||[];
+  if(!arts.length) return '';
+  const lis = arts.map(a=>`<li><a href="${a.url}" target="_blank" rel="noopener">${a.title}</a></li>`).join('');
+  return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul></div>`;
+}
+
 /* Full render */
 function renderAnswer(payload){
   const s = payload.structured||{};
@@ -356,40 +378,38 @@ function renderAnswer(payload){
     merged_products: merged.length,
     events_found: (s.events||[]).length,
     pills_rendered: 0,
-    intent: payload?.meta?.intent || null
+    intent: payload?.meta?.intent || 'unknown'
   };
 
-  if(merged.length || (s.events||[]).length){
+  // Prefer structured render; include product card if available
+  if(merged.length || (s.events||[]).length || (s.articles||[]).length){
     let prod = merged.find(p=>p?.price!=null) ||
                merged.find(p=>p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null) ||
                merged[0];
 
-    if(prod){
-      addBubble(renderProductCard(prod));
-    }
+    if(prod) addBubble(renderProductCard(prod));
     const evHTML = renderEventsBlock(s);
     if(evHTML) addBubble(evHTML);
+    const artHTML = renderArticlesList(s);
+    if(artHTML) addBubble(artHTML);
 
+    // single pill row at the end
     const pills = buildActionPills(s, prod);
     if(pills.length){
       const wrap = document.createElement('div');
       wrap.className='actions';
       pills.forEach(p=>{
-        if(!p.href) return;
         const a=document.createElement('a'); a.className='pill'; a.textContent=p.label;
-        a.href=p.href; a.target='_blank'; a.rel='noopener';
+        a.href=p.href || p.url; a.target='_blank'; a.rel='noopener';
         wrap.appendChild(a);
       });
       thread.appendChild(wrap);
       note.pills_rendered = pills.length;
     }
   } else {
-    // advice / article-only answers render via markdown
+    // generic markdown fallback
     const md = payload.answer_markdown || payload.answer || '';
     if(md){ const {html}=mdToHtml(md); addBubble(html); }
-    else{
-      addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about <em>workshops</em> or <em>advice</em> — for example, “Upcoming workshops in Devon” or “What tripod do you recommend?”</p></div>`);
-    }
   }
 
   // Debug dumps
@@ -420,7 +440,7 @@ async function sendQuery(query){
     if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
       renderAnswer(data);
     } else {
-      addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about <em>workshops</em> or <em>advice</em> — for example, “Upcoming workshops in Devon” or “What tripod do you recommend?”</p></div>`);
+      addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about workshops, tuition, kit, or locations — for example, <em>“When are the next Bluebell dates?”</em></p></div>`);
     }
   } catch (err){
     closeTyping();
@@ -442,9 +462,8 @@ input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
 
-/* (Future) Email transcript: plan is to append a tiny button under the Copy-all
-   that POSTs the current thread HTML + structured JSON to /api/email-chat.
-   Leaving out for now per your note. */
+// Dev sanity
+// sendQuery("give me the next bluebell workshop dates and prices");
 </script>
 </body>
 </html>
