@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Chat Testbench — v0.5.0</title>
+  <title>Chat Testbench — v0.5.2</title>
   <style>
     :root{--bg:#0b1220;--card:#0f172a;--muted:#9fb3d9;--border:#1b2540;--text:#dbe4ff;--ok:#22c55e;--bad:#ef4444;--brand:#2563eb;}
     *{box-sizing:border-box}
@@ -12,38 +12,34 @@
     h1{margin:0 0 10px}
     .ver{background:#13203e;color:#c7d7ff;border:1px solid #26406f;padding:4px 8px;border-radius:999px;font:12px/1 ui-monospace,Menlo,Consolas,monospace}
     .container{max-width:1200px;margin:0 auto}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin:12px 0}
+    .card{background:#0f172a;border:1px solid #1b2540;border-radius:10px;padding:16px;margin:12px 0}
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
     .w-1{flex:1 1 200px} .w-2{flex:2 1 320px} .w-3{flex:3 1 500px}
-    input,textarea,select{width:100%;background:#0b1426;border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px}
+    input,textarea,select{width:100%;background:#0b1426;border:1px solid #1b2540;color:#dbe4ff;padding:10px 12px;border-radius:8px}
     textarea{min-height:120px}
-    button{background:var(--brand);color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
+    button{background:#2563eb;color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
     button:disabled{opacity:.6;cursor:not-allowed}
-    .btn-ghost{background:#13203e;border:1px solid var(--border)}
+    .btn-ghost{background:#13203e;border:1px solid #1b2540}
     .btn-red{background:#7f1d1d}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+    th,td{padding:10px;border-bottom:1px solid #1b2540;text-align:left;vertical-align:top}
     th{color:#c7d7ff}
-    .muted{color:var(--muted)}
-    .pill{padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:#0b1426;font-weight:600}
-    .ok{color:var(--ok)} .bad{color:var(--bad)}
-    .center{display:flex;align-items:center;gap:10px}
-    .right{margin-left:auto}
-    .progress{height:8px;background:#0b1426;border:1px solid var(--border);border-radius:999px;overflow:hidden}
-    .bar{height:100%;width:0;background:var(--brand)}
-    /* Modal */
+    .muted{color:#9fb3d9}
+    .progress{height:8px;background:#0b1426;border:1px solid #1b2540;border-radius:999px;overflow:hidden}
+    .bar{height:100%;width:0;background:#2563eb}
     .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:50}
     .modal.open{display:flex}
-    .modal .content{max-width:900px;width:92vw;max-height:80vh;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+    .modal .content{max-width:900px;width:92vw;max-height:80vh;overflow:auto;background:#0f172a;border:1px solid #1b2540;border-radius:12px;padding:16px}
     .content h3{margin:0 0 8px}
-    pre{white-space:pre-wrap;word-break:break-word;background:#0b1426;border:1px solid var(--border);padding:10px;border-radius:8px}
+    pre{white-space:pre-wrap;word-break:break-word;background:#0b1426;border:1px solid #1b2540;padding:10px;border-radius:8px}
+    .ok{color:#22c55e} .bad{color:#ef4444}
   </style>
 </head>
 <body>
 <div class="container">
-  <div class="center">
-    <h1>Chat Testbench</h1><span class="ver mono" id="ver">v0.5.0</span>
+  <div class="row" style="align-items:center">
+    <h1>Chat Testbench</h1><span class="ver mono" id="ver">v0.5.2</span>
   </div>
 
   <div class="card">
@@ -67,315 +63,206 @@
       <div class="w-1">
         <button class="btn-ghost" id="clear">Clear</button>
       </div>
+      <div class="w-1">
+        <button class="btn-ghost" id="copy">Copy Results</button>
+      </div>
     </div>
     <details style="margin-top:10px">
       <summary class="muted">Paste mode (one query per line; optionally “ | expected” after it)</summary>
       <textarea id="paste" placeholder="When is the next Devon workshop? | events&#10;What tripod do you recommend? | advice"></textarea>
-      <div class="row" style="margin-top:8px">
-        <button id="loadPaste">Load pasted lines</button>
-      </div>
     </details>
   </div>
 
   <div class="card">
-    <div class="row center">
-      <div class="w-3"><div class="progress"><div class="bar" id="bar"></div></div></div>
-      <div class="right muted" id="progressLbl"></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <table id="tbl">
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <table style="margin-top:12px">
       <thead>
         <tr>
-          <th style="width:60px">#</th>
+          <th style="width:48px">#</th>
           <th>Query</th>
-          <th>Expected</th>
-          <th>Detected</th>
-          <th>Events</th>
-          <th>Articles</th>
-          <th>Pills</th>
-          <th>Result</th>
-          <th>Actions</th>
+          <th style="width:100px">Expected</th>
+          <th style="width:110px">Detected</th>
+          <th style="width:80px">Events</th>
+          <th style="width:80px">Articles</th>
+          <th style="width:60px">Pills</th>
+          <th style="width:90px">Result</th>
+          <th style="width:110px">Actions</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
-  </div>
-
-  <div class="card center">
-    <button class="btn-ghost" id="copyJson">Copy results (JSON)</button>
-    <button class="btn-ghost" id="copyLogs">Copy all inspect logs</button>
-    <button class="btn-ghost" id="dlCsv">Download results.csv</button>
-    <div class="muted right" id="status"></div>
   </div>
 </div>
 
 <!-- Inspect modal -->
 <div class="modal" id="modal">
   <div class="content">
-    <div class="center">
-      <h3 id="mTitle">Inspect</h3>
-      <button class="btn-ghost right" id="mCopy">Copy log</button>
-      <button class="btn-red" id="mClose">Close</button>
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h3>Inspect</h3>
+      <button class="btn-ghost" id="close">Close</button>
     </div>
-    <pre class="mono" id="mPre"></pre>
+    <pre id="inspect" class="mono"></pre>
   </div>
 </div>
 
 <script>
-const VERSION='v0.5.0';
+const VERSION='v0.5.2';
 document.getElementById('ver').textContent=VERSION;
 
-const $ = id => document.getElementById(id);
-const rowsEl = $('rows');
-const statusEl = $('status');
-const progressLbl = $('progressLbl');
-const bar = $('bar');
+const $=(id)=>document.getElementById(id);
+const rowsEl=$('rows');
+const barEl=$('bar');
+const mod=$('modal');
+const inspectEl=$('inspect');
 
-let dataset = [];       // [{idx, query, expected}]
-let results = [];       // [{... dataset fields..., res, detected, counts, pass}]
+let data=[];      // [{query, expected}]
+let results=[];   // for Copy Results
 
-function setProgress(done,total){
-  const pct = total ? Math.round(100*done/total) : 0;
-  bar.style.width = pct + '%';
-  progressLbl.textContent = total ? `${done}/${total} (${pct}%)` : '';
-}
-
-/* ---------- CSV parsing ---------- */
-function detectDelim(firstLine){
-  const c1=(firstLine.match(/,/g)||[]).length;
-  const c2=(firstLine.match(/;/g)||[]).length;
-  const c3=(firstLine.match(/\t/g)||[]).length;
-  return c1>=c2 && c1>=c3 ? ',' : (c2>=c3 ? ';' : '\t');
-}
 function parseCSV(text){
-  // strip BOM
-  if (text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-  const first = text.split(/\r?\n/)[0] || '';
-  const delim = detectDelim(first);
-  const rows=[]; let row=[], val='', inQ=false;
-  function pushVal(){ row.push(val); val=''; }
-  function pushRow(){ rows.push(row); row=[]; }
-  for(let i=0;i<text.length;i++){
-    const ch=text[i];
-    if(inQ){
-      if(ch===`"`){ if(text[i+1]==='"'){ val+='"'; i++; } else inQ=false; }
-      else val+=ch;
-    }else{
-      if(ch===`"`){ inQ=true; }
-      else if(ch===delim){ pushVal(); }
-      else if(ch==='\n'){ pushVal(); pushRow(); }
-      else if(ch!=='\r'){ val+=ch; }
-    }
+  // extremely forgiving parser for 2 columns
+  const lines=text.split(/\r?\n/).filter(Boolean);
+  if(!lines.length) return [];
+  const header=lines[0].split(',').map(s=>s.trim().toLowerCase());
+  const qi=header.indexOf('query');
+  const ei=header.indexOf('expected');
+  if(qi===-1){ alert('No rows loaded. Make sure your CSV has a header "query,expected" or use Paste mode.'); return []; }
+  const out=[];
+  for(let i=1;i<lines.length;i++){
+    const parts=lines[i].split(',');
+    const query=(parts[qi]||'').trim();
+    const expected=(ei===-1?'':(parts[ei]||'').trim());
+    if(query) out.push({query,expected});
   }
-  if(val.length||row.length){ pushVal(); pushRow(); }
-  return {rows, delim};
+  return out;
 }
-function loadCsvText(text){
-  const {rows} = parseCSV(text);
-  dataset = [];
-  if(!rows.length){ $('parsed').textContent='Parsed rows: 0'; return; }
 
-  // header?
-  const header = rows[0].map(h=>String(h||'').trim().toLowerCase());
-  let startIdx = 0;
-  let hQuery=-1, hExpected=-1;
-
-  if(header.includes('query')){
-    hQuery = header.indexOf('query');
-    if(header.includes('expected')) hExpected = header.indexOf('expected');
-    else if(header.includes('label')) hExpected = header.indexOf('label');
-    else if(header.includes('intent')) hExpected = header.indexOf('intent');
-    startIdx = 1;
-  }
-
-  for(let i=startIdx;i<rows.length;i++){
-    const r = rows[i];
-    if(!r || !r.length) continue;
-    let q, e;
-    if(hQuery>=0){ q = r[hQuery] || ''; e = (hExpected>=0? r[hExpected] : '') || ''; }
-    else { q = r[0] || ''; e = r[1] || ''; }
-    q = String(q||'').trim();
-    e = String(e||'').trim().toLowerCase();
-    if(!q) continue;
-    dataset.push({ idx: dataset.length+1, query:q, expected:e });
-  }
-  $('parsed').textContent = `Parsed rows: ${dataset.length}`;
-  renderRows();
-}
-$('csv').addEventListener('change', async e=>{
-  const f = e.target.files && e.target.files[0];
-  if(!f){ loadCsvText(''); return; }
-  const t = await f.text();
-  loadCsvText(t);
+$('csv').addEventListener('change', async (e)=>{
+  results=[]; rowsEl.innerHTML=''; barEl.style.width='0%';
+  const file=e.target.files && e.target.files[0];
+  if(!file){ $('parsed').textContent='Parsed rows: 0'; data=[]; return; }
+  const txt=await file.text();
+  data=parseCSV(txt);
+  $('parsed').textContent=`Parsed rows: ${data.length}`;
+  renderRowsSkeleton();
 });
 
-/* ---------- Paste mode ---------- */
-$('loadPaste').onclick = () => {
-  const lines = ($('paste').value||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  dataset = [];
-  for(const ln of lines){
-    const parts = ln.split('|');
-    const q = (parts[0]||'').trim();
-    const e = (parts[1]||'').trim().toLowerCase();
-    if(q) dataset.push({ idx: dataset.length+1, query:q, expected:e });
-  }
-  $('parsed').textContent = `Parsed rows: ${dataset.length}`;
-  renderRows();
+$('clear').onclick=()=>{
+  $('csv').value=''; $('paste').value='';
+  rowsEl.innerHTML=''; data=[]; results=[]; $('parsed').textContent='Parsed rows: 0';
+  barEl.style.width='0%';
 };
 
-/* ---------- Call /api/chat ---------- */
-async function callChat(query, topK){
-  const res = await fetch('/api/chat', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ query, topK: Number(topK||8) })
-  });
-  const txt = await res.text();
-  let j; try{ j=JSON.parse(txt); }catch{ j=null; }
-  if(!res.ok || !j) throw new Error(j?.error || j?.detail || `${res.status} ${res.statusText}`);
-  return j;
-}
-function pickedIntent(res){
-  // robust detection from structured.intent or meta intent
-  const s = res?.structured || {};
-  return (s.intent || res?.meta?.intent || '').toString().trim().toLowerCase() || null;
-}
-function countsFrom(res){
-  const s = res?.structured || {};
-  const events = Array.isArray(s.events) ? s.events.length : 0;
-  const articles = Array.isArray(s.articles) ? s.articles.length : 0;
-  const pills = Array.isArray(s.pills||s.chips) ? (s.pills||s.chips).length : 0;
-  return { events, articles, pills };
-}
-
-/* ---------- Run All ---------- */
-$('runAll').onclick = async () => {
-  if(!dataset.length){ alert('No rows loaded. Use CSV with header "query,expected" or Paste mode.'); return; }
-  const topK = Number($('topk').value||8);
-  const conc = Math.max(1, Number($('conc').value||3));
-  results = [];
-  renderRows();
-  setProgress(0, dataset.length);
-  statusEl.textContent='Running…';
-
-  let done=0;
-  const q = dataset.slice(); // shallow copy
-  const runners = Array.from({length:conc}, ()=> (async function run(){
-    while(q.length){
-      const row = q.shift();
-      try{
-        const res = await callChat(row.query, topK);
-        const intent = pickedIntent(res);
-        const {events, articles, pills} = countsFrom(res);
-        const pass = row.expected ? (row.expected===intent) : true;
-        results.push({ ...row, detected:intent||'', counts:{events,articles,pills}, pass, res });
-      }catch(e){
-        results.push({ ...row, detected:'', counts:{events:0,articles:0,pills:0}, pass:false, res:{ ok:false, error:String(e?.message||e) } });
-      }
-      done++; setProgress(done, dataset.length); renderRows();
-    }
-  })());
-  await Promise.all(runners);
-  statusEl.textContent='Done.';
-};
-
-/* ---------- Render table ---------- */
-function renderRows(){
-  rowsEl.innerHTML = '';
-  const index = new Map(results.map(r => [r.idx, r]));
-  for(const row of dataset){
-    const r = index.get(row.idx);
-    const tr = document.createElement('tr');
-
-    const det = r?.detected || '';
-    const cnt = r?.counts || {events:0,articles:0,pills:0};
-    const pass = (typeof r?.pass === 'boolean') ? r.pass : '';
-
-    tr.innerHTML = `
-      <td class="mono">${row.idx}</td>
-      <td>${escapeHtml(row.query)}</td>
-      <td class="mono">${escapeHtml(row.expected||'')}</td>
-      <td class="mono">${escapeHtml(det)}</td>
-      <td>${cnt.events ?? ''}</td>
-      <td>${cnt.articles ?? ''}</td>
-      <td>${cnt.pills ?? ''}</td>
-      <td>${pass===''? '' : (pass? '<span class="ok">PASS</span>':'<span class="bad">FAIL</span>')}</td>
-      <td>
-        <button class="btn-ghost" data-inspect="${row.idx}" ${r?'':'disabled'}>Inspect</button>
-      </td>
-    `;
-    rowsEl.appendChild(tr);
-  }
-  // bind inspect buttons
-  rowsEl.querySelectorAll('button[data-inspect]').forEach(btn=>{
-    btn.onclick = () => openInspect(Number(btn.getAttribute('data-inspect')));
-  });
-}
-function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-/* ---------- Inspect modal ---------- */
-const modal = $('modal'), mPre=$('mPre'), mTitle=$('mTitle');
-$('mClose').onclick = () => modal.classList.remove('open');
-$('mCopy').onclick = () => {
-  navigator.clipboard.writeText(mPre.textContent||'');
-  toast('Copied log');
-};
-function openInspect(idx){
-  const r = results.find(x=>x.idx===idx);
-  if(!r) return;
-  mTitle.textContent = `Inspect #${idx}`;
-  mPre.textContent = JSON.stringify({
+$('copy').onclick=()=>{
+  if(!results.length){ alert('No results yet. Run the test first.'); return; }
+  const payload=results.map(r=>({
+    idx: r.idx,
     query: r.query,
     expected: r.expected,
     detected: r.detected,
     counts: r.counts,
-    pass: r.pass,
-    response: r.res
-  }, null, 2);
-  modal.classList.add('open');
+    pass: r.pass
+  }));
+  navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+  alert('Copied results JSON to clipboard.');
+};
+
+$('runAll').onclick=async()=>{
+  results=[]; rowsEl.innerHTML=''; barEl.style.width='0%';
+
+  let list=[...data];
+  if(!list.length){
+    // try paste mode
+    const pasted=$('paste').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    if(!pasted.length){ alert('No rows. Load a CSV or use Paste mode.'); return; }
+    list=pasted.map((line,i)=>{
+      const m=line.split('|'); return { query:(m[0]||'').trim(), expected:(m[1]||'').trim() };
+    });
+    $('parsed').textContent=`Parsed rows: ${list.length} (paste mode)`;
+  }
+
+  renderRowsSkeleton(list);
+
+  const topk=Number($('topk').value||8);
+  const conc=Math.max(1, Number($('conc').value||3));
+  let done=0, idx=0;
+
+  async function next(){
+    if(idx>=list.length) return;
+    const i=idx++; const row=list[i];
+    const tr=rowsEl.querySelector(`tr[data-i="${i}"]`);
+    const res=await callChat(row.query, topk).catch(e=>({error:String(e)}));
+    const structured=res && res.structured || {};
+    const detected= (res && (res.meta?.intent || structured.intent)) || '';
+    const counts = {
+      events: (structured.events||[]).length || 0,
+      articles: (structured.articles||[]).length || 0,
+      pills: (structured.pills||[]).length || 0
+    };
+    const pass = compareIntent(row.expected, detected);
+
+    tr.querySelector('.det').textContent = detected || '—';
+    tr.querySelector('.ct-events').textContent = counts.events;
+    tr.querySelector('.ct-articles').textContent = counts.articles;
+    tr.querySelector('.ct-pills').textContent = counts.pills;
+    tr.querySelector('.res').innerHTML = pass ? '<span class="ok">PASS</span>' : '<span class="bad">FAIL</span>';
+
+    const inspect = { idx:i+1, request:{ query:row.query, topK:topk }, response:res, derived:{ detected, counts, pass } };
+    tr.querySelector('.inspect').onclick=()=>openInspect(inspect);
+
+    results.push({ idx:i+1, query:row.query, expected:row.expected, detected, counts, pass, inspect });
+
+    done++; barEl.style.width = `${Math.round((done/list.length)*100)}%`;
+    await next();
+  }
+  const runners=Array.from({length:conc},()=>next());
+  await Promise.all(runners);
+};
+
+function equivIntent(s){
+  s=(s||'').toString().trim().toLowerCase();
+  if(!s) return '';
+  if(s==='event') s='events';
+  return s;
+}
+function compareIntent(expected, detected){
+  const a=equivIntent(expected);
+  const b=equivIntent(detected);
+  if(!a) return true; // nothing to compare, treat as pass
+  return a===b;
 }
 
-/* ---------- Sharing tools ---------- */
-$('copyJson').onclick = () => {
-  const out = results.map(r=>({
-    idx:r.idx, query:r.query, expected:r.expected, detected:r.detected,
-    counts:r.counts, pass:r.pass
-  }));
-  navigator.clipboard.writeText(JSON.stringify(out, null, 2));
-  toast('Copied results JSON');
-};
-$('copyLogs').onclick = () => {
-  const logs = results.map(r => JSON.stringify({
-    idx:r.idx, query:r.query, expected:r.expected, detected:r.detected,
-    counts:r.counts, pass:r.pass, response:r.res
-  }));
-  navigator.clipboard.writeText(logs.join('\n'));
-  toast('Copied all inspect logs');
-};
-$('dlCsv').onclick = () => {
-  const header = 'idx,query,expected,detected,events,articles,pills,pass';
-  const lines = results.map(r=>{
-    const qq = `"${(r.query||'').replace(/"/g,'""')}"`;
-    return [r.idx, qq, r.expected||'', r.detected||'', r.counts?.events||0, r.counts?.articles||0, r.counts?.pills||0, r.pass?'PASS':'FAIL'].join(',');
+function renderRowsSkeleton(src=data){
+  rowsEl.innerHTML='';
+  src.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.dataset.i=i;
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td>${escapeHtml(r.query)}</td>
+      <td>${escapeHtml(r.expected||'')}</td>
+      <td class="det muted">…</td>
+      <td class="ct-events">0</td>
+      <td class="ct-articles">0</td>
+      <td class="ct-pills">0</td>
+      <td class="res muted">…</td>
+      <td><button class="btn-ghost inspect" disabled>Inspect</button></td>
+    `;
+    rowsEl.appendChild(tr);
   });
-  const blob = new Blob([header+'\n'+lines.join('\n')], {type:'text/csv;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url; a.download='testbench-results.csv'; a.click();
-  URL.revokeObjectURL(url);
-};
+}
 
-/* ---------- Clear ---------- */
-$('clear').onclick = () => { dataset=[]; results=[]; $('parsed').textContent='Parsed rows: 0'; setProgress(0,0); renderRows(); statusEl.textContent=''; };
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));}
 
-/* ---------- Tiny toast ---------- */
-let toastTimer;
-function toast(msg){
-  statusEl.textContent = msg;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>{ statusEl.textContent=''; }, 1500);
+function openInspect(obj){
+  inspectEl.textContent = JSON.stringify(obj, null, 2);
+  mod.classList.add('open');
+}
+$('close').onclick=()=>mod.classList.remove('open');
+mod.addEventListener('click', (e)=>{ if(e.target===mod) mod.classList.remove('open'); });
+
+async function callChat(query, topK){
+  const res = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query, topK})});
+  return res.json();
 }
 </script>
 </body>
