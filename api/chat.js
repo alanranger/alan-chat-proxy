@@ -47,45 +47,29 @@ function urlSafe(u) {
   try { return u ? new URL(u) : null; } catch { return null; }
 }
 
-/* ----------------------- Topic detection (simple) ------------------------ */
-function getTopicFromQuery(query) {
-  const q = (query || "").toLowerCase();
-  if (q.includes("bluebell")) return "bluebell";
-  return null;
+/* ---------------------- Query tokenisation / filters --------------------- */
+function normaliseQuery(q) {
+  return String(q || "")
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
-
-/* ---------------- Canonical resolver (Option A: tolerant) ---------------- */
-async function resolveCanonicalsOptionA(client, topic) {
-  const out = { product: null, landing: null, debug: {} };
-
-  const { data: prodA2, error: prodErr } = await client
-    .from("page_entities")
-    .select("*")
-    .eq("kind", "product")
-    .eq("raw->>canonical", "true")
-    .eq("raw->>topic", topic)
-    .eq("raw->>role", "product")
-    .order("last_seen", { ascending: false })
-    .limit(1);
-
-  const { data: landA2, error: landErr } = await client
-    .from("page_entities")
-    .select("*")
-    .in("kind", ["article", "page"])
-    .eq("raw->>canonical", "true")
-    .eq("raw->>topic", topic)
-    .eq("raw->>role", "landing")
-    .order("last_seen", { ascending: false })
-    .limit(1);
-
-  out.product = prodA2?.[0] || null;
-  out.landing = landA2?.[0] || null;
-  out.debug.explicitErrors = { prodErr, landErr };
-  out.debug.selected = {
-    product: out.product?.id || null,
-    landing: out.landing?.id || null,
-  };
-  return out;
+function tokensFromQuery(q) {
+  const stop = new Set(["the","a","an","of","on","to","in","for","with","and","or","next","dates","workshop","workshops","course","courses"]);
+  return normaliseQuery(q)
+    .toLowerCase()
+    .split(" ")
+    .filter(t => t && !stop.has(t))
+    .slice(0, 6);
+}
+function buildIlikeOr(parts, cols) {
+  // builds Supabase .or() string like: title.ilike.%devon%,page_url.ilike.%devon%,title.ilike.%batsford% ...
+  const terms = [];
+  for (const p of parts) {
+    const pat = `%${p}%`;
+    for (const c of cols) terms.push(`${c}.ilike.${pat}`);
+  }
+  return terms.join(",");
 }
 
 /* ----------------------- Product description parsing -------------------- */
@@ -233,8 +217,6 @@ function buildProductPanelMarkdown(products) {
 }
 
 /* --------------------- Backend pills (Book/Event/More/Photos) -------------------- */
-
-/** Derive a "More Workshops" index URL from a product/event URL (same-origin, no hard-coding). */
 function deriveWorkshopsIndex(productUrl, eventUrl) {
   const u = urlSafe(productUrl) ?? urlSafe(eventUrl);
   if (!u) return null;
@@ -248,8 +230,6 @@ function deriveWorkshopsIndex(productUrl, eventUrl) {
   const parent = base.substring(0, base.lastIndexOf('/') + 1);
   return u.origin + (parent || '/');
 }
-
-/** Helper to pull strings from Supabase selects */
 async function pickUrlsFromSelect(q) {
   const { data, error } = await q;
   if (error) return [];
@@ -262,8 +242,12 @@ async function pickUrlsFromSelect(q) {
   }
   return out;
 }
-
-/** Find best gallery landing URL on same origin, fallback to /search?query=gallery */
+function scoreGallery(u) {
+  const s = String(u).toLowerCase();
+  if (s.includes("gallery-image-portfolios")) return 0;
+  if (/\/gallery(\/|$)/.test(s)) return 1;
+  return 2;
+}
 async function findPhotosUrl(client, productUrl, eventUrl) {
   const origin = (urlSafe(productUrl) ?? urlSafe(eventUrl))?.origin || null;
 
@@ -288,14 +272,6 @@ async function findPhotosUrl(client, productUrl, eventUrl) {
   if (origin) return `${origin}/search?query=gallery`;
   return "https://www.alanranger.com/search?query=gallery";
 }
-function scoreGallery(u) {
-  const s = String(u).toLowerCase();
-  if (s.includes("gallery-image-portfolios")) return 0; // your hub page
-  if (/\/gallery(\/|$)/.test(s)) return 1;              // clean /gallery root
-  return 2;                                              // other gallery paths
-}
-
-/** Main pill builder */
 async function buildPills({ client, product, firstEvent }) {
   const productUrl = product?.url || product?.page_url || product?.source_url || null;
   const eventUrl   = firstEvent?.page_url || firstEvent?.source_url || null;
@@ -310,78 +286,68 @@ async function buildPills({ client, product, firstEvent }) {
   const photos = await findPhotosUrl(client, productUrl, eventUrl);
   if (photos) pills.push({ label: "Photos", url: photos });
 
-  // de-dup
   const seen = new Set();
   return pills.filter(p => (p.url && !seen.has(p.url) && seen.add(p.url))).slice(0, 4);
 }
 
-/* -------------------------------- Bluebell -------------------------------- */
-async function answerBluebell({ client }) {
+/* ------------------------- Generic search resolver ----------------------- */
+async function answerByQuery({ client, query }) {
   const nowIso = new Date().toISOString();
+  const toks = tokensFromQuery(query);
+  const orClause = buildIlikeOr(toks.length ? toks : [normaliseQuery(query)], [
+    "title",
+    "page_url",
+    "source_url",
+    "url",
+  ]);
 
-  const canon = await resolveCanonicalsOptionA(client, "bluebell");
-
-  // Future events
+  // Future events that match the query tokens
   const { data: events } = await client
     .from("page_entities")
     .select("id, title, page_url, source_url, date_start, date_end, location, raw")
     .eq("kind", "event")
-    .or("title.ilike.%bluebell%,page_url.ilike.%bluebell%")
     .gte("date_start", nowIso)
+    .or(orClause)
     .order("date_start", { ascending: true })
     .limit(100);
 
-  // Products
+  // Products that match the query tokens
   const { data: products } = await client
     .from("page_entities")
     .select("*")
     .eq("kind", "product")
-    .or("title.ilike.%bluebell%,page_url.ilike.%bluebell%")
+    .or(orClause)
     .order("last_seen", { ascending: false })
     .limit(50);
 
-  // Product panel only (no events mixed in)
   const productPanel = buildProductPanelMarkdown(products || []);
 
-  // Event list for structure/citations
   const eventList = (events || [])
     .map((e) => ({ ...e, when: fmtDateLondon(e.date_start) }))
     .slice(0, 12);
 
-  // Representative product & first event (for pills)
   const product =
     (products || []).find((p) => p && pickUrl(p)) ||
     (products || [])[0] || null;
+
   const firstEvent =
     (events || [])
       .filter((e) => e && e.date_start)
       .sort((a, b) => new Date(a.date_start) - new Date(b.date_start))[0] || null;
 
-  // Backend pills
   const pills = await buildPills({ client, product, firstEvent });
 
-  // Citations
   const citations = uniq([
-    pickUrl(canon.product),
-    pickUrl(canon.landing),
     ...((events || []).map(pickUrl)),
     pickUrl(products?.[0]),
   ]).filter(Boolean);
 
-  // Structure
   const structured = {
-    topic: "bluebell",
+    topic: null, // unknown/generic topic
     events: eventList,
     products: products || [],
-    canonicals: {
-      product: canon.product || null,
-      landing: canon.landing || null,
-      debug: canon.debug,
-    },
-    // New: backend-provided pills for the UI
     pills,
-    // Mirror as 'chips' for any older frontends still expecting this field
-    chips: pills,
+    chips: pills, // backward-compat
   };
 
   return { ok: true, answer_markdown: productPanel, citations, structured };
@@ -401,27 +367,10 @@ export default async function handler(req, res) {
     const { query, topK } = req.body || {};
     const client = supabaseAdmin();
 
-    const topic = getTopicFromQuery(query);
-    if (topic === "bluebell") {
-      const result = await answerBluebell({ client });
-      res.status(200).json({
-        ...result,
-        meta: {
-          duration_ms: Date.now() - started,
-          endpoint: "/api/chat",
-          topK: topK || null,
-        },
-      });
-      return;
-    }
+    const result = await answerByQuery({ client, query });
 
-    // Generic fallback
     res.status(200).json({
-      ok: true,
-      answer_markdown:
-        "I don’t have a specific answer for that yet. Try asking about workshops, tuition, kit, or locations — for example, “When are the next Bluebell dates?”",
-      citations: [],
-      structured: { topic: null },
+      ...result,
       meta: {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
