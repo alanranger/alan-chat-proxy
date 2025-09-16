@@ -2,13 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>Bench Test — Events/Advice Ranker + Stitching (single-file)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Bench Test — Single File</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <style>
-    :root{
-      --bg:#0b0e12; --fg:#e9eef5; --muted:#a7b3c4; --card:#121722; --accent:#8dd0ff; --good:#4cd964; --warn:#ffcc00; --bad:#ff4d4f; --brand:#ff7a00;
-    }
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;}
+    :root{--bg:#0b0e12;--fg:#e9eef5;--muted:#a7b3c4;--card:#121722;--accent:#8dd0ff;--good:#4cd964;--warn:#ffcc00;--bad:#ff4d4f;--brand:#ff7a00}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
     header{padding:16px 20px;border-bottom:1px solid #1c2230;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
     header h1{font-size:18px;margin:0}
     .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#182033;border:1px solid #243149;font-size:12px;color:var(--muted)}
@@ -17,7 +15,7 @@
     .card{background:var(--card);border:1px solid #1c2230;border-radius:12px;padding:14px}
     .card h2{margin:0 0 8px;font-size:14px;color:#d9e2ef;letter-spacing:.25px}
     .input-row{display:flex;gap:8px}
-    input[type="text"],textarea{width:100%;background:#0f1420;color:var(--fg);border:1px solid #223049;border-radius:10px;padding:10px 12px;font-size:14px}
+    input[type="text"]{width:100%;background:#0f1420;color:var(--fg);border:1px solid #223049;border-radius:10px;padding:10px 12px;font-size:14px}
     button{background:#1b66ff;border:0;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
     button.secondary{background:#27344a}
     .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
@@ -26,23 +24,18 @@
     .item .title{font-weight:600;color:#dfe9f7}
     .item .sub{color:var(--muted);font-size:12px;margin-top:2px}
     .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-    .flex{display:flex;gap:8px;align-items:center}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap}
     .tag{font-size:10px;border:1px solid #2f3b54;background:#141b29;border-radius:6px;padding:2px 6px;color:#9fb3d1}
     .ok{color:var(--good)} .mid{color:var(--warn)} .low{color:var(--bad)}
-    .tooltip {position:relative;display:inline-block;}
-    .tooltip .tiptext {
-      visibility:hidden;opacity:0;transition:opacity .15s ease;
-      width:280px;background:#0f1420;color:#e9eef5;text-align:left;border-radius:8px;padding:10px;border:1px solid #25324b;
-      position:absolute;z-index:1;top:120%;left:0;
-      box-shadow:0 10px 30px rgba(0,0,0,.4)
-    }
-    .tooltip:hover .tiptext {visibility:visible;opacity:1;}
+    .tooltip {position:relative;display:inline-block}
+    .tooltip .tiptext{visibility:hidden;opacity:0;transition:opacity .15s;width:280px;background:#0f1420;color:#e9eef5;text-align:left;border-radius:8px;padding:10px;border:1px solid #25324b;position:absolute;z-index:1;top:120%;left:0;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+    .tooltip:hover .tiptext{visibility:visible;opacity:1}
     .btnline{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     a.btn{color:#fff;text-decoration:none;background:#1b66ff;border-radius:8px;padding:6px 10px;font-weight:600}
     a.btn.brand{background:var(--brand)}
     .kvs{display:grid;grid-template-columns:160px 1fr;gap:6px;font-size:12px;color:#c7d4e8}
     .kvs b{color:#eef5ff}
+    progress{width:100%;height:10px}
   </style>
 </head>
 <body>
@@ -65,17 +58,24 @@
     </div>
 
     <div class="btnline">
-      <button class="secondary" id="runTests">Run Test Suite</button>
+      <button class="secondary" id="runBuiltIn">Run Built-in Suite</button>
       <button class="secondary" id="copyJson">Copy JSON</button>
-      <button class="secondary" id="reloadCSV">Reload Landing CSV</button>
+      <button class="secondary" id="btnLoadLanding">Upload Landing CSV</button>
+      <button class="secondary" id="btnLoadQuestions">Upload Questions CSV</button>
+      <button class="secondary" id="runCSV">Run CSV Test Suite</button>
     </div>
+
+    <input id="landingFile" type="file" accept=".csv" style="display:none"/>
+    <input id="questionsFile" type="file" accept=".csv" style="display:none"/>
 
     <div style="margin-top:12px">
       <h2 style="margin:0 0 6px">Status</h2>
       <div class="kvs">
         <div>Intent</div><div id="intent"></div>
         <div>Reason</div><div id="intentWhy" class="mono"></div>
-        <div>Landing CSV</div><div id="csvStatus"></div>
+        <div>Landing CSV</div><div id="csvStatus">not loaded</div>
+        <div>Questions CSV</div><div id="qsStatus">not loaded</div>
+        <div>CSV Progress</div><div><progress id="qsProg" max="100" value="0"></progress> <span id="qsProgTxt"></span></div>
       </div>
     </div>
   </section>
@@ -84,8 +84,8 @@
     <h2>Results</h2>
     <div class="row">
       <span class="tag">No generic /search?query pills used</span>
-      <span class="tag">Bluebell stitching generic</span>
-      <span class="tag">Advice scoring: BM25-ish + phrase boost</span>
+      <span class="tag">Product↔event stitching</span>
+      <span class="tag">Advice ranking w/ phrase boost</span>
     </div>
     <div style="margin-top:10px" class="grid">
       <div>
@@ -111,38 +111,41 @@
 </main>
 
 <script>
-/* ============================================================
-   BENCH-ONLY UTILITIES
-   ============================================================ */
-
-// Config (bench only)
+/* ==========================
+   Config (bench only)
+   ========================== */
 const EVENT_LISTING_URL = "https://www.alanranger.com/photographic-workshops-near-me";
 const PHOTOS_URL = "https://www.alanranger.com/gallery-image-portfolios";
 
-// CSV path provided by you earlier:
-const LANDING_CSV_PATH = "/mnt/data/landing pages.csv"; // bench fs mount
-
-// Simple CSV parser (no external libs)
+/* ==========================
+   CSV Helpers
+   ========================== */
 function parseCSV(text){
-  // very small, header=true, commas, b64 quotes supported
-  const lines = text.split(/\r?\n/).filter(Boolean);
+  const lines = text.split(/\r?\n/);
   if(!lines.length) return [];
-  const head = lines[0].split(",").map(s=>s.trim());
-  const rows=[];
-  for(let i=1;i<lines.length;i++){
-    const row = splitCSVLine(lines[i]);
-    if(row.length!==head.length) continue;
-    const o={};
-    head.forEach((h,idx)=>o[h.trim()]=row[idx]?.trim()||"");
-    rows.push(o);
+  // join lines that include quoted commas
+  const rows=[]; let acc=""; let inQ=false;
+  for(const ln of lines){
+    let l=ln;
+    for(let i=0;i<l.length;i++){
+      if(l[i]==='"'){ if(l[i+1]==='"'){i++;} else inQ=!inQ; }
+    }
+    acc += (acc? "\n":"") + l;
+    if(!inQ){ rows.push(acc); acc=""; }
   }
-  return rows;
+  const header = splitCSVLine(rows.shift()||"").map(s=>s.trim());
+  return rows.filter(Boolean).map(r=>{
+    const cols = splitCSVLine(r);
+    const obj={};
+    header.forEach((h,i)=>obj[h]= (cols[i]??"").replace(/^"|"$/g,""));
+    return obj;
+  });
 }
 function splitCSVLine(line){
   const out=[]; let cur=""; let q=false;
   for(let i=0;i<line.length;i++){
     const c=line[i];
-    if(c==='"' ){ if(q && line[i+1]==='"'){cur+='"';i++;} else {q=!q;} }
+    if(c==='"'){ if(q && line[i+1]==='"'){cur+='"';i++;} else {q=!q;} }
     else if(c===',' && !q){ out.push(cur);cur=""; }
     else cur+=c;
   }
@@ -150,360 +153,250 @@ function splitCSVLine(line){
   return out;
 }
 
-// tiny helpers
+/* ==========================
+   Tiny utils
+   ========================== */
 const toLower = s => (s||"").toLowerCase();
 const normWS = s => (s||"").replace(/\s+/g," ").trim();
-const slugTokens = s => normWS(s).toLowerCase().replace(/https?:\/\/[^/]+/,"").replace(/[^\w\s-]+/g," ").split(/[\s/_-]+/).filter(Boolean);
-const uniq = arr => Array.from(new Set(arr));
+const uniq = a => Array.from(new Set(a));
+function escapeHtml(s){return (s||"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));}
 
-/* ============================================================
-   INTENT CLASSIFIER (events | advice) — heuristic + weights
-   ============================================================ */
+/* ==========================
+   Intent classifier
+   ========================== */
 function classifyIntent(q){
   const s = toLower(q);
-  const hits = [];
-  // Events signals
-  const evWords = [
-    "when","date","next","where","cost","price","workshop","event","available","booking","book","devon","lake district","yorkshire","dartmoor","kenilworth","warwickshire","peak district"
-  ];
-  const adWords = [
-    "how","what is","recommend","do i need","certificate","free","b&b","accommodation","age","laptop","tripod","long exposure","astrophotography course","advice","camera do i need"
-  ];
+  const evWords = ["when","date","next","where","cost","price","workshop","event","available","booking","book","devon","lake district","yorkshire","dartmoor","kenilworth","warwickshire","peak district","bluebell"];
+  const adWords = ["how","what is","recommend","do i need","certificate","free","b&b","accommodation","residential","age","laptop","tripod","long exposure","astrophotography course","advice","camera do i need"];
   let ev=0, ad=0;
-
-  evWords.forEach(w=>{
-    if(s.includes(w)) { ev+= (w.length>6?2:1); hits.push(["events",w]);}
-  });
-  adWords.forEach(w=>{
-    if(s.includes(w)) { ad+= (w.length>6?2:1); hits.push(["advice",w]);}
-  });
-
-  // Phrase patterns
+  evWords.forEach(w=>{ if(s.includes(w)) ev+=(w.length>6?2:1); });
+  adWords.forEach(w=>{ if(s.includes(w)) ad+=(w.length>6?2:1); });
   if(/\b(when|what|where)\b.*\b(workshop|event)\b/.test(s)) ev+=2;
   if(/\b(what is|how to|how do i|recommend)\b/.test(s)) ad+=2;
-
-  // Disambiguation: “include b&b / residential”
   if(/\b(b&b|bed.*breakfast|accommodation|residential)\b/.test(s)) ad+=3;
-
   const intent = ev>=ad ? "events" : "advice";
   const margin = Math.abs(ev-ad);
-  const confidence = Math.min(95, 50 + margin*10); // 50–95 rough
-  return { intent, confidence, reason:`events=${ev}, advice=${ad}, hits=${hits.map(h=>h.join(":")).join(", ")}` };
+  const confidence = Math.min(95, 50 + margin*10);
+  return { intent, confidence, reason:`events=${ev}, advice=${ad}` };
 }
 
-/* ============================================================
-   RANKING — BM25-ish + exact phrase/synonym boosts
-   Works on whatever candidates the collectors produce.
-   ============================================================ */
-function tokenSet(s){
-  return uniq(normWS(s||"").toLowerCase().replace(/[^\w\s]+/g," ").split(/\s+/).filter(Boolean));
-}
+/* ==========================
+   Scoring helpers
+   ========================== */
+function tokenSet(s){ return uniq(normWS(s||"").toLowerCase().replace(/[^\w\s]+/g," ").split(/\s+/).filter(Boolean)); }
+function escapeReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 function scoreDoc(query, fields){
   const q = normWS(query).toLowerCase();
   const qTokens = tokenSet(q);
   const text = (fields||[]).map(normWS).join(" ").toLowerCase();
-
-  let score = 0;
-
-  // Exact phrase boost (strong)
-  if(q.length>3 && text.includes(q)) score += 12;
-
-  // Token scoring with naive IDF
-  const corpusTokens = tokenSet(text);
+  let score=0;
+  if(q.length>3 && text.includes(q)) score+=12;
   qTokens.forEach(t=>{
     const tf = (text.match(new RegExp("\\b"+escapeReg(t)+"\\b","g"))||[]).length;
     if(!tf) return;
-    const idf = 1 + Math.log(1 + 20/(1+ (text.split(t).length-1))); // pseudo
-    score += (tf * idf);
+    const idf = 1 + Math.log(1 + 20/(1+(text.split(t).length-1)));
+    score += tf*idf;
   });
-
-  // Synonyms / domain boosts
   if(/\blong exposure\b/.test(q) && /long\s*exposure/.test(text)) score += 8;
   if(/\bbluebell/.test(q) && /bluebell/.test(text)) score += 10;
   if(/\bresidential|b&b|bed.*breakfast/.test(q) && /(residential|accommodation|b&b)/.test(text)) score += 6;
-
   return score;
 }
-function escapeReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 
-/* ============================================================
-   PRODUCT ↔ EVENT STITCHING (generic)
-   Groups events by base slug and attaches book-now + dates.
-   Specifically fixes prior “bluebell” hard-wire without special cases.
-   ============================================================ */
+/* ==========================
+   Product↔Event stitching
+   ========================== */
 function baseKeyFromUrl(u){
   try{
-    const parts = new URL(u).pathname.split("/").filter(Boolean);
-    const last = parts[parts.length-1] || "";
-    // remove date-like tails and short tokens
+    const last = new URL(u).pathname.split("/").filter(Boolean).pop() || "";
     return last.replace(/-\d{1,2}-\d{1,2}$/,"").replace(/-\d{2,4}$/,"").replace(/-\w{3,5}\d+$/,"");
   }catch(e){ return u; }
 }
 function groupEventsByProduct(events){
-  const groups = new Map(); // key -> {productUrl,title,events:[]}
+  const map=new Map();
   (events||[]).forEach(ev=>{
-    const key = baseKeyFromUrl(ev.url);
-    const g = groups.get(key) || { productUrl: ev.url, title: ev.title, events: [] };
-    g.events.push(ev);
-    groups.set(key, g);
+    const key=baseKeyFromUrl(ev.url);
+    const g=map.get(key)||{productUrl:ev.url,title:ev.title,events:[]};
+    g.events.push(ev); map.set(key,g);
   });
-  return Array.from(groups.values());
+  return [...map.values()];
 }
 
-/* ============================================================
-   LANDING PAGES — load + choose fallback (no generic search pills)
-   CSV expected headers: url,meta_title,intents (optional "advice|events")
-   ============================================================ */
-let LANDINGS = [];
-async function loadLandingCSV(){
-  try{
-    const res = await fetch(LANDING_CSV_PATH);
-    if(!res.ok) throw new Error(res.status+" landing csv fetch failed");
-    const txt = await res.text();
-    const rows = parseCSV(txt);
+/* ==========================
+   Landing & Questions CSV (uploaded)
+   ========================== */
+let LANDINGS=[]; // {url, meta_title, intents[]}
+let QUESTIONS=[]; // [{query, expected?}]
+function loadLandingFromFile(file){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const rows=parseCSV(reader.result||"");
     LANDINGS = rows.map(r=>({
-      url: r.url || "",
-      meta_title: r.meta_title || "",
+      url: r.url||"",
+      meta_title: r.meta_title||r.title||"",
       intents: (r.intents||"").split("|").map(s=>s.trim()).filter(Boolean)
     })).filter(r=>r.url && r.meta_title);
     document.getElementById("csvStatus").textContent = `loaded ${LANDINGS.length} rows`;
-  }catch(e){
-    LANDINGS = [];
-    document.getElementById("csvStatus").textContent = `not loaded (fallbacks still work)`;
-  }
+  };
+  reader.readAsText(file);
 }
-function bestLandingFor(query, intent){
+function loadQuestionsFromFile(file){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const rows=parseCSV(reader.result||"");
+    QUESTIONS = rows.map(r=>{
+      const q = r.query || r.question || r.prompt || r.text || "";
+      const expected = r.expected || r.expected_intent || r.intent || "";
+      return { query: normWS(q), expected: normWS(expected) };
+    }).filter(r=>r.query);
+    document.getElementById("qsStatus").textContent = `loaded ${QUESTIONS.length} rows`;
+  };
+  reader.readAsText(file);
+}
+function bestLandingFor(query,intent){
   if(!LANDINGS.length) return null;
   const scored = LANDINGS.map(row=>{
-    const score = scoreDoc(query,[row.meta_title, row.url]) + (row.intents.includes(intent)?2:0);
-    return {row, score};
-  }).sort((a,b)=>b.score-a.score);
+    const s = scoreDoc(query,[row.meta_title,row.url]) + (row.intents.includes(intent)?2:0);
+    return {row, s};
+  }).sort((a,b)=>b.s-a.s);
   return scored[0]?.row || null;
 }
 
-/* ============================================================
-   COLLECTORS — adapt to your existing bench if present
-   If window.benchCollectors is present, we call it.
-   Else, we return empty arrays (still exercises ranking, pills, stitching).
-   ============================================================ */
+/* ==========================
+   Collectors adapter (uses your bench fetchers if present)
+   ========================== */
 async function collectCandidates(query){
-  if (window.benchCollectors && typeof window.benchCollectors === "function"){
-    // Your bench can return {events:[...], articles:[...]} raw
+  if (window.benchCollectors && typeof window.benchCollectors==="function"){
     try { return await window.benchCollectors(query); } catch(e){}
   }
-  // Fallback: nothing fetched; the UI still renders structure and pills via landings.
   return { events: [], articles: [] };
 }
 
-/* ============================================================
-   RE-RANK + BUILD ANSWER
-   ============================================================ */
+/* ==========================
+   Ranking & confidence
+   ========================== */
 function rankEvents(query, events){
-  // Score by title+location+url; add “next” boost by date proximity if parsable
-  const now = Date.now();
-  const scored = events.map(e=>{
-    let s = scoreDoc(query,[e.title,e.location,e.url]);
+  const now=Date.now();
+  return (events||[]).map(e=>{
+    let s=scoreDoc(query,[e.title,e.location,e.url]);
     if(/\b(next|when|soon|nearest)\b/i.test(query) && e.date){
       const t = Date.parse(e.date) || Date.parse(e.when) || 0;
-      if(t>now) s += 10 * (1/Math.max(1, (t-now)/(1000*60*60*24*30))); // closer = higher
+      if(t>now) s += 10 * (1/Math.max(1,(t-now)/(1000*60*60*24*30)));
     }
-    // location keyword boosts
-    const q = query.toLowerCase();
+    const q=query.toLowerCase();
     if(e.location && q.includes(e.location.toLowerCase())) s += 6;
     if(q.includes("devon") && /devon/i.test(e.location + " " + e.title + " " + e.url)) s += 8;
     if(q.includes("bluebell") && /bluebell/i.test(e.title + " " + e.url)) s += 10;
-    return {e, s};
-  }).sort((a,b)=>b.s-a.s);
-  return scored.map(x=>x.e);
+    return {e,s};
+  }).sort((a,b)=>b.s-a.s).map(x=>x.e);
 }
-
-function rankArticles(query, articles){
-  const scored = (articles||[]).map(a=>{
-    // prefer exact term, e.g., "long exposure" to its article
-    let s = scoreDoc(query,[a.title,a.url]);
-    return {a,s};
-  }).sort((a,b)=>b.s-a.s);
-  return scored.map(x=>x.a);
+function rankArticles(query, arts){
+  return (arts||[]).map(a=>({a,s:scoreDoc(query,[a.title,a.url])}))
+                    .sort((a,b)=>b.s-a.s).map(x=>x.a);
 }
-
-/* ============================================================
-   CONFIDENCE SCORE (0–100)
-   Mix of: intent margin, top-vs-second rank gap, presence of matching evidence.
-   ============================================================ */
-function confidenceScore(query, intent, evs, arts){
-  // intent portion
-  const cls = classifyIntent(query);
-  let score = Math.min(95, cls.confidence);
-
-  // ranking gap — events or articles depending on intent
+function confidenceScore(query,intent,evs,arts){
+  const cls=classifyIntent(query);
+  let score=Math.min(95,cls.confidence);
   function gap(list, scorer){
     if(list.length<2) return 15;
-    const s0 = scorer(list[0]);
-    const s1 = scorer(list[1]);
-    const g = Math.max(0, s0 - s1);
-    return Math.max(0, Math.min(25, g)); // cap
+    const s0=scorer(list[0]); const s1=scorer(list[1]); const g=Math.max(0,s0-s1);
+    return Math.min(25,g);
   }
-  if(intent==="events"){
-    score += gap(evs, e => scoreDoc(query,[e.title,e.location,e.url]));
-  } else {
-    score += gap(arts, a => scoreDoc(query,[a.title,a.url]));
-  }
-
-  // exact phrase evidence
-  const phrase = normWS(query).toLowerCase();
-  const text = (intent==="events"? evs : arts).slice(0,1).map(x=>{
-    return intent==="events" ? (x.title+" "+x.url) : (x.title+" "+x.url);
-  }).join(" ").toLowerCase();
-  if(phrase && text.includes(phrase)) score += 8;
-
-  // clamp
-  score = Math.max(0, Math.min(99, Math.round(score)));
-  const band = score>=80? "high" : score>=60? "medium" : "low";
-  return { score, band, why: `intent=${cls.confidence}, rankGap≈${score- cls.confidence - (text.includes(phrase)?8:0)}, phrase=${text.includes(phrase)}` };
+  if(intent==="events"){ score+=gap(evs, e=>scoreDoc(query,[e.title,e.location,e.url])); }
+  else { score+=gap(arts, a=>scoreDoc(query,[a.title,a.url])); }
+  const phrase=normWS(query).toLowerCase();
+  const text=(intent==="events"?evs:arts).slice(0,1).map(x=>intent==="events"?(x.title+" "+x.url):(x.title+" "+x.url)).join(" ").toLowerCase();
+  if(phrase && text.includes(phrase)) score+=8;
+  score=Math.max(0,Math.min(99,Math.round(score)));
+  const band=score>=80?"high":score>=60?"medium":"low";
+  return {score,band,why:`intent=${cls.confidence}`};
 }
 
-/* ============================================================
-   PILLS (no generic search)
-   - Book Now: first stitched product's URL (not generic)
-   - Event Listing: canonical listing page
-   - More Articles: best landing page (CSV)
-   - Photos: fixed portfolios URL
-   ============================================================ */
+/* ==========================
+   Pills
+   ========================== */
 function buildPills(intent, rankedEvents, rankedArticles, query){
-  const pills = [];
-  // Book Now — from stitched product/event group if we have events
+  const pills=[];
   if(rankedEvents.length){
-    const groups = groupEventsByProduct(rankedEvents);
-    // choose the group that contains the top event
-    const g = groups.find(G => G.events.some(ev => ev.url===rankedEvents[0].url)) || groups[0];
-    pills.push({ label:"Book Now", url:g?.productUrl||rankedEvents[0].url, brand:true });
+    const groups=groupEventsByProduct(rankedEvents);
+    const g = groups.find(G=>G.events.some(ev=>ev.url===rankedEvents[0].url)) || groups[0];
+    pills.push({label:"Book Now", url:g?.productUrl||rankedEvents[0].url, brand:true});
   }
-
-  // Event Listing — canonical, not generic search
-  pills.push({ label:"Event Listing", url:EVENT_LISTING_URL, brand:true });
-
-  // More Articles — best landing for advice or for event-related info
-  const landing = bestLandingFor(query, intent) || null;
-  if(landing){
-    pills.push({ label:"More Articles", url:landing.url, brand:true });
-  }
-
-  // Photos
-  pills.push({ label:"Photos", url:PHOTOS_URL, brand:false });
-
-  return pills;
+  pills.push({label:"Event Listing", url:EVENT_LISTING_URL, brand:true});
+  const landing=bestLandingFor(query,intent);
+  if(landing) pills.push({label:"More Articles", url:landing.url, brand:true});
+  pills.push({label:"Photos", url:PHOTOS_URL, brand:false});
+  return pills.filter(p=>!/\/search\?query=/.test(p.url));
 }
 
-/* ============================================================
-   MAIN RUNNER
-   ============================================================ */
+/* ==========================
+   Run one query
+   ========================== */
 async function runOne(query){
-  const cls = classifyIntent(query);
-  document.getElementById("intent").textContent = cls.intent;
-  document.getElementById("intentWhy").textContent = cls.reason;
+  const cls=classifyIntent(query);
+  document.getElementById("intent").textContent=cls.intent;
+  document.getElementById("intentWhy").textContent=cls.reason;
 
-  const raw = await collectCandidates(query);
-  // Re-rank
+  const raw=await collectCandidates(query);
   const events = cls.intent==="events" ? rankEvents(query, raw.events||[]) : (raw.events||[]);
-  const articles = cls.intent==="advice" ? rankArticles(query, raw.articles||[]) : rankArticles(query, raw.articles||[]);
+  const articles = rankArticles(query, raw.articles||[]);
 
-  // Stitch product↔events for correctness (used by pills + parity)
-  const stitchedGroups = groupEventsByProduct(events);
-
-  // Confidence
-  const conf = confidenceScore(query, cls.intent, events, articles);
-  const confPill = document.getElementById("conf-pill");
-  confPill.textContent = `Confidence: ${conf.score}%`;
+  const conf=confidenceScore(query,cls.intent,events,articles);
+  const confPill=document.getElementById("conf-pill");
+  confPill.textContent=`Confidence: ${conf.score}%`;
   confPill.classList.remove("ok","mid","low");
   confPill.classList.add(conf.band==="high"?"ok":conf.band==="medium"?"mid":"low");
-  const confTip = document.getElementById("conf-tip");
-  confTip.innerHTML = `
-    <b>How this is calculated</b><br/>
-    • Intent certainty: ${classifyIntent(query).confidence}%<br/>
-    • Ranking gap &amp; evidence boosts<br/>
-    • Exact-phrase match considered<br/><br/>
-    <i>Band:</i> ${conf.band}
-  `;
+  document.getElementById("conf-tip").innerHTML =
+    `<b>How this is calculated</b><br/>• Intent certainty: ${classifyIntent(query).confidence}%<br/>• Rank gap & phrase evidence<br/><i>Band:</i> ${conf.band}`;
 
-  // Build pills (no generic search)
   const pills = buildPills(cls.intent, events, articles, query);
+  const citations = uniq([ ...events.slice(0,12).map(e=>e.url), ...articles.slice(0,10).map(a=>a.url) ]);
 
-  // Citations = urls used
-  const citations = uniq([
-    ...events.slice(0,12).map(e=>e.url),
-    ...articles.slice(0,10).map(a=>a.url)
-  ]);
-
-  // Assemble canonical JSON like your logs
-  const out = {
-    idx: 1,
-    query,
-    expected: cls.intent,   // for ad-hoc
-    detected: cls.intent,
-    counts: { events: events.length, articles: articles.length, pills: pills.length },
-    pass: true,
-    used: {
-      intent: cls.intent,
-      product: null, // product grouping is implicit via stitchedGroups
-      events: events.slice(0,12).map(e=>({
-        date: e.date || e.when || null,
-        when: e.when || e.date || null,
-        title: e.title,
-        location: e.location || "",
-        url: e.url
-      })),
-      articles: articles.slice(0,10).map(a=>({ title:a.title, url:a.url })),
-      pills,
-      citations
+  const out={
+    idx:1, query, expected:cls.intent, detected:cls.intent,
+    counts:{events:events.length,articles:articles.length,pills:pills.length},
+    pass:true,
+    used:{
+      intent:cls.intent,
+      product:null,
+      events:events.slice(0,12).map(e=>({date:e.date||e.when||null,when:e.when||e.date||null,title:e.title,location:e.location||"",url:e.url})),
+      articles:articles.slice(0,10).map(a=>({title:a.title,url:a.url})),
+      pills, citations
     },
-    confidence: conf.score
+    confidence:conf.score
   };
 
-  // Render lists
   renderList("events", out.used.events, "event");
   renderList("articles", out.used.articles, "article");
   renderPills("pills", pills);
-  document.getElementById("json").textContent = JSON.stringify(out, null, 2);
-
-  // expose for copy
+  document.getElementById("json").textContent = JSON.stringify(out,null,2);
   window.__BENCH_LAST__ = out;
+  return out;
 }
 
 function renderList(id, arr, kind){
-  const el = document.getElementById(id);
-  el.innerHTML = "";
+  const el=document.getElementById(id); el.innerHTML="";
   arr.forEach(o=>{
-    const div = document.createElement("div");
-    div.className="item";
-    div.innerHTML = `
-      <div class="title">${escapeHtml(o.title||"(untitled)")}</div>
-      <div class="sub">${kind==="event" ? escapeHtml([o.when,o.location].filter(Boolean).join(" — ")) : ""}</div>
-      <div class="sub"><a href="${o.url}" target="_blank">${o.url}</a></div>
-    `;
+    const div=document.createElement("div"); div.className="item";
+    div.innerHTML=`<div class="title">${escapeHtml(o.title||"(untitled)")}</div>
+      <div class="sub">${kind==="event"? escapeHtml([o.when,o.location].filter(Boolean).join(" — ")):""}</div>
+      <div class="sub"><a href="${o.url}" target="_blank">${o.url}</a></div>`;
     el.appendChild(div);
   });
 }
-function renderPills(id, pills){
-  const el = document.getElementById(id);
-  el.innerHTML = "";
+function renderPills(id,pills){
+  const el=document.getElementById(id); el.innerHTML="";
   pills.forEach(p=>{
-    // NEVER /search?query=
-    if(/\/search\?query=/.test(p.url)) return;
-    const a = document.createElement("a");
-    a.className = "btn" + (p.brand?" brand":"");
-    a.href = p.url; a.target="_blank"; a.textContent = p.label;
+    const a=document.createElement("a");
+    a.className="btn"+(p.brand?" brand":""); a.href=p.url; a.target="_blank"; a.textContent=p.label;
     el.appendChild(a);
   });
 }
 
-function escapeHtml(s){return (s||"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));}
-
-/* ============================================================
-   TEST SUITE from your examples (works as smoke test)
-   NOTE: This uses whatever your benchCollectors return.
-   The improvements are in re-ranking+pills+stitching+confidence.
-   ============================================================ */
-const TESTS = [
+/* ==========================
+   Built-in tests
+   ========================== */
+const BUILTIN = [
   "whens the next bluebell workshops and whats the cost",
   "when is the next devon workshop",
   "what is your next workshop date and where is it",
@@ -521,25 +414,51 @@ const TESTS = [
   "My pictures never seem sharp.  Can you advise on what I am doing wrong"
 ];
 
-// Hook up UI
-document.getElementById("run").addEventListener("click", ()=> runOne(document.getElementById("q").value || ""));
-document.getElementById("runTests").addEventListener("click", async ()=>{
-  const outs=[];
-  for(let i=0;i<TESTS.length;i++){
-    await runOne(TESTS[i]);
-    outs.push(window.__BENCH_LAST__);
+/* ==========================
+   UI wiring
+   ========================== */
+document.getElementById("run").addEventListener("click", ()=> runOne(document.getElementById("q").value||""));
+
+document.getElementById("runBuiltIn").addEventListener("click", async ()=>{
+  const outs=[]; for(const q of BUILTIN){ outs.push(await runOne(q)); }
+  document.getElementById("json").textContent = JSON.stringify(outs,null,2);
+});
+
+document.getElementById("copyJson").addEventListener("click", ()=>{
+  const txt=document.getElementById("json").textContent;
+  navigator.clipboard.writeText(txt);
+});
+
+document.getElementById("btnLoadLanding").addEventListener("click", ()=> document.getElementById("landingFile").click());
+document.getElementById("landingFile").addEventListener("change", (e)=>{
+  const f=e.target.files?.[0]; if(f) loadLandingFromFile(f);
+});
+
+document.getElementById("btnLoadQuestions").addEventListener("click", ()=> document.getElementById("questionsFile").click());
+document.getElementById("questionsFile").addEventListener("change", (e)=>{
+  const f=e.target.files?.[0]; if(f) loadQuestionsFromFile(f);
+});
+
+document.getElementById("runCSV").addEventListener("click", async ()=>{
+  const qs=QUESTIONS.slice(); if(!qs.length){ alert("Load a Questions CSV first."); return; }
+  const prog=document.getElementById("qsProg"); const txt=document.getElementById("qsProgTxt");
+  const outs=[]; let pass=0;
+  prog.value=0; prog.max=qs.length; txt.textContent=`0 / ${qs.length}`;
+  for(let i=0;i<qs.length;i++){
+    const q=qs[i].query; const expected=qs[i].expected;
+    const res=await runOne(q);
+    if(expected){
+      const want=expected.toLowerCase();
+      const got=res.detected.toLowerCase();
+      res.pass = (want===got);
+      res.expected = expected;
+      if(res.pass) pass++;
+    }
+    outs.push(res);
+    prog.value=i+1; txt.textContent=`${i+1} / ${qs.length}  ${expected?`(pass ${pass})`:""}`;
   }
   document.getElementById("json").textContent = JSON.stringify(outs,null,2);
 });
-document.getElementById("copyJson").addEventListener("click", ()=>{
-  const txt = document.getElementById("json").textContent;
-  navigator.clipboard.writeText(txt).then(()=>{});
-});
-document.getElementById("reloadCSV").addEventListener("click", loadLandingCSV);
-
-// initial
-loadLandingCSV();
-
 </script>
 </body>
 </html>
