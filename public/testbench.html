@@ -3,267 +3,373 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Chat Testbench — v0.5.2</title>
+  <title>Chat Testbench — v0.4.2</title>
   <style>
-    :root{--bg:#0b1220;--card:#0f172a;--muted:#9fb3d9;--border:#1b2540;--text:#dbe4ff;--ok:#22c55e;--bad:#ef4444;--brand:#2563eb;}
-    *{box-sizing:border-box}
-    body{background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:24px}
-    a{color:#93c5fd;text-decoration:none} a:hover{text-decoration:underline}
-    h1{margin:0 0 10px}
-    .ver{background:#13203e;color:#c7d7ff;border:1px solid #26406f;padding:4px 8px;border-radius:999px;font:12px/1 ui-monospace,Menlo,Consolas,monospace}
-    .container{max-width:1200px;margin:0 auto}
-    .card{background:#0f172a;border:1px solid #1b2540;border-radius:10px;padding:16px;margin:12px 0}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
-    .w-1{flex:1 1 200px} .w-2{flex:2 1 320px} .w-3{flex:3 1 500px}
-    input,textarea,select{width:100%;background:#0b1426;border:1px solid #1b2540;color:#dbe4ff;padding:10px 12px;border-radius:8px}
-    textarea{min-height:120px}
-    button{background:#2563eb;color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    .btn-ghost{background:#13203e;border:1px solid #1b2540}
-    .btn-red{background:#7f1d1d}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    :root{
+      --bg:#0b1220; --panel:#0f172a; --ink:#dbe4ff; --muted:#A9B8E8;
+      --line:#1b2540; --pill:#0b1426; --accent:#3b82f6; --ok:#22c55e; --bad:#ef4444;
+    }
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .container{max-width:1200px;margin:24px auto;padding:0 16px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+    h1{margin:0 0 8px}
+    .ver{background:#13203e;border:1px solid #26406f;color:#c7d7ff;padding:3px 10px;border-radius:999px;font-weight:600}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+    input,textarea{width:100%;background:var(--pill);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:10px 12px}
+    button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}
+    button.secondary{background:#1f2937}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
     table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid #1b2540;text-align:left;vertical-align:top}
-    th{color:#c7d7ff}
-    .muted{color:#9fb3d9}
-    .progress{height:8px;background:#0b1426;border:1px solid #1b2540;border-radius:999px;overflow:hidden}
-    .bar{height:100%;width:0;background:#2563eb}
-    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:50}
-    .modal.open{display:flex}
-    .modal .content{max-width:900px;width:92vw;max-height:80vh;overflow:auto;background:#0f172a;border:1px solid #1b2540;border-radius:12px;padding:16px}
-    .content h3{margin:0 0 8px}
-    pre{white-space:pre-wrap;word-break:break-word;background:#0b1426;border:1px solid #1b2540;padding:10px;border-radius:8px}
-    .ok{color:#22c55e} .bad{color:#ef4444}
+    th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
+    .pill{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:var(--pill);font-weight:600;margin-right:6px}
+    .ok{color:var(--ok)} .bad{color:var(--bad)}
+    details summary{cursor:pointer}
+    .chips a{display:inline-block;margin:0 8px 8px 0;padding:4px 8px;border:1px solid var(--line);border-radius:999px;color:var(--ink);text-decoration:none}
+    .chips a:hover{background:#13203e}
+    .right{margin-left:auto}
+    .flex{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+    .nowrap{white-space:nowrap}
   </style>
 </head>
 <body>
 <div class="container">
-  <div class="row" style="align-items:center">
-    <h1>Chat Testbench</h1><span class="ver mono" id="ver">v0.5.2</span>
+  <div class="flex">
+    <h1 style="margin:0">Chat Testbench</h1>
+    <span class="ver mono">v0.4.2</span>
+    <div class="right flex">
+      <button id="copyAll" class="secondary">Copy Results JSON</button>
+      <button id="clear">Clear</button>
+    </div>
   </div>
 
   <div class="card">
     <div class="row">
-      <div class="w-2">
-        <div><small class="muted">CSV (columns: <b>query,expected</b>)</small></div>
-        <input id="csv" type="file" accept=".csv"/>
-        <div class="muted" id="parsed">Parsed rows: 0</div>
+      <div style="flex:3 1 520px">
+        <div class="small muted">CSV (columns: <span class="mono">query, expected</span>)</div>
+        <input type="file" id="csv" accept=".csv" />
+        <div class="small muted" id="status">Parsed rows: 0</div>
       </div>
-      <div class="w-1">
-        <div><small class="muted">topK</small></div>
+      <div style="flex:1 1 120px">
+        <div class="small muted">topK</div>
         <input id="topk" value="8"/>
       </div>
-      <div class="w-1">
-        <div><small class="muted">Concurrency</small></div>
-        <input id="conc" value="3"/>
-      </div>
-      <div class="w-1">
+      <div style="flex:0 0 100px">
+        <div class="small muted">&nbsp;</div>
         <button id="runAll">Run All</button>
       </div>
-      <div class="w-1">
-        <button class="btn-ghost" id="clear">Clear</button>
-      </div>
-      <div class="w-1">
-        <button class="btn-ghost" id="copy">Copy Results</button>
-      </div>
     </div>
+
     <details style="margin-top:10px">
-      <summary class="muted">Paste mode (one query per line; optionally “ | expected” after it)</summary>
-      <textarea id="paste" placeholder="When is the next Devon workshop? | events&#10;What tripod do you recommend? | advice"></textarea>
+      <summary class="small">▶ Paste mode (one query per line; optionally <span class="mono">| expected</span>)</summary>
+      <textarea id="paste" rows="6" placeholder="when is the next devon workshop | events&#10;what tripod do you recommend | advice"></textarea>
+      <div class="flex small muted" style="margin-top:6px">
+        <span id="pasteCount">0 rows</span>
+        <button id="usePaste" class="secondary">Use pasted rows</button>
+      </div>
     </details>
   </div>
 
   <div class="card">
-    <div class="progress"><div class="bar" id="bar"></div></div>
-    <table style="margin-top:12px">
+    <table>
       <thead>
-        <tr>
-          <th style="width:48px">#</th>
-          <th>Query</th>
-          <th style="width:100px">Expected</th>
-          <th style="width:110px">Detected</th>
-          <th style="width:80px">Events</th>
-          <th style="width:80px">Articles</th>
-          <th style="width:60px">Pills</th>
-          <th style="width:90px">Result</th>
-          <th style="width:110px">Actions</th>
-        </tr>
+      <tr>
+        <th class="nowrap">#</th>
+        <th>Query</th>
+        <th>Expected</th>
+        <th>Detected</th>
+        <th>Events</th>
+        <th>Articles</th>
+        <th>Pills</th>
+        <th>Result</th>
+        <th>Actions</th>
+      </tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
   </div>
 </div>
 
-<!-- Inspect modal -->
-<div class="modal" id="modal">
-  <div class="content">
-    <div class="row" style="justify-content:space-between;margin-bottom:10px">
-      <h3>Inspect</h3>
-      <button class="btn-ghost" id="close">Close</button>
-    </div>
-    <pre id="inspect" class="mono"></pre>
-  </div>
-</div>
-
 <script>
-const VERSION='v0.5.2';
-document.getElementById('ver').textContent=VERSION;
+const $ = (id)=>document.getElementById(id);
+const rowsEl = $('rows');
+let batch = [];     // [{query,expected}]
+let results = [];   // compact results for Copy Results JSON
 
-const $=(id)=>document.getElementById(id);
-const rowsEl=$('rows');
-const barEl=$('bar');
-const mod=$('modal');
-const inspectEl=$('inspect');
-
-let data=[];      // [{query, expected}]
-let results=[];   // for Copy Results
-
+/* ---------- CSV parsing (robust, header-insensitive) ---------- */
 function parseCSV(text){
-  // extremely forgiving parser for 2 columns
-  const lines=text.split(/\r?\n/).filter(Boolean);
-  if(!lines.length) return [];
-  const header=lines[0].split(',').map(s=>s.trim().toLowerCase());
-  const qi=header.indexOf('query');
-  const ei=header.indexOf('expected');
-  if(qi===-1){ alert('No rows loaded. Make sure your CSV has a header "query,expected" or use Paste mode.'); return []; }
-  const out=[];
-  for(let i=1;i<lines.length;i++){
-    const parts=lines[i].split(',');
-    const query=(parts[qi]||'').trim();
-    const expected=(ei===-1?'':(parts[ei]||'').trim());
-    if(query) out.push({query,expected});
+  const t = text.replace(/^\uFEFF/, ''); // strip BOM
+  const lines = t.split(/\r?\n/).filter(x=>x.trim().length);
+  if (!lines.length) return [];
+  const header = lines[0].split(/,|;|\t/).map(h=>h.trim().toLowerCase());
+  const qi = header.indexOf('query');
+  const ei = header.indexOf('expected');
+  if (qi === -1) return [];
+  const out = [];
+  for (let i=1;i<lines.length;i++){
+    const cols = lines[i].split(/,|;|\t/);
+    const q = (cols[qi]||'').trim();
+    const e = ei !== -1 ? (cols[ei]||'').trim() : '';
+    if (q) out.push({ query:q, expected:e });
   }
   return out;
 }
 
+/* ---------- Paste mode ---------- */
+$('paste').addEventListener('input', ()=>{
+  const arr = $('paste').value.split(/\r?\n/).filter(Boolean).map(line=>{
+    const m = line.split('|');
+    return { query:(m[0]||'').trim(), expected:(m[1]||'').trim() };
+  }).filter(r=>r.query);
+  $('pasteCount').textContent = `${arr.length} rows`;
+});
+$('usePaste').onclick = ()=>{
+  const arr = $('paste').value.split(/\r?\n/).filter(Boolean).map(line=>{
+    const m = line.split('|');
+    return { query:(m[0]||'').trim(), expected:(m[1]||'').trim() };
+  }).filter(r=>r.query);
+  batch = arr;
+  $('status').textContent = `Parsed rows: ${batch.length} (paste)`;
+  renderTableSkeleton();
+};
+
+/* ---------- CSV file picker ---------- */
 $('csv').addEventListener('change', async (e)=>{
-  results=[]; rowsEl.innerHTML=''; barEl.style.width='0%';
-  const file=e.target.files && e.target.files[0];
-  if(!file){ $('parsed').textContent='Parsed rows: 0'; data=[]; return; }
-  const txt=await file.text();
-  data=parseCSV(txt);
-  $('parsed').textContent=`Parsed rows: ${data.length}`;
-  renderRowsSkeleton();
+  results = [];
+  rowsEl.innerHTML = '';
+  const f = e.target.files[0];
+  if (!f){ $('status').textContent = 'Parsed rows: 0'; return; }
+  const text = await f.text();
+  batch = parseCSV(text);
+  $('status').textContent = `Parsed rows: ${batch.length}`;
+  renderTableSkeleton();
 });
 
-$('clear').onclick=()=>{
-  $('csv').value=''; $('paste').value='';
-  rowsEl.innerHTML=''; data=[]; results=[]; $('parsed').textContent='Parsed rows: 0';
-  barEl.style.width='0%';
-};
-
-$('copy').onclick=()=>{
-  if(!results.length){ alert('No results yet. Run the test first.'); return; }
-  const payload=results.map(r=>({
-    idx: r.idx,
-    query: r.query,
-    expected: r.expected,
-    detected: r.detected,
-    counts: r.counts,
-    pass: r.pass
-  }));
-  navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-  alert('Copied results JSON to clipboard.');
-};
-
-$('runAll').onclick=async()=>{
-  results=[]; rowsEl.innerHTML=''; barEl.style.width='0%';
-
-  let list=[...data];
-  if(!list.length){
-    // try paste mode
-    const pasted=$('paste').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    if(!pasted.length){ alert('No rows. Load a CSV or use Paste mode.'); return; }
-    list=pasted.map((line,i)=>{
-      const m=line.split('|'); return { query:(m[0]||'').trim(), expected:(m[1]||'').trim() };
-    });
-    $('parsed').textContent=`Parsed rows: ${list.length} (paste mode)`;
-  }
-
-  renderRowsSkeleton(list);
-
-  const topk=Number($('topk').value||8);
-  const conc=Math.max(1, Number($('conc').value||3));
-  let done=0, idx=0;
-
-  async function next(){
-    if(idx>=list.length) return;
-    const i=idx++; const row=list[i];
-    const tr=rowsEl.querySelector(`tr[data-i="${i}"]`);
-    const res=await callChat(row.query, topk).catch(e=>({error:String(e)}));
-    const structured=res && res.structured || {};
-    const detected= (res && (res.meta?.intent || structured.intent)) || '';
-    const counts = {
-      events: (structured.events||[]).length || 0,
-      articles: (structured.articles||[]).length || 0,
-      pills: (structured.pills||[]).length || 0
-    };
-    const pass = compareIntent(row.expected, detected);
-
-    tr.querySelector('.det').textContent = detected || '—';
-    tr.querySelector('.ct-events').textContent = counts.events;
-    tr.querySelector('.ct-articles').textContent = counts.articles;
-    tr.querySelector('.ct-pills').textContent = counts.pills;
-    tr.querySelector('.res').innerHTML = pass ? '<span class="ok">PASS</span>' : '<span class="bad">FAIL</span>';
-
-    const inspect = { idx:i+1, request:{ query:row.query, topK:topk }, response:res, derived:{ detected, counts, pass } };
-    tr.querySelector('.inspect').onclick=()=>openInspect(inspect);
-
-    results.push({ idx:i+1, query:row.query, expected:row.expected, detected, counts, pass, inspect });
-
-    done++; barEl.style.width = `${Math.round((done/list.length)*100)}%`;
-    await next();
-  }
-  const runners=Array.from({length:conc},()=>next());
-  await Promise.all(runners);
-};
-
-function equivIntent(s){
-  s=(s||'').toString().trim().toLowerCase();
-  if(!s) return '';
-  if(s==='event') s='events';
-  return s;
-}
-function compareIntent(expected, detected){
-  const a=equivIntent(expected);
-  const b=equivIntent(detected);
-  if(!a) return true; // nothing to compare, treat as pass
-  return a===b;
-}
-
-function renderRowsSkeleton(src=data){
-  rowsEl.innerHTML='';
-  src.forEach((r,i)=>{
-    const tr=document.createElement('tr');
-    tr.dataset.i=i;
-    tr.innerHTML=`
-      <td>${i+1}</td>
-      <td>${escapeHtml(r.query)}</td>
-      <td>${escapeHtml(r.expected||'')}</td>
-      <td class="det muted">…</td>
-      <td class="ct-events">0</td>
-      <td class="ct-articles">0</td>
-      <td class="ct-pills">0</td>
-      <td class="res muted">…</td>
-      <td><button class="btn-ghost inspect" disabled>Inspect</button></td>
+/* ---------- Table skeleton ---------- */
+function renderTableSkeleton(){
+  rowsEl.innerHTML = '';
+  batch.forEach((r,idx)=>{
+    const tr = document.createElement('tr');
+    tr.id = `row-${idx}`;
+    tr.innerHTML = `
+      <td class="mono">${idx+1}</td>
+      <td>${escapeHTML(r.query)}</td>
+      <td>${escapeHTML(r.expected||'')}</td>
+      <td id="det-${idx}" class="mono muted">…</td>
+      <td id="ev-${idx}" class="mono muted">0</td>
+      <td id="ar-${idx}" class="mono muted">0</td>
+      <td id="pi-${idx}" class="mono muted">0</td>
+      <td id="ok-${idx}" class="mono">—</td>
+      <td><button id="ins-${idx}" class="secondary" disabled>Inspect</button></td>
     `;
     rowsEl.appendChild(tr);
   });
 }
 
-function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));}
-
-function openInspect(obj){
-  inspectEl.textContent = JSON.stringify(obj, null, 2);
-  mod.classList.add('open');
+/* ---------- Helpers ---------- */
+function escapeHTML(s){ return String(s).replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+function intentFrom(res){
+  return (res?.structured?.intent) || (res?.meta?.intent) || '';
 }
-$('close').onclick=()=>mod.classList.remove('open');
-mod.addEventListener('click', (e)=>{ if(e.target===mod) mod.classList.remove('open'); });
+function countsFrom(res){
+  return {
+    events: (res?.structured?.events || []).length,
+    articles: (res?.structured?.articles || []).length,
+    pills: (res?.structured?.pills || []).length,
+  };
+}
 
+/* ---------- Call /api/chat ---------- */
 async function callChat(query, topK){
-  const res = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query, topK})});
-  return res.json();
+  const res = await fetch('/api/chat', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ query, topK:Number(topK||8) })
+  });
+  const j = await res.json();
+  return j;
 }
+
+/* ---------- Run All ---------- */
+$('runAll').onclick = async ()=>{
+  if (!batch.length){ alert('No rows loaded. Provide CSV or use Paste mode.'); return; }
+  const topk = Number($('topk').value||8);
+  results = [];
+  for (let i=0;i<batch.length;i++){
+    const { query, expected } = batch[i];
+    const j = await callChat(query, topk);
+
+    const detected = intentFrom(j);
+    const counts = countsFrom(j);
+    const pass = expected ? (expected.toLowerCase().startsWith(detected)) : true;
+
+    // table cells
+    $('det-'+i).textContent = detected||'';
+    $('ev-'+i).textContent = counts.events;
+    $('ar-'+i).textContent = counts.articles;
+    $('pi-'+i).textContent = counts.pills;
+    $('ok-'+i).innerHTML = pass ? `<span class="ok">PASS</span>` : `<span class="bad">FAIL</span>`;
+
+    // enable Inspect
+    const btn = $('ins-'+i);
+    btn.disabled = false;
+    btn.onclick = ()=>inspectRow(i, query, expected, j);
+
+    // compact record for Copy Results JSON
+    results.push({
+      idx: i+1,
+      query, expected,
+      detected,
+      counts,
+      pass,
+      // only keep compact “used” bits
+      used: compactUsed(j)
+    });
+  }
+};
+
+/* ---------- Compact “used” view for results/inspect ---------- */
+function compactUsed(j){
+  const S = j?.structured || {};
+  const prod = (S.product || (S.products||[])[0]) || null;
+  const events = (S.events||[]).slice(0,12).map(e=>({
+    date: e.date_start || e.when || null,
+    when: e.when || null,
+    title: e.title || null,
+    location: e.location || null,
+    url: e.page_url || e.source_url || e.url || null
+  }));
+  const articles = (S.articles||[]).slice(0,8).map(a=>({
+    title: a.title || a.raw?.name || null,
+    url: a.url || a.page_url || a.source_url || null
+  }));
+  const pills = (S.pills||S.chips||[]).map(p=>({label:p.label,url:p.url,brand:!!p.brand})).slice(0,6);
+  return {
+    intent: S.intent || j?.meta?.intent || '',
+    product: prod ? {
+      title: prod.title || prod.raw?.name || null,
+      url: prod.page_url || prod.source_url || prod.url || null,
+      price: prod.price || prod.raw?.offers?.price || null
+    } : null,
+    events, articles, pills,
+    citations: Array.from(new Set(j?.citations||[])).slice(0,12)
+  };
+}
+
+/* ---------- Inspect modal (details) ---------- */
+function inspectRow(i, query, expected, j){
+  const used = compactUsed(j);
+  const id = `inspect-${i}`;
+  let host = document.getElementById(id);
+  if (host) host.remove();
+
+  const wrap = document.createElement('tr');
+  wrap.id = id;
+  const td = document.createElement('td');
+  td.colSpan = 9;
+
+  const html = `
+    <div class="card">
+      <div class="flex">
+        <div><strong>Inspect #${i+1}</strong></div>
+        <div class="small muted">query:</div>
+        <div class="mono small">${escapeHTML(query)}</div>
+        <div class="small muted">expected:</div>
+        <div class="mono small">${escapeHTML(expected||'')}</div>
+        <div class="small muted">detected:</div>
+        <div class="mono small">${escapeHTML(used.intent||'')}</div>
+        <div class="right"><button class="secondary" id="copy-${i}">Copy row JSON</button></div>
+      </div>
+
+      ${used.product ? `
+        <div style="margin-top:10px">
+          <div class="small muted">Product used</div>
+          <div class="mono">${escapeHTML(used.product.title||'')}</div>
+          ${used.product.url ? `<div class="chips"><a target="_blank" href="${used.product.url}">${used.product.url}</a></div>`:''}
+        </div>` : ''}
+
+      <div style="margin-top:10px">
+        <div class="small muted">Events used (${used.events.length})</div>
+        ${used.events.length ? `
+          <table class="small">
+            <thead><tr><th>Date</th><th>Title</th><th>Location</th><th>Link</th></tr></thead>
+            <tbody>
+              ${used.events.map(e=>`
+                <tr>
+                  <td class="mono">${escapeHTML(e.when||e.date||'')}</td>
+                  <td>${escapeHTML(e.title||'')}</td>
+                  <td>${escapeHTML(e.location||'')}</td>
+                  <td>${e.url?`<a class="small" target="_blank" href="${e.url}">${e.url}</a>`:''}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>` : `<div class="small muted">—</div>`}
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="small muted">Articles used (${used.articles.length})</div>
+        ${used.articles.length ? `
+          <ul class="small">
+            ${used.articles.map(a=>`
+              <li>${escapeHTML(a.title||'')} — ${a.url?`<a target="_blank" href="${a.url}">${a.url}</a>`:''}</li>
+            `).join('')}
+          </ul>` : `<div class="small muted">—</div>`}
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="small muted">Pills</div>
+        ${used.pills.length ? `
+          <div class="chips">
+            ${used.pills.map(p=>`<a target="_blank" href="${p.url}">${escapeHTML(p.label)}</a>`).join('')}
+          </div>` : `<div class="small muted">—</div>`}
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="small muted">Citations</div>
+        ${used.citations.length ? `
+          <div class="chips">
+            ${used.citations.map(u=>`<a target="_blank" href="${u}">${u}</a>`).join('')}
+          </div>` : `<div class="small muted">—</div>`}
+      </div>
+    </div>
+  `;
+  td.innerHTML = html;
+  wrap.appendChild(td);
+
+  // remove previous inspect row for this index if any
+  const existing = document.querySelector(`tr#inspect-${i}`);
+  if (existing) existing.remove();
+
+  // insert after the row
+  const base = document.getElementById(`row-${i}`);
+  base.insertAdjacentElement('afterend', wrap);
+
+  // copy this row’s compact JSON
+  document.getElementById(`copy-${i}`).onclick = ()=>{
+    const payload = results[i];
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+  };
+}
+
+/* ---------- Copy all ---------- */
+$('copyAll').onclick = ()=>{
+  if (!results.length){ alert('No results to copy yet. Run the tests first.'); return; }
+  navigator.clipboard.writeText(JSON.stringify(results, null, 2));
+  $('copyAll').textContent = 'Copied!';
+  setTimeout(()=> $('copyAll').textContent = 'Copy Results JSON', 1200);
+};
+
+/* ---------- Clear ---------- */
+$('clear').onclick = ()=>{
+  results = [];
+  rowsEl.innerHTML = '';
+  batch = [];
+  $('csv').value = '';
+  $('paste').value = '';
+  $('pasteCount').textContent = '0 rows';
+  $('status').textContent = 'Parsed rows: 0';
+};
 </script>
 </body>
 </html>
