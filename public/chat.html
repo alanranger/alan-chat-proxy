@@ -70,7 +70,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <body>
 <div class="wrap">
   <!-- Keeps the badge under the orange rule -->
-  <div class="badge-wrap"><span class="version">v0.9.18</span></div>
+  <div class="badge-wrap"><span class="version">v0.9.17</span></div>
 
   <div class="card">
     <div class="header">
@@ -174,22 +174,7 @@ function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
 
-/* ---------------- Utilities ---------------- */
-function normaliseAvailability(val){
-  if(!val) return null;
-  const s = String(val).trim();
-  if (/out\s*of\s*stock/i.test(s)) return 'Out of Stock';
-  if (/in\s*stock/i.test(s)) return 'In Stock';
-  if (/schema\.org\/OutOfStock/i.test(s)) return 'Out of Stock';
-  if (/schema\.org\/InStock/i.test(s)) return 'In Stock';
-  return s;
-}
-function tryUrl(u){ try{ return new URL(u); } catch { return null; } }
-function uniqueByHref(arr){
-  const seen=new Set(); return arr.filter(x=>{ if(!x.href) return false; const k=x.href; if(seen.has(k)) return false; seen.add(k); return true; });
-}
-
-/* ---------------- Product merging & parsing ---------------- */
+/* ---------------- Product merging & parsing (generic safety net) ---------------- */
 function mergeProducts(list){
   if(!Array.isArray(list) || !list.length) return [];
   const map = new Map();
@@ -197,81 +182,43 @@ function mergeProducts(list){
     const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
     if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
     const m = map.get(key);
-    for(const k of ['price','price_currency','availability','provider','description','title','url','page_url','source_url'])
-      if((m[k]==null || m[k]==='') && p[k]!=null) m[k]=p[k];
+    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
     const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
     const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
     if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = p.raw.offers; }
-    if(p?.raw?.offers?.price!=null && (!m?.raw?.offers?.price)){
-      m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency});
-    }
-    if(!m.availability){
-      m.availability = p.availability || p?.raw?.offers?.availability || null;
-    }
+    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
   }
   return [...map.values()];
 }
 
-function cleanDescToLines(desc){
-  const lines = String(desc||'').split(/\r?\n/);
-  const out = [];
-  for (let l of lines){
-    if(/^dates\s*\(/i.test(l)) continue;
-    if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) continue;
-    if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) continue;
-    out.push(l);
-  }
-  return out;
-}
-function grabLabel(lines, label){
-  const labRe = new RegExp(`^\\s*${label}\\s*:?\\s*(.*)$`,'i');
-  const isOtherLabel = (s)=>/^\s*(Location|Participants|Fitness|Availability)\s*:?\s*$/i.test(s);
-  const isOptionHead = (s)=>/^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(s);
-  for (let i=0;i<lines.length;i++){
-    const m = lines[i].match(labRe);
-    if (m){
-      let v = (m[1]||'').trim();
-      if (v && v !== ':') return v.replace(/^\s*:\s*/,'').trim();
-      for (let j=i+1;j<lines.length;j++){
-        const next = (lines[j]||'').trim();
-        if (!next) continue;
-        if (isOtherLabel(next) || isOptionHead(next)) break;
-        return next.replace(/^\s*:\s*/,'').trim();
-      }
-      return null;
-    }
-  }
-  return null;
-}
-function extractFacts(prod){
-  const lines = cleanDescToLines(prod?.description||'');
-  const location     = grabLabel(lines,'Location');
-  const participants = grabLabel(lines,'Participants');
-  const fitness      = grabLabel(lines,'Fitness');
-  let availability   = grabLabel(lines,'Availability');
+function extractFacts(desc){
+  const txt = String(desc||'')
+    .split(/\r?\n/).filter(l=>{
+      if(/^dates\s*\(/i.test(l)) return false;
+      if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
+      if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
+      return true;
+    });
 
-  if(!availability){
-    availability = normaliseAvailability(prod?.availability || prod?.raw?.offers?.availability || null);
-  } else {
-    availability = normaliseAvailability(availability);
-  }
+  const grab = (label)=>{
+    const r = new RegExp(`^\\s*${label}\\s*:?\\s*(.+)$`,'i');
+    const m = txt.find(l=>r.test(l));
+    return m ? m.replace(r,'$1').trim() : null;
+  };
 
-  const optionLines = lines.filter(l =>
+  const location     = grab('Location');
+  const participants = grab('Participants') || (txt.find(l=>/\bMax\s*\d{1,2}\b/i.test(l))?.match(/\bMax\s*\d{1,2}\b/i)?.[0] || null);
+  const fitness      = grab('Fitness');
+  const availability = grab('Availability');
+
+  const optionLines = txt.filter(l =>
     /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
     /^\s*OR\s*1\s*day\b/i.test(l)
-  ).slice(0,6);
+  ).slice(0,4);
 
-  const labelOrOption = (s)=>/^\s*(Location|Participants|Fitness|Availability)\s*:?/i.test(s) ||
-                          /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(s);
-  const narrative = lines.filter(l=>l && !labelOrOption(l)).join(' ').replace(/\s+/g,' ').trim();
-  let meta = '';
-  if(narrative){
-    const m = narrative.match(/^(.{40,220}?[\.\!\?])\s+/) || narrative.match(/^.{40,220}/);
-    meta = m ? m[0].trim() : narrative.slice(0,200);
-  }
-
-  return { location, participants, fitness, availability, optionLines, meta };
+  return {location, participants, fitness, availability, optionLines};
 }
+
 function currency(amount, ccy){
   if(amount==null || amount==='') return null;
   const n = Number(amount); if(!isFinite(n)) return null;
@@ -289,7 +236,6 @@ function deriveOptions(prod, facts){
   const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
 
   const opts = [];
-
   if(low!=null && high!=null && has4h && has1d){
     opts.push({label:'4 hours', price:currency(low,ccy)});
     opts.push({label:'1 day',   price:currency(high,ccy)});
@@ -316,81 +262,55 @@ function deriveOptions(prod, facts){
   return opts;
 }
 
-/* --------- Pill URL derivation (client fallback only) --------- */
-function findWorkshopsIndexUrl(productUrl, eventUrl){
-  const u = tryUrl(productUrl) || tryUrl(eventUrl);
-  if(!u) return null;
-  const segs = u.pathname.split('/').filter(Boolean);
-  const idx = segs.findIndex(s => /workshop/i.test(s));
-  if (idx >= 0){
-    const rootPath = '/' + segs.slice(0, idx+1).join('/') + '/';
-    return u.origin + rootPath;
-  }
-  const base = u.pathname.endsWith('/') ? u.pathname.slice(0,-1) : u.pathname;
-  const parent = base.substring(0, base.lastIndexOf('/')+1);
-  return u.origin + (parent || '/');
-}
-function findPhotosUrl(payload, topic, productUrl, eventUrl){
-  const base = tryUrl(productUrl) || tryUrl(eventUrl);
-  if(!base) return null;
-  const origin = base.origin;
-  const q = encodeURIComponent((topic||'gallery') || 'gallery');
-  return `${origin}/search?query=${q}`;
-}
+/* Pills from server (preferred), else legacy fallback */
+function buildActionPills(structured, prod){
+  // Prefer server-provided pills (structured.pills or structured.chips)
+  const fromServer = (structured?.pills && Array.isArray(structured.pills) && structured.pills.length)
+      ? structured.pills
+      : (structured?.chips && Array.isArray(structured.chips) && structured.chips.length ? structured.chips : []);
 
-/* Prefer backend-provided pills; else build fallback */
-function buildActionPills(payload, structured, prod){
-  if (Array.isArray(structured?.pills) && structured.pills.length){
-    // server-provided: render as-is
-    return structured.pills
-      .map(p => ({ label: String(p.label||'').trim(), href: String(p.url||'').trim() }))
-      .filter(p => p.label && p.href);
+  if (fromServer.length){
+    // normalise {label, url|href}
+    return fromServer.slice(0,4).map(c=>{
+      return { label: c.label || c.text, href: c.url || c.href };
+    }).filter(p=>p.label && p.href);
   }
 
-  // Fallback (client-side derivation)
+  // Fallback (should rarely run)
   const chips=[];
   const productUrl = prod?.url || prod?.page_url || prod?.source_url || structured?.products?.[0]?.url || null;
-  const eventUrl   = (structured?.events?.[0]?.page_url || structured?.events?.[0]?.source_url) || null;
-
+  const upcoming   = (structured?.events?.[0]?.page_url || structured?.events?.[0]?.source_url) || null;
   if(productUrl) chips.push({label:'Book Now', href:productUrl});
-  if(eventUrl)   chips.push({label:'Event Listing', href:eventUrl});
-
-  const more = findWorkshopsIndexUrl(productUrl, eventUrl);
-  if(more) chips.push({label:'More Workshops', href:more});
-
-  const photos = findPhotosUrl(payload, structured?.topic, productUrl, eventUrl);
-  if(photos) chips.push({label:'Photos', href:photos});
-
-  return uniqueByHref(chips);
+  if(upcoming)   chips.push({label:'Event Listing', href:upcoming});
+  if(productUrl) chips.push({label:'More Events', href:productUrl});
+  return chips.slice(0,4);
 }
 
 /* ---------------- Renderers ---------------- */
 function renderProductCard(prod){
-  const facts = extractFacts(prod);
+  const facts = extractFacts(prod.description||'');
   const options = deriveOptions(prod, facts);
 
-  const rows = [];
-  if(facts.location)     rows.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
-  if(facts.participants) rows.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
-  if(facts.fitness)      rows.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
-  if(facts.availability) rows.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
+  const infoP = [];
+  if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
+  if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
+  if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
+  if(facts.availability) infoP.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
 
   const li = options.map(o=>{
     const bits = [o.label, o.time ? `— ${o.time}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
     return `<li>${bits}</li>`;
   }).join('');
 
-  const meta = facts.meta ? `<p>${facts.meta}</p>` : '';
-
   return `
     <div class="answer">
       <h3>${prod.title || 'Workshop'}</h3>
-      ${meta}
-      ${rows.join('')}
+      ${infoP.join('')}
       ${li? `<ul>${li}</ul>`:''}
     </div>
   `;
 }
+
 function renderEventsBlock(structured){
   const now=new Date();
   const future=(structured?.events||[])
@@ -421,7 +341,8 @@ function renderAnswer(payload){
     resolver: 'default',
     merged_products: merged.length,
     events_found: (s.events||[]).length,
-    pills_rendered: 0
+    pills_rendered: 0,
+    intent: payload?.meta?.intent || null
   };
 
   if(merged.length || (s.events||[]).length){
@@ -435,12 +356,12 @@ function renderAnswer(payload){
     const evHTML = renderEventsBlock(s);
     if(evHTML) addBubble(evHTML);
 
-    // Prefer backend-provided pills
-    const pills = buildActionPills(payload, s, prod);
+    const pills = buildActionPills(s, prod);
     if(pills.length){
       const wrap = document.createElement('div');
       wrap.className='actions';
       pills.forEach(p=>{
+        if(!p.href) return;
         const a=document.createElement('a'); a.className='pill'; a.textContent=p.label;
         a.href=p.href; a.target='_blank'; a.rel='noopener';
         wrap.appendChild(a);
@@ -449,8 +370,12 @@ function renderAnswer(payload){
       note.pills_rendered = pills.length;
     }
   } else {
+    // generic markdown fallback
     const md = payload.answer_markdown || payload.answer || '';
     if(md){ const {html}=mdToHtml(md); addBubble(html); }
+    else{
+      addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about <em>workshops</em> or <em>advice</em> — for example, “Upcoming workshops in Devon” or “What tripod do you recommend?”</p></div>`);
+    }
   }
 
   // Debug dumps
@@ -478,10 +403,10 @@ async function sendQuery(query){
     dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
 
     closeTyping();
-    if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length)))) {
+    if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
       renderAnswer(data);
     } else {
-      addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about workshops, tuition, kit, or locations — for example, <em>“When are the next workshop dates?”</em></p></div>`);
+      addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about <em>workshops</em> or <em>advice</em> — for example, “Upcoming workshops in Devon” or “What tripod do you recommend?”</p></div>`);
     }
   } catch (err){
     closeTyping();
@@ -502,6 +427,11 @@ sendBtn.addEventListener('click', submit);
 input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
+
+/* Dev sanity helper:
+   // sendQuery("when is the next Devon workshop?");
+   // sendQuery("what tripod do you recommend?");
+*/
 </script>
 </body>
 </html>
