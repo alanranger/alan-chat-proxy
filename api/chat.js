@@ -47,7 +47,7 @@ function urlSafe(u) {
   try { return u ? new URL(u) : null; } catch { return null; }
 }
 
-/* ---------------------- Query tokenisation / filters --------------------- */
+/* ---------------------- Query tokenisation / intent ---------------------- */
 function normaliseQuery(q) {
   return String(q || "")
     .replace(/[^\p{L}\p{N}\s-]/gu, " ")
@@ -57,7 +57,8 @@ function normaliseQuery(q) {
 function tokensFromQuery(q) {
   const stop = new Set([
     "the","a","an","of","on","to","in","for","with","and","or",
-    "when","is","are","next","dates","date",
+    "when","is","are","what","which","who","do","you","your","my","me",
+    "next","dates","date","please","thanks","thank",
     "workshop","workshops","course","courses","class","classes","tuition"
   ]);
   return normaliseQuery(q)
@@ -66,9 +67,22 @@ function tokensFromQuery(q) {
     .filter(t => t && !stop.has(t))
     .slice(0, 8);
 }
+function detectIntent(q) {
+  const s = normaliseQuery(q).toLowerCase();
+  const has = (...words) => words.some(w => s.includes(w));
+  const gear = ["tripod","filter","filters","nd","polariser","lens","lenses","camera","bag","backpack","ballhead","head","legs","kit","gear"];
+  const how  = ["recommend","which","best","how to","settings","technique","setup","guide","review"];
+  const eventish = ["when","date","next","available","availability","book","booking"];
+  const eventWords = ["batsford","dartmoor","devon","exmoor","sidmouth","workshop","course","class","event","tuition"];
+
+  if (has(...gear) || has(...how)) return "advice";
+  if (has(...eventish) || has(...eventWords)) return "events";
+  // default: events only if strong location word otherwise advice
+  return "advice";
+}
 function buildIlikeOr(parts, cols) {
   const terms = [];
-  for (const p of parts) {
+  for (const p of (parts && parts.length ? parts : [""])) {
     const pat = `%${p}%`;
     for (const c of cols) terms.push(`${c}.ilike.${pat}`);
   }
@@ -104,7 +118,6 @@ function extractFromDescription(desc, productRawOffers) {
     sessions: [],
   };
   if (!desc) {
-    // fall back availability from offers if description absent
     out.availability = normalizeAvailabilityToken(productRawOffers?.availability) ||
                        normalizeAvailabilityToken(productRawOffers?.Availability);
     return out;
@@ -143,9 +156,7 @@ function extractFromDescription(desc, productRawOffers) {
     const mMax = ln.match(/\bmax\s*(\d{1,2})\b/i);
     if (mMax && !out.participants) out.participants = `Max ${mMax[1]}`;
 
-    // Generic session rows:
-    // "4hrs - 5:45 am to 9:45 am or 10:30 am to 2:30 pm"
-    // "OR 1 day - 5:45 am to 2:30 pm"
+    // Session lines
     const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
     if (m1) {
       const rawLabel = m1[1].replace(/\s+/g, " ").trim();
@@ -155,7 +166,6 @@ function extractFromDescription(desc, productRawOffers) {
     }
   }
 
-  // Availability fallback from offers if still blank
   if (!out.availability && productRawOffers) {
     out.availability =
       normalizeAvailabilityToken(productRawOffers.availability) ||
@@ -182,15 +192,13 @@ function buildProductPanelMarkdown(products) {
 
   // Headline price(s)
   let lowPrice = null,
-    highPrice = null,
-    priceCurrency = "GBP";
+    highPrice = null;
   for (const p of products) {
     const ro = p?.raw?.offers || {};
     const lp = ro.lowPrice ?? ro.lowprice ?? null;
     const hp = ro.highPrice ?? ro.highprice ?? null;
     if (lp != null) lowPrice = lp;
     if (hp != null) highPrice = hp;
-    if (ro.priceCurrency) priceCurrency = ro.priceCurrency;
   }
   const headlineSingle = primary?.price != null ? toGBP(primary.price) : null;
   const lowTx = lowPrice != null ? toGBP(lowPrice) : null;
@@ -208,7 +216,7 @@ function buildProductPanelMarkdown(products) {
       primary?.raw?.offers
     ) || {};
 
-  // Attach prices to sessions: two sessions → low/high; else fallback single
+  // Attach prices to sessions
   const sessions = [...(info.sessions || [])];
   if (sessions.length) {
     if (lowPrice != null && highPrice != null && sessions.length >= 2) {
@@ -246,12 +254,12 @@ function buildProductPanelMarkdown(products) {
   return lines.join("\n");
 }
 
-/* --------------------- Backend pills (Book/Event/More/Photos) -------------------- */
-function deriveWorkshopsIndex(productUrl, eventUrl) {
-  const u = urlSafe(productUrl) ?? urlSafe(eventUrl);
+/* --------------------- Backend pills (context-aware) --------------------- */
+function deriveWorkshopsIndex(productUrl, eventUrl, articleUrl) {
+  const u = urlSafe(productUrl) ?? urlSafe(eventUrl) ?? urlSafe(articleUrl);
   if (!u) return null;
   const segs = u.pathname.split('/').filter(Boolean);
-  const idx = segs.findIndex((s) => /workshop/i.test(s));
+  const idx = segs.findIndex((s) => /workshop|event|course/i.test(s));
   if (idx >= 0) {
     const path = '/' + segs.slice(0, idx + 1).join('/') + '/';
     return u.origin + path;
@@ -278,8 +286,8 @@ function scoreGallery(u) {
   if (/\/gallery(\/|$)/.test(s)) return 1;
   return 2;
 }
-async function findPhotosUrl(client, productUrl, eventUrl) {
-  const origin = (urlSafe(productUrl) ?? urlSafe(eventUrl))?.origin || null;
+async function findPhotosUrl(client, ...candidates) {
+  const origin = (candidates.map(urlSafe).find(Boolean))?.origin || null;
 
   const buckets = await Promise.all([
     pickUrlsFromSelect(client.from("page_entities").select("url, page_url, source_url").ilike("url", "%/gallery%")),
@@ -302,7 +310,7 @@ async function findPhotosUrl(client, productUrl, eventUrl) {
   if (origin) return `${origin}/search?query=gallery`;
   return "https://www.alanranger.com/search?query=gallery";
 }
-async function buildPills({ client, product, firstEvent }) {
+async function buildEventPills({ client, product, firstEvent }) {
   const productUrl = product?.url || product?.page_url || product?.source_url || null;
   const eventUrl   = firstEvent?.page_url || firstEvent?.source_url || null;
 
@@ -311,9 +319,27 @@ async function buildPills({ client, product, firstEvent }) {
   if (eventUrl)   pills.push({ label: "Event Listing", url: eventUrl, brand: true });
 
   const more = deriveWorkshopsIndex(productUrl, eventUrl);
-  if (more) pills.push({ label: "More Workshops", url: more });
+  if (more) pills.push({ label: "More Events", url: more });
 
   const photos = await findPhotosUrl(client, productUrl, eventUrl);
+  if (photos) pills.push({ label: "Photos", url: photos });
+
+  const seen = new Set();
+  return pills.filter(p => (p.url && !seen.has(p.url) && seen.add(p.url))).slice(0, 4);
+}
+async function buildAdvicePills({ client, topArticle, query, productUrl, eventUrl }) {
+  const articleUrl = pickUrl(topArticle);
+  const origin = (urlSafe(articleUrl) ?? urlSafe(productUrl) ?? urlSafe(eventUrl))?.origin || "https://www.alanranger.com";
+  const searchUrl = `${origin}/search?query=${encodeURIComponent(normaliseQuery(query))}`;
+
+  const pills = [];
+  if (articleUrl) pills.push({ label: "Read Guide", url: articleUrl, brand: true });
+  pills.push({ label: "More Articles", url: searchUrl, brand: true });
+
+  const moreEvents = deriveWorkshopsIndex(productUrl, eventUrl, articleUrl) || `${origin}/search?query=workshop`;
+  pills.push({ label: "Events", url: moreEvents });
+
+  const photos = await findPhotosUrl(client, articleUrl, productUrl, eventUrl);
   if (photos) pills.push({ label: "Photos", url: photos });
 
   const seen = new Set();
@@ -326,7 +352,6 @@ function scoreEventRelevance(e, toks) {
   const title = e?.title || "";
   const loc = e?.location || "";
   const urls = `${e?.page_url || ""} ${e?.source_url || ""}`;
-  // Heavier weight for location matches
   return scoreTextByTokens(loc, toks) * 2 +
          scoreTextByTokens(title, toks) +
          Math.min(1, scoreTextByTokens(urls, toks));
@@ -340,15 +365,24 @@ function scoreProductRelevance(p, toks) {
          scoreTextByTokens(desc, toks) +
          Math.min(1, scoreTextByTokens(urls, toks));
 }
-function filterAndOrderByRelevance(items, scorer, toks) {
+function scoreArticleRelevance(a, toks) {
+  if (!toks?.length) return 0;
+  const title = a?.title || "";
+  const desc = a?.description || a?.raw?.description || "";
+  const url  = a?.url || a?.page_url || a?.source_url || "";
+  // prefer advice/blog paths
+  const urlBoost = /\/advice|\/blog|\/guides/i.test(url) ? 1 : 0;
+  return scoreTextByTokens(title, toks) * 2 +
+         scoreTextByTokens(desc, toks) +
+         scoreTextByTokens(url, toks) + urlBoost;
+}
+function filterAndOrderByRelevance(items, scorer, toks, { emptyFallback = false } = {}) {
   if (!Array.isArray(items) || !items.length) return [];
   const scored = items.map(it => ({ it, s: scorer(it, toks) }));
   const maxS = scored.reduce((m, r) => Math.max(m, r.s), 0);
   if (maxS <= 0) {
-    // nothing matched: return original order
-    return items;
+    return emptyFallback ? items : []; // <-- no unrelated fallbacks
   }
-  // Keep only matches with score >= 1, sort by score desc, then by date if present
   const filtered = scored.filter(r => r.s >= 1);
   filtered.sort((a, b) => {
     if (b.s !== a.s) return b.s - a.s;
@@ -359,8 +393,59 @@ function filterAndOrderByRelevance(items, scorer, toks) {
   return filtered.map(r => r.it);
 }
 
-/* ------------------------- Generic search resolver ----------------------- */
-async function answerByQuery({ client, query }) {
+/* --------------------------- Advice (articles) --------------------------- */
+async function answerAdvice({ client, query }) {
+  const toks = tokensFromQuery(query);
+  const orClause = buildIlikeOr(toks, ["title", "page_url", "source_url", "url", "description"]);
+
+  const { data: articlesRaw } = await client
+    .from("page_entities")
+    .select("*")
+    .in("kind", ["article", "page"])
+    .or(orClause)
+    .order("last_seen", { ascending: false })
+    .limit(60);
+
+  const articles = filterAndOrderByRelevance(articlesRaw || [], scoreArticleRelevance, toks, { emptyFallback: false })
+    .slice(0, 12);
+
+  // Build a concise markdown answer with top articles
+  const bullets = (articles || []).slice(0, 6).map(a => {
+    const u = pickUrl(a) || "#";
+    const t = a.title || a.raw?.name || u;
+    const desc = (a.description || a.raw?.description || "").replace(/\s+/g, " ").trim();
+    const mini = desc ? ` — ${desc.slice(0, 120)}${desc.length>120?'…':''}` : "";
+    return `- [${t}](${u})${mini}`;
+  });
+  const preface = bullets.length
+    ? `Here are Alan’s guides that match your question:\n\n${bullets.join("\n")}`
+    : `I couldn't find a specific guide for that yet. Try searching the advice blog on the site.`;
+
+  // Pills (context-aware for advice)
+  const pills = await buildAdvicePills({
+    client,
+    topArticle: articles?.[0] || null,
+    query,
+    productUrl: null,
+    eventUrl: null
+  });
+
+  const structured = {
+    topic: null,
+    events: [],
+    products: [],
+    articles: (articles || []).map(a => ({ title: a.title, url: pickUrl(a) })),
+    pills,
+    chips: pills,
+  };
+
+  const citations = uniq((articles || []).map(pickUrl)).filter(Boolean);
+
+  return { ok: true, answer_markdown: preface, citations, structured };
+}
+
+/* ------------------------------ Events path ------------------------------ */
+async function answerEvents({ client, query }) {
   const nowIso = new Date().toISOString();
   const toks = tokensFromQuery(query);
   const orClause = buildIlikeOr(toks.length ? toks : [normaliseQuery(query)], [
@@ -370,7 +455,7 @@ async function answerByQuery({ client, query }) {
     "url",
   ]);
 
-  // Future events that match the query tokens (broad fetch first)
+  // Future events (broad fetch, then relevance-filter)
   const { data: eventsRaw } = await client
     .from("page_entities")
     .select("id, title, page_url, source_url, date_start, date_end, location, raw")
@@ -389,12 +474,11 @@ async function answerByQuery({ client, query }) {
     .order("last_seen", { ascending: false })
     .limit(100);
 
-  // Relevance filtering
-  const events = filterAndOrderByRelevance(eventsRaw || [], scoreEventRelevance, toks)
-    .slice(0, 50); // keep a reasonable amount before UI trim
-  const products = filterAndOrderByRelevance(productsRaw || [], scoreProductRelevance, toks);
+  // Relevance filtering (no unrelated fallbacks)
+  const events = filterAndOrderByRelevance(eventsRaw || [], scoreEventRelevance, toks, { emptyFallback: false }).slice(0, 50);
+  const products = filterAndOrderByRelevance(productsRaw || [], scoreProductRelevance, toks, { emptyFallback: false });
 
-  const productPanel = buildProductPanelMarkdown(products || []);
+  const productPanel = buildProductPanelMarkdown(products || "");
 
   const eventList = (events || [])
     .map((e) => ({ ...e, when: fmtDateLondon(e.date_start) }))
@@ -409,7 +493,7 @@ async function answerByQuery({ client, query }) {
       .filter((e) => e && e.date_start)
       .sort((a, b) => new Date(a.date_start) - new Date(b.date_start))[0] || null;
 
-  const pills = await buildPills({ client, product, firstEvent });
+  const pills = await buildEventPills({ client, product, firstEvent });
 
   const citations = uniq([
     ...((events || []).map(pickUrl)),
@@ -421,7 +505,7 @@ async function answerByQuery({ client, query }) {
     events: eventList,
     products: products || [],
     pills,
-    chips: pills, // backward-compat for older UI
+    chips: pills,
   };
 
   return { ok: true, answer_markdown: productPanel, citations, structured };
@@ -441,7 +525,10 @@ export default async function handler(req, res) {
     const { query, topK } = req.body || {};
     const client = supabaseAdmin();
 
-    const result = await answerByQuery({ client, query });
+    const intent = detectIntent(query);
+    const result = intent === "events"
+      ? await answerEvents({ client, query })
+      : await answerAdvice({ client, query });
 
     res.status(200).json({
       ...result,
@@ -449,6 +536,7 @@ export default async function handler(req, res) {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
         topK: topK || null,
+        intent
       },
     });
   } catch (err) {
