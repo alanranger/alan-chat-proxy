@@ -1,390 +1,411 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Alan Ranger Assistant</title>
-  <style>
-    :root{
-      --bg:#0e1620;
-      --panel:#172234;
-      --panel-2:#1c2a41;
-      --text:#eaf2ff;
-      --muted:#a9bed5;
-      --brand:#f6a10a;
-      --brand-2:#ffb21a;
-      --pill:#ffad1f;
-      --pillText:#111;
-      --accent:#39b389;
-      --error:#ff5c5c;
-      --ok:#78d48c;
-      --border:#2b3d58;
-      --border-strong:#354b6b;
-      --code:#0c121a;
-      --link:#9fd2ff;
-      --shadow: 0 2px 0 rgba(0,0,0,.35), 0 0 0 1px var(--border);
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; background:var(--bg); color:var(--text);
-      font:16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    }
-    a{color:var(--link); text-decoration:none}
-    a:hover{text-decoration:underline}
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Alan Ranger Assistant</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
+  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
+  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
+  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
+  --user-bg:#e6edf7; --user-text:#0b0f16;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
+.version{position:absolute;top:-8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
+.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
+.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
+.pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
+.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
-    /* orange trim */
-    .trim{height:8px; background:linear-gradient(90deg,var(--brand),#ff8c00)}
+.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
+.thread{display:flex;flex-direction:column;gap:12px}
+.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
+.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
+.answer h1,.answer h2,.answer h3{margin:.2em 0}
+.answer p{margin:.5em 0}
+.answer ul{margin:.4em 0 .6em 1.25em}
+.answer li{margin:.15em 0}
+.answer a{color:var(--link);text-decoration:underline}
+.answer a:hover{color:var(--link-hover)}
 
-    header{
-      position:relative; padding:28px 16px 14px; text-align:center;
-    }
-    /* Restored circular logo “R” */
-    .logo{
-      width:76px; height:76px; margin:0 auto 10px; border-radius:50%;
-      display:grid; place-items:center;
-      background:#0d1420;
-      color:#fff; font-weight:800; font-size:36px;
-      box-shadow: inset 0 0 0 2px #2b3a52, 0 2px 0 rgba(0,0,0,.4);
-    }
-    .title{font-size:28px; font-weight:800; letter-spacing:.2px}
-    .subtitle{max-width:880px; margin:8px auto 12px; color:var(--muted)}
-    .cta-row{display:flex; gap:10px; justify-content:center}
-    .chip{
-      background:var(--brand); color:#111; padding:8px 14px; border-radius:999px; font-weight:800;
-      border:0; cursor:pointer; box-shadow:0 1px 0 rgba(0,0,0,.25);
-    }
-    .chip.green{background:var(--accent); color:#03140e}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none;font-weight:600}
+.chips a.brand{background:var(--brand);color:#0b0f16;border-color:transparent}
+.chips a:hover{opacity:.9}
 
-    /* version pinned under orange bar */
-    .version{
-      position:absolute; top:-16px; right:10px;
-      background:#121a29; color:#9cb0c6; padding:2px 8px; border-radius:8px;
-      font-size:12px; border:1px solid #2b3a52;
-    }
+/* Composer */
+.composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
+.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
+.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
-    main{max-width:980px; margin:0 auto; padding:0 14px 80px}
-    .panel{
-      background:var(--panel); border:1px solid var(--border-strong); border-radius:14px;
-      box-shadow:var(--shadow); padding:14px 16px; margin:12px 0;
-    }
-    .panel.dark{background:var(--panel-2)}
-    .assist-banner{background:#16233a; color:#c7d6e8; border-color:#304766}
-    .ask-row{display:flex; gap:10px; align-items:center}
-    .ask-input{
-      flex:1; background:#0f1723; color:var(--text); border:1px solid #2a3a4a;
-      padding:12px 14px; border-radius:10px; box-shadow:0 1px 0 rgba(0,0,0,.3) inset;
-    }
-    .send{background:var(--brand); color:#171003; border:0; border-radius:10px; padding:10px 16px; font-weight:800; cursor:pointer}
-    .send:disabled{opacity:.5; cursor:default}
+/* Debug panel */
+details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
+details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
+.kv label{color:#93A4C1}
+pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
 
-    /* product card */
-    .product{
-      background:#18243a; border:1px solid #2f4567; border-radius:12px; padding:14px;
-      box-shadow: 0 1px 0 rgba(0,0,0,.25) inset;
-    }
-    .product h4{
-      margin:0; font-size:15px; font-weight:900; letter-spacing:.01em
-    }
-    .subtitle-line{color:#c4d2e5; margin-top:6px}
-    .kv{
-      display:grid; grid-template-columns:130px 1fr; gap:8px 14px; margin:10px 0 2px;
-    }
-    .kv .k{color:#9fb0c3; font-weight:800}
-    .price-list{margin:6px 0 0 0; padding-left:20px}
-    .price-list li{margin:4px 0}
+/* Typing dots */
+.typing{position:relative;display:inline-block}
+.typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
+.typing .dot:nth-child(2){animation-delay:.15s}
+.typing .dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
-    .pills{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
-    .pill{
-      background:var(--pill); color:var(--pillText); border-radius:999px; padding:8px 12px; font-weight:800;
-      display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none;
-      box-shadow:0 1px 0 rgba(0,0,0,.25);
-    }
-    .pill a{color:inherit; text-decoration:none}
-
-    /* events */
-    h3{margin:0 0 8px; font-size:15px; color:#cfe0f7; letter-spacing:.08em; text-transform:uppercase}
-    .events ul{margin:6px 0 0 0; padding-left:22px}
-    .events li{margin:6px 0}
-
-    /* debug */
-    details.debug{margin-top:6px}
-    .debug .hdr{display:flex; align-items:center; gap:10px}
-    .debug .btn{background:#0f1723; color:#cfe1ff; border:1px solid #334861; padding:6px 10px; border-radius:8px; cursor:pointer}
-    .debug pre{
-      background:#0c121a; color:#9bd0ff; border:1px solid #233247; border-radius:8px;
-      padding:10px; overflow:auto; max-height:320px; margin:10px 0
-    }
-
-    .mute{color:var(--muted)}
-    .hidden{display:none !important}
-  </style>
+@media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-  <div class="trim"></div>
-  <header>
-    <div class="version" id="version">v0.9.15</div>
-    <div class="logo">R</div>
-    <div class="title">Alan Ranger Assistant</div>
-    <div class="subtitle">
-      I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
-      photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:
-    </div>
-    <div class="cta-row">
-      <a class="chip" href="https://www.alanranger.com/contact">Contact form</a>
-      <a class="chip green" href="https://wa.me/447899433607">WhatsApp</a>
-    </div>
-  </header>
-
-  <main>
-    <div class="panel assist-banner">
-      Hi! I can help with workshops, tuition, and photography advice.
+<div class="wrap">
+  <span class="version">v0.9.14</span>
+  <div class="card">
+    <div class="header">
+      <img class="logo" src="./chat%20white.png" alt="AR logo">
+      <h2 class="title">Alan Ranger Assistant</h2>
+      <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:</p>
+      <div class="pills">
+        <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+        <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+      </div>
     </div>
 
-    <div class="panel">
-      <div class="ask-row">
-        <input id="ask" class="ask-input" placeholder="Ask a question… (Shift+Enter for newline)" />
+    <div class="chat">
+      <div id="thread" class="thread">
+        <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
+      </div>
+
+      <details id="debugPanel" class="debug">
+        <summary>🔎 Show debug</summary>
+        <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
+        <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
+        <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
+        <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
+        <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
+        <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
+        <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
+        <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
+      </details>
+
+      <div class="composer">
+        <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
         <button id="send" class="send">Send</button>
       </div>
     </div>
+  </div>
+</div>
 
-    <!-- Render target -->
-    <section id="results"></section>
+<script>
+const CHAT_ENDPOINT = '/api/chat';
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
-    <!-- Debug -->
-    <details class="panel debug" id="debug">
-      <summary class="hdr">🔎 Show debug</summary>
-      <div style="display:flex;gap:10px;align-items:center">
-        <button id="copyAll" class="debug btn">Copy all</button>
-        <span class="mute">Endpoint: <code>/api/chat</code></span>
-      </div>
-      <pre id="dbgHeaders" class="hidden"></pre>
-      <pre id="dbgReq" class="hidden"></pre>
-      <pre id="dbgRes" class="hidden"></pre>
-      <pre id="dbgStructured" class="hidden"></pre>
-      <pre id="dbgProv" class="hidden"></pre>
-    </details>
-  </main>
+const thread = document.getElementById('thread');
+const input  = document.getElementById('q');
+const sendBtn= document.getElementById('send');
 
-  <script>
-  ;(()=> {
-    const $ = s=>document.querySelector(s);
-    const elResults = $('#results');
-    const elAsk = $('#ask');
-    const elSend = $('#send');
-    const elCopy = $('#copyAll');
+const dbgStatus = document.getElementById('dbg-status');
+const dbgReq    = document.getElementById('dbg-req');
+const dbgRes    = document.getElementById('dbg-res');
+const dbgHeaders= document.getElementById('dbg-headers');
+const dbgStruct = document.getElementById('dbg-struct');
+const dbgProv   = document.getElementById('dbg-prov');
+const dbgCopy   = document.getElementById('dbg-copy');
 
-    // ---------- helpers ----------
-    const money = v => (v==null || v==='' || isNaN(v)) ? null : `£${Number(v).toLocaleString('en-GB',{maximumFractionDigits:0})}`;
+function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
 
-    function pluckMetaFromDescription(desc=''){
-      const out = {};
-      let m;
-      m = desc.match(/Location:\s*([^\n]+?)(?:\n|$)/i); if(m) out.location = m[1].trim();
-      m = desc.match(/Participants:\s*([^\n]+?)(?:\n|$)/i); if(m) out.participants = m[1].trim();
-      m = desc.match(/Fitness:\s*([^\n]+?)(?:\n|$)/i); if(m) out.fitness = m[1].trim();
-      m = desc.match(/Availability:\s*([^\n]+?)(?:\n|$)/i); if(m) out.availability = m[1].trim();
-      return out;
+dbgCopy?.addEventListener('click', ()=>{
+  const all = [
+    'Status: '+dbgStatus.textContent,
+    'Headers:\n'+dbgHeaders.textContent,
+    'Request:\n'+dbgReq.textContent,
+    'Response:\n'+dbgRes.textContent,
+    'Structured:\n'+dbgStruct.textContent,
+    'Provenance:\n'+dbgProv.textContent,
+  ].join('\n\n');
+  navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
+});
+
+/* ---------- UI helpers ---------- */
+function addBubble(html, opts={}) {
+  const div = document.createElement('div');
+  div.className = 'bubble' + (opts.user ? ' user' : '');
+  div.innerHTML = html;
+  thread.appendChild(div);
+  div.scrollIntoView({behavior:'smooth', block:'end'});
+  return div;
+}
+function addTyping() {
+  const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
+  return ()=> el && el.remove();
+}
+
+function mdToHtml(md){
+  if (!md) return { html:'', liIds:[], items:[] };
+  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  const lines = s.split(/\r?\n/);
+  let out='', inList=false;
+  const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
+  for (const line of lines){
+    const m = line.match(/^\s*-\s+(.*)$/);
+    if (m){
+      if(!inList){ out+='<ul>'; inList=true; }
+      out += `<li>${m[1].trim()}</li>`;
+    } else {
+      flush();
+      out += line.trim()? `<p>${line}</p>` : '';
     }
+  }
+  flush();
+  return { html:`<div class="answer">${out}</div>` };
+}
 
-    function findOptionPriceLines(desc=''){
-      const out = [];
-      const re = /(?:^|\n)\s*(?:-|\u2022)?\s*(\d+\s*hr(?:s)?|1\s*day|half[-\s]*day|full[-\s]*day)\s*[—-]\s*([^\n£]*?)\s*[—-]\s*£?(\d+(?:\.\d{1,2})?)/gi;
-      let m; while((m=re.exec(desc))!==null){
-        const label=m[1].replace(/\s+/g,' ').trim();
-        const time=(m[2]||'').replace(/\s+/g,' ').trim();
-        const price=m[3];
-        out.push({label,time,price});
-      }
-      return out;
+function fmtDate(iso){
+  try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
+}
+
+/* --------- Product helpers (generic) ---------- */
+function textFind(lines, key){
+  const r = new RegExp(`^\\s*${key}\\s*:\\s*(.+)$`,'i');
+  for(const ln of lines){ const m=ln.match(r); if(m) return m[1].trim(); }
+  return null;
+}
+function parseProductMeta(desc){
+  const lines = String(desc||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const location = textFind(lines,'Location');
+  const participants = textFind(lines,'Participants');
+  const fitness = textFind(lines,'Fitness');
+  // Try to pick out session times (first 1–2 lines that look like "4hrs - ..." etc.)
+  const sessionLines = lines.filter(l=>/^\d+\s*(?:hrs?|hours?|day)/i.test(l) || /^OR\s*\d+\s*day/i.test(l)).slice(0,3);
+  return {location, participants, fitness, sessionLines};
+}
+function normalizeAvailability(av){
+  if(!av) return null;
+  const s = String(av).toLowerCase();
+  if(s.includes('instock')) return 'In Stock';
+  if(s.includes('outofstock')) return 'Out of Stock';
+  return null;
+}
+function currency(amount, ccy){
+  if(amount==null || amount==='') return null;
+  const n = Number(amount);
+  if(!isFinite(n)) return null;
+  try{
+    return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n);
+  }catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
+}
+
+function derivePriceLines(prod){
+  const ccy = prod.price_currency || prod?.raw?.offers?.priceCurrency || 'GBP';
+  const out = [];
+  // Base single price (if present)
+  const base = prod.price ?? prod?.raw?.offers?.price;
+  // Range (AggregateOffer)
+  const low  = prod?.raw?.offers?.lowPrice ?? prod?.raw?.offers?.lowprice;
+  const high = prod?.raw?.offers?.highPrice ?? prod?.raw?.offers?.highprice;
+
+  // Try to map to option names from description
+  const dtext = String(prod.description||'').toLowerCase();
+  const has4h  = /(?:^|\s)(?:4\s*hrs?|4\s*hours?)(?=\s*[-–]|,|\s)/i.test(prod.description||'') || dtext.includes('4hr');
+  const has1day= /(?:^|\s)1\s*day/i.test(prod.description||'');
+
+  if(low!=null && high!=null){
+    if(has4h && has1day){
+      out.push({label:'4hrs', price: currency(low, ccy)});
+      out.push({label:'1 day', price: currency(high, ccy)});
+    }else{
+      out.push({label:'From', price: currency(low, ccy)});
+      out.push({label:'To',   price: currency(high, ccy)});
     }
+  }
+  // If base exists and not already equal to one of range ends, include as “Standard”
+  if(base!=null && !(Number(base)===Number(low)||Number(base)===Number(high))){
+    out.unshift({label:'Standard', price: currency(base, ccy)});
+  }
+  return out;
+}
 
-    function selectPrimaryProduct(products=[]){
-      if(!products.length) return null;
-      const withStd = products.find(p => p.price || p?.raw?.offers?.price);
-      if(withStd) return withStd;
-      const withAgg = products.find(p => p?.raw?.offers?.lowPrice || p?.raw?.offers?.highPrice);
-      return withAgg || products[0];
-    }
+/* Build chips from available links */
+function createChips(structured){
+  const events=structured?.events||[];
+  const products=structured?.products||[];
+  const firstEventUrl = events.find(e=>e?.page_url||e?.source_url)?.page_url || events.find(e=>e?.source_url)?.source_url || null;
+  const productUrl    = products.find(p=>p?.url||p?.page_url)?.url || products.find(p=>p?.page_url)?.page_url || null;
+  const chips = [];
+  if(productUrl) chips.push({label:'Book Now', href:productUrl, brand:true});
+  if(firstEventUrl) chips.push({label:'Upcoming dates', href:firstEventUrl, brand:false});
+  return chips;
+}
 
-    function getPriceSummary(p){
-      let std=null; if(p?.price) std=money(p.price); else if(p?.raw?.offers?.price) std=money(p.raw.offers.price);
-      const low=p?.raw?.offers?.lowPrice, high=p?.raw?.offers?.highPrice;
-      const range=(low||high)?`${low?money(low):''}${(low&&high)?'–':''}${high?money(high):''}`:null;
-      return {std, range};
-    }
+/* -------- Renderers -------- */
+function renderProductBlock(prod){
+  const meta = parseProductMeta(prod.description||'');
+  const avail = normalizeAvailability(prod?.availability || prod?.raw?.offers?.availability);
+  const priceLines = derivePriceLines(prod);
 
-    function dedupeEvents(events=[]){
-      const seen=new Set();
-      return events.filter(ev=>{
-        const key=(ev.date_start||ev.when||ev.title);
-        if(seen.has(key)) return false; seen.add(key); return true;
-      });
-    }
+  const lines = [];
+  if(meta.location)     lines.push(`<p><strong>Location:</strong> ${meta.location}</p>`);
+  if(prod.description){
+    const first = String(prod.description).split(/\r?\n/).map(s=>s.trim()).filter(Boolean)[0] || '';
+    if(first) lines.push(`<p>${first}</p>`);
+  }
 
-    function pill(label, href, brand=false){
-      const d=document.createElement('span');
-      d.className='pill';
-      d.innerHTML=`<a href="${href||'#'}" target="_blank" rel="noopener">${label}</a>`;
-      if(brand){ d.style.background='var(--brand)'; d.style.color='#111'; }
-      if(!href) d.classList.add('hidden');
-      return d;
-    }
+  const ul = [];
+  // show the best schedule bullets if we have them
+  if(meta.sessionLines && meta.sessionLines.length){
+    meta.sessionLines.forEach(s=>ul.push(`<li>${s.replace(/^OR\s*/,'').replace(/\s{2,}/g,' ')}</li>`));
+  }
+  // append price option lines
+  if(priceLines.length){
+    priceLines.forEach(pl=>ul.push(`<li><strong>${pl.label}:</strong> ${pl.price??''}</li>`));
+  }
+  // meta extras
+  if(meta.participants) ul.push(`<li><strong>Participants:</strong> ${meta.participants}</li>`);
+  if(meta.fitness)      ul.push(`<li><strong>Fitness:</strong> ${meta.fitness}</li>`);
+  if(avail)             ul.push(`<li><strong>Availability:</strong> ${avail}</li>`);
 
-    function renderProduct(product, chips=[]){
-      const wrap=document.createElement('div'); wrap.className='panel';
-      const card=document.createElement('div'); card.className='product';
+  const ulHtml = ul.length? `<ul>${ul.join('')}</ul>` : '';
 
-      const {std,range}=getPriceSummary(product);
-      const title=product?.title||'Workshop';
-      const priceParts=[]; if(std) priceParts.push(std); if(range) priceParts.push(range);
-      const priceLabel=priceParts.join(' • ');
+  return `
+    <div class="answer">
+      <h3>${prod.title || 'Workshop Options'}</h3>
+      ${lines.join('')}
+      ${ulHtml}
+    </div>
+  `;
+}
 
-      const desc=(product?.description || product?.raw?.description || '').trim();
-      const meta=pluckMetaFromDescription(desc);
-      const options=findOptionPriceLines(desc);
+function renderEventsBlock(structured, heading='Upcoming Workshops'){
+  const now=new Date();
+  const future=(structured?.events||[])
+    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
+    .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
+    .slice(0,12);
 
-      const h=document.createElement('h4');
-      h.textContent = priceLabel ? `${title} — ${priceLabel}` : title;
+  if(!future.length) return '';
+  const hTitle = structured?.topic ? `Upcoming ${structured.topic.toString().trim()} Workshops` : heading;
 
-      const sub=document.createElement('div'); sub.className='subtitle-line';
-      sub.textContent=(desc.split('\n')[0]||'').replace(/^Summary\s*:?/i,'').trim();
+  const li = future.map(e=>{
+    const when=fmtDate(e.date_start);
+    const href=e.page_url||e.source_url||'#';
+    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a> — ${e.location||''}</li>`;
+  }).join('');
 
-      // Strip giant date list from sub if it slipped in
-      if(/Mon|Tue|Wed|Thu|Fri|Sat|Sun/i.test(sub.textContent)){
-        sub.textContent=sub.textContent.replace(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[^\n]+/ig,'').trim();
-      }
+  return `
+    <div class="answer">
+      <h3>${hTitle}</h3>
+      <ul>${li}</ul>
+    </div>
+  `;
+}
 
-      const kv=document.createElement('div'); kv.className='kv';
-      const addKV=(k,v)=>{ if(!v) return;
-        const kdiv=document.createElement('div'); kdiv.className='k'; kdiv.textContent=k;
-        const vdiv=document.createElement('div'); vdiv.textContent=v;
-        kv.appendChild(kdiv); kv.appendChild(vdiv);
-      };
-      addKV('Location', meta.location);
-      addKV('Participants', meta.participants);
-      addKV('Fitness', meta.fitness);
-      const avail = (product?.availability||'').replace(/^.*\/|https?:\/\/schema\.org\//,'');
-      addKV('Availability', meta.availability || (avail?avail.replace(/([A-Z])/g,' $1').trim():''));
+/* ---------- Render answer end-to-end ---------- */
+function renderAnswer(payload){
+  // If we have structured data, we own the layout and suppress the raw markdown
+  const hasStructured = !!payload.structured && (payload.structured.products?.length || payload.structured.events?.length);
 
-      const ul=document.createElement('ul'); ul.className='price-list';
-      if(options.length){
-        options.forEach(op=>{
-          const li=document.createElement('li');
-          const bits=[op.label]; if(op.time) bits.push(`— ${op.time}`); if(op.price) bits.push(`— £${op.price}`);
-          li.textContent=bits.join(' '); ul.appendChild(li);
+  if(!hasStructured){
+    // Render markdown (generic fallback)
+    const md = payload.answer_markdown || payload.answer || '';
+    if(md){ const {html}=mdToHtml(md); addBubble(html); }
+  }else{
+    const s = payload.structured;
+
+    // Product: pick the “richer” record (prefer one with price or aggregate)
+    const products = s.products||[];
+    let prod = null;
+    prod = products.find(p=>p?.price!=null) || products.find(p=>p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null) || products[0];
+
+    if(prod){
+      const top = `
+        <div class="answer">
+          <h3>${prod.title || 'Workshop'}</h3>
+          ${renderProductBlock(prod)}
+        </div>`;
+      const bubble = addBubble(top);
+
+      // Smart chips (Book Now / Upcoming dates)
+      const chips=createChips(s);
+      if(chips.length){
+        const wrap=document.createElement('div'); wrap.className='chips';
+        chips.forEach(c=>{
+          const a=document.createElement('a');
+          a.href=c.href; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
+          if(c.brand) a.classList.add('brand');
+          wrap.appendChild(a);
         });
+        bubble.appendChild(wrap);
       }
-
-      const row=document.createElement('div'); row.className='pills';
-      const seen=new Set();
-      chips.forEach(c=>{
-        const key=(c.label||'').toLowerCase(); if(!key||seen.has(key)) return; seen.add(key);
-        row.appendChild(pill(c.label, c.url, !!c.brand));
-      });
-
-      card.appendChild(h);
-      if(sub.textContent) card.appendChild(sub);
-      if(kv.childElementCount) card.appendChild(kv);
-      if(ul.childElementCount) card.appendChild(ul);
-      card.appendChild(row);
-      wrap.appendChild(card);
-      return wrap;
     }
 
-    function renderEvents(events=[]){
-      const evs=dedupeEvents(events);
-      if(!evs.length) return null;
-      const wrap=document.createElement('div'); wrap.className='panel dark events';
-      wrap.innerHTML=`<h3>Upcoming bluebell Workshops</h3>`;
-      const ul=document.createElement('ul');
-      evs.forEach(ev=>{
-        const when=ev.when||new Date(ev.date_start||Date.now()).toLocaleDateString('en-GB',{weekday:'short', day:'2-digit', month:'short', year:'numeric'});
-        const loc=ev.location || ev.raw?.location?.name || '';
-        const url=ev.page_url || ev.source_url || ev.raw?.url || '#';
-        const li=document.createElement('li');
-        li.innerHTML=`${when} — <a href="${url}" target="_blank" rel="noopener">Link</a>${loc?` — ${loc}`:''}`;
-        ul.appendChild(li);
-      });
-      wrap.appendChild(ul);
+    // Events list
+    const evHtml = renderEventsBlock(s);
+    if(evHtml) addBubble(evHtml);
+  }
 
-      const pills=document.createElement('div'); pills.className='pills';
-      pills.appendChild(pill('Book Now', evs[0]?.page_url||evs[0]?.source_url, true));
-      pills.appendChild(pill('Upcoming dates', evs[0]?.page_url||evs[0]?.source_url, false));
-      wrap.appendChild(pills);
+  // Debug dump
+  dbgStruct.textContent=safeJSONString(payload.structured||{});
+}
 
-      return wrap;
-    }
-
-    function renderFallback(){
-      const p=document.createElement('div'); p.className='panel dark';
-      p.innerHTML=`<div style="font-size:18px;font-weight:800;margin-bottom:6px;">I don’t have a specific answer for that yet.</div>
-      <div class="mute">Try asking about workshops, tuition, kit, or locations — e.g., <em>“When are the next Bluebell dates?”</em></div>`;
-      return p;
-    }
-
-    function show(sel, obj){
-      const el=document.querySelector(sel);
-      el.textContent=(typeof obj==='string')?obj:JSON.stringify(obj,null,2);
-      el.classList.remove('hidden');
-    }
-    function fillDebug(res, payload, data){
-      const headers=Object.fromEntries(res.headers.entries());
-      show('#dbgHeaders', headers);
-      show('#dbgReq', payload);
-      show('#dbgRes', data);
-      show('#dbgStructured', data?.structured||{});
-      show('#dbgProv', data?.provenance||data?.citations||{});
-    }
-
-    async function ask(q){
-      if(!q) return;
-      elSend.disabled=true;
-      const payload={query:q, topK:8};
-      let res, data, raw;
-      try{
-        res=await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
-        raw=await res.text(); data=JSON.parse(raw);
-      }catch(e){
-        const p=document.createElement('div'); p.className='panel'; p.style.borderColor='var(--error)'; p.textContent='Network error.';
-        elResults.prepend(p); elSend.disabled=false; return;
-      }
-      fillDebug(res, payload, data);
-
-      const zone=document.createElement('div');
-      const st=data?.structured||{};
-      const product = selectPrimaryProduct(st.products||[]);
-      if(product){
-        // prune date sludge from product.description
-        const copy=JSON.parse(JSON.stringify(product));
-        if(copy.description){
-          const lines=copy.description.split('\n').filter(line => !/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(line));
-          copy.description=lines.join('\n').trim();
-        }
-        zone.appendChild(renderProduct(copy, st.chips||[]));
-      }
-      const evBlock = renderEvents(st.events||[]);
-      if(evBlock) zone.appendChild(evBlock);
-
-      if(!product && !evBlock) zone.appendChild(renderFallback());
-
-      elResults.prepend(zone);
-      elSend.disabled=false;
-    }
-
-    $('#send').addEventListener('click', ()=> ask($('#ask').value.trim()));
-    $('#ask').addEventListener('keydown', e=>{
-      if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('#send').click(); }
+/* ---------- Networking ---------- */
+async function sendQuery(query){
+  const req = { query, topK: 8 };
+  dbgReq.textContent = safeJSONString(req);
+  const closeTyping = addTyping();
+  try{
+    const res = await fetch(CHAT_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(req)
     });
+    dbgStatus.textContent = res.status;
+    const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
+    dbgHeaders.textContent = safeJSONString(headers);
 
-    $('#copyAll').addEventListener('click', async ()=>{
-      const blocks=['dbgHeaders','dbgReq','dbgRes','dbgStructured','dbgProv'].map(id=>`## ${id}\n${document.getElementById(id).textContent}`).join('\n\n');
-      try{ await navigator.clipboard.writeText(blocks); const b=$('#copyAll'); b.textContent='Copied!'; setTimeout(()=>b.textContent='Copy all',1200);}catch(e){ alert('Copy failed'); }
-    });
+    const data = await res.json();
+    dbgRes.textContent = safeJSONString(data);
+    dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
 
-    // Optional seed for testing:
-    // ask('give me the next bluebell workshop dates and prices');
-  })();
-  </script>
+    closeTyping();
+    if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length)))) {
+      renderAnswer(data);
+    } else {
+      addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about workshops, tuition, kit, or locations — for example, <em>“When are the next Bluebell dates?”</em></p></div>`);
+    }
+  } catch (err){
+    closeTyping();
+    dbgStatus.textContent = 'error';
+    addBubble(`<div class="answer"><p>Something went wrong: ${String(err)}</p></div>`);
+  }
+}
+
+/* ---------- Wire up composer ---------- */
+function submit(){
+  const val = input.value.trim();
+  if(!val) return;
+  addBubble(val, {user:true});
+  input.value='';
+  sendQuery(val);
+}
+sendBtn.addEventListener('click', submit);
+input.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
+});
+
+// Example starter (optional): comment out if you don’t want a prefilled query
+// sendQuery("give me the next workshop dates and prices");
+</script>
 </body>
 </html>
