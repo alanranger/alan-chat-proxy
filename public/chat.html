@@ -17,8 +17,8 @@
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
 .wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px;position:relative}
-.version{position:absolute;top:6px;right:10px;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.version{position:absolute;top:-8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
@@ -37,8 +37,6 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer li{margin:.15em 0}
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
-.answer .kv{display:grid;grid-template-columns:132px 1fr;gap:0 .75rem;margin:.5rem 0}
-.answer .kv strong{color:#cfe3ff}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none;font-weight:600}
@@ -58,8 +56,6 @@ details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
 pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
-.debug-actions{display:flex;justify-content:flex-end}
-.debug-actions button{margin-bottom:8px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer}
 
 /* Typing dots */
 .typing{position:relative;display:inline-block}
@@ -68,15 +64,13 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 .typing .dot:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
-@media (max-width:540px){
-  .title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}
-}
+@media (max-width:540px){.title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <span class="version">v0.9.14</span>
   <div class="card">
-    <span class="version">v0.9.14</span>
     <div class="header">
       <img class="logo" src="./chat%20white.png" alt="AR logo">
       <h2 class="title">Alan Ranger Assistant</h2>
@@ -94,9 +88,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
       <details id="debugPanel" class="debug">
         <summary>🔎 Show debug</summary>
-        <div class="debug-actions">
-          <button id="dbg-copy">Copy all</button>
-        </div>
+        <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
         <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
         <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
@@ -164,258 +156,203 @@ function mdToHtml(md){
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   const lines = s.split(/\r?\n/);
-  let out='', inList=false, liIds=[], items=[], idx=0;
+  let out='', inList=false;
   const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
   for (const line of lines){
     const m = line.match(/^\s*-\s+(.*)$/);
     if (m){
       if(!inList){ out+='<ul>'; inList=true; }
-      const text = m[1].trim();
-      const id = `li_${++idx}`; liIds.push(id); items.push(text);
-      out += `<li id="${id}">${text}</li>`;
+      out += `<li>${m[1].trim()}</li>`;
     } else {
       flush();
       out += line.trim()? `<p>${line}</p>` : '';
     }
   }
   flush();
-  return { html:`<div class="answer">${out}</div>`, liIds, items };
+  return { html:`<div class="answer">${out}</div>` };
 }
 
 function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
 
-/* ---------- Product helpers (generic) ---------- */
-function money(v){
-  if(v==null || v==='') return '';
-  const n = Number(v); if(!isFinite(n)) return String(v);
-  return '£'+n.toString();
+/* --------- Product helpers (generic) ---------- */
+function textFind(lines, key){
+  const r = new RegExp(`^\\s*${key}\\s*:\\s*(.+)$`,'i');
+  for(const ln of lines){ const m=ln.match(r); if(m) return m[1].trim(); }
+  return null;
 }
-function priceFromProduct(prod){
-  if(!prod) return {headline:'', low:null, high:null, single:null};
-  if (prod.price!=null) return {headline:money(prod.price), low:null, high:null, single:prod.price};
-  const low = prod?.raw?.offers?.lowPrice ?? prod?.raw?.offers?.lowprice ?? null;
-  const high= prod?.raw?.offers?.highPrice ?? prod?.raw?.offers?.highprice ?? null;
-  if(low!=null && high!=null) return {headline:`${money(low)}–${money(high)}`, low, high, single:null};
-  return {headline:'', low:null, high:null, single:null};
+function parseProductMeta(desc){
+  const lines = String(desc||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const location = textFind(lines,'Location');
+  const participants = textFind(lines,'Participants');
+  const fitness = textFind(lines,'Fitness');
+  // Try to pick out session times (first 1–2 lines that look like "4hrs - ..." etc.)
+  const sessionLines = lines.filter(l=>/^\d+\s*(?:hrs?|hours?|day)/i.test(l) || /^OR\s*\d+\s*day/i.test(l)).slice(0,3);
+  return {location, participants, fitness, sessionLines};
 }
-function extractDetails(desc){
-  // Keep concise, drop “date walls”
-  const lines = (desc||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  const keep = [];
-  let location=null, participants=null, fitness=null, availability=null;
-  const dateLike = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[^A-Za-z]*\d{1,2}/i;
+function normalizeAvailability(av){
+  if(!av) return null;
+  const s = String(av).toLowerCase();
+  if(s.includes('instock')) return 'In Stock';
+  if(s.includes('outofstock')) return 'Out of Stock';
+  return null;
+}
+function currency(amount, ccy){
+  if(amount==null || amount==='') return null;
+  const n = Number(amount);
+  if(!isFinite(n)) return null;
+  try{
+    return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n);
+  }catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
+}
 
-  for(const ln of lines){
-    if(dateLike.test(ln)) continue; // drop calendar rows in product block
-    if(/^Summary:?$/i.test(ln)) continue;
+function derivePriceLines(prod){
+  const ccy = prod.price_currency || prod?.raw?.offers?.priceCurrency || 'GBP';
+  const out = [];
+  // Base single price (if present)
+  const base = prod.price ?? prod?.raw?.offers?.price;
+  // Range (AggregateOffer)
+  const low  = prod?.raw?.offers?.lowPrice ?? prod?.raw?.offers?.lowprice;
+  const high = prod?.raw?.offers?.highPrice ?? prod?.raw?.offers?.highprice;
 
-    let m;
-    if((m=ln.match(/^Location:\s*(.+)$/i))) { location=m[1].trim(); continue; }
-    if((m=ln.match(/^Participants:\s*(.+)$/i))) { participants=m[1].trim(); continue; }
-    if((m=ln.match(/^Fitness:\s*(.+)$/i))) { fitness=m[1].trim(); continue; }
-    if((m=ln.match(/^Availability:\s*(.+)$/i))) { availability=m[1].trim(); continue; }
-    keep.push(ln);
-  }
-  return {clean:keep, location, participants, fitness, availability};
-}
-function extractOptionTimes(desc){
-  // Try to pull the two time options without prices
-  if(!desc) return [];
-  const lines = desc.split(/\r?\n/).map(s=>s.trim());
-  const hits=[];
-  const timeLine = /(4\s*hrs?|4\s*hours?|half[-\s]*day).*?(\d{1,2}[:.]\d{2}\s*am).*?(\d{1,2}[:.]\d{2}\s*pm)/i;
-  const dayLine  = /(1\s*day|full[-\s]*day).*?(\d{1,2}[:.]\d{2}\s*am).*?(\d{1,2}[:.]\d{2}\s*pm)/i;
-  for(const ln of lines){
-    let m;
-    if((m=ln.match(timeLine))) hits.push({label:'4hrs', text:ln});
-    else if((m=ln.match(dayLine))) hits.push({label:'1 day', text:ln});
-  }
-  // Fallback to known patterns in your copy
-  if(hits.length===0){
-    const four = lines.find(s=>/4hrs?\s*-\s*5:45\s*am/i); if(four) hits.push({label:'4hrs', text:four});
-    const one  = lines.find(s=>/1\s*day\s*-\s*5:45\s*am/i); if(one)  hits.push({label:'1 day', text:one});
-  }
-  return hits;
-}
-function extractPerOptionPrices(desc){
-  // Look for lines that start with option label and have a £
-  const out=[];
-  if(!desc) return out;
-  const lines = desc.split(/\r?\n/).map(s=>s.trim());
-  const pairs = [
-    [/^(?:4\s*hrs?|4\s*hours?|half[-\s]*day)\b/i,'4hrs'],
-    [/^(?:1\s*day|full[-\s]*day)\b/i,'1 day']
-  ];
-  for(const ln of lines){
-    for(const [rx,label] of pairs){
-      if(rx.test(ln) && /£\s*\d+/.test(ln)) {
-        const price = (ln.match(/£\s*\d+/)||[''])[0].replace(/\s+/g,'');
-        out.push({label, price});
-      }
+  // Try to map to option names from description
+  const dtext = String(prod.description||'').toLowerCase();
+  const has4h  = /(?:^|\s)(?:4\s*hrs?|4\s*hours?)(?=\s*[-–]|,|\s)/i.test(prod.description||'') || dtext.includes('4hr');
+  const has1day= /(?:^|\s)1\s*day/i.test(prod.description||'');
+
+  if(low!=null && high!=null){
+    if(has4h && has1day){
+      out.push({label:'4hrs', price: currency(low, ccy)});
+      out.push({label:'1 day', price: currency(high, ccy)});
+    }else{
+      out.push({label:'From', price: currency(low, ccy)});
+      out.push({label:'To',   price: currency(high, ccy)});
     }
   }
-  // Deduplicate by label
-  const uniq=new Map();
-  for(const p of out) if(!uniq.has(p.label)) uniq.set(p.label,p);
-  return [...uniq.values()];
-}
-
-/* Build chips safely */
-function createChips(structured){
-  const events=structured?.events||[];
-  const products=structured?.products||[];
-
-  const firstEventUrl = events.find(e=>e?.page_url||e?.source_url)?.page_url || events.find(e=>e?.source_url)?.source_url || null;
-  const productUrl    = products.find(p=>p?.url||p?.page_url)?.url || products.find(p=>p?.page_url)?.page_url || null;
-  const infoUrl = productUrl || firstEventUrl || 'https://www.alanranger.com/photographic-workshops-uk';
-
-  const rawChips = [
-    {label:'Book Now', href:productUrl, brand:true},
-    {label:'Prices',   href:productUrl, brand:true},
-    {label:'Upcoming dates', href:firstEventUrl || productUrl, brand:true},
-    {label:'Info', href:infoUrl, brand:false}
-  ].filter(c=>!!c.href);
-
-  const out=[], seen=new Set();
-  for(const c of rawChips){ if(!seen.has(c.href)){ out.push(c); seen.add(c.href);} }
+  // If base exists and not already equal to one of range ends, include as “Standard”
+  if(base!=null && !(Number(base)===Number(low)||Number(base)===Number(high))){
+    out.unshift({label:'Standard', price: currency(base, ccy)});
+  }
   return out;
 }
 
-/* Render a single merged product block */
-function renderProductBlock(structured){
-  const products = structured?.products||[];
-  if(!products.length) return null;
-
-  // Choose the richer row, then merge pricing/span info from the other.
-  let primary = products.find(p=>p.price!=null) || products[0];
-  const alt   = products.find(p=>p!==primary) || null;
-
-  // Pricing headline & per-option
-  const pMain = priceFromProduct(primary);
-  const pAlt  = alt ? priceFromProduct(alt) : {headline:'', low:null, high:null, single:null};
-  const headline = [money(primary.price)||'', pAlt.headline].filter(Boolean).join(' • ') || pMain.headline || pAlt.headline;
-
-  const title = primary.title || primary.raw?.name || 'Workshop Options';
-  const desc  = primary.description || primary.raw?.description || '';
-  const details = extractDetails(desc);
-  const options = extractOptionTimes(desc);
-  const perOpt  = extractPerOptionPrices(desc);
-
-  // Build DOM
-  const wrap = document.createElement('div');
-  wrap.className='answer';
-
-  const h = document.createElement('h3');
-  h.textContent = `${title} — ${headline}`.replace(/\s+—\s+$/, '');
-  wrap.appendChild(h);
-
-  // Short intro line (first kept line if helpful)
-  const intro = details.clean.find(s=>s.length>20) || '';
-  if(intro){
-    const p = document.createElement('p'); p.textContent = intro; wrap.appendChild(p);
-  }
-
-  // Key/Value rows
-  const kv = document.createElement('div'); kv.className='kv';
-  const addKV=(k,v)=>{ if(!v) return; const s=document.createElement('div'); s.innerHTML=`<strong>${k}</strong>`; kv.appendChild(s); const d=document.createElement('div'); d.textContent=v; kv.appendChild(d);};
-  addKV('Location:', details.location);
-  addKV('Participants:', details.participants);
-  addKV('Fitness:', details.fitness);
-  addKV('Availability:', details.availability);
-  if(kv.children.length) wrap.appendChild(kv);
-
-  // Option list with de-dup logic
-  if(options.length){
-    const ul=document.createElement('ul');
-    options.forEach(op=>{
-      const li=document.createElement('li');
-      // If we have per-option price (e.g., 4hrs £99 / 1 day £150), use that;
-      // otherwise, do NOT echo the headline price again.
-      const match = perOpt.find(x=>x.label.toLowerCase()===op.label.toLowerCase());
-      const priceTx = match ? ` — ${match.price}` : '';
-      li.innerHTML = `<strong>${op.label}</strong> — ${op.text.replace(/^.*?-\s*/,'')}${priceTx}`;
-      ul.appendChild(li);
-    });
-    wrap.appendChild(ul);
-  }
-
-  return wrap;
+/* Build chips from available links */
+function createChips(structured){
+  const events=structured?.events||[];
+  const products=structured?.products||[];
+  const firstEventUrl = events.find(e=>e?.page_url||e?.source_url)?.page_url || events.find(e=>e?.source_url)?.source_url || null;
+  const productUrl    = products.find(p=>p?.url||p?.page_url)?.url || products.find(p=>p?.page_url)?.page_url || null;
+  const chips = [];
+  if(productUrl) chips.push({label:'Book Now', href:productUrl, brand:true});
+  if(firstEventUrl) chips.push({label:'Upcoming dates', href:firstEventUrl, brand:false});
+  return chips;
 }
 
-/* Render upcoming events */
-function renderEvents(structured, fallbackHeading='Upcoming Workshops'){
+/* -------- Renderers -------- */
+function renderProductBlock(prod){
+  const meta = parseProductMeta(prod.description||'');
+  const avail = normalizeAvailability(prod?.availability || prod?.raw?.offers?.availability);
+  const priceLines = derivePriceLines(prod);
+
+  const lines = [];
+  if(meta.location)     lines.push(`<p><strong>Location:</strong> ${meta.location}</p>`);
+  if(prod.description){
+    const first = String(prod.description).split(/\r?\n/).map(s=>s.trim()).filter(Boolean)[0] || '';
+    if(first) lines.push(`<p>${first}</p>`);
+  }
+
+  const ul = [];
+  // show the best schedule bullets if we have them
+  if(meta.sessionLines && meta.sessionLines.length){
+    meta.sessionLines.forEach(s=>ul.push(`<li>${s.replace(/^OR\s*/,'').replace(/\s{2,}/g,' ')}</li>`));
+  }
+  // append price option lines
+  if(priceLines.length){
+    priceLines.forEach(pl=>ul.push(`<li><strong>${pl.label}:</strong> ${pl.price??''}</li>`));
+  }
+  // meta extras
+  if(meta.participants) ul.push(`<li><strong>Participants:</strong> ${meta.participants}</li>`);
+  if(meta.fitness)      ul.push(`<li><strong>Fitness:</strong> ${meta.fitness}</li>`);
+  if(avail)             ul.push(`<li><strong>Availability:</strong> ${avail}</li>`);
+
+  const ulHtml = ul.length? `<ul>${ul.join('')}</ul>` : '';
+
+  return `
+    <div class="answer">
+      <h3>${prod.title || 'Workshop Options'}</h3>
+      ${lines.join('')}
+      ${ulHtml}
+    </div>
+  `;
+}
+
+function renderEventsBlock(structured, heading='Upcoming Workshops'){
   const now=new Date();
   const future=(structured?.events||[])
     .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
     .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
     .slice(0,12);
 
-  if(!future.length) return null;
+  if(!future.length) return '';
+  const hTitle = structured?.topic ? `Upcoming ${structured.topic.toString().trim()} Workshops` : heading;
 
-  const container=document.createElement('div'); container.className='answer';
-  const heading = structured?.topic ? `Upcoming ${structured.topic.toString().trim()} Workshops` : fallbackHeading;
-  const h2=document.createElement('h3'); h2.textContent=heading; container.appendChild(h2);
-  const ul=document.createElement('ul');
-  future.forEach(e=>{
-    const li=document.createElement('li');
+  const li = future.map(e=>{
     const when=fmtDate(e.date_start);
     const href=e.page_url||e.source_url||'#';
-    const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent='Link';
-    li.innerHTML=`${when} — `; li.appendChild(a);
-    li.insertAdjacentText('beforeend',` — ${e.location||''}`);
-    ul.appendChild(li);
-  });
-  container.appendChild(ul);
-  return container;
+    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a> — ${e.location||''}</li>`;
+  }).join('');
+
+  return `
+    <div class="answer">
+      <h3>${hTitle}</h3>
+      <ul>${li}</ul>
+    </div>
+  `;
 }
 
-/* Graceful fallback when we have nothing useful */
-function renderFallback(){
-  const div=document.createElement('div'); div.className='answer';
-  div.innerHTML = `
-    <p>Sorry — I couldn’t find exact dates for that just now.</p>
-    <ul>
-      <li><a target="_blank" rel="noopener" href="https://www.alanranger.com/photographic-workshops-uk">Browse all workshops</a></li>
-      <li><a target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Ask Alan via the contact form</a> or <a target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a></li>
-    </ul>`;
-  return div;
-}
-
-/* ---------- Render end-to-end ---------- */
+/* ---------- Render answer end-to-end ---------- */
 function renderAnswer(payload){
-  let bubbleToChip = null;
+  // If we have structured data, we own the layout and suppress the raw markdown
+  const hasStructured = !!payload.structured && (payload.structured.products?.length || payload.structured.events?.length);
 
-  // 1) Primary markdown (if any)
-  const md=payload.answer_markdown||payload.answer||'';
-  if(md){ const {html}=mdToHtml(md); addBubble(html); }
+  if(!hasStructured){
+    // Render markdown (generic fallback)
+    const md = payload.answer_markdown || payload.answer || '';
+    if(md){ const {html}=mdToHtml(md); addBubble(html); }
+  }else{
+    const s = payload.structured;
 
-  // 2) Structured: Product (merged)
-  if(payload.structured){
-    const prodNode=renderProductBlock(payload.structured);
-    if(prodNode){ bubbleToChip = addBubble(prodNode.outerHTML); }
+    // Product: pick the “richer” record (prefer one with price or aggregate)
+    const products = s.products||[];
+    let prod = null;
+    prod = products.find(p=>p?.price!=null) || products.find(p=>p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null) || products[0];
 
-    // 3) Events
-    const evNode=renderEvents(payload.structured);
-    if(evNode){ bubbleToChip = addBubble(evNode.outerHTML); }
+    if(prod){
+      const top = `
+        <div class="answer">
+          <h3>${prod.title || 'Workshop'}</h3>
+          ${renderProductBlock(prod)}
+        </div>`;
+      const bubble = addBubble(top);
 
-    // 4) Chips
-    const chips=createChips(payload.structured);
-    if(chips.length && bubbleToChip){
-      const wrap=document.createElement('div'); wrap.className='chips';
-      chips.forEach(c=>{
-        const a=document.createElement('a'); a.href=c.href; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
-        if(c.brand) a.classList.add('brand');
-        wrap.appendChild(a);
-      });
-      bubbleToChip.appendChild(wrap);
+      // Smart chips (Book Now / Upcoming dates)
+      const chips=createChips(s);
+      if(chips.length){
+        const wrap=document.createElement('div'); wrap.className='chips';
+        chips.forEach(c=>{
+          const a=document.createElement('a');
+          a.href=c.href; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
+          if(c.brand) a.classList.add('brand');
+          wrap.appendChild(a);
+        });
+        bubble.appendChild(wrap);
+      }
     }
-  }
 
-  // 5) Fallback when nothing structured/markdown
-  if(!md && (!payload.structured || ((!payload.structured.events||!payload.structured.events.length) && (!payload.structured.products||!payload.structured.products.length)))){
-    addBubble(renderFallback().outerHTML);
+    // Events list
+    const evHtml = renderEventsBlock(s);
+    if(evHtml) addBubble(evHtml);
   }
 
   // Debug dump
@@ -442,10 +379,10 @@ async function sendQuery(query){
     dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
 
     closeTyping();
-    if (data && (data.answer_markdown || data.structured)) {
+    if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length)))) {
       renderAnswer(data);
     } else {
-      addBubble(renderFallback().outerHTML);
+      addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about workshops, tuition, kit, or locations — for example, <em>“When are the next Bluebell dates?”</em></p></div>`);
     }
   } catch (err){
     closeTyping();
@@ -467,7 +404,7 @@ input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
 
-// optional starter
+// Example starter (optional): comment out if you don’t want a prefilled query
 // sendQuery("give me the next workshop dates and prices");
 </script>
 </body>
