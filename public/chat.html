@@ -70,7 +70,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <body>
 <div class="wrap">
   <!-- Keeps the badge under the orange rule -->
-  <div class="badge-wrap"><span class="version">v0.9.15</span></div>
+  <div class="badge-wrap"><span class="version">v0.9.16</span></div>
 
   <div class="card">
     <div class="header">
@@ -174,7 +174,18 @@ function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
 
-/* ---------------- Product merging & parsing (generic) ---------------- */
+/* ---------------- Utilities ---------------- */
+function normaliseAvailability(val){
+  if(!val) return null;
+  const s = String(val).trim();
+  if (/out\s*of\s*stock/i.test(s)) return 'Out of Stock';
+  if (/in\s*stock/i.test(s)) return 'In Stock';
+  if (/schema\.org\/OutOfStock/i.test(s)) return 'Out of Stock';
+  if (/schema\.org\/InStock/i.test(s)) return 'In Stock';
+  return s;
+}
+
+/* ---------------- Product merging & parsing (robust) ---------------- */
 function mergeProducts(list){
   if(!Array.isArray(list) || !list.length) return [];
   const map = new Map();
@@ -182,45 +193,88 @@ function mergeProducts(list){
     const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
     if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
     const m = map.get(key);
-    // Precedence: keep existing, fill gaps from p
-    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
-    // Keep richer offers
+    for(const k of ['price','price_currency','availability','provider','description','title','url','page_url','source_url'])
+      if((m[k]==null || m[k]==='') && p[k]!=null) m[k]=p[k];
     const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
     const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
     if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = p.raw.offers; }
-    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
+    if(p?.raw?.offers?.price!=null && (!m?.raw?.offers?.price)){
+      m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency});
+    }
+    if(!m.availability){
+      m.availability = p.availability || p?.raw?.offers?.availability || null;
+    }
   }
   return [...map.values()];
 }
 
-function extractFacts(desc){
-  const txt = String(desc||'')
-    // strip the “Dates (are subject…)” paragraph and any dated lines
-    .split(/\r?\n/).filter(l=>{
-      if(/^dates\s*\(/i.test(l)) return false;
-      if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
-      if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
-      return true;
-    });
+/* Clean description, remove date-like lines and keep array of lines */
+function cleanDescToLines(desc){
+  const lines = String(desc||'').split(/\r?\n/);
+  const out = [];
+  for (let l of lines){
+    if(/^dates\s*\(/i.test(l)) continue; // drop entire "Dates (" paragraph header line
+    if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) continue;
+    if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) continue;
+    out.push(l);
+  }
+  return out;
+}
 
-  const grab = (label)=>{
-    const r = new RegExp(`^\\s*${label}\\s*:?\\s*(.+)$`,'i');
-    const m = txt.find(l=>r.test(l));
-    return m ? m.replace(r,'$1').trim() : null;
-  };
+/* Grab label value; if empty inline, look ahead to next non-empty line */
+function grabLabel(lines, label){
+  const labRe = new RegExp(`^\\s*${label}\\s*:?\\s*(.*)$`,'i');
+  const isOtherLabel = (s)=>/^\s*(Location|Participants|Fitness|Availability)\s*:?\s*$/i.test(s);
+  const isOptionHead = (s)=>/^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(s);
+  for (let i=0;i<lines.length;i++){
+    const m = lines[i].match(labRe);
+    if (m){
+      let v = (m[1]||'').trim();
+      if (v && v !== ':') return v.replace(/^\s*:\s*/,'').trim();
+      // look ahead
+      for (let j=i+1;j<lines.length;j++){
+        const next = (lines[j]||'').trim();
+        if (!next) continue; // skip blank
+        if (isOtherLabel(next) || isOptionHead(next)) break; // stop at next label/option
+        return next.replace(/^\s*:\s*/,'').trim();
+      }
+      return null;
+    }
+  }
+  return null;
+}
 
-  const location     = grab('Location');
-  const participants = grab('Participants');
-  const fitness      = grab('Fitness');
-  const availability = grab('Availability');
+function extractFacts(prod){
+  const lines = cleanDescToLines(prod?.description||'');
+  const location     = grabLabel(lines,'Location');
+  const participants = grabLabel(lines,'Participants');
+  const fitness      = grabLabel(lines,'Fitness');
+  let availability   = grabLabel(lines,'Availability');
 
-  // option/times lines
-  const optionLines = txt.filter(l =>
+  // Fallback from structured offer availability if not found in text
+  if(!availability){
+    availability = normaliseAvailability(prod?.availability || prod?.raw?.offers?.availability || null);
+  } else {
+    availability = normaliseAvailability(availability);
+  }
+
+  // option/times lines (keep only the first few relevant)
+  const optionLines = lines.filter(l =>
     /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
     /^\s*OR\s*1\s*day\b/i.test(l)
-  ).slice(0,4);
+  ).slice(0,6);
 
-  return {location, participants, fitness, availability, optionLines};
+  // meta snippet (remove label/option lines, then take first decent sentence)
+  const labelOrOption = (s)=>/^\s*(Location|Participants|Fitness|Availability)\s*:?/i.test(s) ||
+                          /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(s);
+  const narrative = lines.filter(l=>l && !labelOrOption(l)).join(' ').replace(/\s+/g,' ').trim();
+  let meta = '';
+  if(narrative){
+    const m = narrative.match(/^(.{40,220}?[\.\!\?])\s+/) || narrative.match(/^.{40,220}/);
+    meta = m ? m[0].trim() : narrative.slice(0,200);
+  }
+
+  return { location, participants, fitness, availability, optionLines, meta };
 }
 
 function currency(amount, ccy){
@@ -235,14 +289,12 @@ function deriveOptions(prod, facts){
   const low  = prod?.raw?.offers?.lowPrice;
   const high = prod?.raw?.offers?.highPrice;
 
-  // Decide labels from text if we can
   const text = (facts.optionLines||[]).join('\n').toLowerCase();
   const has4h  = /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
   const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
 
   const opts = [];
 
-  // Use AggregateOffer as range mapping when both labels exist
   if(low!=null && high!=null && has4h && has1d){
     opts.push({label:'4 hours', price:currency(low,ccy)});
     opts.push({label:'1 day',   price:currency(high,ccy)});
@@ -254,13 +306,11 @@ function deriveOptions(prod, facts){
     }
   }
 
-  // try to add time windows from option lines
   const timePat = /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
   for(const ln of facts.optionLines||[]){
     const label = ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
     const tm = ln.match(timePat);
     const window = tm ? `${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}` : null;
-    // only add if not already present with same label
     if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){
       opts.push({label, time:window});
     } else if(window){
@@ -289,24 +339,27 @@ function buildActionPills(structured, prod){
 
 /* ---------------- Renderers ---------------- */
 function renderProductCard(prod){
-  const facts = extractFacts(prod.description||'');
+  const facts = extractFacts(prod);
   const options = deriveOptions(prod, facts);
 
-  const infoP = [];
-  if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
-  if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
-  if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
-  if(facts.availability) infoP.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
+  const rows = [];
+  if(facts.location)     rows.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
+  if(facts.participants) rows.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
+  if(facts.fitness)      rows.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
+  if(facts.availability) rows.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
 
   const li = options.map(o=>{
     const bits = [o.label, o.time ? `— ${o.time}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
     return `<li>${bits}</li>`;
   }).join('');
 
+  const meta = facts.meta ? `<p>${facts.meta}</p>` : '';
+
   return `
     <div class="answer">
       <h3>${prod.title || 'Workshop'}</h3>
-      ${infoP.join('')}
+      ${meta}
+      ${rows.join('')}
       ${li? `<ul>${li}</ul>`:''}
     </div>
   `;
@@ -346,7 +399,6 @@ function renderAnswer(payload){
   };
 
   if(merged.length || (s.events||[]).length){
-    // pick richest product
     let prod = merged.find(p=>p?.price!=null) ||
                merged.find(p=>p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null) ||
                merged[0];
@@ -357,7 +409,6 @@ function renderAnswer(payload){
     const evHTML = renderEventsBlock(s);
     if(evHTML) addBubble(evHTML);
 
-    // single pill row at the end
     const pills = buildActionPills(s, prod);
     if(pills.length){
       const wrap = document.createElement('div');
@@ -371,7 +422,6 @@ function renderAnswer(payload){
       note.pills_rendered = pills.length;
     }
   } else {
-    // generic markdown fallback
     const md = payload.answer_markdown || payload.answer || '';
     if(md){ const {html}=mdToHtml(md); addBubble(html); }
   }
@@ -426,8 +476,8 @@ input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
 
-/* Optional: prefill a quick sanity query during dev
-   sendQuery("give me the next bluebell workshop dates and prices");
+/* Optional sanity query during dev
+// sendQuery("give me the next bluebell workshop dates and prices");
 */
 </script>
 </body>
