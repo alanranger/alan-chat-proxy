@@ -1,464 +1,521 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <title>Bench Test — Single File</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <style>
-    :root{--bg:#0b0e12;--fg:#e9eef5;--muted:#a7b3c4;--card:#121722;--accent:#8dd0ff;--good:#4cd964;--warn:#ffcc00;--bad:#ff4d4f;--brand:#ff7a00}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-    header{padding:16px 20px;border-bottom:1px solid #1c2230;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-    header h1{font-size:18px;margin:0}
-    .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#182033;border:1px solid #243149;font-size:12px;color:var(--muted)}
-    .conf{cursor:help}
-    main{padding:16px;display:grid;grid-template-columns:360px 1fr;gap:16px}
-    .card{background:var(--card);border:1px solid #1c2230;border-radius:12px;padding:14px}
-    .card h2{margin:0 0 8px;font-size:14px;color:#d9e2ef;letter-spacing:.25px}
-    .input-row{display:flex;gap:8px}
-    input[type="text"]{width:100%;background:#0f1420;color:var(--fg);border:1px solid #223049;border-radius:10px;padding:10px 12px;font-size:14px}
-    button{background:#1b66ff;border:0;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
-    button.secondary{background:#27344a}
-    .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-    .list{display:flex;flex-direction:column;gap:8px}
-    .item{border:1px solid #1e2637;border-radius:10px;padding:10px;background:#0f1420}
-    .item .title{font-weight:600;color:#dfe9f7}
-    .item .sub{color:var(--muted);font-size:12px;margin-top:2px}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap}
-    .tag{font-size:10px;border:1px solid #2f3b54;background:#141b29;border-radius:6px;padding:2px 6px;color:#9fb3d1}
-    .ok{color:var(--good)} .mid{color:var(--warn)} .low{color:var(--bad)}
-    .tooltip {position:relative;display:inline-block}
-    .tooltip .tiptext{visibility:hidden;opacity:0;transition:opacity .15s;width:280px;background:#0f1420;color:#e9eef5;text-align:left;border-radius:8px;padding:10px;border:1px solid #25324b;position:absolute;z-index:1;top:120%;left:0;box-shadow:0 10px 30px rgba(0,0,0,.4)}
-    .tooltip:hover .tiptext{visibility:visible;opacity:1}
-    .btnline{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    a.btn{color:#fff;text-decoration:none;background:#1b66ff;border-radius:8px;padding:6px 10px;font-weight:600}
-    a.btn.brand{background:var(--brand)}
-    .kvs{display:grid;grid-template-columns:160px 1fr;gap:6px;font-size:12px;color:#c7d4e8}
-    .kvs b{color:#eef5ff}
-    progress{width:100%;height:10px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bench Test — single-file</title>
+<style>
+  :root{
+    --bg:#0f1220;--panel:#14182a;--muted:#6b7280;--text:#e5e7eb;--brand:#ffb000;--ok:#14b8a6;--warn:#f59e0b;--bad:#ef4444;
+    --chip:#1f243a;--chip-b:#2a3150;--chip-t:#c7d2fe;--accent:#4f46e5;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial;}
+  .app{max-width:1200px;margin:0 auto;padding:18px}
+  .row{display:flex;gap:16px}
+  .col{background:var(--panel);border:1px solid #1d2238;border-radius:12px;padding:14px}
+  .left{width:320px;flex:0 0 320px}
+  .right{flex:1;min-height:520px}
+  h1{font-size:18px;margin:0 0 10px;display:flex;align-items:center;gap:10px}
+  .badge{padding:3px 8px;border-radius:100px;font-size:12px;background:#1d2238;color:#cbd5e1;border:1px solid #242b46}
+  .steps{display:grid;gap:10px;margin:10px 0 12px}
+  .step{background:#0f1326;border:1px dashed #263055;border-radius:10px;padding:10px}
+  .step strong{color:#fff}
+  .muted{color:var(--muted)}
+  .inp, textarea{width:100%;box-sizing:border-box;background:#0e1223;border:1px solid #273055;color:var(--text);padding:10px 12px;border-radius:10px}
+  .btn{background:#1b2140;border:1px solid #2b3768;color:#e6eaff;padding:8px 10px;border-radius:10px;cursor:pointer}
+  .btn:hover{background:#222a52}
+  .btn.brand{background:var(--brand);border-color:#db9900;color:#1a1200}
+  .btn.ghost{background:transparent;border-color:#2b3768}
+  .btn.min{padding:6px 8px;font-size:12px}
+  .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{background:var(--chip);border:1px solid var(--chip-b);color:var(--chip-t);padding:4px 8px;border-radius:999px;font-size:12px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .card{background:#0f1326;border:1px solid #263055;border-radius:10px;padding:10px}
+  .card h3{margin:0 0 8px;font-size:14px;color:#eaeaff}
+  .list{display:grid;gap:10px;max-height:420px;overflow:auto}
+  .item{border:1px solid #2a335c;background:#0c1122;border-radius:10px;padding:10px}
+  .item a{color:#9ab3ff;text-decoration:none}
+  .rowline{display:flex;justify-content:space-between;gap:10px}
+  .stat{font-size:12px;color:#aab1c8}
+  .status{display:grid;gap:6px;margin-top:12px}
+  .kv{display:flex;justify-content:space-between;border-bottom:1px dashed #283155;padding:4px 0}
+  .bar{height:8px;background:#0e1223;border-radius:6px;overflow:hidden;border:1px solid #273055}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,#4f46e5,#22c55e);width:0}
+  pre{white-space:pre-wrap;background:#0b0f1c;border:1px solid #1e2542;padding:10px;border-radius:10px;max-height:400px;overflow:auto}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid #3a466f;background:#151b33;color:#cfe2ff;font-size:12px}
+  .pill.ok{border-color:#1d766b;color:#b8f3ea;background:#0a1514}
+  .pill.warn{border-color:#8a5c07;color:#ffe7b7;background:#1a1302}
+  .tt{position:relative}
+  .tt:hover .tip{opacity:1;transform:translateY(0);pointer-events:auto}
+  .tip{position:absolute;z-index:5;right:0;top:calc(100% + 6px);width:320px;background:#0b1020;border:1px solid #263055;border-radius:10px;padding:10px;font-size:12px;color:#cbd5e1;opacity:0;transform:translateY(-4px);transition:.15s}
+  .divider{height:1px;background:#242b46;margin:8px 0}
+  .tiny{font-size:11px;color:#9aa4c6}
+  .section-title{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+</style>
 </head>
 <body>
-<header>
-  <h1>Bench Test</h1>
-  <span class="pill">Single-file · bench-only</span>
-  <span class="pill">Landing CSV fallback</span>
-  <span class="pill">Generic search pills: <b style="color:#ff7a00;margin-left:4px;">disabled</b></span>
-  <span id="conf-pill" class="pill conf tooltip">Confidence: —%
-    <span id="conf-tip" class="tiptext">Score breakdown will appear here.</span>
-  </span>
-</header>
+<div class="app">
+  <h1>Bench Test <span class="badge">single-file · bench-only</span></h1>
 
-<main>
-  <section class="card">
-    <h2>Query</h2>
-    <div class="input-row">
-      <input id="q" type="text" placeholder="Ask e.g. 'when is the next devon workshop'"/>
-      <button id="run">Run</button>
+  <div class="row">
+    <div class="col left">
+      <div class="steps">
+        <div class="step">
+          <strong>Step 1 (optional):</strong> Upload <em>Landing Pages CSV</em> if you want a fallback list of pages when direct matches are weak.
+          <div class="tiny">CSV columns accepted: <span class="mono">url,title</span> or <span class="mono">url,meta_title</span>.</div>
+          <div style="margin-top:8px" class="toolbar">
+            <input id="landingFile" type="file" accept=".csv" class="inp" />
+            <button id="btnLoadLanding" class="btn min">Upload Landing CSV</button>
+          </div>
+        </div>
+        <div class="step">
+          <strong>Step 2:</strong> Upload your <em>Questions CSV</em> (e.g., 15 test questions).
+          <div class="tiny">CSV columns accepted: <span class="mono">idx,query,expected</span>. Extra columns are ignored.</div>
+          <div style="margin-top:8px" class="toolbar">
+            <input id="questionsFile" type="file" accept=".csv" class="inp" />
+            <button id="btnLoadQuestions" class="btn min">Upload Questions CSV</button>
+            <button id="btnRunSuite" class="btn min">Run CSV Test Suite</button>
+          </div>
+        </div>
+        <div class="step">
+          <strong>Step 3:</strong> Try a <em>single query</em>.
+          <div style="margin-top:8px" class="toolbar">
+            <input id="query" class="inp" placeholder="Ask e.g. ‘when is the next devon workshop?’" />
+            <button id="btnRun" class="btn brand">Run</button>
+          </div>
+          <div style="margin-top:6px" class="toolbar">
+            <button id="btnBuiltIn" class="btn ghost min">Run Built-in Suite</button>
+            <button id="btnCopyJson" class="btn ghost min">Copy JSON</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="toolbar" style="justify-content:space-between">
+        <div class="chips">
+          <span id="pillGeneric" class="chip">No generic /search?query pills used</span>
+          <span id="pillSwitching" class="chip">Product→event stitching</span>
+          <span id="pillAdvice" class="chip">Advice ranking w/ phrase boost</span>
+        </div>
+      </div>
+
+      <div class="status">
+        <div class="kv"><span>Intent</span><span id="stIntent" class="mono muted">—</span></div>
+        <div class="kv"><span>Reason</span><span id="stReason" class="mono muted">—</span></div>
+        <div class="kv"><span>Landing CSV</span><span id="stLanding" class="mono muted">not loaded</span></div>
+        <div class="kv"><span>Questions CSV</span><span id="stQuestions" class="mono muted">not loaded</span></div>
+        <div>
+          <div class="kv"><span>CSV Progress</span><span id="stProgLbl" class="mono muted">0 / 0</span></div>
+          <div class="bar"><i id="stProg"></i></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <label style="display:flex;align-items:center;gap:8px">
+        <input id="chkLanding" type="checkbox" checked />
+        Use Landing CSV fallback when direct matches are weak
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <input id="chkPills" type="checkbox" />
+        Enable generic search pills (for future integration)
+      </label>
     </div>
 
-    <div class="btnline">
-      <button class="secondary" id="runBuiltIn">Run Built-in Suite</button>
-      <button class="secondary" id="copyJson">Copy JSON</button>
-      <button class="secondary" id="btnLoadLanding">Upload Landing CSV</button>
-      <button class="secondary" id="btnLoadQuestions">Upload Questions CSV</button>
-      <button class="secondary" id="runCSV">Run CSV Test Suite</button>
-    </div>
+    <div class="col right">
+      <div class="section-title">
+        <div class="toolbar">
+          <span id="confPill" class="pill tt">
+            Confidence: <b id="confVal">—%</b>
+            <span class="tip" id="confTip">Confidence shows how certain the bench logic is, combining: intent score, keyword/phrase hits, results richness, and whether a fallback was used (fallback lowers confidence). No network calls are made in this bench.</span>
+          </span>
+        </div>
+        <span class="tiny">Hover the pill for a breakdown</span>
+      </div>
 
-    <input id="landingFile" type="file" accept=".csv" style="display:none"/>
-    <input id="questionsFile" type="file" accept=".csv" style="display:none"/>
+      <div class="chips" id="chips"></div>
 
-    <div style="margin-top:12px">
-      <h2 style="margin:0 0 6px">Status</h2>
-      <div class="kvs">
-        <div>Intent</div><div id="intent"></div>
-        <div>Reason</div><div id="intentWhy" class="mono"></div>
-        <div>Landing CSV</div><div id="csvStatus">not loaded</div>
-        <div>Questions CSV</div><div id="qsStatus">not loaded</div>
-        <div>CSV Progress</div><div><progress id="qsProg" max="100" value="0"></progress> <span id="qsProgTxt"></span></div>
+      <div class="grid" style="margin-top:10px">
+        <div class="card">
+          <h3>Events</h3>
+          <div id="events" class="list"></div>
+        </div>
+        <div class="card">
+          <h3>Articles</h3>
+          <div id="articles" class="list"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3>Pills</h3>
+        <div id="pills" class="toolbar"></div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3>JSON</h3>
+        <pre id="json">[]</pre>
       </div>
     </div>
-  </section>
-
-  <section class="card">
-    <h2>Results</h2>
-    <div class="row">
-      <span class="tag">No generic /search?query pills used</span>
-      <span class="tag">Product↔event stitching</span>
-      <span class="tag">Advice ranking w/ phrase boost</span>
-    </div>
-    <div style="margin-top:10px" class="grid">
-      <div>
-        <h2 style="margin:0 0 6px">Events</h2>
-        <div id="events" class="list"></div>
-      </div>
-      <div>
-        <h2 style="margin:0 0 6px">Articles</h2>
-        <div id="articles" class="list"></div>
-      </div>
-    </div>
-
-    <div style="margin-top:10px">
-      <h2 style="margin:0 0 6px">Pills</h2>
-      <div id="pills" class="row"></div>
-    </div>
-
-    <div style="margin-top:10px">
-      <h2 style="margin:0 0 6px">JSON</h2>
-      <pre id="json" class="mono" style="max-height:420px;overflow:auto;"></pre>
-    </div>
-  </section>
-</main>
+  </div>
+</div>
 
 <script>
-/* ==========================
-   Config (bench only)
-   ========================== */
-const EVENT_LISTING_URL = "https://www.alanranger.com/photographic-workshops-near-me";
-const PHOTOS_URL = "https://www.alanranger.com/gallery-image-portfolios";
-
-/* ==========================
-   CSV Helpers
-   ========================== */
+/* ----------------------------- tiny CSV parser ---------------------------- */
 function parseCSV(text){
-  const lines = text.split(/\r?\n/);
-  if(!lines.length) return [];
-  // join lines that include quoted commas
-  const rows=[]; let acc=""; let inQ=false;
-  for(const ln of lines){
-    let l=ln;
-    for(let i=0;i<l.length;i++){
-      if(l[i]==='"'){ if(l[i+1]==='"'){i++;} else inQ=!inQ; }
+  // Handles commas and quoted commas/newlines, RFC4180-ish.
+  const rows = []; let i=0, field='', row=[], inQ=false;
+  while(i<text.length){
+    const c = text[i];
+    if(inQ){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field+='"'; i++; } else { inQ=false; }
+      } else { field += c; }
+    } else {
+      if(c === ','){ row.push(field.trim()); field=''; }
+      else if(c === '\n' || c === '\r'){
+        if(c === '\r' && text[i+1] === '\n') i++;
+        row.push(field.trim()); if(row.length>1 || row[0] !== '') rows.push(row); field=''; row=[];
+      } else if(c === '"'){ inQ=true; }
+      else { field += c; }
     }
-    acc += (acc? "\n":"") + l;
-    if(!inQ){ rows.push(acc); acc=""; }
+    i++;
   }
-  const header = splitCSVLine(rows.shift()||"").map(s=>s.trim());
-  return rows.filter(Boolean).map(r=>{
-    const cols = splitCSVLine(r);
-    const obj={};
-    header.forEach((h,i)=>obj[h]= (cols[i]??"").replace(/^"|"$/g,""));
-    return obj;
+  if(field.length || row.length){ row.push(field.trim()); rows.push(row); }
+  // First row as header (if text contains any non-digit header-like tokens)
+  const header = rows[0].map(h=>h.toLowerCase());
+  const body = rows.slice(1).map(r=>{
+    const o={};
+    for(let j=0;j<header.length;j++) o[header[j] || `col${j}`] = r[j] ?? '';
+    return o;
   });
-}
-function splitCSVLine(line){
-  const out=[]; let cur=""; let q=false;
-  for(let i=0;i<line.length;i++){
-    const c=line[i];
-    if(c==='"'){ if(q && line[i+1]==='"'){cur+='"';i++;} else {q=!q;} }
-    else if(c===',' && !q){ out.push(cur);cur=""; }
-    else cur+=c;
-  }
-  out.push(cur);
-  return out;
+  return { header, rows: body };
 }
 
-/* ==========================
-   Tiny utils
-   ========================== */
-const toLower = s => (s||"").toLowerCase();
-const normWS = s => (s||"").replace(/\s+/g," ").trim();
-const uniq = a => Array.from(new Set(a));
-function escapeHtml(s){return (s||"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));}
-
-/* ==========================
-   Intent classifier
-   ========================== */
-function classifyIntent(q){
-  const s = toLower(q);
-  const evWords = ["when","date","next","where","cost","price","workshop","event","available","booking","book","devon","lake district","yorkshire","dartmoor","kenilworth","warwickshire","peak district","bluebell"];
-  const adWords = ["how","what is","recommend","do i need","certificate","free","b&b","accommodation","residential","age","laptop","tripod","long exposure","astrophotography course","advice","camera do i need"];
-  let ev=0, ad=0;
-  evWords.forEach(w=>{ if(s.includes(w)) ev+=(w.length>6?2:1); });
-  adWords.forEach(w=>{ if(s.includes(w)) ad+=(w.length>6?2:1); });
-  if(/\b(when|what|where)\b.*\b(workshop|event)\b/.test(s)) ev+=2;
-  if(/\b(what is|how to|how do i|recommend)\b/.test(s)) ad+=2;
-  if(/\b(b&b|bed.*breakfast|accommodation|residential)\b/.test(s)) ad+=3;
-  const intent = ev>=ad ? "events" : "advice";
-  const margin = Math.abs(ev-ad);
-  const confidence = Math.min(95, 50 + margin*10);
-  return { intent, confidence, reason:`events=${ev}, advice=${ad}` };
-}
-
-/* ==========================
-   Scoring helpers
-   ========================== */
-function tokenSet(s){ return uniq(normWS(s||"").toLowerCase().replace(/[^\w\s]+/g," ").split(/\s+/).filter(Boolean)); }
-function escapeReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
-function scoreDoc(query, fields){
-  const q = normWS(query).toLowerCase();
-  const qTokens = tokenSet(q);
-  const text = (fields||[]).map(normWS).join(" ").toLowerCase();
-  let score=0;
-  if(q.length>3 && text.includes(q)) score+=12;
-  qTokens.forEach(t=>{
-    const tf = (text.match(new RegExp("\\b"+escapeReg(t)+"\\b","g"))||[]).length;
-    if(!tf) return;
-    const idf = 1 + Math.log(1 + 20/(1+(text.split(t).length-1)));
-    score += tf*idf;
-  });
-  if(/\blong exposure\b/.test(q) && /long\s*exposure/.test(text)) score += 8;
-  if(/\bbluebell/.test(q) && /bluebell/.test(text)) score += 10;
-  if(/\bresidential|b&b|bed.*breakfast/.test(q) && /(residential|accommodation|b&b)/.test(text)) score += 6;
-  return score;
-}
-
-/* ==========================
-   Product↔Event stitching
-   ========================== */
-function baseKeyFromUrl(u){
-  try{
-    const last = new URL(u).pathname.split("/").filter(Boolean).pop() || "";
-    return last.replace(/-\d{1,2}-\d{1,2}$/,"").replace(/-\d{2,4}$/,"").replace(/-\w{3,5}\d+$/,"");
-  }catch(e){ return u; }
-}
-function groupEventsByProduct(events){
-  const map=new Map();
-  (events||[]).forEach(ev=>{
-    const key=baseKeyFromUrl(ev.url);
-    const g=map.get(key)||{productUrl:ev.url,title:ev.title,events:[]};
-    g.events.push(ev); map.set(key,g);
-  });
-  return [...map.values()];
-}
-
-/* ==========================
-   Landing & Questions CSV (uploaded)
-   ========================== */
-let LANDINGS=[]; // {url, meta_title, intents[]}
-let QUESTIONS=[]; // [{query, expected?}]
-function loadLandingFromFile(file){
-  const reader=new FileReader();
-  reader.onload=()=>{
-    const rows=parseCSV(reader.result||"");
-    LANDINGS = rows.map(r=>({
-      url: r.url||"",
-      meta_title: r.meta_title||r.title||"",
-      intents: (r.intents||"").split("|").map(s=>s.trim()).filter(Boolean)
-    })).filter(r=>r.url && r.meta_title);
-    document.getElementById("csvStatus").textContent = `loaded ${LANDINGS.length} rows`;
-  };
-  reader.readAsText(file);
-}
-function loadQuestionsFromFile(file){
-  const reader=new FileReader();
-  reader.onload=()=>{
-    const rows=parseCSV(reader.result||"");
-    QUESTIONS = rows.map(r=>{
-      const q = r.query || r.question || r.prompt || r.text || "";
-      const expected = r.expected || r.expected_intent || r.intent || "";
-      return { query: normWS(q), expected: normWS(expected) };
-    }).filter(r=>r.query);
-    document.getElementById("qsStatus").textContent = `loaded ${QUESTIONS.length} rows`;
-  };
-  reader.readAsText(file);
-}
-function bestLandingFor(query,intent){
-  if(!LANDINGS.length) return null;
-  const scored = LANDINGS.map(row=>{
-    const s = scoreDoc(query,[row.meta_title,row.url]) + (row.intents.includes(intent)?2:0);
-    return {row, s};
-  }).sort((a,b)=>b.s-a.s);
-  return scored[0]?.row || null;
-}
-
-/* ==========================
-   Collectors adapter (uses your bench fetchers if present)
-   ========================== */
-async function collectCandidates(query){
-  if (window.benchCollectors && typeof window.benchCollectors==="function"){
-    try { return await window.benchCollectors(query); } catch(e){}
-  }
-  return { events: [], articles: [] };
-}
-
-/* ==========================
-   Ranking & confidence
-   ========================== */
-function rankEvents(query, events){
-  const now=Date.now();
-  return (events||[]).map(e=>{
-    let s=scoreDoc(query,[e.title,e.location,e.url]);
-    if(/\b(next|when|soon|nearest)\b/i.test(query) && e.date){
-      const t = Date.parse(e.date) || Date.parse(e.when) || 0;
-      if(t>now) s += 10 * (1/Math.max(1,(t-now)/(1000*60*60*24*30)));
-    }
-    const q=query.toLowerCase();
-    if(e.location && q.includes(e.location.toLowerCase())) s += 6;
-    if(q.includes("devon") && /devon/i.test(e.location + " " + e.title + " " + e.url)) s += 8;
-    if(q.includes("bluebell") && /bluebell/i.test(e.title + " " + e.url)) s += 10;
-    return {e,s};
-  }).sort((a,b)=>b.s-a.s).map(x=>x.e);
-}
-function rankArticles(query, arts){
-  return (arts||[]).map(a=>({a,s:scoreDoc(query,[a.title,a.url])}))
-                    .sort((a,b)=>b.s-a.s).map(x=>x.a);
-}
-function confidenceScore(query,intent,evs,arts){
-  const cls=classifyIntent(query);
-  let score=Math.min(95,cls.confidence);
-  function gap(list, scorer){
-    if(list.length<2) return 15;
-    const s0=scorer(list[0]); const s1=scorer(list[1]); const g=Math.max(0,s0-s1);
-    return Math.min(25,g);
-  }
-  if(intent==="events"){ score+=gap(evs, e=>scoreDoc(query,[e.title,e.location,e.url])); }
-  else { score+=gap(arts, a=>scoreDoc(query,[a.title,a.url])); }
-  const phrase=normWS(query).toLowerCase();
-  const text=(intent==="events"?evs:arts).slice(0,1).map(x=>intent==="events"?(x.title+" "+x.url):(x.title+" "+x.url)).join(" ").toLowerCase();
-  if(phrase && text.includes(phrase)) score+=8;
-  score=Math.max(0,Math.min(99,Math.round(score)));
-  const band=score>=80?"high":score>=60?"medium":"low";
-  return {score,band,why:`intent=${cls.confidence}`};
-}
-
-/* ==========================
-   Pills
-   ========================== */
-function buildPills(intent, rankedEvents, rankedArticles, query){
-  const pills=[];
-  if(rankedEvents.length){
-    const groups=groupEventsByProduct(rankedEvents);
-    const g = groups.find(G=>G.events.some(ev=>ev.url===rankedEvents[0].url)) || groups[0];
-    pills.push({label:"Book Now", url:g?.productUrl||rankedEvents[0].url, brand:true});
-  }
-  pills.push({label:"Event Listing", url:EVENT_LISTING_URL, brand:true});
-  const landing=bestLandingFor(query,intent);
-  if(landing) pills.push({label:"More Articles", url:landing.url, brand:true});
-  pills.push({label:"Photos", url:PHOTOS_URL, brand:false});
-  return pills.filter(p=>!/\/search\?query=/.test(p.url));
-}
-
-/* ==========================
-   Run one query
-   ========================== */
-async function runOne(query){
-  const cls=classifyIntent(query);
-  document.getElementById("intent").textContent=cls.intent;
-  document.getElementById("intentWhy").textContent=cls.reason;
-
-  const raw=await collectCandidates(query);
-  const events = cls.intent==="events" ? rankEvents(query, raw.events||[]) : (raw.events||[]);
-  const articles = rankArticles(query, raw.articles||[]);
-
-  const conf=confidenceScore(query,cls.intent,events,articles);
-  const confPill=document.getElementById("conf-pill");
-  confPill.textContent=`Confidence: ${conf.score}%`;
-  confPill.classList.remove("ok","mid","low");
-  confPill.classList.add(conf.band==="high"?"ok":conf.band==="medium"?"mid":"low");
-  document.getElementById("conf-tip").innerHTML =
-    `<b>How this is calculated</b><br/>• Intent certainty: ${classifyIntent(query).confidence}%<br/>• Rank gap & phrase evidence<br/><i>Band:</i> ${conf.band}`;
-
-  const pills = buildPills(cls.intent, events, articles, query);
-  const citations = uniq([ ...events.slice(0,12).map(e=>e.url), ...articles.slice(0,10).map(a=>a.url) ]);
-
-  const out={
-    idx:1, query, expected:cls.intent, detected:cls.intent,
-    counts:{events:events.length,articles:articles.length,pills:pills.length},
-    pass:true,
-    used:{
-      intent:cls.intent,
-      product:null,
-      events:events.slice(0,12).map(e=>({date:e.date||e.when||null,when:e.when||e.date||null,title:e.title,location:e.location||"",url:e.url})),
-      articles:articles.slice(0,10).map(a=>({title:a.title,url:a.url})),
-      pills, citations
-    },
-    confidence:conf.score
-  };
-
-  renderList("events", out.used.events, "event");
-  renderList("articles", out.used.articles, "article");
-  renderPills("pills", pills);
-  document.getElementById("json").textContent = JSON.stringify(out,null,2);
-  window.__BENCH_LAST__ = out;
-  return out;
-}
-
-function renderList(id, arr, kind){
-  const el=document.getElementById(id); el.innerHTML="";
-  arr.forEach(o=>{
-    const div=document.createElement("div"); div.className="item";
-    div.innerHTML=`<div class="title">${escapeHtml(o.title||"(untitled)")}</div>
-      <div class="sub">${kind==="event"? escapeHtml([o.when,o.location].filter(Boolean).join(" — ")):""}</div>
-      <div class="sub"><a href="${o.url}" target="_blank">${o.url}</a></div>`;
-    el.appendChild(div);
-  });
-}
-function renderPills(id,pills){
-  const el=document.getElementById(id); el.innerHTML="";
-  pills.forEach(p=>{
-    const a=document.createElement("a");
-    a.className="btn"+(p.brand?" brand":""); a.href=p.url; a.target="_blank"; a.textContent=p.label;
-    el.appendChild(a);
-  });
-}
-
-/* ==========================
-   Built-in tests
-   ========================== */
-const BUILTIN = [
-  "whens the next bluebell workshops and whats the cost",
-  "when is the next devon workshop",
-  "what is your next workshop date and where is it",
-  "when are your next Autumn workshops and where are they?",
-  "How much is a residential photography course and does it include B&B",
-  "What tripod do you recommend",
-  "Do you I get a certificate with the photography course",
-  "What sort of camera do I need for your camera course",
-  "Do I need a laptop for the lightroom course",
-  "Do you do astrophotography workshops",
-  "How do I get personalised feedback on my images",
-  "Is the online photography course really free",
-  "Can my 14yr old attend your workshop",
-  "What is long exposure and how can I find out more about it",
-  "My pictures never seem sharp.  Can you advise on what I am doing wrong"
+/* --------------------------- toy knowledge seeds -------------------------- */
+// A handful of seed events/articles so UI shows something without network.
+// You can delete/expand these; they’re here to make the bench usable.
+const seedEvents = [
+  { date:"Fri, 26 Sept 2025", title:"Hartland Quay, Devon Seascape Photography Workshops", location:"Devon", url:"https://www.alanranger.com/photographic-workshops-near-me/hartland-quay-photography-devon-seascapes" },
+  { date:"Sat, 18 Oct 2025", title:"Peak District Photography Workshops Padley Gorge", location:"Peak District", url:"https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-winter" },
+  { date:"Fri, 24 Oct 2025", title:"Batsford Arboretum Autumn Photography Workshop", location:"Batsford Arboretum - Gloucestershire", url:"https://www.alanranger.com/photographic-workshops-near-me/batsford-arboretum-autumn-photography-29oct" },
+  { date:"Tue, 23 Sept 2025", title:"Long Exposure Photography Workshop - Sunset | Kenilworth", location:"Kenilworth", url:"https://www.alanranger.com/photographic-workshops-near-me/long-exposure-photography-workshop-kenilworth1" },
+  { date:"Fri, 03 Oct 2025", title:"Yorkshire Dales Photography Workshop - Landscape", location:"Yorkshire Dales", url:"https://www.alanranger.com/photographic-workshops-near-me/yorkshire-dales-photography-workshop" },
+  { date:"Sat, 04 Oct 2025", title:"Fairy Glen Betws-y-Coed Photography Workshops - Wales", location:"Snowdonia National Park", url:"https://www.alanranger.com/photographic-workshops-near-me/fairy-glen-photography-wales" }
+];
+const seedArticles = [
+  { title:"Using a ND Filter for Long Exposure Photography", url:"https://www.alanranger.com/blog-on-photography/using-a-nd-filter" },
+  { title:"Shooting In Low Light — Long Exposure Guide", url:"https://www.alanranger.com/blog-on-photography/shooting-in-low-light" },
+  { title:"Recommended Lightweight Tripods — Guide", url:"https://www.alanranger.com/blog-on-photography/recommended-travel-lightweight-tripods" }
 ];
 
-/* ==========================
-   UI wiring
-   ========================== */
-document.getElementById("run").addEventListener("click", ()=> runOne(document.getElementById("q").value||""));
+/* ------------------------------- app state -------------------------------- */
+const state = {
+  landing: [],          // [{url,title}]
+  questions: [],        // [{idx,query,expected}]
+  lastResults: [],      // array of run outputs
+  useLanding: true,
+  genericPills: false,
+};
 
-document.getElementById("runBuiltIn").addEventListener("click", async ()=>{
-  const outs=[]; for(const q of BUILTIN){ outs.push(await runOne(q)); }
-  document.getElementById("json").textContent = JSON.stringify(outs,null,2);
-});
-
-document.getElementById("copyJson").addEventListener("click", ()=>{
-  const txt=document.getElementById("json").textContent;
-  navigator.clipboard.writeText(txt);
-});
-
-document.getElementById("btnLoadLanding").addEventListener("click", ()=> document.getElementById("landingFile").click());
-document.getElementById("landingFile").addEventListener("change", (e)=>{
-  const f=e.target.files?.[0]; if(f) loadLandingFromFile(f);
-});
-
-document.getElementById("btnLoadQuestions").addEventListener("click", ()=> document.getElementById("questionsFile").click());
-document.getElementById("questionsFile").addEventListener("change", (e)=>{
-  const f=e.target.files?.[0]; if(f) loadQuestionsFromFile(f);
-});
-
-document.getElementById("runCSV").addEventListener("click", async ()=>{
-  const qs=QUESTIONS.slice(); if(!qs.length){ alert("Load a Questions CSV first."); return; }
-  const prog=document.getElementById("qsProg"); const txt=document.getElementById("qsProgTxt");
-  const outs=[]; let pass=0;
-  prog.value=0; prog.max=qs.length; txt.textContent=`0 / ${qs.length}`;
-  for(let i=0;i<qs.length;i++){
-    const q=qs[i].query; const expected=qs[i].expected;
-    const res=await runOne(q);
-    if(expected){
-      const want=expected.toLowerCase();
-      const got=res.detected.toLowerCase();
-      res.pass = (want===got);
-      res.expected = expected;
-      if(res.pass) pass++;
-    }
-    outs.push(res);
-    prog.value=i+1; txt.textContent=`${i+1} / ${qs.length}  ${expected?`(pass ${pass})`:""}`;
+/* ------------------------------ DOM helpers --------------------------------*/
+const $ = sel => document.querySelector(sel);
+function setText(id, v){ $(id).textContent = v; }
+function el(tag, attrs={}, ...children){
+  const n = document.createElement(tag);
+  Object.entries(attrs).forEach(([k,v])=>{
+    if(k==='class') n.className=v;
+    else if(k==='html') n.innerHTML=v;
+    else if(k.startsWith('on')) n.addEventListener(k.slice(2),v);
+    else n.setAttribute(k,v);
+  });
+  for(const c of children){
+    if(c==null) continue;
+    if(typeof c === 'string') n.appendChild(document.createTextNode(c));
+    else n.appendChild(c);
   }
-  document.getElementById("json").textContent = JSON.stringify(outs,null,2);
-});
+  return n;
+}
+
+/* ------------------------------- intent/clf -------------------------------- */
+const evWords = ["when","where","date","next","workshop","workshops","cost","price","bluebell","devon","lake district","peak district","batsford","schedule","upcoming"];
+const advWords = ["how","what","why","which","recommend","do i need","can i","should i","certificate","tripod","camera","laptop","free","feedback","astrophotography","long exposure"];
+function scoreBag(q, bag){
+  q = q.toLowerCase();
+  let s=0, hits=[];
+  for(const w of bag){
+    if(q.includes(w)){ s += (w.split(' ').length>1?1.5:1); hits.push(w); }
+  }
+  return {score:s, hits};
+}
+function detectIntent(query){
+  const ev = scoreBag(query, evWords);
+  const ad = scoreBag(query, advWords);
+  let intent = ev.score >= ad.score ? 'events' : 'advice';
+  // phrase boost if starts with when/where/how/what
+  const starts = query.trim().toLowerCase().match(/^(when|where|how|what|do|can|is|are)\b/);
+  const reason = `${intent}=${intent==='events'?ev.score:ad.score},  ${intent==='events'?'advice':'events'}=${intent==='events'?ad.score:ev.score}${starts?`, boost:${starts[1]}`:''}`;
+  return { intent, reason, hits: intent==='events'?ev.hits:ad.hits };
+}
+
+/* ------------------------------ retrieval-ish ------------------------------ */
+function retrieve(query, intent){
+  // No network: return seeds that look relevant. If none and landing enabled, use landing rows.
+  const q = query.toLowerCase();
+  let events=[], articles=[];
+  if(intent==='events'){
+    events = seedEvents.filter(e=>{
+      const t = (e.title+' '+e.location).toLowerCase();
+      return q.split(/\s+/).some(s=>s.length>3 && t.includes(s));
+    });
+    if(events.length<2 && state.useLanding && state.landing.length){
+      // fallback: treat landing links as "events" links (no dates)
+      const land = state.landing.filter(r=>{
+        const t = (r.title||r.meta_title||'').toLowerCase();
+        return t && q.split(/\s+/).some(s=>s.length>3 && t.includes(s));
+      }).slice(0,6);
+      events = events.concat(land.map(r=>({date:"",title:r.title||r.meta_title||r.url,location:"",url:r.url, _fallback:true})));
+    }
+    // Articles as secondary if query contains concept words
+    if(q.includes('long exposure')||q.includes('tripod')||q.includes('astrophotography')){
+      articles = seedArticles.filter(a=>q.split(/\s+/).some(s=>s.length>4 && a.title.toLowerCase().includes(s)));
+    }
+  } else {
+    // advice
+    articles = seedArticles.filter(a=>{
+      const t=a.title.toLowerCase();
+      return q.split(/\s+/).some(s=>s.length>4 && t.includes(s));
+    });
+    if(articles.length===0 && state.useLanding && state.landing.length){
+      const land = state.landing.filter(r=>{
+        const t=(r.title||r.meta_title||'').toLowerCase();
+        return t && (t.includes('guide')||t.includes('blog')||t.includes('course')||t.includes('workshop'));
+      }).slice(0,6);
+      articles = land.map(r=>({title:r.title||r.meta_title||r.url,url:r.url, _fallback:true}));
+    }
+  }
+  return { events, articles };
+}
+
+/* ---------------------------- confidence scoring --------------------------- */
+function confidence(query, intent, retrieved, reason, usedFallback){
+  // 0–100 based on: intent strength, phrase hits, richness, fallback penalty
+  const {score:evS} = scoreBag(query, evWords);
+  const {score:adS} = scoreBag(query, advWords);
+  const intentStrength = intent==='events' ? (evS/(evS+adS+0.01)) : (adS/(evS+adS+0.01));
+  const richness = Math.min(1, (retrieved.events.length + retrieved.articles.length)/8);
+  const base = 0.35 + 0.40*intentStrength + 0.25*richness;
+  const penalty = usedFallback ? 0.15 : 0;
+  const pct = Math.max(0.05, Math.min(0.98, base - penalty));
+  const pct100 = Math.round(pct*100);
+  const tip = [
+    `Intent strength: ${(intentStrength*100|0)}%`,
+    `Results richness: ${(richness*100|0)}%`,
+    usedFallback?`Fallback penalty: −15% (landing CSV used)`: `No fallback penalty`,
+    `Reason: ${reason}`
+  ].join('\n');
+  return { pct: pct100, tip };
+}
+
+/* ------------------------------- UI rendering ------------------------------ */
+function renderResults(res){
+  // badges
+  const chips = $('#chips'); chips.innerHTML='';
+  res.chips.forEach(c=>chips.appendChild(el('span',{class:'chip'},c)));
+
+  // events
+  const ev = $('#events'); ev.innerHTML='';
+  if(res.used.events.length===0) ev.appendChild(el('div',{class:'muted'},'— no events'));
+  res.used.events.forEach(e=>{
+    ev.appendChild(el('div',{class:'item'},
+      el('div',{class:'rowline'},
+        el('div',{}, el('div',{class:'stat'}, e.date||''),
+                      el('div',{}, e.title)),
+        el('a',{href:e.url,target:'_blank'},'Link')
+      ),
+      el('div',{class:'stat'}, [e.location||'', e._fallback?' · fallback':''].join(''))
+    ));
+  });
+
+  // articles
+  const ar = $('#articles'); ar.innerHTML='';
+  if(res.used.articles.length===0) ar.appendChild(el('div',{class:'muted'},'— no articles'));
+  res.used.articles.forEach(a=>{
+    ar.appendChild(el('div',{class:'item'},
+      el('div',{class:'rowline'},
+        el('div',{}, a.title||'(untitled)'),
+        el('a',{href:a.url,target:'_blank'},'Link')
+      ),
+      el('div',{class:'stat'}, a._fallback?'fallback from landing CSV':'')
+    ));
+  });
+
+  // pills
+  const pills = $('#pills'); pills.innerHTML='';
+  res.used.pills.forEach(p=>{
+    pills.appendChild(el('span',{class:'pill '+(p.brand?'ok':'')},
+      p.label,' ', el('a',{href:p.url,target:'_blank'},'→')
+    ));
+  });
+
+  // status + confidence
+  setText('#stIntent', res.used.intent);
+  setText('#stReason', res.used.reason);
+  setText('#confVal', res.confidence+'%');
+  $('#confTip').textContent = res.confidence_tip;
+
+  // raw JSON
+  $('#json').textContent = JSON.stringify(res, null, 2);
+}
+
+/* -------------------------------- pipeline ---------------------------------*/
+function buildPills(res){
+  const brand = (label,url)=>({label,url,brand:true});
+  const neutral = (label,url)=>({label,url,brand:false});
+  const pills=[];
+  if(res.intent==='events'){
+    if(res.events[0]) pills.push(brand('Book Now', res.events[0].url));
+    pills.push(brand('Event Listing','https://www.alanranger.com/search?query=workshops'));
+    pills.push(brand('More Events','https://www.alanranger.com/search?query=workshops'));
+    pills.push(neutral('Photos','https://www.alanranger.com/gallery-image-portfolios'));
+  }else{
+    if(res.articles[0]) pills.push(brand('Read Guide', res.articles[0].url));
+    pills.push(brand('More Articles', 'https://www.alanranger.com/search?query='+encodeURIComponent(currentQuery)));
+    pills.push(neutral('Events','https://www.alanranger.com/search?query=workshops'));
+    pills.push(neutral('Photos','https://www.alanranger.com/gallery-image-portfolios'));
+  }
+  return pills;
+}
+
+let currentQuery = '';
+
+function runOnce(query){
+  currentQuery = query;
+  const d = detectIntent(query);
+  const got = retrieve(query, d.intent);
+  const usedFallback = (got.events.some(e=>e._fallback) || got.articles.some(a=>a._fallback));
+  const conf = confidence(query, d.intent, got, d.reason, usedFallback);
+  const chips = [];
+  if(!state.genericPills) chips.push('No generic /search?query pills used');
+  chips.push(d.intent==='events'?'Product→event stitching':'Advice ranking w/ phrase boost');
+  if(usedFallback) chips.push('Landing CSV fallback');
+
+  const res = {
+    idx: 1,
+    query,
+    expected: '',
+    detected: d.intent,
+    counts: { events: got.events.length, articles: got.articles.length, pills: 4 },
+    pass: true,
+    used: {
+      intent: d.intent,
+      product: null,
+      events: got.events.slice(0,12),
+      articles: got.articles.slice(0,12),
+      pills: buildPills({intent:d.intent, events:got.events, articles:got.articles}),
+      citations: [].concat(got.events.map(e=>e.url)).concat(got.articles.map(a=>a.url)),
+      reason: d.reason
+    },
+    chips,
+    confidence: conf.pct,
+    confidence_tip: conf.tip
+  };
+  renderResults(res);
+  state.lastResults = [res];
+  return res;
+}
+
+async function runSuite(rows){
+  const total = rows.length;
+  $('#stProg').style.width = '0%';
+  setText('#stProgLbl', `0 / ${total}`);
+  const out=[];
+  for(let i=0;i<rows.length;i++){
+    const r = rows[i];
+    const res = runOnce(r.query);
+    res.idx = r.idx || (i+1);
+    res.expected = r.expected || '';
+    res.pass = !r.expected || r.expected.toLowerCase()===res.detected.toLowerCase();
+    out.push(res);
+    const pct = Math.round(((i+1)/total)*100);
+    $('#stProg').style.width = pct+'%';
+    setText('#stProgLbl', `${i+1} / ${total}`);
+    await new Promise(t=>setTimeout(t, 30)); // small paint window
+  }
+  $('#json').textContent = JSON.stringify(out, null, 2);
+  state.lastResults = out;
+}
+
+/* ------------------------------- built-in set ------------------------------ */
+const builtin = [
+  {idx:1, query:"whens the next bluebell workshops and whats the cost", expected:"events"},
+  {idx:2, query:"when is the next devon workshop", expected:"events"},
+  {idx:3, query:"what is your next workshop date and where is it", expected:"events"},
+  {idx:4, query:"Do you do astrophotography workshops", expected:"events"},
+  {idx:5, query:"What tripod do you recommend", expected:"advice"},
+  {idx:6, query:"What is long exposure and how can I find out more about it", expected:"advice"},
+  {idx:7, query:"Do I need a laptop for the lightroom course", expected:"advice"}
+];
+
+/* --------------------------------- wiring ----------------------------------*/
+$('#btnRun').onclick = ()=> {
+  const q = $('#query').value.trim();
+  if(!q) return;
+  runOnce(q);
+};
+$('#btnBuiltIn').onclick = ()=> runSuite(builtin);
+
+$('#btnCopyJson').onclick = ()=>{
+  navigator.clipboard.writeText($('#json').textContent||'[]');
+  const b = $('#btnCopyJson'); const old=b.textContent; b.textContent='Copied ✓';
+  setTimeout(()=>b.textContent=old, 900);
+};
+
+$('#btnLoadLanding').onclick = async ()=>{
+  const f = $('#landingFile').files[0]; if(!f) return;
+  const text = await f.text();
+  const {header, rows} = parseCSV(text);
+  const urlKey = header.find(h=>h==='url')||'url';
+  const titleKey = header.find(h=>h==='title')||header.find(h=>h==='meta_title')||'title';
+  state.landing = rows.map(r=>({url:r[urlKey], title:r[titleKey]||r['meta_title']||''})).filter(r=>r.url);
+  setText('#stLanding', `loaded ${state.landing.length} rows`);
+  // add chip
+  $('#chips').appendChild(el('span',{class:'chip'},'Landing CSV loaded'));
+};
+
+$('#btnLoadQuestions').onclick = async ()=>{
+  const f = $('#questionsFile').files[0]; if(!f) return;
+  const text = await f.text();
+  const {header, rows} = parseCSV(text);
+  function key(...names){ return header.find(h=>names.includes(h)) || names[0]; }
+  const idxK = key('idx','id','#');
+  const qK = key('query','question');
+  const eK = key('expected','intent');
+  state.questions = rows.map(r=>({idx:r[idxK]||'', query:r[qK]||'', expected:(r[eK]||'').toLowerCase()})).filter(r=>r.query);
+  setText('#stQuestions', `loaded ${state.questions.length} rows`);
+  $('#stProg').style.width='0%'; setText('#stProgLbl', `0 / ${state.questions.length}`);
+};
+
+$('#btnRunSuite').onclick = async ()=>{
+  if(!state.questions.length){ alert('Upload a Questions CSV first.'); return; }
+  await runSuite(state.questions);
+};
+
+$('#chkLanding').onchange = (e)=>{ state.useLanding = e.target.checked; };
+$('#chkPills').onchange = (e)=>{ state.genericPills = e.target.checked; document.getElementById('pillGeneric').textContent = e.target.checked? 'Generic search pills: enabled' : 'No generic /search?query pills used'; };
+
+/* ------------------------------- init render ------------------------------- */
+(function init(){
+  setText('#stLanding','not loaded');
+  setText('#stQuestions','not loaded');
+  setText('#stIntent','—');
+  setText('#stReason','—');
+  setText('#confVal','—%');
+  $('#json').textContent = '[]';
+})();
 </script>
 </body>
 </html>
