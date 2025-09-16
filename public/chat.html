@@ -17,8 +17,7 @@
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
 .wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.badge-wrap{position:relative;height:0}
-.version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.version{position:absolute;top:-8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
 .card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
@@ -39,9 +38,10 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
 
-/* Global pill row at end */
-.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-.actions .pill{background:var(--brand);color:#0b0f16;border:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none;font-weight:600}
+.chips a.brand{background:var(--brand);color:#0b0f16;border-color:transparent}
+.chips a:hover{opacity:.9}
 
 /* Composer */
 .composer{display:flex;gap:10px;margin-top:14px;padding:12px;background:var(--panel);border-radius:12px}
@@ -69,9 +69,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <!-- Keeps the badge under the orange rule -->
-  <div class="badge-wrap"><span class="version">v0.9.15</span></div>
-
+  <span class="version">v0.9.17</span>
   <div class="card">
     <div class="header">
       <img class="logo" src="./chat%20white.png" alt="AR logo">
@@ -98,7 +96,6 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
         <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
         <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
         <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
-        <div class="kv"><label>Note</label><pre id="dbg-note" class="json">–</pre></div>
       </details>
 
       <div class="composer">
@@ -125,7 +122,6 @@ const dbgHeaders= document.getElementById('dbg-headers');
 const dbgStruct = document.getElementById('dbg-struct');
 const dbgProv   = document.getElementById('dbg-prov');
 const dbgCopy   = document.getElementById('dbg-copy');
-const dbgNote   = document.getElementById('dbg-note');
 
 function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
 
@@ -137,7 +133,6 @@ dbgCopy?.addEventListener('click', ()=>{
     'Response:\n'+dbgRes.textContent,
     'Structured:\n'+dbgStruct.textContent,
     'Provenance:\n'+dbgProv.textContent,
-    'Note:\n'+dbgNote.textContent
   ].join('\n\n');
   navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
 });
@@ -155,6 +150,7 @@ function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
   return ()=> el && el.remove();
 }
+
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -164,155 +160,146 @@ function mdToHtml(md){
   const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
   for (const line of lines){
     const m = line.match(/^\s*-\s+(.*)$/);
-    if (m){ if(!inList){ out+='<ul>'; inList=true; } out += `<li>${m[1].trim()}</li>`; }
-    else { flush(); out += line.trim()? `<p>${line}</p>` : ''; }
+    if (m){
+      if(!inList){ out+='<ul>'; inList=true; }
+      out += `<li>${m[1].trim()}</li>`;
+    } else {
+      flush();
+      out += line.trim()? `<p>${line}</p>` : '';
+    }
   }
   flush();
   return { html:`<div class="answer">${out}</div>` };
 }
+
 function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
 
-/* ---------------- Product merging & parsing (generic) ---------------- */
-function mergeProducts(list){
-  if(!Array.isArray(list) || !list.length) return [];
-  const map = new Map();
-  for(const p of list){
-    const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
-    if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
-    const m = map.get(key);
-    // Precedence: keep existing, fill gaps from p
-    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
-    // Keep richer offers
-    const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
-    const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
-    if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = p.raw.offers; }
-    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
-  }
-  return [...map.values()];
+/* --------- Generic extractors ---------- */
+function normalizeAvailability(av){
+  if(!av) return null;
+  const s = String(av).toLowerCase();
+  if (s.includes('instock')) return 'In Stock';
+  if (s.includes('outofstock')) return 'Out of Stock';
+  return av;
 }
 
 function extractFacts(desc){
-  const txt = String(desc||'')
-    // strip the “Dates (are subject…)” paragraph and any dated lines
-    .split(/\r?\n/).filter(l=>{
-      if(/^dates\s*\(/i.test(l)) return false;
-      if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
-      if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
-      return true;
-    });
+  const rawLines = String(desc||'').split(/\r?\n/);
 
-  const grab = (label)=>{
-    const r = new RegExp(`^\\s*${label}\\s*:?\\s*(.+)$`,'i');
-    const m = txt.find(l=>r.test(l));
-    return m ? m.replace(r,'$1').trim() : null;
-  };
+  // Strip dates & the “Dates (are subject…)” paragraph
+  const lines = [];
+  let skipDatesPara = false;
+  for (const ln of rawLines){
+    const t = (ln||'').trim();
+    if (!t) { if (skipDatesPara) { skipDatesPara = false; } continue; }
+    if (/^dates\s*\(/i.test(t)) { skipDatesPara = true; continue; }
+    if (skipDatesPara) continue;
+    if (/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(t)) continue;
+    if (/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(t)) continue;
+    lines.push(t);
+  }
 
-  const location     = grab('Location');
-  const participants = grab('Participants');
-  const fitness      = grab('Fitness');
-  const availability = grab('Availability');
+  function pick(label){
+    const r = new RegExp(`^\\s*${label}\\s*:?(?:\\s+(.*))?$`,'i');
+    for (let i=0;i<lines.length;i++){
+      const m = lines[i].match(r);
+      if (m){
+        if (m[1] && m[1].trim()) return m[1].trim();
+        // value on next line
+        for (let j=i+1;j<lines.length;j++){
+          const v = lines[j].trim();
+          if (v) return v;
+        }
+      }
+    }
+    return null;
+  }
 
-  // option/times lines
-  const optionLines = txt.filter(l =>
-    /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
-    /^\s*OR\s*1\s*day\b/i.test(l)
+  const optionLines = lines.filter(l =>
+    /^(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
+    /^OR\s*1\s*day\b/i.test(l)
   ).slice(0,4);
 
-  return {location, participants, fitness, availability, optionLines};
+  return {
+    location:     pick('Location'),
+    participants: pick('Participants'),
+    fitness:      pick('Fitness'),
+    availability: pick('Availability'),
+    optionLines
+  };
 }
 
 function currency(amount, ccy){
   if(amount==null || amount==='') return null;
-  const n = Number(amount); if(!isFinite(n)) return null;
-  try{ return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n); }
-  catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
+  const n = Number(amount);
+  if(!isFinite(n)) return null;
+  try{
+    return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n);
+  }catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
 }
+
 function deriveOptions(prod, facts){
   const ccy = prod.price_currency || prod?.raw?.offers?.priceCurrency || 'GBP';
+  const out = [];
   const base = prod.price ?? prod?.raw?.offers?.price;
-  const low  = prod?.raw?.offers?.lowPrice;
-  const high = prod?.raw?.offers?.highPrice;
+  const low  = prod?.raw?.offers?.lowPrice ?? prod?.raw?.offers?.lowprice;
+  const high = prod?.raw?.offers?.highPrice ?? prod?.raw?.offers?.highprice;
 
-  // Decide labels from text if we can
-  const text = (facts.optionLines||[]).join('\n').toLowerCase();
-  const has4h  = /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
-  const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
-
-  const opts = [];
-
-  // Use AggregateOffer as range mapping when both labels exist
-  if(low!=null && high!=null && has4h && has1d){
-    opts.push({label:'4 hours', price:currency(low,ccy)});
-    opts.push({label:'1 day',   price:currency(high,ccy)});
-  } else {
-    if(base!=null) opts.push({label:'Standard', price:currency(base,ccy)});
-    if(low!=null || high!=null){
-      const range = [low,high].filter(v=>v!=null).map(v=>currency(v,ccy)).join(' – ');
-      if(range) opts.push({label:'Pricing', price:range});
-    }
+  if(low!=null && high!=null){
+    out.push({label:'4 hours', price: currency(low, ccy)});
+    out.push({label:'1 day',  price: currency(high, ccy)});
+  } else if(base!=null){
+    out.push({label:'Standard', price: currency(base, ccy)});
   }
 
-  // try to add time windows from option lines
-  const timePat = /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
-  for(const ln of facts.optionLines||[]){
-    const label = ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
-    const tm = ln.match(timePat);
-    const window = tm ? `${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}` : null;
-    // only add if not already present with same label
-    if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){
-      opts.push({label, time:window});
-    } else if(window){
-      const o = opts.find(o=>o.label.toLowerCase()===label.toLowerCase());
-      if(o && !o.time) o.time = window;
-    }
+  if(facts.optionLines?.length){
+    facts.optionLines.forEach(l=> out.push({label:l.replace(/^OR\s*/,'').trim()}));
   }
-  return opts;
+  return out;
 }
 
-/* Chips from structured (render once, at the end) */
-function buildActionPills(structured, prod){
-  const chips=[];
-  const productUrl = prod?.url || prod?.page_url || prod?.source_url || structured?.products?.[0]?.url || null;
-  const priceUrl   = productUrl ? `${productUrl}#prices` : null;
-  const upcoming   = (structured?.events?.[0]?.page_url || structured?.events?.[0]?.source_url) || null;
-  const infoUrl    = productUrl ? `${productUrl}#info` : productUrl;
+/* -------- Chip builder (single set, post-answer) -------- */
+function buildPills(structured){
+  const events = structured?.events||[];
+  const products = structured?.products||[];
+  const productUrl = products.find(p=>p?.url||p?.page_url)?.url || products.find(p=>p?.page_url)?.page_url || null;
+  const firstEventUrl = events.find(e=>e?.page_url||e?.source_url)?.page_url || events.find(e=>e?.source_url)?.source_url || null;
 
-  if(productUrl) chips.push({label:'Book Now', href:productUrl});
-  if(priceUrl)   chips.push({label:'Prices', href:priceUrl});
-  if(upcoming)   chips.push({label:'Upcoming dates', href:upcoming});
-  if(infoUrl)    chips.push({label:'Info', href:infoUrl});
-
-  return chips;
+  const pills = [];
+  if(productUrl) pills.push({label:'Book Now', href:productUrl, brand:true});
+  if(productUrl) pills.push({label:'Prices', href:productUrl+'#prices', brand:true});
+  if(firstEventUrl) pills.push({label:'Upcoming dates', href:firstEventUrl, brand:false});
+  if(productUrl) pills.push({label:'Info', href:productUrl+'#info', brand:false});
+  return pills;
 }
 
-/* ---------------- Renderers ---------------- */
+/* -------- Renderers -------- */
 function renderProductCard(prod){
   const facts = extractFacts(prod.description||'');
+  const schemaAvail = normalizeAvailability(prod.availability || prod?.raw?.offers?.availability);
+  const availability = normalizeAvailability(facts.availability || schemaAvail);
   const options = deriveOptions(prod, facts);
 
-  const infoP = [];
-  if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
-  if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
-  if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
-  if(facts.availability) infoP.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
+  const info = [];
+  if (facts.location)     info.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
+  if (facts.participants) info.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
+  if (facts.fitness)      info.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
+  if (availability)       info.push(`<p><strong>Availability:</strong> ${availability}</p>`);
 
-  const li = options.map(o=>{
-    const bits = [o.label, o.time ? `— ${o.time}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
-    return `<li>${bits}</li>`;
-  }).join('');
+  const optLines = options.map(o=>`<li>${o.label}${o.price?` — ${o.price}`:''}</li>`).join('');
 
   return `
     <div class="answer">
       <h3>${prod.title || 'Workshop'}</h3>
-      ${infoP.join('')}
-      ${li? `<ul>${li}</ul>`:''}
+      ${info.join('')}
+      ${optLines?`<ul>${optLines}</ul>`:''}
     </div>
   `;
 }
 
-function renderEventsBlock(structured){
+function renderEventsBlock(structured, heading='Upcoming bluebell Workshops'){
   const now=new Date();
   const future=(structured?.events||[])
     .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
@@ -320,68 +307,67 @@ function renderEventsBlock(structured){
     .slice(0,12);
 
   if(!future.length) return '';
+  const hTitle = structured?.topic ? `Upcoming ${structured.topic.toString().trim()} Workshops` : heading;
 
-  const topic = (structured?.topic||'').toString().trim();
-  const title = topic ? `Upcoming ${topic} Workshops` : 'Upcoming Workshops';
-
-  const lis = future.map(e=>{
+  const li = future.map(e=>{
     const when=fmtDate(e.date_start);
     const href=e.page_url||e.source_url||'#';
-    const loc=e.location||'';
-    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a> — ${loc}</li>`;
+    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a> — ${e.location||''}</li>`;
   }).join('');
 
-  return `<div class="answer"><h3>${title}</h3><ul>${lis}</ul></div>`;
+  return `
+    <div class="answer">
+      <h3>${hTitle}</h3>
+      <ul>${li}</ul>
+    </div>
+  `;
 }
 
-/* Full render */
+/* ---------- Render answer ---------- */
 function renderAnswer(payload){
-  const s = payload.structured||{};
-  const merged = mergeProducts(s.products||[]);
-  const note = {
-    resolver: 'default',
-    merged_products: merged.length,
-    events_found: (s.events||[]).length,
-    pills_rendered: 0
-  };
+  const hasStructured = !!payload.structured && (payload.structured.products?.length || payload.structured.events?.length);
 
-  if(merged.length || (s.events||[]).length){
-    // pick richest product
-    let prod = merged.find(p=>p?.price!=null) ||
-               merged.find(p=>p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null) ||
-               merged[0];
-
-    if(prod){
-      addBubble(renderProductCard(prod));
-    }
-    const evHTML = renderEventsBlock(s);
-    if(evHTML) addBubble(evHTML);
-
-    // single pill row at the end
-    const pills = buildActionPills(s, prod);
-    if(pills.length){
-      const wrap = document.createElement('div');
-      wrap.className='actions';
-      pills.forEach(p=>{
-        const a=document.createElement('a'); a.className='pill'; a.textContent=p.label;
-        a.href=p.href; a.target='_blank'; a.rel='noopener';
-        wrap.appendChild(a);
-      });
-      thread.appendChild(wrap);
-      note.pills_rendered = pills.length;
-    }
-  } else {
-    // generic markdown fallback
+  if(!hasStructured){
     const md = payload.answer_markdown || payload.answer || '';
     if(md){ const {html}=mdToHtml(md); addBubble(html); }
+    return;
   }
 
-  // Debug dumps
-  dbgStruct.textContent = safeJSONString(payload.structured||{});
-  dbgNote.textContent   = safeJSONString(note);
+  const s = payload.structured;
+
+  // Choose best product (one merged card)
+  const products = s.products||[];
+  let prod = products.find(p=>p?.price!=null) ||
+             products.find(p=>p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null) ||
+             products[0];
+
+  if(prod){
+    const html = renderProductCard(prod);
+    addBubble(html);
+  }
+
+  const evHtml = renderEventsBlock(s);
+  if(evHtml) addBubble(evHtml);
+
+  // Single pill set at the very end
+  const pills = buildPills(s);
+  if(pills.length){
+    const wrap = document.createElement('div');
+    wrap.className = 'chips';
+    pills.forEach(p=>{
+      const a=document.createElement('a');
+      a.href=p.href; a.target='_blank'; a.rel='noopener'; a.textContent=p.label;
+      if(p.brand) a.classList.add('brand');
+      wrap.appendChild(a);
+    });
+    const pillBubble = addBubble('<div class="answer"></div>');
+    pillBubble.appendChild(wrap);
+  }
+
+  dbgStruct.textContent=safeJSONString(payload.structured||{});
 }
 
-/* ---------------- Networking ---------------- */
+/* ---------- Networking ---------- */
 async function sendQuery(query){
   const req = { query, topK: 8 };
   dbgReq.textContent = safeJSONString(req);
@@ -413,7 +399,7 @@ async function sendQuery(query){
   }
 }
 
-/* ---------------- Wire up composer ---------------- */
+/* ---------- Wire up composer ---------- */
 function submit(){
   const val = input.value.trim();
   if(!val) return;
@@ -426,9 +412,7 @@ input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
 
-/* Optional: prefill a quick sanity query during dev
-   sendQuery("give me the next bluebell workshop dates and prices");
-*/
+// sendQuery("give me the next workshop dates and prices"); // optional starter
 </script>
 </body>
 </html>
