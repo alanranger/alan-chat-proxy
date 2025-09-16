@@ -12,12 +12,8 @@ function supabaseAdmin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-const SITE_ORIGIN =
-  process.env.SITE_ORIGIN?.replace(/\/$/, "") || "https://www.alanranger.com";
-
 /* ------------------------------ Small utils ------------------------------ */
 const TZ = "Europe/London";
-const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
 function fmtDateLondon(ts) {
   try {
@@ -36,515 +32,205 @@ function fmtDateLondon(ts) {
 function uniq(arr) {
   return [...new Set((arr || []).filter(Boolean))];
 }
-function currency(n, ccy = "GBP") {
+function toGBP(n) {
   if (n == null || isNaN(Number(n))) return null;
-  try {
-    return new Intl.NumberFormat("en-GB", {
-      style: "currency",
-      currency: ccy,
-      maximumFractionDigits: 0,
-    }).format(Number(n));
-  } catch {
-    return `£${n}`;
-  }
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0,
+  }).format(Number(n));
 }
 function pickUrl(row) {
-  return row?.page_url || row?.source_url || row?.url || null;
-}
-function titleCase(slugish) {
-  const t = String(slugish || "")
-    .replace(/\.(html?|php)$/i, "")
-    .replace(/[-_]+/g, " ")
-    .trim();
-  return t
-    ? t.replace(/\b([a-z])/g, (m, a) => a.toUpperCase())
-    : "Related link";
+  return row?.source_url || row?.page_url || row?.url || null;
 }
 
-/* --------------------------- Intent + tokeniser -------------------------- */
-function tokenize(q) {
-  return (q || "")
-    .toLowerCase()
-    .split(/[^a-z0-9]+/g)
-    .filter((t) => t.length >= 3 && !stop.has(t));
-}
-const stop = new Set([
-  "the",
-  "and",
-  "for",
-  "with",
-  "from",
-  "that",
-  "this",
-  "your",
-  "you",
-  "what",
-  "when",
-  "next",
-  "date",
-  "into",
-  "about",
-  "more",
-  "how",
-  "can",
-  "are",
-  "any",
-  "who",
-  "does",
-  "do",
-]);
+/* -------------------------- Intent & keywording -------------------------- */
+function inferIntent(query) {
+  const q = (query || "").toLowerCase();
 
-function detectIntent(q) {
-  const s = (q || "").toLowerCase();
-  const asksDate =
-    /(when|date|next|schedule|time)/.test(s) && /(workshop|course|event)/.test(s);
-  const mentionsPlace =
-    /(devon|batsford|warwickshire|cotswolds|lake|district|wales|coventry|dorset|bluebell|autumn|woodland)/.test(
-      s
-    );
-  if (asksDate || mentionsPlace) return "events";
-  // default to advice (guides/blog answers)
+  const hasWorkshopish = /(workshop|course|event|class|devon|bluebell|autumn|astro|batsford|coventry|lightroom)s?/i.test(q);
+  const askSchedule   = /(when|date|next|upcoming|where|time|schedule|book|cost|price)/i.test(q);
+
+  // Bias towards "events" if it's about workshops/courses/events at all
+  if (hasWorkshopish) return "events";
+  // Otherwise general advice/articles
+  if (askSchedule) return "events"; // many schedule-ish questions without explicit word "workshop"
   return "advice";
 }
-
-/* ----------------------------- SQL helpers ------------------------------ */
-function buildOrIlike(cols, tokens) {
-  const parts = [];
-  for (const t of tokens) {
-    for (const c of cols) parts.push(`${c}.ilike.%${t}%`);
-  }
-  return parts.join(",");
+function kwFromQuery(query, limit = 5) {
+  const stop = new Set(["the","a","an","of","in","on","for","to","your","my","is","are","and","or","do","i","you","me","with","about","what","when","where","how","next"]);
+  return (query || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]+/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter(w => !stop.has(w))
+    .slice(0, limit);
 }
 
-/* ------------------------------ Events flow ----------------------------- */
-async function fetchEvents(client, tokens) {
+/* --------------------------- Data lookups (DB) --------------------------- */
+async function searchUpcomingEvents(client, query, topK = 100) {
   const nowIso = new Date().toISOString();
-  let orExpr = buildOrIlike(
-    ["title", "page_url", "source_url", "location"],
-    tokens
-  );
-  if (!orExpr) orExpr = "title.ilike.%%";
+  const kws = kwFromQuery(query);
+  // Build ilike OR for keywords (title/page_url)
+  const ors = kws.map(k => `title.ilike.%${k}%,page_url.ilike.%${k}%`).join(",");
+  const filter = ors ? `.or(${ors})` : "";
 
-  const { data, error } = await client
+  let q = client
     .from("page_entities")
-    .select(
-      "id,title,page_url,source_url,date_start,date_end,location,raw,kind,last_seen"
-    )
+    .select("id,title,page_url,source_url,date_start,date_end,location,raw")
     .eq("kind", "event")
     .gte("date_start", nowIso)
-    .or(orExpr)
     .order("date_start", { ascending: true })
-    .limit(100);
+    .limit(topK);
 
+  if (filter) q = q.or(ors);
+  const { data, error } = await q;
   if (error) throw error;
   return data || [];
 }
 
-async function fetchProducts(client, tokens) {
-  let orExpr = buildOrIlike(["title", "page_url", "source_url"], tokens);
-  if (!orExpr) orExpr = "title.ilike.%%";
-
-  const { data, error } = await client
+async function searchArticles(client, query, topK = 10) {
+  const kws = kwFromQuery(query);
+  const ors = kws.map(k => `title.ilike.%${k}%,page_url.ilike.%${k}%`).join(",");
+  // Include both 'article' and 'page' so we catch guides and info pages
+  let q = client
     .from("page_entities")
-    .select("*")
-    .eq("kind", "product")
-    .or(orExpr)
+    .select("id,title,page_url,source_url,raw")
+    .in("kind", ["article", "page"])
     .order("last_seen", { ascending: false })
-    .limit(20);
+    .limit(topK);
 
+  if (ors) q = q.or(ors);
+  const { data, error } = await q;
   if (error) throw error;
-  return data || [];
-}
 
-function extractFacts(desc) {
-  const lines = String(desc || "")
-    .split(/\r?\n/)
-    .map((s) => s.trim());
-
-  const cleaned = lines.filter((l) => {
-    if (/^dates?\b/i.test(l)) return false;
-    if (/^\s*(mon|tue|wed|thu|fri|sat|sun)\b/i.test(l)) return false;
-    if (/\b\d{1,2}[:.]\d{2}\s*(am|pm)/i.test(l) && /–|—|-/.test(l)) return true;
-    return true;
+  // prefer blog posts if present
+  const blogFirst = (data || []).sort((a,b) => {
+    const au = (a.page_url || "").includes("/blog-on-photography/") ? 1 : 0;
+    const bu = (b.page_url || "").includes("/blog-on-photography/") ? 1 : 0;
+    return bu - au;
   });
-
-  const nextVal = (i) => {
-    for (let j = i + 1; j < cleaned.length; j++) {
-      const t = cleaned[j].trim();
-      if (!t) continue;
-      return t;
-    }
-    return null;
-  };
-
-  const out = {
-    location: null,
-    participants: null,
-    fitness: null,
-    availability: null,
-    optionLines: [],
-  };
-
-  for (let i = 0; i < cleaned.length; i++) {
-    const ln = cleaned[i];
-    if (/^location\b/i.test(ln))
-      out.location = ln.replace(/^location\s*:?\s*/i, "").trim() || nextVal(i);
-    if (/^participants?\b/i.test(ln))
-      out.participants =
-        ln.replace(/^participants?\s*:?\s*/i, "").trim() || nextVal(i);
-    if (/^fitness\b/i.test(ln))
-      out.fitness = ln.replace(/^fitness\s*:?\s*/i, "").trim() || nextVal(i);
-    if (/^availability\b/i.test(ln))
-      out.availability =
-        ln.replace(/^availability\s*:?\s*/i, "").trim() || nextVal(i);
-
-    if (
-      /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(ln)
-    ) {
-      out.optionLines.push(ln);
-    } else if (/^\s*or\s*1\s*day\b/i.test(ln)) {
-      out.optionLines.push(ln);
-    }
-  }
-  return out;
+  return blogFirst;
 }
 
-function buildOptions(prod, facts) {
-  const ccy =
-    prod.price_currency || prod?.raw?.offers?.priceCurrency || "GBP";
-  const base = prod.price ?? prod?.raw?.offers?.price;
-  const low = prod?.raw?.offers?.lowPrice;
-  const high = prod?.raw?.offers?.highPrice;
+/* ----------------------------- Pills builder ---------------------------- */
+function buildEventPills(firstEventUrl) {
+  // Use stable listing/search URLs rather than echoing user query
+  const listing = "https://www.alanranger.com/search?query=workshops";
+  const photos  = "https://www.alanranger.com/gallery-image-portfolios";
 
-  const text = (facts.optionLines || []).join("\n").toLowerCase();
-  const has4h =
-    /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
-  const has1d = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
-
-  const opts = [];
-  if (low != null && high != null && has4h && has1d) {
-    opts.push({ label: "4 hours", price: currency(low, ccy) });
-    opts.push({ label: "1 day", price: currency(high, ccy) });
-  } else {
-    if (base != null) opts.push({ label: "Standard", price: currency(base, ccy) });
-    if (low != null || high != null) {
-      const range = [low, high]
-        .filter((v) => v != null)
-        .map((v) => currency(v, ccy))
-        .join(" – ");
-      if (range) opts.push({ label: "Pricing", price: range });
-    }
-  }
-
-  const timePat =
-    /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
-  for (const ln of facts.optionLines || []) {
-    const label = ln.replace(/\s*—.*$/i, "").replace(/^OR\s*/i, "").trim();
-    const tm = ln.match(timePat);
-    const window = tm
-      ? `${tm[1]} – ${tm[2]}${tm[3] ? ` or ${tm[3]} – ${tm[4]}` : ""}`
-      : null;
-    if (
-      label &&
-      !opts.some((o) => o.label.toLowerCase() === label.toLowerCase())
-    ) {
-      opts.push({ label, time: window });
-    } else if (window) {
-      const o = opts.find((o) => o.label.toLowerCase() === label.toLowerCase());
-      if (o && !o.time) o.time = window;
-    }
-  }
-  return opts;
+  const pills = [];
+  if (firstEventUrl) pills.push({ label: "Book Now", url: firstEventUrl, brand: true });
+  pills.push({ label: "Event Listing", url: listing, brand: true });
+  pills.push({ label: "More Events", url: listing, brand: true });
+  pills.push({ label: "Photos", url: photos, brand: false });
+  return pills;
 }
-
-function productPanelMarkdown(prod) {
-  const facts = extractFacts(prod.description || prod?.raw?.description || "");
-  const opts = buildOptions(prod, facts);
-
-  const bits = [];
-  bits.push(`**${prod.title || prod?.raw?.name || "Workshop"}**`);
-  if (facts.location) bits.push(`\n**Location:** ${facts.location}`);
-  if (facts.participants) bits.push(`\n**Participants:** ${facts.participants}`);
-  if (facts.fitness) bits.push(`\n**Fitness:** ${facts.fitness}`);
-  if (facts.availability) bits.push(`\n**Availability:** ${facts.availability}`);
-  if (opts.length) {
-    bits.push("");
-    for (const o of opts) {
-      const more = [o.time, o.price].filter(Boolean).join(" — ");
-      bits.push(`- **${o.label}**${more ? ` — ${more}` : ""}`);
-    }
-  }
-  return bits.join("\n");
-}
-
-/* ------------------------------ Advice flow ------------------------------ */
-async function fetchArticlesByEntities(client, tokens, limit = 8) {
-  if (!tokens.length) return [];
-  let orExpr = buildOrIlike(["title", "page_url", "source_url"], tokens);
-  if (!orExpr) orExpr = "title.ilike.%%";
-
-  const { data, error } = await client
-    .from("page_entities")
-    .select("title,page_url,source_url,kind,last_seen")
-    .in("kind", ["article", "page"])
-    .or(orExpr)
-    .order("last_seen", { ascending: false })
-    .limit(limit * 2);
-
-  if (error) throw error;
-
-  const rows = (data || []).filter((r) =>
-    /alanranger\.com/.test(pickUrl(r) || "")
-  );
-
+function buildAdvicePills(firstArticleUrl, query) {
+  const searchUrl = `https://www.alanranger.com/search?query=${encodeURIComponent(query || "")}`;
+  const photos    = "https://www.alanranger.com/gallery-image-portfolios";
   const out = [];
-  const seen = new Set();
-  for (const r of rows) {
-    const u = pickUrl(r);
-    if (!u || seen.has(u)) continue;
-    seen.add(u);
-    out.push({ title: r.title || "", url: u });
-    if (out.length >= limit) break;
-  }
+  if (firstArticleUrl) out.push({ label: "Read Guide", url: firstArticleUrl, brand: true });
+  out.push({ label: "More Articles", url: searchUrl, brand: true });
+  out.push({ label: "Events", url: "https://www.alanranger.com/search?query=workshops", brand: false });
+  out.push({ label: "Photos", url: photos, brand: false });
   return out;
 }
 
-async function fetchArticlesByChunks(client, tokens, limit = 8) {
-  if (!tokens.length) return [];
-  const orExpr = buildOrIlike(["text"], tokens) || "text.ilike.%%";
-
-  const { data, error } = await client
-    .from("chunks")
-    .select("source_url,url")
-    .or(orExpr)
-    .limit(250);
-
-  if (error) throw error;
-
-  const urls = uniq(
-    (data || [])
-      .map((r) => r.source_url || r.url)
-      .filter((u) => /alanranger\.com\/blog-on-photography/i.test(u || ""))
-  ).slice(0, 40);
-
-  if (!urls.length) return [];
-
-  const { data: arts } = await client
-    .from("page_entities")
-    .select("title,page_url,source_url,kind,last_seen")
-    .in("kind", ["article", "page"])
-    .in("source_url", urls)
-    .limit(limit * 2);
-
-  const out = [];
-  const seen = new Set();
-  for (const r of arts || []) {
-    const u = pickUrl(r);
-    if (!u || seen.has(u)) continue;
-    seen.add(u);
-    out.push({ title: r.title || "", url: u });
-    if (out.length >= limit) break;
-  }
-  return out;
-}
-
-async function findArticleExtras(client, articleUrl) {
-  // Probe page_chunks for extracted.links containing pdf and related links
-  const { data } = await client
-    .from("page_chunks")
-    .select("url,extracted")
-    .ilike("url", `${articleUrl}%`)
-    .limit(50);
-
-  const links = [];
-  for (const row of data || []) {
-    const arr = row?.extracted?.links || row?.extracted?.["links"] || [];
-    for (const it of arr) {
-      const href = (typeof it === "string" ? it : it?.href) || null;
-      if (href) links.push(href);
-    }
-  }
-  const uniqLinks = uniq(links);
-
-  const pdf = uniqLinks.find((u) => /\.pdf(\?|#|$)/i.test(u || ""));
-  const related = uniqLinks.find(
-    (u) =>
-      /^https?:\/\/(www\.)?alanranger\.com\//i.test(u || "") &&
-      !/\.pdf(\?|#|$)/i.test(u || "") &&
-      u !== articleUrl
-  );
-
-  let relatedLabel = null;
-  if (related) {
-    try {
-      const u = new URL(related);
-      const parts = u.pathname.split("/").filter(Boolean);
-      const last = parts[parts.length - 1] || parts[parts.length - 2] || "";
-      relatedLabel = "Related: " + titleCase(last);
-    } catch {
-      relatedLabel = "Related link";
-    }
-  }
-
-  return { pdf, related, relatedLabel };
-}
-
-/* ------------------------------- Hubs etc -------------------------------- */
-async function findWorkshopsHub(client) {
-  // Try to find a good workshops hub page (no hard-coding)
-  const { data } = await client
-    .from("page_entities")
-    .select("title,page_url,source_url,kind,last_seen")
-    .in("kind", ["page", "article"])
-    .or("title.ilike.%workshop%,page_url.ilike.%workshop%")
-    .order("last_seen", { ascending: false })
-    .limit(30);
-
-  const pick = (data || []).find((r) =>
-    /\/workshops/i.test(pickUrl(r) || "")
-  );
-  return pick ? pickUrl(pick) : `${SITE_ORIGIN}/workshops`;
-}
-
-/* ------------------------------ Main handler ----------------------------- */
+/* ------------------------------ Handler core ---------------------------- */
 export default async function handler(req, res) {
   const started = Date.now();
   try {
     if (req.method !== "POST") {
-      res
-        .status(405)
-        .json({ ok: false, error: "method_not_allowed", where: "http" });
+      res.status(405).json({ ok: false, error: "method_not_allowed", where: "http" });
       return;
     }
 
-    const { query, topK = 8 } = req.body || {};
+    const { query, topK } = req.body || {};
     const client = supabaseAdmin();
-
-    const intent = detectIntent(query);
-    const tokens = tokenize(query);
-
-    const structured = { intent, topic: null, events: [], products: [], articles: [], pills: [] };
-    const citations = [];
+    const intent = inferIntent(query);
 
     if (intent === "events") {
-      const events = await fetchEvents(client, tokens);
-      structured.events = events.map((e) => ({
-        ...e,
-        when: e.date_start ? fmtDateLondon(e.date_start) : null,
-      }));
+      const events = await searchUpcomingEvents(client, query, Math.max(50, Number(topK || 8)));
+      const firstUrl = pickUrl(events?.[0]);
+      const pills = buildEventPills(firstUrl);
 
-      // Product(s) that seem to match this topic
-      const products = await fetchProducts(client, tokens);
-      structured.products = products;
+      const structured = {
+        intent: "events",
+        events: (events || []).map(e => ({
+          id: e.id,
+          title: e.title,
+          when: fmtDateLondon(e.date_start),
+          page_url: e.page_url,
+          source_url: e.source_url,
+          location: e.location || null,
+        })),
+        articles: [],
+        pills,
+      };
 
-      // Build event/product pills
-      const firstEventUrl = pickUrl(events[0]) || null;
-      const firstProductUrl = pickUrl(products[0]) || null;
+      const citations = uniq((events || []).map(pickUrl));
 
-      const hubUrl = await findWorkshopsHub(client);
-
-      if (firstProductUrl) {
-        structured.pills.push({ label: "Book Now", url: firstProductUrl, brand: true });
-      }
-      if (firstEventUrl) {
-        structured.pills.push({ label: "Event Listing", url: firstEventUrl });
-      }
-      if (hubUrl) {
-        structured.pills.push({ label: "More Events", url: hubUrl });
-      }
-      structured.pills.push({
-        label: "Photos",
-        url: `${SITE_ORIGIN}/gallery-image-portfolios`,
-      });
-
-      citations.push(...uniq([firstEventUrl, firstProductUrl, hubUrl]).filter(Boolean));
-
-      // Render product panel as the main answer when a product exists
-      let answer_markdown = "";
-      if (products.length) {
-        answer_markdown = productPanelMarkdown(products[0]);
-      }
+      // Friendly markdown (panel content primarily lives in the UI)
+      const answer_markdown =
+        events?.length
+          ? "" // UI renders the events list; no extra prose needed
+          : "I couldn’t find upcoming dates for that just now — try the Event Listing or ask me about a specific location or month.";
 
       res.status(200).json({
         ok: true,
-        answer_markdown: answer_markdown || "",
-        citations: uniq(citations),
+        answer_markdown,
+        citations,
         structured,
         meta: {
           duration_ms: Date.now() - started,
           endpoint: "/api/chat",
-          topK,
-          intent,
+          topK: topK || null,
+          intent: "events",
         },
       });
       return;
     }
 
-    // ---- Advice intent (guides/blog answers)
-    let articles = await fetchArticlesByEntities(client, tokens, topK);
-    if (articles.length < clamp(topK / 2, 2, 4)) {
-      const extra = await fetchArticlesByChunks(client, tokens, topK);
-      const merged = [];
-      const seen = new Set(articles.map((a) => a.url));
-      for (const a of extra) {
-        if (seen.has(a.url)) continue;
-        seen.add(a.url);
-        merged.push(a);
-      }
-      articles = articles.concat(merged).slice(0, topK);
-    }
-    structured.articles = articles;
+    // ----- ADVICE PATH -----
+    // Expand synonyms so “feedback / critique / mentoring / 1-2-1” get hits.
+    const enrichedQuery = enrichAdviceQuery(query);
+    const articles = await searchArticles(client, enrichedQuery, Math.max(10, Number(topK || 8)));
+    const firstArticleUrl = pickUrl(articles?.[0]);
+    const pills = buildAdvicePills(firstArticleUrl, query);
 
-    // Advice pills
-    if (articles.length) {
-      const first = articles[0].url;
-      structured.pills.push({ label: "Read Guide", url: first, brand: true });
-      structured.pills.push({
-        label: "More Articles",
-        url: `${SITE_ORIGIN}/search?query=${encodeURIComponent(query || "")}`,
-        brand: true,
-      });
+    const structured = {
+      intent: "advice",
+      events: [],
+      articles: (articles || []).slice(0, 12).map(a => ({
+        id: a.id,
+        title: a.title,
+        url: pickUrl(a),
+      })),
+      pills,
+    };
 
-      // Try to find a downloadable checklist or a related internal link
-      const extras = await findArticleExtras(client, first);
-      if (extras.pdf) structured.pills.push({ label: "Download Checklist", url: extras.pdf });
-      if (extras.related) {
-        structured.pills.push({
-          label: extras.relatedLabel || "Related link",
-          url: extras.related,
-        });
-      }
-      citations.push(first);
-    } else {
-      // No articles at all; keep the experience helpful
-      structured.pills.push({
-        label: "More Articles",
-        url: `${SITE_ORIGIN}/search?query=${encodeURIComponent(query || "")}`,
-        brand: true,
-      });
-      structured.pills.push({
-        label: "Photos",
-        url: `${SITE_ORIGIN}/gallery-image-portfolios`,
-      });
-    }
+    const citations = uniq((articles || []).map(pickUrl));
+    const linksMd = (structured.articles || [])
+      .slice(0, 6)
+      .map(a => `- ${a.title} — ${a.url}`)
+      .join("\n");
 
     const answer_markdown =
-      articles.length
-        ? `Here are Alan’s guides that match your question:\n\n${articles
-            .map((a) => `- [${a.title || "Read guide"}](${a.url})`)
-            .join("\n")}`
-        : "I couldn’t find a specific guide for that yet.";
+      linksMd ||
+      "I couldn’t find a specific guide for that yet.";
 
     res.status(200).json({
       ok: true,
       answer_markdown,
-      citations: uniq(citations),
+      citations,
       structured,
       meta: {
-        intent,
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
-        topK,
+        topK: topK || null,
+        intent: "advice",
       },
     });
   } catch (err) {
@@ -556,4 +242,18 @@ export default async function handler(req, res) {
       meta: { duration_ms: Date.now() - started, endpoint: "/api/chat" },
     });
   }
+}
+
+/* --------------------------- tiny query enrichers ----------------------- */
+function enrichAdviceQuery(q) {
+  const s = (q || "").toLowerCase();
+  // add synonyms for some FAQs so article search hits
+  let extra = "";
+  if (/feedback|critique|review|personal/i.test(s)) extra += " feedback critique mentoring 1-2-1";
+  if (/tripod/i.test(s)) extra += " tripod head legs travel carbon";
+  if (/sharp|focus|blurry|blur/i.test(s)) extra += " sharpness focus technique";
+  if (/long exposure|nd filter|big stopper|slow shutter/i.test(s)) extra += " long exposure nd-filter";
+  if (/certificate/i.test(s)) extra += " certificate course policy";
+  if (/camera.*need/i.test(s)) extra += " camera requirements gear kit";
+  return (q || "") + " " + extra.trim();
 }
