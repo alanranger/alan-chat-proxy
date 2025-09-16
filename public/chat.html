@@ -481,7 +481,7 @@ async function sendQuery(query){
     if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length)))) {
       renderAnswer(data);
     } else {
-      addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about workshops, tuition, kit, or locations — for example, <em>“When are the next Bluebell dates?”</em></p></div>`);
+      addBubble(`<div class="answer"><p>I don’t have a specific answer for that yet. Try asking about workshops, tuition, kit, or locations — for example, <em>“When are the next workshop dates?”</em></p></div>`);
     }
   } catch (err){
     closeTyping();
