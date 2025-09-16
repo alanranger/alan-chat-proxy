@@ -12,10 +12,12 @@ function supabaseAdmin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
+const SITE_ORIGIN =
+  process.env.SITE_ORIGIN?.replace(/\/$/, "") || "https://www.alanranger.com";
+
 /* ------------------------------ Small utils ------------------------------ */
 const TZ = "Europe/London";
-const DEFAULT_ORIGIN = "https://www.alanranger.com";
-const GALLERY_HUB = "/gallery-image-portfolios";
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
 function fmtDateLondon(ts) {
   try {
@@ -27,462 +29,523 @@ function fmtDateLondon(ts) {
       year: "numeric",
       timeZone: TZ,
     }).format(d);
-  } catch { return ts; }
+  } catch {
+    return ts;
+  }
 }
-function uniq(arr) { return [...new Set((arr || []).filter(Boolean))]; }
-function toGBP(n) {
+function uniq(arr) {
+  return [...new Set((arr || []).filter(Boolean))];
+}
+function currency(n, ccy = "GBP") {
   if (n == null || isNaN(Number(n))) return null;
-  return new Intl.NumberFormat("en-GB", {
-    style: "currency", currency: "GBP", maximumFractionDigits: 0,
-  }).format(Number(n));
+  try {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: ccy,
+      maximumFractionDigits: 0,
+    }).format(Number(n));
+  } catch {
+    return `£${n}`;
+  }
 }
-function stripHtml(s) {
-  if (!s) return "";
-  return String(s)
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
+function pickUrl(row) {
+  return row?.page_url || row?.source_url || row?.url || null;
+}
+function titleCase(slugish) {
+  const t = String(slugish || "")
+    .replace(/\.(html?|php)$/i, "")
+    .replace(/[-_]+/g, " ")
     .trim();
+  return t
+    ? t.replace(/\b([a-z])/g, (m, a) => a.toUpperCase())
+    : "Related link";
 }
-function pickUrl(row) { return row?.source_url || row?.page_url || row?.url || null; }
-function pickOriginFromRows(rows) {
-  for (const r of rows || []) {
-    const u = pickUrl(r);
-    try { if (u) return new URL(u).origin; } catch {}
+
+/* --------------------------- Intent + tokeniser -------------------------- */
+function tokenize(q) {
+  return (q || "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/g)
+    .filter((t) => t.length >= 3 && !stop.has(t));
+}
+const stop = new Set([
+  "the",
+  "and",
+  "for",
+  "with",
+  "from",
+  "that",
+  "this",
+  "your",
+  "you",
+  "what",
+  "when",
+  "next",
+  "date",
+  "into",
+  "about",
+  "more",
+  "how",
+  "can",
+  "are",
+  "any",
+  "who",
+  "does",
+  "do",
+]);
+
+function detectIntent(q) {
+  const s = (q || "").toLowerCase();
+  const asksDate =
+    /(when|date|next|schedule|time)/.test(s) && /(workshop|course|event)/.test(s);
+  const mentionsPlace =
+    /(devon|batsford|warwickshire|cotswolds|lake|district|wales|coventry|dorset|bluebell|autumn|woodland)/.test(
+      s
+    );
+  if (asksDate || mentionsPlace) return "events";
+  // default to advice (guides/blog answers)
+  return "advice";
+}
+
+/* ----------------------------- SQL helpers ------------------------------ */
+function buildOrIlike(cols, tokens) {
+  const parts = [];
+  for (const t of tokens) {
+    for (const c of cols) parts.push(`${c}.ilike.%${t}%`);
   }
-  return DEFAULT_ORIGIN;
+  return parts.join(",");
 }
 
-/* ----------------------- Topic & intent detection ------------------------ */
-const TOPIC_HINTS = [
-  "bluebell","devon","dartmoor","exmoor","sidmouth",
-  "snowdonia","wales","lake district","peak district","warwickshire","coventry"
-];
-const EVENT_HINTS = [
-  "when","date","next","workshop","workshops","course","courses","tuition",
-  "event","events","book","availability","where","cost","price","prices"
-];
-
-function detectTopic(query) {
-  const q = (query||"").toLowerCase();
-  for (const t of TOPIC_HINTS) if (q.includes(t)) return t;
-  return null;
-}
-function detectIntentFromQuery(query) {
-  const q = (query||"").toLowerCase();
-  const hasEvent = EVENT_HINTS.some(w => q.includes(w));
-  return hasEvent ? "events" : "advice";
-}
-
-/* ----------------------- Facts parsing (server-side) --------------------- */
-function extractFromDescription(desc) {
-  const out = {
-    location:null, participants:null, fitness:null, availability:null,
-    summary:null, sessions:[]
-  };
-  if (!desc) return out;
-  const text = stripHtml(desc);
-  const lines = text.split(/\r?\n|(?<=\.)\s+(?=[A-Z])/).map(s => s.trim()).filter(Boolean);
-
-  // first non-empty sentence as summary
-  out.summary = lines[0] || null;
-
-  // scan for labelled facts (value may be next line)
-  const nextVal = (idx) => {
-    for (let j=idx+1; j<lines.length; j++) {
-      const t = lines[j].trim(); if (t) return t;
-    }
-    return null;
-  };
-  const tryLabel = (label, idx, key) => {
-    const re = new RegExp(`^\\s*${label}\\s*:?\\s*(.+)$`, "i");
-    const m = lines[idx].match(re);
-    if (m) { out[key] = m[1].trim() || nextVal(idx); return true; }
-    return false;
-  };
-
-  for (let i=0;i<lines.length;i++){
-    const ln = lines[i];
-
-    if (tryLabel("Location", i, "location")) continue;
-    if (tryLabel("Participants", i, "participants")) continue;
-    if (tryLabel("Fitness", i, "fitness")) continue;
-    if (tryLabel("Availability", i, "availability")) continue;
-
-    // session/time rows: "4hrs - 5:45 am to 9:45 am or 10:30 am to 2:30 pm"
-    const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day|days|half\s*day|full\s*day))\s*[-–—]\s*(.+)$/i);
-    if (m1) out.sessions.push({ label: m1[1].replace(/\s+/g," ").trim(), time: m1[2].trim(), price: null });
-  }
-  return out;
-}
-
-/* -------------------------- Markdown renderers --------------------------- */
-function buildProductPanelMarkdown(products) {
-  if (!products?.length) return "";
-  const primary = products.find(p=>p.price!=null) || products[0];
-
-  // headline prices
-  let lowPrice=null, highPrice=null, priceCurrency='GBP';
-  for (const p of products) {
-    const ro = p?.raw?.offers || {};
-    const lp = ro.lowPrice ?? ro.lowprice ?? null;
-    const hp = ro.highPrice ?? ro.highprice ?? null;
-    if (lp!=null) lowPrice = lp;
-    if (hp!=null) highPrice = hp;
-    if (ro.priceCurrency) priceCurrency = ro.priceCurrency;
-  }
-  const headSingle = primary?.price!=null ? toGBP(primary.price) : null;
-  const lowTx = lowPrice!=null ? toGBP(lowPrice) : null;
-  const highTx = highPrice!=null ? toGBP(highPrice) : null;
-
-  const title = primary.title || primary?.raw?.name || "Workshop";
-  const headBits = [];
-  if (headSingle) headBits.push(headSingle);
-  if (lowTx && highTx) headBits.push(`${lowTx}–${highTx}`);
-  const priceHead = headBits.length?` — ${headBits.join(" • ")}`:"";
-
-  // facts
-  const info = extractFromDescription(
-    primary.description || primary?.raw?.description || primary?.html || primary?.raw?.html || ""
-  );
-  // attach prices to sessions if we can
-  const sessions = [...(info.sessions||[])];
-  if (sessions.length) {
-    if (lowPrice!=null && highPrice!=null && sessions.length>=2) {
-      sessions[0].price = lowPrice; sessions[1].price = highPrice;
-    } else if (primary?.price!=null) {
-      sessions.forEach(s=> s.price = primary.price);
-    }
-  }
-
-  const lines=[];
-  lines.push(`**${title}**${priceHead}`);
-  if (info.summary) lines.push(`\n${info.summary}`);
-  const facts=[];
-  if (info.location)     facts.push(`**Location:** ${info.location}`);
-  if (info.participants) facts.push(`**Participants:** ${info.participants}`);
-  if (info.fitness)      facts.push(`**Fitness:** ${info.fitness}`);
-  if (info.availability) facts.push(`**Availability:** ${info.availability}`);
-  if (facts.length){ lines.push(""); for (const f of facts) lines.push(f); }
-  if (sessions.length){
-    lines.push("");
-    for (const s of sessions){
-      const pretty = s.label.replace(/\bhrs\b/i,"hours");
-      const ptxt = s.price!=null ? ` — ${toGBP(s.price)}` : "";
-      lines.push(`- **${pretty}** — ${s.time}${ptxt}`);
-    }
-  }
-  return lines.join("\n");
-}
-
-/* ------------------------- Advice pills from HTML ------------------------ */
-function extractLinksFromHtml(html, baseUrl) {
-  if (!html) return [];
-  const re = /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
-  const out = [];
-  let m;
-  let base = DEFAULT_ORIGIN;
-  try { base = new URL(baseUrl||DEFAULT_ORIGIN).origin; } catch {}
-  while ((m = re.exec(html))) {
-    let href = m[1].trim();
-    const text = m[2].replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
-    try { href = new URL(href, base).href; } catch {}
-    out.push({ href, text });
-  }
-  return out;
-}
-function pickChecklistLink(links) {
-  const isPdf = (u) => /\.pdf(\?|#|$)/i.test(u);
-  const looksChecklist = (t,u) => /a-?page|field|check\s*list/i.test(t) || /checklist/i.test(u);
-  for (const l of links) {
-    if (isPdf(l.href) && looksChecklist(l.text, l.href)) {
-      return { label: "Download Checklist", url: l.href };
-    }
-  }
-  const anyPdf = links.find(l => /\.pdf(\?|#|$)/i.test(l.href));
-  return anyPdf ? { label: "Download PDF", url: anyPdf.href } : null;
-}
-function pickContextLink(links, disallow=[]) {
-  const bad = /^(mailto:|tel:|javascript:)|\b(login|signup|share|facebook|twitter|pinterest|contact|privacy|terms|cookie)\b/i;
-  const goodHint = /\b(workshop|course|guide|tuition|gallery|portfolio|critique|feedback|astro|long exposure|tripod|filter)\b/i;
-  const seen = new Set(disallow.map(u=>u?.toLowerCase()));
-  for (const l of links) {
-    if (!l.href || seen.has(l.href.toLowerCase())) continue;
-    const txt = l.text||"";
-    if (bad.test(l.href) || bad.test(txt)) continue;
-    if (!txt) continue;
-    if (goodHint.test(txt) || goodHint.test(l.href)) {
-      const label = ("Related: " + txt).replace(/\s+/g," ").trim();
-      return { label: label.length>36?label.slice(0,33)+"…":label, url: l.href };
-    }
-  }
-  const first = links.find(l => l.text && !bad.test(l.href));
-  return first ? { label: ("Related: " + first.text).slice(0,36) + (first.text.length>36?"…":""), url: first.href } : null;
-}
-
-/* ---------------------------- Pill composers ----------------------------- */
-function composeEventPills({ origin, topic, products, events }) {
-  const pills = [];
-  const used = new Set();
-  const add = (label, url, brand=false) => {
-    if (!label || !url) return;
-    const key = url.toLowerCase();
-    if (used.has(key)) return; used.add(key);
-    pills.push({ label, url, brand });
-  };
-
-  const productUrl = pickUrl(products?.[0]) || null;
-  const firstEvent = (events||[])[0] || null;
-  const eventUrl = pickUrl(firstEvent);
-  const moreEvents = topic
-    ? `${origin}/search?query=${encodeURIComponent(topic + " workshop")}`
-    : `${origin}/search?query=workshops`;
-
-  if (productUrl) add("Book Now", productUrl, true);
-  if (eventUrl)   add("Event Listing", eventUrl, true);
-  add("More Events", moreEvents, true);
-  add("Photos", `${origin}${GALLERY_HUB}`, false);
-
-  return pills.slice(0,4);
-}
-function composeAdvicePillsFromArticle({ origin, query, article, topic }) {
-  const pills = [];
-  const used = new Set();
-  const add = (label, url, brand=false) => {
-    if (!label || !url) return;
-    const key = url.toLowerCase();
-    if (used.has(key)) return; used.add(key);
-    pills.push({ label, url, brand });
-  };
-
-  const topUrl = article?.url || null;
-  add("Read Guide", topUrl, true);
-  add("More Articles", `${origin}/search?query=${encodeURIComponent(query)}`, true);
-
-  const html = article?.html || article?.raw?.html || "";
-  const links = extractLinksFromHtml(html, topUrl || origin);
-
-  const pdf = pickChecklistLink(links);
-  if (pdf) add(pdf.label, pdf.url);
-
-  const ctx = pickContextLink(links, [topUrl, pdf?.url].filter(Boolean));
-  if (ctx) add(ctx.label, ctx.url);
-
-  // fill to 4 with safe defaults (never pick a random single event)
-  if (pills.length < 4) {
-    const evSearch = topic
-      ? `${origin}/search?query=${encodeURIComponent(topic + " workshop")}`
-      : `${origin}/search?query=workshops`;
-    add("Events", evSearch);
-  }
-  if (pills.length < 4) add("Photos", `${origin}${GALLERY_HUB}`);
-
-  return pills.slice(0,4);
-}
-
-/* ----------------------------- Data fetchers ----------------------------- */
-async function fetchFutureEvents(client, topic) {
+/* ------------------------------ Events flow ----------------------------- */
+async function fetchEvents(client, tokens) {
   const nowIso = new Date().toISOString();
-  const { data } = await client
+  let orExpr = buildOrIlike(
+    ["title", "page_url", "source_url", "location"],
+    tokens
+  );
+  if (!orExpr) orExpr = "title.ilike.%%";
+
+  const { data, error } = await client
     .from("page_entities")
-    .select("id, title, page_url, source_url, date_start, date_end, location, raw")
+    .select(
+      "id,title,page_url,source_url,date_start,date_end,location,raw,kind,last_seen"
+    )
     .eq("kind", "event")
     .gte("date_start", nowIso)
+    .or(orExpr)
     .order("date_start", { ascending: true })
-    .limit(120);
-  let events = data || [];
-  if (topic) {
-    const t = topic.toLowerCase();
-    events = events.filter(e => {
-      const hay = [e.title, e.page_url, e.source_url, e.location].join(" ").toLowerCase();
-      return hay.includes(t);
-    });
-  }
-  return events.slice(0, 60);
+    .limit(100);
+
+  if (error) throw error;
+  return data || [];
 }
-async function fetchProducts(client, topic) {
-  const { data } = await client
+
+async function fetchProducts(client, tokens) {
+  let orExpr = buildOrIlike(["title", "page_url", "source_url"], tokens);
+  if (!orExpr) orExpr = "title.ilike.%%";
+
+  const { data, error } = await client
     .from("page_entities")
     .select("*")
     .eq("kind", "product")
+    .or(orExpr)
     .order("last_seen", { ascending: false })
-    .limit(60);
-  let rows = data || [];
-  if (topic) {
-    const t = topic.toLowerCase();
-    rows = rows.filter(p => {
-      const hay = [p.title, p.page_url, p.source_url, p.url, p.description].join(" ").toLowerCase();
-      return hay.includes(t);
-    });
-  }
-  return rows;
+    .limit(20);
+
+  if (error) throw error;
+  return data || [];
 }
 
-/* ----------------------- Smarter article retrieval ----------------------- */
-const STOP_WORDS = new Set([
-  "a","an","and","are","as","at","be","by","can","do","does","for","from","how","i","in","is","it","me","more","my","of","on","or","out","tell","that","the","this","to","what","when","where","which","who","why","with","you","your","about"
-]);
+function extractFacts(desc) {
+  const lines = String(desc || "")
+    .split(/\r?\n/)
+    .map((s) => s.trim());
 
-function tokenize(q) {
-  return (q||"")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]+/g," ")
-    .split(/\s+/)
-    .filter(t => t && !STOP_WORDS.has(t) && t.length > 2)
-    .slice(0, 8);
+  const cleaned = lines.filter((l) => {
+    if (/^dates?\b/i.test(l)) return false;
+    if (/^\s*(mon|tue|wed|thu|fri|sat|sun)\b/i.test(l)) return false;
+    if (/\b\d{1,2}[:.]\d{2}\s*(am|pm)/i.test(l) && /–|—|-/.test(l)) return true;
+    return true;
+  });
+
+  const nextVal = (i) => {
+    for (let j = i + 1; j < cleaned.length; j++) {
+      const t = cleaned[j].trim();
+      if (!t) continue;
+      return t;
+    }
+    return null;
+  };
+
+  const out = {
+    location: null,
+    participants: null,
+    fitness: null,
+    availability: null,
+    optionLines: [],
+  };
+
+  for (let i = 0; i < cleaned.length; i++) {
+    const ln = cleaned[i];
+    if (/^location\b/i.test(ln))
+      out.location = ln.replace(/^location\s*:?\s*/i, "").trim() || nextVal(i);
+    if (/^participants?\b/i.test(ln))
+      out.participants =
+        ln.replace(/^participants?\s*:?\s*/i, "").trim() || nextVal(i);
+    if (/^fitness\b/i.test(ln))
+      out.fitness = ln.replace(/^fitness\s*:?\s*/i, "").trim() || nextVal(i);
+    if (/^availability\b/i.test(ln))
+      out.availability =
+        ln.replace(/^availability\s*:?\s*/i, "").trim() || nextVal(i);
+
+    if (
+      /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(ln)
+    ) {
+      out.optionLines.push(ln);
+    } else if (/^\s*or\s*1\s*day\b/i.test(ln)) {
+      out.optionLines.push(ln);
+    }
+  }
+  return out;
 }
 
-function expandTokens(tokens) {
-  const set = new Set(tokens);
-  const s = tokens.join(" ");
-  if (s.includes("long exposure") || (tokens.includes("long") && tokens.includes("exposure"))) {
-    set.add("long exposure"); set.add("nd"); set.add("filters"); set.add("neutral density"); set.add("10 stop"); set.add("slow shutter");
+function buildOptions(prod, facts) {
+  const ccy =
+    prod.price_currency || prod?.raw?.offers?.priceCurrency || "GBP";
+  const base = prod.price ?? prod?.raw?.offers?.price;
+  const low = prod?.raw?.offers?.lowPrice;
+  const high = prod?.raw?.offers?.highPrice;
+
+  const text = (facts.optionLines || []).join("\n").toLowerCase();
+  const has4h =
+    /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
+  const has1d = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
+
+  const opts = [];
+  if (low != null && high != null && has4h && has1d) {
+    opts.push({ label: "4 hours", price: currency(low, ccy) });
+    opts.push({ label: "1 day", price: currency(high, ccy) });
+  } else {
+    if (base != null) opts.push({ label: "Standard", price: currency(base, ccy) });
+    if (low != null || high != null) {
+      const range = [low, high]
+        .filter((v) => v != null)
+        .map((v) => currency(v, ccy))
+        .join(" – ");
+      if (range) opts.push({ label: "Pricing", price: range });
+    }
   }
-  if (set.has("tripod") || set.has("tripods")) {
-    set.add("tripod"); set.add("benro"); set.add("manfrotto"); set.add("gitzo"); set.add("head"); set.add("legs");
+
+  const timePat =
+    /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
+  for (const ln of facts.optionLines || []) {
+    const label = ln.replace(/\s*—.*$/i, "").replace(/^OR\s*/i, "").trim();
+    const tm = ln.match(timePat);
+    const window = tm
+      ? `${tm[1]} – ${tm[2]}${tm[3] ? ` or ${tm[3]} – ${tm[4]}` : ""}`
+      : null;
+    if (
+      label &&
+      !opts.some((o) => o.label.toLowerCase() === label.toLowerCase())
+    ) {
+      opts.push({ label, time: window });
+    } else if (window) {
+      const o = opts.find((o) => o.label.toLowerCase() === label.toLowerCase());
+      if (o && !o.time) o.time = window;
+    }
   }
-  if (set.has("astro") || set.has("astrophotography")) {
-    set.add("astrophotography"); set.add("night"); set.add("milky way");
-  }
-  return [...set];
+  return opts;
 }
 
-function scoreArticle(row, tokens) {
-  const url = pickUrl(row) || row.url || "";
-  const title = (row.title || "").toLowerCase();
-  const body = stripHtml(row.html || row.raw?.html || "").toLowerCase();
+function productPanelMarkdown(prod) {
+  const facts = extractFacts(prod.description || prod?.raw?.description || "");
+  const opts = buildOptions(prod, facts);
 
-  let score = 0;
-
-  // phrase boosts
-  if (body.includes("long exposure") || title.includes("long exposure")) score += 8;
-  if (title.includes("tripod")) score += 6;
-
-  // token scoring
-  for (const t of tokens) {
-    if (!t) continue;
-    if (title.includes(t)) score += 3;
-    if (url.includes(t))   score += 2;
-    if (body.includes(t))  score += 1;
+  const bits = [];
+  bits.push(`**${prod.title || prod?.raw?.name || "Workshop"}**`);
+  if (facts.location) bits.push(`\n**Location:** ${facts.location}`);
+  if (facts.participants) bits.push(`\n**Participants:** ${facts.participants}`);
+  if (facts.fitness) bits.push(`\n**Fitness:** ${facts.fitness}`);
+  if (facts.availability) bits.push(`\n**Availability:** ${facts.availability}`);
+  if (opts.length) {
+    bits.push("");
+    for (const o of opts) {
+      const more = [o.time, o.price].filter(Boolean).join(" — ");
+      bits.push(`- **${o.label}**${more ? ` — ${more}` : ""}`);
+    }
   }
-  return score;
+  return bits.join("\n");
 }
 
-async function fetchArticles(client, query) {
+/* ------------------------------ Advice flow ------------------------------ */
+async function fetchArticlesByEntities(client, tokens, limit = 8) {
+  if (!tokens.length) return [];
+  let orExpr = buildOrIlike(["title", "page_url", "source_url"], tokens);
+  if (!orExpr) orExpr = "title.ilike.%%";
+
+  const { data, error } = await client
+    .from("page_entities")
+    .select("title,page_url,source_url,kind,last_seen")
+    .in("kind", ["article", "page"])
+    .or(orExpr)
+    .order("last_seen", { ascending: false })
+    .limit(limit * 2);
+
+  if (error) throw error;
+
+  const rows = (data || []).filter((r) =>
+    /alanranger\.com/.test(pickUrl(r) || "")
+  );
+
+  const out = [];
+  const seen = new Set();
+  for (const r of rows) {
+    const u = pickUrl(r);
+    if (!u || seen.has(u)) continue;
+    seen.add(u);
+    out.push({ title: r.title || "", url: u });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+async function fetchArticlesByChunks(client, tokens, limit = 8) {
+  if (!tokens.length) return [];
+  const orExpr = buildOrIlike(["text"], tokens) || "text.ilike.%%";
+
+  const { data, error } = await client
+    .from("chunks")
+    .select("source_url,url")
+    .or(orExpr)
+    .limit(250);
+
+  if (error) throw error;
+
+  const urls = uniq(
+    (data || [])
+      .map((r) => r.source_url || r.url)
+      .filter((u) => /alanranger\.com\/blog-on-photography/i.test(u || ""))
+  ).slice(0, 40);
+
+  if (!urls.length) return [];
+
+  const { data: arts } = await client
+    .from("page_entities")
+    .select("title,page_url,source_url,kind,last_seen")
+    .in("kind", ["article", "page"])
+    .in("source_url", urls)
+    .limit(limit * 2);
+
+  const out = [];
+  const seen = new Set();
+  for (const r of arts || []) {
+    const u = pickUrl(r);
+    if (!u || seen.has(u)) continue;
+    seen.add(u);
+    out.push({ title: r.title || "", url: u });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+async function findArticleExtras(client, articleUrl) {
+  // Probe page_chunks for extracted.links containing pdf and related links
+  const { data } = await client
+    .from("page_chunks")
+    .select("url,extracted")
+    .ilike("url", `${articleUrl}%`)
+    .limit(50);
+
+  const links = [];
+  for (const row of data || []) {
+    const arr = row?.extracted?.links || row?.extracted?.["links"] || [];
+    for (const it of arr) {
+      const href = (typeof it === "string" ? it : it?.href) || null;
+      if (href) links.push(href);
+    }
+  }
+  const uniqLinks = uniq(links);
+
+  const pdf = uniqLinks.find((u) => /\.pdf(\?|#|$)/i.test(u || ""));
+  const related = uniqLinks.find(
+    (u) =>
+      /^https?:\/\/(www\.)?alanranger\.com\//i.test(u || "") &&
+      !/\.pdf(\?|#|$)/i.test(u || "") &&
+      u !== articleUrl
+  );
+
+  let relatedLabel = null;
+  if (related) {
+    try {
+      const u = new URL(related);
+      const parts = u.pathname.split("/").filter(Boolean);
+      const last = parts[parts.length - 1] || parts[parts.length - 2] || "";
+      relatedLabel = "Related: " + titleCase(last);
+    } catch {
+      relatedLabel = "Related link";
+    }
+  }
+
+  return { pdf, related, relatedLabel };
+}
+
+/* ------------------------------- Hubs etc -------------------------------- */
+async function findWorkshopsHub(client) {
+  // Try to find a good workshops hub page (no hard-coding)
   const { data } = await client
     .from("page_entities")
-    .select("id, title, page_url, source_url, url, html, raw, last_seen, kind")
-    .in("kind", ["article","blog","page"])
+    .select("title,page_url,source_url,kind,last_seen")
+    .in("kind", ["page", "article"])
+    .or("title.ilike.%workshop%,page_url.ilike.%workshop%")
     .order("last_seen", { ascending: false })
-    .limit(300);
+    .limit(30);
 
-  const rows = data || [];
-  const toks = expandTokens(tokenize(query));
-
-  // score all, keep top results with score > 0
-  const scored = rows
-    .map(r => ({ row: r, s: scoreArticle(r, toks) }))
-    .filter(x => x.s > 0)
-    .sort((a,b) => b.s - a.s)
-    .slice(0, 12)
-    .map(x => x.row);
-
-  return scored;
+  const pick = (data || []).find((r) =>
+    /\/workshops/i.test(pickUrl(r) || "")
+  );
+  return pick ? pickUrl(pick) : `${SITE_ORIGIN}/workshops`;
 }
 
-/* ----------------------------- Resolvers -------------------------------- */
-async function resolveEventsOrProduct({ client, query }) {
-  const topic = detectTopic(query) || null;
-  const products = await fetchProducts(client, topic);
-  const events = await fetchFutureEvents(client, topic);
-
-  const origin = pickOriginFromRows(products.length?products:events);
-  const pills = composeEventPills({ origin, topic, products, events });
-
-  const citations = uniq([
-    ...products.map(pickUrl),
-    ...events.map(pickUrl)
-  ]).filter(Boolean);
-
-  const productPanel = products.length ? buildProductPanelMarkdown(products) : "";
-
-  return {
-    ok: true,
-    answer_markdown: productPanel,
-    citations,
-    structured: {
-      intent: "events",
-      topic,
-      products,
-      events: (events||[]).slice(0,12).map(e => ({ ...e, when: fmtDateLondon(e.date_start) })),
-      pills
-    },
-    meta: { intent: "events" }
-  };
-}
-
-async function resolveAdvice({ client, query }) {
-  const topic = detectTopic(query) || null;
-  const articles = await fetchArticles(client, query);
-
-  const origin = pickOriginFromRows(articles);
-  const top = articles[0] || null;
-
-  // neat list of article links (markdown)
-  const md = articles.length
-    ? [
-        "Here are Alan’s guides that match your question:",
-        "",
-        ...articles.map(a => `- [${a.title}](${pickUrl(a) || a.url || "#"})`)
-      ].join("\n")
-    : "I couldn’t find a specific guide for that yet.";
-
-  const pills = composeAdvicePillsFromArticle({ origin, query, article: top, topic });
-
-  const citations = uniq(articles.map(pickUrl)).filter(Boolean);
-
-  return {
-    ok: true,
-    answer_markdown: md,
-    citations,
-    structured: {
-      intent: "advice",
-      topic,
-      articles: articles.map(a => ({ title: a.title, url: pickUrl(a) || a.url || null })),
-      pills
-    },
-    meta: { intent: "advice" }
-  };
-}
-
-/* -------------------------------- Handler -------------------------------- */
+/* ------------------------------ Main handler ----------------------------- */
 export default async function handler(req, res) {
   const started = Date.now();
   try {
     if (req.method !== "POST") {
-      res.status(405).json({ ok: false, error: "method_not_allowed", where: "http" });
+      res
+        .status(405)
+        .json({ ok: false, error: "method_not_allowed", where: "http" });
       return;
     }
 
-    const { query="", topK } = req.body || {};
+    const { query, topK = 8 } = req.body || {};
     const client = supabaseAdmin();
 
-    // pick intent quickly, but trust resolvers to return what they find
-    const roughIntent = detectIntentFromQuery(query);
+    const intent = detectIntent(query);
+    const tokens = tokenize(query);
 
-    const result = roughIntent === "events"
-      ? await resolveEventsOrProduct({ client, query })
-      : await resolveAdvice({ client, query });
+    const structured = { intent, topic: null, events: [], products: [], articles: [], pills: [] };
+    const citations = [];
+
+    if (intent === "events") {
+      const events = await fetchEvents(client, tokens);
+      structured.events = events.map((e) => ({
+        ...e,
+        when: e.date_start ? fmtDateLondon(e.date_start) : null,
+      }));
+
+      // Product(s) that seem to match this topic
+      const products = await fetchProducts(client, tokens);
+      structured.products = products;
+
+      // Build event/product pills
+      const firstEventUrl = pickUrl(events[0]) || null;
+      const firstProductUrl = pickUrl(products[0]) || null;
+
+      const hubUrl = await findWorkshopsHub(client);
+
+      if (firstProductUrl) {
+        structured.pills.push({ label: "Book Now", url: firstProductUrl, brand: true });
+      }
+      if (firstEventUrl) {
+        structured.pills.push({ label: "Event Listing", url: firstEventUrl });
+      }
+      if (hubUrl) {
+        structured.pills.push({ label: "More Events", url: hubUrl });
+      }
+      structured.pills.push({
+        label: "Photos",
+        url: `${SITE_ORIGIN}/gallery-image-portfolios`,
+      });
+
+      citations.push(...uniq([firstEventUrl, firstProductUrl, hubUrl]).filter(Boolean));
+
+      // Render product panel as the main answer when a product exists
+      let answer_markdown = "";
+      if (products.length) {
+        answer_markdown = productPanelMarkdown(products[0]);
+      }
+
+      res.status(200).json({
+        ok: true,
+        answer_markdown: answer_markdown || "",
+        citations: uniq(citations),
+        structured,
+        meta: {
+          duration_ms: Date.now() - started,
+          endpoint: "/api/chat",
+          topK,
+          intent,
+        },
+      });
+      return;
+    }
+
+    // ---- Advice intent (guides/blog answers)
+    let articles = await fetchArticlesByEntities(client, tokens, topK);
+    if (articles.length < clamp(topK / 2, 2, 4)) {
+      const extra = await fetchArticlesByChunks(client, tokens, topK);
+      const merged = [];
+      const seen = new Set(articles.map((a) => a.url));
+      for (const a of extra) {
+        if (seen.has(a.url)) continue;
+        seen.add(a.url);
+        merged.push(a);
+      }
+      articles = articles.concat(merged).slice(0, topK);
+    }
+    structured.articles = articles;
+
+    // Advice pills
+    if (articles.length) {
+      const first = articles[0].url;
+      structured.pills.push({ label: "Read Guide", url: first, brand: true });
+      structured.pills.push({
+        label: "More Articles",
+        url: `${SITE_ORIGIN}/search?query=${encodeURIComponent(query || "")}`,
+        brand: true,
+      });
+
+      // Try to find a downloadable checklist or a related internal link
+      const extras = await findArticleExtras(client, first);
+      if (extras.pdf) structured.pills.push({ label: "Download Checklist", url: extras.pdf });
+      if (extras.related) {
+        structured.pills.push({
+          label: extras.relatedLabel || "Related link",
+          url: extras.related,
+        });
+      }
+      citations.push(first);
+    } else {
+      // No articles at all; keep the experience helpful
+      structured.pills.push({
+        label: "More Articles",
+        url: `${SITE_ORIGIN}/search?query=${encodeURIComponent(query || "")}`,
+        brand: true,
+      });
+      structured.pills.push({
+        label: "Photos",
+        url: `${SITE_ORIGIN}/gallery-image-portfolios`,
+      });
+    }
+
+    const answer_markdown =
+      articles.length
+        ? `Here are Alan’s guides that match your question:\n\n${articles
+            .map((a) => `- [${a.title || "Read guide"}](${a.url})`)
+            .join("\n")}`
+        : "I couldn’t find a specific guide for that yet.";
 
     res.status(200).json({
-      ...result,
+      ok: true,
+      answer_markdown,
+      citations: uniq(citations),
+      structured,
       meta: {
-        ...(result.meta||{}),
+        intent,
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
-        topK: topK || null
-      }
+        topK,
+      },
     });
   } catch (err) {
     res.status(500).json({
