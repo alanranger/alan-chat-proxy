@@ -1,5 +1,5 @@
 // /api/chat.js
-// Site-wide AI chat endpoint (Bluebell path sends a complete answer_markdown block)
+// Site-wide AI chat endpoint (Product panel via markdown, events via structured)
 // Runtime: NodeJS (Vercel)
 export const config = { runtime: "nodejs" };
 
@@ -15,34 +15,19 @@ function supabaseAdmin() {
 
 /* ------------------------------ Small utils ------------------------------ */
 const TZ = "Europe/London";
+const GBP = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 });
+
+const toGBP = (n) => (n == null || isNaN(Number(n)) ? null : GBP.format(Number(n)));
+const pickUrl = (row) => row?.source_url || row?.page_url || row?.url || null;
+const uniq = (arr) => [...new Set((arr || []).filter(Boolean))];
 
 function fmtDateLondon(ts) {
   try {
     const d = new Date(ts);
     return new Intl.DateTimeFormat("en-GB", {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      timeZone: TZ,
+      weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: TZ,
     }).format(d);
-  } catch {
-    return ts;
-  }
-}
-function uniq(arr) { return [...new Set((arr || []).filter(Boolean))]; }
-function toGBP(n) {
-  if (n == null || isNaN(Number(n))) return null;
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(n));
-}
-function pickUrl(row) { return row?.source_url || row?.page_url || row?.url || null; }
-function normAvailability(v) {
-  if (!v) return null;
-  const s = String(v).toLowerCase();
-  if (s.includes("instock")) return "In Stock";
-  if (s.includes("outofstock") || s.includes("out_of_stock")) return "Out of Stock";
-  if (s.includes("preorder")) return "Preorder";
-  return null;
+  } catch { return ts; }
 }
 
 /* ----------------------- Topic detection (simple) ------------------------ */
@@ -52,7 +37,7 @@ function getTopicFromQuery(query) {
   return null;
 }
 
-/* --------- Canonical resolver (Option A) – tolerant if missing ---------- */
+/* --------- Canonical resolver (tolerant; no tags JSON dependence) -------- */
 async function resolveCanonicalsOptionA(client, topic) {
   const out = { product: null, landing: null, debug: {} };
 
@@ -79,222 +64,164 @@ async function resolveCanonicalsOptionA(client, topic) {
   return out;
 }
 
-/* -------------------- Product description field parser ------------------- */
-function parseDesc(desc) {
-  const out = {
-    blurb: "",
-    location_text: null,
-    participants_text: null,
-    fitness_text: null,
-    sessions: [],
-  };
-  if (!desc) return out;
+/* ------------------------- Product field extraction ---------------------- */
+function get(obj, path, def = null) {
+  try {
+    return path.split(".").reduce((a, k) => (a?.[k]), obj) ?? def;
+  } catch { return def; }
+}
 
-  const lines = String(desc).split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+// Read location/participants/fitness + time options out of description text.
+function extractFromDescription(desc) {
+  if (!desc) return {};
+  const lines = desc.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 
-  // blurb = first non-label line that looks like prose
-  out.blurb = lines.find(
-    ln => !/^\w+\s*:$/i.test(ln) &&
-          !/^(location|participants|fitness|availability)\s*:/i.test(ln)
-  ) || "";
-
-  const grab = (label) => {
-    // pattern: "Label: value"
-    const m = lines.map(ln => ln.match(new RegExp(`^${label}\\s*:\\s*(.+)$`, "i"))).find(Boolean);
-    if (m) return m[1].trim();
-    // pattern: "Label:" then next non-empty line
-    for (let i=0;i<lines.length;i++){
-      if (new RegExp(`^${label}\\s*:\\s*$`, "i").test(lines[i])) {
-        const nxt = lines.slice(i+1).find(x=>x && !/:$/.test(x));
-        if (nxt) return nxt.trim();
-      }
-    }
-    return null;
-  };
-
-  out.location_text = grab("Location");
-  out.participants_text = grab("Participants");
-  out.fitness_text = grab("Fitness");
-
-  // session lines (4hrs…, OR 1 day…, Full day…)
+  let location = null, participants = null, fitness = null, availability = null;
+  const options = []; // [{label, timeText}]
   for (const ln of lines) {
-    if (/^(\s*or\s*)?(?:\d+\s*hrs?|\d+\s*hours?|full\s*day|\d+\s*day)/i.test(ln)) {
-      out.sessions.push(ln.replace(/^or\s*/i, "").trim());
+    const lc = ln.toLowerCase();
+
+    if (/^location:\s*/i.test(ln)) location = ln.replace(/^location:\s*/i, "").trim();
+    if (/^participants:\s*/i.test(ln)) participants = ln.replace(/^participants:\s*/i, "").trim();
+    if (/^fitness:\s*/i.test(ln)) fitness = ln.replace(/^fitness:\s*/i, "").trim();
+    if (/^availability:\s*/i.test(ln)) availability = ln.replace(/^availability:\s*/i, "").trim();
+
+    // Time options – tolerate variants ("4hrs", "4 hours", "OR 1 day", "1 day")
+    let m;
+    if ((m = ln.match(/^(?:4\s*hrs?|4\s*hours?)\s*[-–]\s*(.+)$/i))) {
+      options.push({ key: "short", label: "4 hours", timeText: m[1].trim() });
+    } else if ((m = ln.match(/^(?:or\s*)?1\s*day\s*[-–]\s*(.+)$/i))) {
+      options.push({ key: "long", label: "1 day", timeText: m[1].trim() });
     }
   }
-  return out;
+  return { location, participants, fitness, availability, options };
 }
 
-/* ------------------------- Price / options builder ----------------------- */
-function extractPricesFromOffers(raw) {
-  if (!raw) return {};
-  const offers = raw.offers || raw.Offers || null;
-  const single = offers && !Array.isArray(offers) && String(offers["@type"]).toLowerCase()==="offer" ? offers : null;
-  const aggr   = offers && !Array.isArray(offers) && String(offers["@type"]).toLowerCase()==="aggregateoffer" ? offers : null;
+// Merge two product rows (e.g., one with Offer price 125, another with AggregateOffer 99–150).
+function mergeProducts(rows) {
+  if (!rows?.length) return null;
+  // Prefer the row with non-null price as "base".
+  const byRecency = [...rows].sort((a, b) =>
+    new Date(b.last_seen || 0) - new Date(a.last_seen || 0)
+  );
+  const withOffer = byRecency.find(r => get(r, "raw.offers.@type") === "Offer") || null;
+  const withAgg   = byRecency.find(r => /AggregateOffer/i.test(get(r, "raw.offers.@type") || "")) || null;
+  const base = withOffer || byRecency[0];
 
-  const price_currency = single?.priceCurrency || aggr?.priceCurrency || raw?.priceCurrency || "GBP";
-  const availability_text = normAvailability(single?.availability) || normAvailability(aggr?.availability) || null;
+  const title = base.title || get(base, "raw.name") || "Workshop";
+  const description = base.description || get(base, "raw.description") || "";
+
+  // Pull availability directly from any row (prefer explicit schema URL, else plain "InStock")
+  const availability =
+    get(base, "availability") ||
+    get(base, "raw.offers.availability") ||
+    get(withAgg, "raw.offers.availability") ||
+    null;
+
+  // Prices
+  const singlePrice = base.price != null ? Number(base.price) : (get(withOffer, "raw.offers.price") ?? null);
+  const low  = get(withAgg, "raw.offers.lowPrice");
+  const high = get(withAgg, "raw.offers.highPrice");
+
+  // Build per-option mapping
+  const { location, participants, fitness, availability: availText, options } = extractFromDescription(description);
+
+  // Decide prices for options
+  let priceShort = null, priceLong = null, headerPrice = null, headerRange = null;
+  if (low != null && high != null) {
+    // Use range for header; map short to low, long to high
+    headerRange = { low: Number(low), high: Number(high) };
+    priceShort = Number(low);
+    priceLong  = Number(high);
+  } else if (singlePrice != null) {
+    headerPrice = Number(singlePrice);
+    // Apply same price to any options we display
+    priceShort = headerPrice;
+    priceLong  = headerPrice;
+  }
 
   return {
-    price_single: single?.price != null ? Number(single.price) : null,
-    price_low: aggr?.lowPrice != null ? Number(aggr.lowPrice) : null,
-    price_high: aggr?.highPrice != null ? Number(aggr.highPrice) : null,
-    price_currency,
-    availability_text,
+    title,
+    url: pickUrl(base),
+    description,
+    location,
+    participants,
+    fitness,
+    availability: availText || (availability?.includes("schema.org") ? "In Stock" : availability) || null,
+    options,
+    pricing: { headerPrice, headerRange, priceShort, priceLong }
   };
 }
 
-function buildSessionOptions(parsedDesc, prices) {
-  const sessions = parsedDesc.sessions || [];
-  const items = [];
-  const priceText = (n) => (n != null ? toGBP(n) : null);
+/* -------------------------- Product panel markdown ----------------------- */
+function buildProductPanelMarkdown(prodMerged) {
+  if (!prodMerged) return "";
 
-  if (!sessions.length) return items;
+  const {
+    title, url, description, location, participants, fitness, availability, options, pricing
+  } = prodMerged;
 
-  const ordered = [...sessions].sort((a,b)=>a.length-b.length); // shortest wording first
-  const { price_low: low, price_high: high, price_single: single } = prices;
-
-  if (low != null && high != null && ordered.length >= 2) {
-    ordered.forEach((ln, idx) => {
-      const p = idx === 0 ? low : high;
-      items.push({ label: ln.split("-")[0].trim(), time: ln, price: p, price_text: priceText(p) });
-    });
-  } else {
-    ordered.forEach((ln) => {
-      items.push({ label: ln.split("-")[0].trim(), time: ln, price: single ?? null, price_text: priceText(single ?? null) });
-    });
-  }
-  return items;
-}
-
-function enrichProduct(p) {
-  const raw = p?.raw || {};
-  const parsed = parseDesc(p?.description || raw?.description || "");
-  const prices = extractPricesFromOffers(raw);
-  const session_options = buildSessionOptions(parsed, prices);
-
-  return {
-    ...p,
-    _enriched: {
-      blurb: parsed.blurb || "",
-      location_text: parsed.location_text,
-      participants_text: parsed.participants_text,
-      fitness_text: parsed.fitness_text,
-      availability_text: prices.availability_text,
-      price_single: prices.price_single,
-      price_low: prices.price_low,
-      price_high: prices.price_high,
-      price_currency: prices.price_currency || "GBP",
-      session_options,
-      price_title: prices.price_single != null
-        ? toGBP(prices.price_single)
-        : (prices.price_low != null || prices.price_high != null)
-          ? [prices.price_low, prices.price_high].filter(v=>v!=null).map(toGBP).join("–")
-          : null,
-    },
-  };
-}
-
-/* ----------------------- Option line construction ----------------------- */
-function buildOptionLines(products) {
-  const items = (products || [])
-    .map(p => {
-      const name = (p.raw && (p.raw.name || p.raw?.["@name"])) || (p.title || "Option");
-      const price =
-        p.price != null ? Number(p.price)
-        : p.raw?.offers?.price != null ? Number(p.raw.offers.price)
-        : null;
-      return { name: String(name).trim(), price, row: p };
-    })
-    .filter(x => x.price != null);
-
-  const seen = new Set();
-  const uniqItems = [];
-  for (const it of items) {
-    const key = `${it.name}__${it.price}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    uniqItems.push(it);
-  }
-
-  const byName = new Map();
-  for (const it of uniqItems) {
-    if (!byName.has(it.name)) byName.set(it.name, []);
-    byName.get(it.name).push(it);
-  }
+  const headerRight =
+    pricing.headerPrice != null
+      ? toGBP(pricing.headerPrice)
+      : (pricing.headerRange ? `${toGBP(pricing.headerRange.low)}–${toGBP(pricing.headerRange.high)}` : "");
 
   const lines = [];
-  for (const [name, arr] of byName.entries()) {
-    const prices = arr.map(a => a.price).sort((a,b)=>a-b);
-    const priceBits = prices.map(p => toGBP(p)).filter(Boolean);
-    if (!priceBits.length) continue;
-    lines.push(arr.length === 1 ? `${name} — ${priceBits[0]}` : `${name} — ${priceBits.join(" • ")}`);
-  }
-  return lines;
-}
+  lines.push(`**${title}**${headerRight ? ` — ${headerRight}` : ""}`);
+  if (description) lines.push(``);
+  if (description) lines.push(description.replace(/\n{2,}/g, "\n").split("\n").slice(0, 1)[0]); // first line/summary
 
-/* ----------------------------- Chips builder ---------------------------- */
-function buildChips({ bookNowUrl, landingUrl, anotherUrl }) {
-  const chips = [];
-  const used = new Set();
-  const add = (label, url) => {
-    if (!label || !url) return;
-    if (used.has(url)) return;
-    used.add(url);
-    chips.push({ label, url });
-  };
-  add("Book Now", bookNowUrl);
-  add("Bluebell info", landingUrl);
-  add("Upcoming dates", anotherUrl);
-  return chips.slice(0, 4);
-}
-
-/* ---------------------- Compose product markdown block ------------------- */
-function productMarkdownBlock(prodEnriched) {
-  if (!prodEnriched) return "";
-  const p = prodEnriched;
-  const e = p._enriched || {};
-  const title = p.title || p.raw?.name || "Workshop";
-  const priceTitle = e.price_title ? ` — ${e.price_title}` : "";
-  const url = pickUrl(p);
-
-  const lines = [];
-  lines.push(`**${title}**${priceTitle}`);
-  if (e.blurb) lines.push(`${e.blurb}`);
-
-  const facts = [];
-  if (e.location_text) facts.push(`**Location:** ${e.location_text}`);
-  if (e.participants_text) facts.push(`**Participants:** ${e.participants_text}`);
-  if (e.fitness_text) facts.push(`**Fitness:** ${e.fitness_text}`);
-  if (e.availability_text) facts.push(`**Availability:** ${e.availability_text}`);
-  if (facts.length) {
+  const infoBullets = [];
+  if (availability) infoBullets.push(`**Availability:** ${availability}`);
+  if (location)     infoBullets.push(`**Location:** ${location}`);
+  if (participants) infoBullets.push(`**Participants:** ${participants}`);
+  if (fitness)      infoBullets.push(`**Fitness:** ${fitness}`);
+  if (infoBullets.length) {
     lines.push("");
-    lines.push(facts.join(" • "));
+    lines.push(infoBullets.map(b => `- ${b}`).join("\n"));
   }
 
-  const opts = e.session_options || [];
-  if (opts.length) {
+  // Options with per-session prices
+  const optLines = [];
+  const short = options.find(o => o.key === "short");
+  const longer = options.find(o => o.key === "long");
+  if (short)  optLines.push(`- **${short.label}** — ${short.timeText}${pricing.priceShort != null ? ` — ${toGBP(pricing.priceShort)}` : ""}`);
+  if (longer) optLines.push(`- **${longer.label}** — ${longer.timeText}${pricing.priceLong  != null ? ` — ${toGBP(pricing.priceLong)}`  : ""}`);
+  if (optLines.length) {
     lines.push("");
-    lines.push("**Options:**");
-    for (const o of opts) {
-      const price = o.price_text ? ` — ${o.price_text}` : "";
-      lines.push(`- ${o.time}${price}`);
-    }
+    lines.push(optLines.join("\n"));
   }
 
+  // Booking link (compact)
   if (url) {
     lines.push("");
     lines.push(`[Book Now](${url})`);
   }
+
   return lines.join("\n");
 }
 
-/* ------------------------------- Bluebell -------------------------------- */
-async function answerBluebell({ query, client }) {
+/* ------------------------------- Chips ----------------------------------- */
+function buildChips({ productUrl, landingUrl, firstEventUrl }) {
+  const chips = [];
+  const add = (label, url, brand = true) => (url && chips.push({ label, url, brand }));
+  add("Book Now", productUrl, true);
+  add("Prices", productUrl ? productUrl + "#prices" : productUrl, true);
+  add("Upcoming dates", firstEventUrl || productUrl, true);
+  if (landingUrl) add("Info", landingUrl, true);
+  // de-dupe by url
+  const seen = new Set();
+  return chips.filter(c => !seen.has(c.url) && seen.add(c.url)).slice(0, 4);
+}
+
+/* -------------------------------- Bluebell ------------------------------- */
+async function answerBluebell({ client }) {
   const nowIso = new Date().toISOString();
 
+  // Canonicals (tolerant)
   const canon = await resolveCanonicalsOptionA(client, "bluebell");
 
+  // Future events (topic by title/page_url)
   const { data: events, error: evErr } = await client
     .from("page_entities")
     .select("id, title, page_url, source_url, date_start, date_end, location, raw")
@@ -308,6 +235,7 @@ async function answerBluebell({ query, client }) {
     return { ok: false, error: "event_query_failed", where: "events", hint: evErr.message };
   }
 
+  // Products (topic by title/page_url)
   const { data: products, error: prodErr } = await client
     .from("page_entities")
     .select("*")
@@ -320,64 +248,33 @@ async function answerBluebell({ query, client }) {
     return { ok: false, error: "product_query_failed", where: "products", hint: prodErr.message };
   }
 
-  const products_enriched = (products || []).map(enrichProduct);
+  // Merge products and build product-only markdown (no events here)
+  const merged = mergeProducts(products || []);
+  const answer_markdown = buildProductPanelMarkdown(merged);
 
-  // Choose the product that gives us the best pricing signal (range > single > anything)
-  const productPreferred =
-    products_enriched.find(p => p._enriched?.price_low != null || p._enriched?.price_high != null) ||
-    products_enriched.find(p => p._enriched?.price_single != null) ||
-    products_enriched[0] ||
-    null;
-
-  // Build event bullets for the bottom section
+  // Chips
   const eventList = (events || []).slice(0, 10);
-  const eventLines = [];
-  const bulletCitations = [];
-  for (const ev of eventList) {
-    const when = fmtDateLondon(ev.date_start);
-    const where = ev.location ? ` — ${ev.location}` : "";
-    const evUrl = pickUrl(ev);
-    eventLines.push(`- ${when} — [Link](${evUrl})${where}`);
-    if (evUrl) bulletCitations.push(evUrl);
-  }
-  if (eventLines.length === 0) eventLines.push("- (no upcoming dates found)");
-
-  // Book button source
-  let bookNowUrl = pickUrl(productPreferred);
-  if (!bookNowUrl && eventList[0]) bookNowUrl = pickUrl(eventList[0]);
-
   const chips = buildChips({
-    bookNowUrl,
+    productUrl: merged?.url || pickUrl(products?.[0]),
     landingUrl: pickUrl(canon.landing),
-    anotherUrl: pickUrl(eventList[0]),
+    firstEventUrl: pickUrl(eventList[0]),
   });
 
-  // ---------- Compose final markdown so the UI shows ALL details ----------
-  const parts = [];
-  if (productPreferred) {
-    parts.push(productMarkdownBlock(productPreferred));
-  }
-  parts.push("");
-  parts.push("### Upcoming bluebell Workshops");
-  parts.push(eventLines.join("\n"));
-  const answer_markdown = parts.join("\n");
-
+  // Citations (product + first few events + canon)
   const citations = uniq([
+    merged?.url,
     pickUrl(canon.landing),
     pickUrl(canon.product),
-    ...bulletCitations,
-    bookNowUrl,
-  ]).filter(Boolean);
+    ...eventList.map(pickUrl),
+  ]);
 
+  // Structured (leave events here; UI renders them once with its own styling)
   const structured = {
     topic: "bluebell",
     events: eventList,
     products: products || [],
-    products_enriched,
-    top_product: productPreferred || null,
     canonicals: { product: canon.product || null, landing: canon.landing || null, debug: canon.debug },
     chips,
-    option_lines: buildOptionLines(products || []),
   };
 
   return { ok: true, answer_markdown, citations, structured };
@@ -398,7 +295,7 @@ export default async function handler(req, res) {
     const topic = getTopicFromQuery(query);
 
     if (topic === "bluebell") {
-      const result = await answerBluebell({ query, client });
+      const result = await answerBluebell({ client });
       res.status(result.ok ? 200 : 500).json({
         ...result,
         meta: { duration_ms: Date.now() - started, endpoint: "/api/chat", topK: topK || null },
@@ -406,7 +303,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Generic fallback — to be expanded later
+    // Generic fallback
     res.status(200).json({
       ok: true,
       answer_markdown:
