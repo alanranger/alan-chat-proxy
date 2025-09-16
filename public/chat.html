@@ -17,8 +17,8 @@
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
 .wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px;position:relative}
-.version{position:absolute;top:6px;right:10px;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.card{position:relative;background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+.version{position:absolute;right:10px;top:10px;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
@@ -37,6 +37,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer li{margin:.15em 0}
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
+.answer .facts{margin:.25rem 0 .5rem}
+.answer .facts div{margin:.15rem 0}
+.answer .facts b{display:inline-block;min-width:110px}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chips a{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--chip-br);background:var(--chip-bg);color:#cfe3ff;text-decoration:none;font-weight:600}
@@ -48,7 +51,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
 .composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
-.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
+.send{background:var(--brand);color:var(--user-text);font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
 /* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
@@ -88,7 +91,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
       <details id="debugPanel" class="debug">
         <summary>🔎 Show debug</summary>
-        <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
+        <button id="dbg-copy" style="margin:8px 0 10px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
         <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
         <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
@@ -150,7 +153,6 @@ function addTyping() {
   const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
   return ()=> el && el.remove();
 }
-
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -173,121 +175,152 @@ function mdToHtml(md){
   flush();
   return { html:`<div class="answer">${out}</div>`, liIds, items };
 }
-
 function fmtDate(iso){
   try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
 }
-
-/* ---------- Helpers for robust schema extraction ---------- */
-function firstNonEmptyAfter(lines, i){
-  for(let j=i+1;j<lines.length;j++){ if(lines[j].trim()) return lines[j].trim(); }
-  return null;
-}
-function norm(s){ return String(s||'').trim(); }
-function textEq(a,b){ return norm(a).toLowerCase()===norm(b).toLowerCase(); }
-
-/* Pull generic details from a description block (supports next-line values) */
-function extractKeyDetails(desc){
-  if(!desc) return { bullets:[], location:null, sessions:[], participants:null, fitness:null };
-  const lines = desc.split(/\r?\n/).map(s=>s.trim());
-  const seen = new Set(); // de-duplicate repeated lines
-  const bullets=[], sessions=[];
-  let location=null, participants=null, fitness=null;
-
-  for(let i=0;i<lines.length;i++){
-    const ln = lines[i];
-    if(!ln) continue;
-
-    // Sessions (4hrs / 1 day patterns)
-    if(/(?:\b\d+\s*hrs?\b|\b\d+\s*hour\b|\b1\s*day\b)/i.test(ln)){
-      if(!seen.has(ln.toLowerCase())){ sessions.push(ln); bullets.push(ln); seen.add(ln.toLowerCase()); }
-      continue;
-    }
-
-    // Location / Participants / Fitness (inline or next line)
-    if(/^Location:/i.test(ln)){
-      let v = ln.replace(/^Location:\s*/i,'').trim();
-      if(!v) v = firstNonEmptyAfter(lines,i);
-      if(v){ location = v; if(!seen.has(('Location: '+v).toLowerCase())){ bullets.push('Location: '+v); seen.add(('Location: '+v).toLowerCase()); } }
-      continue;
-    }
-    if(/^Participants:/i.test(ln)){
-      let v = ln.replace(/^Participants:\s*/i,'').trim();
-      if(!v) v = firstNonEmptyAfter(lines,i);
-      if(v){ participants = v; if(!seen.has(('Participants: '+v).toLowerCase())){ bullets.push('Participants: '+v); seen.add(('Participants: '+v).toLowerCase()); } }
-      continue;
-    }
-    if(/^Fitness:/i.test(ln)){
-      let v = ln.replace(/^Fitness:\s*/i,'').trim();
-      if(!v) v = firstNonEmptyAfter(lines,i);
-      if(v){ fitness = v; if(!seen.has(('Fitness: '+v).toLowerCase())){ bullets.push('Fitness: '+v); seen.add(('Fitness: '+v).toLowerCase()); } }
-      continue;
-    }
-
-    // Keep a concise marketing line, but avoid duplicates
-    const plain = ln.replace(/\s+/g,' ').trim();
-    if(plain && !seen.has(plain.toLowerCase())){
-      bullets.push(plain); seen.add(plain.toLowerCase());
-    }
-  }
-
-  return { bullets, location, sessions, participants, fitness };
-}
-
-function mapAvailability(av){
-  const s = String(av||'').toLowerCase();
-  if(s.includes('instock')) return 'In Stock';
-  if(s.includes('outofstock')||s.includes('out_of_stock')) return 'Out of Stock';
-  return s ? av : null;
-}
-
-function availabilityFromProduct(p){
-  return mapAvailability(
-    p?.availability ||
-    p?.raw?.offers?.availability ||
-    p?.raw?.offers?.[0]?.availability
-  );
-}
-
 function toGBP(n){
-  if(n==null || isNaN(Number(n))) return null;
-  return new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0}).format(Number(n));
+  if (n == null || isNaN(Number(n))) return null;
+  return new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP",maximumFractionDigits:0}).format(Number(n));
+}
+/* Tiny cleaners */
+const clean = {
+  normSpaces(s){ return String(s||'').replace(/\s+/g,' ').trim(); },
+  stripSummaryHdr(s){ return String(s||'').replace(/^\s*summary\s*:?\s*/i,''); },
+  dedupeLines(s){
+    const lines = String(s||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    const seen = new Set(); const out=[];
+    for(const l of lines){ const k=l.toLowerCase(); if(seen.has(k)) continue; seen.add(k); out.push(l); }
+    return out.join('\n');
+  }
+};
+
+/* --------- Parse product details (generic) ---------- */
+function deriveFromDescription(descRaw){
+  if(!descRaw) return {};
+  const desc = clean.dedupeLines(descRaw);
+  const lines = desc.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  let location=null, participants=null, fitness=null;
+  const sessions=[];
+  for (const ln of lines){
+    const l = ln.replace(/^Summary\s*:?\s*/i,'').trim();
+    if(/^Location\s*:/i.test(l)) location = clean.normSpaces(l.replace(/^Location\s*:\s*/i,''));
+    if(/^Participants\s*:/i.test(l)) participants = clean.normSpaces(l.replace(/^Participants\s*:\s*/i,''));
+    if(/^Fitness\s*:/i.test(l)) fitness = clean.normSpaces(l.replace(/^Fitness\s*:\s*/i,''));
+    if(/^\d+\s*hrs?/.test(l) || /^OR\s*\d+\s*day/i.test(l) || /^1\s*day/i.test(l) || /Full\s*day/i.test(l)){
+      sessions.push(l.replace(/^OR\s*/,'').replace(/\s{2,}/g,' ').trim());
+    }
+  }
+  // Build a short, single-sentence summary from the first non-label line
+  const summary = lines.find(x => !/^(Location|Participants|Fitness)\s*:/i.test(x) && !/^\d+\s*hrs?/i.test(x) && !/^1\s*day/i.test(x) && !/^OR\s*/i.test(x)) || '';
+  return { summary: clean.stripSummaryHdr(summary), location, participants, fitness, sessions, availability: null };
 }
 
-function readLow(o){
-  return o?.lowPrice ?? o?.lowprice ?? o?.low_price ?? null;
-}
-function readHigh(o){
-  return o?.highPrice ?? o?.highprice ?? o?.high_price ?? null;
-}
+function mapPricesToSessions(prod, sessions){
+  // Try AggregateOffer first
+  const agg = prod?.raw?.offers;
+  const single = Number(prod?.price);
+  const low = Number(agg?.lowPrice ?? agg?.lowprice);
+  const high = Number(agg?.highPrice ?? agg?.highprice);
+  const offers = Array.isArray(prod?.raw?.offers) ? prod.raw.offers : null;
 
-/* Merge price signals across all products (single + range) */
-function collectPrices(allProducts){
-  const singles = new Set();
-  const ranges = new Set();
+  const fmt = n => toGBP(n);
 
-  for(const p of (allProducts||[])){
-    const op = p?.raw?.offers || {};
-    const single =
-      p?.price ??
-      op?.price ??
-      (Array.isArray(op) ? op.find(x=>x?.price!=null)?.price : null);
+  // Case A: explicit multiple offers with price
+  if (offers && offers.length){
+    const priced = offers
+      .map(o => ({ price: Number(o?.price), name: o?.name || o?.description || null }))
+      .filter(x => x.price && !isNaN(x.price))
+      .sort((a,b)=>a.price-b.price);
 
-    const low = readLow(op);
-    const high = readHigh(op);
-
-    if(single!=null) singles.add(Number(single));
-    if(low!=null && high!=null){
-      ranges.add(`${Number(low)}-${Number(high)}`);
+    if (priced.length){
+      const lines=[];
+      // Pair cheapest→shortest, etc.
+      const orderedSessions = sessions.slice().sort((a,b)=> a.length - b.length);
+      priced.forEach((p,i)=>{
+        const label = orderedSessions[i] || orderedSessions[orderedSessions.length-1] || 'Option';
+        lines.push({ label, price: p.price });
+      });
+      return { lines, headlinePrice: priced.length===1 ? fmt(priced[0].price) : (fmt(priced[0].price)+' – '+fmt(priced[priced.length-1].price)) };
     }
   }
 
-  const singleTxt = [...singles].sort((a,b)=>a-b).map(toGBP);
-  const rangeTxt  = [...ranges].map(r=>{
-    const [a,b]=r.split('-'); return `${toGBP(a)}–${toGBP(b)}`;
-  });
+  // Case B: single price
+  if (!isNaN(single) && single){
+    return {
+      lines: sessions.map(s => ({ label:s, price: single })),
+      headlinePrice: fmt(single)
+    };
+  }
 
-  return { singleTxt, rangeTxt };
+  // Case C: aggregate low/high with 2+ sessions → map low→short, high→long
+  if (!isNaN(low) && !isNaN(high) && sessions.length){
+    const ordered = sessions.slice().sort((a,b)=> a.length - b.length);
+    const out=[];
+    if (ordered[0]) out.push({ label: ordered[0], price: low });
+    if (ordered[1]) out.push({ label: ordered[1], price: high });
+    // Any remainder get nearest price (high)
+    for (let i=2;i<ordered.length;i++) out.push({ label: ordered[i], price: high });
+    return { lines: out, headlinePrice: fmt(low)+' • '+fmt(high) };
+  }
+
+  // Fallback: no prices we can pair
+  return { lines: sessions.map(s=>({label:s, price:null})), headlinePrice: null };
+}
+
+function productSummaryNode(prod){
+  const wrap = document.createElement('div'); wrap.className='answer';
+
+  const title = clean.normSpaces(prod?.title || prod?.raw?.name || 'Workshop');
+  const fromDesc = deriveFromDescription(prod?.description || prod?.raw?.description || '');
+  const sessions = fromDesc.sessions.length ? fromDesc.sessions : [];
+
+  // prices
+  const pricing = mapPricesToSessions(prod, sessions);
+
+  // Headline
+  const h = document.createElement('h3');
+  const headlinePrice = pricing.headlinePrice || toGBP(prod?.price) || '';
+  h.innerHTML = `<strong>${title}</strong>${headlinePrice ? ` — ${headlinePrice}` : ''}`;
+  wrap.appendChild(h);
+
+  // One-sentence summary
+  if (fromDesc.summary){
+    const p = document.createElement('p');
+    p.textContent = fromDesc.summary;
+    wrap.appendChild(p);
+  }
+
+  // Key facts (inline labels, no bullets)
+  const facts = document.createElement('div'); facts.className='facts';
+  const addFact = (label,val)=>{ if(!val) return; const d=document.createElement('div'); d.innerHTML=`<b>${label}:</b> ${val}`; facts.appendChild(d); };
+  addFact('Location', fromDesc.location);
+  // Participants: prefer numeric if present
+  addFact('Participants', fromDesc.participants);
+  addFact('Fitness', fromDesc.fitness);
+  const avail = prod?.availability || prod?.raw?.offers?.availability || null;
+  addFact('Availability', (typeof avail==='string') ? (avail.includes('InStock')?'In Stock':avail) : null);
+  if (facts.children.length) wrap.appendChild(facts);
+
+  // Sessions & prices (bulleted)
+  if (pricing.lines.length){
+    const ul = document.createElement('ul');
+    pricing.lines.forEach(x=>{
+      const li = document.createElement('li');
+      const label = x.label
+        .replace(/^OR\s*/,'')
+        .replace(/^\d+\s*hrs?\b/i, m=>m.replace('hrs','hours'))
+        .replace(/\s*-\s*/g,' - ')
+        .replace(/\s–\s/g,' – ');
+      li.innerHTML = `<strong>${label.replace(/\s*-\s*\d.*$/,'').trim()}</strong>`; // bold option name (e.g., "4 hours", "1 day")
+      const timesText = label.replace(/^\s*[^-–]+[-–]\s*/,''); // after dash
+      if (timesText) li.insertAdjacentText('beforeend', ` — ${timesText}`);
+      if (x.price!=null) li.insertAdjacentHTML('beforeend', ` — <strong>${toGBP(x.price)}</strong>`);
+      ul.appendChild(li);
+    });
+    wrap.appendChild(ul);
+  }
+
+  return wrap;
 }
 
 /* Build chips *generically* from what we have */
@@ -320,99 +353,66 @@ function createChips(structured, citations){
   return out;
 }
 
-/* Render a concise structured block that works for any topic */
-function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
-  const container=document.createElement('div'); container.className='answer';
-
-  // ---------- Product / options (generic) ----------
-  const products=structured?.products||[];
-  // Prefer a product that has a description; else first available
-  const prod=(products.find(p=>p.description)||products[0])||null;
-
-  if(prod){
-    const details=extractKeyDetails(prod.description||'');
-    const { singleTxt, rangeTxt } = collectPrices(products);
-    const availability = availabilityFromProduct(prod);
-
-    const h=document.createElement('h3'); h.textContent='Workshop Options:'; container.appendChild(h);
-    const p=document.createElement('p');
-    const title = prod.title || 'Options';
-    const priceBits = [...singleTxt, ...rangeTxt].filter(Boolean);
-    const priceStr = priceBits.length ? ' — ' + priceBits.join(' • ') : '';
-    p.innerHTML = `<strong>${title}</strong>${priceStr}`;
-    container.appendChild(p);
-
-    // Build bullets with de-duplication and ordering
-    const ul=document.createElement('ul');
-    const push = (html)=>{ const li=document.createElement('li'); li.innerHTML=html; ul.appendChild(li); };
-    if(details.location)   push(`<strong>Location:</strong> ${details.location}`);
-    // Short marketing line — keep only one (first non "Location/Participants/Fitness/Sessions")
-    // The extractKeyDetails already de-dupes; pick the first non-labelled line
-    const firstPlain = (details.bullets||[]).find(b=>!/^location:|^participants:|^fitness:/i.test(b) && !/(?:\b\d+\s*hrs?\b|\b1\s*day\b)/i.test(b));
-    if(firstPlain) push(firstPlain);
-    // Sessions
-    (details.sessions||[]).forEach(s=> push(s));
-    // Participants / Fitness
-    if(details.participants) push(`<strong>Participants:</strong> ${details.participants}`);
-    if(details.fitness) push(`<strong>Fitness:</strong> ${details.fitness}`);
-    // Availability (from schema)
-    if(availability) push(`<strong>Availability:</strong> ${availability}`);
-
-    if(ul.children.length) container.appendChild(ul);
-  }
-
-  // ---------- Upcoming events (generic) ----------
+/* Render events block */
+function renderEvents(structured){
   const now=new Date();
   const future=(structured?.events||[])
     .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
     .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
     .slice(0,12);
 
-  if(future.length){
-    const heading = structured?.topic ? `Upcoming ${structured.topic.toString().trim()} Workshops` : fallbackHeading;
-    const h2=document.createElement('h3'); h2.textContent=heading; container.appendChild(h2);
-    const ul=document.createElement('ul');
-    future.forEach(e=>{
-      const li=document.createElement('li');
-      const when=fmtDate(e.date_start);
-      const href=e.page_url||e.source_url||'#';
-      const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent='Link';
-      li.innerHTML=`${when} — `; li.appendChild(a);
-      if(e.location) li.insertAdjacentText('beforeend',` — ${e.location}`);
-      ul.appendChild(li);
-    });
-    container.appendChild(ul);
-  }
+  if(!future.length) return null;
 
-  return {node:container};
+  const wrap = document.createElement('div'); wrap.className='answer';
+  const heading = structured?.topic ? `Upcoming ${structured.topic.toString().trim()} Workshops` : 'Upcoming Dates';
+  const h2=document.createElement('h3'); h2.textContent=heading; wrap.appendChild(h2);
+  const ul=document.createElement('ul');
+  future.forEach(e=>{
+    const li=document.createElement('li');
+    const when=fmtDate(e.date_start);
+    const href=e.page_url||e.source_url||'#';
+    const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent='Link';
+    li.innerHTML=`${when} — `; li.appendChild(a);
+    if (e.location) li.insertAdjacentText('beforeend',` — ${e.location}`);
+    ul.appendChild(li);
+  });
+  wrap.appendChild(ul);
+  return wrap;
 }
 
 /* ---------- Render answer end-to-end ---------- */
 function renderAnswer(payload){
-  // 1) Primary markdown from API (if present)
   const md=payload.answer_markdown||payload.answer||'';
   if(md){ const {html}=mdToHtml(md); addBubble(html); }
 
-  // 2) Structured augmentation (generic)
   if(payload.structured){
-    const {node}=renderStructured(payload.structured);
-    const bubble=addBubble(node.outerHTML);
+    // Product first
+    const products = payload.structured.products || [];
+    const mainProd = products.find(p=>p.price!=null) || products[0] || null;
+    if (mainProd){
+      const node = productSummaryNode(mainProd);
+      addBubble(node.outerHTML);
+    }
 
-    // 3) Smart chips (no duplicates; generic labels)
+    // Events block
+    const evNode = renderEvents(payload.structured);
+    let bubble = null;
+    if (evNode) bubble = addBubble(evNode.outerHTML);
+
+    // Chips
     const chips=createChips(payload.structured, payload.citations||[]);
     if(chips.length){
-      const wrap=document.createElement('div'); wrap.className='chips';
+      const chipWrap=document.createElement('div'); chipWrap.className='chips';
       chips.forEach(c=>{
         const a=document.createElement('a');
         a.href=c.href; a.target='_blank'; a.rel='noopener'; a.textContent=c.label;
         if(c.brand) a.classList.add('brand');
-        wrap.appendChild(a);
+        chipWrap.appendChild(a);
       });
-      bubble.appendChild(wrap);
+      (bubble || thread.lastElementChild).appendChild(chipWrap);
     }
   }
 
-  // Debug dump
   dbgStruct.textContent=safeJSONString(payload.structured||{});
 }
 
@@ -461,7 +461,7 @@ input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
 
-// Optional: prefill example
+// Optional starter
 // sendQuery("give me the next workshop dates and prices");
 </script>
 </body>
