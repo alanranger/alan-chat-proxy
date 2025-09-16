@@ -16,10 +16,10 @@
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
-.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.version{position:absolute;top:-8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
-.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
-.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px;position:relative}
+.version{position:static;display:inline-block;float:right;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3;margin-top:-10px}
+.header{clear:both;display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
 .sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
@@ -69,8 +69,8 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <span class="version">v0.9.12</span>
   <div class="card">
+    <span class="version">v0.9.12</span>
     <div class="header">
       <img class="logo" src="./chat%20white.png" alt="AR logo">
       <h2 class="title">Alan Ranger Assistant</h2>
@@ -88,6 +88,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
       <details id="debugPanel" class="debug">
         <summary>🔎 Show debug</summary>
+        <button id="dbg-copy" style="margin:10px 0;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
         <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
         <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
@@ -95,7 +96,6 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
         <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
         <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
         <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
-        <button id="dbg-copy" style="margin-top:10px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
       </details>
 
       <div class="composer">
@@ -184,20 +184,15 @@ function normCurrency(cur){
   const s = String(cur).toUpperCase().replace(/[^A-Z]/g,'');
   return s || 'GBP';
 }
-
 function getPriceInfo(prod){
-  // Accept price at top-level or inside raw.offers
   const raw = prod?.raw || {};
   const offers = raw.offers || {};
   const currency = normCurrency(offers.priceCurrency || prod?.price_currency);
-
-  // Single price (Offer or top-level)
   const single = [prod?.price, offers?.price].find(v => v!=null);
   if (single!=null && !isNaN(Number(single))) {
-    return { type:'single', currency, value:Number(single), text: new Intl.NumberFormat('en-GB',{style:'currency',currency,maximumFractionDigits:0}).format(Number(single)) };
+    return { type:'single', currency, value:Number(single),
+      text: new Intl.NumberFormat('en-GB',{style:'currency',currency,maximumFractionDigits:0}).format(Number(single)) };
   }
-
-  // Aggregate offer (low/high). Handle various casings
   const low = offers.lowPrice ?? offers.lowprice ?? offers.low_price;
   const high = offers.highPrice ?? offers.highprice ?? offers.high_price;
   if ((low!=null && !isNaN(Number(low))) || (high!=null && !isNaN(Number(high)))) {
@@ -207,16 +202,15 @@ function getPriceInfo(prod){
     const text = lo && hi ? `${lo}–${hi}` : (lo||hi||'');
     return { type:'range', currency, low:low!=null?Number(low):null, high:high!=null?Number(high):null, text };
   }
-
   return { type:'unknown', currency, text:'' };
 }
 
-/* ---------- Description parser (tolerant, multi-line) ---------- */
+/* ---------- Description parser (multi-line tolerant) ---------- */
 function extractKeyDetails(desc){
-  if(!desc) return { bullets:[], location:null, sessions:[], participants:null, fitness:null };
+  if(!desc) return { bullets:[], location:null, sessions:[], participants:null, fitness:null, availability:null };
   const lines = desc.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
 
-  let location=null, participants=null, fitness=null;
+  let location=null, participants=null, fitness=null, availability=null;
   const bullets=[], sessions=[];
   for(let i=0;i<lines.length;i++){
     const ln = lines[i];
@@ -225,50 +219,42 @@ function extractKeyDetails(desc){
     const locMatch = ln.match(/^\s*Location\s*:?\s*(.*)$/i);
     if(locMatch){
       const rest = locMatch[1].trim();
-      if (rest) {
-        location = rest;
-      } else if (i+1 < lines.length) {
-        location = lines[i+1].trim();
-      }
+      location = rest || lines[i+1]?.trim() || location;
       continue;
     }
-    // Sometimes appears as free text: "Near Henley In Arden, Warwickshire"
-    if(!location && /^Near\s+.+,\s*[^,]+$/i.test(ln)){
-      location = ln;
-    }
+    if(!location && /^Near\s+.+/i.test(ln)) location = ln;
 
-    // Participants (allow bullet or leading spaces)
     const partMatch = ln.match(/^\s*(?:[-•]\s*)?Participants?\s*:\s*(.+)$/i);
     if(partMatch){ participants = partMatch[1].trim(); continue; }
 
-    // Fitness
     const fitMatch = ln.match(/^\s*(?:[-•]\s*)?Fitness\s*:\s*(.+)$/i);
     if(fitMatch){ fitness = fitMatch[1].trim(); continue; }
 
-    // Session lines (4hrs/4 hours / 1 day etc)
+    const availMatch = ln.match(/^\s*(?:[-•]\s*)?Availability\s*:\s*(.+)$/i);
+    if(availMatch){ availability = availMatch[1].trim(); continue; }
+
     if (/\b\d+\s*(?:hrs?|hours?)\b/i.test(ln) || /\b\d+\s*day\b/i.test(ln)) {
       sessions.push(ln);
       continue;
     }
   }
 
-  // Build bullets in a stable order (and dedupe)
   const seen = new Set();
-  const pushUnique = (v)=>{ if(v && !seen.has(v)){ bullets.push(v); seen.add(v);} };
-  if(location) pushUnique(`Location: ${location}`);
-  if(participants) pushUnique(`Participants: ${participants}`);
-  if(fitness) pushUnique(`Fitness: ${fitness}`);
-  sessions.forEach(s=>pushUnique(s));
+  const push = v => { if(v && !seen.has(v)){ bullets.push(v); seen.add(v);} };
+  if(location) push(`Location: ${location}`);
+  if(participants) push(`Participants: ${participants}`);
+  if(fitness) push(`Fitness: ${fitness}`);
+  if(availability) push(`Availability: ${availability}`);
+  sessions.forEach(s=>push(s));
 
-  return { bullets, location, sessions, participants, fitness };
+  return { bullets, location, sessions, participants, fitness, availability };
 }
-
 function priceTextFromProduct(prod){
   const p = getPriceInfo(prod);
   return p.text || '';
 }
 
-/* Build chips *generically* from what we have */
+/* Build chips generically */
 function createChips(structured, citations){
   const events=structured?.events||[];
   const products=structured?.products||[];
@@ -298,16 +284,17 @@ function createChips(structured, citations){
   return out;
 }
 
-/* Render a concise structured block that works for any topic, avoiding duplicates */
+/* Render structured block (no duplicates) */
 function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
   const container=document.createElement('div'); container.className='answer';
 
-  // Choose a representative product (prefer one with price)
+  // choose a representative product (prefer one with price text)
   const products=structured?.products||[];
-  const prod=(products.find(p=>getPriceInfo(p).text)||products[0])||null;
+  const prod=(products.find(p=>priceTextFromProduct(p))||products[0])||null;
 
   if(prod){
-    const details=extractKeyDetails(prod.description||prod.raw?.description||'');
+    const description = prod.description || prod.raw?.description || '';
+    const details=extractKeyDetails(description);
     const priceTx=priceTextFromProduct(prod);
 
     const h=document.createElement('h3'); h.textContent='Workshop Options:'; container.appendChild(h);
@@ -316,12 +303,15 @@ function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
     container.appendChild(p);
     const ul=document.createElement('ul');
 
-    // Location / Participants / Fitness if present
     if(details.location){ const li=document.createElement('li'); li.innerHTML=`<strong>Location:</strong> ${details.location}`; ul.appendChild(li); }
-    if(details.participants){ const li=document.createElement('li'); li.innerHTML=`<strong>Participants:</strong> ${details.participants}`; ul.appendChild(li); }
-    if(details.fitness){ const li=document.createElement('li'); li.innerHTML=`<strong>Fitness:</strong> ${details.fitness}`; ul.appendChild(li); }
 
-    // Sessions (deduped)
+    // If the first non-label line in description looks like a one-sentence summary, include it
+    const firstLine = description.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)[0] || '';
+    if(firstLine && !/^Location:|Participants:|Fitness:|Availability:/i.test(firstLine) && !/^\d+\s*(hrs?|hours?|day)/i.test(firstLine)){
+      const li=document.createElement('li'); li.textContent=firstLine; ul.appendChild(li);
+    }
+
+    // Sessions
     const seen = new Set();
     (details.sessions||[]).forEach(s=>{
       const t=s.replace(/\s+/g,' ').trim();
@@ -330,10 +320,14 @@ function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
       const li=document.createElement('li'); li.textContent=t; ul.appendChild(li);
     });
 
+    if(details.participants){ const li=document.createElement('li'); li.innerHTML=`<strong>Participants:</strong> ${details.participants}`; ul.appendChild(li); }
+    if(details.fitness){ const li=document.createElement('li'); li.innerHTML=`<strong>Fitness:</strong> ${details.fitness}`; ul.appendChild(li); }
+    if(details.availability){ const li=document.createElement('li'); li.innerHTML=`<strong>Availability:</strong> ${details.availability}`; ul.appendChild(li); }
+
     if(ul.children.length) container.appendChild(ul);
   }
 
-  // Upcoming events
+  // Events list
   const now=new Date();
   const future=(structured?.events||[])
     .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
@@ -361,16 +355,13 @@ function renderStructured(structured, fallbackHeading='Upcoming Workshops'){
 
 /* ---------- Render answer end-to-end ---------- */
 function renderAnswer(payload){
-  // 1) Primary markdown from API (if present)
   const md=payload.answer_markdown||payload.answer||'';
   if(md){ const {html}=mdToHtml(md); addBubble(html); }
 
-  // 2) Structured augmentation (generic)
   if(payload.structured){
     const {node}=renderStructured(payload.structured);
     const bubble=addBubble(node.outerHTML);
 
-    // 3) Smart chips (no duplicates; generic labels)
     const chips=createChips(payload.structured, payload.citations||[]);
     if(chips.length){
       const wrap=document.createElement('div'); wrap.className='chips';
@@ -384,7 +375,6 @@ function renderAnswer(payload){
     }
   }
 
-  // Debug dump
   dbgStruct.textContent=safeJSONString(payload.structured||{});
 }
 
@@ -433,7 +423,7 @@ input.addEventListener('keydown', (e)=>{
   if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
 });
 
-// Example starter (optional)
+// Optional starter
 // sendQuery("give me the next workshop dates and prices");
 </script>
 </body>
