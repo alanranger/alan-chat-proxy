@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <title>Bench Test – Events / Products / Articles</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Supabase client -->
   <script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <style>
     :root{
@@ -38,7 +37,7 @@
     .badge.ok{border-color:#1f5130;background:#0b1f14;color:#86efac}
     .badge.warn{border-color:#4a3a14;background:#1a1307;color:#fde68a}
     .badge.err{border-color:#5a1a1a;background:#1a0b0b;color:#fecaca}
-    .log{height:260px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap;background:#0b0f15;border-top:1px solid var(--border);border-radius:0 0 10px 10px;padding:10px}
+    .log{height:220px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap;background:#0b0f15;border-top:1px solid var(--border);border-radius:0 0 10px 10px;padding:10px}
     .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0 0 0}
     .gridTitle{display:flex;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border)}
     .gridTitle h4{margin:0;font-weight:600}
@@ -54,19 +53,13 @@
 <div class="page">
   <!-- LEFT PANEL -->
   <div class="left">
-
-    <!-- Connect -->
     <div class="card section">
       <h3>Step 0 · Connect to Supabase</h3>
       <div class="row"><input id="sbUrl" type="text" placeholder="Supabase URL"></div>
       <div class="row"><input id="sbAnon" type="text" placeholder="Supabase ANON key"></div>
       <div class="row">
-        <select id="eventsView">
-          <option value="ai_events">ai_events</option>
-        </select>
-        <select id="productsView">
-          <option value="ai_products">ai_products</option>
-        </select>
+        <select id="eventsView"><option value="ai_events">ai_events</option></select>
+        <select id="productsView"><option value="ai_products">ai_products</option></select>
       </div>
       <div class="row">
         <button id="saveCfg" class="small">Save</button>
@@ -74,42 +67,26 @@
       </div>
       <div class="row">
         <button id="btnConnect" class="primary">Connect</button>
-        <button id="btnFetch" class="">Fetch live data</button>
+        <button id="btnFetch">Fetch live data</button>
       </div>
-      <div class="kpi">
-        <span id="connStatus" class="badge">Disconnected.</span>
-      </div>
+      <div class="kpi"><span id="connStatus" class="badge">Disconnected.</span></div>
       <div class="row" style="margin-top:6px;">
-        <label class="hint">
-          <input id="useLandingFallback" type="checkbox" />
-          Use Landing CSV fallback
-        </label>
-        <label class="hint" style="margin-left:10px;">
-          <input id="enableGenericPills" type="checkbox" checked />
-          Enable generic pills
-        </label>
+        <label class="hint"><input id="useLandingFallback" type="checkbox" /> Use Landing CSV fallback</label>
+        <label class="hint" style="margin-left:10px;"><input id="enableGenericPills" type="checkbox" checked /> Enable generic pills</label>
       </div>
     </div>
 
-    <!-- Landing pages CSV -->
     <div class="card section">
       <h3>Step 1 (optional) · Landing Pages CSV (fallback)</h3>
       <div class="hint">Required columns: <code>url</code> and one of <code>meta_title</code> or <code>title</code>.</div>
-      <div class="row">
-        <input id="landingCsv" type="file" accept=".csv" />
-        <button id="clearLanding" class="small">Clear</button>
-      </div>
+      <div class="row"><input id="landingCsv" type="file" accept=".csv" /><button id="clearLanding" class="small">Clear</button></div>
       <div id="landingInfo" class="hint">No file loaded.</div>
     </div>
 
-    <!-- Questions CSV -->
     <div class="card section">
       <h3>Step 2 · Questions CSV</h3>
       <div class="hint">Columns: <code>idx, query, expected</code>. Extra columns ignored.</div>
-      <div class="row">
-        <input id="questionsCsv" type="file" accept=".csv" />
-        <button id="clearQuestions" class="small">Clear</button>
-      </div>
+      <div class="row"><input id="questionsCsv" type="file" accept=".csv" /><button id="clearQuestions" class="small">Clear</button></div>
       <div class="row sticky-tools">
         <button id="runSuite" class="primary">Run whole suite</button>
         <button id="downloadSuiteJson" class="small">Download suite JSON</button>
@@ -117,12 +94,9 @@
       <div id="questionsInfo" class="hint">No file loaded.</div>
     </div>
 
-    <!-- Single query -->
     <div class="card section">
       <h3>Step 3 · Try a single query</h3>
-      <div class="row">
-        <input id="singleQuery" type="text" placeholder="e.g. when is the next devon workshop?" />
-      </div>
+      <div class="row"><input id="singleQuery" type="text" placeholder="e.g. when is the next devon workshop?" /></div>
       <div class="row">
         <button id="btnRun" class="primary">Run</button>
         <button id="btnCopyJson" class="small">Copy JSON</button>
@@ -135,89 +109,75 @@
         </div>
       </div>
     </div>
-
   </div>
 
   <!-- RIGHT PANEL -->
   <div class="right">
     <div class="grids">
-      <!-- Events -->
       <div class="card">
-        <div class="gridTitle">
-          <h4>Results · Events</h4>
-          <span id="eventsKpi" class="badge">–</span>
-        </div>
+        <div class="gridTitle"><h4>Results · Events</h4><span id="eventsKpi" class="badge">–</span></div>
         <div style="max-height:260px;overflow:auto;">
           <table class="table" id="eventsTable">
-            <thead><tr>
-              <th style="width:34%">title</th>
-              <th>url</th>
-              <th style="width:16%">when</th>
-              <th style="width:18%">location</th>
-            </tr></thead>
+            <thead><tr><th style="width:34%">title</th><th>url</th><th style="width:16%">when</th><th style="width:18%">location</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
 
-      <!-- Products -->
       <div class="card">
-        <div class="gridTitle">
-          <h4>Results · Products</h4>
-          <span id="productsKpi" class="badge">–</span>
-        </div>
+        <div class="gridTitle"><h4>Results · Products</h4><span id="productsKpi" class="badge">–</span></div>
         <div style="max-height:260px;overflow:auto;">
           <table class="table" id="productsTable">
-            <thead><tr>
-              <th style="width:45%">title</th>
-              <th>url</th>
-              <th style="width:12%">price</th>
-              <th style="width:16%">tags</th>
-            </tr></thead>
+            <thead><tr><th style="width:45%">title</th><th>url</th><th style="width:12%">price</th><th style="width:16%">tags</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
 
-      <!-- Articles -->
       <div class="card">
-        <div class="gridTitle">
-          <h4>Results · Articles</h4>
-          <span id="articlesKpi" class="badge">–</span>
-        </div>
+        <div class="gridTitle"><h4>Results · Articles</h4><span id="articlesKpi" class="badge">–</span></div>
         <div style="max-height:220px;overflow:auto;">
           <table class="table" id="articlesTable">
-            <thead><tr>
-              <th style="width:55%">title</th>
-              <th>url</th>
-            </tr></thead>
+            <thead><tr><th style="width:55%">title</th><th>url</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
 
-      <!-- Pills -->
       <div class="card">
         <div class="gridTitle">
           <h4>Pills generated</h4>
-          <div>
-            <span id="pillCounts" class="badge">Events 0</span>
-            <span id="pillCounts2" class="badge">Products 0</span>
-            <span id="pillCounts3" class="badge">Articles 0</span>
-          </div>
+          <div><span id="pillCounts" class="badge">Events 0</span><span id="pillCounts2" class="badge">Products 0</span><span id="pillCounts3" class="badge">Articles 0</span></div>
         </div>
         <div class="pillbar" id="pillBar"></div>
       </div>
     </div>
 
+    <!-- Suite results -->
+    <div class="card" id="suiteCard">
+      <div class="gridTitle">
+        <h4>Suite Results</h4>
+        <span id="suiteSummary" class="badge">—</span>
+      </div>
+      <div style="max-height:240px;overflow:auto;">
+        <table class="table" id="suiteTable">
+          <thead>
+            <tr>
+              <th style="width:60px;">idx</th>
+              <th>query</th>
+              <th style="width:120px;">expected</th>
+              <th style="width:120px;">predicted</th>
+              <th style="width:80px;">ok</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- LOG -->
     <div class="card">
-      <div class="gridTitle">
-        <h4>Execution Log</h4>
-        <div class="toolbar">
-          <span id="suiteSummary" class="badge">—</span>
-        </div>
-      </div>
+      <div class="gridTitle"><h4>Execution Log</h4></div>
       <div id="log" class="log"></div>
     </div>
   </div>
@@ -225,15 +185,13 @@
 
 <script>
 /* ============================
-   CONFIG (hardcoded defaults)
+   HARD-CODED DEFAULTS
    ============================ */
 const DEFAULTS = {
   SUPABASE_URL: 'https://igzvwbvgvmzvvzoclufx.supabase.co',
-  // ⬇️ Paste your real anon key once; it will be hard-coded and also cached in localStorage.
-  SUPABASE_ANON_KEY: 'PASTE_YOUR_SUPABASE_ANON_KEY',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY',
   EVENTS_VIEW: 'ai_events',
   PRODUCTS_VIEW: 'ai_products',
-  // how many rows to preview in the grids
   PREVIEW_ROWS: 10
 };
 
@@ -259,10 +217,7 @@ const log = (msg) => {
   $('#log').scrollTop = $('#log').scrollHeight;
 };
 const saveCfg = (cfg) => localStorage.setItem('bench_cfg', JSON.stringify(cfg));
-const loadCfg = () => {
-  try { return JSON.parse(localStorage.getItem('bench_cfg')||'{}'); }
-  catch { return {}; }
-};
+const loadCfg = () => { try { return JSON.parse(localStorage.getItem('bench_cfg')||'{}'); } catch { return {}; } };
 const setBadge = (el, text, kind='')=>{
   const node = typeof el==='string' ? $(el) : el;
   node.className = `badge${kind? ' '+kind: ''}`;
@@ -271,19 +226,15 @@ const setBadge = (el, text, kind='')=>{
 const download = (filename, data) => {
   const blob = new Blob([data], {type:'application/json'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
+  const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 };
-const copyText = async (text) => {
-  try { await navigator.clipboard.writeText(text); } catch(e){}
-};
+const copyText = async (text) => { try { await navigator.clipboard.writeText(text); } catch(e){} };
 
 /* ===============
    CSV PARSERS
    =============== */
 function parseCsv(text){
-  // very small CSV parser (commas, quoted fields)
   const rows = [];
   const lines = text.replace(/\r/g,'').split('\n').filter(Boolean);
   const headers = splitCsvLine(lines.shift());
@@ -320,7 +271,6 @@ function currentCfg(){
     productsView: $('#productsView').value || cached.productsView || DEFAULTS.PRODUCTS_VIEW
   };
 }
-
 function applyDefaultsToUI(){
   const cfg = loadCfg();
   $('#sbUrl').value = cfg.url || DEFAULTS.SUPABASE_URL;
@@ -333,17 +283,13 @@ applyDefaultsToUI();
 
 function connect(){
   const cfg = currentCfg();
-  if(!cfg.url || !cfg.anon){
-    setBadge('#connStatus','Missing URL or anon key','warn'); log('Missing URL or anon key.'); return;
-  }
+  if(!cfg.url || !cfg.anon){ setBadge('#connStatus','Missing URL or anon key','warn'); log('Missing URL or anon key.'); return; }
   state.sbClient = supabase.createClient(cfg.url, cfg.anon, {auth:{persistSession:false}});
   state.connected = true;
   setBadge('#connStatus','Connected.','ok');
   log('Connected to Supabase.');
-  // quick sanity: count rows
   sanityCounts();
 }
-
 async function sanityCounts(){
   const {eventsView, productsView} = currentCfg();
   try{
@@ -352,11 +298,8 @@ async function sanityCounts(){
       state.sbClient.from(productsView).select('*',{count:'exact', head:true}),
     ]);
     log(`Views reachable · ${eventsView}: ${ecount ?? 'n/a'} · ${productsView}: ${pcount ?? 'n/a'}`);
-  }catch(e){
-    log(`Error checking counts: ${e.message}`);
-  }
+  }catch(e){ log(`Error checking counts: ${e.message}`); }
 }
-
 async function fetchLive(){
   if(!state.connected){ connect(); }
   const {eventsView, productsView} = currentCfg();
@@ -375,7 +318,6 @@ async function fetchLive(){
     renderTable('#eventsTable', state.events.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','when','location']);
     renderTable('#productsTable', state.products.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','price','tags']);
     log(`Loaded events=${state.events.length}, products=${state.products.length}.`);
-    // derive "articles" from landing CSV only (if available)
     deriveArticles();
   }catch(e){
     setBadge('#eventsKpi','Error','err'); setBadge('#productsKpi','Error','err');
@@ -396,12 +338,9 @@ function renderTable(sel, rows, cols){
       const td = document.createElement('td');
       let v = r[c];
       if(c==='url' && v){
-        const a = document.createElement('a');
-        a.href = v; a.className='link'; a.target='_blank'; a.textContent = v;
+        const a = document.createElement('a'); a.href = v; a.className='link'; a.target='_blank'; a.textContent = v;
         td.appendChild(a);
-      }else{
-        td.textContent = (v==null?'':v);
-      }
+      }else{ td.textContent = (v==null?'':v); }
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -413,15 +352,11 @@ function renderTable(sel, rows, cols){
    =========================== */
 let landingRows = [];
 function deriveArticles(){
-  // Articles = any landing row whose URL looks like blog/news/tips, etc.
   const rows = landingRows || [];
   const picked = rows.filter(r => {
     const u = (r.url||'').toLowerCase();
     return u.includes('/blog') || u.includes('/news') || u.includes('/tips');
-  }).map(r => ({
-    title: r.meta_title || r.title || '',
-    url: r.url
-  }));
+  }).map(r => ({ title: r.meta_title || r.title || '', url: r.url }));
   state.articles = picked.slice(0, 500);
   setBadge('#articlesKpi', `From Landing CSV: ${state.articles.length}`);
   renderTable('#articlesTable', state.articles.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url']);
@@ -432,56 +367,47 @@ function deriveArticles(){
    =========================== */
 function detectIntent(q){
   const s = (q||'').toLowerCase();
-  // very basic heuristics
   const eventTerms = ['workshop','course','class','event','tuition','training','mentoring','walk','trip','photography','astrophotography'];
   const productTerms = ['price','cost','£','gbp','book','buy','voucher','subscription'];
   const adviceTerms = ['what','how','tips','recommend','do i need','should i','can i'];
   let scoreE = eventTerms.some(t=>s.includes(t)) ? 1 : 0;
   let scoreP = productTerms.some(t=>s.includes(t)) ? 1 : 0;
   let scoreA = adviceTerms.some(t=>s.includes(t)) ? 1 : 0;
-
-  // if "blog", "article", "read", "guide" lean to articles
   const scoreBlog = (s.includes('blog') || s.includes('article') || s.includes('guide')) ? 1 : 0;
 
   let intent = 'advice';
   if(scoreBlog && !scoreE && !scoreP) intent = 'articles';
   else if(scoreE && !scoreP) intent = 'events';
   else if(scoreP && !scoreE) intent = 'products';
-  else if(scoreE && scoreP) intent = 'events'; // prefer events when overlapping
+  else if(scoreE && scoreP) intent = 'events';
 
-  // dumb confidence
   let conf = 60;
   if(intent==='events') conf = 85;
   if(intent==='products') conf = 80;
   if(intent==='articles') conf = 75;
-  if(s.trim()==='') conf = 90; // empty -> advice
-
+  if(s.trim()==='') conf = 90;
   return { intent, confidence: conf };
 }
-
 function matchEvents(q){
   const s = (q||'').toLowerCase();
-  const hits = state.events.filter(e=>{
+  return state.events.filter(e=>{
     const hay = [e.title, e.location, e.when].join(' ').toLowerCase();
     return s.split(/\s+/).every(tok => hay.includes(tok));
   }).slice(0, 20);
-  return hits;
 }
 function matchProducts(q){
   const s = (q||'').toLowerCase();
-  const hits = state.products.filter(p=>{
+  return state.products.filter(p=>{
     const hay = [p.title, p.tags, p.price, p.url].join(' ').toLowerCase();
     return s.split(/\s+/).every(tok => hay.includes(tok));
   }).slice(0, 20);
-  return hits;
 }
 function matchArticles(q){
   const s = (q||'').toLowerCase();
-  const hits = state.articles.filter(a=>{
+  return state.articles.filter(a=>{
     const hay = [a.title, a.url].join(' ').toLowerCase();
     return s.split(/\s+/).every(tok => hay.includes(tok));
   }).slice(0, 10);
-  return hits;
 }
 
 /* ===========================
@@ -489,35 +415,21 @@ function matchArticles(q){
    =========================== */
 function buildPills(q){
   const pills = [];
-  // Brand pills
   if($('#enableGenericPills').checked){
     pills.push({label:'Event Listing', url:'https://www.alanranger.com/search?query=workshops', brand:true});
     pills.push({label:'Blog / Articles', url:'https://www.alanranger.com/blog-on-photography', brand:true});
     pills.push({label:'Gift Vouchers', url:'https://www.alanranger.com/photography-gift-vouchers', brand:true});
     pills.push({label:'Contact', url:'https://www.alanranger.com/contact', brand:true});
   }
-  // Contextual pills from matches
-  for(const e of (state.events||[]).slice(0,3)){
-    if(e?.url && e?.title){ pills.push({label: trim(e.title, 42), url:e.url, type:'event'}); }
-  }
-  for(const p of (state.products||[]).slice(0,2)){
-    if(p?.url && p?.title){ pills.push({label: trim(p.title, 42), url:p.url, type:'product'}); }
-  }
-  for(const a of (state.articles||[]).slice(0,2)){
-    if(a?.url && a?.title){ pills.push({label: trim(a.title, 42), url:a.url, type:'article'}); }
-  }
+  for(const e of (state.events||[]).slice(0,3)){ if(e?.url && e?.title){ pills.push({label: trim(e.title, 42), url:e.url, type:'event'}); } }
+  for(const p of (state.products||[]).slice(0,2)){ if(p?.url && p?.title){ pills.push({label: trim(p.title, 42), url:p.url, type:'product'}); } }
+  for(const a of (state.articles||[]).slice(0,2)){ if(a?.url && a?.title){ pills.push({label: trim(a.title, 42), url:a.url, type:'article'}); } }
   return pills;
 }
 function trim(s, n){ s=s||''; return s.length>n ? s.slice(0,n-1)+'…' : s; }
 function renderPills(list){
-  const bar = $('#pillBar');
-  bar.innerHTML='';
-  list.forEach(p=>{
-    const a = document.createElement('a');
-    a.href = p.url; a.target='_blank'; a.className='badge';
-    a.textContent = p.label;
-    bar.appendChild(a);
-  });
+  const bar = $('#pillBar'); bar.innerHTML='';
+  list.forEach(p=>{ const a = document.createElement('a'); a.href = p.url; a.target='_blank'; a.className='badge'; a.textContent = p.label; bar.appendChild(a); });
   const counts = {
     events: list.filter(x=>x.type==='event').length,
     products: list.filter(x=>x.type==='product').length,
@@ -539,16 +451,10 @@ function singleRun(q){
   if(intent==='articles'){ articles = matchArticles(q); }
 
   state.lastRun = {
-    q, intent, confidence, counts:{
-      events: events.length, products: products.length, articles: articles.length
-    },
-    used:{
-      events: events.slice(0,5), products: products.slice(0,5), articles: articles.slice(0,5),
-      pills: buildPills(q)
-    }
+    q, intent, confidence, counts:{ events: events.length, products: products.length, articles: articles.length },
+    used:{ events: events.slice(0,5), products: products.slice(0,5), articles: articles.slice(0,5), pills: buildPills(q) }
   };
 
-  // Render previews (top few)
   renderTable('#eventsTable', events.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','when','location']);
   renderTable('#productsTable', products.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','price','tags']);
   renderTable('#articlesTable', articles.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url']);
@@ -556,14 +462,12 @@ function singleRun(q){
 
   setBadge('#intentBadge', `intent: ${intent} (${confidence}%)`);
   setBadge('#countsBadge', `events=${events.length}, products=${products.length}, articles=${articles.length}, pills=${state.lastRun.used.pills.length}`);
-
   log(`Run: ${JSON.stringify({q,intent})}`);
 }
 
 function suiteRun(){
   if(state.suite.length===0){ log('No questions CSV loaded.'); return; }
-  let pass=0;
-  const results=[];
+  let pass=0; const results=[];
   for(const row of state.suite){
     const q = row.query || row.Q || row.question || '';
     const expected = (row.expected||'').toLowerCase().trim();
@@ -574,62 +478,59 @@ function suiteRun(){
   }
   state.suiteResults = results;
   const pct = Math.round((pass / state.suite.length) * 100);
-  setBadge('#suiteSummary', `Suite: ${pass}/${state.suite.length} matched expected intent (${pct}%)`,
-           pass===state.suite.length ? 'ok' : (pct>=70 ? 'warn' : 'err'));
+  setBadge('#suiteSummary', `Suite: ${pass}/${state.suite.length} matched (${pct}%)`, pass===state.suite.length ? 'ok' : (pct>=70 ? 'warn' : 'err'));
+  renderSuiteTable();
   log(`Suite done: ${pass}/${state.suite.length} matched expected intent.`);
 }
+function renderSuiteTable(){
+  const tb = $('#suiteTable tbody'); tb.innerHTML='';
+  for(const r of state.suiteResults){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.idx||''}</td>
+      <td>${escapeHtml(r.q||'')}</td>
+      <td>${r.expected||''}</td>
+      <td>${r.predicted||''}</td>
+      <td>${r.ok ? '✅' : '❌'}</td>
+    `;
+    tb.appendChild(tr);
+  }
+}
+function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 /* ===========================
    UI WIRING
    =========================== */
-$('#saveCfg').onclick = ()=>{
-  const cfg = currentCfg();
-  saveCfg(cfg);
-  log('Saved configuration.');
-};
+$('#saveCfg').onclick = ()=>{ const cfg = currentCfg(); saveCfg(cfg); log('Saved configuration.'); };
 $('#resetCfg').onclick = ()=>{
-  const cfg = {...DEFAULTS};
-  saveCfg({url:cfg.SUPABASE_URL, anon:cfg.SUPABASE_ANON_KEY, eventsView:cfg.EVENTS_VIEW, productsView:cfg.PRODUCTS_VIEW});
-  applyDefaultsToUI();
-  log('Defaults restored.');
+  saveCfg({url:DEFAULTS.SUPABASE_URL, anon:DEFAULTS.SUPABASE_ANON_KEY, eventsView:DEFAULTS.EVENTS_VIEW, productsView:DEFAULTS.PRODUCTS_VIEW});
+  applyDefaultsToUI(); log('Defaults restored.');
 };
-$('#btnConnect').onclick = ()=>{ connect(); };
-$('#btnFetch').onclick = ()=>{ fetchLive(); };
+$('#btnConnect').onclick = ()=> connect();
+$('#btnFetch').onclick = ()=> fetchLive();
 
-$('#btnRun').onclick = ()=>{
-  const q = $('#singleQuery').value || '';
-  singleRun(q);
-};
+$('#btnRun').onclick = ()=>{ const q = $('#singleQuery').value || ''; singleRun(q); };
 $('#btnCopyJson').onclick = ()=>{
   const out = {
     meta:{version:'benchtest/2.0', timestamp:new Date().toISOString()},
-    environment: {
+    environment:{
       supabase_url: currentCfg().url,
       events_view: currentCfg().eventsView,
       products_view: currentCfg().productsView,
       flags:{fallback: $('#useLandingFallback').checked, generic: $('#enableGenericPills').checked}
     },
     datasets:{
-      live:{
-        events_count: state.events.length,
-        products_count: state.products.length,
-        events_sample: state.events.slice(0,3),
-        products_sample: state.products.slice(0,3),
-      },
-      landing_csv: { rows_total: landingRows.length, sample: landingRows.slice(0,5) },
-      questions_csv: { rows_total: state.suite.length, rows: state.suite.slice(0,5) }
+      live:{ events_count: state.events.length, products_count: state.products.length, events_sample: state.events.slice(0,3), products_sample: state.products.slice(0,3) },
+      landing_csv:{ rows_total: landingRows.length, sample: landingRows.slice(0,5) },
+      questions_csv:{ rows_total: state.suite.length, rows: state.suite.slice(0,5) }
     },
     last_single_run: state.lastRun||null,
-    last_suite_run: { total: state.suiteResults.length, results: state.suiteResults.slice(0,20) }
+    last_suite_run: { total: state.suiteResults.length, results: state.suiteResults.slice(0,50) }
   };
   copyText(JSON.stringify(out,null,2));
 };
 $('#btnDownloadJson').onclick = ()=>{
-  const payload = {
-    meta:{version:'benchtest/2.0', timestamp:new Date().toISOString()},
-    datasets:{ events: state.events, products: state.products, articles: state.articles },
-    last_run: state.lastRun, suite: state.suiteResults
-  };
+  const payload = { meta:{version:'benchtest/2.0', timestamp:new Date().toISOString()}, datasets:{ events: state.events, products: state.products, articles: state.articles }, last_run: state.lastRun, suite: state.suiteResults };
   download('bench-results.json', JSON.stringify(payload,null,2));
 };
 
@@ -637,40 +538,29 @@ $('#btnDownloadJson').onclick = ()=>{
 $('#landingCsv').onchange = async (e)=>{
   const f = e.target.files?.[0];
   if(!f){ landingRows=[]; $('#landingInfo').textContent='No file loaded.'; return; }
-  const text = await f.text();
-  landingRows = parseCsv(text);
-  $('#landingInfo').textContent = `Loaded ${landingRows.length} landing pages.`;
-  log(`Landing CSV loaded (${landingRows.length} rows).`);
+  const text = await f.text(); landingRows = parseCsv(text);
+  $('#landingInfo').textContent = `Loaded ${landingRows.length} landing pages.`; log(`Landing CSV loaded (${landingRows.length} rows).`);
   deriveArticles();
 };
-$('#clearLanding').onclick = ()=>{
-  $('#landingCsv').value=''; landingRows=[]; $('#landingInfo').textContent='Cleared.'; deriveArticles();
-};
+$('#clearLanding').onclick = ()=>{ $('#landingCsv').value=''; landingRows=[]; $('#landingInfo').textContent='Cleared.'; deriveArticles(); };
 
 /* Questions CSV */
 $('#questionsCsv').onchange = async (e)=>{
   const f = e.target.files?.[0];
   if(!f){ state.suite=[]; $('#questionsInfo').textContent='No file loaded.'; return; }
-  const text = await f.text();
-  state.suite = parseCsv(text);
-  $('#questionsInfo').textContent = `Loaded ${state.suite.length} questions.`;
-  log(`Questions CSV loaded (${state.suite.length} rows).`);
+  const text = await f.text(); state.suite = parseCsv(text);
+  $('#questionsInfo').textContent = `Loaded ${state.suite.length} questions.`; log(`Questions CSV loaded (${state.suite.length} rows).`);
 };
-$('#clearQuestions').onclick = ()=>{
-  $('#questionsCsv').value=''; state.suite=[]; $('#questionsInfo').textContent='Cleared.';
-};
+$('#clearQuestions').onclick = ()=>{ $('#questionsCsv').value=''; state.suite=[]; $('#questionsInfo').textContent='Cleared.'; };
 $('#runSuite').onclick = ()=> suiteRun();
-$('#downloadSuiteJson').onclick = ()=>{
-  download('bench-questions.json', JSON.stringify(state.suite,null,2));
-};
+$('#downloadSuiteJson').onclick = ()=> download('bench-questions.json', JSON.stringify(state.suite,null,2));
 
-/* Boot banner */
+/* Boot */
 log('Bench ready.');
-// If anon key is present in defaults but looks unset, nudge:
-if((DEFAULTS.SUPABASE_ANON_KEY||'').startsWith('PASTE_')){
-  setBadge('#connStatus','Missing anon key','warn');
-  log('NOTE: Please paste your anon key into the hardcoded constant SUPABASE_ANON_KEY near the top of this file.');
-}
+applyDefaultsToUI();
+/* Auto-connect & fetch on load using hard-coded keys */
+connect();
+fetchLive();
 </script>
 </body>
 </html>
