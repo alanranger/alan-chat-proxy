@@ -3,423 +3,476 @@
 <head>
 <meta charset="utf-8" />
 <title>Bench Test (single-file)</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<!-- Supabase client -->
-<script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>
-  :root {
-    --bg:#0f1216; --panel:#151a21; --muted:#9aa4b2; --text:#e8edf3; --hl:#2dd4bf; --accent:#6ee7b7;
-    --chip:#1e2630; --chipText:#cfe5ff; --border:#1f2732; --btn:#1a212c; --btnAccent:#2b3544; --red:#ff6b6b;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial}
-  .wrap{display:grid;grid-template-columns:340px 1fr;gap:12px;padding:12px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px}
-  .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600}
-  .card .content{padding:10px 12px}
-  .row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-  label{display:block;margin:8px 0 4px;color:var(--muted);font-size:12px}
-  input[type="text"],textarea{width:100%;background:#0e141b;border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px}
-  textarea{min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
-  button{background:var(--btn);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;cursor:pointer}
-  button.primary{background:#1b2a3a;border-color:#234;box-shadow:inset 0 0 0 1px #2c3b4e}
-  button.run{background:#123222;border-color:#165;box-shadow:inset 0 0 0 1px #1a6}
-  button.danger{background:#34191c;border-color:#5b1f27}
-  button:disabled{opacity:.55;cursor:not-allowed}
-  .switch{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
-  .switch input{accent-color:#22c55e}
-  .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{background:var(--chip);color:var(--chipText);padding:6px 8px;border-radius:999px;border:1px solid var(--border);font-size:12px;white-space:nowrap}
-  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-  .pillTitle{color:var(--muted);font-size:12px;margin-bottom:8px}
-  .items{display:flex;flex-wrap:wrap;gap:8px;max-height:240px;overflow:auto}
-  .item{background:#0f1520;border:1px solid var(--border);padding:6px 8px;border-radius:8px}
-  pre{margin:0;background:#0c1117;border:1px solid var(--border);padding:10px;border-radius:8px;max-height:260px;overflow:auto}
-  .hint{color:var(--muted);font-size:12px}
-  .kpi{display:flex;gap:8px;align-items:center}
-  .badge{display:inline-flex;align-items:center;gap:6px;background:#0d1824;border:1px solid var(--border);padding:6px 8px;border-radius:999px;font-size:12px}
-  .badge b{color:#bfe8ff}
-  .badge .dot{width:8px;height:8px;border-radius:999px;background:var(--hl)}
-  .tag{font-size:12px;color:var(--muted)}
-  .log{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace}
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
-  .tip{border-bottom:1px dashed #789; cursor:help}
+  :root { --bg:#0f1115; --panel:#171a21; --muted:#8b93a7; --text:#e6e9f2; --brand:#4ade80; --warn:#f59e0b; --err:#ef4444; --pill:#232838; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Inter,Roboto,Helvetica,Arial}
+  h1{font-size:16px;margin:0 0 12px}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:14px;padding:14px}
+  .card{background:var(--panel);border:1px solid #222735;border-radius:10px;padding:12px}
+  .row{display:flex;gap:8px;align-items:center}
+  input,textarea,button,select{background:#0e1118;border:1px solid #2a3142;color:var(--text);border-radius:8px;padding:8px}
+  input,select{height:34px}
+  textarea{width:100%;min-height:72px}
+  button{cursor:pointer}
+  button.primary{background:#1f6feb;border-color:#1f6feb}
+  button.ghost{background:#0e1118}
+  .btn-sm{padding:6px 10px;height:30px;border-radius:7px}
+  .btn-pill{background:var(--pill);border:0;padding:5px 8px;border-radius:20px;font-size:12px}
+  .muted{color:var(--muted)}
+  .pill{display:inline-flex;gap:6px;align-items:center;background:var(--pill);padding:5px 8px;border-radius:999px;margin:2px 4px 2px 0;font-size:12px}
+  .flex{display:flex;gap:8px}
+  .col{display:flex;flex-direction:column;gap:8px}
+  .section-title{font-size:13px;margin:6px 0 4px;color:#a3acc5}
+  .panes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .list{min-height:120px;max-height:210px;overflow:auto;border:1px dashed #2b3242;border-radius:8px;padding:8px}
+  .list a{color:#9ccaff;text-decoration:none}
+  .list .item{padding:6px 4px;border-bottom:1px solid #222a39}
+  .list .item:last-child{border-bottom:0}
+  code,pre{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+  pre.json{background:#0b0e14;border:1px solid #222a39;border-radius:8px;padding:10px;max-height:340px;overflow:auto}
+  .log{background:#0b0e14;border:1px solid #222a39;border-radius:8px;padding:10px;max-height:220px;overflow:auto;white-space:pre-wrap}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;margin-top:6px}
+  .stat{font-weight:600}
+  .badge{padding:2px 8px;border-radius:999px;font-size:12px}
+  .badge.ok{background:#1b3a29;color:#6ee7b7;border:1px solid #1f4d38}
+  .badge.warn{background:#3a2e1b;color:#fcd34d;border:1px solid #5a441d}
+  .badge.err{background:#3a1b1b;color:#fca5a5;border:1px solid #5a1d1d}
+  .confidence{display:inline-flex;align-items:center;gap:6px}
+  .confidence .bar{width:140px;height:8px;background:#1a2030;border-radius:6px;overflow:hidden;border:1px solid #283044}
+  .confidence .fill{height:100%;background:linear-gradient(90deg,#ef4444,#f59e0b,#4ade80)}
+  .help{border-bottom:1px dotted #627099; cursor:help}
+  .divider{height:1px;background:#1f2533;margin:8px 0}
+  .small{font-size:12px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <!-- LEFT: controls -->
-  <div class="card">
-    <h3>Step 0 · Connect to Supabase</h3>
-    <div class="content">
-      <label>Supabase URL</label>
-      <input id="sb_url" type="text" />
-      <label>Supabase ANON key</label>
-      <input id="sb_key" type="text" class="mono" />
+
+<div class="grid">
+  <!-- Left controls -->
+  <div class="card col">
+    <h1>Step 0 · Connect to Supabase</h1>
+    <div class="col">
+      <label class="small muted">Supabase URL</label>
+      <input id="sbUrl" />
+      <label class="small muted">Supabase ANON key</label>
+      <textarea id="sbAnon" style="min-height:56px"></textarea>
       <div class="row">
-        <div style="flex:1">
-          <label style="margin-top:8px">Events view</label>
-          <input id="events_view" type="text" value="ai_events"/>
+        <div class="col" style="flex:1">
+          <label class="small muted">Events view</label>
+          <input id="eventsTable" />
         </div>
-        <div style="flex:1">
-          <label style="margin-top:8px">Products view</label>
-          <input id="products_view" type="text" value="ai_products"/>
+        <div class="col" style="flex:1">
+          <label class="small muted">Products view</label>
+          <input id="productsTable" />
         </div>
       </div>
       <div class="row">
-        <button id="btnSave" class="primary">Save</button>
-        <button id="btnFetch" class="">Fetch live data</button>
-        <button id="btnDefaults" class="">Reset defaults</button>
-        <span id="connState" class="hint">Not connected</span>
+        <button id="saveCreds" class="btn-sm">Save</button>
+        <button id="fetchLive" class="btn-sm">Fetch live data</button>
+        <span class="badge" id="liveStatus">Not connected</span>
       </div>
+    </div>
 
-      <hr style="border:none;border-top:1px solid var(--border);margin:10px 0">
+    <div class="divider"></div>
 
-      <h4 style="margin:0 0 6px">Step 1 (optional) · Landing Pages CSV (fallback)</h4>
-      <div class="row">
-        <input id="landingCsv" type="file" accept=".csv" />
-        <button id="btnUploadLanding">Upload</button>
-        <span id="landingState" class="hint">Not loaded</span>
+    <h1>Step 1 (optional) · Landing Pages CSV (fallback)</h1>
+    <div class="small muted">Use when direct matches are weak. Required columns: <code>url</code> and one of <code>url_meta_title</code>, <code>meta_title</code> or <code>title</code>.</div>
+    <div class="row">
+      <input type="file" id="landingCsv" accept=".csv" />
+      <button id="uploadLanding" class="btn-sm">Upload</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <h1>Step 2 · Questions CSV</h1>
+    <div class="small muted">Columns: <code>idx</code>, <code>query</code>, <code>expected</code>. Extra columns ignored.</div>
+    <div class="row">
+      <input type="file" id="questionsCsv" accept=".csv" />
+      <button id="uploadQuestions" class="btn-sm">Upload</button>
+      <button id="runSuite" class="btn-sm">Run CSV Test Suite</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <h1>Step 3 · Try a single query</h1>
+    <input id="query" placeholder="e.g. ‘when is the next devon workshop?’" />
+    <div class="row">
+      <button id="run" class="primary btn-sm" disabled>Run</button>
+      <button id="copyJson" class="btn-sm">Copy JSON</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <label class="row small"><input type="checkbox" id="useFallback" checked />
+      Use Landing CSV fallback when direct matches are weak</label>
+    <label class="row small"><input type="checkbox" id="enableGeneric" />
+      Enable generic search pills (placeholder)</label>
+
+    <div class="divider"></div>
+
+    <div class="kv small">
+      <div class="muted">Intent</div><div id="kvIntent">—</div>
+      <div class="muted">Reason</div><div id="kvReason">—</div>
+      <div class="muted">Landing CSV</div><div id="kvLanding">not loaded</div>
+      <div class="muted">Questions CSV</div><div id="kvQuestions">not loaded</div>
+      <div class="muted">Events</div><div id="kvEvents">not loaded</div>
+      <div class="muted">Products</div><div id="kvProducts">not loaded</div>
+      <div class="muted">Confidence</div>
+      <div>
+        <span class="confidence help" title="How sure the ranker is (signal coverage + score margin). It is informational only; a low score won’t block answers.">
+          <div class="bar"><div id="confFill" class="fill" style="width:0%"></div></div>
+          <span id="confPct">0%</span>
+        </span>
       </div>
+    </div>
 
-      <h4 style="margin:10px 0 6px">Step 2 · Questions CSV</h4>
-      <div class="row">
-        <input id="qCsv" type="file" accept=".csv" />
-        <button id="btnUploadQ">Upload</button>
-        <button id="btnRunSuite">Run CSV Test Suite</button>
-        <span id="qsState" class="hint">0/0</span>
-      </div>
+    <div class="divider"></div>
 
-      <h4 style="margin:12px 0 6px">Step 3 · Try a single query</h4>
-      <input id="qInput" type="text" placeholder="e.g. when is the next devon workshop?" />
-      <div class="row">
-        <button id="btnRun" class="run">Run</button>
-        <button id="btnCopyJson">Copy JSON</button>
-      </div>
-
-      <div class="switch"><input id="useLanding" type="checkbox" checked>Use Landing CSV fallback when direct matches are weak</div>
-      <div class="switch"><input id="enableGeneric" type="checkbox">Enable generic search pills (placeholder)</div>
-
-      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div>
-          <div class="tag">Intent</div>
-          <div id="intentOut">—</div>
-        </div>
-        <div>
-          <div class="tag">Reason</div>
-          <div id="reasonOut" class="mono">—</div>
-        </div>
-        <div>
-          <div class="tag">Landing CSV</div>
-          <div id="landingCount" class="mono">0 rows</div>
-        </div>
-        <div>
-          <div class="tag">Events</div>
-          <div id="eventsCount" class="mono">not loaded</div>
-        </div>
-        <div>
-          <div class="tag">Products</div>
-          <div id="productsCount" class="mono">not loaded</div>
-        </div>
-        <div>
-          <div class="tag">Questions CSV</div>
-          <div id="qsCount" class="mono">0 rows</div>
-        </div>
-        <div class="kpi" style="grid-column:1 / span 2;justify-content:space-between">
-          <div class="badge" title="Confidence is a normalized blend of match score (BM25-ish), recency and intent certainty. It’s a hint, not a guarantee."><span class="dot"></span><span>Confidence</span> <b id="confPct">—%</b> <span class="tip">what’s this?</span></div>
-          <div class="row">
-            <button id="btnCopyLog">Copy Log</button>
-            <button id="btnDownloadLog">Download Log</button>
-          </div>
-        </div>
-      </div>
+    <div class="row">
+      <button id="copyLog" class="btn-sm">Copy Log</button>
+      <button id="downloadLog" class="btn-sm">Download Log</button>
     </div>
   </div>
 
-  <!-- RIGHT: results -->
-  <div class="card">
-    <h3>Results</h3>
-    <div class="content">
-      <div class="grid">
-        <div>
-          <div class="pillTitle">Events</div>
-          <div id="eventsBox" class="items"></div>
-        </div>
-        <div>
-          <div class="pillTitle">Articles</div>
-          <div id="articlesBox" class="items"></div>
-        </div>
-        <div>
-          <div class="pillTitle">Pills</div>
-          <div id="pillsBox" class="items"></div>
-        </div>
-      </div>
-
-      <h4 style="margin:14px 0 6px">JSON</h4>
-      <pre id="jsonBox">{}</pre>
-
-      <h4 style="margin:14px 0 6px">Execution Log</h4>
-      <pre id="logBox" class="log"></pre>
+  <!-- Right results -->
+  <div class="col card">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h1>Results</h1>
+      <span class="small muted">Hover the tags below for a breakdown</span>
     </div>
+
+    <div class="panes">
+      <div>
+        <div class="section-title">Events</div>
+        <div id="eventsPills" class="row small muted" style="margin-bottom:6px;"></div>
+        <div id="eventsList" class="list"></div>
+      </div>
+      <div>
+        <div class="section-title">Articles</div>
+        <div id="articlesPills" class="row small muted" style="margin-bottom:6px;"></div>
+        <div id="articlesList" class="list"></div>
+      </div>
+      <div>
+        <div class="section-title">Pills</div>
+        <div id="pillsBox" class="list"></div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:10px">JSON</div>
+    <pre id="jsonOut" class="json">[]</pre>
+
+    <div class="section-title" style="margin-top:10px">Execution Log</div>
+    <div id="log" class="log"></div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ------------------ hard-coded defaults (you asked for no typing) ------------------ */
+/*** ---------- CONFIG (prefilled) ---------- ***/
 const DEFAULTS = {
-  url: "https://igzvwbvgvmzvvzoclufx.supabase.co",
-  anon: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY",
-  eventsView: "ai_events",
-  productsView: "ai_products"
+  url: 'https://igzvwbvgvmzvvzoclufx.supabase.co',
+  anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY',
+  eventsTable: 'ai_events',
+  productsTable: 'ai_products'
 };
 
-/* ------------------ state ------------------ */
-let supa = null;
-let state = {
-  events: [],
-  products: [],
-  landing: [], // [{url,title,meta_title}]
-  questions: [], // [{idx, query, expected}]
-  results: null,
-  log: []
+/*** ---------- STATE ---------- ***/
+let sb = null;
+let EVENTS = [];      // from Supabase
+let PRODUCTS = [];    // from Supabase
+let LANDING = [];     // CSV fallback pages
+let QUESTIONS = [];   // CSV test suite
+
+const $ = id => document.getElementById(id);
+const log = (m) => {
+  const t = new Date().toTimeString().slice(0,8);
+  $('log').textContent += `${t}  ${m}\n`;
+  $('log').scrollTop = $('log').scrollHeight;
 };
 
-function log(line){ state.log.push(`${new Date().toISOString().slice(11,19)}  ${line}`); renderLog(); }
-function renderLog(){ document.getElementById('logBox').textContent = state.log.join('\n'); }
+function setBadge(el, type, txt){
+  el.className = `badge ${type}`;
+  el.textContent = txt;
+}
+function setConfidence(pct){
+  pct = Math.max(0, Math.min(100, Math.round(pct)));
+  $('confFill').style.width = pct+'%';
+  $('confPct').textContent = pct+'%';
+}
+function tokens(s){ return (s||'').toString().toLowerCase().match(/[a-z0-9]+/g)||[]; }
 
-/* ------------------ tiny CSV helpers ------------------ */
-function parseCsv(text){
-  const rows = text.trim().split(/\r?\n/);
-  const headers = rows.shift().split(',').map(h=>h.trim());
-  return rows.map(r=>{
-    const cells = r.split(',').map(c=>c.trim());
-    const obj = {};
-    headers.forEach((h,i)=>obj[h]=cells[i]??'');
-    return obj;
+function classifyIntent(q){
+  const t = tokens(q);
+  if (t.length===0) return {intent:'none', reason:'empty'};
+  const hasWhen = /(when|date|next|where|time|schedule|available)/.test(q.toLowerCase());
+  const hasEventWords = /(workshop|course|class|trip|walk|event|devon|norfolk|batsford|bluebell)/.test(q.toLowerCase());
+  const hasAdviceWords = /(how|what|which|recommend|do i need|can i|should i|settings|gear|tripod|camera|lens|certificate|feedback|free)/.test(q.toLowerCase());
+  if (hasWhen || hasEventWords) return {intent:'events', reason: hasWhen?'has “when/date/where”':'workshop keywords'};
+  if (hasAdviceWords) return {intent:'advice', reason:'advice keywords'};
+  // Fallback: pick the stronger overlap against titles
+  const eHit = scoreMany(t, EVENTS.map(e => `${e.title||''} ${e.location||''}`)).maxScore;
+  const pHit = scoreMany(t, PRODUCTS.map(p => `${p.title||''} ${p.tags||''}`)).maxScore;
+  return (eHit>=pHit) ? {intent:'events', reason:'event score >= article score'} : {intent:'advice', reason:'article score > event score'};
+}
+
+function score(textTokens, itemText){
+  const hay = tokens(itemText);
+  if (textTokens.length===0 || hay.length===0) return 0;
+  let s = 0;
+  for (const tt of textTokens){
+    const freq = hay.filter(h=>h===tt).length;
+    if (freq) s += 3 + Math.min(freq,3); // simple weight
+  }
+  // slight boost for phrase presence
+  const phrase = textTokens.join(' ');
+  if (phrase && itemText.toLowerCase().includes(phrase)) s += 5;
+  return s;
+}
+function scoreMany(qTokens, arrText){
+  let best = -1, idx=-1;
+  const scores = arrText.map((t,i)=>{ const s = score(qTokens,t); if (s>best){best=s;idx=i} return s; });
+  return {scores, maxScore: best, bestIdx: idx};
+}
+
+function pickTop(arr, qTokens, fields){
+  // fields: array of field names to concat for scoring
+  const scored = arr.map((it, i) => {
+    const text = fields.map(f=>it[f]||'').join(' ');
+    return {i, s: score(qTokens, text)};
+  }).filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,10);
+  return scored.map(x=>arr[x.i]);
+}
+
+/*** ---------- SUPABASE ---------- ***/
+async function connect(){
+  const url = $('sbUrl').value.trim(), anon = $('sbAnon').value.trim();
+  if (!url || !anon){ setBadge($('liveStatus'),'err','Missing creds'); return; }
+  sb = supabase.createClient(url, anon);
+  setBadge($('liveStatus'),'ok','Saved');
+  log('Saved Supabase credentials.');
+}
+
+async function fetchLive(){
+  if (!sb) await connect();
+  const evTable = $('eventsTable').value.trim();
+  const prTable = $('productsTable').value.trim();
+  setBadge($('liveStatus'),'warn','Fetching…');
+  try{
+    const { data: e, error: eErr } = await sb.from(evTable).select('*').limit(2000);
+    if (eErr) throw eErr;
+    EVENTS = Array.isArray(e)? e : [];
+    const { data: p, error: pErr } = await sb.from(prTable).select('*').limit(5000);
+    if (pErr) throw pErr;
+    PRODUCTS = Array.isArray(p)? p : [];
+    setBadge($('liveStatus'),'ok','Connected');
+    $('kvEvents').textContent = EVENTS.length + ' rows';
+    $('kvProducts').textContent = PRODUCTS.length + ' rows';
+    log(`Fetched live data: events=${EVENTS.length}, products=${PRODUCTS.length}`);
+    renderFetched();
+  }catch(err){
+    setBadge($('liveStatus'),'err','Error');
+    log('ERROR fetching live data: '+ err.message);
+  }
+}
+
+function renderFetched(){
+  // quick visual preview of what’s loaded
+  const eList = EVENTS.slice(0,30).map(e=>`<div class="item"><a href="${e.url||'#'}" target="_blank">${escapeHtml(e.title||'(untitled)')}</a><div class="small muted">${escapeHtml(e.when||e.location||'')}</div></div>`).join('');
+  $('eventsList').innerHTML = eList||'<div class="small muted">—</div>';
+  $('eventsPills').innerHTML = `<span class="pill" title="Total events fetched">${EVENTS.length} loaded</span>`;
+  const bloggy = PRODUCTS.filter(p=> String(p.url||'').includes('/blog') || String(p.tags||'').toLowerCase().includes('blog')).slice(0,30);
+  $('articlesList').innerHTML = bloggy.map(a=>`<div class="item"><a href="${a.url||'#'}" target="_blank">${escapeHtml(a.title||'(untitled)')}</a></div>`).join('') || '<div class="small muted">—</div>';
+  $('articlesPills').innerHTML = `<span class="pill" title="Blog-like products subset">${bloggy.length} shown</span>`;
+  // default pill (brand route)
+  $('pillsBox').innerHTML = `<div class="item"><a class="btn-pill" href="https://www.alanranger.com/search?query=workshops" target="_blank">Event Listing</a></div>`;
+}
+
+/*** ---------- CSV LOADERS ---------- ***/
+function parseCsvFile(file){
+  return new Promise((resolve,reject)=>{
+    Papa.parse(file, {
+      header: true,
+      dynamicTyping: true,
+      skipEmptyLines: true,
+      complete: (res)=> resolve(res.data||[]),
+      error: reject
+    });
   });
 }
+$('uploadLanding').onclick = async () => {
+  const f = $('landingCsv').files[0];
+  if (!f){ log('No landing CSV selected.'); return; }
+  LANDING = await parseCsvFile(f);
+  $('kvLanding').textContent = `loaded ${LANDING.length} rows`;
+  log('Landing CSV loaded ('+LANDING.length+' rows).');
+};
+$('uploadQuestions').onclick = async () => {
+  const f = $('questionsCsv').files[0];
+  if (!f){ log('No questions CSV selected.'); return; }
+  QUESTIONS = await parseCsvFile(f);
+  $('kvQuestions').textContent = `loaded ${QUESTIONS.length} rows`;
+  log('Questions CSV loaded ('+QUESTIONS.length+' rows).');
+};
 
-/* ------------------ UI helpers ------------------ */
-const $ = id => document.getElementById(id);
-function chip(s){ const el = document.createElement('div'); el.className='chip'; el.textContent=s; return el; }
-function linkItem(title, url){ const d=document.createElement('div'); d.className='item'; const a=document.createElement('a'); a.textContent=title; a.href=url; a.target='_blank'; a.rel='noopener'; a.style.color='#a4d8ff'; a.style.textDecoration='none'; d.appendChild(a); return d; }
-
-/* ------------------ confidence score (simple but useful) ------------------ */
-function scoreConfidence({intentScore, topScore, hadLive}){
-  // intentScore 0..1 (keyword hit); topScore 0..1 (BM25-ish); hadLive bool (events/products)
-  let s = 0.55*topScore + 0.35*intentScore + 0.10*(hadLive?1:0);
-  s = Math.max(0, Math.min(1, s));
-  return Math.round(s*100);
-}
-
-/* ------------------ light-weight matcher ------------------ */
-function tokenize(t){ return (t||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean); }
-function bm25ishScore(queryTokens, text){
-  const t = tokenize(text); if(!t.length) return 0;
-  const set=new Set(t); let hit=0;
-  for(const q of queryTokens){ if(set.has(q)) hit++; }
-  return hit / Math.max(3, queryTokens.length); // crude normalization
-}
-function detectIntent(q){
-  const s=q.toLowerCase();
-  const wantsEvent = /(next|when|date|where|workshop|devon|norfolk|bluebell|autumn)/.test(s);
-  const wantsAdvice = /(price|cost|how much|include|equipment|camera|tripod|certificate|laptop|astrophotography|residential|b&b|b and b)/.test(s);
-  // Rule: if it looks like a date/place ask → events; else advice.
-  if(wantsEvent && !wantsAdvice) return {intent:'events', reason:'events=✓, advice=0'};
-  if(wantsAdvice && !wantsEvent) return {intent:'advice', reason:'advice=✓, events=0'};
-  // Mixed → prefer events if any date/place tokens
-  return {intent: wantsEvent ? 'events' : 'advice', reason:`events=${wantsEvent?1:0}, advice=${wantsAdvice?1:0}`};
-}
-
-/* ------------------ run a single query ------------------ */
-async function runOne(query){
-  const {intent, reason} = detectIntent(query);
-  $('intentOut').textContent = intent;
-  $('reasonOut').textContent = reason;
-
-  const qTok = tokenize(query);
-  const used = { intent, product: null, events: [], articles: [], pills: [], citations: [] };
-  let counts = { events: 0, articles: 0, pills: 0 };
-
-  // EVENTS (live data)
-  if(intent==='events' && state.events.length){
-    const scored = state.events.map(e => {
-      const txt = `${e.title||''} ${e.location||''}`;
-      return { e, s: bm25ishScore(qTok, txt) + ( /devon|norfolk|bluebell|autumn|peak|batsford|cotswold|coast/.test(txt.toLowerCase()) ? 0.15 : 0) };
-    }).filter(x => x.s>0.05).sort((a,b)=>b.s-a.s).slice(0,6);
-    used.events = scored.map(x => ({
-      date: eSafe(x.e.starts_on),
-      when: x.e.when || null,
-      title: x.e.title, location: x.e.location || '',
-      url: x.e.url
-    }));
-    counts.events = used.events.length;
+/*** ---------- RUNNERS ---------- ***/
+function runSingle(q){
+  const trimmed = (q||'').trim();
+  // empty guard
+  if (trimmed.length < 3){
+    $('kvIntent').textContent = '—';
+    $('kvReason').textContent = 'enter a question';
+    setConfidence(0);
+    $('jsonOut').textContent = JSON.stringify({
+      idx: 1, query: trimmed, expected: '—',
+      detected: 'none', counts: {events:0, articles:0, pills:1},
+      pass: true, used: { intent:'none', product:null, events:[], articles:[], pills:[{label:'Event Listing', url:'https://www.alanranger.com/search?query=workshops', brand:true}]},
+      confidence: 0
+    }, null, 2);
+    return;
   }
 
-  // ADVICE (policy bits)
-  if(intent==='advice'){
-    // Residential policy (your correction)
-    if(/residential/.test(query.toLowerCase())){
-      used.articles.push({
-        title: "Residential workshops include B&B and inter-location travel.",
-        url: "https://www.alanranger.com/photographic-workshops-near-me"
-      });
+  const {intent, reason} = classifyIntent(trimmed);
+  $('kvIntent').textContent = intent;
+  $('kvReason').textContent = reason;
+
+  const qTokens = tokens(trimmed);
+  let events = [], articles = [];
+  if (intent==='events'){
+    events = pickTop(EVENTS, qTokens, ['title','location','when','url']);
+    // fallback to landing pages as articles block if weak
+    if (events.length < 1 && $('useFallback').checked && LANDING.length){
+      articles = pickTop(LANDING, qTokens, ['title','url_meta_title','meta_title','url']).slice(0,6);
+    }
+  } else if (intent==='advice'){
+    // “articles” come from products; prefer blog-like
+    const bloggy = PRODUCTS.filter(p=> String(p.url||'').includes('/blog') || String(p.tags||'').toLowerCase().includes('blog'));
+    articles = pickTop(bloggy.length?bloggy:PRODUCTS, qTokens, ['title','tags','url']);
+    // optional: suggest relevant events as secondary if the query includes workshop words
+    if ((/\b(workshop|course|class|trip)\b/i).test(trimmed)){
+      events = pickTop(EVENTS, qTokens, ['title','location','when']);
     }
   }
 
-  // LANDING PAGES FALLBACK (articles)
-  if($('useLanding').checked && state.landing.length && (counts.events===0 || intent==='advice')){
-    const scoredL = state.landing.map(a => ({ a, s: bm25ishScore(qTok, `${a.title||''} ${a.meta_title||''}`)}))
-      .filter(x=>x.s>0.08).sort((a,b)=>b.s-a.s).slice(0,8);
-    used.articles.push(...scoredL.map(x => ({title: x.a.title || x.a.meta_title || x.a.url, url: x.a.url})));
-  }
+  // Confidence = simple blend: signal coverage + margin vs. next
+  const conf = (() => {
+    const sEvt = events.length ? 70 : 0;
+    const sArt = articles.length ? 70 : 0;
+    // margin heuristic (more early matches -> more confident)
+    const margin = Math.min(30, (events.length>2 || articles.length>2) ? 30 : (events.length||articles.length)*10);
+    return Math.max(10, Math.min(100, (intent==='events' ? sEvt : sArt) + margin - 20));
+  })();
+  setConfidence(conf);
 
-  // Pills (simple brand search or catch-all)
-  used.pills.push({ label: 'Event Listing', url: 'https://www.alanranger.com/search?query=workshops', brand: true });
-  counts.pills = used.pills.length;
-  counts.articles = used.articles.length;
+  // Pills
+  const pills = [{label:'Event Listing', url:'https://www.alanranger.com/search?query=workshops', brand:true}];
 
-  // Confidence
-  const topScore = Math.max(0.01, used.events.length ? 0.6 : (used.articles.length?0.35:0.1));
-  const intentScore = intent==='events' ? 0.9 : 0.8;
-  const conf = scoreConfidence({intentScore, topScore, hadLive: state.events.length>0});
-  $('confPct').textContent = conf + '%';
+  // Render lists (top 10)
+  $('eventsList').innerHTML = events.map(e=>`<div class="item"><a href="${e.url||'#'}" target="_blank">${escapeHtml(e.title||'(untitled)')}</a><div class="small muted">${escapeHtml(e.when||e.location||'')}</div></div>`).join('') || '<div class="small muted">—</div>';
+  $('articlesList').innerHTML = articles.map(a=>`<div class="item"><a href="${a.url||'#'}" target="_blank">${escapeHtml(a.title||'(untitled)')}</a></div>`).join('') || '<div class="small muted">—</div>';
+  $('pillsBox').innerHTML = pills.map(p=>`<div class="item"><a class="btn-pill" href="${p.url}" target="_blank">${escapeHtml(p.label)}</a>${p.brand? ' <span class="small muted">· brand</span>':''}</div>`).join('');
 
   const result = {
-    idx: 1, query, expected: intent, detected: intent, counts, pass: true,
-    used, confidence: conf
+    idx: 1,
+    query: trimmed,
+    expected: intent, // for ad-hoc runs we don’t have “expected”; echo detected
+    detected: intent,
+    counts: { events: events.length, articles: articles.length, pills: pills.length },
+    pass: true,
+    used: {
+      intent, product: null,
+      events: events.map(e=>({date:e.date||null, when:e.when||null, title:e.title||'', location:e.location||'', url:e.url||''})),
+      articles: articles.map(a=>({title:a.title||'', url:a.url||''})),
+      pills,
+      citations: []
+    },
+    confidence: conf
   };
-  state.results = result;
-  renderResult();
-  log(`Run: "${query}" → intent=${intent}, events=${counts.events}, articles=${counts.articles}, conf=${conf}%`);
+  $('jsonOut').textContent = JSON.stringify(result, null, 2);
+  log(`Run: "${trimmed}" → intent=${intent}, events=${events.length}, articles=${articles.length}, conf=${conf}%`);
 }
 
-function eSafe(v){ try{ return v ? String(v) : null }catch{ return null } }
+$('run').onclick = () => runSingle($('query').value);
+$('query').addEventListener('input', () => {
+  const has = $('query').value.trim().length >= 3;
+  $('run').disabled = !has;
+  if (!has) setConfidence(0);
+});
 
-/* ------------------ render ------------------ */
-function renderResult(){
-  const r = state.results || {};
-  $('jsonBox').textContent = JSON.stringify(r, null, 2);
-
-  const evBox = $('eventsBox'); evBox.innerHTML='';
-  (r.used?.events || []).forEach(e => evBox.appendChild(linkItem(e.title, e.url)));
-
-  const artBox = $('articlesBox'); artBox.innerHTML='';
-  (r.used?.articles || []).forEach(a => artBox.appendChild(linkItem(a.title, a.url)));
-
-  const pillsBox = $('pillsBox'); pillsBox.innerHTML='';
-  (r.used?.pills || []).forEach(p => pillsBox.appendChild(linkItem(p.label, p.url)));
-}
-
-/* ------------------ Supabase wiring ------------------ */
-async function connectSupabase(){
-  const url = $('sb_url').value.trim();
-  const key = $('sb_key').value.trim();
-  if(!url || !key){ $('connState').textContent = 'Missing URL or key'; return; }
-  supa = supabase.createClient(url, key);
-  $('connState').textContent = 'Saved (not yet fetched)';
-  log('Saved Supabase credentials.');
-}
-async function fetchLive(){
-  if(!supa){ await connectSupabase(); }
-  const evView = $('events_view').value.trim();
-  const prView = $('products_view').value.trim();
-
-  $('btnFetch').disabled = true;
-  try{
-    // events
-    let { data: ev, error: e1 } = await supa.from(evView).select('*').limit(2000);
-    if(e1) throw e1;
-    state.events = (ev||[]).map(x => ({
-      title: x.title ?? x.event_title ?? '',
-      url: x.url ?? '',
-      when: x.when ?? x.human_when ?? null,
-      starts_on: x.starts_on ?? null,
-      location: x.location ?? ''
-    }));
-    $('eventsCount').textContent = state.events.length + ' rows';
-
-    // products
-    let { data: pr, error: e2 } = await supa.from(prView).select('*').limit(2000);
-    if(e2) throw e2;
-    state.products = pr || [];
-    $('productsCount').textContent = state.products.length + ' rows';
-
-    $('connState').textContent = 'Connected';
-    log(`Fetched live data: events=${state.events.length}, products=${state.products.length}`);
-  }catch(err){
-    $('connState').textContent = 'Fetch failed';
-    log('ERROR fetching live data: ' + (err.message||err));
-  }finally{
-    $('btnFetch').disabled = false;
-  }
-}
-
-/* ------------------ CSV handlers ------------------ */
-$('btnUploadLanding').onclick = async () => {
-  const f = $('landingCsv').files?.[0]; if(!f){ return; }
-  const text = await f.text();
-  const rows = parseCsv(text);
-  // columns accepted: url and one of url_meta_title | meta_title | title
-  state.landing = rows.map(r => ({ url: r.url||r.URL||'', meta_title: r.url_meta_title||r.meta_title||'', title: r.title||'' }))
-                      .filter(r => r.url);
-  $('landingState').textContent = 'Loaded ' + state.landing.length + ' rows';
-  $('landingCount').textContent = state.landing.length + ' rows';
-  log(`Landing CSV loaded (${state.landing.length} rows).`);
+$('copyJson').onclick = () => {
+  navigator.clipboard.writeText($('jsonOut').textContent||'[]');
+  log('Copied JSON.');
 };
-$('btnUploadQ').onclick = async () => {
-  const f = $('qCsv').files?.[0]; if(!f){ return; }
-  const text = await f.text();
-  const rows = parseCsv(text).map((r,i)=>({ idx: Number(r.idx||i+1), query: r.query||r.question||'', expected:(r.expected||'').toLowerCase() }));
-  state.questions = rows.filter(r=>r.query);
-  $('qsState').textContent = `${state.questions.length}/${state.questions.length}`;
-  $('qsCount').textContent = state.questions.length + ' rows';
-  log(`Questions CSV loaded (${state.questions.length} rows).`);
+
+$('copyLog').onclick = () => {
+  navigator.clipboard.writeText($('log').textContent||'');
 };
-$('btnRunSuite').onclick = async () => {
-  if(!state.questions.length){ log('No Questions CSV loaded.'); return; }
+$('downloadLog').onclick = () => {
+  const blob = new Blob([$('log').textContent||''], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'bench_log.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+$('runSuite').onclick = async () => {
+  if (!QUESTIONS.length){ log('Questions CSV not loaded.'); return; }
   const results = [];
-  let passed = 0;
-  for(const q of state.questions){
-    await runOne(q.query);
-    const r = structuredClone(state.results);
-    r.idx = q.idx; r.expected = q.expected;
-    r.pass = (r.detected === (q.expected||r.detected));
-    if(r.pass) passed++;
-    results.push(r);
+  let pass=0;
+  for (const row of QUESTIONS){
+    const q = (row.query||'').toString();
+    const expected = (row.expected||'').toString().toLowerCase().trim();
+    const {intent} = classifyIntent(q);
+    const qTokens = tokens(q);
+    let events=[], articles=[];
+    if (intent==='events'){
+      events = pickTop(EVENTS, qTokens, ['title','location','when','url']);
+    } else {
+      const bloggy = PRODUCTS.filter(p=> String(p.url||'').includes('/blog') || String(p.tags||'').toLowerCase().includes('blog'));
+      articles = pickTop(bloggy.length?bloggy:PRODUCTS, qTokens, ['title','tags','url']);
+    }
+    const counts = {events:events.length, articles:articles.length, pills:1};
+    const ok = expected ? ((expected==='events' && events.length>0) || (expected==='advice' && articles.length>0)) : true;
+    if (ok) pass++;
+    results.push({
+      idx: row.idx || results.length+1,
+      query: q,
+      expected: expected||intent,
+      detected: intent,
+      counts,
+      pass: ok,
+      used: {
+        intent,
+        product: null,
+        events: events.slice(0,3).map(e=>({title:e.title||'', url:e.url||''})),
+        articles: articles.slice(0,3).map(a=>({title:a.title||'', url:a.url||''})),
+        pills: [{label:'Event Listing', url:'https://www.alanranger.com/search?query=workshops', brand:true}],
+        citations: []
+      },
+      confidence: Math.min(100, 40 + (events.length||articles.length)*10)
+    });
   }
-  const rate = Math.round(100*passed/Math.max(1,results.length));
-  log(`CSV suite complete. passed=${passed}/${results.length} (${rate}%)`);
-  $('jsonBox').textContent = JSON.stringify({ total: results.length, passed, rate: `${rate}%`, results }, null, 2);
+  $('jsonOut').textContent = JSON.stringify(results, null, 2);
+  log(`CSV Suite: total=${results.length}, passed=${pass}, rate="${Math.round((pass/results.length)*100)}%"`);
 };
 
-/* ------------------ wire up buttons ------------------ */
-$('btnRun').onclick = () => runOne($('qInput').value.trim());
-$('btnCopyJson').onclick = () => { navigator.clipboard.writeText($('jsonBox').textContent||'{}'); };
-$('btnCopyLog').onclick = () => { navigator.clipboard.writeText(state.log.join('\n')); };
-$('btnDownloadLog').onclick = () => {
-  const blob = new Blob([state.log.join('\n')], {type:'text/plain'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='benchtest-log.txt'; a.click();
-};
-$('btnSave').onclick = connectSupabase;
-$('btnFetch').onclick = fetchLive;
-$('btnDefaults').onclick = () => {
-  $('sb_url').value = DEFAULTS.url;
-  $('sb_key').value = DEFAULTS.anon;
-  $('events_view').value = DEFAULTS.eventsView;
-  $('products_view').value = DEFAULTS.productsView;
-  $('connState').textContent = 'Defaults applied';
-};
+/*** ---------- UTIL ---------- ***/
+function escapeHtml(s){return (s||'').toString().replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]))}
 
-/* ------------------ boot ------------------ */
-(function init(){
-  // prefill and auto-connect+fetch
-  $('sb_url').value = DEFAULTS.url;
-  $('sb_key').value = DEFAULTS.anon;
-  $('events_view').value = DEFAULTS.eventsView;
-  $('products_view').value = DEFAULTS.productsView;
-  connectSupabase().then(fetchLive);
+/*** ---------- BOOT ---------- ***/
+(function boot(){
+  $('sbUrl').value = DEFAULTS.url;
+  $('sbAnon').value = DEFAULTS.anon;
+  $('eventsTable').value = DEFAULTS.eventsTable;
+  $('productsTable').value = DEFAULTS.productsTable;
+
+  $('saveCreds').onclick = connect;
+  $('fetchLive').onclick = fetchLive;
+
   log('Boot OK. Prefilled Supabase creds and requested live fetch.');
+  connect().then(fetchLive);
 })();
 </script>
 </body>
