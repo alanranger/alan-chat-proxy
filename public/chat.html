@@ -13,6 +13,7 @@
   --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
   --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
   --user-bg:#e6edf7; --user-text:#0b0f16;
+  --conf-blue:#4c8dff; --conf-blue-bg:rgba(76,141,255,.14); --conf-blue-br:rgba(76,141,255,.65);
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
@@ -46,7 +47,12 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer li{margin:.15em 0}
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
-.conf{display:inline-block;font-size:12px;font-weight:700;background:rgba(229,114,0,.12);color:var(--brand);border:1px solid var(--brand);border-radius:999px;padding:2px 8px;margin-top:8px}
+
+/* Single overall confidence pill */
+.conf-row{display:flex;gap:8px;align-items:center;margin-top:6px}
+.conf{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:6px 10px;user-select:none}
+.conf--overall{background:var(--conf-blue-bg);color:var(--text);border:1px solid var(--conf-blue-br);box-shadow:0 6px 18px rgba(76,141,255,.25)}
+.conf--overall strong{color:var(--conf-blue)}
 
 /* Global pill row at end (from payload chips) */
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
@@ -208,7 +214,7 @@ function currency(amount, ccy){
   catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
 }
 
-/* ---------------- Product helpers (keep your existing behaviour) ---------------- */
+/* ---------------- Product helpers ---------------- */
 function mergeProducts(list){
   if(!Array.isArray(list) || !list.length) return [];
   const map = new Map();
@@ -216,11 +222,14 @@ function mergeProducts(list){
     const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
     if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
     const m = map.get(key);
-    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
+    for(const k of ['price','price_currency','availability','provider','description','title','meta_description'])
+      if(m[k]==null && p[k]!=null) m[k]=p[k];
     const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
     const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
     if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = p.raw.offers; }
-    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
+    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){
+      m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency});
+    }
   }
   return [...map.values()];
 }
@@ -295,24 +304,32 @@ function renderProductCard(prod){
   const options = deriveOptions(prod, facts);
 
   const infoP = [];
-  if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
-  if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
-  if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
-  if(facts.availability) infoP.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
+  if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
+  if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
+  if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
+  if(facts.availability) infoP.push(`<p><strong>Availability:</strong> ${escapeHTML(facts.availability)}</p>`);
+
+  const meta = prod.meta_description || prod.meta || (prod.raw && (prod.raw.description || prod.raw.metaDescription));
+  const metaP = meta ? `<p>${escapeHTML(meta)}</p>` : '';
 
   const li = options.map(o=>{
-    const bits = [o.label, o.time ? `— ${o.time}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
+    const bits = [escapeHTML(o.label), o.time ? `— ${escapeHTML(o.time)}` : null, o.price ? `— ${escapeHTML(o.price)}` : null].filter(Boolean).join(' ');
     return `<li>${bits}</li>`;
   }).join('');
 
   return `
     <div class="answer">
-      <h3>${prod.title || 'Workshop'}</h3>
+      <h3>${escapeHTML(prod.title || 'Workshop')}</h3>
+      ${metaP}
       ${infoP.join('')}
       ${li? `<ul>${li}</ul>`:''}
-      ${renderConfidenceBadge()}
     </div>
   `;
+}
+function cleanTopic(s){
+  if(!s) return '';
+  const stop=/\b(when|whens|next|upcoming|workshops?|what|whats|cost|prices?|where|near|me|the|and|or|how)\b/gi;
+  return s.replace(stop,'').replace(/\s+/g,' ').trim();
 }
 function renderEventsBlock(structured, productHasLocation){
   const now=new Date();
@@ -320,16 +337,16 @@ function renderEventsBlock(structured, productHasLocation){
     .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
     .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start));
   if(!future.length) return '';
-  const topic = (structured?.topic||'').toString().trim();
-  const title = topic ? `Upcoming ${topic} Workshops` : 'Upcoming Workshops';
+  const topic = cleanTopic(structured?.topic||'');
+  const title = topic ? `Upcoming ${escapeHTML(topic)} Workshops` : 'Upcoming Workshops';
   const lis = future.map(e=>{
     const when=fmtDate(e.date_start);
     const href=e.page_url||e.source_url||e.url||'#';
     const loc=e.location||'';
-    const locPart = (!productHasLocation && loc) ? ` — ${loc}` : '';
+    const locPart = (!productHasLocation && loc) ? ` — ${escapeHTML(loc)}` : '';
     return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${locPart}</li>`;
   }).join('');
-  return `<div class="answer"><h3>${title}</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
+  return `<div class="answer"><h3>${title}</h3><ul>${lis}</ul></div>`;
 }
 function renderArticlesBlock(structured){
   const list = (structured?.articles||[]).slice(0,5);
@@ -339,12 +356,7 @@ function renderArticlesBlock(structured){
     const u = a.page_url || a.source_url || a.url || '#';
     return `<li><a href="${u}" target="_blank" rel="noopener">${escapeHTML(t)}</a></li>`;
   }).join('');
-  return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
-}
-function renderConfidenceBadge(){
-  const pct = window.__lastConfidencePct;
-  if(pct==null || isNaN(pct)) return '';
-  return `<div class="conf">Confidence: ${pct}%</div>`;
+  return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul></div>`;
 }
 function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
 
@@ -355,14 +367,12 @@ function buildActionPillsFromStructured(structured){
   const add = (label, href) => {
     if(!label || !href) return;
     const u = String(href);
-    // ban site-search wildcard
-    if (/\/search\?query=/.test(u)) return;
+    if (/\/search\?query=/.test(u)) return; // ban site search
     const key = `${label}::${u}`;
     if(used.has(key)) return;
     used.add(key);
     safe.push({label,href});
   };
-  // consume provided pills/chips if any
   const inPills = (structured?.pills || structured?.chips || []);
   for (const p of inPills){
     add(p.label || p.text || 'Open', p.url || p.href);
@@ -370,31 +380,38 @@ function buildActionPillsFromStructured(structured){
   return safe.slice(0,4);
 }
 
+/* Confidence (overall, single pill) */
+function placeConfidencePill(pct){
+  if(pct==null || isNaN(pct)) return;
+  const row = document.createElement('div');
+  row.className='conf-row';
+  row.innerHTML = `<span class="conf conf--overall"><strong>Confidence:</strong> ${pct}%</span>`;
+  thread.appendChild(row);
+}
+
 /* Full render */
 function renderAnswer(payload){
   const s = payload.structured||{};
-  window.__lastConfidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
+  const confPct = (typeof payload.confidence_pct === 'number')
+                    ? Math.round(payload.confidence_pct)
+                    : (typeof payload.confidence === 'number' ? Math.round(payload.confidence*100) : null);
+  window.__lastConfidencePct = confPct;
 
   const merged = mergeProducts(s.products||[]);
-  // choose single best product
   const prod = merged[0] || null;
 
-  // render product first (if present)
   if(prod){
     addBubble(renderProductCard(prod));
   }
 
-  // events (no cap; hide location if product has one already)
   const productFacts = prod ? extractFacts(prod.description||'') : null;
   const productHasLocation = !!(productFacts && productFacts.location);
   const evHTML = renderEventsBlock(s, productHasLocation);
   if(evHTML) addBubble(evHTML);
 
-  // articles (top 5, proper <li>)
   const artHTML = renderArticlesBlock(s);
   if(artHTML) addBubble(artHTML);
 
-  // related pills (below blocks)
   const pills = buildActionPillsFromStructured(s);
   if(pills.length){
     const wrap = document.createElement('div');
@@ -407,17 +424,19 @@ function renderAnswer(payload){
     thread.appendChild(wrap);
   }
 
-  // If nothing rendered, generic fallback with nudge to use header contact
   if(!prod && !(s.events||[]).length && !(s.articles||[]).length){
     const md = payload.answer_markdown || payload.answer || '';
     const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
     const {html}=mdToHtml(md || "I don’t have a specific answer for that yet.");
-    addBubble(html.replace('</div>', `${extra}${renderConfidenceBadge()}</div>`));
+    addBubble(html.replace('</div>', `${extra}</div>`));
   }
 
-  // Debug dumps
+  // Place one overall confidence pill at the end of the response
+  placeConfidencePill(confPct);
+
+  // Debug dumps (current response only)
   dbgStruct.textContent = safeJSONString(payload.structured||{});
-  dbgNote.textContent   = safeJSONString({ confidence_pct: window.__lastConfidencePct });
+  dbgNote.textContent   = safeJSONString({ confidence_pct: confPct });
 }
 
 /* ---------------- Networking ---------------- */
@@ -446,12 +465,13 @@ async function sendQuery(query){
       const fallback = "I don’t have a specific answer for that yet.";
       const {html}=mdToHtml(fallback);
       const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
-      addBubble(html.replace('</div>', `${extra}${renderConfidenceBadge()}</div>`));
+      addBubble(html.replace('</div>', `${extra}</div>`));
+      placeConfidencePill((typeof data?.confidence_pct==='number') ? Math.round(data.confidence_pct) : null);
     }
   } catch (err){
     closeTyping();
     dbgStatus.textContent = 'error';
-    addBubble(`<div class="answer"><p>Something went wrong: ${String(err)}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p>${renderConfidenceBadge()}</div>`);
+    addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
   }
 }
 
@@ -465,7 +485,7 @@ function buildTranscript(){
   rows.push(new Date().toISOString());
   rows.push('');
   for (const el of thread.children){
-    if (el.classList.contains('actions')) continue;
+    if (el.classList.contains('actions') || el.classList.contains('conf-row')) continue;
     const role = el.classList.contains('user') ? 'User' : 'Assistant';
     rows.push(`${role}:\n${nodeToPlain(el)}`);
     rows.push('');
@@ -479,7 +499,7 @@ function emailTranscript(){
   if (body.length > 2000){
     const blob = new Blob([body], {type:'text/plain'});
     const url = URL.createObjectURL(blob);
-    addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p>${renderConfidenceBadge()}</div>`);
+    addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p></div>`);
   }
   location.href = mailto;
 }
