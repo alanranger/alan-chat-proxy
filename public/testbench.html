@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Bench Test – Events / Products / Articles</title>
+  <title>Bench Test – Events • Products • Articles</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -30,7 +30,6 @@
     .span-12{grid-column:span 12}
     .span-6{grid-column:span 6}
     .span-4{grid-column:span 4}
-    .span-3{grid-column:span 3}
     .kpi{display:flex;gap:10px;align-items:center}
     .badge{display:inline-block;padding:2px 6px;border-radius:6px;background:#0b1220;border:1px solid var(--line);font-size:12px}
     .badge.good{border-color:#1e3a2a;color:#86efac}
@@ -38,6 +37,7 @@
     details.debug{border:1px dashed var(--line);border-radius:8px;padding:10px;margin-top:12px}
     .small{font-size:12px}
     .right{float:right}
+    .mb4{margin-bottom:4px}
     .mb8{margin-bottom:8px}
     .mb12{margin-bottom:12px}
     .mb16{margin-bottom:16px}
@@ -71,7 +71,7 @@
       </div>
       <details class="debug">
         <summary>Debug: View names</summary>
-        <div class="small">These are read-only views:</div>
+        <div class="small">Read-only views:</div>
         <div class="mono small">ai_events, ai_products, ai_articles, page_chunks</div>
       </details>
     </div>
@@ -84,9 +84,16 @@
         <span class="small">Intent: <span id="intent" class="badge">—</span></span>
         <span class="small">Tokens: <span id="tok" class="badge mono">[]</span></span>
       </div>
-      <div class="flex small">
+      <div class="flex small mb8">
         <span>Brand pills:</span>
         <div id="pills"></div>
+      </div>
+      <div class="flex small">
+        <button id="btnCopySummary" title="Copy a readable summary of the last run">Copy last run</button>
+        <button id="btnCopyJSON" title="Copy full JSON of the last run">Copy JSON</button>
+        <button id="btnDownloadJSON" title="Download full JSON of the last run">Download JSON</button>
+        <button id="btnCopyLogs" title="Copy Debug & Logs">Copy logs</button>
+        <span id="copyStatus" class="badge">Ready</span>
       </div>
     </div>
 
@@ -95,7 +102,7 @@
       <div class="mb8">
         <label class="small">Landing pages CSV (url, title/meta_title)</label>
         <input type="file" id="csvLanding" accept=".csv">
-        <div class="hint small">Used only to mint brand pills (Blog, Newsletter, Gift Vouchers, Payment Plan). No query pill is ever created.</div>
+        <div class="hint small">Used only for brand pills (Blog, Newsletter, Gift Vouchers, Payment Plan). No query pill is ever created.</div>
       </div>
       <div>
         <label class="small">Questions suite CSV (idx, query, expected)</label>
@@ -178,7 +185,7 @@
       return "advice";
     }
 
-    // ------- Brand pills (landing CSV only). No "search site" pill is ever created -------
+    // ------- Brand pills (landing CSV only). No "search site" pill ever -------
     let landing = [];
     function generatePills() {
       const wrap = document.getElementById('pills');
@@ -195,9 +202,9 @@
       find("gift", "Gift Vouchers");
       find("payment", "Payment Plan");
 
-      add("Event Listing","https://www.alanranger.com/search?query=workshops");
-      add("Course Finder","https://www.alanranger.com/course-finder-photography-classes-near-me");
-      add("Home","https://www.alanranger.com");
+      out.push({label:"Event Listing", url:"https://www.alanranger.com/search?query=workshops", brand:true});
+      out.push({label:"Course Finder", url:"https://www.alanranger.com/course-finder-photography-classes-near-me", brand:true});
+      out.push({label:"Home", url:"https://www.alanranger.com", brand:true});
 
       out.forEach(p => {
         const a = document.createElement('a');
@@ -207,6 +214,9 @@
         a.target = '_blank';
         wrap.appendChild(a);
       });
+
+      // Save pills for export
+      lastRun.pills = out;
     }
 
     // ------- CSV parsing -------
@@ -254,7 +264,6 @@
       $('#connStatus').textContent = 'Connected';
       $('#connStatus').classList.add('good');
       log('Connected to Supabase:', url);
-      // Optionally test counts
       try {
         const [e,p,a] = await Promise.all([
           supa.from('ai_events').select('url', {count:'exact', head:true}),
@@ -318,6 +327,59 @@
 
     function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
 
+    // ------- Export helpers -------
+    let lastRun = { query:"", tokens:[], intent:null, pills:[], events:[], products:[], articles:[] };
+
+    function buildReadableSummary(){
+      const maxList = 20;
+      const lines = [];
+      lines.push(`Query: ${lastRun.query}`);
+      lines.push(`Intent: ${lastRun.intent}`);
+      lines.push(`Tokens: ${JSON.stringify(lastRun.tokens)}`);
+      lines.push(`Brand pills: ${lastRun.pills.map(p=>`${p.label} → ${p.url}`).join(' | ') || '—'}`);
+      lines.push('');
+      lines.push(`Events (${lastRun.events.length}):`);
+      lastRun.events.slice(0,maxList).forEach((e,i)=>{
+        const when = e.when || e.start_date || e.date_start || '';
+        const price = (e.price!=null) ? ` | ${fmt.format(e.price)}` : '';
+        lines.push(`${i+1}. ${e.title} — ${when}${price} — ${e.url}`);
+      });
+      if (lastRun.events.length > maxList) lines.push(`… +${lastRun.events.length - maxList} more`);
+      lines.push('');
+      lines.push(`Products (${lastRun.products.length}):`);
+      lastRun.products.slice(0,maxList).forEach((p,i)=>{
+        const price = (p.price!=null) ? ` | ${fmt.format(p.price)}` : '';
+        lines.push(`${i+1}. ${p.title}${price} — ${p.url}`);
+      });
+      if (lastRun.products.length > maxList) lines.push(`… +${lastRun.products.length - maxList} more`);
+      lines.push('');
+      lines.push(`Articles (${lastRun.articles.length}):`);
+      lastRun.articles.slice(0,maxList).forEach((a,i)=>{
+        lines.push(`${i+1}. ${a.title} — ${a.url}`);
+      });
+      if (lastRun.articles.length > maxList) lines.push(`… +${lastRun.articles.length - maxList} more`);
+      return lines.join('\n');
+    }
+
+    async function copyText(text){
+      await navigator.clipboard.writeText(text);
+      flashCopyStatus('Copied');
+    }
+    function flashCopyStatus(msg){
+      const el = document.getElementById('copyStatus');
+      el.textContent = msg;
+      setTimeout(()=>{ el.textContent = 'Ready'; }, 1200);
+    }
+    function downloadJSON(filename, obj){
+      const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
     // ------- Single run -------
     async function runSingle(){
       const q = $('#q').value || '';
@@ -327,12 +389,13 @@
       $('#intent').textContent = intent;
       log('Query:', q, '→ intent:', intent, 'tokens:', JSON.stringify(toks));
 
+      lastRun = { query:q, tokens:toks, intent, pills:lastRun.pills || [], events:[], products:[], articles:[] };
+
       if (toks.length === 0){
         renderEvents([]); renderProducts([]); renderArticles([]);
         return;
       }
 
-      // Fetch all three via RPCs, then decorate events w/ prices from products
       const [events, products, articles] = await Promise.all([
         fetchViaRPC('search_events', toks),
         fetchViaRPC('search_products', toks),
@@ -341,7 +404,10 @@
 
       const evWithPrice = decorateEventPrices(events, products);
 
-      // Render (we always render all three blocks so testers can see breadth)
+      lastRun.events   = evWithPrice;
+      lastRun.products = products;
+      lastRun.articles = articles;
+
       renderEvents(evWithPrice);
       renderProducts(products);
       renderArticles(articles);
@@ -385,12 +451,25 @@
     document.getElementById('csvQuestions').addEventListener('change', async (e)=>{
       const f = e.target.files?.[0]; if (!f) return;
       const rows = await parseCSVFile(f);
-      // Expect columns: idx, query, expected
       questions = rows.map(r=>({ idx:r.idx, query:r.query, expected:r.expected }));
       log(`Loaded questions: ${questions.length}`);
     });
 
-    // ------- Initial brand pills (empty landing → still add fixed ones) -------
+    // Export buttons
+    document.getElementById('btnCopySummary').addEventListener('click', async ()=>{
+      await copyText(buildReadableSummary());
+    });
+    document.getElementById('btnCopyJSON').addEventListener('click', async ()=>{
+      await copyText(JSON.stringify(lastRun, null, 2));
+    });
+    document.getElementById('btnDownloadJSON').addEventListener('click', ()=>{
+      downloadJSON('bench-last-run.json', lastRun);
+    });
+    document.getElementById('btnCopyLogs').addEventListener('click', async ()=>{
+      await copyText(logEl.textContent || '');
+    });
+
+    // Initial pills (empty landing still adds fixed brand pills)
     generatePills();
   </script>
 </body>
