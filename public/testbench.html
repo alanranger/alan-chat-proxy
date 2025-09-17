@@ -1,473 +1,550 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>BenchTest – Events • Products • Articles</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root{
-      --bg:#0b0f13;
-      --panel:#121820;
-      --muted:#8aa0b2;
-      --accent:#4cc3ff;
-      --ok:#4ade80;
-      --warn:#f59e0b;
-      --card:#0f141b;
-      --pill:#ff8a00;
-      --radius:14px;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
-      color:#e6eef6;
-      background:linear-gradient(180deg, #0a0e13 0%, #0d131a 100%);
-    }
-    header{
-      padding:18px 22px;
-      display:flex;
-      gap:14px;
-      align-items:center;
-      border-bottom:1px solid rgba(255,255,255,.06);
-      background:rgba(10,14,19,.6);
-      position:sticky; top:0; backdrop-filter:saturate(130%) blur(8px);
-      z-index:10;
-    }
-    header h1{font-size:16px;margin:0 8px 0 0;color:#cfe6fb;font-weight:650;letter-spacing:.3px}
-    .hint{color:var(--muted);font-size:12px}
-    .row{display:flex; gap:16px; align-items:stretch}
-    .grow{flex:1}
-    input[type="text"]{
-      width:100%; padding:12px 14px; border-radius:12px; outline:none; border:1px solid rgba(255,255,255,.09);
-      background:#0e141b; color:#e9f2fb; font-size:14px;
-    }
-    button{
-      border:0; padding:12px 14px; border-radius:12px; color:#081018; background:var(--accent); font-weight:700; cursor:pointer;
-      transition:all .12s ease; box-shadow:0 6px 18px rgba(76,195,255,.25);
-    }
-    button.secondary{background:#1f2a36;color:#cfe6fb;border:1px solid rgba(255,255,255,.08); box-shadow:none}
-    button:hover{transform:translateY(-1px)}
-    main{max-width:1300px;margin:24px auto;padding:0 20px}
-    .grid{display:grid; grid-template-columns:2fr 2fr 2fr 2fr; gap:16px}
-    .col-span-2{grid-column:span 2}
-    .panel{
-      background:var(--panel);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius:var(--radius);
-      overflow:hidden;
-    }
-    .panel h2{
-      margin:0; padding:12px 14px; font-size:13px; letter-spacing:.35px; text-transform:uppercase;
-      color:#c5d8ea; border-bottom:1px solid rgba(255,255,255,.06);
-      background:linear-gradient(180deg, #15202b 0%, #101722 100%);
-    }
-    .panel .content{padding:14px}
-    .cards{display:grid; grid-template-columns:1fr; gap:10px}
-    .card{
-      padding:12px; border-radius:12px; background:var(--card); border:1px solid rgba(255,255,255,.06);
-      display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
-    }
-    .title{font-weight:650}
-    .sub{color:var(--muted); font-size:12px}
-    .price{font-weight:800}
-    .ok{color:var(--ok)}
-    .muted{color:var(--muted)}
-    a{color:#cfe6fb; text-decoration:none}
-    a:hover{text-decoration:underline}
-    .kvs{display:flex; flex-wrap:wrap; gap:6px}
-    .pill{
-      padding:8px 10px; border-radius:999px; background:var(--pill); color:#1a0e00; font-weight:700; font-size:12px;
-      box-shadow:0 8px 22px rgba(255,138,0,.25);
-    }
-    .brand{background:linear-gradient(180deg,#ffc46b,#ff8a00)}
-    pre{
-      margin:0; padding:12px; border-radius:12px; background:#0a0f15; color:#ddecff; border:1px solid rgba(255,255,255,.06);
-      white-space:pre-wrap; max-height:560px; overflow:auto; font-size:12px; line-height:1.35;
-    }
-    footer{max-width:1300px;margin:8px auto 26px;padding:0 20px;color:var(--muted);font-size:12px}
-    .tag{padding:2px 8px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:11px;color:#9ad0ff}
-    .stack{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>BenchTest</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1115;--panel:#151922;--muted:#8791a1;--text:#e6e9ef;
+    --accent:#78a9ff;--ok:#17c964;--warn:#f5a524;--bad:#f31260;--chip:#ffb020;
+    --line:#212636;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.4 ui-sans-serif,system-ui,Segoe UI,Roboto,Inter,Helvetica,Arial;
+  }
+  a{color:var(--accent);text-decoration:none}
+  .wrap{display:grid;grid-template-columns:280px 1fr;gap:16px;padding:16px}
+  .sidebar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;position:sticky;top:12px;height:calc(100vh - 24px);overflow:auto}
+  .section{margin:10px 0 16px}
+  .section h4{margin:0 0 10px;font-weight:600;color:#cdd6e6;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .row{display:flex;gap:8px;align-items:center;margin:6px 0}
+  input[type=text]{width:100%;background:#0b0e13;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px 12px;outline:none}
+  input[type=checkbox]{transform:translateY(1px)}
+  button{
+    background:#1b2331;border:1px solid var(--line);color:var(--text);
+    padding:8px 10px;border-radius:8px;cursor:pointer
+  }
+  button.primary{background:#2e3a52;border-color:#3c4b6a}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .hint{color:var(--muted);font-size:12px}
+  .grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px
+  }
+  .grid3{grid-template-columns:1fr 1fr 1fr}
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden
+  }
+  .panel h3{
+    margin:0;padding:10px 12px;border-bottom:1px solid var(--line);
+    font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#cdd6e6;
+    display:flex;align-items:center;justify-content:space-between
+  }
+  .panel .body{padding:10px 12px;overflow:auto;max-height:290px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}
+  th{color:#a8b3c9;font-weight:600;font-size:12px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{
+    background:linear-gradient(0deg,#ffcc66,#ffb13b);
+    color:#3a2b00;border-radius:16px;padding:6px 10px;font-weight:600;font-size:12px
+  }
+  .muted{color:var(--muted)}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+  .json{background:#0b0e13;border:1px solid var(--line);border-radius:10px;padding:10px;white-space:pre;overflow:auto;max-height:340px}
+  .suite{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+  .suite table tbody tr:hover{background:#111622}
+  .pillcounts{font-size:12px;color:var(--muted)}
+</style>
 </head>
 <body>
-  <header>
-    <h1>BenchTest</h1>
-    <div class="row grow">
-      <input id="q" type="text" placeholder="Ask something…  (e.g. “whens the next bluebell workshops and whats the cost”)">
-      <button id="run">Run</button>
-      <button id="load" class="secondary">Run bench-suite.json</button>
-      <input id="file" type="file" accept="application/json" hidden />
+<div class="wrap">
+  <!-- LEFT: steps -->
+  <aside class="sidebar">
+    <div class="section">
+      <h4>Step 0 · Connect to Supabase</h4>
+      <div class="row"><button id="btnConnect" class="primary">Connect</button><span id="connState" class="hint">disconnected</span></div>
+      <div class="row hint">Hard coded URL & key are in the file (same as before).</div>
+      <div class="row"><label><input id="cbCsvFallback" type="checkbox" /> Use landing CSV (fallback)</label></div>
+      <div class="row"><label><input id="cbGenericPills" type="checkbox" checked /> Enable generic pills</label></div>
+      <div class="hint">RPCs (if present): <code>search_events</code>, <code>search_products</code>, <code>search_articles</code></div>
     </div>
-    <div class="hint">RPC-first • falls back to views</div>
-  </header>
 
-  <main class="grid">
-    <section class="panel col-span-2">
-      <h2>Events (dates &amp; when)</h2>
-      <div class="content">
-        <div id="events" class="cards"></div>
+    <div class="section">
+      <h4>Step 1 (optional) · Landing Pages CSV (fallback)</h4>
+      <div class="row">
+        <input type="file" id="landingCsv" accept=".csv" />
+        <button id="btnClearLanding">Clear</button>
       </div>
-    </section>
+      <div id="landingInfo" class="hint">Loaded 0 landing pages.</div>
+      <div class="hint">Required columns: <code>url</code> and one of <code>meta_title</code> or <code>title</code>.</div>
+    </div>
 
-    <section class="panel col-span-2">
-      <h2>Products (price lives here)</h2>
-      <div class="content">
-        <div id="products" class="cards"></div>
+    <div class="section">
+      <h4>Step 2 · Questions CSV</h4>
+      <div class="row">
+        <input type="file" id="questionsCsv" accept=".csv" />
+        <button id="runSuite" class="primary">Run whole suite</button>
       </div>
-    </section>
-
-    <section class="panel col-span-2">
-      <h2>Articles</h2>
-      <div class="content">
-        <div id="articles" class="cards"></div>
+      <div class="row">
+        <button id="btnCopySuite">Copy JSON</button>
+        <button id="btnDownloadSuite">Download suite JSON</button>
       </div>
-    </section>
+      <div id="qsInfo" class="hint">Loaded 0 questions.</div>
+    </div>
 
-    <section class="panel col-span-2">
-      <h2>Orange pills</h2>
-      <div class="content">
-        <div id="pills" class="kvs"></div>
+    <div class="section">
+      <h4>Step 3 · Try a single query</h4>
+      <div class="row"><input type="text" id="q" placeholder="e.g. whens the next bluebell workshop?" /></div>
+      <div class="row">
+        <button id="btnRun" class="primary">Run</button>
+        <span id="intentBadge" class="hint">intent: —</span>
       </div>
-    </section>
+      <div class="hint" id="countsHint">events=0, products=0, articles=0, pills=0</div>
+    </div>
+  </aside>
 
-    <section class="panel col-span-4">
-      <h2>Result JSON</h2>
-      <div class="content">
-        <div class="stack" style="margin-bottom:8px">
-          <span class="tag" id="latency">– ms</span>
-          <span class="tag" id="mode">fallback?</span>
+  <!-- RIGHT: results -->
+  <main>
+    <div class="grid grid3">
+      <div class="panel">
+        <h3>Results · Events <span class="hint" id="eventsMeta"></span></h3>
+        <div class="body">
+          <table id="tblEvents">
+            <thead><tr><th>title</th><th>url</th><th>when</th><th>location</th></tr></thead>
+            <tbody></tbody>
+          </table>
         </div>
-        <pre id="json"></pre>
       </div>
-    </section>
-  </main>
 
-  <footer>
-    <div class="mono">
-      Configure <strong>SUPABASE_URL</strong> and <strong>SUPABASE_ANON_KEY</strong> below.  
-      Uses views: <em>ai_events, ai_products, ai_articles</em>.  
-      Optional RPCs (preferred): <em>search_events(text[]), search_products(text[]), search_articles(text[])</em>.
+      <div class="panel">
+        <h3>Results · Articles <span class="hint" id="articlesMeta"></span></h3>
+        <div class="body">
+          <table id="tblArticles">
+            <thead><tr><th>title</th><th>url</th><th>snippet</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Results · Products <span class="hint" id="productsMeta"></span></h3>
+        <div class="body">
+          <table id="tblProducts">
+            <thead><tr><th>title</th><th>url</th><th>price</th><th>tags</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="pillcounts" id="pillCounts"></div>
+        </div>
+      </div>
     </div>
-  </footer>
 
-  <!-- Supabase client -->
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+    <div class="grid">
+      <div class="panel">
+        <h3>Pills generated</h3>
+        <div class="body"><div class="chips" id="pills"></div></div>
+      </div>
+      <div class="panel">
+        <h3>Result JSON <span id="timing" class="hint"></span></h3>
+        <div class="body">
+          <pre class="json" id="jsonOut">{}</pre>
+        </div>
+      </div>
+    </div>
 
-    // ---------- CONFIG ----------
-    // 🔧 Replace these with your project values
-    const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
-    const SUPABASE_ANON_KEY = "YOUR-ANON-KEY";
+    <div class="suite">
+      <h3 style="margin:0;padding:10px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+        Suite Results
+        <span id="suiteScore" class="hint"></span>
+      </h3>
+      <div style="padding:10px 12px;overflow:auto;max-height:360px">
+        <table id="tblSuite">
+          <thead>
+            <tr><th>idx</th><th>query</th><th>expected</th><th>predicted</th><th>ok</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
 
-    // Limits to mirror your bench
-    const LIMITS = { events: 16, products: 104, articles: 95, pills: 8 };
+<script>
+/* =========================
+   HARD-CODED SUPABASE CONFIG
+   (same model as before)
+========================= */
+const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";      // <-- put your existing URL
+const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";                    // <-- put your existing anon key
+let supa = null;
 
-    // ---------- INIT ----------
-    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/* =========================
+   UTIL: UI helpers
+========================= */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const el = (tag, attrs={}, html="") => {
+  const n = document.createElement(tag);
+  Object.entries(attrs).forEach(([k,v]) => (k in n) ? n[k]=v : n.setAttribute(k,v));
+  if (html) n.innerHTML = html;
+  return n;
+};
+function clearTbody(t){ while(t.firstChild) t.removeChild(t.firstChild); }
+function safe(v){ return v==null ? "" : String(v); }
 
-    // ---------- UTIL ----------
-    const $ = (sel) => document.querySelector(sel);
-    const nowIso = () => new Date().toISOString();
-    const todayDate = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const clean = (s='') => (s || '').toString().trim();
-    const uniq = (arr, keyFn) => {
-      const seen = new Set();
-      return arr.filter(x => {
-        const k = keyFn ? keyFn(x) : JSON.stringify(x);
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-      });
+/* =========================
+   KEYWORD + INTENT
+========================= */
+function norm(s){ return s.toLowerCase().replace(/\s+/g," ").trim(); }
+function words(s){ return norm(s).split(/[^a-z0-9]+/).filter(Boolean); }
+
+const SYNONYM_EXPAND = {
+  bluebell: ["bluebell","bluebells","bluebell woodland","bluebell woodlands"],
+  workshop: ["workshop","workshops","course","courses","class","classes","event","events"]
+};
+
+function expandKeywords(q){
+  const base = words(q);
+  const set = new Set();
+  base.forEach(w=>{
+    if(SYNONYM_EXPAND[w]) SYNONYM_EXPAND[w].forEach(x=>set.add(x));
+    set.add(w);
+  });
+  // drop generic stop-words
+  ["the","a","an","and","or","to","of","in","is","whats","what","when","whens","next"].forEach(s=>set.delete(s));
+  return Array.from(set);
+}
+
+function classifyIntent(q){
+  const s = norm(q);
+  if (/\b(cost|price|how much|£|\$)\b/.test(s)) return "products";
+  if (/\b(blog|article|tips|guide|how to)\b/.test(s)) return "articles";
+  return "events";
+}
+
+/* =========================
+   CSV state (fallback)
+========================= */
+let landingPages = [];  // [{url,title/meta_title}]
+let questions = [];     // [{idx,query,expected}]
+
+/* =========================
+   Pills (brand + search)
+========================= */
+function buildPills(query){
+  const pills = [
+    {label:"Blog", url:"https://www.alanranger.com/blog-on-photography", brand:true},
+    {label:"Newsletter", url:"https://www.alanranger.com/newsletter-signup-form", brand:true},
+    {label:"Gift Vouchers", url:"https://www.alanranger.com/photography-gift-vouchers", brand:true},
+    {label:"Payment Plan", url:"https://www.alanranger.com/photography-payment-plan", brand:true},
+    {label:"Event Listing", url:"https://www.alanranger.com/search?query=workshops", brand:true},
+    {label:"Course Finder", url:"https://www.alanranger.com/course-finder-photography-classes-near-me", brand:true},
+    {label:"Home", url:"https://www.alanranger.com", brand:true},
+  ];
+  pills.push({
+    label:`Search site: “${query}”`,
+    url:`https://www.alanranger.com/search?query=${encodeURIComponent(query)}`,
+    brand:false
+  });
+  return pills;
+}
+
+/* =========================
+   Supabase querying
+========================= */
+function supaClient(){
+  if (!supa) supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:false}});
+  return supa;
+}
+
+function buildOrIlike(fields, kws){
+  const parts=[];
+  kws.forEach(kw=>{
+    const pat = `.%25${encodeURIComponent(kw)}%25`; // “%kw%” URL-encoded for PostgREST
+    fields.forEach(f => parts.push(`${f}.ilike${pat}`));
+  });
+  return parts.join(",");
+}
+
+async function tryRpc(name, param){
+  try {
+    const { data, error } = await supaClient().rpc(name, { text: param });
+    if (error) throw error;
+    return data || null;
+  } catch(e){ return null; }
+}
+
+async function fetchEvents(kws){
+  // prefer RPC
+  let data = await tryRpc("search_events", kws);
+  if (!data){
+    // fallback to ai_events
+    let q = supaClient().from("ai_events")
+      .select("title,url,when,location,start_date,date_start,date_end")
+      .limit(100);
+    const orStr = buildOrIlike(["title","url"], kws);
+    if (orStr) q = q.or(orStr);
+    const { data:d } = await q;
+    data = d||[];
+  }
+  // upcoming filter & map
+  const now = Date.now();
+  const mapped = (data||[]).map(e=>{
+    // normalize timestamps if present
+    const ds = e.date_start || e.start_date || null;
+    const de = e.date_end || null;
+    return {
+      title: e.title, url: e.url, when: e.when || "",
+      location: e.location || "",
+      start_date: e.start_date ?? null,
+      date_start: ds, date_end: de
     };
-    const scoreContains = (text, kws) => {
-      const t = (text || '').toLowerCase();
-      return kws.reduce((acc, kw) => acc + (t.includes(kw) ? 1 : 0), 0);
-    };
+  }).filter(x=>{
+    // keep upcoming if a start is present; else leave it (some pages only have 'when' string)
+    if (!x.date_start) return true;
+    const t = Date.parse(x.date_start);
+    return isFinite(t) ? t >= now : true;
+  });
+  // sort by start if possible
+  mapped.sort((a,b)=>{
+    const ta = Date.parse(a.date_start||"")||Infinity;
+    const tb = Date.parse(b.date_start||"")||Infinity;
+    return ta - tb;
+  });
+  return mapped.slice(0,25);
+}
 
-    function kwTokens(q){
-      const raw = clean(q).toLowerCase();
-      // split on non-letters, keep useful tokens only
-      let kws = raw.split(/[^a-z0-9]+/g).filter(w => w.length >= 3);
-      // tiny heuristic: de-plural “bluebells” -> “bluebell”
-      kws.forEach(k => { if(k.endsWith('s')) kws.push(k.slice(0,-1)); });
-      // keep unique
-      kws = Array.from(new Set(kws));
-      return kws.length ? kws : ['workshop']; // fallback token
-    }
+async function fetchProducts(kws){
+  let data = await tryRpc("search_products", kws);
+  if (!data){
+    let q = supaClient().from("ai_products")
+      .select("title,url,price,tags")
+      .limit(120);
+    const orStr = buildOrIlike(["title","url"], kws);
+    if (orStr) q = q.or(orStr);
+    const { data:d } = await q;
+    data = d||[];
+  }
+  return (data||[]).map(p=>({
+    title:p.title, url:p.url, price:p.price ?? null, tags:p.tags ?? null
+  }));
+}
 
-    // Builds an OR expression for PostgREST .or(...) like:
-    // 'title.ilike.%kw1%,url.ilike.%kw1%,title.ilike.%kw2%,url.ilike.%kw2%'
-    const orExpr = (cols, kws) =>
-      kws.map(kw => cols.map(c => `${c}.ilike.*${encodeURIComponent(kw)}*`).join(',')).join(',');
+async function fetchArticles(kws){
+  let data = await tryRpc("search_articles", kws);
+  if (!data){
+    let q = supaClient().from("ai_articles")
+      .select("title,url,snippet,kind")
+      .limit(100);
+    const orStr = buildOrIlike(["title","url","snippet"], kws);
+    if (orStr) q = q.or(orStr);
+    const { data:d } = await q;
+    data = (d||[]).filter(a=> (a.kind??"article").toLowerCase()==="article");
+  }
+  return (data||[]).map(a=>({title:a.title,url:a.url,snippet:a.snippet||"",kind:"article"}));
+}
 
-    // ---------- RPC HELPERS ----------
-    async function tryRpc(name, args){
-      try {
-        const t0 = performance.now();
-        const { data, error } = await sb.rpc(name, args);
-        const dt = Math.round(performance.now() - t0);
-        if(error) return { ok:false, data:null, ms:dt, err:error.message };
-        return { ok:true, data, ms:dt };
-      } catch(e){
-        return { ok:false, data:null, ms:0, err:e.message };
+/* =========================
+   Fallback from Landing CSV
+========================= */
+function csvFallbackSearch(kws){
+  // naive contains on title/meta_title
+  const matches = [];
+  for (const row of landingPages){
+    const title = (row.meta_title || row.title || "").toLowerCase();
+    const url = (row.url || "");
+    if (!title) continue;
+    const hit = kws.some(kw => title.includes(kw.toLowerCase()));
+    if (hit){
+      // classify rudimentarily
+      const record = { title: row.meta_title || row.title || url, url };
+      if (/\/blog-on-photography\//.test(url)){
+        matches.push({type:"article", ...record, snippet:"(from landing CSV)"});
+      } else if (/photo-workshops-uk|one-day-landscape|photography-workshops/.test(url)){
+        matches.push({type:"product", ...record, price:null, tags:null});
+      } else {
+        matches.push({type:"event", ...record, when:"", location:""});
       }
     }
+  }
+  return matches.slice(0,10);
+}
 
-    // ---------- FALLBACK QUERIES ----------
-    async function fbEvents(kws){
-      const t0 = performance.now();
-      // Filter by title hit first (ai_events columns from your view)
-      const { data, error } = await sb
-        .from('ai_events')
-        .select('title,url,when,location,start_date,date_start,date_end')
-        .or(orExpr(['title'], kws))
-        .order('date_start', { ascending:true, nullsFirst:false })
-        .order('start_date', { ascending:true, nullsFirst:false })
-        .limit(Math.max(LIMITS.events, 60));
-      const ms = Math.round(performance.now() - t0);
-      if(error) return { ok:false, data:[], ms, err:error.message };
-
-      // Keep upcoming only using client-side coalesce
-      const now = new Date();
-      const rows = (data||[]).filter(r => {
-        const ts = r.date_start ? new Date(r.date_start) :
-                   r.start_date ? new Date(r.start_date) : null;
-        return ts && ts >= now;
-      });
-
-      // Score by keyword relevance; then by soonest
-      rows.forEach(r => r._score = scoreContains(`${r.title} ${r.url} ${r.location}`, kws));
-      rows.sort((a,b) => (b._score - a._score) || (new Date(a.date_start||a.start_date) - new Date(b.date_start||b.start_date)));
-      return { ok:true, data: rows.slice(0, LIMITS.events), ms };
-    }
-
-    async function fbProducts(kws){
-      const t0 = performance.now();
-      const { data, error } = await sb
-        .from('ai_products')
-        .select('title,url,price,tags')
-        .or(orExpr(['title','url'], kws))
-        .limit(Math.max(LIMITS.products, 200));
-      const ms = Math.round(performance.now() - t0);
-      if(error) return { ok:false, data:[], ms, err:error.message };
-
-      const listPatterns = [
-        '/photography-workshops-near-me',
-        '/one-day-landscape-photography-workshops',
-        '/landscape-photography-workshops'
-      ];
-
-      const rows = (data||[]).map(r => {
-        const base = scoreContains(`${r.title} ${r.url}`, kws);
-        const isList = listPatterns.some(p => r.url.includes(p));
-        const priceBoost = (r.price ?? null) !== null ? 1 : 0; // prefer price
-        r._score = base + priceBoost - (isList ? 2 : 0);
-        return r;
-      });
-
-      // Sort: higher score, then by having price, then price ascending
-      rows.sort((a,b) => (b._score - a._score)
-        || ((a.price==null)-(b.price==null))
-        || ((a.price ?? Infinity) - (b.price ?? Infinity)));
-
-      return { ok:true, data: rows.slice(0, LIMITS.products), ms };
-    }
-
-    async function fbArticles(kws){
-      const t0 = performance.now();
-      const { data, error } = await sb
-        .from('ai_articles')
-        .select('title,url,snippet,kind')
-        .or(orExpr(['title','snippet'], kws))
-        .limit(Math.max(LIMITS.articles, 200));
-      const ms = Math.round(performance.now() - t0);
-      if(error) return { ok:false, data:[], ms, err:error.message };
-
-      (data||[]).forEach(r => r._score = scoreContains(`${r.title} ${r.snippet}`, kws));
-      data.sort((a,b) => (b._score - a._score) || (clean(a.title).localeCompare(clean(b.title))));
-      return { ok:true, data: data.slice(0, LIMITS.articles), ms };
-    }
-
-    // ---------- SEARCH PIPE ----------
-    async function fetchEvents(kws){
-      const rpc = await tryRpc('search_events', { kws });
-      if(rpc.ok && Array.isArray(rpc.data)) { lastModes.events = `rpc (${rpc.ms}ms)`; return rpc.data.slice(0, LIMITS.events); }
-      const fb = await fbEvents(kws); lastModes.events = `view (${fb.ms}ms)`;
-      return fb.data;
-    }
-    async function fetchProducts(kws){
-      const rpc = await tryRpc('search_products', { kws });
-      if(rpc.ok && Array.isArray(rpc.data)) { lastModes.products = `rpc (${rpc.ms}ms)`; return rpc.data.slice(0, LIMITS.products); }
-      const fb = await fbProducts(kws); lastModes.products = `view (${fb.ms}ms)`;
-      return fb.data;
-    }
-    async function fetchArticles(kws){
-      // You already created public.search_articles(kws text[])
-      const rpc = await tryRpc('search_articles', { kws });
-      if(rpc.ok && Array.isArray(rpc.data)) { lastModes.articles = `rpc (${rpc.ms}ms)`; return rpc.data.slice(0, LIMITS.articles); }
-      const fb = await fbArticles(kws); lastModes.articles = `view (${fb.ms}ms)`;
-      return fb.data;
-    }
-
-    function buildPills(q){
-      const pills = [
-        { label:'Blog',          url:'https://www.alanranger.com/blog-on-photography', brand:true },
-        { label:'Newsletter',    url:'https://www.alanranger.com/newsletter-signup-form', brand:true },
-        { label:'Gift Vouchers', url:'https://www.alanranger.com/photography-gift-vouchers', brand:true },
-        { label:'Payment Plan',  url:'https://www.alanranger.com/photography-payment-plan', brand:true },
-        { label:'Event Listing', url:'https://www.alanranger.com/search?query=workshops', brand:true },
-        { label:'Course Finder', url:'https://www.alanranger.com/course-finder-photography-classes-near-me', brand:true },
-        { label:'Home',          url:'https://www.alanranger.com', brand:true },
-      ];
-      const sq = encodeURIComponent(clean(q));
-      pills.push({ label:`Search site: “${clean(q)}”`, url:`https://www.alanranger.com/search?query=${sq}`, brand:false });
-      return pills.slice(0, LIMITS.pills);
-    }
-
-    function toWhen(e){
-      // ai_events exposes a pretty string `when`; if not, format from date_(start|end)
-      if(clean(e.when)) return e.when;
-      const a = e.date_start ? new Date(e.date_start) : (e.start_date ? new Date(e.start_date) : null);
-      if(!a) return '';
-      return a.toUTCString().slice(0,11); // e.g. "Sat, 24 Aug"
-    }
-
-    // ---------- RENDER ----------
-    function renderList(rootSel, rows, kind){
-      const root = $(rootSel);
-      root.innerHTML = '';
-      if(!rows || !rows.length){ root.innerHTML = `<div class="muted">No ${kind} found.</div>`; return; }
-
-      const frag = document.createDocumentFragment();
-      rows.forEach(r => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        const left = document.createElement('div');
-
-        const title = document.createElement('div');
-        title.className = 'title';
-        title.innerHTML = `<a href="${r.url}" target="_blank" rel="noopener">${clean(r.title) || clean(r.url)}</a>`;
-
-        const sub = document.createElement('div');
-        sub.className = 'sub';
-        if(kind==='events'){
-          sub.textContent = `${toWhen(r)}${clean(r.location) ? ' • ' + r.location : ''}`;
-        } else if(kind==='products'){
-          sub.textContent = clean(r.tags || '');
-        } else if(kind==='articles'){
-          sub.textContent = clean(r.snippet || '').slice(0, 180);
-        }
-
-        left.appendChild(title);
-        left.appendChild(sub);
-        card.appendChild(left);
-
-        const right = document.createElement('div');
-        if(kind==='products'){
-          const price = r.price==null ? '—' : (Number(r.price).toFixed(0));
-          right.innerHTML = `<span class="price">${price === '—' ? '<span class="muted">£—</span>' : '£'+price}</span>`;
-        } else if(kind==='events'){
-          // events intentionally have no price – price lives in products
-          right.innerHTML = `<span class="muted">when</span>`;
-        } else {
-          right.innerHTML = `<span class="muted">${clean(r.kind||'article')}</span>`;
-        }
-        card.appendChild(right);
-
-        frag.appendChild(card);
-      });
-      root.appendChild(frag);
-    }
-
-    function renderPills(pills){
-      const root = $('#pills');
-      root.innerHTML = '';
-      for(const p of pills){
-        const a = document.createElement('a');
-        a.className = `pill ${p.brand?'brand':''}`;
-        a.href = p.url; a.target = '_blank'; a.rel='noopener';
-        a.textContent = p.label;
-        root.appendChild(a);
+/* =========================
+   RENDER
+========================= */
+function renderRows(tbody, rows, cols){
+  clearTbody(tbody);
+  rows.forEach(r=>{
+    const tr = el("tr");
+    cols.forEach(c=>{
+      const td = el("td");
+      let v = r[c];
+      if (c==="url"){
+        td.append(el("a",{href:r.url,target:"_blank"}, r.url));
+      } else {
+        td.textContent = safe(v);
       }
-    }
-
-    function renderJSON(obj){
-      $('#json').textContent = JSON.stringify(obj, null, 2);
-    }
-
-    const lastModes = { events:'', products:'', articles:'' };
-
-    async function runOnce(q){
-      const t0 = performance.now();
-      const kws = kwTokens(q);
-
-      const [events, products, articles] = await Promise.all([
-        fetchEvents(kws),
-        fetchProducts(kws),
-        fetchArticles(kws),
-      ]);
-
-      const pills = buildPills(q);
-
-      // Compose bench-style JSON
-      const result = {
-        q: q,
-        intent: 'events', // default bucket for these queries
-        counts: {
-          events: events.length,
-          products: products.length,
-          articles: articles.length,
-          pills: pills.length
-        },
-        events: events.map(e => ({
-          title: e.title, url: e.url, when: toWhen(e), location: e.location || null,
-          start_date: e.start_date ?? null, date_start: e.date_start ?? null, date_end: e.date_end ?? null
-        })),
-        products: products.map(p => ({
-          title: p.title, url: p.url, price: p.price ?? null, tags: p.tags ?? null
-        })),
-        articles: articles.map(a => ({
-          title: a.title, url: a.url, snippet: a.snippet ?? '', kind: a.kind ?? 'article'
-        })),
-        pills: pills.map(pl => ({ label: pl.label, url: pl.url, brand: !!pl.brand }))
-      };
-
-      // Render UI
-      renderList('#events', events, 'events');
-      renderList('#products', products, 'products');
-      renderList('#articles', articles, 'articles');
-      renderPills(pills);
-      renderJSON(result);
-
-      // Meta
-      const ms = Math.round(performance.now() - t0);
-      $('#latency').textContent = `${ms} ms`;
-      $('#mode').textContent = `events=${lastModes.events} • products=${lastModes.products} • articles=${lastModes.articles}`;
-    }
-
-    // ---------- BENCH SUITE ----------
-    async function runSuite(file){
-      const text = await file.text();
-      const suite = JSON.parse(text);
-      const items = Array.isArray(suite) ? suite : (suite.tests || []);
-      if(!items || !items.length){ alert('No tests found in JSON. Expect array of {q: "..."}'); return; }
-      for(const t of items){
-        await runOnce(t.q || '');
-      }
-    }
-
-    // ---------- WIRE ----------
-    $('#run').addEventListener('click', () => runOnce($('#q').value));
-    $('#q').addEventListener('keydown', (e) => { if(e.key==='Enter') runOnce($('#q').value); });
-    $('#load').addEventListener('click', () => $('#file').click());
-    $('#file').addEventListener('change', e => {
-      const f = e.target.files?.[0]; if(f) runSuite(f);
+      tr.append(td);
     });
+    tbody.append(tr);
+  });
+}
 
-    // Example placeholder to nudge the first run
-    $('#q').value = 'whens the next bluebell workshops and whats the cost';
-  </script>
+function setPills(pills){
+  const wrap = $("#pills");
+  wrap.innerHTML = "";
+  pills.forEach(p=>{
+    const a = el("a",{href:p.url,target:"_blank",className:"chip"}, p.label);
+    wrap.append(a);
+  });
+}
+
+/* =========================
+   MAIN one-shot runner
+========================= */
+async function runOne(q){
+  const t0 = performance.now();
+  const intent = classifyIntent(q);
+  $("#intentBadge").textContent = `intent: ${intent}`;
+  const kws = expandKeywords(q);
+
+  // core fetches
+  let [events, products, articles] = await Promise.all([
+    fetchEvents(kws),
+    fetchProducts(kws),
+    fetchArticles(kws)
+  ]);
+
+  // optional CSV fallback
+  if ($("#cbCsvFallback").checked && landingPages.length){
+    const fb = csvFallbackSearch(kws);
+    // fill only empty panels
+    if (!events.length) events = fb.filter(x=>x.type==="event").map(x=>({title:x.title,url:x.url,when:"",location:""}));
+    if (!products.length) products = fb.filter(x=>x.type==="product").map(x=>({title:x.title,url:x.url,price:null,tags:null}));
+    if (!articles.length) articles = fb.filter(x=>x.type==="article").map(x=>({title:x.title,url:x.url,snippet:x.snippet,kind:"article"}));
+  }
+
+  // pills
+  const pills = $("#cbGenericPills").checked ? buildPills(q) : [];
+
+  // render
+  renderRows($("#tblEvents tbody"), events, ["title","url","when","location"]);
+  renderRows($("#tblProducts tbody"), products, ["title","url","price","tags"]);
+  renderRows($("#tblArticles tbody"), articles, ["title","url","snippet"]);
+
+  $("#eventsMeta").textContent   = `(${events.length})`;
+  $("#productsMeta").textContent = `(${products.length})`;
+  $("#articlesMeta").textContent = `(${articles.length})`;
+
+  setPills(pills);
+  $("#pillCounts").textContent = `Events ${events.length} · Products ${products.length} · Articles ${articles.length}`;
+
+  const result = {
+    q,
+    intent,
+    counts:{ events:events.length, products:products.length, articles:articles.length, pills:pills.length },
+    events, products, articles,
+    pills
+  };
+
+  $("#countsHint").textContent = `events=${events.length}, products=${products.length}, articles=${articles.length}, pills=${pills.length}`;
+  $("#jsonOut").textContent = JSON.stringify(result,null,2);
+  $("#timing").textContent = `${Math.round(performance.now()-t0)} ms`;
+  return {intent};
+}
+
+/* =========================
+   SUITE RUN
+========================= */
+async function runSuiteAll(){
+  if (!questions.length) return;
+  const tbody = $("#tblSuite tbody");
+  clearTbody(tbody);
+  let ok=0;
+  for (let i=0;i<questions.length;i++){
+    const q = questions[i];
+    const {intent} = await runOne(q.query);
+    const tr = el("tr");
+    tr.append(el("td",{}, q.idx ?? (i+1)));
+    tr.append(el("td",{}, q.query));
+    tr.append(el("td",{}, q.expected || "—"));
+    tr.append(el("td",{}, intent));
+    const passed = (q.expected||"").toLowerCase() === (intent||"").toLowerCase();
+    tr.append(el("td",{}, passed ? "✓" : "✗"));
+    tr.lastChild.className = passed ? "ok" : "bad";
+    tbody.append(tr);
+    if (passed) ok++;
+  }
+  const pct = Math.round(ok/questions.length*100);
+  $("#suiteScore").textContent = `Suite: ${ok}/${questions.length} matched (${pct}%)`;
+}
+
+/* =========================
+   WIRE-UP
+========================= */
+$("#btnConnect").addEventListener("click", ()=>{
+  try{
+    supaClient();
+    $("#connState").textContent = "connected";
+  }catch(e){
+    $("#connState").textContent = "error";
+  }
+});
+
+$("#btnRun").addEventListener("click", ()=> runOne($("#q").value.trim()));
+
+$("#landingCsv").addEventListener("change", (ev)=>{
+  const f = ev.target.files[0]; if(!f) return;
+  Papa.parse(f, {
+    header:true, skipEmptyLines:true,
+    complete: ({data})=>{
+      landingPages = data.filter(r=>r.url);
+      $("#landingInfo").textContent = `Loaded ${landingPages.length} landing pages.`;
+    }
+  });
+});
+$("#btnClearLanding").addEventListener("click", ()=>{
+  landingPages = [];
+  $("#landingCsv").value = "";
+  $("#landingInfo").textContent = "Loaded 0 landing pages.";
+});
+
+$("#questionsCsv").addEventListener("change", (ev)=>{
+  const f = ev.target.files[0]; if(!f) return;
+  Papa.parse(f, {
+    header:true, skipEmptyLines:true,
+    complete: ({data})=>{
+      // expected columns: idx, query, expected (extra ignored)
+      questions = data.filter(r=>r.query).map((r,i)=>({ idx:r.idx||String(i+1), query:r.query, expected:r.expected||"" }));
+      $("#qsInfo").textContent = `Loaded ${questions.length} questions.`;
+    }
+  });
+});
+
+$("#runSuite").addEventListener("click", runSuiteAll);
+
+$("#btnCopySuite").addEventListener("click", async ()=>{
+  const out = { questions };
+  await navigator.clipboard.writeText(JSON.stringify(out,null,2));
+});
+
+$("#btnDownloadSuite").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify({questions},null,2)], {type:"application/json"});
+  const a = el("a",{href:URL.createObjectURL(blob),download:"bench-suite.json"});
+  document.body.append(a); a.click(); a.remove();
+});
+
+/* Auto-connect on load (same as before) */
+document.addEventListener("DOMContentLoaded", ()=>{
+  try{ supaClient(); $("#connState").textContent = "connected"; }catch(e){}
+});
+</script>
 </body>
 </html>
