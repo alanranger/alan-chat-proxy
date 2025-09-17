@@ -35,7 +35,6 @@
     .badge.bad{border-color:#3a1e1e;color:#fecaca}
     details.debug{border:1px dashed var(--line);border-radius:8px;padding:10px;margin-top:12px}
     .small{font-size:12px}
-    .mb4{margin-bottom:4px}
     .mb8{margin-bottom:8px}
     .mb16{margin-bottom:16px}
     .orange{color:var(--orange)}
@@ -178,7 +177,7 @@
       return (q||"").toLowerCase().replace(/[^a-z0-9\s-]/g," ").split(/\s+/).filter(Boolean);
     }
 
-    // -------- Intent heuristic (tuned to your suite) --------
+    // -------- Intent heuristic (refined) --------
     function detectIntent(q) {
       const s = (q || "").toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -186,27 +185,30 @@
       const hasSched   = /\b(when|where|date|time|next|upcoming|start|ends?)\b/.test(s);
       const hasPrice   = /\b(how much|price|cost|£|gbp|fee|fees?)\b/.test(s);
       const buyIntent  = /\b(book|buy|purchase|checkout|voucher|vouchers|gift|payment ?plan|subscribe|subscription|pay)\b/.test(s);
-      const policyYou  = /\b(do you|can you|will you)\b/.test(s);
-      const policyMe   = /\b(do i|can i|will i|am i|should i)\b/.test(s);
+      const policyYou  = /\bdo you\b|\bcan you\b|\bwill you\b/.test(s);
+      const policyMe   = /\bdo i\b|\bcan i\b|\bwill i\b|\bam i\b|\bshould i\b/.test(s);
       const adviceLead = /\b(what|how|why|need|require|should|which|help)\b/.test(s);
       const mentionsFree = /\bfree\b/.test(s);
 
-      // 1) Explicit schedule about events
+      // 1) Schedule about events
       if (hasEvent && hasSched) return "events";
 
-      // 2) Price + event (no buy intent) → we show listings with prices
+      // 2) Price + event (no buy intent) → show listings with prices
       if (hasEvent && hasPrice && !buyIntent) return "events";
 
-      // 3) "Do you … workshops/courses?" (offer/host/run) → events
-      if (policyYou && hasEvent && /(do|run|offer|host|provide)/.test(s)) return "events";
+      // 3) “Do you run/offer/host/provide … (workshops/courses)?” → events
+      //    Avoid matching “do you get a certificate” etc.
+      if (policyYou && hasEvent && /\b(run|offer|host|provide|do)\b.*\b(workshop|workshops|course|courses|class|classes)\b/.test(s)) {
+        return "events";
+      }
 
-      // 4) "Is it free" style → advice
+      // 4) “Is it free” style → advice
       if (mentionsFree && /course|workshop|class|subscription|online/.test(s)) return "advice";
 
       // 5) Purchase intent, or price with no event noun → products
       if (buyIntent || (hasPrice && !hasEvent)) return "products";
 
-      // 6) Policy about me (eligibility/requirements) → advice
+      // 6) Policy/requirements about me → advice
       if (policyMe) return "advice";
 
       // 7) Generic informational → advice
@@ -358,7 +360,7 @@
       $('#countArticles').textContent = rows.length;
     }
 
-    function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
+    function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39'}[c])) }
 
     // ------- Export helpers -------
     let suiteResults = []; // [{idx,query,expected,got,pass, data:{events,products,articles}, tokens, intent}]
@@ -568,7 +570,6 @@
     $byId('btnDownloadJSON').addEventListener('click', ()=>{ downloadJSON('bench-last-run.json', lastRun); });
     $byId('btnCopyLogs').addEventListener('click', async ()=>{ await copyText(logEl.textContent || ''); });
     $byId('btnCopySuiteJSON').addEventListener('click', async ()=>{
-      // Include the data we captured for each row
       await copyText(JSON.stringify({ results:suiteResults }, null, 2));
       flashCopyStatus('Suite JSON copied');
     });
