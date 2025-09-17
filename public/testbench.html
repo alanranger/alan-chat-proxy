@@ -2,26 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Bench Test – Events / Products / Articles</title>
+  <title>Bench Test — Events / Products / Articles</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Supabase & PapaParse -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <!-- Supabase JS v2 (UMD) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <!-- PapaParse for CSV -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
   <style>
     :root{
       --bg:#0e1117;--panel:#161b22;--muted:#9aa4b3;--text:#e6edf3;--accent:#3b82f6;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;
-      --border:#222834;--chip:#1f2633;
+      --border:#222834;--chip:#1f2633;--chipBrand:#19233a;--chipGen:#1b2433;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif}
-    .page{display:grid;grid-template-columns:300px 1fr;gap:14px;padding:14px;min-height:100vh}
+    .page{display:grid;grid-template-columns:320px 1fr;gap:14px;padding:14px;height:100%}
     .card{background:var(--panel);border:1px solid var(--border);border-radius:10px}
-    .left{display:flex;flex-direction:column;gap:14px}
+    .left{display:flex;flex-direction:column;gap:14px;height:calc(100vh - 28px)}
     .section{padding:12px}
     .section h3{margin:0 0 10px 0;font-weight:600;font-size:14px;color:#cbd5e1}
     .row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-    input[type=text], select{width:100%;background:#0b0f15;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px}
+    input[type=text]{width:100%;background:#0b0f15;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px}
+    select{width:100%;background:#0b0f15;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px}
     button{background:#1f2937;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;cursor:pointer}
     button.primary{background:var(--accent);border-color:transparent}
     button.small{padding:6px 8px;font-size:12px}
@@ -31,22 +34,31 @@
     .badge.ok{border-color:#1f5130;background:#0b1f14;color:#86efac}
     .badge.warn{border-color:#4a3a14;background:#1a1307;color:#fde68a}
     .badge.err{border-color:#5a1a1a;background:#1a0b0b;color:#fecaca}
+    .hint{font-size:12px;color:var(--muted)}
+    .sticky-tools{position:sticky;top:0;background:var(--panel);padding-bottom:8px;z-index:1}
+
     .right{display:grid;grid-template-rows:auto 1fr;gap:14px}
     .grids{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .gridTitle{display:flex;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border)}
+    .gridTitle h4{margin:0;font-weight:600}
+
     .table{width:100%;border-collapse:collapse;font-size:13px}
     .table th,.table td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
     .table th{color:#cbd5e1;background:#111622;position:sticky;top:0}
-    .gridTitle{display:flex;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border)}
-    .gridTitle h4{margin:0;font-weight:600}
-    .pillbar{display:flex;flex-wrap:wrap;gap:6px;padding:8px}
-    .pill{background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:4px 8px;font-size:12px;color:var(--muted)}
-    .log{height:220px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap;background:#0b0f15;border-top:1px solid var(--border);border-radius:0 0 10px 10px;padding:10px}
-    .hint{font-size:12px;color:var(--muted)}
+
     a.link{color:#a5b4fc;text-decoration:none}
+    .log{height:220px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap;background:#0b0f15;border-top:1px solid var(--border);border-radius:0 0 10px 10px;padding:10px}
+
+    .pillbar{display:flex;flex-wrap:wrap;gap:6px;padding:8px}
+    .pill{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--border);padding:.2rem .55rem;border-radius:999px;background:var(--chip);font-size:12px}
+    .pill.brand{background:var(--chipBrand)}
+    .pill.generic{background:var(--chipGen)}
+    .counts{display:flex;gap:8px}
   </style>
 </head>
 <body>
 <div class="page">
+
   <!-- LEFT PANEL -->
   <div class="left">
     <div class="card section">
@@ -59,6 +71,7 @@
       </div>
       <div class="row">
         <select id="articlesView"><option value="ai_articles">ai_articles</option></select>
+        <span class="hint">events / products / articles views</span>
       </div>
       <div class="row">
         <button id="saveCfg" class="small">Save</button>
@@ -86,7 +99,7 @@
       <h3>Step 2 · Questions CSV</h3>
       <div class="hint">Columns: <code>idx, query, expected</code>. Extra columns ignored.</div>
       <div class="row"><input id="questionsCsv" type="file" accept=".csv" /><button id="clearQuestions" class="small">Clear</button></div>
-      <div class="row">
+      <div class="row sticky-tools">
         <button id="runSuite" class="primary">Run whole suite</button>
         <button id="downloadSuiteJson" class="small">Download suite JSON</button>
       </div>
@@ -102,8 +115,10 @@
         <button id="btnDownloadJson" class="small">Download JSON</button>
       </div>
       <div class="kpi">
-        <span id="intentBadge" class="badge">intent: —</span>
-        <span id="countsBadge" class="badge">events=0, products=0, articles=0, pills=0</span>
+        <div class="counts">
+          <span id="intentBadge" class="badge">intent: —</span>
+          <span id="countsBadge" class="badge">events=0, products=0, articles=0, pills=0</span>
+        </div>
       </div>
     </div>
   </div>
@@ -130,9 +145,7 @@
           </table>
         </div>
       </div>
-    </div>
 
-    <div class="grids">
       <div class="card">
         <div class="gridTitle"><h4>Results · Articles</h4><span id="articlesKpi" class="badge">–</span></div>
         <div style="max-height:220px;overflow:auto;">
@@ -146,9 +159,9 @@
       <div class="card">
         <div class="gridTitle">
           <h4>Pills generated</h4>
-          <div><span id="pillCounts" class="badge">Events 0</span><span id="pillCounts2" class="badge" style="margin-left:6px;">Products 0</span><span id="pillCounts3" class="badge" style="margin-left:6px;">Articles 0</span></div>
+          <div><span id="pillCounts" class="badge">Events 0</span><span id="pillCounts2" class="badge">Products 0</span><span id="pillCounts3" class="badge">Articles 0</span></div>
         </div>
-        <div class="pillbar" id="pillBar"></div>
+        <div id="pillBar" class="pillbar"></div>
       </div>
     </div>
 
@@ -181,341 +194,375 @@
 </div>
 
 <script>
-/* =========================
-   HARD-CODED DEFAULTS
-========================= */
+/* ----------------------------------------------------------------------
+   CONFIG (hard-wired defaults; still editable in the UI)
+---------------------------------------------------------------------- */
 const DEFAULTS = {
   SUPABASE_URL: 'https://igzvwbvgvmzvvzoclufx.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY',
   VIEW_EVENTS:   'ai_events',
   VIEW_PRODUCTS: 'ai_products',
   VIEW_ARTICLES: 'ai_articles',
-  PREVIEW_ROWS: 20
+  PREVIEW_ROWS:  50
 };
 
+let env = { ...DEFAULTS };
 let supa = null;
-let env = {...DEFAULTS};
+
 let live = { events: [], products: [], articles: [] };
 let landing = [];     // CSV fallback pages
 let questions = [];   // suite rows
 let lastRun = null;
 let suiteResults = [];
 
-/* =========================
-   UTILITIES
-========================= */
-const $ = s => document.querySelector(s);
-function log(msg){ const t=new Date().toLocaleTimeString(); const el=$("#log"); el.textContent += (el.textContent?'\n':'') + `${t}  ${msg}`; el.scrollTop = el.scrollHeight; }
-function esc(s){ return (s??'').toString().replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
-function link(u){ return u?`<a href="${u}" target="_blank" class="link">${esc(u)}</a>`:''; }
-function money(v){ if(v==null||v==='') return ''; const n=Number(v); if(!isFinite(n)) return String(v); return '£'+n.toLocaleString('en-GB',{maximumFractionDigits:0}); }
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
+/* ----------------------------------------------------------------------
+   Helpers
+---------------------------------------------------------------------- */
+const $ = (s)=>document.querySelector(s);
+const esc = s => (s ?? "").toString().replace(/[<>&]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[m]));
+const link = u => u ? `<a href="${u}" target="_blank" class="link">${esc(u)}</a>` : "";
+const money = v => (v==null||v==="") ? "" : `£${Number(v).toLocaleString("en-GB",{maximumFractionDigits:0})}`;
+function el(tag, cls, html){ const n=document.createElement(tag); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; }
+function setBadge(sel, text, kind=''){ const n=$(sel); n.className='badge'+(kind? ' '+kind:''); n.textContent=text; }
+function log(msg){ const t = new Date().toTimeString().slice(0,8); $('#log').textContent += `${t}  ${msg}\n`; $('#log').scrollTop = $('#log').scrollHeight; }
+function downloadBlob(text, name, type="application/json"){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),500); }
+const uniqBy = (arr, keyFn)=>{ const m=new Map(); for(const v of arr) m.set(keyFn(v),v); return [...m.values()]; };
 
-function setBadge(sel,text,kind){ const el = $(sel); el.textContent = text; el.className = `badge${kind?(' '+kind):''}`; }
-function downloadBlob(text,name,type='application/json'){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
-
-function tokens(q){ return (q||'').toLowerCase().replace(/[^a-z0-9\s-]/g,' ').split(/\s+/).filter(Boolean); }
-function buildOrIlike(keys, cols){
-  const safe = (keys||[]).map(k=>k.replace(/[%_,]/g,'')).filter(k=>k.length>=3).slice(0,6);
-  if(!safe.length) return null;
-  const parts=[]; for(const k of safe){ for(const c of cols){ parts.push(`${c}.ilike.%${k}%`); } }
-  return parts.join(',');
-}
-function uniqBy(arr,key){ const m=new Map(); for(const it of arr){ m.set(key(it),it); } return [...m.values()]; }
-
-/* =========================
-   RENDER HELPERS
-========================= */
-function renderTable(tbodySel, rows, cols){
-  const tbody = document.querySelector(tbodySel+' tbody');
-  tbody.innerHTML = '';
-  (rows||[]).forEach(r=>{
-    const tr = document.createElement('tr');
-    cols.forEach(c=>{
-      const td=document.createElement('td');
-      const v=r[c];
-      if(c==='url') td.innerHTML = link(v);
-      else if(c==='price') td.textContent = money(v);
-      else td.textContent = v==null?'':v;
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
+/* ----------------------------------------------------------------------
+   CSV parsing (Papa)
+---------------------------------------------------------------------- */
+async function parseCSV(file){
+  return new Promise((resolve,reject)=>{
+    Papa.parse(file,{header:true,skipEmptyLines:true,complete:r=>resolve(r.data||[]),error:reject});
   });
 }
 
-/* =========================
-   PILLS
-========================= */
-function generatePills(query){
-  const pills=[];
-  const add=(label,url,brand=true,type=null)=>{ pills.push({label,url,brand,type}); };
-  // Brand/navigation (from site structure)
-  add('Blog / Articles','https://www.alanranger.com/blog-on-photography',true,'article');
-  add('Gift Vouchers','https://www.alanranger.com/photography-gift-vouchers',true,'product');
-  add('Payment Plan','https://www.alanranger.com/photography-payment-plan',true,'product');
-  add('Event Listing','https://www.alanranger.com/search?query=workshops',true,'event');
-  add('Course Finder','https://www.alanranger.com/course-finder-photography-classes-near-me',true,'event');
-  add('Home','https://www.alanranger.com',true);
-  // Query echo site-search
-  const q=query.trim(); if(q){ add(`Search site: “${q.slice(0,28)}”`,'https://www.alanranger.com/search?query='+encodeURIComponent(q),false); }
-  // Top matches as quick pills
-  (lastRun?.events||[]).slice(0,3).forEach(e=> add(e.title,e.url,false,'event'));
-  (lastRun?.products||[]).slice(0,2).forEach(p=> add(p.title,p.url,false,'product'));
-  (lastRun?.articles||[]).slice(0,2).forEach(a=> add(a.title,a.url,false,'article'));
-  return pills;
-}
-function renderPills(pills){
-  const bar=$("#pillBar"); bar.innerHTML='';
-  pills.forEach(p=>{ const a=document.createElement('a'); a.href=p.url; a.target='_blank'; a.className='pill'; a.textContent=p.label; bar.appendChild(a); });
-  const c={events:pills.filter(x=>x.type==='event').length,products:pills.filter(x=>x.type==='product').length,articles:pills.filter(x=>x.type==='article').length};
-  $("#pillCounts").textContent=`Events ${c.events}`; $("#pillCounts2").textContent=`Products ${c.products}`; $("#pillCounts3").textContent=`Articles ${c.articles}`;
+/* ----------------------------------------------------------------------
+   Tokenization & intent
+---------------------------------------------------------------------- */
+function tokens(q){
+  return (q||"").toLowerCase().replace(/[^a-z0-9\s-]/g," ").split(/\s+/).filter(Boolean);
 }
 
-/* =========================
-   INTENT (simple & stable)
-========================= */
-function detectIntent(q){
-  const t=tokens(q);
-  const has=s=>t.includes(s);
-  const any=a=>a.some(has);
-  if(any(['workshop','workshops','course','courses','class','classes','event','events','date','when','where','next'])) return 'events';
-  if(any(['price','cost','£','gbp'])) return 'products';
-  if(any(['blog','article','guide','tips','how'])) return 'articles';
-  return 'events';
+/* Improved, deterministic heuristic */
+function detectIntent(q) {
+  const s = (q || "").toLowerCase();
+
+  const scheduleQ = /\b(when|where|date|time|next|upcoming|start|ends?)\b/;
+  const adviceQ   = /\b(what|how|why|do i|can i|should i|is it|are there|need|require|free|certificate|tripod|camera|lens|laptop|settings?)\b/;
+  const mentionsEvent = /\b(workshop|workshops|course|courses|class|classes|event|events|session|tuition)\b/;
+  const mentionsPrice = /\b(price|cost|£|gbp|voucher|vouchers|gift|payment|plan|book|buy|subscription)\b/;
+
+  // explicit schedule + event terms → events
+  if (scheduleQ.test(s) && mentionsEvent.test(s)) return "events";
+
+  // requirement/knowledge phrasing → advice
+  if (adviceQ.test(s)) return "advice";
+
+  // price/cost → products (but UI will still show events/products)
+  if (mentionsPrice.test(s)) return "products";
+
+  // generic event phrasing → events
+  if (mentionsEvent.test(s)) return "events";
+
+  // default to advice
+  return "advice";
 }
 
-/* =========================
-   SUPABASE
-========================= */
-function hydrateConfig(){
+/* Build OR-ilike string for Supabase */
+function buildOrIlike(keys, cols = ["title"]) {
+  const safe = keys.map(k=>k.replace(/[%_,]/g,"")).filter(k=>k.length>=3).slice(0,6);
+  if (!safe.length) return null;
+  const parts = [];
+  for (const k of safe) for (const c of cols) parts.push(`${c}.ilike.%${k}%`);
+  return parts.join(",");
+}
+
+/* ----------------------------------------------------------------------
+   Supabase
+---------------------------------------------------------------------- */
+function hydrateInputs(){
   $('#sbUrl').value = env.SUPABASE_URL;
   $('#sbAnon').value = env.SUPABASE_ANON_KEY;
-  $('#eventsView').value = env.VIEW_EVENTS;
+  $('#eventsView').value   = env.VIEW_EVENTS;
   $('#productsView').value = env.VIEW_PRODUCTS;
   $('#articlesView').value = env.VIEW_ARTICLES;
 }
-function readConfig(){
-  env.SUPABASE_URL = $('#sbUrl').value.trim() || DEFAULTS.SUPABASE_URL;
-  env.SUPABASE_ANON_KEY = $('#sbAnon').value.trim() || DEFAULTS.SUPABASE_ANON_KEY;
-  env.VIEW_EVENTS   = $('#eventsView').value || DEFAULTS.VIEW_EVENTS;
-  env.VIEW_PRODUCTS = $('#productsView').value || DEFAULTS.VIEW_PRODUCTS;
-  env.VIEW_ARTICLES = $('#articlesView').value || DEFAULTS.VIEW_ARTICLES;
+
+function readInputs(){
+  env.SUPABASE_URL = $('#sbUrl').value.trim();
+  env.SUPABASE_ANON_KEY = $('#sbAnon').value.trim();
+  env.VIEW_EVENTS   = $('#eventsView').value.trim();
+  env.VIEW_PRODUCTS = $('#productsView').value.trim();
+  env.VIEW_ARTICLES = $('#articlesView').value.trim();
 }
-function saveLocal(){ localStorage.setItem('bench.env', JSON.stringify(env)); }
-function loadLocal(){ try{ env = JSON.parse(localStorage.getItem('bench.env')) || {...DEFAULTS}; } catch{ env = {...DEFAULTS}; } }
+
+function saveCfg(){ localStorage.setItem('bench.env', JSON.stringify(env)); log('Saved configuration.'); }
+function loadCfg(){
+  try{ const raw=localStorage.getItem('bench.env'); if(!raw) return; env = {...env, ...JSON.parse(raw)}; }catch{}
+}
 
 async function connect(){
-  readConfig();
-  supa = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {auth:{persistSession:false}});
+  readInputs();
+  supa = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
   setBadge('#connStatus','Connecting…');
   log('Connecting to Supabase…');
 
-  const [E,P,A] = await Promise.all([
+  const [e,p,a] = await Promise.all([
     supa.from(env.VIEW_EVENTS).select('title',{count:'estimated',head:true}),
     supa.from(env.VIEW_PRODUCTS).select('title',{count:'estimated',head:true}),
-    supa.from(env.VIEW_ARTICLES).select('title',{count:'estimated',head:true})
+    supa.from(env.VIEW_ARTICLES).select('title',{count:'estimated',head:true}),
   ]);
 
-  if(E.error||P.error||A.error){
+  if (e.error || p.error || a.error) {
     setBadge('#connStatus','Error','err');
-    if(E.error) log('events: '+E.error.message);
-    if(P.error) log('products: '+P.error.message);
-    if(A.error) log('articles: '+A.error.message);
+    if (e.error) log('events: '+e.error.message);
+    if (p.error) log('products: '+p.error.message);
+    if (a.error) log('articles: '+a.error.message);
     return;
   }
   setBadge('#connStatus','Connected.','ok');
-  log(`Views reachable · ${env.VIEW_EVENTS}: ${E.count||'?'} · ${env.VIEW_PRODUCTS}: ${P.count||'?'} · ${env.VIEW_ARTICLES}: ${A.count||'?'}`);
+  log(`Views reachable · ${env.VIEW_EVENTS}: ${e.count||'?'}, ${env.VIEW_PRODUCTS}: ${p.count||'?'}, ${env.VIEW_ARTICLES}: ${a.count||'?'}`);
 }
 
 async function fetchLive(){
-  if(!supa) await connect();
+  if (!supa) await connect();
   setBadge('#eventsKpi','Loading…'); setBadge('#productsKpi','Loading…'); setBadge('#articlesKpi','Loading…');
-  const [ev, pr, ar] = await Promise.all([
+
+  const [E,P,A] = await Promise.all([
     supa.from(env.VIEW_EVENTS).select('title,url,when,location,start_date,date_start,date_end').order('start_date',{ascending:true}).limit(2000),
     supa.from(env.VIEW_PRODUCTS).select('title,url,price,tags').limit(2000),
-    supa.from(env.VIEW_ARTICLES).select('title,url,snippet,kind').order('last_seen',{ascending:false}).limit(2000)
+    supa.from(env.VIEW_ARTICLES).select('title,url,snippet,kind,last_seen').order('last_seen',{ascending:false}).limit(2000)
   ]);
-  if(ev.error) log('events error: '+ev.error.message);
-  if(pr.error) log('products error: '+pr.error.message);
-  if(ar.error) log('articles error: '+ar.error.message);
 
-  live.events = ev.data||[];
-  live.products = pr.data||[];
-  live.articles = (ar.data||[]).filter(x => (x.kind||'article').toLowerCase()==='article');
+  if (E.error) log('events error: '+E.error.message);
+  if (P.error) log('products error: '+P.error.message);
+  if (A.error) log('articles error: '+A.error.message);
 
-  setBadge('#eventsKpi',`Loaded ${live.events.length}`,'ok');
-  setBadge('#productsKpi',`Loaded ${live.products.length}`,'ok');
-  setBadge('#articlesKpi',`Loaded ${live.articles.length}`,'ok');
+  live.events = E.data||[];
+  live.products = P.data||[];
+  live.articles = A.data||[];
 
-  // preview
-  renderTable('#eventsTable', live.events.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','when','location']);
-  renderTable('#productsTable', live.products.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','price','tags']);
-  renderTable('#articlesTable', live.articles.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','snippet']);
+  setBadge('#eventsKpi',   `Loaded ${live.events.length}`,   'ok');
+  setBadge('#productsKpi', `Loaded ${live.products.length}`, 'ok');
+  setBadge('#articlesKpi', `Loaded ${live.articles.length}`, 'ok');
+
+  renderTable('#eventsTable',   live.events.slice(0,DEFAULTS.PREVIEW_ROWS),   ['title','url','when','location']);
+  renderTable('#productsTable', live.products.slice(0,DEFAULTS.PREVIEW_ROWS), ['title','url','price','tags']);
+  renderTable('#articlesTable', live.articles.slice(0,DEFAULTS.PREVIEW_ROWS), ['title','url','snippet']);
 
   log(`Loaded events=${live.events.length}, products=${live.products.length}, articles=${live.articles.length}.`);
 }
 
-/* Prefer RPCs; fallback to views with OR ILIKE */
-async function rpcOrView(kind, keys){
-  const k = keys.filter(t=>t.length>=3);
-  try{
-    if(kind==='events'){
-      const { data, error } = await supa.rpc('search_events',{ text: k });
-      if(!error && data) return data;
-    }else if(kind==='products'){
-      const { data, error } = await supa.rpc('search_products',{ text: k });
-      if(!error && data) return data;
-    }else if(kind==='articles'){
-      const { data, error } = await supa.rpc('search_articles',{ text: k });
-      if(!error && data) return data;
+/* ----------------------------------------------------------------------
+   Matching & pills
+---------------------------------------------------------------------- */
+function renderTable(sel, rows, cols){
+  const tbody = document.querySelector(sel+' tbody');
+  tbody.innerHTML='';
+  for(const r of rows){
+    const tr = document.createElement('tr');
+    for(const c of cols){
+      const td = document.createElement('td');
+      let v = r[c];
+      if(c==='url') td.innerHTML = link(v);
+      else if (c==='price') td.textContent = money(v);
+      else td.textContent = (v??'');
+      tr.appendChild(td);
     }
-  }catch(_){/* ignore; fall back */}
-  const or = kind==='articles'
-    ? buildOrIlike(k, ['title','snippet'])
-    : buildOrIlike(k, ['title']);
-  if(!or) return [];
-  if(kind==='events'){
-    const {data} = await supa.from(env.VIEW_EVENTS).select('title,url,when,location,start_date,date_start,date_end').or(or).limit(200);
-    return data||[];
+    tbody.appendChild(tr);
   }
-  if(kind==='products'){
-    const {data} = await supa.from(env.VIEW_PRODUCTS).select('title,url,price,tags').or(or).limit(200);
-    return data||[];
-  }
-  if(kind==='articles'){
-    const {data} = await supa.from(env.VIEW_ARTICLES).select('title,url,snippet,kind').or(or).limit(200);
-    return (data||[]).filter(x => (x.kind||'article').toLowerCase()==='article');
-  }
-  return [];
 }
 
-/* =========================
-   RUNNERS
-========================= */
-async function runSingle(query){
-  if(!supa) await connect();
-  const intent = detectIntent(query);
-  $('#intentBadge').textContent = `intent: ${intent}`;
+function generatePills(query) {
+  const out = [];
+  const add = (label,url,brand=true) => out.push({label,url,brand});
 
-  const keys = tokens(query);
+  // Brand pills from landing CSV by keyword (simple picks)
+  const tryAdd = (kw, label) => {
+    const hit = landing.find(x => ((x.title||x.meta_title||"") + " " + (x.url||"")).toLowerCase().includes(kw));
+    if (hit) add(label || (hit.title||hit.meta_title||"").slice(0,60), hit.url, true);
+  };
+  tryAdd("blog","Blog / Articles");
+  tryAdd("newsletter","Newsletter");
+  tryAdd("gift","Gift Vouchers");
+  tryAdd("payment","Payment Plan");
+
+  // Events generic landing search
+  if ($('#enableGenericPills').checked) {
+    add("Event Listing", "https://www.alanranger.com/search?query=workshops", true);
+    add("Course Finder", "https://www.alanranger.com/course-finder-photography-classes-near-me", true);
+    add("Home", "https://www.alanranger.com", true);
+  }
+
+  // Query→site search pill (generic)
+  const q = (query||"").trim();
+  if ($('#enableGenericPills').checked && q) {
+    add(`Search site: “${q.slice(0,28)}”`, `https://www.alanranger.com/search?query=${encodeURIComponent(q)}`, false);
+  }
+  return out;
+}
+
+function renderPills(list){
+  const bar = $('#pillBar'); bar.innerHTML='';
+  for (const p of list){
+    const a = document.createElement('a');
+    a.href=p.url; a.target='_blank'; a.className='pill '+(p.brand?'brand':'generic'); a.textContent=p.label;
+    bar.appendChild(a);
+  }
+  const counts = {
+    events: (lastRun?.events||[]).length,
+    products: (lastRun?.products||[]).length,
+    articles: (lastRun?.articles||[]).length,
+  };
+  $('#pillCounts').textContent  = `Events ${counts.events}`;
+  $('#pillCounts2').textContent = `Products ${counts.products}`;
+  $('#pillCounts3').textContent = `Articles ${counts.articles}`;
+}
+
+/* Main single run */
+async function runSingle(query){
+  if (!supa) await connect();
+  const intent = detectIntent(query);
+  setBadge('#intentBadge', `intent: ${intent}`);
+
+  const keys = tokens(query).filter(t=>t.length>=3);
   let events=[], products=[], articles=[];
 
-  // Events first
-  events = await rpcOrView('events', keys);
-  // keep upcoming first where dates exist
-  const now = Date.now();
-  events = events.sort((a,b)=>{
-    const ta = Date.parse(a.date_start||a.start_date||'') || Infinity;
-    const tb = Date.parse(b.date_start||b.start_date||'') || Infinity;
-    return ta - tb;
-  });
-
-  // Products for price
-  products = await rpcOrView('products', keys);
-
-  // Articles
-  articles = await rpcOrView('articles', keys);
-  if(!articles.length && $('#useLandingFallback').checked && landing.length){
-    const contentish = landing.filter(x => /blog|tips|guide|article|tutorial/i.test(`${x.title||x.meta_title||""}`));
-    articles = contentish.slice(0,2).map(x => ({title:x.title||x.meta_title||'(landing)', url:x.url, snippet:'(from Landing CSV)', kind:'landing'}));
+  // EVENTS: if intent events, search; otherwise show a small context slice
+  if (intent === 'events') {
+    const or = buildOrIlike(keys, ['title']);
+    if (or){
+      const { data, error } = await supa.from(env.VIEW_EVENTS)
+        .select('title,url,when,location,start_date,date_start,date_end')
+        .or(or).limit(200);
+      if (!error) events = data||[];
+    }
+    if (!events.length) events = live.events.slice(0,50);
+  } else {
+    // provide context slice even when intent not events
+    events = live.events.slice(0,20);
   }
 
-  lastRun = {
-    q: query,
-    intent,
-    counts:{ events:events.length, products:products.length, articles:articles.length },
-    events, products, articles
-  };
+  // PRODUCTS: search titles
+  {
+    const or = buildOrIlike(keys, ['title']);
+    if (or){
+      const { data, error } = await supa.from(env.VIEW_PRODUCTS).select('title,url,price,tags').or(or).limit(200);
+      if (!error) products = data||[];
+    }
+    if (!products.length && /price|cost|voucher|gift|plan/i.test(query)) {
+      products = live.products.slice(0,20);
+    }
+  }
+
+  // ARTICLES: search title/snippet; fallback to landing if none
+  {
+    const or = buildOrIlike(keys, ['title','snippet']);
+    if (or){
+      const { data, error } = await supa.from(env.VIEW_ARTICLES).select('title,url,snippet,kind').or(or).limit(200);
+      if (!error) articles = data||[];
+    }
+    if (!articles.length && $('#useLandingFallback').checked && landing.length){
+      const contentish = landing.filter(x => /blog|tips|guide|article|tutorial/i.test(`${x.title||x.meta_title||""}`));
+      articles = contentish.slice(0,4).map(x => ({title:x.title||x.meta_title||"(landing)", url:x.url, snippet:"(from Landing CSV)", kind:"landing"}));
+    }
+  }
 
   // Render
-  renderTable('#eventsTable', events.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','when','location']);
-  renderTable('#productsTable', products.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','price','tags']);
-  renderTable('#articlesTable', articles.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','snippet']);
+  renderTable('#eventsTable',   events.slice(0,DEFAULTS.PREVIEW_ROWS),   ['title','url','when','location']);
+  renderTable('#productsTable', products.slice(0,DEFAULTS.PREVIEW_ROWS), ['title','url','price','tags']);
+  renderTable('#articlesTable', articles.slice(0,DEFAULTS.PREVIEW_ROWS), ['title','url','snippet']);
 
-  const pills = $('#enableGenericPills').checked ? generatePills(query) : [];
-  lastRun.pills = pills;
+  // Pills
+  const pills = generatePills(query);
+
+  lastRun = { q:query, intent, counts:{events:events.length,products:products.length,articles:articles.length,pills:pills.length}, events, products, articles, pills };
+  setBadge('#countsBadge', `events=${events.length}, products=${products.length}, articles=${articles.length}, pills=${pills.length}`);
   renderPills(pills);
 
-  $('#countsBadge').textContent = `events=${events.length}, products=${products.length}, articles=${articles.length}, pills=${pills.length}`;
-  log(`Run: ${JSON.stringify({q:query,intent})}`);
+  log(`Run: ${JSON.stringify({q:query, intent})}`);
 }
 
+/* Suite runner */
 async function runSuite(){
   if(!questions.length){ log('No questions CSV loaded.'); return; }
-  suiteResults = []; $('#suiteTable tbody').innerHTML = '';
+  const rows = [];
   let pass=0;
-  for(const row of questions){
-    const idx = String(row.idx ?? suiteResults.length+1);
-    const q = (row.query||'').toString();
-    const expected = (row.expected||'').toString().toLowerCase();
+  for (const row of questions){
+    const idx = row.idx || row.ID || '';
+    const q = row.query || row.Q || row.question || '';
+    const expected = (row.expected||'').toLowerCase().trim();
 
     await runSingle(q);
-    const predicted = (lastRun.intent||'').toLowerCase();
-    const ok = expected ? (predicted === expected) : true;
-    if(ok) pass++;
+    const predicted = lastRun.intent;
+    const ok = expected ? (predicted===expected || (expected==='advice' && predicted==='articles')) : true; // treat articles≈advice if desired
+    if (ok) pass++;
 
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${esc(idx)}</td><td>${esc(q)}</td><td>${esc(expected)}</td><td>${esc(predicted)}</td><td>${ok?'✅':'❌'}</td>`;
-    $('#suiteTable tbody').appendChild(tr);
-
-    suiteResults.push({
-      idx,q,expected,predicted,ok,
-      used:{
-        top_events:(lastRun.events||[]).slice(0,5),
-        top_products:(lastRun.products||[]).slice(0,5),
-        top_articles:(lastRun.articles||[]).slice(0,5),
-        pills:lastRun.pills||[]
-      }
-    });
-    await sleep(30);
+    rows.push({idx,q,expected,predicted,ok});
+    await new Promise(r=>setTimeout(r,20)); // keep UI snappy
   }
-  const pct=Math.round(pass/suiteResults.length*100);
-  setBadge('#suiteSummary',`Suite: ${pass}/${suiteResults.length} matched (${pct}%)`, pass===suiteResults.length?'ok':(pct>=70?'warn':'err'));
-  log(`Suite done: ${pass}/${suiteResults.length} matched expected intent.`);
+  suiteResults = rows;
+  const pct = Math.round((pass / rows.length)*100);
+  setBadge('#suiteSummary', `Suite: ${pass}/${rows.length} matched (${pct}%)`, pass===rows.length ? 'ok' : (pct>=70 ? 'warn' : 'err'));
+  renderSuiteTable();
+  log(`Suite done: ${pass}/${rows.length} matched expected intent.`);
 }
 
-/* =========================
-   CSV LOADERS
-========================= */
-function parseCSV(file){
-  return new Promise((resolve,reject)=>{
-    Papa.parse(file,{header:true,skipEmptyLines:true,complete:r=>resolve(r.data),error:reject});
-  });
+function renderSuiteTable(){
+  const tb = $('#suiteTable tbody'); tb.innerHTML='';
+  for (const r of suiteResults){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${esc(String(r.idx||''))}</td>
+      <td>${esc(r.q||'')}</td>
+      <td>${esc(r.expected||'')}</td>
+      <td>${esc(r.predicted||'')}</td>
+      <td>${r.ok ? '✅' : '❌'}</td>
+    `;
+    tb.appendChild(tr);
+  }
 }
 
-/* =========================
-   WIRING
-========================= */
+/* ----------------------------------------------------------------------
+   UI wiring
+---------------------------------------------------------------------- */
 function wire(){
-  loadLocal(); hydrateConfig();
-  $('#saveCfg').onclick = ()=>{ readConfig(); saveLocal(); log('Saved configuration.'); };
-  $('#resetCfg').onclick = ()=>{ env={...DEFAULTS}; saveLocal(); hydrateConfig(); log('Defaults restored.'); };
-  $('#btnConnect').onclick = connect;
-  $('#btnFetch').onclick = fetchLive;
+  // load & hydrate
+  loadCfg(); hydrateInputs(); log('Bench ready.');
 
-  $('#landingCsv').onchange = async e=>{
-    const f=e.target.files?.[0]; if(!f){ landing=[]; $('#landingInfo').textContent='No file loaded.'; return; }
+  $('#saveCfg').onclick = ()=>{ saveCfg(); };
+  $('#resetCfg').onclick = ()=>{ env={...DEFAULTS}; hydrateInputs(); saveCfg(); log('Defaults restored.'); };
+
+  $('#btnConnect').onclick = ()=>connect();
+  $('#btnFetch').onclick   = ()=>fetchLive();
+
+  $('#landingCsv').onchange = async (e)=>{
+    const f = e.target.files?.[0];
+    if (!f){ landing=[]; $('#landingInfo').textContent='No file loaded.'; return; }
     landing = await parseCSV(f);
     $('#landingInfo').textContent = `Loaded ${landing.length} landing pages.`;
     log(`Landing CSV loaded (${landing.length} rows).`);
   };
-  $('#clearLanding').onclick = ()=>{ landing=[]; $('#landingCsv').value=''; $('#landingInfo').textContent='Cleared.'; };
+  $('#clearLanding').onclick = ()=>{ $('#landingCsv').value=''; landing=[]; $('#landingInfo').textContent='Cleared.'; };
 
-  $('#questionsCsv').onchange = async e=>{
-    const f=e.target.files?.[0]; if(!f){ questions=[]; $('#questionsInfo').textContent='No file loaded.'; return; }
+  $('#questionsCsv').onchange = async (e)=>{
+    const f = e.target.files?.[0];
+    if (!f){ questions=[]; $('#questionsInfo').textContent='No file loaded.'; return; }
     questions = await parseCSV(f);
     $('#questionsInfo').textContent = `Loaded ${questions.length} questions.`;
     log(`Questions CSV loaded (${questions.length} rows).`);
   };
-  $('#clearQuestions').onclick = ()=>{ questions=[]; $('#questionsCsv').value=''; $('#questionsInfo').textContent='Cleared.'; };
+  $('#clearQuestions').onclick = ()=>{ $('#questionsCsv').value=''; questions=[]; $('#questionsInfo').textContent='Cleared.'; };
 
-  $('#btnRun').onclick = ()=> runSingle($('#singleQuery').value||'');
+  $('#runSuite').onclick = ()=>runSuite();
+
+  $('#btnRun').onclick = ()=>{ const q=$('#singleQuery').value||''; runSingle(q); };
   $('#btnCopyJson').onclick = ()=>{ if(!lastRun) return; navigator.clipboard.writeText(JSON.stringify(lastRun,null,2)); log('Copied JSON of last run.'); };
   $('#btnDownloadJson').onclick = ()=>{ if(!lastRun) return; downloadBlob(JSON.stringify(lastRun,null,2),'bench-last-run.json'); };
-  $('#runSuite').onclick = runSuite;
   $('#downloadSuiteJson').onclick = ()=>{ if(!suiteResults.length) return; downloadBlob(JSON.stringify({meta:{at:new Date().toISOString()},results:suiteResults},null,2),'bench-suite.json'); };
 
-  // auto-connect & fetch on load
+  // auto-connect & fetch once
   connect().then(fetchLive);
 }
 
