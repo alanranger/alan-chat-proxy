@@ -1,456 +1,508 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Alan Ranger Assistant</title>
-  <style>
-    :root{
-      --bg:#0f1420;
-      --card:#1a2130;
-      --card-2:#202a3d;
-      --text:#e9eefb;
-      --muted:#b7c2da;
-      --brand:#ffae1a;
-      --brand-2:#53d36b;
-      --accent:#5aa2ff;
-      --danger:#ff5577;
-      --border:#293147;
-      --pill:#2b3650;
-      --pill-muted:#2a3349;
-      --shadow:0 12px 30px rgba(0,0,0,.35);
-      --radius:18px;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
-      color:var(--text);
-      background:radial-gradient(1200px 600px at 50% -200px,#141a29 0%,#0f1420 60%);
-      letter-spacing:.2px;
-    }
-    a{color:#a9c7ff;text-decoration:none}
-    a:hover{text-decoration:underline}
-    .container{
-      max-width:980px;
-      margin:0 auto;
-      padding:28px 18px 120px;
-    }
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Alan Ranger Assistant</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
+  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
+  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
+  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
+  --user-bg:#e6edf7; --user-text:#0b0f16;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
+.badge-wrap{position:relative;height:0}
+.version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 
-    /* Header */
-    .header{
-      position:sticky;top:0;z-index:10;
-      background:linear-gradient(180deg,rgba(15,20,32,.95),rgba(15,20,32,.70));
-      backdrop-filter:saturate(120%) blur(8px);
-      border-bottom:1px solid var(--border);
-    }
-    .header-inner{
-      max-width:980px;margin:0 auto;padding:16px 18px 14px;
-      display:flex;align-items:center;gap:16px;
-    }
-    .logo{
-      width:42px;height:42px;border-radius:50%;
-      display:grid;place-items:center;
-      border:2px solid #b9c7ff;color:#b9c7ff;font-weight:700;
-      box-shadow:0 0 0 3px rgba(90,162,255,.15);
-    }
-    .brand{
-      display:flex;flex-direction:column;gap:2px;margin-right:auto
-    }
-    .brand h1{margin:0;font-size:22px;font-weight:700}
-    .brand small{color:var(--muted);opacity:.9}
+/* Sticky header (keeps logo, title and contact pills visible) */
+.header-sticky{
+  position:sticky; top:10px; z-index:50;
+  background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98));
+  border-radius:12px; padding:0 0 10px 0; margin:-8px -8px 12px -8px;
+}
+.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
+.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
+.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
+.pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
+.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
-    /* Pills in header */
-    .h-pills{display:flex;gap:10px}
-    .btn-pill{
-      padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.08);
-      font-weight:600;cursor:pointer;display:inline-flex;gap:8px;align-items:center;
-      background:var(--card-2);color:var(--text);box-shadow:var(--shadow);
-    }
-    .btn-pill.brand{background:var(--brand);color:#1f1400;border-color:#d69100}
-    .btn-pill.green{background:var(--brand-2);color:#00220a;border-color:#2eb34e}
-    .btn-pill:active{transform:translateY(1px)}
+/* Chat surface */
+.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
+.thread{display:flex;flex-direction:column;gap:12px}
+.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
+.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
+.answer h1,.answer h2,.answer h3{margin:.2em 0}
+.answer p{margin:.5em 0}
+.answer ul{margin:.4em 0 .6em 1.25em}
+.answer li{margin:.15em 0}
+.answer a{color:var(--link);text-decoration:underline}
+.answer a:hover{color:var(--link-hover)}
+.conf{display:inline-block;font-size:12px;font-weight:700;background:rgba(229,114,0,.12);color:var(--brand);border:1px solid var(--brand);border-radius:999px;padding:2px 8px;margin-top:8px}
 
-    /* Input ask box (hero) */
-    .ask-wrap{margin:18px auto 8px;max-width:980px;padding:0 18px}
-    .ask{
-      background:var(--card);border:1px solid var(--border);border-radius:14px;
-      padding:8px;display:flex;gap:10px;align-items:center;box-shadow:var(--shadow);
-    }
-    .ask input{
-      flex:1;background:#111827;border:1px solid #2a344d;border-radius:10px;
-      padding:12px 14px;color:var(--text);outline:none;
-    }
-    .ask button{
-      background:var(--brand);color:#1f1400;border:1px solid #d69100;
-      padding:10px 16px;border-radius:12px;font-weight:700;cursor:pointer;
-    }
-    .hint{font-size:12px;color:var(--muted);margin:6px 6px 0}
+/* Global pill row at end (from payload chips) */
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.actions .pill{background:var(--brand);color:#0b0f16;border:none}
 
-    /* Cards */
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
-    .section{padding:18px}
-    .section + .section{border-top:1px solid var(--border)}
-    .title{
-      font-weight:800;margin:0 0 10px;font-size:18px;
-    }
+/* Composer + utilities */
+.tools{display:flex;justify-content:flex-end;gap:10px;margin:8px 0 6px}
+.tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
+.tools button:hover{border-color:#3c548b}
+.composer{display:flex;gap:10px;margin-top:8px;padding:12px;background:var(--panel);border-radius:12px}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
+.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
+.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
-    /* Product block (markdownish) */
-    .product{
-      margin-top:16px
-    }
-    .product h3{margin:0 0 8px;font-size:17px}
-    .product p{margin:6px 0;color:#dfe6fb}
-    .product ul{margin:8px 0 0 18px}
-    .product li{margin:4px 0}
+/* Debug panel */
+details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
+details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
+.kv label{color:#93A4C1}
+pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
 
-    /* Confidence pill in card header */
-    .confidence{
-      position:absolute;top:10px;right:12px;background:var(--accent);
-      color:white;font-weight:800;border-radius:999px;padding:5px 10px;
-      font-size:12px;box-shadow:0 6px 18px rgba(90,162,255,.28);user-select:none
-    }
-    .card-head{
-      position:relative;padding:16px 18px 8px;border-bottom:1px solid var(--border);
-    }
-    .card-head h2{margin:0;font-size:20px}
+/* Typing dots */
+.typing{position:relative;display:inline-block}
+.typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
+.typing .dot:nth-child(2){animation-delay:.15s}
+.typing .dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
-    /* Event list */
-    .events{padding:14px 18px}
-    .events h3{margin:0 0 10px}
-    .events ul{margin:0;padding-left:22px}
-    .events li{margin:6px 0;color:#dfe6fb}
-    .events small{color:#9fb2d9}
-    .events a{font-weight:700}
-
-    /* Articles list */
-    .articles{padding:14px 18px}
-    .articles h3{margin:0 0 10px}
-    .articles ul{margin:0;padding-left:22px}
-    .articles li{margin:6px 0}
-
-    /* Pills row (below blocks) */
-    .pills{
-      display:flex;flex-wrap:wrap;gap:10px;padding:12px 18px 16px;border-top:1px solid var(--border)
-    }
-    .pill{
-      padding:8px 12px;border-radius:999px;border:1px solid var(--border);
-      background:var(--pill);color:#dfe6fb;font-weight:700;display:inline-flex;gap:8px;align-items:center
-    }
-    .pill.brand{background:var(--brand);color:#1f1400;border-color:#d69100}
-    .pill.secondary{background:var(--pill-muted)}
-    .pill a{color:inherit;text-decoration:none}
-
-    /* Debug toggle */
-    .debug-wrap{margin:18px 0 0}
-    details.debug{background:#0e1626;border:1px dashed #314066;border-radius:14px}
-    details.debug>summary{
-      list-style:none;padding:12px 14px;border-bottom:1px dashed #314066;cursor:pointer;
-      color:#bcd0ff;font-weight:700
-    }
-    details.debug>summary::-webkit-details-marker{display:none}
-    .debug-body{padding:14px}
-    pre{white-space:pre-wrap;word-break:break-word;background:#0a1120;border-radius:10px;border:1px solid #1f2b46;padding:12px;color:#bcd0ff}
-
-    /* Footer input bar */
-    .footer{
-      position:fixed;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(15,20,32,.2),rgba(15,20,32,.9) 30%,rgba(15,20,32,1) 90%);
-      padding:14px;border-top:1px solid var(--border)
-    }
-    .footer-inner{max-width:980px;margin:0 auto;display:flex;gap:10px}
-    .footer input{
-      flex:1;background:#111827;border:1px solid #2a344d;border-radius:12px;padding:12px 14px;color:var(--text);outline:none;
-    }
-    .footer button{
-      background:var(--brand);color:#1f1400;border:1px solid #d69100;border-radius:12px;padding:10px 16px;font-weight:800;cursor:pointer
-    }
-
-    /* Utility rows */
-    .row{display:flex;gap:12px;align-items:center}
-    .row.right{justify-content:flex-end}
-    .controls{margin:10px 0 18px}
-    .chip{
-      display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#152037;color:#cfe0ff;border:1px solid #2a3656;font-weight:700
-    }
-    .muted{color:var(--muted)}
-    .sr{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
-  </style>
+@media (max-width:540px){
+  .title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}
+  .header-sticky{top:6px;margin:-6px -6px 10px -6px}
+}
+</style>
 </head>
 <body>
-  <!-- Sticky header -->
-  <div class="header">
-    <div class="header-inner">
-      <div class="logo">R</div>
-      <div class="brand">
-        <h1>Alan Ranger Assistant</h1>
-        <small>I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. If I can’t help, please contact Alan directly.</small>
-      </div>
-      <div class="h-pills">
-        <a class="btn-pill brand" href="https://www.alanranger.com/contact" target="_blank" rel="noopener">Contact form</a>
-        <a class="btn-pill green" href="https://wa.me/447971164748" target="_blank" rel="noopener">WhatsApp</a>
-      </div>
-    </div>
-  </div>
+<div class="wrap">
+  <div class="badge-wrap"><span class="version">v0.9.22</span></div>
 
-  <div class="container">
-    <!-- Prompt box near top -->
-    <div class="ask-wrap">
-      <div class="ask">
-        <input id="qTop" placeholder='Ask a question… (Shift+Enter for newline)' />
-        <button id="sendTop">Send</button>
-      </div>
-      <div class="hint">Try: “when are the next bluebell workshops and what do they cost?”</div>
-    </div>
+  <div class="card">
 
-    <!-- Response card placeholder -->
-    <div id="card" class="card" style="margin-top:18px; display:none;">
-      <div class="card-head">
-        <h2 id="cardTitle">Result</h2>
-        <div id="confPill" class="confidence">Confidence: 0%</div>
-      </div>
-
-      <div id="productSec" class="section product" style="display:none;"></div>
-      <div id="eventsSec" class="events" style="display:none;"></div>
-      <div id="articlesSec" class="articles" style="display:none;"></div>
-
-      <div id="pillsRow" class="pills" style="display:none;"></div>
-    </div>
-
-    <!-- Controls under card -->
-    <div class="controls row right" id="controlsRow" style="display:none;">
-      <button id="emailBtn" class="btn-pill">Email transcript</button>
-      <button id="resetBtn" class="btn-pill">Reset chat</button>
-    </div>
-
-    <!-- Debug -->
-    <div class="debug-wrap">
-      <details id="debugDetails" class="debug">
-        <summary>🔎 Show debug</summary>
-        <div class="debug-body">
-          <div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px">
-            <span id="dbgIntent" class="chip">Intent: <em class="muted" style="font-style:normal;margin-left:6px">–</em></span>
-            <span id="dbgTopic" class="chip">Topic: <em class="muted" style="font-style:normal;margin-left:6px">–</em></span>
-            <span id="dbgDuration" class="chip">Latency: <em class="muted" style="font-style:normal;margin-left:6px">–</em></span>
-          </div>
-          <pre id="debugPre">No response yet.</pre>
+    <!-- Sticky header block -->
+    <div class="header-sticky">
+      <div class="header">
+        <img class="logo" src="./chat%20white.png" alt="AR logo">
+        <h2 class="title">Alan Ranger Assistant</h2>
+        <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
+          photography questions. I won’t always get everything right — if I can’t help, please contact
+          Alan directly:</p>
+        <div class="pills">
+          <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+          <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
         </div>
+      </div>
+    </div>
+
+    <div class="chat">
+      <div id="thread" class="thread">
+        <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
+      </div>
+
+      <!-- Utility buttons -->
+      <div class="tools">
+        <button id="btn-email">Email transcript</button>
+        <button id="btn-reset">Reset chat</button>
+      </div>
+
+      <details id="debugPanel" class="debug">
+        <summary>🔎 Show debug</summary>
+        <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
+        <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
+        <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
+        <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
+        <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
+        <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
+        <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
+        <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
+        <div class="kv"><label>Note</label><pre id="dbg-note" class="json">–</pre></div>
       </details>
+
+      <div class="composer">
+        <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
+        <button id="send" class="send">Send</button>
+      </div>
     </div>
   </div>
+</div>
 
-  <!-- Footer input -->
-  <div class="footer">
-    <div class="footer-inner">
-      <input id="qBottom" placeholder="Ask a question… (Shift+Enter for newline)" />
-      <button id="sendBottom">Send</button>
+<script>
+const CHAT_ENDPOINT = '/api/chat';
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
+
+const thread = document.getElementById('thread');
+const input  = document.getElementById('q');
+const sendBtn= document.getElementById('send');
+const btnEmail = document.getElementById('btn-email');
+const btnReset = document.getElementById('btn-reset');
+
+const dbgStatus = document.getElementById('dbg-status');
+const dbgReq    = document.getElementById('dbg-req');
+const dbgRes    = document.getElementById('dbg-res');
+const dbgHeaders= document.getElementById('dbg-headers');
+const dbgStruct = document.getElementById('dbg-struct');
+const dbgProv   = document.getElementById('dbg-prov');
+const dbgCopy   = document.getElementById('dbg-copy');
+const dbgNote   = document.getElementById('dbg-note');
+
+function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
+
+dbgCopy?.addEventListener('click', ()=>{
+  const all = [
+    'Status: '+dbgStatus.textContent,
+    'Headers:\n'+dbgHeaders.textContent,
+    'Request:\n'+dbgReq.textContent,
+    'Response:\n'+dbgRes.textContent,
+    'Structured:\n'+dbgStruct.textContent,
+    'Provenance:\n'+dbgProv.textContent,
+    'Note:\n'+dbgNote.textContent
+  ].join('\n\n');
+  navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
+});
+
+/* ---------- UI helpers ---------- */
+function addBubble(html, opts={}) {
+  const div = document.createElement('div');
+  div.className = 'bubble' + (opts.user ? ' user' : '');
+  div.innerHTML = html;
+  thread.appendChild(div);
+  div.scrollIntoView({behavior:'smooth', block:'end'});
+  return div;
+}
+function addTyping() {
+  const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
+  return ()=> el && el.remove();
+}
+function mdToHtml(md){
+  if (!md) return { html:'', liIds:[], items:[] };
+  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  const lines = s.split(/\r?\n/);
+  let out='', inList=false;
+  const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
+  for (const line of lines){
+    const m = line.match(/^\s*-\s+(.*)$/);
+    if (m){ if(!inList){ out+='<ul>'; inList=true; } out += `<li>${m[1].trim()}</li>`; }
+    else { flush(); out += line.trim()? `<p>${line}</p>` : ''; }
+  }
+  flush();
+  return { html:`<div class="answer">${out}</div>` };
+}
+function fmtDate(iso){
+  try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
+}
+function currency(amount, ccy){
+  if(amount==null || amount==='') return null;
+  const n = Number(amount); if(!isFinite(n)) return null;
+  try{ return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n); }
+  catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
+}
+
+/* ---------------- Product helpers (keep your existing behaviour) ---------------- */
+function mergeProducts(list){
+  if(!Array.isArray(list) || !list.length) return [];
+  const map = new Map();
+  for(const p of list){
+    const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
+    if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
+    const m = map.get(key);
+    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
+    const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
+    const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
+    if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = p.raw.offers; }
+    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
+  }
+  return [...map.values()];
+}
+function extractFacts(desc){
+  const txt = String(desc||'')
+    .split(/\r?\n/).filter(l=>{
+      if(/^dates\s*\(/i.test(l)) return false;
+      if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
+      if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
+      return true;
+    });
+
+  const grab = (label)=>{
+    const r = new RegExp(`^\\s*${label}\\s*:?\\s*(.+)$`,'i');
+    const m = txt.find(l=>r.test(l));
+    return m ? m.replace(r,'$1').trim() : null;
+  };
+
+  const location     = grab('Location');
+  const participants = grab('Participants');
+  const fitness      = grab('Fitness');
+  const availability = grab('Availability');
+
+  const optionLines = txt.filter(l =>
+    /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
+    /^\s*OR\s*1\s*day\b/i.test(l)
+  ).slice(0,4);
+
+  return {location, participants, fitness, availability, optionLines};
+}
+function deriveOptions(prod, facts){
+  const ccy = prod.price_currency || prod?.raw?.offers?.priceCurrency || 'GBP';
+  const base = prod.price ?? prod?.raw?.offers?.price;
+  const low  = prod?.raw?.offers?.lowPrice;
+  const high = prod?.raw?.offers?.highPrice;
+
+  const text = (facts.optionLines||[]).join('\n').toLowerCase();
+  const has4h  = /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
+  const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
+
+  const opts = [];
+
+  if(low!=null && high!=null && has4h && has1d){
+    opts.push({label:'4 hours', price:currency(low,ccy)});
+    opts.push({label:'1 day',   price:currency(high,ccy)});
+  } else {
+    if(base!=null) opts.push({label:'Standard', price:currency(base,ccy)});
+    if(low!=null || high!=null){
+      const range = [low,high].filter(v=>v!=null).map(v=>currency(v,ccy)).join(' – ');
+      if(range) opts.push({label:'Pricing', price:range});
+    }
+  }
+
+  const timePat = /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
+  for(const ln of facts.optionLines||[]){
+    const label = ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
+    const tm = ln.match(timePat);
+    const window = tm ? `${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}` : null;
+    if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){
+      opts.push({label, time:window});
+    } else if(window){
+      const o = opts.find(o=>o.label.toLowerCase()===label.toLowerCase());
+      if(o && !o.time) o.time = window;
+    }
+  }
+  return opts;
+}
+
+/* ---------------- Renderers ---------------- */
+function renderProductCard(prod){
+  const facts = extractFacts(prod.description||'');
+  const options = deriveOptions(prod, facts);
+
+  const infoP = [];
+  if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
+  if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
+  if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
+  if(facts.availability) infoP.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
+
+  const li = options.map(o=>{
+    const bits = [o.label, o.time ? `— ${o.time}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
+    return `<li>${bits}</li>`;
+  }).join('');
+
+  return `
+    <div class="answer">
+      <h3>${prod.title || 'Workshop'}</h3>
+      ${infoP.join('')}
+      ${li? `<ul>${li}</ul>`:''}
+      ${renderConfidenceBadge()}
     </div>
-  </div>
+  `;
+}
+function renderEventsBlock(structured, productHasLocation){
+  const now=new Date();
+  const future=(structured?.events||[])
+    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
+    .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start));
+  if(!future.length) return '';
+  const topic = (structured?.topic||'').toString().trim();
+  const title = topic ? `Upcoming ${topic} Workshops` : 'Upcoming Workshops';
+  const lis = future.map(e=>{
+    const when=fmtDate(e.date_start);
+    const href=e.page_url||e.source_url||e.url||'#';
+    const loc=e.location||'';
+    const locPart = (!productHasLocation && loc) ? ` — ${loc}` : '';
+    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${locPart}</li>`;
+  }).join('');
+  return `<div class="answer"><h3>${title}</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
+}
+function renderArticlesBlock(structured){
+  const list = (structured?.articles||[]).slice(0,5);
+  if(!list.length) return '';
+  const lis = list.map(a=>{
+    const t = a.title || a.raw?.name || 'Read more';
+    const u = a.page_url || a.source_url || a.url || '#';
+    return `<li><a href="${u}" target="_blank" rel="noopener">${escapeHTML(t)}</a></li>`;
+  }).join('');
+  return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
+}
+function renderConfidenceBadge(){
+  const pct = window.__lastConfidencePct;
+  if(pct==null || isNaN(pct)) return '';
+  return `<div class="conf">Confidence: ${pct}%</div>`;
+}
+function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
 
-  <script>
-    // ------------------- tiny helpers -------------------
-    const $ = (s)=>document.querySelector(s);
-    const fmt = (n)=>String(n ?? "");
-    const stopWords = new Set(["when","where","whats","what","cost","next","dates","date","workshop","workshops","upcoming","near","me","the","and","or","how","much","price","prices"]);
-    function deriveEventsTitle(topic){
-      const toks = (topic||"").split(/[, ]+/).map(s=>s.trim().toLowerCase()).filter(Boolean);
-      const keep = toks.filter(t=>!stopWords.has(t));
-      return `Upcoming ${keep.length? keep[0] + " " : ""}Workshops`;
-    }
-    function escapeHtml(s){
-      return s.replace(/[&<>"]/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m]));
-    }
-    // Minimal markdown: **bold**, "- " lists, newlines -> <br> (inside p), preserve paragraphs
-    function mdToHtml(md){
-      if(!md) return "";
-      const lines = md.split(/\r?\n/);
-      let out = [];
-      let inList = false;
-      const flushList = ()=>{ if(inList){ out.push("</ul>"); inList=false; } };
-      for(const raw of lines){
-        const line = raw.trimRight();
-        if(/^-\s+/.test(line)){
-          if(!inList){ out.push("<ul>"); inList=true; }
-          const li = line.replace(/^-\s+/, "");
-          out.push(`<li>${inline(li)}</li>`);
-        }else if(line===""){
-          flushList();
-          out.push("<p></p>");
-        }else{
-          flushList();
-          out.push(`<p>${inline(line)}</p>`);
-        }
-      }
-      flushList();
-      return out.join("\n");
+/* Pills: show only relevant; dedupe; never site-search/wildcards */
+function buildActionPillsFromStructured(structured){
+  const safe = [];
+  const used = new Set();
+  const add = (label, href) => {
+    if(!label || !href) return;
+    const u = String(href);
+    // ban site-search wildcard
+    if (/\/search\?query=/.test(u)) return;
+    const key = `${label}::${u}`;
+    if(used.has(key)) return;
+    used.add(key);
+    safe.push({label,href});
+  };
+  // consume provided pills/chips if any
+  const inPills = (structured?.pills || structured?.chips || []);
+  for (const p of inPills){
+    add(p.label || p.text || 'Open', p.url || p.href);
+  }
+  return safe.slice(0,4);
+}
 
-      function inline(s){
-        // bold
-        s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-        // em
-        s = s.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-        // link [text](url)
-        s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-        return s;
-      }
-    }
+/* Full render */
+function renderAnswer(payload){
+  const s = payload.structured||{};
+  window.__lastConfidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
 
-    function clearCard(){
-      $("#productSec").style.display="none";
-      $("#eventsSec").style.display="none";
-      $("#articlesSec").style.display="none";
-      $("#pillsRow").style.display="none";
-      $("#productSec").innerHTML="";
-      $("#eventsSec").innerHTML="";
-      $("#articlesSec").innerHTML="";
-      $("#pillsRow").innerHTML="";
-    }
+  const merged = mergeProducts(s.products||[]);
+  // choose single best product
+  const prod = merged[0] || null;
 
-    function buildEventsHtml(list, title){
-      const safe = (s)=>escapeHtml(s||"");
-      let html = `<h3 class="title">${escapeHtml(title)}</h3>\n<ul>`;
-      for(const e of (list||[])){
-        const when = safe(e.when);
-        const t = safe(e.title);
-        const href = e.href ? `<a href="${e.href}" target="_blank" rel="noopener">Link</a>` : "";
-        html += `<li><small>${when}</small> — ${href}</li>`;
-      }
-      html += `</ul>`;
-      return html;
-    }
+  // render product first (if present)
+  if(prod){
+    addBubble(renderProductCard(prod));
+  }
 
-    function buildArticlesHtml(articles){
-      if(!articles?.length) return "";
-      let html = `<h3 class="title">Related guides</h3>\n<ul>`;
-      for(const a of articles.slice(0,8)){
-        const t = escapeHtml(a.title || a.raw?.name || "Read more");
-        const u = a.page_url || a.source_url || a.url;
-        html += `<li>${t} — ${u ? `<a href="${u}" target="_blank" rel="noopener">Link</a>` : ""}</li>`;
-      }
-      html += `</ul>`;
-      return html;
-    }
+  // events (no cap; hide location if product has one already)
+  const productFacts = prod ? extractFacts(prod.description||'') : null;
+  const productHasLocation = !!(productFacts && productFacts.location);
+  const evHTML = renderEventsBlock(s, productHasLocation);
+  if(evHTML) addBubble(evHTML);
 
-    function renderPills(pills){
-      const row = $("#pillsRow");
-      if(!pills?.length){ row.style.display="none"; return; }
-      for(const p of pills){
-        const el = document.createElement(p.url ? "a" : "span");
-        el.className = "pill " + (p.brand ? "brand" : "secondary");
-        if(p.url){ el.href = p.url; el.target="_blank"; el.rel="noopener"; }
-        el.textContent = p.label || "More";
-        row.appendChild(el);
-      }
-      row.style.display="";
-    }
+  // articles (top 5, proper <li>)
+  const artHTML = renderArticlesBlock(s);
+  if(artHTML) addBubble(artHTML);
 
-    async function ask(query){
-      clearCard();
-      $("#card").style.display=""; // show shell early
-      $("#cardTitle").textContent = "Answer";
-      $("#confPill").textContent = "Confidence: —";
-      $("#controlsRow").style.display="";
-
-      const started = performance.now();
-      const res = await fetch("/api/chat", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ query, topK: 8 })
-      });
-      const payload = await res.json();
-      const took = Math.round(performance.now() - started);
-
-      // Debug (current response only)
-      $("#dbgIntent").innerHTML = `Intent: <em class="muted" style="margin-left:6px;font-style:normal">${escapeHtml(payload?.structured?.intent || "–")}</em>`;
-      $("#dbgTopic").innerHTML = `Topic: <em class="muted" style="margin-left:6px;font-style:normal">${escapeHtml(payload?.structured?.topic || "–")}</em>`;
-      $("#dbgDuration").innerHTML = `Latency: <em class="muted" style="margin-left:6px;font-style:normal">${took}ms</em>`;
-      $("#debugPre").textContent = JSON.stringify(payload, null, 2);
-
-      if(!payload?.ok){
-        $("#productSec").style.display="";
-        $("#productSec").innerHTML = `<p style="color:#ffb4c4"><strong>Sorry</strong> — something went wrong.</p><p class="muted">Please try again, or use the <strong>Contact form / WhatsApp</strong> buttons above to message Alan directly.</p>`;
-        $("#confPill").textContent = "Confidence: 0%";
-        return;
-      }
-
-      const confPct = payload.confidence_pct ?? Math.round((payload.confidence||0)*100);
-      $("#confPill").textContent = `Confidence: ${Number.isFinite(confPct) ? confPct : 0}%`;
-
-      const s = payload.structured || {};
-      const intent = s.intent || "advice";
-
-      // Title
-      $("#cardTitle").textContent = intent === "events" ? "Workshops & availability" : "Guides & advice";
-
-      // Product (markdown)
-      if(payload.answer_markdown){
-        $("#productSec").innerHTML = mdToHtml(payload.answer_markdown);
-        $("#productSec").style.display="";
-      }
-
-      // Events
-      if(Array.isArray(s.events) && s.events.length){
-        const title = deriveEventsTitle(s.topic || "");
-        $("#eventsSec").innerHTML = buildEventsHtml(s.events, title);
-        $("#eventsSec").style.display="";
-      }
-
-      // Articles (if provided)
-      if(Array.isArray(s.articles) && s.articles.length){
-        $("#articlesSec").innerHTML = buildArticlesHtml(s.articles);
-        $("#articlesSec").style.display="";
-      }
-
-      // Pills (CTA row)
-      renderPills(s.pills);
-
-      // keep debug closed by default
-      $("#debugDetails").open = false;
-    }
-
-    // --------------- wire inputs / buttons ---------------
-    function wireInput(inputEl, btnEl){
-      btnEl.addEventListener("click", ()=>{
-        const q = inputEl.value.trim();
-        if(!q) return;
-        ask(q);
-        inputEl.value="";
-      });
-      inputEl.addEventListener("keydown",(e)=>{
-        if(e.key==="Enter" && !e.shiftKey){
-          e.preventDefault();
-          btnEl.click();
-        }
-      });
-    }
-    wireInput($("#qTop"), $("#sendTop"));
-    wireInput($("#qBottom"), $("#sendBottom"));
-
-    $("#resetBtn").addEventListener("click", ()=>{
-      clearCard();
-      $("#card").style.display="none";
-      $("#controlsRow").style.display="none";
-      $("#debugPre").textContent="No response yet.";
-      $("#dbgIntent").innerHTML=`Intent: <em class="muted" style="margin-left:6px;font-style:normal">–</em>`;
-      $("#dbgTopic").innerHTML=`Topic: <em class="muted" style="margin-left:6px;font-style:normal">–</em>`;
-      $("#dbgDuration").innerHTML=`Latency: <em class="muted" style="margin-left:6px;font-style:normal">–</em>`;
+  // related pills (below blocks)
+  const pills = buildActionPillsFromStructured(s);
+  if(pills.length){
+    const wrap = document.createElement('div');
+    wrap.className='actions';
+    pills.forEach(p=>{
+      const a=document.createElement('a'); a.className='pill'; a.textContent=p.label;
+      a.href=p.href; a.target='_blank'; a.rel='noopener';
+      wrap.appendChild(a);
     });
+    thread.appendChild(wrap);
+  }
 
-    $("#emailBtn").addEventListener("click", ()=>{
-      try{
-        const dump = $("#debugPre").textContent || "";
-        const blob = new Blob([dump], {type:"application/json"});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "alan-ranger-assistant-transcript.json";
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(()=>URL.revokeObjectURL(url), 1000);
-      }catch(e){ alert("Could not create transcript file."); }
+  // If nothing rendered, generic fallback with nudge to use header contact
+  if(!prod && !(s.events||[]).length && !(s.articles||[]).length){
+    const md = payload.answer_markdown || payload.answer || '';
+    const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
+    const {html}=mdToHtml(md || "I don’t have a specific answer for that yet.");
+    addBubble(html.replace('</div>', `${extra}${renderConfidenceBadge()}</div>`));
+  }
+
+  // Debug dumps
+  dbgStruct.textContent = safeJSONString(payload.structured||{});
+  dbgNote.textContent   = safeJSONString({ confidence_pct: window.__lastConfidencePct });
+}
+
+/* ---------------- Networking ---------------- */
+async function sendQuery(query){
+  const req = { query, topK: 8 };
+  dbgReq.textContent = safeJSONString(req);
+  const closeTyping = addTyping();
+  try{
+    const res = await fetch(CHAT_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(req)
     });
+    dbgStatus.textContent = res.status;
+    const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
+    dbgHeaders.textContent = safeJSONString(headers);
 
-    // Nice first focus
-    $("#qTop").focus();
-  </script>
+    const data = await res.json();
+    dbgRes.textContent = safeJSONString(data);
+    dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
+
+    closeTyping();
+    if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
+      renderAnswer(data);
+    } else {
+      const fallback = "I don’t have a specific answer for that yet.";
+      const {html}=mdToHtml(fallback);
+      const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
+      addBubble(html.replace('</div>', `${extra}${renderConfidenceBadge()}</div>`));
+    }
+  } catch (err){
+    closeTyping();
+    dbgStatus.textContent = 'error';
+    addBubble(`<div class="answer"><p>Something went wrong: ${String(err)}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p>${renderConfidenceBadge()}</div>`);
+  }
+}
+
+/* ---------------- Transcript helpers ---------------- */
+function nodeToPlain(div){
+  return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+function buildTranscript(){
+  const rows = [];
+  rows.push(`Alan Ranger Assistant — transcript`);
+  rows.push(new Date().toISOString());
+  rows.push('');
+  for (const el of thread.children){
+    if (el.classList.contains('actions')) continue;
+    const role = el.classList.contains('user') ? 'User' : 'Assistant';
+    rows.push(`${role}:\n${nodeToPlain(el)}`);
+    rows.push('');
+  }
+  return rows.join('\n');
+}
+function emailTranscript(){
+  const body = buildTranscript();
+  const subject = 'Alan Ranger Assistant chat transcript';
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,2000))}`;
+  if (body.length > 2000){
+    const blob = new Blob([body], {type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p>${renderConfidenceBadge()}</div>`);
+  }
+  location.href = mailto;
+}
+function resetChat(){
+  thread.innerHTML = '';
+  addBubble('Hi! I can help with workshops, tuition, and photography advice.');
+  [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgProv, dbgNote].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
+}
+
+/* ---------------- Wire up composer & tools ---------------- */
+function submit(){
+  const val = input.value.trim();
+  if(!val) return;
+  addBubble(val, {user:true});
+  input.value='';
+  sendQuery(val);
+}
+sendBtn.addEventListener('click', submit);
+input.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
+});
+btnEmail.addEventListener('click', emailTranscript);
+btnReset.addEventListener('click', resetChat);
+</script>
 </body>
 </html>
