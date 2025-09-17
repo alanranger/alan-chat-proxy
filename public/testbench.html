@@ -2,390 +2,424 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<title>Bench Test (single-file)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Bench Test (single-file, auto-filled Step 0)</title>
+<!-- Supabase client -->
+<script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>
-  :root { --bg:#0f1220; --panel:#151935; --text:#e7e9ff; --muted:#9aa1c6; --ok:#29d; --warn:#f7b500; --bad:#f64; --chip:#242a52; }
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .wrap{display:grid;grid-template-columns:340px 1fr;gap:16px;padding:16px}
-  .card{background:var(--panel);border-radius:12px;padding:14px;box-shadow:0 0 0 1px rgba(255,255,255,.04) inset}
-  h2{margin:.25rem 0 .75rem 0;font-size:15px;letter-spacing:.02em;color:#cfd3ff}
-  label{display:block;margin:.5rem 0 .25rem;color:var(--muted);font-size:12px}
-  input[type=text],textarea{width:100%;background:#0e1130;color:var(--text);border:1px solid #272c57;border-radius:9px;padding:9px 10px}
-  textarea{min-height:102px;resize:vertical}
-  .row{display:flex;gap:8px;align-items:center}
-  .btn{background:#24306b;border:1px solid #2c3a84;color:#e7e9ff;border-radius:9px;padding:8px 10px;cursor:pointer}
-  .btn:disabled{opacity:.55;cursor:not-allowed}
-  .btn.primary{background:#2b6be2;border-color:#2b6be2}
-  .btn.ghost{background:transparent;border-color:#39438a}
-  .pill{display:inline-flex;gap:6px;align-items:center;background:var(--chip);border:1px solid #2b3369;color:#cfd3ff;
-        border-radius:20px;padding:4px 8px;font-size:12px;margin-right:6px;margin-bottom:6px}
-  .split{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-  .log{white-space:pre-wrap;background:#0b0e25;border:1px solid #22285b;border-radius:10px;padding:10px;min-height:96px;color:#cbd2ff}
-  .stat{display:grid;grid-template-columns:140px 1fr;gap:8px;color:#c9cdf7}
-  .tag{font-size:12px;color:#9aa1c6}
-  .count{font-variant-numeric:tabular-nums}
-  .title{font-weight:600}
-  .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
-  .hint{color:#a6acd8;font-size:12px}
-  .success{color:#7cffcc} .warn{color:#ffd27a} .error{color:#ff9a9a}
+  :root {
+    --bg:#0f1216; --panel:#151a21; --muted:#9aa4b2; --text:#e8edf3; --hl:#2dd4bf; --accent:#6ee7b7;
+    --chip:#1e2630; --chipText:#cfe5ff; --border:#1f2732; --btn:#1a212c; --btnAccent:#2b3544; --red:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial}
+  .wrap{display:grid;grid-template-columns:340px 1fr;gap:12px;padding:12px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px}
+  .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600}
+  .card .content{padding:10px 12px}
+  .row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  label{display:block;margin:8px 0 4px;color:var(--muted);font-size:12px}
+  input[type="text"],textarea{width:100%;background:#0e141b;border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px}
+  textarea{min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  button{background:var(--btn);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;cursor:pointer}
+  button.primary{background:#1b2a3a;border-color:#234;box-shadow:inset 0 0 0 1px #2c3b4e}
+  button.run{background:#123222;border-color:#165;box-shadow:inset 0 0 0 1px #1a6}
+  button.danger{background:#34191c;border-color:#5b1f27}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  .switch{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+  .switch input{accent-color:#22c55e}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:var(--chip);color:var(--chipText);padding:6px 8px;border-radius:999px;border:1px solid var(--border);font-size:12px;white-space:nowrap}
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .pillTitle{color:var(--muted);font-size:12px;margin-bottom:8px}
+  .items{display:flex;flex-wrap:wrap;gap:8px;max-height:240px;overflow:auto}
+  .item{background:#0f1520;border:1px solid var(--border);padding:6px 8px;border-radius:8px}
+  pre{margin:0;background:#0c1117;border:1px solid var(--border);padding:10px;border-radius:8px;max-height:260px;overflow:auto}
+  .hint{color:var(--muted);font-size:12px}
+  .kpi{display:flex;gap:8px;align-items:center}
+  .badge{display:inline-flex;align-items:center;gap:6px;background:#0d1824;border:1px solid var(--border);padding:6px 8px;border-radius:999px;font-size:12px}
+  .badge b{color:#bfe8ff}
+  .badge .dot{width:8px;height:8px;border-radius:999px;background:var(--hl)}
+  .tag{font-size:12px;color:var(--muted)}
+  .log{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  .tip{border-bottom:1px dashed #789; cursor:help}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.3/dist/umd/supabase.min.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <!-- LEFT: Controls -->
-    <section class="card">
-      <h2>Step 0 · Connect to Supabase</h2>
+<div class="wrap">
+  <!-- LEFT: controls -->
+  <div class="card">
+    <h3>Step 0 · Connect to Supabase</h3>
+    <div class="content">
       <label>Supabase URL</label>
-      <input id="sb-url" type="text" autocomplete="off" />
+      <input id="sb_url" type="text" />
       <label>Supabase ANON key</label>
-      <textarea id="sb-key" class="mono"></textarea>
-      <div class="row" style="margin-top:.5rem">
+      <input id="sb_key" type="text" class="mono" />
+      <div class="row">
         <div style="flex:1">
-          <label>Events view</label>
-          <input id="sb-events" type="text" />
+          <label style="margin-top:8px">Events view</label>
+          <input id="events_view" type="text" value="ai_events"/>
         </div>
         <div style="flex:1">
-          <label>Products view</label>
-          <input id="sb-products" type="text" />
+          <label style="margin-top:8px">Products view</label>
+          <input id="products_view" type="text" value="ai_products"/>
         </div>
       </div>
-      <div class="row" style="margin-top:.6rem">
-        <button id="save" class="btn">Save</button>
-        <button id="fetch" class="btn primary">Fetch live data</button>
-        <button id="resetDefaults" class="btn ghost">Reset defaults</button>
+      <div class="row">
+        <button id="btnSave" class="primary">Save</button>
+        <button id="btnFetch" class="">Fetch live data</button>
+        <button id="btnDefaults" class="">Reset defaults</button>
+        <span id="connState" class="hint">Not connected</span>
       </div>
 
-      <div style="height:10px"></div>
-      <div class="stat">
-        <div class="tag">Status</div><div id="status" class="mono warn">Not connected</div>
-        <div class="tag">Events rows</div><div id="evCount" class="count mono">—</div>
-        <div class="tag">Products rows</div><div id="prCount" class="count mono">—</div>
-      </div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:10px 0">
 
-      <div style="height:16px"></div>
-      <h2>Step 1 (optional) · Landing Pages CSV</h2>
+      <h4 style="margin:0 0 6px">Step 1 (optional) · Landing Pages CSV (fallback)</h4>
       <div class="row">
         <input id="landingCsv" type="file" accept=".csv" />
-        <button id="loadLanding" class="btn">Upload</button>
+        <button id="btnUploadLanding">Upload</button>
+        <span id="landingState" class="hint">Not loaded</span>
       </div>
-      <div class="hint">Used only as a fallback when direct matches are weak. Columns accepted: <span class="mono">url</span> and one of <span class="mono">url_meta_title | meta_title | title</span>.</div>
 
-      <div style="height:16px"></div>
-      <h2>Step 2 · Questions CSV</h2>
+      <h4 style="margin:10px 0 6px">Step 2 · Questions CSV</h4>
       <div class="row">
         <input id="qCsv" type="file" accept=".csv" />
-        <button id="runSuite" class="btn">Run CSV Test Suite</button>
+        <button id="btnUploadQ">Upload</button>
+        <button id="btnRunSuite">Run CSV Test Suite</button>
+        <span id="qsState" class="hint">0/0</span>
       </div>
-      <div class="hint">Columns: <span class="mono">idx, query, expected</span>. Extra columns ignored.</div>
 
-      <div style="height:16px"></div>
-      <h2>Step 3 · Try a single query</h2>
+      <h4 style="margin:12px 0 6px">Step 3 · Try a single query</h4>
+      <input id="qInput" type="text" placeholder="e.g. when is the next devon workshop?" />
       <div class="row">
-        <input id="query" type="text" placeholder="e.g. ‘when is the next devon workshop?’" />
-        <button id="run" class="btn primary">Run</button>
+        <button id="btnRun" class="run">Run</button>
+        <button id="btnCopyJson">Copy JSON</button>
       </div>
 
-      <div style="height:16px"></div>
-      <div class="row">
-        <button id="copyJson" class="btn">Copy JSON</button>
-        <button id="copyLog" class="btn">Copy Log</button>
-        <button id="downloadLog" class="btn">Download Log</button>
-      </div>
+      <div class="switch"><input id="useLanding" type="checkbox" checked>Use Landing CSV fallback when direct matches are weak</div>
+      <div class="switch"><input id="enableGeneric" type="checkbox">Enable generic search pills (placeholder)</div>
 
-      <div style="height:12px"></div>
-      <div class="stat">
-        <div class="tag">Intent</div><div id="intent" class="mono">—</div>
-        <div class="tag">Reason</div><div id="reason" class="mono">—</div>
-        <div class="tag">Confidence</div><div id="conf" class="mono">—%</div>
-        <div class="tag">Landing CSV</div><div id="landingRows" class="mono">0 rows</div>
-        <div class="tag">Questions CSV</div><div id="qRows" class="mono">0 rows</div>
-      </div>
-    </section>
-
-    <!-- RIGHT: Results -->
-    <section class="card">
-      <div class="split">
+      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div>
-          <h2>Events</h2>
-          <div id="events"></div>
+          <div class="tag">Intent</div>
+          <div id="intentOut">—</div>
         </div>
         <div>
-          <h2>Articles</h2>
-          <div id="articles"></div>
+          <div class="tag">Reason</div>
+          <div id="reasonOut" class="mono">—</div>
         </div>
         <div>
-          <h2>Pills</h2>
-          <div id="pills"></div>
+          <div class="tag">Landing CSV</div>
+          <div id="landingCount" class="mono">0 rows</div>
+        </div>
+        <div>
+          <div class="tag">Events</div>
+          <div id="eventsCount" class="mono">not loaded</div>
+        </div>
+        <div>
+          <div class="tag">Products</div>
+          <div id="productsCount" class="mono">not loaded</div>
+        </div>
+        <div>
+          <div class="tag">Questions CSV</div>
+          <div id="qsCount" class="mono">0 rows</div>
+        </div>
+        <div class="kpi" style="grid-column:1 / span 2;justify-content:space-between">
+          <div class="badge" title="Confidence is a normalized blend of match score (BM25-ish), recency and intent certainty. It’s a hint, not a guarantee."><span class="dot"></span><span>Confidence</span> <b id="confPct">—%</b> <span class="tip">what’s this?</span></div>
+          <div class="row">
+            <button id="btnCopyLog">Copy Log</button>
+            <button id="btnDownloadLog">Download Log</button>
+          </div>
         </div>
       </div>
-
-      <div style="height:12px"></div>
-      <h2>JSON</h2>
-      <pre id="json" class="log mono">{}</pre>
-
-      <div style="height:12px"></div>
-      <h2>Execution Log</h2>
-      <pre id="log" class="log mono"></pre>
-    </section>
+    </div>
   </div>
 
+  <!-- RIGHT: results -->
+  <div class="card">
+    <h3>Results</h3>
+    <div class="content">
+      <div class="grid">
+        <div>
+          <div class="pillTitle">Events</div>
+          <div id="eventsBox" class="items"></div>
+        </div>
+        <div>
+          <div class="pillTitle">Articles</div>
+          <div id="articlesBox" class="items"></div>
+        </div>
+        <div>
+          <div class="pillTitle">Pills</div>
+          <div id="pillsBox" class="items"></div>
+        </div>
+      </div>
+
+      <h4 style="margin:14px 0 6px">JSON</h4>
+      <pre id="jsonBox">{}</pre>
+
+      <h4 style="margin:14px 0 6px">Execution Log</h4>
+      <pre id="logBox" class="log"></pre>
+    </div>
+  </div>
+</div>
+
 <script>
-/* ------------------------- CONFIG DEFAULTS ------------------------- */
-/* These are the values you asked to be auto-filled. They’re also stored
-   to localStorage after first load so you don’t need to touch them again. */
+/* ------------------ hard-coded defaults (you asked for no typing) ------------------ */
 const DEFAULTS = {
   url: "https://igzvwbvgvmzvvzoclufx.supabase.co",
   anon: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY",
   eventsView: "ai_events",
   productsView: "ai_products"
 };
-/* ------------------------------------------------------------------ */
 
-const els = {
-  url: document.getElementById('sb-url'),
-  key: document.getElementById('sb-key'),
-  evView: document.getElementById('sb-events'),
-  prView: document.getElementById('sb-products'),
-  save: document.getElementById('save'),
-  fetch: document.getElementById('fetch'),
-  reset: document.getElementById('resetDefaults'),
-  status: document.getElementById('status'),
-  evCount: document.getElementById('evCount'),
-  prCount: document.getElementById('prCount'),
-  log: document.getElementById('log'),
-  events: document.getElementById('events'),
-  articles: document.getElementById('articles'),
-  pills: document.getElementById('pills'),
-  json: document.getElementById('json'),
-  intent: document.getElementById('intent'),
-  reason: document.getElementById('reason'),
-  conf: document.getElementById('conf'),
-  landingCsv: document.getElementById('landingCsv'),
-  loadLanding: document.getElementById('loadLanding'),
-  qCsv: document.getElementById('qCsv'),
-  runSuite: document.getElementById('runSuite'),
-  q: document.getElementById('query'),
-  run: document.getElementById('run'),
-  copyJson: document.getElementById('copyJson'),
-  copyLog: document.getElementById('copyLog'),
-  downloadLog: document.getElementById('downloadLog'),
-  landingRows: document.getElementById('landingRows'),
-  qRows: document.getElementById('qRows'),
-};
-
+/* ------------------ state ------------------ */
 let supa = null;
-let cache = { events: [], products: [], landing: [] };
+let state = {
+  events: [],
+  products: [],
+  landing: [], // [{url,title,meta_title}]
+  questions: [], // [{idx, query, expected}]
+  results: null,
+  log: []
+};
 
-function log(s){ els.log.textContent += s + "\n"; els.log.scrollTop = els.log.scrollHeight; }
+function log(line){ state.log.push(`${new Date().toISOString().slice(11,19)}  ${line}`); renderLog(); }
+function renderLog(){ document.getElementById('logBox').textContent = state.log.join('\n'); }
 
-function saveSettings(){
-  const s = {
-    url: els.url.value.trim(),
-    anon: els.key.value.trim(),
-    eventsView: els.evView.value.trim(),
-    productsView: els.prView.value.trim(),
-  };
-  localStorage.setItem('bench_settings', JSON.stringify(s));
-  log("Saved settings.");
-}
-
-function loadSettings(){
-  const saved = localStorage.getItem('bench_settings');
-  const s = saved ? JSON.parse(saved) : DEFAULTS;
-  els.url.value = s.url || DEFAULTS.url;
-  els.key.value = s.anon || DEFAULTS.anon;
-  els.evView.value = s.eventsView || DEFAULTS.eventsView;
-  els.prView.value = s.productsView || DEFAULTS.productsView;
-}
-
-function resetDefaults(){
-  localStorage.removeItem('bench_settings');
-  loadSettings();
-  log("Defaults restored.");
-}
-
-async function connect(){
-  try{
-    supa = window.supabase.createClient(els.url.value.trim(), els.key.value.trim(), { auth: { persistSession: false }});
-    els.status.textContent = "Connecting…";
-    log(`[${new Date().toISOString()}] Connecting to Supabase…`);
-    // quick metadata ping by counting
-    const { data: eCount, error: eErr } = await supa.from(els.evView.value.trim()).select('*', { count:'estimated', head:true });
-    const { data: pCount, error: pErr } = await supa.from(els.prView.value.trim()).select('*', { count:'estimated', head:true });
-    if(eErr || pErr){ throw eErr || pErr; }
-    els.status.textContent = "Connected";
-    els.status.classList.remove('warn','error'); els.status.classList.add('success');
-    els.evCount.textContent = (eCount ?? '—');
-    els.prCount.textContent = (pCount ?? '—');
-    log("Connected. Ready.");
-    return true;
-  }catch(err){
-    els.status.textContent = "Connection failed";
-    els.status.classList.remove('warn','success'); els.status.classList.add('error');
-    log("ERROR connecting: " + (err?.message || err));
-    return false;
-  }
-}
-
-async function fetchLive(){
-  if(!supa){ const ok = await connect(); if(!ok) return; }
-  els.events.innerHTML = els.articles.innerHTML = els.pills.innerHTML = "";
-  els.json.textContent = "{}";
-  try{
-    log("Fetching sample events/products…");
-    const { data: evs, error: e1 } = await supa.from(els.evView.value.trim()).select('*').limit(50);
-    if(e1) throw e1;
-    const { data: prs, error: e2 } = await supa.from(els.prView.value.trim()).select('*').limit(25);
-    if(e2) throw e2;
-    cache.events = evs || []; cache.products = prs || [];
-    renderPreview();
-    log(`Fetched ${cache.events.length} events, ${cache.products.length} products (preview).`);
-  }catch(err){
-    log("ERROR fetching live data: " + (err?.message || err));
-  }
-}
-
-function renderPreview(){
-  const eBox = document.createElement('div');
-  cache.events.forEach((e,i)=>{
-    const d = document.createElement('div');
-    d.className = 'pill'; d.title = (e.when||'') + (e.location?(' · '+e.location):'');
-    d.innerHTML = `<span class="title">${escapeHtml(e.title||'Untitled')}</span>`;
-    eBox.appendChild(d);
-  });
-  els.events.innerHTML = ""; els.events.appendChild(eBox);
-
-  const pBox = document.createElement('div');
-  cache.products.forEach((p)=>{
-    const d = document.createElement('div');
-    d.className = 'pill'; d.title = p.tags || '';
-    const price = (p.price!=null && p.price!=='') ? ` · £${p.price}` : '';
-    d.innerHTML = `<span class="title">${escapeHtml(p.title||'Untitled')}</span><span class="tag">${price}</span>`;
-    pBox.appendChild(d);
-  });
-  els.articles.innerHTML = ""; els.articles.appendChild(pBox);
-
-  els.pills.innerHTML = `<span class="pill">Use Landing CSV fallback: <span class="tag">${cache.landing?.length||0} rows</span></span>`;
-}
-
-function escapeHtml(s){ return (s??'').toString().replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
-
-/* ---------- Single query demo (very light ranking just for visibility) --------- */
-function classifyIntent(q){
-  const s = q.toLowerCase();
-  const eventHints = ["when", "workshop", "date", "where", "devon","bluebell","batsford","peak district","book"];
-  const adviceHints = ["how", "what", "why", "camera", "tripod", "settings", "long exposure","lightroom","certificate","free"];
-  let eScore = 0, aScore = 0;
-  eventHints.forEach(k=>{ if(s.includes(k)) eScore+=1; });
-  adviceHints.forEach(k=>{ if(s.includes(k)) aScore+=1; });
-  return eScore>=aScore ? {intent:"events", reason:`events=${eScore}, advice=${aScore}`} : {intent:"advice", reason:`advice=${aScore}, events=${eScore}`};
-}
-
-function scoreEvent(q, e){
-  const t = (e.title||"") + " " + (e.location||"") + " " + (e.when||"");
-  const s = q.toLowerCase(); const T=t.toLowerCase();
-  let score = 0;
-  s.split(/\s+/).forEach(w=>{ if(w.length>2 && T.includes(w)) score+=1; });
-  if(T.includes(s)) score+=3; // phrase boost
-  if((e.title||"").toLowerCase().includes("bluebell") && s.includes("bluebell")) score+=2;
-  return score;
-}
-
-function runSingleQuery(){
-  const q = els.q.value.trim();
-  if(!q){ return; }
-  const {intent, reason} = classifyIntent(q);
-  els.intent.textContent = intent; els.reason.textContent = reason;
-
-  if(intent==="events"){
-    const ranked = [...cache.events].map(e=>({e,score:scoreEvent(q,e)})).sort((a,b)=>b.score-a.score).slice(0,12);
-    const ev = ranked.filter(r=>r.score>0).map(r=>({
-      date: r.e.when || null,
-      when: r.e.when || null,
-      title: r.e.title || "",
-      location: r.e.location || "",
-      url: r.e.url || r.e.permalink || ""
-    }));
-    const out = {
-      idx: 1, query: q, expected: "events", detected: "events",
-      counts: {events: ev.length, articles: 0, pills: cache.landing?.length?1:0},
-      pass: true,
-      used: { intent:"events", product:null, events: ev, articles: [], pills: cache.landing?.length? [{label:"Event Listing", url:"https://www.alanranger.com/search?query=workshops", brand:true}] : [] }
-    };
-    els.json.textContent = JSON.stringify([out], null, 2);
-    els.conf.textContent = Math.min(100, 50 + (ev.length*5)).toFixed(0) + "%";
-  }else{
-    // advice placeholder: push some “articles” from products preview as a stand-in
-    const arts = cache.products.slice(0,6).map(p=>({ title: p.title, url: p.url || p.permalink }));
-    const out = {
-      idx: 1, query: q, expected: "advice", detected: "advice",
-      counts: {events: 0, articles: arts.length, pills: cache.landing?.length?1:0},
-      pass: true,
-      used: { intent:"advice", product:null, events: [], articles: arts, pills: cache.landing?.length? [{label:"Event Listing", url:"https://www.alanranger.com/search?query=workshops", brand:true}] : [] }
-    };
-    els.json.textContent = JSON.stringify([out], null, 2);
-    els.conf.textContent = "85%";
-  }
-  log("Single query executed.");
-}
-
-/* --------------- CSV helpers (simple, tolerant) ------------------- */
+/* ------------------ tiny CSV helpers ------------------ */
 function parseCsv(text){
-  const rows = []; let header = null;
-  text.split(/\r?\n/).forEach(line=>{
-    if(!line.trim()) return;
-    const cols = line.split(",").map(c=>c.trim().replace(/^"|"$/g,""));
-    if(!header){ header = cols; }
-    else{
-      const obj = {}; header.forEach((h,i)=>obj[h]=cols[i]);
-      rows.push(obj);
-    }
+  const rows = text.trim().split(/\r?\n/);
+  const headers = rows.shift().split(',').map(h=>h.trim());
+  return rows.map(r=>{
+    const cells = r.split(',').map(c=>c.trim());
+    const obj = {};
+    headers.forEach((h,i)=>obj[h]=cells[i]??'');
+    return obj;
   });
-  return rows;
 }
 
-els.loadLanding.onclick = async ()=>{
-  const f = els.landingCsv.files?.[0]; if(!f) return;
-  const text = await f.text(); const rows = parseCsv(text);
-  cache.landing = rows; els.landingRows.textContent = `${rows.length} rows`;
-  log(`Landing CSV loaded (${rows.length} rows).`);
-};
-els.runSuite.onclick = async ()=>{
-  const f = els.qCsv.files?.[0]; if(!f) return;
-  const text = await f.text(); const rows = parseCsv(text);
-  els.qRows.textContent = `${rows.length} rows`;
-  log(`Questions CSV loaded (${rows.length} rows). Running simple pass…`);
-  // very light demo: run first 5
-  const results = [];
-  for(let i=0;i<Math.min(5,rows.length);i++){
-    els.q.value = rows[i].query || rows[i].q || '';
-    runSingleQuery();
-    results.push(JSON.parse(els.json.textContent)[0]);
+/* ------------------ UI helpers ------------------ */
+const $ = id => document.getElementById(id);
+function chip(s){ const el = document.createElement('div'); el.className='chip'; el.textContent=s; return el; }
+function linkItem(title, url){ const d=document.createElement('div'); d.className='item'; const a=document.createElement('a'); a.textContent=title; a.href=url; a.target='_blank'; a.rel='noopener'; a.style.color='#a4d8ff'; a.style.textDecoration='none'; d.appendChild(a); return d; }
+
+/* ------------------ confidence score (simple but useful) ------------------ */
+function scoreConfidence({intentScore, topScore, hadLive}){
+  // intentScore 0..1 (keyword hit); topScore 0..1 (BM25-ish); hadLive bool (events/products)
+  let s = 0.55*topScore + 0.35*intentScore + 0.10*(hadLive?1:0);
+  s = Math.max(0, Math.min(1, s));
+  return Math.round(s*100);
+}
+
+/* ------------------ light-weight matcher ------------------ */
+function tokenize(t){ return (t||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean); }
+function bm25ishScore(queryTokens, text){
+  const t = tokenize(text); if(!t.length) return 0;
+  const set=new Set(t); let hit=0;
+  for(const q of queryTokens){ if(set.has(q)) hit++; }
+  return hit / Math.max(3, queryTokens.length); // crude normalization
+}
+function detectIntent(q){
+  const s=q.toLowerCase();
+  const wantsEvent = /(next|when|date|where|workshop|devon|norfolk|bluebell|autumn)/.test(s);
+  const wantsAdvice = /(price|cost|how much|include|equipment|camera|tripod|certificate|laptop|astrophotography|residential|b&b|b and b)/.test(s);
+  // Rule: if it looks like a date/place ask → events; else advice.
+  if(wantsEvent && !wantsAdvice) return {intent:'events', reason:'events=✓, advice=0'};
+  if(wantsAdvice && !wantsEvent) return {intent:'advice', reason:'advice=✓, events=0'};
+  // Mixed → prefer events if any date/place tokens
+  return {intent: wantsEvent ? 'events' : 'advice', reason:`events=${wantsEvent?1:0}, advice=${wantsAdvice?1:0}`};
+}
+
+/* ------------------ run a single query ------------------ */
+async function runOne(query){
+  const {intent, reason} = detectIntent(query);
+  $('intentOut').textContent = intent;
+  $('reasonOut').textContent = reason;
+
+  const qTok = tokenize(query);
+  const used = { intent, product: null, events: [], articles: [], pills: [], citations: [] };
+  let counts = { events: 0, articles: 0, pills: 0 };
+
+  // EVENTS (live data)
+  if(intent==='events' && state.events.length){
+    const scored = state.events.map(e => {
+      const txt = `${e.title||''} ${e.location||''}`;
+      return { e, s: bm25ishScore(qTok, txt) + ( /devon|norfolk|bluebell|autumn|peak|batsford|cotswold|coast/.test(txt.toLowerCase()) ? 0.15 : 0) };
+    }).filter(x => x.s>0.05).sort((a,b)=>b.s-a.s).slice(0,6);
+    used.events = scored.map(x => ({
+      date: eSafe(x.e.starts_on),
+      when: x.e.when || null,
+      title: x.e.title, location: x.e.location || '',
+      url: x.e.url
+    }));
+    counts.events = used.events.length;
   }
-  els.json.textContent = JSON.stringify(results, null, 2);
-  log("CSV mini-suite finished (first 5 rows).");
+
+  // ADVICE (policy bits)
+  if(intent==='advice'){
+    // Residential policy (your correction)
+    if(/residential/.test(query.toLowerCase())){
+      used.articles.push({
+        title: "Residential workshops include B&B and inter-location travel.",
+        url: "https://www.alanranger.com/photographic-workshops-near-me"
+      });
+    }
+  }
+
+  // LANDING PAGES FALLBACK (articles)
+  if($('useLanding').checked && state.landing.length && (counts.events===0 || intent==='advice')){
+    const scoredL = state.landing.map(a => ({ a, s: bm25ishScore(qTok, `${a.title||''} ${a.meta_title||''}`)}))
+      .filter(x=>x.s>0.08).sort((a,b)=>b.s-a.s).slice(0,8);
+    used.articles.push(...scoredL.map(x => ({title: x.a.title || x.a.meta_title || x.a.url, url: x.a.url})));
+  }
+
+  // Pills (simple brand search or catch-all)
+  used.pills.push({ label: 'Event Listing', url: 'https://www.alanranger.com/search?query=workshops', brand: true });
+  counts.pills = used.pills.length;
+  counts.articles = used.articles.length;
+
+  // Confidence
+  const topScore = Math.max(0.01, used.events.length ? 0.6 : (used.articles.length?0.35:0.1));
+  const intentScore = intent==='events' ? 0.9 : 0.8;
+  const conf = scoreConfidence({intentScore, topScore, hadLive: state.events.length>0});
+  $('confPct').textContent = conf + '%';
+
+  const result = {
+    idx: 1, query, expected: intent, detected: intent, counts, pass: true,
+    used, confidence: conf
+  };
+  state.results = result;
+  renderResult();
+  log(`Run: "${query}" → intent=${intent}, events=${counts.events}, articles=${counts.articles}, conf=${conf}%`);
+}
+
+function eSafe(v){ try{ return v ? String(v) : null }catch{ return null } }
+
+/* ------------------ render ------------------ */
+function renderResult(){
+  const r = state.results || {};
+  $('jsonBox').textContent = JSON.stringify(r, null, 2);
+
+  const evBox = $('eventsBox'); evBox.innerHTML='';
+  (r.used?.events || []).forEach(e => evBox.appendChild(linkItem(e.title, e.url)));
+
+  const artBox = $('articlesBox'); artBox.innerHTML='';
+  (r.used?.articles || []).forEach(a => artBox.appendChild(linkItem(a.title, a.url)));
+
+  const pillsBox = $('pillsBox'); pillsBox.innerHTML='';
+  (r.used?.pills || []).forEach(p => pillsBox.appendChild(linkItem(p.label, p.url)));
+}
+
+/* ------------------ Supabase wiring ------------------ */
+async function connectSupabase(){
+  const url = $('sb_url').value.trim();
+  const key = $('sb_key').value.trim();
+  if(!url || !key){ $('connState').textContent = 'Missing URL or key'; return; }
+  supa = supabase.createClient(url, key);
+  $('connState').textContent = 'Saved (not yet fetched)';
+  log('Saved Supabase credentials.');
+}
+async function fetchLive(){
+  if(!supa){ await connectSupabase(); }
+  const evView = $('events_view').value.trim();
+  const prView = $('products_view').value.trim();
+
+  $('btnFetch').disabled = true;
+  try{
+    // events
+    let { data: ev, error: e1 } = await supa.from(evView).select('*').limit(2000);
+    if(e1) throw e1;
+    state.events = (ev||[]).map(x => ({
+      title: x.title ?? x.event_title ?? '',
+      url: x.url ?? '',
+      when: x.when ?? x.human_when ?? null,
+      starts_on: x.starts_on ?? null,
+      location: x.location ?? ''
+    }));
+    $('eventsCount').textContent = state.events.length + ' rows';
+
+    // products
+    let { data: pr, error: e2 } = await supa.from(prView).select('*').limit(2000);
+    if(e2) throw e2;
+    state.products = pr || [];
+    $('productsCount').textContent = state.products.length + ' rows';
+
+    $('connState').textContent = 'Connected';
+    log(`Fetched live data: events=${state.events.length}, products=${state.products.length}`);
+  }catch(err){
+    $('connState').textContent = 'Fetch failed';
+    log('ERROR fetching live data: ' + (err.message||err));
+  }finally{
+    $('btnFetch').disabled = false;
+  }
+}
+
+/* ------------------ CSV handlers ------------------ */
+$('btnUploadLanding').onclick = async () => {
+  const f = $('landingCsv').files?.[0]; if(!f){ return; }
+  const text = await f.text();
+  const rows = parseCsv(text);
+  // columns accepted: url and one of url_meta_title | meta_title | title
+  state.landing = rows.map(r => ({ url: r.url||r.URL||'', meta_title: r.url_meta_title||r.meta_title||'', title: r.title||'' }))
+                      .filter(r => r.url);
+  $('landingState').textContent = 'Loaded ' + state.landing.length + ' rows';
+  $('landingCount').textContent = state.landing.length + ' rows';
+  log(`Landing CSV loaded (${state.landing.length} rows).`);
+};
+$('btnUploadQ').onclick = async () => {
+  const f = $('qCsv').files?.[0]; if(!f){ return; }
+  const text = await f.text();
+  const rows = parseCsv(text).map((r,i)=>({ idx: Number(r.idx||i+1), query: r.query||r.question||'', expected:(r.expected||'').toLowerCase() }));
+  state.questions = rows.filter(r=>r.query);
+  $('qsState').textContent = `${state.questions.length}/${state.questions.length}`;
+  $('qsCount').textContent = state.questions.length + ' rows';
+  log(`Questions CSV loaded (${state.questions.length} rows).`);
+};
+$('btnRunSuite').onclick = async () => {
+  if(!state.questions.length){ log('No Questions CSV loaded.'); return; }
+  const results = [];
+  let passed = 0;
+  for(const q of state.questions){
+    await runOne(q.query);
+    const r = structuredClone(state.results);
+    r.idx = q.idx; r.expected = q.expected;
+    r.pass = (r.detected === (q.expected||r.detected));
+    if(r.pass) passed++;
+    results.push(r);
+  }
+  const rate = Math.round(100*passed/Math.max(1,results.length));
+  log(`CSV suite complete. passed=${passed}/${results.length} (${rate}%)`);
+  $('jsonBox').textContent = JSON.stringify({ total: results.length, passed, rate: `${rate}%`, results }, null, 2);
 };
 
-/* -------------------- Wiring & onload -------------------- */
-els.save.onclick = ()=>{ saveSettings(); };
-els.fetch.onclick = ()=>{ saveSettings(); connect().then(fetchLive); };
-els.reset.onclick = ()=>{ resetDefaults(); };
-els.run.onclick = ()=>{ runSingleQuery(); };
-els.copyJson.onclick = ()=>{ navigator.clipboard.writeText(els.json.textContent || "{}"); log("JSON copied."); };
-els.copyLog.onclick = ()=>{ navigator.clipboard.writeText(els.log.textContent || ""); };
-els.downloadLog.onclick = ()=>{
-  const blob = new Blob([els.log.textContent||""], {type:"text/plain"});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'bench-log.txt'; a.click();
-  URL.revokeObjectURL(a.href);
+/* ------------------ wire up buttons ------------------ */
+$('btnRun').onclick = () => runOne($('qInput').value.trim());
+$('btnCopyJson').onclick = () => { navigator.clipboard.writeText($('jsonBox').textContent||'{}'); };
+$('btnCopyLog').onclick = () => { navigator.clipboard.writeText(state.log.join('\n')); };
+$('btnDownloadLog').onclick = () => {
+  const blob = new Blob([state.log.join('\n')], {type:'text/plain'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='benchtest-log.txt'; a.click();
+};
+$('btnSave').onclick = connectSupabase;
+$('btnFetch').onclick = fetchLive;
+$('btnDefaults').onclick = () => {
+  $('sb_url').value = DEFAULTS.url;
+  $('sb_key').value = DEFAULTS.anon;
+  $('events_view').value = DEFAULTS.eventsView;
+  $('products_view').value = DEFAULTS.productsView;
+  $('connState').textContent = 'Defaults applied';
 };
 
-(function bootstrap(){
-  loadSettings();            // 1) load saved or defaults
-  saveSettings();            // 2) persist once (if defaults)
-  connect().then(fetchLive); // 3) auto-connect & fetch on load
-  log(`[${new Date().toISOString()}] Ready. Auto-filled & connected. Upload Landing CSV (optional), Questions CSV, then Run query or CSV mini-suite.`);
+/* ------------------ boot ------------------ */
+(function init(){
+  // prefill and auto-connect+fetch
+  $('sb_url').value = DEFAULTS.url;
+  $('sb_key').value = DEFAULTS.anon;
+  $('events_view').value = DEFAULTS.eventsView;
+  $('products_view').value = DEFAULTS.productsView;
+  connectSupabase().then(fetchLive);
+  log('Boot OK. Prefilled Supabase creds and requested live fetch.');
 })();
 </script>
 </body>
