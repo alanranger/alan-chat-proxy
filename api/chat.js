@@ -400,13 +400,16 @@ function buildProductPanelMarkdown(products) {
 
 /* ----------------------------- Event list UI ----------------------------- */
 function formatEventsForUi(events) {
+  // NOTE: your current UI shows "Link" as the anchor text, so we provide href+when
+  const now = new Date();
   return (events || [])
+    .filter((e) => e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start) >= now)
     .map((e) => ({
       ...e,
       when: fmtDateLondon(e.date_start),
       href: pickUrl(e),
-    }))
-    .slice(0, 12);
+    }));
+  // No cap — you requested all instances to show
 }
 
 /* ----------------------------- Pills builders ---------------------------- */
@@ -423,11 +426,18 @@ function buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl }) {
   add("Book Now", productUrl || firstEventUrl, true);
 
   // Event Listing + More Events both point at listing root (no search page)
-  const listUrl = landingUrl || (firstEventUrl && originOf(firstEventUrl) + "/photography-workshops");
+  const listUrl =
+    landingUrl ||
+    (firstEventUrl && originOf(firstEventUrl) + "/photography-workshops");
   add("Event Listing", listUrl, true);
   add("More Events", listUrl, true);
 
-  add("Photos", photosUrl || (firstEventUrl && originOf(firstEventUrl) + "/gallery-image-portfolios"), false);
+  add(
+    "Photos",
+    photosUrl ||
+      (firstEventUrl && originOf(firstEventUrl) + "/gallery-image-portfolios"),
+    false
+  );
   return pills;
 }
 
@@ -438,10 +448,79 @@ function buildAdvicePills({ articleUrl, query, pdfUrl, relatedUrl, relatedLabel 
     pills.push({ label, url, brand });
   };
   add("Read Guide", articleUrl, true);
-  add("More Articles", `https://www.alanranger.com/search?query=${encodeURIComponent(query || "")}`, true);
+  // NOTE: You asked to avoid wildcard site search pills in production UI.
+  // This remains for now; you can remove it later when wiring chat.html logic.
+  add(
+    "More Articles",
+    `https://www.alanranger.com/search?query=${encodeURIComponent(query || "")}`,
+    true
+  );
   if (pdfUrl) add("Download PDF", pdfUrl, true);
   if (relatedUrl) add(relatedLabel || "Related", relatedUrl, false);
   return pills.slice(0, 4);
+}
+
+/* -------------------------- Confidence (server) -------------------------- */
+/**
+ * Build a compact “document text” for scoring.
+ */
+function rowText(row) {
+  const t = [
+    row?.title,
+    row?.page_url,
+    row?.source_url,
+    row?.url,
+    row?.location,
+    row?.raw?.name,
+    row?.raw?.description,
+    row?.raw?.tags,
+  ]
+    .filter(Boolean)
+    .join(" • ")
+    .toLowerCase();
+  return t;
+}
+
+/**
+ * Score a single row by keyword hits across title/url/location/description.
+ * Simple additive model; cap and normalise to 0..1.
+ */
+function scoreRow(row, keywords) {
+  if (!row || !keywords?.length) return 0;
+  const text = rowText(row);
+  if (!text) return 0;
+  let score = 0;
+  for (const kw of keywords) {
+    if (!kw) continue;
+    const k = kw.toLowerCase();
+    if (text.includes(k)) score += 1.0;
+    // small bonus for exact word boundary matches
+    const re = new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+    if (re.test(text)) score += 0.5;
+  }
+  // soft cap to keep within a sensible range
+  const maxReasonable = Math.max(1.0, keywords.length * 1.5);
+  const normalised = Math.min(score / maxReasonable, 1.0);
+  return normalised;
+}
+
+/**
+ * Score an array of rows; returns { listWithScores, topScore }
+ */
+function scoreList(list, keywords) {
+  const withScores = (list || []).map((r) => ({
+    ...r,
+    _score: scoreRow(r, keywords),
+  }));
+  const top = withScores.reduce((m, r) => Math.max(m, r._score || 0), 0);
+  return { listWithScores: withScores, topScore: top };
+}
+
+/**
+ * Convert 0..1 to 0..100 integer
+ */
+function deriveConfidencePct(maxScore01) {
+  return Math.max(0, Math.min(100, Math.round((maxScore01 || 0) * 100)));
 }
 
 /* --------------------------- Generic resolvers --------------------------- */
@@ -483,7 +562,19 @@ export default async function handler(req, res) {
         { keywords }
       );
 
-      const eventList = formatEventsForUi(events);
+      // ----- Confidence (events/products) -----
+      const { listWithScores: scoredEvents, topScore: evTop } = scoreList(
+        events,
+        keywords
+      );
+      const { listWithScores: scoredProducts, topScore: prTop } = scoreList(
+        product ? [product] : [],
+        keywords
+      );
+      const confidence01 = Math.max(evTop, prTop);
+      const confidence_pct = deriveConfidencePct(confidence01);
+
+      const eventList = formatEventsForUi(scoredEvents);
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
 
       const firstEventUrl = pickUrl(events?.[0]) || null;
@@ -521,6 +612,8 @@ export default async function handler(req, res) {
           products: product ? [product] : [],
           pills,
         },
+        confidence: confidence01,
+        confidence_pct,
         meta: {
           duration_ms: Date.now() - started,
           endpoint: "/api/chat",
@@ -532,7 +625,6 @@ export default async function handler(req, res) {
     }
 
     // --------- ADVICE -----------
-    // return article answers + upgraded pills
     const articles = await findArticles(client, { keywords, limit: 12 });
     const topArticle = articles?.[0] || null;
     const articleUrl = pickUrl(topArticle) || null;
@@ -558,6 +650,14 @@ export default async function handler(req, res) {
 
     const citations = uniq([articleUrl]).filter(Boolean);
 
+    // Confidence (articles)
+    const { listWithScores: scoredArticles, topScore: artTop } = scoreList(
+      articles,
+      keywords
+    );
+    const confidence01 = artTop;
+    const confidence_pct = deriveConfidencePct(confidence01);
+
     // If we have multiple articles, render a neat bullet list (title — Link)
     const lines = [];
     if (articles?.length) {
@@ -569,6 +669,7 @@ export default async function handler(req, res) {
       }
     } else {
       lines.push("I couldn’t find a specific guide for that yet.");
+      // NOTE: chat.html will add the fallback nudge to use Contact/WhatsApp in header.
     }
 
     res.status(200).json({
@@ -580,9 +681,11 @@ export default async function handler(req, res) {
         topic: keywords.join(", "),
         events: [],
         products: [],
-        articles: articles || [],
+        articles: scoredArticles || [],
         pills,
       },
+      confidence: confidence01,
+      confidence_pct,
       meta: {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
