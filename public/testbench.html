@@ -166,19 +166,40 @@
       return (q||"").toLowerCase().replace(/[^a-z0-9\s-]/g," ").split(/\s+/).filter(Boolean);
     }
 
-    // Improved heuristic: schedule > price > advice > events
+    // Improved intent heuristic tuned to your suite
     function detectIntent(q) {
-      const s = (q || "").toLowerCase().replace(/\s+/g,' ').trim();
+      const s = (q || "").toLowerCase().replace(/\s+/g, ' ').trim();
 
-      const schedule = /\b(when|where|date|time|next|upcoming|start|ends?)\b/;
-      const priceN   = /\b(price|cost|how much|£|gbp|voucher|vouchers|gift|payment|plan|buy|subscription)\b/;
-      const adviceQ  = /\b(what|how|why|need|require|should i|can i|do i|do you|will you|can you|is there|are there)\b/;
-      const eventN   = /\b(workshop|workshops|course|courses|class|classes|event|events|session|tuition)\b/;
+      const hasEvent   = /\b(workshop|workshops|course|courses|class|classes|event|events|session|tuition)\b/.test(s);
+      const hasSched   = /\b(when|where|date|time|next|upcoming|start|ends?)\b/.test(s);
+      const hasPrice   = /\b(how much|price|cost|£|gbp|fee|fees?)\b/.test(s);
+      const buyIntent  = /\b(book|buy|purchase|checkout|voucher|vouchers|gift|payment ?plan|subscribe|subscription|pay)\b/.test(s);
+      const policyAsk  = /\b(do you|can you|will you|is there|are there|do i|can i|will i|am i)\b/.test(s);
+      const adviceLead = /\b(what|how|why|need|require|should|which|help)\b/.test(s);
+      const mentionsFree = /\bfree\b/.test(s);
 
-      if (schedule.test(s) && eventN.test(s)) return "events";
-      if (priceN.test(s)) return "products";
-      if (adviceQ.test(s)) return "advice";
-      if (eventN.test(s)) return "events";
+      // 1) Schedule questions about events → Events
+      if (hasEvent && hasSched) return "events";
+
+      // 2) Availability/policy about events (“do you do/run/offer … workshops?”) → Events
+      if (hasEvent && policyAsk) return "events";
+
+      // 3) “Is … free?” style questions are policy/info → Advice
+      if (mentionsFree && /course|workshop|class|subscription|online/.test(s)) return "advice";
+
+      // 4) Price questions that mention events but NOT an explicit purchase/book action → Events
+      if (hasEvent && hasPrice && !buyIntent) return "events";
+
+      // 5) Explicit purchase intent OR price w/o event nouns → Products
+      if (buyIntent || (hasPrice && !hasEvent)) return "products";
+
+      // 6) Generic “what/how/why/should/which/need/require/help” → Advice
+      if (adviceLead) return "advice";
+
+      // 7) Any remaining queries mentioning events → Events
+      if (hasEvent) return "events";
+
+      // 8) Default
       return "advice";
     }
 
@@ -282,6 +303,7 @@
       return events.map(e => ({ ...e, price: priceByUrl.get(e.url) ?? null }));
     }
 
+    // ------- Rendering -------
     const fmt = new Intl.NumberFormat('en-GB', { style:'currency', currency:'GBP', maximumFractionDigits:0 });
 
     function renderEvents(rows){
@@ -324,6 +346,7 @@
     function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
 
     // ------- Export helpers -------
+    let suiteResults = []; // [{idx,query,expected,got,pass}]
     function buildReadableSummary(){
       const maxList = 20;
       const lines = [];
@@ -427,7 +450,6 @@
 
     // ------- Suite runner -------
     let questions = []; // [{idx, query, expected}]
-    let suiteResults = []; // [{idx,query,expected,got,pass}]
     function normalizeExpected(v){
       const s = (v||'').toLowerCase().trim();
       if (s === 'articles') return 'advice'; // policy: treat as equivalent
