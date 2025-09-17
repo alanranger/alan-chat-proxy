@@ -9,7 +9,7 @@
 
 <!--
   chat.html — Alan Ranger Assistant
-  Version: v0.9.24  (full-drop-in build)
+  Version: v0.9.25  (full-drop-in build)
 -->
 
 <style>
@@ -99,7 +99,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version" aria-label="Build version">v0.9.24</span></div>
+  <div class="badge-wrap"><span class="version" aria-label="Build version">v0.9.25</span></div>
 
   <div class="card" role="application" aria-label="Alan Ranger Assistant">
     <!-- Sticky header -->
@@ -155,11 +155,11 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 <script>
 /* ==========================================================
    Alan Ranger Assistant — client script
-   Build v0.9.24
+   Build v0.9.25
    ========================================================== */
 
-const CHAT_ENDPOINT='/api/chat';    // server endpoint
-const STORAGE_KEY='ar-assistant-thread-v1'; // local transcript cache (session)
+const CHAT_ENDPOINT='/api/chat';
+const STORAGE_KEY='ar-assistant-thread-v1';
 const urlParams=new URLSearchParams(location.search);
 if(urlParams.get('debug')==='1') requestAnimationFrame(()=>{document.getElementById('debugPanel').open=true;});
 
@@ -300,7 +300,20 @@ function extractFacts(desc){
     return flat?flat.replace(new RegExp(`^${lab}\\s*:?\\s+`,'i'),''):null;
   };
   const optionLines=lines.filter(l=>/^(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l));
-  return {location:get('Location'),participants:get('Participants'),fitness:get('Fitness'),availability:get('Availability'),optionLines};
+  return {location:get('Location'),participants:get('Participants'),fitness:get('Fitness'),availability:get('Availability'),optionLines,lines};
+}
+function parsePriceTokens(text){
+  // find £xxx tokens but ignore 0, postal codes, times, percentages
+  const vals=new Set();
+  String(text||'').replace(/£\s?(\d{2,4})(?:\.\d{2})?/g,(m,grp,off)=>{
+    const n=+grp;
+    if(!isFinite(n)||n===0) return;
+    // guard: if "B95 5BG" or similar nearby (letters digits space letters)
+    const around=text.slice(Math.max(0,off-8),off+8);
+    if(/[A-Z]\d{1,2}\s?\d[A-Z]{2}/i.test(around)) return;
+    vals.add(n);
+  });
+  return Array.from(vals).sort((a,b)=>a-b);
 }
 function parseExtraPriceFromText(desc){
   const m=String(desc||'').match(/\b(?:1\s*day|full\s*day)\b[^£\d]{0,12}(£?\s?\d{2,4})/i);
@@ -311,53 +324,74 @@ function parseExtraPriceFromText(desc){
 function deriveOptions(prod,facts){
   const ccy=prod.price_currency||prod?.raw?.offers?.priceCurrency||'GBP';
   const base=prod.price??prod?.raw?.offers?.price;
-  let low=prod?.raw?.offers?.lowPrice, high=prod?.raw?.offers?.highPrice;
-  if((low==null||high==null) && base!=null){
-    const extra=parseExtraPriceFromText(prod.description||'');
-    if(extra!=null && extra!==base){ low=Math.min(base,extra); high=Math.max(base,extra); }
-  }
   const arr=offersArray(prod.raw);
   const opts=[];
-  // Multiple offers -> list them
   if(arr.length>1){
-    arr.forEach((o,i)=>{ opts.push({label:o.name||o.description||`Option ${i+1}`,price:currency(o.price,o.priceCurrency||ccy)}); });
+    arr.forEach((o,i)=>{ // multiple offers
+      const label=o.name||o.description||`Option ${i+1}`;
+      const price=currency(o.price,o.priceCurrency||ccy);
+      if(price||label) opts.push({label,price});
+    });
   }
-  // Text-derived options
   const text=(facts.optionLines||[]).join('\n').toLowerCase();
   const has4h=/(^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
   const has1d=/(^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
-  if(low!=null && high!=null && has4h && has1d){
+  const extra=parseExtraPriceFromText(prod.description||prod.raw?.description||'');
+  if(has4h && has1d && base!=null && extra!=null && extra!==base){
+    const low=Math.min(base,extra), high=Math.max(base,extra);
     opts.push({label:'4 hours',price:currency(low,ccy)});
     opts.push({label:'1 day',price:currency(high,ccy)});
   }else{
     if(base!=null) opts.push({label:'Standard',price:currency(base,ccy)});
-    if(low!=null || high!=null){
-      const range=[low,high].filter(v=>v!=null).map(v=>currency(v,ccy)).join(' – ');
-      if(range) opts.push({label:'Pricing',price:range});
-    }
   }
-  // Detect times for each row
+  // Add times if present
   const timePat=/(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
   for(const ln of facts.optionLines||[]){
     const label=ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
     const tm=ln.match(timePat);
     const window=tm?`${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}`:null;
-    if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){
-      opts.push({label,time:window});
-    }else if(window){
-      const o=opts.find(o=>o.label.toLowerCase()===label.toLowerCase());
-      if(o && !o.time) o.time=window;
+    if(label){
+      const existing=opts.find(o=>o.label.toLowerCase()===label.toLowerCase());
+      if(existing){ if(window && !existing.time) existing.time=window; }
+      else opts.push({label,time:window});
     }
   }
   return opts;
 }
-function renderProductCard(prod,payload){
-  const facts=extractFacts(prod.description||'');
-  const opts=deriveOptions(prod,facts);
+function derivePriceRange(prod){
   const ccy=prod.price_currency||prod?.raw?.offers?.priceCurrency||'GBP';
-  const discount=parseDiscount(prod.raw?.description||prod.description||'');
+  let low=prod?.raw?.offers?.lowPrice, high=prod?.raw?.offers?.highPrice;
+
+  // From multiple offers[]
+  const arr=offersArray(prod.raw).map(o=>Number(o.price)).filter(n=>isFinite(n)&&n>0);
+  if(arr.length>=2){ low=Math.min(...arr); high=Math.max(...arr); }
+
+  // From description tokens
+  const tokens=parsePriceTokens(prod.raw?.description||prod.description||'');
+  if(tokens.length>=2){
+    const tLow=Math.min(...tokens), tHigh=Math.max(...tokens);
+    if((low==null||tLow<low) && tLow>0) low=tLow;
+    if((high==null||tHigh>high) && tHigh>0) high=tHigh;
+  }
+
+  // From 4hr vs 1day
   const base=prod.price??prod?.raw?.offers?.price;
-  const low=prod?.raw?.offers?.lowPrice, high=prod?.raw?.offers?.highPrice;
+  const extra=parseExtraPriceFromText(prod.raw?.description||prod.description||'');
+  if(base!=null && extra!=null && base!==extra){
+    const bLow=Math.min(base,extra), bHigh=Math.max(base,extra);
+    if(low==null||bLow<low) low=bLow;
+    if(high==null||bHigh>high) high=bHigh;
+  }
+
+  if(low!=null && high!=null && high>low) return {low,high,ccy};
+  return {ccy,base:base??low??high};
+}
+function renderProductCard(prod,payload){
+  const facts=extractFacts(prod.description||prod.raw?.description||'');
+  const opts=deriveOptions(prod,facts);
+  const discount=parseDiscount(prod.raw?.description||prod.description||'');
+  const range=derivePriceRange(prod);
+  const ccy=range.ccy||'GBP';
 
   const meta=firstSentenceOnly(prod.raw?.description||prod.description||payload?.answer_markdown||'');
   const bits=[];
@@ -370,14 +404,14 @@ function renderProductCard(prod,payload){
     bits.push(`<p class="kvline"><strong>Availability:</strong> ${esc(a)}</p>`);
   }
 
-  // Price lines
   const lines=[];
   if(discount){
     lines.push(`<li><strong>Normal price</strong> — ${currency(discount.was,ccy)}</li>`);
     lines.push(`<li><strong>Discounted</strong> — ${currency(discount.now,ccy)}</li>`);
-  }else{
-    if(low!=null && high!=null) lines.push(`<li><strong>Price range</strong> — ${currency(low,ccy)} – ${currency(high,ccy)}</li>`);
-    else if(base!=null) lines.push(`<li><strong>Price</strong> — ${currency(base,ccy)}</li>`);
+  }else if(range.low!=null && range.high!=null){
+    lines.push(`<li><strong>Price range</strong> — ${currency(range.low,ccy)} – ${currency(range.high,ccy)}</li>`);
+  }else if(range.base!=null){
+    lines.push(`<li><strong>Price</strong> — ${currency(range.base,ccy)}</li>`);
   }
   for(const o of opts){
     const tail=[o.time?` — ${esc(o.time)}`:'',o.price?` — ${o.price}`:''].join('');
@@ -425,20 +459,38 @@ function renderEvents(structured,productHasLocation){
   return `<div class="answer" aria-label="events"><h3>${title}</h3><ul>${lis}</ul>${confBadge()}</div>`;
 }
 
-// ===== Articles (no wildcard/tag search fallbacks) =====
-function renderArticles(structured){
-  const arts=(structured?.articles||[]).filter(a=>a?.page_url||a?.source_url||a?.url).slice(0,5);
+// ===== Articles (from structured.articles OR from citations — generic, no wildcard) =====
+const GUIDE_HINT=/\/(blog|blogs?|guide|guides|article|articles|learn|tips|resources|tuition)\b/i;
+function titleFromUrl(u){
+  try{
+    const p=new URL(u); const seg=p.pathname.split('/').filter(Boolean).pop()||p.hostname;
+    return seg.replace(/[-_]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  }catch{return u;}
+}
+function deriveArticles(payload){
+  const fromStructured=(payload?.structured?.articles||[]).filter(a=>a?.page_url||a?.source_url||a?.url);
+  if(fromStructured.length) return fromStructured.slice(0,5).map(a=>({title:a.title||a.raw?.name||titleFromUrl(a.page_url||a.source_url||a.url), url:a.page_url||a.source_url||a.url}));
+  const cites=(payload?.citations||[]).filter(u=>GUIDE_HINT.test(String(u)));
+  const uniq=[]; const used=new Set();
+  for(const u of cites){
+    const url=String(u);
+    if(used.has(url)) continue;
+    used.add(url);
+    uniq.push({title:titleFromUrl(url), url});
+    if(uniq.length>=5) break;
+  }
+  return uniq;
+}
+function renderArticlesFromPayload(payload){
+  const arts=deriveArticles(payload);
   if(!arts.length) return '';
-  const lis=arts.map(a=>{
-    const t=a.title||a.raw?.name||'Read more';
-    const u=a.page_url||a.source_url||a.url;
-    return `<li><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></li>`;
-  }).join('');
+  const lis=arts.map(a=>`<li><a href="${a.url}" target="_blank" rel="noopener">${esc(a.title)}</a></li>`).join('');
   return `<div class="answer" aria-label="guides"><h3>Guides that match your question</h3><ul>${lis}</ul>${confBadge()}</div>`;
 }
 
-// ===== Action pills (safe only) =====
-function buildPills(structured){
+// ===== Action pills (safe only; include first article if present) =====
+function buildPills(payload){
+  const structured=payload.structured||{};
   const safe=[]; const used=new Set();
   const add=(label,href)=>{
     if(!label||!href) return;
@@ -448,7 +500,10 @@ function buildPills(structured){
     used.add(key); safe.push({label,href});
   };
   for(const p of (structured?.pills||[])) add(p.label||p.text,p.url||p.href);
-  for(const a of (structured?.articles||[])){ const u=a.page_url||a.source_url||a.url; if(u){ add(a.title||'Related article',u); break; } }
+
+  const art=deriveArticles(payload)[0];
+  if(art) add('Related articles', art.url);
+
   return safe.slice(0,5);
 }
 
@@ -462,23 +517,22 @@ function renderAnswer(payload){
   const prods=(s.products||[]); const prod=prods[0]||null;
   if(prod) addBubble(renderProductCard(prod,payload));
 
-  const productFacts=prod?extractFacts(prod.description||''):null;
+  const productFacts=prod?extractFacts(prod.description||prod.raw?.description||''):null;
   const evHTML=renderEvents(s,!!(productFacts&&productFacts.location));
   if(evHTML) addBubble(evHTML);
 
-  const artHTML=renderArticles(s);
+  const artHTML=renderArticlesFromPayload(payload);
   if(artHTML) addBubble(artHTML);
 
-  const pills=buildPills(s);
+  const pills=buildPills(payload);
   if(pills.length){
     const wrap=document.createElement('div'); wrap.className='actions';
     pills.forEach(p=>{const a=document.createElement('a'); a.className='pill'; a.textContent=p.label; a.href=p.href; a.target='_blank'; a.rel='noopener'; wrap.appendChild(a);});
     thread.appendChild(wrap); persistThread();
   }
 
-  if(!prod && !(s.events||[]).length && !(s.articles||[]).length){
-    const md=payload.answer_markdown||payload.answer||"I don’t have a specific answer for that yet.";
-    const {html}=mdToHtml(md);
+  if(!prod && !(s.events||[]).length && !deriveArticles(payload).length){
+    const {html}=mdToHtml(payload.answer_markdown||payload.answer||"I don’t have a specific answer for that yet.");
     addBubble(html.replace('</div>', `${confBadge()}</div>`));
   }
 
@@ -498,7 +552,7 @@ async function sendQuery(q){
     const headers={}; res.headers.forEach((v,k)=>headers[k]=v); dbgHeaders.textContent=j(headers);
     const data=await res.json(); dbgRes.textContent=j(data); dbgProv.textContent=j({citations:data.citations||[]});
     close();
-    if(data && (data.answer_markdown||data.answer||(data.structured&&(data.structured.products?.length||data.structured.events?.length||data.structured.articles?.length)))){
+    if(data && (data.answer_markdown||data.answer||(data.structured&&(data.structured.products?.length||data.structured.events?.length||data.structured.articles?.length)) || (data.citations||[]).length)){
       renderAnswer(data);
     }else{
       const {html}=mdToHtml("I don’t have a specific answer for that yet.");
