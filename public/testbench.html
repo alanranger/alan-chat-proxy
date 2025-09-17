@@ -1,648 +1,473 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Bench Tester — Events • Products • Articles • Pills</title>
-<!-- Tailwind (CDN) just for layout/spacing; remove if you prefer plain CSS -->
-<script src="https://cdn.tailwindcss.com"></script>
-<!-- Supabase JS v2 -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- PapaParse for CSV -->
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<style>
-  :root { --panel:#0f172a; --ink:#e2e8f0; --muted:#94a3b8; --accent:#22d3ee; --ok:#22c55e; --bad:#ef4444; }
-  body { background:#0b1020; color:var(--ink); }
-  .panel { background:var(--panel); border:1px solid #1f2a44; border-radius:10px; }
-  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-  .table { width:100%; border-collapse:collapse; }
-  .table th, .table td { padding:.5rem .6rem; border-bottom:1px solid #1f2a44; vertical-align:top; }
-  .table th { color:var(--muted); font-weight:600; text-transform:uppercase; font-size:.72rem; letter-spacing:.02em; }
-  .pill { display:inline-flex; align-items:center; gap:.4rem; border:1px solid #1f2a44; padding:.15rem .5rem; border-radius:999px; margin:.15rem .3rem .15rem 0; font-size:.8rem }
-  .pill.brand { border-color:#334155; background:#0b1328; }
-  .pill.generic { border-color:#2a3a55; background:#0b1828; }
-  .btn { background:#13213d; border:1px solid #1f2a44; padding:.45rem .6rem; border-radius:8px; font-weight:600; }
-  .btn:hover { background:#17284c }
-  .btn:disabled { opacity:.5; cursor:not-allowed }
-  .badge { font-size:.72rem; padding:.1rem .45rem; border:1px solid #1f2a44; border-radius:6px; }
-  .ok { color:var(--ok) }
-  .bad { color:var(--bad) }
-  .log { white-space:pre-wrap; font-size:.82rem; line-height:1.35; }
-  .small { font-size:.82rem; color:var(--muted); }
-  details > summary { cursor:pointer }
-</style>
+  <meta charset="utf-8" />
+  <title>BenchTest – Events • Products • Articles</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b0f13;
+      --panel:#121820;
+      --muted:#8aa0b2;
+      --accent:#4cc3ff;
+      --ok:#4ade80;
+      --warn:#f59e0b;
+      --card:#0f141b;
+      --pill:#ff8a00;
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+      color:#e6eef6;
+      background:linear-gradient(180deg, #0a0e13 0%, #0d131a 100%);
+    }
+    header{
+      padding:18px 22px;
+      display:flex;
+      gap:14px;
+      align-items:center;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      background:rgba(10,14,19,.6);
+      position:sticky; top:0; backdrop-filter:saturate(130%) blur(8px);
+      z-index:10;
+    }
+    header h1{font-size:16px;margin:0 8px 0 0;color:#cfe6fb;font-weight:650;letter-spacing:.3px}
+    .hint{color:var(--muted);font-size:12px}
+    .row{display:flex; gap:16px; align-items:stretch}
+    .grow{flex:1}
+    input[type="text"]{
+      width:100%; padding:12px 14px; border-radius:12px; outline:none; border:1px solid rgba(255,255,255,.09);
+      background:#0e141b; color:#e9f2fb; font-size:14px;
+    }
+    button{
+      border:0; padding:12px 14px; border-radius:12px; color:#081018; background:var(--accent); font-weight:700; cursor:pointer;
+      transition:all .12s ease; box-shadow:0 6px 18px rgba(76,195,255,.25);
+    }
+    button.secondary{background:#1f2a36;color:#cfe6fb;border:1px solid rgba(255,255,255,.08); box-shadow:none}
+    button:hover{transform:translateY(-1px)}
+    main{max-width:1300px;margin:24px auto;padding:0 20px}
+    .grid{display:grid; grid-template-columns:2fr 2fr 2fr 2fr; gap:16px}
+    .col-span-2{grid-column:span 2}
+    .panel{
+      background:var(--panel);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:var(--radius);
+      overflow:hidden;
+    }
+    .panel h2{
+      margin:0; padding:12px 14px; font-size:13px; letter-spacing:.35px; text-transform:uppercase;
+      color:#c5d8ea; border-bottom:1px solid rgba(255,255,255,.06);
+      background:linear-gradient(180deg, #15202b 0%, #101722 100%);
+    }
+    .panel .content{padding:14px}
+    .cards{display:grid; grid-template-columns:1fr; gap:10px}
+    .card{
+      padding:12px; border-radius:12px; background:var(--card); border:1px solid rgba(255,255,255,.06);
+      display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
+    }
+    .title{font-weight:650}
+    .sub{color:var(--muted); font-size:12px}
+    .price{font-weight:800}
+    .ok{color:var(--ok)}
+    .muted{color:var(--muted)}
+    a{color:#cfe6fb; text-decoration:none}
+    a:hover{text-decoration:underline}
+    .kvs{display:flex; flex-wrap:wrap; gap:6px}
+    .pill{
+      padding:8px 10px; border-radius:999px; background:var(--pill); color:#1a0e00; font-weight:700; font-size:12px;
+      box-shadow:0 8px 22px rgba(255,138,0,.25);
+    }
+    .brand{background:linear-gradient(180deg,#ffc46b,#ff8a00)}
+    pre{
+      margin:0; padding:12px; border-radius:12px; background:#0a0f15; color:#ddecff; border:1px solid rgba(255,255,255,.06);
+      white-space:pre-wrap; max-height:560px; overflow:auto; font-size:12px; line-height:1.35;
+    }
+    footer{max-width:1300px;margin:8px auto 26px;padding:0 20px;color:var(--muted);font-size:12px}
+    .tag{padding:2px 8px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:11px;color:#9ad0ff}
+    .stack{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+  </style>
 </head>
-<body class="p-4 md:p-6">
-  <div class="grid grid-cols-12 gap-4">
-    <!-- Left controls -->
-    <div class="col-span-12 md:col-span-3 space-y-4">
-      <div class="panel p-4">
-        <div class="font-semibold mb-2">Step 0 · Connect to Supabase</div>
-        <label class="block text-sm mb-1">Supabase URL</label>
-        <input id="sb_url" class="w-full p-2 rounded bg-slate-800 border border-slate-700 mono" />
-        <label class="block text-sm mt-3 mb-1">Supabase ANON key</label>
-        <input id="sb_key" class="w-full p-2 rounded bg-slate-800 border border-slate-700 mono" />
-        <div class="grid grid-cols-2 gap-2 mt-3">
-          <div>
-            <label class="block text-xs mb-1 small">Events view</label>
-            <input id="view_events" class="w-full p-2 rounded bg-slate-800 border border-slate-700 mono" />
-          </div>
-          <div>
-            <label class="block text-xs mb-1 small">Products view</label>
-            <input id="view_products" class="w-full p-2 rounded bg-slate-800 border border-slate-700 mono" />
-          </div>
-        </div>
-        <div class="mt-2">
-          <label class="block text-xs mb-1 small">Articles view</label>
-          <input id="view_articles" class="w-full p-2 rounded bg-slate-800 border border-slate-700 mono" />
-        </div>
-        <div class="flex items-center gap-2 mt-3">
-          <button id="btnSave" class="btn">Save</button>
-          <button id="btnReset" class="btn">Reset defaults</button>
-          <span id="connStatus" class="small ml-auto">—</span>
-        </div>
-        <div class="flex items-center gap-2 mt-2">
-          <button id="btnConnect" class="btn">Connect</button>
-          <button id="btnFetchLive" class="btn">Fetch live data</button>
-        </div>
-        <div class="mt-3 space-y-1">
-          <label class="inline-flex items-center gap-2 small">
-            <input id="flagFallback" type="checkbox" class="accent-cyan-400">
-            Use Landing CSV fallback
-          </label>
-          <br>
-          <label class="inline-flex items-center gap-2 small">
-            <input id="flagGeneric" type="checkbox" class="accent-cyan-400" checked>
-            Enable generic pills
-          </label>
-        </div>
-      </div>
-
-      <div class="panel p-4">
-        <div class="font-semibold mb-2">Step 1 (optional) · Landing Pages CSV (fallback)</div>
-        <div class="small mb-2">Required columns: <span class="mono">url</span> and one of <span class="mono">meta_title</span> or <span class="mono">title</span>.</div>
-        <input id="fileLanding" type="file" accept=".csv" class="w-full">
-        <div class="flex items-center gap-2 mt-2">
-          <button id="btnClearLanding" class="btn">Clear</button>
-          <span id="landingMeta" class="small ml-auto">—</span>
-        </div>
-      </div>
-
-      <div class="panel p-4">
-        <div class="font-semibold mb-2">Step 2 · Questions CSV</div>
-        <div class="small mb-2">Columns: <span class="mono">idx, query, expected</span>. Extra columns ignored.</div>
-        <input id="fileQuestions" type="file" accept=".csv" class="w-full">
-        <div class="flex items-center gap-2 mt-2">
-          <button id="btnClearQuestions" class="btn">Clear</button>
-          <span id="questionsMeta" class="small ml-auto">—</span>
-        </div>
-        <div class="flex items-center gap-2 mt-3">
-          <button id="btnRunSuite" class="btn">Run whole suite</button>
-          <button id="btnDownloadSuite" class="btn">Download suite JSON</button>
-        </div>
-      </div>
-
-      <div class="panel p-4">
-        <div class="font-semibold mb-2">Step 3 · Try a single query</div>
-        <input id="singleQuery" placeholder="e.g. when is the next devon workshop?" class="w-full p-2 rounded bg-slate-800 border border-slate-700">
-        <div class="flex items-center gap-2 mt-2">
-          <button id="btnRun" class="btn">Run</button>
-          <button id="btnCopyJSON" class="btn">Copy JSON</button>
-          <button id="btnDownloadJSON" class="btn">Download JSON</button>
-        </div>
-        <div class="grid grid-cols-3 gap-2 mt-3 small">
-          <div>Intent: <span id="badgeIntent" class="badge">—</span></div>
-          <div>Counts: <span id="badgeCounts" class="badge">events=0, products=0, articles=0, pills=0</span></div>
-          <div class="text-right"><span id="brandGeneric" class="small"></span></div>
-        </div>
-      </div>
+<body>
+  <header>
+    <h1>BenchTest</h1>
+    <div class="row grow">
+      <input id="q" type="text" placeholder="Ask something…  (e.g. “whens the next bluebell workshops and whats the cost”)">
+      <button id="run">Run</button>
+      <button id="load" class="secondary">Run bench-suite.json</button>
+      <input id="file" type="file" accept="application/json" hidden />
     </div>
+    <div class="hint">RPC-first • falls back to views</div>
+  </header>
 
-    <!-- Right: results + log + suite -->
-    <div class="col-span-12 md:col-span-9 space-y-4">
-      <div class="grid grid-cols-2 gap-4">
-        <div class="panel p-3">
-          <div class="flex items-center justify-between">
-            <div class="font-semibold">Results · Events</div>
-            <div id="eventsCounter" class="small"></div>
-          </div>
-          <div class="overflow-auto max-h-72">
-            <table class="table">
-              <thead><tr><th>title</th><th>url</th><th>when</th><th>location</th></tr></thead>
-              <tbody id="tblEvents"></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="panel p-3">
-          <div class="flex items-center justify-between">
-            <div class="font-semibold">Results · Products</div>
-            <div id="productsCounter" class="small"></div>
-          </div>
-          <div class="overflow-auto max-h-72">
-            <table class="table">
-              <thead><tr><th>title</th><th>url</th><th>price</th><th>tags</th></tr></thead>
-              <tbody id="tblProducts"></tbody>
-            </table>
-          </div>
-        </div>
+  <main class="grid">
+    <section class="panel col-span-2">
+      <h2>Events (dates &amp; when)</h2>
+      <div class="content">
+        <div id="events" class="cards"></div>
       </div>
+    </section>
 
-      <div class="grid grid-cols-2 gap-4">
-        <div class="panel p-3">
-          <div class="flex items-center justify-between">
-            <div class="font-semibold">Results · Articles</div>
-            <div id="articlesCounter" class="small"></div>
-          </div>
-          <div class="overflow-auto max-h-56">
-            <table class="table">
-              <thead><tr><th>title</th><th>url</th><th>snippet</th></tr></thead>
-              <tbody id="tblArticles"></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="panel p-3">
-          <div class="flex items-center justify-between">
-            <div class="font-semibold">Pills generated</div>
-            <div class="small">Brand + Generic</div>
-          </div>
-          <div id="pillsArea" class="mt-1"></div>
-          <div class="mt-2 grid grid-cols-3 gap-2">
-            <div class="badge">Events: <span id="cntEvents">0</span></div>
-            <div class="badge">Products: <span id="cntProducts">0</span></div>
-            <div class="badge">Articles: <span id="cntArticles">0</span></div>
-          </div>
-        </div>
+    <section class="panel col-span-2">
+      <h2>Products (price lives here)</h2>
+      <div class="content">
+        <div id="products" class="cards"></div>
       </div>
+    </section>
 
-      <div class="panel p-3">
-        <div class="font-semibold mb-1">Execution Log</div>
-        <div id="log" class="log mono"></div>
+    <section class="panel col-span-2">
+      <h2>Articles</h2>
+      <div class="content">
+        <div id="articles" class="cards"></div>
       </div>
+    </section>
 
-      <div class="panel p-3">
-        <div class="flex items-center justify-between">
-          <div class="font-semibold">Suite Results</div>
-          <div id="suiteHeader" class="small">—</div>
-        </div>
-        <div class="overflow-auto max-h-[420px]">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>idx</th><th>query</th><th>expected</th><th>predicted</th><th>ok</th><th>details</th>
-              </tr>
-            </thead>
-            <tbody id="tblSuite"></tbody>
-          </table>
-        </div>
+    <section class="panel col-span-2">
+      <h2>Orange pills</h2>
+      <div class="content">
+        <div id="pills" class="kvs"></div>
       </div>
+    </section>
+
+    <section class="panel col-span-4">
+      <h2>Result JSON</h2>
+      <div class="content">
+        <div class="stack" style="margin-bottom:8px">
+          <span class="tag" id="latency">– ms</span>
+          <span class="tag" id="mode">fallback?</span>
+        </div>
+        <pre id="json"></pre>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="mono">
+      Configure <strong>SUPABASE_URL</strong> and <strong>SUPABASE_ANON_KEY</strong> below.  
+      Uses views: <em>ai_events, ai_products, ai_articles</em>.  
+      Optional RPCs (preferred): <em>search_events(text[]), search_products(text[]), search_articles(text[])</em>.
     </div>
-  </div>
+  </footer>
 
-<script>
-/* ---------------------------------------------------------------------- */
-/*  CONFIG (hard-wired defaults; still editable in the UI)                */
-/* ---------------------------------------------------------------------- */
-const DEFAULTS = {
-  SUPABASE_URL: "https://igzvwbvgvmzvvzoclufx.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY",
-  VIEW_EVENTS:   "ai_events",
-  VIEW_PRODUCTS: "ai_products",
-  VIEW_ARTICLES: "ai_articles"
-};
+  <!-- Supabase client -->
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-let supa = null;
-let env = { ...DEFAULTS };
-let live = { events: [], products: [], articles: [] };
-let landing = [];     // CSV fallback pages
-let questions = [];   // suite rows
-let lastRun = null;
-let suiteResults = [];
+    // ---------- CONFIG ----------
+    // 🔧 Replace these with your project values
+    const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR-ANON-KEY";
 
-/* ---------------------------------------------------------------------- */
-/*  Utility helpers                                                       */
-/* ---------------------------------------------------------------------- */
-const $ = sel => document.querySelector(sel);
-const el = (tag, cls, html) => {
-  const x = document.createElement(tag);
-  if (cls) x.className = cls;
-  if (html !== undefined) x.innerHTML = html;
-  return x;
-};
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+    // Limits to mirror your bench
+    const LIMITS = { events: 16, products: 104, articles: 95, pills: 8 };
 
-function log(msg) {
-  const t = new Date().toTimeString().slice(0,8);
-  const line = `${t}  ${msg}`;
-  $("#log").textContent += ( ($("#log").textContent ? "\n" : "") + line );
-}
+    // ---------- INIT ----------
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function saveToLocal() {
-  localStorage.setItem("bench.env", JSON.stringify(env));
-  log("Saved configuration.");
-}
+    // ---------- UTIL ----------
+    const $ = (sel) => document.querySelector(sel);
+    const nowIso = () => new Date().toISOString();
+    const todayDate = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const clean = (s='') => (s || '').toString().trim();
+    const uniq = (arr, keyFn) => {
+      const seen = new Set();
+      return arr.filter(x => {
+        const k = keyFn ? keyFn(x) : JSON.stringify(x);
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+    };
+    const scoreContains = (text, kws) => {
+      const t = (text || '').toLowerCase();
+      return kws.reduce((acc, kw) => acc + (t.includes(kw) ? 1 : 0), 0);
+    };
 
-function loadFromLocal() {
-  const raw = localStorage.getItem("bench.env");
-  if (!raw) return (env = { ...DEFAULTS });
-  try { env = JSON.parse(raw); } catch { env = { ...DEFAULTS }; }
-}
-
-function hydrateInputs() {
-  $("#sb_url").value = env.SUPABASE_URL;
-  $("#sb_key").value = env.SUPABASE_ANON_KEY;
-  $("#view_events").value = env.VIEW_EVENTS;
-  $("#view_products").value = env.VIEW_PRODUCTS;
-  $("#view_articles").value = env.VIEW_ARTICLES;
-}
-
-function readInputs() {
-  env.SUPABASE_URL = $("#sb_url").value.trim();
-  env.SUPABASE_ANON_KEY = $("#sb_key").value.trim();
-  env.VIEW_EVENTS = $("#view_events").value.trim();
-  env.VIEW_PRODUCTS = $("#view_products").value.trim();
-  env.VIEW_ARTICLES = $("#view_articles").value.trim();
-}
-
-/* CSV parsing (Papaparse) */
-function parseCSV(file) {
-  return new Promise((resolve, reject) => {
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: results => resolve(results.data),
-      error: err => reject(err)
-    });
-  });
-}
-
-/* Basic tokenizer for simple matching */
-function tokens(q) {
-  return (q || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
-/* crude intent heuristic (deterministic for bench) */
-function detectIntent(q) {
-  const t = tokens(q);
-  const has = s => t.includes(s);
-  const any = arr => arr.some(has);
-
-  if (any(["workshop","workshops","course","courses","class","classes","event","events","date","when","where","cost","price","next"]))
-    return "events";
-
-  // “articles” when specifically asking “what is …” or “how …”
-  if (has("what") || has("how") || has("guide") || has("tips")) return "advice";
-  return "advice";
-}
-
-/* Build OR filter for supabase (title/snippet contains any key) */
-function buildOrIlike(keys, cols = ["title","snippet"]) {
-  const safe = keys
-    .map(k => k.replace(/[%_,]/g, ""))
-    .filter(k => k.length >= 3)
-    .slice(0, 6);
-  if (!safe.length) return null;
-  const parts = [];
-  for (const k of safe) {
-    for (const c of cols) parts.push(`${c}.ilike.%${k}%`);
-  }
-  return parts.join(",");
-}
-
-/* Render helpers */
-function setCounts(e=0,p=0,a=0) {
-  $("#cntEvents").textContent = e;
-  $("#cntProducts").textContent = p;
-  $("#cntArticles").textContent = a;
-  $("#badgeCounts").textContent = `events=${e}, products=${p}, articles=${a}, pills=${(lastRun?.pills||[]).length||0}`;
-}
-
-function clrTable(tbodySel){ $(tbodySel).innerHTML = ""; }
-function pushRow(tbodySel, cells) {
-  const tr = el("tr");
-  for (const c of cells) tr.append(el("td","", c ?? ""));
-  $(tbodySel).append(tr);
-}
-function renderTopN() {
-  clrTable("#tblEvents"); clrTable("#tblProducts"); clrTable("#tblArticles");
-  const e = (lastRun?.events||[]).slice(0,20);
-  const p = (lastRun?.products||[]).slice(0,20);
-  const a = (lastRun?.articles||[]).slice(0,20);
-  for (const r of e) pushRow("#tblEvents",[esc(r.title), link(r.url), esc(r.when||""), esc(r.location||"")]);
-  for (const r of p) pushRow("#tblProducts",[esc(r.title), link(r.url), money(r.price), esc(r.tags||"")]);
-  for (const r of a) pushRow("#tblArticles",[esc(r.title), link(r.url), esc(r.snippet||"")]);
-  $("#eventsCounter").textContent   = `showing ${e.length} (of ${lastRun?.events?.length||0})`;
-  $("#productsCounter").textContent = `showing ${p.length} (of ${lastRun?.products?.length||0})`;
-  $("#articlesCounter").textContent = `showing ${a.length} (of ${lastRun?.articles?.length||0})`;
-}
-const esc = s => (s ?? "").toString().replace(/[<>&]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[m]));
-const link = u => u ? `<a href="${u}" target="_blank" class="text-cyan-300 underline break-all">${esc(u)}</a>` : "";
-const money = v => (v==null||v==="") ? "" : `£${Number(v).toLocaleString("en-GB",{maximumFractionDigits:0})}`;
-
-/* pills from landing CSV and some generic fallbacks */
-function generatePills(query) {
-  const out = [];
-  const t = tokens(query);
-  const add = (label,url,brand=true) => out.push({label,url,brand});
-
-  // Brand pills from landing CSV by keyword
-  const tryAdd = (kw, label) => {
-    const hit = landing.find(x => (x.title||x.meta_title||"").toLowerCase().includes(kw));
-    if (hit) add(label || (hit.title||hit.meta_title||"").slice(0,60), hit.url, true);
-  };
-  tryAdd("blog","Blog");
-  tryAdd("newsletter","Newsletter");
-  tryAdd("gift","Gift Vouchers");
-  tryAdd("payment","Payment Plan");
-
-  // Events generic landing search
-  if ($("#flagGeneric").checked) {
-    if (t.includes("workshop") || t.includes("workshops") || t.includes("course")) {
-      add("Event Listing", "https://www.alanranger.com/search?query=workshops", true);
-      add("Course Finder", "https://www.alanranger.com/course-finder-photography-classes-near-me", true);
+    function kwTokens(q){
+      const raw = clean(q).toLowerCase();
+      // split on non-letters, keep useful tokens only
+      let kws = raw.split(/[^a-z0-9]+/g).filter(w => w.length >= 3);
+      // tiny heuristic: de-plural “bluebells” -> “bluebell”
+      kws.forEach(k => { if(k.endsWith('s')) kws.push(k.slice(0,-1)); });
+      // keep unique
+      kws = Array.from(new Set(kws));
+      return kws.length ? kws : ['workshop']; // fallback token
     }
-    // Generic pills that always help navigation
-    add("Home", "https://www.alanranger.com", true);
-  }
 
-  // Query→site search pill (generic)
-  if ($("#flagGeneric").checked && query.trim()) {
-    const q = encodeURIComponent(query.trim());
-    add(`Search site: “${query.slice(0,24)}”`, `https://www.alanranger.com/search?query=${q}`, false);
-  }
-  return out;
-}
+    // Builds an OR expression for PostgREST .or(...) like:
+    // 'title.ilike.%kw1%,url.ilike.%kw1%,title.ilike.%kw2%,url.ilike.%kw2%'
+    const orExpr = (cols, kws) =>
+      kws.map(kw => cols.map(c => `${c}.ilike.*${encodeURIComponent(kw)}*`).join(',')).join(',');
 
-/* ---------------------------------------------------------------------- */
-/*  Supabase                                                              */
-/* ---------------------------------------------------------------------- */
-async function connect() {
-  readInputs();
-  supa = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-  $("#connStatus").textContent = "Connecting…";
-  log("Connecting to Supabase…");
-
-  // quick smoke: count rows in each view
-  const [e,p,a] = await Promise.all([
-    supa.from(env.VIEW_EVENTS).select("title",{count:"estimated",head:true}),
-    supa.from(env.VIEW_PRODUCTS).select("title",{count:"estimated",head:true}),
-    supa.from(env.VIEW_ARTICLES).select("title",{count:"estimated",head:true})
-  ]);
-
-  if (e.error || p.error || a.error) {
-    $("#connStatus").textContent = "Error";
-    log("ERROR connecting (check grants / view names).");
-    if (e.error) log("events: " + e.error.message);
-    if (p.error) log("products: " + p.error.message);
-    if (a.error) log("articles: " + a.error.message);
-    return;
-  }
-  $("#connStatus").textContent = "Connected.";
-  log(`Connected to Supabase. Views reachable · ${env.VIEW_EVENTS}: ${e.count||"?"} · ${env.VIEW_PRODUCTS}: ${p.count||"?"} · ${env.VIEW_ARTICLES}: ${a.count||"?"}`);
-}
-
-async function fetchLive() {
-  if (!supa) await connect();
-  $("#connStatus").textContent = "Fetching…";
-  log("Fetching live data…");
-
-  const [E,P,A] = await Promise.all([
-    supa.from(env.VIEW_EVENTS).select("title,url,when,location,start_date,date_start,date_end").order("start_date",{ascending:true}).limit(2000),
-    supa.from(env.VIEW_PRODUCTS).select("title,url,price,tags").limit(2000),
-    supa.from(env.VIEW_ARTICLES).select("title,url,snippet,kind").order("last_seen",{ascending:false}).limit(2000)
-  ]);
-
-  if (E.error) log("events error: " + E.error.message);
-  if (P.error) log("products error: " + P.error.message);
-  if (A.error) log("articles error: " + A.error.message);
-
-  live.events = E.data||[];
-  live.products = P.data||[];
-  live.articles = A.data||[];
-
-  log(`Loaded events=${live.events.length}, products=${live.products.length}, articles=${live.articles.length}.`);
-  $("#connStatus").textContent = "Connected.";
-}
-
-/* ---------------------------------------------------------------------- */
-/*  Runner                                                                */
-/* ---------------------------------------------------------------------- */
-async function runSingle(query) {
-  if (!supa) await connect();
-  const intent = detectIntent(query);
-  $("#badgeIntent").textContent = intent;
-
-  // EVENTS retrieval: simple ilike across title + location
-  let events = [];
-  if (intent === "events") {
-    const keys = tokens(query).filter(t => t.length>=3);
-    const or = buildOrIlike(keys, ["title"]);
-    if (or) {
-      const q = supa.from(env.VIEW_EVENTS).select("title,url,when,location,start_date,date_start,date_end").or(or).limit(200);
-      const { data, error } = await q;
-      if (!error) events = data || [];
-    }
-    // If nothing (or fallback ticked), show "latest/upcoming" slice as context
-    if (!events.length || $("#flagFallback").checked) {
-      const tail = live.events.slice(0,50);
-      if (tail.length) events = uniqBy([ ...events, ...tail ], r => r.url);
-    }
-  }
-
-  // PRODUCTS retrieval: search title
-  let products = [];
-  {
-    const keys = tokens(query).filter(t => t.length>=3);
-    const or = buildOrIlike(keys, ["title"]);
-    if (or) {
-      const { data, error } = await supa.from(env.VIEW_PRODUCTS).select("title,url,price,tags").or(or).limit(200);
-      if (!error) products = data || [];
-    }
-  }
-
-  // ARTICLES retrieval: title/snippet
-  let articles = [];
-  {
-    const keys = tokens(query).filter(t => t.length>=3);
-    const or = buildOrIlike(keys, ["title","snippet"]);
-    if (or) {
-      const { data, error } = await supa.from(env.VIEW_ARTICLES).select("title,url,snippet,kind").or(or).limit(200);
-      if (!error) articles = data || [];
-    }
-    if (!articles.length && $("#flagFallback").checked && landing.length) {
-      // show two strongest content-y landing pages as a weak fallback
-      const contentish = landing.filter(x => /blog|tips|guide|article|tutorial/i.test(`${x.title||x.meta_title||""}`));
-      articles = contentish.slice(0,2).map(x => ({title:x.title||x.meta_title||"(landing)", url:x.url, snippet:"(from Landing CSV)", kind:"landing"}));
-    }
-  }
-
-  // Pills
-  const pills = generatePills(query);
-
-  lastRun = {
-    q: query,
-    intent,
-    counts: { events: events.length, products: products.length, articles: articles.length, pills: pills.length },
-    events, products, articles, pills
-  };
-
-  $("#brandGeneric").textContent = `Events ${events.length} • Products ${products.length} • Articles ${articles.length}`;
-  setCounts(events.length, products.length, articles.length);
-  renderTopN();
-  renderPills(pills);
-}
-
-function renderPills(pills) {
-  const box = $("#pillsArea");
-  box.innerHTML = "";
-  for (const p of pills) {
-    const a = el("a","pill " + (p.brand?"brand":"generic"), (p.brand? "🏷️":"🔎") + " " + esc(p.label));
-    a.href = p.url; a.target="_blank";
-    box.append(a);
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-/*  Suite                                                                 */
-/* ---------------------------------------------------------------------- */
-async function runSuite() {
-  if (!questions.length) { log("No questions CSV loaded."); return; }
-  suiteResults = [];
-  $("#tblSuite").innerHTML = "";
-  let okCount = 0;
-
-  for (const row of questions) {
-    const idx = String(row.idx ?? "").trim() || String(suiteResults.length+1);
-    const q = (row.query||"").toString();
-    const expected = (row.expected||"").toString().toLowerCase();
-
-    await runSingle(q);
-    const predicted = lastRun.intent;
-    const ok = expected ? (predicted === expected) : true;
-    if (ok) okCount++;
-
-    const det = el("details");
-    const sum = el("summary","", "Show matches");
-    det.append(sum);
-
-    // compact preview of top matches
-    const preview = el("div","small mt-1");
-    const e0 = (lastRun.events||[]).slice(0,3).map(r=>`• ${esc(r.title)}`).join("<br>");
-    const p0 = (lastRun.products||[]).slice(0,2).map(r=>`• ${esc(r.title)}`).join("<br>");
-    const a0 = (lastRun.articles||[]).slice(0,2).map(r=>`• ${esc(r.title)}`).join("<br>");
-    preview.innerHTML =
-      `<div class="mt-1"><b>Events</b><br>${e0 || "(none)"}</div>` +
-      `<div class="mt-2"><b>Products</b><br>${p0 || "(none)"}</div>` +
-      `<div class="mt-2"><b>Articles</b><br>${a0 || "(none)"}</div>` +
-      `<div class="mt-2"><b>Pills</b><br>${(lastRun.pills||[]).map(p=>esc(p.label)).join(", ") || "(none)"}</div>`;
-    det.append(preview);
-
-    const tr = el("tr");
-    tr.append(el("td","small mono", esc(idx)));
-    tr.append(el("td","", esc(q)));
-    tr.append(el("td","small", esc(expected||"")));
-    tr.append(el("td","small", esc(predicted)));
-    tr.append(el("td", ok ? "ok" : "bad", ok ? "✓" : "✗"));
-    const td = el("td"); td.append(det); tr.append(td);
-    $("#tblSuite").append(tr);
-
-    suiteResults.push({ idx, q, expected, predicted, ok,
-      used: {
-        top_events: (lastRun.events||[]).slice(0,5),
-        top_products: (lastRun.products||[]).slice(0,5),
-        top_articles: (lastRun.articles||[]).slice(0,5),
-        pills: lastRun.pills
+    // ---------- RPC HELPERS ----------
+    async function tryRpc(name, args){
+      try {
+        const t0 = performance.now();
+        const { data, error } = await sb.rpc(name, args);
+        const dt = Math.round(performance.now() - t0);
+        if(error) return { ok:false, data:null, ms:dt, err:error.message };
+        return { ok:true, data, ms:dt };
+      } catch(e){
+        return { ok:false, data:null, ms:0, err:e.message };
       }
+    }
+
+    // ---------- FALLBACK QUERIES ----------
+    async function fbEvents(kws){
+      const t0 = performance.now();
+      // Filter by title hit first (ai_events columns from your view)
+      const { data, error } = await sb
+        .from('ai_events')
+        .select('title,url,when,location,start_date,date_start,date_end')
+        .or(orExpr(['title'], kws))
+        .order('date_start', { ascending:true, nullsFirst:false })
+        .order('start_date', { ascending:true, nullsFirst:false })
+        .limit(Math.max(LIMITS.events, 60));
+      const ms = Math.round(performance.now() - t0);
+      if(error) return { ok:false, data:[], ms, err:error.message };
+
+      // Keep upcoming only using client-side coalesce
+      const now = new Date();
+      const rows = (data||[]).filter(r => {
+        const ts = r.date_start ? new Date(r.date_start) :
+                   r.start_date ? new Date(r.start_date) : null;
+        return ts && ts >= now;
+      });
+
+      // Score by keyword relevance; then by soonest
+      rows.forEach(r => r._score = scoreContains(`${r.title} ${r.url} ${r.location}`, kws));
+      rows.sort((a,b) => (b._score - a._score) || (new Date(a.date_start||a.start_date) - new Date(b.date_start||b.start_date)));
+      return { ok:true, data: rows.slice(0, LIMITS.events), ms };
+    }
+
+    async function fbProducts(kws){
+      const t0 = performance.now();
+      const { data, error } = await sb
+        .from('ai_products')
+        .select('title,url,price,tags')
+        .or(orExpr(['title','url'], kws))
+        .limit(Math.max(LIMITS.products, 200));
+      const ms = Math.round(performance.now() - t0);
+      if(error) return { ok:false, data:[], ms, err:error.message };
+
+      const listPatterns = [
+        '/photography-workshops-near-me',
+        '/one-day-landscape-photography-workshops',
+        '/landscape-photography-workshops'
+      ];
+
+      const rows = (data||[]).map(r => {
+        const base = scoreContains(`${r.title} ${r.url}`, kws);
+        const isList = listPatterns.some(p => r.url.includes(p));
+        const priceBoost = (r.price ?? null) !== null ? 1 : 0; // prefer price
+        r._score = base + priceBoost - (isList ? 2 : 0);
+        return r;
+      });
+
+      // Sort: higher score, then by having price, then price ascending
+      rows.sort((a,b) => (b._score - a._score)
+        || ((a.price==null)-(b.price==null))
+        || ((a.price ?? Infinity) - (b.price ?? Infinity)));
+
+      return { ok:true, data: rows.slice(0, LIMITS.products), ms };
+    }
+
+    async function fbArticles(kws){
+      const t0 = performance.now();
+      const { data, error } = await sb
+        .from('ai_articles')
+        .select('title,url,snippet,kind')
+        .or(orExpr(['title','snippet'], kws))
+        .limit(Math.max(LIMITS.articles, 200));
+      const ms = Math.round(performance.now() - t0);
+      if(error) return { ok:false, data:[], ms, err:error.message };
+
+      (data||[]).forEach(r => r._score = scoreContains(`${r.title} ${r.snippet}`, kws));
+      data.sort((a,b) => (b._score - a._score) || (clean(a.title).localeCompare(clean(b.title))));
+      return { ok:true, data: data.slice(0, LIMITS.articles), ms };
+    }
+
+    // ---------- SEARCH PIPE ----------
+    async function fetchEvents(kws){
+      const rpc = await tryRpc('search_events', { kws });
+      if(rpc.ok && Array.isArray(rpc.data)) { lastModes.events = `rpc (${rpc.ms}ms)`; return rpc.data.slice(0, LIMITS.events); }
+      const fb = await fbEvents(kws); lastModes.events = `view (${fb.ms}ms)`;
+      return fb.data;
+    }
+    async function fetchProducts(kws){
+      const rpc = await tryRpc('search_products', { kws });
+      if(rpc.ok && Array.isArray(rpc.data)) { lastModes.products = `rpc (${rpc.ms}ms)`; return rpc.data.slice(0, LIMITS.products); }
+      const fb = await fbProducts(kws); lastModes.products = `view (${fb.ms}ms)`;
+      return fb.data;
+    }
+    async function fetchArticles(kws){
+      // You already created public.search_articles(kws text[])
+      const rpc = await tryRpc('search_articles', { kws });
+      if(rpc.ok && Array.isArray(rpc.data)) { lastModes.articles = `rpc (${rpc.ms}ms)`; return rpc.data.slice(0, LIMITS.articles); }
+      const fb = await fbArticles(kws); lastModes.articles = `view (${fb.ms}ms)`;
+      return fb.data;
+    }
+
+    function buildPills(q){
+      const pills = [
+        { label:'Blog',          url:'https://www.alanranger.com/blog-on-photography', brand:true },
+        { label:'Newsletter',    url:'https://www.alanranger.com/newsletter-signup-form', brand:true },
+        { label:'Gift Vouchers', url:'https://www.alanranger.com/photography-gift-vouchers', brand:true },
+        { label:'Payment Plan',  url:'https://www.alanranger.com/photography-payment-plan', brand:true },
+        { label:'Event Listing', url:'https://www.alanranger.com/search?query=workshops', brand:true },
+        { label:'Course Finder', url:'https://www.alanranger.com/course-finder-photography-classes-near-me', brand:true },
+        { label:'Home',          url:'https://www.alanranger.com', brand:true },
+      ];
+      const sq = encodeURIComponent(clean(q));
+      pills.push({ label:`Search site: “${clean(q)}”`, url:`https://www.alanranger.com/search?query=${sq}`, brand:false });
+      return pills.slice(0, LIMITS.pills);
+    }
+
+    function toWhen(e){
+      // ai_events exposes a pretty string `when`; if not, format from date_(start|end)
+      if(clean(e.when)) return e.when;
+      const a = e.date_start ? new Date(e.date_start) : (e.start_date ? new Date(e.start_date) : null);
+      if(!a) return '';
+      return a.toUTCString().slice(0,11); // e.g. "Sat, 24 Aug"
+    }
+
+    // ---------- RENDER ----------
+    function renderList(rootSel, rows, kind){
+      const root = $(rootSel);
+      root.innerHTML = '';
+      if(!rows || !rows.length){ root.innerHTML = `<div class="muted">No ${kind} found.</div>`; return; }
+
+      const frag = document.createDocumentFragment();
+      rows.forEach(r => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const left = document.createElement('div');
+
+        const title = document.createElement('div');
+        title.className = 'title';
+        title.innerHTML = `<a href="${r.url}" target="_blank" rel="noopener">${clean(r.title) || clean(r.url)}</a>`;
+
+        const sub = document.createElement('div');
+        sub.className = 'sub';
+        if(kind==='events'){
+          sub.textContent = `${toWhen(r)}${clean(r.location) ? ' • ' + r.location : ''}`;
+        } else if(kind==='products'){
+          sub.textContent = clean(r.tags || '');
+        } else if(kind==='articles'){
+          sub.textContent = clean(r.snippet || '').slice(0, 180);
+        }
+
+        left.appendChild(title);
+        left.appendChild(sub);
+        card.appendChild(left);
+
+        const right = document.createElement('div');
+        if(kind==='products'){
+          const price = r.price==null ? '—' : (Number(r.price).toFixed(0));
+          right.innerHTML = `<span class="price">${price === '—' ? '<span class="muted">£—</span>' : '£'+price}</span>`;
+        } else if(kind==='events'){
+          // events intentionally have no price – price lives in products
+          right.innerHTML = `<span class="muted">when</span>`;
+        } else {
+          right.innerHTML = `<span class="muted">${clean(r.kind||'article')}</span>`;
+        }
+        card.appendChild(right);
+
+        frag.appendChild(card);
+      });
+      root.appendChild(frag);
+    }
+
+    function renderPills(pills){
+      const root = $('#pills');
+      root.innerHTML = '';
+      for(const p of pills){
+        const a = document.createElement('a');
+        a.className = `pill ${p.brand?'brand':''}`;
+        a.href = p.url; a.target = '_blank'; a.rel='noopener';
+        a.textContent = p.label;
+        root.appendChild(a);
+      }
+    }
+
+    function renderJSON(obj){
+      $('#json').textContent = JSON.stringify(obj, null, 2);
+    }
+
+    const lastModes = { events:'', products:'', articles:'' };
+
+    async function runOnce(q){
+      const t0 = performance.now();
+      const kws = kwTokens(q);
+
+      const [events, products, articles] = await Promise.all([
+        fetchEvents(kws),
+        fetchProducts(kws),
+        fetchArticles(kws),
+      ]);
+
+      const pills = buildPills(q);
+
+      // Compose bench-style JSON
+      const result = {
+        q: q,
+        intent: 'events', // default bucket for these queries
+        counts: {
+          events: events.length,
+          products: products.length,
+          articles: articles.length,
+          pills: pills.length
+        },
+        events: events.map(e => ({
+          title: e.title, url: e.url, when: toWhen(e), location: e.location || null,
+          start_date: e.start_date ?? null, date_start: e.date_start ?? null, date_end: e.date_end ?? null
+        })),
+        products: products.map(p => ({
+          title: p.title, url: p.url, price: p.price ?? null, tags: p.tags ?? null
+        })),
+        articles: articles.map(a => ({
+          title: a.title, url: a.url, snippet: a.snippet ?? '', kind: a.kind ?? 'article'
+        })),
+        pills: pills.map(pl => ({ label: pl.label, url: pl.url, brand: !!pl.brand }))
+      };
+
+      // Render UI
+      renderList('#events', events, 'events');
+      renderList('#products', products, 'products');
+      renderList('#articles', articles, 'articles');
+      renderPills(pills);
+      renderJSON(result);
+
+      // Meta
+      const ms = Math.round(performance.now() - t0);
+      $('#latency').textContent = `${ms} ms`;
+      $('#mode').textContent = `events=${lastModes.events} • products=${lastModes.products} • articles=${lastModes.articles}`;
+    }
+
+    // ---------- BENCH SUITE ----------
+    async function runSuite(file){
+      const text = await file.text();
+      const suite = JSON.parse(text);
+      const items = Array.isArray(suite) ? suite : (suite.tests || []);
+      if(!items || !items.length){ alert('No tests found in JSON. Expect array of {q: "..."}'); return; }
+      for(const t of items){
+        await runOnce(t.q || '');
+      }
+    }
+
+    // ---------- WIRE ----------
+    $('#run').addEventListener('click', () => runOnce($('#q').value));
+    $('#q').addEventListener('keydown', (e) => { if(e.key==='Enter') runOnce($('#q').value); });
+    $('#load').addEventListener('click', () => $('#file').click());
+    $('#file').addEventListener('change', e => {
+      const f = e.target.files?.[0]; if(f) runSuite(f);
     });
-    await sleep(30); // keep UI responsive
-  }
 
-  $("#suiteHeader").textContent = `Suite: ${okCount}/${suiteResults.length} matched expected intent.`;
-  log(`Suite done: ${okCount}/${suiteResults.length} matched expected intent.`);
-}
-
-/* ---------------------------------------------------------------------- */
-/*  Rendering helpers (misc)                                              */
-/* ---------------------------------------------------------------------- */
-function uniqBy(arr, keyFn){
-  const m = new Map();
-  for (const v of arr) m.set(keyFn(v), v);
-  return [...m.values()];
-}
-
-/* ---------------------------------------------------------------------- */
-/*  UI wiring                                                             */
-/* ---------------------------------------------------------------------- */
-function wire() {
-  // Defaults on first load
-  loadFromLocal();
-  hydrateInputs();
-  $("#connStatus").textContent = "—";
-  log("Bench ready.");
-
-  $("#btnSave").onclick = () => { readInputs(); saveToLocal(); };
-  $("#btnReset").onclick = () => { env = { ...DEFAULTS }; hydrateInputs(); saveToLocal(); };
-  $("#btnConnect").onclick = connect;
-  $("#btnFetchLive").onclick = fetchLive;
-
-  $("#btnClearLanding").onclick = () => { landing = []; $("#landingMeta").textContent = "Cleared"; };
-  $("#btnClearQuestions").onclick = () => { questions = []; $("#questionsMeta").textContent = "Cleared"; };
-
-  $("#fileLanding").onchange = async e => {
-    const f = e.target.files?.[0]; if (!f) return;
-    landing = await parseCSV(f);
-    $("#landingMeta").textContent = `Loaded ${landing.length} landing pages.`;
-    log(`Landing CSV loaded (${landing.length} rows).`);
-  };
-
-  $("#fileQuestions").onchange = async e => {
-    const f = e.target.files?.[0]; if (!f) return;
-    questions = await parseCSV(f);
-    $("#questionsMeta").textContent = `Loaded ${questions.length} questions.`;
-    log(`Questions CSV loaded (${questions.length} rows).`);
-  };
-
-  $("#btnRun").onclick = async () => {
-    const q = $("#singleQuery").value || "";
-    log(`Run: ${JSON.stringify({q, intent: detectIntent(q)})}`);
-    await runSingle(q);
-  };
-
-  $("#btnCopyJSON").onclick = () => {
-    if (!lastRun) return;
-    const payload = JSON.stringify(lastRun, null, 2);
-    navigator.clipboard.writeText(payload);
-    log("Copied JSON of last run.");
-  };
-
-  $("#btnDownloadJSON").onclick = () => {
-    if (!lastRun) return;
-    downloadBlob(JSON.stringify(lastRun, null, 2), "bench-last-run.json", "application/json");
-  };
-
-  $("#btnRunSuite").onclick = runSuite;
-  $("#btnDownloadSuite").onclick = () => {
-    if (!suiteResults.length) return;
-    downloadBlob(JSON.stringify({ meta:{ at:new Date().toISOString() }, results:suiteResults }, null, 2),
-      "bench-suite.json", "application/json");
-  };
-
-  // Auto-connect & fetch once
-  connect().then(fetchLive);
-}
-
-function downloadBlob(text, name, type) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], {type}));
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-window.addEventListener("DOMContentLoaded", wire);
-</script>
+    // Example placeholder to nudge the first run
+    $('#q').value = 'whens the next bluebell workshops and whats the cost';
+  </script>
 </body>
 </html>
