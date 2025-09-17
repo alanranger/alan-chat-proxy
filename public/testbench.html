@@ -28,7 +28,6 @@
     .pill.brand{background:transparent;border-color:var(--orange);color:var(--orange)}
     .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
     .span-12{grid-column:span 12}
-    .span-6{grid-column:span 6}
     .span-4{grid-column:span 4}
     .kpi{display:flex;gap:10px;align-items:center}
     .badge{display:inline-block;padding:2px 6px;border-radius:6px;background:#0b1220;border:1px solid var(--line);font-size:12px}
@@ -36,19 +35,14 @@
     .badge.bad{border-color:#3a1e1e;color:#fecaca}
     details.debug{border:1px dashed var(--line);border-radius:8px;padding:10px;margin-top:12px}
     .small{font-size:12px}
-    .right{float:right}
-    .mb4{margin-bottom:4px}
     .mb8{margin-bottom:8px}
-    .mb12{margin-bottom:12px}
     .mb16{margin-bottom:16px}
-    .mb24{margin-bottom:24px}
     .orange{color:var(--orange)}
     .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .w100{width:100%}
     .nowrap{white-space:nowrap}
     .table-wrap{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:8px}
     .hint{color:#94a3b8}
-    .divider{height:1px;background:var(--line);margin:12px 0}
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.5/dist/umd/supabase.js"></script>
 </head>
@@ -71,8 +65,7 @@
       </div>
       <details class="debug">
         <summary>Debug: View names</summary>
-        <div class="small">Read-only views:</div>
-        <div class="mono small">ai_events, ai_products, ai_articles, page_chunks</div>
+        <div class="small">Read-only views: <code>ai_events</code>, <code>ai_products</code>, <code>ai_articles</code>, <code>page_chunks</code></div>
       </details>
     </div>
 
@@ -89,10 +82,12 @@
         <div id="pills"></div>
       </div>
       <div class="flex small">
-        <button id="btnCopySummary" title="Copy a readable summary of the last run">Copy last run</button>
-        <button id="btnCopyJSON" title="Copy full JSON of the last run">Copy JSON</button>
-        <button id="btnDownloadJSON" title="Download full JSON of the last run">Download JSON</button>
-        <button id="btnCopyLogs" title="Copy Debug & Logs">Copy logs</button>
+        <button id="btnCopySummary">Copy last run</button>
+        <button id="btnCopyJSON">Copy JSON</button>
+        <button id="btnDownloadJSON">Download JSON</button>
+        <button id="btnCopyLogs">Copy logs</button>
+        <button id="btnCopySuiteJSON">Copy suite (JSON)</button>
+        <button id="btnDownloadSuiteCSV">Download suite (CSV)</button>
         <span id="copyStatus" class="badge">Ready</span>
       </div>
     </div>
@@ -171,22 +166,25 @@
       return (q||"").toLowerCase().replace(/[^a-z0-9\s-]/g," ").split(/\s+/).filter(Boolean);
     }
 
+    // Improved heuristic: schedule > price > advice > events
     function detectIntent(q) {
-      const s = (q || "").toLowerCase();
+      const s = (q || "").toLowerCase().replace(/\s+/g,' ').trim();
+
       const schedule = /\b(when|where|date|time|next|upcoming|start|ends?)\b/;
-      const advice   = /\b(what|how|why|do i|can i|should i|is it|are there|need|require|free|tripod|camera|lens|settings?)\b/;
+      const priceN   = /\b(price|cost|how much|£|gbp|voucher|vouchers|gift|payment|plan|buy|subscription)\b/;
+      const adviceQ  = /\b(what|how|why|need|require|should i|can i|do i|do you|will you|can you|is there|are there)\b/;
       const eventN   = /\b(workshop|workshops|course|courses|class|classes|event|events|session|tuition)\b/;
-      const priceN   = /\b(price|cost|£|gbp|voucher|vouchers|gift|payment|plan|buy|subscription)\b/;
 
       if (schedule.test(s) && eventN.test(s)) return "events";
-      if (advice.test(s)) return "advice";
       if (priceN.test(s)) return "products";
+      if (adviceQ.test(s)) return "advice";
       if (eventN.test(s)) return "events";
       return "advice";
     }
 
     // ------- Brand pills (landing CSV only). No "search site" pill ever -------
     let landing = [];
+    let lastRun = { query:"", tokens:[], intent:null, pills:[], events:[], products:[], articles:[] };
     function generatePills() {
       const wrap = document.getElementById('pills');
       wrap.innerHTML = '';
@@ -215,7 +213,6 @@
         wrap.appendChild(a);
       });
 
-      // Save pills for export
       lastRun.pills = out;
     }
 
@@ -285,7 +282,6 @@
       return events.map(e => ({ ...e, price: priceByUrl.get(e.url) ?? null }));
     }
 
-    // ------- Rendering -------
     const fmt = new Intl.NumberFormat('en-GB', { style:'currency', currency:'GBP', maximumFractionDigits:0 });
 
     function renderEvents(rows){
@@ -328,8 +324,6 @@
     function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
 
     // ------- Export helpers -------
-    let lastRun = { query:"", tokens:[], intent:null, pills:[], events:[], products:[], articles:[] };
-
     function buildReadableSummary(){
       const maxList = 20;
       const lines = [];
@@ -379,6 +373,24 @@
       a.click();
       document.body.removeChild(a);
     }
+    function downloadCSV(filename, rows){
+      const header = 'idx,query,expected,got,pass';
+      const lines = rows.map(r => [
+        csvCell(r.idx), csvCell(r.query), csvCell(r.expected), csvCell(r.got), csvCell(r.pass ? '1' : '0')
+      ].join(','));
+      const csv = [header, ...lines].join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+    function csvCell(v){
+      const s = (v ?? '').toString().replace(/"/g,'""');
+      return /[",\n]/.test(s) ? `"${s}"` : s;
+    }
 
     // ------- Single run -------
     async function runSingle(){
@@ -415,6 +427,7 @@
 
     // ------- Suite runner -------
     let questions = []; // [{idx, query, expected}]
+    let suiteResults = []; // [{idx,query,expected,got,pass}]
     function normalizeExpected(v){
       const s = (v||'').toLowerCase().trim();
       if (s === 'articles') return 'advice'; // policy: treat as equivalent
@@ -424,10 +437,12 @@
     async function runSuite(){
       if (!questions.length){ log('No questions loaded.'); return; }
       let pass=0, fail=0;
+      suiteResults = [];
       for (const row of questions){
         const expected = normalizeExpected(row.expected);
         const got = detectIntent(row.query||'');
         const ok = (got === expected);
+        suiteResults.push({ idx:row.idx, query:row.query, expected, got, pass:ok });
         ok ? pass++ : fail++;
         log(`[${row.idx}] "${row.query}" → got:${got} expected:${expected} ${ok?'✓':'✗'}`);
       }
@@ -437,18 +452,20 @@
     }
 
     // ------- Event wiring -------
-    document.getElementById('btnConnect').addEventListener('click', connect);
-    document.getElementById('btnRun').addEventListener('click', runSingle);
-    document.getElementById('btnRunSuite').addEventListener('click', runSuite);
+    const $byId = id => document.getElementById(id);
 
-    document.getElementById('csvLanding').addEventListener('change', async (e)=>{
+    $byId('btnConnect').addEventListener('click', connect);
+    $byId('btnRun').addEventListener('click', runSingle);
+    $byId('btnRunSuite').addEventListener('click', runSuite);
+
+    $byId('csvLanding').addEventListener('change', async (e)=>{
       const f = e.target.files?.[0]; if (!f) return;
       landing = await parseCSVFile(f);
       log(`Loaded landing pages: ${landing.length}`);
       generatePills();
     });
 
-    document.getElementById('csvQuestions').addEventListener('change', async (e)=>{
+    $byId('csvQuestions').addEventListener('change', async (e)=>{
       const f = e.target.files?.[0]; if (!f) return;
       const rows = await parseCSVFile(f);
       questions = rows.map(r=>({ idx:r.idx, query:r.query, expected:r.expected }));
@@ -456,18 +473,12 @@
     });
 
     // Export buttons
-    document.getElementById('btnCopySummary').addEventListener('click', async ()=>{
-      await copyText(buildReadableSummary());
-    });
-    document.getElementById('btnCopyJSON').addEventListener('click', async ()=>{
-      await copyText(JSON.stringify(lastRun, null, 2));
-    });
-    document.getElementById('btnDownloadJSON').addEventListener('click', ()=>{
-      downloadJSON('bench-last-run.json', lastRun);
-    });
-    document.getElementById('btnCopyLogs').addEventListener('click', async ()=>{
-      await copyText(logEl.textContent || '');
-    });
+    $byId('btnCopySummary').addEventListener('click', async ()=>{ await copyText(buildReadableSummary()); });
+    $byId('btnCopyJSON').addEventListener('click', async ()=>{ await copyText(JSON.stringify(lastRun, null, 2)); });
+    $byId('btnDownloadJSON').addEventListener('click', ()=>{ downloadJSON('bench-last-run.json', lastRun); });
+    $byId('btnCopyLogs').addEventListener('click', async ()=>{ await copyText(logEl.textContent || ''); });
+    $byId('btnCopySuiteJSON').addEventListener('click', async ()=>{ await copyText(JSON.stringify({ results:suiteResults }, null, 2)); flashCopyStatus('Suite JSON copied'); });
+    $byId('btnDownloadSuiteCSV').addEventListener('click', ()=>{ downloadCSV('bench-suite-results.csv', suiteResults); });
 
     // Initial pills (empty landing still adds fixed brand pills)
     generatePills();
