@@ -1,550 +1,525 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>BenchTest</title>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" />
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<style>
-  :root{
-    --bg:#0f1115;--panel:#151922;--muted:#8791a1;--text:#e6e9ef;
-    --accent:#78a9ff;--ok:#17c964;--warn:#f5a524;--bad:#f31260;--chip:#ffb020;
-    --line:#212636;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;background:var(--bg);color:var(--text);
-    font:14px/1.4 ui-sans-serif,system-ui,Segoe UI,Roboto,Inter,Helvetica,Arial;
-  }
-  a{color:var(--accent);text-decoration:none}
-  .wrap{display:grid;grid-template-columns:280px 1fr;gap:16px;padding:16px}
-  .sidebar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;position:sticky;top:12px;height:calc(100vh - 24px);overflow:auto}
-  .section{margin:10px 0 16px}
-  .section h4{margin:0 0 10px;font-weight:600;color:#cdd6e6;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
-  .row{display:flex;gap:8px;align-items:center;margin:6px 0}
-  input[type=text]{width:100%;background:#0b0e13;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px 12px;outline:none}
-  input[type=checkbox]{transform:translateY(1px)}
-  button{
-    background:#1b2331;border:1px solid var(--line);color:var(--text);
-    padding:8px 10px;border-radius:8px;cursor:pointer
-  }
-  button.primary{background:#2e3a52;border-color:#3c4b6a}
-  button:disabled{opacity:.5;cursor:not-allowed}
-  .hint{color:var(--muted);font-size:12px}
-  .grid{
-    display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px
-  }
-  .grid3{grid-template-columns:1fr 1fr 1fr}
-  .panel{
-    background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden
-  }
-  .panel h3{
-    margin:0;padding:10px 12px;border-bottom:1px solid var(--line);
-    font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#cdd6e6;
-    display:flex;align-items:center;justify-content:space-between
-  }
-  .panel .body{padding:10px 12px;overflow:auto;max-height:290px}
-  table{width:100%;border-collapse:collapse}
-  th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}
-  th{color:#a8b3c9;font-weight:600;font-size:12px}
-  .chips{display:flex;gap:8px;flex-wrap:wrap}
-  .chip{
-    background:linear-gradient(0deg,#ffcc66,#ffb13b);
-    color:#3a2b00;border-radius:16px;padding:6px 10px;font-weight:600;font-size:12px
-  }
-  .muted{color:var(--muted)}
-  .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
-  .json{background:#0b0e13;border:1px solid var(--line);border-radius:10px;padding:10px;white-space:pre;overflow:auto;max-height:340px}
-  .suite{background:var(--panel);border:1px solid var(--line);border-radius:10px}
-  .suite table tbody tr:hover{background:#111622}
-  .pillcounts{font-size:12px;color:var(--muted)}
-</style>
+  <meta charset="utf-8" />
+  <title>Bench Test – Events / Products / Articles</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Supabase & PapaParse -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    :root{
+      --bg:#0e1117;--panel:#161b22;--muted:#9aa4b3;--text:#e6edf3;--accent:#3b82f6;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;
+      --border:#222834;--chip:#1f2633;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif}
+    .page{display:grid;grid-template-columns:300px 1fr;gap:14px;padding:14px;min-height:100vh}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:10px}
+    .left{display:flex;flex-direction:column;gap:14px}
+    .section{padding:12px}
+    .section h3{margin:0 0 10px 0;font-weight:600;font-size:14px;color:#cbd5e1}
+    .row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+    input[type=text], select{width:100%;background:#0b0f15;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px}
+    button{background:#1f2937;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;cursor:pointer}
+    button.primary{background:var(--accent);border-color:transparent}
+    button.small{padding:6px 8px;font-size:12px}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .kpi{display:flex;gap:10px;margin-top:8px}
+    .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:#0b0f15;color:#cbd5e1}
+    .badge.ok{border-color:#1f5130;background:#0b1f14;color:#86efac}
+    .badge.warn{border-color:#4a3a14;background:#1a1307;color:#fde68a}
+    .badge.err{border-color:#5a1a1a;background:#1a0b0b;color:#fecaca}
+    .right{display:grid;grid-template-rows:auto 1fr;gap:14px}
+    .grids{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .table{width:100%;border-collapse:collapse;font-size:13px}
+    .table th,.table td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+    .table th{color:#cbd5e1;background:#111622;position:sticky;top:0}
+    .gridTitle{display:flex;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border)}
+    .gridTitle h4{margin:0;font-weight:600}
+    .pillbar{display:flex;flex-wrap:wrap;gap:6px;padding:8px}
+    .pill{background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:4px 8px;font-size:12px;color:var(--muted)}
+    .log{height:220px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap;background:#0b0f15;border-top:1px solid var(--border);border-radius:0 0 10px 10px;padding:10px}
+    .hint{font-size:12px;color:var(--muted)}
+    a.link{color:#a5b4fc;text-decoration:none}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <!-- LEFT: steps -->
-  <aside class="sidebar">
-    <div class="section">
-      <h4>Step 0 · Connect to Supabase</h4>
-      <div class="row"><button id="btnConnect" class="primary">Connect</button><span id="connState" class="hint">disconnected</span></div>
-      <div class="row hint">Hard coded URL & key are in the file (same as before).</div>
-      <div class="row"><label><input id="cbCsvFallback" type="checkbox" /> Use landing CSV (fallback)</label></div>
-      <div class="row"><label><input id="cbGenericPills" type="checkbox" checked /> Enable generic pills</label></div>
-      <div class="hint">RPCs (if present): <code>search_events</code>, <code>search_products</code>, <code>search_articles</code></div>
+<div class="page">
+  <!-- LEFT PANEL -->
+  <div class="left">
+    <div class="card section">
+      <h3>Step 0 · Connect to Supabase</h3>
+      <div class="row"><input id="sbUrl" type="text" placeholder="Supabase URL"></div>
+      <div class="row"><input id="sbAnon" type="text" placeholder="Supabase ANON key"></div>
+      <div class="row">
+        <select id="eventsView"><option value="ai_events">ai_events</option></select>
+        <select id="productsView"><option value="ai_products">ai_products</option></select>
+      </div>
+      <div class="row">
+        <select id="articlesView"><option value="ai_articles">ai_articles</option></select>
+      </div>
+      <div class="row">
+        <button id="saveCfg" class="small">Save</button>
+        <button id="resetCfg" class="small">Reset defaults</button>
+      </div>
+      <div class="row">
+        <button id="btnConnect" class="primary">Connect</button>
+        <button id="btnFetch">Fetch live data</button>
+      </div>
+      <div class="kpi"><span id="connStatus" class="badge">Disconnected.</span></div>
+      <div class="row" style="margin-top:6px;">
+        <label class="hint"><input id="useLandingFallback" type="checkbox" /> Use Landing CSV fallback</label>
+        <label class="hint" style="margin-left:10px;"><input id="enableGenericPills" type="checkbox" checked /> Enable generic pills</label>
+      </div>
     </div>
 
-    <div class="section">
-      <h4>Step 1 (optional) · Landing Pages CSV (fallback)</h4>
-      <div class="row">
-        <input type="file" id="landingCsv" accept=".csv" />
-        <button id="btnClearLanding">Clear</button>
-      </div>
-      <div id="landingInfo" class="hint">Loaded 0 landing pages.</div>
+    <div class="card section">
+      <h3>Step 1 (optional) · Landing Pages CSV (fallback)</h3>
       <div class="hint">Required columns: <code>url</code> and one of <code>meta_title</code> or <code>title</code>.</div>
+      <div class="row"><input id="landingCsv" type="file" accept=".csv" /><button id="clearLanding" class="small">Clear</button></div>
+      <div id="landingInfo" class="hint">No file loaded.</div>
     </div>
 
-    <div class="section">
-      <h4>Step 2 · Questions CSV</h4>
+    <div class="card section">
+      <h3>Step 2 · Questions CSV</h3>
+      <div class="hint">Columns: <code>idx, query, expected</code>. Extra columns ignored.</div>
+      <div class="row"><input id="questionsCsv" type="file" accept=".csv" /><button id="clearQuestions" class="small">Clear</button></div>
       <div class="row">
-        <input type="file" id="questionsCsv" accept=".csv" />
         <button id="runSuite" class="primary">Run whole suite</button>
+        <button id="downloadSuiteJson" class="small">Download suite JSON</button>
       </div>
-      <div class="row">
-        <button id="btnCopySuite">Copy JSON</button>
-        <button id="btnDownloadSuite">Download suite JSON</button>
-      </div>
-      <div id="qsInfo" class="hint">Loaded 0 questions.</div>
+      <div id="questionsInfo" class="hint">No file loaded.</div>
     </div>
 
-    <div class="section">
-      <h4>Step 3 · Try a single query</h4>
-      <div class="row"><input type="text" id="q" placeholder="e.g. whens the next bluebell workshop?" /></div>
+    <div class="card section">
+      <h3>Step 3 · Try a single query</h3>
+      <div class="row"><input id="singleQuery" type="text" placeholder="e.g. when is the next devon workshop?" /></div>
       <div class="row">
         <button id="btnRun" class="primary">Run</button>
-        <span id="intentBadge" class="hint">intent: —</span>
+        <button id="btnCopyJson" class="small">Copy JSON</button>
+        <button id="btnDownloadJson" class="small">Download JSON</button>
       </div>
-      <div class="hint" id="countsHint">events=0, products=0, articles=0, pills=0</div>
+      <div class="kpi">
+        <span id="intentBadge" class="badge">intent: —</span>
+        <span id="countsBadge" class="badge">events=0, products=0, articles=0, pills=0</span>
+      </div>
     </div>
-  </aside>
+  </div>
 
-  <!-- RIGHT: results -->
-  <main>
-    <div class="grid grid3">
-      <div class="panel">
-        <h3>Results · Events <span class="hint" id="eventsMeta"></span></h3>
-        <div class="body">
-          <table id="tblEvents">
-            <thead><tr><th>title</th><th>url</th><th>when</th><th>location</th></tr></thead>
+  <!-- RIGHT PANEL -->
+  <div class="right">
+    <div class="grids">
+      <div class="card">
+        <div class="gridTitle"><h4>Results · Events</h4><span id="eventsKpi" class="badge">–</span></div>
+        <div style="max-height:260px;overflow:auto;">
+          <table class="table" id="eventsTable">
+            <thead><tr><th style="width:34%">title</th><th>url</th><th style="width:16%">when</th><th style="width:18%">location</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
 
-      <div class="panel">
-        <h3>Results · Articles <span class="hint" id="articlesMeta"></span></h3>
-        <div class="body">
-          <table id="tblArticles">
-            <thead><tr><th>title</th><th>url</th><th>snippet</th></tr></thead>
+      <div class="card">
+        <div class="gridTitle"><h4>Results · Products</h4><span id="productsKpi" class="badge">–</span></div>
+        <div style="max-height:260px;overflow:auto;">
+          <table class="table" id="productsTable">
+            <thead><tr><th style="width:45%">title</th><th>url</th><th style="width:12%">price</th><th style="width:16%">tags</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="grids">
+      <div class="card">
+        <div class="gridTitle"><h4>Results · Articles</h4><span id="articlesKpi" class="badge">–</span></div>
+        <div style="max-height:220px;overflow:auto;">
+          <table class="table" id="articlesTable">
+            <thead><tr><th style="width:55%">title</th><th>url</th><th>snippet</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
 
-      <div class="panel">
-        <h3>Results · Products <span class="hint" id="productsMeta"></span></h3>
-        <div class="body">
-          <table id="tblProducts">
-            <thead><tr><th>title</th><th>url</th><th>price</th><th>tags</th></tr></thead>
-            <tbody></tbody>
-          </table>
-          <div class="pillcounts" id="pillCounts"></div>
+      <div class="card">
+        <div class="gridTitle">
+          <h4>Pills generated</h4>
+          <div><span id="pillCounts" class="badge">Events 0</span><span id="pillCounts2" class="badge" style="margin-left:6px;">Products 0</span><span id="pillCounts3" class="badge" style="margin-left:6px;">Articles 0</span></div>
         </div>
+        <div class="pillbar" id="pillBar"></div>
       </div>
     </div>
 
-    <div class="grid">
-      <div class="panel">
-        <h3>Pills generated</h3>
-        <div class="body"><div class="chips" id="pills"></div></div>
+    <div class="card" id="suiteCard">
+      <div class="gridTitle">
+        <h4>Suite Results</h4>
+        <span id="suiteSummary" class="badge">—</span>
       </div>
-      <div class="panel">
-        <h3>Result JSON <span id="timing" class="hint"></span></h3>
-        <div class="body">
-          <pre class="json" id="jsonOut">{}</pre>
-        </div>
-      </div>
-    </div>
-
-    <div class="suite">
-      <h3 style="margin:0;padding:10px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
-        Suite Results
-        <span id="suiteScore" class="hint"></span>
-      </h3>
-      <div style="padding:10px 12px;overflow:auto;max-height:360px">
-        <table id="tblSuite">
+      <div style="max-height:240px;overflow:auto;">
+        <table class="table" id="suiteTable">
           <thead>
-            <tr><th>idx</th><th>query</th><th>expected</th><th>predicted</th><th>ok</th></tr>
+            <tr>
+              <th style="width:60px;">idx</th>
+              <th>query</th>
+              <th style="width:120px;">expected</th>
+              <th style="width:120px;">predicted</th>
+              <th style="width:80px;">ok</th>
+            </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
     </div>
-  </main>
+
+    <div class="card">
+      <div class="gridTitle"><h4>Execution Log</h4></div>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
 </div>
 
 <script>
 /* =========================
-   HARD-CODED SUPABASE CONFIG
-   (same model as before)
+   HARD-CODED DEFAULTS
 ========================= */
-const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";      // <-- put your existing URL
-const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";                    // <-- put your existing anon key
+const DEFAULTS = {
+  SUPABASE_URL: 'https://igzvwbvgvmzvvzoclufx.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY',
+  VIEW_EVENTS:   'ai_events',
+  VIEW_PRODUCTS: 'ai_products',
+  VIEW_ARTICLES: 'ai_articles',
+  PREVIEW_ROWS: 20
+};
+
 let supa = null;
+let env = {...DEFAULTS};
+let live = { events: [], products: [], articles: [] };
+let landing = [];     // CSV fallback pages
+let questions = [];   // suite rows
+let lastRun = null;
+let suiteResults = [];
 
 /* =========================
-   UTIL: UI helpers
+   UTILITIES
 ========================= */
-const $ = sel => document.querySelector(sel);
-const $$ = sel => Array.from(document.querySelectorAll(sel));
-const el = (tag, attrs={}, html="") => {
-  const n = document.createElement(tag);
-  Object.entries(attrs).forEach(([k,v]) => (k in n) ? n[k]=v : n.setAttribute(k,v));
-  if (html) n.innerHTML = html;
-  return n;
-};
-function clearTbody(t){ while(t.firstChild) t.removeChild(t.firstChild); }
-function safe(v){ return v==null ? "" : String(v); }
+const $ = s => document.querySelector(s);
+function log(msg){ const t=new Date().toLocaleTimeString(); const el=$("#log"); el.textContent += (el.textContent?'\n':'') + `${t}  ${msg}`; el.scrollTop = el.scrollHeight; }
+function esc(s){ return (s??'').toString().replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+function link(u){ return u?`<a href="${u}" target="_blank" class="link">${esc(u)}</a>`:''; }
+function money(v){ if(v==null||v==='') return ''; const n=Number(v); if(!isFinite(n)) return String(v); return '£'+n.toLocaleString('en-GB',{maximumFractionDigits:0}); }
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+function setBadge(sel,text,kind){ const el = $(sel); el.textContent = text; el.className = `badge${kind?(' '+kind):''}`; }
+function downloadBlob(text,name,type='application/json'){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
+
+function tokens(q){ return (q||'').toLowerCase().replace(/[^a-z0-9\s-]/g,' ').split(/\s+/).filter(Boolean); }
+function buildOrIlike(keys, cols){
+  const safe = (keys||[]).map(k=>k.replace(/[%_,]/g,'')).filter(k=>k.length>=3).slice(0,6);
+  if(!safe.length) return null;
+  const parts=[]; for(const k of safe){ for(const c of cols){ parts.push(`${c}.ilike.%${k}%`); } }
+  return parts.join(',');
+}
+function uniqBy(arr,key){ const m=new Map(); for(const it of arr){ m.set(key(it),it); } return [...m.values()]; }
 
 /* =========================
-   KEYWORD + INTENT
+   RENDER HELPERS
 ========================= */
-function norm(s){ return s.toLowerCase().replace(/\s+/g," ").trim(); }
-function words(s){ return norm(s).split(/[^a-z0-9]+/).filter(Boolean); }
-
-const SYNONYM_EXPAND = {
-  bluebell: ["bluebell","bluebells","bluebell woodland","bluebell woodlands"],
-  workshop: ["workshop","workshops","course","courses","class","classes","event","events"]
-};
-
-function expandKeywords(q){
-  const base = words(q);
-  const set = new Set();
-  base.forEach(w=>{
-    if(SYNONYM_EXPAND[w]) SYNONYM_EXPAND[w].forEach(x=>set.add(x));
-    set.add(w);
+function renderTable(tbodySel, rows, cols){
+  const tbody = document.querySelector(tbodySel+' tbody');
+  tbody.innerHTML = '';
+  (rows||[]).forEach(r=>{
+    const tr = document.createElement('tr');
+    cols.forEach(c=>{
+      const td=document.createElement('td');
+      const v=r[c];
+      if(c==='url') td.innerHTML = link(v);
+      else if(c==='price') td.textContent = money(v);
+      else td.textContent = v==null?'':v;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
   });
-  // drop generic stop-words
-  ["the","a","an","and","or","to","of","in","is","whats","what","when","whens","next"].forEach(s=>set.delete(s));
-  return Array.from(set);
 }
 
-function classifyIntent(q){
-  const s = norm(q);
-  if (/\b(cost|price|how much|£|\$)\b/.test(s)) return "products";
-  if (/\b(blog|article|tips|guide|how to)\b/.test(s)) return "articles";
-  return "events";
-}
-
 /* =========================
-   CSV state (fallback)
+   PILLS
 ========================= */
-let landingPages = [];  // [{url,title/meta_title}]
-let questions = [];     // [{idx,query,expected}]
-
-/* =========================
-   Pills (brand + search)
-========================= */
-function buildPills(query){
-  const pills = [
-    {label:"Blog", url:"https://www.alanranger.com/blog-on-photography", brand:true},
-    {label:"Newsletter", url:"https://www.alanranger.com/newsletter-signup-form", brand:true},
-    {label:"Gift Vouchers", url:"https://www.alanranger.com/photography-gift-vouchers", brand:true},
-    {label:"Payment Plan", url:"https://www.alanranger.com/photography-payment-plan", brand:true},
-    {label:"Event Listing", url:"https://www.alanranger.com/search?query=workshops", brand:true},
-    {label:"Course Finder", url:"https://www.alanranger.com/course-finder-photography-classes-near-me", brand:true},
-    {label:"Home", url:"https://www.alanranger.com", brand:true},
-  ];
-  pills.push({
-    label:`Search site: “${query}”`,
-    url:`https://www.alanranger.com/search?query=${encodeURIComponent(query)}`,
-    brand:false
-  });
+function generatePills(query){
+  const pills=[];
+  const add=(label,url,brand=true,type=null)=>{ pills.push({label,url,brand,type}); };
+  // Brand/navigation (from site structure)
+  add('Blog / Articles','https://www.alanranger.com/blog-on-photography',true,'article');
+  add('Gift Vouchers','https://www.alanranger.com/photography-gift-vouchers',true,'product');
+  add('Payment Plan','https://www.alanranger.com/photography-payment-plan',true,'product');
+  add('Event Listing','https://www.alanranger.com/search?query=workshops',true,'event');
+  add('Course Finder','https://www.alanranger.com/course-finder-photography-classes-near-me',true,'event');
+  add('Home','https://www.alanranger.com',true);
+  // Query echo site-search
+  const q=query.trim(); if(q){ add(`Search site: “${q.slice(0,28)}”`,'https://www.alanranger.com/search?query='+encodeURIComponent(q),false); }
+  // Top matches as quick pills
+  (lastRun?.events||[]).slice(0,3).forEach(e=> add(e.title,e.url,false,'event'));
+  (lastRun?.products||[]).slice(0,2).forEach(p=> add(p.title,p.url,false,'product'));
+  (lastRun?.articles||[]).slice(0,2).forEach(a=> add(a.title,a.url,false,'article'));
   return pills;
 }
-
-/* =========================
-   Supabase querying
-========================= */
-function supaClient(){
-  if (!supa) supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:false}});
-  return supa;
-}
-
-function buildOrIlike(fields, kws){
-  const parts=[];
-  kws.forEach(kw=>{
-    const pat = `.%25${encodeURIComponent(kw)}%25`; // “%kw%” URL-encoded for PostgREST
-    fields.forEach(f => parts.push(`${f}.ilike${pat}`));
-  });
-  return parts.join(",");
-}
-
-async function tryRpc(name, param){
-  try {
-    const { data, error } = await supaClient().rpc(name, { text: param });
-    if (error) throw error;
-    return data || null;
-  } catch(e){ return null; }
-}
-
-async function fetchEvents(kws){
-  // prefer RPC
-  let data = await tryRpc("search_events", kws);
-  if (!data){
-    // fallback to ai_events
-    let q = supaClient().from("ai_events")
-      .select("title,url,when,location,start_date,date_start,date_end")
-      .limit(100);
-    const orStr = buildOrIlike(["title","url"], kws);
-    if (orStr) q = q.or(orStr);
-    const { data:d } = await q;
-    data = d||[];
-  }
-  // upcoming filter & map
-  const now = Date.now();
-  const mapped = (data||[]).map(e=>{
-    // normalize timestamps if present
-    const ds = e.date_start || e.start_date || null;
-    const de = e.date_end || null;
-    return {
-      title: e.title, url: e.url, when: e.when || "",
-      location: e.location || "",
-      start_date: e.start_date ?? null,
-      date_start: ds, date_end: de
-    };
-  }).filter(x=>{
-    // keep upcoming if a start is present; else leave it (some pages only have 'when' string)
-    if (!x.date_start) return true;
-    const t = Date.parse(x.date_start);
-    return isFinite(t) ? t >= now : true;
-  });
-  // sort by start if possible
-  mapped.sort((a,b)=>{
-    const ta = Date.parse(a.date_start||"")||Infinity;
-    const tb = Date.parse(b.date_start||"")||Infinity;
-    return ta - tb;
-  });
-  return mapped.slice(0,25);
-}
-
-async function fetchProducts(kws){
-  let data = await tryRpc("search_products", kws);
-  if (!data){
-    let q = supaClient().from("ai_products")
-      .select("title,url,price,tags")
-      .limit(120);
-    const orStr = buildOrIlike(["title","url"], kws);
-    if (orStr) q = q.or(orStr);
-    const { data:d } = await q;
-    data = d||[];
-  }
-  return (data||[]).map(p=>({
-    title:p.title, url:p.url, price:p.price ?? null, tags:p.tags ?? null
-  }));
-}
-
-async function fetchArticles(kws){
-  let data = await tryRpc("search_articles", kws);
-  if (!data){
-    let q = supaClient().from("ai_articles")
-      .select("title,url,snippet,kind")
-      .limit(100);
-    const orStr = buildOrIlike(["title","url","snippet"], kws);
-    if (orStr) q = q.or(orStr);
-    const { data:d } = await q;
-    data = (d||[]).filter(a=> (a.kind??"article").toLowerCase()==="article");
-  }
-  return (data||[]).map(a=>({title:a.title,url:a.url,snippet:a.snippet||"",kind:"article"}));
+function renderPills(pills){
+  const bar=$("#pillBar"); bar.innerHTML='';
+  pills.forEach(p=>{ const a=document.createElement('a'); a.href=p.url; a.target='_blank'; a.className='pill'; a.textContent=p.label; bar.appendChild(a); });
+  const c={events:pills.filter(x=>x.type==='event').length,products:pills.filter(x=>x.type==='product').length,articles:pills.filter(x=>x.type==='article').length};
+  $("#pillCounts").textContent=`Events ${c.events}`; $("#pillCounts2").textContent=`Products ${c.products}`; $("#pillCounts3").textContent=`Articles ${c.articles}`;
 }
 
 /* =========================
-   Fallback from Landing CSV
+   INTENT (simple & stable)
 ========================= */
-function csvFallbackSearch(kws){
-  // naive contains on title/meta_title
-  const matches = [];
-  for (const row of landingPages){
-    const title = (row.meta_title || row.title || "").toLowerCase();
-    const url = (row.url || "");
-    if (!title) continue;
-    const hit = kws.some(kw => title.includes(kw.toLowerCase()));
-    if (hit){
-      // classify rudimentarily
-      const record = { title: row.meta_title || row.title || url, url };
-      if (/\/blog-on-photography\//.test(url)){
-        matches.push({type:"article", ...record, snippet:"(from landing CSV)"});
-      } else if (/photo-workshops-uk|one-day-landscape|photography-workshops/.test(url)){
-        matches.push({type:"product", ...record, price:null, tags:null});
-      } else {
-        matches.push({type:"event", ...record, when:"", location:""});
-      }
-    }
-  }
-  return matches.slice(0,10);
+function detectIntent(q){
+  const t=tokens(q);
+  const has=s=>t.includes(s);
+  const any=a=>a.some(has);
+  if(any(['workshop','workshops','course','courses','class','classes','event','events','date','when','where','next'])) return 'events';
+  if(any(['price','cost','£','gbp'])) return 'products';
+  if(any(['blog','article','guide','tips','how'])) return 'articles';
+  return 'events';
 }
 
 /* =========================
-   RENDER
+   SUPABASE
 ========================= */
-function renderRows(tbody, rows, cols){
-  clearTbody(tbody);
-  rows.forEach(r=>{
-    const tr = el("tr");
-    cols.forEach(c=>{
-      const td = el("td");
-      let v = r[c];
-      if (c==="url"){
-        td.append(el("a",{href:r.url,target:"_blank"}, r.url));
-      } else {
-        td.textContent = safe(v);
-      }
-      tr.append(td);
-    });
-    tbody.append(tr);
-  });
+function hydrateConfig(){
+  $('#sbUrl').value = env.SUPABASE_URL;
+  $('#sbAnon').value = env.SUPABASE_ANON_KEY;
+  $('#eventsView').value = env.VIEW_EVENTS;
+  $('#productsView').value = env.VIEW_PRODUCTS;
+  $('#articlesView').value = env.VIEW_ARTICLES;
 }
-
-function setPills(pills){
-  const wrap = $("#pills");
-  wrap.innerHTML = "";
-  pills.forEach(p=>{
-    const a = el("a",{href:p.url,target:"_blank",className:"chip"}, p.label);
-    wrap.append(a);
-  });
+function readConfig(){
+  env.SUPABASE_URL = $('#sbUrl').value.trim() || DEFAULTS.SUPABASE_URL;
+  env.SUPABASE_ANON_KEY = $('#sbAnon').value.trim() || DEFAULTS.SUPABASE_ANON_KEY;
+  env.VIEW_EVENTS   = $('#eventsView').value || DEFAULTS.VIEW_EVENTS;
+  env.VIEW_PRODUCTS = $('#productsView').value || DEFAULTS.VIEW_PRODUCTS;
+  env.VIEW_ARTICLES = $('#articlesView').value || DEFAULTS.VIEW_ARTICLES;
 }
+function saveLocal(){ localStorage.setItem('bench.env', JSON.stringify(env)); }
+function loadLocal(){ try{ env = JSON.parse(localStorage.getItem('bench.env')) || {...DEFAULTS}; } catch{ env = {...DEFAULTS}; } }
 
-/* =========================
-   MAIN one-shot runner
-========================= */
-async function runOne(q){
-  const t0 = performance.now();
-  const intent = classifyIntent(q);
-  $("#intentBadge").textContent = `intent: ${intent}`;
-  const kws = expandKeywords(q);
+async function connect(){
+  readConfig();
+  supa = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {auth:{persistSession:false}});
+  setBadge('#connStatus','Connecting…');
+  log('Connecting to Supabase…');
 
-  // core fetches
-  let [events, products, articles] = await Promise.all([
-    fetchEvents(kws),
-    fetchProducts(kws),
-    fetchArticles(kws)
+  const [E,P,A] = await Promise.all([
+    supa.from(env.VIEW_EVENTS).select('title',{count:'estimated',head:true}),
+    supa.from(env.VIEW_PRODUCTS).select('title',{count:'estimated',head:true}),
+    supa.from(env.VIEW_ARTICLES).select('title',{count:'estimated',head:true})
   ]);
 
-  // optional CSV fallback
-  if ($("#cbCsvFallback").checked && landingPages.length){
-    const fb = csvFallbackSearch(kws);
-    // fill only empty panels
-    if (!events.length) events = fb.filter(x=>x.type==="event").map(x=>({title:x.title,url:x.url,when:"",location:""}));
-    if (!products.length) products = fb.filter(x=>x.type==="product").map(x=>({title:x.title,url:x.url,price:null,tags:null}));
-    if (!articles.length) articles = fb.filter(x=>x.type==="article").map(x=>({title:x.title,url:x.url,snippet:x.snippet,kind:"article"}));
+  if(E.error||P.error||A.error){
+    setBadge('#connStatus','Error','err');
+    if(E.error) log('events: '+E.error.message);
+    if(P.error) log('products: '+P.error.message);
+    if(A.error) log('articles: '+A.error.message);
+    return;
+  }
+  setBadge('#connStatus','Connected.','ok');
+  log(`Views reachable · ${env.VIEW_EVENTS}: ${E.count||'?'} · ${env.VIEW_PRODUCTS}: ${P.count||'?'} · ${env.VIEW_ARTICLES}: ${A.count||'?'}`);
+}
+
+async function fetchLive(){
+  if(!supa) await connect();
+  setBadge('#eventsKpi','Loading…'); setBadge('#productsKpi','Loading…'); setBadge('#articlesKpi','Loading…');
+  const [ev, pr, ar] = await Promise.all([
+    supa.from(env.VIEW_EVENTS).select('title,url,when,location,start_date,date_start,date_end').order('start_date',{ascending:true}).limit(2000),
+    supa.from(env.VIEW_PRODUCTS).select('title,url,price,tags').limit(2000),
+    supa.from(env.VIEW_ARTICLES).select('title,url,snippet,kind').order('last_seen',{ascending:false}).limit(2000)
+  ]);
+  if(ev.error) log('events error: '+ev.error.message);
+  if(pr.error) log('products error: '+pr.error.message);
+  if(ar.error) log('articles error: '+ar.error.message);
+
+  live.events = ev.data||[];
+  live.products = pr.data||[];
+  live.articles = (ar.data||[]).filter(x => (x.kind||'article').toLowerCase()==='article');
+
+  setBadge('#eventsKpi',`Loaded ${live.events.length}`,'ok');
+  setBadge('#productsKpi',`Loaded ${live.products.length}`,'ok');
+  setBadge('#articlesKpi',`Loaded ${live.articles.length}`,'ok');
+
+  // preview
+  renderTable('#eventsTable', live.events.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','when','location']);
+  renderTable('#productsTable', live.products.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','price','tags']);
+  renderTable('#articlesTable', live.articles.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','snippet']);
+
+  log(`Loaded events=${live.events.length}, products=${live.products.length}, articles=${live.articles.length}.`);
+}
+
+/* Prefer RPCs; fallback to views with OR ILIKE */
+async function rpcOrView(kind, keys){
+  const k = keys.filter(t=>t.length>=3);
+  try{
+    if(kind==='events'){
+      const { data, error } = await supa.rpc('search_events',{ text: k });
+      if(!error && data) return data;
+    }else if(kind==='products'){
+      const { data, error } = await supa.rpc('search_products',{ text: k });
+      if(!error && data) return data;
+    }else if(kind==='articles'){
+      const { data, error } = await supa.rpc('search_articles',{ text: k });
+      if(!error && data) return data;
+    }
+  }catch(_){/* ignore; fall back */}
+  const or = kind==='articles'
+    ? buildOrIlike(k, ['title','snippet'])
+    : buildOrIlike(k, ['title']);
+  if(!or) return [];
+  if(kind==='events'){
+    const {data} = await supa.from(env.VIEW_EVENTS).select('title,url,when,location,start_date,date_start,date_end').or(or).limit(200);
+    return data||[];
+  }
+  if(kind==='products'){
+    const {data} = await supa.from(env.VIEW_PRODUCTS).select('title,url,price,tags').or(or).limit(200);
+    return data||[];
+  }
+  if(kind==='articles'){
+    const {data} = await supa.from(env.VIEW_ARTICLES).select('title,url,snippet,kind').or(or).limit(200);
+    return (data||[]).filter(x => (x.kind||'article').toLowerCase()==='article');
+  }
+  return [];
+}
+
+/* =========================
+   RUNNERS
+========================= */
+async function runSingle(query){
+  if(!supa) await connect();
+  const intent = detectIntent(query);
+  $('#intentBadge').textContent = `intent: ${intent}`;
+
+  const keys = tokens(query);
+  let events=[], products=[], articles=[];
+
+  // Events first
+  events = await rpcOrView('events', keys);
+  // keep upcoming first where dates exist
+  const now = Date.now();
+  events = events.sort((a,b)=>{
+    const ta = Date.parse(a.date_start||a.start_date||'') || Infinity;
+    const tb = Date.parse(b.date_start||b.start_date||'') || Infinity;
+    return ta - tb;
+  });
+
+  // Products for price
+  products = await rpcOrView('products', keys);
+
+  // Articles
+  articles = await rpcOrView('articles', keys);
+  if(!articles.length && $('#useLandingFallback').checked && landing.length){
+    const contentish = landing.filter(x => /blog|tips|guide|article|tutorial/i.test(`${x.title||x.meta_title||""}`));
+    articles = contentish.slice(0,2).map(x => ({title:x.title||x.meta_title||'(landing)', url:x.url, snippet:'(from Landing CSV)', kind:'landing'}));
   }
 
-  // pills
-  const pills = $("#cbGenericPills").checked ? buildPills(q) : [];
-
-  // render
-  renderRows($("#tblEvents tbody"), events, ["title","url","when","location"]);
-  renderRows($("#tblProducts tbody"), products, ["title","url","price","tags"]);
-  renderRows($("#tblArticles tbody"), articles, ["title","url","snippet"]);
-
-  $("#eventsMeta").textContent   = `(${events.length})`;
-  $("#productsMeta").textContent = `(${products.length})`;
-  $("#articlesMeta").textContent = `(${articles.length})`;
-
-  setPills(pills);
-  $("#pillCounts").textContent = `Events ${events.length} · Products ${products.length} · Articles ${articles.length}`;
-
-  const result = {
-    q,
+  lastRun = {
+    q: query,
     intent,
-    counts:{ events:events.length, products:products.length, articles:articles.length, pills:pills.length },
-    events, products, articles,
-    pills
+    counts:{ events:events.length, products:products.length, articles:articles.length },
+    events, products, articles
   };
 
-  $("#countsHint").textContent = `events=${events.length}, products=${products.length}, articles=${articles.length}, pills=${pills.length}`;
-  $("#jsonOut").textContent = JSON.stringify(result,null,2);
-  $("#timing").textContent = `${Math.round(performance.now()-t0)} ms`;
-  return {intent};
+  // Render
+  renderTable('#eventsTable', events.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','when','location']);
+  renderTable('#productsTable', products.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','price','tags']);
+  renderTable('#articlesTable', articles.slice(0, DEFAULTS.PREVIEW_ROWS), ['title','url','snippet']);
+
+  const pills = $('#enableGenericPills').checked ? generatePills(query) : [];
+  lastRun.pills = pills;
+  renderPills(pills);
+
+  $('#countsBadge').textContent = `events=${events.length}, products=${products.length}, articles=${articles.length}, pills=${pills.length}`;
+  log(`Run: ${JSON.stringify({q:query,intent})}`);
+}
+
+async function runSuite(){
+  if(!questions.length){ log('No questions CSV loaded.'); return; }
+  suiteResults = []; $('#suiteTable tbody').innerHTML = '';
+  let pass=0;
+  for(const row of questions){
+    const idx = String(row.idx ?? suiteResults.length+1);
+    const q = (row.query||'').toString();
+    const expected = (row.expected||'').toString().toLowerCase();
+
+    await runSingle(q);
+    const predicted = (lastRun.intent||'').toLowerCase();
+    const ok = expected ? (predicted === expected) : true;
+    if(ok) pass++;
+
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(idx)}</td><td>${esc(q)}</td><td>${esc(expected)}</td><td>${esc(predicted)}</td><td>${ok?'✅':'❌'}</td>`;
+    $('#suiteTable tbody').appendChild(tr);
+
+    suiteResults.push({
+      idx,q,expected,predicted,ok,
+      used:{
+        top_events:(lastRun.events||[]).slice(0,5),
+        top_products:(lastRun.products||[]).slice(0,5),
+        top_articles:(lastRun.articles||[]).slice(0,5),
+        pills:lastRun.pills||[]
+      }
+    });
+    await sleep(30);
+  }
+  const pct=Math.round(pass/suiteResults.length*100);
+  setBadge('#suiteSummary',`Suite: ${pass}/${suiteResults.length} matched (${pct}%)`, pass===suiteResults.length?'ok':(pct>=70?'warn':'err'));
+  log(`Suite done: ${pass}/${suiteResults.length} matched expected intent.`);
 }
 
 /* =========================
-   SUITE RUN
+   CSV LOADERS
 ========================= */
-async function runSuiteAll(){
-  if (!questions.length) return;
-  const tbody = $("#tblSuite tbody");
-  clearTbody(tbody);
-  let ok=0;
-  for (let i=0;i<questions.length;i++){
-    const q = questions[i];
-    const {intent} = await runOne(q.query);
-    const tr = el("tr");
-    tr.append(el("td",{}, q.idx ?? (i+1)));
-    tr.append(el("td",{}, q.query));
-    tr.append(el("td",{}, q.expected || "—"));
-    tr.append(el("td",{}, intent));
-    const passed = (q.expected||"").toLowerCase() === (intent||"").toLowerCase();
-    tr.append(el("td",{}, passed ? "✓" : "✗"));
-    tr.lastChild.className = passed ? "ok" : "bad";
-    tbody.append(tr);
-    if (passed) ok++;
-  }
-  const pct = Math.round(ok/questions.length*100);
-  $("#suiteScore").textContent = `Suite: ${ok}/${questions.length} matched (${pct}%)`;
+function parseCSV(file){
+  return new Promise((resolve,reject)=>{
+    Papa.parse(file,{header:true,skipEmptyLines:true,complete:r=>resolve(r.data),error:reject});
+  });
 }
 
 /* =========================
-   WIRE-UP
+   WIRING
 ========================= */
-$("#btnConnect").addEventListener("click", ()=>{
-  try{
-    supaClient();
-    $("#connState").textContent = "connected";
-  }catch(e){
-    $("#connState").textContent = "error";
-  }
-});
+function wire(){
+  loadLocal(); hydrateConfig();
+  $('#saveCfg').onclick = ()=>{ readConfig(); saveLocal(); log('Saved configuration.'); };
+  $('#resetCfg').onclick = ()=>{ env={...DEFAULTS}; saveLocal(); hydrateConfig(); log('Defaults restored.'); };
+  $('#btnConnect').onclick = connect;
+  $('#btnFetch').onclick = fetchLive;
 
-$("#btnRun").addEventListener("click", ()=> runOne($("#q").value.trim()));
+  $('#landingCsv').onchange = async e=>{
+    const f=e.target.files?.[0]; if(!f){ landing=[]; $('#landingInfo').textContent='No file loaded.'; return; }
+    landing = await parseCSV(f);
+    $('#landingInfo').textContent = `Loaded ${landing.length} landing pages.`;
+    log(`Landing CSV loaded (${landing.length} rows).`);
+  };
+  $('#clearLanding').onclick = ()=>{ landing=[]; $('#landingCsv').value=''; $('#landingInfo').textContent='Cleared.'; };
 
-$("#landingCsv").addEventListener("change", (ev)=>{
-  const f = ev.target.files[0]; if(!f) return;
-  Papa.parse(f, {
-    header:true, skipEmptyLines:true,
-    complete: ({data})=>{
-      landingPages = data.filter(r=>r.url);
-      $("#landingInfo").textContent = `Loaded ${landingPages.length} landing pages.`;
-    }
-  });
-});
-$("#btnClearLanding").addEventListener("click", ()=>{
-  landingPages = [];
-  $("#landingCsv").value = "";
-  $("#landingInfo").textContent = "Loaded 0 landing pages.";
-});
+  $('#questionsCsv').onchange = async e=>{
+    const f=e.target.files?.[0]; if(!f){ questions=[]; $('#questionsInfo').textContent='No file loaded.'; return; }
+    questions = await parseCSV(f);
+    $('#questionsInfo').textContent = `Loaded ${questions.length} questions.`;
+    log(`Questions CSV loaded (${questions.length} rows).`);
+  };
+  $('#clearQuestions').onclick = ()=>{ questions=[]; $('#questionsCsv').value=''; $('#questionsInfo').textContent='Cleared.'; };
 
-$("#questionsCsv").addEventListener("change", (ev)=>{
-  const f = ev.target.files[0]; if(!f) return;
-  Papa.parse(f, {
-    header:true, skipEmptyLines:true,
-    complete: ({data})=>{
-      // expected columns: idx, query, expected (extra ignored)
-      questions = data.filter(r=>r.query).map((r,i)=>({ idx:r.idx||String(i+1), query:r.query, expected:r.expected||"" }));
-      $("#qsInfo").textContent = `Loaded ${questions.length} questions.`;
-    }
-  });
-});
+  $('#btnRun').onclick = ()=> runSingle($('#singleQuery').value||'');
+  $('#btnCopyJson').onclick = ()=>{ if(!lastRun) return; navigator.clipboard.writeText(JSON.stringify(lastRun,null,2)); log('Copied JSON of last run.'); };
+  $('#btnDownloadJson').onclick = ()=>{ if(!lastRun) return; downloadBlob(JSON.stringify(lastRun,null,2),'bench-last-run.json'); };
+  $('#runSuite').onclick = runSuite;
+  $('#downloadSuiteJson').onclick = ()=>{ if(!suiteResults.length) return; downloadBlob(JSON.stringify({meta:{at:new Date().toISOString()},results:suiteResults},null,2),'bench-suite.json'); };
 
-$("#runSuite").addEventListener("click", runSuiteAll);
+  // auto-connect & fetch on load
+  connect().then(fetchLive);
+}
 
-$("#btnCopySuite").addEventListener("click", async ()=>{
-  const out = { questions };
-  await navigator.clipboard.writeText(JSON.stringify(out,null,2));
-});
-
-$("#btnDownloadSuite").addEventListener("click", ()=>{
-  const blob = new Blob([JSON.stringify({questions},null,2)], {type:"application/json"});
-  const a = el("a",{href:URL.createObjectURL(blob),download:"bench-suite.json"});
-  document.body.append(a); a.click(); a.remove();
-});
-
-/* Auto-connect on load (same as before) */
-document.addEventListener("DOMContentLoaded", ()=>{
-  try{ supaClient(); $("#connState").textContent = "connected"; }catch(e){}
-});
+window.addEventListener('DOMContentLoaded', wire);
 </script>
 </body>
 </html>
