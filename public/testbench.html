@@ -9,98 +9,39 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
     :root {
-      --bg: #0f1115;
-      --panel: #171923;
-      --muted: #a0aec0;
-      --text: #e2e8f0;
-      --hi: #94a3b8;
-      --accent: #60a5fa;
-      --ok: #34d399;
-      --warn: #f59e0b;
-      --bad: #f87171;
-      --chip: #1f2937;
-      --chip-hi: #374151;
-      --border: #2d3748;
-      --btn: #1e293b;
+      --bg:#0f1115;--panel:#171923;--muted:#a0aec0;--text:#e2e8f0;--hi:#94a3b8;--accent:#60a5fa;
+      --ok:#34d399;--warn:#f59e0b;--bad:#f87171;--chip:#1f2937;--border:#2d3748;--btn:#1e293b;
     }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    *{box-sizing:border-box}html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    h1{font-size:18px;margin:0}h2{font-size:14px;margin:0 0 6px;color:var(--hi)}a{color:var(--accent);text-decoration:none}
+    .wrap{display:grid;grid-template-columns:300px 1fr;gap:12px;height:100vh;padding:12px}
+    .left,.right{overflow:hidden;display:flex;flex-direction:column;gap:12px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center}
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    label{color:var(--muted);font-size:12px;display:block;margin-bottom:4px}
+    input[type=text],input[type=url],input[type=password],textarea,select{
+      width:100%;background:#0b0d12;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px;outline:none
     }
-    h1 { font-size: 18px; margin: 0; }
-    h2 { font-size: 14px; margin: 0 0 6px; color: var(--hi); }
-    a { color: var(--accent); text-decoration: none; }
-    .wrap {
-      display: grid;
-      grid-template-columns: 300px 1fr;
-      gap: 12px;
-      height: 100vh;
-      padding: 12px;
-    }
-    .left, .right { overflow: hidden; display: flex; flex-direction: column; gap: 12px; }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px;
-    }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    label { color: var(--muted); font-size: 12px; display: block; margin-bottom: 4px; }
-    input[type=text], input[type=url], input[type=password], textarea, select {
-      width: 100%; background: #0b0d12; color: var(--text);
-      border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
-      outline: none;
-    }
-    textarea { min-height: 120px; resize: vertical; }
-    .btn {
-      background: var(--btn); color: var(--text); border: 1px solid var(--border);
-      border-radius: 8px; padding: 8px 10px; cursor: pointer;
-    }
-    .btn:hover { background: #0b1220; }
-    .btn.primary { background: #1d4ed8; border-color: #1e40af; }
-    .btn.primary:hover { background: #1b46c3; }
-    .btn.ghost { background: transparent; }
-    .btn.small { padding: 6px 8px; font-size: 12px; }
-    .muted { color: var(--muted); }
-    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-    .chip {
-      border-radius: 999px; padding: 4px 8px; background: var(--chip); border: 1px solid var(--border); color: var(--hi);
-      font-size: 12px;
-    }
-    .chip.brand { background: #0b1220; color: #a5b4fc; border-color: #1e293b; }
-    .kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
-    .k { background: #0b0d12; border: 1px solid var(--border); border-radius: 8px; padding: 8px; }
-    .k .v { font-weight: 700; font-size: 16px; }
-    .scroll { overflow: auto; max-height: 260px; border-radius: 8px; border: 1px solid var(--border); }
-    .list { list-style: none; margin: 0; padding: 0; }
-    .list li { padding: 8px 10px; border-bottom: 1px solid #10131a; }
-    .log { background: #0b0d12; color: #d1d5db; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; white-space: pre-wrap; }
-    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
-    .ok { color: var(--ok); }
-    .bad { color: var(--bad); }
-    .warn { color: var(--warn); }
-    .split {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-      height: 100%; overflow: hidden;
-    }
-    .pane { display: flex; flex-direction: column; overflow: hidden; }
-    .pane .scroll { flex: 1; }
-    .footer { color: var(--muted); font-size: 12px; display: flex; gap: 8px; align-items: center; }
-    .switch { display: inline-flex; gap: 8px; align-items: center; }
-    .switch input { transform: translateY(1px); }
-    .right .card:last-child { flex: 1; }
-    .heading { display: flex; align-items: center; justify-content: space-between; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    textarea{min-height:120px;resize:vertical}.btn{background:var(--btn);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer}
+    .btn:hover{background:#0b1220}.btn.primary{background:#1d4ed8;border-color:#1e40af}.btn.primary:hover{background:#1b46c3}
+    .btn.ghost{background:transparent}.btn.small{padding:6px 8px;font-size:12px}
+    .muted{color:var(--muted)}.chips{display:flex;flex-wrap:wrap;gap:6px}
+    .chip{border-radius:999px;padding:4px 8px;background:var(--chip);border:1px solid var(--border);color:var(--hi);font-size:12px}
+    .chip.brand{background:#0b1220;color:#a5b4fc;border-color:#1e293b}
+    .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.k{background:#0b0d12;border:1px solid var(--border);border-radius:8px;padding:8px}
+    .k .v{font-weight:700;font-size:16px}.scroll{overflow:auto;max-height:260px;border-radius:8px;border:1px solid var(--border)}
+    .list{list-style:none;margin:0;padding:0}.list li{padding:8px 10px;border-bottom:1px solid #10131a}
+    .log{background:#0b0d12;color:#d1d5db;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:8px;height:100%;overflow:hidden}.pane{display:flex;flex-direction:column;overflow:hidden}.pane .scroll{flex:1}
+    .footer{color:var(--muted);font-size:12px;display:flex;gap:8px;align-items:center}.switch{display:inline-flex;gap:8px;align-items:center}
+    .right .card:last-child{flex:1}.heading{display:flex;align-items:center;justify-content:space-between}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <!-- LEFT: controls -->
     <div class="left">
       <div class="card">
         <div class="heading">
@@ -152,7 +93,7 @@
           <input type="file" id="csvLanding" accept=".csv,text/csv" />
           <button class="btn small" id="btnLandingClear">Clear</button>
         </div>
-        <div class="muted">Used when direct matches are weak. Required columns: <span class="mono">url</span> and one of <span class="mono">meta_title</span>, <span class="mono">meta_title</span> or <span class="mono">title</span>.</div>
+        <div class="muted">Required columns: <span class="mono">url</span> and one of <span class="mono">meta_title</span> or <span class="mono">title</span>.</div>
       </div>
 
       <div class="card">
@@ -173,8 +114,8 @@
           <button class="btn" id="btnDownloadJson">Download JSON</button>
         </div>
         <div class="toolbar" style="margin-top:4px;">
-          <label class="switch"><input id="flagFallback" type="checkbox" /> Use Landing CSV fallback when direct matches are weak</label>
-          <label class="switch"><input id="flagGeneric" type="checkbox" /> Enable generic search pills (placeholder)</label>
+          <label class="switch"><input id="flagFallback" type="checkbox" /> Use Landing CSV fallback</label>
+          <label class="switch"><input id="flagGeneric" type="checkbox" /> Enable generic pills</label>
         </div>
         <div class="kpi" style="margin-top:8px;">
           <div class="k"><div class="muted">Intent</div><div class="v" id="kIntent">–</div></div>
@@ -185,7 +126,6 @@
       </div>
     </div>
 
-    <!-- RIGHT: results + log -->
     <div class="right">
       <div class="card" style="min-height: 200px;">
         <div class="heading">
@@ -197,23 +137,17 @@
         <div class="split" style="margin-top:8px;">
           <div class="pane">
             <h2>Events</h2>
-            <div class="scroll">
-              <ul class="list" id="listEvents"></ul>
-            </div>
+            <div class="scroll"><ul class="list" id="listEvents"></ul></div>
           </div>
           <div class="pane">
             <h2>Products</h2>
-            <div class="scroll">
-              <ul class="list" id="listProducts"></ul>
-            </div>
+            <div class="scroll"><ul class="list" id="listProducts"></ul></div>
           </div>
         </div>
         <div class="grid-3" style="margin-top:8px;">
           <div>
             <h2>Articles</h2>
-            <div class="scroll">
-              <ul class="list" id="listArticles"></ul>
-            </div>
+            <div class="scroll"><ul class="list" id="listArticles"></ul></div>
           </div>
           <div>
             <h2>Pills</h2>
@@ -234,407 +168,178 @@
             <button class="btn small" id="btnClearLog">Clear</button>
           </div>
         </div>
-        <div class="scroll log" id="logBox" style="margin-top:8px; padding:10px;"></div>
+        <div class="scroll log" id="logBox" style="margin-top:8px;padding:10px;"></div>
       </div>
     </div>
   </div>
 
   <script>
-    // -----------------------
-    // Utility helpers
-    // -----------------------
-    const $ = sel => document.querySelector(sel);
+    // ======== HARD-WIRED CREDS (PUT YOUR REALS HERE) =========
+    // If these are left as the PASTE_... placeholders, the page behaves like before.
+    // If you paste real values, inputs are auto-filled, locked read-only, and auto-connect will run.
+    const HARDCODED_SB_URL = 'PASTE_SUPABASE_URL_HERE';
+    const HARDCODED_SB_ANON_KEY = 'PASTE_SUPABASE_ANON_KEY_HERE';
+
+    // Optional: change default view names if yours differ
+    const DEFAULT_EVENTS_VIEW = 'ai_events';
+    const DEFAULT_PRODUCTS_VIEW = 'ai_products';
+    // =========================================================
+
+    const $ = s => document.querySelector(s);
     const now = () => new Date().toLocaleTimeString('en-GB', { hour12: false });
-    const redactKey = k => {
-      if (!k) return '';
-      if (k.length <= 10) return '***';
-      return k.slice(0, 5) + '…' + k.slice(-6);
-    };
-    const download = (name, text) => {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-      a.download = name;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    };
-
-    // -----------------------
-    // App state
-    // -----------------------
+    const redactKey = k => (!k? '' : (k.length <= 10 ? '***' : k.slice(0,5) + '…' + k.slice(-6)));
+    const download = (name, text) => { const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'application/json'})); a.download=name; a.click(); URL.revokeObjectURL(a.href); };
     const state = {
-      client: null,
-      sbUrl: '',
-      sbKey: '',
-      views: { events: 'ai_events', products: 'ai_products' },
-      flags: { fallback: true, generic: true },
-      live: { events: [], products: [], articles: [] },
-      counts: { events: 0, products: 0 },
-      csv: {
-        landing: [],
-        questions: []
-      },
-      lastSingle: null,
-      lastSuite: { total: 0, results: [] },
-      log: [],
-      errors: []
+      client:null,sbUrl:'',sbKey:'',
+      views:{events:DEFAULT_EVENTS_VIEW,products:DEFAULT_PRODUCTS_VIEW},
+      flags:{fallback:true,generic:true},
+      live:{events:[],products:[],articles:[]},
+      counts:{events:0,products:0},
+      csv:{landing:[],questions:[]},
+      lastSingle:null,lastSuite:{total:0,results:[]},log:[],errors:[]
     };
-
+    const log = (m)=>{const l=`${now()}  ${m}`;state.log.push(l);const b=$('#logBox');b.textContent+=(b.textContent?'\n':'')+l;b.scrollTop=b.scrollHeight;};
+    const setStatus = t => $('#connStatus').textContent=t;
     const persist = () => {
-      localStorage.setItem('bench.sbUrl', state.sbUrl);
-      localStorage.setItem('bench.sbKey', state.sbKey);
-      localStorage.setItem('bench.eventsView', state.views.events);
-      localStorage.setItem('bench.productsView', state.views.products);
-      localStorage.setItem('bench.flags', JSON.stringify(state.flags));
+      localStorage.setItem('bench.sbUrl',state.sbUrl);
+      localStorage.setItem('bench.sbKey',state.sbKey);
+      localStorage.setItem('bench.eventsView',state.views.events);
+      localStorage.setItem('bench.productsView',state.views.products);
+      localStorage.setItem('bench.flags',JSON.stringify(state.flags));
     };
     const restore = () => {
       state.sbUrl = localStorage.getItem('bench.sbUrl') || '';
       state.sbKey = localStorage.getItem('bench.sbKey') || '';
-      state.views.events = localStorage.getItem('bench.eventsView') || 'ai_events';
-      state.views.products = localStorage.getItem('bench.productsView') || 'ai_products';
-      const f = localStorage.getItem('bench.flags');
-      if (f) { try { state.flags = JSON.parse(f); } catch(_){} }
-      $('#sbUrl').value = state.sbUrl || '';
-      $('#sbKey').value = state.sbKey || '';
+      state.views.events = localStorage.getItem('bench.eventsView') || DEFAULT_EVENTS_VIEW;
+      state.views.products = localStorage.getItem('bench.productsView') || DEFAULT_PRODUCTS_VIEW;
+      const f = localStorage.getItem('bench.flags'); if (f) { try { state.flags = JSON.parse(f); } catch{} }
+
+      // If hardcoded values are present (not placeholders), they override everything.
+      const hasHardUrl = HARDCODED_SB_URL && !HARDCODED_SB_URL.startsWith('PASTE_');
+      const hasHardKey = HARDCODED_SB_ANON_KEY && !HARDCODED_SB_ANON_KEY.startsWith('PASTE_');
+      if (hasHardUrl) state.sbUrl = HARDCODED_SB_URL;
+      if (hasHardKey) state.sbKey = HARDCODED_SB_ANON_KEY;
+
+      $('#sbUrl').value = state.sbUrl;
+      $('#sbKey').value = state.sbKey;
       $('#eventsView').value = state.views.events;
       $('#productsView').value = state.views.products;
       $('#flagFallback').checked = !!state.flags.fallback;
       $('#flagGeneric').checked = !!state.flags.generic;
+
+      // Lock inputs when hard-wired to prevent accidental edits
+      if (hasHardUrl) $('#sbUrl').setAttribute('readonly','readonly');
+      if (hasHardKey) $('#sbKey').setAttribute('readonly','readonly');
+
+      // Auto-connect if both hard-wired present
+      if (hasHardUrl && hasHardKey) {
+        connect();
+        fetchLive();
+      }
     };
 
-    // -----------------------
-    // Logging
-    // -----------------------
-    const log = (msg) => {
-      const line = `${now()}  ${msg}`;
-      state.log.push(line);
-      const box = $('#logBox');
-      box.textContent += (box.textContent ? '\n' : '') + line;
-      box.scrollTop = box.scrollHeight;
-    };
-    const setStatus = (t) => $('#connStatus').textContent = t;
-
-    // -----------------------
-    // Supabase connect & fetch
-    // -----------------------
     const connect = () => {
-      try {
+      try{
         const url = $('#sbUrl').value.trim();
         const key = $('#sbKey').value.trim();
-        const ev = $('#eventsView').value.trim() || 'ai_events';
-        const pv = $('#productsView').value.trim() || 'ai_products';
-        state.sbUrl = url; state.sbKey = key; state.views.events = ev; state.views.products = pv;
+        const ev = $('#eventsView').value.trim() || DEFAULT_EVENTS_VIEW;
+        const pv = $('#productsView').value.trim() || DEFAULT_PRODUCTS_VIEW;
+        state.sbUrl=url; state.sbKey=key; state.views.events=ev; state.views.products=pv;
 
-        if (!url || !key) {
-          setStatus('Missing Supabase URL or ANON key');
-          log('ERROR  Missing Supabase URL or ANON key.');
-          return;
-        }
-        state.client = supabase.createClient(url, key, { auth: { persistSession: false }});
-        setStatus('Boot OK. Prefilled Supabase creds and requested live fetch.');
-        log('Boot OK. Prefilled Supabase creds and requested live fetch.');
+        if(!url||!key){ setStatus('Missing Supabase URL or ANON key'); log('ERROR  Missing Supabase URL or ANON key.'); return; }
+        state.client = supabase.createClient(url,key,{auth:{persistSession:false}});
+        setStatus('Connected.'); log('Connected to Supabase.');
         persist();
-      } catch (e) {
-        state.errors.push(String(e));
-        log('ERROR  Failed to init Supabase client.');
-      }
+      }catch(e){ state.errors.push(String(e)); log('ERROR  Failed to init Supabase client.'); }
     };
 
     const fetchLive = async () => {
-      if (!state.client) { log('ERROR  Not connected.'); return; }
-      const EV = state.views.events;
-      const PV = state.views.products;
-      try {
-        // Counts
-        const evHead = await state.client.from(EV).select('*', { count: 'exact', head: true });
-        const pvHead = await state.client.from(PV).select('*', { count: 'exact', head: true });
-        state.counts.events = evHead.count ?? 0;
-        state.counts.products = pvHead.count ?? 0;
-        $('#kEvents').textContent = state.counts.events;
-        $('#kProducts').textContent = state.counts.products;
+      if(!state.client){ log('ERROR  Not connected.'); return; }
+      const EV = state.views.events, PV = state.views.products;
+      try{
+        const evHead = await state.client.from(EV).select('*',{count:'exact',head:true});
+        const pvHead = await state.client.from(PV).select('*',{count:'exact',head:true});
+        state.counts.events = evHead.count ?? 0; state.counts.products = pvHead.count ?? 0;
+        $('#kEvents').textContent = state.counts.events; $('#kProducts').textContent = state.counts.products;
 
-        // Samples (limit 30 for UI)
         const ev = await state.client.from(EV).select('title,url,"when",location').limit(30);
         const pv = await state.client.from(PV).select('title,url,price,tags').limit(30);
-
-        state.live.events = Array.isArray(ev.data) ? ev.data : [];
-        state.live.products = Array.isArray(pv.data) ? pv.data : [];
-
-        // Render lists
-        const ulE = $('#listEvents'); ulE.innerHTML = '';
-        state.live.events.forEach(r => {
-          const li = document.createElement('li');
-          li.innerHTML = `<div><strong>${r.title ?? '(no title)'}</strong></div>
-                          <div class="muted">${r.url ?? ''}</div>
-                          <div class="chips" style="margin-top:4px;">
-                            ${r.when ? `<span class="chip">${r.when}</span>` : ''}
-                            ${r.location ? `<span class="chip">${r.location}</span>` : ''}
-                          </div>`;
-          ulE.appendChild(li);
-        });
-
-        const ulP = $('#listProducts'); ulP.innerHTML = '';
-        state.live.products.forEach(r => {
-          const li = document.createElement('li');
-          li.innerHTML = `<div><strong>${r.title ?? '(no title)'}</strong></div>
-                          <div class="muted">${r.url ?? ''}</div>
-                          <div class="chips" style="margin-top:4px;">
-                            ${r.price != null ? `<span class="chip">£${r.price}</span>` : ''}
-                            ${r.tags ? `<span class="chip">${r.tags}</span>` : ''}
-                          </div>`;
-          ulP.appendChild(li);
-        });
-
+        state.live.events = Array.isArray(ev.data)?ev.data:[]; state.live.products = Array.isArray(pv.data)?pv.data:[];
+        const ulE=$('#listEvents'); ulE.innerHTML=''; state.live.events.forEach(r=>{const li=document.createElement('li'); li.innerHTML=`<div><strong>${r.title??'(no title)'}</strong></div><div class="muted">${r.url??''}</div><div class="chips" style="margin-top:4px;">${r.when?`<span class="chip">${r.when}</span>`:''}${r.location?`<span class="chip">${r.location}</span>`:''}</div>`; ulE.appendChild(li);});
+        const ulP=$('#listProducts'); ulP.innerHTML=''; state.live.products.forEach(r=>{const li=document.createElement('li'); li.innerHTML=`<div><strong>${r.title??'(no title)'}</strong></div><div class="muted">${r.url??''}</div><div class="chips" style="margin-top:4px;">${r.price!=null?`<span class="chip">£${r.price}</span>`:''}${r.tags?`<span class="chip">${r.tags}</span>`:''}</div>`; ulP.appendChild(li);});
         log(`Fetched live data: events=${state.counts.events}, products=${state.counts.products}`);
-      } catch (e) {
-        state.errors.push(String(e));
-        log('ERROR  Fetch failed.');
-      }
+      }catch(e){ state.errors.push(String(e)); log('ERROR  Fetch failed.'); }
     };
 
-    // -----------------------
-    // CSV loaders
-    // -----------------------
-    const loadCsv = (file, target) => new Promise((resolve) => {
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (res) => {
-          state.csv[target] = res.data || [];
-          if (target === 'landing') $('#kLanding').textContent = state.csv.landing.length + ' rows';
-          if (target === 'questions') $('#kQuestions').textContent = state.csv.questions.length + ' rows';
-          log(`${target === 'landing' ? 'Landing' : 'Questions'} CSV loaded (${(res.data || []).length} rows).`);
-          resolve();
-        }
-      });
-    });
+    const loadCsv = (file,target)=>new Promise((resolve)=>{ Papa.parse(file,{header:true,skipEmptyLines:true,complete:(res)=>{ state.csv[target]=res.data||[]; if(target==='landing') $('#kLanding').textContent=state.csv.landing.length+' rows'; if(target==='questions') $('#kQuestions').textContent=state.csv.questions.length+' rows'; log(`${target==='landing'?'Landing':'Questions'} CSV loaded (${(res.data||[]).length} rows).`); resolve(); }}); });
 
-    // -----------------------
-    // Intent & matching (simple heuristics for the bench)
-    // -----------------------
-    const guessIntent = (q) => {
-      const s = q.toLowerCase();
-      const isEventy = /(when|date|next|workshop|course|class|where|time|start)/.test(s);
-      const isAdvicey = /(how|what|why|tips?|recommend|do i need|can i)/.test(s);
-      if (isEventy && !isAdvicey) return 'events';
-      if (isAdvicey && !isEventy) return 'advice';
-      // fallback: prefer events when in doubt
+    const guessIntent = q => {
+      const s=q.toLowerCase();
+      const isEventy=/(when|date|next|workshop|course|class|where|time|start)/.test(s);
+      const isAdvicey=/(how|what|why|tips?|recommend|do i need|can i)/.test(s);
+      if(isEventy && !isAdvicey) return 'events';
+      if(isAdvicey && !isEventy) return 'advice';
       return isEventy ? 'events' : 'advice';
     };
 
-    const searchEvents = async (q) => {
-      const EV = state.views.events;
-      const s = `%${q}%`;
-      const { data, error } = await state.client.from(EV)
-        .select('title,url,"when",location')
-        .ilike('title', s)
-        .limit(10);
-      if (error) { state.errors.push(String(error.message)); return []; }
-      return data || [];
-    };
+    const searchEvents = async (q)=>{ const s=`%${q}%`; const {data,error}=await state.client.from(state.views.events).select('title,url,"when",location').ilike('title',s).limit(10); if(error){state.errors.push(String(error.message));return[]} return data||[]; };
+    const searchProducts = async (q)=>{ const s=`%${q}%`; const {data,error}=await state.client.from(state.views.products).select('title,url,price,tags').ilike('title',s).limit(10); if(error){state.errors.push(String(error.message));return[]} return data||[]; };
 
-    const searchProducts = async (q) => {
-      const PV = state.views.products;
-      const s = `%${q}%`;
-      const { data, error } = await state.client.from(PV)
-        .select('title,url,price,tags')
-        .ilike('title', s)
-        .limit(10);
-      if (error) { state.errors.push(String(error.message)); return []; }
-      return data || [];
-    };
+    const runSingle = async ()=>{
+      const q=$('#txtQuery').value.trim(); if(!q){ log('Run: (empty query)'); }
+      const expectedRow=state.csv.questions.find(r=>(r.query||'').trim().toLowerCase()===q.toLowerCase());
+      const expected=expectedRow?String(expectedRow.expected||'').trim().toLowerCase():null;
+      const intent=guessIntent(q); $('#kIntent').textContent=intent;
 
-    // -----------------------
-    // Single run
-    // -----------------------
-    const runSingle = async () => {
-      const q = $('#txtQuery').value.trim();
-      if (!q) { log('Run: (empty query)'); }
-      const expectedRow = state.csv.questions.find(r => (r.query || '').trim().toLowerCase() === q.toLowerCase());
-      const expected = expectedRow ? String(expectedRow.expected || '').trim().toLowerCase() : null;
+      let events=[],products=[];
+      if(intent==='events'){ events=await searchEvents(q); } else { products=await searchProducts(q); }
 
-      const intent = guessIntent(q);
-      $('#kIntent').textContent = intent;
+      const pills=[]; if(state.flags.generic){ pills.push({label:'Event Listing',url:'https://www.alanranger.com/search?query=workshops',brand:true}); }
+      const counts={events:events.length,articles:0,pills:pills.length};
+      $('#kCounts').textContent=`events=${counts.events}, articles=0`;
+      const conf=Math.min(100,30+(intent==='events'?events.length*8:products.length*6)+(q?7:0)); $('#kConf').textContent=conf+'%';
 
-      let events = [], articles = [], products = [];
-      if (intent === 'events') {
-        events = await searchEvents(q);
-        // if nothing found and fallback enabled, use landing CSV to make a generic pill only
-      } else {
-        products = await searchProducts(q);
-      }
+      const detected=intent; const pass=expected?(expected===detected):null; $('#kReason').textContent=expected?`${expected} vs ${detected}`:'—';
 
-      const pills = [];
-      if (state.flags.generic) {
-        pills.push({ label: 'Event Listing', url: 'https://www.alanranger.com/search?query=workshops', brand: true });
-      }
-      const counts = { events: events.length, articles: 0, pills: pills.length };
-      $('#kCounts').textContent = `events=${counts.events}, articles=${counts.articles}`;
-      const conf = Math.min(100, 30 + (intent === 'events' ? events.length * 8 : products.length * 6) + (q ? 7 : 0));
-      $('#kConf').textContent = conf + '%';
+      const used={intent,product:null,events,articles:[],pills,citations:[]};
+      const idx=expectedRow?.idx??null;
+      const result={idx,query:q,expected,detected,counts,pass:pass===null?undefined:pass,used,confidence:conf};
 
-      const detected = intent;
-      const pass = expected ? (expected === detected) : null;
-      $('#kReason').textContent = expected ? `${expected} vs ${detected}` : '—';
-
-      const used = {
-        intent,
-        product: null,
-        events,
-        articles,
-        pills,
-        citations: []
-      };
-
-      const idx = expectedRow?.idx ?? null;
-      const result = {
-        idx,
-        query: q,
-        expected,
-        detected,
-        counts,
-        pass: pass === null ? undefined : pass,
-        used,
-        confidence: conf
-      };
-
-      state.lastSingle = result;
-      $('#jsonBox').value = JSON.stringify(result, null, 2);
-
-      // Render pills
-      const pb = $('#pillsBox'); pb.innerHTML = '';
-      pills.forEach(p => {
-        const span = document.createElement('a');
-        span.className = 'chip brand';
-        span.href = p.url; span.target = '_blank';
-        span.textContent = p.label;
-        pb.appendChild(span);
-      });
-
+      state.lastSingle=result; $('#jsonBox').value=JSON.stringify(result,null,2);
+      const pb=$('#pillsBox'); pb.innerHTML=''; pills.forEach(p=>{const a=document.createElement('a'); a.className='chip brand'; a.href=p.url; a.target='_blank'; a.textContent=p.label; pb.appendChild(a);});
       log(`Run: "${q}" → intent=${intent}, events=${events.length}, articles=0, conf=${conf}%`);
     };
 
-    // -----------------------
-    // JSON export (rich log)
-    // -----------------------
-    const buildExport = () => {
-      const env = {
-        supabase_url: state.sbUrl,
-        supabase_anon_key_redacted: redactKey(state.sbKey),
-        events_view: state.views.events,
-        products_view: state.views.products,
-        flags: { ...state.flags }
-      };
-
-      const live = {
-        events_count: state.counts.events,
-        products_count: state.counts.products,
-        events_sample: (state.live.events || []).slice(0, 10).map(r => ({
-          title: r.title ?? null, url: r.url ?? null, when: r.when ?? null, location: r.location ?? ''
-        })),
-        products_sample: (state.live.products || []).slice(0, 10).map(r => ({
-          title: r.title ?? null, url: r.url ?? null, price: r.price ?? null, tags: r.tags ?? null
-        }))
-      };
-
-      const landing = {
-        rows_total: state.csv.landing.length,
-        sample: state.csv.landing.slice(0, 10).map(r => ({
-          url: r.url ?? null,
-          title: r.meta_title || r.title || r.page_title || null
-        }))
-      };
-
-      const questions = {
-        rows_total: state.csv.questions.length,
-        rows: state.csv.questions.map(r => ({ query: r.query, expected: r.expected }))
-      };
-
-      const payload = {
-        meta: {
-          version: 'benchtest/1.8',
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent
-        },
-        environment: env,
-        datasets: { live, landing_csv: landing, questions_csv: questions },
-        last_single_run: state.lastSingle,
-        last_suite_run: state.lastSuite,
-        execution_log: [...state.log],
-        errors: [...state.errors]
-      };
-      return payload;
+    const buildExport = ()=>{
+      const env={supabase_url:state.sbUrl,supabase_anon_key_redacted:redactKey(state.sbKey),events_view:state.views.events,products_view:state.views.products,flags:{...state.flags}};
+      const live={events_count:state.counts.events,products_count:state.counts.products,events_sample:(state.live.events||[]).slice(0,10).map(r=>({title:r.title??null,url:r.url??null,when:r.when??null,location:r.location??''})),products_sample:(state.live.products||[]).slice(0,10).map(r=>({title:r.title??null,url:r.url??null,price:r.price??null,tags:r.tags??null}))};
+      const landing={rows_total:state.csv.landing.length,sample:state.csv.landing.slice(0,10).map(r=>({url:r.url??null,title:r.meta_title||r.title||r.page_title||null}))};
+      const questions={rows_total:state.csv.questions.length,rows:state.csv.questions.map(r=>({query:r.query,expected:r.expected}))};
+      return {meta:{version:'benchtest/1.8',timestamp:new Date().toISOString(),userAgent:navigator.userAgent},environment:env,datasets:{live,landing_csv:landing,questions_csv:questions},last_single_run:state.lastSingle,last_suite_run:state.lastSuite,execution_log:[...state.log],errors:[...state.errors]};
     };
+    const copyJson = async ()=>{ const text=JSON.stringify(buildExport(),null,2); try{ await navigator.clipboard.writeText(text); log('Copied JSON.'); }catch{ download(`benchtest-log-${Date.now()}.json`,text); log('Clipboard blocked; downloaded JSON instead.'); } };
+    const downloadJson = ()=>{ download(`benchtest-log-${Date.now()}.json`,JSON.stringify(buildExport(),null,2)); log('Downloaded JSON.'); };
 
-    const copyJson = async () => {
-      const data = buildExport();
-      const text = JSON.stringify(data, null, 2);
-      try {
-        await navigator.clipboard.writeText(text);
-        log('Copied JSON.');
-      } catch {
-        download(`benchtest-log-${Date.now()}.json`, text);
-        log('Clipboard blocked; downloaded JSON instead.');
-      }
-    };
-
-    const downloadJson = () => {
-      const data = buildExport();
-      download(`benchtest-log-${Date.now()}.json`, JSON.stringify(data, null, 2));
-      log('Downloaded JSON.');
-    };
-
-    // -----------------------
-    // Wire up UI
-    // -----------------------
+    // UI wiring
     restore();
-    $('#btnFillDefaults').onclick = () => {
-      $('#eventsView').value = 'ai_events';
-      $('#productsView').value = 'ai_products';
-      if (!$('#sbUrl').value) $('#sbUrl').value = 'https://YOUR-PROJECT.supabase.co';
-      $('#connStatus').textContent = 'Defaults applied (edit as needed).';
-    };
-    $('#btnSaveCreds').onclick = () => { connect(); persist(); log('Saved Supabase credentials.'); };
-    $('#btnConnect').onclick = () => { connect(); };
-    $('#btnFetch').onclick = () => fetchLive();
-    $('#btnClear').onclick = () => {
-      localStorage.removeItem('bench.sbUrl');
-      localStorage.removeItem('bench.sbKey');
-      localStorage.removeItem('bench.eventsView');
-      localStorage.removeItem('bench.productsView');
-      localStorage.removeItem('bench.flags');
-      restore();
-      $('#kEvents').textContent = '–'; $('#kProducts').textContent = '–'; $('#kLanding').textContent = '–'; $('#kQuestions').textContent = '–';
-      $('#listEvents').innerHTML = ''; $('#listProducts').innerHTML = ''; $('#pillsBox').innerHTML = ''; $('#jsonBox').value = '';
-      state.live.events = []; state.live.products = []; state.csv.landing = []; state.csv.questions = [];
-      state.counts = { events: 0, products: 0 };
-      state.log = []; $('#logBox').textContent = '';
-      state.errors = []; state.lastSingle = null; state.lastSuite = { total: 0, results: [] };
-      log('Reset defaults.');
-    };
+    $('#btnFillDefaults').onclick=()=>{ $('#eventsView').value=DEFAULT_EVENTS_VIEW; $('#productsView').value=DEFAULT_PRODUCTS_VIEW; if(!$('#sbUrl').value) $('#sbUrl').value='https://YOUR-PROJECT.supabase.co'; setStatus('Defaults applied (edit as needed).'); };
+    $('#btnSaveCreds').onclick=()=>{ connect(); persist(); log('Saved Supabase credentials.'); };
+    $('#btnConnect').onclick=()=>connect();
+    $('#btnFetch').onclick=()=>fetchLive();
+    $('#btnClear').onclick=()=>{ localStorage.removeItem('bench.sbUrl');localStorage.removeItem('bench.sbKey');localStorage.removeItem('bench.eventsView');localStorage.removeItem('bench.productsView');localStorage.removeItem('bench.flags'); restore(); $('#kEvents').textContent='–';$('#kProducts').textContent='–';$('#kLanding').textContent='–';$('#kQuestions').textContent='–'; $('#listEvents').innerHTML='';$('#listProducts').innerHTML='';$('#pillsBox').innerHTML='';$('#jsonBox').value=''; state.live.events=[];state.live.products=[];state.csv.landing=[];state.csv.questions=[]; state.counts={events:0,products:0}; state.log=[];$('#logBox').textContent=''; state.errors=[];state.lastSingle=null;state.lastSuite={total:0,results:[]}; log('Reset defaults.'); };
+    $('#csvLanding').addEventListener('change',async e=>{ if(e.target.files.length) await loadCsv(e.target.files[0],'landing'); });
+    $('#csvQuestions').addEventListener('change',async e=>{ if(e.target.files.length) await loadCsv(e.target.files[0],'questions'); });
+    $('#btnLandingClear').onclick=()=>{ state.csv.landing=[]; $('#kLanding').textContent='0 rows'; log('Landing CSV cleared.'); };
+    $('#btnQuestionsClear').onclick=()=>{ state.csv.questions=[]; $('#kQuestions').textContent='0 rows'; log('Questions CSV cleared.'); };
+    $('#flagFallback').onchange=e=>{ state.flags.fallback=!!e.target.checked; persist(); };
+    $('#flagGeneric').onchange=e=>{ state.flags.generic=!!e.target.checked; persist(); };
+    $('#btnRun').onclick=()=>runSingle();
+    $('#btnCopyJson').onclick=()=>copyJson();
+    $('#btnDownloadJson').onclick=()=>downloadJson();
+    $('#btnCopyLog').onclick=async()=>{ const text=state.log.join('\n'); try{ await navigator.clipboard.writeText(text); log('Copied log.'); }catch{} };
+    $('#btnShowLog').onclick=()=>$('#btnCopyLog').click();
+    $('#btnClearLog').onclick=()=>{ state.log=[]; $('#logBox').textContent=''; };
 
-    $('#csvLanding').addEventListener('change', async (e) => {
-      if (e.target.files.length) await loadCsv(e.target.files[0], 'landing');
-    });
-    $('#csvQuestions').addEventListener('change', async (e) => {
-      if (e.target.files.length) await loadCsv(e.target.files[0], 'questions');
-    });
-    $('#btnLandingClear').onclick = () => { state.csv.landing = []; $('#kLanding').textContent = '0 rows'; log('Landing CSV cleared.'); };
-    $('#btnQuestionsClear').onclick = () => { state.csv.questions = []; $('#kQuestions').textContent = '0 rows'; log('Questions CSV cleared.'); };
-
-    $('#flagFallback').onchange = (e) => { state.flags.fallback = !!e.target.checked; persist(); };
-    $('#flagGeneric').onchange = (e) => { state.flags.generic = !!e.target.checked; persist(); };
-
-    $('#btnRun').onclick = () => runSingle();
-    $('#btnCopyJson').onclick = () => copyJson();
-    $('#btnDownloadJson').onclick = () => downloadJson();
-    $('#btnCopyLog').onclick = async () => {
-      const text = state.log.join('\n');
-      try { await navigator.clipboard.writeText(text); log('Copied log.'); } catch { /* ignore */ }
-    };
-    $('#btnShowLog').onclick = () => $('#btnCopyLog').click();
-    $('#btnClearLog').onclick = () => { state.log = []; $('#logBox').textContent = ''; };
-
-    // First paint log
     log('Bench ready.');
   </script>
 </body>
