@@ -65,7 +65,7 @@
       </div>
       <details class="debug">
         <summary>Debug: View names</summary>
-        <div class="small">Read-only views: <code>ai_events</code>, <code>ai_products</code>, <code>ai_articles</code>, <code>page_chunks</code></div>
+        <div class="small">Views: <code>ai_events</code>, <code>ai_products</code>, <code>ai_articles</code>, <code>page_chunks</code></div>
       </details>
     </div>
 
@@ -97,7 +97,7 @@
       <div class="mb8">
         <label class="small">Landing pages CSV (url, title/meta_title)</label>
         <input type="file" id="csvLanding" accept=".csv">
-        <div class="hint small">Used only for brand pills (Blog, Newsletter, Gift Vouchers, Payment Plan). No query pill is ever created.</div>
+        <div class="hint small">Only used for brand pills (Blog, Newsletter, Gift Vouchers, Payment Plan). No search pill is ever created.</div>
       </div>
       <div class="mb8">
         <label class="small">Questions suite CSV (idx, query, expected)</label>
@@ -154,7 +154,7 @@
     </div>
 
     <div class="span-12">
-      <details class="debug">
+      <details class="debug" open>
         <summary>Debug & Logs</summary>
         <div id="log" class="mono small"></div>
       </details>
@@ -190,38 +190,18 @@
       const adviceLead = /\b(what|how|why|need|require|should|which|help)\b/.test(s);
       const mentionsFree = /\bfree\b/.test(s);
 
-      // 1) Schedule about events
       if (hasEvent && hasSched) return "events";
-
-      // 2) Price + event (no buy intent) → show listings with prices
       if (hasEvent && hasPrice && !buyIntent) return "events";
-
-      // 3) “Do you run/offer/host/provide … (workshops/courses)?” → events
-      //    Avoid matching “do you get a certificate” etc.
-      if (policyYou && hasEvent && /\b(run|offer|host|provide|do)\b.*\b(workshop|workshops|course|courses|class|classes)\b/.test(s)) {
-        return "events";
-      }
-
-      // 4) “Is it free” style → advice
+      if (policyYou && hasEvent && /\b(run|offer|host|provide|do)\b.*\b(workshop|workshops|course|courses|class|classes)\b/.test(s)) return "events";
       if (mentionsFree && /course|workshop|class|subscription|online/.test(s)) return "advice";
-
-      // 5) Purchase intent, or price with no event noun → products
       if (buyIntent || (hasPrice && !hasEvent)) return "products";
-
-      // 6) Policy/requirements about me → advice
       if (policyMe) return "advice";
-
-      // 7) Generic informational → advice
       if (adviceLead) return "advice";
-
-      // 8) Any remaining event mention → events
       if (hasEvent) return "events";
-
-      // 9) Default
       return "advice";
     }
 
-    // ------- Brand pills (landing CSV only). No "search site" pill ever -------
+    // ------- Brand pills -------
     let landing = [];
     let lastRun = { query:"", tokens:[], intent:null, pills:[], events:[], products:[], articles:[] };
     function generatePills() {
@@ -287,7 +267,7 @@
       return out;
     }
 
-    // ------- Supabase wiring (RPCs only) -------
+    // ------- Supabase (RPCs only) -------
     let supa = null;
 
     async function connect(){
@@ -360,7 +340,7 @@
       $('#countArticles').textContent = rows.length;
     }
 
-    function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39'}[c])) }
+    function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
 
     // ------- Export helpers -------
     let suiteResults = []; // [{idx,query,expected,got,pass, data:{events,products,articles}, tokens, intent}]
@@ -465,11 +445,11 @@
       renderArticles(articles);
     }
 
-    // ------- Suite runner with optional data fetch -------
+    // ------- Suite runner with auto-preview -------
     let questions = []; // [{idx, query, expected}]
     function normalizeExpected(v){
       const s = (v||'').toLowerCase().trim();
-      if (s === 'articles') return 'advice'; // policy: treat as equivalent
+      if (s === 'articles') return 'advice';
       return s;
     }
 
@@ -500,19 +480,19 @@
             data.events = evp.slice(0,10);
             data.products = pr.slice(0,10);
             data.articles = ar.slice(0,10);
-            log(`[${row.idx}] "${q}" → got:${got} expected:${expected} ${ok?'✓':'✗'} | rows: e:${ev.length} p:${pr.length} a:${ar.length}`);
+            log(`[${row.idx || (i+1)}] "${q}" → got:${got} expected:${expected} ${ok?'✓':'✗'} | rows: e:${ev.length} p:${pr.length} a:${ar.length}`);
           } else {
-            log(`[${row.idx}] "${q}" → got:${got} expected:${expected} ${ok?'✓':'✗'} | no tokens`);
+            log(`[${row.idx || (i+1)}] "${q}" → got:${got} expected:${expected} ${ok?'✓':'✗'} | no tokens`);
           }
         } else {
-          log(`[${row.idx}] "${q}" → got:${got} expected:${expected} ${ok?'✓':'✗'}`);
+          log(`[${row.idx || (i+1)}] "${q}" → got:${got} expected:${expected} ${ok?'✓':'✗'}`);
         }
 
-        suiteResults.push({ idx:row.idx, query:q, expected, got, pass:ok, tokens:toks, intent:got, data });
+        suiteResults.push({ idx: row.idx || (i+1), query:q, expected, got, pass:ok, tokens:toks, intent:got, data });
 
         const opt = document.createElement('option');
         opt.value = String(i);
-        opt.textContent = `[${row.idx}] ${q}`;
+        opt.textContent = `[${row.idx || (i+1)}] ${q}`;
         select.appendChild(opt);
 
         ok ? pass++ : fail++;
@@ -520,6 +500,12 @@
       $('#suiteStats').textContent = `Pass ${pass} / ${pass+fail}`;
       $('#suiteStats').classList.toggle('good', true);
       $('#suiteStats').classList.toggle('bad', false);
+
+      // NEW: auto-preview first row so blocks populate immediately
+      if (suiteResults.length) {
+        $byId('suitePreview').value = "0";
+        previewSuiteSelection();
+      }
     }
 
     // Preview any suite row into the 3 blocks
@@ -575,7 +561,7 @@
     });
     $byId('btnDownloadSuiteCSV').addEventListener('click', ()=>{ downloadCSV('bench-suite-results.csv', suiteResults); });
 
-    // Initial pills (empty landing still adds fixed brand pills)
+    // Initial pills (even without landing CSV)
     generatePills();
   </script>
 </body>
