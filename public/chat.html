@@ -6,27 +6,35 @@
 <title>Alan Ranger Assistant</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<!--
+  chat.html — Alan Ranger Assistant
+  Version: v0.9.24  (full-drop-in build)
+-->
+
 <style>
+/* ====== THEME ====== */
 :root{
   --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
   --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
   --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
   --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
-  --user-bg:#e6edf7; --user-text:#0b0f16;
+  --user-bg:#e6edf7; --user-text:#0b0f16; --good:#00b894; --bad:#ef476f;
+  --border:#15223a; --shadow:0 6px 22px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
+a{color:var(--link)} a:hover{color:var(--link-hover)}
+
 .wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
 .badge-wrap{position:relative;height:0}
 .version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
-.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 
-/* Sticky header */
-.header-sticky{
-  position:sticky; top:10px; z-index:50;
-  background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98));
-  border-radius:12px; padding:0 0 10px 0; margin:-8px -8px 12px -8px;
-}
+/* ====== CARD ====== */
+.card{background:var(--panel);border-radius:14px;box-shadow:var(--shadow);border-top:6px solid var(--brand);padding:28px}
+
+/* ====== HEADER ====== */
+.header-sticky{position:sticky;top:10px;z-index:50;background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98));border-radius:12px;padding:0 0 10px 0;margin:-8px -8px 12px -8px}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
@@ -35,7 +43,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
 .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
-/* Chat surface */
+/* ====== CHAT SURFACE ====== */
 .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
 .thread{display:flex;flex-direction:column;gap:12px}
 .bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
@@ -44,42 +52,45 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer p{margin:.5em 0}
 .answer ul{margin:.4em 0 .6em 1.25em}
 .answer li{margin:.15em 0}
-.answer a{color:var(--link);text-decoration:underline}
-.answer a:hover{color:var(--link-hover)}
-.meta{color:var(--muted);font-size:14px}
+.answer a{text-decoration:underline}
 .kvline{margin:0}
 .kvline strong{font-weight:600}
+.meta{color:var(--muted);font-size:14px}
 .conf{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;background:#0f244d;color:#cfe3ff;border:1px solid #274a8a;border-radius:999px;padding:4px 10px;margin-top:8px}
 .conf::before{content:"•";display:inline-block}
 
-/* Global pill row */
+/* ====== ACTIONS ====== */
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .actions .pill{background:var(--brand);color:#0b0f16;border:none}
 
-/* Composer + utilities */
-.tools{display:flex;justify-content:flex-end;gap:10px;margin:8px 0 6px}
+/* ====== UTILITIES / CONTROLS ====== */
+.tools{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin:8px 0 6px}
 .tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
 .tools button:hover{border-color:#3c548b}
+.hint{font-size:12px;color:#8aa0c9;margin-top:6px}
+
+/* ====== COMPOSER ====== */
 .composer{display:flex;gap:10px;margin-top:8px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #d3deee;border-radius:10px;padding:12px 14px;outline:0}
 .composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
-/* Debug panel */
-details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
+/* ====== DEBUG ====== */
+details.debug{margin-top:14px;background:#0f1828;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
 details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
-.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
+.kv{display:grid;grid-template-columns:160px 1fr;gap:8px;margin-top:10px}
 .kv label{color:#93A4C1}
-pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
+pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid var(--border);border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
 
-/* Typing dots */
+/* ====== TYPING ====== */
 .typing{position:relative;display:inline-block}
 .typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
 .typing .dot:nth-child(2){animation-delay:.15s}
 .typing .dot:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
+/* ====== MEDIA ====== */
 @media (max-width:540px){
   .title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}
   .header-sticky{top:6px;margin:-6px -6px 10px -6px}
@@ -88,39 +99,42 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v0.9.22</span></div>
+  <div class="badge-wrap"><span class="version" aria-label="Build version">v0.9.24</span></div>
 
-  <div class="card">
+  <div class="card" role="application" aria-label="Alan Ranger Assistant">
     <!-- Sticky header -->
     <div class="header-sticky">
-      <div class="header">
-        <img class="logo" src="./chat%20white.png" alt="AR logo">
+      <div class="header" role="banner">
+        <img class="logo" src="./chat%20white.png" alt="Alan Ranger icon">
         <h2 class="title">Alan Ranger Assistant</h2>
         <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
           photography questions. I won’t always get everything right — if I can’t help, please contact
           Alan directly:</p>
-        <div class="pills">
-          <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-          <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+        <div class="pills" role="navigation" aria-label="Contact options">
+          <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography" aria-label="Open contact form">Contact form</a>
+          <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994" aria-label="WhatsApp chat">WhatsApp</a>
         </div>
       </div>
     </div>
 
-    <div class="chat">
-      <div id="thread" class="thread">
-        <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
+    <div class="chat" role="region" aria-live="polite">
+      <div id="thread" class="thread" role="log" aria-label="Chat transcript">
+        <div class="bubble" aria-label="assistant message">Hi! I can help with workshops, tuition, and photography advice.</div>
       </div>
 
       <!-- Utility buttons -->
-      <div class="tools">
-        <button id="btn-email">Email transcript</button>
-        <button id="btn-reset">Reset chat</button>
+      <div class="tools" role="toolbar" aria-label="Utilities">
+        <button id="btn-email" title="Email transcript (Ctrl/Cmd+E)">Email transcript</button>
+        <button id="btn-download" title="Download transcript (.txt)">Download</button>
+        <button id="btn-reset" title="Reset chat (Ctrl/Cmd+R)">Reset chat</button>
+        <button id="btn-focus" title="Focus input (Ctrl/Cmd+K)">Focus input</button>
       </div>
+      <div class="hint">Shortcuts: Enter = send, Shift+Enter = newline, <kbd>Ctrl/Cmd+K</kbd> focus, <kbd>Ctrl/Cmd+R</kbd> reset, <kbd>Ctrl/Cmd+E</kbd> email, <kbd>Ctrl/Cmd+D</kbd> toggle debug.</div>
 
       <details id="debugPanel" class="debug">
         <summary>🔎 Show debug</summary>
         <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
-        <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
+        <div class="kv"><label>Endpoint</label><div id="dbg-endpoint">/api/chat</div></div>
         <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
         <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
         <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
@@ -130,48 +144,408 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
         <div class="kv"><label>Note</label><pre id="dbg-note" class="json">–</pre></div>
       </details>
 
-      <div class="composer">
-        <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
-        <button id="send" class="send">Send</button>
+      <div class="composer" role="search">
+        <input id="q" aria-label="Ask a question" placeholder="Ask a question… (Shift+Enter for newline)" />
+        <button id="send" class="send" aria-label="Send message">Send</button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-/* ================= Config ================= */
-const CHAT_ENDPOINT = '/api/chat';
-const urlParams = new URLSearchParams(location.search);
-if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
+/* ==========================================================
+   Alan Ranger Assistant — client script
+   Build v0.9.24
+   ========================================================== */
 
-/* Optional tag-page fallback for articles (safe, non-search) */
-const ARTICLE_TAG_GUESS = {
-  bluebell: 'https://www.alanranger.com/blog?tag=bluebell',
-  bluebells: 'https://www.alanranger.com/blog?tag=bluebell',
-  devon: 'https://www.alanranger.com/blog?tag=devon',
-  woodland: 'https://www.alanranger.com/blog?tag=woodland'
-};
+const CHAT_ENDPOINT='/api/chat';    // server endpoint
+const STORAGE_KEY='ar-assistant-thread-v1'; // local transcript cache (session)
+const urlParams=new URLSearchParams(location.search);
+if(urlParams.get('debug')==='1') requestAnimationFrame(()=>{document.getElementById('debugPanel').open=true;});
 
-/* ================= DOM refs ================= */
-const thread = document.getElementById('thread');
-const input  = document.getElementById('q');
-const sendBtn= document.getElementById('send');
-const btnEmail = document.getElementById('btn-email');
-const btnReset = document.getElementById('btn-reset');
+// ===== DOM =====
+const thread=document.getElementById('thread');
+const input=document.getElementById('q');
+const sendBtn=document.getElementById('send');
+const btnEmail=document.getElementById('btn-email');
+const btnDownload=document.getElementById('btn-download');
+const btnReset=document.getElementById('btn-reset');
+const btnFocus=document.getElementById('btn-focus');
 
-const dbgStatus = document.getElementById('dbg-status');
-const dbgReq    = document.getElementById('dbg-req');
-const dbgRes    = document.getElementById('dbg-res');
-const dbgHeaders= document.getElementById('dbg-headers');
-const dbgStruct = document.getElementById('dbg-struct');
-const dbgProv   = document.getElementById('dbg-prov');
-const dbgCopy   = document.getElementById('dbg-copy');
-const dbgNote   = document.getElementById('dbg-note');
+const dbgStatus=document.getElementById('dbg-status');
+const dbgReq=document.getElementById('dbg-req');
+const dbgRes=document.getElementById('dbg-res');
+const dbgHeaders=document.getElementById('dbg-headers');
+const dbgStruct=document.getElementById('dbg-struct');
+const dbgProv=document.getElementById('dbg-prov');
+const dbgCopy=document.getElementById('dbg-copy');
+const dbgNote=document.getElementById('dbg-note');
 
-function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
+// ===== Utils =====
+function j(v){try{return JSON.stringify(v,null,2);}catch{return String(v);}}
+function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function mdToHtml(md){
+  if(!md) return {html:''};
+  let s=md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  const lines=s.split(/\r?\n/);
+  let out='',inList=false;
+  const flush=()=>{if(inList){out+='</ul>';inList=false;}};
+  for(const line of lines){
+    const m=line.match(/^\s*-\s+(.*)$/);
+    if(m){ if(!inList){out+='<ul>';inList=true;} out+=`<li>${m[1].trim()}</li>`; }
+    else { flush(); out += line.trim()?`<p>${line}</p>`:''; }
+  }
+  flush();
+  return {html:`<div class="answer">${out}</div>`};
+}
+function fmtDate(iso){try{return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{return iso;}}
+function currency(n,ccy){
+  if(n==null||n==='')return null;
+  const v=Number(n); if(!isFinite(v)) return null;
+  try{return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(v);}
+  catch{return `£${String(n).replace(/\.00$/,'')}`;}
+}
 
-dbgCopy?.addEventListener('click', ()=>{
-  const all = [
+// ===== UI helpers =====
+function addBubble(html,opts={}){const d=document.createElement('div');d.className='bubble'+(opts.user?' user':'');d.innerHTML=html;thread.appendChild(d);persistThread();d.scrollIntoView({behavior:'smooth',block:'end'});return d;}
+function addTyping(){const el=addBubble(`<span class="typing" aria-live="polite"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);return()=>el&&el.remove();}
+function nodeToPlain(div){return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();}
+function buildTranscript(){
+  const rows=[];
+  rows.push(`Alan Ranger Assistant — transcript`);
+  rows.push(new Date().toISOString());
+  rows.push('');
+  for(const el of thread.children){
+    if(el.classList.contains('actions')) continue;
+    const role=el.classList.contains('user')?'User':'Assistant';
+    rows.push(`${role}:\n${nodeToPlain(el)}`); rows.push('');
+  }
+  return rows.join('\n');
+}
+function downloadTranscript(){
+  const body=buildTranscript();
+  const blob=new Blob([body],{type:'text/plain'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='alan-ranger-assistant-transcript.txt';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function emailTranscript(){
+  const body=buildTranscript();
+  const subject='Alan Ranger Assistant chat transcript';
+  const link=`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,2000))}`;
+  if(body.length>2000){
+    const blob=new Blob([body],{type:'text/plain'});
+    const url=URL.createObjectURL(blob);
+    addBubble(`<div class="answer"><p>Transcript is long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a>, and a shortened email draft was opened.</p>${confBadge()}</div>`);
+  }
+  location.href=link;
+}
+
+// ===== Persistence =====
+function persistThread(){
+  try{
+    const html=thread.innerHTML;
+    sessionStorage.setItem(STORAGE_KEY, html);
+  }catch{}
+}
+function loadPersisted(){
+  try{
+    const html=sessionStorage.getItem(STORAGE_KEY);
+    if(html){ thread.innerHTML=html; }
+  }catch{}
+}
+loadPersisted();
+
+// ===== Confidence =====
+let __lastConfidencePct=null;
+function confBadge(){
+  const p=__lastConfidencePct;
+  if(p==null||isNaN(p)) return '';
+  return `<div class="conf" aria-label="confidence">Confidence: ${p}%</div>`;
+}
+function heuristicConfidence(s){
+  let score=0;
+  if(s?.products?.length) score+=40;
+  if(s?.events?.length) score+=40;
+  if(s?.articles?.length) score+=20;
+  return Math.min(95,Math.max(20,score||25));
+}
+
+// ===== Product helpers =====
+function firstSentenceOnly(text){
+  const raw=String(text||'').replace(/\s+/g,' ').trim();
+  const cut=raw.split(/summary\b/i)[0].trim();
+  const m=cut.match(/^(.*?\.)\s/);
+  const sent=(m?m[1]:cut).slice(0,220).trim();
+  return sent.endsWith('.')?sent:sent;
+}
+function parseDiscount(desc){
+  const t=String(desc||'');
+  let m=t.match(/\b(?:was|rrp)\s*£?\s*(\d{2,4})\b.*?\b(?:now|today|sale)\s*£?\s*(\d{2,4})/i);
+  if(m) return {was:+m[1],now:+m[2]};
+  m=t.match(/\b£\s?(\d{2,4})\b\s*(?:→|->|to)\s*£\s?(\d{2,4})/i);
+  if(m) return {was:+m[1],now:+m[2]};
+  return null;
+}
+function offersArray(raw){const o=raw?.offers; if(Array.isArray(o)) return o; return o?[o]:[];}
+function extractFacts(desc){
+  const lines=String(desc||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const get=(lab)=>{
+    const idx=lines.findIndex(l=>new RegExp(`^${lab}\\s*:?$`,'i').test(l));
+    if(idx>=0 && idx+1<lines.length) return lines[idx+1];
+    const flat=lines.find(l=>new RegExp(`^${lab}\\s*:?\\s+(.+)$`,'i').test(l));
+    return flat?flat.replace(new RegExp(`^${lab}\\s*:?\\s+`,'i'),''):null;
+  };
+  const optionLines=lines.filter(l=>/^(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l));
+  return {location:get('Location'),participants:get('Participants'),fitness:get('Fitness'),availability:get('Availability'),optionLines};
+}
+function parseExtraPriceFromText(desc){
+  const m=String(desc||'').match(/\b(?:1\s*day|full\s*day)\b[^£\d]{0,12}(£?\s?\d{2,4})/i);
+  if(!m) return null;
+  const n=Number(m[1].replace(/[^\d.]/g,''));
+  return isFinite(n)?n:null;
+}
+function deriveOptions(prod,facts){
+  const ccy=prod.price_currency||prod?.raw?.offers?.priceCurrency||'GBP';
+  const base=prod.price??prod?.raw?.offers?.price;
+  let low=prod?.raw?.offers?.lowPrice, high=prod?.raw?.offers?.highPrice;
+  if((low==null||high==null) && base!=null){
+    const extra=parseExtraPriceFromText(prod.description||'');
+    if(extra!=null && extra!==base){ low=Math.min(base,extra); high=Math.max(base,extra); }
+  }
+  const arr=offersArray(prod.raw);
+  const opts=[];
+  // Multiple offers -> list them
+  if(arr.length>1){
+    arr.forEach((o,i)=>{ opts.push({label:o.name||o.description||`Option ${i+1}`,price:currency(o.price,o.priceCurrency||ccy)}); });
+  }
+  // Text-derived options
+  const text=(facts.optionLines||[]).join('\n').toLowerCase();
+  const has4h=/(^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
+  const has1d=/(^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
+  if(low!=null && high!=null && has4h && has1d){
+    opts.push({label:'4 hours',price:currency(low,ccy)});
+    opts.push({label:'1 day',price:currency(high,ccy)});
+  }else{
+    if(base!=null) opts.push({label:'Standard',price:currency(base,ccy)});
+    if(low!=null || high!=null){
+      const range=[low,high].filter(v=>v!=null).map(v=>currency(v,ccy)).join(' – ');
+      if(range) opts.push({label:'Pricing',price:range});
+    }
+  }
+  // Detect times for each row
+  const timePat=/(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
+  for(const ln of facts.optionLines||[]){
+    const label=ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
+    const tm=ln.match(timePat);
+    const window=tm?`${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}`:null;
+    if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){
+      opts.push({label,time:window});
+    }else if(window){
+      const o=opts.find(o=>o.label.toLowerCase()===label.toLowerCase());
+      if(o && !o.time) o.time=window;
+    }
+  }
+  return opts;
+}
+function renderProductCard(prod,payload){
+  const facts=extractFacts(prod.description||'');
+  const opts=deriveOptions(prod,facts);
+  const ccy=prod.price_currency||prod?.raw?.offers?.priceCurrency||'GBP';
+  const discount=parseDiscount(prod.raw?.description||prod.description||'');
+  const base=prod.price??prod?.raw?.offers?.price;
+  const low=prod?.raw?.offers?.lowPrice, high=prod?.raw?.offers?.highPrice;
+
+  const meta=firstSentenceOnly(prod.raw?.description||prod.description||payload?.answer_markdown||'');
+  const bits=[];
+  if(meta) bits.push(`<p class="meta">${esc(meta)}</p>`);
+  if(facts.location) bits.push(`<p class="kvline"><strong>Location:</strong> ${esc(facts.location)}</p>`);
+  if(facts.participants) bits.push(`<p class="kvline"><strong>Participants:</strong> ${esc(facts.participants)}</p>`);
+  if(facts.fitness) bits.push(`<p class="kvline"><strong>Fitness:</strong> ${esc(facts.fitness)}</p>`);
+  if(prod.availability||facts.availability){
+    const a=(prod.availability||facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
+    bits.push(`<p class="kvline"><strong>Availability:</strong> ${esc(a)}</p>`);
+  }
+
+  // Price lines
+  const lines=[];
+  if(discount){
+    lines.push(`<li><strong>Normal price</strong> — ${currency(discount.was,ccy)}</li>`);
+    lines.push(`<li><strong>Discounted</strong> — ${currency(discount.now,ccy)}</li>`);
+  }else{
+    if(low!=null && high!=null) lines.push(`<li><strong>Price range</strong> — ${currency(low,ccy)} – ${currency(high,ccy)}</li>`);
+    else if(base!=null) lines.push(`<li><strong>Price</strong> — ${currency(base,ccy)}</li>`);
+  }
+  for(const o of opts){
+    const tail=[o.time?` — ${esc(o.time)}`:'',o.price?` — ${o.price}`:''].join('');
+    lines.push(`<li>${esc(o.label||'Option')}${tail}</li>`);
+  }
+
+  return `
+    <div class="answer" aria-label="product">
+      <h3>${esc(prod.title||'Workshop')}</h3>
+      ${bits.join('')}
+      ${lines.length?`<ul>${lines.join('')}</ul>`:''}
+      ${confBadge()}
+    </div>`;
+}
+
+// ===== Events =====
+const STOP=new Set(['the','and','or','what','whats','when','whens','next','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire']);
+let __lastQuery='';
+function extractKeywords(topic,q){
+  const src=[topic||'',q||''].join(' ').toLowerCase();
+  const words=Array.from(new Set(src.match(/[a-z]+/g)||[]));
+  const geos=['devon','warwickshire','warks','coventry','peak','district','lake','lakes','yorkshire','moor','moors','exmoor','dartmoor'];
+  return words.filter(w=>!STOP.has(w) || geos.includes(w));
+}
+function eventMatches(e,kws){
+  if(!kws.length) return true;
+  const hay=((e.title||'')+' '+(e.location||'')).toLowerCase();
+  return kws.some(k=>hay.includes(k));
+}
+function renderEvents(structured,productHasLocation){
+  const now=new Date();
+  const all=(structured?.events||[]).filter(e=>e?.date_start&&!isNaN(Date.parse(e.date_start))&&new Date(e.date_start)>=now);
+  const kws=extractKeywords(structured?.topic||'',__lastQuery);
+  const list=(all.filter(e=>eventMatches(e,kws))||[]);
+  if(!list.length) return '';
+  const kw=kws.find(k=>k&&!STOP.has(k));
+  const title=kw?`Upcoming ${kw[0].toUpperCase()+kw.slice(1)} Workshops`:'Upcoming Workshops';
+  const lis=list.sort((a,b)=>new Date(a.date_start)-new Date(b.date_start)).map(e=>{
+    const when=fmtDate(e.date_start);
+    const href=e.page_url||e.source_url||e.url||'#';
+    const loc=e.location||'';
+    const locPart=(!productHasLocation&&loc)?` — ${esc(loc)}`:'';
+    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${locPart}</li>`;
+  }).join('');
+  return `<div class="answer" aria-label="events"><h3>${title}</h3><ul>${lis}</ul>${confBadge()}</div>`;
+}
+
+// ===== Articles (no wildcard/tag search fallbacks) =====
+function renderArticles(structured){
+  const arts=(structured?.articles||[]).filter(a=>a?.page_url||a?.source_url||a?.url).slice(0,5);
+  if(!arts.length) return '';
+  const lis=arts.map(a=>{
+    const t=a.title||a.raw?.name||'Read more';
+    const u=a.page_url||a.source_url||a.url;
+    return `<li><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></li>`;
+  }).join('');
+  return `<div class="answer" aria-label="guides"><h3>Guides that match your question</h3><ul>${lis}</ul>${confBadge()}</div>`;
+}
+
+// ===== Action pills (safe only) =====
+function buildPills(structured){
+  const safe=[]; const used=new Set();
+  const add=(label,href)=>{
+    if(!label||!href) return;
+    const u=String(href);
+    if(/\/search\?query=/.test(u)) return;   // banned wildcard
+    const key=`${label}::${u}`; if(used.has(key)) return;
+    used.add(key); safe.push({label,href});
+  };
+  for(const p of (structured?.pills||[])) add(p.label||p.text,p.url||p.href);
+  for(const a of (structured?.articles||[])){ const u=a.page_url||a.source_url||a.url; if(u){ add(a.title||'Related article',u); break; } }
+  return safe.slice(0,5);
+}
+
+// ===== Rendering from payload =====
+function renderAnswer(payload){
+  const s=payload.structured||{};
+  let pct=(typeof payload.confidence_pct==='number')?payload.confidence_pct:null;
+  const floor=heuristicConfidence(s); if(pct==null || pct<50) pct=floor;
+  __lastConfidencePct=Math.round(pct);
+
+  const prods=(s.products||[]); const prod=prods[0]||null;
+  if(prod) addBubble(renderProductCard(prod,payload));
+
+  const productFacts=prod?extractFacts(prod.description||''):null;
+  const evHTML=renderEvents(s,!!(productFacts&&productFacts.location));
+  if(evHTML) addBubble(evHTML);
+
+  const artHTML=renderArticles(s);
+  if(artHTML) addBubble(artHTML);
+
+  const pills=buildPills(s);
+  if(pills.length){
+    const wrap=document.createElement('div'); wrap.className='actions';
+    pills.forEach(p=>{const a=document.createElement('a'); a.className='pill'; a.textContent=p.label; a.href=p.href; a.target='_blank'; a.rel='noopener'; wrap.appendChild(a);});
+    thread.appendChild(wrap); persistThread();
+  }
+
+  if(!prod && !(s.events||[]).length && !(s.articles||[]).length){
+    const md=payload.answer_markdown||payload.answer||"I don’t have a specific answer for that yet.";
+    const {html}=mdToHtml(md);
+    addBubble(html.replace('</div>', `${confBadge()}</div>`));
+  }
+
+  dbgStruct.textContent=j(payload.structured||{});
+  dbgNote.textContent=j({confidence_pct:__lastConfidencePct});
+}
+
+// ===== Networking =====
+async function sendQuery(q){
+  __lastQuery=String(q||'');
+  const req={query:q,topK:8};
+  dbgReq.textContent=j(req);
+  const close=addTyping();
+  try{
+    const res=await fetch(CHAT_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req)});
+    dbgStatus.textContent=res.status;
+    const headers={}; res.headers.forEach((v,k)=>headers[k]=v); dbgHeaders.textContent=j(headers);
+    const data=await res.json(); dbgRes.textContent=j(data); dbgProv.textContent=j({citations:data.citations||[]});
+    close();
+    if(data && (data.answer_markdown||data.answer||(data.structured&&(data.structured.products?.length||data.structured.events?.length||data.structured.articles?.length)))){
+      renderAnswer(data);
+    }else{
+      const {html}=mdToHtml("I don’t have a specific answer for that yet.");
+      addBubble(html.replace('</div>', `${confBadge()}</div>`));
+    }
+  }catch(err){
+    close();
+    dbgStatus.textContent='error';
+    addBubble(`<div class="answer"><p>Something went wrong: ${esc(String(err))}</p>${confBadge()}</div>`);
+  }
+}
+
+// ===== Controls/shortcuts =====
+function resetChat(){
+  thread.innerHTML='';
+  addBubble('Hi! I can help with workshops, tuition, and photography advice.');
+  [dbgStatus,dbgHeaders,dbgReq,dbgRes,dbgStruct,dbgProv,dbgNote].forEach(el=>{if(!el)return;el.textContent=el.id==='dbg-status'?'–':'–';});
+  sessionStorage.removeItem(STORAGE_KEY);
+}
+function submit(){
+  const v=input.value.trim();
+  if(!v) return;
+  addBubble(esc(v),{user:true});
+  input.value='';
+  sendQuery(v);
+}
+sendBtn.addEventListener('click',submit);
+input.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
+});
+btnEmail.addEventListener('click',emailTranscript);
+btnDownload.addEventListener('click',downloadTranscript);
+btnReset.addEventListener('click',resetChat);
+btnFocus.addEventListener('click',()=>input.focus());
+
+document.addEventListener('keydown',e=>{
+  const mod=e.metaKey||e.ctrlKey;
+  if(mod && e.key.toLowerCase()==='k'){ e.preventDefault(); input.focus(); }
+  if(mod && e.key.toLowerCase()==='r'){ e.preventDefault(); resetChat(); }
+  if(mod && e.key.toLowerCase()==='e'){ e.preventDefault(); emailTranscript(); }
+  if(mod && e.key.toLowerCase()==='d'){ e.preventDefault(); document.getElementById('debugPanel').open = !document.getElementById('debugPanel').open; }
+});
+
+// ===== Debug copy =====
+dbgCopy?.addEventListener('click',()=>{
+  const all=[
+    'Endpoint: '+document.getElementById('dbg-endpoint').textContent,
     'Status: '+dbgStatus.textContent,
     'Headers:\n'+dbgHeaders.textContent,
     'Request:\n'+dbgReq.textContent,
@@ -180,439 +554,14 @@ dbgCopy?.addEventListener('click', ()=>{
     'Provenance:\n'+dbgProv.textContent,
     'Note:\n'+dbgNote.textContent
   ].join('\n\n');
-  navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
+  navigator.clipboard.writeText(all).then(()=>{
+    dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500);
+  });
 });
 
-/* ================= UI helpers ================= */
-function addBubble(html, opts={}) {
-  const div = document.createElement('div');
-  div.className = 'bubble' + (opts.user ? ' user' : '');
-  div.innerHTML = html;
-  thread.appendChild(div);
-  div.scrollIntoView({behavior:'smooth', block:'end'});
-  return div;
-}
-function addTyping() {
-  const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
-  return ()=> el && el.remove();
-}
-function mdToHtml(md){
-  if (!md) return { html:'', liIds:[], items:[] };
-  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  const lines = s.split(/\r?\n/);
-  let out='', inList=false;
-  const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
-  for (const line of lines){
-    const m = line.match(/^\s*-\s+(.*)$/);
-    if (m){ if(!inList){ out+='<ul>'; inList=true; } out += `<li>${m[1].trim()}</li>`; }
-    else { flush(); out += line.trim()? `<p>${line}</p>` : ''; }
-  }
-  flush();
-  return { html:`<div class="answer">${out}</div>` };
-}
-function fmtDate(iso){
-  try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
-}
-function currency(amount, ccy){
-  if(amount==null || amount==='') return null;
-  const n = Number(amount); if(!isFinite(n)) return null;
-  try{ return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n); }
-  catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
-}
-function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
+// ===== Initial focus =====
+if(!sessionStorage.getItem(STORAGE_KEY)) setTimeout(()=>input.focus(), 350);
 
-/* ================= Product helpers ================= */
-function firstSentence(t){
-  const s = String(t||'').trim();
-  if(!s) return '';
-  const m = s.match(/^(.*?\.)(\s|$)/);
-  return m? m[1].trim() : s;
-}
-function mergeProducts(list){
-  if(!Array.isArray(list) || !list.length) return [];
-  const map = new Map();
-  for(const p of list){
-    const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
-    if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
-    const m = map.get(key);
-    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
-    const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
-    const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
-    if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {lowPrice:p.raw.offers.lowPrice, highPrice:p.raw.offers.highPrice, priceCurrency:p.raw.offers.priceCurrency}); }
-    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
-  }
-  return [...map.values()];
-}
-function extractFacts(desc){
-  const txt = String(desc||'')
-    .split(/\r?\n/)
-    .map(l=>l.trim())
-    .filter(Boolean);
-
-  const findAfter = (label)=>{
-    const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
-    if(i>=0 && i+1<txt.length) return txt[i+1];
-    const flat = txt.find(l=>new RegExp(`^${label}\\s*:?\\s+(.+)$`,'i').test(l));
-    if(flat) return flat.replace(new RegExp(`^${label}\\s*:?\\s+`,'i'),'');
-    return null;
-  };
-  const location     = findAfter('Location');
-  const participants = findAfter('Participants');
-  const fitness      = findAfter('Fitness');
-  const availability = findAfter('Availability');
-
-  // Option lines
-  const optionLines = txt.filter(l =>
-    /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
-    /^\s*OR\s*1\s*day\b/i.test(l)
-  );
-
-  return {location, participants, fitness, availability, optionLines};
-}
-function parseExtraPriceFromText(desc){
-  // Look for lines like "1 day — £175" or "full day - £175"
-  const m = String(desc||'').match(/\b(?:1\s*day|full\s*day)\b[^£\d]{0,12}(£?\s?\d{2,4})/i);
-  if(!m) return null;
-  const s = m[1].replace(/[^\d.]/g,'');
-  const n = Number(s);
-  return isFinite(n) ? n : null;
-}
-function deriveOptions(prod, facts){
-  const ccy = prod.price_currency || prod?.raw?.offers?.priceCurrency || 'GBP';
-  const base = prod.price ?? prod?.raw?.offers?.price;
-  let low  = prod?.raw?.offers?.lowPrice;
-  let high = prod?.raw?.offers?.highPrice;
-
-  // If range missing, try to infer a second price from text
-  if((low==null || high==null) && base!=null){
-    const extra = parseExtraPriceFromText(prod.description||'');
-    if(extra!=null && extra!==base){
-      low = Math.min(base, extra);
-      high= Math.max(base, extra);
-    }
-  }
-
-  const text = (facts.optionLines||[]).join('\n').toLowerCase();
-  const has4h  = /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
-  const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
-
-  const opts = [];
-
-  if(low!=null && high!=null && has4h && has1d){
-    opts.push({label:'4 hours', price:currency(low,ccy)});
-    opts.push({label:'1 day',   price:currency(high,ccy)});
-  } else {
-    if(base!=null) opts.push({label:'Standard', price:currency(base,ccy)});
-    if(low!=null || high!=null){
-      const range = [low,high].filter(v=>v!=null).map(v=>currency(v,ccy)).join(' – ');
-      if(range) opts.push({label:'Pricing', price:range});
-    }
-  }
-
-  const timePat = /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
-  for(const ln of facts.optionLines||[]){
-    const label = ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
-    const tm = ln.match(timePat);
-    const window = tm ? `${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}` : null;
-    if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){
-      opts.push({label, time:window});
-    } else if(window){
-      const o = opts.find(o=>o.label.toLowerCase()===label.toLowerCase());
-      if(o && !o.time) o.time = window;
-    }
-  }
-  return opts;
-}
-
-/* ================= Renderers ================= */
-let __lastConfidencePct = null;
-let __lastQuery = '';
-
-function renderConfidenceBadge(){
-  const pct = __lastConfidencePct;
-  if(pct==null || isNaN(pct)) return '';
-  return `<div class="conf">Confidence: ${pct}%</div>`;
-}
-
-function renderProductCard(prod){
-  const facts = extractFacts(prod.description||'');
-  const options = deriveOptions(prod, facts);
-
-  const lines = [];
-  const md = firstSentence(prod.description||'');
-  if(md) lines.push(`<p class="meta">${escapeHTML(md)}</p>`);
-
-  if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
-  if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
-  if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
-  if(prod.availability || facts.availability){
-    const avail = (prod.availability||facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
-    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
-  }
-
-  const li = options.map(o=>{
-    const bits = [escapeHTML(o.label||''), o.time ? `— ${escapeHTML(o.time)}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
-    return `<li>${bits}</li>`;
-  }).join('');
-
-  return `
-    <div class="answer">
-      <h3>${escapeHTML(prod.title || 'Workshop')}</h3>
-      ${lines.join('')}
-      ${li? `<ul>${li}</ul>`:''}
-      ${renderConfidenceBadge()}
-    </div>
-  `;
-}
-
-/* Keyword extraction for event filtering */
-const STOP = new Set(['the','and','or','what','whats','when','whens','next','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire']); // we’ll still keep geo words separately
-function extractKeywords(topic, query){
-  const src = [topic||'', query||''].join(' ').toLowerCase();
-  const words = Array.from(new Set(src.match(/[a-z]+/g)||[]));
-  const geos = ['devon','warwickshire','warks','coventry','peak','district','lake','lakes','yorkshire','moor','moors'];
-  const keep = words.filter(w => !STOP.has(w) || geos.includes(w));
-  return keep;
-}
-function eventMatches(e, kws){
-  if(!kws.length) return true;
-  const hay = ((e.title||'')+' '+(e.location||'')).toLowerCase();
-  return kws.some(k=>hay.includes(k));
-}
-
-function renderEventsBlock(structured, productHasLocation){
-  const now=new Date();
-  const all=(structured?.events||[])
-    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
-
-  // Filter by keywords from topic + last query
-  const kws = extractKeywords(structured?.topic||'', __lastQuery);
-  const filtered = all.filter(e=>eventMatches(e, kws));
-
-  const list = filtered.length ? filtered : all; // fallback to all if nothing matched
-  if(!list.length) return '';
-
-  const topic = (structured?.topic||'').toString().trim();
-  const titleKW = kws.find(k=>k && !STOP.has(k));
-  const friendlyTitle = titleKW ? `Upcoming ${titleKW[0].toUpperCase()+titleKW.slice(1)} Workshops` :
-    (topic ? `Upcoming ${escapeHTML(topic.replace(/,?\s*(whats?|whens?|next|cost)/gi,'').trim())} Workshops` : 'Upcoming Workshops');
-
-  const lis = list
-    .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
-    .map(e=>{
-      const when=fmtDate(e.date_start);
-      const href=e.page_url||e.source_url||e.url||'#';
-      const loc=e.location||'';
-      const locPart = (!productHasLocation && loc) ? ` — ${escapeHTML(loc)}` : '';
-      return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${locPart}</li>`;
-    }).join('');
-
-  return `<div class="answer"><h3>${friendlyTitle}</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
-}
-
-function renderArticlesBlock(structured){
-  let list = (structured?.articles||[]).slice(0,5);
-
-  // Fallback to tag page if nothing came from API
-  if(!list.length){
-    const topic = (structured?.topic||'').toLowerCase();
-    for(const [kw,url] of Object.entries(ARTICLE_TAG_GUESS)){
-      if(topic.includes(kw)){
-        list = [{title:'Related articles', url}];
-        break;
-      }
-    }
-  }
-  if(!list.length) return '';
-
-  const lis = list.map(a=>{
-    const t = a.title || a.raw?.name || 'Read more';
-    const u = a.page_url || a.source_url || a.url;
-    if(!u) return '';
-    return `<li><a href="${u}" target="_blank" rel="noopener">${escapeHTML(t)}</a></li>`;
-  }).join('');
-
-  return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
-}
-
-function buildActionPillsFromStructured(structured){
-  const safe = [];
-  const used = new Set();
-  const add = (label, href) => {
-    if(!label || !href) return;
-    const u = String(href);
-    if (/\/search\?query=/.test(u)) return; // ban wildcard searches
-    const key = `${label}::${u}`;
-    if(used.has(key)) return;
-    used.add(key);
-    safe.push({label,href});
-  };
-
-  // provided pills
-  for (const p of (structured?.pills || structured?.chips || [])){
-    add(p.label || p.text || 'Open', p.url || p.href);
-  }
-
-  // from articles (take first one if not already present)
-  if((structured?.articles||[]).length){
-    const art = structured.articles[0];
-    add(art.title || 'Related article', art.page_url || art.source_url || art.url);
-  } else {
-    const topic = (structured?.topic||'').toLowerCase();
-    for(const [kw,url] of Object.entries(ARTICLE_TAG_GUESS)){
-      if(topic.includes(kw)){ add('Related articles', url); break; }
-    }
-  }
-
-  return safe.slice(0,5);
-}
-
-/* Confidence heuristic (client-side floor) */
-function heuristicConfidence(structured){
-  let score = 0;
-  if (structured?.products?.length) score += 40;
-  if (structured?.events?.length)   score += 40;
-  if (structured?.articles?.length) score += 20;
-  return Math.min(95, Math.max(20, score || 25));
-}
-
-/* Full render */
-function renderAnswer(payload){
-  const s = payload.structured||{};
-
-  // confidence override logic
-  let confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
-  const heuristic = heuristicConfidence(s);
-  if (confidencePct == null || confidencePct < 50) confidencePct = heuristic;
-  __lastConfidencePct = Math.round(confidencePct);
-
-  const merged = mergeProducts(s.products||[]);
-  const prod = merged[0] || null;
-
-  // product
-  if(prod) addBubble(renderProductCard(prod));
-
-  // events (hide duplicate location if product has one)
-  const productFacts = prod ? extractFacts(prod.description||'') : null;
-  const productHasLocation = !!(productFacts && productFacts.location);
-  const evHTML = renderEventsBlock(s, productHasLocation);
-  if(evHTML) addBubble(evHTML);
-
-  // articles
-  const artHTML = renderArticlesBlock(s);
-  if(artHTML) addBubble(artHTML);
-
-  // pills
-  const pills = buildActionPillsFromStructured(s);
-  if(pills.length){
-    const wrap = document.createElement('div');
-    wrap.className='actions';
-    pills.forEach(p=>{
-      const a=document.createElement('a'); a.className='pill'; a.textContent=p.label;
-      a.href=p.href; a.target='_blank'; a.rel='noopener';
-      wrap.appendChild(a);
-    });
-    thread.appendChild(wrap);
-  }
-
-  // fallback
-  if(!prod && !(s.events||[]).length && !(s.articles||[]).length){
-    const md = payload.answer_markdown || payload.answer || '';
-    const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
-    const {html}=mdToHtml(md || "I don’t have a specific answer for that yet.");
-    addBubble(html.replace('</div>', `${extra}${renderConfidenceBadge()}</div>`));
-  }
-
-  // Debug dumps
-  dbgStruct.textContent = safeJSONString(payload.structured||{});
-  dbgNote.textContent   = safeJSONString({ confidence_pct: __lastConfidencePct });
-}
-
-/* ================= Networking ================= */
-async function sendQuery(query){
-  __lastQuery = String(query||'');
-  const req = { query, topK: 8 };
-  dbgReq.textContent = safeJSONString(req);
-  const closeTyping = addTyping();
-  try{
-    const res = await fetch(CHAT_ENDPOINT, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(req)
-    });
-    dbgStatus.textContent = res.status;
-    const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
-    dbgHeaders.textContent = safeJSONString(headers);
-
-    const data = await res.json();
-    dbgRes.textContent = safeJSONString(data);
-    dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
-
-    closeTyping();
-    if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
-      renderAnswer(data);
-    } else {
-      const fallback = "I don’t have a specific answer for that yet.";
-      const {html}=mdToHtml(fallback);
-      const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
-      addBubble(html.replace('</div>', `${extra}${renderConfidenceBadge()}</div>`));
-    }
-  } catch (err){
-    closeTyping();
-    dbgStatus.textContent = 'error';
-    addBubble(`<div class="answer"><p>Something went wrong: ${String(err)}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p>${renderConfidenceBadge()}</div>`);
-  }
-}
-
-/* ================= Transcript helpers ================= */
-function nodeToPlain(div){
-  return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
-}
-function buildTranscript(){
-  const rows = [];
-  rows.push(`Alan Ranger Assistant — transcript`);
-  rows.push(new Date().toISOString());
-  rows.push('');
-  for (const el of thread.children){
-    if (el.classList.contains('actions')) continue;
-    const role = el.classList.contains('user') ? 'User' : 'Assistant';
-    rows.push(`${role}:\n${nodeToPlain(el)}`);
-    rows.push('');
-  }
-  return rows.join('\n');
-}
-function emailTranscript(){
-  const body = buildTranscript();
-  const subject = 'Alan Ranger Assistant chat transcript';
-  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,2000))}`;
-  if (body.length > 2000){
-    const blob = new Blob([body], {type:'text/plain'});
-    const url = URL.createObjectURL(blob);
-    addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p>${renderConfidenceBadge()}</div>`);
-  }
-  location.href = mailto;
-}
-function resetChat(){
-  thread.innerHTML = '';
-  addBubble('Hi! I can help with workshops, tuition, and photography advice.');
-  [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgProv, dbgNote].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
-}
-
-/* ================= Wire up composer & tools ================= */
-function submit(){
-  const val = input.value.trim();
-  if(!val) return;
-  addBubble(val, {user:true});
-  input.value='';
-  sendQuery(val);
-}
-sendBtn.addEventListener('click', submit);
-input.addEventListener('keydown', (e)=>{
-  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
-});
-btnEmail.addEventListener('click', emailTranscript);
-btnReset.addEventListener('click', resetChat);
 </script>
 </body>
 </html>
