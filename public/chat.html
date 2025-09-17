@@ -68,8 +68,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
 .tools button:hover{border-color:#3c548b}
 .composer{display:flex;gap:10px;margin-top:8px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
-.composer input::placeholder{color:var(--input-ph)}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:#6b7280}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
@@ -236,19 +236,31 @@ function mergeProducts(list){
   }
   return [...map.values()];
 }
+
+/* Grab facts from description; supports “label:” on one line and value on the next */
 function extractFacts(desc){
-  const txt = String(desc||'')
-    .split(/\r?\n/).filter(l=>{
-      if(/^dates\s*\(/i.test(l)) return false;
-      if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
-      if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
-      return true;
-    });
+  const lines = String(desc||'').split(/\r?\n/).map(l=>l.trim());
+  // remove pure date rows etc.
+  const filtered = lines.filter(l=>{
+    if(/^dates\s*\(/i.test(l)) return false;
+    if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
+    if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
+    return true;
+  });
 
   const grab = (label)=>{
-    const r = new RegExp(`^\\s*${label}\\s*:?\\s*(.+)$`,'i');
-    const m = txt.find(l=>r.test(l));
-    return m ? m.replace(r,'$1').trim() : null;
+    const re = new RegExp(`^${label}\\s*:?(?:\\s*(.+))?$`,'i');
+    for(let i=0;i<filtered.length;i++){
+      const m = filtered[i].match(re);
+      if(m){
+        if(m[1] && m[1].trim()) return m[1].trim();        // same line
+        // next non-empty line
+        for(let j=i+1;j<filtered.length;j++){
+          if(filtered[j]) return filtered[j];
+        }
+      }
+    }
+    return null;
   };
 
   const location     = grab('Location');
@@ -256,7 +268,7 @@ function extractFacts(desc){
   const fitness      = grab('Fitness');
   const availability = grab('Availability');
 
-  const optionLines = txt.filter(l =>
+  const optionLines = filtered.filter(l =>
     /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
     /^\s*OR\s*1\s*day\b/i.test(l)
   ).slice(0,4);
@@ -274,7 +286,6 @@ function deriveOptions(prod, facts){
   const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
 
   const opts = [];
-
   if(low!=null && high!=null && has4h && has1d){
     opts.push({label:'4 hours', price:currency(low,ccy)});
     opts.push({label:'1 day',   price:currency(high,ccy)});
@@ -311,6 +322,16 @@ function humanAvailability(prod){
   return null;
 }
 
+/* Meta description fallback: first sentence(s) before 'Summary' */
+function metaFallback(prod){
+  if (prod.meta_description) return String(prod.meta_description).trim();
+  const d = String(prod.description||'');
+  const parts = d.split(/summary/i)[0] || d; // take section before "Summary"
+  const sentences = parts.replace(/\s+/g,' ').trim().match(/[^.!?]*[.!?]/g) || [];
+  const short = (sentences.slice(0,2).join(' ') || parts).trim();
+  return short.length>240 ? short.slice(0,237)+'…' : short;
+}
+
 /* ---------------- Renderers ---------------- */
 function renderProductCard(prod){
   const facts = extractFacts(prod.description||'');
@@ -323,12 +344,7 @@ function renderProductCard(prod){
   const avail = facts.availability || humanAvailability(prod);
   if (avail) infoP.push(`<p><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
 
-  // Prefer meta description if present (trimmed)
-  let meta = prod.meta_description;
-  if (meta) {
-    meta = meta.replace(/\s+/g,' ').trim();
-    if (meta.length > 240) meta = meta.slice(0,237) + '…';
-  }
+  const meta = metaFallback(prod);
 
   const li = options.map(o=>{
     const bits = [escapeHTML(o.label), o.time ? `— ${escapeHTML(o.time)}` : null, o.price ? `— ${escapeHTML(o.price)}` : null].filter(Boolean).join(' ');
@@ -382,7 +398,7 @@ function renderArticlesBlock(structured, citations){
     const derived = [];
     for (const url of citations) {
       if (typeof url !== 'string') continue;
-      if (!/alanranger\.com\/(blog|photography-tips|news|journal|learn)\b/i.test(url)) continue;
+      if (!/alanranger\.com\/(blog|photography-tips|journal|learn|news)\b/i.test(url)) continue;
       const key = url.split('?')[0];
       if (seen.has(key)) continue;
       seen.add(key);
@@ -411,24 +427,22 @@ function renderOverallConfidence(container, pct){
   container.appendChild(pill);
 }
 
-/* Pills: show provided pills + add from articles (first 2) */
+/* Action pills: explicit pills + (optionally) from articles */
 function buildActionPills(structured, articles){
   const safe = [];
   const used = new Set();
   const add = (label, href) => {
     if(!label || !href) return;
     const u = String(href);
-    if (/\/search\?query=/.test(u)) return; // ban site search wildcards
+    if (/\/search\?query=/.test(u)) return;
     const key = `${label}::${u}`;
     if(used.has(key)) return;
     used.add(key);
     safe.push({label,href});
   };
-  // explicit pills
   for (const p of (structured?.pills || structured?.chips || [])){
     add(p.label || p.text || 'Open', p.url || p.href);
   }
-  // derive up to 2 from articles
   for (const a of (articles||[]).slice(0,2)){
     add(a.title || 'Read guide', a.page_url || a.source_url || a.url);
   }
@@ -437,9 +451,8 @@ function buildActionPills(structured, articles){
 
 /* ------------- Full render ------------- */
 function renderAnswer(payload){
-  // wipe any previous per-answer confidence pill
-  const oldConf = document.querySelectorAll('.conf-overall');
-  oldConf.forEach(n=>n.remove());
+  // remove any previous confidence pill
+  document.querySelectorAll('.conf-overall').forEach(n=>n.remove());
 
   const s = payload.structured||{};
   const confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
@@ -447,32 +460,27 @@ function renderAnswer(payload){
   const merged = mergeProducts(s.products||[]);
   const prod = merged[0] || null;
 
-  // product
   if(prod){
     addBubble(renderProductCard(prod));
   }
 
-  // events
   const productFacts = prod ? extractFacts(prod.description||'') : null;
   const productHasLocation = !!(productFacts && productFacts.location);
   const evHTML = renderEventsBlock(s, productHasLocation);
   if(evHTML) addBubble(evHTML);
 
-  // articles (with fallback from citations)
   const artHTML = renderArticlesBlock(s, payload.citations);
   if(artHTML){
     const artDiv = addBubble(artHTML);
     artDiv.dataset.block='articles';
   }
 
-  // actions: include pills + (if we built articles) add first ones as pills
   let articleList = [];
   try{
-    // Recover list we just rendered to reuse links as pills (lightweight parse)
     if (s.articles && s.articles.length) articleList = s.articles;
     else if (Array.isArray(payload.citations)) {
       articleList = (payload.citations||[])
-        .filter(u=>/alanranger\.com\/(blog|photography-tips|news|journal|learn)\b/i.test(u))
+        .filter(u=>/alanranger\.com\/(blog|photography-tips|journal|learn|news)\b/i.test(u))
         .slice(0,5)
         .map(u=>({title:'Related article', page_url:u}));
     }
@@ -490,7 +498,6 @@ function renderAnswer(payload){
     thread.appendChild(wrap);
   }
 
-  // If nothing rendered, generic fallback with nudge
   if(!prod && !(s.events||[]).length && !(s.articles||[]).length){
     const md = payload.answer_markdown || payload.answer || '';
     const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
@@ -498,11 +505,10 @@ function renderAnswer(payload){
     addBubble(html.replace('</div>', `${extra}</div>`));
   }
 
-  // Single overall confidence pill (blue) appended after last content block
   const host = thread.lastElementChild || thread;
   renderOverallConfidence(host, confidencePct);
 
-  // Debug dumps (response-level only)
+  // Debug dumps
   dbgStruct.textContent = safeJSONString(payload.structured||{});
   dbgNote.textContent   = safeJSONString({ confidence_pct: confidencePct });
 }
@@ -534,7 +540,6 @@ async function sendQuery(query){
       const {html}=mdToHtml(fallback);
       const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
       const node = addBubble(html.replace('</div>', `${extra}</div>`));
-      // still show single confidence if provided
       renderOverallConfidence(node, typeof data?.confidence_pct==='number'?data.confidence_pct:null);
     }
   } catch (err){
