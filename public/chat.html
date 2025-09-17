@@ -13,7 +13,7 @@
   --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
   --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
   --user-bg:#e6edf7; --user-text:#0b0f16;
-  --conf-blue:#4c8dff; --conf-blue-bg:rgba(76,141,255,.14); --conf-blue-br:rgba(76,141,255,.65);
+  --conf:#2a72ff; --conf-ring:rgba(42,114,255,.25);
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
@@ -22,7 +22,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
 .card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 
-/* Sticky header (keeps logo, title and contact pills visible) */
+/* Sticky header */
 .header-sticky{
   position:sticky; top:10px; z-index:50;
   background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98));
@@ -48,13 +48,18 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
 
-/* Single overall confidence pill */
-.conf-row{display:flex;gap:8px;align-items:center;margin-top:6px}
-.conf{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:6px 10px;user-select:none}
-.conf--overall{background:var(--conf-blue-bg);color:var(--text);border:1px solid var(--conf-blue-br);box-shadow:0 6px 18px rgba(76,141,255,.25)}
-.conf--overall strong{color:var(--conf-blue)}
+/* Single overall confidence pill (non-clickable) */
+.conf-overall{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:800;
+  background:rgba(42,114,255,.14); color:#d8e6ff;
+  border:1px solid var(--conf); border-radius:999px;
+  padding:6px 10px; margin:6px 0 0 0;
+  box-shadow:0 0 0 3px var(--conf-ring) inset;
+}
+.conf-overall .dot{width:8px;height:8px;border-radius:50%;background:var(--conf);display:inline-block}
 
-/* Global pill row at end (from payload chips) */
+/* Action pills row */
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .actions .pill{background:var(--brand);color:#0b0f16;border:none}
 
@@ -213,6 +218,7 @@ function currency(amount, ccy){
   try{ return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n); }
   catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
 }
+function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
 
 /* ---------------- Product helpers ---------------- */
 function mergeProducts(list){
@@ -222,14 +228,11 @@ function mergeProducts(list){
     const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
     if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
     const m = map.get(key);
-    for(const k of ['price','price_currency','availability','provider','description','title','meta_description'])
-      if(m[k]==null && p[k]!=null) m[k]=p[k];
+    for(const k of ['price','price_currency','availability','provider','description','title','meta_description']) if(m[k]==null && p[k]!=null) m[k]=p[k];
     const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
     const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
     if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = p.raw.offers; }
-    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){
-      m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency});
-    }
+    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
   }
   return [...map.values()];
 }
@@ -297,6 +300,16 @@ function deriveOptions(prod, facts){
   }
   return opts;
 }
+function humanAvailability(prod){
+  const v = prod?.availability || prod?.raw?.offers?.availability;
+  if(!v) return null;
+  const key = String(v).toLowerCase();
+  if (key.includes('instock')) return 'In stock';
+  if (key.includes('outofstock')) return 'Out of stock';
+  if (key.includes('preorder')) return 'Pre-order';
+  if (key.includes('soldout')) return 'Sold out';
+  return null;
+}
 
 /* ---------------- Renderers ---------------- */
 function renderProductCard(prod){
@@ -307,10 +320,15 @@ function renderProductCard(prod){
   if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
   if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
   if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
-  if(facts.availability) infoP.push(`<p><strong>Availability:</strong> ${escapeHTML(facts.availability)}</p>`);
+  const avail = facts.availability || humanAvailability(prod);
+  if (avail) infoP.push(`<p><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
 
-  const meta = prod.meta_description || prod.meta || (prod.raw && (prod.raw.description || prod.raw.metaDescription));
-  const metaP = meta ? `<p>${escapeHTML(meta)}</p>` : '';
+  // Prefer meta description if present (trimmed)
+  let meta = prod.meta_description;
+  if (meta) {
+    meta = meta.replace(/\s+/g,' ').trim();
+    if (meta.length > 240) meta = meta.slice(0,237) + '…';
+  }
 
   const li = options.map(o=>{
     const bits = [escapeHTML(o.label), o.time ? `— ${escapeHTML(o.time)}` : null, o.price ? `— ${escapeHTML(o.price)}` : null].filter(Boolean).join(' ');
@@ -320,7 +338,7 @@ function renderProductCard(prod){
   return `
     <div class="answer">
       <h3>${escapeHTML(prod.title || 'Workshop')}</h3>
-      ${metaP}
+      ${meta ? `<p>${escapeHTML(meta)}</p>` : ''}
       ${infoP.join('')}
       ${li? `<ul>${li}</ul>`:''}
     </div>
@@ -328,8 +346,15 @@ function renderProductCard(prod){
 }
 function cleanTopic(s){
   if(!s) return '';
-  const stop=/\b(when|whens|next|upcoming|workshops?|what|whats|cost|prices?|where|near|me|the|and|or|how)\b/gi;
-  return s.replace(stop,'').replace(/\s+/g,' ').trim();
+  const stop = new Set(['when','whens','next','upcoming','workshop','workshops','what','whats','cost','prices','the','and','or','near','me']);
+  const words = String(s)
+    .replace(/[^\p{L}\p{N}\s,]/gu,' ')
+    .split(/[,\s]+/g)
+    .map(w=>w.trim().toLowerCase())
+    .filter(w=>w && !stop.has(w));
+  if(!words.length) return '';
+  const cleaned = words.join(' ');
+  return cleaned.replace(/\b\w/g, m => m.toUpperCase());
 }
 function renderEventsBlock(structured, productHasLocation){
   const now=new Date();
@@ -348,71 +373,112 @@ function renderEventsBlock(structured, productHasLocation){
   }).join('');
   return `<div class="answer"><h3>${title}</h3><ul>${lis}</ul></div>`;
 }
-function renderArticlesBlock(structured){
-  const list = (structured?.articles||[]).slice(0,5);
+function renderArticlesBlock(structured, citations){
+  let list = (structured?.articles||[]).slice(0,5);
+
+  // Fallback: derive blog-like links from citations if articles absent
+  if (!list.length && Array.isArray(citations)) {
+    const seen = new Set();
+    const derived = [];
+    for (const url of citations) {
+      if (typeof url !== 'string') continue;
+      if (!/alanranger\.com\/(blog|photography-tips|news|journal|learn)\b/i.test(url)) continue;
+      const key = url.split('?')[0];
+      if (seen.has(key)) continue;
+      seen.add(key);
+      derived.push({ title: 'Related article', page_url: key });
+      if (derived.length >= 5) break;
+    }
+    list = derived;
+  }
+
   if(!list.length) return '';
+
   const lis = list.map(a=>{
     const t = a.title || a.raw?.name || 'Read more';
     const u = a.page_url || a.source_url || a.url || '#';
     return `<li><a href="${u}" target="_blank" rel="noopener">${escapeHTML(t)}</a></li>`;
   }).join('');
-  return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul></div>`;
+  return `<div class="answer"><h3>Related guides</h3><ul>${lis}</ul></div>`;
 }
-function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
 
-/* Pills: show only relevant; dedupe; never site-search/wildcards */
-function buildActionPillsFromStructured(structured){
+/* SINGLE overall confidence indicator (blue) */
+function renderOverallConfidence(container, pct){
+  if(pct==null || isNaN(pct)) return;
+  const pill = document.createElement('div');
+  pill.className = 'conf-overall';
+  pill.innerHTML = `<span class="dot"></span> Confidence: ${pct}%`;
+  container.appendChild(pill);
+}
+
+/* Pills: show provided pills + add from articles (first 2) */
+function buildActionPills(structured, articles){
   const safe = [];
   const used = new Set();
   const add = (label, href) => {
     if(!label || !href) return;
     const u = String(href);
-    if (/\/search\?query=/.test(u)) return; // ban site search
+    if (/\/search\?query=/.test(u)) return; // ban site search wildcards
     const key = `${label}::${u}`;
     if(used.has(key)) return;
     used.add(key);
     safe.push({label,href});
   };
-  const inPills = (structured?.pills || structured?.chips || []);
-  for (const p of inPills){
+  // explicit pills
+  for (const p of (structured?.pills || structured?.chips || [])){
     add(p.label || p.text || 'Open', p.url || p.href);
   }
-  return safe.slice(0,4);
+  // derive up to 2 from articles
+  for (const a of (articles||[]).slice(0,2)){
+    add(a.title || 'Read guide', a.page_url || a.source_url || a.url);
+  }
+  return safe.slice(0,6);
 }
 
-/* Confidence (overall, single pill) */
-function placeConfidencePill(pct){
-  if(pct==null || isNaN(pct)) return;
-  const row = document.createElement('div');
-  row.className='conf-row';
-  row.innerHTML = `<span class="conf conf--overall"><strong>Confidence:</strong> ${pct}%</span>`;
-  thread.appendChild(row);
-}
-
-/* Full render */
+/* ------------- Full render ------------- */
 function renderAnswer(payload){
+  // wipe any previous per-answer confidence pill
+  const oldConf = document.querySelectorAll('.conf-overall');
+  oldConf.forEach(n=>n.remove());
+
   const s = payload.structured||{};
-  const confPct = (typeof payload.confidence_pct === 'number')
-                    ? Math.round(payload.confidence_pct)
-                    : (typeof payload.confidence === 'number' ? Math.round(payload.confidence*100) : null);
-  window.__lastConfidencePct = confPct;
+  const confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
 
   const merged = mergeProducts(s.products||[]);
   const prod = merged[0] || null;
 
+  // product
   if(prod){
     addBubble(renderProductCard(prod));
   }
 
+  // events
   const productFacts = prod ? extractFacts(prod.description||'') : null;
   const productHasLocation = !!(productFacts && productFacts.location);
   const evHTML = renderEventsBlock(s, productHasLocation);
   if(evHTML) addBubble(evHTML);
 
-  const artHTML = renderArticlesBlock(s);
-  if(artHTML) addBubble(artHTML);
+  // articles (with fallback from citations)
+  const artHTML = renderArticlesBlock(s, payload.citations);
+  if(artHTML){
+    const artDiv = addBubble(artHTML);
+    artDiv.dataset.block='articles';
+  }
 
-  const pills = buildActionPillsFromStructured(s);
+  // actions: include pills + (if we built articles) add first ones as pills
+  let articleList = [];
+  try{
+    // Recover list we just rendered to reuse links as pills (lightweight parse)
+    if (s.articles && s.articles.length) articleList = s.articles;
+    else if (Array.isArray(payload.citations)) {
+      articleList = (payload.citations||[])
+        .filter(u=>/alanranger\.com\/(blog|photography-tips|news|journal|learn)\b/i.test(u))
+        .slice(0,5)
+        .map(u=>({title:'Related article', page_url:u}));
+    }
+  }catch{}
+
+  const pills = buildActionPills(s, articleList);
   if(pills.length){
     const wrap = document.createElement('div');
     wrap.className='actions';
@@ -424,6 +490,7 @@ function renderAnswer(payload){
     thread.appendChild(wrap);
   }
 
+  // If nothing rendered, generic fallback with nudge
   if(!prod && !(s.events||[]).length && !(s.articles||[]).length){
     const md = payload.answer_markdown || payload.answer || '';
     const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
@@ -431,12 +498,13 @@ function renderAnswer(payload){
     addBubble(html.replace('</div>', `${extra}</div>`));
   }
 
-  // Place one overall confidence pill at the end of the response
-  placeConfidencePill(confPct);
+  // Single overall confidence pill (blue) appended after last content block
+  const host = thread.lastElementChild || thread;
+  renderOverallConfidence(host, confidencePct);
 
-  // Debug dumps (current response only)
+  // Debug dumps (response-level only)
   dbgStruct.textContent = safeJSONString(payload.structured||{});
-  dbgNote.textContent   = safeJSONString({ confidence_pct: confPct });
+  dbgNote.textContent   = safeJSONString({ confidence_pct: confidencePct });
 }
 
 /* ---------------- Networking ---------------- */
@@ -465,13 +533,15 @@ async function sendQuery(query){
       const fallback = "I don’t have a specific answer for that yet.";
       const {html}=mdToHtml(fallback);
       const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
-      addBubble(html.replace('</div>', `${extra}</div>`));
-      placeConfidencePill((typeof data?.confidence_pct==='number') ? Math.round(data.confidence_pct) : null);
+      const node = addBubble(html.replace('</div>', `${extra}</div>`));
+      // still show single confidence if provided
+      renderOverallConfidence(node, typeof data?.confidence_pct==='number'?data.confidence_pct:null);
     }
   } catch (err){
     closeTyping();
     dbgStatus.textContent = 'error';
-    addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
+    const node = addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
+    renderOverallConfidence(node, null);
   }
 }
 
@@ -485,7 +555,7 @@ function buildTranscript(){
   rows.push(new Date().toISOString());
   rows.push('');
   for (const el of thread.children){
-    if (el.classList.contains('actions') || el.classList.contains('conf-row')) continue;
+    if (el.classList.contains('actions')) continue;
     const role = el.classList.contains('user') ? 'User' : 'Assistant';
     rows.push(`${role}:\n${nodeToPlain(el)}`);
     rows.push('');
@@ -499,7 +569,8 @@ function emailTranscript(){
   if (body.length > 2000){
     const blob = new Blob([body], {type:'text/plain'});
     const url = URL.createObjectURL(blob);
-    addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p></div>`);
+    const node = addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p></div>`);
+    renderOverallConfidence(node, null);
   }
   location.href = mailto;
 }
