@@ -35,6 +35,7 @@
     .badge.bad{border-color:#3a1e1e;color:#fecaca}
     details.debug{border:1px dashed var(--line);border-radius:8px;padding:10px;margin-top:12px}
     .small{font-size:12px}
+    .mb4{margin-bottom:4px}
     .mb8{margin-bottom:8px}
     .mb16{margin-bottom:16px}
     .orange{color:var(--orange)}
@@ -99,13 +100,21 @@
         <input type="file" id="csvLanding" accept=".csv">
         <div class="hint small">Used only for brand pills (Blog, Newsletter, Gift Vouchers, Payment Plan). No query pill is ever created.</div>
       </div>
-      <div>
+      <div class="mb8">
         <label class="small">Questions suite CSV (idx, query, expected)</label>
         <input type="file" id="csvQuestions" accept=".csv">
-        <div class="flex mt8">
-          <button id="btnRunSuite">Run whole suite</button>
-          <span id="suiteStats" class="badge">—</span>
-        </div>
+      </div>
+      <div class="flex small mb8">
+        <label><input type="checkbox" id="suiteFetch" checked> Fetch data for suite</label>
+        <span class="hint">Runs RPCs for each row (first 10 items kept).</span>
+      </div>
+      <div class="flex">
+        <button id="btnRunSuite">Run whole suite</button>
+        <span id="suiteStats" class="badge">—</span>
+      </div>
+      <div class="flex small mb8" style="margin-top:8px">
+        <select id="suitePreview" class="w100"></select>
+        <button id="btnPreview">Preview selection</button>
       </div>
     </div>
   </section>
@@ -162,11 +171,14 @@
       logEl.scrollTop = logEl.scrollHeight;
     };
 
+    const $ = sel => document.querySelector(sel);
+    const $byId = id => document.getElementById(id);
+
     function tokens(q){
       return (q||"").toLowerCase().replace(/[^a-z0-9\s-]/g," ").split(/\s+/).filter(Boolean);
     }
 
-    // Improved intent heuristic tuned to your suite
+    // -------- Intent heuristic (tuned to your suite) --------
     function detectIntent(q) {
       const s = (q || "").toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -174,32 +186,36 @@
       const hasSched   = /\b(when|where|date|time|next|upcoming|start|ends?)\b/.test(s);
       const hasPrice   = /\b(how much|price|cost|£|gbp|fee|fees?)\b/.test(s);
       const buyIntent  = /\b(book|buy|purchase|checkout|voucher|vouchers|gift|payment ?plan|subscribe|subscription|pay)\b/.test(s);
-      const policyAsk  = /\b(do you|can you|will you|is there|are there|do i|can i|will i|am i)\b/.test(s);
+      const policyYou  = /\b(do you|can you|will you)\b/.test(s);
+      const policyMe   = /\b(do i|can i|will i|am i|should i)\b/.test(s);
       const adviceLead = /\b(what|how|why|need|require|should|which|help)\b/.test(s);
       const mentionsFree = /\bfree\b/.test(s);
 
-      // 1) Schedule questions about events → Events
+      // 1) Explicit schedule about events
       if (hasEvent && hasSched) return "events";
 
-      // 2) Availability/policy about events (“do you do/run/offer … workshops?”) → Events
-      if (hasEvent && policyAsk) return "events";
-
-      // 3) “Is … free?” style questions are policy/info → Advice
-      if (mentionsFree && /course|workshop|class|subscription|online/.test(s)) return "advice";
-
-      // 4) Price questions that mention events but NOT an explicit purchase/book action → Events
+      // 2) Price + event (no buy intent) → we show listings with prices
       if (hasEvent && hasPrice && !buyIntent) return "events";
 
-      // 5) Explicit purchase intent OR price w/o event nouns → Products
+      // 3) "Do you … workshops/courses?" (offer/host/run) → events
+      if (policyYou && hasEvent && /(do|run|offer|host|provide)/.test(s)) return "events";
+
+      // 4) "Is it free" style → advice
+      if (mentionsFree && /course|workshop|class|subscription|online/.test(s)) return "advice";
+
+      // 5) Purchase intent, or price with no event noun → products
       if (buyIntent || (hasPrice && !hasEvent)) return "products";
 
-      // 6) Generic “what/how/why/should/which/need/require/help” → Advice
+      // 6) Policy about me (eligibility/requirements) → advice
+      if (policyMe) return "advice";
+
+      // 7) Generic informational → advice
       if (adviceLead) return "advice";
 
-      // 7) Any remaining queries mentioning events → Events
+      // 8) Any remaining event mention → events
       if (hasEvent) return "events";
 
-      // 8) Default
+      // 9) Default
       return "advice";
     }
 
@@ -271,7 +287,6 @@
 
     // ------- Supabase wiring (RPCs only) -------
     let supa = null;
-    const $ = sel => document.querySelector(sel);
 
     async function connect(){
       const url = $('#sb_url').value.trim();
@@ -304,7 +319,7 @@
     }
 
     // ------- Rendering -------
-    const fmt = new Intl.NumberFormat('en-GB', { style:'currency', currency:'GBP', maximumFractionDigits:0 });
+    const moneyGB = new Intl.NumberFormat('en-GB', { style:'currency', currency:'GBP', maximumFractionDigits:0 });
 
     function renderEvents(rows){
       const tb = $('#tblEvents tbody'); tb.innerHTML='';
@@ -313,7 +328,7 @@
         const tTitle = `<a href="${r.url}" target="_blank">${escapeHTML(r.title||'')}</a>`;
         const when = r.when || r.start_date || r.date_start || '';
         const loc = r.location || '';
-        const price = (r.price!=null) ? fmt.format(r.price) : '';
+        const price = (r.price!=null) ? moneyGB.format(r.price) : '';
         tr.innerHTML = `<td>${tTitle}</td><td class="nowrap">${escapeHTML(when||'')}</td><td>${escapeHTML(loc)}</td><td>${price}</td>`;
         tb.appendChild(tr);
       });
@@ -325,7 +340,7 @@
       rows.forEach(r=>{
         const tr = document.createElement('tr');
         const tTitle = `<a href="${r.url}" target="_blank">${escapeHTML(r.title||'')}</a>`;
-        const price = (r.price!=null) ? fmt.format(r.price) : '';
+        const price = (r.price!=null) ? moneyGB.format(r.price) : '';
         tr.innerHTML = `<td>${tTitle}</td><td>${price}</td><td>${escapeHTML(r.tags||'')}</td>`;
         tb.appendChild(tr);
       });
@@ -346,7 +361,7 @@
     function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
 
     // ------- Export helpers -------
-    let suiteResults = []; // [{idx,query,expected,got,pass}]
+    let suiteResults = []; // [{idx,query,expected,got,pass, data:{events,products,articles}, tokens, intent}]
     function buildReadableSummary(){
       const maxList = 20;
       const lines = [];
@@ -358,14 +373,14 @@
       lines.push(`Events (${lastRun.events.length}):`);
       lastRun.events.slice(0,maxList).forEach((e,i)=>{
         const when = e.when || e.start_date || e.date_start || '';
-        const price = (e.price!=null) ? ` | ${fmt.format(e.price)}` : '';
+        const price = (e.price!=null) ? ` | ${moneyGB.format(e.price)}` : '';
         lines.push(`${i+1}. ${e.title} — ${when}${price} — ${e.url}`);
       });
       if (lastRun.events.length > maxList) lines.push(`… +${lastRun.events.length - maxList} more`);
       lines.push('');
       lines.push(`Products (${lastRun.products.length}):`);
       lastRun.products.slice(0,maxList).forEach((p,i)=>{
-        const price = (p.price!=null) ? ` | ${fmt.format(p.price)}` : '';
+        const price = (p.price!=null) ? ` | ${moneyGB.format(p.price)}` : '';
         lines.push(`${i+1}. ${p.title}${price} — ${p.url}`);
       });
       if (lastRun.products.length > maxList) lines.push(`… +${lastRun.products.length - maxList} more`);
@@ -448,7 +463,7 @@
       renderArticles(articles);
     }
 
-    // ------- Suite runner -------
+    // ------- Suite runner with optional data fetch -------
     let questions = []; // [{idx, query, expected}]
     function normalizeExpected(v){
       const s = (v||'').toLowerCase().trim();
@@ -460,25 +475,78 @@
       if (!questions.length){ log('No questions loaded.'); return; }
       let pass=0, fail=0;
       suiteResults = [];
-      for (const row of questions){
+      const doFetch = $byId('suiteFetch').checked;
+      const select = $byId('suitePreview');
+      select.innerHTML = '';
+      for (const [i,row] of questions.entries()){
+        const q = row.query || '';
         const expected = normalizeExpected(row.expected);
-        const got = detectIntent(row.query||'');
+        const got = detectIntent(q);
         const ok = (got === expected);
-        suiteResults.push({ idx:row.idx, query:row.query, expected, got, pass:ok });
+
+        let data = { events:[], products:[], articles:[] };
+        let toks = [];
+        if (doFetch){
+          toks = tokens(q).filter(t => t.length >= 3);
+          if (toks.length){
+            const [ev, pr, ar] = await Promise.all([
+              fetchViaRPC('search_events', toks),
+              fetchViaRPC('search_products', toks),
+              fetchViaRPC('search_articles', toks)
+            ]);
+            const evp = decorateEventPrices(ev, pr);
+            data.events = evp.slice(0,10);
+            data.products = pr.slice(0,10);
+            data.articles = ar.slice(0,10);
+            log(`[${row.idx}] "${q}" → got:${got} expected:${expected} ${ok?'✓':'✗'} | rows: e:${ev.length} p:${pr.length} a:${ar.length}`);
+          } else {
+            log(`[${row.idx}] "${q}" → got:${got} expected:${expected} ${ok?'✓':'✗'} | no tokens`);
+          }
+        } else {
+          log(`[${row.idx}] "${q}" → got:${got} expected:${expected} ${ok?'✓':'✗'}`);
+        }
+
+        suiteResults.push({ idx:row.idx, query:q, expected, got, pass:ok, tokens:toks, intent:got, data });
+
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = `[${row.idx}] ${q}`;
+        select.appendChild(opt);
+
         ok ? pass++ : fail++;
-        log(`[${row.idx}] "${row.query}" → got:${got} expected:${expected} ${ok?'✓':'✗'}`);
       }
       $('#suiteStats').textContent = `Pass ${pass} / ${pass+fail}`;
       $('#suiteStats').classList.toggle('good', true);
       $('#suiteStats').classList.toggle('bad', false);
     }
 
-    // ------- Event wiring -------
-    const $byId = id => document.getElementById(id);
+    // Preview any suite row into the 3 blocks
+    function previewSuiteSelection(){
+      const idx = parseInt($byId('suitePreview').value, 10);
+      if (isNaN(idx)) return;
+      const row = suiteResults[idx];
+      if (!row) return;
+      lastRun = {
+        query: row.query,
+        tokens: row.tokens || [],
+        intent: row.intent,
+        pills: lastRun.pills || [],
+        events: row.data?.events || [],
+        products: row.data?.products || [],
+        articles: row.data?.articles || []
+      };
+      $('#intent').textContent = row.intent || '—';
+      $('#tok').textContent = JSON.stringify(row.tokens || []);
+      renderEvents(lastRun.events);
+      renderProducts(lastRun.products);
+      renderArticles(lastRun.articles);
+    }
 
+    // ------- Event wiring -------
     $byId('btnConnect').addEventListener('click', connect);
     $byId('btnRun').addEventListener('click', runSingle);
     $byId('btnRunSuite').addEventListener('click', runSuite);
+    $byId('btnPreview').addEventListener('click', previewSuiteSelection);
 
     $byId('csvLanding').addEventListener('change', async (e)=>{
       const f = e.target.files?.[0]; if (!f) return;
@@ -499,7 +567,11 @@
     $byId('btnCopyJSON').addEventListener('click', async ()=>{ await copyText(JSON.stringify(lastRun, null, 2)); });
     $byId('btnDownloadJSON').addEventListener('click', ()=>{ downloadJSON('bench-last-run.json', lastRun); });
     $byId('btnCopyLogs').addEventListener('click', async ()=>{ await copyText(logEl.textContent || ''); });
-    $byId('btnCopySuiteJSON').addEventListener('click', async ()=>{ await copyText(JSON.stringify({ results:suiteResults }, null, 2)); flashCopyStatus('Suite JSON copied'); });
+    $byId('btnCopySuiteJSON').addEventListener('click', async ()=>{
+      // Include the data we captured for each row
+      await copyText(JSON.stringify({ results:suiteResults }, null, 2));
+      flashCopyStatus('Suite JSON copied');
+    });
     $byId('btnDownloadSuiteCSV').addEventListener('click', ()=>{ downloadCSV('bench-suite-results.csv', suiteResults); });
 
     // Initial pills (empty landing still adds fixed brand pills)
