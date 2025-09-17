@@ -14,6 +14,7 @@ function supabaseAdmin() {
 
 /* ------------------------------ Small utils ------------------------------ */
 const TZ = "Europe/London";
+const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
 function fmtDateLondon(ts) {
   try {
@@ -51,73 +52,39 @@ function originOf(url) {
     return null;
   }
 }
+function slugWords(s = "") {
+  return (s.toLowerCase().replace(/https?:\/\/[^/]+/,"").replace(/[^\p{L}\p{N}]+/gu," ").trim().split(/\s+/)).filter(Boolean);
+}
 
 /* ----------------------- Intent + keyword extraction --------------------- */
-const EVENT_HINTS = [
-  "date",
-  "dates",
-  "when",
-  "next",
-  "upcoming",
-  "available",
-  "where",
-  "workshop",
-  "course",
-  "class",
-  "schedule",
-];
+const EVENT_HINTS = ["date","dates","when","next","upcoming","available","where","workshop","course","class","schedule"];
 
 const TOPIC_KEYWORDS = [
   // locations
-  "devon",
-  "snowdonia",
-  "wales",
-  "lake district",
-  "warwickshire",
-  "coventry",
-  "dorset",
-  // seasons / themes / topics
-  "bluebell",
-  "autumn",
-  "astrophotography",
-  "beginners",
-  "lightroom",
-  "long exposure",
-  "landscape",
-  "woodlands",
+  "devon","snowdonia","wales","lake district","warwickshire","coventry","dorset",
+  // themes
+  "bluebell","autumn","astrophotography","beginners","lightroom","long exposure","landscape","woodlands","arboretum","batsford"
 ];
 
 function extractKeywords(q) {
   const lc = (q || "").toLowerCase();
   const kws = new Set();
-  for (const t of TOPIC_KEYWORDS) {
-    if (lc.includes(t)) kws.add(t);
-  }
-  // also add any single words ≥ 4 chars that look meaningful
-  lc
-    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
-    .split(/\s+/)
-    .filter((w) => w.length >= 4)
-    .forEach((w) => kws.add(w));
+  for (const t of TOPIC_KEYWORDS) if (lc.includes(t)) kws.add(t);
+  lc.replace(/[^\p{L}\p{N}\s-]/gu," ").split(/\s+/).filter(w=>w.length>=4).forEach(w=>kws.add(w));
   return Array.from(kws);
 }
 
 function detectIntent(q) {
   const lc = (q || "").toLowerCase();
   const hasEventWord = EVENT_HINTS.some((w) => lc.includes(w));
-  const mentionsWorkshop =
-    lc.includes("workshop") || lc.includes("course") || lc.includes("class");
+  const mentionsWorkshop = /workshop|course|class/i.test(lc);
   if (hasEventWord && mentionsWorkshop) return "events";
-  // heuristic: if question starts with "when/where" + includes 'workshop' → events
   if (/^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop) return "events";
-  // default
   return "advice";
 }
 
 /* ----------------------- DB helpers (robust fallbacks) ------------------- */
-
 function anyIlike(col, words) {
-  // Builds PostgREST OR ILIKE expression for (col) against multiple words
   const parts = (words || [])
     .map((w) => w.trim())
     .filter(Boolean)
@@ -125,13 +92,11 @@ function anyIlike(col, words) {
   return parts.length ? parts.join(",") : null;
 }
 
-async function findEvents(client, { keywords, limit = 50 }) {
+async function findEvents(client, { keywords, limit = 120 }) {
   const nowIso = new Date().toISOString();
   let q = client
     .from("page_entities")
-    .select(
-      "id, title, page_url, source_url, date_start, date_end, location, raw"
-    )
+    .select("id, title, page_url, source_url, date_start, date_end, location, raw")
     .eq("kind", "event")
     .gte("date_start", nowIso)
     .order("date_start", { ascending: true })
@@ -141,7 +106,7 @@ async function findEvents(client, { keywords, limit = 50 }) {
     anyIlike("title", keywords) ||
     anyIlike("page_url", keywords) ||
     anyIlike("location", keywords);
-  if (orExpr) q = q.or(orExpr);
+  if (keywords?.length) q = q.or(orExpr || "title.ilike.%_NOPE_%");
 
   const { data, error } = await q;
   if (error) return [];
@@ -156,9 +121,11 @@ async function findProducts(client, { keywords, limit = 20 }) {
     .order("last_seen", { ascending: false })
     .limit(limit);
 
-  const orExpr =
-    anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
-  if (orExpr) q = q.or(orExpr);
+  if (keywords?.length) {
+    const orExpr =
+      anyIlike("title", keywords) || anyIlike("page_url", keywords);
+    q = q.or(orExpr || "title.ilike.%_NOPE_%");
+  }
 
   const { data, error } = await q;
   if (error) return [];
@@ -173,9 +140,11 @@ async function findArticles(client, { keywords, limit = 12 }) {
     .order("last_seen", { ascending: false })
     .limit(limit);
 
-  const orExpr =
-    anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
-  if (orExpr) q = q.or(orExpr);
+  if (keywords?.length) {
+    const orExpr =
+      anyIlike("title", keywords) || anyIlike("page_url", keywords);
+    q = q.or(orExpr || "title.ilike.%_NOPE_%");
+  }
 
   const { data, error } = await q;
   if (error) return [];
@@ -183,7 +152,6 @@ async function findArticles(client, { keywords, limit = 12 }) {
 }
 
 async function findLanding(client, { keywords }) {
-  // best effort: a canonical "landing" page if marked, else a generic workshops page
   let q = client
     .from("page_entities")
     .select("*")
@@ -193,139 +161,64 @@ async function findLanding(client, { keywords }) {
     .order("last_seen", { ascending: false })
     .limit(1);
 
-  const orExpr =
-    anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
-  if (orExpr) q = q.or(orExpr);
+  if (keywords?.length) {
+    const orExpr =
+      anyIlike("title", keywords) || anyIlike("page_url", keywords);
+    q = q.or(orExpr || "title.ilike.%_NOPE_%");
+  }
 
   const { data } = await q;
   return data?.[0] || null;
 }
 
-/* -------- find PDF / related link within article chunks (best effort) ---- */
-
-async function getArticleAuxLinks(client, articleUrl) {
-  const result = { pdf: null, related: null, relatedLabel: null };
-  if (!articleUrl) return result;
-
-  // try different chunk tables/columns safely
-  const tryTables = [
-    { table: "page_chunks", urlCol: "source_url", textCol: "chunk_text" },
-    { table: "page_chunks", urlCol: "page_url", textCol: "chunk_text" },
-    { table: "chunks", urlCol: "source_url", textCol: "chunk_text" },
-    { table: "chunks", urlCol: "page_url", textCol: "chunk_text" },
-  ];
-
-  for (const t of tryTables) {
-    try {
-      const { data } = await client
-        .from(t.table)
-        .select(`${t.urlCol}, ${t.textCol}`)
-        .eq(t.urlCol, articleUrl)
-        .limit(20);
-      if (!data?.length) continue;
-
-      for (const row of data) {
-        const text = row?.[t.textCol] || "";
-        // find pdf
-        if (!result.pdf) {
-          const m =
-            text.match(/https?:\/\/\S+?\.pdf/gi) ||
-            text.match(/href="([^"]+\.pdf)"/i);
-          if (m && m[0]) result.pdf = Array.isArray(m) ? m[0] : m[1];
-        }
-        // find first internal related link with hint text
-        if (!result.related) {
-          const rel =
-            text.match(
-              /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']+)/i
-            ) || text.match(/href="([^"]*alanranger\.com[^"]+)"/i);
-          if (rel && rel[0]) {
-            result.related = Array.isArray(rel) ? rel[0] : rel[1];
-            // crude label guess: look for preceding words like link text
-            const labelMatch =
-              text.match(/\[([^\]]+)\]\([^)]+\)/) ||
-              text.match(/>([^<]{3,60})<\/a>/i);
-            if (labelMatch && labelMatch[1]) {
-              result.relatedLabel = labelMatch[1].trim();
-            }
-          }
-        }
-        if (result.pdf && result.related) break;
-      }
-      if (result.pdf || result.related) break;
-    } catch {
-      // ignore and try next table
-    }
+/* --------------------------- Relevance + confidence ---------------------- */
+function scoreEntity(entity, keywords) {
+  const words = new Set(slugWords((entity?.title || "") + " " + (pickUrl(entity) || "") + " " + (entity?.location || "")));
+  let score = 0;
+  for (const k of keywords) {
+    const parts = slugWords(k);
+    for (const p of parts) if (words.has(p)) score += 1;
   }
-  return result;
+  // bonus for exact keyword in title
+  const tlc = (entity?.title || "").toLowerCase();
+  for (const k of keywords) if (k && tlc.includes(k.toLowerCase())) score += 2;
+  return score;
+}
+
+function confidenceFrom(scores = []) {
+  if (!scores.length) return 0.15;
+  const max = Math.max(...scores);
+  const sum = scores.reduce((a,b)=>a+b,0) || 1;
+  const pct = clamp((max / (sum / scores.length)) / 3, 0.2, 0.95); // normalise a bit
+  return pct;
 }
 
 /* ----------------------- Product description parsing -------------------- */
 function extractFromDescription(desc) {
-  const out = {
-    location: null,
-    participants: null,
-    fitness: null,
-    availability: null,
-    summary: null,
-    sessions: [],
-  };
+  const out = { location:null, participants:null, fitness:null, availability:null, summary:null, sessions:[] };
   if (!desc) return out;
-
-  const lines = desc.split(/\r?\n/).map((s) => s.trim());
+  const lines = desc.split(/\r?\n/).map((s)=>s.trim());
   const nonEmpty = lines.filter(Boolean);
   if (nonEmpty.length) out.summary = nonEmpty[0];
 
   const nextVal = (i) => {
-    for (let j = i + 1; j < lines.length; j++) {
-      const t = lines[j].trim();
-      if (!t) continue;
-      return t;
-    }
+    for (let j=i+1;j<lines.length;j++) { const t = lines[j].trim(); if (t) return t; }
     return null;
   };
 
-  for (let i = 0; i < lines.length; i++) {
+  for (let i=0;i<lines.length;i++) {
     const ln = lines[i];
-
-    if (/^location:/i.test(ln)) {
-      const v = ln.replace(/^location:\s*/i, "").trim() || nextVal(i);
-      if (v) out.location = v;
-      continue;
-    }
-    if (/^participants:/i.test(ln)) {
-      const v = ln.replace(/^participants:\s*/i, "").trim() || nextVal(i);
-      if (v) out.participants = v;
-      continue;
-    }
-    if (/^fitness:/i.test(ln)) {
-      const v = ln.replace(/^fitness:\s*/i, "").trim() || nextVal(i);
-      if (v) out.fitness = v;
-      continue;
-    }
-    if (/^availability:/i.test(ln)) {
-      const v = ln.replace(/^availability:\s*/i, "").trim() || nextVal(i);
-      if (v) out.availability = v;
-      continue;
-    }
-
+    if (/^location:/i.test(ln)) { out.location = ln.replace(/^location:\s*/i,"").trim() || nextVal(i); continue; }
+    if (/^participants:/i.test(ln)) { out.participants = ln.replace(/^participants:\s*/i,"").trim() || nextVal(i); continue; }
+    if (/^fitness:/i.test(ln)) { out.fitness = ln.replace(/^fitness:\s*/i,"").trim() || nextVal(i); continue; }
+    if (/^availability:/i.test(ln)) { out.availability = ln.replace(/^availability:\s*/i,"").trim() || nextVal(i); continue; }
     const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
-    if (m1) {
-      const rawLabel = m1[1].replace(/\s+/g, " ").trim();
-      const time = m1[2].trim();
-      out.sessions.push({ label: rawLabel, time, price: null });
-      continue;
-    }
+    if (m1) { const rawLabel = m1[1].replace(/\s+/g," ").trim(); const time = m1[2].trim(); out.sessions.push({ label: rawLabel, time, price: null }); }
   }
-
   if (out.summary && /^summary$/i.test(out.summary.trim())) {
-    const idx = lines.findIndex((s) => /^summary$/i.test(s.trim()));
-    if (idx >= 0) {
-      const nxt = lines.slice(idx + 1).find((s) => s.trim());
-      if (nxt) out.summary = nxt.trim();
-    }
+    const idx = lines.findIndex((s)=>/^summary$/i.test(s.trim()));
+    if (idx >= 0) { const nxt = lines.slice(idx+1).find((s)=>s.trim()); if (nxt) out.summary = nxt.trim(); }
   }
-
   return out;
 }
 
@@ -335,9 +228,8 @@ function buildProductPanelMarkdown(products) {
 
   const primary = products.find((p) => p.price != null) || products[0];
 
-  // Headline price(s)
-  let lowPrice = null,
-    highPrice = null;
+  // Headline AggregateOffer range
+  let lowPrice = null, highPrice = null;
   for (const p of products) {
     const ro = p?.raw?.offers || {};
     const lp = ro.lowPrice ?? ro.lowprice ?? null;
@@ -351,29 +243,24 @@ function buildProductPanelMarkdown(products) {
 
   const title = primary.title || primary?.raw?.name || "Workshop";
   const headBits = [];
-  if (headlineSingle) headBits.push(headlineSingle);
   if (lowTx && highTx) headBits.push(`${lowTx}–${highTx}`);
+  else if (headlineSingle) headBits.push(headlineSingle);
   const priceHead = headBits.length ? ` — ${headBits.join(" • ")}` : "";
 
-  const info =
-    extractFromDescription(
-      primary.description || primary?.raw?.description || ""
-    ) || {};
+  const info = extractFromDescription(primary.description || primary?.raw?.description || "");
 
-  // Attach prices to sessions: two sessions → low/high; else fallback single
+  // Attach prices to sessions
   const sessions = [...(info.sessions || [])];
   if (sessions.length) {
     if (lowPrice != null && highPrice != null && sessions.length >= 2) {
-      sessions[0].price = lowPrice;
-      sessions[1].price = highPrice;
+      sessions[0].price = lowPrice; sessions[1].price = highPrice;
     } else if (primary?.price != null) {
-      sessions.forEach((s) => (s.price = primary.price));
+      sessions.forEach((s)=> (s.price = primary.price));
     }
   }
 
   const lines = [];
   lines.push(`**${title}**${priceHead}`);
-
   if (info.summary) lines.push(`\n${info.summary}`);
 
   const facts = [];
@@ -381,10 +268,7 @@ function buildProductPanelMarkdown(products) {
   if (info.participants) facts.push(`**Participants:** ${info.participants}`);
   if (info.fitness) facts.push(`**Fitness:** ${info.fitness}`);
   if (info.availability) facts.push(`**Availability:** ${info.availability}`);
-  if (facts.length) {
-    lines.push("");
-    for (const f of facts) lines.push(f);
-  }
+  if (facts.length) { lines.push(""); for (const f of facts) lines.push(f); }
 
   if (sessions.length) {
     lines.push("");
@@ -400,16 +284,11 @@ function buildProductPanelMarkdown(products) {
 
 /* ----------------------------- Event list UI ----------------------------- */
 function formatEventsForUi(events) {
-  // NOTE: your current UI shows "Link" as the anchor text, so we provide href+when
-  const now = new Date();
-  return (events || [])
-    .filter((e) => e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start) >= now)
-    .map((e) => ({
-      ...e,
-      when: fmtDateLondon(e.date_start),
-      href: pickUrl(e),
-    }));
-  // No cap — you requested all instances to show
+  return (events || []).map((e) => ({
+    ...e,
+    when: fmtDateLondon(e.date_start),
+    href: pickUrl(e),
+  }));
 }
 
 /* ----------------------------- Pills builders ---------------------------- */
@@ -424,119 +303,63 @@ function buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl }) {
   };
 
   add("Book Now", productUrl || firstEventUrl, true);
-
-  // Event Listing + More Events both point at listing root (no search page)
   const listUrl =
     landingUrl ||
     (firstEventUrl && originOf(firstEventUrl) + "/photography-workshops");
   add("Event Listing", listUrl, true);
-  add("More Events", listUrl, true);
-
-  add(
-    "Photos",
-    photosUrl ||
-      (firstEventUrl && originOf(firstEventUrl) + "/gallery-image-portfolios"),
-    false
-  );
+  add("Photos", photosUrl || (firstEventUrl && originOf(firstEventUrl) + "/gallery-image-portfolios"), false);
   return pills;
 }
 
 function buildAdvicePills({ articleUrl, query, pdfUrl, relatedUrl, relatedLabel }) {
   const pills = [];
-  const add = (label, url, brand = true) => {
-    if (!label || !url) return;
-    pills.push({ label, url, brand });
-  };
+  const add = (label, url, brand = true) => { if (label && url) pills.push({ label, url, brand }); };
   add("Read Guide", articleUrl, true);
-  // NOTE: You asked to avoid wildcard site search pills in production UI.
-  // This remains for now; you can remove it later when wiring chat.html logic.
-  add(
-    "More Articles",
-    `https://www.alanranger.com/search?query=${encodeURIComponent(query || "")}`,
-    true
-  );
+  add("More Articles", `https://www.alanranger.com/search?query=${encodeURIComponent(query || "")}`, true);
   if (pdfUrl) add("Download PDF", pdfUrl, true);
   if (relatedUrl) add(relatedLabel || "Related", relatedUrl, false);
   return pills.slice(0, 4);
 }
 
-/* -------------------------- Confidence (server) -------------------------- */
-/**
- * Build a compact “document text” for scoring.
- */
-function rowText(row) {
-  const t = [
-    row?.title,
-    row?.page_url,
-    row?.source_url,
-    row?.url,
-    row?.location,
-    row?.raw?.name,
-    row?.raw?.description,
-    row?.raw?.tags,
-  ]
-    .filter(Boolean)
-    .join(" • ")
-    .toLowerCase();
-  return t;
-}
-
-/**
- * Score a single row by keyword hits across title/url/location/description.
- * Simple additive model; cap and normalise to 0..1.
- */
-function scoreRow(row, keywords) {
-  if (!row || !keywords?.length) return 0;
-  const text = rowText(row);
-  if (!text) return 0;
-  let score = 0;
-  for (const kw of keywords) {
-    if (!kw) continue;
-    const k = kw.toLowerCase();
-    if (text.includes(k)) score += 1.0;
-    // small bonus for exact word boundary matches
-    const re = new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
-    if (re.test(text)) score += 0.5;
-  }
-  // soft cap to keep within a sensible range
-  const maxReasonable = Math.max(1.0, keywords.length * 1.5);
-  const normalised = Math.min(score / maxReasonable, 1.0);
-  return normalised;
-}
-
-/**
- * Score an array of rows; returns { listWithScores, topScore }
- */
-function scoreList(list, keywords) {
-  const withScores = (list || []).map((r) => ({
-    ...r,
-    _score: scoreRow(r, keywords),
-  }));
-  const top = withScores.reduce((m, r) => Math.max(m, r._score || 0), 0);
-  return { listWithScores: withScores, topScore: top };
-}
-
-/**
- * Convert 0..1 to 0..100 integer
- */
-function deriveConfidencePct(maxScore01) {
-  return Math.max(0, Math.min(100, Math.round((maxScore01 || 0) * 100)));
-}
-
 /* --------------------------- Generic resolvers --------------------------- */
+function filterByTopicFamily(rows, keywords) {
+  if (!keywords?.length) return rows;
+  // if user names a strong topic (e.g., "bluebell"), require it to appear in title/url/location
+  const strong = keywords.filter(k => /bluebell|arboretum|autumn|woodland|long exposure|lightroom|beginners|landscape/i.test(k));
+  if (!strong.length) return rows;
+  const hasStrong = (s="") => strong.some(k => (s||"").toLowerCase().includes(k.toLowerCase()));
+  return rows.filter(r => hasStrong(r?.title) || hasStrong(pickUrl(r)) || hasStrong(r?.location));
+}
 
 async function resolveEventsAndProduct(client, { keywords }) {
-  // Events filtered by keywords (stronger locality match)
-  const events = await findEvents(client, { keywords, limit: 80 });
+  // Fetch
+  const allEvents = await findEvents(client, { keywords, limit: 200 });
+  const allProducts = await findProducts(client, { keywords, limit: 30 });
 
-  // Try to pick the best-matching product for these keywords
-  const products = await findProducts(client, { keywords, limit: 10 });
-  const product = products?.[0] || null;
+  // Restrict to topic family
+  const events = filterByTopicFamily(allEvents, keywords);
+  const products = filterByTopicFamily(allProducts, keywords);
 
-  // Landing page (if any), else the event origin's workshops root
+  // Score + choose the best product
+  const productScores = products.map(p => ({ p, s: scoreEntity(p, keywords) }));
+  productScores.sort((a,b)=>b.s-a.s);
+  const product = productScores[0]?.p || null;
+
+  // Sort events by relevance then by date
+  const eventScores = events.map(e => ({ e, s: scoreEntity(e, keywords) }));
+  eventScores.sort((a,b)=> (b.s - a.s) || (new Date(a.e.date_start) - new Date(b.e.date_start)));
+  const sortedEvents = eventScores.map(x => ({...x.e, _score:x.s}));
+
+  // Confidence (based on event/product match strength)
+  const conf = confidenceFrom([
+    ...(productScores.length ? [productScores[0].s] : []),
+    ...eventScores.slice(0,5).map(x=>x.s)
+  ]);
+
+  // Landing page (if any), else origin workshops root from first event/product
   const landing = (await findLanding(client, { keywords })) || null;
 
-  return { events, product, landing };
+  return { events: sortedEvents, product, landing, confidence: conf };
 }
 
 /* -------------------------------- Handler -------------------------------- */
@@ -544,9 +367,7 @@ export default async function handler(req, res) {
   const started = Date.now();
   try {
     if (req.method !== "POST") {
-      res
-        .status(405)
-        .json({ ok: false, error: "method_not_allowed", where: "http" });
+      res.status(405).json({ ok: false, error: "method_not_allowed", where: "http" });
       return;
     }
 
@@ -557,29 +378,13 @@ export default async function handler(req, res) {
     const keywords = extractKeywords(query || "");
 
     if (intent === "events") {
-      const { events, product, landing } = await resolveEventsAndProduct(
-        client,
-        { keywords }
-      );
+      const { events, product, landing, confidence } = await resolveEventsAndProduct(client, { keywords });
 
-      // ----- Confidence (events/products) -----
-      const { listWithScores: scoredEvents, topScore: evTop } = scoreList(
-        events,
-        keywords
-      );
-      const { listWithScores: scoredProducts, topScore: prTop } = scoreList(
-        product ? [product] : [],
-        keywords
-      );
-      const confidence01 = Math.max(evTop, prTop);
-      const confidence_pct = deriveConfidencePct(confidence01);
-
-      const eventList = formatEventsForUi(scoredEvents);
+      const eventList = formatEventsForUi(events);
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
 
       const firstEventUrl = pickUrl(events?.[0]) || null;
       const productUrl = pickUrl(product) || firstEventUrl || null;
-      // prefer an explicit landing; else derive from first event origin
       const landingUrl =
         pickUrl(landing) ||
         (firstEventUrl ? originOf(firstEventUrl) + "/photography-workshops" : null);
@@ -588,12 +393,7 @@ export default async function handler(req, res) {
         (firstEventUrl && originOf(firstEventUrl) + "/gallery-image-portfolios") ||
         "https://www.alanranger.com/gallery-image-portfolios";
 
-      const pills = buildEventPills({
-        productUrl,
-        firstEventUrl,
-        landingUrl,
-        photosUrl,
-      });
+      const pills = buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl });
 
       const citations = uniq([
         pickUrl(product),
@@ -608,12 +408,12 @@ export default async function handler(req, res) {
         structured: {
           intent: "events",
           topic: keywords.join(", "),
-          events: eventList,
+          events: eventList,            // ALL relevant instances (no arbitrary cap)
           products: product ? [product] : [],
           pills,
         },
-        confidence: confidence01,
-        confidence_pct,
+        confidence,
+        confidence_pct: Math.round(confidence * 100),
         meta: {
           duration_ms: Date.now() - started,
           endpoint: "/api/chat",
@@ -629,36 +429,21 @@ export default async function handler(req, res) {
     const topArticle = articles?.[0] || null;
     const articleUrl = pickUrl(topArticle) || null;
 
-    let pdfUrl = null,
-      relatedUrl = null,
-      relatedLabel = null;
+    // Basic confidence for advice: more articles & direct keyword match → higher
+    const articleScores = (articles || []).map(a => scoreEntity(a, keywords));
+    const confidence = confidenceFrom(articleScores);
 
-    if (articleUrl) {
-      const aux = await getArticleAuxLinks(client, articleUrl);
-      pdfUrl = aux.pdf || null;
-      relatedUrl = aux.related || null;
-      relatedLabel = aux.relatedLabel || null;
-    }
-
+    // Pills + short list
     const pills = buildAdvicePills({
       articleUrl,
       query,
-      pdfUrl,
-      relatedUrl,
-      relatedLabel,
+      pdfUrl: null,
+      relatedUrl: null,
+      relatedLabel: null,
     });
 
     const citations = uniq([articleUrl]).filter(Boolean);
 
-    // Confidence (articles)
-    const { listWithScores: scoredArticles, topScore: artTop } = scoreList(
-      articles,
-      keywords
-    );
-    const confidence01 = artTop;
-    const confidence_pct = deriveConfidencePct(confidence01);
-
-    // If we have multiple articles, render a neat bullet list (title — Link)
     const lines = [];
     if (articles?.length) {
       lines.push("Here are Alan’s guides that match your question:\n");
@@ -668,8 +453,7 @@ export default async function handler(req, res) {
         lines.push(`- ${t} — ${u ? `[Link](${u})` : ""}`.trim());
       }
     } else {
-      lines.push("I couldn’t find a specific guide for that yet.");
-      // NOTE: chat.html will add the fallback nudge to use Contact/WhatsApp in header.
+      lines.push("I couldn’t find a specific guide for that yet. If you need an exact recommendation, please use the Contact form or WhatsApp buttons above to reach Alan directly.");
     }
 
     res.status(200).json({
@@ -681,11 +465,11 @@ export default async function handler(req, res) {
         topic: keywords.join(", "),
         events: [],
         products: [],
-        articles: scoredArticles || [],
+        articles: articles || [],
         pills,
       },
-      confidence: confidence01,
-      confidence_pct,
+      confidence,
+      confidence_pct: Math.round(confidence * 100),
       meta: {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
