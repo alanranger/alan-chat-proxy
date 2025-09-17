@@ -2,314 +2,629 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AlanR – Bench Test</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BenchTest — Events · Products · Articles</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root {
-      --bg: #0f1115; --panel: #161a22; --muted: #8892a6; --text: #e6e9f2;
-      --accent: #7aa2f7; --ok:#34d399; --warn:#f59e0b; --bad:#ef4444; --border:#222835;
-      --chip:#1e2533; --mono: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; --round:12px;
+    :root { --bg:#0f1115; --panel:#161a22; --muted:#9aa4b2; --text:#e6edf3; --accent:#60a5fa; --ok:#4ade80; --warn:#fbbf24; --err:#f87171; --chip:#1f2633; }
+    *{ box-sizing:border-box }
+    body{ margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji"; }
+    h2{ margin:0 0 .5rem 0; font-size:15px; color:#cbd5e1; }
+    small{ color:var(--muted) }
+    .wrap{ display:grid; grid-template-columns: 260px 1fr; gap:14px; padding:14px; }
+    .panel{ background:var(--panel); border:1px solid #202635; border-radius:8px; padding:10px; }
+    .left .panel{ margin-bottom:14px; }
+    label{ display:block; font-size:12px; color:#9fb0c5; margin:6px 0 4px }
+    input[type="text"], input[type="url"], input[type="password"], textarea, select{
+      width:100%; background:#0d121a; color:var(--text); border:1px solid #1e2532; border-radius:6px; padding:8px 10px; outline:none;
     }
-    *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
-    a{color:var(--accent);text-decoration:none}
-    .wrap{display:grid;grid-template-columns:360px 1fr;gap:16px;height:100%;padding:16px}
-    .left,.right{border:1px solid var(--border);border-radius:var(--round);background:var(--panel);overflow:hidden}
-    .left{padding:14px;overflow-y:auto}
-    h2,h3{margin:10px 0 8px;font-weight:700}h2{font-size:16px}h3{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-    .row{display:flex;gap:8px;align-items:center}.row+.row{margin-top:8px}.col{display:flex;flex-direction:column;gap:6px}
-    label{color:var(--muted);font-size:12px}
-    input[type="text"],input[type="password"],select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#0c0f14;color:var(--text);outline:none}
-    textarea{resize:vertical;min-height:70px}
-    button{padding:9px 12px;border:1px solid var(--border);background:#0c0f14;color:var(--text);border-radius:10px;cursor:pointer}
-    button.primary{background:var(--accent);border-color:transparent;color:#0b1020;font-weight:700}
-    button.ghost{background:transparent}.button.small,button.small{padding:6px 9px;font-size:12px}
-    .pill{background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
-    .kpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.kpi>div{padding:10px;border:1px solid var(--border);border-radius:10px;background:#10141c}.kpi b{font-size:18px;display:block}
-    .toggle{display:flex;align-items:center;gap:8px}.toggle input{accent-color:var(--accent)}
-    .card{padding:12px;border-bottom:1px solid var(--border);font-family:var(--mono);white-space:pre-wrap}.card.h{font-weight:700;background:#111622;position:sticky;top:0}
-    .right{display:grid;grid-template-rows:auto auto 1fr}
-    .boards{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;border-bottom:1px solid var(--border)}
-    .board{border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
-    .board>.title{padding:10px 12px;font-weight:700;border-bottom:1px solid var(--border);background:#10141c}
-    .tbl{width:100%;border-collapse:collapse}.tbl th,.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
-    .tbl th{color:var(--muted);font-weight:600;background:#0f141e;position:sticky;top:0}.mon{font-family:var(--mono)}
-    .hint{color:var(--muted);font-size:12px}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mb8{margin-bottom:8px}
-    .log{height:140px;overflow:auto;font-family:var(--mono);font-size:12px;padding:12px;border-top:1px solid var(--border)}
+    button{ background:#20283a; color:#dbe7ff; border:1px solid #2a3550; border-radius:6px; padding:8px 10px; cursor:pointer }
+    button:hover{ background:#27324a }
+    .row{ display:flex; gap:8px; }
+    .row > *{ flex:1 }
+    .btns{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px }
+    .pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; background:var(--chip); color:#d7e3ff; font-size:12px; border:1px solid #263048; }
+    .cols{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; }
+    .grid{ width:100%; border-collapse: collapse; font-size:13px }
+    .grid th, .grid td{ padding:6px 8px; border-bottom:1px solid #21283a; vertical-align:top }
+    .grid th{ text-align:left; color:#b7c4d6; background:#131824; position:sticky; top:0; }
+    .scroll{ max-height:420px; overflow:auto; border:1px solid #202635; border-radius:8px }
+    .muted{ color:var(--muted) }
+    .ok{ color:var(--ok) } .warn{ color:var(--warn) } .err{ color:var(--err) }
+    .kvs{ display:flex; gap:8px; flex-wrap:wrap; }
+    .kv{ background:#0e141d; border:1px solid #1e2635; padding:6px 8px; border-radius:6px; font-size:12px }
+    .chips{ display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 0 }
+    .log{ background:#091019; color:#c9d7ee; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; white-space:pre; padding:10px; border:1px solid #21283a; border-radius:8px; height:120px; overflow:auto }
+    .stats{ display:flex; gap:10px; margin-top:6px }
+    .stat{ background:#0e141d; border:1px solid #222a3a; border-radius:6px; padding:6px 8px; font-size:12px; color:#c3d3ee }
+    .badge{ font-size:11px; padding:2px 6px; border-radius:999px; border:1px solid #2a3550; background:#1c2433; color:#d8e7ff }
+    .right-hdr{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px }
+    .hint{ font-size:12px; color:#9fb0c5 }
+    .switch{ display:flex; gap:8px; align-items:center; margin-top:6px }
+    input[type="checkbox"]{ accent-color:#6ea8ff }
+    .sticky-actions{ display:flex; gap:6px; align-items:center; flex-wrap:wrap }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <aside class="left">
-      <h2>Step 0 · Connect to Supabase</h2>
-      <div class="col">
-        <div class="col">
-          <label>Supabase URL</label>
-          <input id="sb-url" type="text" spellcheck="false" />
-        </div>
-        <div class="col">
-          <label>Supabase <span class="pill">anon</span> key</label>
-          <input id="sb-key" type="password" spellcheck="false" />
-        </div>
-        <div class="grid2 mt8">
-          <div class="col">
+    <!-- LEFT -->
+    <div class="left">
+      <div class="panel">
+        <h2>Step 0 · Connect to Supabase</h2>
+        <label>Supabase URL</label>
+        <input id="sbUrl" type="url" placeholder="https://xxxxxxxx.supabase.co" />
+        <div class="row">
+          <div>
+            <label>Supabase <span class="badge">anon</span> key</label>
+            <input id="sbKey" type="password" placeholder="Paste anon key" />
+          </div>
+          <div>
             <label>Events view</label>
-            <select id="sb-events"><option value="ai_events">ai_events</option></select>
+            <select id="evView">
+              <option value="ai_events">ai_events</option>
+            </select>
           </div>
-          <div class="col">
+          <div>
             <label>Products view</label>
-            <select id="sb-products"><option value="ai_products">ai_products</option></select>
+            <select id="prView">
+              <option value="ai_products">ai_products</option>
+            </select>
           </div>
         </div>
-        <div class="row mt8">
-          <button class="small" id="btn-save">Save</button>
-          <button class="small ghost" id="btn-reset">Reset defaults</button>
-          <span class="hint">Saved to localStorage.</span>
+        <div class="btns">
+          <button id="saveCfg">Save</button>
+          <button id="resetCfg">Reset defaults</button>
+          <button id="connect">Connect</button>
+          <button id="fetchLive">Fetch live data</button>
+          <span id="connState" class="hint">Not connected.</span>
         </div>
-        <div class="row mt8">
-          <button class="primary" id="btn-connect">Connect</button>
-          <button class="small" id="btn-fetch">Fetch live data</button>
-        </div>
-        <div id="conn-status" class="hint mt8">Not connected.</div>
-      </div>
-
-      <hr class="mt16" style="border:0;border-top:1px solid var(--border)">
-
-      <h2>Step 1 (optional) · Landing Pages CSV (fallback)</h2>
-      <div class="hint mb8">Required columns: <code class="mon">url</code> and one of <code class="mon">meta_title</code> or <code class="mon">title</code>.</div>
-      <div class="row">
-        <input id="csv-landing" type="file" accept=".csv" />
-        <button class="small ghost" id="btn-clear-landing">Clear</button>
-      </div>
-
-      <h2 class="mt16">Step 2 · Questions CSV</h2>
-      <div class="hint mb8">Columns: <code class="mon">idx, query, expected</code>. Extra columns ignored.</div>
-      <div class="row">
-        <input id="csv-questions" type="file" accept=".csv" />
-        <button class="small ghost" id="btn-clear-questions">Clear</button>
-      </div>
-
-      <h2 class="mt16">Step 3 · Try a single query</h2>
-      <textarea id="free-query" placeholder="e.g. when is the next devon workshop?"></textarea>
-      <div class="row mt8">
-        <button id="btn-run" class="primary">Run</button>
-        <button id="btn-copy" class="small">Copy JSON</button>
-        <button id="btn-dl" class="small">Download JSON</button>
-      </div>
-      <div class="row mt8">
-        <label class="toggle"><input type="checkbox" id="flag-fallback" /> Use Landing CSV fallback</label>
-        <label class="toggle"><input type="checkbox" id="flag-generic" checked /> Enable generic pills</label>
-      </div>
-
-      <div class="kpi mt12">
-        <div><div class="hint">Intent</div><b id="kpi-intent">–</b></div>
-        <div><div class="hint">Counts</div><b><span id="kpi-ev">events=0</span>, <span id="kpi-art">articles=0</span></b></div>
-      </div>
-    </aside>
-
-    <main class="right">
-      <div class="boards">
-        <div class="board">
-          <div class="title">Results · Events</div>
-          <div style="overflow:auto; max-height: 260px;">
-            <table class="tbl" id="tbl-events">
-              <thead><tr><th>title</th><th>url</th><th>when</th><th>location</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="board">
-          <div class="title">Results · Products</div>
-          <div style="overflow:auto; max-height: 260px;">
-            <table class="tbl" id="tbl-products">
-              <thead><tr><th>title</th><th>url</th><th>price</th><th>tags</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
+        <div class="switch">
+          <label><input id="flagFallback" type="checkbox" checked/> Use Landing CSV fallback</label>
+          <label><input id="flagGeneric" type="checkbox" checked/> Enable generic pills</label>
         </div>
       </div>
 
-      <div class="card h">Execution Log</div>
+      <div class="panel">
+        <h2>Step 1 (optional) · Landing Pages CSV <small class="muted">(fallback)</small></h2>
+        <div class="hint">Required columns: <b>url</b> and one of <b>meta_title</b> or <b>title</b>.</div>
+        <div class="btns">
+          <input id="csvLanding" type="file" accept=".csv" />
+          <button id="clearLanding">Clear</button>
+        </div>
+        <div id="landingInfo" class="hint">No landing CSV loaded.</div>
+      </div>
+
+      <div class="panel">
+        <h2>Step 2 · Questions CSV</h2>
+        <div class="hint">Columns: <b>idx</b>, <b>query</b>, <b>expected</b>. Extra columns ignored.</div>
+        <div class="btns">
+          <input id="csvQs" type="file" accept=".csv" />
+          <button id="clearQs">Clear</button>
+        </div>
+        <div class="btns">
+          <button id="runSuite">Run whole suite</button>
+          <button id="downloadSuiteJSON">Download suite JSON</button>
+        </div>
+        <div id="qsInfo" class="hint">No questions CSV loaded.</div>
+      </div>
+
+      <div class="panel">
+        <h2>Step 3 · Try a single query</h2>
+        <input id="query" type="text" placeholder="e.g. when is the next devon workshop?" />
+        <div class="btns sticky-actions">
+          <button id="runSingle">Run</button>
+          <button id="copyJSON">Copy JSON</button>
+          <button id="downloadJSON">Download JSON</button>
+          <span class="kvs">
+            <span class="kv">Intent: <b id="intent">advice</b></span>
+            <span class="kv">Counts: <span id="counts">events=0, articles=0</span></span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="panel">
+      <div class="right-hdr">
+        <h2>Results · Events</h2>
+        <small class="muted">Shows matched or latest events</small>
+      </div>
+      <div class="scroll">
+        <table class="grid" id="eventsTbl">
+          <thead><tr><th>title</th><th>url</th><th>when</th><th>location</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="right-hdr" style="margin-top:10px">
+        <h2>Results · Products</h2>
+        <small class="muted">Price & tags as scraped</small>
+      </div>
+      <div class="scroll">
+        <table class="grid" id="productsTbl">
+          <thead><tr><th>title</th><th>url</th><th>price</th><th>tags</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="right-hdr" style="margin-top:10px">
+        <h2>Results · Articles</h2>
+        <small class="muted">From Landing CSV (blog pages)</small>
+      </div>
+      <div class="scroll">
+        <table class="grid" id="articlesTbl">
+          <thead><tr><th>title</th><th>url</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="right-hdr" style="margin-top:10px">
+        <h2>Pills generated</h2>
+        <small class="muted">Brand + Generic</small>
+      </div>
+      <div id="pills" class="chips"></div>
+
+      <div class="right-hdr" style="margin-top:10px">
+        <h2>Execution Log</h2>
+        <div class="stats">
+          <div class="stat">Events: <b id="evCount">0</b></div>
+          <div class="stat">Products: <b id="prCount">0</b></div>
+          <div class="stat">Articles: <b id="arCount">0</b></div>
+        </div>
+      </div>
       <div id="log" class="log"></div>
-    </main>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
-    /* ===== Defaults (with hard-wired slots) ===== */
-    const DEFAULTS = {
-      SUPABASE_URL: 'https://igzvwbvgvmzvvzoclufx.supabase.co',
-      // Put your real anon key here (it stays client-side). Then click Save.
-      SUPABASE_ANON_KEY: '<<<PASTE_YOUR_SUPABASE_ANON_KEY_HERE>>>',
-      EVENTS_VIEW: 'ai_events',
-      PRODUCTS_VIEW: 'ai_products'
+  /***** DEFAULTS —> paste your hard-wired credentials here *****/
+  const DEFAULTS = {
+    URL: 'https://igzvwbvgvmzvvzoclufx.supabase.co',     // ✅ your Supabase URL
+    KEY: '',                                            // ⛳ paste your anon key here (left empty because I don’t know it)
+    EV_VIEW: 'ai_events',
+    PR_VIEW: 'ai_products'
+  };
+  /*************************************************************/
+
+  // State
+  let supabase = null;
+  let env = { url: DEFAULTS.URL, key: DEFAULTS.KEY, evView: DEFAULTS.EV_VIEW, prView: DEFAULTS.PR_VIEW };
+  const Landing = { rows: [] };     // [{url,title/meta_title}]
+  const Questions = { rows: [] };   // [{idx, query, expected}]
+  let liveEvents = [];              // from Supabase
+  let liveProducts = [];            // from Supabase
+
+  // DOM
+  const els = {
+    sbUrl: byId('sbUrl'), sbKey: byId('sbKey'), evView: byId('evView'), prView: byId('prView'),
+    saveCfg: byId('saveCfg'), resetCfg: byId('resetCfg'), connect: byId('connect'), fetchLive: byId('fetchLive'),
+    connState: byId('connState'), flagFallback: byId('flagFallback'), flagGeneric: byId('flagGeneric'),
+
+    csvLanding: byId('csvLanding'), clearLanding: byId('clearLanding'), landingInfo: byId('landingInfo'),
+    csvQs: byId('csvQs'), clearQs: byId('clearQs'), qsInfo: byId('qsInfo'), runSuite: byId('runSuite'),
+    downloadSuiteJSON: byId('downloadSuiteJSON'),
+
+    query: byId('query'), runSingle: byId('runSingle'), copyJSON: byId('copyJSON'), downloadJSON: byId('downloadJSON'),
+    intent: byId('intent'), counts: byId('counts'),
+
+    eventsTbl: byId('eventsTbl').querySelector('tbody'),
+    productsTbl: byId('productsTbl').querySelector('tbody'),
+    articlesTbl: byId('articlesTbl').querySelector('tbody'),
+    pills: byId('pills'),
+    evCount: byId('evCount'), prCount: byId('prCount'), arCount: byId('arCount'),
+    log: byId('log')
+  };
+
+  // Init
+  boot();
+
+  function boot(){
+    log('Bench ready.');
+    // hydrate from localStorage if saved before
+    const saved = JSON.parse(localStorage.getItem('bench_cfg')||'{}');
+    env = {
+      url: saved.url || DEFAULTS.URL,
+      key: saved.key || DEFAULTS.KEY,
+      evView: saved.evView || DEFAULTS.EV_VIEW,
+      prView: saved.prView || DEFAULTS.PR_VIEW
     };
+    els.sbUrl.value = env.url;
+    els.sbKey.value = env.key;
+    els.evView.value = env.evView;
+    els.prView.value = env.prView;
 
-    /* ===== DOM ===== */
-    const els = {
-      url: document.getElementById('sb-url'),
-      key: document.getElementById('sb-key'),
-      evView: document.getElementById('sb-events'),
-      prView: document.getElementById('sb-products'),
-      save: document.getElementById('btn-save'),
-      reset: document.getElementById('btn-reset'),
-      connect: document.getElementById('btn-connect'),
-      fetch: document.getElementById('btn-fetch'),
-      status: document.getElementById('conn-status'),
-      csvLanding: document.getElementById('csv-landing'),
-      clearLanding: document.getElementById('btn-clear-landing'),
-      csvQuestions: document.getElementById('csv-questions'),
-      clearQuestions: document.getElementById('btn-clear-questions'),
-      freeQuery: document.getElementById('free-query'),
-      run: document.getElementById('btn-run'),
-      copy: document.getElementById('btn-copy'),
-      dl: document.getElementById('btn-dl'),
-      flagFallback: document.getElementById('flag-fallback'),
-      flagGeneric: document.getElementById('flag-generic'),
-      tblEvents: document.querySelector('#tbl-events tbody'),
-      tblProducts: document.querySelector('#tbl-products tbody'),
-      kpiIntent: document.getElementById('kpi-intent'),
-      kpiEv: document.getElementById('kpi-ev'),
-      kpiArt: document.getElementById('kpi-art'),
-      log: document.getElementById('log')
+    // wire buttons
+    els.saveCfg.onclick = () => {
+      env.url = els.sbUrl.value.trim();
+      env.key = els.sbKey.value.trim();
+      env.evView = els.evView.value.trim();
+      env.prView = els.prView.value.trim();
+      localStorage.setItem('bench_cfg', JSON.stringify(env));
+      log('Saved configuration.');
     };
-
-    const STORAGE_KEY = 'benchtest_cfg_fixed';
-    let supabase = null;
-    let env = {
-      url: DEFAULTS.SUPABASE_URL,
-      key: DEFAULTS.SUPABASE_ANON_KEY,
-      evView: DEFAULTS.EVENTS_VIEW,
-      prView: DEFAULTS.PRODUCTS_VIEW
+    els.resetCfg.onclick = () => {
+      localStorage.removeItem('bench_cfg');
+      els.sbUrl.value = DEFAULTS.URL;
+      els.sbKey.value = DEFAULTS.KEY;
+      els.evView.value = DEFAULTS.EV_VIEW;
+      els.prView.value = DEFAULTS.PR_VIEW;
+      log('Reset to defaults (remember to save).');
     };
+    els.connect.onclick = connect;
+    els.fetchLive.onclick = fetchLive;
 
-    const Landing = { rows: [] };
-    const Questions = { rows: [] };
+    els.csvLanding.onchange = handleLandingCSV;
+    els.clearLanding.onclick = () => { Landing.rows = []; updateLandingInfo(); log('Landing CSV cleared.'); };
 
-    function log(line){ const ts=new Date().toTimeString().slice(0,8); els.log.textContent += `${ts}  ${line}\n`; els.log.scrollTop = els.log.scrollHeight; }
+    els.csvQs.onchange = handleQsCSV;
+    els.clearQs.onclick = () => { Questions.rows = []; updateQsInfo(); log('Questions CSV cleared.'); };
+    els.runSuite.onclick = runSuite;
+    els.downloadSuiteJSON.onclick = () => downloadBlob(JSON.stringify({questions:Questions.rows},null,2), 'bench-questions.json');
 
-    function loadCfg(){
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) { try { Object.assign(env, JSON.parse(raw)); } catch {} }
-      els.url.value = env.url; els.key.value = env.key; els.evView.value = env.evView; els.prView.value = env.prView;
-    }
-    function saveCfg(){
-      env.url = els.url.value.trim(); env.key = els.key.value.trim(); env.evView = els.evView.value.trim(); env.prView = els.prView.value.trim();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(env)); log('Saved configuration.');
-    }
-    function resetDefaults(){
-      Object.assign(env, { url: DEFAULTS.SUPABASE_URL, key: DEFAULTS.SUPABASE_ANON_KEY, evView: DEFAULTS.EVENTS_VIEW, prView: DEFAULTS.PRODUCTS_VIEW });
-      els.url.value = env.url; els.key.value = env.key; els.evView.value = env.evView; els.prView.value = env.prView;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(env)); log('Reset to defaults.');
-    }
-    function asMoney(x){ if(x==null||x==='') return ''; const n=Number(x); if(Number.isNaN(n)) return String(x); return new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0}).format(n); }
-    function renderTable(tbody, rows, cols){
-      tbody.innerHTML=''; rows.forEach(r=>{ const tr=document.createElement('tr'); cols.forEach(c=>{ const td=document.createElement('td'); let v=r[c]??''; if(c==='price') v=asMoney(v); if(c==='url'){const a=document.createElement('a'); a.href=v; a.target='_blank'; a.textContent=v; td.appendChild(a);} else { td.textContent=v; } tr.appendChild(td); }); tbody.appendChild(tr); });
-    }
+    els.runSingle.onclick = runSingle;
+    els.copyJSON.onclick = () => copyText(JSON.stringify(buildSnapshot(), null, 2));
+    els.downloadJSON.onclick = () => downloadBlob(JSON.stringify(buildSnapshot(), null, 2), 'bench-snapshot.json');
 
-    function inferIntent(q){
-      const s=(q||'').toLowerCase();
-      const eventish=/(when|what date|workshop|course|class|available|schedule|next|where|location|price|cost)/.test(s);
-      const productish=/(price|cost|fee|£|\bgbp\b)/.test(s);
-      if(eventish) return 'events'; if(productish) return 'products'; return 'advice';
+    // auto-connect if creds present
+    if(env.url && env.key){
+      connect();
+    }else{
+      log('Missing anon key.');
     }
-    function genericPills(query){
-      const s=(query||'').toLowerCase(); const pills=[];
-      if(/workshop|course|class/.test(s)) pills.push({label:'Event Listing',url:'https://www.alanranger.com/search?query=workshops',brand:true});
-      if(/bluebell/.test(s)) pills.push({label:'Bluebell workshops',url:'https://www.alanranger.com/search?query=bluebell'});
-      return pills;
-    }
+  }
 
-    async function connect(){
-      saveCfg();
-      if (!env.url || !env.key || env.key.includes('PASTE_YOUR')) { els.status.innerHTML='<span class="bad">Please paste your real anon key, then click Save.</span>'; log('Missing anon key.'); return; }
-      supabase = window.supabase.createClient(env.url, env.key, { auth:{ persistSession:false }});
-      els.status.textContent='Connecting…'; log('Connecting to Supabase…');
-      try{
-        const { count: evc, error: e1 } = await supabase.from(env.evView).select('title',{ count:'exact', head:true });
-        const { count: prc, error: e2 } = await supabase.from(env.prView).select('title',{ count:'exact', head:true });
-        if (e1 || e2) throw (e1||e2);
-        els.status.innerHTML='<span class="ok">Connected.</span>';
-        log(`Connected to Supabase.`);
-        log(`Views reachable · ${env.evView}: ${evc ?? '?' } · ${env.prView}: ${prc ?? '?'}`);
-        // Auto-fetch immediately so the tables populate
-        await fetchLive();
-      }catch(err){
-        els.status.innerHTML=`<span class="bad">Connect failed: ${err.message}</span>`; log(`Connect error: ${err.message}`);
-      }
-    }
+  async function connect(){
+    try{
+      els.connState.textContent = 'Connecting to Supabase…';
+      log('Connecting to Supabase…');
 
-    // Fetch helpers that gracefully degrade if optional columns are missing
-    async function fetchEventsRows(){
-      // try with location first
-      let cols = 'title,url,"when",location';
-      let q = supabase.from(env.evView).select(cols).order('date_start',{ascending:true}).limit(1000);
-      let { data, error } = await q;
-      if (error && /location/.test(error.message)) {
-        log('Events: "location" column not found, retrying without it.');
-        ({ data, error } = await supabase.from(env.evView).select('title,url,"when"').order('date_start',{ascending:true}).limit(1000));
-      }
-      if (error) { log('Events error: '+error.message); return []; }
-      return data || [];
-    }
-    async function fetchProductRows(){
-      let cols = 'title,url,price,tags';
-      let { data, error } = await supabase.from(env.prView).select(cols).order('price',{ascending:false,nullsFirst:false}).limit(1000);
-      if (error && /column "tags"/i.test(error.message)) {
-        log('Products: "tags" column not found, retrying without it.');
-        ({ data, error } = await supabase.from(env.prView).select('title,url,price').order('price',{ascending:false,nullsFirst:false}).limit(1000));
-      }
-      if (error) { log('Products error: '+error.message); return []; }
-      return data || [];
-    }
+      env.url = els.sbUrl.value.trim();
+      env.key = els.sbKey.value.trim();
+      env.evView = els.evView.value.trim();
+      env.prView = els.prView.value.trim();
 
-    async function fetchLive(){
-      if (!supabase) { log('Not connected.'); return; }
+      if(!env.url || !env.key){ log('❗ Provide URL and anon key.', 'err'); els.connState.textContent = 'Missing URL or key.'; return; }
+
+      supabase = window.supabase.createClient(env.url, env.key);
+      // probe views
+      const [a,b] = await Promise.all([
+        supabase.from(env.evView).select('title').limit(1),
+        supabase.from(env.prView).select('title').limit(1)
+      ]);
+      if(a.error) throw a.error;
+      if(b.error) throw b.error;
+
+      els.connState.textContent = 'Connected.';
+      log('Connected to Supabase.');
+      // give counts quickly
+      const [ec, pc] = await Promise.all([
+        supabase.from(env.evView).select('*', { count:'exact', head:true }),
+        supabase.from(env.prView).select('*', { count:'exact', head:true })
+      ]);
+      const evC = ec.count ?? '?';
+      const prC = pc.count ?? '?';
+      log(`Views reachable · ${env.evView}: ${evC} · ${env.prView}: ${prC}`);
+    }catch(err){
+      errlog(err);
+      els.connState.textContent = 'Connection failed.';
+    }
+  }
+
+  async function fetchLive(){
+    if(!supabase){ log('Connect first.', 'warn'); return; }
+    try{
       log('Fetching live data…');
-      const [evRows, prRows] = await Promise.all([fetchEventsRows(), fetchProductRows()]);
-      renderTable(els.tblEvents, evRows.slice(0,50), ['title','url','when','location']);
-      renderTable(els.tblProducts, prRows.slice(0,50), ['title','url','price','tags']);
-      els.kpiEv.textContent = `events=${evRows.length}`;
-      els.kpiArt.textContent = `articles=${0}`;
-      log(`Loaded events=${evRows.length}, products=${prRows.length}.`);
+      const [ev, pr] = await Promise.all([
+        supabase.from(env.evView).select('title,url,"when",location,start_date,date_start,date_end').limit(1000),
+        supabase.from(env.prView).select('title,url,price,tags').limit(1000)
+      ]);
+      if(ev.error) throw ev.error;
+      if(pr.error) throw pr.error;
+
+      liveEvents = ev.data || [];
+      liveProducts = pr.data || [];
+      window.__lastEvRows = liveEvents;
+      window.__lastPrRows = liveProducts;
+
+      fillEvents(liveEvents.slice(0, 100));
+      fillProducts(liveProducts.slice(0, 100));
+      updateCounts();
+
+      log(`Loaded events=${liveEvents.length}, products=${liveProducts.length}.`);
+    }catch(err){
+      errlog(err);
+    }
+  }
+
+  // === CSV handlers ===
+  async function handleLandingCSV(e){
+    const file = e.target.files?.[0];
+    if(!file){ return; }
+    const text = await file.text();
+    Landing.rows = parseCSV(text).map(r => ({
+      url: r.url || '',
+      title: r.meta_title || r.title || ''
+    })).filter(r => r.url && r.title);
+    updateLandingInfo();
+    log(`Landing CSV loaded (${Landing.rows.length} rows).`);
+  }
+  async function handleQsCSV(e){
+    const file = e.target.files?.[0];
+    if(!file){ return; }
+    const text = await file.text();
+    const rows = parseCSV(text);
+    Questions.rows = rows.map((r,i) => ({
+      idx: r.idx ?? (i+1),
+      query: r.query ?? r.q ?? '',
+      expected: (r.expected || '').toLowerCase().trim()
+    })).filter(r => r.query);
+    updateQsInfo();
+    log(`Questions CSV loaded (${Questions.rows.length} rows).`);
+  }
+  function updateLandingInfo(){
+    if(!Landing.rows.length){ els.landingInfo.textContent = 'No landing CSV loaded.'; return; }
+    els.landingInfo.innerHTML = `Loaded <b>${Landing.rows.length}</b> landing pages.`;
+  }
+  function updateQsInfo(){
+    if(!Questions.rows.length){ els.qsInfo.textContent = 'No questions CSV loaded.'; return; }
+    els.qsInfo.innerHTML = `Loaded <b>${Questions.rows.length}</b> questions.`;
+  }
+
+  // === Single run ===
+  async function runSingle(){
+    const q = (els.query.value || '').trim();
+    const result = await routeAndAnswer(q);
+    window.__lastSingleRun = result;
+
+    // paint
+    fillEvents(result.events);
+    fillProducts(result.products);
+    fillArticles(result.articles);
+    drawPills(result.pills);
+    els.intent.textContent = result.intent;
+    els.counts.textContent = `events=${result.events.length}, articles=${result.articles.length}`;
+    updateCounts();
+
+    log(`Run: ${JSON.stringify({ q, intent: result.intent })}`);
+  }
+
+  // === Suite ===
+  async function runSuite(){
+    if(!Questions.rows.length){ log('Load questions CSV first.', 'warn'); return; }
+    const suite = [];
+    for(const row of Questions.rows){
+      const res = await routeAndAnswer(row.query);
+      const ok = !row.expected ? true : (res.intent === row.expected);
+      suite.push({
+        idx: row.idx, q: row.query, expected: row.expected,
+        detected: res.intent, ok,
+        counts: { events: res.events.length, products: res.products.length, articles: res.articles.length }
+      });
+    }
+    window.__suiteRun = suite;
+    const pass = suite.filter(s => s.ok).length;
+    log(`Suite done: ${pass}/${suite.length} matched expected intent.`);
+  }
+
+  // === Router / Answerer (simple, transparent) ===
+  async function routeAndAnswer(q){
+    // classify
+    const ql = (q||'').toLowerCase();
+    let intent = 'advice';
+    if(/\b(workshop|course|class|event|tuition|mentoring)\b/.test(ql) || /\bwhen|date|where|next\b/.test(ql)){
+      intent = 'events';
+    }
+    if(/\b(blog|article|what is|how to|metering|exposure|sharp|tripod|long exposure|aperture|iso|shutter)\b/.test(ql)){
+      // articles can override events if purely informational
+      intent = (/\bworkshop|course|class\b/.test(ql)) ? 'events' : 'articles';
     }
 
-    function parseCSV(file, dest){
-      return new Promise((resolve)=>{ Papa.parse(file,{header:true,skipEmptyLines:true,complete:res=>{dest.rows=res.data||[];resolve(dest.rows.length);} }); });
+    // pick from live
+    let events = [];
+    if(liveEvents.length){
+      if(ql.includes('next')){
+        // prefer soonest by date_start/date_end/start_date
+        events = sortByDateAsc(liveEvents).slice(0, 5);
+      }else if(q){
+        const words = ql.split(/\s+/).filter(w=>w.length>2);
+        events = liveEvents.filter(e => {
+          const t = (e.title||'').toLowerCase();
+          return words.some(w => t.includes(w));
+        }).slice(0, 10);
+        if(!events.length) events = sortByDateAsc(liveEvents).slice(0, 5);
+      }else{
+        events = sortByDateAsc(liveEvents).slice(0, 10);
+      }
     }
 
-    function runSingle(){
-      const q = els.freeQuery.value.trim();
-      const intent = inferIntent(q);
-      els.kpiIntent.textContent = intent;
-      const pills = els.flagGeneric.checked ? genericPills(q) : [];
-      const result = { query:q, intent, counts:{ events:0, articles:0, pills:pills.length }, used:{ intent, product:null, events:[], articles:[], pills, citations:[] }, confidence:90 };
-      navigator.clipboard.writeText(JSON.stringify(result,null,2)).catch(()=>{});
-      log(`Run: ${JSON.stringify({ q, intent })}`);
-    }
-    function copyJSON(){ const txt=els.log.textContent.trim(); if(!txt) return; navigator.clipboard.writeText(txt).then(()=>log('Copied log to clipboard.')); }
-    function downloadJSON(){
-      const blob = new Blob([JSON.stringify({ meta:{ version:'benchtest/1.8-fixed' }, log: els.log.textContent }, null, 2)], { type:'application/json' });
-      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='benchtest-log.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+    let products = [];
+    if(liveProducts.length){
+      if(/\bprice|cost|fee|£|gbp\b/.test(ql) || intent==='events'){
+        products = liveProducts
+          .filter(p => p.price != null)
+          .sort((a,b)=> Number(b.price||0) - Number(a.price||0))
+          .slice(0, 10);
+      }else{
+        products = liveProducts.slice(0, 5);
+      }
     }
 
-    // Wire-up
-    loadCfg(); log('Bench ready.');
-    document.getElementById('btn-save').addEventListener('click', saveCfg);
-    document.getElementById('btn-reset').addEventListener('click', resetDefaults);
-    document.getElementById('btn-connect').addEventListener('click', connect);
-    document.getElementById('btn-fetch').addEventListener('click', fetchLive);
+    // articles from landing CSV
+    let articles = [];
+    if(Landing.rows.length){
+      const bloggy = Landing.rows.filter(r => /\/blog|\/article|\/what|\/how|\/tips/.test(r.url.toLowerCase()));
+      if(q){
+        const words = ql.split(/\s+/).filter(w=>w.length>2);
+        articles = bloggy.filter(a => {
+          const t = (a.title||'').toLowerCase();
+          return words.some(w => t.includes(w));
+        }).slice(0, 10);
+      }else{
+        articles = bloggy.slice(0, 10);
+      }
+    }
 
-    els.csvLanding.addEventListener('change', async (e)=>{ if(!e.target.files?.length) return; const n=await parseCSV(e.target.files[0], Landing); log(`Landing CSV loaded (${n} rows).`); });
-    els.clearLanding.addEventListener('click', ()=>{ Landing.rows=[]; els.csvLanding.value=''; log('Landing CSV cleared.'); });
+    // pills
+    const pills = buildPills({ intent, q, events, products, articles });
 
-    els.csvQuestions.addEventListener('change', async (e)=>{ if(!e.target.files?.length) return; const n=await parseCSV(e.target.files[0], Questions); log(`Questions CSV loaded (${n} rows).`); });
-    els.clearQuestions.addEventListener('click', ()=>{ Questions.rows=[]; els.csvQuestions.value=''; log('Questions CSV cleared.'); });
+    // if fallback enabled and no live events, use landing dataset to make “Event Listing” pill
+    if(els.flagFallback.checked && !events.length && Landing.rows.length){
+      const listing = Landing.rows.find(r => /search|workshop|course|classes/i.test(r.title+r.url));
+      if(listing){
+        pills.unshift({ label: 'Event Listing', url: listing.url, brand: true });
+      }
+    }
 
-    els.run.addEventListener('click', runSingle);
-    els.copy.addEventListener('click', copyJSON);
-    els.dl.addEventListener('click', downloadJSON);
+    return { intent, q, events, products, articles, pills, confidence: scoreConfidence({intent, q, events, products, articles}) };
+  }
+
+  // === Helpers ===
+  function sortByDateAsc(list){
+    const d = v => (v?.date_start || v?.start_date || v?.date_end) ? new Date(v.date_start || v.start_date || v.date_end).getTime() : Number.POSITIVE_INFINITY;
+    return [...list].sort((a,b)=> d(a)-d(b));
+  }
+  function scoreConfidence({intent, q, events, products, articles}){
+    let s=60;
+    if(intent==='events' && events.length) s+=20;
+    if(intent==='articles' && articles.length) s+=20;
+    if(q && q.length>25) s+=5;
+    return Math.max(0, Math.min(100, s));
+  }
+
+  function buildPills({ intent, q, events, products, articles }){
+    const out = [];
+    // brand anchors from landing
+    const brand = [
+      {label:'Gift Vouchers', regex:/gift/i},
+      {label:'Newsletter', regex:/newsletter|signup/i},
+      {label:'Private Lessons', regex:/private/i},
+      {label:'Payment Plan', regex:/payment|pick n mix/i},
+      {label:'Contact', regex:/contact/i},
+    ];
+    if(Landing.rows.length){
+      for(const b of brand){
+        const hit = Landing.rows.find(r => b.regex.test((r.title||'')+(r.url||'')));
+        if(hit) out.push({ label:b.label, url:hit.url, brand:true });
+      }
+    }
+    // generic helpful pills
+    if(els.flagGeneric.checked){
+      if(intent==='events') out.push({label:'All Workshops', url: guessListingURL(), brand:false});
+      if(intent==='articles' && articles.length) out.push({label:'More articles', url: articles[0].url, brand:false});
+    }
+    return uniqBy(out.filter(Boolean), p => p.label + p.url);
+  }
+  function guessListingURL(){
+    const cand = Landing.rows.find(r => /workshop|course|classes|photography/i.test(r.title+r.url));
+    return cand ? cand.url : (liveEvents[0]?.url || '#');
+  }
+
+  // === Painting ===
+  function fillEvents(rows){
+    const tb = els.eventsTbl; tb.innerHTML = '';
+    for(const r of rows){
+      const tr = document.createElement('tr');
+      td(tr, r.title); td(tr, link(r.url)); td(tr, r.when || ''); td(tr, r.location || '');
+      tb.appendChild(tr);
+    }
+  }
+  function fillProducts(rows){
+    const tb = els.productsTbl; tb.innerHTML = '';
+    for(const r of rows){
+      const tr = document.createElement('tr');
+      td(tr, r.title); td(tr, link(r.url)); td(tr, money(r.price)); td(tr, r.tags || '');
+      tb.appendChild(tr);
+    }
+  }
+  function fillArticles(rows){
+    const tb = els.articlesTbl; tb.innerHTML = '';
+    for(const r of rows){
+      const tr = document.createElement('tr');
+      td(tr, r.title); td(tr, link(r.url));
+      tb.appendChild(tr);
+    }
+  }
+  function drawPills(list){
+    els.pills.innerHTML = '';
+    for(const p of list){
+      const a = document.createElement('a');
+      a.href = p.url || '#'; a.target = '_blank'; a.rel='noopener';
+      a.className = 'pill'; a.textContent = p.label + (p.brand ? ' ★' : '');
+      els.pills.appendChild(a);
+    }
+  }
+  function updateCounts(){
+    els.evCount.textContent = liveEvents.length;
+    els.prCount.textContent = liveProducts.length;
+    // Articles count reflects current rendered rows
+    els.arCount.textContent = els.articlesTbl.querySelectorAll('tr').length;
+  }
+
+  // === Snapshot / export ===
+  function buildSnapshot(){
+    const redact = k => (k && k.length>12) ? `${k.slice(0,4)}…${k.slice(-4)}` : (k||null);
+    return {
+      meta: { version:'benchtest/2.0', timestamp:new Date().toISOString(), userAgent:navigator.userAgent },
+      environment: {
+        supabase_url: env.url, supabase_anon_key_redacted: redact(env.key),
+        events_view: env.evView, products_view: env.prView,
+        flags: { fallback: els.flagFallback.checked, generic: els.flagGeneric.checked }
+      },
+      datasets: {
+        live: {
+          events_count: liveEvents.length, products_count: liveProducts.length,
+          events_sample: liveEvents.slice(0,10), products_sample: liveProducts.slice(0,10)
+        },
+        landing_csv: {
+          rows_total: Landing.rows.length, sample: Landing.rows.slice(0,10)
+        },
+        questions_csv: {
+          rows_total: Questions.rows.length, rows: Questions.rows
+        }
+      },
+      last_single_run: window.__lastSingleRun || null,
+      last_suite_run: window.__suiteRun || [],
+      execution_log: (els.log.textContent || '').trim().split('\n'),
+      errors: window.__errors || []
+    };
+  }
+
+  // === Utilities ===
+  function parseCSV(text){
+    // small tolerant parser (no external deps)
+    const lines = text.replace(/\r/g,'').split('\n').filter(Boolean);
+    if(!lines.length) return [];
+    const headers = splitCSVLine(lines[0]).map(h => h.trim());
+    const rows = [];
+    for(let i=1;i<lines.length;i++){
+      const cols = splitCSVLine(lines[i]);
+      const obj = {};
+      headers.forEach((h,idx)=> obj[h] = cols[idx] ?? '');
+      rows.push(obj);
+    }
+    return rows;
+  }
+  function splitCSVLine(line){
+    const out=[]; let cur=''; let inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='\"'){ if(inQ && line[i+1]==='\"'){ cur+='\"'; i++; } else { inQ=!inQ; } }
+      else if(c===',' && !inQ){ out.push(cur); cur=''; }
+      else cur+=c;
+    }
+    out.push(cur); return out;
+  }
+
+  function uniqBy(arr, keyFn){ const m=new Map(); for(const x of arr){ m.set(keyFn(x), x); } return [...m.values()]; }
+  function link(u){ if(!u) return ''; return `<a href="${escapeHtml(u)}" target="_blank" rel="noopener">${escapeHtml(u)}</a>`; }
+  function money(v){ if(v==null) return 'NULL'; try{ const n=Number(v); if(!isFinite(n)) return String(v); return new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(n); }catch{ return String(v) } }
+  function td(tr, html){ const e=document.createElement('td'); e.innerHTML=html==null?'':html; tr.appendChild(e); }
+  function byId(id){ return document.getElementById(id); }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+  function downloadBlob(text, name){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'application/json'})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
+  async function copyText(t){ try{ await navigator.clipboard.writeText(t); log('Copied JSON snapshot to clipboard.'); } catch(e){ errlog(e); } }
+  function log(msg, lvl){ const ts = new Date().toTimeString().slice(0,8); els.log.textContent += `${ts}  ${msg}\n`; els.log.scrollTop = els.log.scrollHeight; }
+  function errlog(err){ (window.__errors ||= []).push(String(err?.message||err)); log(`ERROR: ${err?.message||err}`, 'err'); }
   </script>
 </body>
 </html>
