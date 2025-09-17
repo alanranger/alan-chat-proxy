@@ -13,7 +13,6 @@
   --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
   --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
   --user-bg:#e6edf7; --user-text:#0b0f16;
-  --conf:#2a72ff; --conf-ring:rgba(42,114,255,.25);
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
@@ -47,19 +46,13 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer li{margin:.15em 0}
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
+.meta{color:var(--muted);font-size:14px}
+.kvline{margin:0}
+.kvline strong{font-weight:600}
+.conf{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;background:#0f244d;color:#cfe3ff;border:1px solid #274a8a;border-radius:999px;padding:4px 10px;margin-top:8px}
+.conf::before{content:"•";display:inline-block}
 
-/* Single overall confidence pill (non-clickable) */
-.conf-overall{
-  display:inline-flex;align-items:center;gap:8px;
-  font-size:13px;font-weight:800;
-  background:rgba(42,114,255,.14); color:#d8e6ff;
-  border:1px solid var(--conf); border-radius:999px;
-  padding:6px 10px; margin:6px 0 0 0;
-  box-shadow:0 0 0 3px var(--conf-ring) inset;
-}
-.conf-overall .dot{width:8px;height:8px;border-radius:50%;background:var(--conf);display:inline-block}
-
-/* Action pills row */
+/* Global pill row */
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .actions .pill{background:var(--brand);color:#0b0f16;border:none}
 
@@ -68,8 +61,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
 .tools button:hover{border-color:#3c548b}
 .composer{display:flex;gap:10px;margin-top:8px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
-.composer input::placeholder{color:#6b7280}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
@@ -98,8 +91,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
   <div class="badge-wrap"><span class="version">v0.9.22</span></div>
 
   <div class="card">
-
-    <!-- Sticky header block -->
+    <!-- Sticky header -->
     <div class="header-sticky">
       <div class="header">
         <img class="logo" src="./chat%20white.png" alt="AR logo">
@@ -147,10 +139,20 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </div>
 
 <script>
+/* ================= Config ================= */
 const CHAT_ENDPOINT = '/api/chat';
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
+/* Optional tag-page fallback for articles (safe, non-search) */
+const ARTICLE_TAG_GUESS = {
+  bluebell: 'https://www.alanranger.com/blog?tag=bluebell',
+  bluebells: 'https://www.alanranger.com/blog?tag=bluebell',
+  devon: 'https://www.alanranger.com/blog?tag=devon',
+  woodland: 'https://www.alanranger.com/blog?tag=woodland'
+};
+
+/* ================= DOM refs ================= */
 const thread = document.getElementById('thread');
 const input  = document.getElementById('q');
 const sendBtn= document.getElementById('send');
@@ -181,7 +183,7 @@ dbgCopy?.addEventListener('click', ()=>{
   navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
 });
 
-/* ---------- UI helpers ---------- */
+/* ================= UI helpers ================= */
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
   div.className = 'bubble' + (opts.user ? ' user' : '');
@@ -220,7 +222,13 @@ function currency(amount, ccy){
 }
 function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
 
-/* ---------------- Product helpers ---------------- */
+/* ================= Product helpers ================= */
+function firstSentence(t){
+  const s = String(t||'').trim();
+  if(!s) return '';
+  const m = s.match(/^(.*?\.)(\s|$)/);
+  return m? m[1].trim() : s;
+}
 function mergeProducts(list){
   if(!Array.isArray(list) || !list.length) return [];
   const map = new Map();
@@ -228,64 +236,69 @@ function mergeProducts(list){
     const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
     if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
     const m = map.get(key);
-    for(const k of ['price','price_currency','availability','provider','description','title','meta_description']) if(m[k]==null && p[k]!=null) m[k]=p[k];
+    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
     const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
     const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
-    if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = p.raw.offers; }
+    if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {lowPrice:p.raw.offers.lowPrice, highPrice:p.raw.offers.highPrice, priceCurrency:p.raw.offers.priceCurrency}); }
     if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
   }
   return [...map.values()];
 }
-
-/* Grab facts from description; supports “label:” on one line and value on the next */
 function extractFacts(desc){
-  const lines = String(desc||'').split(/\r?\n/).map(l=>l.trim());
-  // remove pure date rows etc.
-  const filtered = lines.filter(l=>{
-    if(/^dates\s*\(/i.test(l)) return false;
-    if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
-    if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
-    return true;
-  });
+  const txt = String(desc||'')
+    .split(/\r?\n/)
+    .map(l=>l.trim())
+    .filter(Boolean);
 
-  const grab = (label)=>{
-    const re = new RegExp(`^${label}\\s*:?(?:\\s*(.+))?$`,'i');
-    for(let i=0;i<filtered.length;i++){
-      const m = filtered[i].match(re);
-      if(m){
-        if(m[1] && m[1].trim()) return m[1].trim();        // same line
-        // next non-empty line
-        for(let j=i+1;j<filtered.length;j++){
-          if(filtered[j]) return filtered[j];
-        }
-      }
-    }
+  const findAfter = (label)=>{
+    const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
+    if(i>=0 && i+1<txt.length) return txt[i+1];
+    const flat = txt.find(l=>new RegExp(`^${label}\\s*:?\\s+(.+)$`,'i').test(l));
+    if(flat) return flat.replace(new RegExp(`^${label}\\s*:?\\s+`,'i'),'');
     return null;
   };
+  const location     = findAfter('Location');
+  const participants = findAfter('Participants');
+  const fitness      = findAfter('Fitness');
+  const availability = findAfter('Availability');
 
-  const location     = grab('Location');
-  const participants = grab('Participants');
-  const fitness      = grab('Fitness');
-  const availability = grab('Availability');
-
-  const optionLines = filtered.filter(l =>
+  // Option lines
+  const optionLines = txt.filter(l =>
     /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
     /^\s*OR\s*1\s*day\b/i.test(l)
-  ).slice(0,4);
+  );
 
   return {location, participants, fitness, availability, optionLines};
+}
+function parseExtraPriceFromText(desc){
+  // Look for lines like "1 day — £175" or "full day - £175"
+  const m = String(desc||'').match(/\b(?:1\s*day|full\s*day)\b[^£\d]{0,12}(£?\s?\d{2,4})/i);
+  if(!m) return null;
+  const s = m[1].replace(/[^\d.]/g,'');
+  const n = Number(s);
+  return isFinite(n) ? n : null;
 }
 function deriveOptions(prod, facts){
   const ccy = prod.price_currency || prod?.raw?.offers?.priceCurrency || 'GBP';
   const base = prod.price ?? prod?.raw?.offers?.price;
-  const low  = prod?.raw?.offers?.lowPrice;
-  const high = prod?.raw?.offers?.highPrice;
+  let low  = prod?.raw?.offers?.lowPrice;
+  let high = prod?.raw?.offers?.highPrice;
+
+  // If range missing, try to infer a second price from text
+  if((low==null || high==null) && base!=null){
+    const extra = parseExtraPriceFromText(prod.description||'');
+    if(extra!=null && extra!==base){
+      low = Math.min(base, extra);
+      high= Math.max(base, extra);
+    }
+  }
 
   const text = (facts.optionLines||[]).join('\n').toLowerCase();
   const has4h  = /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
   const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
 
   const opts = [];
+
   if(low!=null && high!=null && has4h && has1d){
     opts.push({label:'4 hours', price:currency(low,ccy)});
     opts.push({label:'1 day',   price:currency(high,ccy)});
@@ -311,182 +324,187 @@ function deriveOptions(prod, facts){
   }
   return opts;
 }
-function humanAvailability(prod){
-  const v = prod?.availability || prod?.raw?.offers?.availability;
-  if(!v) return null;
-  const key = String(v).toLowerCase();
-  if (key.includes('instock')) return 'In stock';
-  if (key.includes('outofstock')) return 'Out of stock';
-  if (key.includes('preorder')) return 'Pre-order';
-  if (key.includes('soldout')) return 'Sold out';
-  return null;
+
+/* ================= Renderers ================= */
+let __lastConfidencePct = null;
+let __lastQuery = '';
+
+function renderConfidenceBadge(){
+  const pct = __lastConfidencePct;
+  if(pct==null || isNaN(pct)) return '';
+  return `<div class="conf">Confidence: ${pct}%</div>`;
 }
 
-/* Meta description fallback: first sentence(s) before 'Summary' */
-function metaFallback(prod){
-  if (prod.meta_description) return String(prod.meta_description).trim();
-  const d = String(prod.description||'');
-  const parts = d.split(/summary/i)[0] || d; // take section before "Summary"
-  const sentences = parts.replace(/\s+/g,' ').trim().match(/[^.!?]*[.!?]/g) || [];
-  const short = (sentences.slice(0,2).join(' ') || parts).trim();
-  return short.length>240 ? short.slice(0,237)+'…' : short;
-}
-
-/* ---------------- Renderers ---------------- */
 function renderProductCard(prod){
   const facts = extractFacts(prod.description||'');
   const options = deriveOptions(prod, facts);
 
-  const infoP = [];
-  if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
-  if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
-  if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
-  const avail = facts.availability || humanAvailability(prod);
-  if (avail) infoP.push(`<p><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
+  const lines = [];
+  const md = firstSentence(prod.description||'');
+  if(md) lines.push(`<p class="meta">${escapeHTML(md)}</p>`);
 
-  const meta = metaFallback(prod);
+  if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
+  if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
+  if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
+  if(prod.availability || facts.availability){
+    const avail = (prod.availability||facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
+    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
+  }
 
   const li = options.map(o=>{
-    const bits = [escapeHTML(o.label), o.time ? `— ${escapeHTML(o.time)}` : null, o.price ? `— ${escapeHTML(o.price)}` : null].filter(Boolean).join(' ');
+    const bits = [escapeHTML(o.label||''), o.time ? `— ${escapeHTML(o.time)}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
     return `<li>${bits}</li>`;
   }).join('');
 
   return `
     <div class="answer">
       <h3>${escapeHTML(prod.title || 'Workshop')}</h3>
-      ${meta ? `<p>${escapeHTML(meta)}</p>` : ''}
-      ${infoP.join('')}
+      ${lines.join('')}
       ${li? `<ul>${li}</ul>`:''}
+      ${renderConfidenceBadge()}
     </div>
   `;
 }
-function cleanTopic(s){
-  if(!s) return '';
-  const stop = new Set(['when','whens','next','upcoming','workshop','workshops','what','whats','cost','prices','the','and','or','near','me']);
-  const words = String(s)
-    .replace(/[^\p{L}\p{N}\s,]/gu,' ')
-    .split(/[,\s]+/g)
-    .map(w=>w.trim().toLowerCase())
-    .filter(w=>w && !stop.has(w));
-  if(!words.length) return '';
-  const cleaned = words.join(' ');
-  return cleaned.replace(/\b\w/g, m => m.toUpperCase());
+
+/* Keyword extraction for event filtering */
+const STOP = new Set(['the','and','or','what','whats','when','whens','next','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire']); // we’ll still keep geo words separately
+function extractKeywords(topic, query){
+  const src = [topic||'', query||''].join(' ').toLowerCase();
+  const words = Array.from(new Set(src.match(/[a-z]+/g)||[]));
+  const geos = ['devon','warwickshire','warks','coventry','peak','district','lake','lakes','yorkshire','moor','moors'];
+  const keep = words.filter(w => !STOP.has(w) || geos.includes(w));
+  return keep;
 }
+function eventMatches(e, kws){
+  if(!kws.length) return true;
+  const hay = ((e.title||'')+' '+(e.location||'')).toLowerCase();
+  return kws.some(k=>hay.includes(k));
+}
+
 function renderEventsBlock(structured, productHasLocation){
   const now=new Date();
-  const future=(structured?.events||[])
-    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
-    .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start));
-  if(!future.length) return '';
-  const topic = cleanTopic(structured?.topic||'');
-  const title = topic ? `Upcoming ${escapeHTML(topic)} Workshops` : 'Upcoming Workshops';
-  const lis = future.map(e=>{
-    const when=fmtDate(e.date_start);
-    const href=e.page_url||e.source_url||e.url||'#';
-    const loc=e.location||'';
-    const locPart = (!productHasLocation && loc) ? ` — ${escapeHTML(loc)}` : '';
-    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${locPart}</li>`;
-  }).join('');
-  return `<div class="answer"><h3>${title}</h3><ul>${lis}</ul></div>`;
+  const all=(structured?.events||[])
+    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
+
+  // Filter by keywords from topic + last query
+  const kws = extractKeywords(structured?.topic||'', __lastQuery);
+  const filtered = all.filter(e=>eventMatches(e, kws));
+
+  const list = filtered.length ? filtered : all; // fallback to all if nothing matched
+  if(!list.length) return '';
+
+  const topic = (structured?.topic||'').toString().trim();
+  const titleKW = kws.find(k=>k && !STOP.has(k));
+  const friendlyTitle = titleKW ? `Upcoming ${titleKW[0].toUpperCase()+titleKW.slice(1)} Workshops` :
+    (topic ? `Upcoming ${escapeHTML(topic.replace(/,?\s*(whats?|whens?|next|cost)/gi,'').trim())} Workshops` : 'Upcoming Workshops');
+
+  const lis = list
+    .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
+    .map(e=>{
+      const when=fmtDate(e.date_start);
+      const href=e.page_url||e.source_url||e.url||'#';
+      const loc=e.location||'';
+      const locPart = (!productHasLocation && loc) ? ` — ${escapeHTML(loc)}` : '';
+      return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${locPart}</li>`;
+    }).join('');
+
+  return `<div class="answer"><h3>${friendlyTitle}</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
 }
-function renderArticlesBlock(structured, citations){
+
+function renderArticlesBlock(structured){
   let list = (structured?.articles||[]).slice(0,5);
 
-  // Fallback: derive blog-like links from citations if articles absent
-  if (!list.length && Array.isArray(citations)) {
-    const seen = new Set();
-    const derived = [];
-    for (const url of citations) {
-      if (typeof url !== 'string') continue;
-      if (!/alanranger\.com\/(blog|photography-tips|journal|learn|news)\b/i.test(url)) continue;
-      const key = url.split('?')[0];
-      if (seen.has(key)) continue;
-      seen.add(key);
-      derived.push({ title: 'Related article', page_url: key });
-      if (derived.length >= 5) break;
+  // Fallback to tag page if nothing came from API
+  if(!list.length){
+    const topic = (structured?.topic||'').toLowerCase();
+    for(const [kw,url] of Object.entries(ARTICLE_TAG_GUESS)){
+      if(topic.includes(kw)){
+        list = [{title:'Related articles', url}];
+        break;
+      }
     }
-    list = derived;
   }
-
   if(!list.length) return '';
 
   const lis = list.map(a=>{
     const t = a.title || a.raw?.name || 'Read more';
-    const u = a.page_url || a.source_url || a.url || '#';
+    const u = a.page_url || a.source_url || a.url;
+    if(!u) return '';
     return `<li><a href="${u}" target="_blank" rel="noopener">${escapeHTML(t)}</a></li>`;
   }).join('');
-  return `<div class="answer"><h3>Related guides</h3><ul>${lis}</ul></div>`;
+
+  return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
 }
 
-/* SINGLE overall confidence indicator (blue) */
-function renderOverallConfidence(container, pct){
-  if(pct==null || isNaN(pct)) return;
-  const pill = document.createElement('div');
-  pill.className = 'conf-overall';
-  pill.innerHTML = `<span class="dot"></span> Confidence: ${pct}%`;
-  container.appendChild(pill);
-}
-
-/* Action pills: explicit pills + (optionally) from articles */
-function buildActionPills(structured, articles){
+function buildActionPillsFromStructured(structured){
   const safe = [];
   const used = new Set();
   const add = (label, href) => {
     if(!label || !href) return;
     const u = String(href);
-    if (/\/search\?query=/.test(u)) return;
+    if (/\/search\?query=/.test(u)) return; // ban wildcard searches
     const key = `${label}::${u}`;
     if(used.has(key)) return;
     used.add(key);
     safe.push({label,href});
   };
+
+  // provided pills
   for (const p of (structured?.pills || structured?.chips || [])){
     add(p.label || p.text || 'Open', p.url || p.href);
   }
-  for (const a of (articles||[]).slice(0,2)){
-    add(a.title || 'Read guide', a.page_url || a.source_url || a.url);
+
+  // from articles (take first one if not already present)
+  if((structured?.articles||[]).length){
+    const art = structured.articles[0];
+    add(art.title || 'Related article', art.page_url || art.source_url || art.url);
+  } else {
+    const topic = (structured?.topic||'').toLowerCase();
+    for(const [kw,url] of Object.entries(ARTICLE_TAG_GUESS)){
+      if(topic.includes(kw)){ add('Related articles', url); break; }
+    }
   }
-  return safe.slice(0,6);
+
+  return safe.slice(0,5);
 }
 
-/* ------------- Full render ------------- */
-function renderAnswer(payload){
-  // remove any previous confidence pill
-  document.querySelectorAll('.conf-overall').forEach(n=>n.remove());
+/* Confidence heuristic (client-side floor) */
+function heuristicConfidence(structured){
+  let score = 0;
+  if (structured?.products?.length) score += 40;
+  if (structured?.events?.length)   score += 40;
+  if (structured?.articles?.length) score += 20;
+  return Math.min(95, Math.max(20, score || 25));
+}
 
+/* Full render */
+function renderAnswer(payload){
   const s = payload.structured||{};
-  const confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
+
+  // confidence override logic
+  let confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
+  const heuristic = heuristicConfidence(s);
+  if (confidencePct == null || confidencePct < 50) confidencePct = heuristic;
+  __lastConfidencePct = Math.round(confidencePct);
 
   const merged = mergeProducts(s.products||[]);
   const prod = merged[0] || null;
 
-  if(prod){
-    addBubble(renderProductCard(prod));
-  }
+  // product
+  if(prod) addBubble(renderProductCard(prod));
 
+  // events (hide duplicate location if product has one)
   const productFacts = prod ? extractFacts(prod.description||'') : null;
   const productHasLocation = !!(productFacts && productFacts.location);
   const evHTML = renderEventsBlock(s, productHasLocation);
   if(evHTML) addBubble(evHTML);
 
-  const artHTML = renderArticlesBlock(s, payload.citations);
-  if(artHTML){
-    const artDiv = addBubble(artHTML);
-    artDiv.dataset.block='articles';
-  }
+  // articles
+  const artHTML = renderArticlesBlock(s);
+  if(artHTML) addBubble(artHTML);
 
-  let articleList = [];
-  try{
-    if (s.articles && s.articles.length) articleList = s.articles;
-    else if (Array.isArray(payload.citations)) {
-      articleList = (payload.citations||[])
-        .filter(u=>/alanranger\.com\/(blog|photography-tips|journal|learn|news)\b/i.test(u))
-        .slice(0,5)
-        .map(u=>({title:'Related article', page_url:u}));
-    }
-  }catch{}
-
-  const pills = buildActionPills(s, articleList);
+  // pills
+  const pills = buildActionPillsFromStructured(s);
   if(pills.length){
     const wrap = document.createElement('div');
     wrap.className='actions';
@@ -498,23 +516,22 @@ function renderAnswer(payload){
     thread.appendChild(wrap);
   }
 
+  // fallback
   if(!prod && !(s.events||[]).length && !(s.articles||[]).length){
     const md = payload.answer_markdown || payload.answer || '';
     const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
     const {html}=mdToHtml(md || "I don’t have a specific answer for that yet.");
-    addBubble(html.replace('</div>', `${extra}</div>`));
+    addBubble(html.replace('</div>', `${extra}${renderConfidenceBadge()}</div>`));
   }
-
-  const host = thread.lastElementChild || thread;
-  renderOverallConfidence(host, confidencePct);
 
   // Debug dumps
   dbgStruct.textContent = safeJSONString(payload.structured||{});
-  dbgNote.textContent   = safeJSONString({ confidence_pct: confidencePct });
+  dbgNote.textContent   = safeJSONString({ confidence_pct: __lastConfidencePct });
 }
 
-/* ---------------- Networking ---------------- */
+/* ================= Networking ================= */
 async function sendQuery(query){
+  __lastQuery = String(query||'');
   const req = { query, topK: 8 };
   dbgReq.textContent = safeJSONString(req);
   const closeTyping = addTyping();
@@ -539,18 +556,16 @@ async function sendQuery(query){
       const fallback = "I don’t have a specific answer for that yet.";
       const {html}=mdToHtml(fallback);
       const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
-      const node = addBubble(html.replace('</div>', `${extra}</div>`));
-      renderOverallConfidence(node, typeof data?.confidence_pct==='number'?data.confidence_pct:null);
+      addBubble(html.replace('</div>', `${extra}${renderConfidenceBadge()}</div>`));
     }
   } catch (err){
     closeTyping();
     dbgStatus.textContent = 'error';
-    const node = addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
-    renderOverallConfidence(node, null);
+    addBubble(`<div class="answer"><p>Something went wrong: ${String(err)}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p>${renderConfidenceBadge()}</div>`);
   }
 }
 
-/* ---------------- Transcript helpers ---------------- */
+/* ================= Transcript helpers ================= */
 function nodeToPlain(div){
   return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
 }
@@ -574,8 +589,7 @@ function emailTranscript(){
   if (body.length > 2000){
     const blob = new Blob([body], {type:'text/plain'});
     const url = URL.createObjectURL(blob);
-    const node = addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p></div>`);
-    renderOverallConfidence(node, null);
+    addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p>${renderConfidenceBadge()}</div>`);
   }
   location.href = mailto;
 }
@@ -585,7 +599,7 @@ function resetChat(){
   [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgProv, dbgNote].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
 }
 
-/* ---------------- Wire up composer & tools ---------------- */
+/* ================= Wire up composer & tools ================= */
 function submit(){
   const val = input.value.trim();
   if(!val) return;
