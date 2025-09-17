@@ -1,508 +1,298 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Alan Ranger Assistant</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
-  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
-  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
-  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
-  --user-bg:#e6edf7; --user-text:#0b0f16;
-}
-*{box-sizing:border-box} html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
-.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.badge-wrap{position:relative;height:0}
-.version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
-.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
-
-/* Sticky header (keeps logo, title and contact pills visible) */
-.header-sticky{
-  position:sticky; top:10px; z-index:50;
-  background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98));
-  border-radius:12px; padding:0 0 10px 0; margin:-8px -8px 12px -8px;
-}
-.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
-.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
-.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
-.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
-.pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
-.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
-.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
-
-/* Chat surface */
-.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
-.thread{display:flex;flex-direction:column;gap:12px}
-.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
-.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
-.answer h1,.answer h2,.answer h3{margin:.2em 0}
-.answer p{margin:.5em 0}
-.answer ul{margin:.4em 0 .6em 1.25em}
-.answer li{margin:.15em 0}
-.answer a{color:var(--link);text-decoration:underline}
-.answer a:hover{color:var(--link-hover)}
-.conf{display:inline-block;font-size:12px;font-weight:700;background:rgba(229,114,0,.12);color:var(--brand);border:1px solid var(--brand);border-radius:999px;padding:2px 8px;margin-top:8px}
-
-/* Global pill row at end (from payload chips) */
-.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-.actions .pill{background:var(--brand);color:#0b0f16;border:none}
-
-/* Composer + utilities */
-.tools{display:flex;justify-content:flex-end;gap:10px;margin:8px 0 6px}
-.tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
-.tools button:hover{border-color:#3c548b}
-.composer{display:flex;gap:10px;margin-top:8px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
-.composer input::placeholder{color:var(--input-ph)}
-.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
-.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
-
-/* Debug panel */
-details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
-details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
-.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
-.kv label{color:#93A4C1}
-pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
-
-/* Typing dots */
-.typing{position:relative;display:inline-block}
-.typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
-.typing .dot:nth-child(2){animation-delay:.15s}
-.typing .dot:nth-child(3){animation-delay:.3s}
-@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
-
-@media (max-width:540px){
-  .title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}
-  .header-sticky{top:6px;margin:-6px -6px 10px -6px}
-}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Alan Ranger Assistant</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tiny markdown renderer for product/article text -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#1f2937; --muted:#9aa4b2; --fg:#e5e7eb; --brand:#f59e0b; --accent:#0ea5e9;
+      --pill:#0ea5e9; --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--fg)}
+    .wrap{max-width:960px;margin:0 auto;padding:28px 16px 120px}
+    header{position:sticky;top:0;z-index:10;background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.8) 70%,rgba(15,23,42,0));backdrop-filter:blur(6px)}
+    .hero{text-align:center;padding:10px 0 18px}
+    .logo{width:56px;height:56px;border:2px solid var(--fg);border-radius:50%;display:inline-grid;place-items:center;margin:4px auto 10px}
+    .hero h1{margin:0;font-size:28px;font-weight:700}
+    .hero p{margin:6px auto 12px;color:var(--muted);max-width:680px;font-size:14px;line-height:1.45}
+    .top-actions{display:flex;gap:10px;justify-content:center}
+    .btn{background:#334155;color:#fff;border:none;padding:8px 12px;border-radius:999px;cursor:pointer;font-weight:700}
+    .btn.brand{background:var(--brand);color:#241a00}
+    .panel{background:var(--panel);border-radius:var(--radius);padding:14px 16px;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+    .panel + .panel{margin-top:14px}
+    .query-row{display:flex;gap:10px;align-items:center}
+    .query{flex:1;background:#0b1220;color:#e6e6e6;border:1px solid #293347;border-radius:10px;padding:12px 12px;outline:none}
+    .send{min-width:80px}
+    .hint{color:#9aa3b2;font-size:12px;margin-top:6px}
+    .section-title{font-weight:800;margin:0 0 8px;font-size:16px}
+    /* Markdown */
+    .md{line-height:1.55}
+    .md p{margin:8px 0}
+    .md ul{margin:6px 0 6px 18px}
+    /* Events */
+    .events ul{margin:4px 0 0 18px}
+    .events li{margin:4px 0}
+    .events a{color:var(--fg);text-decoration:none;border-bottom:1px dotted #6b7280}
+    /* Articles */
+    .articles ul{margin:4px 0 0 18px}
+    .articles li{margin:4px 0}
+    /* Pills */
+    .pills{display:flex;flex-wrap:wrap;gap:10px}
+    .pill{border-radius:999px;padding:7px 12px;font-weight:800;background:#475569;color:#fff;text-decoration:none;display:inline-flex;align-items:center}
+    .pill.brand{background:var(--brand);color:#241a00}
+    .pill.secondary{background:#536176}
+    .pill.conf{background:var(--pill);color:#fff;pointer-events:none;cursor:default}
+    /* Debug + footer */
+    details.debug{margin-top:12px}
+    pre{white-space:pre-wrap;background:#0b1220;border:1px solid #293347;padding:10px;border-radius:10px;color:#cbd5e1;font-size:12px;overflow:auto;max-height:340px}
+    .bar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(15,23,42,.05),rgba(15,23,42,.65)),var(--bg);padding:12px 16px;border-top:1px solid #263043}
+    .bar .inner{max-width:960px;margin:0 auto;display:flex;gap:10px}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="badge-wrap"><span class="version">v0.9.22</span></div>
-
-  <div class="card">
-
-    <!-- Sticky header block -->
-    <div class="header-sticky">
-      <div class="header">
-        <img class="logo" src="./chat%20white.png" alt="AR logo">
-        <h2 class="title">Alan Ranger Assistant</h2>
-        <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
-          photography questions. I won’t always get everything right — if I can’t help, please contact
-          Alan directly:</p>
-        <div class="pills">
-          <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-          <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+  <header>
+    <div class="wrap">
+      <div class="hero">
+        <div class="logo">R</div>
+        <h1>Alan Ranger Assistant</h1>
+        <p>I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and photography questions. If I can’t help, please contact Alan directly.</p>
+        <div class="top-actions">
+          <a class="btn brand" href="https://www.alanranger.com/contact" target="_blank" rel="noopener">Contact form</a>
+          <a class="btn" href="https://wa.me/447769049161" target="_blank" rel="noopener">WhatsApp</a>
         </div>
       </div>
     </div>
+  </header>
 
-    <div class="chat">
-      <div id="thread" class="thread">
-        <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
+  <main class="wrap">
+    <!-- Ask box (top) -->
+    <div class="panel">
+      <div class="query-row">
+        <input class="query" id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
+        <button class="btn brand send" id="send">Send</button>
       </div>
+      <div class="hint">Try: “when are the next bluebell workshops and what do they cost?”</div>
+    </div>
 
-      <!-- Utility buttons -->
-      <div class="tools">
-        <button id="btn-email">Email transcript</button>
-        <button id="btn-reset">Reset chat</button>
-      </div>
+    <!-- Responses land here -->
+    <section id="responses"></section>
 
-      <details id="debugPanel" class="debug">
-        <summary>🔎 Show debug</summary>
-        <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
-        <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
-        <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
-        <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
-        <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
-        <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
-        <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
-        <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
-        <div class="kv"><label>Note</label><pre id="dbg-note" class="json">–</pre></div>
-      </details>
-
-      <div class="composer">
-        <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
-        <button id="send" class="send">Send</button>
+    <!-- Bottom ask bar -->
+    <div class="bar">
+      <div class="inner">
+        <input class="query" id="qBottom" placeholder="Ask a question… (Shift+Enter for newline)" />
+        <button class="btn brand send" id="sendBottom">Send</button>
       </div>
     </div>
-  </div>
-</div>
+  </main>
 
-<script>
-const CHAT_ENDPOINT = '/api/chat';
-const urlParams = new URLSearchParams(location.search);
-if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
+  <script>
+    /* ---------- tiny helpers ---------- */
+    const $ = s => document.querySelector(s);
+    const responses = $('#responses');
+    const qTop = $('#q'), qBot = $('#qBottom');
+    const sendTop = $('#send'), sendBot = $('#sendBottom');
+    const md = (txt) => marked.parse(txt || '').trim();
+    const el = (t,c) => { const x=document.createElement(t); if(c) x.className=c; return x; };
 
-const thread = document.getElementById('thread');
-const input  = document.getElementById('q');
-const sendBtn= document.getElementById('send');
-const btnEmail = document.getElementById('btn-email');
-const btnReset = document.getElementById('btn-reset');
-
-const dbgStatus = document.getElementById('dbg-status');
-const dbgReq    = document.getElementById('dbg-req');
-const dbgRes    = document.getElementById('dbg-res');
-const dbgHeaders= document.getElementById('dbg-headers');
-const dbgStruct = document.getElementById('dbg-struct');
-const dbgProv   = document.getElementById('dbg-prov');
-const dbgCopy   = document.getElementById('dbg-copy');
-const dbgNote   = document.getElementById('dbg-note');
-
-function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
-
-dbgCopy?.addEventListener('click', ()=>{
-  const all = [
-    'Status: '+dbgStatus.textContent,
-    'Headers:\n'+dbgHeaders.textContent,
-    'Request:\n'+dbgReq.textContent,
-    'Response:\n'+dbgRes.textContent,
-    'Structured:\n'+dbgStruct.textContent,
-    'Provenance:\n'+dbgProv.textContent,
-    'Note:\n'+dbgNote.textContent
-  ].join('\n\n');
-  navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
-});
-
-/* ---------- UI helpers ---------- */
-function addBubble(html, opts={}) {
-  const div = document.createElement('div');
-  div.className = 'bubble' + (opts.user ? ' user' : '');
-  div.innerHTML = html;
-  thread.appendChild(div);
-  div.scrollIntoView({behavior:'smooth', block:'end'});
-  return div;
-}
-function addTyping() {
-  const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
-  return ()=> el && el.remove();
-}
-function mdToHtml(md){
-  if (!md) return { html:'', liIds:[], items:[] };
-  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  const lines = s.split(/\r?\n/);
-  let out='', inList=false;
-  const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
-  for (const line of lines){
-    const m = line.match(/^\s*-\s+(.*)$/);
-    if (m){ if(!inList){ out+='<ul>'; inList=true; } out += `<li>${m[1].trim()}</li>`; }
-    else { flush(); out += line.trim()? `<p>${line}</p>` : ''; }
-  }
-  flush();
-  return { html:`<div class="answer">${out}</div>` };
-}
-function fmtDate(iso){
-  try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
-}
-function currency(amount, ccy){
-  if(amount==null || amount==='') return null;
-  const n = Number(amount); if(!isFinite(n)) return null;
-  try{ return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n); }
-  catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
-}
-
-/* ---------------- Product helpers (keep your existing behaviour) ---------------- */
-function mergeProducts(list){
-  if(!Array.isArray(list) || !list.length) return [];
-  const map = new Map();
-  for(const p of list){
-    const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
-    if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
-    const m = map.get(key);
-    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
-    const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
-    const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
-    if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = p.raw.offers; }
-    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
-  }
-  return [...map.values()];
-}
-function extractFacts(desc){
-  const txt = String(desc||'')
-    .split(/\r?\n/).filter(l=>{
-      if(/^dates\s*\(/i.test(l)) return false;
-      if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
-      if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
-      return true;
-    });
-
-  const grab = (label)=>{
-    const r = new RegExp(`^\\s*${label}\\s*:?\\s*(.+)$`,'i');
-    const m = txt.find(l=>r.test(l));
-    return m ? m.replace(r,'$1').trim() : null;
-  };
-
-  const location     = grab('Location');
-  const participants = grab('Participants');
-  const fitness      = grab('Fitness');
-  const availability = grab('Availability');
-
-  const optionLines = txt.filter(l =>
-    /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
-    /^\s*OR\s*1\s*day\b/i.test(l)
-  ).slice(0,4);
-
-  return {location, participants, fitness, availability, optionLines};
-}
-function deriveOptions(prod, facts){
-  const ccy = prod.price_currency || prod?.raw?.offers?.priceCurrency || 'GBP';
-  const base = prod.price ?? prod?.raw?.offers?.price;
-  const low  = prod?.raw?.offers?.lowPrice;
-  const high = prod?.raw?.offers?.highPrice;
-
-  const text = (facts.optionLines||[]).join('\n').toLowerCase();
-  const has4h  = /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
-  const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
-
-  const opts = [];
-
-  if(low!=null && high!=null && has4h && has1d){
-    opts.push({label:'4 hours', price:currency(low,ccy)});
-    opts.push({label:'1 day',   price:currency(high,ccy)});
-  } else {
-    if(base!=null) opts.push({label:'Standard', price:currency(base,ccy)});
-    if(low!=null || high!=null){
-      const range = [low,high].filter(v=>v!=null).map(v=>currency(v,ccy)).join(' – ');
-      if(range) opts.push({label:'Pricing', price:range});
+    function buildConfidencePill(p){
+      const pill = el('span','pill conf');
+      const pct = Math.max(0, Math.min(100, Number(p)||0));
+      pill.textContent = `Confidence: ${pct}%`;
+      return pill;
     }
-  }
-
-  const timePat = /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
-  for(const ln of facts.optionLines||[]){
-    const label = ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
-    const tm = ln.match(timePat);
-    const window = tm ? `${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}` : null;
-    if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){
-      opts.push({label, time:window});
-    } else if(window){
-      const o = opts.find(o=>o.label.toLowerCase()===label.toLowerCase());
-      if(o && !o.time) o.time = window;
+    function safeTopic(structured){
+      const t = (structured?.topic||'').trim();
+      if(!t) return 'Workshops';
+      const first = t.split(',')[0].trim();
+      return first ? `${first} Workshops` : 'Workshops';
     }
-  }
-  return opts;
-}
 
-/* ---------------- Renderers ---------------- */
-function renderProductCard(prod){
-  const facts = extractFacts(prod.description||'');
-  const options = deriveOptions(prod, facts);
-
-  const infoP = [];
-  if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
-  if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
-  if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
-  if(facts.availability) infoP.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
-
-  const li = options.map(o=>{
-    const bits = [o.label, o.time ? `— ${o.time}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
-    return `<li>${bits}</li>`;
-  }).join('');
-
-  return `
-    <div class="answer">
-      <h3>${prod.title || 'Workshop'}</h3>
-      ${infoP.join('')}
-      ${li? `<ul>${li}</ul>`:''}
-      ${renderConfidenceBadge()}
-    </div>
-  `;
-}
-function renderEventsBlock(structured, productHasLocation){
-  const now=new Date();
-  const future=(structured?.events||[])
-    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
-    .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start));
-  if(!future.length) return '';
-  const topic = (structured?.topic||'').toString().trim();
-  const title = topic ? `Upcoming ${topic} Workshops` : 'Upcoming Workshops';
-  const lis = future.map(e=>{
-    const when=fmtDate(e.date_start);
-    const href=e.page_url||e.source_url||e.url||'#';
-    const loc=e.location||'';
-    const locPart = (!productHasLocation && loc) ? ` — ${loc}` : '';
-    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${locPart}</li>`;
-  }).join('');
-  return `<div class="answer"><h3>${title}</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
-}
-function renderArticlesBlock(structured){
-  const list = (structured?.articles||[]).slice(0,5);
-  if(!list.length) return '';
-  const lis = list.map(a=>{
-    const t = a.title || a.raw?.name || 'Read more';
-    const u = a.page_url || a.source_url || a.url || '#';
-    return `<li><a href="${u}" target="_blank" rel="noopener">${escapeHTML(t)}</a></li>`;
-  }).join('');
-  return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
-}
-function renderConfidenceBadge(){
-  const pct = window.__lastConfidencePct;
-  if(pct==null || isNaN(pct)) return '';
-  return `<div class="conf">Confidence: ${pct}%</div>`;
-}
-function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
-
-/* Pills: show only relevant; dedupe; never site-search/wildcards */
-function buildActionPillsFromStructured(structured){
-  const safe = [];
-  const used = new Set();
-  const add = (label, href) => {
-    if(!label || !href) return;
-    const u = String(href);
-    // ban site-search wildcard
-    if (/\/search\?query=/.test(u)) return;
-    const key = `${label}::${u}`;
-    if(used.has(key)) return;
-    used.add(key);
-    safe.push({label,href});
-  };
-  // consume provided pills/chips if any
-  const inPills = (structured?.pills || structured?.chips || []);
-  for (const p of inPills){
-    add(p.label || p.text || 'Open', p.url || p.href);
-  }
-  return safe.slice(0,4);
-}
-
-/* Full render */
-function renderAnswer(payload){
-  const s = payload.structured||{};
-  window.__lastConfidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
-
-  const merged = mergeProducts(s.products||[]);
-  // choose single best product
-  const prod = merged[0] || null;
-
-  // render product first (if present)
-  if(prod){
-    addBubble(renderProductCard(prod));
-  }
-
-  // events (no cap; hide location if product has one already)
-  const productFacts = prod ? extractFacts(prod.description||'') : null;
-  const productHasLocation = !!(productFacts && productFacts.location);
-  const evHTML = renderEventsBlock(s, productHasLocation);
-  if(evHTML) addBubble(evHTML);
-
-  // articles (top 5, proper <li>)
-  const artHTML = renderArticlesBlock(s);
-  if(artHTML) addBubble(artHTML);
-
-  // related pills (below blocks)
-  const pills = buildActionPillsFromStructured(s);
-  if(pills.length){
-    const wrap = document.createElement('div');
-    wrap.className='actions';
-    pills.forEach(p=>{
-      const a=document.createElement('a'); a.className='pill'; a.textContent=p.label;
-      a.href=p.href; a.target='_blank'; a.rel='noopener';
-      wrap.appendChild(a);
-    });
-    thread.appendChild(wrap);
-  }
-
-  // If nothing rendered, generic fallback with nudge to use header contact
-  if(!prod && !(s.events||[]).length && !(s.articles||[]).length){
-    const md = payload.answer_markdown || payload.answer || '';
-    const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
-    const {html}=mdToHtml(md || "I don’t have a specific answer for that yet.");
-    addBubble(html.replace('</div>', `${extra}${renderConfidenceBadge()}</div>`));
-  }
-
-  // Debug dumps
-  dbgStruct.textContent = safeJSONString(payload.structured||{});
-  dbgNote.textContent   = safeJSONString({ confidence_pct: window.__lastConfidencePct });
-}
-
-/* ---------------- Networking ---------------- */
-async function sendQuery(query){
-  const req = { query, topK: 8 };
-  dbgReq.textContent = safeJSONString(req);
-  const closeTyping = addTyping();
-  try{
-    const res = await fetch(CHAT_ENDPOINT, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(req)
-    });
-    dbgStatus.textContent = res.status;
-    const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
-    dbgHeaders.textContent = safeJSONString(headers);
-
-    const data = await res.json();
-    dbgRes.textContent = safeJSONString(data);
-    dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
-
-    closeTyping();
-    if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
-      renderAnswer(data);
-    } else {
-      const fallback = "I don’t have a specific answer for that yet.";
-      const {html}=mdToHtml(fallback);
-      const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
-      addBubble(html.replace('</div>', `${extra}${renderConfidenceBadge()}</div>`));
+    /* ---------- renderers ---------- */
+    function renderProductBlock(answer_markdown){
+      if(!answer_markdown) return null;
+      const panel = el('div','panel');
+      const body = el('div','md');
+      body.innerHTML = md(answer_markdown);
+      panel.appendChild(body);
+      return panel;
     }
-  } catch (err){
-    closeTyping();
-    dbgStatus.textContent = 'error';
-    addBubble(`<div class="answer"><p>Something went wrong: ${String(err)}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p>${renderConfidenceBadge()}</div>`);
-  }
-}
 
-/* ---------------- Transcript helpers ---------------- */
-function nodeToPlain(div){
-  return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
-}
-function buildTranscript(){
-  const rows = [];
-  rows.push(`Alan Ranger Assistant — transcript`);
-  rows.push(new Date().toISOString());
-  rows.push('');
-  for (const el of thread.children){
-    if (el.classList.contains('actions')) continue;
-    const role = el.classList.contains('user') ? 'User' : 'Assistant';
-    rows.push(`${role}:\n${nodeToPlain(el)}`);
-    rows.push('');
-  }
-  return rows.join('\n');
-}
-function emailTranscript(){
-  const body = buildTranscript();
-  const subject = 'Alan Ranger Assistant chat transcript';
-  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,2000))}`;
-  if (body.length > 2000){
-    const blob = new Blob([body], {type:'text/plain'});
-    const url = URL.createObjectURL(blob);
-    addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p>${renderConfidenceBadge()}</div>`);
-  }
-  location.href = mailto;
-}
-function resetChat(){
-  thread.innerHTML = '';
-  addBubble('Hi! I can help with workshops, tuition, and photography advice.');
-  [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgProv, dbgNote].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
-}
+    function renderEventsBlock(structured){
+      const events = structured?.events || [];
+      if(!events.length) return null;
 
-/* ---------------- Wire up composer & tools ---------------- */
-function submit(){
-  const val = input.value.trim();
-  if(!val) return;
-  addBubble(val, {user:true});
-  input.value='';
-  sendQuery(val);
-}
-sendBtn.addEventListener('click', submit);
-input.addEventListener('keydown', (e)=>{
-  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
-});
-btnEmail.addEventListener('click', emailTranscript);
-btnReset.addEventListener('click', resetChat);
-</script>
+      const panel = el('div','panel events');
+      const h = el('h3','section-title');
+      h.textContent = `Upcoming ${safeTopic(structured)}`;
+      panel.appendChild(h);
+
+      const ul = el('ul');
+      events.forEach(e=>{
+        const li = el('li');
+        const when = e.when || '';
+        const href = e.href || e.page_url || e.source_url;
+        const loc = e.location ? ` — ${e.location}` : '';
+        li.innerHTML = `${when} — ${href ? `<a href="${href}" target="_blank" rel="noopener">Link</a>` : 'Link'}${loc}`;
+        ul.appendChild(li);
+      });
+      panel.appendChild(ul);
+      return panel;
+    }
+
+    function renderArticlesBlock(structured){
+      const articles = structured?.articles || [];
+      if(!articles.length) return null;
+
+      const panel = el('div','panel articles');
+      const h = el('h3','section-title'); h.textContent = 'Related guides';
+      panel.appendChild(h);
+
+      const ul = el('ul');
+      articles.slice(0,5).forEach(a=>{
+        const title = a.title || a.raw?.name || 'Read more';
+        const url = a.page_url || a.source_url;
+        const li = el('li');
+        li.innerHTML = `${title} — ${url ? `<a href="${url}" target="_blank" rel="noopener">Link</a>` : ''}`.trim();
+        ul.appendChild(li);
+      });
+      panel.appendChild(ul);
+      return panel;
+    }
+
+    function renderPills(structured, confidence_pct){
+      const wrap = el('div','panel');
+      const row = el('div','pills');
+
+      // Single overall confidence pill (non-clickable)
+      row.appendChild(buildConfidencePill(confidence_pct));
+
+      // Then backend pills (Book Now, Event Listing first)
+      const pills = structured?.pills || [];
+      const seen = new Set();
+      function add(label,url,brand){
+        if(!label || !url) return;
+        if(seen.has(url)) return;
+        seen.add(url);
+        const a = el('a', 'pill' + (brand ? ' brand' : ' secondary'));
+        a.href = url; a.target = '_blank'; a.rel='noopener';
+        a.textContent = label;
+        row.appendChild(a);
+      }
+      pills.forEach(p => add(p.label, p.url, !!p.brand));
+
+      wrap.appendChild(row);
+      return wrap;
+    }
+
+    function renderDebugSnapshot(req, data){
+      const details = el('details','debug'); const sum = el('summary'); sum.textContent = 'Show debug';
+      const pre = el('pre');
+      pre.textContent = JSON.stringify({
+        request: req,
+        response: {
+          ok: data?.ok,
+          confidence_pct: data?.confidence_pct,
+          meta: data?.meta,
+          intent: data?.structured?.intent,
+          topic: data?.structured?.topic,
+          counts: {
+            events: data?.structured?.events?.length || 0,
+            products: data?.structured?.products?.length || 0,
+            articles: data?.structured?.articles?.length || 0
+          }
+        }
+      }, null, 2);
+      details.appendChild(sum); details.appendChild(pre);
+      return details;
+    }
+
+    function fallbackPanel(){
+      const p = el('div','panel');
+      p.innerHTML = `<p class="hint">I couldn’t find a specific match. Please try rephrasing or use the Contact form / WhatsApp buttons above to reach Alan directly for an accurate response.</p>`;
+      return p;
+    }
+
+    /* ---------- ask flow ---------- */
+    function clearResponses(){ responses.innerHTML=''; }
+    function echoQuery(q){
+      const e = el('div','panel');
+      e.innerHTML = `<div class="hint" style="opacity:.9">You asked: <strong>${q.replace(/</g,'&lt;')}</strong></div>`;
+      responses.appendChild(e);
+    }
+
+    async function ask(query){
+      clearResponses();
+      echoQuery(query);
+
+      const reqBody = { query, topK: 8 };
+      try{
+        const r = await fetch('/api/chat', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(reqBody)
+        });
+        const data = await r.json();
+
+        if(!data?.ok){
+          responses.appendChild(fallbackPanel());
+          responses.appendChild(renderDebugSnapshot(reqBody, data));
+          return;
+        }
+
+        // Product block from markdown (includes description, facts, sessions)
+        const prod = renderProductBlock(data.answer_markdown);
+        if(prod) responses.appendChild(prod);
+
+        // Events
+        const ev = renderEventsBlock(data.structured);
+        if(ev) responses.appendChild(ev);
+
+        // Articles (if any)
+        const art = renderArticlesBlock(data.structured);
+        if(art) responses.appendChild(art);
+
+        // Unified pills row with ONE confidence pill
+        responses.appendChild(renderPills(data.structured, data.confidence_pct));
+
+        // Debug snapshot for this reply only
+        responses.appendChild(renderDebugSnapshot(reqBody, data));
+
+        // Fallback if nothing useful rendered
+        if(!prod && !ev && !art){
+          responses.appendChild(fallbackPanel());
+        }
+
+      }catch(err){
+        responses.appendChild(fallbackPanel());
+        responses.appendChild(renderDebugSnapshot(reqBody, { ok:false, error:String(err) }));
+      }
+    }
+
+    /* ---------- wiring ---------- */
+    function bindSend(btn,input){
+      input.addEventListener('keydown',e=>{
+        if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); btn.click(); }
+      });
+      btn.addEventListener('click', ()=>{
+        const v = (input.value||'').trim();
+        if(!v) return;
+        ask(v);
+        qTop.value = qBot.value = v;
+      });
+    }
+    bindSend(sendTop,qTop);
+    bindSend(sendBot,qBot);
+
+    // Optional demo call:
+    // ask('whens the next bluebell workshops and whats the cost');
+  </script>
 </body>
 </html>
