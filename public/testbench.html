@@ -2,647 +2,547 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bench Test — single-file</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bench Test (single-file, live Supabase)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
   :root{
-    --bg:#0f1320; --panel:#141a2a; --muted:#8892b0; --text:#e6e8f0; --accent:#30d158;
-    --warn:#ff9f0a; --bad:#ff453a; --pill:#1f2842; --link:#82aaff; --btn:#2b3553;
-    --btn2:#213056; --good:#34c759;
-    font-synthesis-weight:none;
+    --bg:#0e1217; --panel:#131923; --muted:#9aa4af; --txt:#e8eef6; --accent:#61d095; --warn:#ffb454; --err:#ff6b6b;
+    --chip:#1b2230; --chip-br:#263043; --btn:#1e2634; --btn-br:#2b374d; --good:#23d18b; --bad:#ff5c8a;
   }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-  a{color:var(--link);text-decoration:none}
-  .wrap{display:grid;grid-template-columns:320px 1fr;gap:16px;height:100vh;padding:14px}
-  .col{display:flex;flex-direction:column;gap:12px;min-height:0}
-  .card{background:var(--panel);border:1px solid #1d2440;border-radius:10px;padding:12px}
-  .card h3{margin:0 0 8px;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  .wrap{display:grid;grid-template-columns:380px 1fr;gap:14px;padding:14px}
+  .card{background:var(--panel);border:1px solid #1e2736;border-radius:10px;padding:12px}
+  .title{display:flex;align-items:center;gap:8px;margin:0 0 8px 0;font-weight:700}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  input[type="text"], input[type="password"], textarea{width:100%;background:#0d1220;border:1px solid #1f2746;color:var(--text);border-radius:8px;padding:10px 10px;font-size:13px}
-  input[type="file"]{color:var(--muted)}
-  .btn{background:var(--btn);color:#e7ecff;border:1px solid #36406a;border-radius:8px;padding:8px 10px;font-weight:600;cursor:pointer}
-  .btn:hover{filter:brightness(1.06)}
+  input[type=text],input[type=password]{width:100%;background:#0b1017;color:var(--txt);border:1px solid #243049;border-radius:8px;padding:9px}
+  textarea{width:100%;min-height:120px;background:#0b1017;color:var(--txt);border:1px solid #243049;border-radius:8px;padding:9px;resize:vertical}
+  .btn{background:var(--btn);border:1px solid var(--btn-br);color:var(--txt);border-radius:8px;padding:7px 10px;cursor:pointer}
+  .btn.green{background:#11301f;border-color:#234e36;color:#8ef0b6}
+  .btn.blue{background:#112c45;border-color:#2b5c8e;color:#8bd2ff}
+  .btn.warn{background:#392a12;border-color:#63491e;color:#ffd494}
   .btn:disabled{opacity:.5;cursor:not-allowed}
-  .btn-run{background:#1e3a2f;border-color:#2c6e49}
-  .btn-run:hover{filter:brightness(1.1)}
-  .btn-green{background:#0f3b28;border-color:#1a7f47}
-  .btn-blue{background:#162a59;border-color:#234aa2}
-  .btn-ghost{background:transparent;border-color:#2b3863}
-  .tiny{font-size:12px;color:var(--muted)}
-  .pill{display:inline-flex;align-items:center;background:var(--pill);border:1px solid #28335d;color:#cfd7ff;border-radius:999px;padding:4px 10px;margin:0 6px 6px 0;font-size:12px;white-space:nowrap}
-  .pill[data-type="warn"]{background:#3a2a12;border-color:#6e4b1a;color:#ffd8a8}
-  .pill[data-type="ok"]{background:#14351f;border-color:#245734;color:#b7ffd1}
-  .list{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}
-  .list a{display:block;background:#0e1323;border:1px solid #212b55;border-radius:8px;padding:10px}
-  .list a:hover{background:#131a31}
-  .meta{color:var(--muted);font-size:12px}
-  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-  .big{min-height:220px;max-height:320px;overflow:auto;background:#0b1020;border:1px solid #1a2244;border-radius:10px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;font-size:12px;color:#e6f0ff}
-  .log{max-height:150px;overflow:auto;background:#0b1020;border:1px solid #1a2244;border-radius:10px;padding:10px;font-family:ui-monospace,monospace;font-size:12px;color:#cfe3ff}
-  .kv{display:grid;grid-template-columns:115px 1fr;gap:4px 8px}
-  .badge{display:inline-flex;align-items:center;gap:6px;background:#0c1a3b;border:1px solid #233a77;border-radius:999px;padding:6px 10px}
-  .badge b{font-size:16px}
-  .tooltip{position:relative}
-  .tooltip:hover .tip{opacity:1;transform:translateY(-2px);pointer-events:auto}
-  .tip{position:absolute;left:0;top:110%;min-width:280px;z-index:10;opacity:0;pointer-events:none;background:#0b0f1d;border:1px solid #27325b;color:#dbe3ff;border-radius:8px;padding:10px;font-size:12px;transition:.15s}
-  .sep{height:8px}
-  .hr{height:1px;background:#1e2748;margin:6px 0}
-  .switch{display:flex;align-items:center;gap:8px}
-  .switch input{accent-color:#2f7ef7}
-  .sticky-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-  .tag{display:inline-block;background:#0c1733;border:1px solid #223562;color:#a9c1ff;border-radius:6px;padding:2px 6px;margin-left:6px;font-size:11px}
-  .rightCol{display:flex;flex-direction:column;gap:12px;min-height:0}
-  .row-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .small{font-size:12px;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .panel{background:#0b1017;border:1px solid #202b3f;border-radius:10px;padding:10px;min-height:140px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:var(--chip);border:1px solid var(--chip-br);color:#c6d2e1;font-size:12px;margin:0 6px 6px 0}
+  .list{display:grid;gap:6px}
+  .item{padding:8px;border:1px solid #22304a;border-radius:8px;background:#0f1520}
   .muted{color:var(--muted)}
-  .ok{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+  .log{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Consolas,Monaco,monospace;background:#0b1017;border:1px solid #202b3f;border-radius:10px;padding:10px;min-height:90px;max-height:240px;overflow:auto}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:8px;margin-top:8px;color:#c4ceda}
+  .tag{display:inline-block;padding:2px 6px;border:1px solid #2d3850;border-radius:6px;background:#121a27;margin-left:8px;color:#9fb0c7}
+  .confidence{font-weight:700}
+  .confBox{display:flex;align-items:center;gap:8px}
+  .good{color:var(--good)} .bad{color:var(--bad)}
+  .hr{height:1px;background:#1f2a3f;margin:10px 0}
+  .right{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+  .hint{border-bottom:1px dotted #6f86a8;cursor:help}
+  details summary{cursor:pointer;color:#b7c7e1}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <!-- LEFT -->
-  <div class="col">
-    <div class="card">
-      <div class="sticky-head">
-        <h3>Bench Test <span class="tag">single-file</span></h3>
-        <div class="badge tooltip">
-          <span>Confidence:</span>
-          <b id="confVal">—%</b>
-          <div class="tip">
-            Composite score (max 100):<br/>
-            • Intent (20)<br/>
-            • Query coverage (20)<br/>
-            • Required results present (30)<br/>
-            • Event freshness (20, events only)<br/>
-            • Price detected (10, events only)<br/>
-            Empty required sections cap confidence at <b>30%</b>.
-          </div>
-        </div>
+
+  <!-- Left: Controls -->
+  <div class="card">
+    <h3 class="title">Step 0 · Connect to Supabase</h3>
+    <div class="row" style="margin-bottom:6px">
+      <input id="sbUrl" type="text" placeholder="Supabase URL e.g. https://xxxx.supabase.co">
+    </div>
+    <div class="row">
+      <input id="sbKey" type="password" placeholder="Supabase anon key (public)">
+    </div>
+    <div class="row" style="margin-top:6px">
+      <input id="eventsTable" type="text" placeholder="Events table/view (default: ai_events)">
+    </div>
+    <div class="row">
+      <input id="productsTable" type="text" placeholder="Products table/view (optional, default: ai_products)">
+    </div>
+    <div class="row" style="margin-top:6px">
+      <button class="btn blue" id="saveSb">Save</button>
+      <button class="btn green" id="fetchLive">Fetch live data</button>
+      <span class="small" id="liveStatus">Not connected</span>
+    </div>
+
+    <div class="hr"></div>
+
+    <h3 class="title">Step 1 (optional) · Landing Pages CSV (fallback)</h3>
+    <div class="small">Accepted columns: <code>url</code> and one of <code>url_meta_title</code> | <code>meta_title</code> | <code>title</code>. Others ignored.</div>
+    <div class="row" style="margin-top:6px">
+      <input type="file" id="landingCsv" accept=".csv" />
+      <button class="btn" id="uploadLanding">Upload</button>
+    </div>
+    <div class="small" id="landingStatus">Not loaded</div>
+
+    <div class="hr"></div>
+
+    <h3 class="title">Step 2 · Questions CSV</h3>
+    <div class="small">Columns used: <code>idx</code>, <code>query</code>, <code>expected</code>. Extras ignored.</div>
+    <div class="row" style="margin-top:6px">
+      <input type="file" id="qCsv" accept=".csv" />
+      <button class="btn" id="uploadQ">Upload</button>
+      <button class="btn green" id="runSuite">Run CSV Test Suite</button>
+    </div>
+    <div class="small" id="qStatus">Not loaded</div>
+
+    <div class="hr"></div>
+
+    <h3 class="title">Step 3 · Try a single query</h3>
+    <div class="row">
+      <input id="singleQuery" type="text" placeholder="e.g. when is the next devon workshop?" />
+      <button class="btn green" id="runSingle">Run</button>
+      <button class="btn" id="copyJson">Copy JSON</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="kv">
+      <div>Intent</div><div id="intent">—</div>
+      <div>Reason</div><div id="reason">—</div>
+      <div>Landing CSV</div><div id="landingRows">0 rows</div>
+      <div>Events</div><div id="eventRows">not loaded</div>
+      <div>Products</div><div id="productRows">not loaded</div>
+      <div>Questions CSV</div><div id="qRows">0 rows</div>
+      <div>Confidence</div>
+      <div class="confBox">
+        <span id="confVal" class="confidence">—%</span>
+        <span class="small hint" id="confHint" title="Confidence blends: match score (query vs title/location/tags), # of matched events, presence of strong phrases (e.g. 'bluebell'), and if we had to fall back to landing pages.">what's this?</span>
       </div>
+    </div>
 
-      <div class="hr"></div>
-
-      <h3>Step 0: Live data (Supabase)</h3>
-      <div class="row">
-        <input id="sbUrl" type="text" placeholder="Supabase URL (e.g. https://xyz.supabase.co)" />
-      </div>
-      <div class="row">
-        <input id="sbKey" type="password" placeholder="Supabase anon key" />
-      </div>
-      <div class="row">
-        <input id="sbEvents" type="text" placeholder="Events table/view (default: ai_events)" />
-      </div>
-      <div class="row">
-        <button class="btn btn-blue" id="btnSaveSb">Save</button>
-        <button class="btn btn-green" id="btnFetchEvents">Fetch live events</button>
-        <span id="sbStatus" class="tiny"></span>
-      </div>
-
-      <div class="hr"></div>
-
-      <h3>Step 1 (optional): Upload <em>Landing Pages</em> CSV</h3>
-      <div class="tiny">Use when direct matches are weak. Required columns:
-        <code>url</code> and at least one of <code>title</code> | <code>meta_title</code> | <code>h1_title</code>. Extra columns are ignored.</div>
-      <div class="row">
-        <input id="fileLanding" type="file" accept=".csv" />
-        <button class="btn" id="btnLanding">Upload</button>
-      </div>
-      <div class="tiny" id="landingInfo">Landing CSV: <span class="muted">not loaded</span></div>
-
-      <div class="hr"></div>
-
-      <h3>Step 2: Upload <em>Questions</em> CSV (≈15 rows)</h3>
-      <div class="tiny">Columns used: <code>idx</code>, <code>query</code>, <code>expected</code>. Extra columns ignored.</div>
-      <div class="row">
-        <input id="fileQs" type="file" accept=".csv" />
-        <button class="btn" id="btnQs">Upload</button>
-        <button class="btn" id="btnRunSuite">Run CSV Test Suite</button>
-      </div>
-      <div class="tiny" id="qsInfo">Questions CSV: <span class="muted">not loaded</span></div>
-
-      <div class="hr"></div>
-
-      <h3>Step 3: (optional) Upload Events snapshot (CSV or JSON)</h3>
-      <div class="tiny">Use only if live pull is unavailable. CSV columns accepted:
-        <code>title</code>, <code>date</code> or <code>when</code>, <code>location</code>, <code>url</code>, optional <code>price_min</code>, <code>price_max</code>, <code>tags</code>.
-      </div>
-      <div class="row">
-        <input id="fileEvents" type="file" accept=".csv,.json" />
-        <button class="btn" id="btnUploadEvents">Upload Events</button>
-        <span class="tiny" id="eventsInfo">Events: <span class="muted">not loaded</span></span>
-      </div>
-
-      <div class="hr"></div>
-
-      <h3>Step 4: Try a single query</h3>
-      <div class="row">
-        <input id="queryInput" type="text" placeholder="Ask e.g. 'when is the next devon workshop?'" />
-        <button class="btn btn-run" id="btnRun">Run</button>
-        <button class="btn btn-ghost" id="btnCopyJson">Copy JSON</button>
-      </div>
-
-      <div class="hr"></div>
-
-      <div class="switch"><input id="chkLandingFallback" type="checkbox" checked> <label for="chkLandingFallback">Use Landing CSV fallback when direct matches are weak</label></div>
-      <div class="switch"><input id="chkGeneric" type="checkbox"> <label for="chkGeneric">Enable generic search pills (placeholder)</label></div>
-
-      <div class="hr"></div>
-
-      <div class="kv">
-        <div class="muted">Intent</div><div id="intentVal">—</div>
-        <div class="muted">Reason</div><div id="reasonVal" class="tiny">—</div>
-        <div class="muted">Landing CSV</div><div id="landingRows" class="tiny">not loaded</div>
-        <div class="muted">Events</div><div id="eventsRows" class="tiny">not loaded</div>
-        <div class="muted">Questions CSV</div><div id="qsRows" class="tiny">not loaded</div>
-      </div>
-
-      <div class="hr"></div>
-
-      <div class="row">
-        <button class="btn" id="btnCopyLog">Copy Log</button>
-        <button class="btn" id="btnDownloadLog">Download Log</button>
-        <button class="btn" id="btnCopyFails">Copy Failures (CSV)</button>
-        <button class="btn" id="btnCopyAll">Copy All Results (JSON)</button>
-      </div>
+    <div class="hr"></div>
+    <div class="right">
+      <button class="btn" id="copyLog">Copy Log</button>
+      <button class="btn" id="copyAll">Copy All Results (JSON)</button>
+      <a class="btn" id="downloadLog" download="benchtest-log.txt">Download Log</a>
     </div>
   </div>
 
-  <!-- RIGHT -->
-  <div class="rightCol">
-    <div class="row-cols">
-      <div class="card">
-        <div class="sticky-head"><h3>Events</h3></div>
-        <div id="eventsList" class="list"></div>
+  <!-- Right: Results -->
+  <div class="card">
+    <div class="grid">
+      <div>
+        <h3 class="title">Events</h3>
+        <div class="panel list" id="eventsPanel"></div>
       </div>
-      <div class="card">
-        <div class="sticky-head"><h3>Articles</h3></div>
-        <div id="articlesList" class="list"></div>
+      <div>
+        <h3 class="title">Articles</h3>
+        <div class="panel list" id="articlesPanel"></div>
       </div>
-      <div class="card">
-        <div class="sticky-head"><h3>Pills</h3></div>
-        <div id="pillsList" class="row"></div>
+      <div>
+        <h3 class="title">Pills</h3>
+        <div class="panel" id="pillsPanel"></div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="sticky-head"><h3>JSON</h3><span class="tiny muted">Hover the tags above for breakdown</span></div>
-      <pre id="jsonOut" class="big">{}</pre>
-    </div>
+    <h3 class="title" style="margin-top:14px">JSON</h3>
+    <div class="panel" id="jsonPanel" style="font-family:ui-monospace,Consolas,monospace;white-space:pre;overflow:auto;min-height:120px"></div>
 
-    <div class="card">
-      <div class="sticky-head"><h3>Execution Log</h3><span class="tiny muted">Click to expand / collapse</span></div>
-      <pre id="logOut" class="log"></pre>
-    </div>
+    <h3 class="title" style="margin-top:14px">Execution Log</h3>
+    <details open class="panel">
+      <summary>Click to expand / collapse</summary>
+      <div class="log" id="log"></div>
+    </details>
   </div>
 </div>
 
 <script>
-/* ---------- tiny utils ---------- */
-const $ = sel => document.querySelector(sel);
-const logLines = [];
-const now = () => new Date().toISOString().replace('T',' ').replace('Z','');
-function log(msg){ const line = `[${now()}] ${msg}`; logLines.push(line); $("#logOut").textContent = logLines.join('\n'); }
-function copy(text){ navigator.clipboard.writeText(text||'').then(()=>{},()=>{}); }
-function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
-function load(k,def=null){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }catch{ return def; } }
-function fmtPct(n){ return Math.round(n) + '%'; }
-function daysUntil(dateStr){
-  const d = (dateStr instanceof Date)? dateStr : new Date(dateStr);
-  if(isNaN(+d)) return null;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const diff = (d - today)/(1000*60*60*24);
-  return Math.round(diff);
-}
-function sanitizeURL(u){ try{ return new URL(u).href; } catch{ return null; } }
+(() => {
+  // --------------------- state ---------------------
+  let sbUrl = localStorage.getItem('bt.sbUrl') || '';
+  let sbKey = localStorage.getItem('bt.sbKey') || '';
+  let eventsTable = localStorage.getItem('bt.eventsTable') || 'ai_events';
+  let productsTable = localStorage.getItem('bt.productsTable') || 'ai_products';
 
-/* ---------- CSV parser (simple, handles quotes) ---------- */
-function parseCSV(text){
-  const rows = []; let i=0, field='', row=[], inQ=false;
-  function endField(){ row.push(field); field=''; }
-  function endRow(){ rows.push(row); row=[]; }
-  while(i<text.length){
-    const c=text[i];
-    if(inQ){
-      if(c==='"' && text[i+1]==='"'){ field+='"'; i+=2; continue; }
-      if(c==='"'){ inQ=false; i++; continue; }
-      field+=c; i++; continue;
-    }else{
-      if(c==='"'){ inQ=true; i++; continue; }
-      if(c===','){ endField(); i++; continue; }
-      if(c==='\r'){ i++; continue; }
-      if(c==='\n'){ endField(); endRow(); i++; continue; }
-      field+=c; i++; continue;
-    }
-  }
-  if(field.length>0 || row.length>0){ endField(); endRow(); }
-  if(rows.length===0) return [];
-  const hdr = rows[0].map(h=>h.trim());
-  return rows.slice(1).filter(r=>r.length>1 || (r.length===1 && r[0])).map(r=>{
-    const o={}; hdr.forEach((h,idx)=> o[h]= (r[idx]??'').trim()); return o;
-  });
-}
+  let supa = null;
+  let events = [];
+  let products = [];
+  let landing = []; // [{url, title}]
+  let questions = []; // [{idx, query, expected}]
 
-/* ---------- state ---------- */
-let landing = [];       // [{url,title,meta_title,h1_title}]
-let questions = [];     // [{idx,query,expected}]
-let events = [];        // normalized events
-let suiteResults = [];  // last CSV suite
-let lastSingle = null;
+  let lastJSON = {};
+  let allResults = [];
+  let logLines = [];
 
-const SB = {
-  url: load('sb.url',''),
-  key: load('sb.key',''),
-  events: load('sb.events','ai_events')
-};
+  // --------------------- dom helpers ---------------------
+  const $ = (id) => document.getElementById(id);
+  const log = (m) => { const t = new Date().toISOString().replace('T',' ').slice(0,19); logLines.push(`[${t}] ${m}`); $('log').textContent = logLines.join('\n'); $('downloadLog').href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(logLines.join('\n')); };
 
-/* ---------- UI init ---------- */
-function hydrateSb(){
-  $('#sbUrl').value = SB.url || '';
-  $('#sbKey').value = SB.key || '';
-  $('#sbEvents').value = SB.events || 'ai_events';
-}
-hydrateSb();
-$('#btnSaveSb').onclick = ()=>{
-  SB.url = $('#sbUrl').value.trim();
-  SB.key = $('#sbKey').value.trim();
-  SB.events = $('#sbEvents').value.trim() || 'ai_events';
-  save('sb.url', SB.url); save('sb.key', SB.key); save('sb.events', SB.events);
-  log('Saved Supabase settings.');
-  $('#sbStatus').textContent = 'saved';
-  setTimeout(()=>$('#sbStatus').textContent='',1500);
-};
+  const fmtPounds = (x) => (x==null||x==='') ? '' : `£${String(x).replace(/\.00$/,'')}`;
 
-/* ---------- Supabase fetch ---------- */
-async function fetchSupabaseEvents(){
-  if(!SB.url || !SB.key){ log('Supabase settings missing — cannot fetch.'); $('#sbStatus').textContent='missing settings'; return; }
-  try{
-    const url = `${SB.url.replace(/\/$/,'')}/rest/v1/${encodeURIComponent(SB.events)}?select=*`;
-    log('Fetching live events from Supabase…');
-    const res = await fetch(url, {headers:{apikey:SB.key, Authorization:`Bearer ${SB.key}`}});
-    if(!res.ok){ throw new Error(`HTTP ${res.status}`); }
-    const data = await res.json();
-    log(`Fetched ${data.length} raw rows.`);
-    events = normalizeEvents(data);
-    $('#eventsRows').textContent = `${events.length} loaded`;
-    $('#sbStatus').textContent = `loaded ${events.length}`;
-    log(`Normalized to ${events.length} events.`);
-  }catch(e){
-    log(`Supabase fetch failed: ${e.message}`);
-    $('#sbStatus').textContent = 'fetch failed';
-  }
-}
-$('#btnFetchEvents').onclick = fetchSupabaseEvents;
+  const setConfidence = (pct) => { $('confVal').textContent = `${pct}%`; $('confVal').classList.toggle('good', pct>=70); $('confVal').classList.toggle('bad', pct<40); }
 
-/* ---------- normalize event rows ---------- */
-function normalizeEvents(arr){
-  const out = [];
-  for(const r of arr){
-    const title = r.title || r.event_title || r.name || r.PageTitle || r.meta_title || '';
-    const when  = r.when || r.date_text || r.DateText || '';
-    const date  = r.date || r.start_date || r.start || r.EventDate || r.event_date || '';
-    const dt = date? new Date(date) : (when? new Date(when) : null);
-    const location = r.location || r.area || r.region || r.Location || '';
-    const url = r.url || r.link || r.href || (r.slug? (r.base_url? (r.base_url + r.slug) : r.slug) : '');
-    const price_min = r.price_min ?? r.min_price ?? r.priceMin ?? r.price ?? null;
-    const price_max = r.price_max ?? r.max_price ?? r.priceMax ?? null;
-    const tags = (r.tags || r.category || r.Categories || '').toString();
-    const o = {title, when: when || (dt? dt.toDateString():''), date: (dt? dt.toISOString():''), location, url, price_min, price_max, tags};
-    // basic filter: must have title and url (most of your rows do)
-    if(o.title && o.url) out.push(o);
-  }
-  // prefer future first
-  out.sort((a,b)=>{
-    const da = +new Date(a.date||a.when||0), db = +new Date(b.date||b.when||0);
-    return da - db;
-  });
-  return out;
-}
+  // --------------------- init form ---------------------
+  $('sbUrl').value = sbUrl;
+  $('sbKey').value = sbKey;
+  $('eventsTable').value = eventsTable;
+  $('productsTable').value = productsTable;
 
-/* ---------- uploads ---------- */
-$('#btnLanding').onclick = async ()=>{
-  const f = $('#fileLanding').files[0];
-  if(!f) return;
-  const txt = await f.text();
-  landing = parseCSV(txt).map(r=>({
-    url:(r.url||'').trim(),
-    title:(r.title||r.h1_title||'').trim(),
-    meta_title:(r.meta_title||'').trim()
-  })).filter(r=>r.url);
-  $('#landingInfo').innerHTML = `Landing CSV: <b>${landing.length} rows</b>`;
-  $('#landingRows').textContent = `loaded ${landing.length}`;
-  save('bench.landing', landing);
-  log(`Landing pages loaded (${landing.length}).`);
-};
-$('#btnQs').onclick = async ()=>{
-  const f = $('#fileQs').files[0];
-  if(!f) return;
-  const txt = await f.text();
-  const rows = parseCSV(txt);
-  questions = rows.map(r=>({idx:+(r.idx||rows.indexOf(r)+1), query:(r.query||'').trim(), expected:(r.expected||'').trim()}))
-                  .filter(r=>r.query);
-  $('#qsInfo').innerHTML = `Questions CSV: <b>${questions.length} rows</b>`;
-  $('#qsRows').textContent = `loaded ${questions.length}`;
-  log(`Questions loaded (${questions.length}).`);
-};
-$('#btnUploadEvents').onclick = async ()=>{
-  const f = $('#fileEvents').files[0];
-  if(!f) return;
-  const txt = await f.text();
-  let rows=[];
-  if(f.name.endsWith('.json')){ rows = JSON.parse(txt); }
-  else { rows = parseCSV(txt); }
-  events = normalizeEvents(rows);
-  $('#eventsInfo').innerHTML = `Events: <b>${events.length} rows</b> (snapshot)`;
-  $('#eventsRows').textContent = `loaded ${events.length}`;
-  log(`Events snapshot loaded (${events.length}).`);
-};
-
-/* ---------- intent & matching ---------- */
-const KW = {
-  events: ['when','next','where','date','workshop','workshops','event','events','cost','price','bluebell','bluebells','devon','batsford','arboretum','autumn','lake district','fairy glen','hartland'],
-  advice: ['how','what','which','do i','can i','is it','is the','need','recommend','free','certificate','laptop','camera','tripod','astrophotography','astro']
-};
-const SYN = {
-  bluebell:['bluebell','bluebells'],
-  devon:['devon','hartland','hartland quay','north devon'],
-  autumn:['autumn','batsford','arboretum','fall'],
-  astro:['astro','astrophotography','night','milky way']
-};
-
-function tokenize(s){ return (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean); }
-function hasAny(tokens, list){ const set = new Set(tokens); return list.some(w=>set.has(w)); }
-
-function detectIntent(q){
-  const t = tokenize(q);
-  const hasEvents = KW.events.some(k=>t.includes(k) || q.toLowerCase().includes(k));
-  const askAdvice = KW.advice.some(k=>q.toLowerCase().includes(k));
-  if(hasEvents && !askAdvice) return {intent:'events', reason:'events>advice'};
-  if(askAdvice && !hasEvents) return {intent:'advice', reason:'advice>events'};
-  // tie-breakers: keyword priority
-  return {intent: hasEvents ? 'events' : 'advice', reason: hasEvents? 'events>=advice':'advice>=events'};
-}
-
-/* product page guess from landing CSV */
-function guessProductPage(q){
-  if(!landing.length) return null;
-  const L = landing;
-  const low = q.toLowerCase();
-  const hits = L.map(p=>{
-    const hay = [p.title,p.meta_title,p.url].join(' ').toLowerCase();
-    let score = 0;
-    for(const w of tokenize(q)){ if(hay.includes(w)) score+=2; }
-    if(/bluebell/.test(hay) && /bluebell/.test(low)) score+=6;
-    if(/batsford|arboretum/.test(hay) && /autumn|batsford|arboretum/.test(low)) score+=4;
-    if(/hartland|devon/.test(hay) && /devon|hartland/.test(low)) score+=4;
-    if(/workshop/.test(hay)) score+=2;
-    return {...p,score};
-  }).sort((a,b)=>b.score-a.score);
-  return hits[0]?.score>3 ? hits[0] : null;
-}
-
-/* filter events by query intent */
-function matchEvents(q){
-  const low = q.toLowerCase();
-  const tok = tokenize(q);
-  const incl = [];
-  function hit(ev){
-    const hay = [ev.title,ev.location,ev.tags].join(' ').toLowerCase();
-    let s=0;
-    for(const w of tok){ if(hay.includes(w)) s+=1; }
-    if(/bluebell/.test(low)) if(/bluebell/.test(hay)) s+=3;
-    if(/devon|hartland/.test(low)) if(/devon|hartland/.test(hay)) s+=3;
-    if(/autumn|batsford|arboretum/.test(low)) if(/autumn|batsford|arboretum/.test(hay)) s+=2;
-    if(/astro/.test(low) || /night/.test(low)) if(/astro|night|milky/.test(hay)) s+=3;
-    return s;
-  }
-  for(const ev of events){
-    const score = hit(ev);
-    if(score>0) incl.push({...ev,_score:score});
-  }
-  incl.sort((a,b)=> b._score - a._score);
-  // prefer future dates
-  const futureFirst = incl.sort((a,b)=>{
-    const da = daysUntil(a.date||a.when) ?? 9999;
-    const db = daysUntil(b.date||b.when) ?? 9999;
-    return da - db;
-  });
-  return futureFirst;
-}
-
-/* ---------- confidence ---------- */
-function confidenceScore({intent, expected, eventsArr, articlesArr, matchedTokens}){
-  // components
-  let score = 0;
-  const intentOk = (expected? intent===expected : true);
-  score += intentOk ? 20 : 5;
-
-  const cov = Math.min(1, (matchedTokens||0)/6); // crude cap
-  score += cov*20;
-
-  const requiredOk = (intent==='events' ? (eventsArr.length>0) : (articlesArr.length>0));
-  score += requiredOk ? 30 : 0;
-  if(!requiredOk) score = Math.min(score, 30);
-
-  if(intent==='events'){
-    let fresh=0;
-    if(eventsArr.length){
-      const d = daysUntil(eventsArr[0].date||eventsArr[0].when);
-      if(d==null) fresh = .3;
-      else if(d<=30) fresh=1;
-      else if(d<=120) fresh=.75;
-      else if(d<=240) fresh=.5;
-      else fresh=.25;
-    }
-    score += fresh*20;
-
-    const hasPrice = eventsArr.some(e=>e.price_min || e.price_max || /\£\s?\d+/.test(e.title));
-    score += hasPrice ? 10 : 0;
-  }
-  return Math.round(score);
-}
-
-/* ---------- policy & answer helpers ---------- */
-function residentialPolicyAnswer(){
-  // This is the corrected statement you asked for.
-  return "Yes — residential workshops include B&B and local travel between locations. See the residential workshop page/FAQ for details.";
-}
-
-/* ---------- run single query ---------- */
-function clearPanels(){
-  $('#eventsList').innerHTML = '';
-  $('#articlesList').innerHTML = '';
-  $('#pillsList').innerHTML = '';
-  $('#jsonOut').textContent = '{}';
-}
-function addEventCard(ev){
-  const a = document.createElement('a');
-  a.href = sanitizeURL(ev.url)||'#'; a.target='_blank'; a.rel='noopener';
-  a.innerHTML = `<div><b>${ev.title}</b></div><div class="meta">${ev.when || ev.date} — ${ev.location||''}${ev.price_min||ev.price_max?` — £${ev.price_min||''}${ev.price_max?`–£${ev.price_max}`:''}`:''}</div>`;
-  $('#eventsList').appendChild(a);
-}
-function addArticleCard(obj){
-  const a = document.createElement('a');
-  a.href = sanitizeURL(obj.url)||'#'; a.target='_blank'; a.rel='noopener';
-  a.innerHTML = `<div><b>${obj.title||obj.meta_title||obj.url}</b></div><div class="meta">${obj.url}</div>`;
-  $('#articlesList').appendChild(a);
-}
-function addPill(label, url=null, type=null){
-  const s = document.createElement(url?'a':'span');
-  if(url){ s.href=url; s.target='_blank'; s.rel='noopener'; }
-  s.className='pill';
-  if(type) s.dataset.type=type;
-  s.textContent = label;
-  $('#pillsList').appendChild(s);
-}
-
-function landingSearch(q, limit=6){
-  if(!landing.length) return [];
-  const low = q.toLowerCase();
-  const scored = landing.map(p=>{
-    const hay = [p.title,p.meta_title,p.url].join(' ').toLowerCase();
-    let score = 0;
-    for(const w of tokenize(q)){ if(hay.includes(w)) score+=1; }
-    if(/blog|guide|tips/.test(hay)) score+=1;
-    if(/workshop|course/.test(hay)) score+=1;
-    return {...p,score};
-  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
-  return scored.slice(0,limit).map(({url,title,meta_title})=>({url,title:title||meta_title||url}));
-}
-
-function derivePills(intent, used, q){
-  const pills = [];
-  if(intent==='events'){
-    if(used.events.length){
-      const first = used.events[0];
-      pills.push({label:'Book Now', url:first.url, brand:true});
-    }
-    pills.push({label:'Event Listing', url:'https://www.alanranger.com/search?query=workshops', brand:true});
-    pills.push({label:'More Events', url:'https://www.alanranger.com/search?query=workshops', brand:true});
-    pills.push({label:'Photos', url:'https://www.alanranger.com/gallery-image-portfolios', brand:false});
-  }else{
-    const art = used.articles[0];
-    if(art) pills.push({label:'Read Guide', url:art.url, brand:true});
-    pills.push({label:'More Articles', url:`https://www.alanranger.com/search?query=${encodeURIComponent(q)}`, brand:true});
-    pills.push({label:'Events', url:'https://www.alanranger.com/search?query=workshops', brand:false});
-    pills.push({label:'Photos', url:'https://www.alanranger.com/gallery-image-portfolios', brand:false});
-  }
-  return pills;
-}
-
-function runSingleQuery(q, expected=null){
-  clearPanels();
-  if(!q) return;
-  const det = detectIntent(q);
-  $('#intentVal').textContent = det.intent;
-  $('#reasonVal').textContent = det.reason;
-
-  let productPage = guessProductPage(q);
-  let matched = matchEvents(q);
-
-  // Residential policy correction
-  let specialAnswer = null;
-  if(/residential/i.test(q) && /(b&b|bb|b and b|bed|breakfast|include)/i.test(q)){
-    specialAnswer = residentialPolicyAnswer();
-  }
-
-  // fallback to landing if events thin or empty (and option enabled)
-  if($('#chkLandingFallback').checked && det.intent==='events' && matched.length===0){
-    log('No events matched — using Landing CSV fallback.');
-  }
-
-  // build articles (landing matches used as "articles" here)
-  let articles = landingSearch(q);
-  // If product page recognized, pin it first as the "product block"
-  if(productPage){
-    articles = [{title: productPage.title||productPage.meta_title||'Product', url: productPage.url}, ...articles.filter(a=>a.url!==productPage.url)];
-  }
-
-  // If advice and we had the residential policy: ensure an article-like source appears (product page or fallback)
-  if(det.intent==='advice' && specialAnswer){
-    if(!articles.length && productPage){ articles = [{title: productPage.title||'Residential Workshops', url: productPage.url}]; }
-  }
-
-  // present UI
-  const used = { intent: det.intent, product: productPage, events: matched.slice(0,12), articles: articles.slice(0,10) };
-  used.citations = [...used.events.map(e=>e.url), ...used.articles.map(a=>a.url)].slice(0,12);
-
-  // events list
-  for(const e of used.events){ addEventCard(e); }
-  // articles list
-  for(const a of used.articles){ addArticleCard(a); }
-  // pills
-  for(const p of derivePills(det.intent, used, q)){ addPill(p.label, p.url); }
-
-  const matchedTokens = tokenize(q).filter(t=> (used.events[0]?.title?.toLowerCase()||'').includes(t) || (used.articles[0]?.title?.toLowerCase()||'').includes(t)).length;
-  const conf = confidenceScore({intent:det.intent, expected, eventsArr:used.events, articlesArr:used.articles, matchedTokens});
-  $('#confVal').textContent = fmtPct(conf);
-
-  // JSON object (close to your format)
-  const out = {
-    idx: 1, query: q, expected: expected||det.intent, detected: det.intent,
-    counts: { events: used.events.length, articles: used.articles.length, pills: 4 },
-    pass: expected? (
-      expected==='events' ? used.events.length>0 : used.articles.length>0
-    ) : true,
-    used,
-    confidence: conf
+  const refreshCounts = () => {
+    $('landingRows').textContent = landing.length ? `${landing.length} rows` : '0 rows';
+    $('eventRows').textContent = events.length ? `loaded ${events.length}` : 'not loaded';
+    $('productRows').textContent = products.length ? `loaded ${products.length}` : 'not loaded';
+    $('qRows').textContent = questions.length ? `loaded ${questions.length}` : '0 rows';
   };
-  if(specialAnswer){
-    out.used.answer = specialAnswer;
+  refreshCounts();
+
+  // --------------------- supabase ---------------------
+  const connect = () => {
+    if (!sbUrl || !sbKey) { $('liveStatus').textContent = 'Missing URL or key'; return null; }
+    supa = window.supabase.createClient(sbUrl, sbKey);
+    $('liveStatus').textContent = 'Saved. Ready.';
+    return supa;
+  };
+
+  const fetchLive = async () => {
+    if (!connect()) { log('Supabase settings missing — cannot fetch.'); return; }
+    $('liveStatus').textContent = 'Fetching…';
+    try {
+      const evName = $('eventsTable').value.trim() || 'ai_events';
+      const prName = $('productsTable').value.trim() || 'ai_products';
+
+      log(`Fetching ${evName}…`);
+      let { data: ev, error: e1 } = await supa.from(evName).select('*').limit(2000);
+      if (e1) throw e1;
+      events = normalizeEvents(ev || []);
+      log(`Fetched ${events.length} events.`);
+      $('eventRows').textContent = `loaded ${events.length}`;
+
+      // Products are optional — try, but don't fail if missing
+      try {
+        log(`Fetching ${prName}…`);
+        let { data: pr, error: e2 } = await supa.from(prName).select('*').limit(2000);
+        if (e2) throw e2;
+        products = normalizeProducts(pr || []);
+        $('productRows').textContent = `loaded ${products.length}`;
+        log(`Fetched ${products.length} products.`);
+      } catch (pp) {
+        products = [];
+        $('productRows').textContent = 'not loaded';
+        log(`Products fetch skipped/failed: ${pp.message || pp}`);
+      }
+
+      $('liveStatus').textContent = `Live data ready (${events.length} events)`;
+    } catch(err){
+      $('liveStatus').textContent = 'Fetch failed';
+      log(`ERROR: ${err.message || err}`);
+      alert('Live fetch failed. See log. Most common cause: RLS blocking anon SELECT.\nGrant select on your view/table to anon.');
+    }
+  };
+
+  // --------------------- normalizers ---------------------
+  function norm(x){ return (x ?? '').toString().trim(); }
+  function toDateISO(x){
+    if(!x) return '';
+    // accept date-like strings
+    const d = new Date(x);
+    return isNaN(+d) ? '' : d.toISOString().slice(0,10);
   }
-  $('#jsonOut').textContent = JSON.stringify(out, null, 2);
-  lastSingle = out;
-  return out;
-}
-
-/* ---------- run CSV suite ---------- */
-$('#btnRunSuite').onclick = async ()=>{
-  if(!questions.length){ alert('Load Questions CSV first.'); return; }
-  log(`Running CSV suite (${questions.length} rows)…`);
-  suiteResults = [];
-  let pass=0;
-  for(const row of questions){
-    const r = runSingleQuery(row.query, row.expected);
-    r.idx = row.idx;
-    suiteResults.push(r);
-    if(r.pass) pass++;
+  function normalizeEvents(rows){
+    return rows.map(r => {
+      const title = r.title || r.event_title || r.name || '';
+      const location = r.location || r.place || r.area || '';
+      const url = r.url || r.link || r.permalink || '';
+      const when = r.when || r.date_text || r.when_text || '';
+      const date = r.date || r.start_date || r.dt || r.on || '';
+      const price_min = r.price_min ?? r.priceFrom ?? r.min_price ?? r.price_low ?? '';
+      const price_max = r.price_max ?? r.priceTo ?? r.max_price ?? r.price_high ?? '';
+      const tags = (r.tags || r.keywords || '').toString();
+      return {
+        title: norm(title),
+        location: norm(location),
+        url: norm(url),
+        when: norm(when),
+        date: toDateISO(date) || norm(date),
+        price_min, price_max,
+        tags: norm(tags)
+      };
+    }).filter(e => e.title && e.url);
   }
-  const pct = Math.round(pass*100/questions.length);
-  log(`Suite complete. Passed ${pass}/${questions.length} (${pct}%).`);
-};
+  function normalizeProducts(rows){
+    return rows.map(r => {
+      return {
+        title: norm(r.title || r.name || ''),
+        url: norm(r.url || r.link || ''),
+        price: r.price ?? r.price_min ?? '',
+        sku: norm(r.sku || ''),
+        tags: norm(r.tags || r.keywords || '')
+      };
+    }).filter(p => p.title && p.url);
+  }
 
-$('#btnRun').onclick = ()=> runSingleQuery($('#queryInput').value.trim());
+  // --------------------- CSV loaders ---------------------
+  $('uploadLanding').onclick = async () => {
+    const f = $('landingCsv').files[0];
+    if(!f) return alert('Choose a CSV first.');
+    Papa.parse(f, {
+      header:true,
+      skipEmptyLines:true,
+      complete: (res)=>{
+        landing = (res.data||[]).map(r=>{
+          const url = norm(r.url);
+          const title = norm(r.url_meta_title || r.meta_title || r.title || '');
+          return url ? {url, title} : null;
+        }).filter(Boolean);
+        $('landingStatus').textContent = landing.length ? `Loaded ${landing.length} rows` : 'Not loaded';
+        refreshCounts();
+        log(`Landing pages loaded (${landing.length}).`);
+      }
+    });
+  };
 
-/* ---------- copy helpers ---------- */
-$('#btnCopyJson').onclick = ()=> copy($('#jsonOut').textContent);
-$('#btnCopyLog').onclick = ()=> copy(logLines.join('\n'));
-$('#btnDownloadLog').onclick = ()=>{
-  const blob = new Blob([logLines.join('\n')], {type:'text/plain'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `bench-log-${Date.now()}.txt`;
-  a.click();
-};
-$('#btnCopyAll').onclick = ()=> copy(JSON.stringify(suiteResults.length? suiteResults : (lastSingle? [lastSingle] : []), null, 2));
-$('#btnCopyFails').onclick = ()=>{
-  const rows = (suiteResults.length? suiteResults : []).filter(r=>!r.pass);
-  const csv = ['idx,query,expected,detected,events,articles,confidence'].concat(
-    rows.map(r=>[r.idx, JSON.stringify(r.query), r.expected, r.detected, r.counts.events, r.counts.articles, r.confidence].join(','))
-  ).join('\n');
-  copy(csv);
-};
+  $('uploadQ').onclick = async () => {
+    const f = $('qCsv').files[0];
+    if(!f) return alert('Choose a CSV first.');
+    Papa.parse(f, {
+      header:true,
+      skipEmptyLines:true,
+      complete: (res)=>{
+        questions = (res.data||[]).map(r=>({ idx: Number(r.idx||0), query: norm(r.query), expected: (r.expected||'').toLowerCase() }))
+                                  .filter(q=> q.query);
+        $('qStatus').textContent = questions.length ? `Loaded ${questions.length} rows` : 'Not loaded';
+        refreshCounts();
+        log(`Questions loaded (${questions.length}).`);
+      }
+    });
+  };
 
-/* ---------- initial tips ---------- */
-log('Ready. Load Events (live via Supabase or snapshot), Landing CSV (optional), Questions CSV, then Run query or CSV Suite.');
+  // --------------------- simple intent + ranking ---------------------
+  const keywords = {
+    events:['when','next','date','workshop','workshops','where','cost','price','bluebell','devon','batsford','peak','lake district','autumn','woodland','padley','arboretum'],
+    advice:['how','do i','what is','should i','recommend','need','free','certificate','camera','tripod','laptop','course','long exposure']
+  };
 
-/* ---------- restore persisted landing (if any) ---------- */
-const persistedLanding = load('bench.landing', null);
-if(persistedLanding && Array.isArray(persistedLanding)){
-  landing = persistedLanding;
-  $('#landingInfo').innerHTML = `Landing CSV: <b>${landing.length} rows</b> (restored)`;
-  $('#landingRows').textContent = `loaded ${landing.length}`;
-}
+  function detectIntent(q){
+    const s = q.toLowerCase();
+    let ev=0, ad=0;
+    for(const k of keywords.events) if(s.includes(k)) ev++;
+    for(const k of keywords.advice) if(s.includes(k)) ad++;
+    return ev>=ad ? 'events' : 'advice';
+  }
+
+  function scoreEvent(q, e){
+    const s = q.toLowerCase();
+    const hay = `${e.title} ${e.location} ${e.tags}`.toLowerCase();
+    let score = 0;
+
+    // token hits
+    for(const tok of s.split(/\W+/).filter(Boolean)){
+      if(hay.includes(tok)) score += 1.0;
+    }
+    // phrase boosts
+    if(s.includes('bluebell') && /bluebell/.test(hay)) score += 4;
+    if(s.includes('devon') && /devon|hartland/i.test(hay)) score += 3;
+    if(s.includes('autumn') && /autumn|oct|nov/.test(hay)) score += 2;
+
+    // title match boost
+    if(e.title && s.split(/\s+/).some(w=> e.title.toLowerCase().includes(w))) score += 1.5;
+
+    // location boost
+    if(e.location && s.includes(e.location.toLowerCase())) score += 1.5;
+
+    return score;
+  }
+
+  function findArticlesFromLanding(q){
+    if(!landing.length) return [];
+    const s = q.toLowerCase();
+    const withScore = landing.map(x=>{
+      const t = (x.title||'').toLowerCase();
+      let sc = 0;
+      for(const tok of s.split(/\W+/).filter(Boolean)){
+        if(t.includes(tok)) sc += 1;
+      }
+      if(/bluebell/.test(s) && /bluebell/.test(t)) sc += 3;
+      if(/autumn/.test(s) && /autumn|batsford/.test(t)) sc += 2;
+      return { ...x, _s: sc };
+    }).filter(x=>x._s>0).sort((a,b)=>b._s-a._s);
+    return withScore.slice(0,10).map(x=>({title: x.title || x.url, url: x.url}));
+  }
+
+  // confidence: 0-100
+  function computeConfidence(intent, evScores, usedLanding){
+    if(intent==='events'){
+      if(evScores.length===0) return usedLanding ? 38 : 22;
+      const best = evScores[0];
+      const second = evScores[1] ?? 0;
+      // normalize roughly: >8 very strong, >4 strong
+      let pct = Math.min(100, Math.round((best/8)*85 + (evScores.length>2?15:5)));
+      if(best-second<1 && evScores.length>1) pct -= 8; // ambiguity penalty
+      if(usedLanding) pct = Math.min(pct, 65);
+      return Math.max(5, Math.min(100, pct));
+    } else {
+      // advice: based on landing matches presence
+      return usedLanding ? 70 : 55;
+    }
+  }
+
+  // --------------------- renderer ---------------------
+  function renderResults(res){
+    // Events
+    const ep = $('eventsPanel'); ep.innerHTML='';
+    res.events.slice(0,12).forEach(e=>{
+      const div = document.createElement('div');
+      div.className='item';
+      div.innerHTML = `
+        <div><a href="${e.url}" target="_blank">${e.title}</a></div>
+        <div class="small muted">${e.when || e.date || ''}${e.location? ' — ' + e.location : ''}</div>
+        <div class="small">${fmtPounds(e.price_min)}${e.price_max ? ' – ' + fmtPounds(e.price_max): ''}</div>`;
+      ep.appendChild(div);
+    });
+
+    // Articles
+    const ap = $('articlesPanel'); ap.innerHTML='';
+    res.articles.slice(0,10).forEach(a=>{
+      const div = document.createElement('div');
+      div.className='item';
+      div.innerHTML = `<a href="${a.url}" target="_blank">${a.title||a.url}</a>`;
+      ap.appendChild(div);
+    });
+
+    // Pills
+    const pp = $('pillsPanel'); pp.innerHTML='';
+    res.pills.forEach(p=>{
+      const a = document.createElement('a');
+      a.className='pill'; a.href=p.url; a.target='_blank';
+      a.textContent = p.label;
+      pp.appendChild(a);
+    });
+
+    // JSON
+    $('jsonPanel').textContent = JSON.stringify(res, null, 2);
+
+    // Intent/Reason/Confidence
+    $('intent').textContent = res.used.intent;
+    $('reason').textContent = res.used.reason;
+    setConfidence(res.confidence);
+    lastJSON = res;
+  }
+
+  // --------------------- core query runner ---------------------
+  function runQuery(q){
+    const intent = detectIntent(q);
+    const reason = intent==='events' ? 'events>=advice by keyword balance' : 'advice>events by keyword balance';
+
+    let ev = [];
+    let evScores = [];
+    if(events.length){
+      const scored = events.map(e=>({e, s: scoreEvent(q, e)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+      ev = scored.map(x=>x.e);
+      evScores = scored.map(x=>x.s);
+    }
+
+    let usedLanding = false;
+    let articles = [];
+    if(!ev.length){
+      articles = findArticlesFromLanding(q);
+      usedLanding = articles.length>0;
+    }else{
+      // still include a couple of related articles if we have them
+      articles = findArticlesFromLanding(q).slice(0,6);
+    }
+
+    // pills
+    const pills = [];
+    if(ev.length) pills.push({label:'Book Now', url: ev[0].url, brand:true});
+    pills.push({label:'Event Listing', url:'https://www.alanranger.com/search?query=workshops', brand:true});
+    if(articles.length) pills.push({label:'More Articles', url:`https://www.alanranger.com/search?query=${encodeURIComponent(q)}`, brand:true});
+
+    const detected = ev.length ? 'events' : 'advice';
+    const confidence = computeConfidence(intent, evScores, usedLanding);
+
+    const res = {
+      intent: detected,
+      events: ev,
+      articles,
+      pills,
+      used: {
+        intent,
+        reason,
+        product: null,
+        events: ev.slice(0,12),
+        articles,
+        pills,
+        citations: [
+          ...ev.slice(0,12).map(x=>x.url),
+          ...articles.map(x=>x.url)
+        ]
+      },
+      confidence
+    };
+    return res;
+  }
+
+  // --------------------- actions ---------------------
+  $('saveSb').onclick = () => {
+    sbUrl = $('sbUrl').value.trim();
+    sbKey = $('sbKey').value.trim();
+    eventsTable = $('eventsTable').value.trim() || 'ai_events';
+    productsTable = $('productsTable').value.trim() || 'ai_products';
+    localStorage.setItem('bt.sbUrl', sbUrl);
+    localStorage.setItem('bt.sbKey', sbKey);
+    localStorage.setItem('bt.eventsTable', eventsTable);
+    localStorage.setItem('bt.productsTable', productsTable);
+    connect();
+    log('Ready. Load Events (live via Supabase), Landing CSV (optional), Questions CSV, then Run query or CSV Suite.');
+  };
+
+  $('fetchLive').onclick = fetchLive;
+
+  $('runSingle').onclick = () => {
+    const q = $('singleQuery').value.trim();
+    if(!q) return alert('Type a query first.');
+    const res = runQuery(q);
+    renderResults(res);
+    allResults = [res];
+  };
+
+  $('runSuite').onclick = async () => {
+    if(!questions.length) return alert('Upload the Questions CSV first.');
+    allResults = [];
+    let pass = 0;
+    for(const row of questions){
+      const res = runQuery(row.query);
+      const ok = (row.expected||'').toLowerCase() === res.intent;
+      if(ok) pass++;
+      allResults.push({
+        idx: row.idx, query: row.query, expected: row.expected, detected: res.intent,
+        counts: { events: res.events.length, articles: res.articles.length, pills: res.pills.length },
+        pass: ok, used: res.used, confidence: res.confidence
+      });
+    }
+    // show last one and summary
+    renderResults({
+      intent: allResults.at(-1).detected,
+      events: allResults.at(-1).used.events,
+      articles: allResults.at(-1).used.articles,
+      pills: allResults.at(-1).used.pills,
+      used: allResults.at(-1).used,
+      confidence: allResults.at(-1).confidence
+    });
+    const rate = Math.round((pass / questions.length) * 100);
+    log(`CSV suite finished. Passed: ${pass}/${questions.length} (${rate}%).`);
+  };
+
+  $('copyJson').onclick = () => {
+    navigator.clipboard.writeText($('jsonPanel').textContent || '{}');
+  };
+  $('copyLog').onclick = () => {
+    navigator.clipboard.writeText(logLines.join('\n'));
+  };
+  $('copyAll').onclick = () => {
+    const out = JSON.stringify(allResults.length? allResults : [lastJSON], null, 2);
+    navigator.clipboard.writeText(out);
+  };
+
+  // auto-connect if settings exist
+  if(sbUrl && sbKey){ connect(); }
+
+})();
 </script>
 </body>
 </html>
