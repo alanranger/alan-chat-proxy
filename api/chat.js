@@ -15,13 +15,6 @@ function supabaseAdmin() {
 }
 
 /* ================= Utilities ================= */
-function safeJSON(v) {
-  try {
-    return JSON.stringify(v, null, 2);
-  } catch {
-    return String(v);
-  }
-}
 function pickUrl(e) {
   return e?.page_url || e?.source_url || e?.url || null;
 }
@@ -33,7 +26,6 @@ function clamp(n, lo, hi) {
 }
 
 /* ================= Intent & Keywords ================= */
-// Strict AND logic: events only when query has an event-ish AND a class-ish term
 function detectIntent(q) {
   const s = String(q || "").toLowerCase();
   const eventish =
@@ -43,50 +35,24 @@ function detectIntent(q) {
   return eventish.test(s) && classish.test(s) ? "events" : "advice";
 }
 
+// ⬇︎ Added pronouns/helpers so they don't become useless filters
 const STOPWORDS = new Set([
-  "the",
-  "and",
-  "or",
-  "what",
-  "whats",
-  "when",
-  "whens",
-  "next",
-  "cost",
-  "workshop",
-  "workshops",
-  "photography",
-  "photo",
-  "near",
-  "me",
-  "uk",
-  "warks",
-  "warwickshire",
-  "devonshire",
-  "class",
-  "classes",
-  "course",
-  "courses",
-  "where",
-  "location",
-  "dates",
-  "date",
-  "upcoming",
-  "available",
-  "availability",
-  "book",
-  "booking",
+  "the","and","or","what","whats","when","whens","where","is","are","was","were",
+  "next","cost","workshop","workshops","photography","photo","near","me","uk",
+  "warks","warwickshire","devonshire","class","classes","course","courses",
+  "upcoming","available","availability","book","booking","to","for","with","on",
+  "your","you","yours","my","mine","our","ours","i","im","we","us","it","its"
 ]);
 
 function extractKeywords(q) {
   const src = String(q || "").toLowerCase();
   const tokens = src.match(/[a-z0-9]+/g) || [];
   const kept = tokens.filter((t) => t.length >= 3 && !STOPWORDS.has(t));
-  return uniq(kept);
+  return Array.from(new Set(kept));
 }
 
 function topicFromKeywords(kws) {
-  return uniq(kws).join(", ");
+  return Array.from(new Set(kws)).join(", ");
 }
 
 /* ================= Scoring ================= */
@@ -94,10 +60,8 @@ function tokenize(s) {
   return (s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
 }
 function jaccard(a, b) {
-  const A = new Set(a),
-    B = new Set(b);
-  let inter = 0;
-  for (const x of A) if (B.has(x)) inter++;
+  const A = new Set(a), B = new Set(b);
+  let inter = 0; for (const x of A) if (B.has(x)) inter++;
   const union = A.size + B.size - inter;
   return union ? inter / union : 0;
 }
@@ -108,7 +72,6 @@ function scoreEntity(ent, qTokens) {
   const tTokens = tokenize(hayTitle + " " + hayUrl + " " + hayLoc);
   if (!tTokens.length || !qTokens.length) return 0;
   let score = jaccard(new Set(qTokens), new Set(tTokens));
-  // small generic title bonus if any query token appears in the title
   if (qTokens.some((t) => t.length >= 3 && hayTitle.includes(t))) score += 0.2;
   return Math.min(1, score);
 }
@@ -116,13 +79,9 @@ function scoreEntity(ent, qTokens) {
 function confidenceFrom(scores) {
   if (!scores?.length) return 25;
   const top = Math.max(...scores);
-  const meanTop3 = scores
-    .slice()
-    .sort((a, b) => b - a)
-    .slice(0, 3)
-    .reduce((s, x, i, arr) => s + x / arr.length, 0);
-  // map 0..1 -> 20..95 with a little lift from mean
-  const pct = 20 + top * 60 + meanTop3 * 15;
+  const meanTop3 = scores.slice().sort((a,b)=>b-a).slice(0,3)
+    .reduce((s,x,i,arr)=>s+x/arr.length,0);
+  const pct = 20 + top*60 + meanTop3*15;
   return clamp(Math.round(pct), 20, 95);
 }
 
@@ -132,12 +91,11 @@ const SELECT_COLS =
 
 async function findEvents(client, { keywords = [], topK = 12 } = {}) {
   let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "event");
-
   // Upcoming only
   q = q.gte("date_start", new Date().toISOString());
 
+  // Only apply filters if we actually have meaningful keywords
   if (keywords.length) {
-    // simple OR ilike across title/url/location
     const ors = [
       ...keywords.map((k) => `title.ilike.%${k}%`),
       ...keywords.map((k) => `page_url.ilike.%${k}%`),
@@ -172,7 +130,6 @@ async function findArticles(client, { keywords = [], topK = 12 } = {}) {
     .from("page_entities")
     .select(SELECT_COLS)
     .in("kind", ["article", "blog", "page"]);
-
   if (keywords.length) {
     const ors = [
       ...keywords.map((k) => `title.ilike.%${k}%`),
@@ -187,7 +144,6 @@ async function findArticles(client, { keywords = [], topK = 12 } = {}) {
 }
 
 async function findLanding(client, { keywords = [] } = {}) {
-  // canonical landing pages
   let q = client
     .from("page_entities")
     .select(SELECT_COLS)
@@ -210,8 +166,7 @@ async function findLanding(client, { keywords = [] } = {}) {
 
 /* ================= Answer composition ================= */
 function buildAdviceMarkdown(articles) {
-  const lines = [];
-  lines.push("**Guides**");
+  const lines = ["**Guides**"];
   for (const a of (articles || []).slice(0, 5)) {
     const t = a.title || a.raw?.name || "Read more";
     const u = pickUrl(a);
@@ -220,7 +175,6 @@ function buildAdviceMarkdown(articles) {
   return lines.join("\n");
 }
 
-// Simple product panel (events mode); UI renders richer card client-side from structured.products
 function buildProductPanelMarkdown(prod) {
   const title = prod?.title || prod?.raw?.name || "Workshop";
   const price =
@@ -252,8 +206,6 @@ function buildAdvicePills(articles, originalQuery) {
   const pills = [];
   const top = articles?.[0] ? pickUrl(articles[0]) : null;
   if (top) pills.push({ label: "Read Guide", url: top, brand: "primary" });
-
-  // “More Articles” pill hits the site search (generic)
   pills.push({
     label: "More Articles",
     url: `https://www.alanranger.com/search?query=${encodeURIComponent(
@@ -268,17 +220,13 @@ function buildEventPills(product, landing) {
   const pills = [];
   const bookUrl = pickUrl(product);
   if (bookUrl) pills.push({ label: "Book Now", url: bookUrl, brand: "primary" });
-
   const landingUrl = pickUrl(landing?.[0]);
   if (landingUrl) pills.push({ label: "Event Listing", url: landingUrl, brand: "secondary" });
-
-  // Generic photos gallery (if landing has photos in raw.image etc) – fallback to homepage gallery
   pills.push({
     label: "Photos",
     url: "https://www.alanranger.com/photography-portfolio",
     brand: "secondary",
   });
-
   return pills;
 }
 
@@ -305,35 +253,37 @@ export default async function handler(req, res) {
     let landing = [];
 
     if (intent === "events") {
-      // Core queries
+      // First pass WITH keywords (if any survived stopwords)
       [events, products, landing] = await Promise.all([
         findEvents(client, { keywords, topK: Math.max(8, topK) }),
         findProducts(client, { keywords, topK: 2 }),
         findLanding(client, { keywords }),
       ]);
 
-      // ALSO fetch articles for tips (generic; guarded)
+      // ⬇︎ Fallback: if no events matched the terms, show the next upcoming dates unfiltered
+      if (!events.length) {
+        events = await findEvents(client, { keywords: [], topK: Math.max(12, topK) });
+      }
+
+      // Also fetch articles for helpful tips (guarded & generic)
       try {
         articles = await findArticles(client, { keywords, topK: 12 });
       } catch {
         articles = [];
       }
     } else {
-      // Advice path
       [articles, products] = await Promise.all([
         findArticles(client, { keywords, topK: Math.max(12, topK) }),
         findProducts(client, { keywords, topK: 2 }),
       ]);
     }
 
-    // Generic ranking by overlap score (deterministic)
     const qTokens = extractKeywords(q);
     const scoreWrap = (arr) =>
       (arr || [])
         .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
-          // tie-breaker by freshness if present
           const by = Date.parse(b.e?.last_seen || "") || 0;
           const ax = Date.parse(a.e?.last_seen || "") || 0;
           return by - ax;
@@ -352,23 +302,19 @@ export default async function handler(req, res) {
 
     const confidence_pct = confidenceFrom(scoresForConfidence);
 
-    // Compose answer_markdown
     let answer_markdown = "";
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
-      // events: show a simple product panel if available; UI renders structured lists
       if (rankedProducts?.length) {
         answer_markdown = buildProductPanelMarkdown(rankedProducts[0]);
       } else if (rankedArticles?.length) {
-        // fallback: give the user something to read
         answer_markdown = buildAdviceMarkdown(rankedArticles);
       } else {
         answer_markdown = "Upcoming workshops and related info below.";
       }
     }
 
-    // Citations: keep light; de-dupe
     const citations = uniq([
       ...rankedArticles.slice(0, 3).map(pickUrl),
       ...rankedProducts.slice(0, 1).map(pickUrl),
@@ -434,9 +380,7 @@ export default async function handler(req, res) {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     return res.status(200).send(payload);
   } catch (err) {
-    // Always return JSON to avoid client parse errors
-    const msg =
-      (err && (err.message || err.toString())) || "Unknown server error";
+    const msg = (err && (err.message || err.toString())) || "Unknown server error";
     const body = { ok: false, error: msg };
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     return res.status(200).send(body);
