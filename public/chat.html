@@ -267,7 +267,7 @@ function currency(amount, ccy){
   try{ return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n); }
   catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
 }
-function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
+function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]) )}
 
 /* ================= Meta description picker ================= */
 function limitSentence(text, max=220){
@@ -459,6 +459,12 @@ function scoreEventMatch(ev, kp){
   for (const w of kp.words) if (w && new RegExp(`\\b${w}\\b`).test(hay)) score += 1;
   return score;
 }
+function eventHeaderLabel(structured){
+  const q = (__lastQuery||'').toLowerCase();
+  if (/\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(q) || structured?.event_subtype==='course') return 'Upcoming Courses';
+  if (/\b(workshop|workshops)\b/.test(q) || structured?.event_subtype==='workshop') return 'Upcoming Workshops';
+  return 'Upcoming Events';
+}
 
 function renderEventsBlock(structured){
   const now = new Date();
@@ -476,13 +482,15 @@ function renderEventsBlock(structured){
     const when=fmtDate(e.date_start);
     const href=e.page_url||e.source_url||e.url||'#';
     const where=e.location ? ` — ${escapeHTML(e.location)}` : '';
-    return `<li>${when}${where} — <a href="${href}" target="_blank" rel="noopener">Link</a></li>`;
+    const title=e.title ? ` — ${escapeHTML(e.title)}` : '';
+    return `<li>${when}${where}${title} — <a href="${href}" target="_blank" rel="noopener">Link</a></li>`;
   }).join('');
 
-  return `<div class="answer"><h3>Upcoming Workshops</h3><ul>${lis}</ul></div>`;
+  const header = eventHeaderLabel(structured);
+  return `<div class="answer"><h3>${header}</h3><ul>${lis}</ul></div>`;
 }
 
-/* ===== Articles (Guides) ranking — generic ===== */
+/* ===== Articles (Guides) ranking — generic, with small workshop/course bias ===== */
 function tokenize(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
 function jaccard(a,b){ const A=new Set(a), B=new Set(b); let inter=0; for(const x of A) if(B.has(x)) inter++; const union=A.size+B.size-inter; return union? inter/union : 0; }
 function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
@@ -497,6 +505,15 @@ function scoreArticle(a, query, topic){
   if (!qTokens.length || !hayTokens.length) return 0;
   let score = jaccard(qTokens, hayTokens);
   if (qTokens.some(t => t.length >= 3 && title.toLowerCase().includes(t))) score += 0.2;
+
+  // Bias: if user asked workshops, prefer workshop-related guides; similarly for courses
+  const q = (__lastQuery||'').toLowerCase();
+  const isWorkshopQ = /\b(workshop|workshops)\b/.test(q);
+  const isCourseQ   = /\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(q);
+  const t = (title + ' ' + url).toLowerCase();
+  if (isWorkshopQ && /workshop/.test(t) && !/course|tuition|lesson/.test(t)) score += 0.15;
+  if (isCourseQ && /course|tuition|lesson|class/.test(t)) score += 0.15;
+
   return Math.min(1, score);
 }
 
@@ -543,7 +560,7 @@ function buildActionPillsFromStructured(structured, query){
     safe.push({label,href});
   };
 
-  // provided pills
+  // provided pills (now server gives Book Now + View event + Photos)
   for (const p of (structured?.pills || structured?.chips || [])){
     add(p.label || p.text || 'Open', p.url || p.href);
   }
