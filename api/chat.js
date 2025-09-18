@@ -492,7 +492,8 @@ export default async function handler(req, res) {
     const lines = [];
     if (ranked?.length) {
       lines.push("Here are Alan’s guides that match your question:\n");
-      for (const a of ranked.slice(0, 8)) {
+      // LIMIT TO 5 ARTICLES IN THE VISIBLE ANSWER
+      for (const a of ranked.slice(0, 5)) {
         const t = a.title || a.raw?.name || "Read more";
         const u = pickUrl(a);
         lines.push(`- ${t} — ${u ? `[Link](${u})` : ""}`.trim());
