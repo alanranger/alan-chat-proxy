@@ -300,10 +300,7 @@ function buildAdviceMarkdown(articles) {
 function buildProductPanelMarkdown(prod) {
   const title = prod?.title || prod?.raw?.name || "Workshop";
   const price =
-    prod?.price ??
-    prod?.raw?.offers?.price ??
-    prod?.raw?.offers?.lowPrice ??
-    null;
+    prod?.price ?? prod?.raw?.offers?.price ?? prod?.raw?.offers?.lowPrice ?? null;
   const priceCcy = prod?.raw?.offers?.priceCurrency || "GBP";
   const priceStr =
     price != null
@@ -407,7 +404,7 @@ export default async function handler(req, res) {
     const qTokens = keywords;
     const scoreWrap = (arr) =>
       (arr || [])
-        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
+        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))}
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
           const by = Date.parse(b.e?.last_seen || "") || 0;
@@ -420,17 +417,67 @@ export default async function handler(req, res) {
     let rankedEvents = scoreWrap(events);
     let rankedProducts = scoreWrap(products);
 
-    // If we have events, try to match a product to the first event and move it to front
-    let matchedProduct = null;
+    // ===== Core fix: make product block link to first upcoming event =====
     const firstEvent = rankedEvents[0] || null;
+
+    // Try to pick a matching product; if found, we will override its URL to event URL.
+    let matchedProduct = null;
     if (firstEvent && rankedProducts.length) {
       const m = matchProductToEvent(rankedProducts, firstEvent);
-      if (m) {
-        matchedProduct = m;
-        rankedProducts = [m, ...rankedProducts.filter((p) => p.id !== m.id)];
+      if (m) matchedProduct = m;
+    }
+
+    const eventUrl = firstEvent ? pickUrl(firstEvent) : null;
+
+    if (firstEvent) {
+      if (rankedProducts.length) {
+        // pick the featured product (matched or top) and force its link to the event URL
+        const featuredId = matchedProduct?.id ?? rankedProducts[0].id;
+        rankedProducts = rankedProducts.map((p) =>
+          p.id === featuredId
+            ? {
+                ...p,
+                // force the UI and markdown to use the event link
+                page_url: eventUrl || p.page_url,
+                source_url: eventUrl || p.source_url,
+                raw: { ...(p.raw || {}), _linkedEventId: firstEvent.id },
+              }
+            : p
+        );
+        // also move the featured to the front if it wasn't already
+        if (matchedProduct && rankedProducts[0].id !== featuredId) {
+          rankedProducts = [
+            rankedProducts.find((p) => p.id === featuredId),
+            ...rankedProducts.filter((p) => p.id !== featuredId),
+          ];
+        }
+      } else {
+        // No products at all — synthesize a product-like card from the event
+        rankedProducts = [
+          {
+            id: `evt-${firstEvent.id || "next"}`,
+            title: firstEvent.title || "Upcoming Workshop",
+            page_url: eventUrl,
+            source_url: eventUrl,
+            description:
+              firstEvent.description ||
+              firstEvent.raw?.metaDescription ||
+              firstEvent.raw?.description ||
+              "",
+            price:
+              firstEvent.raw?.offers?.price &&
+              firstEvent.raw?.offers?.price !== "0.00"
+                ? Number(firstEvent.raw.offers.price)
+                : null,
+            location: firstEvent.location || null,
+            raw: { ...(firstEvent.raw || {}), _syntheticFromEvent: true },
+            _score: 1,
+          },
+        ];
       }
     }
 
+    // Confidence
     const scoresForConfidence = [
       ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
       ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
@@ -441,11 +488,12 @@ export default async function handler(req, res) {
 
     // Compose answer_markdown
     let answer_markdown = "";
+    const preferredProduct = rankedProducts[0];
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
-      const preferredProduct = matchedProduct || rankedProducts[0];
       if (preferredProduct) {
+        // This now links to the first event because we forced page_url/source_url above
         answer_markdown = buildProductPanelMarkdown(preferredProduct);
       } else if (rankedArticles?.length) {
         answer_markdown = buildAdviceMarkdown(rankedArticles);
@@ -499,7 +547,7 @@ export default async function handler(req, res) {
       })),
       pills:
         intent === "events"
-          ? buildEventPills(firstEvent, matchedProduct)
+          ? buildEventPills(firstEvent, rankedProducts[0] || null)
           : buildAdvicePills(rankedArticles, q),
     };
 
