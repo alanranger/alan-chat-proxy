@@ -1,449 +1,444 @@
 // /api/chat.js
+// Node runtime on Vercel. Generic, data-driven, no hard-coded query terms.
+
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
 
-/* ---------------------------- Supabase client ---------------------------- */
+/* ================= Supabase ================= */
 function supabaseAdmin() {
   const url = process.env.SUPABASE_URL;
   const key =
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error("Missing SUPABASE_URL or KEY");
+  if (!url || !key) throw new Error("Missing Supabase env vars");
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-/* ------------------------------ Small utils ------------------------------ */
-function slugWords(s) {
-  return (s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
-}
-function uniq(arr) {
-  return Array.from(new Set((arr || []).filter(Boolean)));
+/* ================= Utilities ================= */
+function safeJSON(v) {
+  try {
+    return JSON.stringify(v, null, 2);
+  } catch {
+    return String(v);
+  }
 }
 function pickUrl(e) {
   return e?.page_url || e?.source_url || e?.url || null;
 }
-function fmtDateLondon(iso) {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString("en-GB", {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      timeZone: "Europe/London",
-    });
-  } catch {
-    return String(iso || "");
-  }
+function uniq(arr) {
+  return Array.from(new Set(arr.filter(Boolean)));
+}
+function clamp(n, lo, hi) {
+  return Math.max(lo, Math.min(hi, n));
 }
 
-/* ----------------------------- Intent hints ------------------------------ */
-const EVENT_HINTS = [
-  "date",
-  "dates",
-  "when",
-  "next",
-  "upcoming",
-  "available",
-  "where",
-  "schedule",
-];
-
-const CLASS_HINTS = ["workshop","course","class","tuition","lesson","masterclass","photowalk","walk"];
-
-// Generic topic hints
-const TOPIC_KEYWORDS = [
-  "devon",
-  "snowdonia",
-  "wales",
-  "lake district",
-  "warwickshire",
-  "coventry",
-  "dorset",
-  "bluebell",
-  "autumn",
-  "astrophotography",
-  "beginners",
-  "lightroom",
-  "long exposure",
-  "filters",
-  "woodland",
-  "tripod",
-  "bag",
-  "lens",
-  "landscape",
-  "composition",
-  "printing",
-];
-
-/* ----------------------------- Intent detect ----------------------------- */
+/* ================= Intent & Keywords ================= */
+// Strict AND logic: events only when query has an event-ish AND a class-ish term
 function detectIntent(q) {
   const s = String(q || "").toLowerCase();
-  const eventish = /(\\bwhen\\b|\\bwhere\\b|\\bdates?\\b|\\bnext\\b|\\bupcoming\\b|\\bavailability\\b|\\bavailable\\b|\\bschedule\\b|\\bbook(ing)?\\b)/;
-  const classish = /(\\bworkshop\\b|\\bcourse\\b|\\bclass\\b|\\btuition\\b|\\blesson\\b|\\bmasterclass\\b|\\bphotowalk\\b|\\bwalk\\b)/;
-  return (eventish.test(s) && classish.test(s)) ? "events" : "advice";
+  const eventish =
+    /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking)\b/;
+  const classish =
+    /\b(workshop|course|class|tuition|lesson|photowalk|walk|masterclass)\b/;
+  return eventish.test(s) && classish.test(s) ? "events" : "advice";
 }
 
-/* ----------------------- DB helpers (robust fallbacks) ------------------- */
-function anyIlike(col, words) {
-  const parts = (words || [])
-    .map((w) => w.trim())
-    .filter(Boolean)
-    .map((w) => `${col}.ilike.%${w}%`);
-  return parts.length ? parts.join(",") : null;
-}
+const STOPWORDS = new Set([
+  "the",
+  "and",
+  "or",
+  "what",
+  "whats",
+  "when",
+  "whens",
+  "next",
+  "cost",
+  "workshop",
+  "workshops",
+  "photography",
+  "photo",
+  "near",
+  "me",
+  "uk",
+  "warks",
+  "warwickshire",
+  "devonshire",
+  "class",
+  "classes",
+  "course",
+  "courses",
+  "where",
+  "location",
+  "dates",
+  "date",
+  "upcoming",
+  "available",
+  "availability",
+  "book",
+  "booking",
+]);
 
-async function findEvents(client, { keywords, limit = 120 }) {
-  const nowIso = new Date().toISOString();
-  let q = client
-    .from("page_entities")
-    .select(
-      "id, title, page_url, source_url, date_start, date_end, location, raw"
-    )
-    .eq("kind", "event")
-    .gte("date_start", nowIso)
-    .order("date_start", { ascending: true })
-    .limit(limit);
-
-  if (keywords?.length) {
-    const orExpr =
-      anyIlike("title", keywords) ||
-      anyIlike("page_url", keywords) ||
-      anyIlike("location", keywords);
-    q = q.or(orExpr || "title.ilike.%_NOPE_%");
-  }
-
-  const { data, error } = await q;
-  if (error) return [];
-  return data || [];
-}
-
-async function findProducts(client, { keywords, limit = 6 }) {
-  let q = client
-    .from("page_entities")
-    .select("id, title, page_url, source_url, location, description, price, raw")
-    .eq("kind", "product")
-    .order("last_seen", { ascending: false })
-    .limit(limit);
-
-  if (keywords?.length) {
-    const orExpr =
-      anyIlike("title", keywords) || anyIlike("page_url", keywords);
-    q = q.or(orExpr || "title.ilike.%_NOPE_%");
-  }
-
-  const { data, error } = await q;
-  if (error) return [];
-  return data || [];
-}
-
-async function findArticles(client, { keywords, limit = 12 }) {
-  let q = client
-    .from("page_entities")
-    .select("id, title, page_url, source_url, raw, last_seen")
-    .in("kind", ["article", "blog", "page"])
-    .order("last_seen", { ascending: false })
-    .limit(limit);
-
-  if (keywords?.length) {
-    const orExpr =
-      anyIlike("title", keywords) || anyIlike("page_url", keywords);
-    q = q.or(orExpr || "title.ilike.%_NOPE_%");
-  }
-
-  const { data, error } = await q;
-  if (error) return [];
-  return data || [];
-}
-
-async function findLanding(client, { keywords }) {
-  let q = client
-    .from("page_entities")
-    .select("id, title, page_url, source_url, raw")
-    .in("kind", ["article", "page"])
-    .eq("raw->>canonical", "true")
-    .eq("raw->>role", "landing")
-    .limit(1);
-
-  if (keywords?.length) {
-    const orExpr =
-      anyIlike("title", keywords) || anyIlike("page_url", keywords);
-    q = q.or(orExpr || "title.ilike.%_NOPE_%");
-  }
-
-  const { data, error } = await q;
-  if (error) return null;
-  return (data && data[0]) || null;
-}
-
-/* ------------------------ Keywords / topic extraction -------------------- */
 function extractKeywords(q) {
-  const raw = (q || "").toLowerCase();
-  const toks = Array.from(new Set(raw.match(/[a-z0-9]+/g) || []));
-  const long = toks.filter((t) => t.length >= 4);
-  const extras = TOPIC_KEYWORDS.filter((t) => raw.includes(t));
-  const out = uniq([...long, ...extras]);
-  return out;
+  const src = String(q || "").toLowerCase();
+  const tokens = src.match(/[a-z0-9]+/g) || [];
+  const kept = tokens.filter((t) => t.length >= 3 && !STOPWORDS.has(t));
+  return uniq(kept);
 }
 
-/* ------------------------------ Rank & confidence ------------------------ */
-function scoreEntity(entity, keywords) {
-  const words = new Set(
-    slugWords(
-      (entity?.title || "") +
-        " " +
-        (pickUrl(entity) || "") +
-        " " +
-        (entity?.location || "")
-    )
-  );
-  let score = 0;
-  for (const k of keywords) {
-    const parts = slugWords(k);
-    for (const p of parts) if (words.has(p)) score += 1;
-  }
-  // bonus for exact keyword in title
-  const title = (entity?.title || "").toLowerCase();
-  for (const k of keywords) if (title.includes(k.toLowerCase())) score += 1;
-  return score;
+function topicFromKeywords(kws) {
+  return uniq(kws).join(", ");
+}
+
+/* ================= Scoring ================= */
+function tokenize(s) {
+  return (s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
+}
+function jaccard(a, b) {
+  const A = new Set(a),
+    B = new Set(b);
+  let inter = 0;
+  for (const x of A) if (B.has(x)) inter++;
+  const union = A.size + B.size - inter;
+  return union ? inter / union : 0;
+}
+function scoreEntity(ent, qTokens) {
+  const hayTitle = (ent?.title || ent?.raw?.name || "").toLowerCase();
+  const hayUrl = (pickUrl(ent) || "").toLowerCase();
+  const hayLoc = (ent?.location || "").toLowerCase();
+  const tTokens = tokenize(hayTitle + " " + hayUrl + " " + hayLoc);
+  if (!tTokens.length || !qTokens.length) return 0;
+  let score = jaccard(new Set(qTokens), new Set(tTokens));
+  // small generic title bonus if any query token appears in the title
+  if (qTokens.some((t) => t.length >= 3 && hayTitle.includes(t))) score += 0.2;
+  return Math.min(1, score);
 }
 
 function confidenceFrom(scores) {
-  const vals = (scores || []).filter((s) => typeof s === "number");
-  if (!vals.length) return 0.25;
-  const max = Math.max(...vals);
-  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-  const conf = Math.max(0.2, Math.min(0.95, (0.5 * max + 0.5 * mean) / 5));
-  return conf;
+  if (!scores?.length) return 25;
+  const top = Math.max(...scores);
+  const meanTop3 = scores
+    .slice()
+    .sort((a, b) => b - a)
+    .slice(0, 3)
+    .reduce((s, x, i, arr) => s + x / arr.length, 0);
+  // map 0..1 -> 20..95 with a little lift from mean
+  const pct = 20 + top * 60 + meanTop3 * 15;
+  return clamp(Math.round(pct), 20, 95);
 }
 
-/* ----------------------------- UI builders ------------------------------- */
-function buildProductPanelMarkdown(prod) {
-  const lines = [];
-  const title =
-    prod?.title || prod?.raw?.name || "Photography Workshop or Tuition";
-  let priceHead = "";
-  const low = prod?.raw?.offers?.lowPrice;
-  const high = prod?.raw?.offers?.highPrice;
-  const price = prod?.price ?? prod?.raw?.offers?.price;
-  const ccy = prod?.raw?.offers?.priceCurrency || "GBP";
-  if (low != null && high != null) {
-    priceHead = ` — £${low}–£${high}`;
-  } else if (price != null) {
-    priceHead = ` — £${price}`;
+/* ================= Supabase queries ================= */
+const SELECT_COLS =
+  "id, kind, title, page_url, source_url, last_seen, location, date_start, date_end, price, description, raw";
+
+async function findEvents(client, { keywords = [], topK = 12 } = {}) {
+  let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "event");
+
+  // Upcoming only
+  q = q.gte("date_start", new Date().toISOString());
+
+  if (keywords.length) {
+    // simple OR ilike across title/url/location
+    const ors = [
+      ...keywords.map((k) => `title.ilike.%${k}%`),
+      ...keywords.map((k) => `page_url.ilike.%${k}%`),
+      ...keywords.map((k) => `location.ilike.%${k}%`),
+    ].join(",");
+    q = q.or(ors);
   }
-  const desc =
-    prod?.meta_description ||
-    prod?.raw?.metaDescription ||
-    prod?.description ||
-    "";
 
-  lines.push(`**${title}**${priceHead}`);
-  if (desc) lines.push(`\n${desc}`);
+  q = q.order("date_start", { ascending: true }).limit(topK);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
 
+async function findProducts(client, { keywords = [], topK = 6 } = {}) {
+  let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "product");
+  if (keywords.length) {
+    const ors = [
+      ...keywords.map((k) => `title.ilike.%${k}%`),
+      ...keywords.map((k) => `page_url.ilike.%${k}%`),
+    ].join(",");
+    q = q.or(ors);
+  }
+  q = q.order("last_seen", { ascending: false }).limit(topK);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+async function findArticles(client, { keywords = [], topK = 12 } = {}) {
+  let q = client
+    .from("page_entities")
+    .select(SELECT_COLS)
+    .in("kind", ["article", "blog", "page"]);
+
+  if (keywords.length) {
+    const ors = [
+      ...keywords.map((k) => `title.ilike.%${k}%`),
+      ...keywords.map((k) => `page_url.ilike.%${k}%`),
+    ].join(",");
+    q = q.or(ors);
+  }
+  q = q.order("last_seen", { ascending: false }).limit(topK);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+async function findLanding(client, { keywords = [] } = {}) {
+  // canonical landing pages
+  let q = client
+    .from("page_entities")
+    .select(SELECT_COLS)
+    .in("kind", ["article", "page"])
+    .eq("raw->>canonical", "true")
+    .eq("raw->>role", "landing");
+
+  if (keywords.length) {
+    const ors = [
+      ...keywords.map((k) => `title.ilike.%${k}%`),
+      ...keywords.map((k) => `page_url.ilike.%${k}%`),
+    ].join(",");
+    q = q.or(ors);
+  }
+  q = q.order("last_seen", { ascending: false }).limit(3);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+/* ================= Answer composition ================= */
+function buildAdviceMarkdown(articles) {
+  const lines = [];
+  lines.push("**Guides**");
+  for (const a of (articles || []).slice(0, 5)) {
+    const t = a.title || a.raw?.name || "Read more";
+    const u = pickUrl(a);
+    lines.push(`- ${t} — ${u ? `[Link](${u})` : ""}`.trim());
+  }
   return lines.join("\n");
 }
 
-/* ----------------------------- Event list UI ----------------------------- */
-function formatEventsForUi(events) {
-  return (events || []).map((e) => ({
-    ...e,
-    when: fmtDateLondon(e.date_start),
-    href: pickUrl(e),
-  }));
+// Simple product panel (events mode); UI renders richer card client-side from structured.products
+function buildProductPanelMarkdown(prod) {
+  const title = prod?.title || prod?.raw?.name || "Workshop";
+  const price =
+    prod?.price ??
+    prod?.raw?.offers?.price ??
+    prod?.raw?.offers?.lowPrice ??
+    null;
+  const priceCcy = prod?.raw?.offers?.priceCurrency || "GBP";
+  const priceStr =
+    price != null
+      ? new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: priceCcy,
+          maximumFractionDigits: 0,
+        }).format(Number(price))
+      : null;
+  const desc =
+    prod?.raw?.metaDescription ||
+    prod?.raw?.meta?.description ||
+    prod?.description ||
+    "";
+  const url = pickUrl(prod);
+  const head = `**${title}**${priceStr ? ` — ${priceStr}` : ""}`;
+  const body = desc ? `\n\n${desc}` : "";
+  return head + body + (url ? `\n\n[Open](${url})` : "");
 }
 
-/* ----------------------------- Pills builders ---------------------------- */
-function buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl }) {
+function buildAdvicePills(articles, originalQuery) {
   const pills = [];
-  const used = new Set();
-  const add = (label, url, brand = true) => {
-    if (!label || !url) return;
-    if (used.has(url)) return;
-    used.add(url);
-    pills.push({ label, url, brand });
-  };
+  const top = articles?.[0] ? pickUrl(articles[0]) : null;
+  if (top) pills.push({ label: "Read Guide", url: top, brand: "primary" });
 
-  add("Book Now", productUrl || firstEventUrl, true);
-  add("Event Listing", landingUrl, false);
-  add("Photos", photosUrl, false);
+  // “More Articles” pill hits the site search (generic)
+  pills.push({
+    label: "More Articles",
+    url: `https://www.alanranger.com/search?query=${encodeURIComponent(
+      String(originalQuery || "")
+    )}`,
+    brand: "secondary",
+  });
+  return pills;
+}
+
+function buildEventPills(product, landing) {
+  const pills = [];
+  const bookUrl = pickUrl(product);
+  if (bookUrl) pills.push({ label: "Book Now", url: bookUrl, brand: "primary" });
+
+  const landingUrl = pickUrl(landing?.[0]);
+  if (landingUrl) pills.push({ label: "Event Listing", url: landingUrl, brand: "secondary" });
+
+  // Generic photos gallery (if landing has photos in raw.image etc) – fallback to homepage gallery
+  pills.push({
+    label: "Photos",
+    url: "https://www.alanranger.com/photography-portfolio",
+    brand: "secondary",
+  });
 
   return pills;
 }
 
-function buildAdvicePills({ articleUrl }) {
-  const pills = [];
-  const used = new Set();
-  const add = (label, url, brand = true) => {
-    if (!label || !url) return;
-    if (used.has(url)) return;
-    used.add(url);
-    pills.push({ label, url, brand });
-  };
-
-  if (articleUrl) add("Read Guide", articleUrl, true);
-  return pills;
-}
-
-/* --------------------------------- API ----------------------------------- */
+/* ================= Handler ================= */
 export default async function handler(req, res) {
-  const started = Date.now();
   if (req.method !== "POST") {
-    res.status(405).json({ ok: false, error: "Method not allowed" });
-    return;
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ ok: false, error: "Method Not Allowed" });
   }
-  const { query, topK = 8 } = req.body || {};
-  const client = supabaseAdmin();
 
-  const intent = detectIntent(query || "");
-  const keywords = extractKeywords(query || "");
-
+  const started = Date.now();
   try {
+    const { query, topK = 8 } = req.body || {};
+    const q = String(query || "").trim();
+    const client = supabaseAdmin();
+
+    const intent = detectIntent(q);
+    const keywords = extractKeywords(q);
+    const topic = topicFromKeywords(keywords);
+
+    let events = [];
+    let products = [];
+    let articles = [];
+    let landing = [];
+
     if (intent === "events") {
-      const [events, products, landing] = await Promise.all([
-        findEvents(client, { keywords, limit: 120 }),
-        findProducts(client, { keywords, limit: 6 }),
+      // Core queries
+      [events, products, landing] = await Promise.all([
+        findEvents(client, { keywords, topK: Math.max(8, topK) }),
+        findProducts(client, { keywords, topK: 2 }),
         findLanding(client, { keywords }),
       ]);
 
-      const product = (products && products[0]) || null;
-      const productPanel = product ? buildProductPanelMarkdown(product) : "";
-
-      const eventList = formatEventsForUi(events || []);
-      const productUrl = pickUrl(product);
-      const firstEventUrl = pickUrl(eventList?.[0]);
-      const landingUrl = pickUrl(landing);
-      const photosUrl =
-        (pickUrl(landing) &&
-          (pickUrl(landing).replace(/\\/$/, "") + "/gallery-image-portfolios")) ||
-        "https://www.alanranger.com/gallery-image-portfolios";
-
-      const pills = buildEventPills({
-        productUrl,
-        firstEventUrl,
-        landingUrl,
-        photosUrl,
-      });
-
-      const citations = uniq([
-        pickUrl(product),
-        pickUrl(landing),
-        ...(events || []).map(pickUrl),
-      ]).filter(Boolean);
-
-      const articles = await findArticles(client, { keywords, limit: 12 });
-
-      res.status(200).json({
-        ok: true,
-        answer_markdown: productPanel,
-        citations,
-        structured: {
-          intent: "events",
-          topic: keywords.join(", "),
-          events: eventList,
-          products: product ? [product] : [],
-          pills,
-          articles: articles || [],
-        },
-        confidence: 0.8,
-        confidence_pct: 80,
-        meta: {
-          duration_ms: Date.now() - started,
-          endpoint: "/api/chat",
-          topK: topK || null,
-          intent: "events",
-        },
-      });
-      return;
-    }
-
-    // --------- ADVICE -----------
-    const articles = await findArticles(client, { keywords, limit: 12 });
-
-    const articleScores = (articles || []).map((a) => ({
-      a,
-      s: scoreEntity(a, keywords),
-    }));
-    articleScores.sort(
-      (x, y) =>
-        y.s - x.s ||
-        new Date(y.a.last_seen).getTime() - new Date(x.a.last_seen).getTime()
-    );
-
-    const anyPositive = articleScores.some((x) => x.s > 0);
-    const ranked = (anyPositive
-      ? articleScores.filter((x) => x.s > 0)
-      : articleScores
-    ).map((x) => x.a);
-
-    const topArticle = ranked[0] || null;
-    const articleUrl = pickUrl(topArticle) || null;
-
-    const conf = confidenceFrom(articleScores.map((x) => x.s));
-
-    const pills = buildAdvicePills({ articleUrl });
-
-    const citations = uniq([articleUrl]).filter(Boolean);
-
-    const lines = [];
-    if (ranked?.length) {
-      lines.push("Here are Alan’s guides that match your question:\n");
-      // LIMIT TO 5 ARTICLES IN THE VISIBLE ANSWER
-      for (const a of ranked.slice(0, 5)) {
-        const t = a.title || a.raw?.name || "Read more";
-        const u = pickUrl(a);
-        lines.push(`- ${t} — ${u ? `[Link](${u})` : ""}`.trim());
+      // ALSO fetch articles for tips (generic; guarded)
+      try {
+        articles = await findArticles(client, { keywords, topK: 12 });
+      } catch {
+        articles = [];
       }
     } else {
-      lines.push(
-        "I couldn’t find a specific guide for that yet. If you need an exact recommendation, please use the Contact form or WhatsApp buttons above to reach Alan directly."
-      );
+      // Advice path
+      [articles, products] = await Promise.all([
+        findArticles(client, { keywords, topK: Math.max(12, topK) }),
+        findProducts(client, { keywords, topK: 2 }),
+      ]);
     }
 
-    res.status(200).json({
+    // Generic ranking by overlap score (deterministic)
+    const qTokens = extractKeywords(q);
+    const scoreWrap = (arr) =>
+      (arr || [])
+        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
+        .sort((a, b) => {
+          if (b.s !== a.s) return b.s - a.s;
+          // tie-breaker by freshness if present
+          const by = Date.parse(b.e?.last_seen || "") || 0;
+          const ax = Date.parse(a.e?.last_seen || "") || 0;
+          return by - ax;
+        })
+        .map((x) => Object.assign({ _score: Math.round(x.s * 100) / 100 }, x.e));
+
+    const rankedArticles = scoreWrap(articles).slice(0, 12);
+    const rankedEvents = scoreWrap(events);
+    const rankedProducts = scoreWrap(products);
+
+    const scoresForConfidence = [
+      ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
+      ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
+      ...(rankedProducts[0]?._score ? [rankedProducts[0]._score] : []),
+    ].map((x) => x / 100);
+
+    const confidence_pct = confidenceFrom(scoresForConfidence);
+
+    // Compose answer_markdown
+    let answer_markdown = "";
+    if (intent === "advice") {
+      answer_markdown = buildAdviceMarkdown(rankedArticles);
+    } else {
+      // events: show a simple product panel if available; UI renders structured lists
+      if (rankedProducts?.length) {
+        answer_markdown = buildProductPanelMarkdown(rankedProducts[0]);
+      } else if (rankedArticles?.length) {
+        // fallback: give the user something to read
+        answer_markdown = buildAdviceMarkdown(rankedArticles);
+      } else {
+        answer_markdown = "Upcoming workshops and related info below.";
+      }
+    }
+
+    // Citations: keep light; de-dupe
+    const citations = uniq([
+      ...rankedArticles.slice(0, 3).map(pickUrl),
+      ...rankedProducts.slice(0, 1).map(pickUrl),
+      ...rankedEvents.slice(0, 1).map(pickUrl),
+    ]);
+
+    const structured = {
+      intent,
+      topic,
+      events: rankedEvents.map((e) => ({
+        id: e.id,
+        title: e.title,
+        page_url: e.page_url,
+        source_url: e.source_url,
+        date_start: e.date_start,
+        date_end: e.date_end,
+        location: e.location,
+        raw: e.raw,
+        when: e.date_start ? new Date(e.date_start).toUTCString() : null,
+        href: pickUrl(e),
+        _score: e._score,
+      })),
+      products: rankedProducts.map((p) => ({
+        id: p.id,
+        title: p.title,
+        page_url: p.page_url,
+        source_url: p.source_url,
+        description: p.description,
+        price: p.price,
+        location: p.location,
+        raw: p.raw,
+        _score: p._score,
+      })),
+      articles: rankedArticles.map((a) => ({
+        id: a.id,
+        title: a.title,
+        page_url: a.page_url,
+        source_url: a.source_url,
+        raw: a.raw,
+        last_seen: a.last_seen,
+      })),
+      pills:
+        intent === "events"
+          ? buildEventPills(rankedProducts[0], landing)
+          : buildAdvicePills(rankedArticles, q),
+    };
+
+    const payload = {
       ok: true,
-      answer_markdown: lines.join("\n"),
+      answer_markdown,
       citations,
-      structured: {
-        intent: "advice",
-        topic: keywords.join(", "),
-        events: [],
-        products: [],
-        articles: ranked || [],
-        pills,
-      },
-      confidence: conf,
-      confidence_pct: Math.round(conf * 100),
+      structured,
+      confidence: confidence_pct / 100,
+      confidence_pct,
       meta: {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
-        topK: topK || null,
-        intent: "advice",
-      },
-    });
-  } catch (e) {
-    res.status(200).json({
-      ok: true,
-      answer_markdown:
-        "Something went wrong fetching the content just now. Please try again, or reach Alan via the Contact or WhatsApp buttons above.",
-      citations: [],
-      structured: {
+        topK,
         intent,
-        topic: keywords.join(", "),
-        events: [],
-        products: [],
-        articles: [],
-        pills: [],
       },
-      confidence: 0.5,
-      confidence_pct: 50,
-      meta: {
-        duration_ms: Date.now() - started,
-        endpoint: "/api/chat",
-        topK: topK || null,
-        intent,
-        error: String(e),
-      },
-    });
+    };
+
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return res.status(200).send(payload);
+  } catch (err) {
+    // Always return JSON to avoid client parse errors
+    const msg =
+      (err && (err.message || err.toString())) || "Unknown server error";
+    const body = { ok: false, error: msg };
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return res.status(200).send(body);
   }
 }
