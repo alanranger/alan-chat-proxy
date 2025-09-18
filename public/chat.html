@@ -72,7 +72,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
 .composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
-.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
+.send{background:var(--brand);color:var(--user-text);font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
 
 /* Debug panel */
 details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
@@ -96,7 +96,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v0.9.25</span></div>
+  <div class="badge-wrap"><span class="version">v0.9.26</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -495,8 +495,8 @@ function renderEventsBlock(structured){
 }
 
 /* ===== Articles (Guides) ranking — add event context and stronger bias ===== */
-function tokenize(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
-function jaccard(a,b){ const A=new Set(a), B=new Set(b); let inter=0; for(const x of A) if(B.has(x)) inter++; const union=A.size+B.size-inter; return union? inter/union : 0; }
+function tokenize2(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
+function jaccard2(a,b){ const A=new Set(a), B=new Set(b); let inter=0; for(const x of A) if(B.has(x)) inter++; const union=A.size+B.size-inter; return union? inter/union : 0; }
 function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
 function articleTitle(a){ return a?.title || a?.raw?.name || ''; }
 
@@ -504,13 +504,12 @@ function scoreArticle(a, query, topic, contextTokens){
   const title = articleTitle(a);
   const url = articleUrl(a);
   if(!title || !url) return 0;
-  const qTokens = tokenize([query, topic].join(' ')).concat(contextTokens||[]);
-  const hayTokens = tokenize(title + ' ' + url);
+  const qTokens = tokenize2([query, topic].join(' ')).concat(contextTokens||[]);
+  const hayTokens = tokenize2(title + ' ' + url);
   if (!qTokens.length || !hayTokens.length) return 0;
-  let score = jaccard(qTokens, hayTokens);
+  let score = jaccard2(qTokens, hayTokens);
   if (qTokens.some(t => t.length >= 3 && title.toLowerCase().includes(t))) score += 0.25;
 
-  // Bias for workshop/course wording on event intent
   const q = (__lastQuery||'').toLowerCase();
   const isWorkshopQ = /\b(workshop|workshops)\b/.test(q);
   const isCourseQ   = /\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(q);
@@ -524,15 +523,13 @@ function scoreArticle(a, query, topic, contextTokens){
 function pickArticles(structured, query, topic){
   const all = Array.isArray(structured?.articles) ? structured.articles : [];
 
-  // Add context from top event (title + location tokens)
   const ev = (structured?.events||[])[0] || {};
-  const ctxTokens = tokenize([(ev.title||''), (ev.location||'')].join(' '));
+  const ctxTokens = tokenize2([(ev.title||''), (ev.location||'')].join(' '));
 
   let scored = all
     .map(a => ({a, s: scoreArticle(a, query, topic, ctxTokens)}))
     .filter(x => x.s > 0);
 
-  // If user clearly asked events, lightly filter to keep event-ish guides first
   const isEventIntent = structured?.event_subtype || /\b(workshop|workshops|course|courses|class|classes|tuition|lesson|lessons)\b/i.test(__lastQuery||'');
   if (isEventIntent) {
     const eventish = scored.filter(x => /workshop|course|tuition|lesson|class/i.test((articleTitle(x.a)+' '+articleUrl(x.a))));
@@ -572,7 +569,7 @@ function buildActionPillsFromStructured(structured, query){
   const add = (label, href) => {
     if(!label || !href) return;
     const u = String(href);
-    if (/\/blog\?tag=|\/search\?query=/.test(u)) return; // ban wildcards
+    if (/\/blog\?tag=|\/search\?query=/.test(u)) return;
     const key = `${label}::${u}`;
     if(used.has(key)) return;
     used.add(key);
@@ -598,23 +595,6 @@ function heuristicConfidence(structured){
   if (structured?.events?.length)   score += 40;
   if (structured?.articles?.length) score += 20;
   return Math.min(95, Math.max(20, score || 25));
-}
-
-/* ===== Debug note builder: show top scores as percentages ===== */
-function buildDebugNote(payload){
-  const s = payload?.structured || {};
-  const take = (arr, n=3) => (Array.isArray(arr)?arr:[]).slice(0,n);
-  const mapTop = (items) => take(items).map(x => ({
-    title: x.title || (x.raw && x.raw.name) || '(untitled)',
-    score_pct: (typeof x._score === 'number') ? `${x._score}%` : null,
-    url: x.page_url || x.source_url || x.url || null
-  }));
-  return {
-    confidence_pct: (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null,
-    top_products:  mapTop(s.products),
-    top_events:    mapTop(s.events),
-    top_articles:  mapTop(s.articles)
-  };
 }
 
 /* Full render */
@@ -663,7 +643,9 @@ function renderAnswer(payload){
   }
 
   setDebugJSON(dbgStruct, payload.structured||{});
-  setDebugJSON(dbgNote, buildDebugNote(payload));
+  // Prefer server-provided debug (includes % scores); fall back to client note
+  const note = payload.debug ? payload.debug : { confidence_pct: __lastConfidencePct };
+  setDebugJSON(dbgNote, note);
 }
 
 /* ================= Networking ================= */
@@ -704,6 +686,7 @@ async function sendQuery(query){
       footer.innerHTML = `${confidencePill(__lastConfidencePct)} <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
       thread.appendChild(footer);
       addBubble(`<div class="answer"><p>Server error: ${escapeHTML(String(data.error||'Unknown'))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
+      setDebugJSON(dbgNote, { confidence_pct: __lastConfidencePct });
     } else {
       const footer = document.createElement('div');
       const heuristic = heuristicConfidence({});
@@ -716,6 +699,7 @@ async function sendQuery(query){
       const {html}=mdToHtml(fallback);
       const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
       addBubble(html.replace('</div>', `${extra}</div>`));
+      setDebugJSON(dbgNote, { confidence_pct: __lastConfidencePct });
     }
   } catch (err){
     closeTyping();
@@ -726,6 +710,7 @@ async function sendQuery(query){
     footer.innerHTML = `${confidencePill(__lastConfidencePct)} <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
     thread.appendChild(footer);
     addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
+    setDebugJSON(dbgNote, { confidence_pct: __lastConfidencePct });
   }
 }
 
