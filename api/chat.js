@@ -39,8 +39,17 @@ function detectIntent(q) {
   const eventish =
     /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking)\b/;
   const classish =
-    /\b(workshop|course|class|tuition|lesson|photowalk|walk|masterclass)\b/;
+    /\b(workshop|course|class|tuition|lesson|lessons|photowalk|walk|masterclass)\b/;
   return eventish.test(s) && classish.test(s) ? "events" : "advice";
+}
+
+// Subtype to distinguish workshop vs course style events
+function detectEventSubtype(q) {
+  const s = String(q || "").toLowerCase();
+  if (/\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(s))
+    return "course";
+  if (/\b(workshop|workshops)\b/.test(s)) return "workshop";
+  return null;
 }
 
 const STOPWORDS = new Set([
@@ -208,6 +217,49 @@ async function findLanding(client, { keywords = [] } = {}) {
   return data || [];
 }
 
+/* ================= Matching helpers ================= */
+function isWorkshopEvent(e) {
+  const u = (pickUrl(e) || "").toLowerCase();
+  const t = (e?.title || e?.raw?.name || "").toLowerCase();
+  const hasWorkshop = /workshop/.test(u) || /workshop/.test(t) || /photo-workshops-uk|photographic-workshops/.test(u);
+  const looksCourse = /(lesson|lessons|tuition|course|courses)/.test(u + " " + t);
+  return hasWorkshop && !looksCourse;
+}
+function isCourseEvent(e) {
+  const u = (pickUrl(e) || "").toLowerCase();
+  const t = (e?.title || e?.raw?.name || "").toLowerCase();
+  const hasCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
+  const looksWorkshop = /workshop/.test(u + " " + t);
+  return hasCourse && !looksWorkshop;
+}
+
+function titleTokens(x) {
+  return tokenize((x?.title || x?.raw?.name || "").toLowerCase());
+}
+function urlTokens(x) {
+  const u = (pickUrl(x) || "").toLowerCase();
+  return tokenize(u.replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " "));
+}
+function matchProductToEvent(products, ev) {
+  if (!ev || !products?.length) return null;
+  const eTokens = new Set([...titleTokens(ev), ...urlTokens(ev)]);
+  let best = null;
+  let bestScore = 0;
+  for (const p of products) {
+    const pTokens = new Set([...titleTokens(p), ...urlTokens(p)]);
+    // Jaccard similarity
+    let inter = 0;
+    for (const tk of eTokens) if (pTokens.has(tk)) inter++;
+    const union = eTokens.size + pTokens.size - inter || 1;
+    const score = inter / union;
+    if (score > bestScore) {
+      best = p;
+      bestScore = score;
+    }
+  }
+  return bestScore >= 0.35 ? best : null;
+}
+
 /* ================= Answer composition ================= */
 function buildAdviceMarkdown(articles) {
   const lines = [];
@@ -264,15 +316,15 @@ function buildAdvicePills(articles, originalQuery) {
   return pills;
 }
 
-function buildEventPills(product, landing) {
+function buildEventPills(firstEvent, productOrNull) {
   const pills = [];
-  const bookUrl = pickUrl(product);
+  const eventUrl = pickUrl(firstEvent);
+  const bookUrl = productOrNull ? pickUrl(productOrNull) : eventUrl;
+
   if (bookUrl) pills.push({ label: "Book Now", url: bookUrl, brand: "primary" });
+  if (eventUrl) pills.push({ label: "View event", url: eventUrl, brand: "secondary" });
 
-  const landingUrl = pickUrl(landing?.[0]);
-  if (landingUrl) pills.push({ label: "Event Listing", url: landingUrl, brand: "secondary" });
-
-  // Generic photos gallery (if landing has photos in raw.image etc) – fallback to homepage gallery
+  // Keep Photos as a handy secondary
   pills.push({
     label: "Photos",
     url: "https://www.alanranger.com/photography-portfolio",
@@ -296,6 +348,7 @@ export default async function handler(req, res) {
     const client = supabaseAdmin();
 
     const intent = detectIntent(q);
+    const subtype = detectEventSubtype(q); // "workshop" | "course" | null
     const keywords = extractKeywords(q);
     const topic = topicFromKeywords(keywords);
 
@@ -308,9 +361,16 @@ export default async function handler(req, res) {
       // Core queries
       [events, products, landing] = await Promise.all([
         findEvents(client, { keywords, topK: Math.max(8, topK) }),
-        findProducts(client, { keywords, topK: 2 }),
+        findProducts(client, { keywords, topK: 4 }),
         findLanding(client, { keywords }),
       ]);
+
+      // === Subtype filter (Option A) ===
+      if (subtype === "workshop") {
+        events = events.filter(isWorkshopEvent);
+      } else if (subtype === "course") {
+        events = events.filter(isCourseEvent);
+      }
 
       // ALSO fetch articles for tips (generic; guarded)
       try {
@@ -322,7 +382,7 @@ export default async function handler(req, res) {
       // Advice path
       [articles, products] = await Promise.all([
         findArticles(client, { keywords, topK: Math.max(12, topK) }),
-        findProducts(client, { keywords, topK: 2 }),
+        findProducts(client, { keywords, topK: 4 }),
       ]);
     }
 
@@ -341,8 +401,23 @@ export default async function handler(req, res) {
         .map((x) => Object.assign({ _score: Math.round(x.s * 100) / 100 }, x.e));
 
     const rankedArticles = scoreWrap(articles).slice(0, 12);
-    const rankedEvents = scoreWrap(events);
-    const rankedProducts = scoreWrap(products);
+    let rankedEvents = scoreWrap(events);
+    let rankedProducts = scoreWrap(products);
+
+    // If we have events, try to match a product to the first event and move it to front
+    let matchedProduct = null;
+    const firstEvent = rankedEvents[0] || null;
+    if (firstEvent && rankedProducts.length) {
+      const m = matchProductToEvent(rankedProducts, firstEvent);
+      if (m) {
+        matchedProduct = m;
+        // move matched to index 0
+        rankedProducts = [
+          m,
+          ...rankedProducts.filter((p) => p.id !== m.id),
+        ];
+      }
+    }
 
     const scoresForConfidence = [
       ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
@@ -357,9 +432,10 @@ export default async function handler(req, res) {
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
-      // events: show a simple product panel if available; UI renders structured lists
-      if (rankedProducts?.length) {
-        answer_markdown = buildProductPanelMarkdown(rankedProducts[0]);
+      // events: show a simple product panel if available (prefer the matched one); UI renders structured lists
+      const preferredProduct = matchedProduct || rankedProducts[0];
+      if (preferredProduct) {
+        answer_markdown = buildProductPanelMarkdown(preferredProduct);
       } else if (rankedArticles?.length) {
         // fallback: give the user something to read
         answer_markdown = buildAdviceMarkdown(rankedArticles);
@@ -378,6 +454,7 @@ export default async function handler(req, res) {
     const structured = {
       intent,
       topic,
+      event_subtype: subtype, // surfaced so the UI can adapt the header if needed
       events: rankedEvents.map((e) => ({
         id: e.id,
         title: e.title,
@@ -412,7 +489,7 @@ export default async function handler(req, res) {
       })),
       pills:
         intent === "events"
-          ? buildEventPills(rankedProducts[0], landing)
+          ? buildEventPills(firstEvent, matchedProduct)
           : buildAdvicePills(rankedArticles, q),
     };
 
