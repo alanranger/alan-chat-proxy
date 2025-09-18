@@ -69,7 +69,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
 .tools button:hover{border-color:#3c548b}
 .composer{display:flex;gap:10px;margin-top:8px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
 .composer input::placeholder{color:var(--input-ph)}
 .composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
 .send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
@@ -582,7 +582,7 @@ function renderAnswer(payload){
   // product
   if(prod) addBubble(renderProductCard(prod));
 
-  // events (phrase-aware, with location per row)
+  // events
   const evHTML = renderEventsBlock(s);
   if(evHTML) addBubble(evHTML);
 
@@ -638,13 +638,29 @@ async function sendQuery(query){
     const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
     setDebugJSON(dbgHeaders, headers);
 
-    const data = await res.json();
+    // tolerant parsing: handle non-JSON error bodies
+    let data = null;
+    let rawText = '';
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+    if (ct.includes('application/json')) {
+      data = await res.json();
+    } else {
+      rawText = await res.text();
+      data = { ok: false, error: rawText || `HTTP ${res.status}` };
+    }
     setDebugJSON(dbgRes, data);
     setDebugJSON(dbgProv, { citations: data.citations || [] });
 
     closeTyping();
-    if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
+    if (data && data.ok && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
       renderAnswer(data);
+    } else if (data && !data.ok) {
+      const footer = document.createElement('div');
+      __lastConfidencePct = 25;
+      footer.className = 'footer-status';
+      footer.innerHTML = `${confidencePill(__lastConfidencePct)} <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+      thread.appendChild(footer);
+      addBubble(`<div class="answer"><p>Server error: ${escapeHTML(String(data.error||'Unknown'))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
     } else {
       // footer even on empty
       const footer = document.createElement('div');
@@ -667,7 +683,7 @@ async function sendQuery(query){
     footer.className = 'footer-status';
     footer.innerHTML = `${confidencePill(__lastConfidencePct)} <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
     thread.appendChild(footer);
-    addBubble(`<div class="answer"><p>Something went wrong: ${String(err)}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
+    addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
   }
 }
 
