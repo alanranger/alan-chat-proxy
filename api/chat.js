@@ -53,44 +53,29 @@ function detectEventSubtype(q) {
 }
 
 const STOPWORDS = new Set([
-  "the",
-  "and",
-  "or",
-  "what",
-  "whats",
-  "when",
-  "whens",
-  "next",
-  "cost",
-  "workshop",
-  "workshops",
-  "photography",
-  "photo",
-  "near",
-  "me",
-  "uk",
-  "warks",
-  "warwickshire",
-  "devonshire",
-  "class",
-  "classes",
-  "course",
-  "courses",
-  "where",
-  "location",
-  "dates",
-  "date",
-  "upcoming",
-  "available",
-  "availability",
-  "book",
-  "booking",
+  "the","and","or","what","whats","when","whens","next","cost",
+  "workshop","workshops","photography","photo","near","me","uk",
+  "warks","warwickshire","devonshire","class","classes","course","courses",
+  "where","location","dates","date","upcoming","available","availability",
+  "book","booking"
 ]);
 
-function extractKeywords(q) {
+function tokenize(s) {
+  return (s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
+}
+
+function extractKeywords(q, intent, subtype) {
   const src = String(q || "").toLowerCase();
   const tokens = src.match(/[a-z0-9]+/g) || [];
   const kept = tokens.filter((t) => t.length >= 3 && !STOPWORDS.has(t));
+  // Fallbacks if we wiped out the query
+  if (kept.length === 0) {
+    if (intent === "events") {
+      if (subtype === "course") return ["course"];
+      return ["workshop"];
+    }
+    return ["photography"];
+  }
   return uniq(kept);
 }
 
@@ -99,9 +84,6 @@ function topicFromKeywords(kws) {
 }
 
 /* ================= Scoring ================= */
-function tokenize(s) {
-  return (s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
-}
 function jaccard(a, b) {
   const A = new Set(a),
     B = new Set(b);
@@ -114,7 +96,12 @@ function scoreEntity(ent, qTokens) {
   const hayTitle = (ent?.title || ent?.raw?.name || "").toLowerCase();
   const hayUrl = (pickUrl(ent) || "").toLowerCase();
   const hayLoc = (ent?.location || "").toLowerCase();
-  const tTokens = tokenize(hayTitle + " " + hayUrl + " " + hayLoc);
+  const hayDesc =
+    (ent?.description ||
+      ent?.raw?.metaDescription ||
+      ent?.raw?.meta?.description ||
+      "")?.toLowerCase();
+  const tTokens = tokenize(hayTitle + " " + hayUrl + " " + hayLoc + " " + hayDesc);
   if (!tTokens.length || !qTokens.length) return 0;
   let score = jaccard(new Set(qTokens), new Set(tTokens));
   // small generic title bonus if any query token appears in the title
@@ -139,6 +126,15 @@ function confidenceFrom(scores) {
 const SELECT_COLS =
   "id, kind, title, page_url, source_url, last_seen, location, date_start, date_end, price, description, raw";
 
+function buildOrIlike(keys, keywords) {
+  // keys are column paths compatible with supabase filter (e.g. 'title', 'page_url', 'description', 'raw->>metaDescription')
+  const clauses = [];
+  for (const k of keywords) {
+    for (const col of keys) clauses.push(`${col}.ilike.%${k}%`);
+  }
+  return clauses.join(",");
+}
+
 async function findEvents(client, { keywords = [], topK = 12 } = {}) {
   let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "event");
 
@@ -146,12 +142,10 @@ async function findEvents(client, { keywords = [], topK = 12 } = {}) {
   q = q.gte("date_start", new Date().toISOString());
 
   if (keywords.length) {
-    // simple OR ilike across title/url/location
-    const ors = [
-      ...keywords.map((k) => `title.ilike.%${k}%`),
-      ...keywords.map((k) => `page_url.ilike.%${k}%`),
-      ...keywords.map((k) => `location.ilike.%${k}%`),
-    ].join(",");
+    const ors = buildOrIlike(
+      ["title", "page_url", "location", "description", "raw->>metaDescription", "raw->meta->>description"],
+      keywords
+    );
     q = q.or(ors);
   }
 
@@ -164,10 +158,10 @@ async function findEvents(client, { keywords = [], topK = 12 } = {}) {
 async function findProducts(client, { keywords = [], topK = 6 } = {}) {
   let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "product");
   if (keywords.length) {
-    const ors = [
-      ...keywords.map((k) => `title.ilike.%${k}%`),
-      ...keywords.map((k) => `page_url.ilike.%${k}%`),
-    ].join(",");
+    const ors = buildOrIlike(
+      ["title", "page_url", "description", "raw->>metaDescription", "raw->meta->>description"],
+      keywords
+    );
     q = q.or(ors);
   }
   q = q.order("last_seen", { ascending: false }).limit(topK);
@@ -183,10 +177,10 @@ async function findArticles(client, { keywords = [], topK = 12 } = {}) {
     .in("kind", ["article", "blog", "page"]);
 
   if (keywords.length) {
-    const ors = [
-      ...keywords.map((k) => `title.ilike.%${k}%`),
-      ...keywords.map((k) => `page_url.ilike.%${k}%`),
-    ].join(",");
+    const ors = buildOrIlike(
+      ["title", "page_url", "description", "raw->>metaDescription", "raw->meta->>description"],
+      keywords
+    );
     q = q.or(ors);
   }
   q = q.order("last_seen", { ascending: false }).limit(topK);
@@ -205,10 +199,10 @@ async function findLanding(client, { keywords = [] } = {}) {
     .eq("raw->>role", "landing");
 
   if (keywords.length) {
-    const ors = [
-      ...keywords.map((k) => `title.ilike.%${k}%`),
-      ...keywords.map((k) => `page_url.ilike.%${k}%`),
-    ].join(",");
+    const ors = buildOrIlike(
+      ["title", "page_url", "description", "raw->>metaDescription", "raw->meta->>description"],
+      keywords
+    );
     q = q.or(ors);
   }
   q = q.order("last_seen", { ascending: false }).limit(3);
@@ -218,34 +212,18 @@ async function findLanding(client, { keywords = [] } = {}) {
 }
 
 /* ================= Matching helpers ================= */
-function isWorkshopEvent(e) {
-  const u = (pickUrl(e) || "").toLowerCase();
-  const t = (e?.title || e?.raw?.name || "").toLowerCase();
-  const hasWorkshop =
-    /workshop/.test(u) ||
-    /workshop/.test(t) ||
-    /photo-workshops-uk|photographic-workshops/.test(u);
-  const looksCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(
-    u + " " + t
-  );
-  return hasWorkshop && !looksCourse;
-}
-function isCourseEvent(e) {
-  const u = (pickUrl(e) || "").toLowerCase();
-  const t = (e?.title || e?.raw?.name || "").toLowerCase();
-  const hasCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(
-    u + " " + t
-  );
-  const looksWorkshop = /workshop/.test(u + " " + t);
-  return hasCourse && !looksWorkshop;
-}
+const GENERIC = new Set([
+  "alan","ranger","photography","photo","workshop","workshops","course","courses",
+  "class","classes","tuition","lesson","lessons","uk","england","blog","near","me",
+  "photographic","landscape","seascape","monthly","day","days","1","one","two","2"
+]);
 
 function titleTokens(x) {
-  return tokenize((x?.title || x?.raw?.name || "").toLowerCase());
+  return tokenize((x?.title || x?.raw?.name || "").toLowerCase()).filter(t=>!GENERIC.has(t));
 }
 function urlTokens(x) {
   const u = (pickUrl(x) || "").toLowerCase();
-  return tokenize(u.replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " "));
+  return tokenize(u.replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")).filter(t=>!GENERIC.has(t));
 }
 function sameHost(a, b) {
   try {
@@ -256,6 +234,21 @@ function sameHost(a, b) {
     return false;
   }
 }
+function isWorkshopEvent(e) {
+  const u = (pickUrl(e) || "").toLowerCase();
+  const t = (e?.title || e?.raw?.name || "").toLowerCase();
+  const hasWorkshop = /workshop/.test(u) || /workshop/.test(t) || /photo-workshops-uk|photographic-workshops/.test(u);
+  const looksCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
+  return hasWorkshop && !looksCourse;
+}
+function isCourseEvent(e) {
+  const u = (pickUrl(e) || "").toLowerCase();
+  const t = (e?.title || e?.raw?.name || "").toLowerCase();
+  const hasCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
+  const looksWorkshop = /workshop/.test(u + " " + t);
+  return hasCourse && !looksWorkshop;
+}
+
 function matchProductToEvent(products, ev) {
   if (!ev || !products?.length) return null;
   const eTokens = new Set([...titleTokens(ev), ...urlTokens(ev)]);
@@ -268,10 +261,9 @@ function matchProductToEvent(products, ev) {
     const union = eTokens.size + pTokens.size - inter || 1;
     let score = inter / union;
 
-    // same-domain bonus and “workshop/course” alignment bonus
     if (sameHost(p, ev)) score += 0.15;
-    const tAll =
-      (p.title || "").toLowerCase() + " " + (ev.title || "").toLowerCase();
+    // light alignment bonus if both look like event offerings
+    const tAll = (p.title || "").toLowerCase() + " " + (ev.title || "").toLowerCase();
     if (/(workshop|course|tuition|lesson)/.test(tAll)) score += 0.05;
 
     if (score > bestScore) {
@@ -279,8 +271,10 @@ function matchProductToEvent(products, ev) {
       bestScore = score;
     }
   }
-  // Threshold 0.45 now (per rule)
-  if (bestScore >= 0.45) return best;
+  // Updated threshold per spec: 0.45
+  if (best && bestScore >= 0.45) return best;
+
+  // Soft fallback: any shared non-generic title token
   for (const p of products) {
     const pt = new Set(titleTokens(p));
     for (const tk of titleTokens(ev)) {
@@ -335,7 +329,6 @@ function buildAdvicePills(articles, originalQuery) {
   const top = articles?.[0] ? pickUrl(articles[0]) : null;
   if (top) pills.push({ label: "Read Guide", url: top, brand: "primary" });
 
-  // “More Articles” pill hits the site search (generic)
   pills.push({
     label: "More Articles",
     url: `https://www.alanranger.com/search?query=${encodeURIComponent(
@@ -353,8 +346,6 @@ function buildEventPills(firstEvent, productOrNull) {
 
   if (bookUrl) pills.push({ label: "Book Now", url: bookUrl, brand: "primary" });
   if (eventUrl) pills.push({ label: "View event", url: eventUrl, brand: "secondary" });
-
-  // Keep Photos as a handy secondary
   pills.push({
     label: "Photos",
     url: "https://www.alanranger.com/photography-portfolio",
@@ -379,7 +370,7 @@ export default async function handler(req, res) {
 
     const intent = detectIntent(q);
     const subtype = detectEventSubtype(q); // "workshop" | "course" | null
-    const keywords = extractKeywords(q);
+    const keywords = extractKeywords(q, intent, subtype);
     const topic = topicFromKeywords(keywords);
 
     let events = [];
@@ -388,36 +379,32 @@ export default async function handler(req, res) {
     let landing = [];
 
     if (intent === "events") {
-      // Core queries
       [events, products, landing] = await Promise.all([
         findEvents(client, { keywords, topK: Math.max(8, topK) }),
-        findProducts(client, { keywords, topK: 4 }),
+        findProducts(client, { keywords, topK: 6 }),
         findLanding(client, { keywords }),
       ]);
 
-      // === Subtype filter (Option A) ===
       if (subtype === "workshop") {
         events = events.filter(isWorkshopEvent);
       } else if (subtype === "course") {
         events = events.filter(isCourseEvent);
       }
 
-      // ALSO fetch articles for tips (generic; guarded)
       try {
         articles = await findArticles(client, { keywords, topK: 12 });
       } catch {
         articles = [];
       }
     } else {
-      // Advice path
       [articles, products] = await Promise.all([
         findArticles(client, { keywords, topK: Math.max(12, topK) }),
-        findProducts(client, { keywords, topK: 4 }),
+        findProducts(client, { keywords, topK: 6 }),
       ]);
     }
 
     // Generic ranking by overlap score (deterministic)
-    const qTokens = extractKeywords(q);
+    const qTokens = keywords;
     const scoreWrap = (arr) =>
       (arr || [])
         .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
@@ -427,9 +414,7 @@ export default async function handler(req, res) {
           const ax = Date.parse(a.e?.last_seen || "") || 0;
           return by - ax;
         })
-        .map((x) =>
-          Object.assign({ _score: Math.round(x.s * 1000) / 10 }, x.e)
-        ); // percent with 1 decimal
+        .map((x) => Object.assign({ _score: Math.round(x.s * 100) / 100 }, x.e));
 
     const rankedArticles = scoreWrap(articles).slice(0, 12);
     let rankedEvents = scoreWrap(events);
@@ -447,10 +432,10 @@ export default async function handler(req, res) {
     }
 
     const scoresForConfidence = [
-      ...(rankedArticles[0]?._score ? [rankedArticles[0]._score / 100] : []),
-      ...(rankedEvents[0]?._score ? [rankedEvents[0]._score / 100] : []),
-      ...(rankedProducts[0]?._score ? [rankedProducts[0]._score / 100] : []),
-    ];
+      ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
+      ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
+      ...(rankedProducts[0]?._score ? [rankedProducts[0]._score] : []),
+    ].map((x) => x / 100);
 
     const confidence_pct = confidenceFrom(scoresForConfidence);
 
@@ -459,7 +444,6 @@ export default async function handler(req, res) {
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
-      // events: show a simple product panel if available (prefer the matched one); UI renders structured lists
       const preferredProduct = matchedProduct || rankedProducts[0];
       if (preferredProduct) {
         answer_markdown = buildProductPanelMarkdown(preferredProduct);
@@ -470,7 +454,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // Citations: keep light; de-dupe
+    // Citations: de-dupe
     const citations = uniq([
       ...rankedArticles.slice(0, 3).map(pickUrl),
       ...rankedProducts.slice(0, 1).map(pickUrl),
@@ -492,7 +476,7 @@ export default async function handler(req, res) {
         raw: e.raw,
         when: e.date_start ? new Date(e.date_start).toUTCString() : null,
         href: pickUrl(e),
-        _score: e._score, // percentage with 1 decimal
+        _score: e._score,
       })),
       products: rankedProducts.map((p) => ({
         id: p.id,
@@ -503,7 +487,7 @@ export default async function handler(req, res) {
         price: p.price,
         location: p.location,
         raw: p.raw,
-        _score: p._score, // percentage with 1 decimal
+        _score: p._score,
       })),
       articles: rankedArticles.map((a) => ({
         id: a.id,
@@ -519,6 +503,29 @@ export default async function handler(req, res) {
           : buildAdvicePills(rankedArticles, q),
     };
 
+    // ===== Debug block with percentages for top results =====
+    const toPct = (s) =>
+      typeof s === "number" ? `${Math.round(s * 1000) / 10}%` : null;
+    const debug = {
+      match_threshold_product_to_event: 0.45,
+      keywords_used: keywords,
+      top_products: structured.products.slice(0, 3).map((p) => ({
+        title: p.title,
+        score_pct: toPct(p._score),
+        url: p.page_url || p.source_url,
+      })),
+      top_events: structured.events.slice(0, 3).map((e) => ({
+        title: e.title,
+        score_pct: toPct(e._score),
+        url: e.page_url || e.source_url,
+      })),
+      top_articles: rankedArticles.slice(0, 3).map((a) => ({
+        title: a.title,
+        score_pct: null, // article scores not exposed on client list
+        url: a.page_url || a.source_url,
+      })),
+    };
+
     const payload = {
       ok: true,
       answer_markdown,
@@ -526,6 +533,7 @@ export default async function handler(req, res) {
       structured,
       confidence: confidence_pct / 100,
       confidence_pct,
+      debug,
       meta: {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
