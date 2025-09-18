@@ -26,11 +26,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 
 /* Sticky header */
-.header-sticky{
-  position:sticky; top:10px; z-index:50;
-  background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98));
-  border-radius:12px; padding:0 0 10px 0; margin:-8px -8px 12px -8px;
-}
+.header-sticky{position:sticky; top:10px; z-index:50; background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98)); border-radius:12px; padding:0 0 10px 0; margin:-8px -8px 12px -8px;}
 .header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
 .logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 .title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
@@ -58,7 +54,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .footer-status{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:12px}
 .badge{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 14px;font-weight:800;letter-spacing:.2px;border:1px solid #1c2a46;background:#0f1b31;color:#cfe3ff}
 .badge.small{padding:6px 10px;font-size:12px}
-.badge.ts{opacity:.95}
+.badge.ts{font-size:12px;font-weight:500;opacity:.9;} /* smaller + not bold */
 .badge.conf{background:#13233f;border-color:#263d68}
 .badge.conf.green{background:var(--status-green-bg);border-color:var(--status-green-br);color:var(--status-green-tx)}
 .badge.conf.amber{background:var(--status-amber-bg);border-color:var(--status-amber-br);color:var(--status-amber-tx)}
@@ -100,7 +96,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v0.9.23</span></div>
+  <div class="badge-wrap"><span class="version">v0.9.24</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -173,19 +169,6 @@ const dbgCopy   = document.getElementById('dbg-copy');
 const dbgNote   = document.getElementById('dbg-note');
 
 function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
-
-dbgCopy?.addEventListener('click', ()=>{
-  const all = [
-    'Status: '+dbgStatus.textContent,
-    'Headers:\n'+dbgHeaders.textContent,
-    'Request:\n'+dbgReq.textContent,
-    'Response:\n'+dbgRes.textContent,
-    'Structured:\n'+dbgStruct.textContent,
-    'Provenance:\n'+dbgProv.textContent,
-    'Note:\n'+dbgNote.textContent
-  ].join('\n\n');
-  navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
-});
 
 /* ================= UI helpers ================= */
 function addBubble(html, opts={}) {
@@ -361,15 +344,8 @@ function deriveOptions(prod, facts){
 let __lastConfidencePct = null;
 let __lastQuery = '';
 
-function confidenceClass(pct){
-  if (pct>=70) return 'green';
-  if (pct>=35) return 'amber';
-  return 'red';
-}
-function confidencePill(pct){
-  const cls = confidenceClass(pct);
-  return `<span class="badge conf ${cls}">Confidence: ${pct}%</span>`;
-}
+function confidenceClass(pct){ if (pct>=70) return 'green'; if (pct>=35) return 'amber'; return 'red'; }
+function confidencePill(pct){ const cls = confidenceClass(pct); return `<span class="badge conf ${cls}">Confidence: ${pct}%</span>`; }
 
 function renderProductCard(prod){
   const facts = extractFacts(prod.description||'');
@@ -401,61 +377,49 @@ function renderProductCard(prod){
   `;
 }
 
-/* Keyword extraction for event filtering */
+/* ===== Events (unchanged behaviour) ===== */
 const STOP = new Set(['the','and','or','what','whats','when','whens','next','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire']);
 function extractKeywords(topic, query){
   const src = [topic||'', query||''].join(' ').toLowerCase();
   const words = Array.from(new Set(src.match(/[a-z]+/g)||[]));
   const geos = ['devon','warwickshire','warks','coventry','peak','district','lake','lakes','yorkshire','moor','moors'];
-  const keep = words.filter(w => !STOP.has(w) || geos.includes(w));
-  return keep;
+  return words.filter(w => !STOP.has(w) || geos.includes(w));
 }
-function eventMatches(e, kws){
-  if(!kws.length) return true;
-  const hay = ((e.title||'')+' '+(e.location||'')).toLowerCase();
-  return kws.some(k=>hay.includes(k));
-}
-
+function eventMatches(e, kws){ if(!kws.length) return true; const hay = ((e.title||'')+' '+(e.location||'')).toLowerCase(); return kws.some(k=>hay.includes(k)); }
 function renderEventsBlock(structured, productHasLocation){
   const now=new Date();
-  const all=(structured?.events||[])
-    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
-
+  const all=(structured?.events||[]).filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
   const kws = extractKeywords(structured?.topic||'', __lastQuery);
   const filtered = all.filter(e=>eventMatches(e, kws));
-
   const list = filtered.length ? filtered : all;
   if(!list.length) return '';
-
   const topic = (structured?.topic||'').toString().trim();
   const titleKW = kws.find(k=>k && !STOP.has(k));
   const friendlyTitle = titleKW ? `Upcoming ${titleKW[0].toUpperCase()+titleKW.slice(1)} Workshops` :
     (topic ? `Upcoming ${escapeHTML(topic.replace(/,?\s*(whats?|whens?|next|cost)/gi,'').trim())} Workshops` : 'Upcoming Workshops');
-
-  const lis = list
-    .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
-    .map(e=>{
-      const when=fmtDate(e.date_start);
-      const href=e.page_url||e.source_url||e.url||'#';
-      const loc=e.location||'';
-      const locPart = (!productHasLocation && loc) ? ` — ${escapeHTML(loc)}` : '';
-      return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${locPart}</li>`;
-    }).join('');
-
+  const lis = list.sort((a,b)=>new Date(a.date_start)-new Date(b.date_start)).map(e=>{
+    const when=fmtDate(e.date_start);
+    const href=e.page_url||e.source_url||e.url||'#';
+    const loc=e.location||'';
+    const locPart = (!productHasLocation && loc) ? ` — ${escapeHTML(loc)}` : '';
+    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${locPart}</li>`;
+  }).join('');
   return `<div class="answer"><h3>${friendlyTitle}</h3><ul>${lis}</ul></div>`;
 }
 
-/* ===== Articles (Guides) ranking – no wildcard links ===== */
-function tokenize(s){
-  return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[];
-}
-function jaccard(a,b){
-  const A=new Set(a), B=new Set(b);
-  let inter=0; for(const x of A) if(B.has(x)) inter++;
-  const union=A.size+B.size-inter; return union? inter/union : 0;
-}
+/* ===== Articles (Guides) ranking – tripod intent, no wildcards ===== */
+function tokenize(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
+function jaccard(a,b){ const A=new Set(a), B=new Set(b); let inter=0; for(const x of A) if(B.has(x)) inter++; const union=A.size+B.size-inter; return union? inter/union : 0; }
 function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
 function articleTitle(a){ return a?.title || a?.raw?.name || ''; }
+
+function isTripodIntent(query, topic){
+  const q = [query, topic].join(' ').toLowerCase();
+  return /\btripod(s)?\b|\bball\s*head\b|\bbenro\b|\bmanfrotto\b|\bgitzo\b|\brhino\b|\bbefree\b|\bcyanbird\b/.test(q);
+}
+function titleHasTripodSignals(title){
+  return /\btripod(s)?\b|\bball\s*head\b|\blegs\b|\bbenro\b|\bmanfrotto\b|\bgitzo\b/i.test(title||'');
+}
 
 function scoreArticle(a, query, topic){
   const title = articleTitle(a);
@@ -463,21 +427,36 @@ function scoreArticle(a, query, topic){
   if(!title || !url) return 0;
   const qTokens = tokenize([query, topic].join(' '));
   const tTokens = tokenize(title);
-  // Boost for obvious gear queries
-  const hasTripodHint = /tripod|tripods|ball\s*head|ballhead|legs/i.test(title);
-  const base = jaccard(qTokens, tTokens);
-  return Math.min(1, base + (hasTripodHint? 0.25 : 0));
+  let score = jaccard(qTokens, tTokens);
+  if (titleHasTripodSignals(title)) score += 0.4; // strong boost for tripod keywords
+  return Math.min(1, score);
 }
 
 function pickArticles(structured, query, topic){
   const all = Array.isArray(structured?.articles) ? structured.articles : [];
-  const scored = all
+  const tripodMode = isTripodIntent(query, topic);
+
+  // If tripod intent, HARD FILTER to titles with tripod signals.
+  const pool = tripodMode ? all.filter(a => titleHasTripodSignals(articleTitle(a))) : all;
+
+  const scored = pool
     .map(a => ({a, s: scoreArticle(a, query, topic)}))
-    .filter(x => x.s >= 0.60)                      // >= 60% match
+    .filter(x => x.s >= 0.60)
     .sort((x,y)=> y.s - x.s)
     .slice(0,5)
     .map(x => x.a)
-    .filter(a => !!articleUrl(a));                 // ensure concrete link
+    .filter(a => !!articleUrl(a));
+
+  // If we filtered too hard and got nothing, softly fall back to any matches ≥0.6.
+  if (!scored.length && !tripodMode){
+    return all
+      .map(a => ({a, s: scoreArticle(a, query, topic)}))
+      .filter(x => x.s >= 0.60)
+      .sort((x,y)=> y.s - x.s)
+      .slice(0,5)
+      .map(x => x.a)
+      .filter(a => !!articleUrl(a));
+  }
   return scored;
 }
 
@@ -485,25 +464,22 @@ function renderArticlesBlock(structured, query){
   const topic = structured?.topic || '';
   const list = pickArticles(structured, query, topic);
   if(!list.length) return '';
-
   const lis = list.map(a=>{
     const t = articleTitle(a);
     const u = articleUrl(a);
     return `<li><a href="${u}" target="_blank" rel="noopener">${escapeHTML(t)}</a></li>`;
   }).join('');
-
   return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul></div>`;
 }
 
-/* Build orange action pills – include top two article matches (no wildcards) */
+/* Build orange action pills – include top two matched articles (no wildcards) */
 function buildActionPillsFromStructured(structured, query){
   const safe = [];
   const used = new Set();
   const add = (label, href) => {
     if(!label || !href) return;
     const u = String(href);
-    // ban wildcard/tag queries
-    if (/\/blog\?tag=|\/search\?query=/.test(u)) return;
+    if (/\/blog\?tag=|\/search\?query=/.test(u)) return; // ban wildcards
     const key = `${label}::${u}`;
     if(used.has(key)) return;
     used.add(key);
@@ -515,7 +491,7 @@ function buildActionPillsFromStructured(structured, query){
     add(p.label || p.text || 'Open', p.url || p.href);
   }
 
-  // top two articles as pills
+  // top two guides as pills
   const arts = pickArticles(structured, query, structured?.topic||'').slice(0,2);
   for (const a of arts){
     add(articleTitle(a) || 'Read Guide', articleUrl(a));
@@ -555,11 +531,11 @@ function renderAnswer(payload){
   const evHTML = renderEventsBlock(s, productHasLocation);
   if(evHTML) addBubble(evHTML);
 
-  // articles (no wildcard fallback)
+  // articles (tripod-aware)
   const artHTML = renderArticlesBlock(s, __lastQuery);
   if(artHTML) addBubble(artHTML);
 
-  // pills (include top 2 articles when available)
+  // pills (include top 2 matched guides)
   const pills = buildActionPillsFromStructured(s, __lastQuery);
   if(pills.length){
     const wrap = document.createElement('div');
@@ -572,7 +548,7 @@ function renderAnswer(payload){
     thread.appendChild(wrap);
   }
 
-  // footer status (confidence + one timestamp only)
+  // footer status (one row per assistant reply)
   const footer = document.createElement('div');
   footer.className = 'footer-status';
   footer.innerHTML = `${confidencePill(__lastConfidencePct)} <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
@@ -615,7 +591,7 @@ async function sendQuery(query){
     if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
       renderAnswer(data);
     } else {
-      // Still show footer status
+      // footer even on empty
       const footer = document.createElement('div');
       const heuristic = heuristicConfidence({});
       __lastConfidencePct = heuristic;
@@ -641,9 +617,7 @@ async function sendQuery(query){
 }
 
 /* ================= Transcript helpers ================= */
-function nodeToPlain(div){
-  return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
-}
+function nodeToPlain(div){ return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim(); }
 function buildTranscript(){
   const rows = [];
   rows.push(`Alan Ranger Assistant — transcript`);
@@ -683,9 +657,7 @@ function submit(){
   sendQuery(val);
 }
 sendBtn.addEventListener('click', submit);
-input.addEventListener('keydown', (e)=>{
-  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
-});
+input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }});
 btnEmail.addEventListener('click', emailTranscript);
 btnReset.addEventListener('click', resetChat);
 </script>
