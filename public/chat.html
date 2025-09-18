@@ -1,621 +1,774 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Alan Ranger Assistant</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Alan Ranger Assistant</title>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    /* ===============================
+       Theme
+       =============================== */
+    :root{
+      --bg:#0b1220;
+      --panel:#172036;
+      --panel-2:#121a2d;
+      --panel-3:#0e162b;
+      --ink:#ecf1ff;
+      --ink-2:#c7d3ff;
+      --muted:#a5b2d6;
+      --stroke:#223154;
+      --brand:#ffd166; /* warm yellow */
+      --accent:#4cc9f0; /* cyan */
+      --ok:#2bd97d;
+      --warn:#ffb703;
+      --bad:#ef476f;
+      --radius:16px;
+      --shadow:0 10px 24px rgba(0,0,0,.35);
+      --code:#0b1328;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--ink);
+      font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+      text-rendering:optimizeLegibility;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    a{color:#b7d7ff;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{max-width:1050px;margin:0 auto;padding:18px}
+    .head{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+    .logo{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--panel);font-weight:800;box-shadow:var(--shadow)}
+    .head h1{margin:0;font-size:26px;letter-spacing:.2px}
+    .head p{margin:4px 0 0;color:var(--muted)}
 
-<!--
-  chat.html — Alan Ranger Assistant
-  Version: v0.9.25  (full-drop-in build)
--->
+    /* ===============================
+       Pills (top links)
+       =============================== */
+    .pillbar{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 10px}
+    .pill{
+      display:inline-flex;gap:8px;align-items:center;
+      padding:8px 14px;border-radius:999px;border:1px solid var(--stroke);
+      background:#0f1730;color:#fff;font-weight:700;letter-spacing:.2px
+    }
+    .pill.brand{background:linear-gradient(180deg,var(--brand),#f8c74d);color:#171717;border:none}
+    .pill svg{width:16px;height:16px;opacity:.9}
 
-<style>
-/* ====== THEME ====== */
-:root{
-  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
-  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
-  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
-  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
-  --user-bg:#e6edf7; --user-text:#0b0f16; --good:#00b894; --bad:#ef476f;
-  --border:#15223a; --shadow:0 6px 22px rgba(0,0,0,.35);
-}
-*{box-sizing:border-box} html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
-a{color:var(--link)} a:hover{color:var(--link-hover)}
+    /* ===============================
+       Cards / bubbles
+       =============================== */
+    .bubble{
+      background:var(--panel);
+      border:1px solid var(--stroke);
+      border-radius:var(--radius);
+      padding:16px;
+      box-shadow:var(--shadow);
+    }
+    .card{
+      background:var(--panel-2);
+      border:1px solid var(--stroke);
+      border-radius:14px;
+      padding:14px;
+    }
+    .card + .card{margin-top:10px}
+    .section h3{margin:0 0 8px}
+    .section h4{margin:0 0 6px;font-size:15px;color:var(--ink-2)}
+    .meta{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:14px;margin-top:8px}
+    .badge{
+      display:inline-block;padding:4px 8px;border-radius:8px;
+      background:#0e1a35;color:#b8c4e6;border:1px solid var(--stroke);font-size:12px
+    }
+    .badge.good{background:#092217;color:#bdf3d0;border-color:#1d6b4a}
+    .badge.warn{background:#261b03;color:#ffe2a7;border-color:#6a4b00}
 
-.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.badge-wrap{position:relative;height:0}
-.version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+    .bar{height:1px;background:#243153;margin:16px 0}
+    ul{margin:0 0 0 18px}
+    .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .chip{background:#0f1730;border:1px solid var(--stroke);color:#cbd7ff;padding:4px 8px;border-radius:999px;font-size:12px;white-space:nowrap}
+    .price{font-weight:800;margin:6px 0}
 
-/* ====== CARD ====== */
-.card{background:var(--panel);border-radius:14px;box-shadow:var(--shadow);border-top:6px solid var(--brand);padding:28px}
+    /* ===============================
+       Conversation list
+       =============================== */
+    .thread{display:flex;flex-direction:column;gap:10px}
+    .msg{display:flex;gap:12px}
+    .msg .role{
+      width:28px;height:28px;border-radius:999px;display:grid;place-items:center;
+      background:#0f1730;border:1px solid #223154;color:#d1ddff;font-weight:700;font-size:12px
+    }
+    .msg .text{flex:1}
+    .msg .text .time{font-size:12px;color:var(--muted);margin-top:4px}
 
-/* ====== HEADER ====== */
-.header-sticky{position:sticky;top:10px;z-index:50;background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98));border-radius:12px;padding:0 0 10px 0;margin:-8px -8px 12px -8px}
-.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
-.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
-.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
-.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
-.pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
-.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
-.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
+    /* ===============================
+       Input / actions
+       =============================== */
+    .input{display:flex;gap:10px;align-items:center;margin-top:10px}
+    .input input{
+      flex:1;border-radius:12px;border:1px solid var(--stroke);
+      background:#0f1730;color:#fff;padding:12px 12px 12px 14px;outline:none
+    }
+    .input button{
+      border:0;border-radius:12px;padding:12px 16px;font-weight:700;background:var(--accent);color:#07101a;cursor:pointer
+    }
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .btn{
+      display:inline-flex;gap:8px;align-items:center;
+      padding:8px 10px;border-radius:10px;border:1px solid #29406a;background:#0d152b;color:#cfe1ff;cursor:pointer
+    }
+    .btn svg{width:16px;height:16px}
 
-/* ====== CHAT SURFACE ====== */
-.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
-.thread{display:flex;flex-direction:column;gap:12px}
-.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
-.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
-.answer h1,.answer h2,.answer h3{margin:.2em 0}
-.answer p{margin:.5em 0}
-.answer ul{margin:.4em 0 .6em 1.25em}
-.answer li{margin:.15em 0}
-.answer a{text-decoration:underline}
-.kvline{margin:0}
-.kvline strong{font-weight:600}
-.meta{color:var(--muted);font-size:14px}
-.conf{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;background:#0f244d;color:#cfe3ff;border:1px solid #274a8a;border-radius:999px;padding:4px 10px;margin-top:8px}
-.conf::before{content:"•";display:inline-block}
+    /* ===============================
+       Debug panel
+       =============================== */
+    details.debug{
+      margin-top:16px;background:#0d152b;border:1px dashed #29406a;border-radius:12px;padding:8px 10px
+    }
+    details.debug > summary{cursor:pointer;color:#a9b6d9;font-weight:600}
+    .debuggrid{display:grid;gap:10px;grid-template-columns:1fr 1fr;margin-top:10px}
+    .debuggrid .full{grid-column:1/-1}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:4px 8px;border:1px solid #284272;border-radius:8px;background:#0f1831;color:#cfe1ff;cursor:pointer}
+    .tab.active{background:#172346}
+    pre{
+      white-space:pre-wrap;background:var(--code);
+      border:1px solid #22345a;border-radius:10px;padding:10px;margin:0;max-height:380px;overflow:auto
+    }
+    code.small{font-size:12px;color:#9bb1e6}
 
-/* ====== ACTIONS ====== */
-.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-.actions .pill{background:var(--brand);color:#0b0f16;border:none}
+    /* ===============================
+       Helpers / utilities
+       =============================== */
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .hidden{display:none !important}
+    .mt8{margin-top:8px}
+    .mt12{margin-top:12px}
+    .mt16{margin-top:16px}
+    .mb0{margin-bottom:0}
 
-/* ====== UTILITIES / CONTROLS ====== */
-.tools{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin:8px 0 6px}
-.tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
-.tools button:hover{border-color:#3c548b}
-.hint{font-size:12px;color:#8aa0c9;margin-top:6px}
-
-/* ====== COMPOSER ====== */
-.composer{display:flex;gap:10px;margin-top:8px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #d3deee;border-radius:10px;padding:12px 14px;outline:0}
-.composer input::placeholder{color:var(--input-ph)}
-.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
-.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
-
-/* ====== DEBUG ====== */
-details.debug{margin-top:14px;background:#0f1828;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
-details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
-.kv{display:grid;grid-template-columns:160px 1fr;gap:8px;margin-top:10px}
-.kv label{color:#93A4C1}
-pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid var(--border);border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
-
-/* ====== TYPING ====== */
-.typing{position:relative;display:inline-block}
-.typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
-.typing .dot:nth-child(2){animation-delay:.15s}
-.typing .dot:nth-child(3){animation-delay:.3s}
-@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
-
-/* ====== MEDIA ====== */
-@media (max-width:540px){
-  .title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}
-  .header-sticky{top:6px;margin:-6px -6px 10px -6px}
-}
-</style>
+    /* print-friendly transcript */
+    @media print{
+      .input,.actions,details.debug,.pillbar{display:none}
+      .wrap{max-width:900px}
+    }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="badge-wrap"><span class="version" aria-label="Build version">v0.9.25</span></div>
+  <div class="wrap">
+    <!-- ===========================
+         Header
+         =========================== -->
+    <div class="head">
+      <div class="logo">AR</div>
+      <div>
+        <h1 class="mb0">Alan Ranger Assistant</h1>
+        <p>I’m Alan’s AI assistant, trained on site content. Ask about workshops, dates, pricing, tuition, or related articles. Everything here is generic—no query-specific wiring.</p>
+      </div>
+    </div>
 
-  <div class="card" role="application" aria-label="Alan Ranger Assistant">
-    <!-- Sticky header -->
-    <div class="header-sticky">
-      <div class="header" role="banner">
-        <img class="logo" src="./chat%20white.png" alt="Alan Ranger icon">
-        <h2 class="title">Alan Ranger Assistant</h2>
-        <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
-          photography questions. I won’t always get everything right — if I can’t help, please contact
-          Alan directly:</p>
-        <div class="pills" role="navigation" aria-label="Contact options">
-          <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography" aria-label="Open contact form">Contact form</a>
-          <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994" aria-label="WhatsApp chat">WhatsApp</a>
+    <!-- Pills -->
+    <div class="pillbar" id="pillbar"></div>
+
+    <!-- Answer bubble -->
+    <div class="bubble">
+      <div id="answerHtml" class="answer">Ask me about workshops or prices…</div>
+      <div class="meta">
+        <span class="badge" id="confidenceBadge">Confidence: —</span>
+        <span class="badge warn hidden" id="warnBadge">Low detail in response</span>
+      </div>
+    </div>
+
+    <!-- Information grid (Product, Events, Related) -->
+    <div class="grid mt12" id="infoGrid"></div>
+
+    <!-- Conversation thread -->
+    <div class="bubble mt12">
+      <div class="row"><h3 class="mb0">Conversation</h3><span class="badge" id="turnCount">0 turns</span></div>
+      <div class="thread mt8" id="thread"></div>
+    </div>
+
+    <!-- Input -->
+    <div class="input">
+      <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
+      <button id="send">Send</button>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn" id="btnEmail" title="Email transcript (Ctrl/Cmd+E)">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="1.5"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.5"/></svg>
+        Email transcript
+      </button>
+      <button class="btn" id="btnDownload" title="Download transcript (Ctrl/Cmd+D)">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12" stroke="currentColor" stroke-width="1.5"/><path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="1.5"/><path d="M5 20h14" stroke="currentColor" stroke-width="1.5"/></svg>
+        Download
+      </button>
+      <button class="btn" id="btnReset" title="Reset chat (Ctrl/Cmd+R)">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.708" stroke="currentColor" stroke-width="1.5"/><path d="M3 4v5h5" stroke="currentColor" stroke-width="1.5"/></svg>
+        Reset chat
+      </button>
+      <button class="btn" id="btnFocus" title="Focus input (Ctrl/Cmd+K)">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 12h10" stroke="currentColor" stroke-width="1.5"/></svg>
+        Focus input
+      </button>
+      <button class="btn" id="btnToggleDebug" title="Toggle debug (Ctrl/Cmd+I)">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M12 8v.01M12 12v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Toggle debug
+      </button>
+    </div>
+
+    <div class="bar"></div>
+
+    <!-- Debug -->
+    <details class="debug" id="debugWrap">
+      <summary>Show debug</summary>
+      <div class="tabs mt8" id="dbgTabs"></div>
+      <div class="debuggrid mt8">
+        <div>
+          <strong>Request</strong>
+          <pre id="dbgReq"></pre>
+        </div>
+        <div>
+          <strong>Response</strong>
+          <pre id="dbgRes"></pre>
+        </div>
+        <div class="full">
+          <strong>Structured</strong>
+          <pre id="dbgStruct"></pre>
+        </div>
+        <div>
+          <strong>Citations (unique)</strong>
+          <pre id="dbgCites"></pre>
+        </div>
+        <div>
+          <strong>Notes</strong>
+          <pre id="dbgNotes"></pre>
         </div>
       </div>
-    </div>
-
-    <div class="chat" role="region" aria-live="polite">
-      <div id="thread" class="thread" role="log" aria-label="Chat transcript">
-        <div class="bubble" aria-label="assistant message">Hi! I can help with workshops, tuition, and photography advice.</div>
+      <div class="mt8">
+        <div><strong>Shortcuts</strong></div>
+        <code class="small">Enter = send, Shift+Enter = newline, Ctrl/Cmd+K = focus, Ctrl/Cmd+R = reset, Ctrl/Cmd+E = email, Ctrl/Cmd+D = download, Ctrl/Cmd+I = toggle debug.</code>
       </div>
-
-      <!-- Utility buttons -->
-      <div class="tools" role="toolbar" aria-label="Utilities">
-        <button id="btn-email" title="Email transcript (Ctrl/Cmd+E)">Email transcript</button>
-        <button id="btn-download" title="Download transcript (.txt)">Download</button>
-        <button id="btn-reset" title="Reset chat (Ctrl/Cmd+R)">Reset chat</button>
-        <button id="btn-focus" title="Focus input (Ctrl/Cmd+K)">Focus input</button>
-      </div>
-      <div class="hint">Shortcuts: Enter = send, Shift+Enter = newline, <kbd>Ctrl/Cmd+K</kbd> focus, <kbd>Ctrl/Cmd+R</kbd> reset, <kbd>Ctrl/Cmd+E</kbd> email, <kbd>Ctrl/Cmd+D</kbd> toggle debug.</div>
-
-      <details id="debugPanel" class="debug">
-        <summary>🔎 Show debug</summary>
-        <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
-        <div class="kv"><label>Endpoint</label><div id="dbg-endpoint">/api/chat</div></div>
-        <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
-        <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
-        <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
-        <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
-        <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
-        <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
-        <div class="kv"><label>Note</label><pre id="dbg-note" class="json">–</pre></div>
-      </details>
-
-      <div class="composer" role="search">
-        <input id="q" aria-label="Ask a question" placeholder="Ask a question… (Shift+Enter for newline)" />
-        <button id="send" class="send" aria-label="Send message">Send</button>
-      </div>
-    </div>
+    </details>
   </div>
-</div>
 
-<script>
-/* ==========================================================
-   Alan Ranger Assistant — client script
-   Build v0.9.25
-   ========================================================== */
+  <script>
+    /* ============================================================
+       Helpers (generic, no site-specific wiring)
+       ============================================================ */
 
-const CHAT_ENDPOINT='/api/chat';
-const STORAGE_KEY='ar-assistant-thread-v1';
-const urlParams=new URLSearchParams(location.search);
-if(urlParams.get('debug')==='1') requestAnimationFrame(()=>{document.getElementById('debugPanel').open=true;});
+    /** Selectors */
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-// ===== DOM =====
-const thread=document.getElementById('thread');
-const input=document.getElementById('q');
-const sendBtn=document.getElementById('send');
-const btnEmail=document.getElementById('btn-email');
-const btnDownload=document.getElementById('btn-download');
-const btnReset=document.getElementById('btn-reset');
-const btnFocus=document.getElementById('btn-focus');
+    /** Local storage keys */
+    const LS = {
+      THREAD:'ar.thread.v1',
+      HISTORY:'ar.history.v1'
+    };
 
-const dbgStatus=document.getElementById('dbg-status');
-const dbgReq=document.getElementById('dbg-req');
-const dbgRes=document.getElementById('dbg-res');
-const dbgHeaders=document.getElementById('dbg-headers');
-const dbgStruct=document.getElementById('dbg-struct');
-const dbgProv=document.getElementById('dbg-prov');
-const dbgCopy=document.getElementById('dbg-copy');
-const dbgNote=document.getElementById('dbg-note');
+    /** Format a date into a readable, locale-friendly string */
+    const fmtDate = (iso) => {
+      if(!iso) return '';
+      try{
+        const d = new Date(iso);
+        return d.toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+      }catch{ return iso; }
+    };
 
-// ===== Utils =====
-function j(v){try{return JSON.stringify(v,null,2);}catch{return String(v);}}
-function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function mdToHtml(md){
-  if(!md) return {html:''};
-  let s=md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  const lines=s.split(/\r?\n/);
-  let out='',inList=false;
-  const flush=()=>{if(inList){out+='</ul>';inList=false;}};
-  for(const line of lines){
-    const m=line.match(/^\s*-\s+(.*)$/);
-    if(m){ if(!inList){out+='<ul>';inList=true;} out+=`<li>${m[1].trim()}</li>`; }
-    else { flush(); out += line.trim()?`<p>${line}</p>`:''; }
-  }
-  flush();
-  return {html:`<div class="answer">${out}</div>`};
-}
-function fmtDate(iso){try{return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{return iso;}}
-function currency(n,ccy){
-  if(n==null||n==='')return null;
-  const v=Number(n); if(!isFinite(v)) return null;
-  try{return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(v);}
-  catch{return `£${String(n).replace(/\.00$/,'')}`;}
-}
+    /** Basic markdown-to-HTML (safe subset: headers, strong, lists, paras) */
+    const md = (text='')=>{
+      let out = text
+        .replace(/^###### (.*)$/gm,'<h6>$1</h6>')
+        .replace(/^##### (.*)$/gm,'<h5>$1</h5>')
+        .replace(/^#### (.*)$/gm,'<h4>$1</h4>')
+        .replace(/^### (.*)$/gm,'<h3>$1</h3>')
+        .replace(/^## (.*)$/gm,'<h2>$1</h2>')
+        .replace(/^# (.*)$/gm,'<h1>$1</h1>')
+        .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+      // Lists (simple)
+      out = out.replace(/(?:^|\n)- (.*?)(?=\n(?!- )|$)/gs, m=>`<ul>${m.trim().split('\n').map(x=>x.replace(/^- /,'<li>')+'</li>').join('')}</ul>`);
+      // Paragraphs/line breaks
+      out = out.replace(/\n{2,}/g,'</p><p>').replace(/\n/g,'<br/>');
+      return `<p>${out}</p>`;
+    };
 
-// ===== UI helpers =====
-function addBubble(html,opts={}){const d=document.createElement('div');d.className='bubble'+(opts.user?' user':'');d.innerHTML=html;thread.appendChild(d);persistThread();d.scrollIntoView({behavior:'smooth',block:'end'});return d;}
-function addTyping(){const el=addBubble(`<span class="typing" aria-live="polite"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);return()=>el&&el.remove();}
-function nodeToPlain(div){return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();}
-function buildTranscript(){
-  const rows=[];
-  rows.push(`Alan Ranger Assistant — transcript`);
-  rows.push(new Date().toISOString());
-  rows.push('');
-  for(const el of thread.children){
-    if(el.classList.contains('actions')) continue;
-    const role=el.classList.contains('user')?'User':'Assistant';
-    rows.push(`${role}:\n${nodeToPlain(el)}`); rows.push('');
-  }
-  return rows.join('\n');
-}
-function downloadTranscript(){
-  const body=buildTranscript();
-  const blob=new Blob([body],{type:'text/plain'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download='alan-ranger-assistant-transcript.txt';
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
-}
-function emailTranscript(){
-  const body=buildTranscript();
-  const subject='Alan Ranger Assistant chat transcript';
-  const link=`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,2000))}`;
-  if(body.length>2000){
-    const blob=new Blob([body],{type:'text/plain'});
-    const url=URL.createObjectURL(blob);
-    addBubble(`<div class="answer"><p>Transcript is long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a>, and a shortened email draft was opened.</p>${confBadge()}</div>`);
-  }
-  location.href=link;
-}
+    /** Build an element with attributes/children */
+    function h(tag, attrs={}, children=[]){
+      const el = document.createElement(tag);
+      for (const [k,v] of Object.entries(attrs||{})){
+        if (k === 'class') el.className = v;
+        else if (k==='text') el.textContent = v;
+        else if (k==='html') el.innerHTML = v;
+        else el.setAttribute(k,v);
+      }
+      for (const c of (Array.isArray(children)?children:[children])) if (c) el.appendChild(c);
+      return el;
+    }
 
-// ===== Persistence =====
-function persistThread(){
-  try{
-    const html=thread.innerHTML;
-    sessionStorage.setItem(STORAGE_KEY, html);
-  }catch{}
-}
-function loadPersisted(){
-  try{
-    const html=sessionStorage.getItem(STORAGE_KEY);
-    if(html){ thread.innerHTML=html; }
-  }catch{}
-}
-loadPersisted();
+    /** Array unique by key */
+    const uniqBy = (arr, keyFn) => {
+      const map = new Map();
+      for (const item of arr||[]){
+        const k = keyFn(item);
+        if(!map.has(k)) map.set(k,item);
+      }
+      return [...map.values()];
+    };
 
-// ===== Confidence =====
-let __lastConfidencePct=null;
-function confBadge(){
-  const p=__lastConfidencePct;
-  if(p==null||isNaN(p)) return '';
-  return `<div class="conf" aria-label="confidence">Confidence: ${p}%</div>`;
-}
-function heuristicConfidence(s){
-  let score=0;
-  if(s?.products?.length) score+=40;
-  if(s?.events?.length) score+=40;
-  if(s?.articles?.length) score+=20;
-  return Math.min(95,Math.max(20,score||25));
-}
+    /** Number/currency helpers */
+    const parseMoneyFromText = (text) => {
+      if(!text) return [];
+      const hits = [];
+      const re = /(?:£|GBP\s?)(\d+(?:[.,]\d{2})?)/gi;
+      let m;
+      while((m = re.exec(text))){ hits.push(Number(m[1].replace(/,/g,''))); }
+      return hits;
+    };
+    function extractPriceRange(products=[], answer=''){
+      const prices = [];
+      let currency = '£';
 
-// ===== Product helpers =====
-function firstSentenceOnly(text){
-  const raw=String(text||'').replace(/\s+/g,' ').trim();
-  const cut=raw.split(/summary\b/i)[0].trim();
-  const m=cut.match(/^(.*?\.)\s/);
-  const sent=(m?m[1]:cut).slice(0,220).trim();
-  return sent.endsWith('.')?sent:sent;
-}
-function parseDiscount(desc){
-  const t=String(desc||'');
-  let m=t.match(/\b(?:was|rrp)\s*£?\s*(\d{2,4})\b.*?\b(?:now|today|sale)\s*£?\s*(\d{2,4})/i);
-  if(m) return {was:+m[1],now:+m[2]};
-  m=t.match(/\b£\s?(\d{2,4})\b\s*(?:→|->|to)\s*£\s?(\d{2,4})/i);
-  if(m) return {was:+m[1],now:+m[2]};
-  return null;
-}
-function offersArray(raw){const o=raw?.offers; if(Array.isArray(o)) return o; return o?[o]:[];}
-function extractFacts(desc){
-  const lines=String(desc||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-  const get=(lab)=>{
-    const idx=lines.findIndex(l=>new RegExp(`^${lab}\\s*:?$`,'i').test(l));
-    if(idx>=0 && idx+1<lines.length) return lines[idx+1];
-    const flat=lines.find(l=>new RegExp(`^${lab}\\s*:?\\s+(.+)$`,'i').test(l));
-    return flat?flat.replace(new RegExp(`^${lab}\\s*:?\\s+`,'i'),''):null;
-  };
-  const optionLines=lines.filter(l=>/^(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l));
-  return {location:get('Location'),participants:get('Participants'),fitness:get('Fitness'),availability:get('Availability'),optionLines,lines};
-}
-function parsePriceTokens(text){
-  // find £xxx tokens but ignore 0, postal codes, times, percentages
-  const vals=new Set();
-  String(text||'').replace(/£\s?(\d{2,4})(?:\.\d{2})?/g,(m,grp,off)=>{
-    const n=+grp;
-    if(!isFinite(n)||n===0) return;
-    // guard: if "B95 5BG" or similar nearby (letters digits space letters)
-    const around=text.slice(Math.max(0,off-8),off+8);
-    if(/[A-Z]\d{1,2}\s?\d[A-Z]{2}/i.test(around)) return;
-    vals.add(n);
-  });
-  return Array.from(vals).sort((a,b)=>a-b);
-}
-function parseExtraPriceFromText(desc){
-  const m=String(desc||'').match(/\b(?:1\s*day|full\s*day)\b[^£\d]{0,12}(£?\s?\d{2,4})/i);
-  if(!m) return null;
-  const n=Number(m[1].replace(/[^\d.]/g,''));
-  return isFinite(n)?n:null;
-}
-function deriveOptions(prod,facts){
-  const ccy=prod.price_currency||prod?.raw?.offers?.priceCurrency||'GBP';
-  const base=prod.price??prod?.raw?.offers?.price;
-  const arr=offersArray(prod.raw);
-  const opts=[];
-  if(arr.length>1){
-    arr.forEach((o,i)=>{ // multiple offers
-      const label=o.name||o.description||`Option ${i+1}`;
-      const price=currency(o.price,o.priceCurrency||ccy);
-      if(price||label) opts.push({label,price});
+      for (const p of products||[]){
+        if (typeof p.price === 'number'){
+          prices.push(p.price);
+          currency = p.price_currency === 'GBP' ? '£' : (p.price_currency || currency);
+        }
+        // handle raw.offers (object or array)
+        const offers = p?.raw?.offers;
+        if (offers && typeof offers === 'object'){
+          if (Array.isArray(offers)){
+            for (const ofr of offers){
+              if (typeof ofr?.price === 'number') prices.push(ofr.price);
+              if (ofr?.priceCurrency && ofr.priceCurrency !== 'GBP') currency = ofr.priceCurrency;
+            }
+          } else {
+            if (typeof offers.price === 'number') prices.push(offers.price);
+            if (offers.priceCurrency && offers.priceCurrency !== 'GBP') currency = offers.priceCurrency;
+          }
+        }
+      }
+
+      if (prices.length === 0) prices.push(...parseMoneyFromText(answer));
+      if (prices.length === 0) return null;
+
+      const lo = Math.min(...prices), hi = Math.max(...prices);
+      return {low: lo, high: hi, currency: currency === 'GBP' ? '£' : currency};
+    }
+
+    /** Confidence → percent */
+    const toPct = (conf) => {
+      if (typeof conf==='number') return Math.round(conf*100);
+      if (typeof conf==='string' && conf.endsWith('%')) return Number(conf.replace('%',''));
+      return NaN;
+    };
+
+    /** Truncate long strings for debug panels */
+    const trunc = (s, n=12000) => {
+      if (!s) return '';
+      const str = typeof s==='string' ? s : JSON.stringify(s,null,2);
+      return str.length>n ? str.slice(0,n)+'\n…(truncated)…' : str;
+    };
+
+    /** Simple group-by */
+    function groupBy(arr, key){
+      return (arr||[]).reduce((acc,x)=>{
+        const k = (typeof key==='function' ? key(x) : x[key]) || 'Other';
+        (acc[k] = acc[k] || []).push(x);
+        return acc;
+      },{});
+    }
+
+    /* ============================================================
+       Related articles discovery (generic fallbacks)
+       Prefers payload.structured.related -> citations -> /sitemap.xml
+       ============================================================ */
+    async function findRelated(query, payload){
+      const out = [];
+
+      // 1) server-provided (future-proof)
+      const provided = payload?.structured?.related;
+      if (Array.isArray(provided) && provided.length){
+        for (const r of provided){
+          if (r?.url && r?.title) out.push({title:r.title,url:r.url});
+        }
+      }
+
+      // 2) from citations (score overlaps with query tokens)
+      if (out.length < 6 && Array.isArray(payload?.citations)){
+        const tokens = new Set((query||'').toLowerCase().split(/\W+/).filter(Boolean));
+        const scored = [];
+        for (const url of payload.citations){
+          if (typeof url !== 'string') continue;
+          const isBlog = /blog|article|tips|journal|news/i.test(url);
+          const parts = url.toLowerCase().split(/[-/]/g);
+          const overlap = parts.reduce((n,w)=>n+(tokens.has(w)?1:0),0);
+          const score = (isBlog?2:1)+overlap;
+          scored.push({url,score});
+        }
+        scored.sort((a,b)=>b.score-a.score);
+        for (const s of scored){
+          if (out.length>=6) break;
+          if (!out.some(x=>x.url===s.url)){
+            out.push({title:s.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ').slice(0,80),url:s.url});
+          }
+        }
+      }
+
+      // 3) sitemap (client-side)
+      if (out.length < 3){
+        try{
+          const xml = await fetch('/sitemap.xml',{cache:'no-store'}).then(r=>r.ok?r.text():'').catch(()=> '');
+          if (xml){
+            const urls = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(m=>m[1]).filter(Boolean);
+            const tokens = new Set((query||'').toLowerCase().split(/\W+/).filter(Boolean));
+            const candidates = urls.filter(u=>/blog|article|tips|journal|news|photography/i.test(u));
+            const scored = candidates.map(u=>{
+              const parts = u.toLowerCase().split(/[-/]/g);
+              const overlap = parts.reduce((n,w)=>n+(tokens.has(w)?1:0),0);
+              return {url:u,score:overlap};
+            }).sort((a,b)=>b.score-a.score).slice(0,6);
+            for (const s of scored){
+              if (!out.some(x=>x.url===s.url)){
+                out.push({title:s.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ').slice(0,80),url:s.url});
+              }
+            }
+          }
+        }catch{/* ignore */}
+      }
+
+      return uniqBy(out,x=>x.url).slice(0,6);
+    }
+
+    /* ============================================================
+       Rendering
+       ============================================================ */
+
+    /** Pills */
+    function renderPills(pills){
+      const bar = $('#pillbar'); bar.innerHTML='';
+      let list = Array.isArray(pills) && pills.length ? pills : null;
+      if (!list){
+        // Generic, not query-wired (only shown if API provides nothing)
+        list = [
+          {label:'Event Listing', url:'/photography-workshops', brand:true},
+          {label:'Photos', url:'/gallery-image-portfolios', brand:false}
+        ];
+      }
+      for (const p of list){
+        if (!p?.label || !p?.url) continue;
+        const a = h('a',{href:p.url,target:'_blank',rel:'noreferrer',class:'pill'+(p.brand?' brand':'')}, p.icon ? [h('span',{text:p.label})] : null);
+        a.textContent = p.label;
+        bar.appendChild(a);
+      }
+    }
+
+    /** Product card with price strip and chips */
+    function productCard(p, priceRange){
+      const url = p?.page_url || p?.url || p?.source_url;
+      const title = p?.title || 'Workshop';
+      const desc = (p?.description||'').split('\n').slice(0,8).join(' ');
+      const avail = p?.availability?.split('/').pop() || '';
+
+      const wrap = h('div',{class:'card'});
+      wrap.appendChild(h('div',{class:'section'},[
+        h('h3',{text:title}),
+        url ? h('div',{}, h('a',{class:'link',href:url,target:'_blank',rel:'noreferrer',text:url})) : null,
+        h('p',{text:desc})
+      ]));
+
+      if (priceRange){
+        const same = priceRange.low === priceRange.high;
+        const unit = priceRange.currency || '£';
+        const txt = same ? `Price — ${unit}${priceRange.low}` : `Price — ${unit}${priceRange.low} to ${unit}${priceRange.high}`;
+        wrap.appendChild(h('div',{class:'price',text:txt}));
+      }
+
+      const chips = h('div',{class:'chips'});
+      const lower = (p?.description||'').toLowerCase();
+
+      const rx = (lab)=> (p?.description.match(new RegExp(`${lab}:[^\\n]+`,'i'))||[])[0];
+      const addChip = (t)=> chips.appendChild(h('span',{class:'chip',text:t}));
+
+      const loc = rx('Location') || (p?.location ? `Location: ${p.location}` : null);
+      const fit = rx('Fitness');
+      const par = rx('Participants');
+
+      if (loc) addChip(loc);
+      if (par) addChip(par);
+      if (fit) addChip(fit);
+
+      wrap.appendChild(chips);
+
+      // Availability badge
+      if (avail) wrap.appendChild(h('div',{class:'meta'},[h('span',{class:'badge',text:avail})]));
+
+      return wrap;
+    }
+
+    /** Events card (groups by location if present) */
+    function eventsCard(events){
+      const div = h('div',{class:'card'});
+      div.appendChild(h('div',{class:'section'}, h('h3',{text:'Upcoming Workshops'})));
+      if (!events || !events.length){ div.appendChild(h('p',{text:'No upcoming events found.'})); return div; }
+
+      // group by location (if present)
+      const groups = groupBy(events, e => (e.location || '').trim() || 'Dates');
+      for (const [loc, list] of Object.entries(groups)){
+        if (loc && loc !== 'Dates') div.appendChild(h('h4',{text:loc}));
+        const ul = h('ul');
+        for (const e of list){
+          const when = e.when || fmtDate(e.date_start);
+          const href = e.href || e.page_url || e.source_url;
+          const label = e.title || 'View';
+          const li = h('li',{},[
+            document.createTextNode(`${when} — `),
+            h('a',{class:'link',href:href,target:'_blank',rel:'noreferrer',text:label})
+          ]);
+          ul.appendChild(li);
+        }
+        div.appendChild(ul);
+      }
+      return div;
+    }
+
+    /** Related articles card */
+    function relatedCard(items){
+      const div = h('div',{class:'card'});
+      div.appendChild(h('div',{class:'section'}, h('h3',{text:'Related Articles'})));
+      if (!items || !items.length){
+        div.appendChild(h('p',{text:'No related articles found right now.'}));
+        return div;
+      }
+      const ul = h('ul');
+      for (const it of items){
+        const a = h('a',{href:it.url,target:'_blank',rel:'noreferrer',class:'link',text: it.title || it.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ')});
+        ul.appendChild(h('li',{},a));
+      }
+      div.appendChild(ul);
+      return div;
+    }
+
+    /** Confidence + badges */
+    function renderConfidence(conf){
+      const pct = toPct(conf);
+      const badge = $('#confidenceBadge');
+      const val = isFinite(pct) ? Math.max(35,Math.min(100,pct)) : 35;
+      badge.textContent = `Confidence: ${val}%`;
+      badge.className = 'badge' + (val>=75 ? ' good' : '');
+    }
+
+    /** Render the main answer bubble */
+    function renderAnswer(markdown, payload){
+      $('#answerHtml').innerHTML = md(markdown || '');
+      // Warn if answer is very short compared to structured data
+      const hasEvents = Array.isArray(payload?.structured?.events) && payload.structured.events.length>0;
+      const hasProducts = Array.isArray(payload?.structured?.products) && payload.structured.products.length>0;
+      const warn = (markdown||'').trim().length < 30 && (hasEvents || hasProducts);
+      $('#warnBadge').classList.toggle('hidden', !warn);
+    }
+
+    /* ============================================================
+       Conversation / transcript
+       ============================================================ */
+    const thread = [];
+    function addTurn(role, content){
+      const time = new Date().toLocaleTimeString();
+      thread.push({role, content, time});
+      localStorage.setItem(LS.THREAD, JSON.stringify(thread));
+      renderThread();
+    }
+    function renderThread(){
+      const tgt = $('#thread'); tgt.innerHTML='';
+      for (const t of thread){
+        const item = h('div',{class:'msg'},[
+          h('div',{class:'role',text: t.role==='user' ? 'U' : 'A'}),
+          h('div',{class:'text'},[
+            h('div',{html: t.role==='assistant' ? md(t.content) : `<p>${t.content}</p>`}),
+            h('div',{class:'time',text: t.time})
+          ])
+        ]);
+        tgt.appendChild(item);
+      }
+      $('#turnCount').textContent = `${thread.length} ${thread.length===1?'turn':'turns'}`;
+    }
+    function resetThread(){
+      thread.length = 0;
+      localStorage.removeItem(LS.THREAD);
+      renderThread();
+    }
+
+    /* ============================================================
+       Debug panes: multi-turn tabs
+       ============================================================ */
+    const dbg = {
+      tabs: [],
+      push(req,res){
+        // Keep last 6
+        this.tabs.push({req,res,ts:new Date().toISOString()});
+        this.tabs = this.tabs.slice(-6);
+        renderDebugTabs();
+      }
+    };
+
+    function renderDebugTabs(){
+      const tabs = $('#dbgTabs'); tabs.innerHTML='';
+      dbg.tabs.forEach((t,i)=>{
+        const b = h('button',{class:'tab'+(i===dbg.tabs.length-1?' active':''),text:`Turn ${i+1}`});
+        b.addEventListener('click',()=>{
+          $$('.tab').forEach(x=>x.classList.remove('active'));
+          b.classList.add('active');
+          mountDebug(t.req, t.res);
+        });
+        tabs.appendChild(b);
+      });
+      const last = dbg.tabs[dbg.tabs.length-1];
+      if (last) mountDebug(last.req, last.res);
+    }
+
+    function mountDebug(req,res){
+      $('#dbgReq').textContent = trunc(JSON.stringify(req,null,2));
+      $('#dbgRes').textContent = trunc(JSON.stringify(res,null,2));
+      $('#dbgStruct').textContent = trunc(JSON.stringify(res?.structured || {},null,2));
+      $('#dbgCites').textContent = trunc(JSON.stringify(uniqBy(res?.citations||[], x=>x),null,2));
+      const notes = [];
+      const s = res?.structured||{};
+      if (!s.products?.length) notes.push('No products in structured.');
+      if (!s.events?.length) notes.push('No events in structured.');
+      if (!s.pills?.length) notes.push('No pills in structured.');
+      $('#dbgNotes').textContent = (notes.join('\n')||'—');
+    }
+
+    /* ============================================================
+       Query / fetch
+       ============================================================ */
+    async function ask(query){
+      const topK = 8;
+      const req = {query, topK};
+      addTurn('user', query);
+
+      // UI: request debug
+      $('#dbgReq').textContent = trunc(JSON.stringify(req,null,2));
+
+      const res = await fetch('/api/chat',{
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body: JSON.stringify(req)
+      }).then(r=>r.json()).catch(err=>({ok:false,error:String(err)}));
+
+      dbg.push(req,res);
+
+      // Render main pieces
+      renderAnswer(res.answer_markdown || '', res);
+      renderConfidence(res.confidence ?? res.confidence_pct/100);
+      renderPills(res?.structured?.pills);
+
+      // Info grid
+      const grid = $('#infoGrid'); grid.innerHTML='';
+
+      // Product card with price range
+      const products = Array.isArray(res?.structured?.products) ? res.structured.products : [];
+      if (products.length){
+        const range = extractPriceRange(products, res.answer_markdown || '');
+        grid.appendChild(productCard(products[0], range));
+      }
+
+      // Events
+      const events = Array.isArray(res?.structured?.events) ? res.structured.events : [];
+      if (events.length) grid.appendChild(eventsCard(events));
+
+      // Related (always attempt)
+      const related = await findRelated(query, res);
+      grid.appendChild(relatedCard(related));
+
+      // Append to conversation
+      addTurn('assistant', res.answer_markdown || '—');
+    }
+
+    /* ============================================================
+       UI wiring
+       ============================================================ */
+    const input = $('#q');
+    const send = $('#send');
+    const debugWrap = $('#debugWrap');
+
+    // Send handlers
+    function doSend(){
+      const q = input.value.trim();
+      if (!q) return;
+      ask(q);
+      input.value = '';
+    }
+    send.addEventListener('click', doSend);
+    input.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); doSend(); }
     });
-  }
-  const text=(facts.optionLines||[]).join('\n').toLowerCase();
-  const has4h=/(^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
-  const has1d=/(^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
-  const extra=parseExtraPriceFromText(prod.description||prod.raw?.description||'');
-  if(has4h && has1d && base!=null && extra!=null && extra!==base){
-    const low=Math.min(base,extra), high=Math.max(base,extra);
-    opts.push({label:'4 hours',price:currency(low,ccy)});
-    opts.push({label:'1 day',price:currency(high,ccy)});
-  }else{
-    if(base!=null) opts.push({label:'Standard',price:currency(base,ccy)});
-  }
-  // Add times if present
-  const timePat=/(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
-  for(const ln of facts.optionLines||[]){
-    const label=ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
-    const tm=ln.match(timePat);
-    const window=tm?`${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}`:null;
-    if(label){
-      const existing=opts.find(o=>o.label.toLowerCase()===label.toLowerCase());
-      if(existing){ if(window && !existing.time) existing.time=window; }
-      else opts.push({label,time:window});
-    }
-  }
-  return opts;
-}
-function derivePriceRange(prod){
-  const ccy=prod.price_currency||prod?.raw?.offers?.priceCurrency||'GBP';
-  let low=prod?.raw?.offers?.lowPrice, high=prod?.raw?.offers?.highPrice;
 
-  // From multiple offers[]
-  const arr=offersArray(prod.raw).map(o=>Number(o.price)).filter(n=>isFinite(n)&&n>0);
-  if(arr.length>=2){ low=Math.min(...arr); high=Math.max(...arr); }
+    // Action buttons
+    $('#btnEmail').addEventListener('click', ()=>{
+      const plain = thread.map(t=>`${t.role.toUpperCase()} @ ${t.time}\n${t.content}\n`).join('\n');
+      const subject = encodeURIComponent('Alan Ranger Assistant Transcript');
+      const body = encodeURIComponent(plain);
+      location.href = `mailto:?subject=${subject}&body=${body}`;
+    });
 
-  // From description tokens
-  const tokens=parsePriceTokens(prod.raw?.description||prod.description||'');
-  if(tokens.length>=2){
-    const tLow=Math.min(...tokens), tHigh=Math.max(...tokens);
-    if((low==null||tLow<low) && tLow>0) low=tLow;
-    if((high==null||tHigh>high) && tHigh>0) high=tHigh;
-  }
+    $('#btnDownload').addEventListener('click', ()=>{
+      const plain = thread.map(t=>`${t.role.toUpperCase()} @ ${t.time}\n${t.content}\n`).join('\n');
+      const blob = new Blob([plain],{type:'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href=url; a.download='assistant-transcript.txt';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    });
 
-  // From 4hr vs 1day
-  const base=prod.price??prod?.raw?.offers?.price;
-  const extra=parseExtraPriceFromText(prod.raw?.description||prod.description||'');
-  if(base!=null && extra!=null && base!==extra){
-    const bLow=Math.min(base,extra), bHigh=Math.max(base,extra);
-    if(low==null||bLow<low) low=bLow;
-    if(high==null||bHigh>high) high=bHigh;
-  }
+    $('#btnReset').addEventListener('click', ()=>{
+      resetThread();
+      $('#infoGrid').innerHTML='';
+      $('#answerHtml').innerHTML = 'Ask me about workshops or prices…';
+      renderConfidence(null);
+      renderPills(null);
+      $('#warnBadge').classList.add('hidden');
+    });
 
-  if(low!=null && high!=null && high>low) return {low,high,ccy};
-  return {ccy,base:base??low??high};
-}
-function renderProductCard(prod,payload){
-  const facts=extractFacts(prod.description||prod.raw?.description||'');
-  const opts=deriveOptions(prod,facts);
-  const discount=parseDiscount(prod.raw?.description||prod.description||'');
-  const range=derivePriceRange(prod);
-  const ccy=range.ccy||'GBP';
+    $('#btnFocus').addEventListener('click', ()=> input.focus());
 
-  const meta=firstSentenceOnly(prod.raw?.description||prod.description||payload?.answer_markdown||'');
-  const bits=[];
-  if(meta) bits.push(`<p class="meta">${esc(meta)}</p>`);
-  if(facts.location) bits.push(`<p class="kvline"><strong>Location:</strong> ${esc(facts.location)}</p>`);
-  if(facts.participants) bits.push(`<p class="kvline"><strong>Participants:</strong> ${esc(facts.participants)}</p>`);
-  if(facts.fitness) bits.push(`<p class="kvline"><strong>Fitness:</strong> ${esc(facts.fitness)}</p>`);
-  if(prod.availability||facts.availability){
-    const a=(prod.availability||facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
-    bits.push(`<p class="kvline"><strong>Availability:</strong> ${esc(a)}</p>`);
-  }
+    $('#btnToggleDebug').addEventListener('click', ()=>{
+      debugWrap.open = !debugWrap.open;
+    });
 
-  const lines=[];
-  if(discount){
-    lines.push(`<li><strong>Normal price</strong> — ${currency(discount.was,ccy)}</li>`);
-    lines.push(`<li><strong>Discounted</strong> — ${currency(discount.now,ccy)}</li>`);
-  }else if(range.low!=null && range.high!=null){
-    lines.push(`<li><strong>Price range</strong> — ${currency(range.low,ccy)} – ${currency(range.high,ccy)}</li>`);
-  }else if(range.base!=null){
-    lines.push(`<li><strong>Price</strong> — ${currency(range.base,ccy)}</li>`);
-  }
-  for(const o of opts){
-    const tail=[o.time?` — ${esc(o.time)}`:'',o.price?` — ${o.price}`:''].join('');
-    lines.push(`<li>${esc(o.label||'Option')}${tail}</li>`);
-  }
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e)=>{
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      if (e.key.toLowerCase()==='k'){ e.preventDefault(); input.focus(); }
+      if (e.key.toLowerCase()==='r'){ e.preventDefault(); $('#btnReset').click(); }
+      if (e.key.toLowerCase()==='e'){ e.preventDefault(); $('#btnEmail').click(); }
+      if (e.key.toLowerCase()==='d'){ e.preventDefault(); $('#btnDownload').click(); }
+      if (e.key.toLowerCase()==='i'){ e.preventDefault(); $('#btnToggleDebug').click(); }
+    });
 
-  return `
-    <div class="answer" aria-label="product">
-      <h3>${esc(prod.title||'Workshop')}</h3>
-      ${bits.join('')}
-      ${lines.length?`<ul>${lines.join('')}</ul>`:''}
-      ${confBadge()}
-    </div>`;
-}
+    /* ============================================================
+       Bootstrap (persist thread; demo query once)
+       ============================================================ */
+    (function boot(){
+      // Persisted thread
+      try{
+        const saved = JSON.parse(localStorage.getItem(LS.THREAD)||'[]');
+        for (const t of saved) thread.push(t);
+        renderThread();
+      }catch{/* ignore */}
 
-// ===== Events =====
-const STOP=new Set(['the','and','or','what','whats','when','whens','next','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire']);
-let __lastQuery='';
-function extractKeywords(topic,q){
-  const src=[topic||'',q||''].join(' ').toLowerCase();
-  const words=Array.from(new Set(src.match(/[a-z]+/g)||[]));
-  const geos=['devon','warwickshire','warks','coventry','peak','district','lake','lakes','yorkshire','moor','moors','exmoor','dartmoor'];
-  return words.filter(w=>!STOP.has(w) || geos.includes(w));
-}
-function eventMatches(e,kws){
-  if(!kws.length) return true;
-  const hay=((e.title||'')+' '+(e.location||'')).toLowerCase();
-  return kws.some(k=>hay.includes(k));
-}
-function renderEvents(structured,productHasLocation){
-  const now=new Date();
-  const all=(structured?.events||[]).filter(e=>e?.date_start&&!isNaN(Date.parse(e.date_start))&&new Date(e.date_start)>=now);
-  const kws=extractKeywords(structured?.topic||'',__lastQuery);
-  const list=(all.filter(e=>eventMatches(e,kws))||[]);
-  if(!list.length) return '';
-  const kw=kws.find(k=>k&&!STOP.has(k));
-  const title=kw?`Upcoming ${kw[0].toUpperCase()+kw.slice(1)} Workshops`:'Upcoming Workshops';
-  const lis=list.sort((a,b)=>new Date(a.date_start)-new Date(b.date_start)).map(e=>{
-    const when=fmtDate(e.date_start);
-    const href=e.page_url||e.source_url||e.url||'#';
-    const loc=e.location||'';
-    const locPart=(!productHasLocation&&loc)?` — ${esc(loc)}`:'';
-    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${locPart}</li>`;
-  }).join('');
-  return `<div class="answer" aria-label="events"><h3>${title}</h3><ul>${lis}</ul>${confBadge()}</div>`;
-}
+      // Initial pills (until first response arrives)
+      renderPills(null);
 
-// ===== Articles (from structured.articles OR from citations — generic, no wildcard) =====
-const GUIDE_HINT=/\/(blog|blogs?|guide|guides|article|articles|learn|tips|resources|tuition)\b/i;
-function titleFromUrl(u){
-  try{
-    const p=new URL(u); const seg=p.pathname.split('/').filter(Boolean).pop()||p.hostname;
-    return seg.replace(/[-_]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-  }catch{return u;}
-}
-function deriveArticles(payload){
-  const fromStructured=(payload?.structured?.articles||[]).filter(a=>a?.page_url||a?.source_url||a?.url);
-  if(fromStructured.length) return fromStructured.slice(0,5).map(a=>({title:a.title||a.raw?.name||titleFromUrl(a.page_url||a.source_url||a.url), url:a.page_url||a.source_url||a.url}));
-  const cites=(payload?.citations||[]).filter(u=>GUIDE_HINT.test(String(u)));
-  const uniq=[]; const used=new Set();
-  for(const u of cites){
-    const url=String(u);
-    if(used.has(url)) continue;
-    used.add(url);
-    uniq.push({title:titleFromUrl(url), url});
-    if(uniq.length>=5) break;
-  }
-  return uniq;
-}
-function renderArticlesFromPayload(payload){
-  const arts=deriveArticles(payload);
-  if(!arts.length) return '';
-  const lis=arts.map(a=>`<li><a href="${a.url}" target="_blank" rel="noopener">${esc(a.title)}</a></li>`).join('');
-  return `<div class="answer" aria-label="guides"><h3>Guides that match your question</h3><ul>${lis}</ul>${confBadge()}</div>`;
-}
-
-// ===== Action pills (safe only; include first article if present) =====
-function buildPills(payload){
-  const structured=payload.structured||{};
-  const safe=[]; const used=new Set();
-  const add=(label,href)=>{
-    if(!label||!href) return;
-    const u=String(href);
-    if(/\/search\?query=/.test(u)) return;   // banned wildcard
-    const key=`${label}::${u}`; if(used.has(key)) return;
-    used.add(key); safe.push({label,href});
-  };
-  for(const p of (structured?.pills||[])) add(p.label||p.text,p.url||p.href);
-
-  const art=deriveArticles(payload)[0];
-  if(art) add('Related articles', art.url);
-
-  return safe.slice(0,5);
-}
-
-// ===== Rendering from payload =====
-function renderAnswer(payload){
-  const s=payload.structured||{};
-  let pct=(typeof payload.confidence_pct==='number')?payload.confidence_pct:null;
-  const floor=heuristicConfidence(s); if(pct==null || pct<50) pct=floor;
-  __lastConfidencePct=Math.round(pct);
-
-  const prods=(s.products||[]); const prod=prods[0]||null;
-  if(prod) addBubble(renderProductCard(prod,payload));
-
-  const productFacts=prod?extractFacts(prod.description||prod.raw?.description||''):null;
-  const evHTML=renderEvents(s,!!(productFacts&&productFacts.location));
-  if(evHTML) addBubble(evHTML);
-
-  const artHTML=renderArticlesFromPayload(payload);
-  if(artHTML) addBubble(artHTML);
-
-  const pills=buildPills(payload);
-  if(pills.length){
-    const wrap=document.createElement('div'); wrap.className='actions';
-    pills.forEach(p=>{const a=document.createElement('a'); a.className='pill'; a.textContent=p.label; a.href=p.href; a.target='_blank'; a.rel='noopener'; wrap.appendChild(a);});
-    thread.appendChild(wrap); persistThread();
-  }
-
-  if(!prod && !(s.events||[]).length && !deriveArticles(payload).length){
-    const {html}=mdToHtml(payload.answer_markdown||payload.answer||"I don’t have a specific answer for that yet.");
-    addBubble(html.replace('</div>', `${confBadge()}</div>`));
-  }
-
-  dbgStruct.textContent=j(payload.structured||{});
-  dbgNote.textContent=j({confidence_pct:__lastConfidencePct});
-}
-
-// ===== Networking =====
-async function sendQuery(q){
-  __lastQuery=String(q||'');
-  const req={query:q,topK:8};
-  dbgReq.textContent=j(req);
-  const close=addTyping();
-  try{
-    const res=await fetch(CHAT_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req)});
-    dbgStatus.textContent=res.status;
-    const headers={}; res.headers.forEach((v,k)=>headers[k]=v); dbgHeaders.textContent=j(headers);
-    const data=await res.json(); dbgRes.textContent=j(data); dbgProv.textContent=j({citations:data.citations||[]});
-    close();
-    if(data && (data.answer_markdown||data.answer||(data.structured&&(data.structured.products?.length||data.structured.events?.length||data.structured.articles?.length)) || (data.citations||[]).length)){
-      renderAnswer(data);
-    }else{
-      const {html}=mdToHtml("I don’t have a specific answer for that yet.");
-      addBubble(html.replace('</div>', `${confBadge()}</div>`));
-    }
-  }catch(err){
-    close();
-    dbgStatus.textContent='error';
-    addBubble(`<div class="answer"><p>Something went wrong: ${esc(String(err))}</p>${confBadge()}</div>`);
-  }
-}
-
-// ===== Controls/shortcuts =====
-function resetChat(){
-  thread.innerHTML='';
-  addBubble('Hi! I can help with workshops, tuition, and photography advice.');
-  [dbgStatus,dbgHeaders,dbgReq,dbgRes,dbgStruct,dbgProv,dbgNote].forEach(el=>{if(!el)return;el.textContent=el.id==='dbg-status'?'–':'–';});
-  sessionStorage.removeItem(STORAGE_KEY);
-}
-function submit(){
-  const v=input.value.trim();
-  if(!v) return;
-  addBubble(esc(v),{user:true});
-  input.value='';
-  sendQuery(v);
-}
-sendBtn.addEventListener('click',submit);
-input.addEventListener('keydown',e=>{
-  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
-});
-btnEmail.addEventListener('click',emailTranscript);
-btnDownload.addEventListener('click',downloadTranscript);
-btnReset.addEventListener('click',resetChat);
-btnFocus.addEventListener('click',()=>input.focus());
-
-document.addEventListener('keydown',e=>{
-  const mod=e.metaKey||e.ctrlKey;
-  if(mod && e.key.toLowerCase()==='k'){ e.preventDefault(); input.focus(); }
-  if(mod && e.key.toLowerCase()==='r'){ e.preventDefault(); resetChat(); }
-  if(mod && e.key.toLowerCase()==='e'){ e.preventDefault(); emailTranscript(); }
-  if(mod && e.key.toLowerCase()==='d'){ e.preventDefault(); document.getElementById('debugPanel').open = !document.getElementById('debugPanel').open; }
-});
-
-// ===== Debug copy =====
-dbgCopy?.addEventListener('click',()=>{
-  const all=[
-    'Endpoint: '+document.getElementById('dbg-endpoint').textContent,
-    'Status: '+dbgStatus.textContent,
-    'Headers:\n'+dbgHeaders.textContent,
-    'Request:\n'+dbgReq.textContent,
-    'Response:\n'+dbgRes.textContent,
-    'Structured:\n'+dbgStruct.textContent,
-    'Provenance:\n'+dbgProv.textContent,
-    'Note:\n'+dbgNote.textContent
-  ].join('\n\n');
-  navigator.clipboard.writeText(all).then(()=>{
-    dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500);
-  });
-});
-
-// ===== Initial focus =====
-if(!sessionStorage.getItem(STORAGE_KEY)) setTimeout(()=>input.focus(), 350);
-
-</script>
+      // Kick with a neutral, generic query so the UI isn't empty
+      ask('when are the next workshops and what do they cost?');
+    })();
+  </script>
 </body>
 </html>
