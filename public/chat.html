@@ -7,7 +7,7 @@
   <meta name="color-scheme" content="dark light" />
   <style>
     /* ===============================
-       Theme
+       Theme  — v0.9.26 (logic-only rev)
        =============================== */
     :root{
       --bg:#0b1220;
@@ -46,9 +46,7 @@
     .head h1{margin:0;font-size:26px;letter-spacing:.2px}
     .head p{margin:4px 0 0;color:var(--muted)}
 
-    /* ===============================
-       Pills (top links)
-       =============================== */
+    /* Pills */
     .pillbar{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 10px}
     .pill{
       display:inline-flex;gap:8px;align-items:center;
@@ -58,9 +56,7 @@
     .pill.brand{background:linear-gradient(180deg,var(--brand),#f8c74d);color:#171717;border:none}
     .pill svg{width:16px;height:16px;opacity:.9}
 
-    /* ===============================
-       Cards / bubbles
-       =============================== */
+    /* Cards / bubbles */
     .bubble{
       background:var(--panel);
       border:1px solid var(--stroke);
@@ -92,9 +88,7 @@
     .chip{background:#0f1730;border:1px solid var(--stroke);color:#cbd7ff;padding:4px 8px;border-radius:999px;font-size:12px;white-space:nowrap}
     .price{font-weight:800;margin:6px 0}
 
-    /* ===============================
-       Conversation list
-       =============================== */
+    /* Conversation list */
     .thread{display:flex;flex-direction:column;gap:10px}
     .msg{display:flex;gap:12px}
     .msg .role{
@@ -104,9 +98,7 @@
     .msg .text{flex:1}
     .msg .text .time{font-size:12px;color:var(--muted);margin-top:4px}
 
-    /* ===============================
-       Input / actions
-       =============================== */
+    /* Input / actions */
     .input{display:flex;gap:10px;align-items:center;margin-top:10px}
     .input input{
       flex:1;border-radius:12px;border:1px solid var(--stroke);
@@ -122,9 +114,7 @@
     }
     .btn svg{width:16px;height:16px}
 
-    /* ===============================
-       Debug panel
-       =============================== */
+    /* Debug panel */
     details.debug{
       margin-top:16px;background:#0d152b;border:1px dashed #29406a;border-radius:12px;padding:8px 10px
     }
@@ -140,9 +130,7 @@
     }
     code.small{font-size:12px;color:#9bb1e6}
 
-    /* ===============================
-       Helpers / utilities
-       =============================== */
+    /* Helpers */
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
     .hidden{display:none !important}
     .mt8{margin-top:8px}
@@ -150,7 +138,6 @@
     .mt16{margin-top:16px}
     .mb0{margin-bottom:0}
 
-    /* print-friendly transcript */
     @media print{
       .input,.actions,details.debug,.pillbar{display:none}
       .wrap{max-width:900px}
@@ -159,9 +146,7 @@
 </head>
 <body>
   <div class="wrap">
-    <!-- ===========================
-         Header
-         =========================== -->
+    <!-- Header -->
     <div class="head">
       <div class="logo">AR</div>
       <div>
@@ -179,10 +164,11 @@
       <div class="meta">
         <span class="badge" id="confidenceBadge">Confidence: —</span>
         <span class="badge warn hidden" id="warnBadge">Low detail in response</span>
+        <span class="badge" id="timeBadge" title="Rendered time">—</span>
       </div>
     </div>
 
-    <!-- Information grid (Product, Events, Related) -->
+    <!-- Information grid (Product, Events, Guides) -->
     <div class="grid mt12" id="infoGrid"></div>
 
     <!-- Conversation thread -->
@@ -257,12 +243,11 @@
   </div>
 
   <script>
-    // Alan Ranger Assistant front-end
-    // Version: v0.9.26 (behaviour-only tweak: direct-answer synthesis, price fixes, next-date pick)
-
     /* ============================================================
        Helpers (generic, no site-specific wiring)
        ============================================================ */
+
+    const VERSION = '0.9.26'; // logic-only revision
 
     /** Selectors */
     const $ = (sel) => document.querySelector(sel);
@@ -274,7 +259,7 @@
       HISTORY:'ar.history.v1'
     };
 
-    /** Format a date into a readable, locale-friendly string */
+    /** Date/time helpers */
     const fmtDate = (iso) => {
       if(!iso) return '';
       try{
@@ -282,6 +267,7 @@
         return d.toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
       }catch{ return iso; }
     };
+    const stampNow = ()=> new Date().toLocaleString();
 
     /** Basic markdown-to-HTML (safe subset: headers, strong, lists, paras) */
     const md = (text='')=>{
@@ -329,32 +315,36 @@
       const hits = [];
       const re = /(?:£|GBP\s?)(\d+(?:[.,]\d{2})?)/gi;
       let m;
-      while((m = re.exec(text))){ hits.push(Number(m[1].replace(/,/g,''))); }
+      while((m = re.exec(text))){ hits.push(Number((m[1]||'').replace(/,/g,'').replace(/\.00$/,''))); }
       return hits;
     };
-
     function extractPriceRange(products=[], answer=''){
       const prices = [];
       let currency = '£';
 
       for (const p of products||[]){
-        // 1) Prefer explicit product.price
-        if (typeof p.price === 'number' && p.price > 0.01){
-          prices.push(p.price);
-          currency = p.price_currency === 'GBP' ? '£' : (p.price_currency || currency);
-        }
-        // 2) Consider raw.offers, but ignore zero/empty (Event JSON often has "0.00")
-        const offers = p?.raw?.offers;
-        const addOfferPrice = (ofr)=>{
-          const val = typeof ofr?.price === 'string' ? Number(ofr.price) : ofr?.price;
-          if (typeof val === 'number' && isFinite(val) && val > 0.01) prices.push(val);
-          if (ofr?.priceCurrency && ofr.priceCurrency !== 'GBP') currency = ofr.priceCurrency;
+        const addPrice = (val)=>{
+          const n = typeof val==='string' ? Number(val) : val;
+          if (typeof n==='number' && isFinite(n) && n>0) prices.push(n);
         };
-        if (Array.isArray(offers)){ offers.forEach(addOfferPrice); }
-        else if (offers && typeof offers === 'object'){ addOfferPrice(offers); }
+        if (typeof p.price === 'number' || typeof p.price === 'string') addPrice(p.price);
+        if (p.price_currency && p.price_currency !== 'GBP') currency = p.price_currency;
+
+        // handle raw.offers (object or array)
+        const offers = p?.raw?.offers;
+        if (offers){
+          if (Array.isArray(offers)){
+            for (const ofr of offers){
+              if (ofr?.priceCurrency && ofr.priceCurrency !== 'GBP') currency = ofr.priceCurrency;
+              addPrice(ofr?.price);
+            }
+          } else {
+            if (offers.priceCurrency && offers.priceCurrency !== 'GBP') currency = offers.priceCurrency;
+            addPrice(offers.price);
+          }
+        }
       }
 
-      // 3) Fallback: parse in-text prices
       if (prices.length === 0) prices.push(...parseMoneyFromText(answer));
       if (prices.length === 0) return null;
 
@@ -362,11 +352,17 @@
       return {low: lo, high: hi, currency: currency === 'GBP' ? '£' : currency};
     }
 
-    /** Confidence → percent */
+    /** Confidence → percent (supports 0–1 or 0–100 or missing) */
     const toPct = (conf) => {
-      if (typeof conf==='number') return Math.round(conf*100);
-      if (typeof conf==='string' && conf.endsWith('%')) return Number(conf.replace('%',''));
-      return NaN;
+      let pct = NaN;
+      if (typeof conf==='number'){
+        pct = conf<=1 ? conf*100 : conf;
+      } else if (typeof conf==='string'){
+        pct = conf.endsWith('%') ? Number(conf.replace('%','')) : Number(conf);
+      }
+      if (!isFinite(pct)) return 35;
+      pct = Math.max(0, Math.min(100, Math.round(pct)));
+      return Math.max(35, pct);
     };
 
     /** Truncate long strings for debug panels */
@@ -379,130 +375,113 @@
     /** Simple group-by */
     function groupBy(arr, key){
       return (arr||[]).reduce((acc,x)=>{
-        const k = (typeof key==='function' ? key(x) : x[key]) || 'Other';
+        const k = (typeof key==='function' ? key(x) : x[key]) || 'Dates';
         (acc[k] = acc[k] || []).push(x);
         return acc;
       },{});
     }
 
     /* ============================================================
-       Related articles discovery (generic fallbacks)
-       Prefers payload.structured.related -> citations -> /sitemap.xml
+       Related “Guides” discovery
+       Rules:
+       - show max 5 with match >= 60%
+       - title must be the article/post title when provided, else tidy slug
+       - use top two (>=60%) as extra orange pills (in addition to existing)
        ============================================================ */
+
+    function tidyTitleFromUrl(u=''){
+      try{
+        const path = u.split('?')[0].split('#')[0];
+        const last = path.replace(/\/$/,'').split('/').pop() || u;
+        return decodeURIComponent(last.replace(/[-_]+/g,' ')).replace(/\b\w/g,m=>m.toUpperCase()).slice(0,80);
+      }catch{ return u; }
+    }
+
+    function simpleMatchPercent(query='', text=''){
+      if (!query || !text) return 0;
+      const q = new Set(query.toLowerCase().split(/\W+/).filter(Boolean));
+      const words = text.toLowerCase().split(/\W+/).filter(Boolean);
+      if (!q.size || !words.length) return 0;
+      let hits = 0;
+      for (const w of words){ if (q.has(w)) hits++; }
+      const pct = Math.round((hits/Math.max(6, q.size))*100); // dampen tiny queries
+      return Math.max(0, Math.min(100, pct));
+    }
+
     async function findRelated(query, payload){
       const out = [];
 
-      // 1) server-provided (future-proof)
+      // 1) server-provided related (preferred)
       const provided = payload?.structured?.related;
-      if (Array.isArray(provided) && provided.length){
+      if (Array.isArray(provided)){
         for (const r of provided){
-          if (r?.url && r?.title) out.push({title:r.title,url:r.url});
+          const title = r.title || tidyTitleFromUrl(r.url||'');
+          const match = typeof r.match_pct === 'number' ? r.match_pct :
+                        typeof r.score === 'number' ? Math.round(r.score*100) :
+                        simpleMatchPercent(query, (r.title||'') + ' ' + (r.snippet||''));
+          if (r?.url) out.push({title, url:r.url, match: match});
         }
       }
 
-      // 2) from citations (score overlaps with query tokens)
-      if (out.length < 6 && Array.isArray(payload?.citations)){
-        const tokens = new Set((query||'').toLowerCase().split(/\W+/).filter(Boolean));
-        const scored = [];
+      // 2) citations fallback
+      if (out.length < 5 && Array.isArray(payload?.citations)){
+        const seen = new Set(out.map(x=>x.url));
         for (const url of payload.citations){
-          if (typeof url !== 'string') continue;
-          const isBlog = /blog|article|tips|journal|news/i.test(url);
-          const parts = url.toLowerCase().split(/[-/]/g);
-          const overlap = parts.reduce((n,w)=>n+(tokens.has(w)?1:0),0);
-          const score = (isBlog?2:1)+overlap;
-          scored.push({url,score});
-        }
-        scored.sort((a,b)=>b.score-a.score);
-        for (const s of scored){
-          if (out.length>=6) break;
-          if (!out.some(x=>x.url===s.url)){
-            out.push({title:s.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ').slice(0,80),url:s.url});
-          }
+          if (typeof url !== 'string' || seen.has(url)) continue;
+          const title = tidyTitleFromUrl(url);
+          const match = simpleMatchPercent(query, title + ' ' + url);
+          out.push({title, url, match});
+          seen.add(url);
         }
       }
 
-      // 3) sitemap (client-side)
+      // 3) sitemap fallback (best-effort, no UI change)
       if (out.length < 3){
         try{
           const xml = await fetch('/sitemap.xml',{cache:'no-store'}).then(r=>r.ok?r.text():'').catch(()=> '');
           if (xml){
-            const urls = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(m=>m[1]).filter(Boolean);
-            const tokens = new Set((query||'').toLowerCase().split(/\W+/).filter(Boolean));
-            const candidates = urls.filter(u=>/blog|article|tips|journal|news|photography/i.test(u));
-            const scored = candidates.map(u=>{
-              const parts = u.toLowerCase().split(/[-/]/g);
-              const overlap = parts.reduce((n,w)=>n+(tokens.has(w)?1:0),0);
-              return {url:u,score:overlap};
-            }).sort((a,b)=>b.score-a.score).slice(0,6);
-            for (const s of scored){
-              if (!out.some(x=>x.url===s.url)){
-                out.push({title:s.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ').slice(0,80),url:s.url});
-              }
+            const urls = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(m=>m[1]).filter(Boolean)
+              .filter(u=>/blog|article|tips|journal|news|photography/i.test(u));
+            for (const u of urls){
+              const title = tidyTitleFromUrl(u);
+              const match = simpleMatchPercent(query, title + ' ' + u);
+              out.push({title, url:u, match});
             }
           }
         }catch{/* ignore */}
       }
 
-      return uniqBy(out,x=>x.url).slice(0,6);
-    }
+      // Rank + threshold + limit
+      const ranked = out
+        .map(x=>({...x, match: Math.max(0, Math.min(100, Math.round(x.match||0)))}))
+        .sort((a,b)=> b.match - a.match);
 
-    /* ============================================================
-       Direct answer synthesis (behaviour only, no new UI)
-       ============================================================ */
-    function pickNextEvent(events){
-      if(!Array.isArray(events) || !events.length) return null;
-      const now = new Date();
-      const withDates = events
-        .map(e=>({e, d: e.date_start ? new Date(e.date_start) : null}))
-        .filter(x=>x.d && isFinite(x.d));
-      if(!withDates.length) return null;
-      const future = withDates.filter(x=>x.d >= now);
-      const pool = future.length ? future : withDates;
-      pool.sort((a,b)=>a.d - b.d);
-      return pool[0].e;
-    }
-
-    function synthesizeDirectAnswer(query, payload){
-      const s = payload?.structured || {};
-      const next = pickNextEvent(s.events || []);
-      const range = extractPriceRange(s.products || [], payload?.answer_markdown || '');
-      if(!next && !range) return ''; // nothing to add
-
-      const pieces = [];
-      // Only add if the user’s query seems to ask about dates or cost
-      const q = (query||'').toLowerCase();
-      const wantsWhen = /\bwhen|next|date|schedule\b/.test(q);
-      const wantsCost = /\bprice|cost|how much|£|gbp\b/.test(q);
-      // If generic, still helpful to show both if we have them
-      if(next) pieces.push(`**Next date:** ${next.when || fmtDate(next.date_start)}`);
-      if(range){
-        const same = range.low === range.high;
-        const unit = range.currency || '£';
-        pieces.push(`**Price:** ${same ? `${unit}${range.low}` : `${unit}${range.low}–${unit}${range.high}`}`);
-      }
-      // Only prepend when the query hints at it or both are present
-      if(!(wantsWhen || wantsCost) && pieces.length < 2) return '';
-      return pieces.join(' — ');
+      const deduped = uniqBy(ranked, x=>x.url);
+      const filtered = deduped.filter(x=>x.match >= 60).slice(0,5);
+      return filtered;
     }
 
     /* ============================================================
        Rendering
        ============================================================ */
 
-    /** Pills */
-    function renderPills(pills){
+    /** Pills (also append top-2 related as extra brand pills) */
+    function renderPills(pills, relatedTop){
       const bar = $('#pillbar'); bar.innerHTML='';
       let list = Array.isArray(pills) && pills.length ? pills : null;
       if (!list){
-        // Generic, not query-wired (only shown if API provides nothing)
         list = [
           {label:'Event Listing', url:'/photography-workshops', brand:true},
-          {label:'Photos', url:'/gallery-image-portfolios', brand:false}
+          {label:'Photos', url:'/gallery-image-portfolios', brand:true}
         ];
       }
-      for (const p of list){
+      // Append top-2 related (>=60%) as brand pills in addition to existing
+      const extra = (relatedTop||[]).slice(0,2).map(r=>({label:r.title, url:r.url, brand:true}));
+      const finalPills = [...list, ...extra];
+
+      for (const p of finalPills){
         if (!p?.label || !p?.url) continue;
-        const a = h('a',{href:p.url,target:'_blank',rel:'noreferrer',class:'pill'+(p.brand?' brand':'')}, p.icon ? [h('span',{text:p.label})] : null);
+        const a = h('a',{href:p.url,target:'_blank',rel:'noreferrer',class:'pill'+(p.brand?' brand':'')});
         a.textContent = p.label;
         bar.appendChild(a);
       }
@@ -530,7 +509,7 @@
       }
 
       const chips = h('div',{class:'chips'});
-      const rx = (lab)=> (p?.description.match(new RegExp(`${lab}:[^\\n]+`,'i'))||[])[0];
+      const rx = (lab)=> (p?.description?.match(new RegExp(`${lab}:[^\\n]+`,'i'))||[])[0];
       const addChip = (t)=> chips.appendChild(h('span',{class:'chip',text:t}));
 
       const loc = rx('Location') || (p?.location ? `Location: ${p.location}` : null);
@@ -543,30 +522,33 @@
 
       wrap.appendChild(chips);
 
-      // Availability badge
       if (avail) wrap.appendChild(h('div',{class:'meta'},[h('span',{class:'badge',text:avail})]));
 
       return wrap;
     }
 
-    /** Events card (groups by location if present) */
+    /** Events card (sorted asc; group by location when present) */
     function eventsCard(events){
       const div = h('div',{class:'card'});
       div.appendChild(h('div',{class:'section'}, h('h3',{text:'Upcoming Workshops'})));
       if (!events || !events.length){ div.appendChild(h('p',{text:'No upcoming events found.'})); return div; }
 
-      // group by location (if present)
-      const groups = groupBy(events, e => (e.location || '').trim() || 'Dates');
+      const sorted = [...events].sort((a,b)=>{
+        const da = new Date(a.date_start||a.when||0).getTime();
+        const db = new Date(b.date_start||b.when||0).getTime();
+        return (isFinite(da)?da:0) - (isFinite(db)?db:0);
+      });
+
+      const groups = groupBy(sorted, e => (e.location || '').trim() || 'Dates');
       for (const [loc, list] of Object.entries(groups)){
         if (loc && loc !== 'Dates') div.appendChild(h('h4',{text:loc}));
         const ul = h('ul');
         for (const e of list){
           const when = e.when || fmtDate(e.date_start);
           const href = e.href || e.page_url || e.source_url;
-          const label = 'Link'; // keep simple, avoids very long titles in UI
           const li = h('li',{},[
             document.createTextNode(`${when} — `),
-            h('a',{class:'link',href:href,target:'_blank',rel:'noreferrer',text:label})
+            h('a',{class:'link',href:href,target:'_blank',rel:'noreferrer',text:'Link'})
           ]);
           ul.appendChild(li);
         }
@@ -575,44 +557,39 @@
       return div;
     }
 
-    /** Related articles card */
-    function relatedCard(items){
+    /** Guides (Related articles) card */
+    function guidesCard(items){
       const div = h('div',{class:'card'});
-      div.appendChild(h('div',{class:'section'}, h('h3',{text:'Related Articles'})));
+      div.appendChild(h('div',{class:'section'}, h('h3',{text:'Guides that match your question'})));
       if (!items || !items.length){
         div.appendChild(h('p',{text:'No related articles found right now.'}));
         return div;
       }
       const ul = h('ul');
       for (const it of items){
-        const a = h('a',{href:it.url,target:'_blank',rel:'noreferrer',class:'link',text: it.title || it.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ')});
+        const a = h('a',{href:it.url,target:'_blank',rel:'noreferrer',class:'link',text: it.title});
         ul.appendChild(h('li',{},a));
       }
       div.appendChild(ul);
       return div;
     }
 
-    /** Confidence + badges */
-    function renderConfidence(conf, pctField){
-      let pct = toPct(conf);
-      if (!isFinite(pct) && typeof pctField === 'number') pct = Math.round(pctField);
+    /** Confidence + time + badges */
+    function renderConfidenceAndTime(conf){
       const badge = $('#confidenceBadge');
-      const val = isFinite(pct) ? Math.max(35,Math.min(100,pct)) : 35;
+      const val = toPct(conf);
       badge.textContent = `Confidence: ${val}%`;
       badge.className = 'badge' + (val>=75 ? ' good' : '');
+      $('#timeBadge').textContent = `Answered: ${stampNow()}`;
     }
 
-    /** Render the main answer bubble (now with direct-answer prefix when appropriate) */
-    function renderAnswer(query, payload){
-      const ans = payload?.answer_markdown || '';
-      const prefix = synthesizeDirectAnswer(query, payload);
-      const combined = prefix ? `${prefix}\n\n${ans}` : ans;
-      $('#answerHtml').innerHTML = md(combined);
-
+    /** Render the main answer bubble */
+    function renderAnswer(markdown, payload){
+      $('#answerHtml').innerHTML = md(markdown || '');
       // Warn if answer is very short compared to structured data
       const hasEvents = Array.isArray(payload?.structured?.events) && payload.structured.events.length>0;
       const hasProducts = Array.isArray(payload?.structured?.products) && payload.structured.products.length>0;
-      const warn = (combined||'').trim().length < 30 && (hasEvents || hasProducts);
+      const warn = (markdown||'').trim().length < 30 && (hasEvents || hasProducts);
       $('#warnBadge').classList.toggle('hidden', !warn);
     }
 
@@ -652,7 +629,6 @@
     const dbg = {
       tabs: [],
       push(req,res){
-        // Keep last 6
         this.tabs.push({req,res,ts:new Date().toISOString()});
         this.tabs = this.tabs.slice(-6);
         renderDebugTabs();
@@ -706,10 +682,15 @@
 
       dbg.push(req,res);
 
+      // Related first (so Pills can include top-2)
+      const related = await findRelated(query, res);
+
       // Render main pieces
-      renderAnswer(query, res);
-      renderConfidence(res.confidence, res.confidence_pct);
-      renderPills(res?.structured?.pills);
+      renderAnswer(res.answer_markdown || '', res);
+      renderConfidenceAndTime(res.confidence ?? res.confidence_pct);
+
+      // Pills (existing + top-2 related as orange)
+      renderPills(res?.structured?.pills, related);
 
       // Info grid
       const grid = $('#infoGrid'); grid.innerHTML='';
@@ -725,9 +706,8 @@
       const events = Array.isArray(res?.structured?.events) ? res.structured.events : [];
       if (events.length) grid.appendChild(eventsCard(events));
 
-      // Related (always attempt)
-      const related = await findRelated(query, res);
-      grid.appendChild(relatedCard(related));
+      // Guides (only high-match, max 5)
+      if (related.length) grid.appendChild(guidesCard(related));
 
       // Append to conversation
       addTurn('assistant', res.answer_markdown || '—');
@@ -774,8 +754,8 @@
       resetThread();
       $('#infoGrid').innerHTML='';
       $('#answerHtml').innerHTML = 'Ask me about workshops or prices…';
-      renderConfidence(null);
-      renderPills(null);
+      renderConfidenceAndTime(null);
+      renderPills(null, []);
       $('#warnBadge').classList.add('hidden');
     });
 
@@ -808,7 +788,7 @@
       }catch{/* ignore */}
 
       // Initial pills (until first response arrives)
-      renderPills(null);
+      renderPills(null, []);
 
       // Kick with a neutral, generic query so the UI isn't empty
       ask('when are the next workshops and what do they cost?');
