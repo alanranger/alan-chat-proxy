@@ -170,6 +170,44 @@ const dbgNote   = document.getElementById('dbg-note');
 
 function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
 
+/* ================= Debug copy helpers (NEW) ================= */
+function collectDebugText(){
+  const get = (el) => (el && el.textContent) ? el.textContent : '–';
+  const blocks = [
+    ['Endpoint','/api/chat'],
+    ['Status', get(dbgStatus)],
+    ['Headers', get(dbgHeaders)],
+    ['Request', get(dbgReq)],
+    ['Response', get(dbgRes)],
+    ['Structured', get(dbgStruct)],
+    ['Provenance', get(dbgProv)],
+    ['Note', get(dbgNote)],
+  ];
+  return blocks.map(([k,v]) => `${k}:\n${v}`).join('\n\n').trim();
+}
+async function copyAllDebug(){
+  const text = collectDebugText();
+  if(!text){ alert('Nothing to copy yet.'); return; }
+  try{
+    if (navigator.clipboard?.writeText){
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta=document.createElement('textarea');
+      ta.value=text; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    if (dbgCopy){
+      const old = dbgCopy.textContent;
+      dbgCopy.textContent = 'Copied ✓';
+      setTimeout(()=>{ dbgCopy.textContent = old; }, 1500);
+    }
+  }catch(e){
+    console.error('Copy failed', e);
+    alert('Copy failed. Select the debug text and press Ctrl/Cmd+C.');
+  }
+}
+
 /* ================= UI helpers ================= */
 function addBubble(html, opts={}) {
   const div = document.createElement('div');
@@ -660,6 +698,7 @@ sendBtn.addEventListener('click', submit);
 input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }});
 btnEmail.addEventListener('click', emailTranscript);
 btnReset.addEventListener('click', resetChat);
+dbgCopy && dbgCopy.addEventListener('click', copyAllDebug); /* NEW */
 </script>
 </body>
 </html>
