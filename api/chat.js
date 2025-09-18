@@ -221,14 +221,21 @@ async function findLanding(client, { keywords = [] } = {}) {
 function isWorkshopEvent(e) {
   const u = (pickUrl(e) || "").toLowerCase();
   const t = (e?.title || e?.raw?.name || "").toLowerCase();
-  const hasWorkshop = /workshop/.test(u) || /workshop/.test(t) || /photo-workshops-uk|photographic-workshops/.test(u);
-  const looksCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
+  const hasWorkshop =
+    /workshop/.test(u) ||
+    /workshop/.test(t) ||
+    /photo-workshops-uk|photographic-workshops/.test(u);
+  const looksCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(
+    u + " " + t
+  );
   return hasWorkshop && !looksCourse;
 }
 function isCourseEvent(e) {
   const u = (pickUrl(e) || "").toLowerCase();
   const t = (e?.title || e?.raw?.name || "").toLowerCase();
-  const hasCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
+  const hasCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(
+    u + " " + t
+  );
   const looksWorkshop = /workshop/.test(u + " " + t);
   return hasCourse && !looksWorkshop;
 }
@@ -263,7 +270,8 @@ function matchProductToEvent(products, ev) {
 
     // same-domain bonus and “workshop/course” alignment bonus
     if (sameHost(p, ev)) score += 0.15;
-    const tAll = (p.title || "").toLowerCase() + " " + (ev.title || "").toLowerCase();
+    const tAll =
+      (p.title || "").toLowerCase() + " " + (ev.title || "").toLowerCase();
     if (/(workshop|course|tuition|lesson)/.test(tAll)) score += 0.05;
 
     if (score > bestScore) {
@@ -271,8 +279,8 @@ function matchProductToEvent(products, ev) {
       bestScore = score;
     }
   }
-  // Lower threshold slightly; if still none, pick any product sharing at least one title token
-  if (bestScore >= 0.25) return best;
+  // Threshold 0.45 now (per rule)
+  if (bestScore >= 0.45) return best;
   for (const p of products) {
     const pt = new Set(titleTokens(p));
     for (const tk of titleTokens(ev)) {
@@ -419,7 +427,9 @@ export default async function handler(req, res) {
           const ax = Date.parse(a.e?.last_seen || "") || 0;
           return by - ax;
         })
-        .map((x) => Object.assign({ _score: Math.round(x.s * 100) / 100 }, x.e));
+        .map((x) =>
+          Object.assign({ _score: Math.round(x.s * 1000) / 10 }, x.e)
+        ); // percent with 1 decimal
 
     const rankedArticles = scoreWrap(articles).slice(0, 12);
     let rankedEvents = scoreWrap(events);
@@ -437,10 +447,10 @@ export default async function handler(req, res) {
     }
 
     const scoresForConfidence = [
-      ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
-      ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
-      ...(rankedProducts[0]?._score ? [rankedProducts[0]._score] : []),
-    ].map((x) => x / 100);
+      ...(rankedArticles[0]?._score ? [rankedArticles[0]._score / 100] : []),
+      ...(rankedEvents[0]?._score ? [rankedEvents[0]._score / 100] : []),
+      ...(rankedProducts[0]?._score ? [rankedProducts[0]._score / 100] : []),
+    ];
 
     const confidence_pct = confidenceFrom(scoresForConfidence);
 
@@ -482,7 +492,7 @@ export default async function handler(req, res) {
         raw: e.raw,
         when: e.date_start ? new Date(e.date_start).toUTCString() : null,
         href: pickUrl(e),
-        _score: e._score,
+        _score: e._score, // percentage with 1 decimal
       })),
       products: rankedProducts.map((p) => ({
         id: p.id,
@@ -493,7 +503,7 @@ export default async function handler(req, res) {
         price: p.price,
         location: p.location,
         raw: p.raw,
-        _score: p._score,
+        _score: p._score, // percentage with 1 decimal
       })),
       articles: rankedArticles.map((a) => ({
         id: a.id,
