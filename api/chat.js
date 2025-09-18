@@ -1,4 +1,4 @@
-// /api/chat.js
+// /ap.i/chat.js
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
