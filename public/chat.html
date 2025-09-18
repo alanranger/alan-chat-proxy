@@ -257,6 +257,9 @@
   </div>
 
   <script>
+    // Alan Ranger Assistant front-end
+    // Version: v0.9.26 (behaviour-only tweak: direct-answer synthesis, price fixes, next-date pick)
+
     /* ============================================================
        Helpers (generic, no site-specific wiring)
        ============================================================ */
@@ -329,30 +332,29 @@
       while((m = re.exec(text))){ hits.push(Number(m[1].replace(/,/g,''))); }
       return hits;
     };
+
     function extractPriceRange(products=[], answer=''){
       const prices = [];
       let currency = '£';
 
       for (const p of products||[]){
-        if (typeof p.price === 'number'){
+        // 1) Prefer explicit product.price
+        if (typeof p.price === 'number' && p.price > 0.01){
           prices.push(p.price);
           currency = p.price_currency === 'GBP' ? '£' : (p.price_currency || currency);
         }
-        // handle raw.offers (object or array)
+        // 2) Consider raw.offers, but ignore zero/empty (Event JSON often has "0.00")
         const offers = p?.raw?.offers;
-        if (offers && typeof offers === 'object'){
-          if (Array.isArray(offers)){
-            for (const ofr of offers){
-              if (typeof ofr?.price === 'number') prices.push(ofr.price);
-              if (ofr?.priceCurrency && ofr.priceCurrency !== 'GBP') currency = ofr.priceCurrency;
-            }
-          } else {
-            if (typeof offers.price === 'number') prices.push(offers.price);
-            if (offers.priceCurrency && offers.priceCurrency !== 'GBP') currency = offers.priceCurrency;
-          }
-        }
+        const addOfferPrice = (ofr)=>{
+          const val = typeof ofr?.price === 'string' ? Number(ofr.price) : ofr?.price;
+          if (typeof val === 'number' && isFinite(val) && val > 0.01) prices.push(val);
+          if (ofr?.priceCurrency && ofr.priceCurrency !== 'GBP') currency = ofr.priceCurrency;
+        };
+        if (Array.isArray(offers)){ offers.forEach(addOfferPrice); }
+        else if (offers && typeof offers === 'object'){ addOfferPrice(offers); }
       }
 
+      // 3) Fallback: parse in-text prices
       if (prices.length === 0) prices.push(...parseMoneyFromText(answer));
       if (prices.length === 0) return null;
 
@@ -445,6 +447,45 @@
     }
 
     /* ============================================================
+       Direct answer synthesis (behaviour only, no new UI)
+       ============================================================ */
+    function pickNextEvent(events){
+      if(!Array.isArray(events) || !events.length) return null;
+      const now = new Date();
+      const withDates = events
+        .map(e=>({e, d: e.date_start ? new Date(e.date_start) : null}))
+        .filter(x=>x.d && isFinite(x.d));
+      if(!withDates.length) return null;
+      const future = withDates.filter(x=>x.d >= now);
+      const pool = future.length ? future : withDates;
+      pool.sort((a,b)=>a.d - b.d);
+      return pool[0].e;
+    }
+
+    function synthesizeDirectAnswer(query, payload){
+      const s = payload?.structured || {};
+      const next = pickNextEvent(s.events || []);
+      const range = extractPriceRange(s.products || [], payload?.answer_markdown || '');
+      if(!next && !range) return ''; // nothing to add
+
+      const pieces = [];
+      // Only add if the user’s query seems to ask about dates or cost
+      const q = (query||'').toLowerCase();
+      const wantsWhen = /\bwhen|next|date|schedule\b/.test(q);
+      const wantsCost = /\bprice|cost|how much|£|gbp\b/.test(q);
+      // If generic, still helpful to show both if we have them
+      if(next) pieces.push(`**Next date:** ${next.when || fmtDate(next.date_start)}`);
+      if(range){
+        const same = range.low === range.high;
+        const unit = range.currency || '£';
+        pieces.push(`**Price:** ${same ? `${unit}${range.low}` : `${unit}${range.low}–${unit}${range.high}`}`);
+      }
+      // Only prepend when the query hints at it or both are present
+      if(!(wantsWhen || wantsCost) && pieces.length < 2) return '';
+      return pieces.join(' — ');
+    }
+
+    /* ============================================================
        Rendering
        ============================================================ */
 
@@ -489,8 +530,6 @@
       }
 
       const chips = h('div',{class:'chips'});
-      const lower = (p?.description||'').toLowerCase();
-
       const rx = (lab)=> (p?.description.match(new RegExp(`${lab}:[^\\n]+`,'i'))||[])[0];
       const addChip = (t)=> chips.appendChild(h('span',{class:'chip',text:t}));
 
@@ -524,7 +563,7 @@
         for (const e of list){
           const when = e.when || fmtDate(e.date_start);
           const href = e.href || e.page_url || e.source_url;
-          const label = e.title || 'View';
+          const label = 'Link'; // keep simple, avoids very long titles in UI
           const li = h('li',{},[
             document.createTextNode(`${when} — `),
             h('a',{class:'link',href:href,target:'_blank',rel:'noreferrer',text:label})
@@ -554,21 +593,26 @@
     }
 
     /** Confidence + badges */
-    function renderConfidence(conf){
-      const pct = toPct(conf);
+    function renderConfidence(conf, pctField){
+      let pct = toPct(conf);
+      if (!isFinite(pct) && typeof pctField === 'number') pct = Math.round(pctField);
       const badge = $('#confidenceBadge');
       const val = isFinite(pct) ? Math.max(35,Math.min(100,pct)) : 35;
       badge.textContent = `Confidence: ${val}%`;
       badge.className = 'badge' + (val>=75 ? ' good' : '');
     }
 
-    /** Render the main answer bubble */
-    function renderAnswer(markdown, payload){
-      $('#answerHtml').innerHTML = md(markdown || '');
+    /** Render the main answer bubble (now with direct-answer prefix when appropriate) */
+    function renderAnswer(query, payload){
+      const ans = payload?.answer_markdown || '';
+      const prefix = synthesizeDirectAnswer(query, payload);
+      const combined = prefix ? `${prefix}\n\n${ans}` : ans;
+      $('#answerHtml').innerHTML = md(combined);
+
       // Warn if answer is very short compared to structured data
       const hasEvents = Array.isArray(payload?.structured?.events) && payload.structured.events.length>0;
       const hasProducts = Array.isArray(payload?.structured?.products) && payload.structured.products.length>0;
-      const warn = (markdown||'').trim().length < 30 && (hasEvents || hasProducts);
+      const warn = (combined||'').trim().length < 30 && (hasEvents || hasProducts);
       $('#warnBadge').classList.toggle('hidden', !warn);
     }
 
@@ -663,8 +707,8 @@
       dbg.push(req,res);
 
       // Render main pieces
-      renderAnswer(res.answer_markdown || '', res);
-      renderConfidence(res.confidence ?? res.confidence_pct/100);
+      renderAnswer(query, res);
+      renderConfidence(res.confidence, res.confidence_pct);
       renderPills(res?.structured?.pills);
 
       // Info grid
