@@ -1,148 +1,8 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Alan Ranger Assistant</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
-  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
-  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
-  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
-  --user-bg:#e6edf7; --user-text:#0b0f16;
-}
-*{box-sizing:border-box} html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
-.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
-.badge-wrap{position:relative;height:0}
-.version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
-.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
-
-/* Sticky header */
-.header-sticky{
-  position:sticky; top:10px; z-index:50;
-  background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98));
-  border-radius:12px; padding:0 0 10px 0; margin:-8px -8px 12px -8px;
-}
-.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
-.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
-.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
-.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
-.pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
-.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
-.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
-
-/* Chat surface */
-.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
-.thread{display:flex;flex-direction:column;gap:12px}
-.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
-.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
-.answer h1,.answer h2,.answer h3{margin:.2em 0}
-.answer p{margin:.5em 0}
-.answer ul{margin:.4em 0 .6em 1.25em}
-.answer li{margin:.15em 0}
-.answer a{color:var(--link);text-decoration:underline}
-.answer a:hover{color:var(--link-hover)}
-.meta{color:var(--muted);font-size:14px}
-.kvline{margin:0}
-.kvline strong{font-weight:600}
-.conf{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;background:#0f244d;color:#cfe3ff;border:1px solid #274a8a;border-radius:999px;padding:4px 10px;margin-top:8px}
-.conf::before{content:"•";display:inline-block}
-
-/* Global pill row */
-.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-.actions .pill{background:var(--brand);color:#0b0f16;border:none}
-
-/* Composer + utilities */
-.tools{display:flex;justify-content:flex-end;gap:10px;margin:8px 0 6px}
-.tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
-.tools button:hover{border-color:#3c548b}
-.composer{display:flex;gap:10px;margin-top:8px;padding:12px;background:var(--panel);border-radius:12px}
-.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
-.composer input::placeholder{color:var(--input-ph)}
-.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
-.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
-
-/* Debug panel */
-details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
-details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
-.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
-.kv label{color:#93A4C1}
-pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
-
-/* Typing dots */
-.typing{position:relative;display:inline-block}
-.typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
-.typing .dot:nth-child(2){animation-delay:.15s}
-.typing .dot:nth-child(3){animation-delay:.3s}
-@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
-
-@media (max-width:540px){
-  .title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}
-  .header-sticky{top:6px;margin:-6px -6px 10px -6px}
-}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="badge-wrap"><span class="version">v0.9.23</span></div>
-
-  <div class="card">
-    <!-- Sticky header -->
-    <div class="header-sticky">
-      <div class="header">
-        <img class="logo" src="./chat%20white.png" alt="AR logo">
-        <h2 class="title">Alan Ranger Assistant</h2>
-        <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
-          photography questions. I won’t always get everything right — if I can’t help, please contact
-          Alan directly:</p>
-        <div class="pills">
-          <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
-          <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
-        </div>
-      </div>
-    </div>
-
-    <div class="chat">
-      <div id="thread" class="thread">
-        <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
-      </div>
-
-      <!-- Utility buttons -->
-      <div class="tools">
-        <button id="btn-email">Email transcript</button>
-        <button id="btn-reset">Reset chat</button>
-      </div>
-
-      <details id="debugPanel" class="debug">
-        <summary>🔎 Show debug</summary>
-        <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
-        <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
-        <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
-        <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
-        <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
-        <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
-        <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
-        <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
-        <div class="kv"><label>Note</label><pre id="dbg-note" class="json">–</pre></div>
-      </details>
-
-      <div class="composer">
-        <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
-        <button id="send" class="send">Send</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
 /* ================= Config ================= */
 const CHAT_ENDPOINT = '/api/chat';
 const urlParams = new URLSearchParams(location.search);
-if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
+if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ const p=document.getElementById('debugPanel'); if(p) p.open = true; });
 
 /* Optional tag-page fallback for articles (safe, non-search) */
 const ARTICLE_TAG_GUESS = {
@@ -170,16 +30,17 @@ const dbgNote   = document.getElementById('dbg-note');
 
 function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
 
+/* Clipboard in debug panel */
 dbgCopy?.addEventListener('click', ()=>{
   const all = [
-    'Status: '+dbgStatus.textContent,
-    'Headers:\\n'+dbgHeaders.textContent,
-    'Request:\\n'+dbgReq.textContent,
-    'Response:\\n'+dbgRes.textContent,
-    'Structured:\\n'+dbgStruct.textContent,
-    'Provenance:\\n'+dbgProv.textContent,
-    'Note:\\n'+dbgNote.textContent
-  ].join('\\n\\n');
+    'Status: '+(dbgStatus?.textContent ?? ''),
+    'Headers:\n'+(dbgHeaders?.textContent ?? ''),
+    'Request:\n'+(dbgReq?.textContent ?? ''),
+    'Response:\n'+(dbgRes?.textContent ?? ''),
+    'Structured:\n'+(dbgStruct?.textContent ?? ''),
+    'Provenance:\n'+(dbgProv?.textContent ?? ''),
+    'Note:\n'+(dbgNote?.textContent ?? '')
+  ].join('\n\n');
   navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
 });
 
@@ -197,18 +58,20 @@ function addBubble(html, opts={}) {
   return div;
 }
 function addTyping() {
-  const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
-  return ()=> el && el.remove();
+  // Always show typing immediately
+  const el = addBubble('<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>');
+  let removed = false;
+  return ()=>{ if (!removed) { removed = true; el.remove(); } };
 }
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  const lines = s.split(/\\r?\\n/);
+  const lines = s.split(/\r?\n/);
   let out='', inList=false;
   const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
   for (const line of lines){
-    const m = line.match(/^\\s*-\\s+(.*)$/);
+    const m = line.match(/^\s*-\s+(.*)$/);
     if (m){ if(!inList){ out+='<ul>'; inList=true; } out += `<li>${m[1].trim()}</li>`; }
     else { flush(); out += line.trim()? `<p>${line}</p>` : ''; }
   }
@@ -222,9 +85,9 @@ function currency(amount, ccy){
   if(amount==null || amount==='') return null;
   const n = Number(amount); if(!isFinite(n)) return null;
   try{ return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n); }
-  catch{ return `£${String(amount).replace(/\\.00$/,'')}`; }
+  catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
 }
-function escapeHTML(s){ return (s||'').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]) ) }
+function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]) ) }
 
 /* Timestamp + confidence badge */
 function renderConfidenceBadge(){
@@ -238,8 +101,8 @@ function renderConfidenceBadge(){
 function firstSentence(t){
   const s = String(t||'').trim();
   if(!s) return '';
-  const m = s.match(/^(.*?\\.)(\\s|$)/);
-  return m? m[1].trim() : s;
+  const m = s.match(/^(.*?\.)\s|^(.+)$/);
+  return m ? (m[1] ? m[1].trim() : m[2].trim()) : s;
 }
 function mergeProducts(list){
   if(!Array.isArray(list) || !list.length) return [];
@@ -258,15 +121,17 @@ function mergeProducts(list){
 }
 function extractFacts(desc){
   const txt = String(desc||'')
-    .split(/\\r?\\n/)
+    .split(/\r?\n/)
     .map(l=>l.trim())
     .filter(Boolean);
 
   const findAfter = (label)=>{
-    const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
+    const re1 = new RegExp('^' + label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\s*:?$', 'i');
+    const re2 = new RegExp('^' + label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\s*:?\\s+(.+)$','i');
+    const i = txt.findIndex(l=>re1.test(l));
     if(i>=0 && i+1<txt.length) return txt[i+1];
-    const flat = txt.find(l=>new RegExp(`^${label}\\s*:?\\s+(.+)$`,'i').test(l));
-    if(flat) return flat.replace(new RegExp(`^${label}\\s*:?\\s+`,'i'),'');
+    const flat = txt.find(l=>re2.test(l));
+    if(flat) return flat.replace(re2,'$1');
     return null;
   };
   const location     = findAfter('Location');
@@ -275,16 +140,16 @@ function extractFacts(desc){
   const availability = findAfter('Availability');
 
   const optionLines = txt.filter(l =>
-    /^\\s*(?:4\\s*hrs?|4\\s*hours?|half\\s*day|1\\s*day|full\\s*day|day)\\b/i.test(l) ||
-    /^\\s*OR\\s*1\\s*day\\b/i.test(l)
+    /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
+    /^\s*OR\s*1\s*day\b/i.test(l)
   );
 
   return {location, participants, fitness, availability, optionLines};
 }
 function parseExtraPriceFromText(desc){
-  const m = String(desc||'').match(/\\b(?:1\\s*day|full\\s*day)\\b[^£\\d]{0,12}(£?\\s?\\d{2,4})/i);
+  const m = String(desc||'').match(/\b(?:1\s*day|full\s*day)\b[^£\d]{0,12}(£?\s?\d{2,4})/i);
   if(!m) return null;
-  const s = m[1].replace(/[^\\d.]/g,'');
+  const s = m[1].replace(/[^\d.]/g,'');
   const n = Number(s);
   return isFinite(n) ? n : null;
 }
@@ -302,9 +167,9 @@ function deriveOptions(prod, facts){
     }
   }
 
-  const text = (facts.optionLines||[]).join('\\n').toLowerCase();
-  const has4h  = /(?:^|\\n)\\s*(?:4\\s*hrs?|4\\s*hours?|half\\s*day)\\b/.test(text);
-  const has1d  = /(?:^|\\n)\\s*(?:1\\s*day|full\\s*day|day)\\b/.test(text);
+  const text = (facts.optionLines||[]).join('\n').toLowerCase();
+  const has4h  = /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
+  const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
 
   const opts = [];
 
@@ -319,9 +184,9 @@ function deriveOptions(prod, facts){
     }
   }
 
-  const timePat = /(\\d{1,2}:\\d{2}\\s*(?:am|pm))\\s*[–-]\\s*(\\d{1,2}:\\d{2}\\s*(?:am|pm))(?:\\s*or\\s*(\\d{1,2}:\\d{2}\\s*(?:am|pm))\\s*[–-]\\s*(\\d{1,2}:\\d{2}\\s*(?:am|pm)))?/i;
+  const timePat = /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
   for(const ln of facts.optionLines||[]){
-    const label = ln.replace(/\\s*—.*$/,'').replace(/^OR\\s*/i,'').trim();
+    const label = ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
     const tm = ln.match(timePat);
     const window = tm ? `${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}` : null;
     if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){
@@ -371,6 +236,12 @@ function rankArticles(query, list){
 }
 
 /* ================= Renderers ================= */
+function renderConfidenceBadge(){
+  const pct = __lastConfidencePct;
+  if(pct==null || isNaN(pct)) return '';
+  const ts = __lastAnsweredAt || new Date().toLocaleString();
+  return `<div class="conf">Confidence: ${pct}%</div><span class="meta" style="margin-left:8px">Answered: ${ts}</span>`;
+}
 function renderProductCard(prod){
   const facts = extractFacts(prod.description||'');
   const options = deriveOptions(prod, facts);
@@ -383,7 +254,7 @@ function renderProductCard(prod){
   if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
   if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
   if(prod.availability || facts.availability){
-    const avail = (prod.availability||facts.availability||'').toString().replace(/^https?:\\/\\/schema\\.org\\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
+    const avail = (prod.availability||facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
     lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
   }
 
@@ -401,7 +272,6 @@ function renderProductCard(prod){
     </div>
   `;
 }
-
 function renderEventsBlock(structured, productHasLocation){
   const now=new Date();
   const all=(structured?.events||[])
@@ -415,7 +285,7 @@ function renderEventsBlock(structured, productHasLocation){
   const topic = (structured?.topic||'').toString().trim();
   const titleKW = kws.find(k=>k && !STOP.has(k));
   const friendlyTitle = titleKW ? `Upcoming ${titleKW[0].toUpperCase()+titleKW.slice(1)} Workshops` :
-    (topic ? `Upcoming ${escapeHTML(topic.replace(/,?\\s*(whats?|whens?|next|cost)/gi,'').trim())} Workshops` : 'Upcoming Workshops');
+    (topic ? `Upcoming ${escapeHTML(topic.replace(/,?\s*(whats?|whens?|next|cost)/gi,'').trim())} Workshops` : 'Upcoming Workshops');
 
   const lis = list
     .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
@@ -429,14 +299,8 @@ function renderEventsBlock(structured, productHasLocation){
 
   return `<div class="answer"><h3>${friendlyTitle}</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
 }
-
 function renderArticlesBlock(structured){
-  let base = (structured?.articles||[]);
-  let ranked = rankArticles(__lastQuery, base);
-  // Filter to ≥60%
-  ranked = ranked.filter(a=>a.__score>=60).slice(0,5);
-
-  // Fallback to tag page if nothing passes threshold
+  let ranked = rankArticles(__lastQuery, structured?.articles||[]).filter(a=>a.__score>=60).slice(0,5);
   if(!ranked.length){
     const topic = (structured?.topic||'').toLowerCase();
     let url = null;
@@ -444,19 +308,16 @@ function renderArticlesBlock(structured){
     if(url) ranked = [{ __title:'Related articles', __url:url, __score:100 }];
   }
   if(!ranked.length) return '';
-
   const lis = ranked.map(a=>`<li><a href="${a.__url}" target="_blank" rel="noopener">${escapeHTML(a.__title)}</a></li>`).join('');
   return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul>${renderConfidenceBadge()}</div>`;
 }
-
-/* Build action pills (include top 2 article matches ≥60%) */
 function buildActionPillsFromStructured(structured){
   const safe = [];
   const used = new Set();
   const add = (label, href) => {
     if(!label || !href) return;
     const u = String(href);
-    if (/\\/search\\?query=/.test(u)) return;
+    if (/\/search\?query=/.test(u)) return;
     const key = `${label}::${u}`;
     if(used.has(key)) return;
     used.add(key);
@@ -469,8 +330,7 @@ function buildActionPillsFromStructured(structured){
 
   const ranked = rankArticles(__lastQuery, structured?.articles||[]).filter(a=>a.__score>=60);
   if(ranked.length){
-    const top2 = ranked.slice(0,2);
-    top2.forEach(a=> add(a.__title || 'Related article', a.__url));
+    ranked.slice(0,2).forEach(a=> add(a.__title || 'Related article', a.__url));
   } else {
     const topic = (structured?.topic||'').toLowerCase();
     for(const [kw,url] of Object.entries(ARTICLE_TAG_GUESS)){
@@ -492,9 +352,7 @@ function heuristicConfidence(structured){
 /* Full render */
 function renderAnswer(payload){
   __lastAnsweredAt = new Date().toLocaleString();
-
   const s = payload.structured||{};
-
   let confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
   const heuristic = heuristicConfidence(s);
   if (confidencePct == null || confidencePct < 50) confidencePct = heuristic;
@@ -532,29 +390,30 @@ function renderAnswer(payload){
     addBubble(html.replace('</div>', `${extra}${renderConfidenceBadge()}</div>`));
   }
 
-  dbgStruct.textContent = safeJSONString(payload.structured||{});
-  dbgNote.textContent   = safeJSONString({ confidence_pct: __lastConfidencePct, answered_at: __lastAnsweredAt });
+  dbgStruct && (dbgStruct.textContent = safeJSONString(payload.structured||{}));
+  dbgNote   && (dbgNote.textContent   = safeJSONString({ confidence_pct: __lastConfidencePct, answered_at: __lastAnsweredAt }));
 }
 
 /* ================= Networking ================= */
 async function sendQuery(query){
   __lastQuery = String(query||'');
   const req = { query, topK: 8 };
-  dbgReq.textContent = safeJSONString(req);
-  const closeTyping = addTyping();
+  dbgReq && (dbgReq.textContent = safeJSONString(req));
+
+  const closeTyping = addTyping(); // show dots immediately
   try{
     const res = await fetch(CHAT_ENDPOINT, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(req)
     });
-    dbgStatus.textContent = res.status;
+    dbgStatus && (dbgStatus.textContent = res.status);
     const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
-    dbgHeaders.textContent = safeJSONString(headers);
+    dbgHeaders && (dbgHeaders.textContent = safeJSONString(headers));
 
     const data = await res.json();
-    dbgRes.textContent = safeJSONString(data);
-    dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
+    dbgRes && (dbgRes.textContent = safeJSONString(data));
+    dbgProv && (dbgProv.textContent = safeJSONString({ citations: data.citations || [] }));
 
     closeTyping();
     if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
@@ -567,27 +426,27 @@ async function sendQuery(query){
     }
   } catch (err){
     closeTyping();
-    dbgStatus.textContent = 'error';
-    addBubble(`<div class="answer"><p>Something went wrong: ${String(err)}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p>${renderConfidenceBadge()}</div>`);
+    dbgStatus && (dbgStatus.textContent = 'error');
+    addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p>${renderConfidenceBadge()}</div>`);
   }
 }
 
 /* ================= Transcript helpers ================= */
 function nodeToPlain(div){
-  return div.textContent.replace(/\\s+\\n/g,'\\n').replace(/\\n{3,}/g,'\\n\\n').trim();
+  return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 function buildTranscript(){
   const rows = [];
-  rows.push(`Alan Ranger Assistant — transcript`);
+  rows.push('Alan Ranger Assistant — transcript');
   rows.push(new Date().toISOString());
   rows.push('');
   for (const el of thread.children){
     if (el.classList.contains('actions')) continue;
     const role = el.classList.contains('user') ? 'User' : 'Assistant';
-    rows.push(`${role}:\\n${nodeToPlain(el)}`);
+    rows.push(`${role}:\n${nodeToPlain(el)}`);
     rows.push('');
   }
-  return rows.join('\\n');
+  return rows.join('\n');
 }
 function emailTranscript(){
   const body = buildTranscript();
@@ -608,18 +467,17 @@ function resetChat(){
 
 /* ================= Wire up composer & tools ================= */
 function submit(){
-  const val = input.value.trim();
+  const val = (input?.value || '').trim();
   if(!val) return;
   addBubble(val, {user:true});
   input.value='';
   sendQuery(val);
 }
-sendBtn.addEventListener('click', submit);
-input.addEventListener('keydown', (e)=>{
-  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
-});
-btnEmail.addEventListener('click', emailTranscript);
-btnReset.addEventListener('click', resetChat);
+/* Ensure listeners bind even if earlier parts fail */
+try{
+  sendBtn?.addEventListener('click', submit);
+  input?.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); } });
+  btnEmail?.addEventListener('click', emailTranscript);
+  btnReset?.addEventListener('click', resetChat);
+}catch(err){ console.error(err); }
 </script>
-</body>
-</html>
