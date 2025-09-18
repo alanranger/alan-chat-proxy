@@ -222,7 +222,7 @@ function isWorkshopEvent(e) {
   const u = (pickUrl(e) || "").toLowerCase();
   const t = (e?.title || e?.raw?.name || "").toLowerCase();
   const hasWorkshop = /workshop/.test(u) || /workshop/.test(t) || /photo-workshops-uk|photographic-workshops/.test(u);
-  const looksCourse = /(lesson|lessons|tuition|course|courses)/.test(u + " " + t);
+  const looksCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
   return hasWorkshop && !looksCourse;
 }
 function isCourseEvent(e) {
@@ -240,6 +240,15 @@ function urlTokens(x) {
   const u = (pickUrl(x) || "").toLowerCase();
   return tokenize(u.replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " "));
 }
+function sameHost(a, b) {
+  try {
+    const ha = new URL(pickUrl(a)).host;
+    const hb = new URL(pickUrl(b)).host;
+    return ha && hb && ha === hb;
+  } catch {
+    return false;
+  }
+}
 function matchProductToEvent(products, ev) {
   if (!ev || !products?.length) return null;
   const eTokens = new Set([...titleTokens(ev), ...urlTokens(ev)]);
@@ -247,17 +256,30 @@ function matchProductToEvent(products, ev) {
   let bestScore = 0;
   for (const p of products) {
     const pTokens = new Set([...titleTokens(p), ...urlTokens(p)]);
-    // Jaccard similarity
     let inter = 0;
     for (const tk of eTokens) if (pTokens.has(tk)) inter++;
     const union = eTokens.size + pTokens.size - inter || 1;
-    const score = inter / union;
+    let score = inter / union;
+
+    // same-domain bonus and “workshop/course” alignment bonus
+    if (sameHost(p, ev)) score += 0.15;
+    const tAll = (p.title || "").toLowerCase() + " " + (ev.title || "").toLowerCase();
+    if (/(workshop|course|tuition|lesson)/.test(tAll)) score += 0.05;
+
     if (score > bestScore) {
       best = p;
       bestScore = score;
     }
   }
-  return bestScore >= 0.35 ? best : null;
+  // Lower threshold slightly; if still none, pick any product sharing at least one title token
+  if (bestScore >= 0.25) return best;
+  for (const p of products) {
+    const pt = new Set(titleTokens(p));
+    for (const tk of titleTokens(ev)) {
+      if (pt.has(tk)) return p;
+    }
+  }
+  return null;
 }
 
 /* ================= Answer composition ================= */
@@ -393,7 +415,6 @@ export default async function handler(req, res) {
         .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
-          // tie-breaker by freshness if present
           const by = Date.parse(b.e?.last_seen || "") || 0;
           const ax = Date.parse(a.e?.last_seen || "") || 0;
           return by - ax;
@@ -411,11 +432,7 @@ export default async function handler(req, res) {
       const m = matchProductToEvent(rankedProducts, firstEvent);
       if (m) {
         matchedProduct = m;
-        // move matched to index 0
-        rankedProducts = [
-          m,
-          ...rankedProducts.filter((p) => p.id !== m.id),
-        ];
+        rankedProducts = [m, ...rankedProducts.filter((p) => p.id !== m.id)];
       }
     }
 
@@ -437,7 +454,6 @@ export default async function handler(req, res) {
       if (preferredProduct) {
         answer_markdown = buildProductPanelMarkdown(preferredProduct);
       } else if (rankedArticles?.length) {
-        // fallback: give the user something to read
         answer_markdown = buildAdviceMarkdown(rankedArticles);
       } else {
         answer_markdown = "Upcoming workshops and related info below.";
@@ -454,7 +470,7 @@ export default async function handler(req, res) {
     const structured = {
       intent,
       topic,
-      event_subtype: subtype, // surfaced so the UI can adapt the header if needed
+      event_subtype: subtype,
       events: rankedEvents.map((e) => ({
         id: e.id,
         title: e.title,
@@ -511,7 +527,6 @@ export default async function handler(req, res) {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     return res.status(200).send(payload);
   } catch (err) {
-    // Always return JSON to avoid client parse errors
     const msg =
       (err && (err.message || err.toString())) || "Unknown server error";
     const body = { ok: false, error: msg };
