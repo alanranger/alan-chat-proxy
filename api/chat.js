@@ -53,24 +53,85 @@ function originOf(url) {
   }
 }
 function slugWords(s = "") {
-  return (s.toLowerCase().replace(/https?:\/\/[^/]+/,"").replace(/[^\p{L}\p{N}]+/gu," ").trim().split(/\s+/)).filter(Boolean);
+  return (s
+    .toLowerCase()
+    .replace(/https?:\/\/[^/]+/, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .split(/\s+/)
+  ).filter(Boolean);
 }
 
 /* ----------------------- Intent + keyword extraction --------------------- */
-const EVENT_HINTS = ["date","dates","when","next","upcoming","available","where","workshop","course","class","schedule"];
-
-const TOPIC_KEYWORDS = [
-  // locations
-  "devon","snowdonia","wales","lake district","warwickshire","coventry","dorset",
-  // themes
-  "bluebell","autumn","astrophotography","beginners","lightroom","long exposure","landscape","woodlands","arboretum","batsford"
+const EVENT_HINTS = [
+  "date",
+  "dates",
+  "when",
+  "next",
+  "upcoming",
+  "available",
+  "where",
+  "workshop",
+  "course",
+  "class",
+  "schedule",
 ];
+
+// Generic topic hints
+const TOPIC_KEYWORDS = [
+  "devon",
+  "snowdonia",
+  "wales",
+  "lake district",
+  "warwickshire",
+  "coventry",
+  "dorset",
+  "bluebell",
+  "autumn",
+  "astrophotography",
+  "beginners",
+  "lightroom",
+  "long exposure",
+  "landscape",
+  "woodlands",
+  "arboretum",
+  "batsford",
+];
+
+// stopwords for advice queries
+const STOPWORDS = new Set([
+  "what",
+  "which",
+  "that",
+  "this",
+  "these",
+  "those",
+  "recommend",
+  "recommendation",
+  "about",
+  "guide",
+  "tell",
+  "info",
+  "information",
+  "help",
+  "need",
+  "want",
+]);
+
+function normaliseWord(w) {
+  if (w.endsWith("s") && w.length > 3) return w.slice(0, -1); // crude singular
+  return w;
+}
 
 function extractKeywords(q) {
   const lc = (q || "").toLowerCase();
   const kws = new Set();
   for (const t of TOPIC_KEYWORDS) if (lc.includes(t)) kws.add(t);
-  lc.replace(/[^\p{L}\p{N}\s-]/gu," ").split(/\s+/).filter(w=>w.length>=4).forEach(w=>kws.add(w));
+  lc.replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(w))
+    .map(normaliseWord)
+    .forEach((w) => kws.add(w));
   return Array.from(kws);
 }
 
@@ -96,7 +157,9 @@ async function findEvents(client, { keywords, limit = 120 }) {
   const nowIso = new Date().toISOString();
   let q = client
     .from("page_entities")
-    .select("id, title, page_url, source_url, date_start, date_end, location, raw")
+    .select(
+      "id, title, page_url, source_url, date_start, date_end, location, raw"
+    )
     .eq("kind", "event")
     .gte("date_start", nowIso)
     .order("date_start", { ascending: true })
@@ -173,7 +236,15 @@ async function findLanding(client, { keywords }) {
 
 /* --------------------------- Relevance + confidence ---------------------- */
 function scoreEntity(entity, keywords) {
-  const words = new Set(slugWords((entity?.title || "") + " " + (pickUrl(entity) || "") + " " + (entity?.location || "")));
+  const words = new Set(
+    slugWords(
+      (entity?.title || "") +
+        " " +
+        (pickUrl(entity) || "") +
+        " " +
+        (entity?.location || "")
+    )
+  );
   let score = 0;
   for (const k of keywords) {
     const parts = slugWords(k);
@@ -181,45 +252,17 @@ function scoreEntity(entity, keywords) {
   }
   // bonus for exact keyword in title
   const tlc = (entity?.title || "").toLowerCase();
-  for (const k of keywords) if (k && tlc.includes(k.toLowerCase())) score += 2;
+  for (const k of keywords)
+    if (k && tlc.includes(k.toLowerCase())) score += 2;
   return score;
 }
 
 function confidenceFrom(scores = []) {
   if (!scores.length) return 0.15;
   const max = Math.max(...scores);
-  const sum = scores.reduce((a,b)=>a+b,0) || 1;
-  const pct = clamp((max / (sum / scores.length)) / 3, 0.2, 0.95); // normalise a bit
+  const sum = scores.reduce((a, b) => a + b, 0) || 1;
+  const pct = clamp((max / (sum / scores.length)) / 3, 0.2, 0.95);
   return pct;
-}
-
-/* ----------------------- Product description parsing -------------------- */
-function extractFromDescription(desc) {
-  const out = { location:null, participants:null, fitness:null, availability:null, summary:null, sessions:[] };
-  if (!desc) return out;
-  const lines = desc.split(/\r?\n/).map((s)=>s.trim());
-  const nonEmpty = lines.filter(Boolean);
-  if (nonEmpty.length) out.summary = nonEmpty[0];
-
-  const nextVal = (i) => {
-    for (let j=i+1;j<lines.length;j++) { const t = lines[j].trim(); if (t) return t; }
-    return null;
-  };
-
-  for (let i=0;i<lines.length;i++) {
-    const ln = lines[i];
-    if (/^location:/i.test(ln)) { out.location = ln.replace(/^location:\s*/i,"").trim() || nextVal(i); continue; }
-    if (/^participants:/i.test(ln)) { out.participants = ln.replace(/^participants:\s*/i,"").trim() || nextVal(i); continue; }
-    if (/^fitness:/i.test(ln)) { out.fitness = ln.replace(/^fitness:\s*/i,"").trim() || nextVal(i); continue; }
-    if (/^availability:/i.test(ln)) { out.availability = ln.replace(/^availability:\s*/i,"").trim() || nextVal(i); continue; }
-    const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
-    if (m1) { const rawLabel = m1[1].replace(/\s+/g," ").trim(); const time = m1[2].trim(); out.sessions.push({ label: rawLabel, time, price: null }); }
-  }
-  if (out.summary && /^summary$/i.test(out.summary.trim())) {
-    const idx = lines.findIndex((s)=>/^summary$/i.test(s.trim()));
-    if (idx >= 0) { const nxt = lines.slice(idx+1).find((s)=>s.trim()); if (nxt) out.summary = nxt.trim(); }
-  }
-  return out;
 }
 
 /* --------------------- Build product panel (markdown) -------------------- */
@@ -229,7 +272,8 @@ function buildProductPanelMarkdown(products) {
   const primary = products.find((p) => p.price != null) || products[0];
 
   // Headline AggregateOffer range
-  let lowPrice = null, highPrice = null;
+  let lowPrice = null,
+    highPrice = null;
   for (const p of products) {
     const ro = p?.raw?.offers || {};
     const lp = ro.lowPrice ?? ro.lowprice ?? null;
@@ -247,37 +291,14 @@ function buildProductPanelMarkdown(products) {
   else if (headlineSingle) headBits.push(headlineSingle);
   const priceHead = headBits.length ? ` — ${headBits.join(" • ")}` : "";
 
-  const info = extractFromDescription(primary.description || primary?.raw?.description || "");
-
-  // Attach prices to sessions
-  const sessions = [...(info.sessions || [])];
-  if (sessions.length) {
-    if (lowPrice != null && highPrice != null && sessions.length >= 2) {
-      sessions[0].price = lowPrice; sessions[1].price = highPrice;
-    } else if (primary?.price != null) {
-      sessions.forEach((s)=> (s.price = primary.price));
-    }
-  }
-
+  const desc =
+    primary.meta_description ||
+    primary.raw?.description ||
+    primary.description ||
+    "";
   const lines = [];
   lines.push(`**${title}**${priceHead}`);
-  if (info.summary) lines.push(`\n${info.summary}`);
-
-  const facts = [];
-  if (info.location) facts.push(`**Location:** ${info.location}`);
-  if (info.participants) facts.push(`**Participants:** ${info.participants}`);
-  if (info.fitness) facts.push(`**Fitness:** ${info.fitness}`);
-  if (info.availability) facts.push(`**Availability:** ${info.availability}`);
-  if (facts.length) { lines.push(""); for (const f of facts) lines.push(f); }
-
-  if (sessions.length) {
-    lines.push("");
-    for (const s of sessions) {
-      const pretty = s.label.replace(/\bhrs\b/i, "hours");
-      const ptxt = s.price != null ? ` — ${toGBP(s.price)}` : "";
-      lines.push(`- **${pretty}** — ${s.time}${ptxt}`);
-    }
-  }
+  if (desc) lines.push(`\n${desc}`);
 
   return lines.join("\n");
 }
@@ -307,56 +328,61 @@ function buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl }) {
     landingUrl ||
     (firstEventUrl && originOf(firstEventUrl) + "/photography-workshops");
   add("Event Listing", listUrl, true);
-  add("Photos", photosUrl || (firstEventUrl && originOf(firstEventUrl) + "/gallery-image-portfolios"), false);
+  add(
+    "Photos",
+    photosUrl ||
+      (firstEventUrl && originOf(firstEventUrl) + "/gallery-image-portfolios"),
+    false
+  );
   return pills;
 }
 
-function buildAdvicePills({ articleUrl, query, pdfUrl, relatedUrl, relatedLabel }) {
+function buildAdvicePills({ articleUrl }) {
   const pills = [];
-  const add = (label, url, brand = true) => { if (label && url) pills.push({ label, url, brand }); };
-  add("Read Guide", articleUrl, true);
-  add("More Articles", `https://www.alanranger.com/search?query=${encodeURIComponent(query || "")}`, true);
-  if (pdfUrl) add("Download PDF", pdfUrl, true);
-  if (relatedUrl) add(relatedLabel || "Related", relatedUrl, false);
-  return pills.slice(0, 4);
+  if (articleUrl) pills.push({ label: "Read Guide", url: articleUrl, brand: true });
+  return pills;
 }
 
 /* --------------------------- Generic resolvers --------------------------- */
 function filterByTopicFamily(rows, keywords) {
   if (!keywords?.length) return rows;
-  // if user names a strong topic (e.g., "bluebell"), require it to appear in title/url/location
-  const strong = keywords.filter(k => /bluebell|arboretum|autumn|woodland|long exposure|lightroom|beginners|landscape/i.test(k));
+  const strong = keywords.filter((k) =>
+    /bluebell|arboretum|autumn|woodland|long exposure|lightroom|beginners|landscape/i.test(
+      k
+    )
+  );
   if (!strong.length) return rows;
-  const hasStrong = (s="") => strong.some(k => (s||"").toLowerCase().includes(k.toLowerCase()));
-  return rows.filter(r => hasStrong(r?.title) || hasStrong(pickUrl(r)) || hasStrong(r?.location));
+  const hasStrong = (s = "") =>
+    strong.some((k) => (s || "").toLowerCase().includes(k.toLowerCase()));
+  return rows.filter(
+    (r) =>
+      hasStrong(r?.title) || hasStrong(pickUrl(r)) || hasStrong(r?.location)
+  );
 }
 
 async function resolveEventsAndProduct(client, { keywords }) {
-  // Fetch
   const allEvents = await findEvents(client, { keywords, limit: 200 });
   const allProducts = await findProducts(client, { keywords, limit: 30 });
 
-  // Restrict to topic family
   const events = filterByTopicFamily(allEvents, keywords);
   const products = filterByTopicFamily(allProducts, keywords);
 
-  // Score + choose the best product
-  const productScores = products.map(p => ({ p, s: scoreEntity(p, keywords) }));
-  productScores.sort((a,b)=>b.s-a.s);
+  const productScores = products.map((p) => ({ p, s: scoreEntity(p, keywords) }));
+  productScores.sort((a, b) => b.s - a.s);
   const product = productScores[0]?.p || null;
 
-  // Sort events by relevance then by date
-  const eventScores = events.map(e => ({ e, s: scoreEntity(e, keywords) }));
-  eventScores.sort((a,b)=> (b.s - a.s) || (new Date(a.e.date_start) - new Date(b.e.date_start)));
-  const sortedEvents = eventScores.map(x => ({...x.e, _score:x.s}));
+  const eventScores = events.map((e) => ({ e, s: scoreEntity(e, keywords) }));
+  eventScores.sort(
+    (a, b) =>
+      b.s - a.s || new Date(a.e.date_start) - new Date(b.e.date_start)
+  );
+  const sortedEvents = eventScores.map((x) => ({ ...x.e, _score: x.s }));
 
-  // Confidence (based on event/product match strength)
   const conf = confidenceFrom([
     ...(productScores.length ? [productScores[0].s] : []),
-    ...eventScores.slice(0,5).map(x=>x.s)
+    ...eventScores.slice(0, 5).map((x) => x.s),
   ]);
 
-  // Landing page (if any), else origin workshops root from first event/product
   const landing = (await findLanding(client, { keywords })) || null;
 
   return { events: sortedEvents, product, landing, confidence: conf };
@@ -367,7 +393,9 @@ export default async function handler(req, res) {
   const started = Date.now();
   try {
     if (req.method !== "POST") {
-      res.status(405).json({ ok: false, error: "method_not_allowed", where: "http" });
+      res
+        .status(405)
+        .json({ ok: false, error: "method_not_allowed", where: "http" });
       return;
     }
 
@@ -378,7 +406,8 @@ export default async function handler(req, res) {
     const keywords = extractKeywords(query || "");
 
     if (intent === "events") {
-      const { events, product, landing, confidence } = await resolveEventsAndProduct(client, { keywords });
+      const { events, product, landing, confidence } =
+        await resolveEventsAndProduct(client, { keywords });
 
       const eventList = formatEventsForUi(events);
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
@@ -387,28 +416,36 @@ export default async function handler(req, res) {
       const productUrl = pickUrl(product) || firstEventUrl || null;
       const landingUrl =
         pickUrl(landing) ||
-        (firstEventUrl ? originOf(firstEventUrl) + "/photography-workshops" : null);
+        (firstEventUrl
+          ? originOf(firstEventUrl) + "/photography-workshops"
+          : null);
 
       const photosUrl =
-        (firstEventUrl && originOf(firstEventUrl) + "/gallery-image-portfolios") ||
+        (firstEventUrl &&
+          originOf(firstEventUrl) + "/gallery-image-portfolios") ||
         "https://www.alanranger.com/gallery-image-portfolios";
 
-      const pills = buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl });
+      const pills = buildEventPills({
+        productUrl,
+        firstEventUrl,
+        landingUrl,
+        photosUrl,
+      });
 
       const citations = uniq([
         pickUrl(product),
         pickUrl(landing),
-        ...((events || []).map(pickUrl)),
+        ...(events || []).map(pickUrl),
       ]).filter(Boolean);
 
       res.status(200).json({
         ok: true,
-        answer_markdown: productPanel, // product block (if any)
+        answer_markdown: productPanel,
         citations,
         structured: {
           intent: "events",
           topic: keywords.join(", "),
-          events: eventList,            // ALL relevant instances (no arbitrary cap)
+          events: eventList,
           products: product ? [product] : [],
           pills,
         },
@@ -426,34 +463,44 @@ export default async function handler(req, res) {
 
     // --------- ADVICE -----------
     const articles = await findArticles(client, { keywords, limit: 12 });
-    const topArticle = articles?.[0] || null;
+
+    const articleScores = (articles || []).map((a) => ({
+      a,
+      s: scoreEntity(a, keywords),
+    }));
+    articleScores.sort(
+      (x, y) =>
+        y.s - x.s ||
+        new Date(y.a.last_seen).getTime() - new Date(x.a.last_seen).getTime()
+    );
+
+    const anyPositive = articleScores.some((x) => x.s > 0);
+    const ranked = (anyPositive
+      ? articleScores.filter((x) => x.s > 0)
+      : articleScores
+    ).map((x) => x.a);
+
+    const topArticle = ranked[0] || null;
     const articleUrl = pickUrl(topArticle) || null;
 
-    // Basic confidence for advice: more articles & direct keyword match → higher
-    const articleScores = (articles || []).map(a => scoreEntity(a, keywords));
-    const confidence = confidenceFrom(articleScores);
+    const conf = confidenceFrom(articleScores.map((x) => x.s));
 
-    // Pills + short list
-    const pills = buildAdvicePills({
-      articleUrl,
-      query,
-      pdfUrl: null,
-      relatedUrl: null,
-      relatedLabel: null,
-    });
+    const pills = buildAdvicePills({ articleUrl });
 
     const citations = uniq([articleUrl]).filter(Boolean);
 
     const lines = [];
-    if (articles?.length) {
+    if (ranked?.length) {
       lines.push("Here are Alan’s guides that match your question:\n");
-      for (const a of articles.slice(0, 8)) {
+      for (const a of ranked.slice(0, 8)) {
         const t = a.title || a.raw?.name || "Read more";
         const u = pickUrl(a);
         lines.push(`- ${t} — ${u ? `[Link](${u})` : ""}`.trim());
       }
     } else {
-      lines.push("I couldn’t find a specific guide for that yet. If you need an exact recommendation, please use the Contact form or WhatsApp buttons above to reach Alan directly.");
+      lines.push(
+        "I couldn’t find a specific guide for that yet. If you need an exact recommendation, please use the Contact form or WhatsApp buttons above to reach Alan directly."
+      );
     }
 
     res.status(200).json({
@@ -465,11 +512,11 @@ export default async function handler(req, res) {
         topic: keywords.join(", "),
         events: [],
         products: [],
-        articles: articles || [],
+        articles: ranked || [],
         pills,
       },
-      confidence,
-      confidence_pct: Math.round(confidence * 100),
+      confidence: conf,
+      confidence_pct: Math.round(conf * 100),
       meta: {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
