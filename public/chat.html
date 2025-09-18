@@ -6,9 +6,6 @@
   <title>Alan Ranger Assistant</title>
   <meta name="color-scheme" content="dark light" />
   <style>
-    /* ===============================
-       Theme
-       =============================== */
     :root{
       --bg:#0b1220;
       --panel:#172036;
@@ -18,8 +15,8 @@
       --ink-2:#c7d3ff;
       --muted:#a5b2d6;
       --stroke:#223154;
-      --brand:#ffd166; /* warm yellow */
-      --accent:#4cc9f0; /* cyan */
+      --brand:#ffd166;
+      --accent:#4cc9f0;
       --ok:#2bd97d;
       --warn:#ffb703;
       --bad:#ef476f;
@@ -30,13 +27,9 @@
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;
-      background:var(--bg);
-      color:var(--ink);
+      margin:0;background:var(--bg);color:var(--ink);
       font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
-      text-rendering:optimizeLegibility;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
+      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale
     }
     a{color:#b7d7ff;text-decoration:none}
     a:hover{text-decoration:underline}
@@ -46,45 +39,24 @@
     .head h1{margin:0;font-size:26px;letter-spacing:.2px}
     .head p{margin:4px 0 0;color:var(--muted)}
 
-    /* ===============================
-       Pills (top links)
-       =============================== */
+    /* Pills */
     .pillbar{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 10px}
     .pill{
-      display:inline-flex;gap:8px;align-items:center;
-      padding:8px 14px;border-radius:999px;border:1px solid var(--stroke);
-      background:#0f1730;color:#fff;font-weight:700;letter-spacing:.2px
+      display:inline-flex;gap:8px;align-items:center;padding:8px 14px;border-radius:999px;
+      border:1px solid var(--stroke);background:#0f1730;color:#fff;font-weight:700;letter-spacing:.2px
     }
     .pill.brand{background:linear-gradient(180deg,var(--brand),#f8c74d);color:#171717;border:none}
-    .pill svg{width:16px;height:16px;opacity:.9}
 
-    /* ===============================
-       Cards / bubbles
-       =============================== */
-    .bubble{
-      background:var(--panel);
-      border:1px solid var(--stroke);
-      border-radius:var(--radius);
-      padding:16px;
-      box-shadow:var(--shadow);
-    }
-    .card{
-      background:var(--panel-2);
-      border:1px solid var(--stroke);
-      border-radius:14px;
-      padding:14px;
-    }
+    /* Cards / bubbles */
+    .bubble{background:var(--panel);border:1px solid var(--stroke);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    .card{background:var(--panel-2);border:1px solid var(--stroke);border-radius:14px;padding:14px}
     .card + .card{margin-top:10px}
     .section h3{margin:0 0 8px}
     .section h4{margin:0 0 6px;font-size:15px;color:var(--ink-2)}
     .meta{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:14px;margin-top:8px}
-    .badge{
-      display:inline-block;padding:4px 8px;border-radius:8px;
-      background:#0e1a35;color:#b8c4e6;border:1px solid var(--stroke);font-size:12px
-    }
+    .badge{display:inline-block;padding:4px 8px;border-radius:8px;background:#0e1a35;color:#b8c4e6;border:1px solid var(--stroke);font-size:12px}
     .badge.good{background:#092217;color:#bdf3d0;border-color:#1d6b4a}
     .badge.warn{background:#261b03;color:#ffe2a7;border-color:#6a4b00}
-
     .bar{height:1px;background:#243153;margin:16px 0}
     ul{margin:0 0 0 18px}
     .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
@@ -92,65 +64,47 @@
     .chip{background:#0f1730;border:1px solid var(--stroke);color:#cbd7ff;padding:4px 8px;border-radius:999px;font-size:12px;white-space:nowrap}
     .price{font-weight:800;margin:6px 0}
 
-    /* ===============================
-       Conversation list
-       =============================== */
+    /* Conversation */
     .thread{display:flex;flex-direction:column;gap:10px}
     .msg{display:flex;gap:12px}
-    .msg .role{
-      width:28px;height:28px;border-radius:999px;display:grid;place-items:center;
-      background:#0f1730;border:1px solid #223154;color:#d1ddff;font-weight:700;font-size:12px
-    }
+    .msg .role{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;background:#0f1730;border:1px solid #223154;color:#d1ddff;font-weight:700;font-size:12px}
     .msg .text{flex:1}
     .msg .text .time{font-size:12px;color:var(--muted);margin-top:4px}
 
-    /* ===============================
-       Input / actions
-       =============================== */
+    /* Input / actions */
     .input{display:flex;gap:10px;align-items:center;margin-top:10px}
-    .input input{
-      flex:1;border-radius:12px;border:1px solid var(--stroke);
-      background:#0f1730;color:#fff;padding:12px 12px 12px 14px;outline:none
-    }
-    .input button{
-      border:0;border-radius:12px;padding:12px 16px;font-weight:700;background:var(--accent);color:#07101a;cursor:pointer
-    }
+    .input input{flex:1;border-radius:12px;border:1px solid var(--stroke);background:#0f1730;color:#fff;padding:12px 12px 12px 14px;outline:none}
+    .input button{border:0;border-radius:12px;padding:12px 16px;font-weight:700;background:var(--accent);color:#07101a;cursor:pointer}
     .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .btn{
-      display:inline-flex;gap:8px;align-items:center;
-      padding:8px 10px;border-radius:10px;border:1px solid #29406a;background:#0d152b;color:#cfe1ff;cursor:pointer
-    }
+    .btn{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;border:1px solid #29406a;background:#0d152b;color:#cfe1ff;cursor:pointer}
     .btn svg{width:16px;height:16px}
 
-    /* ===============================
-       Debug panel
-       =============================== */
-    details.debug{
-      margin-top:16px;background:#0d152b;border:1px dashed #29406a;border-radius:12px;padding:8px 10px
-    }
+    /* Debug */
+    details.debug{margin-top:16px;background:#0d152b;border:1px dashed #29406a;border-radius:12px;padding:8px 10px}
     details.debug > summary{cursor:pointer;color:#a9b6d9;font-weight:600}
     .debuggrid{display:grid;gap:10px;grid-template-columns:1fr 1fr;margin-top:10px}
     .debuggrid .full{grid-column:1/-1}
     .tabs{display:flex;gap:8px;flex-wrap:wrap}
     .tab{padding:4px 8px;border:1px solid #284272;border-radius:8px;background:#0f1831;color:#cfe1ff;cursor:pointer}
     .tab.active{background:#172346}
-    pre{
-      white-space:pre-wrap;background:var(--code);
-      border:1px solid #22345a;border-radius:10px;padding:10px;margin:0;max-height:380px;overflow:auto
-    }
+    pre{white-space:pre-wrap;background:var(--code);border:1px solid #22345a;border-radius:10px;padding:10px;margin:0;max-height:380px;overflow:auto}
     code.small{font-size:12px;color:#9bb1e6}
 
-    /* ===============================
-       Helpers / utilities
-       =============================== */
+    /* Utilities */
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
     .hidden{display:none !important}
     .mt8{margin-top:8px}
     .mt12{margin-top:12px}
     .mt16{margin-top:16px}
     .mb0{margin-bottom:0}
-
-    /* print-friendly transcript */
+    .answerSummary{
+      background:var(--panel-3);border:1px solid var(--stroke);border-radius:12px;padding:10px 12px;
+      display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-weight:700
+    }
+    .tag{padding:6px 10px;border-radius:999px;border:1px solid var(--stroke);background:#10203b}
+    .tag.strong{background:#0e2a1f;border-color:#1e6d4b}
+    .tag.warn{background:#332408;border-color:#6a4b00}
+    .divider{opacity:.25}
     @media print{
       .input,.actions,details.debug,.pillbar{display:none}
       .wrap{max-width:900px}
@@ -159,22 +113,30 @@
 </head>
 <body>
   <div class="wrap">
-    <!-- ===========================
-         Header
-         =========================== -->
+    <!-- Header -->
     <div class="head">
       <div class="logo">AR</div>
       <div>
         <h1 class="mb0">Alan Ranger Assistant</h1>
-        <p>I’m Alan’s AI assistant, trained on site content. Ask about workshops, dates, pricing, tuition, or related articles. Everything here is generic—no query-specific wiring.</p>
+        <p>I’m Alan’s AI assistant, trained on site content. Ask about workshops, dates, pricing, tuition. If I can’t help, please contact Alan directly.</p>
       </div>
     </div>
 
     <!-- Pills -->
     <div class="pillbar" id="pillbar"></div>
 
-    <!-- Answer bubble -->
-    <div class="bubble">
+    <!-- Direct answer summary -->
+    <div class="answerSummary hidden" id="answerSummary">
+      <span class="tag" id="asIntent">—</span>
+      <span class="divider">|</span>
+      <span class="tag strong" id="asNext">Next date: —</span>
+      <span class="tag strong" id="asPrice">Price: —</span>
+      <span class="tag" id="asRange" title="If multiple prices are available">Range: —</span>
+      <span class="tag warn hidden" id="asWarn">Price inferred from text</span>
+    </div>
+
+    <!-- Main answer bubble (markdown) -->
+    <div class="bubble mt12">
       <div id="answerHtml" class="answer">Ask me about workshops or prices…</div>
       <div class="meta">
         <span class="badge" id="confidenceBadge">Confidence: —</span>
@@ -182,10 +144,10 @@
       </div>
     </div>
 
-    <!-- Information grid (Product, Events, Related) -->
+    <!-- Info grid -->
     <div class="grid mt12" id="infoGrid"></div>
 
-    <!-- Conversation thread -->
+    <!-- Conversation -->
     <div class="bubble mt12">
       <div class="row"><h3 class="mb0">Conversation</h3><span class="badge" id="turnCount">0 turns</span></div>
       <div class="thread mt8" id="thread"></div>
@@ -257,275 +219,178 @@
   </div>
 
   <script>
-    /* ============================================================
-       Helpers (generic, no site-specific wiring)
-       ============================================================ */
+    /* ================== helpers ================== */
+    const $ = (s)=>document.querySelector(s);
+    const $$ = (s)=>Array.from(document.querySelectorAll(s));
+    const LS = { THREAD:'ar.thread.v1' };
 
-    /** Selectors */
-    const $ = (sel) => document.querySelector(sel);
-    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-
-    /** Local storage keys */
-    const LS = {
-      THREAD:'ar.thread.v1',
-      HISTORY:'ar.history.v1'
-    };
-
-    /** Format a date into a readable, locale-friendly string */
-    const fmtDate = (iso) => {
+    const fmtDate = (iso)=>{
       if(!iso) return '';
-      try{
-        const d = new Date(iso);
-        return d.toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-      }catch{ return iso; }
+      try{ const d = new Date(iso); return d.toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'}); }
+      catch{ return iso; }
     };
 
-    /** Basic markdown-to-HTML (safe subset: headers, strong, lists, paras) */
-    const md = (text='')=>{
-      let out = text
-        .replace(/^###### (.*)$/gm,'<h6>$1</h6>')
-        .replace(/^##### (.*)$/gm,'<h5>$1</h5>')
-        .replace(/^#### (.*)$/gm,'<h4>$1</h4>')
-        .replace(/^### (.*)$/gm,'<h3>$1</h3>')
-        .replace(/^## (.*)$/gm,'<h2>$1</h2>')
-        .replace(/^# (.*)$/gm,'<h1>$1</h1>')
+    const md = (t='')=>{
+      let out=t
+        .replace(/^###### (.*)$/gm,'<h6>$1</h6>').replace(/^##### (.*)$/gm,'<h5>$1</h5>')
+        .replace(/^#### (.*)$/gm,'<h4>$1</h4>').replace(/^### (.*)$/gm,'<h3>$1</h3>')
+        .replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>')
         .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
-      // Lists (simple)
-      out = out.replace(/(?:^|\n)- (.*?)(?=\n(?!- )|$)/gs, m=>`<ul>${m.trim().split('\n').map(x=>x.replace(/^- /,'<li>')+'</li>').join('')}</ul>`);
-      // Paragraphs/line breaks
-      out = out.replace(/\n{2,}/g,'</p><p>').replace(/\n/g,'<br/>');
+      out=out.replace(/(?:^|\n)- (.*?)(?=\n(?!- )|$)/gs,m=>`<ul>${m.trim().split('\n').map(x=>x.replace(/^- /,'<li>')+'</li>').join('')}</ul>`);
+      out=out.replace(/\n{2,}/g,'</p><p>').replace(/\n/g,'<br/>');
       return `<p>${out}</p>`;
     };
 
-    /** Build an element with attributes/children */
     function h(tag, attrs={}, children=[]){
-      const el = document.createElement(tag);
-      for (const [k,v] of Object.entries(attrs||{})){
-        if (k === 'class') el.className = v;
-        else if (k==='text') el.textContent = v;
-        else if (k==='html') el.innerHTML = v;
+      const el=document.createElement(tag);
+      for(const [k,v] of Object.entries(attrs||{})){
+        if(k==='class') el.className=v;
+        else if(k==='text') el.textContent=v;
+        else if(k==='html') el.innerHTML=v;
         else el.setAttribute(k,v);
       }
-      for (const c of (Array.isArray(children)?children:[children])) if (c) el.appendChild(c);
+      for(const c of (Array.isArray(children)?children:[children])) if(c) el.appendChild(c);
       return el;
     }
 
-    /** Array unique by key */
-    const uniqBy = (arr, keyFn) => {
-      const map = new Map();
-      for (const item of arr||[]){
-        const k = keyFn(item);
-        if(!map.has(k)) map.set(k,item);
-      }
-      return [...map.values()];
-    };
+    const uniqBy=(arr, key)=>{ const m=new Map(); for(const it of arr||[]){ const k=key(it); if(!m.has(k)) m.set(k,it);} return [...m.values()] };
 
-    /** Number/currency helpers */
-    const parseMoneyFromText = (text) => {
+    const parseMoneyFromText=(text)=>{
       if(!text) return [];
-      const hits = [];
-      const re = /(?:£|GBP\s?)(\d+(?:[.,]\d{2})?)/gi;
-      let m;
-      while((m = re.exec(text))){ hits.push(Number(m[1].replace(/,/g,''))); }
+      const hits=[]; const re=/(?:£|GBP\s?)(\d+(?:[.,]\d{2})?)/gi; let m;
+      while((m=re.exec(text))){ hits.push(Number(m[1].replace(/,/g,''))); }
       return hits;
     };
-    function extractPriceRange(products=[], answer=''){
-      const prices = [];
-      let currency = '£';
 
-      for (const p of products||[]){
-        if (typeof p.price === 'number'){
-          prices.push(p.price);
-          currency = p.price_currency === 'GBP' ? '£' : (p.price_currency || currency);
-        }
-        // handle raw.offers (object or array)
-        const offers = p?.raw?.offers;
-        if (offers && typeof offers === 'object'){
-          if (Array.isArray(offers)){
-            for (const ofr of offers){
-              if (typeof ofr?.price === 'number') prices.push(ofr.price);
-              if (ofr?.priceCurrency && ofr.priceCurrency !== 'GBP') currency = ofr.priceCurrency;
-            }
-          } else {
-            if (typeof offers.price === 'number') prices.push(offers.price);
-            if (offers.priceCurrency && offers.priceCurrency !== 'GBP') currency = offers.priceCurrency;
+    function extractPriceRange(products=[], answer=''){
+      const prices=[]; let currency='£';
+      for(const p of products||[]){
+        if(typeof p.price==='number'){ prices.push(p.price); currency = p.price_currency==='GBP'?'£':(p.price_currency||currency); }
+        const offers=p?.raw?.offers;
+        if(offers && typeof offers==='object'){
+          if(Array.isArray(offers)){
+            for(const ofr of offers){ if(typeof ofr?.price==='number') prices.push(ofr.price); if(ofr?.priceCurrency && ofr.priceCurrency!=='GBP') currency=ofr.priceCurrency; }
+          }else{
+            if(typeof offers.price==='number') prices.push(offers.price);
+            if(offers.priceCurrency && offers.priceCurrency!=='GBP') currency=offers.priceCurrency;
           }
         }
       }
-
-      if (prices.length === 0) prices.push(...parseMoneyFromText(answer));
-      if (prices.length === 0) return null;
-
-      const lo = Math.min(...prices), hi = Math.max(...prices);
-      return {low: lo, high: hi, currency: currency === 'GBP' ? '£' : currency};
+      if(prices.length===0) prices.push(...parseMoneyFromText(answer));
+      if(prices.length===0) return null;
+      const lo=Math.min(...prices), hi=Math.max(...prices);
+      return {low:lo, high:hi, currency:currency==='GBP'?'£':currency, inferred: products.length===0};
     }
 
-    /** Confidence → percent */
-    const toPct = (conf) => {
-      if (typeof conf==='number') return Math.round(conf*100);
-      if (typeof conf==='string' && conf.endsWith('%')) return Number(conf.replace('%',''));
+    const toPct=(conf)=>{
+      if(typeof conf==='number') return Math.round(conf*100);
+      if(typeof conf==='string' && conf.endsWith('%')) return Number(conf.replace('%',''));
       return NaN;
     };
 
-    /** Truncate long strings for debug panels */
-    const trunc = (s, n=12000) => {
-      if (!s) return '';
-      const str = typeof s==='string' ? s : JSON.stringify(s,null,2);
-      return str.length>n ? str.slice(0,n)+'\n…(truncated)…' : str;
-    };
-
-    /** Simple group-by */
-    function groupBy(arr, key){
+    const groupBy=(arr,key)=>{
       return (arr||[]).reduce((acc,x)=>{
-        const k = (typeof key==='function' ? key(x) : x[key]) || 'Other';
-        (acc[k] = acc[k] || []).push(x);
+        const k=(typeof key==='function'?key(x):x[key])||'Other';
+        (acc[k]=acc[k]||[]).push(x);
         return acc;
       },{});
-    }
+    };
 
-    /* ============================================================
-       Related articles discovery (generic fallbacks)
-       Prefers payload.structured.related -> citations -> /sitemap.xml
-       ============================================================ */
     async function findRelated(query, payload){
-      const out = [];
-
-      // 1) server-provided (future-proof)
+      const out=[];
       const provided = payload?.structured?.related;
-      if (Array.isArray(provided) && provided.length){
-        for (const r of provided){
-          if (r?.url && r?.title) out.push({title:r.title,url:r.url});
-        }
-      }
-
-      // 2) from citations (score overlaps with query tokens)
-      if (out.length < 6 && Array.isArray(payload?.citations)){
-        const tokens = new Set((query||'').toLowerCase().split(/\W+/).filter(Boolean));
-        const scored = [];
-        for (const url of payload.citations){
-          if (typeof url !== 'string') continue;
-          const isBlog = /blog|article|tips|journal|news/i.test(url);
-          const parts = url.toLowerCase().split(/[-/]/g);
-          const overlap = parts.reduce((n,w)=>n+(tokens.has(w)?1:0),0);
-          const score = (isBlog?2:1)+overlap;
+      if(Array.isArray(provided)&&provided.length){ for(const r of provided){ if(r?.url && r?.title) out.push({title:r.title,url:r.url}); } }
+      if(out.length<6 && Array.isArray(payload?.citations)){
+        const tokens=new Set((query||'').toLowerCase().split(/\W+/).filter(Boolean));
+        const scored=[];
+        for(const url of payload.citations){
+          if(typeof url!=='string') continue;
+          const isBlog=/blog|article|tips|journal|news/i.test(url);
+          const parts=url.toLowerCase().split(/[-/]/g);
+          const overlap=parts.reduce((n,w)=>n+(tokens.has(w)?1:0),0);
+          const score=(isBlog?2:1)+overlap;
           scored.push({url,score});
         }
         scored.sort((a,b)=>b.score-a.score);
-        for (const s of scored){
-          if (out.length>=6) break;
-          if (!out.some(x=>x.url===s.url)){
-            out.push({title:s.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ').slice(0,80),url:s.url});
-          }
-        }
+        for(const s of scored){ if(out.length>=6) break; if(!out.some(x=>x.url===s.url)) out.push({title:s.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ').slice(0,80),url:s.url}); }
       }
-
-      // 3) sitemap (client-side)
-      if (out.length < 3){
+      if(out.length<3){
         try{
           const xml = await fetch('/sitemap.xml',{cache:'no-store'}).then(r=>r.ok?r.text():'').catch(()=> '');
-          if (xml){
-            const urls = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(m=>m[1]).filter(Boolean);
-            const tokens = new Set((query||'').toLowerCase().split(/\W+/).filter(Boolean));
-            const candidates = urls.filter(u=>/blog|article|tips|journal|news|photography/i.test(u));
-            const scored = candidates.map(u=>{
-              const parts = u.toLowerCase().split(/[-/]/g);
-              const overlap = parts.reduce((n,w)=>n+(tokens.has(w)?1:0),0);
+          if(xml){
+            const urls=[...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(m=>m[1]).filter(Boolean);
+            const tokens=new Set((query||'').toLowerCase().split(/\W+/).filter(Boolean));
+            const candidates=urls.filter(u=>/blog|article|tips|journal|news|photography/i.test(u));
+            const scored=candidates.map(u=>{
+              const parts=u.toLowerCase().split(/[-/]/g);
+              const overlap=parts.reduce((n,w)=>n+(tokens.has(w)?1:0),0);
               return {url:u,score:overlap};
             }).sort((a,b)=>b.score-a.score).slice(0,6);
-            for (const s of scored){
-              if (!out.some(x=>x.url===s.url)){
-                out.push({title:s.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ').slice(0,80),url:s.url});
-              }
-            }
+            for(const s of scored){ if(!out.some(x=>x.url===s.url)) out.push({title:s.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ').slice(0,80),url:s.url}); }
           }
-        }catch{/* ignore */}
+        }catch{}
       }
-
       return uniqBy(out,x=>x.url).slice(0,6);
     }
 
-    /* ============================================================
-       Rendering
-       ============================================================ */
-
-    /** Pills */
+    /* ================== rendering ================== */
     function renderPills(pills){
-      const bar = $('#pillbar'); bar.innerHTML='';
-      let list = Array.isArray(pills) && pills.length ? pills : null;
-      if (!list){
-        // Generic, not query-wired (only shown if API provides nothing)
-        list = [
-          {label:'Event Listing', url:'/photography-workshops', brand:true},
-          {label:'Photos', url:'/gallery-image-portfolios', brand:false}
-        ];
-      }
-      for (const p of list){
-        if (!p?.label || !p?.url) continue;
-        const a = h('a',{href:p.url,target:'_blank',rel:'noreferrer',class:'pill'+(p.brand?' brand':'')}, p.icon ? [h('span',{text:p.label})] : null);
-        a.textContent = p.label;
-        bar.appendChild(a);
+      const bar=$('#pillbar'); bar.innerHTML='';
+      let list = Array.isArray(pills)&&pills.length ? pills : [
+        {label:'Event Listing', url:'/photography-workshops', brand:true},
+        {label:'Photos', url:'/gallery-image-portfolios', brand:false}
+      ];
+      for(const p of list){
+        if(!p?.label || !p?.url) continue;
+        const a=h('a',{href:p.url,target:'_blank',rel:'noreferrer',class:'pill'+(p.brand?' brand':'')});
+        a.textContent=p.label; bar.appendChild(a);
       }
     }
 
-    /** Product card with price strip and chips */
     function productCard(p, priceRange){
       const url = p?.page_url || p?.url || p?.source_url;
-      const title = p?.title || 'Workshop';
-      const desc = (p?.description||'').split('\n').slice(0,8).join(' ');
-      const avail = p?.availability?.split('/').pop() || '';
-
-      const wrap = h('div',{class:'card'});
+      const title=p?.title||'Workshop';
+      const desc=(p?.description||'').split('\n').slice(0,8).join(' ');
+      const avail=p?.availability?.split('/').pop()||'';
+      const wrap=h('div',{class:'card'});
       wrap.appendChild(h('div',{class:'section'},[
         h('h3',{text:title}),
-        url ? h('div',{}, h('a',{class:'link',href:url,target:'_blank',rel:'noreferrer',text:url})) : null,
+        url?h('div',{}, h('a',{class:'link',href:url,target:'_blank',rel:'noreferrer',text:url})) : null,
         h('p',{text:desc})
       ]));
-
-      if (priceRange){
-        const same = priceRange.low === priceRange.high;
-        const unit = priceRange.currency || '£';
-        const txt = same ? `Price — ${unit}${priceRange.low}` : `Price — ${unit}${priceRange.low} to ${unit}${priceRange.high}`;
+      if(priceRange){
+        const same=priceRange.low===priceRange.high;
+        const unit=priceRange.currency||'£';
+        const txt=same?`Price — ${unit}${priceRange.low}`:`Price — ${unit}${priceRange.low} to ${unit}${priceRange.high}`;
         wrap.appendChild(h('div',{class:'price',text:txt}));
       }
-
-      const chips = h('div',{class:'chips'});
-      const lower = (p?.description||'').toLowerCase();
-
-      const rx = (lab)=> (p?.description.match(new RegExp(`${lab}:[^\\n]+`,'i'))||[])[0];
-      const addChip = (t)=> chips.appendChild(h('span',{class:'chip',text:t}));
-
-      const loc = rx('Location') || (p?.location ? `Location: ${p.location}` : null);
-      const fit = rx('Fitness');
-      const par = rx('Participants');
-
-      if (loc) addChip(loc);
-      if (par) addChip(par);
-      if (fit) addChip(fit);
-
+      const chips=h('div',{class:'chips'});
+      const rx=(lab)=> (p?.description.match(new RegExp(`${lab}:[^\\n]+`,'i'))||[])[0];
+      const addChip=(t)=> chips.appendChild(h('span',{class:'chip',text:t}));
+      const loc=rx('Location') || (p?.location ? `Location: ${p.location}` : null);
+      const fit=rx('Fitness');
+      const par=rx('Participants');
+      if(loc) addChip(loc);
+      if(par) addChip(par);
+      if(fit) addChip(fit);
       wrap.appendChild(chips);
-
-      // Availability badge
-      if (avail) wrap.appendChild(h('div',{class:'meta'},[h('span',{class:'badge',text:avail})]));
-
+      if(avail) wrap.appendChild(h('div',{class:'meta'},[h('span',{class:'badge',text:avail})]));
       return wrap;
     }
 
-    /** Events card (groups by location if present) */
     function eventsCard(events){
-      const div = h('div',{class:'card'});
+      const div=h('div',{class:'card'});
       div.appendChild(h('div',{class:'section'}, h('h3',{text:'Upcoming Workshops'})));
-      if (!events || !events.length){ div.appendChild(h('p',{text:'No upcoming events found.'})); return div; }
-
-      // group by location (if present)
-      const groups = groupBy(events, e => (e.location || '').trim() || 'Dates');
-      for (const [loc, list] of Object.entries(groups)){
-        if (loc && loc !== 'Dates') div.appendChild(h('h4',{text:loc}));
-        const ul = h('ul');
-        for (const e of list){
-          const when = e.when || fmtDate(e.date_start);
-          const href = e.href || e.page_url || e.source_url;
-          const label = e.title || 'View';
-          const li = h('li',{},[
+      if(!events || !events.length){ div.appendChild(h('p',{text:'No upcoming events found.'})); return div; }
+      const groups=groupBy(events, e=> (e.location||'').trim() || 'Dates');
+      for(const [loc,list] of Object.entries(groups)){
+        if(loc && loc!=='Dates') div.appendChild(h('h4',{text:loc}));
+        const ul=h('ul');
+        for(const e of list){
+          const when=e.when || fmtDate(e.date_start);
+          const href=e.href || e.page_url || e.source_url;
+          const label=e.title || 'View';
+          const li=h('li',{},[
             document.createTextNode(`${when} — `),
             h('a',{class:'link',href:href,target:'_blank',rel:'noreferrer',text:label})
           ]);
@@ -536,237 +401,204 @@
       return div;
     }
 
-    /** Related articles card */
     function relatedCard(items){
-      const div = h('div',{class:'card'});
+      const div=h('div',{class:'card'});
       div.appendChild(h('div',{class:'section'}, h('h3',{text:'Related Articles'})));
-      if (!items || !items.length){
-        div.appendChild(h('p',{text:'No related articles found right now.'}));
-        return div;
-      }
-      const ul = h('ul');
-      for (const it of items){
-        const a = h('a',{href:it.url,target:'_blank',rel:'noreferrer',class:'link',text: it.title || it.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ')});
+      if(!items || !items.length){ div.appendChild(h('p',{text:'No related articles found right now.'})); return div; }
+      const ul=h('ul');
+      for(const it of items){
+        const a=h('a',{href:it.url,target:'_blank',rel:'noreferrer',class:'link',text: it.title || it.url.replace(/^https?:\/\/[^/]+\//,'').replace(/-/g,' ')});
         ul.appendChild(h('li',{},a));
       }
       div.appendChild(ul);
       return div;
     }
 
-    /** Confidence + badges */
     function renderConfidence(conf){
-      const pct = toPct(conf);
-      const badge = $('#confidenceBadge');
-      const val = isFinite(pct) ? Math.max(35,Math.min(100,pct)) : 35;
-      badge.textContent = `Confidence: ${val}%`;
-      badge.className = 'badge' + (val>=75 ? ' good' : '');
+      const pct=toPct(conf);
+      const badge=$('#confidenceBadge');
+      const val=isFinite(pct) ? Math.max(35,Math.min(100,pct)) : 35;
+      badge.textContent=`Confidence: ${val}%`;
+      badge.className='badge'+(val>=75?' good':'');
     }
 
-    /** Render the main answer bubble */
     function renderAnswer(markdown, payload){
-      $('#answerHtml').innerHTML = md(markdown || '');
-      // Warn if answer is very short compared to structured data
-      const hasEvents = Array.isArray(payload?.structured?.events) && payload.structured.events.length>0;
-      const hasProducts = Array.isArray(payload?.structured?.products) && payload.structured.products.length>0;
-      const warn = (markdown||'').trim().length < 30 && (hasEvents || hasProducts);
-      $('#warnBadge').classList.toggle('hidden', !warn);
+      $('#answerHtml').innerHTML=md(markdown||'');
+      const hasEvents=Array.isArray(payload?.structured?.events)&&payload.structured.events.length>0;
+      const hasProducts=Array.isArray(payload?.structured?.products)&&payload.structured.products.length>0;
+      const warn=(markdown||'').trim().length<30 && (hasEvents||hasProducts);
+      $('#warnBadge').classList.toggle('hidden',!warn);
     }
 
-    /* ============================================================
-       Conversation / transcript
-       ============================================================ */
-    const thread = [];
+    /* ================== direct answer summary ================== */
+    function pickNextDate(events){
+      if(!Array.isArray(events)||!events.length) return null;
+      const now = new Date();
+      const withDates = events.map(e=>({e, d: e.date_start ? new Date(e.date_start) : null})).filter(x=>x.d);
+      const future = withDates.filter(x=>x.d>=now);
+      const pool = future.length?future:withDates;
+      if(!pool.length) return null;
+      pool.sort((a,b)=>a.d-b.d);
+      return pool[0].e;
+    }
+
+    function showDirectAnswer(query, res){
+      const box = $('#answerSummary');
+      const asIntent = $('#asIntent');
+      const asNext = $('#asNext');
+      const asPrice = $('#asPrice');
+      const asRange = $('#asRange');
+      const asWarn = $('#asWarn');
+
+      const events = Array.isArray(res?.structured?.events) ? res.structured.events : [];
+      const products = Array.isArray(res?.structured?.products) ? res.structured.products : [];
+      const next = pickNextDate(events);
+      const range = extractPriceRange(products, res?.answer_markdown || '');
+
+      asIntent.textContent = (res?.structured?.intent || 'answer').toUpperCase();
+      asNext.textContent = 'Next date: ' + (next ? (next.when || fmtDate(next.date_start)) : '—');
+
+      if(range){
+        const same = range.low === range.high;
+        asPrice.textContent = 'Price: ' + (same ? `${range.currency}${range.low}` : `${range.currency}${range.low}–${range.currency}${range.high}`);
+        asRange.textContent = 'Range: ' + (same ? 'single' : `${range.currency}${range.low} to ${range.currency}${range.high}`);
+        asWarn.classList.toggle('hidden', !range.inferred);
+      }else{
+        asPrice.textContent = 'Price: —';
+        asRange.textContent = 'Range: —';
+        asWarn.classList.add('hidden');
+      }
+
+      box.classList.remove('hidden');
+    }
+
+    /* ================== thread & debug ================== */
+    const thread=[];
     function addTurn(role, content){
-      const time = new Date().toLocaleTimeString();
-      thread.push({role, content, time});
+      const time=new Date().toLocaleTimeString();
+      thread.push({role,content,time});
       localStorage.setItem(LS.THREAD, JSON.stringify(thread));
       renderThread();
     }
     function renderThread(){
-      const tgt = $('#thread'); tgt.innerHTML='';
-      for (const t of thread){
-        const item = h('div',{class:'msg'},[
-          h('div',{class:'role',text: t.role==='user' ? 'U' : 'A'}),
+      const tgt=$('#thread'); tgt.innerHTML='';
+      for(const t of thread){
+        const item=h('div',{class:'msg'},[
+          h('div',{class:'role',text: t.role==='user' ? 'U':'A'}),
           h('div',{class:'text'},[
             h('div',{html: t.role==='assistant' ? md(t.content) : `<p>${t.content}</p>`}),
-            h('div',{class:'time',text: t.time})
+            h('div',{class:'time',text:t.time})
           ])
         ]);
         tgt.appendChild(item);
       }
-      $('#turnCount').textContent = `${thread.length} ${thread.length===1?'turn':'turns'}`;
+      $('#turnCount').textContent=`${thread.length} ${thread.length===1?'turn':'turns'}`;
     }
     function resetThread(){
-      thread.length = 0;
-      localStorage.removeItem(LS.THREAD);
-      renderThread();
+      thread.length=0; localStorage.removeItem(LS.THREAD); renderThread();
     }
 
-    /* ============================================================
-       Debug panes: multi-turn tabs
-       ============================================================ */
-    const dbg = {
-      tabs: [],
-      push(req,res){
-        // Keep last 6
-        this.tabs.push({req,res,ts:new Date().toISOString()});
-        this.tabs = this.tabs.slice(-6);
-        renderDebugTabs();
-      }
-    };
-
+    const dbg={ tabs:[], push(req,res){ this.tabs.push({req,res,ts:new Date().toISOString()}); this.tabs=this.tabs.slice(-6); renderDebugTabs(); } };
+    const trunc=(s,n=12000)=>{ if(!s) return ''; const str=typeof s==='string'?s:JSON.stringify(s,null,2); return str.length>n?str.slice(0,n)+'\n…(truncated)…':str; };
     function renderDebugTabs(){
-      const tabs = $('#dbgTabs'); tabs.innerHTML='';
+      const tabs=$('#dbgTabs'); tabs.innerHTML='';
       dbg.tabs.forEach((t,i)=>{
-        const b = h('button',{class:'tab'+(i===dbg.tabs.length-1?' active':''),text:`Turn ${i+1}`});
-        b.addEventListener('click',()=>{
-          $$('.tab').forEach(x=>x.classList.remove('active'));
-          b.classList.add('active');
-          mountDebug(t.req, t.res);
-        });
+        const b=h('button',{class:'tab'+(i===dbg.tabs.length-1?' active':''),text:`Turn ${i+1}`});
+        b.addEventListener('click',()=>{ $$('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); mountDebug(t.req,t.res); });
         tabs.appendChild(b);
       });
-      const last = dbg.tabs[dbg.tabs.length-1];
-      if (last) mountDebug(last.req, last.res);
+      const last=dbg.tabs[dbg.tabs.length-1]; if(last) mountDebug(last.req,last.res);
     }
-
     function mountDebug(req,res){
-      $('#dbgReq').textContent = trunc(JSON.stringify(req,null,2));
-      $('#dbgRes').textContent = trunc(JSON.stringify(res,null,2));
-      $('#dbgStruct').textContent = trunc(JSON.stringify(res?.structured || {},null,2));
-      $('#dbgCites').textContent = trunc(JSON.stringify(uniqBy(res?.citations||[], x=>x),null,2));
-      const notes = [];
-      const s = res?.structured||{};
-      if (!s.products?.length) notes.push('No products in structured.');
-      if (!s.events?.length) notes.push('No events in structured.');
-      if (!s.pills?.length) notes.push('No pills in structured.');
-      $('#dbgNotes').textContent = (notes.join('\n')||'—');
+      $('#dbgReq').textContent=trunc(JSON.stringify(req,null,2));
+      $('#dbgRes').textContent=trunc(JSON.stringify(res,null,2));
+      $('#dbgStruct').textContent=trunc(JSON.stringify(res?.structured||{},null,2));
+      $('#dbgCites').textContent=trunc(JSON.stringify(uniqBy(res?.citations||[], x=>x),null,2));
+      const notes=[]; const s=res?.structured||{};
+      if(!s.products?.length) notes.push('No products in structured.');
+      if(!s.events?.length) notes.push('No events in structured.');
+      if(!s.pills?.length) notes.push('No pills in structured.');
+      $('#dbgNotes').textContent=(notes.join('\n')||'—');
     }
 
-    /* ============================================================
-       Query / fetch
-       ============================================================ */
+    /* ================== ask() ================== */
     async function ask(query){
-      const topK = 8;
-      const req = {query, topK};
-      addTurn('user', query);
-
-      // UI: request debug
+      const topK=8; const req={query,topK}; addTurn('user',query);
       $('#dbgReq').textContent = trunc(JSON.stringify(req,null,2));
 
       const res = await fetch('/api/chat',{
-        method:'POST',
-        headers:{'content-type':'application/json'},
+        method:'POST', headers:{'content-type':'application/json'},
         body: JSON.stringify(req)
       }).then(r=>r.json()).catch(err=>({ok:false,error:String(err)}));
 
       dbg.push(req,res);
 
-      // Render main pieces
-      renderAnswer(res.answer_markdown || '', res);
-      renderConfidence(res.confidence ?? res.confidence_pct/100);
+      // render
+      renderAnswer(res.answer_markdown||'',res);
+      renderConfidence(res.confidence ?? (res.confidence_pct ? res.confidence_pct/100 : null));
       renderPills(res?.structured?.pills);
 
-      // Info grid
-      const grid = $('#infoGrid'); grid.innerHTML='';
+      // direct answer summary (next date + price)
+      showDirectAnswer(query,res);
 
-      // Product card with price range
-      const products = Array.isArray(res?.structured?.products) ? res.structured.products : [];
-      if (products.length){
-        const range = extractPriceRange(products, res.answer_markdown || '');
-        grid.appendChild(productCard(products[0], range));
-      }
-
-      // Events
-      const events = Array.isArray(res?.structured?.events) ? res.structured.events : [];
-      if (events.length) grid.appendChild(eventsCard(events));
-
-      // Related (always attempt)
-      const related = await findRelated(query, res);
+      // info grid
+      const grid=$('#infoGrid'); grid.innerHTML='';
+      const products=Array.isArray(res?.structured?.products)?res.structured.products:[];
+      if(products.length){ const range=extractPriceRange(products,res.answer_markdown||''); grid.appendChild(productCard(products[0],range)); }
+      const events=Array.isArray(res?.structured?.events)?res.structured.events:[];
+      if(events.length) grid.appendChild(eventsCard(events));
+      const related=await findRelated(query,res);
       grid.appendChild(relatedCard(related));
 
-      // Append to conversation
       addTurn('assistant', res.answer_markdown || '—');
     }
 
-    /* ============================================================
-       UI wiring
-       ============================================================ */
-    const input = $('#q');
-    const send = $('#send');
-    const debugWrap = $('#debugWrap');
+    /* ================== UI wiring ================== */
+    const input=$('#q'); const send=$('#send'); const debugWrap=$('#debugWrap');
 
-    // Send handlers
-    function doSend(){
-      const q = input.value.trim();
-      if (!q) return;
-      ask(q);
-      input.value = '';
-    }
-    send.addEventListener('click', doSend);
-    input.addEventListener('keydown', (e)=>{
-      if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); doSend(); }
-    });
+    function doSend(){ const q=input.value.trim(); if(!q) return; ask(q); input.value=''; }
+    send.addEventListener('click',doSend);
+    input.addEventListener('keydown',(e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doSend(); } });
 
-    // Action buttons
     $('#btnEmail').addEventListener('click', ()=>{
-      const plain = thread.map(t=>`${t.role.toUpperCase()} @ ${t.time}\n${t.content}\n`).join('\n');
-      const subject = encodeURIComponent('Alan Ranger Assistant Transcript');
-      const body = encodeURIComponent(plain);
-      location.href = `mailto:?subject=${subject}&body=${body}`;
+      const plain=thread.map(t=>`${t.role.toUpperCase()} @ ${t.time}\n${t.content}\n`).join('\n');
+      const subject=encodeURIComponent('Alan Ranger Assistant Transcript');
+      const body=encodeURIComponent(plain);
+      location.href=`mailto:?subject=${subject}&body=${body}`;
     });
 
     $('#btnDownload').addEventListener('click', ()=>{
-      const plain = thread.map(t=>`${t.role.toUpperCase()} @ ${t.time}\n${t.content}\n`).join('\n');
-      const blob = new Blob([plain],{type:'text/plain'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href=url; a.download='assistant-transcript.txt';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      const plain=thread.map(t=>`${t.role.toUpperCase()} @ ${t.time}\n${t.content}\n`).join('\n');
+      const blob=new Blob([plain],{type:'text/plain'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download='assistant-transcript.txt';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
     });
 
     $('#btnReset').addEventListener('click', ()=>{
-      resetThread();
-      $('#infoGrid').innerHTML='';
-      $('#answerHtml').innerHTML = 'Ask me about workshops or prices…';
-      renderConfidence(null);
-      renderPills(null);
-      $('#warnBadge').classList.add('hidden');
+      resetThread(); $('#infoGrid').innerHTML='';
+      $('#answerHtml').innerHTML='Ask me about workshops or prices…';
+      renderConfidence(null); renderPills(null);
+      $('#warnBadge').classList.add('hidden'); $('#answerSummary').classList.add('hidden');
     });
 
     $('#btnFocus').addEventListener('click', ()=> input.focus());
+    $('#btnToggleDebug').addEventListener('click', ()=>{ debugWrap.open=!debugWrap.open; });
 
-    $('#btnToggleDebug').addEventListener('click', ()=>{
-      debugWrap.open = !debugWrap.open;
+    window.addEventListener('keydown',(e)=>{
+      const mod=e.ctrlKey||e.metaKey; if(!mod) return;
+      if(e.key.toLowerCase()==='k'){ e.preventDefault(); input.focus(); }
+      if(e.key.toLowerCase()==='r'){ e.preventDefault(); $('#btnReset').click(); }
+      if(e.key.toLowerCase()==='e'){ e.preventDefault(); $('#btnEmail').click(); }
+      if(e.key.toLowerCase()==='d'){ e.preventDefault(); $('#btnDownload').click(); }
+      if(e.key.toLowerCase()==='i'){ e.preventDefault(); $('#btnToggleDebug').click(); }
     });
 
-    // Keyboard shortcuts
-    window.addEventListener('keydown', (e)=>{
-      const mod = e.ctrlKey || e.metaKey;
-      if (!mod) return;
-      if (e.key.toLowerCase()==='k'){ e.preventDefault(); input.focus(); }
-      if (e.key.toLowerCase()==='r'){ e.preventDefault(); $('#btnReset').click(); }
-      if (e.key.toLowerCase()==='e'){ e.preventDefault(); $('#btnEmail').click(); }
-      if (e.key.toLowerCase()==='d'){ e.preventDefault(); $('#btnDownload').click(); }
-      if (e.key.toLowerCase()==='i'){ e.preventDefault(); $('#btnToggleDebug').click(); }
-    });
-
-    /* ============================================================
-       Bootstrap (persist thread; demo query once)
-       ============================================================ */
+    /* ================== boot ================== */
     (function boot(){
-      // Persisted thread
-      try{
-        const saved = JSON.parse(localStorage.getItem(LS.THREAD)||'[]');
-        for (const t of saved) thread.push(t);
-        renderThread();
-      }catch{/* ignore */}
-
-      // Initial pills (until first response arrives)
+      try{ const saved=JSON.parse(localStorage.getItem(LS.THREAD)||'[]'); for(const t of saved) thread.push(t); renderThread(); }catch{}
       renderPills(null);
-
-      // Kick with a neutral, generic query so the UI isn't empty
+      // Initial neutral query so the UI isn't empty (can remove if undesired)
       ask('when are the next workshops and what do they cost?');
     })();
   </script>
