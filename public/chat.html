@@ -43,7 +43,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer h1,.answer h2,.answer h3{margin:.2em 0}
 .answer p{margin:.5em 0}
 .answer ul{margin:.4em 0 .6em 1.25em}
-.answer li{margin:.15em 0}
+.answer li{margin:.2em 0}
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
 .meta{color:var(--muted);font-size:14px}
@@ -54,7 +54,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .footer-status{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:12px}
 .badge{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 14px;font-weight:800;letter-spacing:.2px;border:1px solid #1c2a46;background:#0f1b31;color:#cfe3ff}
 .badge.small{padding:6px 10px;font-size:12px}
-.badge.ts{font-size:12px;font-weight:500;opacity:.9;} /* smaller + not bold */
+.badge.ts{font-size:12px;font-weight:500;opacity:.9;}
 .badge.conf{background:#13233f;border-color:#263d68}
 .badge.conf.green{background:var(--status-green-bg);border-color:var(--status-green-br);color:var(--status-green-tx)}
 .badge.conf.amber{background:var(--status-amber-bg);border-color:var(--status-amber-br);color:var(--status-amber-tx)}
@@ -409,7 +409,7 @@ function renderProductCard(prod){
   const options = deriveOptions(prod, facts);
 
   const lines = [];
-  const md = getMetaDescription(prod); // strictly meta + trimmed
+  const md = getMetaDescription(prod);
   if(md) lines.push(`<p class="meta">${escapeHTML(md)}</p>`);
 
   if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
@@ -434,7 +434,7 @@ function renderProductCard(prod){
   `;
 }
 
-/* ===== Events: phrase-aware, generic scoring; always show location ===== */
+/* ===== Events: phrase-aware, generic scoring; now two-line layout ===== */
 const STOP = new Set([
   'the','and','or','what','whats','when','whens','next','cost',
   'workshop','workshops','photography','photo','near','me','uk',
@@ -481,47 +481,65 @@ function renderEventsBlock(structured){
   const lis = list.map(e=>{
     const when=fmtDate(e.date_start);
     const href=e.page_url||e.source_url||e.url||'#';
-    const where=e.location ? ` — ${escapeHTML(e.location)}` : '';
-    const title=e.title ? ` — ${escapeHTML(e.title)}` : '';
-    return `<li>${when}${where}${title} — <a href="${href}" target="_blank" rel="noopener">Link</a></li>`;
+    const where=e.location ? `${escapeHTML(e.location)}` : '';
+    const title=e.title ? `${escapeHTML(e.title)}` : '';
+    return `
+      <li>
+        <div><strong>${when}${where ? ' — ' + where : ''}</strong> — <a href="${href}" target="_blank" rel="noopener">Link</a></div>
+        <div>${title}</div>
+      </li>`;
   }).join('');
 
   const header = eventHeaderLabel(structured);
   return `<div class="answer"><h3>${header}</h3><ul>${lis}</ul></div>`;
 }
 
-/* ===== Articles (Guides) ranking — generic, with small workshop/course bias ===== */
+/* ===== Articles (Guides) ranking — add event context and stronger bias ===== */
 function tokenize(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
 function jaccard(a,b){ const A=new Set(a), B=new Set(b); let inter=0; for(const x of A) if(B.has(x)) inter++; const union=A.size+B.size-inter; return union? inter/union : 0; }
 function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
 function articleTitle(a){ return a?.title || a?.raw?.name || ''; }
 
-function scoreArticle(a, query, topic){
+function scoreArticle(a, query, topic, contextTokens){
   const title = articleTitle(a);
   const url = articleUrl(a);
   if(!title || !url) return 0;
-  const qTokens = tokenize([query, topic].join(' '));
+  const qTokens = tokenize([query, topic].join(' ')).concat(contextTokens||[]);
   const hayTokens = tokenize(title + ' ' + url);
   if (!qTokens.length || !hayTokens.length) return 0;
   let score = jaccard(qTokens, hayTokens);
-  if (qTokens.some(t => t.length >= 3 && title.toLowerCase().includes(t))) score += 0.2;
+  if (qTokens.some(t => t.length >= 3 && title.toLowerCase().includes(t))) score += 0.25;
 
-  // Bias: if user asked workshops, prefer workshop-related guides; similarly for courses
+  // Bias for workshop/course wording on event intent
   const q = (__lastQuery||'').toLowerCase();
   const isWorkshopQ = /\b(workshop|workshops)\b/.test(q);
   const isCourseQ   = /\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(q);
   const t = (title + ' ' + url).toLowerCase();
-  if (isWorkshopQ && /workshop/.test(t) && !/course|tuition|lesson/.test(t)) score += 0.15;
-  if (isCourseQ && /course|tuition|lesson|class/.test(t)) score += 0.15;
+  if (isWorkshopQ && /workshop/.test(t) && !/course|tuition|lesson/.test(t)) score += 0.25;
+  if (isCourseQ && /course|tuition|lesson|class/.test(t)) score += 0.25;
 
   return Math.min(1, score);
 }
 
 function pickArticles(structured, query, topic){
   const all = Array.isArray(structured?.articles) ? structured.articles : [];
-  const scored = all
-    .map(a => ({a, s: scoreArticle(a, query, topic)}))
-    .filter(x => x.s > 0)
+
+  // Add context from top event (title + location tokens)
+  const ev = (structured?.events||[])[0] || {};
+  const ctxTokens = tokenize([(ev.title||''), (ev.location||'')].join(' '));
+
+  let scored = all
+    .map(a => ({a, s: scoreArticle(a, query, topic, ctxTokens)}))
+    .filter(x => x.s > 0);
+
+  // If user clearly asked events, lightly filter to keep event-ish guides first
+  const isEventIntent = structured?.event_subtype || /\b(workshop|workshops|course|courses|class|classes|tuition|lesson|lessons)\b/i.test(__lastQuery||'');
+  if (isEventIntent) {
+    const eventish = scored.filter(x => /workshop|course|tuition|lesson|class/i.test((articleTitle(x.a)+' '+articleUrl(x.a))));
+    if (eventish.length >= 2) scored = eventish.concat(scored.filter(x=>!eventish.includes(x)));
+  }
+
+  const ranked = scored
     .sort((x,y)=>{
       if (y.s !== x.s) return y.s - x.s;
       const dy = Date.parse(y.a?.last_seen || '') || 0;
@@ -531,7 +549,8 @@ function pickArticles(structured, query, topic){
     .slice(0,5)
     .map(x => x.a)
     .filter(a => !!articleUrl(a));
-  return scored;
+
+  return ranked;
 }
 
 function renderArticlesBlock(structured, query){
@@ -560,12 +579,10 @@ function buildActionPillsFromStructured(structured, query){
     safe.push({label,href});
   };
 
-  // provided pills (now server gives Book Now + View event + Photos)
   for (const p of (structured?.pills || structured?.chips || [])){
     add(p.label || p.text || 'Open', p.url || p.href);
   }
 
-  // top two guides as pills (generic ranking)
   const arts = pickArticles(structured, query, structured?.topic||'').slice(0,2);
   for (const a of arts){
     add(articleTitle(a) || 'Read Guide', articleUrl(a));
@@ -596,18 +613,14 @@ function renderAnswer(payload){
   const merged = mergeProducts(s.products||[]);
   const prod = merged[0] || null;
 
-  // product
   if(prod) addBubble(renderProductCard(prod));
 
-  // events
   const evHTML = renderEventsBlock(s);
   if(evHTML) addBubble(evHTML);
 
-  // articles (generic)
   const artHTML = renderArticlesBlock(s, __lastQuery);
   if(artHTML) addBubble(artHTML);
 
-  // pills (include top 2 matched guides)
   const pills = buildActionPillsFromStructured(s, __lastQuery);
   if(pills.length){
     const wrap = document.createElement('div');
@@ -620,13 +633,11 @@ function renderAnswer(payload){
     thread.appendChild(wrap);
   }
 
-  // footer status (one row per assistant reply)
   const footer = document.createElement('div');
   footer.className = 'footer-status';
   footer.innerHTML = `${confidencePill(__lastConfidencePct)} <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
   thread.appendChild(footer);
 
-  // fallback
   if(!prod && !(s.events||[]).length && !(s.articles||[]).length){
     const md = payload.answer_markdown || payload.answer || '';
     const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
@@ -634,7 +645,6 @@ function renderAnswer(payload){
     addBubble(html.replace('</div>', `${extra}</div>`));
   }
 
-  // Debug dumps (compact)
   setDebugJSON(dbgStruct, payload.structured||{});
   setDebugJSON(dbgNote, { confidence_pct: __lastConfidencePct });
 }
@@ -655,7 +665,6 @@ async function sendQuery(query){
     const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
     setDebugJSON(dbgHeaders, headers);
 
-    // tolerant parsing: handle non-JSON error bodies
     let data = null;
     let rawText = '';
     const ct = (res.headers.get('content-type') || '').toLowerCase();
@@ -679,7 +688,6 @@ async function sendQuery(query){
       thread.appendChild(footer);
       addBubble(`<div class="answer"><p>Server error: ${escapeHTML(String(data.error||'Unknown'))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
     } else {
-      // footer even on empty
       const footer = document.createElement('div');
       const heuristic = heuristicConfidence({});
       __lastConfidencePct = heuristic;
