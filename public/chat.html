@@ -170,7 +170,26 @@ const dbgNote   = document.getElementById('dbg-note');
 
 function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
 
-/* ================= Debug copy helpers (NEW) ================= */
+/* ================= Debug: compact JSON & copy-all ================= */
+function setDebugJSON(el, data, opts={maxLen: 1200, maxItems: 20}) {
+  function replacer(key, value){
+    if (typeof value === 'string') {
+      return value.length > opts.maxLen ? value.slice(0, opts.maxLen) + '…(truncated)' : value;
+    }
+    if (Array.isArray(value)) {
+      if (value.length > opts.maxItems) {
+        return [...value.slice(0, opts.maxItems), `…(${value.length - opts.maxItems} more items truncated)`];
+      }
+    }
+    return value;
+  }
+  try {
+    el.textContent = JSON.stringify(data, replacer, 2);
+  } catch {
+    el.textContent = String(data);
+  }
+}
+
 function collectDebugText(){
   const get = (el) => (el && el.textContent) ? el.textContent : '–';
   const blocks = [
@@ -415,37 +434,55 @@ function renderProductCard(prod){
   `;
 }
 
-/* ===== Events (unchanged behaviour) ===== */
-const STOP = new Set(['the','and','or','what','whats','when','whens','next','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire']);
-function extractKeywords(topic, query){
-  const src = [topic||'', query||''].join(' ').toLowerCase();
-  const words = Array.from(new Set(src.match(/[a-z]+/g)||[]));
-  const geos = ['devon','warwickshire','warks','coventry','peak','district','lake','lakes','yorkshire','moor','moors'];
-  return words.filter(w => !STOP.has(w) || geos.includes(w));
+/* ===== Events: phrase-aware, generic scoring; always show location ===== */
+const STOP = new Set([
+  'the','and','or','what','whats','when','whens','next','cost',
+  'workshop','workshops','photography','photo','near','me','uk',
+  'warks','warwickshire','devonshire','district','class','classes','course','courses'
+]);
+
+function tokenizeWords(s){ return (s||'').toLowerCase().match(/[a-z]+/g) || []; }
+
+function extractKeyPhrases(topic, query){
+  const words = tokenizeWords([topic||'', query||''].join(' '));
+  const kept = words.filter(w => !STOP.has(w) && w.length >= 3);
+  const phrases = [];
+  for (let i=0; i<kept.length-1; i++){
+    phrases.push(`${kept[i]} ${kept[i+1]}`);
+  }
+  return { words: new Set(kept), phrases: new Set(phrases) };
 }
-function eventMatches(e, kws){ if(!kws.length) return true; const hay = ((e.title||'')+' '+(e.location||'')).toLowerCase(); return kws.some(k=>hay.includes(k)); }
-function renderEventsBlock(structured, productHasLocation){
-  const now=new Date();
-  const all=(structured?.events||[]).filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
-  const kws = extractKeywords(structured?.topic||'', __lastQuery);
-  const filtered = all.filter(e=>eventMatches(e, kws));
-  const list = filtered.length ? filtered : all;
-  if(!list.length) return '';
-  const topic = (structured?.topic||'').toString().trim();
-  const titleKW = kws.find(k=>k && !STOP.has(k));
-  const friendlyTitle = titleKW ? `Upcoming ${titleKW[0].toUpperCase()+titleKW.slice(1)} Workshops` :
-    (topic ? `Upcoming ${escapeHTML(topic.replace(/,?\s*(whats?|whens?|next|cost)/gi,'').trim())} Workshops` : 'Upcoming Workshops');
-  const lis = list.sort((a,b)=>new Date(a.date_start)-new Date(b.date_start)).map(e=>{
-    const when=fmtDate(e.date_start);
-    const href=e.page_url||e.source_url||e.url||'#';
-    const loc=e.location||'';
-    const locPart = (!productHasLocation && loc) ? ` — ${escapeHTML(loc)}` : '';
-    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a>${locPart}</li>`;
-  }).join('');
-  return `<div class="answer"><h3>${friendlyTitle}</h3><ul>${lis}</ul></div>`;
+function scoreEventMatch(ev, kp){
+  const hay = ((ev.title||'') + ' ' + (ev.location||'')).toLowerCase();
+  let score = 0;
+  for (const ph of kp.phrases) if (ph && hay.includes(ph)) score += 2;
+  for (const w of kp.words) if (w && new RegExp(`\\b${w}\\b`).test(hay)) score += 1;
+  return score;
 }
 
-/* ===== Articles (Guides) ranking — generic, no hard-coded terms ===== */
+function renderEventsBlock(structured){
+  const now = new Date();
+  const all=(structured?.events||[])
+    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
+  if(!all.length) return '';
+
+  const kp = extractKeyPhrases(structured?.topic||'', __lastQuery);
+  const list = all
+    .map(e=>({e, s: scoreEventMatch(e, kp)}))
+    .sort((a,b)=> (b.s - a.s) || (new Date(a.e.date_start) - new Date(b.e.date_start)))
+    .map(x=>x.e);
+
+  const lis = list.map(e=>{
+    const when=fmtDate(e.date_start);
+    const href=e.page_url||e.source_url||e.url||'#';
+    const where=e.location ? ` — ${escapeHTML(e.location)}` : '';
+    return `<li>${when}${where} — <a href="${href}" target="_blank" rel="noopener">Link</a></li>`;
+  }).join('');
+
+  return `<div class="answer"><h3>Upcoming Workshops</h3><ul>${lis}</ul></div>`;
+}
+
+/* ===== Articles (Guides) ranking — generic ===== */
 function tokenize(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
 function jaccard(a,b){ const A=new Set(a), B=new Set(b); let inter=0; for(const x of A) if(B.has(x)) inter++; const union=A.size+B.size-inter; return union? inter/union : 0; }
 function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
@@ -459,7 +496,6 @@ function scoreArticle(a, query, topic){
   const hayTokens = tokenize(title + ' ' + url);
   if (!qTokens.length || !hayTokens.length) return 0;
   let score = jaccard(qTokens, hayTokens);
-  // small, generic boost if any query token appears in the title (no term hard-coding)
   if (qTokens.some(t => t.length >= 3 && title.toLowerCase().includes(t))) score += 0.2;
   return Math.min(1, score);
 }
@@ -468,10 +504,9 @@ function pickArticles(structured, query, topic){
   const all = Array.isArray(structured?.articles) ? structured.articles : [];
   const scored = all
     .map(a => ({a, s: scoreArticle(a, query, topic)}))
-    .filter(x => x.s > 0) // require some overlap
+    .filter(x => x.s > 0)
     .sort((x,y)=>{
       if (y.s !== x.s) return y.s - x.s;
-      // tie-breaker: fresher first if available
       const dy = Date.parse(y.a?.last_seen || '') || 0;
       const dx = Date.parse(x.a?.last_seen || '') || 0;
       return dy - dx;
@@ -547,10 +582,8 @@ function renderAnswer(payload){
   // product
   if(prod) addBubble(renderProductCard(prod));
 
-  // events
-  const productFacts = prod ? extractFacts(prod.description||'') : null;
-  const productHasLocation = !!(productFacts && productFacts.location);
-  const evHTML = renderEventsBlock(s, productHasLocation);
+  // events (phrase-aware, with location per row)
+  const evHTML = renderEventsBlock(s);
   if(evHTML) addBubble(evHTML);
 
   // articles (generic)
@@ -584,16 +617,16 @@ function renderAnswer(payload){
     addBubble(html.replace('</div>', `${extra}</div>`));
   }
 
-  // Debug dumps
-  dbgStruct.textContent = safeJSONString(payload.structured||{});
-  dbgNote.textContent   = safeJSONString({ confidence_pct: __lastConfidencePct });
+  // Debug dumps (compact)
+  setDebugJSON(dbgStruct, payload.structured||{});
+  setDebugJSON(dbgNote, { confidence_pct: __lastConfidencePct });
 }
 
 /* ================= Networking ================= */
 async function sendQuery(query){
   __lastQuery = String(query||'');
   const req = { query, topK: 8 };
-  dbgReq.textContent = safeJSONString(req);
+  setDebugJSON(dbgReq, req);
   const closeTyping = addTyping();
   try{
     const res = await fetch(CHAT_ENDPOINT, {
@@ -603,11 +636,11 @@ async function sendQuery(query){
     });
     dbgStatus.textContent = res.status;
     const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
-    dbgHeaders.textContent = safeJSONString(headers);
+    setDebugJSON(dbgHeaders, headers);
 
     const data = await res.json();
-    dbgRes.textContent = safeJSONString(data);
-    dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
+    setDebugJSON(dbgRes, data);
+    setDebugJSON(dbgProv, { citations: data.citations || [] });
 
     closeTyping();
     if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
@@ -682,7 +715,7 @@ sendBtn.addEventListener('click', submit);
 input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }});
 btnEmail.addEventListener('click', emailTranscript);
 btnReset.addEventListener('click', resetChat);
-dbgCopy && dbgCopy.addEventListener('click', copyAllDebug); /* NEW */
+dbgCopy && dbgCopy.addEventListener('click', copyAllDebug);
 </script>
 </body>
 </html>
