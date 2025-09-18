@@ -445,56 +445,40 @@ function renderEventsBlock(structured, productHasLocation){
   return `<div class="answer"><h3>${friendlyTitle}</h3><ul>${lis}</ul></div>`;
 }
 
-/* ===== Articles (Guides) ranking – tripod intent, no wildcards ===== */
+/* ===== Articles (Guides) ranking — generic, no hard-coded terms ===== */
 function tokenize(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
 function jaccard(a,b){ const A=new Set(a), B=new Set(b); let inter=0; for(const x of A) if(B.has(x)) inter++; const union=A.size+B.size-inter; return union? inter/union : 0; }
 function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
 function articleTitle(a){ return a?.title || a?.raw?.name || ''; }
-
-function isTripodIntent(query, topic){
-  const q = [query, topic].join(' ').toLowerCase();
-  return /\btripod(s)?\b|\bball\s*head\b|\bbenro\b|\bmanfrotto\b|\bgitzo\b|\brhino\b|\bbefree\b|\bcyanbird\b/.test(q);
-}
-function titleHasTripodSignals(title){
-  return /\btripod(s)?\b|\bball\s*head\b|\blegs\b|\bbenro\b|\bmanfrotto\b|\bgitzo\b/i.test(title||'');
-}
 
 function scoreArticle(a, query, topic){
   const title = articleTitle(a);
   const url = articleUrl(a);
   if(!title || !url) return 0;
   const qTokens = tokenize([query, topic].join(' '));
-  const tTokens = tokenize(title);
-  let score = jaccard(qTokens, tTokens);
-  if (titleHasTripodSignals(title)) score += 0.4; // strong boost for tripod keywords
+  const hayTokens = tokenize(title + ' ' + url);
+  if (!qTokens.length || !hayTokens.length) return 0;
+  let score = jaccard(qTokens, hayTokens);
+  // small, generic boost if any query token appears in the title (no term hard-coding)
+  if (qTokens.some(t => t.length >= 3 && title.toLowerCase().includes(t))) score += 0.2;
   return Math.min(1, score);
 }
 
 function pickArticles(structured, query, topic){
   const all = Array.isArray(structured?.articles) ? structured.articles : [];
-  const tripodMode = isTripodIntent(query, topic);
-
-  // If tripod intent, HARD FILTER to titles with tripod signals.
-  const pool = tripodMode ? all.filter(a => titleHasTripodSignals(articleTitle(a))) : all;
-
-  const scored = pool
+  const scored = all
     .map(a => ({a, s: scoreArticle(a, query, topic)}))
-    .filter(x => x.s >= 0.60)
-    .sort((x,y)=> y.s - x.s)
+    .filter(x => x.s > 0) // require some overlap
+    .sort((x,y)=>{
+      if (y.s !== x.s) return y.s - x.s;
+      // tie-breaker: fresher first if available
+      const dy = Date.parse(y.a?.last_seen || '') || 0;
+      const dx = Date.parse(x.a?.last_seen || '') || 0;
+      return dy - dx;
+    })
     .slice(0,5)
     .map(x => x.a)
     .filter(a => !!articleUrl(a));
-
-  // If we filtered too hard and got nothing, softly fall back to any matches ≥0.6.
-  if (!scored.length && !tripodMode){
-    return all
-      .map(a => ({a, s: scoreArticle(a, query, topic)}))
-      .filter(x => x.s >= 0.60)
-      .sort((x,y)=> y.s - x.s)
-      .slice(0,5)
-      .map(x => x.a)
-      .filter(a => !!articleUrl(a));
-  }
   return scored;
 }
 
@@ -529,7 +513,7 @@ function buildActionPillsFromStructured(structured, query){
     add(p.label || p.text || 'Open', p.url || p.href);
   }
 
-  // top two guides as pills
+  // top two guides as pills (generic ranking)
   const arts = pickArticles(structured, query, structured?.topic||'').slice(0,2);
   for (const a of arts){
     add(articleTitle(a) || 'Read Guide', articleUrl(a));
@@ -569,7 +553,7 @@ function renderAnswer(payload){
   const evHTML = renderEventsBlock(s, productHasLocation);
   if(evHTML) addBubble(evHTML);
 
-  // articles (tripod-aware)
+  // articles (generic)
   const artHTML = renderArticlesBlock(s, __lastQuery);
   if(artHTML) addBubble(artHTML);
 
