@@ -88,7 +88,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v0.9.22</span></div>
+  <div class="badge-wrap"><span class="version">v0.9.23</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -328,11 +328,45 @@ function deriveOptions(prod, facts){
 /* ================= Renderers ================= */
 let __lastConfidencePct = null;
 let __lastQuery = '';
+let __lastAnsweredAt = null;   // NEW: timestamp for the confidence badge
 
 function renderConfidenceBadge(){
   const pct = __lastConfidencePct;
   if(pct==null || isNaN(pct)) return '';
-  return `<div class="conf">Confidence: ${pct}%</div>`;
+  const ts = __lastAnsweredAt ? new Date(__lastAnsweredAt).toLocaleString() : '';
+  return `<div class="conf">Confidence: ${pct}%${ts ? ` • Answered: ${ts}`:''}</div>`;
+}
+
+/* --- Articles scoring helper (shared) --- */
+const STOP = new Set(['the','and','or','what','whats','when','whens','next','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire']);
+function tokenize(s){ return (s||'').toLowerCase().match(/[a-z]+/g)||[]; }
+function unique(arr){ return Array.from(new Set(arr)); }
+function keywordBag(topic, query){
+  const geos = ['devon','warwickshire','warks','coventry','peak','district','lake','lakes','yorkshire','moor','moors'];
+  const words = unique(tokenize(`${topic||''} ${query||''}`));
+  return new Set(words.filter(w => !STOP.has(w) || geos.includes(w)));
+}
+function scoreArticle(art, bag){
+  // If backend provides a score-like value, respect it (normalized to 0..1)
+  const raw = art?.score ?? art?.match ?? art?.raw?.score;
+  if (typeof raw === 'number') {
+    const n = raw > 1 ? raw/100 : raw;
+    return Math.max(0, Math.min(1, n));
+  }
+  // Otherwise use simple overlap between bag and title/url tokens
+  const title = (art?.title || art?.raw?.name || '').toLowerCase();
+  const url   = (art?.page_url || art?.source_url || art?.url || '').toLowerCase();
+  const tokens = unique(tokenize(title+' '+url));
+  if (!tokens.length || !bag.size) return 0;
+  let hits = 0;
+  for (const t of tokens) if (bag.has(t)) hits++;
+  return hits / Math.max(tokens.length, bag.size); // a soft Jaccard-ish proxy
+}
+function getRankedArticles(structured){
+  const bag = keywordBag(structured?.topic, __lastQuery);
+  const list = (structured?.articles||[]).map(a => ({...a, __score: scoreArticle(a, bag)}));
+  // Filter to >=60%, sort desc, keep 5
+  return list.filter(x => x.__score >= 0.6).sort((a,b)=>b.__score - a.__score).slice(0,5);
 }
 
 function renderProductCard(prod){
@@ -366,8 +400,7 @@ function renderProductCard(prod){
   `;
 }
 
-/* Keyword extraction for event filtering */
-const STOP = new Set(['the','and','or','what','whats','when','whens','next','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire']); // we’ll still keep geo words separately
+/* Event filtering (unchanged) */
 function extractKeywords(topic, query){
   const src = [topic||'', query||''].join(' ').toLowerCase();
   const words = Array.from(new Set(src.match(/[a-z]+/g)||[]));
@@ -390,7 +423,7 @@ function renderEventsBlock(structured, productHasLocation){
   const kws = extractKeywords(structured?.topic||'', __lastQuery);
   const filtered = all.filter(e=>eventMatches(e, kws));
 
-  const list = filtered.length ? filtered : all; // fallback to all if nothing matched
+  const list = filtered.length ? filtered : all;
   if(!list.length) return '';
 
   const topic = (structured?.topic||'').toString().trim();
@@ -412,21 +445,22 @@ function renderEventsBlock(structured, productHasLocation){
 }
 
 function renderArticlesBlock(structured){
-  let list = (structured?.articles||[]).slice(0,5);
+  // NEW: ranked & thresholded list
+  let ranked = getRankedArticles(structured);
 
-  // Fallback to tag page if nothing came from API
-  if(!list.length){
+  // Fallback to tag page if nothing qualifies
+  if(!ranked.length){
     const topic = (structured?.topic||'').toLowerCase();
     for(const [kw,url] of Object.entries(ARTICLE_TAG_GUESS)){
       if(topic.includes(kw)){
-        list = [{title:'Related articles', url}];
+        ranked = [{title:'Related articles', url, __score: 1}];
         break;
       }
     }
   }
-  if(!list.length) return '';
+  if(!ranked.length) return '';
 
-  const lis = list.map(a=>{
+  const lis = ranked.map(a=>{
     const t = a.title || a.raw?.name || 'Read more';
     const u = a.page_url || a.source_url || a.url;
     if(!u) return '';
@@ -454,11 +488,16 @@ function buildActionPillsFromStructured(structured){
     add(p.label || p.text || 'Open', p.url || p.href);
   }
 
-  // from articles (take first one if not already present)
-  if((structured?.articles||[]).length){
-    const art = structured.articles[0];
-    add(art.title || 'Related article', art.page_url || art.source_url || art.url);
+  // NEW: add top two ranked article pills (≥60%)
+  const ranked = getRankedArticles(structured);
+  if (ranked.length){
+    for (const a of ranked.slice(0,2)){
+      const label = a.title || a.raw?.name || 'Related article';
+      const href = a.page_url || a.source_url || a.url;
+      add(label, href);
+    }
   } else {
+    // tag fallback as a pill (unchanged behavior)
     const topic = (structured?.topic||'').toLowerCase();
     for(const [kw,url] of Object.entries(ARTICLE_TAG_GUESS)){
       if(topic.includes(kw)){ add('Related articles', url); break; }
@@ -486,6 +525,7 @@ function renderAnswer(payload){
   const heuristic = heuristicConfidence(s);
   if (confidencePct == null || confidencePct < 50) confidencePct = heuristic;
   __lastConfidencePct = Math.round(confidencePct);
+  __lastAnsweredAt = new Date(); // NEW: set timestamp for this render
 
   const merged = mergeProducts(s.products||[]);
   const prod = merged[0] || null;
@@ -526,7 +566,7 @@ function renderAnswer(payload){
 
   // Debug dumps
   dbgStruct.textContent = safeJSONString(payload.structured||{});
-  dbgNote.textContent   = safeJSONString({ confidence_pct: __lastConfidencePct });
+  dbgNote.textContent   = safeJSONString({ confidence_pct: __lastConfidencePct, answered_at: __lastAnsweredAt });
 }
 
 /* ================= Networking ================= */
