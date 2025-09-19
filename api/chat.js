@@ -404,7 +404,7 @@ export default async function handler(req, res) {
     const qTokens = keywords;
     const scoreWrap = (arr) =>
       (arr || [])
-        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))}
+        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
           const by = Date.parse(b.e?.last_seen || "") || 0;
@@ -437,7 +437,6 @@ export default async function handler(req, res) {
           p.id === featuredId
             ? {
                 ...p,
-                // force the UI and markdown to use the event link
                 page_url: eventUrl || p.page_url,
                 source_url: eventUrl || p.source_url,
                 raw: { ...(p.raw || {}), _linkedEventId: firstEvent.id },
@@ -569,7 +568,7 @@ export default async function handler(req, res) {
       })),
       top_articles: rankedArticles.slice(0, 3).map((a) => ({
         title: a.title,
-        score_pct: null, // article scores not exposed on client list
+        score_pct: null,
         url: a.page_url || a.source_url,
       })),
     };
