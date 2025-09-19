@@ -306,6 +306,24 @@ async function lookupCleanPrice(client, { url, title, extraTokens = [] }) {
 }
 
 /* ================= Answer composition ================= */
+
+// ---- Price selection: STRICT (never show 0, never use event raw) ----
+function selectDisplayPriceNumber(prod) {
+  const pg = prod?.price_gbp != null ? Number(prod.price_gbp) : null;
+  const pn = prod?.price != null ? Number(prod.price) : null;
+  const candidate = (pg && pg > 0) ? pg : (pn && pn > 0 ? pn : null);
+  return candidate && candidate > 0 ? candidate : null;
+}
+
+function formatDisplayPriceGBP(n) {
+  if (n == null) return null;
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0,
+  }).format(Number(n));
+}
+
 function buildAdviceMarkdown(articles) {
   const lines = ["**Guides**"];
   for (const a of (articles || []).slice(0, 5)) {
@@ -315,28 +333,11 @@ function buildAdviceMarkdown(articles) {
   }
   return lines.join("\n");
 }
+
 function buildProductPanelMarkdown(prod) {
   const title = prod?.title || prod?.raw?.name || "Workshop";
-  // prefer numeric price, fallback to price_gbp, then raw offers
-  const priceValue =
-    prod?.price ??
-    (prod?.price_gbp != null ? Number(prod.price_gbp) : null) ??
-    (prod?.raw?.offers?.price != null ? Number(prod.raw.offers.price) : null) ??
-    (prod?.raw?.offers?.lowPrice != null ? Number(prod.raw.offers.lowPrice) : null);
-
-  const priceCcy =
-    prod?.currency ||
-    prod?.raw?.offers?.priceCurrency ||
-    "GBP";
-
-  const priceStr =
-    priceValue != null && !Number.isNaN(priceValue) && Number(priceValue) > 0
-      ? new Intl.NumberFormat(undefined, {
-          style: "currency",
-          currency: priceCcy,
-          maximumFractionDigits: 0,
-        }).format(Number(priceValue))
-      : null;
+  const priceNum = selectDisplayPriceNumber(prod); // <- strict precedence
+  const priceStr = formatDisplayPriceGBP(priceNum);
 
   const desc =
     prod?.raw?.metaDescription ||
@@ -348,6 +349,7 @@ function buildProductPanelMarkdown(prod) {
   const body = desc ? `\n\n${desc}` : "";
   return head + body + (url ? `\n\n[Open](${url})` : "");
 }
+
 function buildAdvicePills(articles, originalQuery) {
   const pills = [];
   const top = articles?.[0] ? pickUrl(articles[0]) : null;
@@ -359,11 +361,12 @@ function buildAdvicePills(articles, originalQuery) {
   });
   return pills;
 }
+
+// Prefer product (booking) URL when present; fallback to event
 function buildEventPills(firstEvent, productOrNull) {
   const pills = [];
   const eventUrl = pickUrl(firstEvent);
   const productUrl = pickUrl(productOrNull);
-  // Prefer product (booking) URL when present; fallback to event
   const bookUrl = productUrl || eventUrl;
   if (bookUrl) pills.push({ label: "Book Now", url: bookUrl, brand: "primary" });
   if (eventUrl) pills.push({ label: "View event", url: eventUrl, brand: "secondary" });
@@ -439,17 +442,16 @@ export default async function handler(req, res) {
     const firstEvent = rankedEvents[0] || null;
     const eventUrl = firstEvent ? pickUrl(firstEvent) : null;
 
-    // === Build featured product card FROM the first event ===
-    let featuredProduct = null;
-
-    // Helper to enrich a product-like object with a clean price if needed
+    // === Helper to enrich a product-like object with a clean price and product URL if applicable ===
     const maybeEnrichPrice = async (prodLike) => {
       if (!prodLike) return prodLike;
-      const hasPrice =
+
+      const alreadyHasPrice =
         (prodLike.price != null && Number(prodLike.price) > 0) ||
-        (prodLike.price_gbp != null && Number(prodLike.price_gbp) > 0) ||
-        (prodLike.raw?.offers?.price != null && Number(prodLike.raw.offers.price) > 0);
-      if (hasPrice) return prodLike;
+        (prodLike.price_gbp != null && Number(prodLike.price_gbp) > 0);
+
+      // If we already have a real price, keep it. Never use raw.offers fallbacks.
+      if (alreadyHasPrice) return prodLike;
 
       // Try ai_products_clean using event/product url & title + query keywords
       const tip = await lookupCleanPrice(client, {
@@ -457,17 +459,27 @@ export default async function handler(req, res) {
         title: prodLike.title,
         extraTokens: keywords
       });
+
       if (tip?.price_gbp > 0) {
-        return { ...prodLike, price_gbp: Number(tip.price_gbp) };
+        const enriched = { ...prodLike, price_gbp: Number(tip.price_gbp) };
+        // If this object was synthesized from an event, promote the URL to the product for booking
+        if (prodLike?.raw?._syntheticFromEvent && tip.url) {
+          enriched.page_url = tip.url;
+          enriched.source_url = tip.url;
+        }
+        return enriched;
       }
       return prodLike;
     };
+
+    // === Build featured product card FROM the first event ===
+    let featuredProduct = null;
 
     if (firstEvent) {
       const matched = matchProductToEvent(rankedProducts, firstEvent);
 
       if (matched) {
-        // Keep product URL; only borrow the event title for consistency
+        // Keep product URL; borrow the event title for cosmetic consistency only
         featuredProduct = await maybeEnrichPrice({
           ...matched,
           title: firstEvent.title || matched.title,
@@ -479,7 +491,7 @@ export default async function handler(req, res) {
           ...rankedProducts.filter((p) => p.id !== matched.id),
         ];
       } else {
-        // No product match: synthesize from the event and try to enrich price from clean table
+        // No product match: synthesize from the event and try to enrich price & URL from clean table
         const synthetic = {
           id: `evt-${firstEvent.id || "next"}`,
           title: firstEvent.title || "Upcoming Workshop",
@@ -490,12 +502,8 @@ export default async function handler(req, res) {
             firstEvent.raw?.metaDescription ||
             firstEvent.raw?.description ||
             "",
-          // event raw price is often "0.00"; we’ll enrich below from clean view
-          price:
-            firstEvent.raw?.offers?.price &&
-            firstEvent.raw?.offers?.price !== "0.00"
-              ? Number(firstEvent.raw.offers.price)
-              : null,
+          // DO NOT trust event raw.offers.price; set null unless clearly >0 (we suppress by default)
+          price: null,
           location: firstEvent.location || null,
           raw: { ...(firstEvent.raw || {}), _syntheticFromEvent: true },
           _score: 1,
@@ -558,11 +566,12 @@ export default async function handler(req, res) {
         page_url: p.page_url,
         source_url: p.source_url,
         description: p.description,
-        price: p.price,           // may be null
-        price_gbp: p.price_gbp,   // cleaned value if enriched
+        price: p.price ?? null,           // may be null; not used for display if <=0
+        price_gbp: p.price_gbp ?? null,   // cleaned value if enriched
         location: p.location,
         raw: p.raw,
         _score: p._score,
+        display_price: selectDisplayPriceNumber(p), // convenient for UI tests
       })),
       articles: rankedArticles.map((a) => ({
         id: a.id,
@@ -588,7 +597,8 @@ export default async function handler(req, res) {
         title: p.title,
         score_pct: toPct(p._score),
         url: p.page_url || p.source_url,
-        price: p.price ?? p.price_gbp ?? p?.raw?.offers?.price ?? null,
+        // Show the actual number we use for display; never raw.offers
+        price: p.display_price,
       })),
       top_events: structured.events.slice(0, 3).map((e) => ({
         title: e.title,
@@ -615,6 +625,7 @@ export default async function handler(req, res) {
         endpoint: "/api/chat",
         topK,
         intent,
+        version: "v0.9.27-price-link-fix" // bump for cache-busting visibility
       },
     };
 
