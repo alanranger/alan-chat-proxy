@@ -180,7 +180,9 @@ async function findLanding(client, { keywords = [] } = {}) {
   return data || [];
 }
 
-/* ================= Matching helpers ================= */
+/* ======== Canonical price lookups (NEW: ai_products_clean) ======== */
+
+/** Tokens we’ll use to search clean product URLs/titles */
 const GENERIC = new Set([
   "alan","ranger","photography","photo","workshop","workshops","course","courses",
   "class","classes","tuition","lesson","lessons","uk","england","blog","near","me",
@@ -193,6 +195,39 @@ function urlTokens(x) {
   const u = (pickUrl(x) || "").toLowerCase();
   return tokenize(u.replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")).filter(t=>!GENERIC.has(t));
 }
+
+async function lookupCleanPrice(client, { url, title, extraTokens = [] }) {
+  // Build a conservative set of tokens for ILIKE matching
+  const tokens = uniq([
+    ...(url ? url.replace(/^https?:\/\//, "").split(/[\/_-]/g) : []),
+    ...(title ? tokenize(title) : []),
+    ...extraTokens,
+  ])
+    .map((t) => t.trim().toLowerCase())
+    .filter((t) => t && t.length >= 4 && !GENERIC.has(t))
+    .slice(0, 6); // keep small for concise OR clause
+
+  if (!tokens.length) return null;
+
+  const ors = tokens
+    .map((t) => [`url.ilike.%${t}%`, `title.ilike.%${t}%`])
+    .flat()
+    .join(",");
+
+  // Query deduped/clean view: lowest non-zero price wins
+  let q = client
+    .from("ai_products_clean")
+    .select("title,url,price_gbp")
+    .or(ors)
+    .order("price_gbp", { ascending: true })
+    .limit(1);
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+/* ================= Matching helpers ================= */
 function sameHost(a, b) {
   try {
     const ha = new URL(pickUrl(a)).host;
@@ -221,7 +256,10 @@ function matchProductToEvent(products, ev) {
   let best = null;
   let bestScore = 0;
   for (const p of products) {
-    const pTokens = new Set([...titleTokens(p), ...urlTokens(p)]);
+    const pTokens = new Set([
+      ...titleTokens(p),
+      ...urlTokens(p),
+    ]);
     let inter = 0;
     for (const tk of eTokens) if (pTokens.has(tk)) inter++;
     const union = eTokens.size + pTokens.size - inter || 1;
@@ -246,16 +284,20 @@ function buildAdviceMarkdown(articles) {
 }
 function buildProductPanelMarkdown(prod) {
   const title = prod?.title || prod?.raw?.name || "Workshop";
-  const price =
-    prod?.price ?? prod?.raw?.offers?.price ?? prod?.raw?.offers?.lowPrice ?? null;
-  const priceCcy = prod?.raw?.offers?.priceCurrency || "GBP";
+  // NEW: prefer canonical price_gbp (from ai_products_clean) if present
+  const priceLike =
+    prod?.price_gbp ?? prod?.price ?? prod?.raw?.offers?.price ?? prod?.raw?.offers?.lowPrice ?? null;
+  const priceCcy =
+    prod?.currency ||
+    prod?.raw?.offers?.priceCurrency ||
+    "GBP";
   const priceStr =
-    price != null
+    priceLike != null
       ? new Intl.NumberFormat(undefined, {
           style: "currency",
           currency: priceCcy,
           maximumFractionDigits: 0,
-        }).format(Number(price))
+        }).format(Number(priceLike))
       : null;
   const desc =
     prod?.raw?.metaDescription ||
@@ -371,6 +413,21 @@ export default async function handler(req, res) {
           source_url: eventUrl || matched.source_url,
           raw: { ...(matched.raw || {}), _linkedEventId: firstEvent.id },
         };
+
+        // NEW: enrich with canonical price from ai_products_clean
+        try {
+          const clean = await lookupCleanPrice(client, {
+            url: pickUrl(featuredProduct),
+            title: featuredProduct.title,
+            extraTokens: [...urlTokens(firstEvent), ...titleTokens(firstEvent)].slice(0, 6),
+          });
+          if (clean?.price_gbp) {
+            featuredProduct.price = Number(clean.price_gbp);
+            featuredProduct.price_gbp = Number(clean.price_gbp);
+            // keep feature link as the event URL; price source link is still product URL
+          }
+        } catch { /* ignore enrichment errors */ }
+
         // Keep the rest of the products after the featured
         rankedProducts = [
           featuredProduct,
@@ -397,8 +454,40 @@ export default async function handler(req, res) {
           raw: { ...(firstEvent.raw || {}), _syntheticFromEvent: true },
           _score: 1,
         };
+
+        // Try to enrich the synthetic card with a canonical product price
+        try {
+          const clean = await lookupCleanPrice(client, {
+            url: pickUrl(firstEvent),
+            title: firstEvent.title,
+            extraTokens: [...urlTokens(firstEvent), ...titleTokens(firstEvent)].slice(0, 6),
+          });
+          if (clean?.price_gbp) {
+            featuredProduct.price = Number(clean.price_gbp);
+            featuredProduct.price_gbp = Number(clean.price_gbp);
+            // do not change link; still the event page
+          }
+        } catch { /* ignore enrichment errors */ }
+
         rankedProducts = [featuredProduct, ...rankedProducts];
       }
+    }
+
+    // NEW: also enrich the next few product cards (in case they show) with canonical price
+    for (let i = 0; i < Math.min(3, rankedProducts.length); i++) {
+      const p = rankedProducts[i];
+      const hasPrice = p?.price != null && Number(p.price) > 0;
+      if (hasPrice) continue;
+      try {
+        const clean = await lookupCleanPrice(client, {
+          url: pickUrl(p),
+          title: p?.title,
+          extraTokens: [...urlTokens(p), ...titleTokens(p)].slice(0, 6),
+        });
+        if (clean?.price_gbp) {
+          rankedProducts[i] = { ...p, price: Number(clean.price_gbp), price_gbp: Number(clean.price_gbp) };
+        }
+      } catch { /* ignore */ }
     }
 
     // Confidence
@@ -454,7 +543,7 @@ export default async function handler(req, res) {
         page_url: p.page_url,
         source_url: p.source_url,
         description: p.description,
-        price: p.price,
+        price: p.price_gbp ?? p.price ?? null,
         location: p.location,
         raw: p.raw,
         _score: p._score,
