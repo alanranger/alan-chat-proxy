@@ -180,9 +180,7 @@ async function findLanding(client, { keywords = [] } = {}) {
   return data || [];
 }
 
-/* ======== Canonical price lookups (NEW: ai_products_clean) ======== */
-
-/** Tokens we’ll use to search clean product URLs/titles */
+/* ================= Matching helpers ================= */
 const GENERIC = new Set([
   "alan","ranger","photography","photo","workshop","workshops","course","courses",
   "class","classes","tuition","lesson","lessons","uk","england","blog","near","me",
@@ -195,39 +193,6 @@ function urlTokens(x) {
   const u = (pickUrl(x) || "").toLowerCase();
   return tokenize(u.replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")).filter(t=>!GENERIC.has(t));
 }
-
-async function lookupCleanPrice(client, { url, title, extraTokens = [] }) {
-  // Build a conservative set of tokens for ILIKE matching
-  const tokens = uniq([
-    ...(url ? url.replace(/^https?:\/\//, "").split(/[\/_-]/g) : []),
-    ...(title ? tokenize(title) : []),
-    ...extraTokens,
-  ])
-    .map((t) => t.trim().toLowerCase())
-    .filter((t) => t && t.length >= 4 && !GENERIC.has(t))
-    .slice(0, 6); // keep small for concise OR clause
-
-  if (!tokens.length) return null;
-
-  const ors = tokens
-    .map((t) => [`url.ilike.%${t}%`, `title.ilike.%${t}%`])
-    .flat()
-    .join(",");
-
-  // Query deduped/clean view: lowest non-zero price wins
-  let q = client
-    .from("ai_products_clean")
-    .select("title,url,price_gbp")
-    .or(ors)
-    .order("price_gbp", { ascending: true })
-    .limit(1);
-
-  const { data, error } = await q;
-  if (error) throw error;
-  return data?.[0] || null;
-}
-
-/* ================= Matching helpers ================= */
 function sameHost(a, b) {
   try {
     const ha = new URL(pickUrl(a)).host;
@@ -256,10 +221,7 @@ function matchProductToEvent(products, ev) {
   let best = null;
   let bestScore = 0;
   for (const p of products) {
-    const pTokens = new Set([
-      ...titleTokens(p),
-      ...urlTokens(p),
-    ]);
+    const pTokens = new Set([...titleTokens(p), ...urlTokens(p)]);
     let inter = 0;
     for (const tk of eTokens) if (pTokens.has(tk)) inter++;
     const union = eTokens.size + pTokens.size - inter || 1;
@@ -270,6 +232,77 @@ function matchProductToEvent(products, ev) {
     if (score > bestScore) { best = p; bestScore = score; }
   }
   return best && bestScore >= 0.45 ? best : null;
+}
+
+/* ================= Clean price lookup (safe) ================= */
+function tokenSetFrom(text) {
+  return new Set(
+    tokenize(String(text || ""))
+      .filter(t => t.length >= 4 && !GENERIC.has(t))
+  );
+}
+function overlapScore(refTokens, candUrl, candTitle) {
+  const candTokens = new Set([
+    ...tokenize(String(candUrl || "").replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")),
+    ...tokenize(String(candTitle || "")),
+  ].filter(t => t.length >= 4 && !GENERIC.has(t)));
+  let inter = 0;
+  for (const t of refTokens) if (candTokens.has(t)) inter++;
+  const union = refTokens.size + candTokens.size - inter || 1;
+  return { inter, score: inter / union };
+}
+
+/**
+ * Look up a canonical price in ai_products_clean by:
+ *  - fetching a small candidate set (OR ILIKE)
+ *  - ranking by token overlap with the reference (AND-ish)
+ *  - requiring a minimum overlap before accepting
+ *  - returning the MIN price for the best URL
+ */
+async function lookupCleanPrice(client, { url, title, extraTokens = [] }) {
+  const refTokens = new Set([
+    ...tokenize(String(url || "").replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")),
+    ...tokenize(String(title || "")),
+    ...extraTokens
+  ].filter(t => t.length >= 4 && !GENERIC.has(t)));
+
+  if (refTokens.size === 0) return null;
+
+  const orParts = Array.from(refTokens)
+    .slice(0, 8)
+    .flatMap(t => [`url.ilike.%${t}%`, `title.ilike.%${t}%`]);
+  const ors = orParts.join(",");
+
+  const { data, error } = await client
+    .from("ai_products_clean")
+    .select("title,url,price_gbp")
+    .or(ors)
+    .limit(24);
+
+  if (error) throw error;
+  if (!data?.length) return null;
+
+  // Group by URL and keep the lowest price per URL
+  const byUrl = new Map();
+  for (const row of data) {
+    const u = row.url;
+    const p = Number(row.price_gbp);
+    if (!u || !(p > 0)) continue;
+    const prev = byUrl.get(u);
+    if (!prev || p < prev.price_gbp) byUrl.set(u, { ...row, price_gbp: p });
+  }
+  if (byUrl.size === 0) return null;
+
+  // Rank candidates by overlap
+  let best = null;
+  let bestScore = -1;
+  for (const cand of byUrl.values()) {
+    const { inter, score } = overlapScore(refTokens, cand.url, cand.title);
+    if (inter >= 2 && score >= 0.25) {
+      if (score > bestScore) { best = cand; bestScore = score; }
+    }
+  }
+  return best || null;
 }
 
 /* ================= Answer composition ================= */
@@ -284,21 +317,27 @@ function buildAdviceMarkdown(articles) {
 }
 function buildProductPanelMarkdown(prod) {
   const title = prod?.title || prod?.raw?.name || "Workshop";
-  // NEW: prefer canonical price_gbp (from ai_products_clean) if present
-  const priceLike =
-    prod?.price_gbp ?? prod?.price ?? prod?.raw?.offers?.price ?? prod?.raw?.offers?.lowPrice ?? null;
+  // prefer numeric price, fallback to price_gbp, then raw offers
+  const priceValue =
+    prod?.price ??
+    (prod?.price_gbp != null ? Number(prod.price_gbp) : null) ??
+    (prod?.raw?.offers?.price != null ? Number(prod.raw.offers.price) : null) ??
+    (prod?.raw?.offers?.lowPrice != null ? Number(prod.raw.offers.lowPrice) : null);
+
   const priceCcy =
     prod?.currency ||
     prod?.raw?.offers?.priceCurrency ||
     "GBP";
+
   const priceStr =
-    priceLike != null
+    priceValue != null && !Number.isNaN(priceValue) && Number(priceValue) > 0
       ? new Intl.NumberFormat(undefined, {
           style: "currency",
           currency: priceCcy,
           maximumFractionDigits: 0,
-        }).format(Number(priceLike))
+        }).format(Number(priceValue))
       : null;
+
   const desc =
     prod?.raw?.metaDescription ||
     prod?.raw?.meta?.description ||
@@ -323,7 +362,9 @@ function buildAdvicePills(articles, originalQuery) {
 function buildEventPills(firstEvent, productOrNull) {
   const pills = [];
   const eventUrl = pickUrl(firstEvent);
-  const bookUrl = eventUrl || pickUrl(productOrNull);
+  const productUrl = pickUrl(productOrNull);
+  // Prefer product (booking) URL when present; fallback to event
+  const bookUrl = productUrl || eventUrl;
   if (bookUrl) pills.push({ label: "Book Now", url: bookUrl, brand: "primary" });
   if (eventUrl) pills.push({ label: "View event", url: eventUrl, brand: "secondary" });
   pills.push({ label: "Photos", url: "https://www.alanranger.com/photography-portfolio", brand: "secondary" });
@@ -401,41 +442,45 @@ export default async function handler(req, res) {
     // === Build featured product card FROM the first event ===
     let featuredProduct = null;
 
+    // Helper to enrich a product-like object with a clean price if needed
+    const maybeEnrichPrice = async (prodLike) => {
+      if (!prodLike) return prodLike;
+      const hasPrice =
+        (prodLike.price != null && Number(prodLike.price) > 0) ||
+        (prodLike.price_gbp != null && Number(prodLike.price_gbp) > 0) ||
+        (prodLike.raw?.offers?.price != null && Number(prodLike.raw.offers.price) > 0);
+      if (hasPrice) return prodLike;
+
+      // Try ai_products_clean using event/product url & title + query keywords
+      const tip = await lookupCleanPrice(client, {
+        url: pickUrl(prodLike),
+        title: prodLike.title,
+        extraTokens: keywords
+      });
+      if (tip?.price_gbp > 0) {
+        return { ...prodLike, price_gbp: Number(tip.price_gbp) };
+      }
+      return prodLike;
+    };
+
     if (firstEvent) {
       const matched = matchProductToEvent(rankedProducts, firstEvent);
 
       if (matched) {
-        // Override title & link so the card looks like the event
-        featuredProduct = {
+        // Keep product URL; only borrow the event title for consistency
+        featuredProduct = await maybeEnrichPrice({
           ...matched,
           title: firstEvent.title || matched.title,
-          page_url: eventUrl || matched.page_url,
-          source_url: eventUrl || matched.source_url,
           raw: { ...(matched.raw || {}), _linkedEventId: firstEvent.id },
-        };
-
-        // NEW: enrich with canonical price from ai_products_clean
-        try {
-          const clean = await lookupCleanPrice(client, {
-            url: pickUrl(featuredProduct),
-            title: featuredProduct.title,
-            extraTokens: [...urlTokens(firstEvent), ...titleTokens(firstEvent)].slice(0, 6),
-          });
-          if (clean?.price_gbp) {
-            featuredProduct.price = Number(clean.price_gbp);
-            featuredProduct.price_gbp = Number(clean.price_gbp);
-            // keep feature link as the event URL; price source link is still product URL
-          }
-        } catch { /* ignore enrichment errors */ }
-
-        // Keep the rest of the products after the featured
+        });
+        // Keep the rest of the products after the featured (dedup by id)
         rankedProducts = [
           featuredProduct,
           ...rankedProducts.filter((p) => p.id !== matched.id),
         ];
       } else {
-        // No product match: synthesize from the event
-        featuredProduct = {
+        // No product match: synthesize from the event and try to enrich price from clean table
+        const synthetic = {
           id: `evt-${firstEvent.id || "next"}`,
           title: firstEvent.title || "Upcoming Workshop",
           page_url: eventUrl,
@@ -445,6 +490,7 @@ export default async function handler(req, res) {
             firstEvent.raw?.metaDescription ||
             firstEvent.raw?.description ||
             "",
+          // event raw price is often "0.00"; we’ll enrich below from clean view
           price:
             firstEvent.raw?.offers?.price &&
             firstEvent.raw?.offers?.price !== "0.00"
@@ -454,40 +500,9 @@ export default async function handler(req, res) {
           raw: { ...(firstEvent.raw || {}), _syntheticFromEvent: true },
           _score: 1,
         };
-
-        // Try to enrich the synthetic card with a canonical product price
-        try {
-          const clean = await lookupCleanPrice(client, {
-            url: pickUrl(firstEvent),
-            title: firstEvent.title,
-            extraTokens: [...urlTokens(firstEvent), ...titleTokens(firstEvent)].slice(0, 6),
-          });
-          if (clean?.price_gbp) {
-            featuredProduct.price = Number(clean.price_gbp);
-            featuredProduct.price_gbp = Number(clean.price_gbp);
-            // do not change link; still the event page
-          }
-        } catch { /* ignore enrichment errors */ }
-
+        featuredProduct = await maybeEnrichPrice(synthetic);
         rankedProducts = [featuredProduct, ...rankedProducts];
       }
-    }
-
-    // NEW: also enrich the next few product cards (in case they show) with canonical price
-    for (let i = 0; i < Math.min(3, rankedProducts.length); i++) {
-      const p = rankedProducts[i];
-      const hasPrice = p?.price != null && Number(p.price) > 0;
-      if (hasPrice) continue;
-      try {
-        const clean = await lookupCleanPrice(client, {
-          url: pickUrl(p),
-          title: p?.title,
-          extraTokens: [...urlTokens(p), ...titleTokens(p)].slice(0, 6),
-        });
-        if (clean?.price_gbp) {
-          rankedProducts[i] = { ...p, price: Number(clean.price_gbp), price_gbp: Number(clean.price_gbp) };
-        }
-      } catch { /* ignore */ }
     }
 
     // Confidence
@@ -543,7 +558,8 @@ export default async function handler(req, res) {
         page_url: p.page_url,
         source_url: p.source_url,
         description: p.description,
-        price: p.price_gbp ?? p.price ?? null,
+        price: p.price,           // may be null
+        price_gbp: p.price_gbp,   // cleaned value if enriched
         location: p.location,
         raw: p.raw,
         _score: p._score,
@@ -572,6 +588,7 @@ export default async function handler(req, res) {
         title: p.title,
         score_pct: toPct(p._score),
         url: p.page_url || p.source_url,
+        price: p.price ?? p.price_gbp ?? p?.raw?.offers?.price ?? null,
       })),
       top_events: structured.events.slice(0, 3).map((e) => ({
         title: e.title,
