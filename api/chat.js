@@ -15,6 +15,13 @@ function supabaseAdmin() {
 }
 
 /* ================= Utilities ================= */
+function safeJSON(v) {
+  try {
+    return JSON.stringify(v, null, 2);
+  } catch {
+    return String(v);
+  }
+}
 function pickUrl(e) {
   return e?.page_url || e?.source_url || e?.url || null;
 }
@@ -24,20 +31,19 @@ function uniq(arr) {
 function clamp(n, lo, hi) {
   return Math.max(lo, Math.min(hi, n));
 }
-function tokenize(s) {
-  return (s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
-}
 
 /* ================= Intent & Keywords ================= */
 // Strict AND logic: events only when query has an event-ish AND a class-ish term
 function detectIntent(q) {
   const s = String(q || "").toLowerCase();
   const eventish =
-    /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking|time)\b/;
+    /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking)\b/;
   const classish =
     /\b(workshop|course|class|tuition|lesson|lessons|photowalk|walk|masterclass)\b/;
   return eventish.test(s) && classish.test(s) ? "events" : "advice";
 }
+
+// Subtype to distinguish workshop vs course style events
 function detectEventSubtype(q) {
   const s = String(q || "").toLowerCase();
   if (/\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(s))
@@ -54,22 +60,33 @@ const STOPWORDS = new Set([
   "book","booking"
 ]);
 
+function tokenize(s) {
+  return (s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
+}
+
 function extractKeywords(q, intent, subtype) {
-  const tokens = tokenize(String(q || ""));
+  const src = String(q || "").toLowerCase();
+  const tokens = src.match(/[a-z0-9]+/g) || [];
   const kept = tokens.filter((t) => t.length >= 3 && !STOPWORDS.has(t));
+  // Fallbacks if we wiped out the query
   if (kept.length === 0) {
-    if (intent === "events") return [subtype === "course" ? "course" : "workshop"];
+    if (intent === "events") {
+      if (subtype === "course") return ["course"];
+      return ["workshop"];
+    }
     return ["photography"];
   }
   return uniq(kept);
 }
+
 function topicFromKeywords(kws) {
   return uniq(kws).join(", ");
 }
 
 /* ================= Scoring ================= */
 function jaccard(a, b) {
-  const A = new Set(a), B = new Set(b);
+  const A = new Set(a),
+    B = new Set(b);
   let inter = 0;
   for (const x of A) if (B.has(x)) inter++;
   const union = A.size + B.size - inter;
@@ -87,14 +104,20 @@ function scoreEntity(ent, qTokens) {
   const tTokens = tokenize(hayTitle + " " + hayUrl + " " + hayLoc + " " + hayDesc);
   if (!tTokens.length || !qTokens.length) return 0;
   let score = jaccard(new Set(qTokens), new Set(tTokens));
+  // small generic title bonus if any query token appears in the title
   if (qTokens.some((t) => t.length >= 3 && hayTitle.includes(t))) score += 0.2;
   return Math.min(1, score);
 }
+
 function confidenceFrom(scores) {
   if (!scores?.length) return 25;
   const top = Math.max(...scores);
-  const meanTop3 = scores.slice().sort((a,b)=>b-a).slice(0,3)
-    .reduce((s,x,_,arr)=>s + x/arr.length, 0);
+  const meanTop3 = scores
+    .slice()
+    .sort((a, b) => b - a)
+    .slice(0, 3)
+    .reduce((s, x, i, arr) => s + x / arr.length, 0);
+  // map 0..1 -> 20..95 with a little lift from mean
   const pct = 20 + top * 60 + meanTop3 * 15;
   return clamp(Math.round(pct), 20, 95);
 }
@@ -104,15 +127,20 @@ const SELECT_COLS =
   "id, kind, title, page_url, source_url, last_seen, location, date_start, date_end, price, description, raw";
 
 function buildOrIlike(keys, keywords) {
+  // keys are column paths compatible with supabase filter (e.g. 'title', 'page_url', 'description', 'raw->>metaDescription')
   const clauses = [];
-  for (const k of keywords) for (const col of keys) clauses.push(`${col}.ilike.%${k}%`);
+  for (const k of keywords) {
+    for (const col of keys) clauses.push(`${col}.ilike.%${k}%`);
+  }
   return clauses.join(",");
 }
 
 async function findEvents(client, { keywords = [], topK = 12 } = {}) {
   let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "event");
+
   // Upcoming only
   q = q.gte("date_start", new Date().toISOString());
+
   if (keywords.length) {
     const ors = buildOrIlike(
       ["title", "page_url", "location", "description", "raw->>metaDescription", "raw->meta->>description"],
@@ -120,7 +148,7 @@ async function findEvents(client, { keywords = [], topK = 12 } = {}) {
     );
     q = q.or(ors);
   }
-  // Most important: chronological
+
   q = q.order("date_start", { ascending: true }).limit(topK);
   const { data, error } = await q;
   if (error) throw error;
@@ -147,6 +175,7 @@ async function findArticles(client, { keywords = [], topK = 12 } = {}) {
     .from("page_entities")
     .select(SELECT_COLS)
     .in("kind", ["article", "blog", "page"]);
+
   if (keywords.length) {
     const ors = buildOrIlike(
       ["title", "page_url", "description", "raw->>metaDescription", "raw->meta->>description"],
@@ -161,12 +190,14 @@ async function findArticles(client, { keywords = [], topK = 12 } = {}) {
 }
 
 async function findLanding(client, { keywords = [] } = {}) {
+  // canonical landing pages
   let q = client
     .from("page_entities")
     .select(SELECT_COLS)
     .in("kind", ["article", "page"])
     .eq("raw->>canonical", "true")
     .eq("raw->>role", "landing");
+
   if (keywords.length) {
     const ors = buildOrIlike(
       ["title", "page_url", "description", "raw->>metaDescription", "raw->meta->>description"],
@@ -186,6 +217,7 @@ const GENERIC = new Set([
   "class","classes","tuition","lesson","lessons","uk","england","blog","near","me",
   "photographic","landscape","seascape","monthly","day","days","1","one","two","2"
 ]);
+
 function titleTokens(x) {
   return tokenize((x?.title || x?.raw?.name || "").toLowerCase()).filter(t=>!GENERIC.has(t));
 }
@@ -198,7 +230,9 @@ function sameHost(a, b) {
     const ha = new URL(pickUrl(a)).host;
     const hb = new URL(pickUrl(b)).host;
     return ha && hb && ha === hb;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 function isWorkshopEvent(e) {
   const u = (pickUrl(e) || "").toLowerCase();
@@ -226,17 +260,34 @@ function matchProductToEvent(products, ev) {
     for (const tk of eTokens) if (pTokens.has(tk)) inter++;
     const union = eTokens.size + pTokens.size - inter || 1;
     let score = inter / union;
+
     if (sameHost(p, ev)) score += 0.15;
+    // light alignment bonus if both look like event offerings
     const tAll = (p.title || "").toLowerCase() + " " + (ev.title || "").toLowerCase();
     if (/(workshop|course|tuition|lesson)/.test(tAll)) score += 0.05;
-    if (score > bestScore) { best = p; bestScore = score; }
+
+    if (score > bestScore) {
+      best = p;
+      bestScore = score;
+    }
   }
-  return best && bestScore >= 0.45 ? best : null;
+  // Updated threshold per spec: 0.45
+  if (best && bestScore >= 0.45) return best;
+
+  // Soft fallback: any shared non-generic title token
+  for (const p of products) {
+    const pt = new Set(titleTokens(p));
+    for (const tk of titleTokens(ev)) {
+      if (pt.has(tk)) return p;
+    }
+  }
+  return null;
 }
 
 /* ================= Answer composition ================= */
 function buildAdviceMarkdown(articles) {
-  const lines = ["**Guides**"];
+  const lines = [];
+  lines.push("**Guides**");
   for (const a of (articles || []).slice(0, 5)) {
     const t = a.title || a.raw?.name || "Read more";
     const u = pickUrl(a);
@@ -244,6 +295,8 @@ function buildAdviceMarkdown(articles) {
   }
   return lines.join("\n");
 }
+
+// Simple product panel (events mode); UI renders richer card client-side from structured.products
 function buildProductPanelMarkdown(prod) {
   const title = prod?.title || prod?.raw?.name || "Workshop";
   const price =
@@ -267,24 +320,35 @@ function buildProductPanelMarkdown(prod) {
   const body = desc ? `\n\n${desc}` : "";
   return head + body + (url ? `\n\n[Open](${url})` : "");
 }
+
 function buildAdvicePills(articles, originalQuery) {
   const pills = [];
   const top = articles?.[0] ? pickUrl(articles[0]) : null;
   if (top) pills.push({ label: "Read Guide", url: top, brand: "primary" });
+
   pills.push({
     label: "More Articles",
-    url: `https://www.alanranger.com/search?query=${encodeURIComponent(String(originalQuery || ""))}`,
+    url: `https://www.alanranger.com/search?query=${encodeURIComponent(
+      String(originalQuery || "")
+    )}`,
     brand: "secondary",
   });
   return pills;
 }
+
 function buildEventPills(firstEvent, productOrNull) {
   const pills = [];
   const eventUrl = pickUrl(firstEvent);
-  const bookUrl = eventUrl || pickUrl(productOrNull);
+  const bookUrl = productOrNull ? pickUrl(productOrNull) : eventUrl;
+
   if (bookUrl) pills.push({ label: "Book Now", url: bookUrl, brand: "primary" });
   if (eventUrl) pills.push({ label: "View event", url: eventUrl, brand: "secondary" });
-  pills.push({ label: "Photos", url: "https://www.alanranger.com/photography-portfolio", brand: "secondary" });
+  pills.push({
+    label: "Photos",
+    url: "https://www.alanranger.com/photography-portfolio",
+    brand: "secondary",
+  });
+
   return pills;
 }
 
@@ -317,11 +381,18 @@ export default async function handler(req, res) {
         findProducts(client, { keywords, topK: 6 }),
         findLanding(client, { keywords }),
       ]);
-      if (subtype === "workshop") events = events.filter(isWorkshopEvent);
-      else if (subtype === "course") events = events.filter(isCourseEvent);
 
-      try { articles = await findArticles(client, { keywords, topK: 12 }); }
-      catch { articles = []; }
+      if (subtype === "workshop") {
+        events = events.filter(isWorkshopEvent);
+      } else if (subtype === "course") {
+        events = events.filter(isCourseEvent);
+      }
+
+      try {
+        articles = await findArticles(client, { keywords, topK: 12 });
+      } catch {
+        articles = [];
+      }
     } else {
       [articles, products] = await Promise.all([
         findArticles(client, { keywords, topK: Math.max(12, topK) }),
@@ -329,12 +400,11 @@ export default async function handler(req, res) {
       ]);
     }
 
+    // Generic ranking by overlap score (deterministic)
     const qTokens = keywords;
-
-    // === Ranking: products & articles may use score; EVENTS must stay chronological ===
     const scoreWrap = (arr) =>
       (arr || [])
-        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
+        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))}
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
           const by = Date.parse(b.e?.last_seen || "") || 0;
@@ -343,61 +413,67 @@ export default async function handler(req, res) {
         })
         .map((x) => Object.assign({ _score: Math.round(x.s * 100) / 100 }, x.e));
 
-    // keep chronological order from DB (date_start asc); just annotate with score
-    const rankedEvents = (events || [])
-      .slice()
-      .sort((a, b) => (Date.parse(a.date_start || 0) || 0) - (Date.parse(b.date_start || 0) || 0))
-      .map((e) => ({ ...e, _score: Math.round(scoreEntity(e, qTokens) * 100) / 100 }));
-
-    let rankedProducts = scoreWrap(products);
     const rankedArticles = scoreWrap(articles).slice(0, 12);
+    let rankedEvents = scoreWrap(events);
+    let rankedProducts = scoreWrap(products);
 
-    // === Choose the first upcoming event (chronological) ===
+    // ===== Core fix: make product block link to first upcoming event =====
     const firstEvent = rankedEvents[0] || null;
+
+    // Try to pick a matching product; if found, we will override its URL to event URL.
+    let matchedProduct = null;
+    if (firstEvent && rankedProducts.length) {
+      const m = matchProductToEvent(rankedProducts, firstEvent);
+      if (m) matchedProduct = m;
+    }
+
     const eventUrl = firstEvent ? pickUrl(firstEvent) : null;
 
-    // === Build featured product card FROM the first event ===
-    let featuredProduct = null;
-
     if (firstEvent) {
-      const matched = matchProductToEvent(rankedProducts, firstEvent);
-
-      if (matched) {
-        // Override title & link so the card looks like the event
-        featuredProduct = {
-          ...matched,
-          title: firstEvent.title || matched.title,
-          page_url: eventUrl || matched.page_url,
-          source_url: eventUrl || matched.source_url,
-          raw: { ...(matched.raw || {}), _linkedEventId: firstEvent.id },
-        };
-        // Keep the rest of the products after the featured
-        rankedProducts = [
-          featuredProduct,
-          ...rankedProducts.filter((p) => p.id !== matched.id),
-        ];
+      if (rankedProducts.length) {
+        // pick the featured product (matched or top) and force its link to the event URL
+        const featuredId = matchedProduct?.id ?? rankedProducts[0].id;
+        rankedProducts = rankedProducts.map((p) =>
+          p.id === featuredId
+            ? {
+                ...p,
+                // force the UI and markdown to use the event link
+                page_url: eventUrl || p.page_url,
+                source_url: eventUrl || p.source_url,
+                raw: { ...(p.raw || {}), _linkedEventId: firstEvent.id },
+              }
+            : p
+        );
+        // also move the featured to the front if it wasn't already
+        if (matchedProduct && rankedProducts[0].id !== featuredId) {
+          rankedProducts = [
+            rankedProducts.find((p) => p.id === featuredId),
+            ...rankedProducts.filter((p) => p.id !== featuredId),
+          ];
+        }
       } else {
-        // No product match: synthesize from the event
-        featuredProduct = {
-          id: `evt-${firstEvent.id || "next"}`,
-          title: firstEvent.title || "Upcoming Workshop",
-          page_url: eventUrl,
-          source_url: eventUrl,
-          description:
-            firstEvent.description ||
-            firstEvent.raw?.metaDescription ||
-            firstEvent.raw?.description ||
-            "",
-          price:
-            firstEvent.raw?.offers?.price &&
-            firstEvent.raw?.offers?.price !== "0.00"
-              ? Number(firstEvent.raw.offers.price)
-              : null,
-          location: firstEvent.location || null,
-          raw: { ...(firstEvent.raw || {}), _syntheticFromEvent: true },
-          _score: 1,
-        };
-        rankedProducts = [featuredProduct, ...rankedProducts];
+        // No products at all — synthesize a product-like card from the event
+        rankedProducts = [
+          {
+            id: `evt-${firstEvent.id || "next"}`,
+            title: firstEvent.title || "Upcoming Workshop",
+            page_url: eventUrl,
+            source_url: eventUrl,
+            description:
+              firstEvent.description ||
+              firstEvent.raw?.metaDescription ||
+              firstEvent.raw?.description ||
+              "",
+            price:
+              firstEvent.raw?.offers?.price &&
+              firstEvent.raw?.offers?.price !== "0.00"
+                ? Number(firstEvent.raw.offers.price)
+                : null,
+            location: firstEvent.location || null,
+            raw: { ...(firstEvent.raw || {}), _syntheticFromEvent: true },
+            _score: 1,
+          },
+        ];
       }
     }
 
@@ -407,16 +483,18 @@ export default async function handler(req, res) {
       ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
       ...(rankedProducts[0]?._score ? [rankedProducts[0]._score] : []),
     ].map((x) => x / 100);
+
     const confidence_pct = confidenceFrom(scoresForConfidence);
 
     // Compose answer_markdown
     let answer_markdown = "";
+    const preferredProduct = rankedProducts[0];
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
-      const preferred = rankedProducts[0] || featuredProduct || null;
-      if (preferred) {
-        answer_markdown = buildProductPanelMarkdown(preferred);
+      if (preferredProduct) {
+        // This now links to the first event because we forced page_url/source_url above
+        answer_markdown = buildProductPanelMarkdown(preferredProduct);
       } else if (rankedArticles?.length) {
         answer_markdown = buildAdviceMarkdown(rankedArticles);
       } else {
@@ -424,11 +502,11 @@ export default async function handler(req, res) {
       }
     }
 
-    // Citations: de-dupe (include first event + featured product)
+    // Citations: de-dupe
     const citations = uniq([
       ...rankedArticles.slice(0, 3).map(pickUrl),
-      ...(firstEvent ? [pickUrl(firstEvent)] : []),
-      ...(rankedProducts[0] ? [pickUrl(rankedProducts[0])] : []),
+      ...rankedProducts.slice(0, 1).map(pickUrl),
+      ...rankedEvents.slice(0, 1).map(pickUrl),
     ]);
 
     const structured = {
@@ -473,7 +551,7 @@ export default async function handler(req, res) {
           : buildAdvicePills(rankedArticles, q),
     };
 
-    // Debug
+    // ===== Debug block with percentages for top results =====
     const toPct = (s) =>
       typeof s === "number" ? `${Math.round(s * 1000) / 10}%` : null;
     const debug = {
@@ -491,7 +569,7 @@ export default async function handler(req, res) {
       })),
       top_articles: rankedArticles.slice(0, 3).map((a) => ({
         title: a.title,
-        score_pct: null,
+        score_pct: null, // article scores not exposed on client list
         url: a.page_url || a.source_url,
       })),
     };
@@ -515,7 +593,8 @@ export default async function handler(req, res) {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     return res.status(200).send(payload);
   } catch (err) {
-    const msg = (err && (err.message || err.toString())) || "Unknown server error";
+    const msg =
+      (err && (err.message || err.toString())) || "Unknown server error";
     const body = { ok: false, error: msg };
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     return res.status(200).send(body);
