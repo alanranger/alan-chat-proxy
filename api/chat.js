@@ -46,8 +46,6 @@ function pickUrl(e) { return e?.page_url || e?.source_url || e?.url || null; }
 function uniq(arr) { return Array.from(new Set(arr.filter(Boolean))); }
 function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 function tokenize(s) { return (s || "").toLowerCase().match(/[a-z0-9]+/g) || []; }
-
-// normalise: strip trailing run numbers like kenilworth1 → kenilworth
 function normaliseToken(t) { return String(t || "").replace(/\d+$/, ""); }
 
 const GENERIC = new Set([
@@ -79,6 +77,16 @@ function sameHost(a, b) {
     const hb = new URL(pickUrl(b)).host;
     return ha && hb && ha === hb;
   } catch { return false; }
+}
+
+// URL type guards
+function isProductUrl(u) {
+  const x = String(u || "").toLowerCase();
+  return x.includes("/photo-workshops-uk/");
+}
+function isEventUrl(u) {
+  const x = String(u || "").toLowerCase();
+  return x.includes("/photographic-workshops-near-me/");
 }
 
 /* ================= Intent & Keywords ================= */
@@ -163,6 +171,20 @@ async function findLanding(client, { keywords = [] } = {}) {
   const { data, error } = await q; if (error) throw error; return data || [];
 }
 
+// Fetch the full product entity by URL (so we get proper description/meta)
+async function fetchProductByUrl(client, url) {
+  if (!url) return null;
+  const { data, error } = await client
+    .from("page_entities")
+    .select(SELECT_COLS)
+    .eq("kind", "product")
+    .ilike("page_url", url) // ilike to ignore minor variations
+    .limit(1)
+    .maybeSingle();
+  if (error) return null;
+  return data || null;
+}
+
 /* ================= Matching helpers ================= */
 function isWorkshopEvent(e) {
   const u = (pickUrl(e) || "").toLowerCase(); const t = (e?.title || e?.raw?.name || "").toLowerCase();
@@ -178,9 +200,10 @@ function isCourseEvent(e) {
 }
 function matchProductToEvent(products, ev) {
   if (!ev || !products?.length) return null;
+  const filtered = products.filter(p => isProductUrl(pickUrl(p))); // ensure only product pages
   const eTokens = new Set([...titleTokens(ev), ...urlTokens(ev)]);
   let best = null, bestScore = 0;
-  for (const p of products) {
+  for (const p of filtered) {
     const pTokens = new Set([...titleTokens(p), ...urlTokens(p)]);
     let inter = 0; for (const tk of eTokens) if (pTokens.has(tk)) inter++;
     const union = eTokens.size + pTokens.size - inter || 1;
@@ -194,8 +217,6 @@ function matchProductToEvent(products, ev) {
 }
 
 /* ================= ai_products_clean deterministic accessor ================= */
-// Only run strict AND when we actually have tokens.
-// Also, expose a validator that requires topic+location when present.
 function urlOrTitleHasAll(u, t, required) {
   const hay = (String(u || "") + " " + String(t || "")).toLowerCase();
   return required.every(tok => hay.includes(tok));
@@ -205,16 +226,13 @@ async function findProductsClean(client, { tokens = [], urlFragment = "" } = {})
   const urlToks = nonGenericTokens(urlFragment);
   const tok = uniq([ ...urlToks, ...tokens.map(normaliseToken).filter(t => t.length >= 4) ]).slice(0, 8);
 
-  // If we have no tokens, do NOT run a wide-open query.
   if (!tok.length) return [];
 
-  // Strict AND on URL first
   let andQuery = client.from("ai_products_clean").select("title,url,price_gbp");
   for (const t of tok) andQuery = andQuery.ilike("url", `%${t}%`);
   andQuery = andQuery.limit(16);
   let { data: andRows, error: andErr } = await andQuery; if (andErr) throw andErr;
 
-  // Deduplicate and keep min price per URL
   const byUrl = new Map();
   for (const row of (andRows || [])) {
     const p = Number(row.price_gbp); if (!(p > 0)) continue;
@@ -224,7 +242,7 @@ async function findProductsClean(client, { tokens = [], urlFragment = "" } = {})
   return Array.from(byUrl.values());
 }
 
-/* ================= Clean price lookup (overlap with validation) ================= */
+/* ================= Clean price lookup (with validation) ================= */
 function overlapScore(refTokens, candUrl, candTitle) {
   const candTokens = new Set([
     ...tokenize(String(candUrl || "").replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")),
@@ -238,11 +256,25 @@ function overlapScore(refTokens, candUrl, candTitle) {
 function extractTopicAndLocationTokens(ev) {
   const t = titleTokens(ev);
   const u = urlTokens(ev);
-  const all = uniq([...t, ...u]);
-  // crude heuristics
-  const topicHints = all.filter(x => /(exposure|long|seascape|woodland|sunset|night|architecture)/.test(x));
-  const locationHints = all.filter(x => /(kenilworth|coventry|dartmoor|yorkshire|devon|wales|betws|windmill|hartland)/.test(x));
-  return { topic: uniq(topicHints), location: uniq(locationHints), all };
+
+  // include explicit location field too
+  const locField = (ev?.location || "").toLowerCase();
+  const locTokens = tokenize(locField).map(normaliseToken).filter(x => x.length >= 4 && !GENERIC.has(x));
+
+  const all = uniq([...t, ...u, ...locTokens]);
+
+  const topicHints = all.filter(x =>
+    /(exposure|long|seascape|woodland|sunset|night|architecture|coastal|yorkshire|dartmoor|devon)/.test(x)
+  );
+
+  const locationHints = uniq([
+    ...locTokens,
+    ...all.filter(x =>
+      /(kenilworth|coventry|dartmoor|yorkshire|devon|wales|betws|windmill|hartland|northumberland|batsford|warwickshire)/.test(x)
+    ),
+  ]);
+
+  return { topic: uniq(topicHints), location: locationHints, all };
 }
 
 async function lookupCleanPriceValidated(client, ev, extraTokens = []) {
@@ -251,18 +283,15 @@ async function lookupCleanPriceValidated(client, ev, extraTokens = []) {
   const refTokens = new Set(baseTokens);
   if (refTokens.size === 0) return { best: null, diag: { reason: "no_ref_tokens", topic, location, all } };
 
-  // Try strict AND on URL using topic+location tokens where available
   const strictTokens = uniq([ ...topic, ...location ]).slice(0, 6);
   let strictRows = [];
   if (strictTokens.length) {
     strictRows = await findProductsClean(client, { tokens: strictTokens, urlFragment: pickUrl(ev) || "" });
   }
 
-  // Build candidates set
   const candidates = new Map();
   for (const r of strictRows) candidates.set(r.url, r);
 
-  // Fallback: broad OR (title+url) then rank
   if (!candidates.size) {
     const orParts = Array.from(refTokens).slice(0, 12).flatMap(t => [`url.ilike.%${t}%`, `title.ilike.%${t}%`]).join(",");
     const { data, error } = await client.from("ai_products_clean").select("title,url,price_gbp").or(orParts).limit(48);
@@ -274,9 +303,13 @@ async function lookupCleanPriceValidated(client, ev, extraTokens = []) {
     }
   }
 
-  if (!candidates.size) return { best: null, diag: { reason: "no_candidates", topic, location, all } };
+  // keep only real product pages
+  for (const [k] of Array.from(candidates.entries())) {
+    if (!isProductUrl(k)) candidates.delete(k);
+  }
 
-  // Score & validate
+  if (!candidates.size) return { best: null, diag: { reason: "no_product_candidates", topic, location, all } };
+
   let best = null, bestScore = -1, bestInter = 0, why = "overlap_threshold";
   for (const cand of candidates.values()) {
     const { inter, score } = overlapScore(refTokens, cand.url, cand.title);
@@ -286,9 +319,7 @@ async function lookupCleanPriceValidated(client, ev, extraTokens = []) {
     const hasLocation = location.length ? location.some(tok => hay.includes(tok)) : false;
 
     const passes = (
-      // strong case: both topic and location tokens appear
       (hasTopic && hasLocation) ||
-      // fallback: decent overlap plus at least a location token
       ((inter >= 2 && score >= 0.25) || (inter >= 1 && score >= 0.18)) && hasLocation
     );
 
@@ -359,7 +390,7 @@ export default async function handler(req, res) {
 
   const started = Date.now();
   try {
-    const { query, topK = 8, debug_level = "basic", include_raw = false } = req.body || {};
+    const { query, topK = 8 } = req.body || {};
     const q = String(query || "").trim();
     const client = supabaseAdmin();
 
@@ -389,6 +420,7 @@ export default async function handler(req, res) {
         findProducts(client, { keywords, topK: 6 }),
         findLanding(client, { keywords }),
       ]);
+
       if (subtype === "workshop") events = events.filter(isWorkshopEvent);
       else if (subtype === "course") events = events.filter(isCourseEvent);
 
@@ -422,68 +454,53 @@ export default async function handler(req, res) {
     const eventUrl = firstEvent ? pickUrl(firstEvent) : null;
     t_rank += Date.now() - s2;
 
-    // Build featured product from first event
-    let featuredProduct = null, matchedProduct = null, cleanTip = null, decisionPath = null, diag = null;
+    // ===== Product selection for the product panel =====
+    let featuredProduct = null, cleanTip = null, decisionPath = null, diag = null;
 
     const s3 = Date.now();
     if (firstEvent) {
+      // 1) Try to match to an already-fetched product entity (must be a product URL)
       const matched = matchProductToEvent(rankedProducts, firstEvent);
+
+      // 2) If not matched, consult ai_products_clean (strictly product URLs)
       const evTokensAll = uniq([ ...urlTokens(firstEvent), ...titleTokens(firstEvent) ]);
+      const { best, diag: d } = await lookupCleanPriceValidated(client, firstEvent, evTokensAll);
+      cleanTip = best || null; diag = d || null;
 
       if (matched) {
         decisionPath = "matched_product";
-        // Try enrich price but keep matched.url
-        const { best, diag: d } = await lookupCleanPriceValidated(client, firstEvent, evTokensAll);
-        diag = d;
-        if (best?.price_gbp > 0 && urlOrTitleHasAll(best.url, best.title, [ ...(extractTopicAndLocationTokens(firstEvent).location || []) ])) {
-          featuredProduct = { ...matched, price_gbp: Number(best.price_gbp) };
-          cleanTip = best;
-        } else {
-          featuredProduct = matched;
+        let enriched = { ...matched };
+        // Enrich price if clean tip matches a product URL & location/topic
+        if (best?.url && isProductUrl(best.url)) {
+          const locOk = extractTopicAndLocationTokens(firstEvent).location.some(tok =>
+            (best.url + " " + (best.title || "")).toLowerCase().includes(tok)
+          );
+          if (locOk && best.price_gbp > 0) enriched.price_gbp = Number(best.price_gbp);
         }
+        featuredProduct = enriched;
         rankedProducts = [featuredProduct, ...rankedProducts.filter((p) => p.id !== matched.id)];
-      } else {
-        decisionPath = "synthetic_from_event";
-        const synthetic = {
-          id: `evt-${firstEvent.id || "next"}`,
-          title: firstEvent.title || "Upcoming Workshop",
-          page_url: eventUrl,
-          source_url: eventUrl,
-          description: firstEvent.description || firstEvent.raw?.metaDescription || firstEvent.raw?.description || "",
-          price: null,
-          location: firstEvent.location || null,
-          raw: { ...(firstEvent.raw || {}), _syntheticFromEvent: true },
-          _score: 1,
-        };
-        const { best, diag: d } = await lookupCleanPriceValidated(client, firstEvent, evTokensAll);
-        cleanTip = best || null; diag = d || null;
-
-        // Only promote price+URL if candidate passes topic+location requirement
-        if (best?.price_gbp > 0) {
-          const { location: loc } = extractTopicAndLocationTokens(firstEvent);
-          const hay = (best.url + " " + (best.title || "")).toLowerCase();
-          const hasLocation = !loc.length || loc.some(tok => hay.includes(tok));
-          const hasTopic = extractTopicAndLocationTokens(firstEvent).topic.some(tok => hay.includes(tok));
-          const allowPromote = hasLocation && hasTopic;
-
-          if (allowPromote) {
-            featuredProduct = {
-              ...synthetic,
-              page_url: best.url,
-              source_url: best.url,
-              price_gbp: Number(best.price_gbp),
-            };
-          } else {
-            // safer: keep event URL and fill price only if location matches
-            featuredProduct = {
-              ...synthetic,
-              price_gbp: hasLocation ? Number(best.price_gbp) : null,
-            };
-          }
+      } else if (best?.url && isProductUrl(best.url)) {
+        decisionPath = "clean_product_by_url";
+        // Pull the full product entity for description/meta
+        const entity = await fetchProductByUrl(client, best.url);
+        if (entity) {
+          featuredProduct = { ...entity, price_gbp: Number(best.price_gbp) || entity.price_gbp || entity.price || null };
         } else {
-          featuredProduct = synthetic;
+          // minimal object if not indexed yet
+          featuredProduct = {
+            id: `clean-${firstEvent.id || "next"}`,
+            title: best.title || firstEvent.title || "Workshop",
+            page_url: best.url,
+            source_url: best.url,
+            price_gbp: Number(best.price_gbp) || null,
+            description: firstEvent.raw?.metaDescription || firstEvent.description || "",
+            raw: { _fromCleanOnly: true }
+          };
         }
         rankedProducts = [featuredProduct, ...rankedProducts];
+      } else {
+        // No safe product URL – do NOT substitute an event. Leave product null.
+        decisionPath = "no_product_found";
       }
     }
     t_comp += Date.now() - s3;
@@ -492,7 +509,7 @@ export default async function handler(req, res) {
     const scoresForConfidence = [
       ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
       ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
-      ...(rankedProducts[0]?._score ? [rankedProducts[0]._score] : []),
+      ...(featuredProduct?._score ? [featuredProduct._score] : (rankedProducts[0]?._score ? [rankedProducts[0]._score] : [])),
     ].map((x) => x / 100);
     const confidence_pct = confidenceFrom(scoresForConfidence);
 
@@ -502,7 +519,7 @@ export default async function handler(req, res) {
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
-      const preferred = rankedProducts[0] || featuredProduct || null;
+      const preferred = featuredProduct || rankedProducts.find(p => isProductUrl(pickUrl(p))) || null;
       if (preferred) answer_markdown = buildProductPanelMarkdown(preferred);
       else if (rankedArticles?.length) answer_markdown = buildAdviceMarkdown(rankedArticles);
       else answer_markdown = "Upcoming workshops and related info below.";
@@ -513,7 +530,7 @@ export default async function handler(req, res) {
     const citations = uniq([
       ...rankedArticles.slice(0, 3).map(pickUrl),
       ...(firstEvent ? [pickUrl(firstEvent)] : []),
-      ...(rankedProducts[0] ? [pickUrl(rankedProducts[0])] : []),
+      ...(featuredProduct ? [pickUrl(featuredProduct)] : []),
     ]);
 
     // Structured
@@ -524,7 +541,9 @@ export default async function handler(req, res) {
         date_start: e.date_start, date_end: e.date_end, location: e.location,
         when: e.date_start ? new Date(e.date_start).toUTCString() : null, href: pickUrl(e), _score: e._score,
       })),
-      products: (rankedProducts || []).map((p) => ({
+      products: (
+        (featuredProduct ? [featuredProduct, ...rankedProducts.filter(p => pickUrl(p) !== pickUrl(featuredProduct))] : rankedProducts)
+      ).map((p) => ({
         id: p.id, title: p.title, page_url: p.page_url, source_url: p.source_url,
         description: p.description, price: p.price ?? null, price_gbp: p.price_gbp ?? null,
         location: p.location, _score: p._score, display_price: selectDisplayPriceNumber(p),
@@ -532,19 +551,21 @@ export default async function handler(req, res) {
       articles: (rankedArticles || []).map((a) => ({
         id: a.id, title: a.title, page_url: a.page_url, source_url: a.source_url, last_seen: a.last_seen
       })),
-      pills: intent === "events" ? buildEventPills(firstEvent, rankedProducts[0] || null) : buildAdvicePills(rankedArticles, q),
+      pills: intent === "events"
+        ? buildEventPills(firstEvent, featuredProduct || null)
+        : buildAdvicePills(rankedArticles, q),
     };
 
     // Debug
-    const baseDebug = {
-      version: "v0.9.31-clean-guard+tokens-normalised+topicLocationGate",
-      path: decisionPath,
+    const debug = {
+      version: "v0.9.31-product-guard+clean-url-entity",
+      path: featuredProduct ? "product_selected" : "no_product",
       intent, keywords,
       event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
-      product: rankedProducts[0] ? {
-        id: rankedProducts[0].id, title: rankedProducts[0].title, url: pickUrl(rankedProducts[0]),
-        price_gbp: rankedProducts[0].price_gbp ?? null, display_price: selectDisplayPriceNumber(rankedProducts[0]),
-        source: decisionPath === "matched_product" ? "matched" : (rankedProducts[0]?.raw?._syntheticFromEvent ? "synthetic" : "product")
+      product: featuredProduct ? {
+        id: featuredProduct.id, title: featuredProduct.title, url: pickUrl(featuredProduct),
+        price_gbp: featuredProduct.price_gbp ?? null, display_price: selectDisplayPriceNumber(featuredProduct),
+        source: decisionPath
       } : null,
       clean_lookup: cleanTip ? {
         hit: true, url: cleanTip.url, price_gbp: cleanTip.price_gbp,
@@ -554,12 +575,15 @@ export default async function handler(req, res) {
         location_tokens: cleanTip._diagnostic?.location ?? null,
         all_tokens: cleanTip._diagnostic?.all ?? null
       } : { hit: false, diag },
-      pills: { book_now: (structured.pills?.[0]?.url) || null, event_url: pickUrl(firstEvent) || null, product_url: pickUrl(rankedProducts[0]) || null },
-      counts: { events: rankedEvents.length, products: rankedProducts.length, articles: rankedArticles.length },
+      pills: {
+        book_now: (structured.pills?.[0]?.url) || null,
+        event_url: pickUrl(firstEvent) || null,
+        product_url: pickUrl(featuredProduct) || null
+      },
+      counts: { events: rankedEvents.length, products: structured.products.length, articles: rankedArticles.length },
       probes: { ai_products_clean_count: cleanCount, supabase_health: health },
       timings_ms: { total: Date.now() - started, supabase: t_supabase, rank: t_rank, compose: t_comp }
     };
-    const debug = baseDebug;
 
     // Payload
     const payload = {
