@@ -27,6 +27,16 @@ function clamp(n, lo, hi) {
 function tokenize(s) {
   return (s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
 }
+function redactRaw(raw) {
+  if (!raw) return raw;
+  const { offers, image, images, ...rest } = raw || {};
+  return {
+    ...rest,
+    offers: offers ? "[redacted]" : undefined,
+    image: image ? "[redacted]" : undefined,
+    images: images ? "[redacted]" : undefined,
+  };
+}
 
 /* ================= Intent & Keywords ================= */
 // Strict AND logic: events only when query has an event-ish AND a class-ish term
@@ -235,12 +245,6 @@ function matchProductToEvent(products, ev) {
 }
 
 /* ================= Clean price lookup (safe) ================= */
-function tokenSetFrom(text) {
-  return new Set(
-    tokenize(String(text || ""))
-      .filter(t => t.length >= 4 && !GENERIC.has(t))
-  );
-}
 function overlapScore(refTokens, candUrl, candTitle) {
   const candTokens = new Set([
     ...tokenize(String(candUrl || "").replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")),
@@ -253,23 +257,24 @@ function overlapScore(refTokens, candUrl, candTitle) {
 }
 
 /**
- * Look up a canonical price in ai_products_clean by:
+ * Look up a canonical product/price in ai_products_clean by:
  *  - fetching a small candidate set (OR ILIKE)
  *  - ranking by token overlap with the reference (AND-ish)
- *  - requiring a minimum overlap before accepting
+ *  - accepting matches with modest overlap (slug-ish behaviour via URL tokens)
  *  - returning the MIN price for the best URL
  */
 async function lookupCleanPrice(client, { url, title, extraTokens = [] }) {
-  const refTokens = new Set([
+  const baseTokens = [
     ...tokenize(String(url || "").replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")),
     ...tokenize(String(title || "")),
     ...extraTokens
-  ].filter(t => t.length >= 4 && !GENERIC.has(t)));
+  ].filter(t => t.length >= 4 && !GENERIC.has(t));
 
+  const refTokens = new Set(baseTokens);
   if (refTokens.size === 0) return null;
 
   const orParts = Array.from(refTokens)
-    .slice(0, 8)
+    .slice(0, 10)
     .flatMap(t => [`url.ilike.%${t}%`, `title.ilike.%${t}%`]);
   const ors = orParts.join(",");
 
@@ -277,7 +282,7 @@ async function lookupCleanPrice(client, { url, title, extraTokens = [] }) {
     .from("ai_products_clean")
     .select("title,url,price_gbp")
     .or(ors)
-    .limit(24);
+    .limit(48);
 
   if (error) throw error;
   if (!data?.length) return null;
@@ -296,25 +301,28 @@ async function lookupCleanPrice(client, { url, title, extraTokens = [] }) {
   // Rank candidates by overlap
   let best = null;
   let bestScore = -1;
+  let bestInter = 0;
   for (const cand of byUrl.values()) {
     const { inter, score } = overlapScore(refTokens, cand.url, cand.title);
-    if (inter >= 2 && score >= 0.25) {
-      if (score > bestScore) { best = cand; bestScore = score; }
+    // Acceptance: slightly relaxed to ensure practical matches surface
+    const ok = (inter >= 2 && score >= 0.22) || (inter >= 1 && score >= 0.15 && cand.url);
+    if (ok && score > bestScore) {
+      best = cand; bestScore = score; bestInter = inter;
     }
   }
-  return best || null;
+
+  if (!best) return null;
+  return { ...best, _diagnostic: { inter: bestInter, score: bestScore, tokens_used: Array.from(refTokens).slice(0, 12) } };
 }
 
 /* ================= Answer composition ================= */
-
-// ---- Price selection: STRICT (never show 0, never use event raw) ----
+// STRICT price precedence: price_gbp > price; never show 0, never event raw.offers
 function selectDisplayPriceNumber(prod) {
   const pg = prod?.price_gbp != null ? Number(prod.price_gbp) : null;
   const pn = prod?.price != null ? Number(prod.price) : null;
   const candidate = (pg && pg > 0) ? pg : (pn && pn > 0 ? pn : null);
   return candidate && candidate > 0 ? candidate : null;
 }
-
 function formatDisplayPriceGBP(n) {
   if (n == null) return null;
   return new Intl.NumberFormat(undefined, {
@@ -323,7 +331,6 @@ function formatDisplayPriceGBP(n) {
     maximumFractionDigits: 0,
   }).format(Number(n));
 }
-
 function buildAdviceMarkdown(articles) {
   const lines = ["**Guides**"];
   for (const a of (articles || []).slice(0, 5)) {
@@ -333,12 +340,10 @@ function buildAdviceMarkdown(articles) {
   }
   return lines.join("\n");
 }
-
 function buildProductPanelMarkdown(prod) {
   const title = prod?.title || prod?.raw?.name || "Workshop";
-  const priceNum = selectDisplayPriceNumber(prod); // <- strict precedence
+  const priceNum = selectDisplayPriceNumber(prod); // strict precedence
   const priceStr = formatDisplayPriceGBP(priceNum);
-
   const desc =
     prod?.raw?.metaDescription ||
     prod?.raw?.meta?.description ||
@@ -349,7 +354,6 @@ function buildProductPanelMarkdown(prod) {
   const body = desc ? `\n\n${desc}` : "";
   return head + body + (url ? `\n\n[Open](${url})` : "");
 }
-
 function buildAdvicePills(articles, originalQuery) {
   const pills = [];
   const top = articles?.[0] ? pickUrl(articles[0]) : null;
@@ -361,7 +365,6 @@ function buildAdvicePills(articles, originalQuery) {
   });
   return pills;
 }
-
 // Prefer product (booking) URL when present; fallback to event
 function buildEventPills(firstEvent, productOrNull) {
   const pills = [];
@@ -382,8 +385,9 @@ export default async function handler(req, res) {
   }
 
   const started = Date.now();
+  const t0 = Date.now();
   try {
-    const { query, topK = 8 } = req.body || {};
+    const { query, topK = 8, debug_level = "basic", include_raw = false } = req.body || {};
     const q = String(query || "").trim();
     const client = supabaseAdmin();
 
@@ -392,6 +396,9 @@ export default async function handler(req, res) {
     const keywords = extractKeywords(q, intent, subtype);
     const topic = topicFromKeywords(keywords);
 
+    let t_supabase = 0, t_rank = 0, t_comp = 0;
+
+    const s1 = Date.now();
     let events = [];
     let products = [];
     let articles = [];
@@ -414,7 +421,9 @@ export default async function handler(req, res) {
         findProducts(client, { keywords, topK: 6 }),
       ]);
     }
+    t_supabase += Date.now() - s1;
 
+    const s2 = Date.now();
     const qTokens = keywords;
 
     // === Ranking: products & articles may use score; EVENTS must stay chronological ===
@@ -441,19 +450,17 @@ export default async function handler(req, res) {
     // === Choose the first upcoming event (chronological) ===
     const firstEvent = rankedEvents[0] || null;
     const eventUrl = firstEvent ? pickUrl(firstEvent) : null;
+    t_rank += Date.now() - s2;
 
     // === Helper to enrich a product-like object with a clean price and product URL if applicable ===
     const maybeEnrichPrice = async (prodLike) => {
-      if (!prodLike) return prodLike;
-
+      if (!prodLike) return { prod: prodLike, tip: null };
       const alreadyHasPrice =
         (prodLike.price != null && Number(prodLike.price) > 0) ||
         (prodLike.price_gbp != null && Number(prodLike.price_gbp) > 0);
 
-      // If we already have a real price, keep it. Never use raw.offers fallbacks.
-      if (alreadyHasPrice) return prodLike;
+      if (alreadyHasPrice) return { prod: prodLike, tip: null };
 
-      // Try ai_products_clean using event/product url & title + query keywords
       const tip = await lookupCleanPrice(client, {
         url: pickUrl(prodLike),
         title: prodLike.title,
@@ -467,31 +474,35 @@ export default async function handler(req, res) {
           enriched.page_url = tip.url;
           enriched.source_url = tip.url;
         }
-        return enriched;
+        return { prod: enriched, tip };
       }
-      return prodLike;
+      return { prod: prodLike, tip };
     };
 
     // === Build featured product card FROM the first event ===
     let featuredProduct = null;
+    let matchedProduct = null;
+    let cleanTip = null;
+    let decisionPath = null;
 
+    const s3 = Date.now();
     if (firstEvent) {
       const matched = matchProductToEvent(rankedProducts, firstEvent);
 
       if (matched) {
-        // Keep product URL; borrow the event title for cosmetic consistency only
-        featuredProduct = await maybeEnrichPrice({
+        matchedProduct = matched;
+        decisionPath = "matched_product";
+        const { prod, tip } = await maybeEnrichPrice({
           ...matched,
           title: firstEvent.title || matched.title,
           raw: { ...(matched.raw || {}), _linkedEventId: firstEvent.id },
         });
-        // Keep the rest of the products after the featured (dedup by id)
-        rankedProducts = [
-          featuredProduct,
-          ...rankedProducts.filter((p) => p.id !== matched.id),
-        ];
+        featuredProduct = prod;
+        cleanTip = tip;
+        // Dedup matched
+        rankedProducts = [featuredProduct, ...rankedProducts.filter((p) => p.id !== matched.id)];
       } else {
-        // No product match: synthesize from the event and try to enrich price & URL from clean table
+        decisionPath = "synthetic_from_event";
         const synthetic = {
           id: `evt-${firstEvent.id || "next"}`,
           title: firstEvent.title || "Upcoming Workshop",
@@ -502,16 +513,18 @@ export default async function handler(req, res) {
             firstEvent.raw?.metaDescription ||
             firstEvent.raw?.description ||
             "",
-          // DO NOT trust event raw.offers.price; set null unless clearly >0 (we suppress by default)
-          price: null,
+          price: null, // never trust event price
           location: firstEvent.location || null,
           raw: { ...(firstEvent.raw || {}), _syntheticFromEvent: true },
           _score: 1,
         };
-        featuredProduct = await maybeEnrichPrice(synthetic);
+        const { prod, tip } = await maybeEnrichPrice(synthetic);
+        featuredProduct = prod;
+        cleanTip = tip;
         rankedProducts = [featuredProduct, ...rankedProducts];
       }
     }
+    t_comp += Date.now() - s3;
 
     // Confidence
     const scoresForConfidence = [
@@ -522,6 +535,7 @@ export default async function handler(req, res) {
     const confidence_pct = confidenceFrom(scoresForConfidence);
 
     // Compose answer_markdown
+    const s4 = Date.now();
     let answer_markdown = "";
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
@@ -535,6 +549,7 @@ export default async function handler(req, res) {
         answer_markdown = "Upcoming workshops and related info below.";
       }
     }
+    t_comp += Date.now() - s4;
 
     // Citations: de-dupe (include first event + featured product)
     const citations = uniq([
@@ -543,11 +558,15 @@ export default async function handler(req, res) {
       ...(rankedProducts[0] ? [pickUrl(rankedProducts[0])] : []),
     ]);
 
+    // —— Structured ——
+    const selectedEventRaw = include_raw && firstEvent ? redactRaw(firstEvent.raw) : undefined;
+    const selectedProductRaw = include_raw && rankedProducts[0] ? redactRaw(rankedProducts[0].raw) : undefined;
+
     const structured = {
       intent,
       topic,
       event_subtype: subtype,
-      events: rankedEvents.map((e) => ({
+      events: (events || []).length ? rankedEvents.map((e, idx) => ({
         id: e.id,
         title: e.title,
         page_url: e.page_url,
@@ -555,31 +574,31 @@ export default async function handler(req, res) {
         date_start: e.date_start,
         date_end: e.date_end,
         location: e.location,
-        raw: e.raw,
         when: e.date_start ? new Date(e.date_start).toUTCString() : null,
         href: pickUrl(e),
         _score: e._score,
-      })),
-      products: rankedProducts.map((p) => ({
+        ...(include_raw && idx === 0 ? { raw: selectedEventRaw } : {}),
+      })) : [],
+      products: (rankedProducts || []).map((p, idx) => ({
         id: p.id,
         title: p.title,
         page_url: p.page_url,
         source_url: p.source_url,
         description: p.description,
-        price: p.price ?? null,           // may be null; not used for display if <=0
-        price_gbp: p.price_gbp ?? null,   // cleaned value if enriched
+        price: p.price ?? null,
+        price_gbp: p.price_gbp ?? null,
         location: p.location,
-        raw: p.raw,
         _score: p._score,
-        display_price: selectDisplayPriceNumber(p), // convenient for UI tests
+        display_price: selectDisplayPriceNumber(p),
+        ...(include_raw && idx === 0 ? { raw: selectedProductRaw } : {}),
       })),
-      articles: rankedArticles.map((a) => ({
+      articles: (rankedArticles || []).map((a) => ({
         id: a.id,
         title: a.title,
         page_url: a.page_url,
         source_url: a.source_url,
-        raw: a.raw,
         last_seen: a.last_seen,
+        // no raw unless explicitly required (we default to trimmed)
       })),
       pills:
         intent === "events"
@@ -587,32 +606,76 @@ export default async function handler(req, res) {
           : buildAdvicePills(rankedArticles, q),
     };
 
-    // Debug
-    const toPct = (s) =>
-      typeof s === "number" ? `${Math.round(s * 1000) / 10}%` : null;
-    const debug = {
-      match_threshold_product_to_event: 0.45,
-      keywords_used: keywords,
-      top_products: structured.products.slice(0, 3).map((p) => ({
-        title: p.title,
-        score_pct: toPct(p._score),
-        url: p.page_url || p.source_url,
-        // Show the actual number we use for display; never raw.offers
-        price: p.display_price,
-      })),
-      top_events: structured.events.slice(0, 3).map((e) => ({
-        title: e.title,
-        score_pct: toPct(e._score),
-        url: e.page_url || e.source_url,
-      })),
-      top_articles: rankedArticles.slice(0, 3).map((a) => ({
-        title: a.title,
-        score_pct: null,
-        url: a.page_url || a.source_url,
-      })),
+    // —— Debug (compact) ——
+    const thresholds = {
+      product_match: 0.45,
+      clean_accept_noslug: { inter: 2, score: 0.22 },
+      clean_accept_slugish: { inter: 1, score: 0.15 }
     };
 
-    const payload = {
+    const baseDebug = {
+      version: "v0.9.28-debug-trim",
+      path: decisionPath,
+      intent,
+      keywords,
+      thresholds,
+      event: firstEvent ? {
+        id: firstEvent.id,
+        title: firstEvent.title,
+        url: pickUrl(firstEvent),
+        date_start: firstEvent.date_start
+      } : null,
+      product: rankedProducts[0] ? {
+        id: rankedProducts[0].id,
+        title: rankedProducts[0].title,
+        url: pickUrl(rankedProducts[0]),
+        price_gbp: rankedProducts[0].price_gbp ?? null,
+        display_price: selectDisplayPriceNumber(rankedProducts[0]),
+        source: decisionPath === "matched_product" ? (cleanTip ? "matched+clean_enriched" : "matched") : (cleanTip ? "synthetic+clean_enriched" : "synthetic")
+      } : null,
+      clean_lookup: cleanTip ? {
+        hit: true,
+        url: cleanTip.url,
+        price_gbp: cleanTip.price_gbp,
+        inter: cleanTip._diagnostic?.inter ?? null,
+        score: cleanTip._diagnostic?.score ?? null,
+        tokens_used: cleanTip._diagnostic?.tokens_used ?? null
+      } : { hit: false },
+      pills: {
+        book_now: (structured.pills?.[0]?.url) || null,
+        event_url: pickUrl(firstEvent) || null,
+        product_url: pickUrl(rankedProducts[0]) || null
+      },
+      counts: {
+        events: rankedEvents.length,
+        products: rankedProducts.length,
+        articles: rankedArticles.length
+      },
+      timings_ms: {
+        total: Date.now() - started,
+        supabase: t_supabase,
+        rank: t_rank,
+        compose: t_comp
+      }
+    };
+
+    let debug = null;
+    if (debug_level === "basic") {
+      debug = baseDebug;
+    } else if (debug_level === "verbose") {
+      debug = {
+        ...baseDebug,
+        trace: [
+          `intent=${intent} subtype=${subtype || "n/a"}`,
+          `events_found=${events.length} products_found=${products.length} articles_found=${articles.length}`,
+          `decision=${decisionPath}`,
+          `book_now=${(structured.pills?.[0]?.url) || "n/a"}`
+        ]
+      };
+    } // if "off": leave as null
+
+    // —— Payload ——
+    let payload = {
       ok: true,
       answer_markdown,
       citations,
@@ -621,13 +684,35 @@ export default async function handler(req, res) {
       confidence_pct,
       debug,
       meta: {
-        duration_ms: Date.now() - started,
+        duration_ms: Date.now() - t0,
         endpoint: "/api/chat",
         topK,
         intent,
-        version: "v0.9.27-price-link-fix" // bump for cache-busting visibility
       },
     };
+
+    // —— Size guard: keep payload pasteable ——
+    const approxSize = Buffer.byteLength(JSON.stringify(payload), "utf8");
+    if (approxSize > 40000) {
+      // Downgrade debug and strip any leftover raw
+      payload.debug = debug_level === "off" ? null : {
+        version: baseDebug.version,
+        note: "debug trimmed due to payload size",
+        path: baseDebug.path,
+        intent: baseDebug.intent,
+        event: baseDebug.event && { id: baseDebug.event.id, url: baseDebug.event.url, date_start: baseDebug.event.date_start },
+        product: baseDebug.product && { id: baseDebug.product.id, url: baseDebug.product.url, display_price: baseDebug.product.display_price },
+        counts: baseDebug.counts,
+        timings_ms: baseDebug.timings_ms
+      };
+      // Ensure no raw in arrays
+      if (payload.structured?.events) payload.structured.events = payload.structured.events.map(({ raw, ...rest }) => rest);
+      if (payload.structured?.products) payload.structured.products = payload.structured.products.map(({ raw, ...rest }) => rest);
+      if (payload.structured?.articles) payload.structured.articles = payload.structured.articles.map(({ raw, ...rest }) => rest);
+      payload.meta.trimmed = true;
+      payload.meta.size_before = approxSize;
+      payload.meta.size_after = Buffer.byteLength(JSON.stringify(payload), "utf8");
+    }
 
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     return res.status(200).send(payload);
