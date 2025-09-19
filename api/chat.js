@@ -27,7 +27,7 @@ function supabaseAdmin() {
 /* ================= Utilities ================= */
 const pickUrl = (e) => e?.page_url || e?.source_url || e?.url || null;
 const uniq = (arr) => Array.from(new Set((arr || []).filter(Boolean)));
-const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n)));
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n)); // ← fixed extra parenthesis
 const tokenize = (s) => (String(s || "").toLowerCase().match(/[a-z0-9]+/g) || []);
 const normaliseToken = (t) => String(t || "").replace(/\d+$/, ""); // kenilworth1 → kenilworth
 
