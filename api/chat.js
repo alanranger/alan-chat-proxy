@@ -270,32 +270,77 @@ function upgradeToRichestByUrl(allProducts, chosen) {
   return same.reduce(preferRicherProduct, chosen);
 }
 
-/* --- strict product-vs-event gate (single source of truth for panel/pills) --- */
-function strictlyMatchesEvent(product, firstEvent) {
+/* ===== date parsing used for strict workshop matching ===== */
+function monthIdx(m) {
+  const s = lc(m).slice(0,3);
+  const map = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
+  return s in map ? map[s] : null;
+}
+function extractDatesFromText(text, defaultYear) {
+  const out = [];
+  if (!text) return out;
+  const re = /(?:(?:mon|tue|wed|thu|fri|sat|sun)\s*,?\s*)?(\d{1,2})(?:st|nd|rd|th)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{4}))?/ig;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const d = parseInt(m[1],10);
+    const mi = monthIdx(m[2]);
+    const y = m[3] ? parseInt(m[3],10) : (defaultYear || new Date().getFullYear());
+    if (mi!=null && d>=1 && d<=31) {
+      const dt = new Date(Date.UTC(y, mi, d));
+      if (!isNaN(dt)) out.push(dt);
+    }
+  }
+  return out;
+}
+function withinDays(a, b, days) {
+  const diff = Math.abs(a.getTime() - b.getTime());
+  return diff <= days * 86400000;
+}
+
+/* --- strict product-vs-event gate --- */
+function strictlyMatchesEvent(product, firstEvent, subtype = null) {
   if (!product || !firstEvent) return false;
+
   const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
   const refCore = uniq([...(location || []), ...(topic || [])]);
   const refTokens = new Set(refCore.length ? refCore : all);
 
-  // require: (1) anchor hit, (2) decent token overlap, (3) if we detected a location token, it must be present in product
   const anchors = productAnchorTokens(product);
   const hasAnchorHit = anchors.some(a => refTokens.has(a));
   if (!hasAnchorHit) return false;
 
   const { f1 } = symmetricOverlap(refTokens, pickUrl(product), product.title);
-  if (f1 < 0.30) return false;
+  // tighter base threshold
+  if (f1 < 0.35) return false;
 
+  // require location token to be present somewhere in product title/url/desc, when we have one
   if ((location || []).length) {
-    const hay = lc((product.title || "") + " " + (pickUrl(product) || ""));
+    const long = sanitizeDesc(product?.raw?.metaDescription || product?.raw?.meta?.description || product?.description || "");
+    const hay = lc((product.title || "") + " " + (pickUrl(product) || "") + " " + long);
     const locOk = location.some(l => hay.includes(l));
     if (!locOk) return false;
   }
-  // subtype alignment helps avoid course↔workshop leakage
-  const isSameKind = (isWorkshopEvent(firstEvent) ? isWorkshopProduct(product) : true)
-                  && (isCourseEvent(firstEvent) ? isCourseProduct(product) : true);
-  if (!isSameKind) return false;
 
-  // extra anti-hijack: disallow portrait/lightroom/etc unless present in event tokens
+  // subtype-specific tightening: for WORKSHOP, require a date near the event date if the product text exposes any date
+  if (subtype === "workshop") {
+    const eventDate = firstEvent?.date_start ? new Date(firstEvent.date_start) : null;
+    if (eventDate && !isNaN(eventDate)) {
+      const long = sanitizeDesc(product?.raw?.metaDescription || product?.raw?.meta?.description || product?.description || "");
+      const dates = extractDatesFromText(long, eventDate.getUTCFullYear());
+      if (dates.length) {
+        const anyClose = dates.some(d => withinDays(d, eventDate, 5));
+        if (!anyClose) return false;
+      }
+    }
+  }
+
+  // subtype alignment
+  const okKind =
+    (isWorkshopEvent(firstEvent) ? isWorkshopProduct(product) : true) &&
+    (isCourseEvent(firstEvent) ? isCourseProduct(product) : true);
+  if (!okKind) return false;
+
+  // anti-hijack
   const evtLower = lc((firstEvent.title || "") + " " + (pickUrl(firstEvent) || ""));
   const tl = lc(product.title || "");
   if (/portrait/.test(tl) && !/portrait/.test(evtLower)) return false;
@@ -427,16 +472,18 @@ function formatDisplayPriceGBP(n) {
 function sanitizeDesc(s) {
   if (!s || typeof s !== "string") return "";
   let out = s;
+  // structure → newlines
   out = out.replace(/<br\s*\/?>/gi, "\n");
   out = out.replace(/<\/p>/gi, "\n");
   out = out.replace(/<\/li>/gi, "\n");
   out = out.replace(/<li[^>]*>/gi, "• ");
+  // tidy entities & attrs
   out = out.replace(/\s+[a-z-]+="[^"]*"/gi, "");
   out = out.replace(/&nbsp;|&#160;/gi, " ");
   out = out.replace(/&amp;/gi, "&");
+  // strip tags & collapse
   out = out.replace(/\u2013|\u2014/g, "-");
   out = out.replace(/<[^>]*>/g, " ");
-  out = out.replace(/--\s*>/g, " ");
   out = out.replace(/[ \t\f\v]+/g, " ");
   out = out.replace(/\s*\n\s*/g, "\n");
   out = out.replace(/\n{3,}/g, "\n\n");
@@ -629,7 +676,7 @@ export default async function handler(req, res) {
 
     if (firstEvent) {
       const matched = await findBestProductForEvent(client, firstEvent, rankedProducts, subtype);
-      if (matched && strictlyMatchesEvent(matched, firstEvent)) {
+      if (matched && strictlyMatchesEvent(matched, firstEvent, subtype)) {
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
         // Enrich price from clean table for featured pick
@@ -693,7 +740,7 @@ export default async function handler(req, res) {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
       // PANEL GATE: only show a product if it strictly matches the first event
-      if (firstEvent && featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent)) {
+      if (firstEvent && featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype)) {
         answer_markdown = buildProductPanelMarkdown(featuredProduct);
       } else if (firstEvent) {
         answer_markdown = buildEventPanelMarkdown(firstEvent);
@@ -708,7 +755,7 @@ export default async function handler(req, res) {
     const citations = uniq([
       ...rankedArticles.slice(0, 3).map(pickUrl),
       ...(firstEvent ? [pickUrl(firstEvent)] : []),
-      ...(featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent) ? [pickUrl(featuredProduct)] : []),
+      ...(featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype) ? [pickUrl(featuredProduct)] : []),
     ]);
 
     const structured = {
@@ -740,16 +787,16 @@ export default async function handler(req, res) {
         id: a.id, title: a.title, page_url: a.page_url, source_url: a.source_url, last_seen: a.last_seen
       })),
       // Only show Book Now when we have a strict match to the first event
-      pills: intent === "events" ? buildEventPills(firstEvent, (featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent)) ? featuredProduct : null) : buildAdvicePills(rankedArticles, q),
+      pills: intent === "events" ? buildEventPills(firstEvent, (featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype)) ? featuredProduct : null) : buildAdvicePills(rankedArticles, q),
     };
 
     const debug = {
-      version: "v0.9.46-panel-gate",
+      version: "v0.9.49-workshop-date-gate",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? {
         id: featuredProduct.id, title: featuredProduct.title, url: pickUrl(featuredProduct),
-        strictly_matches_first_event: strictlyMatchesEvent(featuredProduct, firstEvent),
+        strictly_matches_first_event: strictlyMatchesEvent(featuredProduct, firstEvent, subtype),
         display_price: formatDisplayPriceGBP(selectDisplayPriceNumber(featuredProduct))
       } : null,
       pills: { book_now: structured.pills?.find(p=>p.label==="Book Now")?.url || null },
