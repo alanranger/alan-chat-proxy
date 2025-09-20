@@ -211,17 +211,21 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [])
   const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
   const refTokens = new Set(uniq([...all, ...topic, ...location]).filter(t => t.length >= 3));
 
-  // Require location match if we have one (e.g., "kenilworth")
+  // tokens that indicate subject (used to avoid Woodland Walks)
+  const topicNeed = Array.from(new Set(topic)).filter(t =>
+    /(long|exposure|sunset|urban|architecture|seascape)/.test(t)
+  );
   const needLoc = location.length ? location : [];
 
-  // 1) Preloaded products (cheap pass) — reject if no location hit in title/URL
+  // 1) Try among preloaded products — require location **and** topic in TITLE/URL
   let best = null, bestScore = -1;
   for (const p of preloadProducts || []) {
     const title = (p.title || "").toLowerCase();
     const url = (pickUrl(p) || "").toLowerCase();
 
-    // Early reject: if we have location tokens, keep only products that mention any in title/URL
-    if (needLoc.length && !needLoc.some(l => title.includes(l) || url.includes(l))) continue;
+    const hasLoc = !needLoc.length || needLoc.some(l => title.includes(l) || url.includes(l));
+    const hasTopic = !topicNeed.length || topicNeed.some(t => title.includes(t) || url.includes(t));
+    if (!(hasLoc && hasTopic)) continue;
 
     let s = overlapScore(refTokens, url, title);
     if (sameHost(p, firstEvent)) s += 0.08;
@@ -230,14 +234,11 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [])
   }
   if (best && bestScore >= 0.18) return best;
 
-  // 2) Query products; still require location match but allow match in description too
+  // 2) Query products again; still require location+topic **in title/URL** (no description-only matches)
   const orParts = uniq([...Array.from(refTokens)]).slice(0, 12)
     .flatMap(t => [
       `title.ilike.%${t}%`,
-      `page_url.ilike.%${t}%`,
-      `description.ilike.%${t}%`,
-      `raw->>metaDescription.ilike.%${t}%`,
-      `raw->meta->>description.ilike.%${t}%`
+      `page_url.ilike.%${t}%`
     ]).join(",");
 
   let fallback = [];
@@ -248,17 +249,20 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [])
       .eq("kind","product")
       .or(orParts)
       .order("last_seen",{ascending:false})
-      .limit(40);
+      .limit(60);
     fallback = data || [];
   }
 
-  const withLoc = !needLoc.length ? fallback : fallback.filter(p => {
-    const hay = ((p.title || "") + " " + (pickUrl(p) || "") + " " + (p.description || "")).toLowerCase();
-    return needLoc.some(l => hay.includes(l));
+  // keep only those that mention the location AND a topic in TITLE/URL
+  const withLocAndTopic = fallback.filter(p => {
+    const hayTitleUrl = ((p.title || "") + " " + (pickUrl(p) || "")).toLowerCase();
+    const hasLoc = !needLoc.length || needLoc.some(l => hayTitleUrl.includes(l));
+    const hasTopic = !topicNeed.length || topicNeed.some(t => hayTitleUrl.includes(t));
+    return hasLoc && hasTopic;
   });
 
   best = null; bestScore = -1;
-  for (const p of withLoc) {
+  for (const p of withLocAndTopic) {
     const title = (p.title || "").toLowerCase();
     const url = (pickUrl(p) || "").toLowerCase();
     let s = overlapScore(refTokens, url, title);
@@ -389,7 +393,7 @@ export default async function handler(req, res) {
     if (intent === "events") {
       [events, products, landing] = await Promise.all([
         findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
-        findProducts(client, { keywords, topK: 24 }), // preload more products for matching
+        findProducts(client, { keywords, topK: 24 }),
         findLanding(client, { keywords }),
       ]);
 
@@ -442,7 +446,6 @@ export default async function handler(req, res) {
 
       const matched = await findBestProductForEvent(client, firstEvent, rankedProducts);
 
-      // Enrich price from clean view if available
       if (matched) {
         featuredProduct = { ...matched };
         const tokensForClean = uniq([...urlTokens(firstEvent), ...titleTokens(firstEvent)]);
@@ -508,7 +511,7 @@ export default async function handler(req, res) {
     };
 
     const debug = {
-      version: "v0.9.32-product-from-first-event+loc-filter",
+      version: "v0.9.33-product-from-first-event+loc+topic-titleurl",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? { id: featuredProduct.id, title: featuredProduct.title, url: pickUrl(featuredProduct), display_price: selectDisplayPriceNumber(featuredProduct) } : null,
