@@ -245,7 +245,37 @@ function symmetricOverlap(eventTokens, url, title) {
 function productAnchorTokens(prod) {
   const title = prod?.title || "";
   const tokens = titleTokens({ title });
-  return tokens.filter(t => t.length >= 5 && !LOCATION_HINTS.includes(t)); // no location anchors
+  return tokens.filter(t =>
+    t.length >= 5 &&
+    !LOCATION_HINTS.includes(t) &&
+    t !== "beginners" && t !== "beginner" // prevent generic overlap that caused Lightroom to match
+  );
+}
+
+/* ---- domain anchor mapping (camera vs lightroom vs portrait etc.) ---- */
+const DOMAIN_ANCHORS = {
+  camera: new Set(["camera","dslr","mirrorless"]),
+  lightroom: new Set(["lightroom","editing","post","postproduction","develop"]),
+  portrait: new Set(["portrait","headshot"]),
+  landscape: new Set(["landscape","seascape"]),
+  monochrome: new Set(["black","white","monochrome","bw","b+w"])
+};
+function mapToAnchors(tokens) {
+  const hits = new Set();
+  for (const tk of tokens) {
+    for (const [key, set] of Object.entries(DOMAIN_ANCHORS)) {
+      if (set.has(tk)) hits.add(key);
+    }
+  }
+  return hits;
+}
+function eventAnchors(ev) {
+  const evTokens = uniq([...titleTokens(ev), ...urlTokens(ev)]);
+  return mapToAnchors(evTokens);
+}
+function productAnchors(p) {
+  const pTokens = uniq([...titleTokens(p), ...urlTokens(p)]);
+  return mapToAnchors(pTokens);
 }
 
 /* ===== prefer richer duplicate rows for the same product URL ===== */
@@ -277,6 +307,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
   const refCore = uniq([...(location || []), ...(topic || [])]);
   const refTokens = new Set(refCore.length ? refCore : all);
   const needLoc = location.length ? location : [];
+  const evAnch = eventAnchors(firstEvent); // e.g. {"camera"}
 
   const kindAlign = (p) => {
     if (!subtype) return true;
@@ -294,9 +325,9 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     const hasLoc = !needLoc.length || needLoc.some(l => u.toLowerCase().includes(l) || t.toLowerCase().includes(l));
     if (!hasLoc) return false;
 
-    // NEW: require at least one significant product "anchor" to appear in the event tokens
-    const anchors = productAnchorTokens(p);
-    const hasAnchorHit = anchors.some(a => refTokens.has(a));
+    // STRICT domain-anchor intersection (prevents Lightroom when the event is a Camera course)
+    const pAnch = productAnchors(p);
+    const hasAnchorHit = [...pAnch].some(a => evAnch.has(a));
     if (!hasAnchorHit) return false;
 
     const { f1 } = symmetricOverlap(refTokens, u, t);
@@ -614,7 +645,7 @@ export default async function handler(req, res) {
     };
 
     const debug = {
-      version: "v0.9.39-anchor-align",
+      version: "v0.9.40-domain-anchor",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? {
