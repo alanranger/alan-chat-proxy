@@ -248,7 +248,7 @@ function productAnchorTokens(prod) {
   return tokens.filter(t =>
     t.length >= 5 &&
     !LOCATION_HINTS.includes(t) &&
-    t !== "beginners" && t !== "beginner" // prevent generic overlap that caused Lightroom to match
+    t !== "beginners" && t !== "beginner"
   );
 }
 
@@ -307,7 +307,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
   const refCore = uniq([...(location || []), ...(topic || [])]);
   const refTokens = new Set(refCore.length ? refCore : all);
   const needLoc = location.length ? location : [];
-  const evAnch = eventAnchors(firstEvent); // e.g. {"camera"}
+  const evAnch = eventAnchors(firstEvent);
 
   const kindAlign = (p) => {
     if (!subtype) return true;
@@ -325,13 +325,13 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     const hasLoc = !needLoc.length || needLoc.some(l => u.toLowerCase().includes(l) || t.toLowerCase().includes(l));
     if (!hasLoc) return false;
 
-    // STRICT domain-anchor intersection (prevents Lightroom when the event is a Camera course)
+    // STRICT domain-anchor intersection (prevents Lightroom/Portrait when the event is a Camera course)
     const pAnch = productAnchors(p);
     const hasAnchorHit = [...pAnch].some(a => evAnch.has(a));
     if (!hasAnchorHit) return false;
 
     const { f1 } = symmetricOverlap(refTokens, u, t);
-    return f1 >= 0.30; // slightly lower since we already enforce anchor alignment
+    return f1 >= 0.30;
   };
 
   let candidates = (preloadProducts || []).filter(pass);
@@ -594,6 +594,27 @@ export default async function handler(req, res) {
           }
         } catch {}
       }
+
+      // Fallback re-rank when no featured product was found (align to event domain & penalise mismatches)
+      if (!featuredProduct && rankedProducts.length) {
+        const evAnch = eventAnchors(firstEvent);
+        const refTokens = new Set(uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)]));
+        rankedProducts = rankedProducts
+          .map((p) => {
+            const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
+            let s = (p._score || 0) + f1;
+            if (sameHost(p, firstEvent)) s += 0.15;
+            const pAnch = productAnchors(p);
+            if (pAnch.size && evAnch.size) {
+              if ([...pAnch].some(a => evAnch.has(a))) s += 0.4; else s -= 0.35;
+            }
+            if (evAnch.has("camera") && /camera/i.test(p.title || "")) s += 0.2;
+            return { p, s };
+          })
+          .sort((a,b)=>b.s-a.s)
+          .map(x=>x.p);
+      }
+
       if (featuredProduct) {
         const topUrl = baseUrl(pickUrl(featuredProduct));
         rankedProducts = [ featuredProduct, ...rankedProducts.filter(p => baseUrl(pickUrl(p)) !== topUrl) ];
@@ -645,7 +666,7 @@ export default async function handler(req, res) {
     };
 
     const debug = {
-      version: "v0.9.40-domain-anchor",
+      version: "v0.9.41-fallback-rerank",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? {
