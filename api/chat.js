@@ -99,7 +99,7 @@ const STOPWORDS = new Set([
   "workshop","workshops","photography","photo","near","me","uk",
   "class","classes","course","courses",
   "where","location","dates","date","upcoming","available","availability",
-  "book","booking"
+  "book","booking","time"
 ]);
 
 function extractKeywords(q, intent, subtype) {
@@ -245,37 +245,7 @@ function symmetricOverlap(eventTokens, url, title) {
 function productAnchorTokens(prod) {
   const title = prod?.title || "";
   const tokens = titleTokens({ title });
-  return tokens.filter(t =>
-    t.length >= 5 &&
-    !LOCATION_HINTS.includes(t) &&
-    t !== "beginners" && t !== "beginner"
-  );
-}
-
-/* ---- domain anchor mapping (camera vs lightroom vs portrait etc.) ---- */
-const DOMAIN_ANCHORS = {
-  camera: new Set(["camera","dslr","mirrorless"]),
-  lightroom: new Set(["lightroom","editing","post","postproduction","develop"]),
-  portrait: new Set(["portrait","headshot"]),
-  landscape: new Set(["landscape","seascape"]),
-  monochrome: new Set(["black","white","monochrome","bw","b+w"])
-};
-function mapToAnchors(tokens) {
-  const hits = new Set();
-  for (const tk of tokens) {
-    for (const [key, set] of Object.entries(DOMAIN_ANCHORS)) {
-      if (set.has(tk)) hits.add(key);
-    }
-  }
-  return hits;
-}
-function eventAnchors(ev) {
-  const evTokens = uniq([...titleTokens(ev), ...urlTokens(ev)]);
-  return mapToAnchors(evTokens);
-}
-function productAnchors(p) {
-  const pTokens = uniq([...titleTokens(p), ...urlTokens(p)]);
-  return mapToAnchors(pTokens);
+  return tokens.filter(t => t.length >= 5 && !LOCATION_HINTS.includes(t)); // no location anchors
 }
 
 /* ===== prefer richer duplicate rows for the same product URL ===== */
@@ -307,7 +277,6 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
   const refCore = uniq([...(location || []), ...(topic || [])]);
   const refTokens = new Set(refCore.length ? refCore : all);
   const needLoc = location.length ? location : [];
-  const evAnch = eventAnchors(firstEvent);
 
   const kindAlign = (p) => {
     if (!subtype) return true;
@@ -325,9 +294,9 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     const hasLoc = !needLoc.length || needLoc.some(l => u.toLowerCase().includes(l) || t.toLowerCase().includes(l));
     if (!hasLoc) return false;
 
-    // STRICT domain-anchor intersection (prevents Lightroom/Portrait when the event is a Camera course)
-    const pAnch = productAnchors(p);
-    const hasAnchorHit = [...pAnch].some(a => evAnch.has(a));
+    // Require at least one significant product "anchor" to appear in the event tokens
+    const anchors = productAnchorTokens(p);
+    const hasAnchorHit = anchors.some(a => refTokens.has(a));
     if (!hasAnchorHit) return false;
 
     const { f1 } = symmetricOverlap(refTokens, u, t);
@@ -412,29 +381,36 @@ function sanitizeDesc(s) {
   if (!s || typeof s !== "string") return "";
   let out = s;
   out = out.replace(/\s+[a-z-]+="[^"]*"/gi, " "); // strip attributes
-  out = out.replace(/<[^>]*>/g, " ");              // strip tags
+  out = out.replace(/<br\s*\/?>/gi, "\n");
+  out = out.replace(/<\/p>/gi, "\n");
+  out = out.replace(/<li>/gi, "• ");
+  out = out.replace(/<[^>]*>/g, " ");              // strip other tags
   out = out.replace(/--\s*>/g, " ");               // stray “-- >”
+  out = out.replace(/\u2013|\u2014/g, "-");        // en/em dash -> hyphen
   out = out.replace(/\s+/g, " ").trim();           // collapse whitespace
   return out;
 }
 
-/* FIXED: safe regex grab with grouped alternation and guard */
+/* FIXED & ROBUST: extract labelled bullets */
 function parseProductBlock(desc) {
   const out = {};
   const clean = sanitizeDesc(desc);
   if (!clean) return out;
 
-  const grab = (label) => {
-    const r = new RegExp(`(?:${label})\\s*:\\s*([\\s\\S]*?)(?:\\n\\s*[A-Z][A-Za-z ]+:|$)`, "i");
+  // Accept "Label: value", "Label - value", "Label — value"
+  const capture = (label) => {
+    const r = new RegExp(`(?:^|\\b|\\n)${label}\\s*(?:\\:|\\-|—)\\s*([\\s\\S]*?)(?:(?:\\n|\\s){1,}[A-Z][A-Za-z ]{2,}\\s*(?:\\:|\\-|—)|$)`, "i");
     const m = clean.match(r);
     if (!m || m.length < 2 || typeof m[1] !== "string") return null;
     return m[1].trim().replace(/\s+/g, " ").slice(0, 300);
   };
 
-  out.location = grab("Location");
-  out.dates = grab("Dates|\\b20\\d{2}\\b");
-  out.participants = grab("Participants");
-  out.fitness = grab("Fitness");
+  out.location = capture("(Location|Address)");
+  out.participants = capture("(Participants|Group\\s*Size|Max\\s*Participants|Class\\s*Size)");
+  out.time = capture("(Time|Times|Timing|Start\\s*Time)");
+  out.dates = capture("(Dates|Start\\s*Dates|Multi\\s*Course\\s*Start\\s*Dates|\\b20\\d{2}\\b)");
+  out.fitness = capture("(Fitness|Difficulty|Experience\\s*Level|Experience\\s*-\\s*Level)");
+
   return out;
 }
 
@@ -458,8 +434,9 @@ function buildProductPanelMarkdown(prod) {
   const head = `**${title}**${priceStr ? ` — ${priceStr}` : ""}`;
   const bullets = [];
   if (block.location) bullets.push(`- **Location:** ${block.location}`);
-  if (block.dates) bullets.push(`- **Dates:** ${block.dates}`);
   if (block.participants) bullets.push(`- **Participants:** ${block.participants}`);
+  if (block.time) bullets.push(`- **Time:** ${block.time}`);
+  if (block.dates) bullets.push(`- **Dates:** ${block.dates}`);
   if (block.fitness) bullets.push(`- **Fitness:** ${block.fitness}`);
 
   const plain = sanitizeDesc(long);
@@ -556,7 +533,7 @@ export default async function handler(req, res) {
 
     const scoreWrap = (arr) =>
       (arr || [])
-        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
+        .map((e) => ({ e, s: scoreEntity(e, qTokens) })))
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
           const by = Date.parse(b.e?.last_seen || "") || 0;
@@ -585,6 +562,7 @@ export default async function handler(req, res) {
       if (matched) {
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
+        // also enrich price when we have a featured product
         const tokensForClean = uniq([...urlTokens(firstEvent), ...titleTokens(firstEvent)]);
         try {
           const cleanRows = await findProductsClean(client, { tokens: tokensForClean, urlFragment: pickUrl(firstEvent) || "" });
@@ -597,28 +575,44 @@ export default async function handler(req, res) {
 
       // Fallback re-rank when no featured product was found (align to event domain & penalise mismatches)
       if (!featuredProduct && rankedProducts.length) {
-        const evAnch = eventAnchors(firstEvent);
-        const refTokens = new Set(uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)]));
+        const evTokens = new Set(uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)]));
         rankedProducts = rankedProducts
           .map((p) => {
-            const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
+            const { f1 } = symmetricOverlap(evTokens, pickUrl(p), p.title);
             let s = (p._score || 0) + f1;
             if (sameHost(p, firstEvent)) s += 0.15;
-            const pAnch = productAnchors(p);
-            if (pAnch.size && evAnch.size) {
-              if ([...pAnch].some(a => evAnch.has(a))) s += 0.4; else s -= 0.35;
+            const anchors = productAnchorTokens(p);
+            if (anchors.length) {
+              if (anchors.some(a => evTokens.has(a))) s += 0.4; else s -= 0.35;
             }
-            if (evAnch.has("camera") && /camera/i.test(p.title || "")) s += 0.2;
+            if (/camera/i.test(firstEvent?.title || "") && /camera/i.test(p.title || "")) s += 0.2;
             return { p, s };
           })
           .sort((a,b)=>b.s-a.s)
           .map(x=>x.p);
       }
+    }
 
-      if (featuredProduct) {
-        const topUrl = baseUrl(pickUrl(featuredProduct));
-        rankedProducts = [ featuredProduct, ...rankedProducts.filter(p => baseUrl(pickUrl(p)) !== topUrl) ];
-      }
+    /* -------- Pick preferred product (featured or top fallback) and ALWAYS upgrade to richest row -------- */
+    let preferredProduct = featuredProduct || rankedProducts[0] || null;
+    preferredProduct = upgradeToRichestByUrl(rankedProducts, preferredProduct);
+
+    /* -------- If we didn’t enrich price earlier (no featured), try for the preferred product now -------- */
+    if (!featuredProduct && preferredProduct && firstEvent) {
+      try {
+        const tokensForClean = uniq([...urlTokens(firstEvent), ...titleTokens(firstEvent)]);
+        const cleanRows = await findProductsClean(client, { tokens: tokensForClean, urlFragment: pickUrl(firstEvent) || "" });
+        const fromClean = cleanRows.find(r => baseUrl(r.url) === baseUrl(pickUrl(preferredProduct)));
+        if (fromClean && Number(fromClean.price_gbp) > 0) {
+          preferredProduct.price_gbp = Number(fromClean.price_gbp);
+        }
+      } catch {}
+    }
+
+    /* -------- Keep product list headed by preferred -------- */
+    if (preferredProduct) {
+      const topUrl = baseUrl(pickUrl(preferredProduct));
+      rankedProducts = [ preferredProduct, ...rankedProducts.filter(p => baseUrl(pickUrl(p)) !== topUrl) ];
     }
 
     /* =================== Compose =================== */
@@ -634,7 +628,7 @@ export default async function handler(req, res) {
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
-      const preferred = featuredProduct || rankedProducts[0] || null;
+      const preferred = preferredProduct;
       if (preferred) answer_markdown = buildProductPanelMarkdown(preferred);
       else if (rankedArticles?.length) answer_markdown = buildAdviceMarkdown(rankedArticles);
       else answer_markdown = "Upcoming workshops and related info below.";
@@ -654,19 +648,29 @@ export default async function handler(req, res) {
         date_start: e.date_start, date_end: e.date_end, location: e.location,
         when: e.date_start ? new Date(e.date_start).toUTCString() : null, href: pickUrl(e), _score: e._score,
       })),
-      products: (rankedProducts || []).map((p) => ({
-        id: p.id, title: p.title, page_url: p.page_url, source_url: p.source_url,
-        description: p.description, price: p.price ?? null, price_gbp: p.price_gbp ?? null,
-        location: p.location, _score: p._score, display_price: selectDisplayPriceNumber(p),
-      })),
+      products: (rankedProducts || []).map((p) => {
+        const long = p?.raw?.metaDescription || p?.raw?.meta?.description || p?.description || "";
+        const parsed = parseProductBlock(long);
+        return {
+          id: p.id, title: p.title, page_url: p.page_url, source_url: p.source_url,
+          description: p.description, price: p.price ?? null, price_gbp: p.price_gbp ?? null,
+          location: p.location, _score: p._score, display_price: selectDisplayPriceNumber(p),
+          // parsed fields for UI
+          location_parsed: parsed.location || null,
+          participants_parsed: parsed.participants || null,
+          time_parsed: parsed.time || null,
+          dates_parsed: parsed.dates || null,
+          fitness_parsed: parsed.fitness || null,
+        };
+      }),
       articles: (rankedArticles || []).map((a) => ({
         id: a.id, title: a.title, page_url: a.page_url, source_url: a.source_url, last_seen: a.last_seen
       })),
-      pills: intent === "events" ? buildEventPills(firstEvent, featuredProduct || null) : buildAdvicePills(rankedArticles, q),
+      pills: intent === "events" ? buildEventPills(firstEvent, preferredProduct || null) : buildAdvicePills(rankedArticles, q),
     };
 
     const debug = {
-      version: "v0.9.41-fallback-rerank",
+      version: "v0.9.42-preferred-rich-bullets",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? {
