@@ -185,13 +185,38 @@ function isCourseEvent(e) {
   return hasCourse && !looksWorkshop;
 }
 
+/* NEW: product type sniffing aligned with event subtype (uses same generic labels) */
+function isWorkshopProduct(p) {
+  const u = (pickUrl(p) || "").toLowerCase(); const t = (p?.title || "").toLowerCase();
+  const hasWorkshop = /workshop/.test(u + " " + t) || /photo-workshops-uk|photographic-workshops/.test(u);
+  const looksCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
+  return hasWorkshop && !looksCourse;
+}
+function isCourseProduct(p) {
+  const u = (pickUrl(p) || "").toLowerCase(); const t = (p?.title || "").toLowerCase();
+  const hasCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
+  const looksWorkshop = /workshop/.test(u + " " + t);
+  return hasCourse && !looksWorkshop;
+}
+
 /* ---- robust product matching strictly from first event ---- */
 function extractTopicAndLocationTokensFromEvent(ev) {
   const t = titleTokens(ev);
   const u = urlTokens(ev);
   const all = uniq([...t, ...u]);
-  const locationHints = all.filter(x => /(kenilworth|coventry|warwickshire|dartmoor|devon|hartland|anglesey|yorkshire|dales|wales|betws|snowdonia|northumberland|batsford|gloucestershire|chesterton|windmill|lynmouth|exmoor)/.test(x));
-  const topicHints = all.filter(x => /(long|exposure|sunset|seascape|woodland|urban|architecture|dales|windmill|walk|fairy|glen|workshop|coastal|quay)/.test(x));
+
+  // include tokens hinted by explicit location string too
+  const locFromField = nonGenericTokens(ev?.location || "");
+
+  const locationHints = uniq(
+    [...all, ...locFromField].filter(x =>
+      /(kenilworth|coventry|warwickshire|dartmoor|devon|hartland|anglesey|yorkshire|dales|wales|betws|snowdonia|northumberland|batsford|gloucestershire|chesterton|windmill|lynmouth|exmoor|quay)/.test(x)
+    )
+  );
+
+  // topic tokens are simply "all minus location-ish", fully data-driven
+  const topicHints = all.filter(x => !locationHints.includes(x));
+
   return { all, topic: uniq(topicHints), location: uniq(locationHints) };
 }
 
@@ -227,7 +252,7 @@ function upgradeToRichestByUrl(allProducts, chosen) {
 }
 
 /** Try hard to find a product URL for the first event. */
-async function findBestProductForEvent(client, firstEvent, preloadProducts = []) {
+async function findBestProductForEvent(client, firstEvent, preloadProducts = [], subtype = null) {
   if (!firstEvent) return null;
 
   const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
@@ -235,13 +260,26 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [])
   const refTokens = new Set(refCore.length ? refCore : all);
   const needLoc = location.length ? location : [];
 
+  // align product kind to event subtype when provided (no brittle query terms)
+  const kindAlign = (p) => {
+    if (!subtype) return true;
+    if (subtype === "course") return isCourseProduct(p) || !isWorkshopProduct(p);
+    if (subtype === "workshop") return isWorkshopProduct(p) || !isCourseProduct(p);
+    return true;
+  };
+
+  const minOverlap = 0.25; // require some substance beyond generic words
+
   const strictHit = (p) => {
+    if (!kindAlign(p)) return false;
     const u = (pickUrl(p) || "").toLowerCase();
     const t = (p?.title || "").toLowerCase();
     const hasLoc = !needLoc.length || needLoc.some(l => u.includes(l) || t.includes(l));
     if (!hasLoc) return false;
-    const hasTopic = !topic.length || topic.some(l => u.includes(l) || t.includes(l));
-    return hasTopic;
+
+    // overlap measured on event tokens vs product url/title
+    const ov = overlapScore(refTokens, pickUrl(p), p.title);
+    return ov >= minOverlap;
   };
 
   let candidates = (preloadProducts || []).filter(strictHit);
@@ -249,10 +287,11 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [])
     const ranked = candidates.map(p => {
       let s = overlapScore(refTokens, pickUrl(p), p.title);
       if (sameHost(p, firstEvent)) s += 0.15;
-      if (/(workshop)/.test((p.title || "").toLowerCase())) s += 0.05;
+      // tiny nudge if names contain same generic container (kept minimal)
+      if (/(workshop|course|class|lesson)/.test((p.title || "").toLowerCase())) s += 0.02;
       return { p, s };
     }).sort((a,b)=>b.s-a.s);
-    if (ranked[0]?.s >= 0.4) return ranked[0].p;
+    if (ranked[0]?.s >= 0.35) return ranked[0].p;
   }
 
   const core = uniq([...Array.from(refTokens)]).slice(0, 12);
@@ -276,7 +315,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [])
     const ranked = fallback.map(p => {
       let s = overlapScore(refTokens, pickUrl(p), p.title);
       if (sameHost(p, firstEvent)) s += 0.15;
-      if (/(workshop)/.test((p.title || "").toLowerCase())) s += 0.05;
+      if (/(workshop|course|class|lesson)/.test((p.title || "").toLowerCase())) s += 0.02;
       return { p, s };
     }).sort((a,b)=>b.s-a.s);
     if (ranked[0]?.s >= 0.35) return ranked[0].p;
@@ -483,7 +522,7 @@ export default async function handler(req, res) {
     let featuredProduct = null;
 
     if (firstEvent) {
-      const matched = await findBestProductForEvent(client, firstEvent, rankedProducts);
+      const matched = await findBestProductForEvent(client, firstEvent, rankedProducts, subtype);
 
       if (matched) {
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
@@ -548,7 +587,7 @@ export default async function handler(req, res) {
     };
 
     const debug = {
-      version: "v0.9.36-productblock-regex-fix",
+      version: "v0.9.37-course-align+token-overlap",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? {
