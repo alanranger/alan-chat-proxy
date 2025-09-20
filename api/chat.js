@@ -238,12 +238,11 @@ function symmetricOverlap(eventTokens, url, title) {
   const eSize = eTokens.size || 1;
   const pSize = pTokens.size || 1;
 
-  const recall = inter / eSize;     // how much of event is covered by product
-  const precision = inter / pSize;  // how specific the product is to the event
+  const recall = inter / eSize;
+  const precision = inter / pSize;
   const f1 = (precision + recall) ? (2 * precision * recall) / (precision + recall) : 0;
 
-  // Distinctive-token guard: reject when product's strongest tokens have zero intersection.
-  const strong = [...pTokens].filter(t => t.length >= 5); // “lightroom”, “portrait”, “camera”, “coventry”, etc.
+  const strong = [...pTokens].filter(t => t.length >= 5);
   const hasStrongHit = strong.some(t => eTokens.has(t));
 
   return { f1, hasStrongHit };
@@ -290,13 +289,11 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     if (!kindAlign(p)) return false;
     const u = pickUrl(p) || "";
     const t = p?.title || "";
-    // must include any explicit event locations
     const hasLoc = !needLoc.length || needLoc.some(l => u.toLowerCase().includes(l) || t.toLowerCase().includes(l));
     if (!hasLoc) return false;
 
-    // symmetric token similarity and distinctive-token guard
     const { f1, hasStrongHit } = symmetricOverlap(refTokens, u, t);
-    return hasStrongHit && f1 >= 0.35; // balanced, data-driven threshold
+    return hasStrongHit && f1 >= 0.35;
   };
 
   let candidates = (preloadProducts || []).filter(pass);
@@ -376,12 +373,9 @@ function formatDisplayPriceGBP(n) {
 function sanitizeDesc(s) {
   if (!s || typeof s !== "string") return "";
   let out = s;
-  // strip attributes like style="..."
-  out = out.replace(/\s+[a-z-]+="[^"]*"/gi, " ");
-  // remove HTML tags
-  out = out.replace(/<[^>]*>/g, " ");
-  // collapse whitespace
-  out = out.replace(/\s+/g, " ").trim();
+  out = out.replace(/\s+[a-z-]+="[^"]*"/gi, " "); // strip attributes
+  out = out.replace(/<[^>]*>/g, " ");              // strip tags
+  out = out.replace(/\s+/g, " ").trim();           // collapse whitespace
   return out;
 }
 
@@ -612,7 +606,7 @@ export default async function handler(req, res) {
       })),
       articles: (rankedArticles || []).map((a) => ({
         id: a.id, title: a.title, page_url: a.page_url, source_url: a.source_url, last_seen: a.last_seen
-      }))),
+      })), // <-- fixed: only two closing braces here
       pills: intent === "events" ? buildEventPills(firstEvent, featuredProduct || null) : buildAdvicePills(rankedArticles, q),
     };
 
