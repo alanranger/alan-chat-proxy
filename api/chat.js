@@ -203,7 +203,7 @@ function isCourseProduct(p) {
 const LOCATION_HINTS = [
   "devon","hartland","dartmoor","yorkshire","dales","kenilworth","coventry",
   "warwickshire","anglesey","wales","betws","snowdonia","northumberland",
-  "gloucestershire","batsford","chesterton","windmill","lynmouth","exmoor","quay"
+  "gloucestershire","batsford","gloucestershire","chesterton","windmill","lynmouth","exmoor","quay"
 ];
 
 /* ---- extract tokens from the first event ---- */
@@ -285,11 +285,16 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     return true;
   };
 
+  // Lightroom guard ONLY when first event looks like a Beginners camera course
+  const beginnersCamera = /beginners?/i.test(firstEvent?.title || "") && /camera/i.test(firstEvent?.title || "");
+
   const pass = (p) => {
     if (!kindAlign(p)) return false;
 
     const u = pickUrl(p) || "";
     const t = p?.title || "";
+
+    if (beginnersCamera && /(lightroom|editing)/i.test((u + " " + t))) return false;
 
     const hasLoc = !needLoc.length || needLoc.some(l => u.toLowerCase().includes(l) || t.toLowerCase().includes(l));
     if (!hasLoc) return false;
@@ -375,40 +380,60 @@ function formatDisplayPriceGBP(n) {
   return new Intl.NumberFormat(undefined, { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(n));
 }
 
-/* --- sanitize rich text/HTML to plain text before parsing --- */
+/* --- sanitize rich text/HTML to plain text before parsing (PRESERVE NEWLINES) --- */
 function sanitizeDesc(s) {
   if (!s || typeof s !== "string") return "";
   let out = s;
-  out = out.replace(/\s+[a-z-]+="[^"]*"/gi, " ");
+
+  // Convert structure to line breaks and bullets
+  out = out.replace(/<li[^>]*>/gi, "\n• ");
+  out = out.replace(/<\/li>/gi, "\n");
   out = out.replace(/<br\s*\/?>/gi, "\n");
   out = out.replace(/<\/p>/gi, "\n");
-  out = out.replace(/<li>/gi, "• ");
+
+  // Strip remaining tags
   out = out.replace(/<[^>]*>/g, " ");
-  out = out.replace(/--\s*>/g, " ");
-  out = out.replace(/\u2013|\u2014/g, "-");
-  out = out.replace(/\s+/g, " ").trim();
+
+  // Normalize CRLF, keep newlines
+  out = out.replace(/\r/g, "");
+
+  // Clean each line but KEEP line structure
+  out = out
+    .split("\n")
+    .map(line => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n");
+
   return out;
 }
 
-/* Robust: extract labelled bullets */
+/* Robust: extract labelled bullets (Location / Participants / Time / Dates / Fitness) */
 function parseProductBlock(desc) {
   const out = {};
   const clean = sanitizeDesc(desc);
   if (!clean) return out;
 
-  // Accept "Label: value", "Label - value", "Label — value"
-  const capture = (label) => {
-    const r = new RegExp(`(?:^|\\b|\\n)${label}\\s*(?:\\:|\\-|—)\\s*([\\s\\S]*?)(?:(?:\\n|\\s){1,}[A-Z][A-Za-z ]{2,}\\s*(?:\\:|\\-|—)|$)`, "i");
-    const m = clean.match(r);
-    if (!m || m.length < 2 || typeof m[1] !== "string") return null;
-    return m[1].trim().replace(/\s+/g, " ").slice(0, 300);
+  const lines = clean.split(/\n+/).map(x => x.trim()).filter(Boolean);
+
+  // match "Label: value" OR "Label - value" OR "• Label: value"
+  const grab = (line) => {
+    const m = line.match(/^[\u2022•\-]?\s*([A-Za-z ]{3,30})\s*(?:\:|—|-)\s*(.+)$/i);
+    if (!m) return null;
+    return { label: m[1].trim().toLowerCase(), value: m[2].trim() };
   };
 
-  out.location = capture("(Location|Address)");
-  out.participants = capture("(Participants|Group\\s*Size|Max\\s*Participants|Class\\s*Size)");
-  out.time = capture("(Time|Times|Timing|Start\\s*Time)");
-  out.dates = capture("(Dates|Start\\s*Dates|Multi\\s*Course\\s*Start\\s*Dates|\\b20\\d{2}\\b)");
-  out.fitness = capture("(Fitness|Difficulty|Experience\\s*Level|Experience\\s*-\\s*Level)");
+  for (const line of lines) {
+    const g = grab(line);
+    if (!g || !g.value) continue;
+    const L = g.label;
+    const V = g.value;
+
+    if (/^(location|address)$/.test(L) && !out.location) out.location = V;
+    else if (/^(participants|group size|max participants|class size)$/.test(L) && !out.participants) out.participants = V;
+    else if (/^(time|times|timing|start time)$/.test(L) && !out.time) out.time = V;
+    else if (/^(dates|start dates|multi course start dates)$/.test(L) && !out.dates) out.dates = V;
+    else if (/^(fitness|difficulty|experience level|experience - level)$/.test(L) && !out.fitness) out.fitness = V;
+  }
 
   return out;
 }
@@ -533,6 +558,8 @@ export default async function handler(req, res) {
     const scoreWrap = (arr) =>
       (arr || [])
         .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
+
+
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
           const by = Date.parse(b.e?.last_seen || "") || 0;
