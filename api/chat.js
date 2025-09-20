@@ -1,826 +1,387 @@
-// /api/chat.js
-// Node runtime on Vercel. Data-driven. No hard-coded query terms.
+// pages/chat.js (or wherever your chat screen lives)
+// Plain JS (no TypeScript). Drop-in replacement.
+//
+// What this file does:
+// - Calls /api/chat with { query, topK }.
+// - Renders:
+//    1) Answer + "Next Workshop" (from structured.events sorted by date_start)
+//    2) Product Panel (STRICT: only /photo-workshops-uk/ items or items with price fields)
+//    3) Events list (optional, separate from Product Panel)
+// - Never renders an Event card in the Product Panel.
+// - No flags, no special-case text rules. Classification is based on data shape + URL patterns.
 
-export const config = { runtime: "nodejs" };
+import React, { useCallback, useMemo, useState } from "react";
 
-import { createClient } from "@supabase/supabase-js";
+const API_ENDPOINT = "/api/chat";
+const DEFAULT_TOPK = 8;
 
-/* ================= Supabase ================= */
-const FALLBACK_URL = "https://igzvwvbvgvmzvvzoclufx.supabase.co";
-const SUPABASE_URL = process.env.SUPABASE_URL || FALLBACK_URL;
+// ---------- Helpers: Kind detection & normalization ----------
 
-const SUPABASE_SERVICE_ROLE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M";
+// URL-driven taxonomy: stable and scalable for your site structure
+const isProductUrl = (url) =>
+  typeof url === "string" && url.includes("/photo-workshops-uk/");
+const isEventUrl = (url) =>
+  typeof url === "string" && url.includes("/photographic-workshops-near-me/");
 
-const SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY";
+// Shape hints (for safety if a URL is missing but the item is clearly a product)
+const hasPriceLike = (item) =>
+  item?.display_price_number != null ||
+  item?.display_price != null ||
+  item?.price != null;
 
-function supabaseAdmin() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Missing SUPABASE_URL or SERVICE_ROLE_KEY");
-  }
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-    global: { fetch },
-  });
-}
+// Events have dates
+const hasEventDates = (item) => Boolean(item?.date_start);
 
-async function probeSupabaseHealth() {
-  const url = `${String(SUPABASE_URL).replace(/\/+$/, "")}/auth/v1/health`;
-  const out = { url, ok: false, status: null, error: null };
-  try {
-    const resp = await fetch(url);
-    out.status = resp.status;
-    out.ok = resp.ok;
-  } catch (e) {
-    out.error = String(e && e.message ? e.message : e);
-  }
-  return out;
-}
+// STRONG product check: prefer URL taxonomy; fall back to price fields
+const isProductItem = (item) => {
+  const url = item?.page_url || item?.source_url || item?.href;
+  if (isProductUrl(url)) return true;
+  if (isEventUrl(url)) return false; // explicitly exclude events by URL
+  // fallback: if no clear URL taxonomy, allow items that look like products
+  return hasPriceLike(item) && !hasEventDates(item);
+};
 
-/* ================= Utilities ================= */
-const SELECT_COLS = "id, kind, title, page_url, source_url, last_seen, location, date_start, date_end, price, description, raw";
+// STRONG event check
+const isEventItem = (item) => {
+  const url = item?.page_url || item?.source_url || item?.href;
+  if (isEventUrl(url)) return true;
+  if (isProductUrl(url)) return false;
+  return hasEventDates(item);
+};
 
-function pickUrl(e) { return e?.page_url || e?.source_url || e?.url || null; }
-function baseUrl(u) { return String(u || "").split("?")[0]; }
-function uniq(arr) { return Array.from(new Set((arr || []).filter(Boolean))); }
-function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
-function tokenize(s) { return (s || "").toLowerCase().match(/[a-z0-9]+/g) || []; }
-function normaliseToken(t) { return String(t || "").replace(/\d+$/, ""); }
-function lc(s) { return String(s || "").toLowerCase(); }
-
-const GENERIC = new Set([
-  "alan","ranger","photography","photo","workshop","workshops","course","courses",
-  "class","classes","tuition","lesson","lessons","uk","england","blog","near","me",
-  "photographic","landscape","seascape","monthly","day","days","one","two","1","2"
-]);
-
-function nonGenericTokens(str) {
-  return (tokenize(str) || [])
-    .map(normaliseToken)
-    .filter(t => t.length >= 3 && !GENERIC.has(t));
-}
-function titleTokens(x) {
-  return (tokenize((x?.title || x?.raw?.name || "")) || [])
-    .map(normaliseToken)
-    .filter(t => t.length >= 3 && !GENERIC.has(t));
-}
-function urlTokens(x) {
-  const u = (pickUrl(x) || "").toLowerCase();
-  return (tokenize(u.replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")) || [])
-    .map(normaliseToken)
-    .filter(t => t.length >= 3 && !GENERIC.has(t));
-}
-function sameHost(a, b) {
-  try {
-    const ha = new URL(pickUrl(a)).host;
-    const hb = new URL(pickUrl(b)).host;
-    return ha && hb && ha === hb;
-  } catch { return false; }
-}
-
-/* ================= Intent & Keywords ================= */
-function detectIntent(q) {
-  const s = String(q || "").toLowerCase();
-  const eventish = /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking|time|how much|price|cost)\b/;
-  const classish = /\b(workshop|course|class|tuition|lesson|lessons|photowalk|walk|masterclass)\b/;
-  return eventish.test(s) && classish.test(s) ? "events" : "advice";
-}
-function detectEventSubtype(q) {
-  const s = String(q || "").toLowerCase();
-  if (/\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(s)) return "course";
-  if (/\b(workshop|workshops|photowalk|walk|masterclass)\b/.test(s)) return "workshop";
-  return null;
-}
-
-const STOPWORDS = new Set([
-  "the","and","or","what","whats","when","whens","next","cost","how","much",
-  "workshop","workshops","photography","photo","near","me","uk",
-  "class","classes","course","courses",
-  "where","location","dates","date","upcoming","available","availability",
-  "book","booking","time"
-]);
-
-function extractKeywords(q, intent, subtype) {
-  const tokens = tokenize(String(q || ""));
-  const kept = tokens.map(normaliseToken).filter((t) => t.length >= 3 && !STOPWORDS.has(t));
-  if (!kept.length) return [intent === "events" ? (subtype === "course" ? "course" : "workshop") : "photography"];
-  return uniq(kept);
-}
-function topicFromKeywords(kws) { return uniq(kws).join(", "); }
-
-/* ================= Scoring ================= */
-function jaccard(a, b) { const A = new Set(a), B = new Set(b); let inter = 0; for (const x of A) if (B.has(x)) inter++; const union = A.size + B.size - inter; return union ? inter / union : 0; }
-function scoreEntity(ent, qTokens) {
-  const hayTitle = (ent?.title || ent?.raw?.name || "").toLowerCase();
-  const hayUrl = (pickUrl(ent) || "").toLowerCase();
-  const hayLoc = (ent?.location || "").toLowerCase();
-  const hayDesc = (ent?.description || ent?.raw?.metaDescription || ent?.raw?.meta?.description || "")?.toLowerCase();
-  const tTokens = tokenize(hayTitle + " " + hayUrl + " " + hayLoc + " " + hayDesc);
-  if (!tTokens.length || !qTokens.length) return 0;
-  let score = jaccard(new Set(qTokens), new Set(tTokens));
-  if (qTokens.some((t) => t.length >= 3 && hayTitle.includes(t))) score += 0.2;
-  return Math.min(1, score);
-}
-function confidenceFrom(scores) {
-  if (!scores?.length) return 25;
-  const top = Math.max(...scores);
-  const meanTop3 = scores.slice().sort((a,b)=>b-a).slice(0,3).reduce((s,x,_,arr)=>s + x/arr.length, 0);
-  const pct = 20 + top * 60 + meanTop3 * 15;
-  return clamp(Math.round(pct), 20, 95);
-}
-
-/* ================= Supabase queries ================= */
-async function findEvents(client, { keywords = [], topK = 12 } = {}) {
-  let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "event");
-  q = q.gte("date_start", new Date().toISOString());
-  if (keywords.length) {
-    q = q.or(buildOrIlike(
-      ["title", "page_url", "location", "description", "raw->>metaDescription", "raw->meta->>description"],
-      keywords
-    ));
-  }
-  q = q.order("date_start", { ascending: true }).limit(topK);
-  const { data, error } = await q; if (error) throw error; return data || [];
-}
-
-function buildOrIlike(keys, keywords) {
-  const clauses = [];
-  for (const k of keywords) for (const col of keys) clauses.push(`${col}.ilike.%${k}%`);
-  return clauses.join(",");
-}
-
-async function findProducts(client, { keywords = [], topK = 12 } = {}) {
-  let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "product");
-  if (keywords.length) q = q.or(buildOrIlike(["title", "page_url", "description", "raw->>metaDescription", "raw->meta->>description"], keywords));
-  q = q.order("last_seen", { ascending: false }).limit(topK);
-  const { data, error } = await q; if (error) throw error; return data || [];
-}
-async function findArticles(client, { keywords = [], topK = 12 } = {}) {
-  let q = client.from("page_entities").select(SELECT_COLS).in("kind", ["article", "blog", "page"]);
-  if (keywords.length) q = q.or(buildOrIlike(["title", "page_url", "description", "raw->>metaDescription", "raw->meta->>description"], keywords));
-  q = q.order("last_seen", { ascending: false }).limit(topK);
-  const { data, error } = await q; if (error) throw error; return data || [];
-}
-async function findLanding(client, { keywords = [] } = {}) {
-  let q = client.from("page_entities").select(SELECT_COLS)
-    .in("kind", ["article", "page"]).eq("raw->>canonical", "true").eq("raw->>role", "landing");
-  if (keywords.length) q = q.or(buildOrIlike(["title", "page_url", "description", "raw->>metaDescription", "raw->meta->>description"], keywords));
-  q = q.order("last_seen", { ascending: false }).limit(3);
-  const { data, error } = await q; if (error) throw error; return data || [];
-}
-
-/* ================= Matching helpers ================= */
-function isWorkshopEvent(e) {
-  const u = (pickUrl(e) || "").toLowerCase(); const t = (e?.title || e?.raw?.name || "").toLowerCase();
-  const hasWorkshop = /workshop/.test(u) || /workshop/.test(t) || /photo-workshops-uk|photographic-workshops/.test(u);
-  const looksCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
-  return hasWorkshop && !looksCourse;
-}
-function isCourseEvent(e) {
-  const u = (pickUrl(e) || "").toLowerCase(); const t = (e?.title || e?.raw?.name || "").toLowerCase();
-  const hasCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
-  const looksWorkshop = /workshop/.test(u + " " + t);
-  return hasCourse && !looksWorkshop;
-}
-
-/* Product kind (kept generic) */
-function isWorkshopProduct(p) {
-  const u = (pickUrl(p) || "").toLowerCase(); const t = (p?.title || "").toLowerCase();
-  const hasWorkshop = /workshop/.test(u + " " + t) || /photo-workshops-uk|photographic-workshops/.test(u);
-  const looksCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
-  return hasWorkshop && !looksCourse;
-}
-function isCourseProduct(p) {
-  const u = (pickUrl(p) || "").toLowerCase(); const t = (p?.title || "").toLowerCase();
-  const hasCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(u + " " + t);
-  const looksWorkshop = /workshop/.test(u + " " + t);
-  return hasCourse && !looksWorkshop;
-}
-
-/* Location hints used elsewhere too */
-const LOCATION_HINTS = [
-  "devon","hartland","dartmoor","yorkshire","dales","kenilworth","coventry",
-  "warwickshire","anglesey","wales","betws","snowdonia","northumberland",
-  "gloucestershire","batsford","chesterton","windmill","lynmouth","exmoor","quay"
-];
-
-/* ---- extract tokens from the first event ---- */
-function extractTopicAndLocationTokensFromEvent(ev) {
-  const t = titleTokens(ev);
-  const u = urlTokens(ev);
-  const all = uniq([...t, ...u]);
-  const locFromField = nonGenericTokens(ev?.location || "");
-  const locationHints = uniq(
-    [...all, ...locFromField].filter(x =>
-      /(kenilworth|coventry|warwickshire|dartmoor|devon|hartland|anglesey|yorkshire|dales|wales|betws|snowdonia|northumberland|batsford|gloucestershire|chesterton|windmill|lynmouth|exmoor|quay)/.test(x)
-    )
-  );
-  const topicHints = all.filter(x => !locationHints.includes(x));
-  return { all, topic: uniq(topicHints), location: uniq(locationHints) };
-}
-
-/* ---- similarity helpers ---- */
-function symmetricOverlap(eventTokens, url, title) {
-  const pTokens = new Set([
-    ...tokenize(String(url || "").replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")),
-    ...tokenize(String(title || ""))
-  ].map(normaliseToken).filter(x => x.length >= 3 && !GENERIC.has(x)));
-
-  const eTokens = new Set(eventTokens);
-  let inter = 0;
-  for (const tk of eTokens) if (pTokens.has(tk)) inter++;
-
-  const eSize = eTokens.size || 1;
-  const pSize = pTokens.size || 1;
-
-  const recall = inter / eSize;
-  const precision = inter / pSize;
-  const f1 = (precision + recall) ? (2 * precision * recall) / (precision + recall) : 0;
-  return { f1, pTokens };
-}
-
-/* ---- derive 'anchor' tokens from a product title (distinctive words) ---- */
-function productAnchorTokens(prod) {
-  const title = prod?.title || "";
-  const tokens = titleTokens({ title });
-  return tokens.filter(t => t.length >= 5 && !LOCATION_HINTS.includes(t)); // no location anchors
-}
-
-/* ===== prefer richer duplicate rows for the same product URL ===== */
-function preferRicherProduct(a, b) {
-  if (!a) return b;
-  if (!b) return a;
-  const au = baseUrl(pickUrl(a)), bu = baseUrl(pickUrl(b));
-  if (au !== bu) return a;
-  const aHasPrice = (a.price_gbp > 0) || (a.price > 0);
-  const bHasPrice = (b.price_gbp > 0) || (b.price > 0);
-  if (aHasPrice !== bHasPrice) return bHasPrice ? b : a;
-  const aLen = (a.description || "").length;
-  const bLen = (b.description || "").length;
-  if (aLen !== bLen) return bLen > aLen ? b : a;
-  return a;
-}
-function upgradeToRichestByUrl(allProducts, chosen) {
-  if (!chosen) return null;
-  const url = baseUrl(pickUrl(chosen));
-  const same = (allProducts || []).filter(p => baseUrl(pickUrl(p)) === url);
-  return same.reduce(preferRicherProduct, chosen);
-}
-
-/* ===== date parsing used for strict workshop matching ===== */
-function monthIdx(m) {
-  const s = lc(m).slice(0,3);
-  const map = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
-  return s in map ? map[s] : null;
-}
-function extractDatesFromText(text, defaultYear) {
+const uniqueBy = (arr, keyFn) => {
+  const seen = new Set();
   const out = [];
-  if (!text) return out;
-  const re = /(?:(?:mon|tue|wed|thu|fri|sat|sun)\s*,?\s*)?(\d{1,2})(?:st|nd|rd|th)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{4}))?/ig;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    const d = parseInt(m[1],10);
-    const mi = monthIdx(m[2]);
-    const y = m[3] ? parseInt(m[3],10) : (defaultYear || new Date().getFullYear());
-    if (mi!=null && d>=1 && d<=31) {
-      const dt = new Date(Date.UTC(y, mi, d));
-      if (!isNaN(dt)) out.push(dt);
+  for (const x of arr || []) {
+    const k = keyFn(x);
+    if (!k) continue;
+    if (!seen.has(k)) {
+      seen.add(k);
+      out.push(x);
     }
   }
   return out;
-}
-function withinDays(a, b, days) {
-  const diff = Math.abs(a.getTime() - b.getTime());
-  return diff <= days * 86400000;
-}
+};
 
-/* --- strict product-vs-event gate --- */
-function strictlyMatchesEvent(product, firstEvent, subtype = null) {
-  if (!product || !firstEvent) return false;
+const coerceProductsStrict = (items) =>
+  uniqueBy(
+    (items || []).filter(isProductItem),
+    (x) => x.page_url || x.source_url || x.href
+  );
 
-  const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
-  const refCore = uniq([...(location || []), ...(topic || [])]);
-  const refTokens = new Set(refCore.length ? refCore : all);
+const coerceEvents = (items) =>
+  uniqueBy(
+    (items || []).filter(isEventItem),
+    (x) => x.page_url || x.source_url || x.href
+  );
 
-  const anchors = productAnchorTokens(product);
-  const hasAnchorHit = anchors.some(a => refTokens.has(a));
-  if (!hasAnchorHit) return false;
+const toDate = (s) => (s ? new Date(s) : null);
+const isFuture = (d) => d && !Number.isNaN(d.valueOf()) && d.getTime() >= Date.now();
 
-  const { f1 } = symmetricOverlap(refTokens, pickUrl(product), product.title);
-  // tighter base threshold
-  if (f1 < 0.35) return false;
+const sortByDateStartAsc = (a, b) => {
+  const da = toDate(a.date_start)?.getTime() ?? Infinity;
+  const db = toDate(b.date_start)?.getTime() ?? Infinity;
+  return da - db;
+};
 
-  // require location token to be present somewhere in product title/url/desc, when we have one
-  if ((location || []).length) {
-    const long = sanitizeDesc(product?.raw?.metaDescription || product?.raw?.meta?.description || product?.description || "");
-    const hay = lc((product.title || "") + " " + (pickUrl(product) || "") + " " + long);
-    const locOk = location.some(l => hay.includes(l));
-    if (!locOk) return false;
-  }
+// ---------- API ----------
 
-  // subtype-specific tightening: for WORKSHOP, require a date near the event date if the product text exposes any date
-  if (subtype === "workshop") {
-    const eventDate = firstEvent?.date_start ? new Date(firstEvent.date_start) : null;
-    if (eventDate && !isNaN(eventDate)) {
-      const long = sanitizeDesc(product?.raw?.metaDescription || product?.raw?.meta?.description || product?.description || "");
-      const dates = extractDatesFromText(long, eventDate.getUTCFullYear());
-      if (dates.length) {
-        const anyClose = dates.some(d => withinDays(d, eventDate, 5));
-        if (!anyClose) return false;
-      }
-    }
-  }
-
-  // subtype alignment
-  const okKind =
-    (isWorkshopEvent(firstEvent) ? isWorkshopProduct(product) : true) &&
-    (isCourseEvent(firstEvent) ? isCourseProduct(product) : true);
-  if (!okKind) return false;
-
-  // anti-hijack
-  const evtLower = lc((firstEvent.title || "") + " " + (pickUrl(firstEvent) || ""));
-  const tl = lc(product.title || "");
-  if (/portrait/.test(tl) && !/portrait/.test(evtLower)) return false;
-  if (/(lightroom|editing)/.test(tl) && !/(lightroom|editing)/.test(evtLower)) return false;
-
-  return true;
-}
-
-/** Try hard to find a product URL for the first event; require anchor alignment. */
-async function findBestProductForEvent(client, firstEvent, preloadProducts = [], subtype = null) {
-  if (!firstEvent) return null;
-
-  const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
-  const refCore = uniq([...(location || []), ...(topic || [])]);
-  const refTokens = new Set(refCore.length ? refCore : all);
-  const needLoc = location.length ? location : [];
-  const evtLower = lc(((firstEvent?.title || "") + " " + (pickUrl(firstEvent) || "")));
-
-  const kindAlign = (p) => {
-    if (!subtype) return true;
-    if (subtype === "course") return isCourseProduct(p) || !isWorkshopProduct(p);
-    if (subtype === "workshop") return isWorkshopProduct(p) || !isCourseProduct(p);
-    return true;
-  };
-
-  const pass = (p) => {
-    if (!kindAlign(p)) return false;
-
-    const u = pickUrl(p) || "";
-    const t = p?.title || "";
-
-    const hasLoc = !needLoc.length || needLoc.some(l => lc(u).includes(l) || lc(t).includes(l));
-    if (!hasLoc) return false;
-
-    const anchors = productAnchorTokens(p);
-    const hasAnchorHit = anchors.some(a => refTokens.has(a));
-    if (!hasAnchorHit) return false;
-
-    const { f1 } = symmetricOverlap(refTokens, u, t);
-    return f1 >= 0.30;
-  };
-
-  const extraScore = (p, base) => {
-    let s = base;
-    const tl = lc(p.title || "");
-    if (/portrait/.test(tl) && !/portrait/.test(evtLower)) s -= 0.45;
-    if (/(lightroom|editing)/.test(tl) && !/(lightroom|editing)/.test(evtLower)) s -= 0.45;
-    const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
-    if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
-    return s;
-  };
-
-  let candidates = (preloadProducts || []).filter(pass);
-  if (candidates.length) {
-    const ranked = candidates.map(p => {
-      const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
-      let s = f1;
-      if (sameHost(p, firstEvent)) s += 0.1;
-      s = extraScore(p, s);
-      return { p, s };
-    }).sort((a,b)=>b.s-a.s);
-    if (ranked[0]?.p) return ranked[0].p;
-  }
-
-  const core = uniq([...Array.from(refTokens)]).slice(0, 12);
-  let fallback = [];
-  if (core.length) {
-    const orParts = core.flatMap(t => [
-      `title.ilike.%${t}%`, `page_url.ilike.%${t}%`,
-      `description.ilike.%${t}%`, `raw->>metaDescription.ilike.%${t}%`,
-      `raw->meta->>description.ilike.%${t}%`
-    ]).join(",");
-    const { data } = await client.from("page_entities")
-      .select(SELECT_COLS)
-      .eq("kind","product")
-      .or(orParts)
-      .order("last_seen",{ascending:false})
-      .limit(50);
-    fallback = (data || []).filter(pass);
-  }
-
-  if (fallback.length) {
-    const ranked = fallback.map(p => {
-      const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
-      let s = f1;
-      if (sameHost(p, firstEvent)) s += 0.1;
-      s = extraScore(p, s);
-      return { p, s };
-    }).sort((a,b)=>b.s-a.s);
-    if (ranked[0]?.p) return ranked[0].p;
-  }
-
-  return null;
-}
-
-/* ================= Clean-price view (used only to enrich price) ================= */
-async function findProductsClean(client, { tokens = [], urlFragment = "" } = {}) {
-  const urlToks = nonGenericTokens(urlFragment);
-  const tok = uniq([ ...urlToks, ...tokens.map(normaliseToken).filter(t => t.length >= 4) ]).slice(0, 8);
-  if (!tok.length) return [];
-
-  let andQuery = client.from("ai_products_clean").select("title,url,price_gbp");
-  for (const t of tok) andQuery = andQuery.ilike("url", `%${t}%`);
-  andQuery = andQuery.limit(16);
-  let { data: andRows, error: andErr } = await andQuery; if (andErr) throw andErr;
-
-  const byUrl = new Map();
-  for (const row of (andRows || [])) {
-    const p = Number(row.price_gbp); if (!(p > 0)) continue;
-    const prev = byUrl.get(row.url);
-    if (!prev || p < prev.price_gbp) byUrl.set(row.url, { ...row, price_gbp: p });
-  }
-  return Array.from(byUrl.values());
-}
-
-/* ================= Product & Event panel rendering ================= */
-function selectDisplayPriceNumber(prod) {
-  const pg = prod?.price_gbp != null ? Number(prod.price_gbp) : null;
-  const pn = prod?.price != null ? Number(prod.price) : null;
-  const candidate = (pg && pg > 0) ? pg : (pn && pn > 0 ? pn : null);
-  return candidate && candidate > 0 ? candidate : null;
-}
-function formatDisplayPriceGBP(n) {
-  if (n == null) return null;
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(n));
-}
-
-/* --- sanitize rich text/HTML to plain text before parsing --- */
-function sanitizeDesc(s) {
-  if (!s || typeof s !== "string") return "";
-  let out = s;
-  // structure → newlines
-  out = out.replace(/<br\s*\/?>/gi, "\n");
-  out = out.replace(/<\/p>/gi, "\n");
-  out = out.replace(/<\/li>/gi, "\n");
-  out = out.replace(/<li[^>]*>/gi, "• ");
-  // tidy entities & attrs
-  out = out.replace(/\s+[a-z-]+="[^"]*"/gi, "");
-  out = out.replace(/&nbsp;|&#160;/gi, " ");
-  out = out.replace(/&amp;/gi, "&");
-  // strip tags & collapse
-  out = out.replace(/\u2013|\u2014/g, "-");
-  out = out.replace(/<[^>]*>/g, " ");
-  out = out.replace(/[ \t\f\v]+/g, " ");
-  out = out.replace(/\s*\n\s*/g, "\n");
-  out = out.replace(/\n{3,}/g, "\n\n");
-  return out.trim();
-}
-
-/* Robust: extract labelled bullets */
-function parseProductBlock(desc) {
-  const out = {};
-  const clean = sanitizeDesc(desc);
-  if (!clean) return out;
-
-  const NEXT_LABELS = "(?:Location|Address|Participants|Group\\s*Size|Max\\s*Participants|Class\\s*Size|Time|Times|Timing|Start\\s*Time|Dates|Start\\s*Dates|Multi\\s*Course\\s*Start\\s*Dates|Experience\\s*(?:\\-|\\s*)Level|Fitness|Difficulty)";
-
-  const capture = (labelExpr) => {
-    const re = new RegExp(
-      `(?:^|\\b|\\n)${labelExpr}\\s*(?:\\:|\\-|—)\\s*([\\s\\S]*?)(?=(?:\\n|\\b)${NEXT_LABELS}\\s*(?:\\:|\\-|—)|$)`,
-      "i"
-    );
-    const m = clean.match(re);
-    if (!m || m.length < 2 || typeof m[1] !== "string") return null;
-    return m[1].replace(/^\s*(?:-+|—)\s*/, "").trim().replace(/\s{2,}/g, " ").slice(0, 300);
-  };
-
-  out.location = capture("(?:Location|Address)");
-  out.participants = capture("(?:Participants|Group\\s*Size|Max\\s*Participants|Class\\s*Size)");
-  out.time = capture("(?:Time|Times|Timing|Start\\s*Time)");
-  out.dates = capture("(?:Dates|Start\\s*Dates|Multi\\s*Course\\s*Start\\s*Dates)");
-  out.fitness = capture("(?:Fitness|Difficulty|Experience\\s*(?:\\-|\\s*)Level)");
-
-  return out;
-}
-
-function buildAdviceMarkdown(articles) {
-  const lines = ["**Guides**"];
-  for (const a of (articles || []).slice(0, 5)) {
-    const t = a.title || a.raw?.name || "Read more"; const u = pickUrl(a);
-    lines.push(`- ${t} — ${u ? `[Link](${u})` : ""}`.trim());
-  }
-  return lines.join("\n");
-}
-function buildProductPanelMarkdown(prod) {
-  const title = prod?.title || prod?.raw?.name || "Workshop";
-  const priceNum = selectDisplayPriceNumber(prod);
-  const priceStr = formatDisplayPriceGBP(priceNum);
-  const url = pickUrl(prod);
-
-  const long = prod?.raw?.metaDescription || prod?.raw?.meta?.description || prod?.description || "";
-  const block = parseProductBlock(long);
-
-  const head = `**${title}**${priceStr ? ` — ${priceStr}` : ""}`;
-  const bullets = [];
-  if (block.location) bullets.push(`- **Location:** ${block.location}`);
-  if (block.participants) bullets.push(`- **Participants:** ${block.participants}`);
-  if (block.time) bullets.push(`- **Time:** ${block.time}`);
-  if (block.dates) bullets.push(`- **Dates:** ${block.dates}`);
-  if (block.fitness) bullets.push(`- **Fitness:** ${block.fitness}`);
-
-  const plain = sanitizeDesc(long);
-  const bodyText = plain && !bullets.length ? `\n\n${plain}` : "";
-  const bulletsText = bullets.length ? `\n\n${bullets.join("\n")}` : "";
-
-  return head + bulletsText + bodyText + (url ? `\n\n[Open](${url})` : "");
-}
-
-/* Minimal event card for when no matching product is found */
-function buildEventPanelMarkdown(ev) {
-  if (!ev) return "";
-  const title = ev.title || ev.raw?.name || "Upcoming Workshop";
-  const when = ev.date_start ? new Date(ev.date_start).toUTCString() : null;
-  const loc = ev.location || null;
-  const url = pickUrl(ev) || null;
-
-  const items = [`**${title}**`];
-  if (loc) items.push(`- **Location:** ${loc}`);
-  if (when) items.push(`- **When:** ${when}`);
-  return items.join("\n") + (url ? `\n\n[View event](${url})` : "");
-}
-
-function buildAdvicePills(articles, originalQuery) {
-  const pills = [];
-  const top = articles?.[0] ? pickUrl(articles[0]) : null;
-  if (top) pills.push({ label: "Read Guide", url: top, brand: "primary" });
-  pills.push({ label: "More Articles", url: `https://www.alanranger.com/search?query=${encodeURIComponent(String(originalQuery || ""))}`, brand: "secondary" });
-  return pills;
-}
-function buildEventPills(firstEvent, productOrNull) {
-  const pills = [];
-  const eventUrl = pickUrl(firstEvent);
-  const productUrl = pickUrl(productOrNull);
-  const bookUrl = productUrl || null;
-  if (bookUrl) pills.push({ label: "Book Now", url: bookUrl, brand: "primary" });
-  if (eventUrl) pills.push({ label: "View event", url: eventUrl, brand: "secondary" });
-  pills.push({ label: "Photos", url: "https://www.alanranger.com/photography-portfolio", brand: "secondary" });
-  return pills;
-}
-
-/* Location filtering for events when query contains a place */
-function filterEventsByLocationKeywords(events, keywords) {
-  const locs = keywords.filter(k => LOCATION_HINTS.includes(k.toLowerCase()));
-  if (!locs.length) return events;
-  return events.filter(e => {
-    const hay = ((e.title || "") + " " + (e.location || "") + " " + (pickUrl(e) || "")).toLowerCase();
-    return locs.some(l => hay.includes(l));
+async function fetchChat({ query, topK = DEFAULT_TOPK }) {
+  const res = await fetch(API_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, topK }),
   });
+  const data = await res.json();
+  // normalize a little
+  data.structured = data.structured || {};
+  data.structured.products = Array.isArray(data.structured.products)
+    ? data.structured.products
+    : [];
+  data.structured.events = Array.isArray(data.structured.events)
+    ? data.structured.events
+    : [];
+  data.structured.articles = Array.isArray(data.structured.articles)
+    ? data.structured.articles
+    : [];
+  return data;
 }
 
-/* ================= Handler ================= */
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ ok: false, error: "Method Not Allowed" });
-  }
+// ---------- UI: Cards ----------
 
-  const started = Date.now();
-  try {
-    const { query, topK = 8 } = req.body || {};
-    const q = String(query || "").trim();
-    const client = supabaseAdmin();
+function ExternalLink({ href, children }) {
+  if (!href) return <span>{children}</span>;
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="link">
+      {children}
+    </a>
+  );
+}
 
-    const health = await probeSupabaseHealth();
+function ProductCard({ item }) {
+  const url = item.page_url || item.source_url || item.href;
+  return (
+    <div className="card">
+      <div className="card-title">{item.title || "Untitled product"}</div>
+      <div className="card-body">
+        {item.location_parsed && <div>Location: {item.location_parsed}</div>}
+        {item.display_price && <div>Price: {item.display_price}</div>}
+        {!item.display_price && item.price != null && (
+          <div>Price: £{item.price}</div>
+        )}
+        {item.dates_parsed && <div>Dates: {item.dates_parsed}</div>}
+        <div style={{ marginTop: 8 }}>
+          <ExternalLink href={url}>Open</ExternalLink>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-    const intent = detectIntent(q);
-    const subtype = detectEventSubtype(q);
-    const keywords = extractKeywords(q, intent, subtype);
-    const topic = topicFromKeywords(keywords);
+function EventCard({ item, label }) {
+  const url = item.page_url || item.source_url || item.href;
+  const when =
+    item.when ||
+    (item.date_start ? new Date(item.date_start).toUTCString() : null);
+  return (
+    <div className="card">
+      <div className="card-title">
+        {label ? `${label}: ` : ""}
+        {item.title || "Untitled event"}
+      </div>
+      <div className="card-body">
+        {item.location && <div>Location: {item.location}</div>}
+        {when && <div>When: {when}</div>}
+        <div style={{ marginTop: 8 }}>
+          <ExternalLink href={url}>View event</ExternalLink>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-    let t_supabase = 0, t_rank = 0, t_comp = 0;
+// ---------- Panels ----------
 
-    // Optional probe
-    let cleanCount = null;
-    try {
-      const sProbe = Date.now();
-      const { count } = await client.from("ai_products_clean").select("*", { count: "exact", head: true });
-      cleanCount = typeof count === "number" ? count : null;
-      t_supabase += Date.now() - sProbe;
-    } catch { cleanCount = null; }
+function ProductPanel({ products }) {
+  if (!products?.length) return null;
+  return (
+    <section>
+      <h3>Products</h3>
+      <div className="grid">
+        {products.map((p) => (
+          <ProductCard key={p.page_url || p.source_url || p.href} item={p} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
-    const s1 = Date.now();
-    let events = [], products = [], articles = [], landing = [];
-    if (intent === "events") {
-      [events, products, landing] = await Promise.all([
-        findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
-        findProducts(client, { keywords, topK: 24 }),
-        findLanding(client, { keywords }),
-      ]);
+function EventsPanel({ events, limit = 5 }) {
+  if (!events?.length) return null;
+  return (
+    <section>
+      <h3>Upcoming Workshops</h3>
+      <div className="stack">
+        {events.slice(0, limit).map((e) => (
+          <EventCard key={e.page_url || e.source_url || e.href} item={e} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
-      if (subtype === "workshop") events = events.filter(isWorkshopEvent);
-      else if (subtype === "course") events = events.filter(isCourseEvent);
+function NextWorkshop({ events }) {
+  const next = useMemo(() => {
+    const upcoming = (events || [])
+      .filter((e) => isFuture(toDate(e.date_start)))
+      .sort(sortByDateStartAsc);
+    return upcoming[0] || null;
+  }, [events]);
 
-      const locFiltered = filterEventsByLocationKeywords(events, keywords);
-      if (locFiltered.length) events = locFiltered;
+  if (!next) return null;
+  return (
+    <section>
+      <EventCard item={next} label="Next workshop" />
+    </section>
+  );
+}
 
-      try { articles = await findArticles(client, { keywords, topK: 12 }); } catch { articles = []; }
-    } else {
-      [articles, products] = await Promise.all([
-        findArticles(client, { keywords, topK: Math.max(12, topK) }),
-        findProducts(client, { keywords, topK: 12 }),
-      ]);
-    }
-    t_supabase += Date.now() - s1;
+// ---------- Main ----------
 
-    const s2 = Date.now();
-    const qTokens = keywords;
+export default function ChatPage() {
+  const [query, setQuery] = useState("whens the next workshop");
+  const [resp, setResp] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [error, setError] = useState(null);
 
-    const scoreWrap = (arr) =>
-      (arr || [])
-        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
-        .sort((a, b) => {
-          if (b.s !== a.s) return b.s - a.s;
-          const by = Date.parse(b.e?.last_seen || "") || 0;
-          const ax = Date.parse(a.e?.last_seen || "") || 0;
-          return by - ax;
-        })
-        .map((x) => Object.assign({ _score: Math.round(x.s * 100) / 100 }, x.e));
-
-    const rankedEvents = (events || [])
-      .slice()
-      .sort((a, b) => (Date.parse(a.date_start || 0) || 0) - (Date.parse(b.date_start || 0) || 0))
-      .map((e) => ({ ...e, _score: Math.round(scoreEntity(e, qTokens) * 100) / 100 }));
-
-    let rankedProducts = scoreWrap(products);
-    const rankedArticles = scoreWrap(articles).slice(0, 12);
-
-    const firstEvent = rankedEvents[0] || null;
-    t_rank += Date.now() - s2;
-
-    /* =================== FEATURED PRODUCT strictly from first event =================== */
-    let featuredProduct = null;
-
-    if (firstEvent) {
-      const matched = await findBestProductForEvent(client, firstEvent, rankedProducts, subtype);
-      if (matched && strictlyMatchesEvent(matched, firstEvent, subtype)) {
-        featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
-
-        // Enrich price from clean table for featured pick
-        const tokensForClean = uniq([...urlTokens(firstEvent), ...titleTokens(firstEvent)]);
-        try {
-          const cleanRows = await findProductsClean(client, { tokens: tokensForClean, urlFragment: pickUrl(firstEvent) || "" });
-          const fromClean = cleanRows.find(r => baseUrl(r.url) === baseUrl(pickUrl(featuredProduct)));
-          if (fromClean && Number(fromClean.price_gbp) > 0) {
-            featuredProduct.price_gbp = Number(fromClean.price_gbp);
-          }
-        } catch {}
+  const onAsk = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchChat({ query, topK: DEFAULT_TOPK });
+        setResp(data);
+      } catch (err) {
+        console.error(err);
+        setError("Request failed. Check the network tab for details.");
+      } finally {
+        setLoading(false);
       }
+    },
+    [query]
+  );
 
-      // Re-rank products for structured list (independent of panel gating)
-      if (rankedProducts.length) {
-        const evTokens = new Set(uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)]));
-        rankedProducts = rankedProducts
-          .map((p) => {
-            const { f1 } = symmetricOverlap(evTokens, pickUrl(p), p.title);
-            let s = (p._score || 0) + f1;
-            if (sameHost(p, firstEvent)) s += 0.15;
-            const anchors = productAnchorTokens(p);
-            if (anchors.length) {
-              if (anchors.some(a => evTokens.has(a))) s += 0.4; else s -= 0.35;
-            }
-            if (/camera/i.test(firstEvent?.title || "") && /camera/i.test(p.title || "")) s += 0.2;
+  const productsStrict = useMemo(() => {
+    const raw = resp?.structured?.products || [];
+    return coerceProductsStrict(raw);
+  }, [resp]);
 
-            // Penalties for off-topic
-            const evtLower = lc((firstEvent?.title || "") + " " + (pickUrl(firstEvent) || ""));
-            if (/portrait/.test(lc(p.title||"")) && !/portrait/.test(evtLower)) s -= 0.45;
-            if (/(lightroom|editing)/.test(lc(p.title||"")) && !/(lightroom|editing)/.test(evtLower)) s -= 0.45;
-            if (/beginners[-\s]photography[-\s]course/.test(lc(((pickUrl(p)||"") + " " + (p.title||""))))) s += 0.35;
+  const eventsClean = useMemo(() => {
+    const raw = resp?.structured?.events || [];
+    // Only real events; sort by date
+    return coerceEvents(raw).sort(sortByDateStartAsc);
+  }, [resp]);
 
-            return { p, s };
-          })
-          .sort((a,b)=>b.s-a.s)
-          .map(x=>x.p);
-      }
-    }
+  const answerMarkdown = resp?.answer_markdown;
 
-    /* -------- Preferred product for structured payload only -------- */
-    let preferredProduct = featuredProduct || rankedProducts[0] || null;
-    preferredProduct = upgradeToRichestByUrl(rankedProducts, preferredProduct);
+  return (
+    <div className="page">
+      <h1>Chat</h1>
+      <form onSubmit={onAsk} className="row">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Ask something…"
+          className="input"
+        />
+        <button className="btn" disabled={loading}>
+          {loading ? "Thinking…" : "Ask"}
+        </button>
+      </form>
 
-    if (preferredProduct) {
-      const topUrl = baseUrl(pickUrl(preferredProduct));
-      rankedProducts = [ preferredProduct, ...rankedProducts.filter(p => baseUrl(pickUrl(p)) !== topUrl) ];
-    }
+      {error && <div className="error">{error}</div>}
 
-    /* =================== Compose =================== */
-    const pricesForConf = [
-      ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
-      ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
-      ...(rankedProducts[0]?._score ? [rankedProducts[0]._score] : []),
-    ].map((x) => x / 100);
-    const confidence_pct = confidenceFrom(pricesForConf);
+      {resp && (
+        <>
+          {/* Answer */}
+          {answerMarkdown && (
+            <section>
+              <h3>Answer</h3>
+              <div className="answer">{answerMarkdown}</div>
+            </section>
+          )}
 
-    const s4 = Date.now();
-    let answer_markdown = "";
-    if (intent === "advice") {
-      answer_markdown = buildAdviceMarkdown(rankedArticles);
-    } else {
-      // PANEL GATE: only show a product if it strictly matches the first event
-      if (firstEvent && featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype)) {
-        answer_markdown = buildProductPanelMarkdown(featuredProduct);
-      } else if (firstEvent) {
-        answer_markdown = buildEventPanelMarkdown(firstEvent);
-      } else if (rankedArticles?.length) {
-        answer_markdown = buildAdviceMarkdown(rankedArticles);
-      } else {
-        answer_markdown = "Upcoming workshops and related info below.";
-      }
-    }
-    t_comp += Date.now() - s4;
+          {/* Next workshop (from events only) */}
+          <NextWorkshop events={eventsClean} />
 
-    const citations = uniq([
-      ...rankedArticles.slice(0, 3).map(pickUrl),
-      ...(firstEvent ? [pickUrl(firstEvent)] : []),
-      ...(featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype) ? [pickUrl(featuredProduct)] : []),
-    ]);
+          {/* Product panel (STRICT products only) */}
+          <ProductPanel products={productsStrict} />
 
-    const structured = {
-      intent, topic, event_subtype: subtype,
-      events: (rankedEvents || []).map((e) => ({
-        id: e.id, title: e.title, page_url: e.page_url, source_url: e.source_url,
-        date_start: e.date_start, date_end: e.date_end, location: e.location,
-        when: e.date_start ? new Date(e.date_start).toUTCString() : null, href: pickUrl(e), _score: e._score,
-      })),
-      products: (rankedProducts || []).map((p) => {
-        const long = p?.raw?.metaDescription || p?.raw?.meta?.description || p?.description || "";
-        const parsed = parseProductBlock(long);
-        const priceNum = selectDisplayPriceNumber(p);
-        const priceStr = formatDisplayPriceGBP(priceNum);
-        return {
-          id: p.id, title: p.title, page_url: p.page_url, source_url: p.source_url,
-          description: p.description, price: p.price ?? null, price_gbp: p.price_gbp ?? null,
-          location: p.location, _score: p._score,
-          display_price_number: priceNum,
-          display_price: priceStr,
-          location_parsed: parsed.location || null,
-          participants_parsed: parsed.participants || null,
-          time_parsed: parsed.time || null,
-          dates_parsed: parsed.dates || null,
-          fitness_parsed: parsed.fitness || null,
-        };
-      }),
-      articles: (rankedArticles || []).map((a) => ({
-        id: a.id, title: a.title, page_url: a.page_url, source_url: a.source_url, last_seen: a.last_seen
-      })),
-      // Only show Book Now when we have a strict match to the first event
-      pills: intent === "events" ? buildEventPills(firstEvent, (featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype)) ? featuredProduct : null) : buildAdvicePills(rankedArticles, q),
-    };
+          {/* Optional: show an events list too */}
+          <EventsPanel events={eventsClean} />
 
-    const debug = {
-      version: "v0.9.49-workshop-date-gate",
-      intent, keywords, event_subtype: subtype,
-      first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
-      featured_product: featuredProduct ? {
-        id: featuredProduct.id, title: featuredProduct.title, url: pickUrl(featuredProduct),
-        strictly_matches_first_event: strictlyMatchesEvent(featuredProduct, firstEvent, subtype),
-        display_price: formatDisplayPriceGBP(selectDisplayPriceNumber(featuredProduct))
-      } : null,
-      pills: { book_now: structured.pills?.find(p=>p.label==="Book Now")?.url || null },
-      counts: { events: (structured.events||[]).length, products: (structured.products||[]).length, articles: (structured.articles||[]).length },
-      probes: { ai_products_clean_count: cleanCount, supabase_health: health }
-    };
+          <section>
+            <button className="btn-secondary" onClick={() => setShowDebug((v) => !v)}>
+              {showDebug ? "Hide debug" : "Show debug"}
+            </button>
+            {showDebug && (
+              <pre className="debug">
+                {JSON.stringify(resp, null, 2)}
+              </pre>
+            )}
+          </section>
+        </>
+      )}
 
-    const payload = {
-      ok: true,
-      answer_markdown,
-      citations,
-      structured,
-      confidence: confidence_pct / 100,
-      confidence_pct,
-      debug,
-      meta: { duration_ms: Date.now() - started, endpoint: "/api/chat", topK, intent },
-    };
-
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    return res.status(200).send(payload);
-  } catch (err) {
-    const msg = (err && (err.message || err.toString())) || "Unknown server error";
-    const body = { ok: false, error: msg };
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    return res.status(200).send(body);
-  }
+      <style jsx>{`
+        .page {
+          max-width: 900px;
+          margin: 24px auto;
+          padding: 0 16px;
+          font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
+            Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji",
+            "Segoe UI Emoji";
+        }
+        h1 {
+          font-size: 24px;
+          margin: 0 0 16px;
+        }
+        h3 {
+          margin: 24px 0 8px;
+          font-size: 18px;
+        }
+        .row {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        .input {
+          flex: 1;
+          padding: 10px 12px;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+        }
+        .btn, .btn-secondary {
+          padding: 10px 14px;
+          border-radius: 8px;
+          border: 1px solid #333;
+          background: #111;
+          color: white;
+          cursor: pointer;
+        }
+        .btn-secondary {
+          background: #fff;
+          color: #111;
+          border-color: #aaa;
+        }
+        .answer {
+          white-space: pre-wrap;
+          background: #fafafa;
+          border: 1px solid #eee;
+          border-radius: 8px;
+          padding: 12px;
+        }
+        .grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+          gap: 12px;
+        }
+        .stack {
+          display: grid;
+          gap: 12px;
+        }
+        .card {
+          border: 1px solid #eee;
+          border-radius: 10px;
+          padding: 12px;
+          background: white;
+        }
+        .card-title {
+          font-weight: 600;
+          margin-bottom: 6px;
+        }
+        .card-body {
+          font-size: 14px;
+          color: #333;
+        }
+        .link {
+          text-decoration: underline;
+        }
+        .error {
+          margin: 12px 0;
+          color: #b00020;
+        }
+        .debug {
+          margin-top: 8px;
+          background: #0b1020;
+          color: #c8d2ff;
+          padding: 12px;
+          border-radius: 8px;
+          overflow-x: auto;
+        }
+      `}</style>
+    </div>
+  );
 }
