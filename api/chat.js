@@ -294,7 +294,6 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     const hasLoc = !needLoc.length || needLoc.some(l => u.toLowerCase().includes(l) || t.toLowerCase().includes(l));
     if (!hasLoc) return false;
 
-    // Require at least one significant product "anchor" to appear in the event tokens
     const anchors = productAnchorTokens(p);
     const hasAnchorHit = anchors.some(a => refTokens.has(a));
     if (!hasAnchorHit) return false;
@@ -380,18 +379,18 @@ function formatDisplayPriceGBP(n) {
 function sanitizeDesc(s) {
   if (!s || typeof s !== "string") return "";
   let out = s;
-  out = out.replace(/\s+[a-z-]+="[^"]*"/gi, " "); // strip attributes
+  out = out.replace(/\s+[a-z-]+="[^"]*"/gi, " ");
   out = out.replace(/<br\s*\/?>/gi, "\n");
   out = out.replace(/<\/p>/gi, "\n");
   out = out.replace(/<li>/gi, "• ");
-  out = out.replace(/<[^>]*>/g, " ");              // strip other tags
-  out = out.replace(/--\s*>/g, " ");               // stray “-- >”
-  out = out.replace(/\u2013|\u2014/g, "-");        // en/em dash -> hyphen
-  out = out.replace(/\s+/g, " ").trim();           // collapse whitespace
+  out = out.replace(/<[^>]*>/g, " ");
+  out = out.replace(/--\s*>/g, " ");
+  out = out.replace(/\u2013|\u2014/g, "-");
+  out = out.replace(/\s+/g, " ").trim();
   return out;
 }
 
-/* FIXED & ROBUST: extract labelled bullets */
+/* Robust: extract labelled bullets */
 function parseProductBlock(desc) {
   const out = {};
   const clean = sanitizeDesc(desc);
@@ -533,7 +532,7 @@ export default async function handler(req, res) {
 
     const scoreWrap = (arr) =>
       (arr || [])
-        .map((e) => ({ e, s: scoreEntity(e, qTokens) })))
+        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
           const by = Date.parse(b.e?.last_seen || "") || 0;
@@ -562,7 +561,6 @@ export default async function handler(req, res) {
       if (matched) {
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
-        // also enrich price when we have a featured product
         const tokensForClean = uniq([...urlTokens(firstEvent), ...titleTokens(firstEvent)]);
         try {
           const cleanRows = await findProductsClean(client, { tokens: tokensForClean, urlFragment: pickUrl(firstEvent) || "" });
@@ -573,7 +571,6 @@ export default async function handler(req, res) {
         } catch {}
       }
 
-      // Fallback re-rank when no featured product was found (align to event domain & penalise mismatches)
       if (!featuredProduct && rankedProducts.length) {
         const evTokens = new Set(uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)]));
         rankedProducts = rankedProducts
@@ -593,11 +590,11 @@ export default async function handler(req, res) {
       }
     }
 
-    /* -------- Pick preferred product (featured or top fallback) and ALWAYS upgrade to richest row -------- */
+    /* -------- Pick preferred product and upgrade to richest row -------- */
     let preferredProduct = featuredProduct || rankedProducts[0] || null;
     preferredProduct = upgradeToRichestByUrl(rankedProducts, preferredProduct);
 
-    /* -------- If we didn’t enrich price earlier (no featured), try for the preferred product now -------- */
+    /* -------- Enrich price for preferred (if needed) -------- */
     if (!featuredProduct && preferredProduct && firstEvent) {
       try {
         const tokensForClean = uniq([...urlTokens(firstEvent), ...titleTokens(firstEvent)]);
@@ -609,7 +606,6 @@ export default async function handler(req, res) {
       } catch {}
     }
 
-    /* -------- Keep product list headed by preferred -------- */
     if (preferredProduct) {
       const topUrl = baseUrl(pickUrl(preferredProduct));
       rankedProducts = [ preferredProduct, ...rankedProducts.filter(p => baseUrl(pickUrl(p)) !== topUrl) ];
@@ -655,7 +651,6 @@ export default async function handler(req, res) {
           id: p.id, title: p.title, page_url: p.page_url, source_url: p.source_url,
           description: p.description, price: p.price ?? null, price_gbp: p.price_gbp ?? null,
           location: p.location, _score: p._score, display_price: selectDisplayPriceNumber(p),
-          // parsed fields for UI
           location_parsed: parsed.location || null,
           participants_parsed: parsed.participants || null,
           time_parsed: parsed.time || null,
@@ -670,7 +665,7 @@ export default async function handler(req, res) {
     };
 
     const debug = {
-      version: "v0.9.42-preferred-rich-bullets",
+      version: "v0.9.43-fix-syntax",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? {
