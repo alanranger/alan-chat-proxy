@@ -96,7 +96,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v0.9.26</span></div>
+  <div class="badge-wrap"><span class="version">v0.9.51</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -283,6 +283,12 @@ function pickFirstString(...candidates){
   }
   return '';
 }
+function firstSentence(t){
+  const s = String(t||'').trim();
+  if(!s) return '';
+  const m = s.match(/^(.*?\.)(\s|$)/);
+  return m? m[1].trim() : s;
+}
 function getMetaDescription(prod){
   const raw = pickFirstString(
     prod?.meta_description,
@@ -298,12 +304,6 @@ function getMetaDescription(prod){
 }
 
 /* ================= Product helpers ================= */
-function firstSentence(t){
-  const s = String(t||'').trim();
-  if(!s) return '';
-  const m = s.match(/^(.*?\.)(\s|$)/);
-  return m? m[1].trim() : s;
-}
 function mergeProducts(list){
   if(!Array.isArray(list) || !list.length) return [];
   const map = new Map();
@@ -321,9 +321,7 @@ function mergeProducts(list){
 }
 function extractFacts(desc){
   const txt = String(desc||'')
-    .split(/\r?\n/)
-    .map(l=>l.trim())
-    .filter(Boolean);
+    .split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
 
   const findAfter = (label)=>{
     const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
@@ -397,6 +395,69 @@ function deriveOptions(prod, facts){
   return opts;
 }
 
+/* ================= Matching & intent helpers ================= */
+const STOP = new Set([
+  'the','and','or','what','whats','when','whens','next','cost',
+  'workshop','workshops','photography','photo','near','me','uk',
+  'warks','warwickshire','devonshire','district','class','classes','course','courses'
+]);
+
+function tokenizeWords(s){ return (s||'').toLowerCase().match(/[a-z]+/g) || []; }
+function tokenize2(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
+function jaccard(aTokens, bTokens){
+  const A = new Set(aTokens), B = new Set(bTokens);
+  let inter=0; for(const x of A) if(B.has(x)) inter++;
+  const union = A.size + B.size - inter;
+  return union ? inter/union : 0;
+}
+
+function detectIntent(payload, query){
+  const s = payload?.structured || {};
+  const q = String(query||'').toLowerCase();
+  const server =
+    s.intent ||
+    payload?.intent ||
+    payload?.meta?.intent ||
+    payload?.debug?.intent || '';
+
+  if (/course|courses|class|classes|tuition|lesson|lessons/.test(q)) return 'events';
+  if (/workshop|workshops|event|events|when|whens|next/.test(q)) return 'events';
+  if (/price|cost|fee|fees|how much|book|booking|buy/i.test(q)) return 'products';
+
+  if (server) return server.toLowerCase();
+  return 'unknown';
+}
+
+function isPriceyQuery(q){
+  return /\b(price|cost|fee|fees|how much|book|booking|buy)\b/i.test(String(q||''));
+}
+
+function futureEvents(structured){
+  const now = new Date();
+  return (structured?.events||[])
+    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
+}
+
+function strongProductEventMatch(prod, ev){
+  if(!prod || !ev) return false;
+  const titleP = (prod.title || '').toLowerCase();
+  const titleE = (ev.title  || '').toLowerCase();
+  const locP   = (prod.location_parsed || prod.location || '').toLowerCase();
+  const locE   = (ev.location || '').toLowerCase();
+
+  const toksP = tokenize2(titleP + ' ' + locP).filter(t=>t.length>2 && !STOP.has(t));
+  const toksE = tokenize2(titleE + ' ' + locE).filter(t=>t.length>2 && !STOP.has(t));
+
+  const overlap = jaccard(toksP, toksE); // 0..1
+  if (overlap >= 0.38) return true;
+
+  // Fallback: simple containment of a key noun
+  const key = toksE.find(t => !STOP.has(t) && t.length >= 5);
+  if (key && titleP.includes(key)) return true;
+
+  return false;
+}
+
 /* ================= Renderers ================= */
 let __lastConfidencePct = null;
 let __lastQuery = '';
@@ -435,14 +496,6 @@ function renderProductCard(prod){
 }
 
 /* ===== Events: phrase-aware, generic scoring; now two-line layout ===== */
-const STOP = new Set([
-  'the','and','or','what','whats','when','whens','next','cost',
-  'workshop','workshops','photography','photo','near','me','uk',
-  'warks','warwickshire','devonshire','district','class','classes','course','courses'
-]);
-
-function tokenizeWords(s){ return (s||'').toLowerCase().match(/[a-z]+/g) || []; }
-
 function extractKeyPhrases(topic, query){
   const words = tokenizeWords([topic||'', query||''].join(' '));
   const kept = words.filter(w => !STOP.has(w) && w.length >= 3);
@@ -467,9 +520,7 @@ function eventHeaderLabel(structured){
 }
 
 function renderEventsBlock(structured){
-  const now = new Date();
-  const all=(structured?.events||[])
-    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
+  const all = futureEvents(structured);
   if(!all.length) return '';
 
   const kp = extractKeyPhrases(structured?.topic||'', __lastQuery);
@@ -494,8 +545,7 @@ function renderEventsBlock(structured){
   return `<div class="answer"><h3>${header}</h3><ul>${lis}</ul></div>`;
 }
 
-/* ===== Articles (Guides) ranking — add event context and stronger bias ===== */
-function tokenize2(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
+/* ===== Articles (Guides) ranking ===== */
 function jaccard2(a,b){ const A=new Set(a), B=new Set(b); let inter=0; for(const x of A) if(B.has(x)) inter++; const union=A.size+B.size-inter; return union? inter/union : 0; }
 function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
 function articleTitle(a){ return a?.title || a?.raw?.name || ''; }
@@ -526,9 +576,8 @@ function pickArticles(structured, query, topic){
   const ev = (structured?.events||[])[0] || {};
   const ctxTokens = tokenize2([(ev.title||''), (ev.location||'')].join(' '));
 
-  let scored = all
-    .map(a => ({a, s: scoreArticle(a, query, topic, ctxTokens)}))
-    .filter(x => x.s > 0);
+  let scored = all.map(a => ({a, s: scoreArticle(a, query, topic, ctxTokens)}))
+                  .filter(x => x.s > 0);
 
   const isEventIntent = structured?.event_subtype || /\b(workshop|workshops|course|courses|class|classes|tuition|lesson|lessons)\b/i.test(__lastQuery||'');
   if (isEventIntent) {
@@ -597,6 +646,39 @@ function heuristicConfidence(structured){
   return Math.min(95, Math.max(20, score || 25));
 }
 
+/* ================= Product gating ================= */
+function decideProductRendering(payload, mergedProducts, query){
+  const s = payload?.structured || {};
+  const intent = detectIntent(payload, query);
+  const evs = futureEvents(s);
+  const hasEvs = evs.length > 0;
+  const topEv = hasEvs ? evs[0] : null;
+
+  // Default rule-set:
+  // 1) If explicit events intent -> hide products unless a strong match to the top upcoming event.
+  // 2) If price/booking query -> allow a product even with events.
+  // 3) If no events -> allow first product as fallback.
+  // 4) If explicit products intent -> allow product.
+  // 5) Otherwise prefer events.
+
+  if (!mergedProducts.length) return {show:false, reason:'no-products'};
+
+  if (intent === 'products') return {show:true, reason:'intent-products'};
+
+  if (isPriceyQuery(query)) return {show:true, reason:'pricey-query'};
+
+  if (intent === 'events') {
+    if (!hasEvs) return {show:true, reason:'events-intent-no-events'};
+    const prod = mergedProducts[0];
+    if (strongProductEventMatch(prod, topEv)) return {show:true, reason:'strong-match'};
+    return {show:false, reason:'events-intent-hide-products'};
+  }
+
+  if (!hasEvs) return {show:true, reason:'no-events-fallback'};
+
+  return {show:false, reason:'prefer-events'};
+}
+
 /* Full render */
 function renderAnswer(payload){
   const s = payload.structured||{};
@@ -608,9 +690,12 @@ function renderAnswer(payload){
   __lastConfidencePct = Math.round(confidencePct);
 
   const merged = mergeProducts(s.products||[]);
-  const prod = merged[0] || null;
+  const gate = decideProductRendering(payload, merged, __lastQuery);
 
-  if(prod) addBubble(renderProductCard(prod));
+  if (gate.show) {
+    const prod = merged[0] || null;
+    if (prod) addBubble(renderProductCard(prod));
+  }
 
   const evHTML = renderEventsBlock(s);
   if(evHTML) addBubble(evHTML);
@@ -635,7 +720,8 @@ function renderAnswer(payload){
   footer.innerHTML = `${confidencePill(__lastConfidencePct)} <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
   thread.appendChild(footer);
 
-  if(!prod && !(s.events||[]).length && !(s.articles||[]).length){
+  // Fallback answer if nothing rendered at all
+  if(!gate.show && !(s.events||[]).length && !(s.articles||[]).length){
     const md = payload.answer_markdown || payload.answer || '';
     const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
     const {html}=mdToHtml(md || "I don’t have a specific answer for that yet.");
@@ -643,8 +729,8 @@ function renderAnswer(payload){
   }
 
   setDebugJSON(dbgStruct, payload.structured||{});
-  // Prefer server-provided debug (includes % scores); fall back to client note
-  const note = payload.debug ? payload.debug : { confidence_pct: __lastConfidencePct };
+  // Add gating decision to the Note block so you can see why a product did/didn't render
+  const note = payload.debug ? {...payload.debug, product_gate: gate} : { confidence_pct: __lastConfidencePct, product_gate: gate };
   setDebugJSON(dbgNote, note);
 }
 
