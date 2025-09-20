@@ -203,7 +203,7 @@ function isCourseProduct(p) {
 const LOCATION_HINTS = [
   "devon","hartland","dartmoor","yorkshire","dales","kenilworth","coventry",
   "warwickshire","anglesey","wales","betws","snowdonia","northumberland",
-  "gloucestershire","batsford","gloucestershire","chesterton","windmill","lynmouth","exmoor","quay"
+  "gloucestershire","batsford","chesterton","windmill","lynmouth","exmoor","quay"
 ];
 
 /* ---- extract tokens from the first event ---- */
@@ -277,6 +277,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
   const refCore = uniq([...(location || []), ...(topic || [])]);
   const refTokens = new Set(refCore.length ? refCore : all);
   const needLoc = location.length ? location : [];
+  const evtLower = ((firstEvent?.title || "") + " " + (pickUrl(firstEvent) || "")).toLowerCase();
 
   const kindAlign = (p) => {
     if (!subtype) return true;
@@ -285,16 +286,11 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     return true;
   };
 
-  // Lightroom guard ONLY when first event looks like a Beginners camera course
-  const beginnersCamera = /beginners?/i.test(firstEvent?.title || "") && /camera/i.test(firstEvent?.title || "");
-
   const pass = (p) => {
     if (!kindAlign(p)) return false;
 
     const u = pickUrl(p) || "";
     const t = p?.title || "";
-
-    if (beginnersCamera && /(lightroom|editing)/i.test((u + " " + t))) return false;
 
     const hasLoc = !needLoc.length || needLoc.some(l => u.toLowerCase().includes(l) || t.toLowerCase().includes(l));
     if (!hasLoc) return false;
@@ -307,12 +303,32 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     return f1 >= 0.30;
   };
 
+  const extraScore = (p, base) => {
+    let s = base;
+    const tl = (p.title || "").toLowerCase();
+
+    // Penalise side-topics if not part of the event: portrait, lightroom/editing, ebook/foundation/rps
+    if (/portrait/.test(tl) && !/portrait/.test(evtLower)) s -= 0.45;
+    if (/(lightroom|editing)/.test(tl) && !/(lightroom|editing)/.test(evtLower)) s -= 0.45;
+    if (/(ebook|foundation|distinction|distinctions|rps)/.test(tl) && !/(ebook|foundation|distinction|distinctions|rps)/.test(evtLower)) s -= 0.40;
+
+    // Small boost when the event is "camera/beginners" and the product matches that theme
+    if (/camera/.test(evtLower) && (/(camera|beginners\s*photography)/.test(tl))) s += 0.30;
+
+    // Boost slugs/titles that explicitly say "beginners photography course"
+    const slug = ((pickUrl(p) || "") + " " + (p.title || "")).toLowerCase();
+    if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
+
+    return s;
+  };
+
   let candidates = (preloadProducts || []).filter(pass);
   if (candidates.length) {
     const ranked = candidates.map(p => {
       const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
       let s = f1;
       if (sameHost(p, firstEvent)) s += 0.1;
+      s = extraScore(p, s);
       return { p, s };
     }).sort((a,b)=>b.s-a.s);
     if (ranked[0]?.p) return ranked[0].p;
@@ -340,6 +356,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
       const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
       let s = f1;
       if (sameHost(p, firstEvent)) s += 0.1;
+      s = extraScore(p, s);
       return { p, s };
     }).sort((a,b)=>b.s-a.s);
     if (ranked[0]?.p) return ranked[0].p;
@@ -380,60 +397,52 @@ function formatDisplayPriceGBP(n) {
   return new Intl.NumberFormat(undefined, { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(n));
 }
 
-/* --- sanitize rich text/HTML to plain text before parsing (PRESERVE NEWLINES) --- */
+/* --- sanitize rich text/HTML to plain text before parsing --- */
 function sanitizeDesc(s) {
   if (!s || typeof s !== "string") return "";
   let out = s;
-
-  // Convert structure to line breaks and bullets
-  out = out.replace(/<li[^>]*>/gi, "\n• ");
-  out = out.replace(/<\/li>/gi, "\n");
+  // drop attributes
+  out = out.replace(/\s+[a-z-]+="[^"]*"/gi, "");
+  // convert structural tags to line breaks first
   out = out.replace(/<br\s*\/?>/gi, "\n");
   out = out.replace(/<\/p>/gi, "\n");
-
-  // Strip remaining tags
+  out = out.replace(/<li>/gi, "• ");
+  // strip remaining tags
   out = out.replace(/<[^>]*>/g, " ");
-
-  // Normalize CRLF, keep newlines
-  out = out.replace(/\r/g, "");
-
-  // Clean each line but KEEP line structure
-  out = out
-    .split("\n")
-    .map(line => line.replace(/\s+/g, " ").trim())
-    .filter(Boolean)
-    .join("\n");
-
-  return out;
+  out = out.replace(/--\s*>/g, " ");
+  out = out.replace(/\u2013|\u2014/g, "-");
+  // collapse spaces but keep single newlines
+  out = out.replace(/[ \t\f\v]+/g, " ");
+  out = out.replace(/\s*\n\s*/g, "\n");
+  out = out.replace(/\n{3,}/g, "\n\n");
+  return out.trim();
 }
 
-/* Robust: extract labelled bullets (Location / Participants / Time / Dates / Fitness) */
+/* Robust: extract labelled bullets */
 function parseProductBlock(desc) {
   const out = {};
   const clean = sanitizeDesc(desc);
   if (!clean) return out;
 
-  const lines = clean.split(/\n+/).map(x => x.trim()).filter(Boolean);
+  // Labels we consider for "next stop" when capturing a span
+  const NEXT_LABELS = "(?:Location|Address|Participants|Group\\s*Size|Max\\s*Participants|Class\\s*Size|Time|Times|Timing|Start\\s*Time|Dates|Start\\s*Dates|Multi\\s*Course\\s*Start\\s*Dates|Experience\\s*(?:\\-|\\s*)Level|Fitness|Difficulty)";
 
-  // match "Label: value" OR "Label - value" OR "• Label: value"
-  const grab = (line) => {
-    const m = line.match(/^[\u2022•\-]?\s*([A-Za-z ]{3,30})\s*(?:\:|—|-)\s*(.+)$/i);
-    if (!m) return null;
-    return { label: m[1].trim().toLowerCase(), value: m[2].trim() };
+  // Capture "Label: value" until the next known label (or end)
+  const capture = (labelExpr) => {
+    const re = new RegExp(
+      `(?:^|\\b|\\n)${labelExpr}\\s*(?:\\:|\\-|—)\\s*([\\s\\S]*?)(?=(?:\\n|\\b)${NEXT_LABELS}\\s*(?:\\:|\\-|—)|$)`,
+      "i"
+    );
+    const m = clean.match(re);
+    if (!m || m.length < 2 || typeof m[1] !== "string") return null;
+    return m[1].replace(/^\s*(?:-+|—)\s*/, "").trim().replace(/\s{2,}/g, " ").slice(0, 300);
   };
 
-  for (const line of lines) {
-    const g = grab(line);
-    if (!g || !g.value) continue;
-    const L = g.label;
-    const V = g.value;
-
-    if (/^(location|address)$/.test(L) && !out.location) out.location = V;
-    else if (/^(participants|group size|max participants|class size)$/.test(L) && !out.participants) out.participants = V;
-    else if (/^(time|times|timing|start time)$/.test(L) && !out.time) out.time = V;
-    else if (/^(dates|start dates|multi course start dates)$/.test(L) && !out.dates) out.dates = V;
-    else if (/^(fitness|difficulty|experience level|experience - level)$/.test(L) && !out.fitness) out.fitness = V;
-  }
+  out.location = capture("(?:Location|Address)");
+  out.participants = capture("(?:Participants|Group\\s*Size|Max\\s*Participants|Class\\s*Size)");
+  out.time = capture("(?:Time|Times|Timing|Start\\s*Time)");
+  out.dates = capture("(?:Dates|Start\\s*Dates|Multi\\s*Course\\s*Start\\s*Dates)");
+  out.fitness = capture("(?:Fitness|Difficulty|Experience\\s*(?:\\-|\\s*)Level)");
 
   return out;
 }
@@ -558,8 +567,6 @@ export default async function handler(req, res) {
     const scoreWrap = (arr) =>
       (arr || [])
         .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
-
-
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
           const by = Date.parse(b.e?.last_seen || "") || 0;
@@ -610,6 +617,14 @@ export default async function handler(req, res) {
               if (anchors.some(a => evTokens.has(a))) s += 0.4; else s -= 0.35;
             }
             if (/camera/i.test(firstEvent?.title || "") && /camera/i.test(p.title || "")) s += 0.2;
+
+            // Keep the same penalties/boosts here too
+            const fakeEvt = { title: firstEvent?.title || "", url: pickUrl(firstEvent) || "" };
+            const evtLower = ((fakeEvt.title) + " " + (fakeEvt.url)).toLowerCase();
+            if (/portrait/.test((p.title||"").toLowerCase()) && !/portrait/.test(evtLower)) s -= 0.45;
+            if (/(lightroom|editing)/.test((p.title||"").toLowerCase()) && !/(lightroom|editing)/.test(evtLower)) s -= 0.45;
+            if (/beginners[-\s]photography[-\s]course/.test(((pickUrl(p)||"") + " " + (p.title||"")).toLowerCase())) s += 0.35;
+
             return { p, s };
           })
           .sort((a,b)=>b.s-a.s)
