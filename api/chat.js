@@ -5,9 +5,6 @@ export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
 
-/* ================= Feature Flags (safe/surgical) ================= */
-const SAFE_FIXES = process.env.SAFE_FIXES !== "false";
-
 /* ================= Supabase ================= */
 const FALLBACK_URL = "https://igzvwvbvgvmzvvzoclufx.supabase.co";
 const SUPABASE_URL = process.env.SUPABASE_URL || FALLBACK_URL;
@@ -52,7 +49,7 @@ function uniq(arr) { return Array.from(new Set((arr || []).filter(Boolean))); }
 function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 function tokenize(s) { return (s || "").toLowerCase().match(/[a-z0-9]+/g) || []; }
 function normaliseToken(t) { return String(t || "").replace(/\d+$/, ""); }
-function lc(str) { return String(str || "").toLowerCase(); }
+function lc(s) { return String(s || "").toLowerCase(); }
 
 const GENERIC = new Set([
   "alan","ranger","photography","photo","workshop","workshops","course","courses",
@@ -87,8 +84,6 @@ function sameHost(a, b) {
 /* ================= Intent & Keywords ================= */
 function detectIntent(q) {
   const s = String(q || "").toLowerCase();
-  theEventish: {
-  }
   const eventish = /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking|time|how much|price|cost)\b/;
   const classish = /\b(workshop|course|class|tuition|lesson|lessons|photowalk|walk|masterclass)\b/;
   return eventish.test(s) && classish.test(s) ? "events" : "advice";
@@ -275,10 +270,38 @@ function upgradeToRichestByUrl(allProducts, chosen) {
   return same.reduce(preferRicherProduct, chosen);
 }
 
-/* -- helpers for topic pre-filter (anti-hijack) -- */
-function containsAllTokens(str, tokens) {
-  const s = lc(str);
-  return tokens.every(t => s.includes(t));
+/* --- strict product-vs-event gate (single source of truth for panel/pills) --- */
+function strictlyMatchesEvent(product, firstEvent) {
+  if (!product || !firstEvent) return false;
+  const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
+  const refCore = uniq([...(location || []), ...(topic || [])]);
+  const refTokens = new Set(refCore.length ? refCore : all);
+
+  // require: (1) anchor hit, (2) decent token overlap, (3) if we detected a location token, it must be present in product
+  const anchors = productAnchorTokens(product);
+  const hasAnchorHit = anchors.some(a => refTokens.has(a));
+  if (!hasAnchorHit) return false;
+
+  const { f1 } = symmetricOverlap(refTokens, pickUrl(product), product.title);
+  if (f1 < 0.30) return false;
+
+  if ((location || []).length) {
+    const hay = lc((product.title || "") + " " + (pickUrl(product) || ""));
+    const locOk = location.some(l => hay.includes(l));
+    if (!locOk) return false;
+  }
+  // subtype alignment helps avoid course↔workshop leakage
+  const isSameKind = (isWorkshopEvent(firstEvent) ? isWorkshopProduct(product) : true)
+                  && (isCourseEvent(firstEvent) ? isCourseProduct(product) : true);
+  if (!isSameKind) return false;
+
+  // extra anti-hijack: disallow portrait/lightroom/etc unless present in event tokens
+  const evtLower = lc((firstEvent.title || "") + " " + (pickUrl(firstEvent) || ""));
+  const tl = lc(product.title || "");
+  if (/portrait/.test(tl) && !/portrait/.test(evtLower)) return false;
+  if (/(lightroom|editing)/.test(tl) && !/(lightroom|editing)/.test(evtLower)) return false;
+
+  return true;
 }
 
 /** Try hard to find a product URL for the first event; require anchor alignment. */
@@ -287,23 +310,10 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
 
   const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
   const refCore = uniq([...(location || []), ...(topic || [])]);
-  const refTokensArr = refCore.length ? refCore : all;
-  const refTokens = new Set(refTokensArr);
+  const refTokens = new Set(refCore.length ? refCore : all);
   const needLoc = location.length ? location : [];
   const evtLower = lc(((firstEvent?.title || "") + " " + (pickUrl(firstEvent) || "")));
 
-  // ---- topic pre-filter: if event looks like camera+beginners, restrict candidates ----
-  const wantsCameraBeginners = SAFE_FIXES && /\bcamera\b/.test(evtLower) && /\bbeginner/.test(evtLower);
-  const requireTokens = wantsCameraBeginners ? ["camera", "beginner"] : [];
-
-  const topicFilter = (p) => {
-    if (!requireTokens.length) return true;
-    const hay = lc((p?.title || "") + " " + (pickUrl(p) || ""));
-    // require BOTH tokens present in product title/url
-    return requireTokens.every(tok => hay.includes(tok));
-  };
-
-  // Align product "kind" with event subtype
   const kindAlign = (p) => {
     if (!subtype) return true;
     if (subtype === "course") return isCourseProduct(p) || !isWorkshopProduct(p);
@@ -313,7 +323,6 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
 
   const pass = (p) => {
     if (!kindAlign(p)) return false;
-    if (!topicFilter(p)) return false;
 
     const u = pickUrl(p) || "";
     const t = p?.title || "";
@@ -332,30 +341,14 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
   const extraScore = (p, base) => {
     let s = base;
     const tl = lc(p.title || "");
-
-    // Penalise side-topics if not part of the event: portrait, lightroom/editing, ebook/foundation/rps
     if (/portrait/.test(tl) && !/portrait/.test(evtLower)) s -= 0.45;
     if (/(lightroom|editing)/.test(tl) && !/(lightroom|editing)/.test(evtLower)) s -= 0.45;
-    if (/(ebook|foundation|distinction|distinctions|rps)/.test(tl) && !/(ebook|foundation|distinction|distinctions|rps)/.test(evtLower)) s -= 0.40;
-
-    // Small boost when the event is "camera/beginners" and the product matches that theme
-    if (wantsCameraBeginners && (/(camera|beginners\s*photography)/.test(tl))) s += 0.30;
-
-    // Boost slugs/titles that explicitly say "beginners photography course"
     const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
     if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
-
     return s;
   };
 
-  // -- Preload candidates path (fast path)
-  let preload = Array.isArray(preloadProducts) ? preloadProducts : [];
-  if (requireTokens.length) {
-    const narrowed = preload.filter(topicFilter);
-    if (narrowed.length) preload = narrowed;
-  }
-  let candidates = preload.filter(pass);
-
+  let candidates = (preloadProducts || []).filter(pass);
   if (candidates.length) {
     const ranked = candidates.map(p => {
       const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
@@ -367,7 +360,6 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     if (ranked[0]?.p) return ranked[0].p;
   }
 
-  // -- Fallback query by core tokens
   const core = uniq([...Array.from(refTokens)]).slice(0, 12);
   let fallback = [];
   if (core.length) {
@@ -382,9 +374,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
       .or(orParts)
       .order("last_seen",{ascending:false})
       .limit(50);
-    let fetched = (data || []);
-    if (requireTokens.length) fetched = fetched.filter(topicFilter);
-    fallback = fetched.filter(pass);
+    fallback = (data || []).filter(pass);
   }
 
   if (fallback.length) {
@@ -437,23 +427,16 @@ function formatDisplayPriceGBP(n) {
 function sanitizeDesc(s) {
   if (!s || typeof s !== "string") return "";
   let out = s;
-  // convert explicit breaks first
   out = out.replace(/<br\s*\/?>/gi, "\n");
-  // line breaks for block endings
   out = out.replace(/<\/p>/gi, "\n");
   out = out.replace(/<\/li>/gi, "\n");
-  // bullet prefix for list items
   out = out.replace(/<li[^>]*>/gi, "• ");
-  // drop attributes
   out = out.replace(/\s+[a-z-]+="[^"]*"/gi, "");
-  // decode a couple of common entities & tidy dashes
   out = out.replace(/&nbsp;|&#160;/gi, " ");
   out = out.replace(/&amp;/gi, "&");
   out = out.replace(/\u2013|\u2014/g, "-");
-  // strip remaining tags
   out = out.replace(/<[^>]*>/g, " ");
   out = out.replace(/--\s*>/g, " ");
-  // collapse spaces but keep single newlines (guard for messy HTML)
   out = out.replace(/[ \t\f\v]+/g, " ");
   out = out.replace(/\s*\n\s*/g, "\n");
   out = out.replace(/\n{3,}/g, "\n\n");
@@ -466,10 +449,8 @@ function parseProductBlock(desc) {
   const clean = sanitizeDesc(desc);
   if (!clean) return out;
 
-  // Labels we consider for "next stop" when capturing a span
   const NEXT_LABELS = "(?:Location|Address|Participants|Group\\s*Size|Max\\s*Participants|Class\\s*Size|Time|Times|Timing|Start\\s*Time|Dates|Start\\s*Dates|Multi\\s*Course\\s*Start\\s*Dates|Experience\\s*(?:\\-|\\s*)Level|Fitness|Difficulty)";
 
-  // Capture "Label: value" until the next known label (or end)
   const capture = (labelExpr) => {
     const re = new RegExp(
       `(?:^|\\b|\\n)${labelExpr}\\s*(?:\\:|\\-|—)\\s*([\\s\\S]*?)(?=(?:\\n|\\b)${NEXT_LABELS}\\s*(?:\\:|\\-|—)|$)`,
@@ -521,7 +502,7 @@ function buildProductPanelMarkdown(prod) {
   return head + bulletsText + bodyText + (url ? `\n\n[Open](${url})` : "");
 }
 
-/* NEW: small event card for when no matching product is found */
+/* Minimal event card for when no matching product is found */
 function buildEventPanelMarkdown(ev) {
   if (!ev) return "";
   const title = ev.title || ev.raw?.name || "Upcoming Workshop";
@@ -585,7 +566,7 @@ export default async function handler(req, res) {
 
     let t_supabase = 0, t_rank = 0, t_comp = 0;
 
-    // Probe: count clean view (optional)
+    // Optional probe
     let cleanCount = null;
     try {
       const sProbe = Date.now();
@@ -648,8 +629,7 @@ export default async function handler(req, res) {
 
     if (firstEvent) {
       const matched = await findBestProductForEvent(client, firstEvent, rankedProducts, subtype);
-
-      if (matched) {
+      if (matched && strictlyMatchesEvent(matched, firstEvent)) {
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
         // Enrich price from clean table for featured pick
@@ -663,9 +643,8 @@ export default async function handler(req, res) {
         } catch {}
       }
 
-      // If no strict match, we still re-rank products for structured payload,
-      // but we WON'T show any unrelated product in the answer panel or Book pill.
-      if (!featuredProduct && rankedProducts.length) {
+      // Re-rank products for structured list (independent of panel gating)
+      if (rankedProducts.length) {
         const evTokens = new Set(uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)]));
         rankedProducts = rankedProducts
           .map((p) => {
@@ -678,7 +657,7 @@ export default async function handler(req, res) {
             }
             if (/camera/i.test(firstEvent?.title || "") && /camera/i.test(p.title || "")) s += 0.2;
 
-            // Keep the same penalties/boosts here too
+            // Penalties for off-topic
             const evtLower = lc((firstEvent?.title || "") + " " + (pickUrl(firstEvent) || ""));
             if (/portrait/.test(lc(p.title||"")) && !/portrait/.test(evtLower)) s -= 0.45;
             if (/(lightroom|editing)/.test(lc(p.title||"")) && !/(lightroom|editing)/.test(evtLower)) s -= 0.45;
@@ -691,21 +670,9 @@ export default async function handler(req, res) {
       }
     }
 
-    /* -------- Pick preferred product (for structured list only) -------- */
+    /* -------- Preferred product for structured payload only -------- */
     let preferredProduct = featuredProduct || rankedProducts[0] || null;
     preferredProduct = upgradeToRichestByUrl(rankedProducts, preferredProduct);
-
-    /* -------- Enrich price for preferred (if needed) -------- */
-    if (preferredProduct && firstEvent) {
-      try {
-        const tokensForClean = uniq([...urlTokens(firstEvent), ...titleTokens(firstEvent)]);
-        const cleanRows = await findProductsClean(client, { tokens: tokensForClean, urlFragment: pickUrl(firstEvent) || "" });
-        const fromClean = cleanRows.find(r => baseUrl(r.url) === baseUrl(pickUrl(preferredProduct)));
-        if (fromClean && Number(fromClean.price_gbp) > 0) {
-          preferredProduct.price_gbp = Number(fromClean.price_gbp);
-        }
-      } catch {}
-    }
 
     if (preferredProduct) {
       const topUrl = baseUrl(pickUrl(preferredProduct));
@@ -725,11 +692,10 @@ export default async function handler(req, res) {
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
-      if (featuredProduct) {
-        // Only show a product if it strictly matches the first event
+      // PANEL GATE: only show a product if it strictly matches the first event
+      if (firstEvent && featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent)) {
         answer_markdown = buildProductPanelMarkdown(featuredProduct);
       } else if (firstEvent) {
-        // Show the next event details instead of a mismatched product
         answer_markdown = buildEventPanelMarkdown(firstEvent);
       } else if (rankedArticles?.length) {
         answer_markdown = buildAdviceMarkdown(rankedArticles);
@@ -742,7 +708,7 @@ export default async function handler(req, res) {
     const citations = uniq([
       ...rankedArticles.slice(0, 3).map(pickUrl),
       ...(firstEvent ? [pickUrl(firstEvent)] : []),
-      ...(featuredProduct ? [pickUrl(featuredProduct)] : []), // only cite the product if it matches the first event
+      ...(featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent) ? [pickUrl(featuredProduct)] : []),
     ]);
 
     const structured = {
@@ -773,16 +739,17 @@ export default async function handler(req, res) {
       articles: (rankedArticles || []).map((a) => ({
         id: a.id, title: a.title, page_url: a.page_url, source_url: a.source_url, last_seen: a.last_seen
       })),
-      // Only let Book Now appear when we have a strict product match to the first event
-      pills: intent === "events" ? buildEventPills(firstEvent, featuredProduct || null) : buildAdvicePills(rankedArticles, q),
+      // Only show Book Now when we have a strict match to the first event
+      pills: intent === "events" ? buildEventPills(firstEvent, (featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent)) ? featuredProduct : null) : buildAdvicePills(rankedArticles, q),
     };
 
     const debug = {
-      version: "v0.9.45-workshop-align",
+      version: "v0.9.46-panel-gate",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? {
         id: featuredProduct.id, title: featuredProduct.title, url: pickUrl(featuredProduct),
+        strictly_matches_first_event: strictlyMatchesEvent(featuredProduct, firstEvent),
         display_price: formatDisplayPriceGBP(selectDisplayPriceNumber(featuredProduct))
       } : null,
       pills: { book_now: structured.pills?.find(p=>p.label==="Book Now")?.url || null },
