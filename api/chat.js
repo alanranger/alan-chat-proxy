@@ -1,5 +1,5 @@
 // /api/chat.js
-// Node runtime on Vercel. Data-driven. No hard-coded query terms.
+// Node runtime on Vercel. Data-driven. Nohard-coded query terms.
 
 export const config = { runtime: "nodejs" };
 
