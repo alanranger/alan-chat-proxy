@@ -96,7 +96,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v0.9.51</span></div>
+  <div class="badge-wrap"><span class="version">v0.9.52</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -396,10 +396,12 @@ function deriveOptions(prod, facts){
 }
 
 /* ================= Matching & intent helpers ================= */
+/* Expanded stopwords to avoid generic matches (exposure, sunset, etc.) */
 const STOP = new Set([
   'the','and','or','what','whats','when','whens','next','cost',
   'workshop','workshops','photography','photo','near','me','uk',
-  'warks','warwickshire','devonshire','district','class','classes','course','courses'
+  'warks','warwickshire','devonshire','district','class','classes','course','courses',
+  'long','exposure','sunset','sunrise','landscape','seascape','evening','morning','walk','walks'
 ]);
 
 function tokenizeWords(s){ return (s||'').toLowerCase().match(/[a-z]+/g) || []; }
@@ -438,8 +440,15 @@ function futureEvents(structured){
     .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
 }
 
+/* ======= TIGHTENED strong match =======
+   Accept if:
+   - title/location Jaccard >= 0.40; OR
+   - ≥1 shared location token; OR
+   - ≥2 shared non-generic content tokens (after STOP filter).
+*/
 function strongProductEventMatch(prod, ev){
   if(!prod || !ev) return false;
+
   const titleP = (prod.title || '').toLowerCase();
   const titleE = (ev.title  || '').toLowerCase();
   const locP   = (prod.location_parsed || prod.location || '').toLowerCase();
@@ -448,12 +457,19 @@ function strongProductEventMatch(prod, ev){
   const toksP = tokenize2(titleP + ' ' + locP).filter(t=>t.length>2 && !STOP.has(t));
   const toksE = tokenize2(titleE + ' ' + locE).filter(t=>t.length>2 && !STOP.has(t));
 
-  const overlap = jaccard(toksP, toksE); // 0..1
-  if (overlap >= 0.38) return true;
+  // Title/location similarity
+  const overlap = jaccard(toksP, toksE);
+  if (overlap >= 0.40) return true;
 
-  // Fallback: simple containment of a key noun
-  const key = toksE.find(t => !STOP.has(t) && t.length >= 5);
-  if (key && titleP.includes(key)) return true;
+  // Location overlap
+  const locTokP = tokenize2(locP).filter(t=>t.length>3);
+  const locTokE = tokenize2(locE).filter(t=>t.length>3);
+  const hasSharedLoc = locTokP.some(t => locTokE.includes(t));
+  if (hasSharedLoc) return true;
+
+  // Require at least 2 meaningful shared tokens for fallback
+  const shared = new Set(toksP.filter(t => toksE.includes(t)));
+  if (shared.size >= 2) return true;
 
   return false;
 }
@@ -495,7 +511,7 @@ function renderProductCard(prod){
   `;
 }
 
-/* ===== Events: phrase-aware, generic scoring; now two-line layout ===== */
+/* ===== Events: phrase-aware, generic scoring ===== */
 function extractKeyPhrases(topic, query){
   const words = tokenizeWords([topic||'', query||''].join(' '));
   const kept = words.filter(w => !STOP.has(w) && w.length >= 3);
@@ -654,18 +670,9 @@ function decideProductRendering(payload, mergedProducts, query){
   const hasEvs = evs.length > 0;
   const topEv = hasEvs ? evs[0] : null;
 
-  // Default rule-set:
-  // 1) If explicit events intent -> hide products unless a strong match to the top upcoming event.
-  // 2) If price/booking query -> allow a product even with events.
-  // 3) If no events -> allow first product as fallback.
-  // 4) If explicit products intent -> allow product.
-  // 5) Otherwise prefer events.
-
   if (!mergedProducts.length) return {show:false, reason:'no-products'};
-
   if (intent === 'products') return {show:true, reason:'intent-products'};
-
-  if (isPriceyQuery(query)) return {show:true, reason:'pricey-query'};
+  if (isPriceyQuery(query))  return {show:true, reason:'pricey-query'};
 
   if (intent === 'events') {
     if (!hasEvs) return {show:true, reason:'events-intent-no-events'};
@@ -675,7 +682,6 @@ function decideProductRendering(payload, mergedProducts, query){
   }
 
   if (!hasEvs) return {show:true, reason:'no-events-fallback'};
-
   return {show:false, reason:'prefer-events'};
 }
 
@@ -687,7 +693,7 @@ function renderAnswer(payload){
   let confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
   const heuristic = heuristicConfidence(s);
   if (confidencePct == null || confidencePct < 50) confidencePct = heuristic;
-  __lastConfidencePct = Math.round(confidencePct);
+  const __rounded = Math.round(confidencePct);
 
   const merged = mergeProducts(s.products||[]);
   const gate = decideProductRendering(payload, merged, __lastQuery);
@@ -717,7 +723,7 @@ function renderAnswer(payload){
 
   const footer = document.createElement('div');
   footer.className = 'footer-status';
-  footer.innerHTML = `${confidencePill(__lastConfidencePct)} <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+  footer.innerHTML = `<span class="badge conf ${__rounded>=70?'green':__rounded>=35?'amber':'red'}">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
   thread.appendChild(footer);
 
   // Fallback answer if nothing rendered at all
@@ -730,7 +736,7 @@ function renderAnswer(payload){
 
   setDebugJSON(dbgStruct, payload.structured||{});
   // Add gating decision to the Note block so you can see why a product did/didn't render
-  const note = payload.debug ? {...payload.debug, product_gate: gate} : { confidence_pct: __lastConfidencePct, product_gate: gate };
+  const note = payload.debug ? {...payload.debug, product_gate: gate} : { product_gate: gate };
   setDebugJSON(dbgNote, note);
 }
 
@@ -767,36 +773,29 @@ async function sendQuery(query){
       renderAnswer(data);
     } else if (data && !data.ok) {
       const footer = document.createElement('div');
-      __lastConfidencePct = 25;
       footer.className = 'footer-status';
-      footer.innerHTML = `${confidencePill(__lastConfidencePct)} <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+      footer.innerHTML = `<span class="badge conf red">Confidence: 25%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
       thread.appendChild(footer);
       addBubble(`<div class="answer"><p>Server error: ${escapeHTML(String(data.error||'Unknown'))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
-      setDebugJSON(dbgNote, { confidence_pct: __lastConfidencePct });
     } else {
       const footer = document.createElement('div');
-      const heuristic = heuristicConfidence({});
-      __lastConfidencePct = heuristic;
       footer.className = 'footer-status';
-      footer.innerHTML = `${confidencePill(__lastConfidencePct)} <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+      footer.innerHTML = `<span class="badge conf amber">Confidence: 50%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
       thread.appendChild(footer);
 
       const fallback = "I don’t have a specific answer for that yet.";
       const {html}=mdToHtml(fallback);
       const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
       addBubble(html.replace('</div>', `${extra}</div>`));
-      setDebugJSON(dbgNote, { confidence_pct: __lastConfidencePct });
     }
   } catch (err){
     closeTyping();
     dbgStatus.textContent = 'error';
     const footer = document.createElement('div');
-    __lastConfidencePct = 25;
     footer.className = 'footer-status';
-    footer.innerHTML = `${confidencePill(__lastConfidencePct)} <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+    footer.innerHTML = `<span class="badge conf red">Confidence: 25%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
     thread.appendChild(footer);
     addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
-    setDebugJSON(dbgNote, { confidence_pct: __lastConfidencePct });
   }
 }
 
