@@ -1,5 +1,5 @@
 // /api/chat.js
-// Node runtime on Vercel. Data-driven. Nohard-coded query terms.
+// Node runtime on Vercel. Data-driven. No hard-coded query terms.
 
 export const config = { runtime: "nodejs" };
 
@@ -185,7 +185,7 @@ function isCourseEvent(e) {
   return hasCourse && !looksWorkshop;
 }
 
-/* Product kind (aligned with subtype, still generic labels) */
+/* Product kind (kept generic) */
 function isWorkshopProduct(p) {
   const u = (pickUrl(p) || "").toLowerCase(); const t = (p?.title || "").toLowerCase();
   const hasWorkshop = /workshop/.test(u + " " + t) || /photo-workshops-uk|photographic-workshops/.test(u);
@@ -199,7 +199,14 @@ function isCourseProduct(p) {
   return hasCourse && !looksWorkshop;
 }
 
-/* ---- robust product matching strictly from first event ---- */
+/* Location hints used elsewhere too */
+const LOCATION_HINTS = [
+  "devon","hartland","dartmoor","yorkshire","dales","kenilworth","coventry",
+  "warwickshire","anglesey","wales","betws","snowdonia","northumberland",
+  "gloucestershire","batsford","chesterton","windmill","lynmouth","exmoor","quay"
+];
+
+/* ---- extract tokens from the first event ---- */
 function extractTopicAndLocationTokensFromEvent(ev) {
   const t = titleTokens(ev);
   const u = urlTokens(ev);
@@ -214,24 +221,14 @@ function extractTopicAndLocationTokensFromEvent(ev) {
   return { all, topic: uniq(topicHints), location: uniq(locationHints) };
 }
 
-function overlapScore(refTokens, url, title) {
-  const candTokens = new Set([
-    ...tokenize(String(url || "").replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")),
-    ...tokenize(String(title || ""))
-  ].map(normaliseToken).filter(x => x.length >= 3 && !GENERIC.has(x)));
-  let inter = 0; for (const tk of refTokens) if (candTokens.has(tk)) inter++;
-  const denom = Math.max(1, refTokens.size);
-  return inter / denom;
-}
-
-/* ---- symmetric similarity + distinctive-token requirement ---- */
+/* ---- similarity helpers ---- */
 function symmetricOverlap(eventTokens, url, title) {
   const pTokens = new Set([
     ...tokenize(String(url || "").replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")),
     ...tokenize(String(title || ""))
   ].map(normaliseToken).filter(x => x.length >= 3 && !GENERIC.has(x)));
 
-  const eTokens = new Set([...eventTokens]);
+  const eTokens = new Set(eventTokens);
   let inter = 0;
   for (const tk of eTokens) if (pTokens.has(tk)) inter++;
 
@@ -241,11 +238,14 @@ function symmetricOverlap(eventTokens, url, title) {
   const recall = inter / eSize;
   const precision = inter / pSize;
   const f1 = (precision + recall) ? (2 * precision * recall) / (precision + recall) : 0;
+  return { f1, pTokens };
+}
 
-  const strong = [...pTokens].filter(t => t.length >= 5);
-  const hasStrongHit = strong.some(t => eTokens.has(t));
-
-  return { f1, hasStrongHit };
+/* ---- derive 'anchor' tokens from a product title (distinctive words) ---- */
+function productAnchorTokens(prod) {
+  const title = prod?.title || "";
+  const tokens = titleTokens({ title });
+  return tokens.filter(t => t.length >= 5 && !LOCATION_HINTS.includes(t)); // no location anchors
 }
 
 /* ===== prefer richer duplicate rows for the same product URL ===== */
@@ -269,7 +269,7 @@ function upgradeToRichestByUrl(allProducts, chosen) {
   return same.reduce(preferRicherProduct, chosen);
 }
 
-/** Try hard to find a product URL for the first event. */
+/** Try hard to find a product URL for the first event; require anchor alignment. */
 async function findBestProductForEvent(client, firstEvent, preloadProducts = [], subtype = null) {
   if (!firstEvent) return null;
 
@@ -287,13 +287,20 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
 
   const pass = (p) => {
     if (!kindAlign(p)) return false;
+
     const u = pickUrl(p) || "";
     const t = p?.title || "";
+
     const hasLoc = !needLoc.length || needLoc.some(l => u.toLowerCase().includes(l) || t.toLowerCase().includes(l));
     if (!hasLoc) return false;
 
-    const { f1, hasStrongHit } = symmetricOverlap(refTokens, u, t);
-    return hasStrongHit && f1 >= 0.35;
+    // NEW: require at least one significant product "anchor" to appear in the event tokens
+    const anchors = productAnchorTokens(p);
+    const hasAnchorHit = anchors.some(a => refTokens.has(a));
+    if (!hasAnchorHit) return false;
+
+    const { f1 } = symmetricOverlap(refTokens, u, t);
+    return f1 >= 0.30; // slightly lower since we already enforce anchor alignment
   };
 
   let candidates = (preloadProducts || []).filter(pass);
@@ -304,7 +311,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
       if (sameHost(p, firstEvent)) s += 0.1;
       return { p, s };
     }).sort((a,b)=>b.s-a.s);
-    if (ranked[0]?.s >= 0.35) return ranked[0].p;
+    if (ranked[0]?.p) return ranked[0].p;
   }
 
   const core = uniq([...Array.from(refTokens)]).slice(0, 12);
@@ -331,7 +338,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
       if (sameHost(p, firstEvent)) s += 0.1;
       return { p, s };
     }).sort((a,b)=>b.s-a.s);
-    if (ranked[0]?.s >= 0.35) return ranked[0].p;
+    if (ranked[0]?.p) return ranked[0].p;
   }
 
   return null;
@@ -375,6 +382,7 @@ function sanitizeDesc(s) {
   let out = s;
   out = out.replace(/\s+[a-z-]+="[^"]*"/gi, " "); // strip attributes
   out = out.replace(/<[^>]*>/g, " ");              // strip tags
+  out = out.replace(/--\s*>/g, " ");               // stray “-- >”
   out = out.replace(/\s+/g, " ").trim();           // collapse whitespace
   return out;
 }
@@ -448,11 +456,6 @@ function buildEventPills(firstEvent, productOrNull) {
 }
 
 /* Location filtering for events when query contains a place */
-const LOCATION_HINTS = [
-  "devon","hartland","dartmoor","yorkshire","dales","kenilworth","coventry",
-  "warwickshire","anglesey","wales","betws","snowdonia","northumberland",
-  "gloucestershire","batsford","chesterton","windmill","lynmouth","exmoor","quay"
-];
 function filterEventsByLocationKeywords(events, keywords) {
   const locs = keywords.filter(k => LOCATION_HINTS.includes(k.toLowerCase()));
   if (!locs.length) return events;
@@ -606,12 +609,12 @@ export default async function handler(req, res) {
       })),
       articles: (rankedArticles || []).map((a) => ({
         id: a.id, title: a.title, page_url: a.page_url, source_url: a.source_url, last_seen: a.last_seen
-      })), // <-- fixed: only two closing braces here
+      })),
       pills: intent === "events" ? buildEventPills(firstEvent, featuredProduct || null) : buildAdvicePills(rankedArticles, q),
     };
 
     const debug = {
-      version: "v0.9.38-symmetric-overlap+sanitize",
+      version: "v0.9.39-anchor-align",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? {
