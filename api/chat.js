@@ -189,9 +189,14 @@ function extractTopicAndLocationTokensFromEvent(ev) {
   const t = titleTokens(ev);
   const u = urlTokens(ev);
   const all = uniq([...t, ...u]);
-  const locationHints = all.filter(x => /(kenilworth|coventry|warwickshire|dartmoor|devon|hartland|anglesey|yorkshire|dales|wales|betws|snowdonia|northumberland|batsford|gloucestershire|chesterton|windmill)/.test(x));
-  const topicHints = all.filter(x => /(long|exposure|sunset|seascape|woodland|urban|architecture|dales|windmill|walk|fairy|glen|workshop)/.test(x));
+  const locationHints = all.filter(x => /(kenilworth|coventry|warwickshire|dartmoor|devon|hartland|anglesey|yorkshire|dales|wales|betws|snowdonia|northumberland|batsford|gloucestershire|chesterton|windmill|lynmouth|exmoor)/.test(x));
+  const topicHints = all.filter(x => /(long|exposure|sunset|seascape|woodland|urban|architecture|dales|windmill|walk|fairy|glen|workshop|coastal|quay)/.test(x));
   return { all, topic: uniq(topicHints), location: uniq(locationHints) };
+}
+
+function urlOrTitleHasAll(u, t, required) {
+  const hay = (String(u || "") + " " + String(t || "")).toLowerCase();
+  return required.every(tok => hay.includes(tok));
 }
 
 function overlapScore(refTokens, url, title) {
@@ -200,8 +205,8 @@ function overlapScore(refTokens, url, title) {
     ...tokenize(String(title || ""))
   ].map(normaliseToken).filter(x => x.length >= 3 && !GENERIC.has(x)));
   let inter = 0; for (const tk of refTokens) if (candTokens.has(tk)) inter++;
-  const union = refTokens.size + candTokens.size - inter || 1;
-  return inter / union;
+  const denom = Math.max(1, refTokens.size); // recall-like
+  return inter / denom;
 }
 
 /** Try hard to find a product URL for the first event. */
@@ -209,68 +214,65 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [])
   if (!firstEvent) return null;
 
   const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
-  const refTokens = new Set(uniq([...all, ...topic, ...location]).filter(t => t.length >= 3));
-
-  // tokens that indicate subject (used to avoid Woodland Walks)
-  const topicNeed = Array.from(new Set(topic)).filter(t =>
-    /(long|exposure|sunset|urban|architecture|seascape)/.test(t)
-  );
+  const refCore = uniq([...(location || []), ...(topic || [])]);
+  const refTokens = new Set(refCore.length ? refCore : all);
   const needLoc = location.length ? location : [];
 
-  // 1) Try among preloaded products — require location **and** topic in TITLE/URL
-  let best = null, bestScore = -1;
-  for (const p of preloadProducts || []) {
-    const title = (p.title || "").toLowerCase();
-    const url = (pickUrl(p) || "").toLowerCase();
+  // Helper: strict Devon/Hartland-style check (prevents Woodland bleed-through)
+  const strictHit = (p) => {
+    const u = pickUrl(p) || "";
+    const t = p?.title || "";
+    // require location token(s) if we have them
+    const hasLoc = !needLoc.length || needLoc.some(l => u.toLowerCase().includes(l) || t.toLowerCase().includes(l));
+    if (!hasLoc) return false;
+    // also require at least one topic-ish token (seascape/long/coastal/quay/windmill/etc.) if available
+    const hasTopic = !topic.length || topic.some(l => u.toLowerCase().includes(l) || t.toLowerCase().includes(l));
+    return hasTopic;
+  };
 
-    const hasLoc = !needLoc.length || needLoc.some(l => title.includes(l) || url.includes(l));
-    const hasTopic = !topicNeed.length || topicNeed.some(t => title.includes(t) || url.includes(t));
-    if (!(hasLoc && hasTopic)) continue;
-
-    let s = overlapScore(refTokens, url, title);
-    if (sameHost(p, firstEvent)) s += 0.08;
-    if (/workshop/.test(title)) s += 0.04;
-    if (s > bestScore) { best = p; bestScore = s; }
+  // 1) Try among any preloaded products (same host favored) — STRICT first
+  let candidates = (preloadProducts || []).filter(strictHit);
+  if (candidates.length) {
+    candidates = candidates
+      .map(p => {
+        let s = overlapScore(refTokens, pickUrl(p), p.title);
+        if (sameHost(p, firstEvent)) s += 0.15;
+        if (/(workshop)/.test((p.title || "").toLowerCase())) s += 0.05;
+        return { p, s };
+      })
+      .sort((a,b)=>b.s-a.s);
+    if (candidates[0]?.s >= 0.4) return candidates[0].p; // strict + decent overlap
   }
-  if (best && bestScore >= 0.18) return best;
 
-  // 2) Query products again; still require location+topic **in title/URL** (no description-only matches)
-  const orParts = uniq([...Array.from(refTokens)]).slice(0, 12)
-    .flatMap(t => [
-      `title.ilike.%${t}%`,
-      `page_url.ilike.%${t}%`
-    ]).join(",");
-
+  // 2) Query products table again with an OR on core tokens
+  const core = uniq([...Array.from(refTokens)]).slice(0, 12);
   let fallback = [];
-  if (orParts) {
-    const { data } = await client
-      .from("page_entities")
+  if (core.length) {
+    const orParts = core
+      .flatMap(t => [
+        `title.ilike.%${t}%`, `page_url.ilike.%${t}%`,
+        `description.ilike.%${t}%`, `raw->>metaDescription.ilike.%${t}%`,
+        `raw->meta->>description.ilike.%${t}%`
+      ])
+      .join(",");
+    const { data } = await client.from("page_entities")
       .select(SELECT_COLS)
       .eq("kind","product")
       .or(orParts)
       .order("last_seen",{ascending:false})
-      .limit(60);
-    fallback = data || [];
+      .limit(50);
+    fallback = (data || []).filter(strictHit);
   }
 
-  // keep only those that mention the location AND a topic in TITLE/URL
-  const withLocAndTopic = fallback.filter(p => {
-    const hayTitleUrl = ((p.title || "") + " " + (pickUrl(p) || "")).toLowerCase();
-    const hasLoc = !needLoc.length || needLoc.some(l => hayTitleUrl.includes(l));
-    const hasTopic = !topicNeed.length || topicNeed.some(t => hayTitleUrl.includes(t));
-    return hasLoc && hasTopic;
-  });
-
-  best = null; bestScore = -1;
-  for (const p of withLocAndTopic) {
-    const title = (p.title || "").toLowerCase();
-    const url = (pickUrl(p) || "").toLowerCase();
-    let s = overlapScore(refTokens, url, title);
-    if (sameHost(p, firstEvent)) s += 0.08;
-    if (/workshop/.test(title)) s += 0.04;
-    if (s > bestScore) { best = p; bestScore = s; }
+  if (fallback.length) {
+    const scored = fallback.map(p => {
+      let s = overlapScore(refTokens, pickUrl(p), p.title);
+      if (sameHost(p, firstEvent)) s += 0.15;
+      if (/(workshop)/.test((p.title || "").toLowerCase())) s += 0.05;
+      return { p, s };
+    }).sort((a,b)=>b.s-a.s);
+    if (scored[0]?.s >= 0.35) return scored[0].p;
   }
-  if (best && bestScore >= 0.18) return best;
 
   return null;
 }
@@ -335,7 +337,7 @@ function buildEventPills(firstEvent, productOrNull) {
   const pills = [];
   const eventUrl = pickUrl(firstEvent);
   const productUrl = pickUrl(productOrNull);
-  const bookUrl = productUrl || null; // only use product URL for Book Now
+  const bookUrl = productUrl || null; // <— IMPORTANT: only use product URL for Book Now
   if (bookUrl) pills.push({ label: "Book Now", url: bookUrl, brand: "primary" });
   if (eventUrl) pills.push({ label: "View event", url: eventUrl, brand: "secondary" });
   pills.push({ label: "Photos", url: "https://www.alanranger.com/photography-portfolio", brand: "secondary" });
@@ -346,7 +348,7 @@ function buildEventPills(firstEvent, productOrNull) {
 const LOCATION_HINTS = [
   "devon","hartland","dartmoor","yorkshire","dales","kenilworth","coventry",
   "warwickshire","anglesey","wales","betws","snowdonia","northumberland",
-  "gloucestershire","batsford","chesterton","windmill"
+  "gloucestershire","batsford","chesterton","windmill","lynmouth","exmoor","quay"
 ];
 function filterEventsByLocationKeywords(events, keywords) {
   const locs = keywords.filter(k => LOCATION_HINTS.includes(k.toLowerCase()));
@@ -393,7 +395,7 @@ export default async function handler(req, res) {
     if (intent === "events") {
       [events, products, landing] = await Promise.all([
         findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
-        findProducts(client, { keywords, topK: 24 }),
+        findProducts(client, { keywords, topK: 24 }), // preload more products for matching
         findLanding(client, { keywords }),
       ]);
 
@@ -511,7 +513,7 @@ export default async function handler(req, res) {
     };
 
     const debug = {
-      version: "v0.9.33-product-from-first-event+loc+topic-titleurl",
+      version: "v0.9.34-product-from-first-event+strict-loc-topic",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? { id: featuredProduct.id, title: featuredProduct.title, url: pickUrl(featuredProduct), display_price: selectDisplayPriceNumber(featuredProduct) } : null,
