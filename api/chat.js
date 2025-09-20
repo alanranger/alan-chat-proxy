@@ -205,7 +205,7 @@ function overlapScore(refTokens, url, title) {
   return inter / denom;
 }
 
-/* ===== New: prefer richer duplicate rows for the same product URL ===== */
+/* ===== prefer richer duplicate rows for the same product URL ===== */
 function preferRicherProduct(a, b) {
   if (!a) return b;
   if (!b) return a;
@@ -285,7 +285,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [])
   return null;
 }
 
-/* ================= Clean-price view (kept, used only to enrich price if product lacks it) ================= */
+/* ================= Clean-price view (used only to enrich price) ================= */
 async function findProductsClean(client, { tokens = [], urlFragment = "" } = {}) {
   const urlToks = nonGenericTokens(urlFragment);
   const tok = uniq([ ...urlToks, ...tokens.map(normaliseToken).filter(t => t.length >= 4) ]).slice(0, 8);
@@ -317,17 +317,21 @@ function formatDisplayPriceGBP(n) {
   return new Intl.NumberFormat(undefined, { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(n));
 }
 
-/* Parse common "product block" lines from long descriptions */
+/* FIXED: safe regex grab with grouped alternation and guard */
 function parseProductBlock(desc) {
   const out = {};
-  if (!desc) return out;
+  if (!desc || typeof desc !== "string") return out;
+
   const grab = (label) => {
-    const r = new RegExp(`${label}\\s*:\\s*([\\s\\S]*?)(?:\\n\\s*[A-Z][A-Za-z ]+:|$)`, "i");
+    // group the label/alternation to avoid partial matches without the value part
+    const r = new RegExp(`(?:${label})\\s*:\\s*([\\s\\S]*?)(?:\\n\\s*[A-Z][A-Za-z ]+:|$)`, "i");
     const m = desc.match(r);
-    return m ? m[1].trim().replace(/\s+/g, " ").slice(0, 300) : null;
+    if (!m || m.length < 2 || typeof m[1] !== "string") return null;
+    return m[1].trim().replace(/\s+/g, " ").slice(0, 300);
   };
+
   out.location = grab("Location");
-  out.dates = grab("Dates|2025|2026|2027"); // dates often live under "Dates:" or start with a year block
+  out.dates = grab("Dates|\\b20\\d{2}\\b"); // tolerate lines that start with a year block
   out.participants = grab("Participants");
   out.fitness = grab("Fitness");
   return out;
@@ -341,14 +345,12 @@ function buildAdviceMarkdown(articles) {
   }
   return lines.join("\n");
 }
-
 function buildProductPanelMarkdown(prod) {
   const title = prod?.title || prod?.raw?.name || "Workshop";
   const priceNum = selectDisplayPriceNumber(prod);
   const priceStr = formatDisplayPriceGBP(priceNum);
   const url = pickUrl(prod);
 
-  // Prefer metaDescription; fallback to description.
   const long = prod?.raw?.metaDescription || prod?.raw?.meta?.description || prod?.description || "";
   const block = parseProductBlock(long);
 
@@ -364,7 +366,6 @@ function buildProductPanelMarkdown(prod) {
 
   return head + bulletsText + bodyText + (url ? `\n\n[Open](${url})` : "");
 }
-
 function buildAdvicePills(articles, originalQuery) {
   const pills = [];
   const top = articles?.[0] ? pickUrl(articles[0]) : null;
@@ -434,7 +435,7 @@ export default async function handler(req, res) {
     if (intent === "events") {
       [events, products, landing] = await Promise.all([
         findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
-        findProducts(client, { keywords, topK: 24 }), // preload more products for matching
+        findProducts(client, { keywords, topK: 24 }),
         findLanding(client, { keywords }),
       ]);
 
@@ -485,10 +486,8 @@ export default async function handler(req, res) {
       const matched = await findBestProductForEvent(client, firstEvent, rankedProducts);
 
       if (matched) {
-        // NEW: upgrade to the richest row for this URL (price + long description)
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
-        // optional: enrich price from ai_products_clean
         const tokensForClean = uniq([...urlTokens(firstEvent), ...titleTokens(firstEvent)]);
         try {
           const cleanRows = await findProductsClean(client, { tokens: tokensForClean, urlFragment: pickUrl(firstEvent) || "" });
@@ -549,7 +548,7 @@ export default async function handler(req, res) {
     };
 
     const debug = {
-      version: "v0.9.35-product-upgrade-by-url+productblock",
+      version: "v0.9.36-productblock-regex-fix",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? {
