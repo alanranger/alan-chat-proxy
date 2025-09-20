@@ -87,6 +87,8 @@ function sameHost(a, b) {
 /* ================= Intent & Keywords ================= */
 function detectIntent(q) {
   const s = String(q || "").toLowerCase();
+  theEventish: {
+  }
   const eventish = /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking|time|how much|price|cost)\b/;
   const classish = /\b(workshop|course|class|tuition|lesson|lessons|photowalk|walk|masterclass)\b/;
   return eventish.test(s) && classish.test(s) ? "events" : "advice";
@@ -419,7 +421,7 @@ async function findProductsClean(client, { tokens = [], urlFragment = "" } = {})
   return Array.from(byUrl.values());
 }
 
-/* ================= Product block rendering ================= */
+/* ================= Product & Event panel rendering ================= */
 function selectDisplayPriceNumber(prod) {
   const pg = prod?.price_gbp != null ? Number(prod.price_gbp) : null;
   const pn = prod?.price != null ? Number(prod.price) : null;
@@ -518,6 +520,21 @@ function buildProductPanelMarkdown(prod) {
 
   return head + bulletsText + bodyText + (url ? `\n\n[Open](${url})` : "");
 }
+
+/* NEW: small event card for when no matching product is found */
+function buildEventPanelMarkdown(ev) {
+  if (!ev) return "";
+  const title = ev.title || ev.raw?.name || "Upcoming Workshop";
+  const when = ev.date_start ? new Date(ev.date_start).toUTCString() : null;
+  const loc = ev.location || null;
+  const url = pickUrl(ev) || null;
+
+  const items = [`**${title}**`];
+  if (loc) items.push(`- **Location:** ${loc}`);
+  if (when) items.push(`- **When:** ${when}`);
+  return items.join("\n") + (url ? `\n\n[View event](${url})` : "");
+}
+
 function buildAdvicePills(articles, originalQuery) {
   const pills = [];
   const top = articles?.[0] ? pickUrl(articles[0]) : null;
@@ -646,7 +663,8 @@ export default async function handler(req, res) {
         } catch {}
       }
 
-      // If no strict match, fall back with alignment & penalties
+      // If no strict match, we still re-rank products for structured payload,
+      // but we WON'T show any unrelated product in the answer panel or Book pill.
       if (!featuredProduct && rankedProducts.length) {
         const evTokens = new Set(uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)]));
         rankedProducts = rankedProducts
@@ -673,7 +691,7 @@ export default async function handler(req, res) {
       }
     }
 
-    /* -------- Pick preferred product and upgrade to richest row -------- */
+    /* -------- Pick preferred product (for structured list only) -------- */
     let preferredProduct = featuredProduct || rankedProducts[0] || null;
     preferredProduct = upgradeToRichestByUrl(rankedProducts, preferredProduct);
 
@@ -707,17 +725,24 @@ export default async function handler(req, res) {
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
-      const preferred = preferredProduct;
-      if (preferred) answer_markdown = buildProductPanelMarkdown(preferred);
-      else if (rankedArticles?.length) answer_markdown = buildAdviceMarkdown(rankedArticles);
-      else answer_markdown = "Upcoming workshops and related info below.";
+      if (featuredProduct) {
+        // Only show a product if it strictly matches the first event
+        answer_markdown = buildProductPanelMarkdown(featuredProduct);
+      } else if (firstEvent) {
+        // Show the next event details instead of a mismatched product
+        answer_markdown = buildEventPanelMarkdown(firstEvent);
+      } else if (rankedArticles?.length) {
+        answer_markdown = buildAdviceMarkdown(rankedArticles);
+      } else {
+        answer_markdown = "Upcoming workshops and related info below.";
+      }
     }
     t_comp += Date.now() - s4;
 
     const citations = uniq([
       ...rankedArticles.slice(0, 3).map(pickUrl),
       ...(firstEvent ? [pickUrl(firstEvent)] : []),
-      ...(rankedProducts[0] ? [pickUrl(rankedProducts[0])] : []),
+      ...(featuredProduct ? [pickUrl(featuredProduct)] : []), // only cite the product if it matches the first event
     ]);
 
     const structured = {
@@ -748,11 +773,12 @@ export default async function handler(req, res) {
       articles: (rankedArticles || []).map((a) => ({
         id: a.id, title: a.title, page_url: a.page_url, source_url: a.source_url, last_seen: a.last_seen
       })),
-      pills: intent === "events" ? buildEventPills(firstEvent, preferredProduct || null) : buildAdvicePills(rankedArticles, q),
+      // Only let Book Now appear when we have a strict product match to the first event
+      pills: intent === "events" ? buildEventPills(firstEvent, featuredProduct || null) : buildAdvicePills(rankedArticles, q),
     };
 
     const debug = {
-      version: "v0.9.44-topic-prefilter",
+      version: "v0.9.45-workshop-align",
       intent, keywords, event_subtype: subtype,
       first_event: firstEvent ? { id: firstEvent.id, title: firstEvent.title, url: pickUrl(firstEvent), date_start: firstEvent.date_start } : null,
       featured_product: featuredProduct ? {
