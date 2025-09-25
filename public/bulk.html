@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Upload URL List to Train AI Bot — v0.3.2</title>
+  <title>Upload URL List to Train AI Bot — v0.3.3</title>
   <link rel="stylesheet" href="/_next/static/css/081a0fca5a9bd20.css"/>
   <style>
     body { background:#0b1220; color:#dbe4ff; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:24px; }
@@ -17,18 +17,16 @@
     button:disabled{ opacity:.5; cursor:not-allowed }
     .pill{ padding:3px 10px; border-radius:999px; border:1px solid #1b2540; background:#0b1426; font-weight:600; letter-spacing:.2px; }
     .ok{ color:#22c55e } .bad{ color:#ef4444 }
+    .muted{ color:#A9B8E8 }
     .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace }
     table{ width:100%; border-collapse:collapse; }
     th,td{ padding:8px 10px; border-bottom:1px solid #1b2540; text-align:left; vertical-align:top; }
-    .muted{ color:#A9B8E8 }
     .answer{ white-space:pre-wrap }
     .chips a{ display:inline-block; margin-right:6px; margin-bottom:6px; border:1px solid #1b2540; border-radius:999px; padding:4px 8px; color:#dbe4ff; text-decoration:none; }
     .chips a:hover{ background:#13203e; }
     .header{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:16px; }
     .header h2{ margin:0 }
     .pill.ver{ background:#13203e; border-color:#26406f }
-
-    /* Collapsible console (FAILED ONLY) */
     details.console{border:1px solid #1b2540; border-radius:8px; background:#0b1426;}
     details.console summary{cursor:pointer; list-style:none; padding:10px 12px; font-weight:700; color:#c7d7ff;}
     details.console summary::-webkit-details-marker{display:none}
@@ -41,7 +39,7 @@
 
   <div class="header">
     <h2>Upload URL List to Train AI Bot</h2>
-    <span id="ver" class="pill ver mono">v0.3.2</span>
+    <span id="ver" class="pill ver mono">v0.3.3</span>
   </div>
 
   <!-- top controls -->
@@ -79,25 +77,38 @@
     <div class="row">
       <input id="single" class="w-3" placeholder="https://example.com/page"/>
       <button id="test">Test Single URL</button>
+      <span id="refreshStatusSingle" class="pill" style="margin-left:8px">links: idle</span>
     </div>
     <pre id="debug" class="mono"></pre>
   </div>
 
   <!-- paste + crawl -->
   <div class="card">
-    <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
-    <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
-    <div style="margin-top:10px" class="row">
-      <button id="crawl">Crawl & Ingest</button>
-      <button id="stop" disabled>Stop</button>
-      <span class="pill">Loaded <span id="loaded">0</span> rows</span>
-      <span id="succPill" class="pill ok">Success: <span id="succ">0</span></span>
-      <span id="failPill" class="pill bad">Failed: <span id="fail">0</span></span>
-      <span class="pill">Stopped: <span id="stopped">0</span></span>
+    <div class="row" style="align-items:center; justify-content:space-between;">
+      <div style="flex:1">
+        <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
+        <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+        <div style="margin-top:10px" class="row">
+          <button id="crawl">Crawl & Ingest</button>
+          <button id="stop" disabled>Stop</button>
+          <span class="pill">Loaded <span id="loaded">0</span> rows</span>
+          <span id="succPill" class="pill ok">Success: <span id="succ">0</span></span>
+          <span id="failPill" class="pill bad">Failed: <span id="fail">0</span></span>
+          <span class="pill">Stopped: <span id="stopped">0</span></span>
+        </div>
+      </div>
+      <div>
+        <div><small>Links Refresh (MV)</small></div>
+        <div class="row">
+          <button id="refreshNow">Refresh Links Now</button>
+          <span id="refreshStatus" class="pill" style="margin-left:8px">links: idle</span>
+        </div>
+        <small class="muted">Calls <span class="mono">/rest/v1/rpc/refresh_event_product_links</span></small>
+      </div>
     </div>
   </div>
 
-  <!-- debug console (FAILED ONLY; collapsed until the first error) -->
+  <!-- debug console (FAILED ONLY) -->
   <div class="card">
     <details id="consoleWrap" class="console">
       <summary>Debug console (what the client sees)</summary>
@@ -200,7 +211,7 @@
 
 <script>
 /* ====== Version badge ====== */
-const VERSION = 'v0.3.2';
+const VERSION = 'v0.3.3';
 document.title = `Upload URL List to Train AI Bot — ${VERSION}`;
 window.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('ver');
@@ -213,19 +224,16 @@ const escapeHtml = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&
 const saveToken = () => localStorage.setItem('ingest_token', $('token').value || '');
 $('token').value = localStorage.getItem('ingest_token') || '';
 
-/* Failed-only console (collapsed until first error) */
+/* Failed-only console */
 const consoleWrap = $('consoleWrap'); consoleWrap.open = false;
-const logError = (s) => {
-  if (!consoleWrap.open) consoleWrap.open = true; // auto-open on first fail
-  const c=$('console'); c.textContent += s + "\n"; c.scrollTop = c.scrollHeight;
-};
+const logError = (s) => { if (!consoleWrap.open) consoleWrap.open = true; const c=$('console'); c.textContent += s + "\\n"; c.scrollTop = c.scrollHeight; };
 
 /* ---------- CSV handling ---------- */
 let csvUrls = [];
 function parseCSV(text) {
-  const firstLine = text.split(/\r?\n/)[0] || '';
+  const firstLine = text.split(/\\r?\\n/)[0] || '';
   let delim = ',';
-  const counts = [[',',(firstLine.match(/,/g)||[]).length],[';',(firstLine.match(/;/g)||[]).length],['\t',(firstLine.match(/\t/g)||[]).length]].sort((a,b)=>b[1]-a[1]);
+  const counts = [[',',(firstLine.match(/,/g)||[]).length],[';',(firstLine.match(/;/g)||[]).length],['\\t',(firstLine.match(/\\t/g)||[]).length]].sort((a,b)=>b[1]-a[1]);
   if (counts[0][1] > 0) delim = counts[0][0];
 
   const rows = []; let row=[], val='', inQ=false;
@@ -239,20 +247,19 @@ function parseCSV(text) {
     } else {
       if (ch === '"'){ inQ = true; }
       else if (ch === delim){ pushVal(); }
-      else if (ch === '\n'){ pushVal(); pushRow(); }
-      else if (ch !== '\r'){ val += ch; }
+      else if (ch === '\\n'){ pushVal(); pushRow(); }
+      else if (ch !== '\\r'){ val += ch; }
     }
   }
   if (val.length || row.length){ pushVal(); pushRow(); }
   if (!rows.length) return [];
-
   const header = rows[0].map(h => (h||'').trim().toLowerCase());
   const data = rows.slice(1).map(r => { const o = {}; for (let i=0;i<header.length;i++){ o[header[i]] = (r[i]||'').trim(); } return o; });
   data.__header = header;
   return data;
 }
 function updateLoadedPill() {
-  const pasted = $('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const pasted = $('paste').value.split('\\n').map(s=>s.trim()).filter(Boolean);
   const set = new Set([...csvUrls, ...pasted]);
   $('loaded').textContent = String(set.size);
 }
@@ -264,14 +271,12 @@ $('csv').addEventListener('change', async (e)=>{
   const rows = parseCSV(text);
   const h = rows.__header || [];
   const idx = h.indexOf('url');
-  if (idx !== -1) {
-    for (const r of rows) if (r.url) csvUrls.push(r.url.trim());
-  }
+  if (idx !== -1) { for (const r of rows) if (r.url) csvUrls.push(r.url.trim()); }
   updateLoadedPill();
 });
 $('paste').addEventListener('input', updateLoadedPill);
 
-/* ---------- fetch helpers (retry for transient 503/OpenAI hiccups) ---------- */
+/* ---------- fetch helpers ---------- */
 const bearer = () => {
   const tok = $('token').value.trim();
   return tok ? { 'Authorization': `Bearer ${tok}` } : {};
@@ -312,8 +317,6 @@ async function callExtract(action, url){
     headers: { ...bearer() }
   });
 }
-
-/* >>>>>>>>>>>>>  FIXED HERE: send { query, topK }  <<<<<<<<<<<<< */
 async function callChat(query, topK){
   return fetchJson('/api/chat', {
     method:'POST',
@@ -322,27 +325,30 @@ async function callChat(query, topK){
   });
 }
 
-/* ---------- table helpers ---------- */
-function addRow(url, text, ok){
-  const tr = document.createElement('tr');
-  tr.innerHTML = `<td class="mono"></td>
-    <td><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a></td>
-    <td class="mono">${ok?'<span class="ok">OK</span>':'<span class="bad">FAILED</span>'} ${escapeHtml(text||'')}</td>`;
-  $('rows').appendChild(tr);
-  tr.firstChild.textContent = String($('rows').children.length);
-  return tr;
-}
-async function verifyAndAnnotate(url, tr){
-  try {
-    const v = await callVerify(url);
-    const extra = (v && v.ok) ? ` | DB: chunks=${v.chunks ?? '?'} len=${v.len ?? '?'}` : '';
-    tr.lastChild.innerHTML += escapeHtml(extra);
-  } catch(e) {
-    logError(`DB verify FAILED for ${url} — ${e && e.message ? e.message : e}`);
+/* ---------- NEW: refresh RPC ---------- */
+async function callRefreshLinks(){
+  const pill = $('refreshStatus'); if (pill) pill.textContent = 'links: refreshing…';
+  const pillS = $('refreshStatusSingle'); if (pillS) pillS.textContent = 'links: refreshing…';
+  try{
+    const res = await fetch('/rest/v1/rpc/refresh_event_product_links', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', ...bearer() },
+      body: JSON.stringify({})
+    });
+    if (!res.ok){
+      const t = await res.text();
+      throw new Error(`${res.status} ${t.slice(0,200)}`);
+    }
+    if (pill) pill.textContent = 'links: refreshed ✓';
+    if (pillS) pillS.textContent = 'links: refreshed ✓';
+  }catch(e){
+    if (pill) pill.textContent = 'links: refresh failed';
+    if (pillS) pillS.textContent = 'links: refresh failed';
+    logError(`Refresh links FAILED — ${e && e.message ? e.message : e}`);
   }
 }
 
-/* ---------- ingest single (same behavior as batch: table + DB verify) ---------- */
+/* ---------- ingest single ---------- */
 $('test').onclick = async () => {
   saveToken();
   const u = $('single').value.trim();
@@ -353,6 +359,7 @@ $('test').onclick = async () => {
     $('debug').textContent = JSON.stringify(body, null, 2);
     const tr = addRow(u, `id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
     verifyAndAnnotate(u, tr);
+    await callRefreshLinks();           // <<< refresh after single ingest
   } catch (e) {
     $('debug').textContent = JSON.stringify({ ok:false, error: String(e?.message||e) }, null, 2);
     addRow(u, String(e?.message||e), false);
@@ -367,7 +374,7 @@ $('crawl').onclick = async () => {
   saveToken();
   stopFlag = false; $('stop').disabled = false;
 
-  const pasted = $('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const pasted = $('paste').value.split('\\n').map(s=>s.trim()).filter(Boolean);
   const combined = [...new Set([...csvUrls, ...pasted])];
   $('loaded').textContent = String(combined.length);
   $('succ').textContent = '0'; $('fail').textContent = '0';
@@ -393,14 +400,37 @@ $('crawl').onclick = async () => {
     }
   })());
   await Promise.all(runners);
+
   if (stopFlag) $('stopped').textContent = String(Number($('stopped').textContent) + 1);
+
+  await callRefreshLinks();            // <<< refresh after batch finishes
 };
 
+/* ---------- table helpers ---------- */
+function addRow(url, text, ok){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="mono"></td>
+    <td><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a></td>
+    <td class="mono">${ok?'<span class="ok">OK</span>':'<span class="bad">FAILED</span>'} ${escapeHtml(text||'')}</td>`;
+  $('rows').appendChild(tr);
+  tr.firstChild.textContent = String($('rows').children.length);
+  return tr;
+}
+async function verifyAndAnnotate(url, tr){
+  try {
+    const v = await callVerify(url);
+    const extra = (v && v.ok) ? ` | DB: chunks=${v.chunks ?? '?'} len=${v.len ?? '?'}` : '';
+    tr.lastChild.innerHTML += escapeHtml(extra);
+  } catch(e) {
+    logError(`DB verify FAILED for ${url} — ${e && e.message ? e.message : e}`);
+  }
+}
+
 /* ---------- search tester ---------- */
-function normalizeMdLinks(s){ if(!s) return ''; s=s.replace(/!\[([^\]]*)\]\([^)]+\)/g,'$1'); s=s.replace(/\[([^\]]+)\]\([^)]+\)/g,'$1'); return s; }
-function cleanText(s){ s=normalizeMdLinks(s||''); s=s.replace(/[\[\]\(\)]/g,' '); s=s.replace(/https?:\/\/\S+/g,' '); return s.replace(/\s+/g,' ').trim(); }
-function sentenceSpans(text){ const spans=[]; let start=0; for(let i=0;i<text.length;i++){ const ch=text[i]; if(ch==='.'||ch==='!'||ch==='?'||ch==='\n'||ch==='|'){ const end=i+1; const seg=text.slice(start,end).trim(); if(seg)spans.push([start,end,seg]); start=end; } } if(start<text.length){ const seg=text.slice(start).trim(); if(seg)spans.push([start,text.length,seg]); } return spans; }
-function tidyStart(s){ s=(s||'').replace(/^[\)\]\}\.,;:\/\\\-—–•\s]+/u,'').trim(); const sp=s.indexOf(' '); if(s && !/^[A-Za-z0-9]/.test(s[0]) && sp>0) s=s.slice(sp+1).trim(); return s; }
+function normalizeMdLinks(s){ if(!s) return ''; s=s.replace(/!\\[([^\\]]*)\\]\\([^)]+\\)/g,'$1'); s=s.replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g,'$1'); return s; }
+function cleanText(s){ s=normalizeMdLinks(s||''); s=s.replace(/[\\[\\]\\(\\)]/g,' '); s=s.replace(/https?:\\/\\/\\S+/g,' '); return s.replace(/\\s+/g,' ').trim(); }
+function sentenceSpans(text){ const spans=[]; let start=0; for(let i=0;i<text.length;i++){ const ch=text[i]; if(ch==='.'||ch==='!'||ch==='?'||ch==='\\n'||ch==='|'){ const end=i+1; const seg=text.slice(start,end).trim(); if(seg)spans.push([start,end,seg]); start=end; } } if(start<text.length){ const seg=text.slice(start).trim(); if(seg)spans.push([start,text.length,seg]); } return spans; }
+function tidyStart(s){ s=(s||'').replace(/^[\\)\\]\\}\\.,;:\\/\\\\\\-—–•\\s]+/u,'').trim(); const sp=s.indexOf(' '); if(s && !/^[A-Za-z0-9]/.test(s[0]) && sp>0) s=s.slice(sp+1).trim(); return s; }
 function sentenceSnippet(content,terms,minChars=80){ const text=cleanText(content); if(!text) return ''; const lc=text.toLowerCase(); let pos=-1; if(terms.length){ for(const t of terms){ const i=lc.indexOf(t); if(i!==-1) pos=(pos===-1)?i:Math.min(pos,i);} } const spans=sentenceSpans(text); if(!spans.length) return text; let idx=0; if(pos!==-1){ for(let i=0;i<spans.length;i++){ const[s,e]=spans[i]; if(pos>=s && pos<e){ idx=i; break; } } } let snippet=tidyStart(spans[idx][2]); if(snippet.length<minChars && spans[idx+1]) snippet=(snippet+' '+tidyStart(spans[idx+1][2])).trim(); return snippet; }
 
 $('runSearch').onclick = async () => {
@@ -418,7 +448,7 @@ $('runSearch').onclick = async () => {
 
     const matches = (body && (body.matches || body.results || body.data)) || [];
     const groups = new Map();
-    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const terms = query.toLowerCase().split(/\\s+/).filter(Boolean);
 
     for (const m of matches) {
       if (!m || !m.url) continue;
@@ -450,7 +480,7 @@ $('runSearch').onclick = async () => {
   }
 };
 
-/* ---------- Extract tester bindings ---------- */
+/* ---------- Extract tester ---------- */
 async function runExtract(action){
   saveToken();
   const url = $('exUrl').value.trim();
@@ -491,7 +521,10 @@ $('ask').onclick = async () => {
   }
 };
 
-/* sensible default single test url */
+/* manual refresh button */
+$('refreshNow').onclick = async () => { saveToken(); await callRefreshLinks(); };
+
+/* default single test url */
 $('single').value = 'https://www.alanranger.com/photography-workshops';
 </script>
 </body>
