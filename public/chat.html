@@ -96,7 +96,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v0.9.52</span></div>
+  <div class="badge-wrap"><span class="version">v1.1.1</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -130,6 +130,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
         <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
         <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
+        <div class="kv"><label>Server ver</label><div id="dbg-srvver">–</div></div>
         <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
         <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
         <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
@@ -167,6 +168,7 @@ const dbgStruct = document.getElementById('dbg-struct');
 const dbgProv   = document.getElementById('dbg-prov');
 const dbgCopy   = document.getElementById('dbg-copy');
 const dbgNote   = document.getElementById('dbg-note');
+const dbgSrvVer = document.getElementById('dbg-srvver');
 
 function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
 
@@ -195,6 +197,7 @@ function collectDebugText(){
   const blocks = [
     ['Endpoint','/api/chat'],
     ['Status', get(dbgStatus)],
+    ['Server ver', get(dbgSrvVer)],
     ['Headers', get(dbgHeaders)],
     ['Request', get(dbgReq)],
     ['Response', get(dbgRes)],
@@ -312,6 +315,10 @@ function mergeProducts(list){
     if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
     const m = map.get(key);
     for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
+    // Enriched fields from server: keep if present
+    for (const k of ['display_price_gbp','display_price','availability_status','availability_raw','price_gbp','product_kind_resolved','price_source']) {
+      if (m[k]==null && p[k]!=null) m[k]=p[k];
+    }
     const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
     const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
     if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {lowPrice:p.raw.offers.lowPrice, highPrice:p.raw.offers.highPrice, priceCurrency:p.raw.offers.priceCurrency}); }
@@ -373,6 +380,7 @@ function deriveOptions(prod, facts){
     opts.push({label:'4 hours', price:currency(low,ccy)});
     opts.push({label:'1 day',   price:currency(high,ccy)});
   } else {
+    // Prefer server display price for the headline; options complement that.
     if(base!=null) opts.push({label:'Standard', price:currency(base,ccy)});
     if(low!=null || high!=null){
       const range = [low,high].filter(v=>v!=null).map(v=>currency(v,ccy)).join(' – ');
@@ -396,7 +404,6 @@ function deriveOptions(prod, facts){
 }
 
 /* ================= Matching & intent helpers ================= */
-/* Expanded stopwords to avoid generic matches (exposure, sunset, etc.) */
 const STOP = new Set([
   'the','and','or','what','whats','when','whens','next','cost',
   'workshop','workshops','photography','photo','near','me','uk',
@@ -440,38 +447,22 @@ function futureEvents(structured){
     .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
 }
 
-/* ======= TIGHTENED strong match =======
-   Accept if:
-   - title/location Jaccard >= 0.40; OR
-   - ≥1 shared location token; OR
-   - ≥2 shared non-generic content tokens (after STOP filter).
-*/
+/* Strong match gate */
 function strongProductEventMatch(prod, ev){
   if(!prod || !ev) return false;
-
   const titleP = (prod.title || '').toLowerCase();
   const titleE = (ev.title  || '').toLowerCase();
   const locP   = (prod.location_parsed || prod.location || '').toLowerCase();
   const locE   = (ev.location || '').toLowerCase();
-
   const toksP = tokenize2(titleP + ' ' + locP).filter(t=>t.length>2 && !STOP.has(t));
   const toksE = tokenize2(titleE + ' ' + locE).filter(t=>t.length>2 && !STOP.has(t));
-
-  // Title/location similarity
   const overlap = jaccard(toksP, toksE);
   if (overlap >= 0.40) return true;
-
-  // Location overlap
   const locTokP = tokenize2(locP).filter(t=>t.length>3);
   const locTokE = tokenize2(locE).filter(t=>t.length>3);
-  const hasSharedLoc = locTokP.some(t => locTokE.includes(t));
-  if (hasSharedLoc) return true;
-
-  // Require at least 2 meaningful shared tokens for fallback
+  if (locTokP.some(t => locTokE.includes(t))) return true;
   const shared = new Set(toksP.filter(t => toksE.includes(t)));
-  if (shared.size >= 2) return true;
-
-  return false;
+  return shared.size >= 2;
 }
 
 /* ================= Renderers ================= */
@@ -481,37 +472,55 @@ let __lastQuery = '';
 function confidenceClass(pct){ if (pct>=70) return 'green'; if (pct>=35) return 'amber'; return 'red'; }
 function confidencePill(pct){ const cls = confidenceClass(pct); return `<span class="badge conf ${cls}">Confidence: ${pct}%</span>`; }
 
+function productHeadlinePrice(prod){
+  if (prod.display_price) return String(prod.display_price);
+  if (typeof prod.display_price_number === 'number') return currency(prod.display_price_number, 'GBP');
+  if (typeof prod.price_gbp === 'number') return currency(prod.price_gbp, 'GBP');
+  if (typeof prod.price === 'number') return currency(prod.price, prod.price_currency||'GBP');
+  return null;
+}
+
 function renderProductCard(prod){
   const facts = extractFacts(prod.description||'');
   const options = deriveOptions(prod, facts);
+  const priceHead = productHeadlinePrice(prod);
 
   const lines = [];
+  if (priceHead) lines.push(`<p class="kvline"><strong>Price:</strong> ${escapeHTML(priceHead)}</p>`);
+
   const md = getMetaDescription(prod);
   if(md) lines.push(`<p class="meta">${escapeHTML(md)}</p>`);
+
+  if (prod.availability_status){
+    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(String(prod.availability_status).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2'))}</p>`);
+  } else if(facts.availability){
+    const avail = (facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
+    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
+  }
 
   if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
   if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
   if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
-  if(prod.availability || facts.availability){
-    const avail = (prod.availability||facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
-    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
-  }
 
   const li = options.map(o=>{
     const bits = [escapeHTML(o.label||''), o.time ? `— ${escapeHTML(o.time)}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
     return `<li>${bits}</li>`;
   }).join('');
 
+  const href = prod.page_url || prod.source_url || prod.url || '#';
+  const book = href && href !== '#' ? `<p style="margin-top:8px"><a href="${href}" target="_blank" rel="noopener">Book now →</a></p>` : '';
+
   return `
     <div class="answer">
       <h3>${escapeHTML(prod.title || 'Workshop')}</h3>
       ${lines.join('')}
       ${li? `<ul>${li}</ul>`:''}
+      ${book}
     </div>
   `;
 }
 
-/* ===== Events: phrase-aware, generic scoring ===== */
+/* ===== Events ===== */
 function extractKeyPhrases(topic, query){
   const words = tokenizeWords([topic||'', query||''].join(' '));
   const kept = words.filter(w => !STOP.has(w) && w.length >= 3);
@@ -627,7 +636,7 @@ function renderArticlesBlock(structured, query){
   return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul></div>`;
 }
 
-/* Build orange action pills – include top two matched articles (no wildcards) */
+/* Build orange action pills */
 function buildActionPillsFromStructured(structured, query){
   const safe = [];
   const used = new Set();
@@ -688,6 +697,11 @@ function decideProductRendering(payload, mergedProducts, query){
 /* Full render */
 function renderAnswer(payload){
   const s = payload.structured||{};
+
+  // server version in debug
+  try {
+    if (dbgSrvVer) dbgSrvVer.textContent = payload?.debug?.version || '–';
+  } catch {}
 
   // confidence override logic
   let confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
@@ -785,7 +799,7 @@ async function sendQuery(query){
 
       const fallback = "I don’t have a specific answer for that yet.";
       const {html}=mdToHtml(fallback);
-      const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
+      const extra = `<p>If this doesn’t answer your question, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
       addBubble(html.replace('</div>', `${extra}</div>`));
     }
   } catch (err){
@@ -828,7 +842,7 @@ function emailTranscript(){
 function resetChat(){
   thread.innerHTML = '';
   addBubble('Hi! I can help with workshops, tuition, and photography advice.');
-  [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgProv, dbgNote].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
+  [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgProv, dbgNote, dbgSrvVer].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
 }
 
 /* ================= Wire up composer & tools ================= */
