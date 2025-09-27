@@ -11,7 +11,7 @@
   --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
   --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
   --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
-  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
+  --link:#9cd3ff; --link-hover:#cfe7ff;
   --user-bg:#e6edf7; --user-text:#0b0f16;
 
   --status-green-bg:#12381e; --status-green-br:#245f3a; --status-green-tx:#b8f3c7;
@@ -29,8 +29,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .header-sticky{position:sticky; top:10px; z-index:50; background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98)); border-radius:12px; padding:8px 10px; margin:-8px -8px 12px -8px;}
 .header{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
 .head-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:10px}
-.logo{display:block;height:36px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
-.title{margin:0;font-size:24px;font-weight:400;letter-spacing:.2px;line-height:1.2}
+.logo{display:block;height:40px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.title{margin:0;font-size:32px;font-weight:400;letter-spacing:.2px;line-height:1.2;text-align:center}
+.head-row .spacer{width:40px} /* balances the grid so title is truly centered */
 .sub{margin:0;color:var(--muted);max-width:100%;font-size:14px;line-height:1.35}
 .pill{appearance:none;border:0;border-radius:28px;padding:6px 10px;font-weight:600;font-size:12px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px;margin-left:8px;vertical-align:baseline}
 .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
@@ -88,17 +89,19 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 .typing .dot:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
+@media (min-width:720px){
+  .title{font-size:36px}
+}
 @media (max-width:640px){
-  .title{font-size:20px}
-  .logo{height:32px}
-  .kv{grid-template-columns:1fr}
+  .logo{height:34px}
   .header-sticky{top:6px;margin:-6px -6px 10px -6px}
+  .kv{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.1.2</span></div>
+  <div class="badge-wrap"><span class="version">v1.1.3</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -107,6 +110,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
         <div class="head-row">
           <img class="logo" src="./chat%20white.png" alt="AR logo">
           <h2 class="title">Alan Ranger Assistant</h2>
+          <span class="spacer" aria-hidden="true"></span>
         </div>
         <p class="sub">
           I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
@@ -173,9 +177,6 @@ const dbgCopy   = document.getElementById('dbg-copy');
 const dbgNote   = document.getElementById('dbg-note');
 const dbgSrvVer = document.getElementById('dbg-srvver');
 
-function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
-
-/* ================= Debug: compact JSON & copy-all ================= */
 function setDebugJSON(el, data, opts={maxLen: 1200, maxItems: 20}) {
   function replacer(key, value){
     if (typeof value === 'string') {
@@ -188,49 +189,8 @@ function setDebugJSON(el, data, opts={maxLen: 1200, maxItems: 20}) {
     }
     return value;
   }
-  try {
-    el.textContent = JSON.stringify(data, replacer, 2);
-  } catch {
-    el.textContent = String(data);
-  }
-}
-
-function collectDebugText(){
-  const get = (el) => (el && el.textContent) ? el.textContent : '–';
-  const blocks = [
-    ['Endpoint','/api/chat'],
-    ['Status', get(dbgStatus)],
-    ['Server ver', get(dbgSrvVer)],
-    ['Headers', get(dbgHeaders)],
-    ['Request', get(dbgReq)],
-    ['Response', get(dbgRes)],
-    ['Structured', get(dbgStruct)],
-    ['Provenance', get(dbgProv)],
-    ['Note', get(dbgNote)],
-  ];
-  return blocks.map(([k,v]) => `${k}:\n${v}`).join('\n\n').trim();
-}
-async function copyAllDebug(){
-  const text = collectDebugText();
-  if(!text){ alert('Nothing to copy yet.'); return; }
-  try{
-    if (navigator.clipboard?.writeText){
-      await navigator.clipboard.writeText(text);
-    } else {
-      const ta=document.createElement('textarea');
-      ta.value=text; document.body.appendChild(ta);
-      ta.select(); document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-    if (dbgCopy){
-      const old = dbgCopy.textContent;
-      dbgCopy.textContent = 'Copied ✓';
-      setTimeout(()=>{ dbgCopy.textContent = old; }, 1500);
-    }
-  }catch(e){
-    console.error('Copy failed', e);
-    alert('Copy failed. Select the debug text and press Ctrl/Cmd+C.');
-  }
+  try { el.textContent = JSON.stringify(data, replacer, 2); }
+  catch { el.textContent = String(data); }
 }
 
 /* ================= UI helpers ================= */
@@ -275,41 +235,7 @@ function currency(amount, ccy){
 }
 function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]) )}
 
-/* ================= Meta description picker ================= */
-function limitSentence(text, max=220){
-  const t = String(text||'').trim();
-  if(!t) return '';
-  const m = t.match(new RegExp(`^(.{0,${max}}?[.!?])\\s`));
-  if (m && m[1]) return m[1].trim();
-  return t.length>max ? t.slice(0,max).replace(/\s+\S*$/,'')+'…' : t;
-}
-function pickFirstString(...candidates){
-  for (const v of candidates){
-    if (typeof v === 'string' && v.trim()) return v.trim();
-  }
-  return '';
-}
-function firstSentence(t){
-  const s = String(t||'').trim();
-  if(!s) return '';
-  const m = s.match(/^(.*?\.)(\s|$)/);
-  return m? m[1].trim() : s;
-}
-function getMetaDescription(prod){
-  const raw = pickFirstString(
-    prod?.meta_description,
-    prod?.metaDescription,
-    prod?.meta?.description,
-    prod?.seo?.metaDescription,
-    prod?.seo?.description,
-    prod?.raw?.metaDescription,
-    prod?.raw?.meta?.description
-  );
-  const fallback = firstSentence(prod?.description||'');
-  return limitSentence(raw || fallback, 220);
-}
-
-/* ================= Product helpers ================= */
+/* ================= Product helpers (unchanged) ================= */
 function mergeProducts(list){
   if(!Array.isArray(list) || !list.length) return [];
   const map = new Map();
@@ -318,7 +244,6 @@ function mergeProducts(list){
     if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
     const m = map.get(key);
     for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
-    // Enriched fields from server: keep if present
     for (const k of ['display_price_gbp','display_price','availability_status','availability_raw','price_gbp','product_kind_resolved','price_source']) {
       if (m[k]==null && p[k]!=null) m[k]=p[k];
     }
@@ -330,9 +255,7 @@ function mergeProducts(list){
   return [...map.values()];
 }
 function extractFacts(desc){
-  const txt = String(desc||'')
-    .split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-
+  const txt = String(desc||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
   const findAfter = (label)=>{
     const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
     if(i>=0 && i+1<txt.length) return txt[i+1];
@@ -344,12 +267,10 @@ function extractFacts(desc){
   const participants = findAfter('Participants');
   const fitness      = findAfter('Fitness');
   const availability = findAfter('Availability');
-
   const optionLines = txt.filter(l =>
     /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
     /^\s*OR\s*1\s*day\b/i.test(l)
   );
-
   return {location, participants, fitness, availability, optionLines};
 }
 function parseExtraPriceFromText(desc){
@@ -364,116 +285,70 @@ function deriveOptions(prod, facts){
   const base = prod.price ?? prod?.raw?.offers?.price;
   let low  = prod?.raw?.offers?.lowPrice;
   let high = prod?.raw?.offers?.highPrice;
-
   if((low==null || high==null) && base!=null){
     const extra = parseExtraPriceFromText(prod.description||'');
-    if(extra!=null && extra!==base){
-      low = Math.min(base, extra);
-      high= Math.max(base, extra);
-    }
+    if(extra!=null && extra!==base){ low = Math.min(base, extra); high= Math.max(base, extra); }
   }
-
   const text = (facts.optionLines||[]).join('\n').toLowerCase();
   const has4h  = /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
   const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
-
   const opts = [];
-
   if(low!=null && high!=null && has4h && has1d){
     opts.push({label:'4 hours', price:currency(low,ccy)});
     opts.push({label:'1 day',   price:currency(high,ccy)});
   } else {
-    // Prefer server display price for the headline; options complement that.
     if(base!=null) opts.push({label:'Standard', price:currency(base,ccy)});
     if(low!=null || high!=null){
       const range = [low,high].filter(v=>v!=null).map(v=>currency(v,ccy)).join(' – ');
       if(range) opts.push({label:'Pricing', price:range});
     }
   }
-
   const timePat = /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
   for(const ln of facts.optionLines||[]){
     const label = ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
     const tm = ln.match(timePat);
     const window = tm ? `${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}` : null;
-    if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){
-      opts.push({label, time:window});
-    } else if(window){
-      const o = opts.find(o=>o.label.toLowerCase()===label.toLowerCase());
-      if(o && !o.time) o.time = window;
-    }
+    if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){ opts.push({label, time:window}); }
+    else if(window){ const o = opts.find(o=>o.label.toLowerCase()===label.toLowerCase()); if(o && !o.time) o.time = window; }
   }
   return opts;
 }
 
-/* ================= Matching & intent helpers ================= */
-const STOP = new Set([
-  'the','and','or','what','whats','when','whens','next','cost',
-  'workshop','workshops','photography','photo','near','me','uk',
-  'warks','warwickshire','devonshire','district','class','classes','course','courses',
-  'long','exposure','sunset','sunrise','landscape','seascape','evening','morning','walk','walks'
-]);
-
+/* ================= Intent helpers (unchanged) ================= */
+const STOP = new Set(['the','and','or','what','whats','when','whens','next','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire','district','class','classes','course','courses','long','exposure','sunset','sunrise','landscape','seascape','evening','morning','walk','walks']);
 function tokenizeWords(s){ return (s||'').toLowerCase().match(/[a-z]+/g) || []; }
 function tokenize2(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
-function jaccard(aTokens, bTokens){
-  const A = new Set(aTokens), B = new Set(bTokens);
-  let inter=0; for(const x of A) if(B.has(x)) inter++;
-  const union = A.size + B.size - inter;
-  return union ? inter/union : 0;
-}
-
+function jaccard(aTokens, bTokens){ const A=new Set(aTokens), B=new Set(bTokens); let inter=0; for(const x of A) if(B.has(x)) inter++; const union=A.size+B.size-inter; return union? inter/union : 0; }
 function detectIntent(payload, query){
   const s = payload?.structured || {};
   const q = String(query||'').toLowerCase();
-  const server =
-    s.intent ||
-    payload?.intent ||
-    payload?.meta?.intent ||
-    payload?.debug?.intent || '';
-
+  const server = s.intent || payload?.intent || payload?.meta?.intent || payload?.debug?.intent || '';
   if (/course|courses|class|classes|tuition|lesson|lessons/.test(q)) return 'events';
   if (/workshop|workshops|event|events|when|whens|next/.test(q)) return 'events';
   if (/price|cost|fee|fees|how much|book|booking|buy/i.test(q)) return 'products';
-
   if (server) return server.toLowerCase();
   return 'unknown';
 }
-
-function isPriceyQuery(q){
-  return /\b(price|cost|fee|fees|how much|book|booking|buy)\b/i.test(String(q||''));
-}
-
+function isPriceyQuery(q){ return /\b(price|cost|fee|fees|how much|book|booking|buy)\b/i.test(String(q||'')); }
 function futureEvents(structured){
   const now = new Date();
-  return (structured?.events||[])
-    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
+  return (structured?.events||[]).filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
 }
-
-/* Strong match gate */
 function strongProductEventMatch(prod, ev){
   if(!prod || !ev) return false;
-  const titleP = (prod.title || '').toLowerCase();
-  const titleE = (ev.title  || '').toLowerCase();
-  const locP   = (prod.location_parsed || prod.location || '').toLowerCase();
-  const locE   = (ev.location || '').toLowerCase();
-  const toksP = tokenize2(titleP + ' ' + locP).filter(t=>t.length>2 && !STOP.has(t));
-  const toksE = tokenize2(titleE + ' ' + locE).filter(t=>t.length>2 && !STOP.has(t));
-  const overlap = jaccard(toksP, toksE);
-  if (overlap >= 0.40) return true;
-  const locTokP = tokenize2(locP).filter(t=>t.length>3);
-  const locTokE = tokenize2(locE).filter(t=>t.length>3);
-  if (locTokP.some(t => locTokE.includes(t))) return true;
-  const shared = new Set(toksP.filter(t => toksE.includes(t)));
-  return shared.size >= 2;
+  const titleP=(prod.title||'').toLowerCase(), titleE=(ev.title||'').toLowerCase();
+  const locP=(prod.location_parsed||prod.location||'').toLowerCase(), locE=(ev.location||'').toLowerCase();
+  const toksP=tokenize2(titleP+' '+locP).filter(t=>t.length>2 && !STOP.has(t));
+  const toksE=tokenize2(titleE+' '+locE).filter(t=>t.length>2 && !STOP.has(t));
+  const overlap=jaccard(toksP,toksE); if(overlap>=0.40) return true;
+  const locTokP=tokenize2(locP).filter(t=>t.length>3), locTokE=tokenize2(locE).filter(t=>t.length>3);
+  if (locTokP.some(t=>locTokE.includes(t))) return true;
+  const shared=new Set(toksP.filter(t=>toksE.includes(t)));
+  return shared.size>=2;
 }
 
-/* ================= Renderers ================= */
-let __lastConfidencePct = null;
+/* ===== Renderers ===== */
 let __lastQuery = '';
-
-function confidenceClass(pct){ if (pct>=70) return 'green'; if (pct>=35) return 'amber'; return 'red'; }
-function confidencePill(pct){ const cls = confidenceClass(pct); return `<span class="badge conf ${cls}">Confidence: ${pct}%</span>`; }
 
 function productHeadlinePrice(prod){
   if (prod.display_price) return String(prod.display_price);
@@ -482,62 +357,38 @@ function productHeadlinePrice(prod){
   if (typeof prod.price === 'number') return currency(prod.price, prod.price_currency||'GBP');
   return null;
 }
-
 function renderProductCard(prod){
   const facts = extractFacts(prod.description||'');
   const options = deriveOptions(prod, facts);
   const priceHead = productHeadlinePrice(prod);
-
   const lines = [];
   if (priceHead) lines.push(`<p class="kvline"><strong>Price:</strong> ${escapeHTML(priceHead)}</p>`);
-
-  const md = getMetaDescription(prod);
+  const md = (prod.meta_description||prod.raw?.metaDescription||prod.raw?.meta?.description||'').trim();
   if(md) lines.push(`<p class="meta">${escapeHTML(md)}</p>`);
-
   if (prod.availability_status){
     lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(String(prod.availability_status).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2'))}</p>`);
-  } else if(facts.availability){
-    const avail = (facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
-    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
   }
-
   if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
   if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
   if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
-
   const li = options.map(o=>{
-    const bits = [escapeHTML(o.label||''), o.time ? `— ${escapeHTML(o.time)}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
+    const bits=[escapeHTML(o.label||''), o.time?`— ${escapeHTML(o.time)}`:null, o.price?`— ${o.price}`:null].filter(Boolean).join(' ');
     return `<li>${bits}</li>`;
   }).join('');
-
   const href = prod.page_url || prod.source_url || prod.url || '#';
-  const book = href && href !== '#' ? `<p style="margin-top:8px"><a href="${href}" target="_blank" rel="noopener">Book now →</a></p>` : '';
-
-  return `
-    <div class="answer">
-      <h3>${escapeHTML(prod.title || 'Workshop')}</h3>
-      ${lines.join('')}
-      ${li? `<ul>${li}</ul>`:''}
-      ${book}
-    </div>
-  `;
+  const book = href && href!=='#' ? `<p style="margin-top:8px"><a href="${href}" target="_blank" rel="noopener">Book now →</a></p>` : '';
+  return `<div class="answer"><h3>${escapeHTML(prod.title || 'Workshop')}</h3>${lines.join('')}${li?`<ul>${li}</ul>`:''}${book}</div>`;
 }
-
-/* ===== Events ===== */
 function extractKeyPhrases(topic, query){
   const words = tokenizeWords([topic||'', query||''].join(' '));
   const kept = words.filter(w => !STOP.has(w) && w.length >= 3);
-  const phrases = [];
-  for (let i=0; i<kept.length-1; i++){
-    phrases.push(`${kept[i]} ${kept[i+1]}`);
-  }
-  return { words: new Set(kept), phrases: new Set(phrases) };
+  const phrases = []; for (let i=0;i<kept.length-1;i++) phrases.push(`${kept[i]} ${kept[i+1]}`);
+  return { words:new Set(kept), phrases:new Set(phrases) };
 }
 function scoreEventMatch(ev, kp){
   const hay = ((ev.title||'') + ' ' + (ev.location||'')).toLowerCase();
-  let score = 0;
-  for (const ph of kp.phrases) if (ph && hay.includes(ph)) score += 2;
-  for (const w of kp.words) if (w && new RegExp(`\\b${w}\\b`).test(hay)) score += 1;
+  let score = 0; for(const ph of kp.phrases) if (hay.includes(ph)) score+=2;
+  for(const w of kp.words) if (new RegExp(`\\b${w}\\b`).test(hay)) score+=1;
   return score;
 }
 function eventHeaderLabel(structured){
@@ -546,236 +397,134 @@ function eventHeaderLabel(structured){
   if (/\b(workshop|workshops)\b/.test(q) || structured?.event_subtype==='workshop') return 'Upcoming Workshops';
   return 'Upcoming Events';
 }
-
 function renderEventsBlock(structured){
   const all = futureEvents(structured);
   if(!all.length) return '';
-
   const kp = extractKeyPhrases(structured?.topic||'', __lastQuery);
-  const list = all
-    .map(e=>({e, s: scoreEventMatch(e, kp)}))
-    .sort((a,b)=> (b.s - a.s) || (new Date(a.e.date_start) - new Date(b.e.date_start)))
-    .map(x=>x.e);
-
+  const list = all.map(e=>({e,s:scoreEventMatch(e,kp)})).sort((a,b)=> (b.s-a.s)||(new Date(a.e.date_start)-new Date(b.e.date_start))).map(x=>x.e);
   const lis = list.map(e=>{
-    const when=fmtDate(e.date_start);
-    const href=e.page_url||e.source_url||e.url||'#';
-    const where=e.location ? `${escapeHTML(e.location)}` : '';
-    const title=e.title ? `${escapeHTML(e.title)}` : '';
-    return `
-      <li>
-        <div><strong>${when}${where ? ' — ' + where : ''}</strong> — <a href="${href}" target="_blank" rel="noopener">Link</a></div>
-        <div>${title}</div>
-      </li>`;
+    const when=fmtDate(e.date_start), href=e.page_url||e.source_url||e.url||'#', where=e.location?`${escapeHTML(e.location)}`:'', title=e.title?`${escapeHTML(e.title)}`:'';
+    return `<li><div><strong>${when}${where?' — '+where:''}</strong> — <a href="${href}" target="_blank" rel="noopener">Link</a></div><div>${title}</div></li>`;
   }).join('');
-
   const header = eventHeaderLabel(structured);
   return `<div class="answer"><h3>${header}</h3><ul>${lis}</ul></div>`;
 }
-
-/* ===== Articles (Guides) ranking ===== */
 function jaccard2(a,b){ const A=new Set(a), B=new Set(b); let inter=0; for(const x of A) if(B.has(x)) inter++; const union=A.size+B.size-inter; return union? inter/union : 0; }
 function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
 function articleTitle(a){ return a?.title || a?.raw?.name || ''; }
-
 function scoreArticle(a, query, topic, contextTokens){
-  const title = articleTitle(a);
-  const url = articleUrl(a);
-  if(!title || !url) return 0;
-  const qTokens = tokenize2([query, topic].join(' ')).concat(contextTokens||[]);
-  const hayTokens = tokenize2(title + ' ' + url);
-  if (!qTokens.length || !hayTokens.length) return 0;
-  let score = jaccard2(qTokens, hayTokens);
-  if (qTokens.some(t => t.length >= 3 && title.toLowerCase().includes(t))) score += 0.25;
-
-  const q = (__lastQuery||'').toLowerCase();
-  const isWorkshopQ = /\b(workshop|workshops)\b/.test(q);
-  const isCourseQ   = /\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(q);
-  const t = (title + ' ' + url).toLowerCase();
-  if (isWorkshopQ && /workshop/.test(t) && !/course|tuition|lesson/.test(t)) score += 0.25;
-  if (isCourseQ && /course|tuition|lesson|class/.test(t)) score += 0.25;
-
-  return Math.min(1, score);
+  const title=articleTitle(a), url=articleUrl(a); if(!title||!url) return 0;
+  const qTokens=tokenize2([query,topic].join(' ')).concat(contextTokens||[]), hayTokens=tokenize2(title+' '+url);
+  if(!qTokens.length||!hayTokens.length) return 0; let score=jaccard2(qTokens,hayTokens);
+  if(qTokens.some(t=>t.length>=3 && title.toLowerCase().includes(t))) score+=0.25;
+  const q=(__lastQuery||'').toLowerCase(), isWorkshopQ=/\b(workshop|workshops)\b/.test(q), isCourseQ=/\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(q);
+  const t=(title+' '+url).toLowerCase(); if(isWorkshopQ && /workshop/.test(t) && !/course|tuition|lesson/.test(t)) score+=0.25;
+  if(isCourseQ && /course|tuition|lesson|class/.test(t)) score+=0.25; return Math.min(1,score);
 }
-
 function pickArticles(structured, query, topic){
-  const all = Array.isArray(structured?.articles) ? structured.articles : [];
-
-  const ev = (structured?.events||[])[0] || {};
-  const ctxTokens = tokenize2([(ev.title||''), (ev.location||'')].join(' '));
-
-  let scored = all.map(a => ({a, s: scoreArticle(a, query, topic, ctxTokens)}))
-                  .filter(x => x.s > 0);
-
+  const all = Array.isArray(structured?.articles)?structured.articles:[];
+  const ev=(structured?.events||[])[0]||{}; const ctxTokens=tokenize2([(ev.title||''),(ev.location||'')].join(' '));
+  let scored=all.map(a=>({a,s:scoreArticle(a,query,topic,ctxTokens)})).filter(x=>x.s>0);
   const isEventIntent = structured?.event_subtype || /\b(workshop|workshops|course|courses|class|classes|tuition|lesson|lessons)\b/i.test(__lastQuery||'');
-  if (isEventIntent) {
-    const eventish = scored.filter(x => /workshop|course|tuition|lesson|class/i.test((articleTitle(x.a)+' '+articleUrl(x.a))));
-    if (eventish.length >= 2) scored = eventish.concat(scored.filter(x=>!eventish.includes(x)));
-  }
-
-  const ranked = scored
-    .sort((x,y)=>{
-      if (y.s !== x.s) return y.s - x.s;
-      const dy = Date.parse(y.a?.last_seen || '') || 0;
-      const dx = Date.parse(x.a?.last_seen || '') || 0;
-      return dy - dx;
-    })
-    .slice(0,5)
-    .map(x => x.a)
-    .filter(a => !!articleUrl(a));
-
-  return ranked;
+  if(isEventIntent){ const eventish=scored.filter(x=>/workshop|course|tuition|lesson|class/i.test((articleTitle(x.a)+' '+articleUrl(x.a))));
+    if(eventish.length>=2) scored=eventish.concat(scored.filter(x=>!eventish.includes(x))); }
+  return scored.sort((x,y)=> (y.s-x.s) || ((Date.parse(y.a?.last_seen||'')||0)-(Date.parse(x.a?.last_seen||'')||0)))
+               .slice(0,5).map(x=>x.a).filter(a=>!!articleUrl(a));
 }
-
 function renderArticlesBlock(structured, query){
-  const topic = structured?.topic || '';
-  const list = pickArticles(structured, query, topic);
-  if(!list.length) return '';
-  const lis = list.map(a=>{
-    const t = articleTitle(a);
-    const u = articleUrl(a);
-    return `<li><a href="${u}" target="_blank" rel="noopener">${escapeHTML(t)}</a></li>`;
-  }).join('');
+  const list=pickArticles(structured, query, structured?.topic||''); if(!list.length) return '';
+  const lis=list.map(a=>`<li><a href="${articleUrl(a)}" target="_blank" rel="noopener">${escapeHTML(articleTitle(a))}</a></li>`).join('');
   return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul></div>`;
 }
-
-/* Build orange action pills */
 function buildActionPillsFromStructured(structured, query){
-  const safe = [];
-  const used = new Set();
-  const add = (label, href) => {
-    if(!label || !href) return;
-    const u = String(href);
-    if (/\/blog\?tag=|\/search\?query=/.test(u)) return;
-    const key = `${label}::${u}`;
-    if(used.has(key)) return;
-    used.add(key);
-    safe.push({label,href});
-  };
-
-  for (const p of (structured?.pills || structured?.chips || [])){
-    add(p.label || p.text || 'Open', p.url || p.href);
-  }
-
-  const arts = pickArticles(structured, query, structured?.topic||'').slice(0,2);
-  for (const a of arts){
-    add(articleTitle(a) || 'Read Guide', articleUrl(a));
-  }
-
+  const safe=[]; const used=new Set(); const add=(label,href)=>{ if(!label||!href) return; const u=String(href); if(/\/blog\?tag=|\/search\?query=/.test(u)) return;
+    const key=`${label}::${u}`; if(used.has(key)) return; used.add(key); safe.push({label,href}); };
+  for(const p of (structured?.pills||structured?.chips||[])) add(p.label||p.text||'Open', p.url||p.href);
+  for (const a of pickArticles(structured, query, structured?.topic||'').slice(0,2)) add(articleTitle(a)||'Read Guide', articleUrl(a));
   return safe.slice(0,5);
 }
+function heuristicConfidence(s){ let score=0; if(s?.products?.length) score+=40; if(s?.events?.length) score+=40; if(s?.articles?.length) score+=20; return Math.min(95, Math.max(20, score||25)); }
 
-/* Confidence heuristic (client-side floor) */
-function heuristicConfidence(structured){
-  let score = 0;
-  if (structured?.products?.length) score += 40;
-  if (structured?.events?.length)   score += 40;
-  if (structured?.articles?.length) score += 20;
-  return Math.min(95, Math.max(20, score || 25));
-}
-
-/* ================= Product gating ================= */
+/* ===== Product gating ===== */
 function decideProductRendering(payload, mergedProducts, query){
-  const s = payload?.structured || {};
-  const intent = detectIntent(payload, query);
-  const evs = futureEvents(s);
-  const hasEvs = evs.length > 0;
-  const topEv = hasEvs ? evs[0] : null;
-
-  if (!mergedProducts.length) return {show:false, reason:'no-products'};
-  if (intent === 'products') return {show:true, reason:'intent-products'};
-  if (isPriceyQuery(query))  return {show:true, reason:'pricey-query'};
-
-  if (intent === 'events') {
-    if (!hasEvs) return {show:true, reason:'events-intent-no-events'};
-    const prod = mergedProducts[0];
-    if (strongProductEventMatch(prod, topEv)) return {show:true, reason:'strong-match'};
-    return {show:false, reason:'events-intent-hide-products'};
-  }
-
-  if (!hasEvs) return {show:true, reason:'no-events-fallback'};
+  const s=payload?.structured||{}; const intent=detectIntent(payload,query); const evs=futureEvents(s); const hasEvs=evs.length>0; const topEv=hasEvs?evs[0]:null;
+  if(!mergedProducts.length) return {show:false, reason:'no-products'};
+  if(intent==='products') return {show:true, reason:'intent-products'};
+  if(isPriceyQuery(query)) return {show:true, reason:'pricey-query'};
+  if(intent==='events'){ if(!hasEvs) return {show:true, reason:'events-intent-no-events'}; const prod=mergedProducts[0]; if(strongProductEventMatch(prod,topEv)) return {show:true, reason:'strong-match'}; return {show:false, reason:'events-intent-hide-products'}; }
+  if(!hasEvs) return {show:true, reason:'no-events-fallback'};
   return {show:false, reason:'prefer-events'};
 }
 
-/* ======== Chime (Web Audio, no asset needed) ======== */
+/* ===== Chime: WebAudio + fallback WAV ===== */
 let __audioCtx = null;
-function playChime() {
-  try {
-    // Lazily create context after first user gesture (send click/enter)
-    __audioCtx = __audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const ctx = __audioCtx;
-    const now = ctx.currentTime + 0.02;
+let __audioUnlocked = false;
+const FALLBACK_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAABAQH9/f38/Pz8+fn59/f3+vr6+/v7"; // very short tick
 
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, now);
-
-    const o1 = ctx.createOscillator();
-    o1.type = 'sine';
-    o1.frequency.setValueAtTime(880, now);       // A5
-    o1.frequency.exponentialRampToValueAtTime(1320, now + 0.12); // small sweep
-
+function unlockAudio(){
+  try{
+    __audioCtx = __audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    if (__audioCtx.state === 'suspended') __audioCtx.resume();
+    __audioUnlocked = true;
+  }catch{}
+}
+function playChime(){
+  // Try WebAudio first
+  try{
+    if(!__audioUnlocked) return; // must be after a user gesture
+    const ctx = __audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    const now = ctx.currentTime + 0.01;
+    const g = ctx.createGain();
+    const o = ctx.createOscillator();
     const o2 = ctx.createOscillator();
-    o2.type = 'triangle';
-    o2.frequency.setValueAtTime(1760, now);      // A6
-
-    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
-
-    o1.connect(gain); o2.connect(gain); gain.connect(ctx.destination);
-    o1.start(now);   o2.start(now + 0.02);
-    o1.stop(now + 0.25); o2.stop(now + 0.27);
-  } catch(e) {
-    // Silently ignore if autoplay blocked
-  }
+    o.type = 'sine';     o.frequency.setValueAtTime(1046.5, now); // C6
+    o2.type= 'triangle'; o2.frequency.setValueAtTime(1568.0, now);// G6
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.12, now+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now+0.35);
+    o.connect(g); o2.connect(g); g.connect(ctx.destination);
+    o.start(now); o2.start(now+0.02); o.stop(now+0.3); o2.stop(now+0.33);
+    return;
+  }catch{}
+  // Fallback HTMLAudio
+  try{
+    const a = new Audio(FALLBACK_WAV);
+    a.volume = 0.9;
+    a.play().catch(()=>{});
+  }catch{}
 }
 
-/* Full render */
+/* ===== Full render ===== */
 function renderAnswer(payload){
   const s = payload.structured||{};
+  // server version into debug
+  try { if (dbgSrvVer) dbgSrvVer.textContent = payload?.debug?.version || '–'; } catch {}
 
-  // server version in debug
-  try {
-    if (dbgSrvVer) dbgSrvVer.textContent = payload?.debug?.version || '–';
-  } catch {}
-
-  // confidence override logic
   let confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
   const heuristic = heuristicConfidence(s);
   if (confidencePct == null || confidencePct < 50) confidencePct = heuristic;
-  const __rounded = Math.round(confidencePct);
+  const rounded = Math.round(confidencePct);
 
   const merged = mergeProducts(s.products||[]);
   const gate = decideProductRendering(payload, merged, __lastQuery);
 
-  if (gate.show) {
-    const prod = merged[0] || null;
-    if (prod) addBubble(renderProductCard(prod));
-  }
+  if (gate.show) { const prod = merged[0] || null; if (prod) addBubble(renderProductCard(prod)); }
 
-  const evHTML = renderEventsBlock(s);
-  if(evHTML) addBubble(evHTML);
-
-  const artHTML = renderArticlesBlock(s, __lastQuery);
-  if(artHTML) addBubble(artHTML);
+  const evHTML = renderEventsBlock(s); if(evHTML) addBubble(evHTML);
+  const artHTML = renderArticlesBlock(s, __lastQuery); if(artHTML) addBubble(artHTML);
 
   const pills = buildActionPillsFromStructured(s, __lastQuery);
   if(pills.length){
-    const wrap = document.createElement('div');
-    wrap.className='actions';
-    pills.forEach(p=>{
-      const a=document.createElement('a'); a.className='pill'; a.textContent=p.label;
-      a.href=p.href; a.target='_blank'; a.rel='noopener';
-      wrap.appendChild(a);
-    });
+    const wrap = document.createElement('div'); wrap.className='actions';
+    pills.forEach(p=>{ const a=document.createElement('a'); a.className='pill'; a.textContent=p.label; a.href=p.href; a.target='_blank'; a.rel='noopener'; wrap.appendChild(a); });
     thread.appendChild(wrap);
   }
 
   const footer = document.createElement('div');
   footer.className = 'footer-status';
-  footer.innerHTML = `<span class="badge conf ${__rounded>=70?'green':__rounded>=35?'amber':'red'}">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+  footer.innerHTML = `<span class="badge conf ${rounded>=70?'green':rounded>=35?'amber':'red'}">Confidence: ${rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
   thread.appendChild(footer);
 
-  // Fallback answer if nothing rendered at all
   if(!gate.show && !(s.events||[]).length && !(s.articles||[]).length){
     const md = payload.answer_markdown || payload.answer || '';
     const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons in the header to reach Alan directly.</p>`;
@@ -784,11 +533,10 @@ function renderAnswer(payload){
   }
 
   setDebugJSON(dbgStruct, payload.structured||{});
-  // Add gating decision to the Note block so you can see why a product did/didn't render
   const note = payload.debug ? {...payload.debug, product_gate: gate} : { product_gate: gate };
   setDebugJSON(dbgNote, note);
 
-  // 🔔 Chime when the assistant has answered
+  // 🔔 chime
   playChime();
 }
 
@@ -799,8 +547,8 @@ async function sendQuery(query){
   setDebugJSON(dbgReq, req);
   const closeTyping = addTyping();
 
-  // Resume AudioContext on user gesture if needed (for mobile Safari)
-  try { if (__audioCtx && __audioCtx.state === 'suspended') __audioCtx.resume(); } catch {}
+  // Unlock audio based on this user gesture
+  unlockAudio();
 
   try{
     const res = await fetch(CHAT_ENDPOINT, {
@@ -812,15 +560,9 @@ async function sendQuery(query){
     const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
     setDebugJSON(dbgHeaders, headers);
 
-    let data = null;
-    let rawText = '';
-    const ct = (res.headers.get('content-type') || '').toLowerCase();
-    if (ct.includes('application/json')) {
-      data = await res.json();
-    } else {
-      rawText = await res.text();
-      data = { ok: false, error: rawText || `HTTP ${res.status}` };
-    }
+    let data = null; const ct=(res.headers.get('content-type')||'').toLowerCase();
+    if (ct.includes('application/json')) data = await res.json();
+    else { const raw = await res.text(); data = { ok:false, error: raw || `HTTP ${res.status}` }; }
     setDebugJSON(dbgRes, data);
     setDebugJSON(dbgProv, { citations: data.citations || [] });
 
@@ -839,9 +581,7 @@ async function sendQuery(query){
       footer.className = 'footer-status';
       footer.innerHTML = `<span class="badge conf amber">Confidence: 50%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
       thread.appendChild(footer);
-
-      const fallback = "I don’t have a specific answer for that yet.";
-      const {html}=mdToHtml(fallback);
+      const {html}=mdToHtml("I don’t have a specific answer for that yet.");
       const extra = `<p>If this doesn’t answer your question, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
       addBubble(html.replace('</div>', `${extra}</div>`));
       playChime();
@@ -858,19 +598,11 @@ async function sendQuery(query){
   }
 }
 
-/* ================= Transcript helpers ================= */
+/* ================= Transcript & wiring ================= */
 function nodeToPlain(div){ return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim(); }
 function buildTranscript(){
-  const rows = [];
-  rows.push(`Alan Ranger Assistant — transcript`);
-  rows.push(new Date().toISOString());
-  rows.push('');
-  for (const el of thread.children){
-    if (el.classList.contains('actions')) continue;
-    const role = el.classList.contains('user') ? 'User' : 'Assistant';
-    rows.push(`${role}:\n${nodeToPlain(el)}`);
-    rows.push('');
-  }
+  const rows = []; rows.push(`Alan Ranger Assistant — transcript`); rows.push(new Date().toISOString()); rows.push('');
+  for (const el of thread.children){ if (el.classList.contains('actions')) continue; const role = el.classList.contains('user') ? 'User' : 'Assistant'; rows.push(`${role}:\n${nodeToPlain(el)}`); rows.push(''); }
   return rows.join('\n');
 }
 function emailTranscript(){
@@ -889,8 +621,6 @@ function resetChat(){
   addBubble('Hi! I can help with workshops, tuition, and photography advice.');
   [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgProv, dbgNote, dbgSrvVer].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
 }
-
-/* ================= Wire up composer & tools ================= */
 function submit(){
   const val = input.value.trim();
   if(!val) return;
@@ -902,7 +632,22 @@ sendBtn.addEventListener('click', submit);
 input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }});
 btnEmail.addEventListener('click', emailTranscript);
 btnReset.addEventListener('click', resetChat);
-dbgCopy && dbgCopy.addEventListener('click', copyAllDebug);
+dbgCopy && dbgCopy.addEventListener('click', async ()=>{
+  const get = (el) => (el && el.textContent) ? el.textContent : '–';
+  const blocks = [
+    ['Endpoint','/api/chat'],
+    ['Status', get(dbgStatus)],
+    ['Server ver', get(dbgSrvVer)],
+    ['Headers', get(dbgHeaders)],
+    ['Request', get(dbgReq)],
+    ['Response', get(dbgRes)],
+    ['Structured', get(dbgStruct)],
+    ['Provenance', get(dbgProv)],
+    ['Note', get(dbgNote)],
+  ];
+  const text = blocks.map(([k,v]) => `${k}:\n${v}`).join('\n\n').trim();
+  try{ await navigator.clipboard.writeText(text); const old = dbgCopy.textContent; dbgCopy.textContent='Copied ✓'; setTimeout(()=>dbgCopy.textContent=old,1200); }catch{ alert('Copy failed. Select the debug text and press Ctrl/Cmd+C.'); }
+});
 </script>
 </body>
 </html>
