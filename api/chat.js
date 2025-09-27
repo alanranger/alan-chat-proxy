@@ -17,28 +17,21 @@ const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY";
 
-// <<< CHANGED: Node<18-safe fetch shim
-async function ensureFetch() {
-  if (typeof globalThis.fetch === "function") return globalThis.fetch;
-  const mod = await import("node-fetch");
-  return mod.default;
-}
-
-function supabaseAdmin(fetchFn) { // <<< CHANGED (accept fetch)
+function supabaseAdmin() {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("Missing SUPABASE_URL or SERVICE_ROLE_KEY");
   }
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
-    global: { fetch: fetchFn }, // <<< CHANGED
+    global: { fetch },
   });
 }
 
-async function probeSupabaseHealth(fetchFn) { // <<< CHANGED (accept fetch)
+async function probeSupabaseHealth() {
   const url = `${String(SUPABASE_URL).replace(/\/+$/, "")}/auth/v1/health`;
   const out = { url, ok: false, status: null, error: null };
   try {
-    const resp = await fetchFn(url); // <<< CHANGED
+    const resp = await fetch(url);
     out.status = resp.status;
     out.ok = resp.ok;
   } catch (e) {
@@ -345,52 +338,74 @@ async function findLanding(client, { keywords = [] } = {}) {
   return data || [];
 }
 
-/* ================= Views: unified price + availability ================= */
+/* ================= Views (legacy helpers kept for compatibility) ================= */
 
-// <<< CHANGED: both helpers now read from v_products_unified
-
-// Fetch canonical price/kind/source from unified view
+// Fetch canonical lowest price for a set of product URLs from v_product_display
 async function fetchDisplayPrices(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
   if (!urls.length) return new Map();
   const { data, error } = await client
-    .from("v_products_unified")
-    .select("product_url, display_price_gbp, product_kind_resolved, price_source")
+    .from("v_product_display")
+    .select("product_url, display_price_gbp, product_kind, preferred_source")
     .in("product_url", urls);
   if (error) return new Map();
   const map = new Map();
   for (const row of data || []) {
     map.set(baseUrl(row.product_url), {
-      display_price_gbp: row.display_price_gbp ?? null,
-      preferred_source: row.price_source ?? null, // keep same downstream prop name
-      product_kind: row.product_kind_resolved ?? null,
+      display_price_gbp: row.display_price_gbp,
+      preferred_source: row.preferred_source || null,
+      product_kind: row.product_kind || null,
     });
   }
   return map;
 }
 
-// Availability (and optional location hint) from unified view
+// Optional availability fetch; silently ignore if view is missing.
 async function fetchAvailability(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
   if (!urls.length) return new Map();
   try {
     const { data, error } = await client
-      .from("v_products_unified")
-      .select("product_url, availability_status, location_hint")
+      .from("v_product_availability")
+      .select("product_url, availability_status, availability_raw")
       .in("product_url", urls);
     if (error) return new Map();
     const map = new Map();
     for (const row of data || []) {
       map.set(baseUrl(row.product_url), {
-        availability_status: row.availability_status ?? null,
-        availability_raw: null, // unified view doesn’t carry raw; keep shape stable
-        location_hint: row.location_hint ?? null,
+        availability_status: row.availability_status || null,
+        availability_raw: row.availability_raw || null,
       });
     }
     return map;
   } catch {
     return new Map();
   }
+}
+
+/* ===== New: unified hydration from v_products_unified ===== */
+async function hydrateFromUnified(client, productUrls = []) {
+  const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
+  if (!urls.length) return new Map();
+  const { data, error } = await client
+    .from("v_products_unified")
+    .select(
+      "product_url, product_kind_resolved, display_price_gbp, price_source, availability_status, location_hint, last_seen"
+    )
+    .in("product_url", urls);
+  if (error) return new Map();
+  const map = new Map();
+  for (const row of data || []) {
+    map.set(baseUrl(row.product_url), {
+      display_price_gbp: row.display_price_gbp ?? null,
+      product_kind_resolved: row.product_kind_resolved ?? null,
+      price_source: row.price_source ?? null,
+      availability_status: row.availability_status ?? null,
+      location_hint: row.location_hint ?? null,
+      last_seen: row.last_seen ?? null,
+    });
+  }
+  return map;
 }
 
 /* ================= Matching helpers ================= */
@@ -688,7 +703,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     // If mapping exists but strict gate fails, continue to heuristic search
   }
 
-  // Heuristic fallback (your previous logic)
+  // Heuristic fallback
   const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
   const refCore = uniq([...(location || []), ...(topic || [])]);
   const refTokens = new Set(refCore.length ? refCore : all);
@@ -786,7 +801,6 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
 
 /* ================= Product & Event panel rendering ================= */
 function selectDisplayPriceNumber(prod) {
-  // If we've enriched via v_products_unified (or legacy price_gbp), prefer that
   const pg =
     prod?.display_price_gbp != null
       ? Number(prod.display_price_gbp)
@@ -875,7 +889,6 @@ function buildProductPanelMarkdown(prod) {
   const title = prod?.title || prod?.raw?.name || "Workshop";
   const priceNum = selectDisplayPriceNumber(prod);
   const priceStr = formatDisplayPriceGBP(priceNum);
-  const url = pickUrl(prod);
 
   const long =
     prod?.raw?.metaDescription ||
@@ -883,12 +896,16 @@ function buildProductPanelMarkdown(prod) {
     prod?.description ||
     "";
   const block = parseProductBlock(long);
+  const locationText = block.location || prod.location || prod.location_hint || null;
 
-  const head = `**${title}**${priceStr ? ` — ${priceStr}` : ""}`;
+  const head = `**${title}**${
+    priceStr ? ` — ${priceStr}${prod.price_source ? ` (via ${prod.price_source})` : ""}` : ""
+  }`;
+
   const bullets = [];
   if (prod.availability_status)
     bullets.push(`- **Availability:** ${prod.availability_status}`);
-  if (block.location) bullets.push(`- **Location:** ${block.location}`);
+  if (locationText) bullets.push(`- **Location:** ${locationText}`);
   if (block.participants) bullets.push(`- **Participants:** ${block.participants}`);
   if (block.time) bullets.push(`- **Time:** ${block.time}`);
   if (block.dates) bullets.push(`- **Dates:** ${block.dates}`);
@@ -898,7 +915,8 @@ function buildProductPanelMarkdown(prod) {
   const bodyText = plain && !bullets.length ? `\n\n${plain}` : "";
   const bulletsText = bullets.length ? `\n\n${bullets.join("\n")}` : "";
 
-  return head + bulletsText + bodyText + (url ? `\n\n[Open](${url})` : "");
+  const url = pickUrl(prod);
+  return head + bulletsText + bodyText + (url ? `\n\n[Book now →](${url})` : "");
 }
 
 /* Minimal event card (kept for other surfaces; NOT used in product panel anymore) */
@@ -970,11 +988,9 @@ export default async function handler(req, res) {
   try {
     const { query, topK = 8 } = req.body || {};
     const q = String(query || "").trim();
+    const client = supabaseAdmin();
 
-    const _fetch = await ensureFetch();           // <<< CHANGED
-    const client = supabaseAdmin(_fetch);         // <<< CHANGED
-
-    const health = await probeSupabaseHealth(_fetch); // <<< CHANGED
+    const health = await probeSupabaseHealth();
 
     const intent = detectIntent(q);
     const subtype = detectEventSubtype(q);
@@ -1016,24 +1032,20 @@ export default async function handler(req, res) {
     }
     t_supabase += Date.now() - s1;
 
-    // Enrich product list with canonical price + availability
+    // ======== Enrich products from unified view (price, availability, kind, location hint)
     const allProdUrls = (products || []).map((p) => pickUrl(p)).filter(Boolean);
-    const [priceMap, availMap] = await Promise.all([
-      fetchDisplayPrices(client, allProdUrls),
-      fetchAvailability(client, allProdUrls),
-    ]);
+    const unifiedMap = await hydrateFromUnified(client, allProdUrls);
+
     products = (products || []).map((p) => {
       const u = baseUrl(pickUrl(p));
-      const priceRow = priceMap.get(u);
-      const availRow = availMap.get(u);
+      const row = unifiedMap.get(u) || {};
       return {
         ...p,
-        display_price_gbp: priceRow?.display_price_gbp ?? null,
-        product_kind_resolved: priceRow?.product_kind ?? null,
-        price_source: priceRow?.preferred_source ?? null,
-        availability_status: availRow?.availability_status ?? null,
-        availability_raw: availRow?.availability_raw ?? null,
-        location_hint: availRow?.location_hint ?? null,
+        display_price_gbp: row.display_price_gbp ?? p.display_price_gbp ?? null,
+        product_kind_resolved: row.product_kind_resolved ?? p.product_kind_resolved ?? null,
+        price_source: row.price_source ?? p.price_source ?? null,
+        availability_status: row.availability_status ?? p.availability_status ?? null,
+        location_hint: row.location_hint ?? p.location_hint ?? null,
       };
     });
 
@@ -1084,23 +1096,19 @@ export default async function handler(req, res) {
 
         // Ensure unified enrichment for the featured item too
         const u = baseUrl(pickUrl(featuredProduct));
-        const priceRow = (await fetchDisplayPrices(client, [u])).get(u);
-        const availRow = (await fetchAvailability(client, [u])).get(u);
-        if (priceRow) {
+        const fMap = await hydrateFromUnified(client, [u]);
+        const fRow = fMap.get(u);
+        if (fRow) {
           featuredProduct.display_price_gbp =
-            priceRow.display_price_gbp ?? featuredProduct.display_price_gbp ?? null;
+            fRow.display_price_gbp ?? featuredProduct.display_price_gbp ?? null;
           featuredProduct.product_kind_resolved =
-            priceRow.product_kind ?? featuredProduct.product_kind_resolved ?? null;
+            fRow.product_kind_resolved ?? featuredProduct.product_kind_resolved ?? null;
           featuredProduct.price_source =
-            priceRow.preferred_source ?? featuredProduct.price_source ?? null;
-        }
-        if (availRow) {
+            fRow.price_source ?? featuredProduct.price_source ?? null;
           featuredProduct.availability_status =
-            availRow.availability_status ?? featuredProduct.availability_status ?? null;
-          featuredProduct.availability_raw =
-            availRow.availability_raw ?? featuredProduct.availability_raw ?? null;
+            fRow.availability_status ?? featuredProduct.availability_status ?? null;
           featuredProduct.location_hint =
-            availRow.location_hint ?? featuredProduct.location_hint ?? null;
+            fRow.location_hint ?? featuredProduct.location_hint ?? null;
         }
       }
 
@@ -1261,7 +1269,7 @@ export default async function handler(req, res) {
     };
 
     const debug = {
-      version: "v1.1.1-unified-products", // <<< CHANGED (bump)
+      version: "v1.1.2-unified",
       intent,
       keywords,
       event_subtype: subtype,
@@ -1288,6 +1296,7 @@ export default async function handler(req, res) {
             ),
             availability_status: featuredProduct.availability_status || null,
             price_source: featuredProduct.price_source || null,
+            location_hint: featuredProduct.location_hint || null,
           }
         : null,
       pills: {
@@ -1300,7 +1309,9 @@ export default async function handler(req, res) {
       },
       probes: { supabase_health: health },
       views: {
-        unified_view: "public.v_products_unified", // <<< CHANGED
+        unified_products: "public.v_products_unified",
+        legacy_price_view: "public.v_product_display",
+        legacy_availability: "public.v_product_availability (optional)",
         event_map_view: "public.v_event_product_links_all",
       },
     };
