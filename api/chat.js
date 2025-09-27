@@ -338,61 +338,16 @@ async function findLanding(client, { keywords = [] } = {}) {
   return data || [];
 }
 
-/* ================= Views (legacy helpers kept for compatibility) ================= */
+/* ================= Unified view enrichment ================= */
 
-// Fetch canonical lowest price for a set of product URLs from v_product_display
-async function fetchDisplayPrices(client, productUrls = []) {
-  const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
-  if (!urls.length) return new Map();
-  const { data, error } = await client
-    .from("v_product_display")
-    .select("product_url, display_price_gbp, product_kind, preferred_source")
-    .in("product_url", urls);
-  if (error) return new Map();
-  const map = new Map();
-  for (const row of data || []) {
-    map.set(baseUrl(row.product_url), {
-      display_price_gbp: row.display_price_gbp,
-      preferred_source: row.preferred_source || null,
-      product_kind: row.product_kind || null,
-    });
-  }
-  return map;
-}
-
-// Optional availability fetch; silently ignore if view is missing.
-async function fetchAvailability(client, productUrls = []) {
-  const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
-  if (!urls.length) return new Map();
-  try {
-    const { data, error } = await client
-      .from("v_product_availability")
-      .select("product_url, availability_status, availability_raw")
-      .in("product_url", urls);
-    if (error) return new Map();
-    const map = new Map();
-    for (const row of data || []) {
-      map.set(baseUrl(row.product_url), {
-        availability_status: row.availability_status || null,
-        availability_raw: row.availability_raw || null,
-      });
-    }
-    return map;
-  } catch {
-    return new Map();
-  }
-}
-
-/* ===== New: unified hydration from v_products_unified ===== */
+// Fetch unified product info (price, availability, kind, location hint) by canonical URL
 async function hydrateFromUnified(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
   if (!urls.length) return new Map();
   const { data, error } = await client
-    .from("v_products_unified")
-    .select(
-      "product_url, product_kind_resolved, display_price_gbp, price_source, availability_status, location_hint, last_seen"
-    )
-    .in("product_url", urls);
+    .from('v_products_unified')
+    .select('product_url, product_kind_resolved, display_price_gbp, price_source, availability_status, location_hint, last_seen')
+    .in('product_url', urls);
   if (error) return new Map();
   const map = new Map();
   for (const row of data || []) {
@@ -703,7 +658,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     // If mapping exists but strict gate fails, continue to heuristic search
   }
 
-  // Heuristic fallback
+  // Heuristic fallback (previous logic)
   const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
   const refCore = uniq([...(location || []), ...(topic || [])]);
   const refTokens = new Set(refCore.length ? refCore : all);
@@ -801,6 +756,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
 
 /* ================= Product & Event panel rendering ================= */
 function selectDisplayPriceNumber(prod) {
+  // Prefer unified view display_price_gbp if present; else legacy price_gbp; else raw price
   const pg =
     prod?.display_price_gbp != null
       ? Number(prod.display_price_gbp)
@@ -889,6 +845,7 @@ function buildProductPanelMarkdown(prod) {
   const title = prod?.title || prod?.raw?.name || "Workshop";
   const priceNum = selectDisplayPriceNumber(prod);
   const priceStr = formatDisplayPriceGBP(priceNum);
+  const url = pickUrl(prod);
 
   const long =
     prod?.raw?.metaDescription ||
@@ -896,12 +853,12 @@ function buildProductPanelMarkdown(prod) {
     prod?.description ||
     "";
   const block = parseProductBlock(long);
+
+  // NEW: fallback to prod.location, then unified location_hint
   const locationText = block.location || prod.location || prod.location_hint || null;
 
-  const head = `**${title}**${
-    priceStr ? ` — ${priceStr}${prod.price_source ? ` (via ${prod.price_source})` : ""}` : ""
-  }`;
-
+  // NEW: show price_source if available
+  const head = `**${title}**${priceStr ? ` — ${priceStr}${prod.price_source ? ` (via ${prod.price_source})` : ''}` : ""}`;
   const bullets = [];
   if (prod.availability_status)
     bullets.push(`- **Availability:** ${prod.availability_status}`);
@@ -915,7 +872,6 @@ function buildProductPanelMarkdown(prod) {
   const bodyText = plain && !bullets.length ? `\n\n${plain}` : "";
   const bulletsText = bullets.length ? `\n\n${bullets.join("\n")}` : "";
 
-  const url = pickUrl(prod);
   return head + bulletsText + bodyText + (url ? `\n\n[Book now →](${url})` : "");
 }
 
@@ -1032,7 +988,7 @@ export default async function handler(req, res) {
     }
     t_supabase += Date.now() - s1;
 
-    // ======== Enrich products from unified view (price, availability, kind, location hint)
+    // Enrich products from unified view (price, availability, kind, location hint)
     const allProdUrls = (products || []).map((p) => pickUrl(p)).filter(Boolean);
     const unifiedMap = await hydrateFromUnified(client, allProdUrls);
 
@@ -1045,6 +1001,8 @@ export default async function handler(req, res) {
         product_kind_resolved: row.product_kind_resolved ?? p.product_kind_resolved ?? null,
         price_source: row.price_source ?? p.price_source ?? null,
         availability_status: row.availability_status ?? p.availability_status ?? null,
+        // keep availability_raw if you have it elsewhere; unified view may not expose it
+        location_parsed: p.location_parsed ?? null,
         location_hint: row.location_hint ?? p.location_hint ?? null,
       };
     });
@@ -1309,9 +1267,7 @@ export default async function handler(req, res) {
       },
       probes: { supabase_health: health },
       views: {
-        unified_products: "public.v_products_unified",
-        legacy_price_view: "public.v_product_display",
-        legacy_availability: "public.v_product_availability (optional)",
+        unified_products_view: "public.v_products_unified",
         event_map_view: "public.v_event_product_links_all",
       },
     };
