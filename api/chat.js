@@ -1,5 +1,4 @@
 // /api/chat.js
-// Node runtime on Vercel. Data-driven. No hard-coded query terms.
 
 export const config = { runtime: "nodejs" };
 
@@ -60,7 +59,6 @@ function tokenize(s) {
   return (s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
 }
 function normaliseToken(t) {
-  // tiny normalization: beginners -> beginner, etc.
   return String(t || "").replace(/\d+$/, "").replace(/ers$/, "er");
 }
 function lc(s) {
@@ -136,7 +134,7 @@ function detectIntent(q) {
 function detectEventSubtype(q) {
   const s = String(q || "").toLowerCase();
   if (/\b(course|courses|class|classes|tuition|lesson|lessons|beginner|beginners)\b/.test(s))
-    return "course"; // ▲ tiny nudge so “beginners …” prefers course
+    return "course";
   if (/\b(workshop|workshops|photowalk|walk|masterclass)\b/.test(s))
     return "workshop";
   return null;
@@ -340,8 +338,6 @@ async function findLanding(client, { keywords = [] } = {}) {
 }
 
 /* ================= Views: display price + availability ================= */
-
-// Fetch canonical lowest price for a set of product URLs from v_product_display
 async function fetchDisplayPrices(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
   if (!urls.length) return new Map();
@@ -360,8 +356,6 @@ async function fetchDisplayPrices(client, productUrls = []) {
   }
   return map;
 }
-
-// Optional availability fetch; silently ignore if view is missing.
 async function fetchAvailability(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
   if (!urls.length) return new Map();
@@ -406,8 +400,6 @@ function isCourseEvent(e) {
   const looksWorkshop = /workshop/.test(u + " " + t);
   return hasCourse && !looksWorkshop;
 }
-
-/* Product kind (kept generic) */
 function isWorkshopProduct(p) {
   const u = (pickUrl(p) || "").toLowerCase();
   const t = (p?.title || "").toLowerCase();
@@ -429,7 +421,6 @@ function isCourseProduct(p) {
   return hasCourse && !looksWorkshop;
 }
 
-/* Location hints used elsewhere too */
 const LOCATION_HINTS = [
   "devon",
   "hartland",
@@ -453,7 +444,6 @@ const LOCATION_HINTS = [
   "quay",
 ];
 
-/* --- small synonym expansion for locations (helps Coventry/Kenilworth) --- */
 function expandLocationKeywords(keywords = []) {
   const set = new Set();
   for (const k of keywords) {
@@ -473,7 +463,6 @@ function expandLocationKeywords(keywords = []) {
   return Array.from(set);
 }
 
-/* ---- extract tokens from the first event ---- */
 function extractTopicAndLocationTokensFromEvent(ev) {
   const t = titleTokens(ev);
   const u = urlTokens(ev);
@@ -490,7 +479,6 @@ function extractTopicAndLocationTokensFromEvent(ev) {
   return { all, topic: uniq(topicHints), location: uniq(locationHints) };
 }
 
-/* ---- similarity helpers ---- */
 function symmetricOverlap(eventTokens, url, title) {
   const pTokens = new Set(
     [
@@ -517,14 +505,12 @@ function symmetricOverlap(eventTokens, url, title) {
   return { f1, pTokens };
 }
 
-/* ---- derive 'anchor' tokens from a product title (distinctive words) ---- */
 function productAnchorTokens(prod) {
   const title = prod?.title || "";
   const tokens = titleTokens({ title });
-  return tokens.filter((t) => t.length >= 5 && !LOCATION_HINTS.includes(t)); // no location anchors
+  return tokens.filter((t) => t.length >= 5 && !LOCATION_HINTS.includes(t));
 }
 
-/* ===== prefer richer duplicate rows for the same product URL ===== */
 function preferRicherProduct(a, b) {
   if (!a) return b;
   if (!b) return a;
@@ -546,24 +532,13 @@ function upgradeToRichestByUrl(allProducts, chosen) {
   return same.reduce(preferRicherProduct, chosen);
 }
 
-/* ===== date parsing used for strict workshop matching ===== */
 function monthIdx(m) {
   const s = lc(m).slice(0, 3);
   const map = {
-    jan: 0,
-    feb: 1,
-    mar: 2,
-    apr: 3,
-    may: 4,
-    jun: 5,
-    jul: 6,
-    aug: 7,
-    sep: 8,
-    oct: 9,
-    nov: 10,
-    dec: 11,
+    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
   };
-  return s in map ? (s in map ? map[s] : null) : null;
+  return s in map ? map[s] : null;
 }
 function extractDatesFromText(text, defaultYear) {
   const out = [];
@@ -589,7 +564,6 @@ function withinDays(a, b, days) {
   return diff <= days * 86400000;
 }
 
-/* --- strict product-vs-event gate --- */
 function strictlyMatchesEvent(product, firstEvent, subtype = null) {
   if (!product || !firstEvent) return false;
 
@@ -648,7 +622,6 @@ function strictlyMatchesEvent(product, firstEvent, subtype = null) {
   return true;
 }
 
-/* ========= Resolve event→product via view (preferred), with fallback ========= */
 async function resolveEventProductByView(client, eventUrl) {
   if (!eventUrl) return null;
   try {
@@ -665,20 +638,16 @@ async function resolveEventProductByView(client, eventUrl) {
   }
 }
 
-/** Try hard to find a product URL for the first event; require anchor alignment. */
 async function findBestProductForEvent(client, firstEvent, preloadProducts = [], subtype = null) {
   if (!firstEvent) return null;
 
-  // Preferred path: lookup mapping view
   const evUrl = pickUrl(firstEvent);
   const mapped = await resolveEventProductByView(client, evUrl);
   if (mapped) {
-    // Try to find in preload list first
     let prod =
       (preloadProducts || []).find((p) => baseUrl(pickUrl(p)) === baseUrl(mapped)) ||
       null;
     if (!prod) {
-      // Fallback to fetching the entity by URL
       const { data } = await client
         .from("page_entities")
         .select(SELECT_COLS)
@@ -696,15 +665,12 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     if (prod && strictlyMatchesEvent(prod, firstEvent, subtype)) {
       return prod;
     }
-    // If mapping exists but strict gate fails, continue to heuristic search
   }
 
-  // Heuristic fallback (your previous logic)
   const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
   const refCore = uniq([...(location || []), ...(topic || [])]);
   const refTokens = new Set(refCore.length ? refCore : all);
   const needLoc = location.length ? location : [];
-  const evtLower = lc(((firstEvent?.title || "") + " " + (pickUrl(firstEvent) || "")));
 
   const kindAlign = (p) => {
     if (!subtype) return true;
@@ -738,14 +704,12 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
         const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
         let s = f1;
         if (sameHost(p, firstEvent)) s += 0.1;
-        s = extraScore(p, s);
         return { p, s };
       })
       .sort((a, b) => b.s - a.s);
     if (ranked[0]?.p) return ranked[0].p;
   }
 
-  // Expand recall
   const core = uniq([...Array.from(refTokens)]).slice(0, 12);
   let fallback = [];
   if (core.length) {
@@ -774,7 +738,6 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
         const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
         let s = f1;
         if (sameHost(p, firstEvent)) s += 0.1;
-        s = extraScore(p, s);
         return { p, s };
       })
       .sort((a, b) => b.s - a.s);
@@ -787,7 +750,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
 function extraScore(p, base) {
   let s = base;
   const tl = lc(p.title || "");
-  if (/portrait/.test(tl)) s -= 0.0; // keep neutral; gating handles mismatch
+  if (/portrait/.test(tl)) s -= 0.0;
   if (/(lightroom|editing)/.test(tl)) s -= 0.0;
   const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
   if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
@@ -796,7 +759,6 @@ function extraScore(p, base) {
 
 /* ================= Product & Event panel rendering ================= */
 function selectDisplayPriceNumber(prod) {
-  // If we've enriched via v_product_display, prefer that
   const pg =
     prod?.display_price_gbp != null
       ? Number(prod.display_price_gbp)
@@ -815,21 +777,16 @@ function formatDisplayPriceGBP(n) {
     maximumFractionDigits: 0,
   }).format(Number(n));
 }
-
-/* --- sanitize rich text/HTML to plain text before parsing --- */
 function sanitizeDesc(s) {
   if (!s || typeof s !== "string") return "";
   let out = s;
-  // structure → newlines
   out = out.replace(/<br\s*\/?>/gi, "\n");
   out = out.replace(/<\/p>/gi, "\n");
   out = out.replace(/<\/li>/gi, "\n");
   out = out.replace(/<li[^>]*>/gi, "• ");
-  // tidy entities & attrs
   out = out.replace(/\s+[a-z-]+="[^"]*"/gi, "");
   out = out.replace(/&nbsp;|&#160;/gi, " ");
   out = out.replace(/&amp;/gi, "&");
-  // strip tags & collapse
   out = out.replace(/\u2013|\u2014/g, "-");
   out = out.replace(/<[^>]*>/g, " ");
   out = out.replace(/[ \t\f\v]+/g, " ");
@@ -837,8 +794,6 @@ function sanitizeDesc(s) {
   out = out.replace(/\n{3,}/g, "\n\n");
   return out.trim();
 }
-
-/* Robust: extract labelled bullets */
 function parseProductBlock(desc) {
   const out = {};
   const clean = sanitizeDesc(desc);
@@ -871,7 +826,6 @@ function parseProductBlock(desc) {
 
   return out;
 }
-
 function buildAdviceMarkdown(articles) {
   const lines = ["**Guides**"];
   for (const a of (articles || []).slice(0, 5)) {
@@ -910,8 +864,6 @@ function buildProductPanelMarkdown(prod) {
 
   return head + bulletsText + bodyText + (url ? `\n\n[Book now →](${url})` : "");
 }
-
-/* Minimal event card (kept for other surfaces; NOT used in product panel anymore) */
 function buildEventPanelMarkdown(ev) {
   if (!ev) return "";
   const title = ev.title || ev.raw?.name || "Upcoming Workshop";
@@ -924,7 +876,6 @@ function buildEventPanelMarkdown(ev) {
   if (when) items.push(`- **When:** ${when}`);
   return items.join("\n") + (url ? `\n\n[View event](${url})` : "");
 }
-
 function buildAdvicePills(articles, originalQuery) {
   const pills = [];
   const top = articles?.[0] ? pickUrl(articles[0]) : null;
@@ -938,8 +889,6 @@ function buildAdvicePills(articles, originalQuery) {
   });
   return pills;
 }
-
-// ▲ changed: allow an explicit fallbackProduct (featured || preferred)
 function buildEventPills(firstEvent, productOrNull, fallbackProduct = null) {
   const pills = [];
   const eventUrl = pickUrl(firstEvent);
@@ -956,8 +905,6 @@ function buildEventPills(firstEvent, productOrNull, fallbackProduct = null) {
   });
   return pills;
 }
-
-/* Location filtering for events when query contains a place */
 function filterEventsByLocationKeywords(events, keywords) {
   const expanded = expandLocationKeywords(
     keywords.filter((k) => LOCATION_HINTS.includes(k.toLowerCase()))
@@ -993,7 +940,7 @@ export default async function handler(req, res) {
     const intent = detectIntent(q);
     const subtype = detectEventSubtype(q);
     const rawKeywords = extractKeywords(q, intent, subtype);
-    const keywords = expandLocationKeywords(rawKeywords); // ▲ tiny improvement
+    const keywords = expandLocationKeywords(rawKeywords);
     const topic = topicFromKeywords(keywords);
 
     let t_supabase = 0,
@@ -1031,7 +978,6 @@ export default async function handler(req, res) {
     }
     t_supabase += Date.now() - s1;
 
-    // Enrich product list with canonical price + availability
     const allProdUrls = (products || []).map((p) => pickUrl(p)).filter(Boolean);
     const [priceMap, availMap] = await Promise.all([
       fetchDisplayPrices(client, allProdUrls),
@@ -1054,9 +1000,10 @@ export default async function handler(req, res) {
     const s2 = Date.now();
     const qTokens = keywords;
 
+    // ✅ fixed: removed stray parenthesis that caused runtime error
     const scoreWrap = (arr) =>
       (arr || [])
-        .map((e) => ({ e, s: scoreEntity(e, qTokens) })))
+        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
           const by = Date.parse(b.e?.last_seen || "") || 0;
@@ -1083,7 +1030,6 @@ export default async function handler(req, res) {
     const firstEvent = rankedEvents[0] || null;
     t_rank += Date.now() - s2;
 
-    /* =================== FEATURED PRODUCT from event mapping/view =================== */
     let featuredProduct = null;
 
     if (firstEvent) {
@@ -1096,7 +1042,6 @@ export default async function handler(req, res) {
       if (matched && strictlyMatchesEvent(matched, firstEvent, subtype)) {
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
-        // Ensure display price enrichment for the featured item too
         const u = baseUrl(pickUrl(featuredProduct));
         const priceRow = (await fetchDisplayPrices(client, [u])).get(u);
         const availRow = (await fetchAvailability(client, [u])).get(u);
@@ -1116,7 +1061,6 @@ export default async function handler(req, res) {
         }
       }
 
-      // Re-rank products for structured list (independent of panel gating)
       if (rankedProducts.length) {
         const evTokens = new Set(
           uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)])
@@ -1134,7 +1078,6 @@ export default async function handler(req, res) {
             if (/camera/i.test(firstEvent?.title || "") && /camera/i.test(p.title || ""))
               s += 0.2;
 
-            // Penalties for off-topic
             const evtLower = lc(
               (firstEvent?.title || "") + " " + (pickUrl(firstEvent) || "")
             );
@@ -1156,7 +1099,6 @@ export default async function handler(req, res) {
       }
     }
 
-    /* -------- Preferred product for structured payload only -------- */
     let preferredProduct = featuredProduct || rankedProducts[0] || null;
     preferredProduct = upgradeToRichestByUrl(rankedProducts, preferredProduct);
 
@@ -1168,20 +1110,18 @@ export default async function handler(req, res) {
       ];
     }
 
-    /* =================== Compose =================== */
-    const pricesForConf = [
+    const scoresForConf = [
       ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
       ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
       ...(rankedProducts[0]?._score ? [rankedProducts[0]._score] : []),
     ].map((x) => x / 100);
-    const confidence_pct = confidenceFrom(pricesForConf);
+    const confidence_pct = confidenceFrom(scoresForConf);
 
     const s4 = Date.now();
     let answer_markdown = "";
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
-      // Product panel shows ONLY a product — never an event fallback
       if (
         firstEvent &&
         featuredProduct &&
@@ -1189,7 +1129,6 @@ export default async function handler(req, res) {
       ) {
         answer_markdown = buildProductPanelMarkdown(featuredProduct);
       } else if (preferredProduct) {
-        // ▲ if strict match failed but we still have a high-quality product, show panel
         answer_markdown = buildProductPanelMarkdown(preferredProduct);
       } else {
         answer_markdown = "";
@@ -1207,7 +1146,6 @@ export default async function handler(req, res) {
       ...(firstEvent ? [pickUrl(firstEvent)] : []),
     ]);
 
-    // ▲ choose a pill product even if strict match failed
     const pillProductForBook =
       featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
         ? featuredProduct
@@ -1277,7 +1215,7 @@ export default async function handler(req, res) {
                 strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
                 ? featuredProduct
                 : null,
-              pillProductForBook // ▲ fallback ensures orange “Book now” pill appears
+              pillProductForBook
             )
           : buildAdvicePills(rankedArticles, q),
     };
