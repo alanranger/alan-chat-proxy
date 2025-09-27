@@ -25,16 +25,44 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
 .card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 
-/* Sticky header */
-.header-sticky{position:sticky; top:10px; z-index:50; background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98)); border-radius:12px; padding:8px 10px; margin:-8px -8px 12px -8px;}
-.header{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-.head-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:10px}
-.logo{display:block;height:40px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
-.title{margin:0;font-size:32px;font-weight:400;letter-spacing:.2px;line-height:1.2;text-align:center}
-.head-row .spacer{width:40px} /* balances the grid so title is truly centered */
-.sub{margin:0;color:var(--muted);max-width:100%;font-size:14px;line-height:1.35}
-.pill{appearance:none;border:0;border-radius:28px;padding:6px 10px;font-weight:600;font-size:12px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px;margin-left:8px;vertical-align:baseline}
-.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
+/* =========================
+   HERO / HEADER (EDITABLE)
+   ========================= */
+.header-sticky{position:sticky; top:10px; z-index:50; background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98)); border-radius:12px; padding:10px 10px 14px; margin:-8px -8px 12px -8px;}
+.header{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+
+/* Center logo + title together on one line */
+.head-row{display:flex;justify-content:center;align-items:center;gap:14px}
+.logo{display:block;height:46px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.title{margin:0;font-size:44px;font-weight:300;letter-spacing:.2px;line-height:1.1;text-align:center}
+
+/* Intro paragraph: 66% width, centered, comfy line-height, buttons inline */
+.sub{
+  margin:0 auto;                 /* center it */
+  color:var(--muted);
+  max-width:66%;                 /* 66% of card width */
+  font-size:16px;
+  line-height:1.7;               /* airier */
+  text-align:center;
+}
+/* Make the inline buttons feel natural inside the paragraph */
+.sub .pill{
+  display:inline-flex; align-items:center;
+  font-size:14px; font-weight:600;
+  padding:8px 12px; border-radius:28px; border:0;
+  margin-left:12px;               /* gap from preceding text */
+  vertical-align:baseline;
+}
+.pill--brand{background:var(--brand); color:#0b0f16}
+.pill--wa{background:var(--wa); color:#0b0f16}
+
+/* Smaller screens: widen the intro a touch and scale down sizes */
+@media (max-width:720px){
+  .logo{height:40px}
+  .title{font-size:34px}
+  .sub{max-width:88%; font-size:15px; line-height:1.6}
+  .sub .pill{font-size:13px;padding:7px 10px;margin-left:10px}
+}
 
 /* Chat surface */
 .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
@@ -88,30 +116,23 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 .typing .dot:nth-child(2){animation-delay:.15s}
 .typing .dot:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
-
-@media (min-width:720px){
-  .title{font-size:36px}
-}
-@media (max-width:640px){
-  .logo{height:34px}
-  .header-sticky{top:6px;margin:-6px -6px 10px -6px}
-  .kv{grid-template-columns:1fr}
-}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.1.3</span></div>
+  <div class="badge-wrap"><span class="version">v1.1.4</span></div>
 
   <div class="card">
-    <!-- Sticky header -->
+    <!-- =========================
+         HERO / HEADER (EDITABLE)
+         ========================= -->
     <div class="header-sticky">
       <div class="header">
         <div class="head-row">
-         <img class="logo" src="./chat%20white.png" alt="AR logo">
+          <img class="logo" src="./chat%20white.png" alt="AR logo">
           <h2 class="title">Alan Ranger Assistant</h2>
-          <span class="spacer" aria-hidden="true"></span>
         </div>
+
         <p class="sub">
           I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
           photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:
@@ -235,7 +256,7 @@ function currency(amount, ccy){
 }
 function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]) )}
 
-/* ================= Product helpers (unchanged) ================= */
+/* ================= Product helpers (condensed) ================= */
 function mergeProducts(list){
   if(!Array.isArray(list) || !list.length) return [];
   const map = new Map();
@@ -247,89 +268,13 @@ function mergeProducts(list){
     for (const k of ['display_price_gbp','display_price','availability_status','availability_raw','price_gbp','product_kind_resolved','price_source']) {
       if (m[k]==null && p[k]!=null) m[k]=p[k];
     }
-    const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
-    const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
-    if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {lowPrice:p.raw.offers.lowPrice, highPrice:p.raw.offers.highPrice, priceCurrency:p.raw.offers.priceCurrency}); }
-    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
   }
   return [...map.values()];
 }
-function extractFacts(desc){
-  const txt = String(desc||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-  const findAfter = (label)=>{
-    const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
-    if(i>=0 && i+1<txt.length) return txt[i+1];
-    const flat = txt.find(l=>new RegExp(`^${label}\\s*:?\\s+(.+)$`,'i').test(l));
-    if(flat) return flat.replace(new RegExp(`^${label}\\s*:?\\s+`,'i'),'');
-    return null;
-  };
-  const location     = findAfter('Location');
-  const participants = findAfter('Participants');
-  const fitness      = findAfter('Fitness');
-  const availability = findAfter('Availability');
-  const optionLines = txt.filter(l =>
-    /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
-    /^\s*OR\s*1\s*day\b/i.test(l)
-  );
-  return {location, participants, fitness, availability, optionLines};
-}
-function parseExtraPriceFromText(desc){
-  const m = String(desc||'').match(/\b(?:1\s*day|full\s*day)\b[^£\d]{0,12}(£?\s?\d{2,4})/i);
-  if(!m) return null;
-  const s = m[1].replace(/[^\d.]/g,'');
-  const n = Number(s);
-  return isFinite(n) ? n : null;
-}
-function deriveOptions(prod, facts){
-  const ccy = prod.price_currency || prod?.raw?.offers?.priceCurrency || 'GBP';
-  const base = prod.price ?? prod?.raw?.offers?.price;
-  let low  = prod?.raw?.offers?.lowPrice;
-  let high = prod?.raw?.offers?.highPrice;
-  if((low==null || high==null) && base!=null){
-    const extra = parseExtraPriceFromText(prod.description||'');
-    if(extra!=null && extra!==base){ low = Math.min(base, extra); high= Math.max(base, extra); }
-  }
-  const text = (facts.optionLines||[]).join('\n').toLowerCase();
-  const has4h  = /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
-  const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
-  const opts = [];
-  if(low!=null && high!=null && has4h && has1d){
-    opts.push({label:'4 hours', price:currency(low,ccy)});
-    opts.push({label:'1 day',   price:currency(high,ccy)});
-  } else {
-    if(base!=null) opts.push({label:'Standard', price:currency(base,ccy)});
-    if(low!=null || high!=null){
-      const range = [low,high].filter(v=>v!=null).map(v=>currency(v,ccy)).join(' – ');
-      if(range) opts.push({label:'Pricing', price:range});
-    }
-  }
-  const timePat = /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
-  for(const ln of facts.optionLines||[]){
-    const label = ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
-    const tm = ln.match(timePat);
-    const window = tm ? `${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}` : null;
-    if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){ opts.push({label, time:window}); }
-    else if(window){ const o = opts.find(o=>o.label.toLowerCase()===label.toLowerCase()); if(o && !o.time) o.time = window; }
-  }
-  return opts;
-}
-
-/* ================= Intent helpers (unchanged) ================= */
 const STOP = new Set(['the','and','or','what','whats','when','whens','next','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire','district','class','classes','course','courses','long','exposure','sunset','sunrise','landscape','seascape','evening','morning','walk','walks']);
 function tokenizeWords(s){ return (s||'').toLowerCase().match(/[a-z]+/g) || []; }
 function tokenize2(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
 function jaccard(aTokens, bTokens){ const A=new Set(aTokens), B=new Set(bTokens); let inter=0; for(const x of A) if(B.has(x)) inter++; const union=A.size+B.size-inter; return union? inter/union : 0; }
-function detectIntent(payload, query){
-  const s = payload?.structured || {};
-  const q = String(query||'').toLowerCase();
-  const server = s.intent || payload?.intent || payload?.meta?.intent || payload?.debug?.intent || '';
-  if (/course|courses|class|classes|tuition|lesson|lessons/.test(q)) return 'events';
-  if (/workshop|workshops|event|events|when|whens|next/.test(q)) return 'events';
-  if (/price|cost|fee|fees|how much|book|booking|buy/i.test(q)) return 'products';
-  if (server) return server.toLowerCase();
-  return 'unknown';
-}
-function isPriceyQuery(q){ return /\b(price|cost|fee|fees|how much|book|booking|buy)\b/i.test(String(q||'')); }
 function futureEvents(structured){
   const now = new Date();
   return (structured?.events||[]).filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
@@ -349,7 +294,6 @@ function strongProductEventMatch(prod, ev){
 
 /* ===== Renderers ===== */
 let __lastQuery = '';
-
 function productHeadlinePrice(prod){
   if (prod.display_price) return String(prod.display_price);
   if (typeof prod.display_price_number === 'number') return currency(prod.display_price_number, 'GBP');
@@ -358,26 +302,12 @@ function productHeadlinePrice(prod){
   return null;
 }
 function renderProductCard(prod){
-  const facts = extractFacts(prod.description||'');
-  const options = deriveOptions(prod, facts);
   const priceHead = productHeadlinePrice(prod);
   const lines = [];
   if (priceHead) lines.push(`<p class="kvline"><strong>Price:</strong> ${escapeHTML(priceHead)}</p>`);
-  const md = (prod.meta_description||prod.raw?.metaDescription||prod.raw?.meta?.description||'').trim();
-  if(md) lines.push(`<p class="meta">${escapeHTML(md)}</p>`);
-  if (prod.availability_status){
-    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(String(prod.availability_status).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2'))}</p>`);
-  }
-  if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
-  if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
-  if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
-  const li = options.map(o=>{
-    const bits=[escapeHTML(o.label||''), o.time?`— ${escapeHTML(o.time)}`:null, o.price?`— ${o.price}`:null].filter(Boolean).join(' ');
-    return `<li>${bits}</li>`;
-  }).join('');
   const href = prod.page_url || prod.source_url || prod.url || '#';
   const book = href && href!=='#' ? `<p style="margin-top:8px"><a href="${href}" target="_blank" rel="noopener">Book now →</a></p>` : '';
-  return `<div class="answer"><h3>${escapeHTML(prod.title || 'Workshop')}</h3>${lines.join('')}${li?`<ul>${li}</ul>`:''}${book}</div>`;
+  return `<div class="answer"><h3>${escapeHTML(prod.title || 'Workshop')}</h3>${lines.join('')}${book}</div>`;
 }
 function extractKeyPhrases(topic, query){
   const words = tokenizeWords([topic||'', query||''].join(' '));
@@ -444,6 +374,17 @@ function buildActionPillsFromStructured(structured, query){
   return safe.slice(0,5);
 }
 function heuristicConfidence(s){ let score=0; if(s?.products?.length) score+=40; if(s?.events?.length) score+=40; if(s?.articles?.length) score+=20; return Math.min(95, Math.max(20, score||25)); }
+function detectIntent(payload, query){
+  const s = payload?.structured || {};
+  const q = String(query||'').toLowerCase();
+  const server = s.intent || payload?.intent || payload?.meta?.intent || payload?.debug?.intent || '';
+  if (/course|courses|class|classes|tuition|lesson|lessons/.test(q)) return 'events';
+  if (/workshop|workshops|event|events|when|whens|next/.test(q)) return 'events';
+  if (/price|cost|fee|fees|how much|book|booking|buy/i.test(q)) return 'products';
+  if (server) return server.toLowerCase();
+  return 'unknown';
+}
+function isPriceyQuery(q){ return /\b(price|cost|fee|fees|how much|book|booking|buy)\b/i.test(String(q||'')); }
 
 /* ===== Product gating ===== */
 function decideProductRendering(payload, mergedProducts, query){
@@ -459,8 +400,7 @@ function decideProductRendering(payload, mergedProducts, query){
 /* ===== Chime: WebAudio + fallback WAV ===== */
 let __audioCtx = null;
 let __audioUnlocked = false;
-const FALLBACK_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAABAQH9/f38/Pz8+fn59/f3+vr6+/v7"; // very short tick
-
+const FALLBACK_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAABAQH9/f38/Pz8+fn59/f3+vr6+/v7";
 function unlockAudio(){
   try{
     __audioCtx = __audioCtx || new (window.AudioContext||window.webkitAudioContext)();
@@ -469,16 +409,15 @@ function unlockAudio(){
   }catch{}
 }
 function playChime(){
-  // Try WebAudio first
   try{
-    if(!__audioUnlocked) return; // must be after a user gesture
+    if(!__audioUnlocked) return;
     const ctx = __audioCtx || new (window.AudioContext||window.webkitAudioContext)();
     const now = ctx.currentTime + 0.01;
     const g = ctx.createGain();
     const o = ctx.createOscillator();
     const o2 = ctx.createOscillator();
-    o.type = 'sine';     o.frequency.setValueAtTime(1046.5, now); // C6
-    o2.type= 'triangle'; o2.frequency.setValueAtTime(1568.0, now);// G6
+    o.type = 'sine';     o.frequency.setValueAtTime(1046.5, now);
+    o2.type= 'triangle'; o2.frequency.setValueAtTime(1568.0, now);
     g.gain.setValueAtTime(0.0001, now);
     g.gain.exponentialRampToValueAtTime(0.12, now+0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, now+0.35);
@@ -486,18 +425,12 @@ function playChime(){
     o.start(now); o2.start(now+0.02); o.stop(now+0.3); o2.stop(now+0.33);
     return;
   }catch{}
-  // Fallback HTMLAudio
-  try{
-    const a = new Audio(FALLBACK_WAV);
-    a.volume = 0.9;
-    a.play().catch(()=>{});
-  }catch{}
+  try{ const a = new Audio(FALLBACK_WAV); a.volume = 0.9; a.play().catch(()=>{}); }catch{}
 }
 
 /* ===== Full render ===== */
 function renderAnswer(payload){
   const s = payload.structured||{};
-  // server version into debug
   try { if (dbgSrvVer) dbgSrvVer.textContent = payload?.debug?.version || '–'; } catch {}
 
   let confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
