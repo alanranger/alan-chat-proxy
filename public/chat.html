@@ -26,13 +26,13 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
 
 /* Sticky header */
-.header-sticky{position:sticky; top:10px; z-index:50; background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98)); border-radius:12px; padding:0 0 10px 0; margin:-8px -8px 12px -8px;}
-.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
-.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
-.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
-.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
-.pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
-.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.header-sticky{position:sticky; top:10px; z-index:50; background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98)); border-radius:12px; padding:8px 10px; margin:-8px -8px 12px -8px;}
+.header{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.head-row{display:flex;align-items:center;gap:10px}
+.logo{display:block;height:36px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.title{margin:0;font-size:24px;font-weight:400;letter-spacing:.2px;line-height:1.2}
+.sub{margin:0;color:var(--muted);max-width:100%;font-size:14px;line-height:1.35}
+.pill{appearance:none;border:0;border-radius:28px;padding:6px 10px;font-weight:600;font-size:12px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px;margin-left:8px;vertical-align:baseline}
 .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 
 /* Chat surface */
@@ -88,29 +88,32 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 .typing .dot:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
-@media (max-width:540px){
-  .title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}
+@media (max-width:640px){
+  .title{font-size:20px}
+  .logo{height:32px}
+  .kv{grid-template-columns:1fr}
   .header-sticky{top:6px;margin:-6px -6px 10px -6px}
 }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.1.1</span></div>
+  <div class="badge-wrap"><span class="version">v1.1.2</span></div>
 
   <div class="card">
     <!-- Sticky header -->
     <div class="header-sticky">
       <div class="header">
-        <img class="logo" src="./chat%20white.png" alt="AR logo">
-        <h2 class="title">Alan Ranger Assistant</h2>
-        <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
-          photography questions. I won’t always get everything right — if I can’t help, please contact
-          Alan directly:</p>
-        <div class="pills">
+        <div class="head-row">
+          <img class="logo" src="./chat%20white.png" alt="AR logo">
+          <h2 class="title">Alan Ranger Assistant</h2>
+        </div>
+        <p class="sub">
+          I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
+          photography questions. I won’t always get everything right — if I can’t help, please contact Alan directly:
           <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
           <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
-        </div>
+        </p>
       </div>
     </div>
 
@@ -694,6 +697,38 @@ function decideProductRendering(payload, mergedProducts, query){
   return {show:false, reason:'prefer-events'};
 }
 
+/* ======== Chime (Web Audio, no asset needed) ======== */
+let __audioCtx = null;
+function playChime() {
+  try {
+    // Lazily create context after first user gesture (send click/enter)
+    __audioCtx = __audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = __audioCtx;
+    const now = ctx.currentTime + 0.02;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+
+    const o1 = ctx.createOscillator();
+    o1.type = 'sine';
+    o1.frequency.setValueAtTime(880, now);       // A5
+    o1.frequency.exponentialRampToValueAtTime(1320, now + 0.12); // small sweep
+
+    const o2 = ctx.createOscillator();
+    o2.type = 'triangle';
+    o2.frequency.setValueAtTime(1760, now);      // A6
+
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+
+    o1.connect(gain); o2.connect(gain); gain.connect(ctx.destination);
+    o1.start(now);   o2.start(now + 0.02);
+    o1.stop(now + 0.25); o2.stop(now + 0.27);
+  } catch(e) {
+    // Silently ignore if autoplay blocked
+  }
+}
+
 /* Full render */
 function renderAnswer(payload){
   const s = payload.structured||{};
@@ -752,6 +787,9 @@ function renderAnswer(payload){
   // Add gating decision to the Note block so you can see why a product did/didn't render
   const note = payload.debug ? {...payload.debug, product_gate: gate} : { product_gate: gate };
   setDebugJSON(dbgNote, note);
+
+  // 🔔 Chime when the assistant has answered
+  playChime();
 }
 
 /* ================= Networking ================= */
@@ -760,6 +798,10 @@ async function sendQuery(query){
   const req = { query, topK: 8 };
   setDebugJSON(dbgReq, req);
   const closeTyping = addTyping();
+
+  // Resume AudioContext on user gesture if needed (for mobile Safari)
+  try { if (__audioCtx && __audioCtx.state === 'suspended') __audioCtx.resume(); } catch {}
+
   try{
     const res = await fetch(CHAT_ENDPOINT, {
       method:'POST',
@@ -791,6 +833,7 @@ async function sendQuery(query){
       footer.innerHTML = `<span class="badge conf red">Confidence: 25%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
       thread.appendChild(footer);
       addBubble(`<div class="answer"><p>Server error: ${escapeHTML(String(data.error||'Unknown'))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
+      playChime();
     } else {
       const footer = document.createElement('div');
       footer.className = 'footer-status';
@@ -801,6 +844,7 @@ async function sendQuery(query){
       const {html}=mdToHtml(fallback);
       const extra = `<p>If this doesn’t answer your question, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
       addBubble(html.replace('</div>', `${extra}</div>`));
+      playChime();
     }
   } catch (err){
     closeTyping();
@@ -810,6 +854,7 @@ async function sendQuery(query){
     footer.innerHTML = `<span class="badge conf red">Confidence: 25%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
     thread.appendChild(footer);
     addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
+    playChime();
   }
 }
 
