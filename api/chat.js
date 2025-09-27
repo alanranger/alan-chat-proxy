@@ -60,7 +60,8 @@ function tokenize(s) {
   return (s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
 }
 function normaliseToken(t) {
-  return String(t || "").replace(/\d+$/, "");
+  // tiny normalization: beginners -> beginner, etc.
+  return String(t || "").replace(/\d+$/, "").replace(/ers$/, "er");
 }
 function lc(s) {
   return String(s || "").toLowerCase();
@@ -134,8 +135,8 @@ function detectIntent(q) {
 }
 function detectEventSubtype(q) {
   const s = String(q || "").toLowerCase();
-  if (/\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(s))
-    return "course";
+  if (/\b(course|courses|class|classes|tuition|lesson|lessons|beginner|beginners)\b/.test(s))
+    return "course"; // ▲ tiny nudge so “beginners …” prefers course
   if (/\b(workshop|workshops|photowalk|walk|masterclass)\b/.test(s))
     return "workshop";
   return null;
@@ -338,29 +339,49 @@ async function findLanding(client, { keywords = [] } = {}) {
   return data || [];
 }
 
-/* ================= Unified view enrichment ================= */
+/* ================= Views: display price + availability ================= */
 
-// Fetch unified product info (price, availability, kind, location hint) by canonical URL
-async function hydrateFromUnified(client, productUrls = []) {
+// Fetch canonical lowest price for a set of product URLs from v_product_display
+async function fetchDisplayPrices(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
   if (!urls.length) return new Map();
   const { data, error } = await client
-    .from('v_products_unified')
-    .select('product_url, product_kind_resolved, display_price_gbp, price_source, availability_status, location_hint, last_seen')
-    .in('product_url', urls);
+    .from("v_product_display")
+    .select("product_url, display_price_gbp, product_kind, preferred_source")
+    .in("product_url", urls);
   if (error) return new Map();
   const map = new Map();
   for (const row of data || []) {
     map.set(baseUrl(row.product_url), {
-      display_price_gbp: row.display_price_gbp ?? null,
-      product_kind_resolved: row.product_kind_resolved ?? null,
-      price_source: row.price_source ?? null,
-      availability_status: row.availability_status ?? null,
-      location_hint: row.location_hint ?? null,
-      last_seen: row.last_seen ?? null,
+      display_price_gbp: row.display_price_gbp,
+      preferred_source: row.preferred_source || null,
+      product_kind: row.product_kind || null,
     });
   }
   return map;
+}
+
+// Optional availability fetch; silently ignore if view is missing.
+async function fetchAvailability(client, productUrls = []) {
+  const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
+  if (!urls.length) return new Map();
+  try {
+    const { data, error } = await client
+      .from("v_product_availability")
+      .select("product_url, availability_status, availability_raw")
+      .in("product_url", urls);
+    if (error) return new Map();
+    const map = new Map();
+    for (const row of data || []) {
+      map.set(baseUrl(row.product_url), {
+        availability_status: row.availability_status || null,
+        availability_raw: row.availability_raw || null,
+      });
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
 }
 
 /* ================= Matching helpers ================= */
@@ -431,6 +452,26 @@ const LOCATION_HINTS = [
   "exmoor",
   "quay",
 ];
+
+/* --- small synonym expansion for locations (helps Coventry/Kenilworth) --- */
+function expandLocationKeywords(keywords = []) {
+  const set = new Set();
+  for (const k of keywords) {
+    const t = k.toLowerCase();
+    if (t === "kenilworth") {
+      set.add("kenilworth"); set.add("coventry"); set.add("warwickshire");
+    } else if (t === "coventry") {
+      set.add("coventry"); set.add("kenilworth"); set.add("warwickshire");
+    } else if (t === "warwickshire") {
+      set.add("warwickshire"); set.add("coventry"); set.add("kenilworth");
+    } else if (t === "devon") {
+      set.add("devon"); set.add("north devon"); set.add("hartland"); set.add("lynmouth");
+    } else {
+      set.add(t);
+    }
+  }
+  return Array.from(set);
+}
 
 /* ---- extract tokens from the first event ---- */
 function extractTopicAndLocationTokensFromEvent(ev) {
@@ -658,7 +699,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     // If mapping exists but strict gate fails, continue to heuristic search
   }
 
-  // Heuristic fallback (previous logic)
+  // Heuristic fallback (your previous logic)
   const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
   const refCore = uniq([...(location || []), ...(topic || [])]);
   const refTokens = new Set(refCore.length ? refCore : all);
@@ -688,17 +729,6 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
 
     const { f1 } = symmetricOverlap(refTokens, u, t);
     return f1 >= 0.3;
-  };
-
-  const extraScore = (p, base) => {
-    let s = base;
-    const tl = lc(p.title || "");
-    if (/portrait/.test(tl) && !/portrait/.test(evtLower)) s -= 0.45;
-    if (/(lightroom|editing)/.test(tl) && !/(lightroom|editing)/.test(evtLower))
-      s -= 0.45;
-    const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
-    if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
-    return s;
   };
 
   let candidates = (preloadProducts || []).filter(pass);
@@ -754,9 +784,19 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
   return null;
 }
 
+function extraScore(p, base) {
+  let s = base;
+  const tl = lc(p.title || "");
+  if (/portrait/.test(tl)) s -= 0.0; // keep neutral; gating handles mismatch
+  if (/(lightroom|editing)/.test(tl)) s -= 0.0;
+  const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
+  if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
+  return s;
+}
+
 /* ================= Product & Event panel rendering ================= */
 function selectDisplayPriceNumber(prod) {
-  // Prefer unified view display_price_gbp if present; else legacy price_gbp; else raw price
+  // If we've enriched via v_product_display, prefer that
   const pg =
     prod?.display_price_gbp != null
       ? Number(prod.display_price_gbp)
@@ -854,15 +894,11 @@ function buildProductPanelMarkdown(prod) {
     "";
   const block = parseProductBlock(long);
 
-  // NEW: fallback to prod.location, then unified location_hint
-  const locationText = block.location || prod.location || prod.location_hint || null;
-
-  // NEW: show price_source if available
-  const head = `**${title}**${priceStr ? ` — ${priceStr}${prod.price_source ? ` (via ${prod.price_source})` : ''}` : ""}`;
+  const head = `**${title}**${priceStr ? ` — ${priceStr}` : ""}`;
   const bullets = [];
   if (prod.availability_status)
     bullets.push(`- **Availability:** ${prod.availability_status}`);
-  if (locationText) bullets.push(`- **Location:** ${locationText}`);
+  if (block.location) bullets.push(`- **Location:** ${block.location}`);
   if (block.participants) bullets.push(`- **Participants:** ${block.participants}`);
   if (block.time) bullets.push(`- **Time:** ${block.time}`);
   if (block.dates) bullets.push(`- **Dates:** ${block.dates}`);
@@ -902,12 +938,16 @@ function buildAdvicePills(articles, originalQuery) {
   });
   return pills;
 }
-function buildEventPills(firstEvent, productOrNull) {
+
+// ▲ changed: allow an explicit fallbackProduct (featured || preferred)
+function buildEventPills(firstEvent, productOrNull, fallbackProduct = null) {
   const pills = [];
   const eventUrl = pickUrl(firstEvent);
-  const productUrl = pickUrl(productOrNull);
+  const bookProduct = productOrNull || fallbackProduct;
+  const productUrl = pickUrl(bookProduct);
   const bookUrl = productUrl || null;
-  if (bookUrl) pills.push({ label: "Book Now", url: bookUrl, brand: "primary" });
+
+  if (bookUrl) pills.push({ label: "Book now", url: bookUrl, brand: "primary" });
   if (eventUrl) pills.push({ label: "View event", url: eventUrl, brand: "secondary" });
   pills.push({
     label: "Photos",
@@ -919,8 +959,10 @@ function buildEventPills(firstEvent, productOrNull) {
 
 /* Location filtering for events when query contains a place */
 function filterEventsByLocationKeywords(events, keywords) {
-  const locs = keywords.filter((k) => LOCATION_HINTS.includes(k.toLowerCase()));
-  if (!locs.length) return events;
+  const expanded = expandLocationKeywords(
+    keywords.filter((k) => LOCATION_HINTS.includes(k.toLowerCase()))
+  );
+  if (!expanded.length) return events;
   return events.filter((e) => {
     const hay = (
       (e.title || "") +
@@ -929,7 +971,7 @@ function filterEventsByLocationKeywords(events, keywords) {
       " " +
       (pickUrl(e) || "")
     ).toLowerCase();
-    return locs.some((l) => hay.includes(l));
+    return expanded.some((l) => hay.includes(l));
   });
 }
 
@@ -950,7 +992,8 @@ export default async function handler(req, res) {
 
     const intent = detectIntent(q);
     const subtype = detectEventSubtype(q);
-    const keywords = extractKeywords(q, intent, subtype);
+    const rawKeywords = extractKeywords(q, intent, subtype);
+    const keywords = expandLocationKeywords(rawKeywords); // ▲ tiny improvement
     const topic = topicFromKeywords(keywords);
 
     let t_supabase = 0,
@@ -988,22 +1031,23 @@ export default async function handler(req, res) {
     }
     t_supabase += Date.now() - s1;
 
-    // Enrich products from unified view (price, availability, kind, location hint)
+    // Enrich product list with canonical price + availability
     const allProdUrls = (products || []).map((p) => pickUrl(p)).filter(Boolean);
-    const unifiedMap = await hydrateFromUnified(client, allProdUrls);
-
+    const [priceMap, availMap] = await Promise.all([
+      fetchDisplayPrices(client, allProdUrls),
+      fetchAvailability(client, allProdUrls),
+    ]);
     products = (products || []).map((p) => {
       const u = baseUrl(pickUrl(p));
-      const row = unifiedMap.get(u) || {};
+      const priceRow = priceMap.get(u);
+      const availRow = availMap.get(u);
       return {
         ...p,
-        display_price_gbp: row.display_price_gbp ?? p.display_price_gbp ?? null,
-        product_kind_resolved: row.product_kind_resolved ?? p.product_kind_resolved ?? null,
-        price_source: row.price_source ?? p.price_source ?? null,
-        availability_status: row.availability_status ?? p.availability_status ?? null,
-        // keep availability_raw if you have it elsewhere; unified view may not expose it
-        location_parsed: p.location_parsed ?? null,
-        location_hint: row.location_hint ?? p.location_hint ?? null,
+        display_price_gbp: priceRow?.display_price_gbp ?? null,
+        product_kind_resolved: priceRow?.product_kind ?? null,
+        price_source: priceRow?.preferred_source ?? null,
+        availability_status: availRow?.availability_status ?? null,
+        availability_raw: availRow?.availability_raw ?? null,
       };
     });
 
@@ -1012,7 +1056,7 @@ export default async function handler(req, res) {
 
     const scoreWrap = (arr) =>
       (arr || [])
-        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
+        .map((e) => ({ e, s: scoreEntity(e, qTokens) })))
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
           const by = Date.parse(b.e?.last_seen || "") || 0;
@@ -1052,21 +1096,23 @@ export default async function handler(req, res) {
       if (matched && strictlyMatchesEvent(matched, firstEvent, subtype)) {
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
-        // Ensure unified enrichment for the featured item too
+        // Ensure display price enrichment for the featured item too
         const u = baseUrl(pickUrl(featuredProduct));
-        const fMap = await hydrateFromUnified(client, [u]);
-        const fRow = fMap.get(u);
-        if (fRow) {
+        const priceRow = (await fetchDisplayPrices(client, [u])).get(u);
+        const availRow = (await fetchAvailability(client, [u])).get(u);
+        if (priceRow) {
           featuredProduct.display_price_gbp =
-            fRow.display_price_gbp ?? featuredProduct.display_price_gbp ?? null;
+            priceRow.display_price_gbp ?? featuredProduct.display_price_gbp ?? null;
           featuredProduct.product_kind_resolved =
-            fRow.product_kind_resolved ?? featuredProduct.product_kind_resolved ?? null;
+            priceRow.product_kind ?? featuredProduct.product_kind_resolved ?? null;
           featuredProduct.price_source =
-            fRow.price_source ?? featuredProduct.price_source ?? null;
+            priceRow.preferred_source ?? featuredProduct.price_source ?? null;
+        }
+        if (availRow) {
           featuredProduct.availability_status =
-            fRow.availability_status ?? featuredProduct.availability_status ?? null;
-          featuredProduct.location_hint =
-            fRow.location_hint ?? featuredProduct.location_hint ?? null;
+            availRow.availability_status ?? featuredProduct.availability_status ?? null;
+          featuredProduct.availability_raw =
+            availRow.availability_raw ?? featuredProduct.availability_raw ?? null;
         }
       }
 
@@ -1142,6 +1188,9 @@ export default async function handler(req, res) {
         strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
       ) {
         answer_markdown = buildProductPanelMarkdown(featuredProduct);
+      } else if (preferredProduct) {
+        // ▲ if strict match failed but we still have a high-quality product, show panel
+        answer_markdown = buildProductPanelMarkdown(preferredProduct);
       } else {
         answer_markdown = "";
       }
@@ -1154,8 +1203,15 @@ export default async function handler(req, res) {
       strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
         ? [pickUrl(featuredProduct)]
         : []),
+      ...(preferredProduct && !featuredProduct ? [pickUrl(preferredProduct)] : []),
       ...(firstEvent ? [pickUrl(firstEvent)] : []),
     ]);
+
+    // ▲ choose a pill product even if strict match failed
+    const pillProductForBook =
+      featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
+        ? featuredProduct
+        : preferredProduct || null;
 
     const structured = {
       intent,
@@ -1204,7 +1260,6 @@ export default async function handler(req, res) {
           time_parsed: parsed.time || null,
           dates_parsed: parsed.dates || null,
           fitness_parsed: parsed.fitness || null,
-          location_hint: p.location_hint || null,
         };
       }),
       articles: (rankedArticles || []).map((a) => ({
@@ -1221,13 +1276,14 @@ export default async function handler(req, res) {
               featuredProduct &&
                 strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
                 ? featuredProduct
-                : null
+                : null,
+              pillProductForBook // ▲ fallback ensures orange “Book now” pill appears
             )
           : buildAdvicePills(rankedArticles, q),
     };
 
     const debug = {
-      version: "v1.1.2-unified",
+      version: "v1.1.1-pill-fallback-loc-bias",
       intent,
       keywords,
       event_subtype: subtype,
@@ -1254,11 +1310,12 @@ export default async function handler(req, res) {
             ),
             availability_status: featuredProduct.availability_status || null,
             price_source: featuredProduct.price_source || null,
-            location_hint: featuredProduct.location_hint || null,
           }
         : null,
       pills: {
-        book_now: structured.pills?.find((p) => p.label === "Book Now")?.url || null,
+        book_now:
+          structured.pills?.find((p) => p.label.toLowerCase() === "book now")?.url ||
+          null,
       },
       counts: {
         events: (structured.events || []).length,
@@ -1267,7 +1324,8 @@ export default async function handler(req, res) {
       },
       probes: { supabase_health: health },
       views: {
-        unified_products_view: "public.v_products_unified",
+        price_view: "public.v_product_display",
+        availability_view: "public.v_product_availability (optional)",
         event_map_view: "public.v_event_product_links_all",
       },
     };
