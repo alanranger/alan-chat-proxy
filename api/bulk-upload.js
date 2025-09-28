@@ -75,9 +75,9 @@ async function callIngestReplace({ url, token }) {
   return json;
 }
 
-// NEW: call Supabase RPC to refresh MVs --------------------------------------
+// UPDATED: call Supabase RPC to refresh event→product autolinks --------------
 async function callRefreshLinksServer(token) {
-  const r = await fetch(`${SELF_BASE}/rest/v1/rpc/refresh_event_product_links`, {
+  const r = await fetch(`${SELF_BASE}/rest/v1/rpc/refresh_event_product_autolinks`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -87,7 +87,7 @@ async function callRefreshLinksServer(token) {
   });
   const txt = await r.text().catch(() => '');
   if (!r.ok) {
-    throw new Error(`refresh_event_product_links failed: ${r.status} ${txt.slice(0,200)}`);
+    throw new Error(`refresh_event_product_autolinks failed: ${r.status} ${txt.slice(0,200)}`);
   }
   return true;
 }
@@ -156,19 +156,18 @@ export default async function handler(req, res) {
       if (delayMs) await sleep(delayMs);
     }
 
-    // NEW: refresh the MV once at the end of the stream
+    // UPDATED: refresh the autolink mapping once at the end of the stream
     try {
       await callRefreshLinksServer(clientToken);
-      send({ progress: "Links refresh: OK", log: "mv_event_product_links_courses refreshed" });
+      send({ progress: "Mapping refresh: OK", log: "refresh_event_product_autolinks() executed" });
     } catch (e) {
-      send({ progress: "Links refresh: FAILED", log: String(e && e.message ? e.message : e) });
+      send({ progress: "Mapping refresh: FAILED", log: String(e && e.message ? e.message : e) });
     }
 
     send({ progress: `Done. Success: ${ok}, Failed: ${fail}` });
     res.end();
   } catch (err) {
     send({ log: `Fatal error: ${String(err && err.message ? err.message : err)}` });
-    // try to end gracefully even on fatal errors
     try { res.end(); } catch {}
   }
 }
