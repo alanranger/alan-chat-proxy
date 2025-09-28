@@ -81,6 +81,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .tools{display:flex;justify-content:flex-end;gap:10px;margin:8px 0 6px}
 .tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
 .tools button:hover{border-color:#3c548b}
+.tools .toggle{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid #2a3b61;border-radius:8px;background:#13203e;color:#cfe3ff;font-size:13px}
+.tools .toggle input{accent-color:var(--brand)}
+
 .composer{display:flex;gap:10px;margin-top:8px;padding:12px;background:var(--panel);border-radius:12px}
 .composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
 .composer input::placeholder{color:var(--input-ph)}
@@ -110,7 +113,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.1.4</span></div>
+  <div class="badge-wrap"><span class="version">v1.1.5</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -146,6 +149,9 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
       <!-- Utility buttons -->
       <div class="tools">
+        <label class="toggle" title="Play a short chime when an answer arrives">
+          <input type="checkbox" id="sound-toggle"> 🔔 Sound
+        </label>
         <button id="btn-email">Email transcript</button>
         <button id="btn-reset">Reset chat</button>
       </div>
@@ -184,6 +190,7 @@ const input  = document.getElementById('q');
 const sendBtn= document.getElementById('send');
 const btnEmail = document.getElementById('btn-email');
 const btnReset = document.getElementById('btn-reset');
+const soundToggle = document.getElementById('sound-toggle');
 
 const dbgStatus = document.getElementById('dbg-status');
 const dbgReq    = document.getElementById('dbg-req');
@@ -476,6 +483,64 @@ function heuristicConfidence(structured){
   return Math.min(95, Math.max(20, score || 25));
 }
 
+/* ===================== Chime (with autoplay unlock) ===================== */
+const CHIME_KEY = 'alan_chime_enabled';
+let chime = { enabled: true, unlocked: false, ctx: null };
+
+function loadChimePref(){
+  const s = localStorage.getItem(CHIME_KEY);
+  chime.enabled = s == null ? true : s === '1';
+  if (soundToggle) soundToggle.checked = chime.enabled;
+}
+function saveChimePref(){
+  localStorage.setItem(CHIME_KEY, soundToggle.checked ? '1' : '0');
+  chime.enabled = soundToggle.checked;
+}
+function unlockAudio(){
+  if (chime.unlocked) return;
+  try{
+    chime.ctx = chime.ctx || new (window.AudioContext || window.webkitAudioContext)();
+    // resume on gesture
+    const maybeResume = chime.ctx.resume ? chime.ctx.resume() : Promise.resolve();
+    Promise.resolve(maybeResume).then(()=>{
+      chime.unlocked = true;
+    }).catch(()=>{ /* ignore */ });
+  }catch{ /* ignore */ }
+}
+function playChime(){
+  if (!chime.enabled) return;
+  if (!chime.unlocked) return; // blocked until a gesture
+  try{
+    const ctx = chime.ctx || new (window.AudioContext || window.webkitAudioContext)();
+    chime.ctx = ctx;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    // two quick notes: A5 then E6
+    const now = ctx.currentTime;
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, now);
+    o.frequency.setValueAtTime(880, now);
+    g.gain.exponentialRampToValueAtTime(0.09, now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    // second ping
+    const o2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    o2.type='sine';
+    o2.frequency.setValueAtTime(1318.51, now + 0.18);
+    o2.connect(g2); g2.connect(ctx.destination);
+    g2.gain.setValueAtTime(0.0001, now + 0.18);
+    g2.gain.exponentialRampToValueAtTime(0.08, now + 0.19);
+    g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.36);
+    o.start(now); o.stop(now + 0.20);
+    o2.start(now + 0.18); o2.stop(now + 0.38);
+  }catch{/* no-op */}
+}
+// gesture listeners to unlock
+window.addEventListener('click', unlockAudio, { once:false, passive:true });
+window.addEventListener('keydown', unlockAudio, { once:false });
+window.addEventListener('touchstart', unlockAudio, { once:false, passive:true });
+
 /* Full render */
 let __lastQuery = '';
 function renderAnswer(payload){
@@ -512,7 +577,8 @@ function renderAnswer(payload){
   footer.innerHTML = `<span class="badge conf ${__rounded>=70?'green':__rounded>=35?'amber':'red'}">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
   thread.appendChild(footer);
 
-  // Chime once answer is rendered
+  // Play chime when the answer is rendered.
+  // If the tab is backgrounded, this is particularly useful.
   playChime();
 
   // Fallback answer if nothing rendered
@@ -526,18 +592,6 @@ function renderAnswer(payload){
   setDebugJSON(dbgStruct, payload.structured||{});
   const note = payload.debug ? {...payload.debug, product_gate: gate} : { product_gate: gate };
   setDebugJSON(dbgNote, note);
-}
-
-/* Simple chime using WebAudio (no asset) */
-function playChime(){
-  try{
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator(); const g = ctx.createGain();
-    o.type='sine'; o.frequency.value=880; g.gain.value=0.0001; o.connect(g); g.connect(ctx.destination);
-    o.start();
-    const now=ctx.currentTime; g.gain.exponentialRampToValueAtTime(0.08, now+0.01); g.gain.exponentialRampToValueAtTime(0.0001, now+0.25);
-    o.stop(now+0.28);
-  }catch{}
 }
 
 /* ================= Networking ================= */
@@ -607,11 +661,20 @@ function submit(){
   const val = input.value.trim(); if(!val) return;
   addBubble(val, {user:true}); input.value=''; sendQuery(val);
 }
+
+/* Wire up */
 sendBtn.addEventListener('click', submit);
 input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }});
 btnEmail.addEventListener('click', emailTranscript);
 btnReset.addEventListener('click', resetChat);
 dbgCopy && dbgCopy.addEventListener('click', copyAllDebug);
+
+/* Sound toggle + initial state */
+loadChimePref();
+soundToggle.addEventListener('change', saveChimePref);
+// unlock as soon as user interacts (any of these will do)
+['click','keydown','touchstart'].forEach(evt => window.addEventListener(evt, unlockAudio, { passive:true }));
+
 </script>
 </body>
 </html>
