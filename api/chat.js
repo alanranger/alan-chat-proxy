@@ -71,34 +71,9 @@ function hasAny(hay, list) {
 }
 
 const GENERIC = new Set([
-  "alan",
-  "ranger",
-  "photography",
-  "photo",
-  "workshop",
-  "workshops",
-  "course",
-  "courses",
-  "class",
-  "classes",
-  "tuition",
-  "lesson",
-  "lessons",
-  "uk",
-  "england",
-  "blog",
-  "near",
-  "me",
-  "photographic",
-  "landscape",
-  "seascape",
-  "monthly",
-  "day",
-  "days",
-  "one",
-  "two",
-  "1",
-  "2",
+  "alan","ranger","photography","photo","workshop","workshops","course","courses",
+  "class","classes","tuition","lesson","lessons","uk","england","blog","near","me",
+  "photographic","landscape","seascape","monthly","day","days","one","two","1","2",
 ]);
 
 function nonGenericTokens(str) {
@@ -621,17 +596,15 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
   const refTokens = new Set(refCore.length ? refCore : all);
   const needLoc = location.length ? location : [];
 
-  // === tightened subtype alignment ===
   const kindAlign = (p) => {
     if (!subtype) return true;
-    if (subtype === "course") return isCourseProduct(p);      // was permissive
-    if (subtype === "workshop") return isWorkshopProduct(p);  // was permissive
+    if (subtype === "course") return isCourseProduct(p);
+    if (subtype === "workshop") return isWorkshopProduct(p);
     return true;
   };
 
   const pass = (p) => {
     if (!kindAlign(p)) return false;
-
     const u = pickUrl(p) || "";
     const t = p?.title || "";
 
@@ -640,8 +613,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     if (!hasLoc) return false;
 
     const anchors = productAnchorTokens(p);
-    const hasAnchorHit = anchors.some((a) => refTokens.has(a));
-    if (!hasAnchorHit) return false;
+    if (!anchors.some((a) => refTokens.has(a))) return false;
 
     const { f1 } = symmetricOverlap(refTokens, u, t);
     return f1 >= 0.3;
@@ -661,7 +633,6 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
     if (ranked[0]?.p) return ranked[0].p;
   }
 
-  // fallback fetch with the same strict pass
   const core = uniq([...Array.from(refTokens)]).slice(0, 12);
   let fallback = [];
   if (core.length) {
@@ -702,8 +673,6 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
 
 function extraScore(p, base) {
   let s = base;
-  const tl = lc(p.title || "");
-  // leave neutral nudges here
   const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
   if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
   if (hasAny(slug, TOPIC_ANCHORS)) s += 0.1;
@@ -910,12 +879,11 @@ export default async function handler(req, res) {
     let t_supabase = 0, t_rank = 0, t_comp = 0;
 
     const s1 = Date.now();
-    let events = [], products = [], articles = [], landing = [];
+    let events = [], products = [], articles = [];
     if (intent === "events") {
-      [events, products, landing] = await Promise.all([
+      [events, products] = await Promise.all([
         findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
         findProducts(client, { keywords, topK: 24 }),
-        findLanding(client, { keywords }),
       ]);
 
       if (subtype === "workshop") events = events.filter(isWorkshopEvent);
@@ -930,7 +898,7 @@ export default async function handler(req, res) {
         articles = [];
       }
 
-      // === NEW: hard-filter products by subtype to avoid “Sensor Clean” etc.
+      // Hard-filter products by subtype to avoid “Sensor Clean” etc.
       if (subtype === "course") {
         products = (products || []).filter(isCourseProduct);
       } else if (subtype === "workshop") {
@@ -1108,7 +1076,7 @@ export default async function handler(req, res) {
     } else {
       if (hasStrictProduct) {
         answer_markdown = buildProductPanelMarkdown(featuredProduct);
-    } else if (firstEvent) {
+      } else if (firstEvent) {
         answer_markdown = buildEventPanelMarkdown(firstEvent);
       } else {
         answer_markdown = "";
@@ -1181,7 +1149,7 @@ export default async function handler(req, res) {
       pills:
         intent === "events"
           ? buildEventPills(
-              firstEvent,
+              rankedEvents[0] || null,
               hasStrictProduct ? featuredProduct : null,
               null
             )
@@ -1189,7 +1157,7 @@ export default async function handler(req, res) {
     };
 
     const debug = {
-      version: "v1.1.5-clean3", // bumped
+      version: "v1.1.5-clean4",
       intent,
       keywords,
       event_subtype: subtype,
@@ -1197,12 +1165,12 @@ export default async function handler(req, res) {
         queryHasLocationPhrase,
         queryHasTopicAnchor,
       },
-      first_event: firstEvent
+      first_event: rankedEvents[0]
         ? {
-            id: firstEvent.id,
-            title: firstEvent.title,
-            url: pickUrl(firstEvent),
-            date_start: firstEvent.date_start,
+            id: rankedEvents[0].id,
+            title: rankedEvents[0].title,
+            url: pickUrl(rankedEvents[0]),
+            date_start: rankedEvents[0].date_start,
           }
         : null,
       featured_product: featuredProduct
@@ -1212,7 +1180,7 @@ export default async function handler(req, res) {
             url: pickUrl(featuredProduct),
             strictly_matches_first_event: strictlyMatchesEvent(
               featuredProduct,
-              firstEvent,
+              rankedEvents[0],
               subtype
             ),
             display_price: formatDisplayPriceGBP(
