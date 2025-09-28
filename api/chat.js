@@ -39,6 +39,21 @@ async function probeSupabaseHealth() {
   return out;
 }
 
+/* ================= Small in-memory cache (15 min TTL) ================= */
+const _cache = new Map();
+function _getCache(key) {
+  const v = _cache.get(key);
+  if (!v) return null;
+  if (v.exp < Date.now()) {
+    _cache.delete(key);
+    return null;
+  }
+  return v.val;
+}
+function _setCache(key, val, ms = 15 * 60 * 1000) {
+  _cache.set(key, { val, exp: Date.now() + ms });
+}
+
 /* ================= Utilities ================= */
 const SELECT_COLS =
   "id, kind, title, page_url, source_url, last_seen, location, date_start, date_end, price, description, raw";
@@ -123,57 +138,17 @@ function sameHost(a, b) {
 }
 
 /* ================= Intent & Keywords ================= */
-// Location list used for intent loosening and filtering
-const LOCATION_HINTS = [
-  "devon",
-  "hartland",
-  "dartmoor",
-  "yorkshire",
-  "dales",
-  "kenilworth",
-  "coventry",
-  "warwickshire",
-  "anglesey",
-  "wales",
-  "betws",
-  "snowdonia",
-  "northumberland",
-  "gloucestershire",
-  "batsford",
-  "chesterton",
-  "windmill",
-  "lynmouth",
-  "exmoor",
-  "quay",
-];
-
-// Beginner anchors used for biasing and subtype inference
-const BEGINNER_WORDS_RE = /\b(beginner|beginners|intro|foundation)\b/i;
-
 function detectIntent(q) {
   const s = String(q || "").toLowerCase();
-
-  // Existing token groups
-  const timeish =
-    /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking|time|today|tomorrow|this\s*(week|month))\b/;
+  const eventish =
+    /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking|time|how much|price|cost)\b/;
   const classish =
-    /\b(workshop|workshops|course|courses|class|classes|tuition|lesson|lessons|photowalk|walk|masterclass|training|clinic)\b/;
-
-  // NEW: location presence (loosens to 'events' even without explicit time words)
-  const hasLocation = LOCATION_HINTS.some((loc) => s.includes(loc));
-
-  // If user mentions a class type + a known location, treat as 'events'
-  if (classish.test(s) && hasLocation) return "events";
-
-  // Otherwise, if they use any timeish words with classish, it's events
-  if (timeish.test(s) && classish.test(s)) return "events";
-
-  // Default fallback
-  return "advice";
+    /\b(workshop|course|class|tuition|lesson|lessons|photowalk|walk|masterclass)\b/;
+  return eventish.test(s) && classish.test(s) ? "events" : "advice";
 }
 function detectEventSubtype(q) {
   const s = String(q || "").toLowerCase();
-  if (/\b(course|courses|class|classes|tuition|lesson|lessons|beginner|beginners|intro|foundation)\b/.test(s))
+  if (/\b(course|courses|class|classes|tuition|lesson|lessons|beginner|beginners)\b/.test(s))
     return "course";
   if (/\b(workshop|workshops|photowalk|walk|masterclass)\b/.test(s))
     return "workshop";
@@ -304,10 +279,7 @@ async function findEvents(client, { keywords = [], topK = 12 } = {}) {
 }
 
 async function findProducts(client, { keywords = [], topK = 12 } = {}) {
-  let q = client
-    .from("page_entities")
-    .select(SELECT_COLS)
-    .eq("kind", "product");
+  let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "product");
   if (keywords.length)
     q = q.or(
       buildOrIlike(
@@ -377,15 +349,21 @@ async function findLanding(client, { keywords = [] } = {}) {
   return data || [];
 }
 
-/* ================= Views: display price + availability ================= */
+/* ================= Views: display price + availability (CACHED) ================= */
 async function fetchDisplayPrices(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
   if (!urls.length) return new Map();
+  const cacheKey = "price::" + urls.sort().join("|");
+  const cached = _getCache(cacheKey);
+  if (cached) return cached;
+
   const { data, error } = await client
     .from("v_product_display")
     .select("product_url, display_price_gbp, product_kind, preferred_source")
     .in("product_url", urls);
-  if (error) return new Map();
+  if (error) {
+    return new Map();
+  }
   const map = new Map();
   for (const row of data || []) {
     map.set(baseUrl(row.product_url), {
@@ -394,17 +372,24 @@ async function fetchDisplayPrices(client, productUrls = []) {
       product_kind: row.product_kind || null,
     });
   }
+  _setCache(cacheKey, map);
   return map;
 }
 async function fetchAvailability(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
   if (!urls.length) return new Map();
+  const cacheKey = "avail::" + urls.sort().join("|");
+  const cached = _getCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const { data, error } = await client
       .from("v_product_availability")
       .select("product_url, availability_status, availability_raw")
       .in("product_url", urls);
-    if (error) return new Map();
+    if (error) {
+      return new Map();
+    }
     const map = new Map();
     for (const row of data || []) {
       map.set(baseUrl(row.product_url), {
@@ -412,6 +397,7 @@ async function fetchAvailability(client, productUrls = []) {
         availability_raw: row.availability_raw || null,
       });
     }
+    _setCache(cacheKey, map);
     return map;
   } catch {
     return new Map();
@@ -460,6 +446,29 @@ function isCourseProduct(p) {
   const looksWorkshop = /workshop/.test(u + " " + t);
   return hasCourse && !looksWorkshop;
 }
+
+const LOCATION_HINTS = [
+  "devon",
+  "hartland",
+  "dartmoor",
+  "yorkshire",
+  "dales",
+  "kenilworth",
+  "coventry",
+  "warwickshire",
+  "anglesey",
+  "wales",
+  "betws",
+  "snowdonia",
+  "northumberland",
+  "gloucestershire",
+  "batsford",
+  "chesterton",
+  "windmill",
+  "lynmouth",
+  "exmoor",
+  "quay",
+];
 
 function expandLocationKeywords(keywords = []) {
   const set = new Set();
@@ -641,16 +650,26 @@ function strictlyMatchesEvent(product, firstEvent, subtype = null) {
 
 async function resolveEventProductByView(client, eventUrl) {
   if (!eventUrl) return null;
+  const key = "evmap::" + baseUrl(eventUrl);
+  const cached = _getCache(key);
+  if (cached !== null) return cached;
+
   try {
     const { data, error } = await client
       .from("v_event_product_links_all")
       .select("product_url")
       .eq("event_url", baseUrl(eventUrl))
       .limit(1);
-    if (error) return null;
+    if (error) {
+      _setCache(key, null);
+      return null;
+    }
     const hit = (data || [])[0];
-    return hit?.product_url ? baseUrl(hit.product_url) : null;
+    const mapped = hit?.product_url ? baseUrl(hit.product_url) : null;
+    _setCache(key, mapped);
+    return mapped;
   } catch {
+    _setCache(key, null);
     return null;
   }
 }
@@ -983,14 +1002,14 @@ export default async function handler(req, res) {
       if (locFiltered.length) events = locFiltered;
 
       try {
-        // PERF TRIM: fewer articles on non-advice (events) queries
+        // Trim articles to 6 for non-advice flows
         articles = await findArticles(client, { keywords, topK: 6 });
       } catch {
         articles = [];
       }
     } else {
       [articles, products] = await Promise.all([
-        // Keep 12 for pure advice
+        // Keep 12 when intent is pure advice
         findArticles(client, { keywords, topK: Math.max(12, topK) }),
         findProducts(client, { keywords, topK: 12 }),
       ]);
@@ -1093,29 +1112,9 @@ export default async function handler(req, res) {
               if (anchors.some((a) => evTokens.has(a))) s += 0.4;
               else s -= 0.35;
             }
-            if (/camera/i.test(firstEvent?.title || "") && /camera/i.test(p.title || "")) {
+            if (/camera/i.test(firstEvent?.title || "") && /camera/i.test(p.title || ""))
               s += 0.2;
-            }
 
-            // NEW biasing: if user query indicates beginner/intro, favour beginner/kickstart
-            const qHasBeginner = BEGINNER_WORDS_RE.test(q);
-            const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
-            if (qHasBeginner && (/beginner|beginners|intro|foundation/.test(slug))) {
-              s += 0.5; // strong boost for beginner anchors
-            }
-            if (qHasBeginner && (/\/beginners-|\/kickstart-/.test(slug))) {
-              s += 0.25; // prefer explicit beginners/kickstart slugs
-            }
-
-            // If resolved subtype is course, lightly penalise 'workshop' terms to disambiguate
-            const resolvedSubtype =
-              BEGINNER_WORDS_RE.test(q) ? "course" :
-              (/\bworkshop\b/.test(q) ? "workshop" : (subtype || "unknown"));
-            if (resolvedSubtype === "course" && /\bworkshop\b/.test(slug)) {
-              s -= 0.4;
-            }
-
-            // Keep existing portrait/lightroom de-bias relative to event
             const evtLower = lc(
               (firstEvent?.title || "") + " " + (pickUrl(firstEvent) || "")
             );
@@ -1123,25 +1122,13 @@ export default async function handler(req, res) {
               s -= 0.45;
             if (/(lightroom|editing)/.test(lc(p.title || "")) && !/(lightroom|editing)/.test(evtLower))
               s -= 0.45;
+            if (
+              /beginners[-\s]photography[-\s]course/.test(
+                lc(((pickUrl(p) || "") + " " + (p.title || "")))
+              )
+            )
+              s += 0.35;
 
-            // Legacy small boost for explicit beginners course slug
-            if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
-
-            return { p, s };
-          })
-          .sort((a, b) => b.s - a.s)
-          .map((x) => x.p);
-      }
-    } else {
-      // No event context — still apply beginner bias to plain product ranking
-      if (rankedProducts.length) {
-        rankedProducts = rankedProducts
-          .map((p) => {
-            let s = p._score || 0;
-            const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
-            const qHasBeginner = BEGINNER_WORDS_RE.test(q);
-            if (qHasBeginner && (/beginner|beginners|intro|foundation/.test(slug))) s += 0.4;
-            if (qHasBeginner && (/\/beginners-|\/kickstart-/.test(slug))) s += 0.25;
             return { p, s };
           })
           .sort((a, b) => b.s - a.s)
@@ -1170,8 +1157,6 @@ export default async function handler(req, res) {
     const s4 = Date.now();
     let answer_markdown = "";
     if (intent === "advice") {
-      // Advice answer still focuses on guides,
-      // but pills (below) may include Book now if we found a strong product.
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
       if (
@@ -1202,27 +1187,6 @@ export default async function handler(req, res) {
       featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
         ? featuredProduct
         : preferredProduct || null;
-
-    // Build pills:
-    // - If intent=events → normal event pills (Book now, View event, Photos)
-    // - If intent=advice → advice pills + (NEW) prepend Book now if we have a strong product
-    let pills;
-    if (intent === "events") {
-      pills = buildEventPills(
-        firstEvent,
-        featuredProduct &&
-          strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
-          ? featuredProduct
-          : null,
-        pillProductForBook
-      );
-    } else {
-      pills = buildAdvicePills(rankedArticles, q);
-      const strongBookUrl = pickUrl(pillProductForBook);
-      if (strongBookUrl) {
-        pills = [{ label: "Book now", url: strongBookUrl, brand: "primary" }, ...pills];
-      }
-    }
 
     const structured = {
       intent,
@@ -1280,11 +1244,21 @@ export default async function handler(req, res) {
         source_url: a.source_url,
         last_seen: a.last_seen,
       })),
-      pills,
+      pills:
+        intent === "events"
+          ? buildEventPills(
+              firstEvent,
+              featuredProduct &&
+                strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
+                ? featuredProduct
+                : null,
+              pillProductForBook
+            )
+          : buildAdvicePills(rankedArticles, q),
     };
 
     const debug = {
-      version: "v1.1.2-intent-loosen-bias-pills",
+      version: "v1.1.3-perf-cache-articles6",
       intent,
       keywords,
       event_subtype: subtype,
@@ -1329,6 +1303,7 @@ export default async function handler(req, res) {
         availability_view: "public.v_product_availability (optional)",
         event_map_view: "public.v_event_product_links_all",
       },
+      timings_ms: { db: t_supabase, rank: t_rank, compose: t_comp },
     };
 
     const payload = {
