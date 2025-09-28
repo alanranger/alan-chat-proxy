@@ -70,6 +70,21 @@ function hasAny(hay, list) {
   return (list || []).some((x) => h.includes(lc(x)));
 }
 
+/** NEW: prefer event date in product panel when we have it */
+function formatDateRangeUTC(startISO, endISO) {
+  const s = startISO ? new Date(startISO) : null;
+  const e = endISO ? new Date(endISO) : null;
+  if (!s || isNaN(s)) return null;
+  const sameDay =
+    e && !isNaN(e)
+      ? s.getUTCFullYear() === e.getUTCFullYear() &&
+        s.getUTCMonth() === e.getUTCMonth() &&
+        s.getUTCDate() === e.getUTCDate()
+      : true;
+  const fmt = (d) => d.toUTCString().slice(0, 16); // e.g. "Sat, 23 May 2026"
+  return sameDay || !e || isNaN(e) ? fmt(s) : `${fmt(s)} – ${fmt(e)}`;
+}
+
 const GENERIC = new Set([
   "alan","ranger","photography","photo","workshop","workshops","course","courses",
   "class","classes","tuition","lesson","lessons","uk","england","blog","near","me",
@@ -748,22 +763,6 @@ function parseProductBlock(desc) {
 
   return out;
 }
-
-/** NEW: format an event date range as UTC strings suitable for the product panel. */
-function formatDateRangeUTC(startISO, endISO) {
-  const s = startISO ? new Date(startISO) : null;
-  const e = endISO ? new Date(endISO) : null;
-  if (!s || isNaN(s)) return null;
-  const sameDay =
-    e && !isNaN(e)
-      ? s.getUTCFullYear() === e.getUTCFullYear() &&
-        s.getUTCMonth() === e.getUTCMonth() &&
-        s.getUTCDate() === e.getUTCDate()
-      : true;
-  const fmt = (d) => d.toUTCString().slice(0, 16); // "Sat, 23 May 2026"
-  return sameDay || !e || isNaN(e) ? fmt(s) : `${fmt(s)} – ${fmt(e)}`;
-}
-
 function buildAdviceMarkdown(articles) {
   const lines = ["**Guides**"];
   for (const a of (articles || []).slice(0, 5)) {
@@ -773,11 +772,8 @@ function buildAdviceMarkdown(articles) {
   }
   return lines.join("\n");
 }
-
-/** UPDATED: accept eventDateText override for the Dates row */
 function buildProductPanelMarkdown(prod, opts = {}) {
-  const { eventDateText = null } = opts;
-
+  const { eventDateText = null } = opts; // NEW
   const title = prod?.title || prod?.raw?.name || "Workshop";
   const priceNum = selectDisplayPriceNumber(prod);
   const priceStr = formatDisplayPriceGBP(priceNum);
@@ -797,7 +793,7 @@ function buildProductPanelMarkdown(prod, opts = {}) {
   if (block.location) bullets.push(`- **Location:** ${block.location}`);
   if (block.participants) bullets.push(`- **Participants:** ${block.participants}`);
   if (block.time) bullets.push(`- **Time:** ${block.time}`);
-  // Prefer event date (from mapped event) over product copy if present
+  // Prefer event date (if provided) over parsed product copy
   if (eventDateText) bullets.push(`- **Dates:** ${eventDateText}`);
   else if (block.dates) bullets.push(`- **Dates:** ${block.dates}`);
   if (block.fitness) bullets.push(`- **Fitness:** ${block.fitness}`);
@@ -808,7 +804,6 @@ function buildProductPanelMarkdown(prod, opts = {}) {
 
   return head + bulletsText + bodyText + (url ? `\n\n[Book now →](${url})` : "");
 }
-
 function buildEventPanelMarkdown(ev) {
   if (!ev) return "";
   const title = ev.title || ev.raw?.name || "Upcoming Workshop";
@@ -829,7 +824,7 @@ function buildAdvicePills(articles, originalQuery) {
     label: "More Articles",
     url: `https://www.alanranger.com/search?query=${encodeURIComponent(
       String(originalQuery || "")
-    )}`),
+    )}`,
     brand: "secondary",
   });
   return pills;
@@ -921,6 +916,7 @@ export default async function handler(req, res) {
         articles = [];
       }
 
+      // Hard-filter products by subtype to avoid wrong services.
       if (subtype === "course") {
         products = (products || []).filter(isCourseProduct);
       } else if (subtype === "workshop") {
@@ -958,4 +954,310 @@ export default async function handler(req, res) {
 
     const scoreWrap = (arr) =>
       (arr || [])
-        .map((e) =>
+        .map((e) => {
+          let s = scoreEntity(e, qTokens);
+          const hay = lc(
+            (e?.title || e?.raw?.name || "") +
+              " " +
+              (pickUrl(e) || "") +
+              " " +
+              (e?.description || e?.raw?.metaDescription || e?.raw?.meta?.description || "")
+          );
+          if (queryHasLocationPhrase && hasAny(hay, LOCATION_HINTS)) s += 0.12;
+          if (queryHasTopicAnchor && hasAny(hay, TOPIC_ANCHORS)) s += 0.12;
+          return { e, s };
+        })
+        .sort((a, b) => {
+          if (b.s !== a.s) return b.s - a.s;
+          const by = Date.parse(b.e?.last_seen || "") || 0;
+          const ax = Date.parse(a.e?.last_seen || "") || 0;
+          return by - ax;
+        })
+        .map((x) => Object.assign({ _score: Math.round(x.s * 100) / 100 }, x.e));
+
+    const rankedEvents = (events || [])
+      .slice()
+      .sort(
+        (a, b) =>
+          (Date.parse(a.date_start || 0) || 0) -
+          (Date.parse(b.date_start || 0) || 0)
+      )
+      .map((e) => {
+        let s = scoreEntity(e, qTokens);
+        const hay = lc(
+          (e?.title || e?.raw?.name || "") +
+            " " +
+            (e?.location || "") +
+            " " +
+            (pickUrl(e) || "")
+        );
+        if (queryHasLocationPhrase && hasAny(hay, LOCATION_HINTS)) s += 0.15;
+        if (queryHasTopicAnchor && hasAny(hay, TOPIC_ANCHORS)) s += 0.12;
+        return { ...e, _score: Math.round(Math.min(1, s) * 100) / 100 };
+      });
+
+    let rankedProducts = scoreWrap(products);
+    const rankedArticles = scoreWrap(articles).slice(0, 12);
+
+    const firstEvent = rankedEvents[0] || null;
+    t_rank += Date.now() - s2;
+
+    let featuredProduct = null;
+
+    if (firstEvent) {
+      const matched = await findBestProductForEvent(
+        client,
+        firstEvent,
+        rankedProducts,
+        subtype
+      );
+      if (matched && strictlyMatchesEvent(matched, firstEvent, subtype)) {
+        featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
+
+        const u = baseUrl(pickUrl(featuredProduct));
+        const priceRow = (await fetchDisplayPrices(client, [u])).get(u);
+        const availRow = (await fetchAvailability(client, [u])).get(u);
+        if (priceRow) {
+          featuredProduct.display_price_gbp =
+            priceRow.display_price_gbp ?? featuredProduct.display_price_gbp ?? null;
+          featuredProduct.product_kind_resolved =
+            priceRow.product_kind ?? featuredProduct.product_kind_resolved ?? null;
+          featuredProduct.price_source =
+            priceRow.preferred_source ?? featuredProduct.price_source ?? null;
+        }
+        if (availRow) {
+          featuredProduct.availability_status =
+            availRow.availability_status ?? featuredProduct.availability_status ?? null;
+          featuredProduct.availability_raw =
+            availRow.availability_raw ?? featuredProduct.availability_raw ?? null;
+        }
+      }
+
+      if (rankedProducts.length) {
+        const evTokens = new Set(
+          uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)])
+        );
+        rankedProducts = rankedProducts
+          .map((p) => {
+            const { f1 } = symmetricOverlap(evTokens, pickUrl(p), p.title);
+            let s = (p._score || 0) + f1;
+            if (sameHost(p, firstEvent)) s += 0.15;
+
+            const anchors = productAnchorTokens(p);
+            if (anchors.length) {
+              if (anchors.some((a) => evTokens.has(a))) s += 0.4;
+              else s -= 0.35;
+            }
+
+            const evtLower = lc(
+              (firstEvent?.title || "") + " " + (pickUrl(firstEvent) || "")
+            );
+            if (/portrait/.test(lc(p.title || "")) && !/portrait/.test(evtLower)) s -= 0.45;
+            if (/(lightroom|editing)/.test(lc(p.title || "")) && !/(lightroom|editing)/.test(evtLower)) s -= 0.45;
+
+            const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
+            if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
+            if (hasAny(slug, TOPIC_ANCHORS)) s += 0.1;
+
+            return { p, s };
+          })
+          .sort((a, b) => b.s - a.s)
+          .map((x) => x.p);
+      }
+    }
+
+    let preferredProduct = featuredProduct || rankedProducts[0] || null;
+    preferredProduct = upgradeToRichestByUrl(rankedProducts, preferredProduct);
+
+    if (preferredProduct) {
+      const topUrl = baseUrl(pickUrl(preferredProduct));
+      rankedProducts = [
+        preferredProduct,
+        ...rankedProducts.filter((p) => baseUrl(pickUrl(p)) !== topUrl),
+      ];
+    }
+
+    const hasStrictProduct =
+      !!(featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype));
+
+    // ✅ Always provide a fallback product for the pill if strict match is missing
+    const fallbackProductCandidate =
+      !hasStrictProduct && rankedProducts.length ? rankedProducts[0] : null;
+
+    const scoresForConf = [
+      ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
+      ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
+      ...(rankedProducts[0]?._score ? [rankedProducts[0]._score] : []),
+    ].map((x) => x / 100);
+    const confidence_pct = confidenceFrom(scoresForConf);
+
+    const s4 = Date.now();
+    let answer_markdown = "";
+    if (intent === "advice") {
+      answer_markdown = buildAdviceMarkdown(rankedArticles);
+    } else {
+      if (hasStrictProduct) {
+        // NEW: pass the event date so the product panel shows the correct dates
+        const eventDateText = formatDateRangeUTC(firstEvent?.date_start, firstEvent?.date_end);
+        answer_markdown = buildProductPanelMarkdown(featuredProduct, { eventDateText });
+      } else if (firstEvent) {
+        answer_markdown = buildEventPanelMarkdown(firstEvent);
+      } else {
+        answer_markdown = "";
+      }
+    }
+    t_comp += Date.now() - s4;
+
+    const citations = uniq([
+      ...rankedArticles.slice(0, 3).map(pickUrl),
+      ...(hasStrictProduct ? [pickUrl(featuredProduct)] : []),
+      ...(firstEvent ? [pickUrl(firstEvent)] : []),
+    ]);
+
+    const structured = {
+      intent,
+      topic,
+      event_subtype: subtype,
+      events: (rankedEvents || []).map((e) => ({
+        id: e.id,
+        title: e.title,
+        page_url: e.page_url,
+        source_url: e.source_url,
+        date_start: e.date_start,
+        date_end: e.date_end,
+        location: e.location,
+        when: e.date_start ? new Date(e.date_start).toUTCString() : null,
+        href: pickUrl(e),
+        _score: e._score,
+      })),
+      products: (rankedProducts || []).map((p) => {
+        const long =
+          p?.raw?.metaDescription ||
+          p?.raw?.meta?.description ||
+          p?.description ||
+          "";
+        const parsed = parseProductBlock(long);
+        const priceNum = selectDisplayPriceNumber(p);
+        const priceStr = formatDisplayPriceGBP(priceNum);
+        return {
+          id: p.id,
+          title: p.title,
+          page_url: p.page_url,
+          source_url: p.source_url,
+          description: p.description,
+          price: p.price ?? null,
+          price_gbp:
+            p.display_price_gbp != null ? p.display_price_gbp : p.price_gbp ?? null,
+          display_price_number: priceNum,
+          display_price: priceStr,
+          price_source: p.price_source || null,
+          product_kind_resolved: p.product_kind_resolved || null,
+          location: p.location,
+          _score: p._score,
+          availability_status: p.availability_status || null,
+          availability_raw: p.availability_raw || null,
+          location_parsed: parsed.location || null,
+          participants_parsed: parsed.participants || null,
+          time_parsed: parsed.time || null,
+          dates_parsed: parsed.dates || null,
+          fitness_parsed: parsed.fitness || null,
+        };
+      }),
+      articles: (rankedArticles || []).map((a) => ({
+        id: a.id,
+        title: a.title,
+        page_url: a.page_url,
+        source_url: a.source_url,
+        last_seen: a.last_seen,
+      })),
+      pills:
+        intent === "events"
+          ? buildEventPills(
+              rankedEvents[0] || null,
+              hasStrictProduct ? featuredProduct : null,
+              fallbackProductCandidate
+            )
+          : buildAdvicePills(rankedArticles, q),
+    };
+
+    const debug = {
+      version: "v1.1.5-clean5",
+      intent,
+      keywords,
+      event_subtype: subtype,
+      anchor_flags: {
+        queryHasLocationPhrase,
+        queryHasTopicAnchor,
+      },
+      first_event: rankedEvents[0]
+        ? {
+            id: rankedEvents[0].id,
+            title: rankedEvents[0].title,
+            url: pickUrl(rankedEvents[0]),
+            date_start: rankedEvents[0].date_start,
+          }
+        : null,
+      featured_product: featuredProduct
+        ? {
+            id: featuredProduct.id,
+            title: featuredProduct.title,
+            url: pickUrl(featuredProduct),
+            strictly_matches_first_event: strictlyMatchesEvent(
+              featuredProduct,
+              rankedEvents[0],
+              subtype
+            ),
+            display_price: formatDisplayPriceGBP(
+              selectDisplayPriceNumber(featuredProduct)
+            ),
+            availability_status: featuredProduct.availability_status || null,
+            price_source: featuredProduct.price_source || null,
+          }
+        : null,
+      strict_product_gate: hasStrictProduct,
+      fallback_product_for_pill: fallbackProductCandidate
+        ? { id: fallbackProductCandidate.id, title: fallbackProductCandidate.title, url: pickUrl(fallbackProductCandidate) }
+        : null,
+      pills: {
+        book_now:
+          structured.pills?.find((p) => p.label.toLowerCase() === "book now")?.url ||
+          null,
+      },
+      counts: {
+        events: (structured.events || []).length,
+        products: (structured.products || []).length,
+        articles: (structured.articles || []).length,
+      },
+      probes: { supabase_health: health },
+      views: {
+        price_view: "public.v_product_display",
+        availability_view: "public.v_product_availability (optional)",
+        event_map_view: "public.v_event_product_links_all",
+      },
+    };
+
+    const payload = {
+      ok: true,
+      answer_markdown,
+      citations,
+      structured,
+      confidence: confidence_pct / 100,
+      confidence_pct,
+      debug,
+      meta: {
+        duration_ms: Date.now() - started,
+        endpoint: "/api/chat",
+        topK,
+        intent,
+      },
+    };
+
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return res.status(200).send(payload);
+  } catch (err) {
+    const msg = (err && (err.message || err.toString())) || "Unknown server error";
+    const body = { ok: false, error: msg };
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return res.status(200).send(body);
+  }
+}
