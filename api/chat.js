@@ -898,7 +898,7 @@ export default async function handler(req, res) {
         articles = [];
       }
 
-      // Hard-filter products by subtype to avoid “Sensor Clean” etc.
+      // Hard-filter products by subtype to avoid wrong services.
       if (subtype === "course") {
         products = (products || []).filter(isCourseProduct);
       } else if (subtype === "workshop") {
@@ -1062,6 +1062,10 @@ export default async function handler(req, res) {
     const hasStrictProduct =
       !!(featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype));
 
+    // ✅ NEW: Always provide a fallback product for the pill if strict match is missing
+    const fallbackProductCandidate =
+      !hasStrictProduct && rankedProducts.length ? rankedProducts[0] : null;
+
     const scoresForConf = [
       ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
       ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
@@ -1151,13 +1155,13 @@ export default async function handler(req, res) {
           ? buildEventPills(
               rankedEvents[0] || null,
               hasStrictProduct ? featuredProduct : null,
-              null
+              fallbackProductCandidate // <-- now used for the Book now pill
             )
           : buildAdvicePills(rankedArticles, q),
     };
 
     const debug = {
-      version: "v1.1.5-clean4",
+      version: "v1.1.5-clean5",
       intent,
       keywords,
       event_subtype: subtype,
@@ -1191,6 +1195,9 @@ export default async function handler(req, res) {
           }
         : null,
       strict_product_gate: hasStrictProduct,
+      fallback_product_for_pill: fallbackProductCandidate
+        ? { id: fallbackProductCandidate.id, title: fallbackProductCandidate.title, url: pickUrl(fallbackProductCandidate) }
+        : null,
       pills: {
         book_now:
           structured.pills?.find((p) => p.label.toLowerCase() === "book now")?.url ||
