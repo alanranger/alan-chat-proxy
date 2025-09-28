@@ -146,38 +146,10 @@ function detectEventSubtype(q) {
 }
 
 const STOPWORDS = new Set([
-  "the",
-  "and",
-  "or",
-  "what",
-  "whats",
-  "when",
-  "whens",
-  "next",
-  "cost",
-  "how",
-  "much",
-  "workshop",
-  "workshops",
-  "photography",
-  "photo",
-  "near",
-  "me",
-  "uk",
-  "class",
-  "classes",
-  "course",
-  "courses",
-  "where",
-  "location",
-  "dates",
-  "date",
-  "upcoming",
-  "available",
-  "availability",
-  "book",
-  "booking",
-  "time",
+  "the","and","or","what","whats","when","whens","next","cost","how","much",
+  "workshop","workshops","photography","photo","near","me","uk","class","classes",
+  "course","courses","where","location","dates","date","upcoming","available",
+  "availability","book","booking","time",
 ]);
 
 function extractKeywords(q, intent, subtype) {
@@ -201,8 +173,7 @@ function topicFromKeywords(kws) {
 
 /* ================= Scoring ================= */
 function jaccard(a, b) {
-  const A = new Set(a),
-    B = new Set(b);
+  const A = new Set(a), B = new Set(b);
   let inter = 0;
   for (const x of A) if (B.has(x)) inter++;
   const union = A.size + B.size - inter;
@@ -316,32 +287,6 @@ async function findArticles(client, { keywords = [], topK = 12 } = {}) {
   return data || [];
 }
 
-async function findLanding(client, { keywords = [] } = {}) {
-  let q = client
-    .from("page_entities")
-    .select(SELECT_COLS)
-    .in("kind", ["article", "page"])
-    .eq("raw->>canonical", "true")
-    .eq("raw->>role", "landing");
-  if (keywords.length)
-    q = q.or(
-      buildOrIlike(
-        [
-          "title",
-          "page_url",
-          "description",
-          "raw->>metaDescription",
-          "raw->meta->>description",
-        ],
-        keywords
-      )
-    );
-  q = q.order("last_seen", { ascending: false }).limit(3);
-  const { data, error } = await q;
-  if (error) throw error;
-  return data || [];
-}
-
 /* ================= Views: display price + availability ================= */
 async function fetchDisplayPrices(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
@@ -428,53 +373,23 @@ function isCourseProduct(p) {
 
 /* -------- Extended location synonyms & topic anchors -------- */
 const LOCATION_HINTS = [
-  // existing single-word anchors
-  "devon",
-  "hartland",
-  "dartmoor",
-  "yorkshire",
-  "dales",
-  "kenilworth",
-  "coventry",
-  "warwickshire",
-  "anglesey",
-  "wales",
-  "betws",
-  "snowdonia",
-  "northumberland",
-  "gloucestershire",
-  "batsford",
-  "chesterton",
-  "windmill",
-  "lynmouth",
-  "exmoor",
-  "quay",
-  // new multi-word & specific synonyms
-  "north devon",
-  "hartland quay",
-  "lynmouth harbour",
-  "betws-y-coed",
-  "yorkshire dales",
+  "devon","hartland","dartmoor","yorkshire","dales","kenilworth","coventry",
+  "warwickshire","anglesey","wales","betws","snowdonia","northumberland",
+  "gloucestershire","batsford","chesterton","windmill","lynmouth","exmoor","quay",
+  "north devon","hartland quay","lynmouth harbour","betws-y-coed","yorkshire dales",
   "snowdonia national park",
 ];
 
-const TOPIC_ANCHORS = [
-  "seascape",
-  "woodland",
-  "moor",
-  "long exposure",
-];
+const TOPIC_ANCHORS = ["seascape","woodland","moor","long exposure"];
 
 function expandLocationKeywords(keywords = [], rawQuery = "") {
   const set = new Set();
   const rq = lc(String(rawQuery || ""));
 
-  // include any LOCATION_HINTS phrases present in raw query
   for (const phrase of LOCATION_HINTS) {
     if (rq.includes(lc(phrase))) set.add(lc(phrase));
   }
 
-  // expand single-word tokens (legacy behaviour)
   for (const k of keywords) {
     const t = k.toLowerCase();
     if (t === "kenilworth") {
@@ -549,8 +464,7 @@ function productAnchorTokens(prod) {
 function preferRicherProduct(a, b) {
   if (!a) return b;
   if (!b) return a;
-  const au = baseUrl(pickUrl(a)),
-    bu = baseUrl(pickUrl(b));
+  const au = baseUrl(pickUrl(a)), bu = baseUrl(pickUrl(b));
   if (au !== bu) return a;
   const aHasPrice = (a.price_gbp > 0) || (a.price > 0);
   const bHasPrice = (b.price_gbp > 0) || (b.price > 0);
@@ -707,10 +621,11 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
   const refTokens = new Set(refCore.length ? refCore : all);
   const needLoc = location.length ? location : [];
 
+  // === tightened subtype alignment ===
   const kindAlign = (p) => {
     if (!subtype) return true;
-    if (subtype === "course") return isCourseProduct(p) || !isWorkshopProduct(p);
-    if (subtype === "workshop") return isWorkshopProduct(p) || !isCourseProduct(p);
+    if (subtype === "course") return isCourseProduct(p);      // was permissive
+    if (subtype === "workshop") return isWorkshopProduct(p);  // was permissive
     return true;
   };
 
@@ -739,15 +654,14 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
         const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
         let s = f1;
         if (sameHost(p, firstEvent)) s += 0.1;
-        // topic anchor nudge
-        const hay = lc((p.title || "") + " " + (pickUrl(p) || ""));
-        if (hasAny(hay, TOPIC_ANCHORS)) s += 0.1;
+        if (hasAny(lc((p.title||"") + " " + (pickUrl(p)||"")), TOPIC_ANCHORS)) s += 0.1;
         return { p, s };
       })
       .sort((a, b) => b.s - a.s);
     if (ranked[0]?.p) return ranked[0].p;
   }
 
+  // fallback fetch with the same strict pass
   const core = uniq([...Array.from(refTokens)]).slice(0, 12);
   let fallback = [];
   if (core.length) {
@@ -776,8 +690,7 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
         const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
         let s = f1;
         if (sameHost(p, firstEvent)) s += 0.1;
-        const hay = lc((p.title || "") + " " + (pickUrl(p) || ""));
-        if (hasAny(hay, TOPIC_ANCHORS)) s += 0.1;
+        if (hasAny(lc((p.title||"") + " " + (pickUrl(p)||"")), TOPIC_ANCHORS)) s += 0.1;
         return { p, s };
       })
       .sort((a, b) => b.s - a.s);
@@ -790,11 +703,9 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
 function extraScore(p, base) {
   let s = base;
   const tl = lc(p.title || "");
-  if (/portrait/.test(tl)) s -= 0.0;
-  if (/(lightroom|editing)/.test(tl)) s -= 0.0;
+  // leave neutral nudges here
   const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
   if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
-  // topic anchors: small positive bias
   if (hasAny(slug, TOPIC_ANCHORS)) s += 0.1;
   return s;
 }
@@ -954,7 +865,6 @@ function filterEventsByLocationKeywords(events, keywords, rawQuery) {
     keywords.filter((k) => LOCATION_HINTS.includes(k.toLowerCase())),
     rawQuery
   );
-  // Also include any LOCATION_HINTS phrases found directly in raw query
   for (const phrase of LOCATION_HINTS) {
     if (lc(rawQuery).includes(lc(phrase))) expanded.push(lc(phrase));
   }
@@ -991,22 +901,16 @@ export default async function handler(req, res) {
     const intent = detectIntent(q);
     const subtype = detectEventSubtype(q);
     const rawKeywords = extractKeywords(q, intent, subtype);
-    const keywords = expandLocationKeywords(rawKeywords, q); // include phrase expansions
+    const keywords = expandLocationKeywords(rawKeywords, q);
     const topic = topicFromKeywords(keywords);
 
-    // helpers to bias scoring by anchors present in query
     const queryHasLocationPhrase = hasAny(q, LOCATION_HINTS);
     const queryHasTopicAnchor = hasAny(q, TOPIC_ANCHORS);
 
-    let t_supabase = 0,
-      t_rank = 0,
-      t_comp = 0;
+    let t_supabase = 0, t_rank = 0, t_comp = 0;
 
     const s1 = Date.now();
-    let events = [],
-      products = [],
-      articles = [],
-      landing = [];
+    let events = [], products = [], articles = [], landing = [];
     if (intent === "events") {
       [events, products, landing] = await Promise.all([
         findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
@@ -1021,10 +925,16 @@ export default async function handler(req, res) {
       if (locFiltered.length) events = locFiltered;
 
       try {
-        // trim articles to 6 for performance when intent=events
         articles = await findArticles(client, { keywords, topK: 6 });
       } catch {
         articles = [];
+      }
+
+      // === NEW: hard-filter products by subtype to avoid “Sensor Clean” etc.
+      if (subtype === "course") {
+        products = (products || []).filter(isCourseProduct);
+      } else if (subtype === "workshop") {
+        products = (products || []).filter(isWorkshopProduct);
       }
     } else {
       [articles, products] = await Promise.all([
@@ -1067,7 +977,6 @@ export default async function handler(req, res) {
               " " +
               (e?.description || e?.raw?.metaDescription || e?.raw?.meta?.description || "")
           );
-          // anchor-aware nudges: only if anchor is present in query as well
           if (queryHasLocationPhrase && hasAny(hay, LOCATION_HINTS)) s += 0.12;
           if (queryHasTopicAnchor && hasAny(hay, TOPIC_ANCHORS)) s += 0.12;
           return { e, s };
@@ -1098,10 +1007,7 @@ export default async function handler(req, res) {
         );
         if (queryHasLocationPhrase && hasAny(hay, LOCATION_HINTS)) s += 0.15;
         if (queryHasTopicAnchor && hasAny(hay, TOPIC_ANCHORS)) s += 0.12;
-        return {
-          ...e,
-          _score: Math.round(Math.min(1, s) * 100) / 100,
-        };
+        return { ...e, _score: Math.round(Math.min(1, s) * 100) / 100 };
       });
 
     let rankedProducts = scoreWrap(products);
@@ -1150,12 +1056,12 @@ export default async function handler(req, res) {
             const { f1 } = symmetricOverlap(evTokens, pickUrl(p), p.title);
             let s = (p._score || 0) + f1;
             if (sameHost(p, firstEvent)) s += 0.15;
+
             const anchors = productAnchorTokens(p);
             if (anchors.length) {
               if (anchors.some((a) => evTokens.has(a))) s += 0.4;
               else s -= 0.35;
             }
-            if (/camera/i.test(firstEvent?.title || "") && /camera/i.test(p.title || "")) s += 0.2;
 
             const evtLower = lc(
               (firstEvent?.title || "") + " " + (pickUrl(firstEvent) || "")
@@ -1185,7 +1091,6 @@ export default async function handler(req, res) {
       ];
     }
 
-    // === NEW: strict product flag (used for rendering & pills) ===
     const hasStrictProduct =
       !!(featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype));
 
@@ -1201,10 +1106,9 @@ export default async function handler(req, res) {
     if (intent === "advice") {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
-      // === NEW: only show product when it's a strict match; otherwise show the event panel ===
       if (hasStrictProduct) {
         answer_markdown = buildProductPanelMarkdown(featuredProduct);
-      } else if (firstEvent) {
+    } else if (firstEvent) {
         answer_markdown = buildEventPanelMarkdown(firstEvent);
       } else {
         answer_markdown = "";
@@ -1214,12 +1118,9 @@ export default async function handler(req, res) {
 
     const citations = uniq([
       ...rankedArticles.slice(0, 3).map(pickUrl),
-      ...(hasStrictProduct ? [pickUrl(featuredProduct)] : []), // NEW: only strict product cited
+      ...(hasStrictProduct ? [pickUrl(featuredProduct)] : []),
       ...(firstEvent ? [pickUrl(firstEvent)] : []),
     ]);
-
-    // === NEW: pass a product for "Book now" ONLY when strict match exists ===
-    const pillProductForBook = hasStrictProduct ? featuredProduct : null;
 
     const structured = {
       intent,
@@ -1281,14 +1182,14 @@ export default async function handler(req, res) {
         intent === "events"
           ? buildEventPills(
               firstEvent,
-              hasStrictProduct ? featuredProduct : null, // NEW: only strict product enables Book pill
+              hasStrictProduct ? featuredProduct : null,
               null
             )
           : buildAdvicePills(rankedArticles, q),
     };
 
     const debug = {
-      version: "v1.1.5-clean2",
+      version: "v1.1.5-clean3", // bumped
       intent,
       keywords,
       event_subtype: subtype,
@@ -1321,6 +1222,7 @@ export default async function handler(req, res) {
             price_source: featuredProduct.price_source || null,
           }
         : null,
+      strict_product_gate: hasStrictProduct,
       pills: {
         book_now:
           structured.pills?.find((p) => p.label.toLowerCase() === "book now")?.url ||
