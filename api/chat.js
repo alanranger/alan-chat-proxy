@@ -26,11 +26,14 @@ function supabaseAdmin() {
   });
 }
 
+// use anon key so /auth/v1/health returns 200 instead of 401 in debug
 async function probeSupabaseHealth() {
   const url = `${String(SUPABASE_URL).replace(/\/+$/, "")}/auth/v1/health`;
   const out = { url, ok: false, status: null, error: null };
   try {
-    const resp = await fetch(url);
+    const resp = await fetch(url, {
+      headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    });
     out.status = resp.status;
     out.ok = resp.ok;
   } catch (e) {
@@ -566,8 +569,6 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
   if (!firstEvent) return null;
 
   const evUrl = pickUrl(firstEvent);
-
-  // ---- CHANGED: trust mapping from the view, no strict re-check ----
   const mapped = await resolveEventProductByView(client, evUrl);
   if (mapped) {
     let prod =
@@ -588,9 +589,10 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
         .limit(1);
       if (data && data[0]) prod = data[0];
     }
-    if (prod) return prod; // accept mapped product as-is
+    if (prod && strictlyMatchesEvent(prod, firstEvent, subtype)) {
+      return prod;
+    }
   }
-  // ------------------------------------------------------------------
 
   const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
   const refCore = uniq([...(location || []), ...(topic || [])]);
@@ -899,7 +901,6 @@ export default async function handler(req, res) {
         articles = [];
       }
 
-      // Hard-filter products by subtype to avoid wrong services.
       if (subtype === "course") {
         products = (products || []).filter(isCourseProduct);
       } else if (subtype === "workshop") {
@@ -994,8 +995,7 @@ export default async function handler(req, res) {
         rankedProducts,
         subtype
       );
-      // If we found a mapped/best product, take it
-      if (matched) {
+      if (matched && strictlyMatchesEvent(matched, firstEvent, subtype)) {
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
         const u = baseUrl(pickUrl(featuredProduct));
@@ -1061,11 +1061,9 @@ export default async function handler(req, res) {
       ];
     }
 
-    // ---- CHANGED: mapped/featured product counts as “strict” for UI purposes ----
-    const hasStrictProduct = !!featuredProduct;
-    // ---------------------------------------------------------------------------
+    const hasStrictProduct =
+      !!(featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype));
 
-    // ✅ Always provide a fallback product for the pill if strict match is missing
     const fallbackProductCandidate =
       !hasStrictProduct && rankedProducts.length ? rankedProducts[0] : null;
 
@@ -1185,7 +1183,11 @@ export default async function handler(req, res) {
             id: featuredProduct.id,
             title: featuredProduct.title,
             url: pickUrl(featuredProduct),
-            strictly_matches_first_event: true,
+            strictly_matches_first_event: strictlyMatchesEvent(
+              featuredProduct,
+              rankedEvents[0],
+              subtype
+            ),
             display_price: formatDisplayPriceGBP(
               selectDisplayPriceNumber(featuredProduct)
             ),
