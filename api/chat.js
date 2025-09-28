@@ -2,32 +2,18 @@
 
 export const config = { runtime: "nodejs" };
 
-import { createClient } from "@supabase/supabase-js";
+// IMPORTANT: use the server-only client you created in /lib/supabaseAdmin.js
+import { supabaseAdmin } from "../lib/supabaseAdmin.js";
 
 /* ================= Supabase ================= */
-const FALLBACK_URL = "https://igzvwvbvgvmzvvzoclufx.supabase.co";
-const SUPABASE_URL = process.env.SUPABASE_URL || FALLBACK_URL;
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
 
-const SUPABASE_SERVICE_ROLE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M";
-
-const SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY";
-
-function supabaseAdmin() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Missing SUPABASE_URL or SERVICE_ROLE_KEY");
-  }
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-    global: { fetch },
-  });
-}
-
+// Simple health probe (best-effort; safe if URL missing)
 async function probeSupabaseHealth() {
-  const url = `${String(SUPABASE_URL).replace(/\/+$/, "")}/auth/v1/health`;
+  const base = String(SUPABASE_URL || "").replace(/\/+$/, "");
+  if (!base) return { url: null, ok: false, status: null, error: "no-supabase-url" };
+
+  const url = `${base}/auth/v1/health`;
   const out = { url, ok: false, status: null, error: null };
   try {
     const resp = await fetch(url);
@@ -462,7 +448,7 @@ function monthIdx(m) {
     jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
     jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
   };
-  return s in map ? map[s] : null;
+  return s in map ? s && map[s] : null;
 }
 function extractDatesFromText(text, defaultYear) {
   const out = [];
@@ -863,7 +849,9 @@ export default async function handler(req, res) {
   try {
     const { query, topK = 8 } = req.body || {};
     const q = String(query || "").trim();
-    const client = supabaseAdmin();
+
+    // Use the server-only admin client (no function call; it's already created)
+    const client = supabaseAdmin;
 
     const health = await probeSupabaseHealth();
 
@@ -1062,7 +1050,6 @@ export default async function handler(req, res) {
     const hasStrictProduct =
       !!(featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype));
 
-    // ✅ NEW: Always provide a fallback product for the pill if strict match is missing
     const fallbackProductCandidate =
       !hasStrictProduct && rankedProducts.length ? rankedProducts[0] : null;
 
@@ -1155,7 +1142,7 @@ export default async function handler(req, res) {
           ? buildEventPills(
               rankedEvents[0] || null,
               hasStrictProduct ? featuredProduct : null,
-              fallbackProductCandidate // <-- now used for the Book now pill
+              fallbackProductCandidate
             )
           : buildAdvicePills(rankedArticles, q),
     };
