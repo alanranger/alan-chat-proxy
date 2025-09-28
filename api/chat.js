@@ -39,21 +39,6 @@ async function probeSupabaseHealth() {
   return out;
 }
 
-/* ================= Small in-memory cache (15 min TTL) ================= */
-const _cache = new Map();
-function _getCache(key) {
-  const v = _cache.get(key);
-  if (!v) return null;
-  if (v.exp < Date.now()) {
-    _cache.delete(key);
-    return null;
-  }
-  return v.val;
-}
-function _setCache(key, val, ms = 15 * 60 * 1000) {
-  _cache.set(key, { val, exp: Date.now() + ms });
-}
-
 /* ================= Utilities ================= */
 const SELECT_COLS =
   "id, kind, title, page_url, source_url, last_seen, location, date_start, date_end, price, description, raw";
@@ -79,6 +64,24 @@ function normaliseToken(t) {
 function lc(s) {
   return String(s || "").toLowerCase();
 }
+
+/* ---------- tiny in-process TTL cache ---------- */
+const TTL_MS = 15 * 60 * 1000; // 15 min
+const cache = {
+  store: new Map(),
+  get(key) {
+    const hit = this.store.get(key);
+    if (!hit) return null;
+    if (hit.expires < Date.now()) {
+      this.store.delete(key);
+      return null;
+    }
+    return hit.value;
+  },
+  set(key, value, ttlMs = TTL_MS) {
+    this.store.set(key, { value, expires: Date.now() + ttlMs });
+  },
+};
 
 const GENERIC = new Set([
   "alan",
@@ -138,17 +141,49 @@ function sameHost(a, b) {
 }
 
 /* ================= Intent & Keywords ================= */
+const LOCATION_HINTS = [
+  "devon",
+  "hartland",
+  "dartmoor",
+  "yorkshire",
+  "dales",
+  "kenilworth",
+  "coventry",
+  "warwickshire",
+  "anglesey",
+  "wales",
+  "betws",
+  "snowdonia",
+  "northumberland",
+  "gloucestershire",
+  "batsford",
+  "chesterton",
+  "windmill",
+  "lynmouth",
+  "exmoor",
+  "quay",
+];
+
 function detectIntent(q) {
   const s = String(q || "").toLowerCase();
   const eventish =
     /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking|time|how much|price|cost)\b/;
   const classish =
     /\b(workshop|course|class|tuition|lesson|lessons|photowalk|walk|masterclass)\b/;
+
+  // NEW: location+class tokens imply events intent
+  const hasLocationToken = LOCATION_HINTS.some((t) => s.includes(t));
+  if (hasLocationToken && classish.test(s)) return "events";
+
   return eventish.test(s) && classish.test(s) ? "events" : "advice";
 }
 function detectEventSubtype(q) {
   const s = String(q || "").toLowerCase();
-  if (/\b(course|courses|class|classes|tuition|lesson|lessons|beginner|beginners)\b/.test(s))
+  if (
+    /\b(course|courses|class|classes|tuition|lesson|lessons|beginner|beginners|intro|foundation)\b/.test(
+      s
+    )
+  )
     return "course";
   if (/\b(workshop|workshops|photowalk|walk|masterclass)\b/.test(s))
     return "workshop";
@@ -279,7 +314,10 @@ async function findEvents(client, { keywords = [], topK = 12 } = {}) {
 }
 
 async function findProducts(client, { keywords = [], topK = 12 } = {}) {
-  let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "product");
+  let q = client
+    .from("page_entities")
+    .select(SELECT_COLS)
+    .eq("kind", "product");
   if (keywords.length)
     q = q.or(
       buildOrIlike(
@@ -299,7 +337,7 @@ async function findProducts(client, { keywords = [], topK = 12 } = {}) {
   return data || [];
 }
 
-async function findArticles(client, { keywords = [], topK = 12 } = {}) {
+async function findArticles(client, { keywords = [], topK = 6 } = {}) {
   let q = client
     .from("page_entities")
     .select(SELECT_COLS)
@@ -349,47 +387,48 @@ async function findLanding(client, { keywords = [] } = {}) {
   return data || [];
 }
 
-/* ================= Views: display price + availability (CACHED) ================= */
+/* ================= Views: display price + availability ================= */
+// Cached reader for v_product_display
 async function fetchDisplayPrices(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
   if (!urls.length) return new Map();
-  const cacheKey = "price::" + urls.sort().join("|");
-  const cached = _getCache(cacheKey);
-  if (cached) return cached;
 
-  const { data, error } = await client
+  // split into cache hits and misses
+  const map = new Map();
+  const misses = [];
+  for (const u of urls) {
+    const hit = cache.get(`price:${u}`);
+    if (hit) map.set(u, hit);
+    else misses.push(u);
+  }
+  if (!misses.length) return map;
+
+  const { data } = await client
     .from("v_product_display")
     .select("product_url, display_price_gbp, product_kind, preferred_source")
-    .in("product_url", urls);
-  if (error) {
-    return new Map();
-  }
-  const map = new Map();
+    .in("product_url", misses);
+
   for (const row of data || []) {
-    map.set(baseUrl(row.product_url), {
+    const key = baseUrl(row.product_url);
+    const val = {
       display_price_gbp: row.display_price_gbp,
       preferred_source: row.preferred_source || null,
       product_kind: row.product_kind || null,
-    });
+    };
+    cache.set(`price:${key}`, val);
+    map.set(key, val);
   }
-  _setCache(cacheKey, map);
   return map;
 }
 async function fetchAvailability(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
   if (!urls.length) return new Map();
-  const cacheKey = "avail::" + urls.sort().join("|");
-  const cached = _getCache(cacheKey);
-  if (cached) return cached;
-
   try {
     const { data, error } = await client
       .from("v_product_availability")
       .select("product_url, availability_status, availability_raw")
       .in("product_url", urls);
-    if (error) {
-      return new Map();
-    }
+    if (error) return new Map();
     const map = new Map();
     for (const row of data || []) {
       map.set(baseUrl(row.product_url), {
@@ -397,7 +436,6 @@ async function fetchAvailability(client, productUrls = []) {
         availability_raw: row.availability_raw || null,
       });
     }
-    _setCache(cacheKey, map);
     return map;
   } catch {
     return new Map();
@@ -446,29 +484,6 @@ function isCourseProduct(p) {
   const looksWorkshop = /workshop/.test(u + " " + t);
   return hasCourse && !looksWorkshop;
 }
-
-const LOCATION_HINTS = [
-  "devon",
-  "hartland",
-  "dartmoor",
-  "yorkshire",
-  "dales",
-  "kenilworth",
-  "coventry",
-  "warwickshire",
-  "anglesey",
-  "wales",
-  "betws",
-  "snowdonia",
-  "northumberland",
-  "gloucestershire",
-  "batsford",
-  "chesterton",
-  "windmill",
-  "lynmouth",
-  "exmoor",
-  "quay",
-];
 
 function expandLocationKeywords(keywords = []) {
   const set = new Set();
@@ -648,11 +663,12 @@ function strictlyMatchesEvent(product, firstEvent, subtype = null) {
   return true;
 }
 
+// Cached resolver for event→product mapping
 async function resolveEventProductByView(client, eventUrl) {
   if (!eventUrl) return null;
-  const key = "evmap::" + baseUrl(eventUrl);
-  const cached = _getCache(key);
-  if (cached !== null) return cached;
+  const key = `emap:${baseUrl(eventUrl)}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
 
   try {
     const { data, error } = await client
@@ -660,16 +676,11 @@ async function resolveEventProductByView(client, eventUrl) {
       .select("product_url")
       .eq("event_url", baseUrl(eventUrl))
       .limit(1);
-    if (error) {
-      _setCache(key, null);
-      return null;
-    }
-    const hit = (data || [])[0];
-    const mapped = hit?.product_url ? baseUrl(hit.product_url) : null;
-    _setCache(key, mapped);
+    if (error) return null;
+    const mapped = (data && data[0]?.product_url) ? baseUrl(data[0].product_url) : null;
+    cache.set(key, mapped);
     return mapped;
   } catch {
-    _setCache(key, null);
     return null;
   }
 }
@@ -786,8 +797,6 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
 function extraScore(p, base) {
   let s = base;
   const tl = lc(p.title || "");
-  if (/portrait/.test(tl)) s -= 0.0;
-  if (/(lightroom|editing)/.test(tl)) s -= 0.0;
   const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
   if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
   return s;
@@ -912,10 +921,11 @@ function buildEventPanelMarkdown(ev) {
   if (when) items.push(`- **When:** ${when}`);
   return items.join("\n") + (url ? `\n\n[View event](${url})` : "");
 }
-function buildAdvicePills(articles, originalQuery) {
+function buildAdvicePills(articles, originalQuery, extraBookUrl = null) {
   const pills = [];
   const top = articles?.[0] ? pickUrl(articles[0]) : null;
-  if (top) pills.push({ label: "Read Guide", url: top, brand: "primary" });
+  if (extraBookUrl) pills.push({ label: "Book now", url: extraBookUrl, brand: "primary" });
+  if (top) pills.push({ label: "Read Guide", url: top, brand: "secondary" });
   pills.push({
     label: "More Articles",
     url: `https://www.alanranger.com/search?query=${encodeURIComponent(
@@ -988,6 +998,7 @@ export default async function handler(req, res) {
       products = [],
       articles = [],
       landing = [];
+
     if (intent === "events") {
       [events, products, landing] = await Promise.all([
         findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
@@ -1002,14 +1013,13 @@ export default async function handler(req, res) {
       if (locFiltered.length) events = locFiltered;
 
       try {
-        // Trim articles to 6 for non-advice flows
+        // PERF: cut to 6 when not pure advice
         articles = await findArticles(client, { keywords, topK: 6 });
       } catch {
         articles = [];
       }
     } else {
       [articles, products] = await Promise.all([
-        // Keep 12 when intent is pure advice
         findArticles(client, { keywords, topK: Math.max(12, topK) }),
         findProducts(client, { keywords, topK: 12 }),
       ]);
@@ -1098,15 +1108,21 @@ export default async function handler(req, res) {
         }
       }
 
+      // Re-rank with bias (course queries prefer beginners/intro etc.)
       if (rankedProducts.length) {
         const evTokens = new Set(
           uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)])
         );
+        const userWantsBeginners =
+          /\b(beginner|beginners|intro|foundation)\b/i.test(q);
+        const isCourseSubtype = subtype === "course";
+
         rankedProducts = rankedProducts
           .map((p) => {
             const { f1 } = symmetricOverlap(evTokens, pickUrl(p), p.title);
             let s = (p._score || 0) + f1;
             if (sameHost(p, firstEvent)) s += 0.15;
+
             const anchors = productAnchorTokens(p);
             if (anchors.length) {
               if (anchors.some((a) => evTokens.has(a))) s += 0.4;
@@ -1122,12 +1138,14 @@ export default async function handler(req, res) {
               s -= 0.45;
             if (/(lightroom|editing)/.test(lc(p.title || "")) && !/(lightroom|editing)/.test(evtLower))
               s -= 0.45;
-            if (
-              /beginners[-\s]photography[-\s]course/.test(
-                lc(((pickUrl(p) || "") + " " + (p.title || "")))
-              )
-            )
-              s += 0.35;
+
+            const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
+            if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
+            if (userWantsBeginners && isCourseSubtype) {
+              if (/\b(beginner|beginners|intro|foundation)\b/.test(slug)) s += 0.5;
+              if (/\/beginners-|\/kickstart-/.test(slug)) s += 0.25;
+              if (/workshop/.test(slug)) s -= 0.4; // subtle disfavours workshop for course intent
+            }
 
             return { p, s };
           })
@@ -1188,6 +1206,23 @@ export default async function handler(req, res) {
         ? featuredProduct
         : preferredProduct || null;
 
+    // Always ensure Book now pill is present when we have a strong product — even if intent=advice
+    const pills =
+      intent === "events"
+        ? buildEventPills(
+            firstEvent,
+            featuredProduct &&
+              strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
+              ? featuredProduct
+              : null,
+            pillProductForBook
+          )
+        : buildAdvicePills(
+            rankedArticles,
+            q,
+            pillProductForBook ? pickUrl(pillProductForBook) : null
+          );
+
     const structured = {
       intent,
       topic,
@@ -1244,21 +1279,11 @@ export default async function handler(req, res) {
         source_url: a.source_url,
         last_seen: a.last_seen,
       })),
-      pills:
-        intent === "events"
-          ? buildEventPills(
-              firstEvent,
-              featuredProduct &&
-                strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
-                ? featuredProduct
-                : null,
-              pillProductForBook
-            )
-          : buildAdvicePills(rankedArticles, q),
+      pills,
     };
 
     const debug = {
-      version: "v1.1.3-perf-cache-articles6",
+      version: "v1.2.0-intent-bias-cache",
       intent,
       keywords,
       event_subtype: subtype,
@@ -1299,11 +1324,11 @@ export default async function handler(req, res) {
       },
       probes: { supabase_health: health },
       views: {
-        price_view: "public.v_product_display",
+        price_view: "public.v_product_display (cached)",
         availability_view: "public.v_product_availability (optional)",
-        event_map_view: "public.v_event_product_links_all",
+        event_map_view: "public.v_event_product_links_all (cached)",
       },
-      timings_ms: { db: t_supabase, rank: t_rank, compose: t_comp },
+      timings_ms: { supabase: t_supabase, rank: t_rank, compose: t_comp },
     };
 
     const payload = {
