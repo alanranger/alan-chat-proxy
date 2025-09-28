@@ -64,24 +64,11 @@ function normaliseToken(t) {
 function lc(s) {
   return String(s || "").toLowerCase();
 }
-
-/* ---------- tiny in-process TTL cache ---------- */
-const TTL_MS = 15 * 60 * 1000; // 15 min
-const cache = {
-  store: new Map(),
-  get(key) {
-    const hit = this.store.get(key);
-    if (!hit) return null;
-    if (hit.expires < Date.now()) {
-      this.store.delete(key);
-      return null;
-    }
-    return hit.value;
-  },
-  set(key, value, ttlMs = TTL_MS) {
-    this.store.set(key, { value, expires: Date.now() + ttlMs });
-  },
-};
+function hasAny(hay, list) {
+  if (!hay) return false;
+  const h = lc(hay);
+  return (list || []).some((x) => h.includes(lc(x)));
+}
 
 const GENERIC = new Set([
   "alan",
@@ -141,49 +128,17 @@ function sameHost(a, b) {
 }
 
 /* ================= Intent & Keywords ================= */
-const LOCATION_HINTS = [
-  "devon",
-  "hartland",
-  "dartmoor",
-  "yorkshire",
-  "dales",
-  "kenilworth",
-  "coventry",
-  "warwickshire",
-  "anglesey",
-  "wales",
-  "betws",
-  "snowdonia",
-  "northumberland",
-  "gloucestershire",
-  "batsford",
-  "chesterton",
-  "windmill",
-  "lynmouth",
-  "exmoor",
-  "quay",
-];
-
 function detectIntent(q) {
   const s = String(q || "").toLowerCase();
   const eventish =
     /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking|time|how much|price|cost)\b/;
   const classish =
     /\b(workshop|course|class|tuition|lesson|lessons|photowalk|walk|masterclass)\b/;
-
-  // NEW: location+class tokens imply events intent
-  const hasLocationToken = LOCATION_HINTS.some((t) => s.includes(t));
-  if (hasLocationToken && classish.test(s)) return "events";
-
   return eventish.test(s) && classish.test(s) ? "events" : "advice";
 }
 function detectEventSubtype(q) {
   const s = String(q || "").toLowerCase();
-  if (
-    /\b(course|courses|class|classes|tuition|lesson|lessons|beginner|beginners|intro|foundation)\b/.test(
-      s
-    )
-  )
+  if (/\b(course|courses|class|classes|tuition|lesson|lessons|beginner|beginners)\b/.test(s))
     return "course";
   if (/\b(workshop|workshops|photowalk|walk|masterclass)\b/.test(s))
     return "workshop";
@@ -337,7 +292,7 @@ async function findProducts(client, { keywords = [], topK = 12 } = {}) {
   return data || [];
 }
 
-async function findArticles(client, { keywords = [], topK = 6 } = {}) {
+async function findArticles(client, { keywords = [], topK = 12 } = {}) {
   let q = client
     .from("page_entities")
     .select(SELECT_COLS)
@@ -388,35 +343,21 @@ async function findLanding(client, { keywords = [] } = {}) {
 }
 
 /* ================= Views: display price + availability ================= */
-// Cached reader for v_product_display
 async function fetchDisplayPrices(client, productUrls = []) {
   const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
   if (!urls.length) return new Map();
-
-  // split into cache hits and misses
-  const map = new Map();
-  const misses = [];
-  for (const u of urls) {
-    const hit = cache.get(`price:${u}`);
-    if (hit) map.set(u, hit);
-    else misses.push(u);
-  }
-  if (!misses.length) return map;
-
-  const { data } = await client
+  const { data, error } = await client
     .from("v_product_display")
     .select("product_url, display_price_gbp, product_kind, preferred_source")
-    .in("product_url", misses);
-
+    .in("product_url", urls);
+  if (error) return new Map();
+  const map = new Map();
   for (const row of data || []) {
-    const key = baseUrl(row.product_url);
-    const val = {
+    map.set(baseUrl(row.product_url), {
       display_price_gbp: row.display_price_gbp,
       preferred_source: row.preferred_source || null,
       product_kind: row.product_kind || null,
-    };
-    cache.set(`price:${key}`, val);
-    map.set(key, val);
+    });
   }
   return map;
 }
@@ -485,8 +426,55 @@ function isCourseProduct(p) {
   return hasCourse && !looksWorkshop;
 }
 
-function expandLocationKeywords(keywords = []) {
+/* -------- Extended location synonyms & topic anchors -------- */
+const LOCATION_HINTS = [
+  // existing single-word anchors
+  "devon",
+  "hartland",
+  "dartmoor",
+  "yorkshire",
+  "dales",
+  "kenilworth",
+  "coventry",
+  "warwickshire",
+  "anglesey",
+  "wales",
+  "betws",
+  "snowdonia",
+  "northumberland",
+  "gloucestershire",
+  "batsford",
+  "chesterton",
+  "windmill",
+  "lynmouth",
+  "exmoor",
+  "quay",
+  // new multi-word & specific synonyms
+  "north devon",
+  "hartland quay",
+  "lynmouth harbour",
+  "betws-y-coed",
+  "yorkshire dales",
+  "snowdonia national park",
+];
+
+const TOPIC_ANCHORS = [
+  "seascape",
+  "woodland",
+  "moor",
+  "long exposure",
+];
+
+function expandLocationKeywords(keywords = [], rawQuery = "") {
   const set = new Set();
+  const rq = lc(String(rawQuery || ""));
+
+  // include any LOCATION_HINTS phrases present in raw query
+  for (const phrase of LOCATION_HINTS) {
+    if (rq.includes(lc(phrase))) set.add(lc(phrase));
+  }
+
+  // expand single-word tokens (legacy behaviour)
   for (const k of keywords) {
     const t = k.toLowerCase();
     if (t === "kenilworth") {
@@ -496,7 +484,13 @@ function expandLocationKeywords(keywords = []) {
     } else if (t === "warwickshire") {
       set.add("warwickshire"); set.add("coventry"); set.add("kenilworth");
     } else if (t === "devon") {
-      set.add("devon"); set.add("north devon"); set.add("hartland"); set.add("lynmouth");
+      set.add("devon"); set.add("north devon"); set.add("hartland"); set.add("hartland quay"); set.add("lynmouth"); set.add("lynmouth harbour");
+    } else if (t === "yorkshire") {
+      set.add("yorkshire"); set.add("yorkshire dales");
+    } else if (t === "betws") {
+      set.add("betws"); set.add("betws-y-coed");
+    } else if (t === "snowdonia") {
+      set.add("snowdonia"); set.add("snowdonia national park");
     } else {
       set.add(t);
     }
@@ -511,7 +505,7 @@ function extractTopicAndLocationTokensFromEvent(ev) {
   const locFromField = nonGenericTokens(ev?.location || "");
   const locationHints = uniq(
     [...all, ...locFromField].filter((x) =>
-      /(kenilworth|coventry|warwickshire|dartmoor|devon|hartland|anglesey|yorkshire|dales|wales|betws|snowdonia|northumberland|batsford|gloucestershire|chesterton|windmill|lynmouth|exmoor|quay)/.test(
+      /(kenilworth|coventry|warwickshire|dartmoor|devon|hartland|anglesey|yorkshire|dales|wales|betws|snowdonia|northumberland|batsford|gloucestershire|chesterton|windmill|lynmouth|exmoor|quay|north|harbour|dales)/.test(
         x
       )
     )
@@ -663,13 +657,8 @@ function strictlyMatchesEvent(product, firstEvent, subtype = null) {
   return true;
 }
 
-// Cached resolver for event→product mapping
 async function resolveEventProductByView(client, eventUrl) {
   if (!eventUrl) return null;
-  const key = `emap:${baseUrl(eventUrl)}`;
-  const hit = cache.get(key);
-  if (hit) return hit;
-
   try {
     const { data, error } = await client
       .from("v_event_product_links_all")
@@ -677,9 +666,8 @@ async function resolveEventProductByView(client, eventUrl) {
       .eq("event_url", baseUrl(eventUrl))
       .limit(1);
     if (error) return null;
-    const mapped = (data && data[0]?.product_url) ? baseUrl(data[0].product_url) : null;
-    cache.set(key, mapped);
-    return mapped;
+    const hit = (data || [])[0];
+    return hit?.product_url ? baseUrl(hit.product_url) : null;
   } catch {
     return null;
   }
@@ -751,6 +739,9 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
         const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
         let s = f1;
         if (sameHost(p, firstEvent)) s += 0.1;
+        // topic anchor nudge
+        const hay = lc((p.title || "") + " " + (pickUrl(p) || ""));
+        if (hasAny(hay, TOPIC_ANCHORS)) s += 0.1;
         return { p, s };
       })
       .sort((a, b) => b.s - a.s);
@@ -785,6 +776,8 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
         const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
         let s = f1;
         if (sameHost(p, firstEvent)) s += 0.1;
+        const hay = lc((p.title || "") + " " + (pickUrl(p) || ""));
+        if (hasAny(hay, TOPIC_ANCHORS)) s += 0.1;
         return { p, s };
       })
       .sort((a, b) => b.s - a.s);
@@ -797,8 +790,12 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
 function extraScore(p, base) {
   let s = base;
   const tl = lc(p.title || "");
+  if (/portrait/.test(tl)) s -= 0.0;
+  if (/(lightroom|editing)/.test(tl)) s -= 0.0;
   const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
   if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
+  // topic anchors: small positive bias
+  if (hasAny(slug, TOPIC_ANCHORS)) s += 0.1;
   return s;
 }
 
@@ -921,11 +918,10 @@ function buildEventPanelMarkdown(ev) {
   if (when) items.push(`- **When:** ${when}`);
   return items.join("\n") + (url ? `\n\n[View event](${url})` : "");
 }
-function buildAdvicePills(articles, originalQuery, extraBookUrl = null) {
+function buildAdvicePills(articles, originalQuery) {
   const pills = [];
   const top = articles?.[0] ? pickUrl(articles[0]) : null;
-  if (extraBookUrl) pills.push({ label: "Book now", url: extraBookUrl, brand: "primary" });
-  if (top) pills.push({ label: "Read Guide", url: top, brand: "secondary" });
+  if (top) pills.push({ label: "Read Guide", url: top, brand: "primary" });
   pills.push({
     label: "More Articles",
     url: `https://www.alanranger.com/search?query=${encodeURIComponent(
@@ -951,11 +947,20 @@ function buildEventPills(firstEvent, productOrNull, fallbackProduct = null) {
   });
   return pills;
 }
-function filterEventsByLocationKeywords(events, keywords) {
+
+/* === location filtering with phrase support === */
+function filterEventsByLocationKeywords(events, keywords, rawQuery) {
   const expanded = expandLocationKeywords(
-    keywords.filter((k) => LOCATION_HINTS.includes(k.toLowerCase()))
+    keywords.filter((k) => LOCATION_HINTS.includes(k.toLowerCase())),
+    rawQuery
   );
-  if (!expanded.length) return events;
+  // Also include any LOCATION_HINTS phrases found directly in raw query
+  for (const phrase of LOCATION_HINTS) {
+    if (lc(rawQuery).includes(lc(phrase))) expanded.push(lc(phrase));
+  }
+  const needles = Array.from(new Set(expanded));
+  if (!needles.length) return events;
+
   return events.filter((e) => {
     const hay = (
       (e.title || "") +
@@ -964,7 +969,7 @@ function filterEventsByLocationKeywords(events, keywords) {
       " " +
       (pickUrl(e) || "")
     ).toLowerCase();
-    return expanded.some((l) => hay.includes(l));
+    return needles.some((l) => hay.includes(l));
   });
 }
 
@@ -986,8 +991,12 @@ export default async function handler(req, res) {
     const intent = detectIntent(q);
     const subtype = detectEventSubtype(q);
     const rawKeywords = extractKeywords(q, intent, subtype);
-    const keywords = expandLocationKeywords(rawKeywords);
+    const keywords = expandLocationKeywords(rawKeywords, q); // include phrase expansions
     const topic = topicFromKeywords(keywords);
+
+    // helpers to bias scoring by anchors present in query
+    const queryHasLocationPhrase = hasAny(q, LOCATION_HINTS);
+    const queryHasTopicAnchor = hasAny(q, TOPIC_ANCHORS);
 
     let t_supabase = 0,
       t_rank = 0,
@@ -998,7 +1007,6 @@ export default async function handler(req, res) {
       products = [],
       articles = [],
       landing = [];
-
     if (intent === "events") {
       [events, products, landing] = await Promise.all([
         findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
@@ -1009,11 +1017,11 @@ export default async function handler(req, res) {
       if (subtype === "workshop") events = events.filter(isWorkshopEvent);
       else if (subtype === "course") events = events.filter(isCourseEvent);
 
-      const locFiltered = filterEventsByLocationKeywords(events, keywords);
+      const locFiltered = filterEventsByLocationKeywords(events, keywords, q);
       if (locFiltered.length) events = locFiltered;
 
       try {
-        // PERF: cut to 6 when not pure advice
+        // trim articles to 6 for performance when intent=events
         articles = await findArticles(client, { keywords, topK: 6 });
       } catch {
         articles = [];
@@ -1050,7 +1058,20 @@ export default async function handler(req, res) {
 
     const scoreWrap = (arr) =>
       (arr || [])
-        .map((e) => ({ e, s: scoreEntity(e, qTokens) }))
+        .map((e) => {
+          let s = scoreEntity(e, qTokens);
+          const hay = lc(
+            (e?.title || e?.raw?.name || "") +
+              " " +
+              (pickUrl(e) || "") +
+              " " +
+              (e?.description || e?.raw?.metaDescription || e?.raw?.meta?.description || "")
+          );
+          // anchor-aware nudges: only if anchor is present in query as well
+          if (queryHasLocationPhrase && hasAny(hay, LOCATION_HINTS)) s += 0.12;
+          if (queryHasTopicAnchor && hasAny(hay, TOPIC_ANCHORS)) s += 0.12;
+          return { e, s };
+        })
         .sort((a, b) => {
           if (b.s !== a.s) return b.s - a.s;
           const by = Date.parse(b.e?.last_seen || "") || 0;
@@ -1066,10 +1087,22 @@ export default async function handler(req, res) {
           (Date.parse(a.date_start || 0) || 0) -
           (Date.parse(b.date_start || 0) || 0)
       )
-      .map((e) => ({
-        ...e,
-        _score: Math.round(scoreEntity(e, qTokens) * 100) / 100,
-      }));
+      .map((e) => {
+        let s = scoreEntity(e, qTokens);
+        const hay = lc(
+          (e?.title || e?.raw?.name || "") +
+            " " +
+            (e?.location || "") +
+            " " +
+            (pickUrl(e) || "")
+        );
+        if (queryHasLocationPhrase && hasAny(hay, LOCATION_HINTS)) s += 0.15;
+        if (queryHasTopicAnchor && hasAny(hay, TOPIC_ANCHORS)) s += 0.12;
+        return {
+          ...e,
+          _score: Math.round(Math.min(1, s) * 100) / 100,
+        };
+      });
 
     let rankedProducts = scoreWrap(products);
     const rankedArticles = scoreWrap(articles).slice(0, 12);
@@ -1108,44 +1141,31 @@ export default async function handler(req, res) {
         }
       }
 
-      // Re-rank with bias (course queries prefer beginners/intro etc.)
       if (rankedProducts.length) {
         const evTokens = new Set(
           uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)])
         );
-        const userWantsBeginners =
-          /\b(beginner|beginners|intro|foundation)\b/i.test(q);
-        const isCourseSubtype = subtype === "course";
-
         rankedProducts = rankedProducts
           .map((p) => {
             const { f1 } = symmetricOverlap(evTokens, pickUrl(p), p.title);
             let s = (p._score || 0) + f1;
             if (sameHost(p, firstEvent)) s += 0.15;
-
             const anchors = productAnchorTokens(p);
             if (anchors.length) {
               if (anchors.some((a) => evTokens.has(a))) s += 0.4;
               else s -= 0.35;
             }
-            if (/camera/i.test(firstEvent?.title || "") && /camera/i.test(p.title || ""))
-              s += 0.2;
+            if (/camera/i.test(firstEvent?.title || "") && /camera/i.test(p.title || "")) s += 0.2;
 
             const evtLower = lc(
               (firstEvent?.title || "") + " " + (pickUrl(firstEvent) || "")
             );
-            if (/portrait/.test(lc(p.title || "")) && !/portrait/.test(evtLower))
-              s -= 0.45;
-            if (/(lightroom|editing)/.test(lc(p.title || "")) && !/(lightroom|editing)/.test(evtLower))
-              s -= 0.45;
+            if (/portrait/.test(lc(p.title || "")) && !/portrait/.test(evtLower)) s -= 0.45;
+            if (/(lightroom|editing)/.test(lc(p.title || "")) && !/(lightroom|editing)/.test(evtLower)) s -= 0.45;
 
             const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
             if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
-            if (userWantsBeginners && isCourseSubtype) {
-              if (/\b(beginner|beginners|intro|foundation)\b/.test(slug)) s += 0.5;
-              if (/\/beginners-|\/kickstart-/.test(slug)) s += 0.25;
-              if (/workshop/.test(slug)) s -= 0.4; // subtle disfavours workshop for course intent
-            }
+            if (hasAny(slug, TOPIC_ANCHORS)) s += 0.1;
 
             return { p, s };
           })
@@ -1206,23 +1226,6 @@ export default async function handler(req, res) {
         ? featuredProduct
         : preferredProduct || null;
 
-    // Always ensure Book now pill is present when we have a strong product — even if intent=advice
-    const pills =
-      intent === "events"
-        ? buildEventPills(
-            firstEvent,
-            featuredProduct &&
-              strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
-              ? featuredProduct
-              : null,
-            pillProductForBook
-          )
-        : buildAdvicePills(
-            rankedArticles,
-            q,
-            pillProductForBook ? pickUrl(pillProductForBook) : null
-          );
-
     const structured = {
       intent,
       topic,
@@ -1279,14 +1282,28 @@ export default async function handler(req, res) {
         source_url: a.source_url,
         last_seen: a.last_seen,
       })),
-      pills,
+      pills:
+        intent === "events"
+          ? buildEventPills(
+              firstEvent,
+              featuredProduct &&
+                strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
+                ? featuredProduct
+                : null,
+              pillProductForBook
+            )
+          : buildAdvicePills(rankedArticles, q),
     };
 
     const debug = {
-      version: "v1.2.0-intent-bias-cache",
+      version: "v1.1.4-anchors",
       intent,
       keywords,
       event_subtype: subtype,
+      anchor_flags: {
+        queryHasLocationPhrase,
+        queryHasTopicAnchor,
+      },
       first_event: firstEvent
         ? {
             id: firstEvent.id,
@@ -1324,11 +1341,10 @@ export default async function handler(req, res) {
       },
       probes: { supabase_health: health },
       views: {
-        price_view: "public.v_product_display (cached)",
+        price_view: "public.v_product_display",
         availability_view: "public.v_product_availability (optional)",
-        event_map_view: "public.v_event_product_links_all (cached)",
+        event_map_view: "public.v_event_product_links_all",
       },
-      timings_ms: { supabase: t_supabase, rank: t_rank, compose: t_comp },
     };
 
     const payload = {
