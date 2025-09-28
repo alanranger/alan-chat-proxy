@@ -70,21 +70,6 @@ function hasAny(hay, list) {
   return (list || []).some((x) => h.includes(lc(x)));
 }
 
-/** NEW: prefer event date in product panel when we have it */
-function formatDateRangeUTC(startISO, endISO) {
-  const s = startISO ? new Date(startISO) : null;
-  const e = endISO ? new Date(endISO) : null;
-  if (!s || isNaN(s)) return null;
-  const sameDay =
-    e && !isNaN(e)
-      ? s.getUTCFullYear() === e.getUTCFullYear() &&
-        s.getUTCMonth() === e.getUTCMonth() &&
-        s.getUTCDate() === e.getUTCDate()
-      : true;
-  const fmt = (d) => d.toUTCString().slice(0, 16); // e.g. "Sat, 23 May 2026"
-  return sameDay || !e || isNaN(e) ? fmt(s) : `${fmt(s)} – ${fmt(e)}`;
-}
-
 const GENERIC = new Set([
   "alan","ranger","photography","photo","workshop","workshops","course","courses",
   "class","classes","tuition","lesson","lessons","uk","england","blog","near","me",
@@ -361,7 +346,6 @@ function isCourseProduct(p) {
   return hasCourse && !looksWorkshop;
 }
 
-/* -------- Extended location synonyms & topic anchors -------- */
 const LOCATION_HINTS = [
   "devon","hartland","dartmoor","yorkshire","dales","kenilworth","coventry",
   "warwickshire","anglesey","wales","betws","snowdonia","northumberland",
@@ -580,6 +564,7 @@ async function resolveEventProductByView(client, eventUrl) {
 async function findBestProductForEvent(client, firstEvent, preloadProducts = [], subtype = null) {
   if (!firstEvent) return null;
 
+  // 1) Trust explicit mapping if present (no strict gating)
   const evUrl = pickUrl(firstEvent);
   const mapped = await resolveEventProductByView(client, evUrl);
   if (mapped) {
@@ -601,11 +586,14 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
         .limit(1);
       if (data && data[0]) prod = data[0];
     }
-    if (prod && strictlyMatchesEvent(prod, firstEvent, subtype)) {
+    if (prod) {
+      // mark provenance so downstream treats it as approved
+      prod._matched_via = "mapping";
       return prod;
     }
   }
 
+  // 2) Heuristic fallback (unchanged)
   const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
   const refCore = uniq([...(location || []), ...(topic || [])]);
   const refTokens = new Set(refCore.length ? refCore : all);
@@ -772,8 +760,7 @@ function buildAdviceMarkdown(articles) {
   }
   return lines.join("\n");
 }
-function buildProductPanelMarkdown(prod, opts = {}) {
-  const { eventDateText = null } = opts; // NEW
+function buildProductPanelMarkdown(prod) {
   const title = prod?.title || prod?.raw?.name || "Workshop";
   const priceNum = selectDisplayPriceNumber(prod);
   const priceStr = formatDisplayPriceGBP(priceNum);
@@ -793,9 +780,7 @@ function buildProductPanelMarkdown(prod, opts = {}) {
   if (block.location) bullets.push(`- **Location:** ${block.location}`);
   if (block.participants) bullets.push(`- **Participants:** ${block.participants}`);
   if (block.time) bullets.push(`- **Time:** ${block.time}`);
-  // Prefer event date (if provided) over parsed product copy
-  if (eventDateText) bullets.push(`- **Dates:** ${eventDateText}`);
-  else if (block.dates) bullets.push(`- **Dates:** ${block.dates}`);
+  if (block.dates) bullets.push(`- **Dates:** ${block.dates}`);
   if (block.fitness) bullets.push(`- **Fitness:** ${block.fitness}`);
 
   const plain = sanitizeDesc(long);
@@ -916,7 +901,6 @@ export default async function handler(req, res) {
         articles = [];
       }
 
-      // Hard-filter products by subtype to avoid wrong services.
       if (subtype === "course") {
         products = (products || []).filter(isCourseProduct);
       } else if (subtype === "workshop") {
@@ -1011,7 +995,7 @@ export default async function handler(req, res) {
         rankedProducts,
         subtype
       );
-      if (matched && strictlyMatchesEvent(matched, firstEvent, subtype)) {
+      if (matched) {
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
         const u = baseUrl(pickUrl(featuredProduct));
@@ -1077,10 +1061,11 @@ export default async function handler(req, res) {
       ];
     }
 
+    // Treat mapping as "strict" so we render the product panel
     const hasStrictProduct =
-      !!(featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype));
+      !!(featuredProduct && (featuredProduct._matched_via === "mapping" ||
+          strictlyMatchesEvent(featuredProduct, rankedEvents[0], subtype)));
 
-    // ✅ Always provide a fallback product for the pill if strict match is missing
     const fallbackProductCandidate =
       !hasStrictProduct && rankedProducts.length ? rankedProducts[0] : null;
 
@@ -1097,9 +1082,7 @@ export default async function handler(req, res) {
       answer_markdown = buildAdviceMarkdown(rankedArticles);
     } else {
       if (hasStrictProduct) {
-        // NEW: pass the event date so the product panel shows the correct dates
-        const eventDateText = formatDateRangeUTC(firstEvent?.date_start, firstEvent?.date_end);
-        answer_markdown = buildProductPanelMarkdown(featuredProduct, { eventDateText });
+        answer_markdown = buildProductPanelMarkdown(featuredProduct);
       } else if (firstEvent) {
         answer_markdown = buildEventPanelMarkdown(firstEvent);
       } else {
@@ -1161,6 +1144,7 @@ export default async function handler(req, res) {
           time_parsed: parsed.time || null,
           dates_parsed: parsed.dates || null,
           fitness_parsed: parsed.fitness || null,
+          _matched_via: p._matched_via || null,
         };
       }),
       articles: (rankedArticles || []).map((a) => ({
@@ -1202,11 +1186,9 @@ export default async function handler(req, res) {
             id: featuredProduct.id,
             title: featuredProduct.title,
             url: pickUrl(featuredProduct),
-            strictly_matches_first_event: strictlyMatchesEvent(
-              featuredProduct,
-              rankedEvents[0],
-              subtype
-            ),
+            strictly_matches_first_event:
+              strictlyMatchesEvent(featuredProduct, rankedEvents[0], subtype),
+            matched_via: featuredProduct._matched_via || null,
             display_price: formatDisplayPriceGBP(
               selectDisplayPriceNumber(featuredProduct)
             ),
