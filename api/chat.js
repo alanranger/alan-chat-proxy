@@ -1,564 +1,1325 @@
-/* =========================================================================
-   Alan Ranger Assistant — chat.js
-   v1.3.0
-   ========================================================================= */
+// /api/chat.js
 
-/* ========================= Config & DOM refs ========================= */
-const CHAT_ENDPOINT = '/api/chat';
-const urlParams = new URLSearchParams(location.search);
-if (urlParams.get('debug') === '1') {
-  requestAnimationFrame(() => {
-    const p = document.getElementById('debugPanel');
-    if (p) p.open = true;
+export const config = { runtime: "nodejs" };
+
+import { createClient } from "@supabase/supabase-js";
+
+/* ================= Supabase ================= */
+const FALLBACK_URL = "https://igzvwvbvgvmzvvzoclufx.supabase.co";
+const SUPABASE_URL = process.env.SUPABASE_URL || FALLBACK_URL;
+
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M";
+
+const SUPABASE_ANON_KEY =
+  process.env.SUPABASE_ANON_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY";
+
+function supabaseAdmin() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Missing SUPABASE_URL or SERVICE_ROLE_KEY");
+  }
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+    global: { fetch },
   });
 }
 
-const thread   = document.getElementById('thread');
-const input    = document.getElementById('q');
-const sendBtn  = document.getElementById('send');
-const btnEmail = document.getElementById('btn-email');
-const btnReset = document.getElementById('btn-reset');
-
-const dbgStatus  = document.getElementById('dbg-status');
-const dbgReq     = document.getElementById('dbg-req');
-const dbgRes     = document.getElementById('dbg-res');
-const dbgHeaders = document.getElementById('dbg-headers');
-const dbgStruct  = document.getElementById('dbg-struct');
-const dbgProv    = document.getElementById('dbg-prov');
-const dbgCopy    = document.getElementById('dbg-copy');
-const dbgNote    = document.getElementById('dbg-note');
-const dbgSrvVer  = document.getElementById('dbg-srvver');
-
-/* ========================= Utilities ========================= */
-function setDebugJSON(el, data, opts={maxLen:1200, maxItems:20}) {
-  const replacer = (k,v) => {
-    if (typeof v === 'string') {
-      return v.length > opts.maxLen ? v.slice(0, opts.maxLen) + '…(truncated)' : v;
-    }
-    if (Array.isArray(v) && v.length > opts.maxItems) {
-      return [...v.slice(0, opts.maxItems), `…(${v.length - opts.maxItems} more items truncated)`];
-    }
-    return v;
-  };
-  try { el.textContent = JSON.stringify(data, replacer, 2); }
-  catch { el.textContent = String(data); }
-}
-function collectDebugText(){
-  const get = (el) => (el && el.textContent) ? el.textContent : '–';
-  const blocks = [
-    ['Endpoint','/api/chat'],
-    ['Status', get(dbgStatus)],
-    ['Server ver', get(dbgSrvVer)],
-    ['Headers', get(dbgHeaders)],
-    ['Request', get(dbgReq)],
-    ['Response', get(dbgRes)],
-    ['Structured', get(dbgStruct)],
-    ['Provenance', get(dbgProv)],
-    ['Note', get(dbgNote)],
-  ];
-  return blocks.map(([k,v]) => `${k}:\n${v}`).join('\n\n').trim();
-}
-async function copyAllDebug(){
-  const text = collectDebugText();
-  if(!text){ alert('Nothing to copy yet.'); return; }
-  try{
-    if (navigator.clipboard?.writeText){
-      await navigator.clipboard.writeText(text);
-    } else {
-      const ta=document.createElement('textarea');
-      ta.value=text; document.body.appendChild(ta);
-      ta.select(); document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-    if (dbgCopy){
-      const old = dbgCopy.textContent;
-      dbgCopy.textContent = 'Copied ✓';
-      setTimeout(()=>{ dbgCopy.textContent = old; }, 1500);
-    }
-  }catch(e){
-    console.error('Copy failed', e);
-    alert('Copy failed. Select the debug text and press Ctrl/Cmd+C.');
+async function probeSupabaseHealth() {
+  const url = `${String(SUPABASE_URL).replace(/\/+$/, "")}/auth/v1/health`;
+  const out = { url, ok: false, status: null, error: null };
+  try {
+    const resp = await fetch(url);
+    out.status = resp.status;
+    out.ok = resp.ok;
+  } catch (e) {
+    out.error = String(e && e.message ? e.message : e);
   }
+  return out;
 }
 
-function addBubble(html, opts={}) {
-  const div = document.createElement('div');
-  div.className = 'bubble' + (opts.user ? ' user' : '');
-  div.innerHTML = html;
-  thread.appendChild(div);
-  div.scrollIntoView({behavior:'smooth', block:'end'});
-  return div;
-}
-function addTyping() {
-  const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
-  return ()=> el && el.remove();
-}
-function mdToHtml(md){
-  if (!md) return { html:'', liIds:[], items:[] };
-  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  const lines = s.split(/\r?\n/);
-  let out='', inList=false;
-  const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
-  for (const line of lines){
-    const m = line.match(/^\s*-\s+(.*)$/);
-    if (m){ if(!inList){ out+='<ul>'; inList=true; } out += `<li>${m[1].trim()}</li>`; }
-    else { flush(); out += line.trim()? `<p>${line}</p>` : ''; }
-  }
-  flush();
-  return { html:`<div class="answer">${out}</div>` };
-}
-function fmtDateTime(d){
-  try{ return new Date(d||Date.now()).toLocaleString(undefined,{hour12:false}); }catch{ return String(d||''); }
-}
-function fmtDate(iso){
-  try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
-}
-function currency(amount, ccy){
-  if(amount==null || amount==='') return null;
-  const n = Number(amount); if(!isFinite(n)) return null;
-  try{ return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n); }
-  catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
-}
-function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]) )}
+/* ================= Utilities ================= */
+const SELECT_COLS =
+  "id, kind, title, page_url, source_url, last_seen, location, date_start, date_end, price, description, raw";
 
-/* ========================= Ranking helpers ========================= */
-const lc = (s) => String(s||'').toLowerCase();
-const uniq = (a) => [...new Set(a)];
-const tokenize2 = (s) => lc(s).match(/[a-z0-9]+/g)||[];
-const STOP = new Set([
-  'the','and','or','what','whats','when','whens','next','cost',
-  'workshop','workshops','photography','photo','near','me','uk',
-  'warks','warwickshire','devonshire','district','class','classes','course','courses',
-  'long','exposure','sunset','sunrise','landscape','seascape','evening','morning','walk','walks'
+function pickUrl(e) {
+  return e?.page_url || e?.source_url || e?.url || null;
+}
+function baseUrl(u) {
+  return String(u || "").split("?")[0];
+}
+function uniq(arr) {
+  return Array.from(new Set((arr || []).filter(Boolean)));
+}
+function clamp(n, lo, hi) {
+  return Math.max(lo, Math.min(hi, n));
+}
+function tokenize(s) {
+  return (s || "").toLowerCase().match(/[a-z0-9]+/g) || [];
+}
+function normaliseToken(t) {
+  return String(t || "").replace(/\d+$/, "").replace(/ers$/, "er");
+}
+function lc(s) {
+  return String(s || "").toLowerCase();
+}
+function hasAny(hay, list) {
+  if (!hay) return false;
+  const h = lc(hay);
+  return (list || []).some((x) => h.includes(lc(x)));
+}
+
+/* ================= Stopwords (consolidated) ================= */
+const STOPWORDS = new Set([
+  "alan",
+  "ranger",
+  "photography",
+  "photo",
+  "workshop",
+  "workshops",
+  "course",
+  "courses",
+  "class",
+  "classes",
+  "tuition",
+  "lesson",
+  "lessons",
+  "the",
+  "and",
+  "or",
+  "what",
+  "whats",
+  "when",
+  "whens",
+  "next",
+  "cost",
+  "how",
+  "much",
+  "near",
+  "me",
+  "uk",
+  "england",
+  "blog",
+  "photographic",
+  "landscape",
+  "seascape",
+  "monthly",
+  "day",
+  "days",
+  "one",
+  "two",
+  "1",
+  "2",
+  "where",
+  "location",
+  "dates",
+  "date",
+  "upcoming",
+  "available",
+  "availability",
+  "book",
+  "booking",
+  "time",
 ]);
 
-/* ---- Anchors & hints ---- */
-const LOCATION_HINTS = [
-  'coventry','kenilworth','warwickshire','warwick','leamington','balsall common','midlands',
-  // new / extended
-  'north devon','hartland quay','lynmouth harbour','betws-y-coed','yorkshire dales','snowdonia'
-];
-const TOPIC_ANCHORS = [
-  'portrait','lightroom','editing','post-processing',
-  // new anchors requested
-  'seascape','woodland','moor','long exposure'
-];
-const COURSE_ANCHORS = [
-  'course','courses','class','classes','tuition','lesson','lessons',
-  'beginner','beginners','foundation','intro','introduction','kickstart'
-];
-
-/* ---- Query analysis ---- */
-function titleTokens(e){ return tokenize2((e?.title||'') + ' ' + (e?.location||'')); }
-function urlTokens(e){ return tokenize2((pickUrl(e)||'')); }
-function pickUrl(obj){ return obj?.page_url || obj?.source_url || obj?.url || ''; }
-function sameHost(a,b){
-  try{ const u1=new URL(pickUrl(a)); const u2=new URL(pickUrl(b)); return u1.host===u2.host; }catch{ return false; }
+function nonGenericTokens(str) {
+  return (tokenize(str) || [])
+    .map(normaliseToken)
+    .filter((t) => t.length >= 3 && !STOPWORDS.has(t));
 }
-function hasAny(hay, list){ hay = Array.isArray(hay)? hay.join(' ') : String(hay||''); const L = lc(hay); return list.some(x => L.includes(lc(x))); }
-function detectIntent(payload, query){
-  const s = payload?.structured || {}; const q = String(query||'').toLowerCase();
-  const server = s.intent || payload?.intent || payload?.meta?.intent || payload?.debug?.intent || '';
-  if (/\b(course|courses|class|classes|tuition|lesson|lessons|beginner|beginners|foundation|intro)\b/.test(q)) return 'course';
-  if (/\b(workshop|workshops|event|events|when|whens|next)\b/.test(q)) return 'events';
-  if (/\b(price|cost|fee|fees|how much|book|booking|buy)\b/i.test(q)) return 'products';
-  return server ? server.toLowerCase() : 'unknown';
+function titleTokens(x) {
+  return (tokenize((x?.title || x?.raw?.name || "")) || [])
+    .map(normaliseToken)
+    .filter((t) => t.length >= 3 && !STOPWORDS.has(t));
 }
-function isWorkshopProduct(p){
-  const s = lc((p?.title||'')+' '+(pickUrl(p)||'')); return /\bworkshop/.test(s);
+function urlTokens(x) {
+  const u = (pickUrl(x) || "").toLowerCase();
+  return (
+    tokenize(u.replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")) || []
+  )
+    .map(normaliseToken)
+    .filter((t) => t.length >= 3 && !STOPWORDS.has(t));
 }
-function isCourseProduct(p){
-  const s = lc((p?.title||'')+' '+(pickUrl(p)||'')); return /\b(course|class|tuition|lesson)s?\b/.test(s);
-}
-
-/* ========================= Product rendering ========================= */
-function mergeProducts(list){
-  if(!Array.isArray(list) || !list.length) return [];
-  const map = new Map();
-  for(const p of list){
-    const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
-    if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
-    const m = map.get(key);
-    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
-    for (const k of ['display_price_gbp','display_price','availability_status','availability_raw','price_gbp','product_kind_resolved','price_source']) {
-      if (m[k]==null && p[k]!=null) m[k]=p[k];
-    }
+function sameHost(a, b) {
+  try {
+    const ha = new URL(pickUrl(a)).host;
+    const hb = new URL(pickUrl(b)).host;
+    return ha && hb && ha === hb;
+  } catch {
+    return false;
   }
-  return [...map.values()];
 }
-function getMetaDescription(prod){
-  const pick = (...c)=>{ for(const v of c){ if(typeof v==='string' && v.trim()) return v.trim(); } return ''; };
-  const firstSentence = t=>{ const s=String(t||'').trim(); const m=s.match(/^(.*?\.)(\s|$)/); return m? m[1].trim() : s; };
-  const limit = (t,max=220)=>{ const m=String(t||'').trim().match(new RegExp(`^(.{0,${max}}?[.!?])\\s`)); if(m&&m[1]) return m[1].trim(); return (t||'').length>max ? String(t).slice(0,max).replace(/\s+\S*$/,'')+'…' : t; };
-  const raw = pick(prod?.meta_description, prod?.metaDescription, prod?.meta?.description, prod?.seo?.metaDescription, prod?.seo?.description, prod?.raw?.metaDescription, prod?.raw?.meta?.description);
-  const fallback = firstSentence(prod?.description||'');
-  return limit(raw || fallback, 220);
+
+/* ================= Intent & Keywords ================= */
+function detectIntent(q) {
+  const s = String(q || "").toLowerCase();
+  const eventish =
+    /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking|time|how much|price|cost)\b/;
+  const classish =
+    /\b(workshop|course|class|tuition|lesson|lessons|photowalk|walk|masterclass)\b/;
+  return eventish.test(s) && classish.test(s) ? "events" : "advice";
 }
-function extractFacts(desc){
-  const txt = String(desc||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-  const findAfter = (label)=>{
-    const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
-    if(i>=0 && i+1<txt.length) return txt[i+1];
-    const flat = txt.find(l=>new RegExp(`^${label}\\s*:?\\s+(.+)$`,'i').test(l));
-    if(flat) return flat.replace(new RegExp(`^${label}\\s*:?\\s+`,'i'),'');
-    return null;
-  };
-  return {
-    location: findAfter('Location'),
-    participants: findAfter('Participants'),
-    fitness: findAfter('Fitness'),
-    availability: findAfter('Availability'),
-  };
-}
-function productHeadlinePrice(prod){
-  if (prod.display_price) return String(prod.display_price);
-  if (typeof prod.display_price_number === 'number') return currency(prod.display_price_number, 'GBP');
-  if (typeof prod.price_gbp === 'number') return currency(prod.price_gbp, 'GBP');
-  if (typeof prod.price === 'number') return currency(prod.price, prod.price_currency||'GBP');
+function detectEventSubtype(q) {
+  const s = String(q || "").toLowerCase();
+  if (/\b(course|courses|class|classes|tuition|lesson|lessons|beginner|beginners)\b/.test(s))
+    return "course";
+  if (/\b(workshop|workshops|photowalk|walk|masterclass)\b/.test(s))
+    return "workshop";
   return null;
 }
-function renderProductCard(prod){
-  const facts = extractFacts(prod.description||'');
-  const priceHead = productHeadlinePrice(prod);
-  const lines = [];
-  if (priceHead) lines.push(`<p class="kvline"><strong>Price:</strong> ${escapeHTML(priceHead)}</p>`);
-  const md = getMetaDescription(prod);
-  if(md) lines.push(`<p class="meta">${escapeHTML(md)}</p>`);
-  if (prod.availability_status){
-    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(String(prod.availability_status).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2'))}</p>`);
-  } else if(facts.availability){
-    const avail = (facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
-    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
-  }
-  if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
-  if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
-  if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
-  const href = pickUrl(prod) || '#';
-  const book = href && href !== '#' ? `<p style="margin-top:8px"><a href="${href}" target="_blank" rel="noopener">Book now →</a></p>` : '';
-  return `<div class="answer"><h3>${escapeHTML(prod.title || 'Workshop')}</h3>${lines.join('')}${book}</div>`;
+
+function extractKeywords(q, intent, subtype) {
+  const tokens = tokenize(String(q || ""));
+  const kept = tokens
+    .map(normaliseToken)
+    .filter((t) => t.length >= 3 && !STOPWORDS.has(t));
+  if (!kept.length)
+    return [
+      intent === "events"
+        ? subtype === "course"
+          ? "course"
+          : "workshop"
+        : "photography",
+    ];
+  return uniq(kept);
+}
+function topicFromKeywords(kws) {
+  return uniq(kws).join(", ");
 }
 
-/* ========================= Events & Articles ========================= */
-function futureEvents(structured){
-  const now = new Date();
-  return (structured?.events||[]).filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
+/* ================= Scoring ================= */
+function jaccard(a, b) {
+  const A = new Set(a),
+    B = new Set(b);
+  let inter = 0;
+  for (const x of A) if (B.has(x)) inter++;
+  const union = A.size + B.size - inter;
+  return union ? inter / union : 0;
 }
-function eventHeaderLabel(structured, __lastQuery){
-  const q = (__lastQuery||'').toLowerCase();
-  if (/\b(course|courses|class|classes|tuition|lesson|lessons|beginner|beginners|foundation|intro)\b/.test(q) || structured?.event_subtype==='course') return 'Upcoming Courses';
-  if (/\b(workshop|workshops)\b/.test(q) || structured?.event_subtype==='workshop') return 'Upcoming Workshops';
-  return 'Upcoming Events';
+function scoreEntity(ent, qTokens) {
+  const hayTitle = (ent?.title || ent?.raw?.name || "").toLowerCase();
+  const hayUrl = (pickUrl(ent) || "").toLowerCase();
+  const hayLoc = (ent?.location || "").toLowerCase();
+  const hayDesc = (
+    ent?.description ||
+    ent?.raw?.metaDescription ||
+    ent?.raw?.meta?.description ||
+    ""
+  )?.toLowerCase();
+  const tTokens = tokenize(hayTitle + " " + hayUrl + " " + hayLoc + " " + hayDesc);
+  if (!tTokens.length || !qTokens.length) return 0;
+  let score = jaccard(new Set(qTokens), new Set(tTokens));
+  if (qTokens.some((t) => t.length >= 3 && hayTitle.includes(t))) score += 0.2;
+  return Math.min(1, score);
 }
-function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
-function articleTitle(a){ return a?.title || a?.raw?.name || ''; }
-function pickArticles(structured){
-  const all = Array.isArray(structured?.articles) ? structured.articles : [];
-  return all.filter(a => articleUrl(a) && articleTitle(a)).slice(0,5);
+function confidenceFrom(scores) {
+  if (!scores?.length) return 25;
+  const top = Math.max(...scores);
+  const meanTop3 = scores
+    .slice()
+    .sort((a, b) => b - a)
+    .slice(0, 3)
+    .reduce((s, x, _, arr) => s + x / arr.length, 0);
+  const pct = 20 + top * 60 + meanTop3 * 15;
+  return clamp(Math.round(pct), 20, 95);
 }
 
-/* --------- Date extraction for synthetic course events --------- */
-function extractDatesFromText(text, yearHint) {
-  const out = [];
-  const y = yearHint || new Date().getFullYear();
-  const t = String(text||'');
-  // e.g. Thu, 02 Oct 2025 — or 02 Oct 2025 — or 2 October 2025
-  const rx = /\b(\d{1,2})\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{4})\b/gi;
-  let m;
-  while ((m = rx.exec(t))) {
-    const dStr = `${m[1]} ${m[2]} ${m[3]}`;
-    const d = Date.parse(dStr);
-    if (!isNaN(d)) out.push(new Date(d).toISOString());
+/* ================= Supabase queries ================= */
+function buildOrIlike(keys, keywords) {
+  const clauses = [];
+  for (const k of keywords)
+    for (const col of keys) clauses.push(`${col}.ilike.%${k}%`);
+  return clauses.join(",");
+}
+
+async function findEvents(client, { keywords = [], topK = 12 } = {}) {
+  let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "event");
+  q = q.gte("date_start", new Date().toISOString());
+  if (keywords.length) {
+    q = q.or(
+      buildOrIlike(
+        [
+          "title",
+          "page_url",
+          "location",
+          "description",
+          "raw->>metaDescription",
+          "raw->meta->>description",
+        ],
+        keywords
+      )
+    );
   }
-  // bare day + month, add hint year
-  const rx2 = /\b(\d{1,2})\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b/gi;
-  while ((m = rx2.exec(t))) {
-    const dStr = `${m[1]} ${m[2]} ${y}`;
-    const d = Date.parse(dStr);
-    if (!isNaN(d)) {
-      const iso = new Date(d).toISOString();
-      if (!out.includes(iso)) out.push(iso);
+  q = q.order("date_start", { ascending: true }).limit(topK);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+async function findProducts(client, { keywords = [], topK = 12 } = {}) {
+  let q = client
+    .from("page_entities")
+    .select(SELECT_COLS)
+    .eq("kind", "product");
+  if (keywords.length)
+    q = q.or(
+      buildOrIlike(
+        [
+          "title",
+          "page_url",
+          "description",
+          "raw->>metaDescription",
+          "raw->meta->>description",
+        ],
+        keywords
+      )
+    );
+  q = q.order("last_seen", { ascending: false }).limit(topK);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+async function findArticles(client, { keywords = [], topK = 12 } = {}) {
+  let q = client
+    .from("page_entities")
+    .select(SELECT_COLS)
+    .in("kind", ["article", "blog", "page"]);
+  if (keywords.length)
+    q = q.or(
+      buildOrIlike(
+        [
+          "title",
+          "page_url",
+          "description",
+          "raw->>metaDescription",
+          "raw->meta->>description",
+        ],
+        keywords
+      )
+    );
+  q = q.order("last_seen", { ascending: false }).limit(topK);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+/* ================= Views: display price + availability ================= */
+async function fetchDisplayPrices(client, productUrls = []) {
+  const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
+  if (!urls.length) return new Map();
+  const { data, error } = await client
+    .from("v_product_display")
+    .select("product_url, display_price_gbp, product_kind, preferred_source")
+    .in("product_url", urls);
+  if (error) return new Map();
+  const map = new Map();
+  for (const row of data || []) {
+    map.set(baseUrl(row.product_url), {
+      display_price_gbp: row.display_price_gbp,
+      preferred_source: row.preferred_source || null,
+      product_kind: row.product_kind || null,
+    });
+  }
+  return map;
+}
+async function fetchAvailability(client, productUrls = []) {
+  const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
+  if (!urls.length) return new Map();
+  try {
+    const { data, error } = await client
+      .from("v_product_availability")
+      .select("product_url, availability_status, availability_raw")
+      .in("product_url", urls);
+    if (error) return new Map();
+    const map = new Map();
+    for (const row of data || []) {
+      map.set(baseUrl(row.product_url), {
+        availability_status: row.availability_status || null,
+        availability_raw: row.availability_raw || null,
+      });
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+/* ================= Matching helpers ================= */
+function isWorkshopEvent(e) {
+  const u = (pickUrl(e) || "").toLowerCase();
+  const t = (e?.title || e?.raw?.name || "").toLowerCase();
+  const hasWorkshop =
+    /workshop/.test(u) ||
+    /workshop/.test(t) ||
+    /photo-workshops-uk|photographic-workshops/.test(u);
+  const looksCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(
+    u + " " + t
+  );
+  return hasWorkshop && !looksCourse;
+}
+function isCourseEvent(e) {
+  const u = (pickUrl(e) || "").toLowerCase();
+  const t = (e?.title || e?.raw?.name || "").toLowerCase();
+  const hasCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(
+    u + " " + t
+  );
+  const looksWorkshop = /workshop/.test(u + " " + t);
+  return hasCourse && !looksWorkshop;
+}
+function isWorkshopProduct(p) {
+  const u = (pickUrl(p) || "").toLowerCase();
+  const t = (p?.title || "").toLowerCase();
+  const hasWorkshop =
+    /workshop/.test(u + " " + t) ||
+    /photo-workshops-uk|photographic-workshops/.test(u);
+  const looksCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(
+    u + " " + t
+  );
+  return hasWorkshop && !looksCourse;
+}
+function isCourseProduct(p) {
+  const u = (pickUrl(p) || "").toLowerCase();
+  const t = (p?.title || "").toLowerCase();
+  const hasCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(
+    u + " " + t
+  );
+  const looksWorkshop = /workshop/.test(u + " " + t);
+  return hasCourse && !looksWorkshop;
+}
+
+/* -------- Extended location synonyms & topic anchors -------- */
+const LOCATION_HINTS = [
+  // existing single-word anchors
+  "devon",
+  "hartland",
+  "dartmoor",
+  "yorkshire",
+  "dales",
+  "kenilworth",
+  "coventry",
+  "warwickshire",
+  "anglesey",
+  "wales",
+  "betws",
+  "snowdonia",
+  "northumberland",
+  "gloucestershire",
+  "batsford",
+  "chesterton",
+  "windmill",
+  "lynmouth",
+  "exmoor",
+  "quay",
+  // new multi-word & specific synonyms
+  "north devon",
+  "hartland quay",
+  "lynmouth harbour",
+  "betws-y-coed",
+  "yorkshire dales",
+  "snowdonia national park",
+];
+
+const TOPIC_ANCHORS = ["seascape", "woodland", "moor", "long exposure"];
+
+function expandLocationKeywords(keywords = [], rawQuery = "") {
+  const set = new Set();
+  const rq = lc(String(rawQuery || ""));
+
+  // include any LOCATION_HINTS phrases present in raw query
+  for (const phrase of LOCATION_HINTS) {
+    if (rq.includes(lc(phrase))) set.add(lc(phrase));
+  }
+
+  // expand single-word tokens (legacy behaviour)
+  for (const k of keywords) {
+    const t = k.toLowerCase();
+    if (t === "kenilworth") {
+      set.add("kenilworth");
+      set.add("coventry");
+      set.add("warwickshire");
+    } else if (t === "coventry") {
+      set.add("coventry");
+      set.add("kenilworth");
+      set.add("warwickshire");
+    } else if (t === "warwickshire") {
+      set.add("warwickshire");
+      set.add("coventry");
+      set.add("kenilworth");
+    } else if (t === "devon") {
+      set.add("devon");
+      set.add("north devon");
+      set.add("hartland");
+      set.add("hartland quay");
+      set.add("lynmouth");
+      set.add("lynmouth harbour");
+    } else if (t === "yorkshire") {
+      set.add("yorkshire");
+      set.add("yorkshire dales");
+    } else if (t === "betws") {
+      set.add("betws");
+      set.add("betws-y-coed");
+    } else if (t === "snowdonia") {
+      set.add("snowdonia");
+      set.add("snowdonia national park");
+    } else {
+      set.add(t);
     }
   }
-  return out.sort();
+  return Array.from(set);
 }
-function synthesizeEventsFromCourseProduct(prod) {
-  const long = String(
+
+function extractTopicAndLocationTokensFromEvent(ev) {
+  const t = titleTokens(ev);
+  const u = urlTokens(ev);
+  const all = uniq([...t, ...u]);
+  const locFromField = nonGenericTokens(ev?.location || "");
+  const locationHints = uniq(
+    [...all, ...locFromField].filter((x) =>
+      /(kenilworth|coventry|warwickshire|dartmoor|devon|hartland|anglesey|yorkshire|dales|wales|betws|snowdonia|northumberland|batsford|gloucestershire|chesterton|windmill|lynmouth|exmoor|quay|north|harbour|dales)/.test(
+        x
+      )
+    )
+  );
+  const topicHints = all.filter((x) => !locationHints.includes(x));
+  return { all, topic: uniq(topicHints), location: uniq(locationHints) };
+}
+
+function symmetricOverlap(eventTokens, url, title) {
+  const pTokens = new Set(
+    [
+      ...tokenize(
+        String(url || "").replace(/^https?:\/\//, "").replace(/[\/_-]+/g, " ")
+      ),
+      ...tokenize(String(title || "")),
+    ]
+      .map(normaliseToken)
+      .filter((x) => x.length >= 3 && !STOPWORDS.has(x))
+  );
+
+  const eTokens = new Set(eventTokens);
+  let inter = 0;
+  for (const tk of eTokens) if (pTokens.has(tk)) inter++;
+
+  const eSize = eTokens.size || 1;
+  const pSize = pTokens.size || 1;
+
+  const recall = inter / eSize;
+  const precision = inter / pSize;
+  const f1 =
+    precision + recall ? (2 * precision * recall) / (precision + recall) : 0;
+  return { f1, pTokens };
+}
+
+function productAnchorTokens(prod) {
+  const title = prod?.title || "";
+  const tokens = titleTokens({ title });
+  return tokens.filter((t) => t.length >= 5 && !LOCATION_HINTS.includes(t));
+}
+
+function preferRicherProduct(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  const au = baseUrl(pickUrl(a)),
+    bu = baseUrl(pickUrl(b));
+  if (au !== bu) return a;
+  const aHasPrice = (a.price_gbp > 0) || (a.price > 0);
+  const bHasPrice = (b.price_gbp > 0) || (b.price > 0);
+  if (aHasPrice !== bHasPrice) return bHasPrice ? b : a;
+  const aLen = (a.description || "").length;
+  const bLen = (b.description || "").length;
+  if (aLen !== bLen) return bLen > aLen ? b : a;
+  return a;
+}
+function upgradeToRichestByUrl(allProducts, chosen) {
+  if (!chosen) return null;
+  const url = baseUrl(pickUrl(chosen));
+  const same = (allProducts || []).filter((p) => baseUrl(pickUrl(p)) === url);
+  return same.reduce(preferRicherProduct, chosen);
+}
+
+function monthIdx(m) {
+  const s = lc(m).slice(0, 3);
+  const map = {
+    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+  };
+  return s in map ? map[s] : null;
+}
+function extractDatesFromText(text, defaultYear) {
+  const out = [];
+  if (!text) return out;
+  const re =
+    /(?:(?:mon|tue|wed|thu|fri|sat|sun)\s*,?\s*)?(\d{1,2})(?:st|nd|rd|th)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{4}))?/gi;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const d = parseInt(m[1], 10);
+    const mi = monthIdx(m[2]);
+    const y = m[3]
+      ? parseInt(m[3], 10)
+      : defaultYear || new Date().getFullYear();
+    if (mi != null && d >= 1 && d <= 31) {
+      const dt = new Date(Date.UTC(y, mi, d));
+      if (!isNaN(dt)) out.push(dt);
+    }
+  }
+  return out;
+}
+function withinDays(a, b, days) {
+  const diff = Math.abs(a.getTime() - b.getTime());
+  return diff <= days * 86400000;
+}
+
+function strictlyMatchesEvent(product, firstEvent, subtype = null) {
+  if (!product || !firstEvent) return false;
+
+  const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
+  const refCore = uniq([...(location || []), ...(topic || [])]);
+  const refTokens = new Set(refCore.length ? refCore : all);
+
+  const anchors = productAnchorTokens(product);
+  const hasAnchorHit = anchors.some((a) => refTokens.has(a));
+  if (!hasAnchorHit) return false;
+
+  const { f1 } = symmetricOverlap(refTokens, pickUrl(product), product.title);
+  if (f1 < 0.35) return false;
+
+  if ((location || []).length) {
+    const long = sanitizeDesc(
+      product?.raw?.metaDescription ||
+        product?.raw?.meta?.description ||
+        product?.description ||
+        ""
+    );
+    const hay = lc(
+      (product.title || "") + " " + (pickUrl(product) || "") + " " + long
+    );
+    const locOk = location.some((l) => hay.includes(l));
+    if (!locOk) return false;
+  }
+
+  if (subtype === "workshop") {
+    const eventDate = firstEvent?.date_start ? new Date(firstEvent.date_start) : null;
+    if (eventDate && !isNaN(eventDate)) {
+      const long = sanitizeDesc(
+        product?.raw?.metaDescription ||
+          product?.raw?.meta?.description ||
+          product?.description ||
+          ""
+      );
+      const dates = extractDatesFromText(long, eventDate.getUTCFullYear());
+      if (dates.length) {
+        const anyClose = dates.some((d) => withinDays(d, eventDate, 5));
+        if (!anyClose) return false;
+      }
+    }
+  }
+
+  const okKind =
+    (isWorkshopEvent(firstEvent) ? isWorkshopProduct(product) : true) &&
+    (isCourseEvent(firstEvent) ? isCourseProduct(product) : true);
+  if (!okKind) return false;
+
+  const evtLower = lc((firstEvent.title || "") + " " + (pickUrl(firstEvent) || ""));
+  const tl = lc(product.title || "");
+  if (/portrait/.test(tl) && !/portrait/.test(evtLower)) return false;
+  if (/(lightroom|editing)/.test(tl) && !/(lightroom|editing)/.test(evtLower)) return false;
+
+  return true;
+}
+
+async function resolveEventProductByView(client, eventUrl) {
+  if (!eventUrl) return null;
+  try {
+    const { data, error } = await client
+      .from("v_event_product_links_all")
+      .select("product_url")
+      .eq("event_url", baseUrl(eventUrl))
+      .limit(1);
+    if (error) return null;
+    const hit = (data || [])[0];
+    return hit?.product_url ? baseUrl(hit.product_url) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function findBestProductForEvent(client, firstEvent, preloadProducts = [], subtype = null) {
+  if (!firstEvent) return null;
+
+  const evUrl = pickUrl(firstEvent);
+  const mapped = await resolveEventProductByView(client, evUrl);
+  if (mapped) {
+    let prod =
+      (preloadProducts || []).find((p) => baseUrl(pickUrl(p)) === baseUrl(mapped)) ||
+      null;
+    if (!prod) {
+      const { data } = await client
+        .from("page_entities")
+        .select(SELECT_COLS)
+        .eq("kind", "product")
+        .or(
+          [
+            `page_url.eq.${mapped}`,
+            `source_url.eq.${mapped}`,
+            `url.eq.${mapped}`,
+          ].join(",")
+        )
+        .limit(1);
+      if (data && data[0]) prod = data[0];
+    }
+    if (prod && strictlyMatchesEvent(prod, firstEvent, subtype)) {
+      return prod;
+    }
+  }
+
+  const { topic, location, all } = extractTopicAndLocationTokensFromEvent(firstEvent);
+  const refCore = uniq([...(location || []), ...(topic || [])]);
+  const refTokens = new Set(refCore.length ? refCore : all);
+  const needLoc = location.length ? location : [];
+
+  const kindAlign = (p) => {
+    if (!subtype) return true;
+    if (subtype === "course") return isCourseProduct(p) || !isWorkshopProduct(p);
+    if (subtype === "workshop") return isWorkshopProduct(p) || !isCourseProduct(p);
+    return true;
+  };
+
+  const pass = (p) => {
+    if (!kindAlign(p)) return false;
+
+    const u = pickUrl(p) || "";
+    const t = p?.title || "";
+
+    const hasLoc =
+      !needLoc.length || needLoc.some((l) => lc(u).includes(l) || lc(t).includes(l));
+    if (!hasLoc) return false;
+
+    const anchors = productAnchorTokens(p);
+    const hasAnchorHit = anchors.some((a) => refTokens.has(a));
+    if (!hasAnchorHit) return false;
+
+    const { f1 } = symmetricOverlap(refTokens, u, t);
+    return f1 >= 0.3;
+  };
+
+  let candidates = (preloadProducts || []).filter(pass);
+  if (candidates.length) {
+    const ranked = candidates
+      .map((p) => {
+        const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
+        let s = f1;
+        if (sameHost(p, firstEvent)) s += 0.1;
+        // topic anchor nudge
+        const hay = lc((p.title || "") + " " + (pickUrl(p) || ""));
+        if (hasAny(hay, TOPIC_ANCHORS)) s += 0.1;
+        return { p, s };
+      })
+      .sort((a, b) => b.s - a.s);
+    if (ranked[0]?.p) return ranked[0].p;
+  }
+
+  const core = uniq([...Array.from(refTokens)]).slice(0, 12);
+  let fallback = [];
+  if (core.length) {
+    const orParts = core
+      .flatMap((t) => [
+        `title.ilike.%${t}%`,
+        `page_url.ilike.%${t}%`,
+        `description.ilike.%${t}%`,
+        `raw->>metaDescription.ilike.%${t}%`,
+        `raw->meta->>description.ilike.%${t}%`,
+      ])
+      .join(",");
+    const { data } = await client
+      .from("page_entities")
+      .select(SELECT_COLS)
+      .eq("kind", "product")
+      .or(orParts)
+      .order("last_seen", { ascending: false })
+      .limit(50);
+    fallback = (data || []).filter(pass);
+  }
+
+  if (fallback.length) {
+    const ranked = fallback
+      .map((p) => {
+        const { f1 } = symmetricOverlap(refTokens, pickUrl(p), p.title);
+        let s = f1;
+        if (sameHost(p, firstEvent)) s += 0.1;
+        const hay = lc((p.title || "") + " " + (pickUrl(p) || ""));
+        if (hasAny(hay, TOPIC_ANCHORS)) s += 0.1;
+        return { p, s };
+      })
+      .sort((a, b) => b.s - a.s);
+    if (ranked[0]?.p) return ranked[0].p;
+  }
+
+  return null;
+}
+
+/* ================= Product & Event panel rendering ================= */
+function selectDisplayPriceNumber(prod) {
+  const pg =
+    prod?.display_price_gbp != null
+      ? Number(prod.display_price_gbp)
+      : prod?.price_gbp != null
+      ? Number(prod.price_gbp)
+      : null;
+  const pn = prod?.price != null ? Number(prod.price) : null;
+  const candidate = pg && pg > 0 ? pg : pn && pn > 0 ? pn : null;
+  return candidate && candidate > 0 ? candidate : null;
+}
+function formatDisplayPriceGBP(n) {
+  if (n == null) return null;
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0,
+  }).format(Number(n));
+}
+function sanitizeDesc(s) {
+  if (!s || typeof s !== "string") return "";
+  let out = s;
+  out = out.replace(/<br\s*\/?>/gi, "\n");
+  out = out.replace(/<\/p>/gi, "\n");
+  out = out.replace(/<\/li>/gi, "\n");
+  out = out.replace(/<li[^>]*>/gi, "• ");
+  out = out.replace(/\s+[a-z-]+="[^"]*"/gi, "");
+  out = out.replace(/&nbsp;|&#160;/gi, " ");
+  out = out.replace(/&amp;/gi, "&");
+  out = out.replace(/\u2013|\u2014/g, "-");
+  out = out.replace(/<[^>]*>/g, " ");
+  out = out.replace(/[ \t\f\v]+/g, " ");
+  out = out.replace(/\s*\n\s*/g, "\n");
+  out = out.replace(/\n{3,}/g, "\n\n");
+  return out.trim();
+}
+function parseProductBlock(desc) {
+  const out = {};
+  const clean = sanitizeDesc(desc);
+  if (!clean) return out;
+
+  const NEXT_LABELS =
+    "(?:Location|Address|Participants|Group\\s*Size|Max\\s*Participants|Class\\s*Size|Time|Times|Timing|Start\\s*Time|Dates|Start\\s*Dates|Multi\\s*Course\\s*Start\\s*Dates|Experience\\s*(?:\\-|\\s*)Level|Fitness|Difficulty)";
+
+  const capture = (labelExpr) => {
+    const re = new RegExp(
+      `(?:^|\\b|\\n)${labelExpr}\\s*(?:\\:|\\-|—)\\s*([\\s\\S]*?)(?=(?:\\n|\\b)${NEXT_LABELS}\\s*(?:\\:|\\-|—)|$)`,
+      "i"
+    );
+    const m = clean.match(re);
+    if (!m || m.length < 2 || typeof m[1] !== "string") return null;
+    return m[1]
+      .replace(/^\s*(?:-+|—)\s*/, "")
+      .trim()
+      .replace(/\s{2,}/g, " ")
+      .slice(0, 300);
+  };
+
+  out.location = capture("(?:Location|Address)");
+  out.participants = capture(
+    "(?:Participants|Group\\s*Size|Max\\s*Participants|Class\\s*Size)"
+  );
+  out.time = capture("(?:Time|Times|Timing|Start\\s*Time)");
+  out.dates = capture("(?:Dates|Start\\s*Dates|Multi\\s*Course\\s*Start\\s*Dates)");
+  out.fitness = capture("(?:Fitness|Difficulty|Experience\\s*(?:\\-|\\s*)Level)");
+
+  return out;
+}
+function buildAdviceMarkdown(articles) {
+  const lines = ["**Guides**"];
+  for (const a of (articles || []).slice(0, 5)) {
+    const t = a.title || a.raw?.name || "Read more";
+    const u = pickUrl(a);
+    lines.push(`- ${t} — ${u ? `[Link](${u})` : ""}`.trim());
+  }
+  return lines.join("\n");
+}
+function buildProductPanelMarkdown(prod) {
+  const title = prod?.title || prod?.raw?.name || "Workshop";
+  const priceNum = selectDisplayPriceNumber(prod);
+  const priceStr = formatDisplayPriceGBP(priceNum);
+  const url = pickUrl(prod);
+
+  const long =
     prod?.raw?.metaDescription ||
     prod?.raw?.meta?.description ||
-    prod?.description || ''
-  );
-  const dates = extractDatesFromText(long, new Date().getUTCFullYear())
-    .map(iso => new Date(iso))
-    .filter(d => d >= new Date());
-  if (!dates.length) return [];
+    prod?.description ||
+    "";
+  const block = parseProductBlock(long);
 
-  const loc = (long.match(/Location\s*:\s*([^\n\r]+)/i)?.[1] || '').trim();
-  const title = prod?.title || prod?.raw?.name || 'Course';
-  const url = pickUrl(prod) || '#';
+  const head = `**${title}**${priceStr ? ` — ${priceStr}` : ""}`;
+  const bullets = [];
+  if (prod.availability_status)
+    bullets.push(`- **Availability:** ${prod.availability_status}`);
+  if (block.location) bullets.push(`- **Location:** ${block.location}`);
+  if (block.participants) bullets.push(`- **Participants:** ${block.participants}`);
+  if (block.time) bullets.push(`- **Time:** ${block.time}`);
+  if (block.dates) bullets.push(`- **Dates:** ${block.dates}`);
+  if (block.fitness) bullets.push(`- **Fitness:** ${block.fitness}`);
 
-  return dates.slice(0, 6).map(d => ({
-    date_start: d.toISOString(),
-    location: loc || '',
-    title,
-    page_url: url,
-    url
-  }));
+  const plain = sanitizeDesc(long);
+  const bodyText = plain && !bullets.length ? `\n\n${plain}` : "";
+  const bulletsText = bullets.length ? `\n\n${bullets.join("\n")}` : "";
+
+  return head + bulletsText + bodyText + (url ? `\n\n[Book now →](${url})` : "");
+}
+function buildEventPanelMarkdown(ev) {
+  if (!ev) return "";
+  const title = ev.title || ev.raw?.name || "Upcoming Workshop";
+  const when = ev.date_start ? new Date(ev.date_start).toUTCString() : null;
+  const loc = ev.location || null;
+  const url = pickUrl(ev) || null;
+
+  const items = [`**${title}**`];
+  if (loc) items.push(`- **Location:** ${loc}`);
+  if (when) items.push(`- **When:** ${when}`);
+  return items.join("\n") + (url ? `\n\n[View event](${url})` : "");
+}
+function buildAdvicePills(articles, originalQuery) {
+  const pills = [];
+  const top = articles?.[0] ? pickUrl(articles[0]) : null;
+  if (top) pills.push({ label: "Read Guide", url: top, brand: "primary" });
+  pills.push({
+    label: "More Articles",
+    url: `https://www.alanranger.com/search?query=${encodeURIComponent(
+      String(originalQuery || "")
+    )}`,
+    brand: "secondary",
+  });
+  return pills;
+}
+function buildEventPills(firstEvent, productOrNull, fallbackProduct = null) {
+  const pills = [];
+  const eventUrl = pickUrl(firstEvent);
+  const bookProduct = productOrNull || fallbackProduct;
+  const productUrl = pickUrl(bookProduct);
+  const bookUrl = productUrl || null;
+
+  if (bookUrl) pills.push({ label: "Book now", url: bookUrl, brand: "primary" });
+  if (eventUrl) pills.push({ label: "View event", url: eventUrl, brand: "secondary" });
+  pills.push({
+    label: "Photos",
+    url: "https://www.alanranger.com/photography-portfolio",
+    brand: "secondary",
+  });
+  return pills;
 }
 
-/* ========================= Action Pills ========================= */
-function buildActionPillsFromStructured(structured, query){
-  const safe = []; const used = new Set();
-  const add = (label, href) => { if(!label || !href) return; const key = `${label}::${href}`; if(used.has(key)) return; used.add(key); safe.push({label,href}); };
-  for (const p of (structured?.pills || structured?.chips || [])) add(p.label || p.text || 'Open', p.url || p.href);
-  for (const a of pickArticles(structured).slice(0,2)) add(articleTitle(a) || 'Read Guide', articleUrl(a));
-  return safe.slice(0,5);
+/* === location filtering (consumes expanded keywords only) === */
+function filterEventsByLocationKeywords(events, expandedKeywords /* already expanded */) {
+  const needles = Array.from(
+    new Set((expandedKeywords || []).map((s) => lc(s)).filter(Boolean))
+  ).filter((k) => LOCATION_HINTS.includes(k));
+  if (!needles.length) return events;
+
+  return events.filter((e) => {
+    const hay = (
+      (e.title || "") +
+      " " +
+      (e.location || "") +
+      " " +
+      (pickUrl(e) || "")
+    ).toLowerCase();
+    return needles.some((l) => hay.includes(l));
+  });
 }
 
-/* ========================= Gating & heuristics ========================= */
-function isPriceyQuery(q){ return /\b(price|cost|fee|fees|how much|book|booking|buy)\b/i.test(String(q||'')); }
-function heuristicConfidence(structured){
-  let score = 0;
-  if (structured?.products?.length) score += 40;
-  if (structured?.events?.length)   score += 40;
-  if (structured?.articles?.length) score += 20;
-  return Math.min(95, Math.max(20, score || 25));
-}
-function decideProductRendering(payload, mergedProducts, query){
-  const s = payload?.structured || {};
-  const intent = detectIntent(payload, query);
-  const evs = futureEvents(s);
-  const hasEvs = evs.length > 0;
-  const topEv = hasEvs ? evs[0] : null;
-  const bookNowUrl = (s.pills || []).find(p => /book now/i.test(p.label||''))?.url || null;
-
-  if (!mergedProducts.length)           return {show:false, reason:'no-products'};
-  if (intent === 'products')            return {show:true,  reason:'intent-products'};
-  if (isPriceyQuery(query))             return {show:true,  reason:'pricey-query'};
-  if (bookNowUrl)                       return {show:true,  reason:'book-pill-present'};
-  if (!hasEvs)                          return {show:true,  reason:'no-events-fallback'};
-
-  // light overlap
-  const prod = mergedProducts[0];
-  const tP = tokenize2((prod.title||'') + ' ' + (prod.location||'')); 
-  const tE = tokenize2((topEv.title||'') + ' ' + (topEv.location||'')); 
-  const overlap = tP.filter(x=>tE.includes(x) && !STOP.has(x));
-  if (overlap.length >= 2) return {show:true, reason:'strong-match'};
-  return {show:false, reason:'prefer-events'};
-}
-
-/* ========================= Rendering ========================= */
-let __lastQuery = '';
-
-function renderEventsBlock(structured, rankedProducts, subtype){
-  let list = futureEvents(structured);
-
-  // synthesize dates for course queries if no events came back
-  if ((!list || !list.length) && subtype === 'course' && rankedProducts && rankedProducts.length) {
-    const topCourse = rankedProducts.find(p => isCourseProduct(p) || hasAny((p.title||'')+' '+pickUrl(p), COURSE_ANCHORS));
-    if (topCourse) {
-      list = synthesizeEventsFromCourseProduct(topCourse);
-    }
+/* ================= Handler ================= */
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ ok: false, error: "Method Not Allowed" });
   }
 
-  if(!list || !list.length) return '';
+  const started = Date.now();
+  try {
+    const { query, topK = 8, debug: debugFlag } = req.body || {};
+    const q = String(query || "").trim();
+    const client = supabaseAdmin();
 
-  // rank basic by date (already filtered/fabricated)
-  list = list.sort((a,b) => new Date(a.date_start)-new Date(b.date_start));
+    const wantDebug = !!debugFlag;
+    const health = wantDebug ? await probeSupabaseHealth() : null;
 
-  const lis = list.map(e=>{
-    const when=fmtDate(e.date_start);
-    const href=e.page_url||e.source_url||e.url||'#';
-    const where=e.location ? `${escapeHTML(e.location)}` : '';
-    const title=e.title ? `${escapeHTML(e.title)}` : '';
-    return `<li><div><strong>${when}${where ? ' — ' + where : ''}</strong> — <a href="${href}" target="_blank" rel="noopener">Link</a></div><div>${title}</div></li>`;
-  }).join('');
+    const intent = detectIntent(q);
+    const subtype = detectEventSubtype(q);
+    const rawKeywords = extractKeywords(q, intent, subtype);
+    const keywords = expandLocationKeywords(rawKeywords, q); // include phrase expansions
+    const topic = topicFromKeywords(keywords);
 
-  const header = eventHeaderLabel(structured, __lastQuery);
-  return `<div class="answer"><h3>${header}</h3><ul>${lis}</ul></div>`;
-}
+    // helpers to bias scoring by anchors present in query
+    const queryHasLocationPhrase = hasAny(q, LOCATION_HINTS);
+    const queryHasTopicAnchor = hasAny(q, TOPIC_ANCHORS);
 
-function renderArticlesBlock(structured){
-  const list = pickArticles(structured);
-  if(!list.length) return '';
-  const lis = list.map(a=>`<li><a href="${articleUrl(a)}" target="_blank" rel="noopener">${escapeHTML(articleTitle(a))}</a></li>`).join('');
-  return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul></div>`;
-}
+    let events = [],
+      products = [],
+      articles = [];
+    if (intent === "events") {
+      [events, products] = await Promise.all([
+        findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
+        findProducts(client, { keywords, topK: 24 }),
+      ]);
 
-/* ---- Main answer renderer ---- */
-function renderAnswer(payload){
-  try { if (dbgSrvVer) dbgSrvVer.textContent = payload?.debug?.version || '–'; } catch {}
+      if (subtype === "workshop") events = events.filter(isWorkshopEvent);
+      else if (subtype === "course") events = events.filter(isCourseEvent);
 
-  const s = payload.structured||{};
-  const intentSubtype = detectIntent(payload, __lastQuery); // 'course'|'events'|'products'|'unknown'
+      const locFiltered = filterEventsByLocationKeywords(events, keywords);
+      if (locFiltered.length) events = locFiltered;
 
-  // rank products with subtype bias and location/topic anchors
-  const qTokens = tokenize2(__lastQuery);
-  const queryHasLocationPhrase = hasAny(__lastQuery, LOCATION_HINTS);
-  const queryHasTopicAnchor    = hasAny(__lastQuery, TOPIC_ANCHORS);
+      try {
+        // trim articles to 6 for performance when intent=events
+        articles = await findArticles(client, { keywords, topK: 6 });
+      } catch {
+        articles = [];
+      }
+    } else {
+      [articles, products] = await Promise.all([
+        findArticles(client, { keywords, topK: Math.max(12, topK) }),
+        findProducts(client, { keywords, topK: 12 }),
+      ]);
+    }
 
-  const products = mergeProducts(s.products||[]);
-  let rankedProducts = products
-    .map((p) => {
-      let score = 0;
+    const allProdUrls = (products || []).map((p) => pickUrl(p)).filter(Boolean);
+    const [priceMap, availMap] = await Promise.all([
+      fetchDisplayPrices(client, allProdUrls),
+      fetchAvailability(client, allProdUrls),
+    ]);
+    products = (products || []).map((p) => {
+      const u = baseUrl(pickUrl(p));
+      const priceRow = priceMap.get(u);
+      const availRow = availMap.get(u);
+      return {
+        ...p,
+        display_price_gbp: priceRow?.display_price_gbp ?? null,
+        product_kind_resolved: priceRow?.product_kind ?? null,
+        price_source: priceRow?.preferred_source ?? null,
+        availability_status: availRow?.availability_status ?? null,
+        availability_raw: availRow?.availability_raw ?? null,
+      };
+    });
 
-      const hay = lc(
-        (p?.title || '') + ' ' +
-        (p?.raw?.name || '') + ' ' +
-        (p?.description || p?.raw?.metaDescription || p?.raw?.meta?.description || '') + ' ' +
-        (pickUrl(p) || '')
+    const qTokens = keywords;
+
+    const scoreWrap = (arr) =>
+      (arr || [])
+        .map((e) => {
+          let s = scoreEntity(e, qTokens);
+          const hay = lc(
+            (e?.title || e?.raw?.name || "") +
+              " " +
+              (pickUrl(e) || "") +
+              " " +
+              (e?.description || e?.raw?.metaDescription || e?.raw?.meta?.description || "")
+          );
+          // anchor-aware nudges: only if anchor is present in query as well
+          if (queryHasLocationPhrase && hasAny(hay, LOCATION_HINTS)) s += 0.12;
+          if (queryHasTopicAnchor && hasAny(hay, TOPIC_ANCHORS)) s += 0.12;
+          return { e, s };
+        })
+        .sort((a, b) => {
+          if (b.s !== a.s) return b.s - a.s;
+          const by = Date.parse(b.e?.last_seen || "") || 0;
+          const ax = Date.parse(a.e?.last_seen || "") || 0;
+          return by - ax;
+        })
+        .map((x) => Object.assign({ _score: Math.round(x.s * 100) / 100 }, x.e));
+
+    const rankedEvents = (events || [])
+      .slice()
+      .sort(
+        (a, b) =>
+          (Date.parse(a.date_start || 0) || 0) -
+          (Date.parse(b.date_start || 0) || 0)
+      )
+      .map((e) => {
+        let s = scoreEntity(e, qTokens);
+        const hay = lc(
+          (e?.title || e?.raw?.name || "") +
+            " " +
+            (e?.location || "") +
+            " " +
+            (pickUrl(e) || "")
+        );
+        if (queryHasLocationPhrase && hasAny(hay, LOCATION_HINTS)) s += 0.15;
+        if (queryHasTopicAnchor && hasAny(hay, TOPIC_ANCHORS)) s += 0.12;
+        return {
+          ...e,
+          _score: Math.round(Math.min(1, s) * 100) / 100,
+        };
+      });
+
+    let rankedProducts = scoreWrap(products);
+    const rankedArticles = scoreWrap(articles).slice(0, 12);
+
+    const firstEvent = rankedEvents[0] || null;
+
+    let featuredProduct = null;
+
+    if (firstEvent) {
+      const matched = await findBestProductForEvent(
+        client,
+        firstEvent,
+        rankedProducts,
+        subtype
       );
+      if (matched && strictlyMatchesEvent(matched, firstEvent, subtype)) {
+        featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
-      // lexical match
-      for (const t of qTokens) if (t && hay.includes(t)) score += 0.15;
+        // enrich from existing bulk maps; only fetch if missing
+        const u = baseUrl(pickUrl(featuredProduct));
+        let priceRow = priceMap.get(u);
+        let availRow = availMap.get(u);
 
-      // anchors/hints
-      if (queryHasLocationPhrase && hasAny(hay, LOCATION_HINTS)) score += 0.20;
-      if (queryHasTopicAnchor && hasAny(hay, TOPIC_ANCHORS))     score += 0.20;
-
-      // subtype bias
-      if (intentSubtype === 'course') {
-        if (isCourseProduct(p) || hasAny(hay, COURSE_ANCHORS)) score += 0.80;
-        if (isWorkshopProduct(p)) score -= 0.60;
+        if (!priceRow) {
+          priceRow = (await fetchDisplayPrices(client, [u])).get(u);
+        }
+        if (!availRow) {
+          availRow = (await fetchAvailability(client, [u])).get(u);
+        }
+        if (priceRow) {
+          featuredProduct.display_price_gbp =
+            priceRow.display_price_gbp ?? featuredProduct.display_price_gbp ?? null;
+          featuredProduct.product_kind_resolved =
+            priceRow.product_kind ?? featuredProduct.product_kind_resolved ?? null;
+          featuredProduct.price_source =
+            priceRow.preferred_source ?? featuredProduct.price_source ?? null;
+        }
+        if (availRow) {
+          featuredProduct.availability_status =
+            availRow.availability_status ?? featuredProduct.availability_status ?? null;
+          featuredProduct.availability_raw =
+            availRow.availability_raw ?? featuredProduct.availability_raw ?? null;
+        }
       }
 
-      // beginner bias when user asks for beginners
-      if (/\bbeginner|beginners\b/.test(__lastQuery) && /\bbeginner|beginners\b/.test(hay)) score += 0.35;
+      if (rankedProducts.length) {
+        const evTokens = new Set(
+          uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)])
+        );
+        rankedProducts = rankedProducts
+          .map((p) => {
+            const { f1 } = symmetricOverlap(evTokens, pickUrl(p), p.title);
+            let s = (p._score || 0) + f1;
+            if (sameHost(p, firstEvent)) s += 0.15;
+            const anchors = productAnchorTokens(p);
+            if (anchors.length) {
+              if (anchors.some((a) => evTokens.has(a))) s += 0.4;
+              else s -= 0.35;
+            }
+            if (/camera/i.test(firstEvent?.title || "") && /camera/i.test(p.title || "")) s += 0.2;
 
-      return { p, s: score };
-    })
-    .sort((a,b)=> b.s - a.s)
-    .map(x => x.p);
+            const evtLower = lc(
+              (firstEvent?.title || "") + " " + (pickUrl(firstEvent) || "")
+            );
+            if (/portrait/.test(lc(p.title || "")) && !/portrait/.test(evtLower)) s -= 0.45;
+            if (/(lightroom|editing)/.test(lc(p.title || "")) && !/(lightroom|editing)/.test(evtLower)) s -= 0.45;
 
-  // decide whether to show a product card
-  const gate = decideProductRendering(payload, rankedProducts, __lastQuery);
-  if (gate.show && rankedProducts.length) {
-    addBubble(renderProductCard(rankedProducts[0]));
-  }
+            const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
+            if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
+            if (hasAny(slug, TOPIC_ANCHORS)) s += 0.1;
 
-  // events (with synthetic fallback for courses)
-  const evHTML = renderEventsBlock(s, rankedProducts, intentSubtype);
-  if(evHTML) addBubble(evHTML);
-
-  // articles
-  const artHTML = renderArticlesBlock(s);
-  if(artHTML) addBubble(artHTML);
-
-  // action pills
-  const pills = buildActionPillsFromStructured(s, __lastQuery);
-  if(pills.length){
-    const wrap = document.createElement('div'); wrap.className='actions';
-    pills.forEach(p=>{ const a=document.createElement('a'); a.className='pill'; a.textContent=p.label; a.href=p.href; a.target='_blank'; a.rel='noopener'; wrap.appendChild(a); });
-    thread.appendChild(wrap);
-  }
-
-  // footer + chime
-  let confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
-  const heuristic = heuristicConfidence(s);
-  if (confidencePct == null || confidencePct < 50) confidencePct = heuristic;
-  const rounded = Math.round(confidencePct);
-  const footer = document.createElement('div');
-  footer.className = 'footer-status';
-  footer.innerHTML = `<span class="badge conf ${rounded>=70?'green':rounded>=35?'amber':'red'}">Confidence: ${rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
-  thread.appendChild(footer);
-
-  playChime();
-
-  // fallback if nothing else showed content
-  if(!gate.show && !(s.events||[]).length && !(s.articles||[]).length){
-    const md = payload.answer_markdown || payload.answer || '';
-    const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons above to reach Alan directly.</p>`;
-    const {html}=mdToHtml(md || "I don’t have a specific answer for that yet.");
-    addBubble(html.replace('</div>', `${extra}</div>`));
-  }
-
-  setDebugJSON(dbgStruct, payload.structured||{});
-  const note = payload.debug ? {...payload.debug, product_gate: gate} : { product_gate: gate };
-  setDebugJSON(dbgNote, note);
-}
-
-/* ========================= Chime ========================= */
-function playChime(){
-  try{
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator(); const g = ctx.createGain();
-    o.type='sine'; o.frequency.value=880; g.gain.value=0.0001; o.connect(g); g.connect(ctx.destination);
-    o.start();
-    const now=ctx.currentTime; g.gain.exponentialRampToValueAtTime(0.08, now+0.01); g.gain.exponentialRampToValueAtTime(0.0001, now+0.25);
-    o.stop(now+0.28);
-  }catch{}
-}
-
-/* ========================= Networking ========================= */
-async function sendQuery(query){
-  __lastQuery = String(query||'');
-  const req = { query, topK: 8 };
-  setDebugJSON(dbgReq, req);
-  const closeTyping = addTyping();
-  try{
-    const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(req) });
-    dbgStatus.textContent = res.status;
-    const headers = {}; res.headers.forEach((v,k)=>headers[k]=v); setDebugJSON(dbgHeaders, headers);
-
-    let data = null; const ct = (res.headers.get('content-type') || '').toLowerCase();
-    if (ct.includes('application/json')) data = await res.json(); else data = { ok: false, error: await res.text() || `HTTP ${res.status}` };
-    setDebugJSON(dbgRes, data); setDebugJSON(dbgProv, { citations: data.citations || [] });
-
-    closeTyping();
-    if (data && data.ok && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
-      renderAnswer(data);
-    } else if (data && !data.ok) {
-      const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf red">Confidence: 25%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
-      addBubble(`<div class="answer"><p>Server error: ${escapeHTML(String(data.error||'Unknown'))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
-      playChime();
-    } else {
-      const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf amber">Confidence: 50%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
-      const fallback = "I don’t have a specific answer for that yet."; const {html}=mdToHtml(fallback);
-      const extra = `<p>If this doesn’t answer your question, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
-      addBubble(html.replace('</div>', `${extra}</div>`));
-      playChime();
+            return { p, s };
+          })
+          .sort((a, b) => b.s - a.s)
+          .map((x) => x.p);
+      }
     }
-  } catch (err){
-    closeTyping(); dbgStatus.textContent = 'error';
-    const footer = document.createElement('div'); footer.className = 'footer-status';
-    footer.innerHTML = `<span class="badge conf red">Confidence: 25%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
-    thread.appendChild(footer);
-    addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
-    playChime();
+
+    let preferredProduct = featuredProduct || rankedProducts[0] || null;
+    preferredProduct = upgradeToRichestByUrl(rankedProducts, preferredProduct);
+
+    if (preferredProduct) {
+      const topUrl = baseUrl(pickUrl(preferredProduct));
+      rankedProducts = [
+        preferredProduct,
+        ...rankedProducts.filter((p) => baseUrl(pickUrl(p)) !== topUrl),
+      ];
+    }
+
+    const scoresForConf = [
+      ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
+      ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
+      ...(rankedProducts[0]?._score ? [rankedProducts[0]._score] : []),
+    ].map((x) => x / 100);
+    const confidence_pct = confidenceFrom(scoresForConf);
+
+    let answer_markdown = "";
+    if (intent === "advice") {
+      answer_markdown = buildAdviceMarkdown(rankedArticles);
+    } else {
+      if (
+        firstEvent &&
+        featuredProduct &&
+        strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
+      ) {
+        answer_markdown = buildProductPanelMarkdown(featuredProduct);
+      } else if (preferredProduct) {
+        answer_markdown = buildProductPanelMarkdown(preferredProduct);
+      } else {
+        answer_markdown = "";
+      }
+    }
+
+    const citations = uniq([
+      ...rankedArticles.slice(0, 3).map(pickUrl),
+      ...(featuredProduct &&
+      strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
+        ? [pickUrl(featuredProduct)]
+        : []),
+      ...(preferredProduct && !featuredProduct ? [pickUrl(preferredProduct)] : []),
+      ...(firstEvent ? [pickUrl(firstEvent)] : []),
+    ]);
+
+    const pillProductForBook =
+      featuredProduct && strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
+        ? featuredProduct
+        : preferredProduct || null;
+
+    const structured = {
+      intent,
+      topic,
+      event_subtype: subtype,
+      events: (rankedEvents || []).map((e) => ({
+        id: e.id,
+        title: e.title,
+        page_url: e.page_url,
+        source_url: e.source_url,
+        date_start: e.date_start,
+        date_end: e.date_end,
+        location: e.location,
+        when: e.date_start ? new Date(e.date_start).toUTCString() : null,
+        href: pickUrl(e),
+        _score: e._score,
+      })),
+      products: (rankedProducts || []).map((p) => {
+        const long =
+          p?.raw?.metaDescription ||
+          p?.raw?.meta?.description ||
+          p?.description ||
+          "";
+        const parsed = parseProductBlock(long);
+        const priceNum = selectDisplayPriceNumber(p);
+        const priceStr = formatDisplayPriceGBP(priceNum);
+        return {
+          id: p.id,
+          title: p.title,
+          page_url: p.page_url,
+          source_url: p.source_url,
+          description: p.description,
+          price: p.price ?? null,
+          price_gbp:
+            p.display_price_gbp != null ? p.display_price_gbp : p.price_gbp ?? null,
+          display_price_number: priceNum,
+          display_price: priceStr,
+          price_source: p.price_source || null,
+          product_kind_resolved: p.product_kind_resolved || null,
+          location: p.location,
+          _score: p._score,
+          availability_status: p.availability_status || null,
+          availability_raw: p.availability_raw || null,
+          location_parsed: parsed.location || null,
+          participants_parsed: parsed.participants || null,
+          time_parsed: parsed.time || null,
+          dates_parsed: parsed.dates || null,
+          fitness_parsed: parsed.fitness || null,
+        };
+      }),
+      articles: (rankedArticles || []).map((a) => ({
+        id: a.id,
+        title: a.title,
+        page_url: a.page_url,
+        source_url: a.source_url,
+        last_seen: a.last_seen,
+      })),
+      pills:
+        intent === "events"
+          ? buildEventPills(
+              firstEvent,
+              featuredProduct &&
+                strictlyMatchesEvent(featuredProduct, firstEvent, subtype)
+                ? featuredProduct
+                : null,
+              pillProductForBook
+            )
+          : buildAdvicePills(rankedArticles, q),
+    };
+
+    const debug = {
+      version: "v1.1.5-clean1",
+      intent,
+      keywords,
+      event_subtype: subtype,
+      anchor_flags: {
+        queryHasLocationPhrase,
+        queryHasTopicAnchor,
+      },
+      first_event: firstEvent
+        ? {
+            id: firstEvent.id,
+            title: firstEvent.title,
+            url: pickUrl(firstEvent),
+            date_start: firstEvent.date_start,
+          }
+        : null,
+      featured_product: featuredProduct
+        ? {
+            id: featuredProduct.id,
+            title: featuredProduct.title,
+            url: pickUrl(featuredProduct),
+            strictly_matches_first_event: strictlyMatchesEvent(
+              featuredProduct,
+              firstEvent,
+              subtype
+            ),
+            display_price: formatDisplayPriceGBP(
+              selectDisplayPriceNumber(featuredProduct)
+            ),
+            availability_status: featuredProduct.availability_status || null,
+            price_source: featuredProduct.price_source || null,
+          }
+        : null,
+      pills: {
+        book_now:
+          structured.pills?.find((p) => p.label.toLowerCase() === "book now")?.url ||
+          null,
+      },
+      counts: {
+        events: (structured.events || []).length,
+        products: (structured.products || []).length,
+        articles: (structured.articles || []).length,
+      },
+      probes: wantDebug ? { supabase_health: health } : undefined,
+      views: {
+        price_view: "public.v_product_display",
+        availability_view: "public.v_product_availability (optional)",
+        event_map_view: "public.v_event_product_links_all",
+      },
+    };
+
+    const payload = {
+      ok: true,
+      answer_markdown,
+      citations,
+      structured,
+      confidence: confidence_pct / 100,
+      confidence_pct,
+      debug,
+      meta: {
+        duration_ms: Date.now() - started,
+        endpoint: "/api/chat",
+        topK,
+        intent,
+      },
+    };
+
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return res.status(200).send(payload);
+  } catch (err) {
+    const msg = (err && (err.message || err.toString())) || "Unknown server error";
+    const body = { ok: false, error: msg };
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return res.status(200).send(body);
   }
 }
-
-/* ========================= Transcript & wiring ========================= */
-function nodeToPlain(div){ return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim(); }
-function buildTranscript(){
-  const rows = [];
-  rows.push(`Alan Ranger Assistant — transcript`);
-  rows.push(new Date().toISOString()); rows.push('');
-  for (const el of thread.children){ if (el.classList.contains('actions')) continue; const role = el.classList.contains('user') ? 'User' : 'Assistant'; rows.push(`${role}:\n${nodeToPlain(el)}`); rows.push(''); }
-  return rows.join('\n');
-}
-function emailTranscript(){
-  const body = buildTranscript();
-  const subject = 'Alan Ranger Assistant chat transcript';
-  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,2000))}`;
-  if (body.length > 2000){
-    const blob = new Blob([body], {type:'text/plain'}); const url = URL.createObjectURL(blob);
-    addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p></div>`);
-  }
-  location.href = mailto;
-}
-function resetChat(){
-  thread.innerHTML = '';
-  addBubble('Hi! I can help with workshops, tuition, and photography advice.');
-  [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgProv, dbgNote, dbgSrvVer].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
-}
-function submit(){
-  const val = input.value.trim(); if(!val) return;
-  addBubble(val, {user:true}); input.value=''; sendQuery(val);
-}
-
-sendBtn && sendBtn.addEventListener('click', submit);
-input   && input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }});
-btnEmail&& btnEmail.addEventListener('click', emailTranscript);
-btnReset&& btnReset.addEventListener('click', resetChat);
-dbgCopy && dbgCopy.addEventListener('click', copyAllDebug);
