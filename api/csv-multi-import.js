@@ -31,32 +31,50 @@ const sendJSON = (res, status, obj) => {
 function parseCSV(csvText) {
   const lines = csvText.split('\n').filter(line => line.trim());
   if (lines.length < 2) return [];
-  
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+
+  function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        // toggle quotes; handle doubled quotes by consuming second quote
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+        else { inQuotes = !inQuotes; }
+      } else if (ch === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current);
+    return result.map(s => s.replace(/^\s+|\s+$/g, '').replace(/^"|"$/g, ''));
+  }
+
+  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
   const rows = [];
-  
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim());
+    const values = parseCSVLine(lines[i]);
     if (values.length !== headers.length) continue;
-    
     const row = {};
-    headers.forEach((header, index) => {
-      row[header] = values[index];
+    headers.forEach((header, idx) => {
+      row[header] = values[idx];
     });
     rows.push(row);
   }
-  
   return rows;
 }
 
 /* ========== Blog data transformation ========== */
 function transformBlogData(row) {
   const title = row.title;
-  const url = row.full_url || row.url;
+  const url = row['full url'] || row['url id'] || row.url;
   const categories = row.categories ? row.categories.split(';').map(c => c.trim()) : [];
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
   const imageUrl = row.image;
-  const publishDate = row.publish_on;
+  const publishDate = row['publish on'] || row.publish_on;
   
   const jsonLd = {
     "@context": "https://schema.org",
@@ -93,11 +111,11 @@ function transformBlogData(row) {
 
 /* ========== Workshop data transformation ========== */
 function transformWorkshopData(row) {
-  const title = row.title;
-  const url = row.full_url || row.url;
+  const title = row.title || row['event title'] || row['event_title'];
+  const url = row['full url'] || row['url id'] || row['event url'] || row['event_url'] || row.url;
   const categories = row.categories ? row.categories.split(';').map(c => c.trim()) : [];
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
-  const imageUrl = row.image;
+  const imageUrl = row.image || row['event image'] || row['event_image'];
   
   // Extract location hints from tags
   const locationHints = [];
@@ -157,7 +175,7 @@ function transformWorkshopData(row) {
 /* ========== Service data transformation ========== */
 function transformServiceData(row) {
   const title = row.title;
-  const url = row.full_url || row.url;
+  const url = row['full url'] || row['url id'] || row.url;
   const categories = row.categories ? row.categories.split(';').map(c => c.trim()) : [];
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
   const imageUrl = row.image;
@@ -218,16 +236,16 @@ function transformServiceData(row) {
 /* ========== Product data transformation ========== */
 function transformProductData(row) {
   const title = row.title;
-  const url = row.product_url;
+  const url = row['product url'] || row.product_url || row.url;
   const description = row.description;
   const sku = row.sku;
   const price = parseFloat(row.price) || 0;
-  const salePrice = parseFloat(row.sale_price) || 0;
-  const onSale = row.on_sale === 'Yes';
+  const salePrice = parseFloat(row['sale price'] || row.sale_price) || 0;
+  const onSale = (row['on sale'] || row.on_sale) === 'Yes' || (row['on sale'] || row.on_sale) === 'TRUE';
   const stock = row.stock;
   const categories = row.categories ? row.categories.split(',').map(c => c.trim()) : [];
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
-  const imageUrls = row.hosted_image_urls ? row.hosted_image_urls.split(' ').filter(url => url.trim()) : [];
+  const imageUrls = row['hosted image urls'] ? row['hosted image urls'].split(' ').filter(u => u.trim()) : (row.hosted_image_urls ? row.hosted_image_urls.split(' ').filter(u => u.trim()) : []);
   
   // Determine availability
   let availability = 'OutOfStock';
@@ -280,13 +298,13 @@ function transformProductData(row) {
 
 /* ========== Event data transformation ========== */
 function transformEventData(row) {
-  const eventUrl = row.event_url || row.url;
-  const eventTitle = row.event_title || row.title;
-  const startDate = row.start_date;
-  const startTime = row.start_time;
-  const endDate = row.end_date;
-  const endTime = row.end_time;
-  const location = row.location_business_name || row.location_address || row.location;
+  const eventUrl = row.event_url || row['event url'] || row.url;
+  const eventTitle = row.event_title || row['event title'] || row.title;
+  const startDate = row.start_date || row['start date'];
+  const startTime = row.start_time || row['start time'];
+  const endDate = row.end_date || row['end date'];
+  const endTime = row.end_time || row['end time'];
+  const location = row.location_business_name || row['location business name'] || row.location_address || row['location address'] || row.location;
   const category = row.category || '';
   
   // Determine event type
@@ -368,23 +386,23 @@ export default async function handler(req, res) {
       
       switch (contentType) {
         case 'blog':
-          if (!row.full_url && !row.url) continue;
+          if (!row['full url'] && !row['url id'] && !row.url) continue;
           entity = transformBlogData(row);
           break;
         case 'workshop':
-          if (!row.full_url && !row.url) continue;
+          if (!row['full url'] && !row['url id'] && !row['event url'] && !row['event_url'] && !row.url) continue;
           entity = transformWorkshopData(row);
           break;
         case 'service':
-          if (!row.full_url && !row.url) continue;
+          if (!row['full url'] && !row['url id'] && !row.url) continue;
           entity = transformServiceData(row);
           break;
         case 'product':
-          if (!row.product_url && !row.url) continue;
+          if (!row['product url'] && !row.product_url && !row.url) continue;
           entity = transformProductData(row);
           break;
         case 'event':
-          if (!row.event_url && !row.url) continue;
+          if (!row.event_url && !row['event url'] && !row.url) continue;
           entity = transformEventData(row);
           break;
         default:
