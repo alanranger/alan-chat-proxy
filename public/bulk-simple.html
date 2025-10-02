@@ -306,7 +306,7 @@
     }
 
     // API calls
-    async function apiCall(endpoint, data = null) {
+    async function apiCall(endpoint, data = null, opts = {}) {
       const token = getToken();
       if (!token) {
         addResult('❌ No token found. Please save your token first.', 'error');
@@ -314,14 +314,22 @@
       }
 
       try {
+        const controller = new AbortController();
+        const timeoutMs = opts.timeoutMs || 0;
+        let timeoutId = null;
+        if (timeoutMs > 0) {
+          timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        }
         const response = await fetch(endpoint, {
           method: data ? 'POST' : 'GET',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: data ? JSON.stringify(data) : undefined
+          body: data ? JSON.stringify(data) : undefined,
+          signal: controller.signal
         });
+        if (timeoutId) clearTimeout(timeoutId);
         const text = await response.text();
         try { return JSON.parse(text); } catch { return { ok: response.ok, status: response.status, text }; }
       } catch (error) {
@@ -508,43 +516,62 @@
         el.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
       }
 
-      for (let i = 0; i < urls.length; i++) {
-        updateProgress((i / urls.length) * 100, `Scraping ${urls[i]}...`);
-        const result = await apiCall('/api/ingest-embed-replace', { url: urls[i] });
-        const category = categorize(urls[i], result);
-        if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
-          // Check if this was a "duplicates only" response
-          if (result.message && result.message.includes('duplicates')) {
-            addResult(`✅ Content already exists: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${result.message}`, 'success');
-            urlScrapingStats[category].skipped++;
-            stats.skippedCount++;
-          } else {
-            addResult(`✅ Scraped: ${urls[i]}`, 'success');
-            stats.successCount++;
-            urlScrapingStats[category].success++;
-          }
-        } else {
-          const src = lines[i+1] || '';
-          const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
-          const reasonLc = reason.toLowerCase();
-          if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
-            addResult(`✅ Skipped duplicate: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'success');
-            urlScrapingStats[category].skipped++;
-            stats.skippedCount++;
-          } else {
-            addResult(`❌ Failed: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
-            stats.failedCount++;
-            urlScrapingStats[category].failed++;
-          }
-        }
-        updateStats();
-        renderCategoryStats();
+      // Parallel worker pool
+      const CONCURRENCY = 8;
+      const TIMEOUT_MS = 20000;
+      let nextIndex = 0;
+      let completed = 0;
 
-        if (stopRequested) {
-          stats.stoppedCount = urls.length - (i + 1);
+      async function worker(workerId) {
+        while (true) {
+          if (stopRequested) break;
+          const i = nextIndex++;
+          if (i >= urls.length) break;
+          const url = urls[i];
+          updateProgress((completed / urls.length) * 100, `Scraping ${url}...`);
+          const result = await apiCall('/api/ingest-embed-replace', { url }, { timeoutMs: TIMEOUT_MS });
+          const category = categorize(url, result);
+          if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
+            if (result.message && result.message.includes('duplicates')) {
+              addResult(`✅ Content already exists: ${url}  (source: site_urls.csv line ${i+2}) — ${result.message}`, 'success');
+              urlScrapingStats[category].skipped++;
+              stats.skippedCount++;
+            } else {
+              addResult(`✅ Scraped: ${url}`, 'success');
+              stats.successCount++;
+              urlScrapingStats[category].success++;
+            }
+          } else {
+            const src = lines[i+1] || '';
+            const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
+            const reasonLc = reason.toLowerCase();
+            if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
+              addResult(`✅ Skipped duplicate: ${url}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'success');
+              urlScrapingStats[category].skipped++;
+              stats.skippedCount++;
+            } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
+              addResult(`❌ Timeout: ${url}  (source: site_urls.csv line ${i+2})`, 'error');
+              stats.failedCount++;
+              urlScrapingStats[category].failed++;
+            } else {
+              addResult(`❌ Failed: ${url}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
+              stats.failedCount++;
+              urlScrapingStats[category].failed++;
+            }
+          }
+          completed++;
+          updateProgress((completed / urls.length) * 100, `Scraping (${completed}/${urls.length})`);
           updateStats();
-          break;
+          renderCategoryStats();
         }
+      }
+
+      const workers = Array.from({ length: Math.min(CONCURRENCY, urls.length) }, (_, idx) => worker(idx));
+      await Promise.all(workers);
+
+      if (stopRequested) {
+        stats.stoppedCount = urls.length - completed;
+        updateStats();
       }
 
       updateProgress(100, 'Website scraping complete');
