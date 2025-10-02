@@ -159,7 +159,7 @@
     <div class="section">
       <h3>🔧 Debug & Control</h3>
       <div class="card">
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px;">
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 10px;">
           <div class="stat-box">
             <div class="stat-label">Loaded Rows</div>
             <div class="stat-value" id="loadedRows">0</div>
@@ -175,6 +175,10 @@
           <div class="stat-box">
             <div class="stat-label">Stopped</div>
             <div class="stat-value" id="stoppedCount">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Skipped</div>
+            <div class="stat-value" id="skippedCount">0</div>
           </div>
         </div>
         <div id="categoryStats" style="margin-top: 10px;">
@@ -433,30 +437,50 @@
       stats.stoppedCount = 0;
       updateStats();
 
-      // per-category stats
+      // per-category stats - match CSV block labels for transparency
       const cat = () => ({ success: 0, failed: 0, skipped: 0 });
       let catStats = {
-        events: cat(),
-        workshops: cat(),
-        blogs: cat(),
-        services: cat(),
-        products: cat(),
-        other: cat()
+        'blog_articles': cat(),
+        'course_events': cat(),
+        'workshop_events': cat(),
+        'service_pages': cat(),
+        'service_products': cat(),
+        'landing_pages': cat(),
+        'test_questions': cat(),
+        'website_urls': cat(),
+        'json_extraction': cat()
       };
 
       function categorize(url, result) {
         const u = (url||'').toLowerCase();
-        if (u.includes('/blog-on-photography')) return 'blogs';
-        if (u.includes('/beginners-photography-lessons')) return 'events';
-        if (u.includes('/photographic-workshops-near-me') || u.includes('/photo-workshops-uk')) return 'workshops';
-        if (u.includes('/photography-services-near-me')) return 'services';
-        if (u.includes('/photography-shop') || u.includes('/photography-presents')) return 'products';
-        return 'other';
+        // Map to CSV block labels for transparency
+        if (u.includes('/blog-on-photography')) return 'blog_articles';
+        if (u.includes('/beginners-photography-lessons')) return 'course_events';
+        if (u.includes('/photographic-workshops-near-me') || u.includes('/photo-workshops-uk')) return 'workshop_events';
+        if (u.includes('/photography-services-near-me')) return 'service_pages';
+        if (u.includes('/photography-shop') || u.includes('/photography-presents')) return 'service_products';
+        // All scraped URLs are website_urls
+        return 'website_urls';
       }
 
       function renderCategoryStats() {
         const el = document.getElementById('categoryStats');
-        const rows = Object.entries(catStats).map(([k,v]) => `<tr><td style="padding:4px 8px;">${k}</td><td style="color:#51cf66">${v.success}</td><td style="color:#ff6b6b">${v.failed}</td><td style="color:#74c0fc">${v.skipped}</td></tr>`).join('');
+        // Format category names for display
+        const formatCategory = (cat) => {
+          const labels = {
+            'blog_articles': 'Blog Articles',
+            'course_events': 'Course Events', 
+            'workshop_events': 'Workshop Events',
+            'service_pages': 'Service Pages',
+            'service_products': 'Service Products',
+            'landing_pages': 'Landing Pages',
+            'test_questions': 'Test Questions',
+            'website_urls': 'Website URLs',
+            'json_extraction': 'JSON Extraction'
+          };
+          return labels[cat] || cat;
+        };
+        const rows = Object.entries(catStats).map(([k,v]) => `<tr><td style="padding:4px 8px;">${formatCategory(k)}</td><td style="color:#51cf66">${v.success}</td><td style="color:#ff6b6b">${v.failed}</td><td style="color:#74c0fc">${v.skipped}</td></tr>`).join('');
         el.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
       }
 
@@ -474,7 +498,6 @@
           const reasonLc = reason.toLowerCase();
           if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
             addResult(`✅ Skipped duplicate: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'success');
-            stats.successCount++;
             catStats[category].skipped++;
           } else {
             addResult(`❌ Failed: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
@@ -510,7 +533,14 @@
       document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: running';
       const token = getToken();
       try {
-        const resp = await fetch('/rest/v1/rpc/refresh_event_product_autolinks', { headers: { 'Authorization': `Bearer ${token}` } });
+        const resp = await fetch('/rest/v1/rpc/refresh_event_product_autolinks', { 
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({})
+        });
         const raw = await resp.text();
         let parsed;
         try { parsed = JSON.parse(raw); } catch { parsed = { text: raw }; }
@@ -623,6 +653,8 @@
       document.getElementById('successCount').textContent = stats.successCount;
       document.getElementById('failedCount').textContent = stats.failedCount;
       document.getElementById('stoppedCount').textContent = stats.stoppedCount;
+      const skipped = (stats.loadedRows - (stats.successCount + stats.failedCount + stats.stoppedCount));
+      document.getElementById('skippedCount').textContent = skipped;
     }
     
     function resetStats() {
