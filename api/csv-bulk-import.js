@@ -32,11 +32,34 @@ function parseCSV(csvText) {
   const lines = csvText.split('\n').filter(line => line.trim());
   if (lines.length < 2) return [];
   
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  // Parse CSV properly handling quoted fields
+  function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    result.push(current.trim());
+    return result;
+  }
+  
+  const headers = parseCSVLine(lines[0]).map(h => h.replace(/"/g, '').trim().toLowerCase());
   const rows = [];
   
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim());
+    const values = parseCSVLine(lines[i]).map(v => v.replace(/"/g, '').trim());
     if (values.length !== headers.length) continue;
     
     const row = {};
@@ -364,6 +387,16 @@ export default async function handler(req, res) {
         }
 
         const entities = [];
+        
+        // Debug: Log the actual headers found
+        console.log(`DEBUG: ${contentType} headers:`, rows[0]);
+        console.log(`DEBUG: ${contentType} first data row:`, rows[1]);
+        
+        // Add debug info to results
+        results.push({ fileName, contentType, success: false, error: `DEBUG: Headers found: ${JSON.stringify(rows[0])}` });
+        if (rows[1]) {
+          results.push({ fileName, contentType, success: false, error: `DEBUG: First data row: ${JSON.stringify(rows[1])}` });
+        }
         
         for (const row of rows) {
           let entity = null;
