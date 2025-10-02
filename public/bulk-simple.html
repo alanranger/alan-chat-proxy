@@ -145,6 +145,7 @@
           <span id="stepMap" style="padding:2px 6px;border-radius:4px;background:#555;">3️⃣ Create Mappings: idle</span>
           <span id="parityStatus" style="padding:2px 6px;border-radius:4px;background:#444;margin-left:8px;display:inline-block;">Parity: …</span>
           <button class="btn" style="margin-left:8px" onclick="exportMappings()">⬇️ Export Mappings CSV</button>
+          <button class="btn" style="margin-left:8px" onclick="runTestQuestions()">🤖 Test Questions Batch</button>
         </small>
       </div>
     </div>
@@ -859,6 +860,110 @@
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         addResult('⬇️ Exported mappings CSV', 'success');
       }catch(e){ addResult(`❌ Export error: ${e.message}`, 'error'); }
+    }
+
+    // Test Questions Batch Runner
+    async function runTestQuestions(){
+      try{
+        addResult('🤖 Starting test questions batch...', 'info');
+        
+        // Load test questions from CSV
+        const testQuestionsFile = document.getElementById('testQuestionsCsv').files[0];
+        if (!testQuestionsFile) {
+          addResult('❌ Please select test questions CSV file first', 'error');
+          return;
+        }
+        
+        const csvText = await testQuestionsFile.text();
+        const questions = parseCSV(csvText);
+        
+        if (!questions.length) {
+          addResult('❌ No test questions found in CSV', 'error');
+          return;
+        }
+        
+        addResult(`📝 Found ${questions.length} test questions`, 'info');
+        
+        const results = [];
+        let processed = 0;
+        
+        for (const question of questions) {
+          if (!question.query) continue;
+          
+          try {
+            addResult(`🤖 Testing: "${question.query}"`, 'info');
+            
+            // Call the AI bot
+            const response = await fetch('/api/chat', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getToken()}`
+              },
+              body: JSON.stringify({
+                query: question.query,
+                topK: 8
+              })
+            });
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const answer = data.answer || 'No answer provided';
+            const citations = (data.citations || []).join('; ');
+            
+            results.push({
+              query: question.query,
+              expected: question.expected || '',
+              answer: answer,
+              citations: citations,
+              timestamp: new Date().toISOString()
+            });
+            
+            processed++;
+            addResult(`✅ Completed ${processed}/${questions.length}`, 'success');
+            
+            // Small delay to avoid overwhelming the API
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+          } catch (error) {
+            addResult(`❌ Failed: "${question.query}" - ${error.message}`, 'error');
+            results.push({
+              query: question.query,
+              expected: question.expected || '',
+              answer: `ERROR: ${error.message}`,
+              citations: '',
+              timestamp: new Date().toISOString()
+            });
+            processed++;
+          }
+        }
+        
+        // Export results to CSV
+        const csvHeader = 'query,expected,answer,citations,timestamp\n';
+        const csvRows = results.map(r => {
+          const escape = (s) => `"${String(s || '').replace(/"/g, '""')}"`;
+          return `${escape(r.query)},${escape(r.expected)},${escape(r.answer)},${escape(r.citations)},${escape(r.timestamp)}`;
+        }).join('\n');
+        
+        const csvContent = csvHeader + csvRows;
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `test-questions-results-${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        addResult(`🎉 Test questions complete! Processed ${processed}/${questions.length}. Results exported to CSV.`, 'success');
+        
+      } catch (error) {
+        addResult(`❌ Test questions batch failed: ${error.message}`, 'error');
+      }
     }
     
     // Statistics tracking
