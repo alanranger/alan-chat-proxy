@@ -26,17 +26,17 @@ export default async function handler(req, res) {
 
     // Views (some may not exist in every environment)
     { name: 'v_events_real_data', type: 'view', columns: '*', order: 'date_start', limit: 5 },
-    { name: 'v_event_product_links_real', type: 'view', columns: '*', order: 'specificity', limit: 5 },
-    { name: 'v_event_product_pricing_real', type: 'view', columns: '*', order: 'price_gbp', limit: 5 },
+    { name: 'v_events_for_chat', type: 'view', columns: 'event_url, product_url, price_gbp, availability', order: 'event_url', limit: 5 },
 
     { name: 'v_events_csv_source', type: 'view', columns: '*', order: 'date_start', limit: 5 },
     { name: 'v_products_scraped', type: 'view', columns: '*', order: 'last_seen', limit: 5 },
-
+    
+    // Legacy or optional views (ignore if missing)
     { name: 'v_event_product_mappings', type: 'view', columns: 'event_url, product_url, method, specificity, score', order: 'score', limit: 10 },
     { name: 'v_event_product_pricing_combined', type: 'view', columns: '*', order: 'price_gbp', limit: 5 },
 
     { name: 'v_blog_content', type: 'view', columns: 'url, title, tags', order: 'url', limit: 5 },
-    { name: 'v_workshop_content', type: 'view', columns: 'url, title, tags', order: 'url', limit: 5 },
+    // { name: 'v_workshop_content', type: 'view', columns: 'url, title, tags', order: 'url', limit: 5 },
     { name: 'v_service_content', type: 'view', columns: 'url, title, tags', order: 'url', limit: 5 },
     { name: 'v_product_content', type: 'view', columns: 'url, title, tags', order: 'url', limit: 5 },
     { name: 'v_enriched_content_for_ai', type: 'view', columns: 'url, kind, title', order: 'url', limit: 10 }
