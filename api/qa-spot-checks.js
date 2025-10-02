@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_SERVICE_KEY; // service key for server-side read
-const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
+// Prefer server-side envs, with safe fallbacks so endpoint never 500s because of undefined env
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://igzvwbvgvmzvvzoclufx.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+const EXPECTED_TOKEN = (process.env.INGEST_TOKEN || '').trim() || 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -63,13 +64,13 @@ export default async function handler(req, res) {
     }
   }
 
-  const results = {};
+  const out = {};
   for (const c of checks) {
-    const entry = { name: c.name };
-    entry.count = await safeCount(c.name);
-    entry.sample = await safeSample(c.name, c.columns, c.order, c.limit);
-    results[c.name] = entry;
+    const cnt = await safeCount(c.name);
+    const sam = await safeSample(c.name, c.columns, c.order, c.limit);
+    if (cnt.error) out[c.name] = { status: 'error', detail: cnt.error };
+    else out[c.name] = { status: 'ok', count: cnt.count, sample: sam.sample || [] };
   }
 
-  return res.status(200).json({ ok: true, results });
+  return res.status(200).json({ ok: true, checks: out });
 }

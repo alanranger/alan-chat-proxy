@@ -687,16 +687,19 @@
       document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: running';
       const token = getToken();
       try {
+        // fetch before/after counts for dashboard clarity
+        const before = await apiCall('/api/refresh-mappings', { preview: true });
         const result = await apiCall('/api/refresh-mappings', {});
         if (result && result.ok) {
           const mappingsCreated = result.mappingsCreated || 0;
           const afterCount = result.afterCount || 0;
+          const beforeCount = before?.afterCount ?? before?.count ?? (afterCount - mappingsCreated);
           addResult(`✅ Event → Product mapping complete! Created ${mappingsCreated} new mappings (${afterCount} total)`, 'success');
           if (result.sampleMappings && result.sampleMappings.length > 0) {
             addResult(`📊 Sample mappings: ${result.sampleMappings.map(m => `${m.event_url} → ${m.product_url} (score: ${m.score})`).join(', ')}`, 'info');
           }
           document.getElementById('stepMap').style.background = '#2a6';
-          document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: complete';
+          document.getElementById('stepMap').textContent = `3️⃣ Create Mappings: ${afterCount} total (+${mappingsCreated})`;
         } else {
           const errorDetail = result?.detail || result?.error || 'Unknown error';
           addResult(`❌ Mapping failed: ${errorDetail}`, 'error');
