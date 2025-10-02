@@ -426,7 +426,8 @@
           stats.successCount++;
         } else {
           const src = lines[i+1] || '';
-          addResult(`❌ Failed: ${urls[i]}  (source: site_urls.csv line ${i+2})`, 'error');
+          const reason = result && (result.error || result.detail) ? `${result.error || ''} ${result.detail || ''}`.trim() : 'unknown';
+          addResult(`❌ Failed: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
           stats.failedCount++;
         }
         updateStats();
