@@ -52,11 +52,11 @@ function parseCSV(csvText) {
 /* ========== Data transformation functions ========== */
 function transformBlogData(row) {
   const title = row.title;
-  const url = row['Full Url'] || row['Url Id'];
+  const url = row['full url'] || row['url id'];
   const categories = row.categories ? row.categories.split(';').map(c => c.trim()) : [];
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
   const imageUrl = row.image;
-  const publishDate = row['Publish On'];
+  const publishDate = row['publish on'];
   
   const jsonLd = {
     "@context": "https://schema.org",
@@ -92,13 +92,13 @@ function transformBlogData(row) {
 }
 
 function transformEventData(row) {
-  const eventUrl = row['Event_URL'] || row['Event URL'];
-  const eventTitle = row['Event_Title'] || row['Event Title'];
-  const startDate = row['Start_Date'] || row['Start Date'];
-  const startTime = row['Start_Time'] || row['Start Time'];
-  const endDate = row['End_Date'] || row['End Date'];
-  const endTime = row['End_Time'] || row['End Time'];
-  const location = row['Location_Business_Name'] || row['Location Business Name'] || row['Location_Address'] || row['Location Address'];
+  const eventUrl = row['event_url'] || row['event url'];
+  const eventTitle = row['event_title'] || row['event title'];
+  const startDate = row['start_date'] || row['start date'];
+  const startTime = row['start_time'] || row['start time'];
+  const endDate = row['end_date'] || row['end date'];
+  const endTime = row['end_time'] || row['end time'];
+  const location = row['location_business_name'] || row['location business name'] || row['location_address'] || row['location address'];
   
   let subtype = 'event';
   if (eventUrl && eventUrl.includes('beginners-photography-lessons')) {
@@ -147,11 +147,11 @@ function transformEventData(row) {
 }
 
 function transformWorkshopData(row) {
-  const title = row['Event_Title'] || row['Event Title'];
-  const url = row['Event_URL'] || row['Event URL'];
+  const title = row['event_title'] || row['event title'];
+  const url = row['event_url'] || row['event url'];
   const categories = row.category ? row.category.split(',').map(c => c.trim()) : [];
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
-  const imageUrl = row['Event_Image'] || row['Event Image'];
+  const imageUrl = row['event_image'] || row['event image'];
   
   const locationHints = [];
   if (tags.includes('warwickshire')) locationHints.push('Warwickshire');
@@ -207,7 +207,7 @@ function transformWorkshopData(row) {
 
 function transformServiceData(row) {
   const title = row.title;
-  const url = row['Full Url'] || row['Url Id'];
+  const url = row['full url'] || row['url id'];
   const categories = row.categories ? row.categories.split(';').map(c => c.trim()) : [];
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
   const imageUrl = row.image;
@@ -264,16 +264,16 @@ function transformServiceData(row) {
 
 function transformProductData(row) {
   const title = row.title;
-  const url = row['Product URL'] || row['Product_URL'];
+  const url = row['product url'] || row['product_url'];
   const description = row.description;
   const sku = row.sku;
   const price = parseFloat(row.price) || 0;
-  const salePrice = parseFloat(row['Sale Price']) || parseFloat(row['Sale_Price']) || 0;
-  const onSale = row['On Sale'] === 'Yes' || row['On_Sale'] === 'Yes';
+  const salePrice = parseFloat(row['sale price']) || parseFloat(row['sale_price']) || 0;
+  const onSale = row['on sale'] === 'Yes' || row['on_sale'] === 'Yes';
   const stock = row.stock;
   const categories = row.categories ? row.categories.split(',').map(c => c.trim()) : [];
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
-  const imageUrls = row['Hosted Image URLs'] ? row['Hosted Image URLs'].split(' ').filter(url => url.trim()) : (row['Hosted_Image_URLs'] ? row['Hosted_Image_URLs'].split(' ').filter(url => url.trim()) : []);
+  const imageUrls = row['hosted image urls'] ? row['hosted image urls'].split(' ').filter(url => url.trim()) : (row['hosted_image_urls'] ? row['hosted_image_urls'].split(' ').filter(url => url.trim()) : []);
   
   let availability = 'OutOfStock';
   if (stock === 'Unlimited' || (parseInt(stock) || 0) > 0) {
@@ -370,41 +370,23 @@ export default async function handler(req, res) {
           
           switch (contentType) {
             case 'blog':
-              console.log(`DEBUG: blog row keys:`, Object.keys(row));
-              console.log(`DEBUG: blog Full Url:`, row['Full Url']);
-              console.log(`DEBUG: blog Url Id:`, row['Url Id']);
-              results.push({ fileName, contentType, success: false, error: `DEBUG: blog row keys: ${JSON.stringify(Object.keys(row))}` });
-              results.push({ fileName, contentType, success: false, error: `DEBUG: blog Full Url: ${row['Full Url']}` });
-              results.push({ fileName, contentType, success: false, error: `DEBUG: blog Url Id: ${row['Url Id']}` });
-              if (!row['Full Url'] && !row['Url Id']) continue;
+              if (!row['full url'] && !row['url id']) continue;
               entity = transformBlogData(row);
               break;
             case 'event':
-              console.log(`DEBUG: event row keys:`, Object.keys(row));
-              console.log(`DEBUG: event Event_URL:`, row['Event_URL']);
-              console.log(`DEBUG: event Event URL:`, row['Event URL']);
-              if (!row['Event_URL'] && !row['Event URL']) continue;
+              if (!row['event_url'] && !row['event url']) continue;
               entity = transformEventData(row);
               break;
             case 'workshop':
-              console.log(`DEBUG: workshop row keys:`, Object.keys(row));
-              console.log(`DEBUG: workshop Event_URL:`, row['Event_URL']);
-              console.log(`DEBUG: workshop Event URL:`, row['Event URL']);
-              if (!row['Event_URL'] && !row['Event URL']) continue;
+              if (!row['event_url'] && !row['event url']) continue;
               entity = transformWorkshopData(row);
               break;
             case 'service':
-              console.log(`DEBUG: service row keys:`, Object.keys(row));
-              console.log(`DEBUG: service Full Url:`, row['Full Url']);
-              console.log(`DEBUG: service Url Id:`, row['Url Id']);
-              if (!row['Full Url'] && !row['Url Id']) continue;
+              if (!row['full url'] && !row['url id']) continue;
               entity = transformServiceData(row);
               break;
             case 'product':
-              console.log(`DEBUG: product row keys:`, Object.keys(row));
-              console.log(`DEBUG: product Product URL:`, row['Product URL']);
-              console.log(`DEBUG: product Product_URL:`, row['Product_URL']);
-              if (!row['Product URL'] && !row['Product_URL']) continue;
+              if (!row['product url'] && !row['product_url']) continue;
               entity = transformProductData(row);
               break;
             default:
