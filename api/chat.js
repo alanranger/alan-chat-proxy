@@ -191,8 +191,8 @@ function buildOrIlike(keys, keywords) {
 }
 
 async function findEvents(client, { keywords = [], topK = 12 } = {}) {
-  // Use CORRECTED consolidated view instead of raw page_entities
-  let q = client.from("v_event_product_pricing_corrected").select(`
+  // Use enhanced view with all missing fields properly extracted
+  let q = client.from("v_event_product_final_enhanced").select(`
     event_url,
     subtype,
     date_start,
@@ -201,10 +201,17 @@ async function findEvents(client, { keywords = [], topK = 12 } = {}) {
     end_time,
     event_location,
     product_url,
-    method,
-    specificity,
+    product_title,
+    map_method,
+    confidence,
     price_gbp,
-    availability
+    availability,
+    participants,
+    fitness_level,
+    event_title,
+    json_price,
+    json_availability,
+    price_currency
   `);
   
   q = q.gte("date_start", new Date().toISOString());
@@ -229,23 +236,27 @@ async function findEvents(client, { keywords = [], topK = 12 } = {}) {
   return (data || []).map(event => ({
     id: event.event_url, // Use event_url as ID
     kind: "event",
-    title: event.event_url.split('/').pop().replace(/-/g, ' '), // Extract title from URL
+    title: event.event_title || event.product_title || event.event_url.split('/').pop().replace(/-/g, ' '), // Use event title if available
     page_url: event.event_url,
     source_url: event.event_url,
     last_seen: new Date().toISOString(),
     location: event.event_location,
     date_start: event.date_start,
     date_end: event.date_end,
-    price: event.price_gbp,
+    price: event.price_gbp || event.json_price,
     description: `Event type: ${event.subtype}`,
     raw: {
       subtype: event.subtype,
       start_time: event.start_time,
       end_time: event.end_time,
       product_url: event.product_url,
-      method: event.method,
-      specificity: event.specificity,
-      availability: event.availability
+      product_title: event.product_title,
+      method: event.map_method,
+      confidence: event.confidence,
+      availability: event.availability || event.json_availability,
+      participants: event.participants,
+      fitness_level: event.fitness_level,
+      price_currency: event.price_currency
     }
   }));
 }

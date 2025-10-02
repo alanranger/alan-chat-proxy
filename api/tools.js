@@ -104,19 +104,19 @@ export default async function handler(req, res) {
       return sendJSON(res, 200, { ok: true, url, chunks: count ?? (rows?.length || 0), total_len });
     }
 
-    // --- counts: mapping totals from v_events_for_chat ---
-    if (req.method === 'GET' && action === 'counts') {
-      const { count: total, error: e1 } = await supa
-        .from('v_events_for_chat')
-        .select('*', { head: true, count: 'exact' });
-      if (e1) return sendJSON(res, 500, { error: 'supabase_error', detail: e1.message });
-      const { count: mapped, error: e2 } = await supa
-        .from('v_events_for_chat')
-        .select('*', { head: true, count: 'exact' })
-        .not('product_url', 'is', null);
-      if (e2) return sendJSON(res, 500, { error: 'supabase_error', detail: e2.message });
-      return sendJSON(res, 200, { ok: true, total: total || 0, mapped: mapped || 0 });
-    }
+        // --- counts: mapping totals from v_event_product_final_enhanced (proper lineage view with all fields) ---
+        if (req.method === 'GET' && action === 'counts') {
+          const { count: total, error: e1 } = await supa
+            .from('v_event_product_final_enhanced')
+            .select('*', { head: true, count: 'exact' });
+          if (e1) return sendJSON(res, 500, { error: 'supabase_error', detail: e1.message });
+          const { count: mapped, error: e2 } = await supa
+            .from('v_event_product_final_enhanced')
+            .select('*', { head: true, count: 'exact' })
+            .not('product_url', 'is', null);
+          if (e2) return sendJSON(res, 500, { error: 'supabase_error', detail: e2.message });
+          return sendJSON(res, 200, { ok: true, total: total || 0, mapped: mapped || 0 });
+        }
 
     // --- parity: distinct URL counts by path using service role ---
     if (req.method === 'GET' && action === 'parity') {
@@ -163,29 +163,29 @@ export default async function handler(req, res) {
       return sendJSON(res, 200, { matches });
     }
 
-    // --- export: CSV of v_events_for_chat ---
-    if (req.method === 'GET' && action === 'export') {
-      try{
-        const headerWith = ['event_url','subtype','product_url','price_gbp','availability','date_start','date_end','event_location','map_method','confidence'];
-        const headerBase = ['event_url','subtype','product_url','price_gbp','availability','date_start','date_end','event_location','map_method'];
+        // --- export: CSV of v_event_product_final_enhanced (proper lineage view with all fields) ---
+        if (req.method === 'GET' && action === 'export') {
+          try{
+            const headerWith = ['event_url','subtype','product_url','product_title','price_gbp','availability','date_start','date_end','start_time','end_time','event_location','map_method','confidence','participants','fitness_level','event_title','json_price','json_availability','price_currency'];
+            const headerBase = ['event_url','subtype','product_url','product_title','price_gbp','availability','date_start','date_end','start_time','end_time','event_location','map_method','participants','fitness_level','event_title','json_price','json_availability','price_currency'];
 
-        async function fetchRows(selectStr){
-          const { data, error } = await supa
-            .from('v_events_for_chat')
-            .select(selectStr)
-            .order('event_url', { ascending: true })
-            .limit(5000);
-          return { data, error };
-        }
+            async function fetchRows(selectStr){
+            const { data, error } = await supa
+              .from('v_event_product_final_enhanced')
+                .select(selectStr)
+                .order('event_url', { ascending: true })
+                .limit(5000);
+              return { data, error };
+            }
 
         // Try with confidence first; if the column doesn't exist yet, fall back
         let rows = [];
         let header = headerWith;
-        let r = await fetchRows('event_url,subtype,product_url,price_gbp,availability,date_start,date_end,event_location,map_method,confidence');
+        let r = await fetchRows('event_url,subtype,product_url,product_title,price_gbp,availability,date_start,date_end,start_time,end_time,event_location,map_method,confidence');
         if (r.error) {
           // fallback without confidence
           header = headerBase;
-          r = await fetchRows('event_url,subtype,product_url,price_gbp,availability,date_start,date_end,event_location,map_method');
+          r = await fetchRows('event_url,subtype,product_url,product_title,price_gbp,availability,date_start,date_end,start_time,end_time,event_location,map_method');
           if (r.error) return sendJSON(res, 500, { error:'supabase_error', detail:r.error.message });
         }
         rows = r.data || [];
@@ -208,7 +208,7 @@ export default async function handler(req, res) {
       try{
         const sel = 'event_url,subtype,date_start,date_end,event_location,price_gbp,availability';
         const { data: allEvents, error: e1 } = await supa
-          .from('v_events_real_data')
+          .from('v_events_for_chat')
           .select(sel)
           .or('event_url.ilike."https://www.alanranger.com/photographic-workshops-near-me/%",event_url.ilike."https://www.alanranger.com/beginners-photography-lessons/%"')
           .limit(5000);
