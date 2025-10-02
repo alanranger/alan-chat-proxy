@@ -458,8 +458,8 @@
         const checks = data.checks || {};
         const order = [
           'page_entities','page_chunks','event_product_links_auto',
-          'v_events_real_data','v_event_product_mappings','v_event_product_pricing_combined',
-          'v_blog_content','v_workshop_content','v_service_content','v_product_content'
+          'v_events_real_data','v_events_for_chat',
+          'v_blog_content','v_service_content','v_product_content'
         ];
         for (const name of order) {
           const c = checks[name];
