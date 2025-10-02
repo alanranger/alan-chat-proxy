@@ -416,13 +416,30 @@ async function callRefreshLinks(){
       const t = await res.text();
       throw new Error(`${res.status} ${t.slice(0,200)}`);
     }
-    if (pill) pill.textContent = 'map: refreshed ✓';
-    if (pillS) pillS.textContent = 'map: refreshed ✓';
+    // After refresh, fetch totals and mapped counts from the view
+    const counts = await getMappingCounts();
+    const label = `map: ${counts.mapped}/${counts.total} mapped`;
+    if (pill) pill.textContent = label;
+    if (pillS) pillS.textContent = label;
   }catch(e){
     if (pill) pill.textContent = 'map: refresh failed';
     if (pillS) pillS.textContent = 'map: refresh failed';
     logError(`Event→Product mapping refresh FAILED — ${e && e.message ? e.message : e}`);
   }
+}
+
+// Get total and mapped counts from v_events_for_chat via PostgREST
+async function getMappingCounts(){
+  async function fetchCount(resource, extraQuery){
+    const q = `/rest/v1/${resource}?select=event_url${extraQuery?`&${extraQuery}`:''}`;
+    const res = await fetch(q, { headers: { ...bearer(), 'Prefer':'count=exact', 'Range':'0-0' } });
+    const cr = res.headers.get('content-range')||'0/0';
+    const total = parseInt((cr.split('/')||[])[1]||'0', 10);
+    return Number.isFinite(total) ? total : 0;
+  }
+  const total = await fetchCount('v_events_for_chat');
+  const mapped = await fetchCount('v_events_for_chat', 'product_url=not.is.null');
+  return { total, mapped };
 }
 
 /* ---------- ingest single ---------- */

@@ -143,6 +143,7 @@
           <span id="stepImport" style="padding:2px 6px;border-radius:4px;background:#555;margin-right:6px;">1️⃣ Import CSVs: idle</span>
           <span id="stepScrape" style="padding:2px 6px;border-radius:4px;background:#555;margin-right:6px;">2️⃣ Scrape URLs: idle</span>
           <span id="stepMap" style="padding:2px 6px;border-radius:4px;background:#555;">3️⃣ Create Mappings: idle</span>
+          <span id="parityStatus" style="padding:2px 6px;border-radius:4px;background:#444;margin-left:8px;display:inline-block;">Parity: …</span>
         </small>
       </div>
     </div>
@@ -396,6 +397,42 @@
         return isNaN(total) ? 0 : total;
       } catch (e) {
         return `err:${e.message}`;
+      }
+    }
+
+    // Fetch total events and mapped events from v_events_for_chat
+    async function getMappingCounts() {
+      const total = await restCount('v_events_for_chat?select=event_url');
+      const mapped = await restCount('v_events_for_chat?select=event_url&product_url=not.is.null');
+      return { total: Number(total)||0, mapped: Number(mapped)||0 };
+    }
+
+    // Parity: compare distinct URLs in entities vs chunks for each required path
+    async function getParity() {
+      const entitiesWorkshops = await restCount('page_entities?select=url&url=ilike.*photographic-workshops-near-me*');
+      const chunksWorkshops   = await restCount('page_chunks?select=url&url=ilike.*photographic-workshops-near-me*');
+      const entitiesCourses   = await restCount('page_entities?select=url&url=ilike.*beginners-photography-lessons*');
+      const chunksCourses     = await restCount('page_chunks?select=url&url=ilike.*beginners-photography-lessons*');
+      return {
+        entitiesWorkshops: Number(entitiesWorkshops)||0,
+        chunksWorkshops: Number(chunksWorkshops)||0,
+        entitiesCourses: Number(entitiesCourses)||0,
+        chunksCourses: Number(chunksCourses)||0
+      };
+    }
+
+    async function updateParityPill() {
+      try {
+        const p = await getParity();
+        const pill = document.getElementById('parityStatus');
+        if (pill) {
+          pill.textContent = `Parity: W ${p.entitiesWorkshops}/${p.chunksWorkshops} | C ${p.entitiesCourses}/${p.chunksCourses}`;
+          const ok = (p.entitiesWorkshops>0 && p.entitiesWorkshops<=p.chunksWorkshops) && (p.entitiesCourses>0 && p.entitiesCourses<=p.chunksCourses);
+          pill.style.background = ok ? '#2a6' : '#a62';
+        }
+      } catch (e) {
+        const pill = document.getElementById('parityStatus');
+        if (pill) { pill.textContent = `Parity: error`; pill.style.background = '#a62'; }
       }
     }
 
@@ -674,6 +711,9 @@
       document.getElementById('stepScrape').style.background = stats.failedCount === 0 ? '#2a6' : '#a62';
       document.getElementById('stepScrape').textContent = `2️⃣ Scrape URLs: ${stats.successCount} ok, ${stats.failedCount} failed, ${stats.stoppedCount} stopped`;
       document.getElementById('stopScrapeBtn').style.display = 'none';
+
+      // Update parity after scraping completes
+      updateParityPill();
     }
 
     function stopScrape() {
@@ -694,12 +734,17 @@
           const mappingsCreated = result.mappingsCreated || 0;
           const afterCount = result.afterCount || 0;
           const beforeCount = before?.afterCount ?? before?.count ?? (afterCount - mappingsCreated);
-          addResult(`✅ Event → Product mapping complete! Created ${mappingsCreated} new mappings (${afterCount} total)`, 'success');
+          // also show live totals from the chat view
+          const counts = await getMappingCounts();
+          addResult(`✅ Event → Product mapping complete! Created ${mappingsCreated} new mappings (${afterCount} auto-links). View totals: ${counts.mapped}/${counts.total} mapped.`, 'success');
           if (result.sampleMappings && result.sampleMappings.length > 0) {
             addResult(`📊 Sample mappings: ${result.sampleMappings.map(m => `${m.event_url} → ${m.product_url} (score: ${m.score})`).join(', ')}`, 'info');
           }
           document.getElementById('stepMap').style.background = '#2a6';
-          document.getElementById('stepMap').textContent = `3️⃣ Create Mappings: ${afterCount} total (+${mappingsCreated})`;
+          document.getElementById('stepMap').textContent = `3️⃣ Create Mappings: ${counts.mapped}/${counts.total} mapped`;
+
+          // Update parity as well (entities likely increased via backfill/refresh)
+          updateParityPill();
         } else {
           const errorDetail = result?.detail || result?.error || 'Unknown error';
           addResult(`❌ Mapping failed: ${errorDetail}`, 'error');
