@@ -356,18 +356,7 @@ export default async function handler(req, res) {
           insertedCount += nonEventEntities.length;
         }
         
-        // If all events were skipped, that's still a success - the content was already there
-        if (insertedCount === 0 && skippedCount > 0) {
-          return sendJSON(res, 200, {
-            ok: true,
-            id: null,
-            len: rawText.length,
-            chunks: 0,
-            entities: 0,
-            stage: 'done',
-            message: 'All entities were duplicates - content already exists'
-          });
-        }
+        // Even if all entities were duplicates, continue to chunk/embed so page content is stored for AI
       }
     }
 
