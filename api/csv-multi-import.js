@@ -449,7 +449,21 @@ export default async function handler(req, res) {
     
     // Insert all entities (no more skipping)
     const { error: insE } = await supa.from('page_entities').insert(entities);
-    if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
+    if (insE) {
+      // If still getting constraint violation, try individual inserts with upsert
+      if (insE.message && insE.message.includes('uniq_events_with_date')) {
+        let imported = 0;
+        for (const e of entities) {
+          const { error: upsertE } = await supa.from('page_entities').upsert([e]);
+          if (upsertE) {
+            return sendJSON(res, 500, { error: 'supabase_entities_upsert_failed', detail: upsertE.message || upsertE, stage, url: e.url });
+          }
+          imported++;
+        }
+        return sendJSON(res, 200, { ok: true, imported, content_type: contentType, stage: 'upserted' });
+      }
+      return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
+    }
     
     stage = 'done';
     return sendJSON(res, 200, { ok: true, imported: entities.length, content_type: contentType, stage });
