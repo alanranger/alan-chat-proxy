@@ -353,6 +353,10 @@ export default async function handler(req, res) {
           continue;
         }
 
+        // Debug: Log the actual headers found
+        console.log(`DEBUG: ${contentType} headers:`, rows[0]);
+        console.log(`DEBUG: ${contentType} first data row:`, rows[1]);
+
         const entities = [];
         
         for (const row of rows) {
@@ -360,22 +364,37 @@ export default async function handler(req, res) {
           
           switch (contentType) {
             case 'blog':
+              console.log(`DEBUG: blog row keys:`, Object.keys(row));
+              console.log(`DEBUG: blog Full Url:`, row['Full Url']);
+              console.log(`DEBUG: blog Url Id:`, row['Url Id']);
               if (!row['Full Url'] && !row['Url Id']) continue;
               entity = transformBlogData(row);
               break;
             case 'event':
+              console.log(`DEBUG: event row keys:`, Object.keys(row));
+              console.log(`DEBUG: event Event_URL:`, row['Event_URL']);
+              console.log(`DEBUG: event Event URL:`, row['Event URL']);
               if (!row['Event_URL'] && !row['Event URL']) continue;
               entity = transformEventData(row);
               break;
             case 'workshop':
+              console.log(`DEBUG: workshop row keys:`, Object.keys(row));
+              console.log(`DEBUG: workshop Event_URL:`, row['Event_URL']);
+              console.log(`DEBUG: workshop Event URL:`, row['Event URL']);
               if (!row['Event_URL'] && !row['Event URL']) continue;
               entity = transformWorkshopData(row);
               break;
             case 'service':
+              console.log(`DEBUG: service row keys:`, Object.keys(row));
+              console.log(`DEBUG: service Full Url:`, row['Full Url']);
+              console.log(`DEBUG: service Url Id:`, row['Url Id']);
               if (!row['Full Url'] && !row['Url Id']) continue;
               entity = transformServiceData(row);
               break;
             case 'product':
+              console.log(`DEBUG: product row keys:`, Object.keys(row));
+              console.log(`DEBUG: product Product URL:`, row['Product URL']);
+              console.log(`DEBUG: product Product_URL:`, row['Product_URL']);
               if (!row['Product URL'] && !row['Product_URL']) continue;
               entity = transformProductData(row);
               break;
