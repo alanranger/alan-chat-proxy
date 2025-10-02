@@ -191,51 +191,112 @@ function buildOrIlike(keys, keywords) {
 }
 
 async function findEvents(client, { keywords = [], topK = 12 } = {}) {
-  let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "event");
+  // Use CORRECTED consolidated view instead of raw page_entities
+  let q = client.from("v_event_product_pricing_corrected").select(`
+    event_url,
+    subtype,
+    date_start,
+    date_end,
+    start_time,
+    end_time,
+    event_location,
+    product_url,
+    method,
+    specificity,
+    price_gbp,
+    availability
+  `);
+  
   q = q.gte("date_start", new Date().toISOString());
+  
   if (keywords.length) {
     q = q.or(
       buildOrIlike(
         [
-          "title",
-          "page_url",
-          "location",
-          "description",
-          "raw->>metaDescription",
-          "raw->meta->>description",
+          "event_url",
+          "event_location",
         ],
         keywords
       )
     );
   }
+  
   q = q.order("date_start", { ascending: true }).limit(topK);
   const { data, error } = await q;
   if (error) throw error;
-  return data || [];
+  
+  // Transform to match expected format
+  return (data || []).map(event => ({
+    id: event.event_url, // Use event_url as ID
+    kind: "event",
+    title: event.event_url.split('/').pop().replace(/-/g, ' '), // Extract title from URL
+    page_url: event.event_url,
+    source_url: event.event_url,
+    last_seen: new Date().toISOString(),
+    location: event.event_location,
+    date_start: event.date_start,
+    date_end: event.date_end,
+    price: event.price_gbp,
+    description: `Event type: ${event.subtype}`,
+    raw: {
+      subtype: event.subtype,
+      start_time: event.start_time,
+      end_time: event.end_time,
+      product_url: event.product_url,
+      method: event.method,
+      specificity: event.specificity,
+      availability: event.availability
+    }
+  }));
 }
 
 async function findProducts(client, { keywords = [], topK = 12 } = {}) {
-  let q = client
-    .from("page_entities")
-    .select(SELECT_COLS)
-    .eq("kind", "product");
-  if (keywords.length)
+  // Use consolidated products view instead of raw page_entities
+  let q = client.from("v_products_unified_open").select(`
+    product_url,
+    product_title,
+    product_kind_resolved,
+    display_price_gbp,
+    price_source,
+    availability_status,
+    location_hint,
+    last_seen
+  `);
+  
+  if (keywords.length) {
     q = q.or(
       buildOrIlike(
         [
-          "title",
-          "page_url",
-          "description",
-          "raw->>metaDescription",
-          "raw->meta->>description",
+          "product_url",
+          "product_title",
+          "location_hint",
         ],
         keywords
       )
     );
+  }
+  
   q = q.order("last_seen", { ascending: false }).limit(topK);
   const { data, error } = await q;
   if (error) throw error;
-  return data || [];
+  
+  // Transform to match expected format
+  return (data || []).map(product => ({
+    id: product.product_url, // Use product_url as ID
+    kind: "product",
+    title: product.product_title,
+    page_url: product.product_url,
+    source_url: product.product_url,
+    last_seen: product.last_seen,
+    location: product.location_hint,
+    price: product.display_price_gbp,
+    description: `Product type: ${product.product_kind_resolved}`,
+    raw: {
+      product_kind_resolved: product.product_kind_resolved,
+      price_source: product.price_source,
+      availability_status: product.availability_status
+    }
+  }));
 }
 
 async function findArticles(client, { keywords = [], topK = 12 } = {}) {
@@ -914,24 +975,8 @@ export default async function handler(req, res) {
     }
     t_supabase += Date.now() - s1;
 
-    const allProdUrls = (products || []).map((p) => pickUrl(p)).filter(Boolean);
-    const [priceMap, availMap] = await Promise.all([
-      fetchDisplayPrices(client, allProdUrls),
-      fetchAvailability(client, allProdUrls),
-    ]);
-    products = (products || []).map((p) => {
-      const u = baseUrl(pickUrl(p));
-      const priceRow = priceMap.get(u);
-      const availRow = availMap.get(u);
-      return {
-        ...p,
-        display_price_gbp: priceRow?.display_price_gbp ?? null,
-        product_kind_resolved: priceRow?.product_kind ?? null,
-        price_source: priceRow?.preferred_source ?? null,
-        availability_status: availRow?.availability_status ?? null,
-        availability_raw: availRow?.availability_raw ?? null,
-      };
-    });
+    // Price and availability data is already included in the consolidated views
+    // No need for separate lookups
 
     const s2 = Date.now();
     const qTokens = keywords;
@@ -998,23 +1043,8 @@ export default async function handler(req, res) {
       if (matched) {
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
-        const u = baseUrl(pickUrl(featuredProduct));
-        const priceRow = (await fetchDisplayPrices(client, [u])).get(u);
-        const availRow = (await fetchAvailability(client, [u])).get(u);
-        if (priceRow) {
-          featuredProduct.display_price_gbp =
-            priceRow.display_price_gbp ?? featuredProduct.display_price_gbp ?? null;
-          featuredProduct.product_kind_resolved =
-            priceRow.product_kind ?? featuredProduct.product_kind_resolved ?? null;
-          featuredProduct.price_source =
-            priceRow.preferred_source ?? featuredProduct.price_source ?? null;
-        }
-        if (availRow) {
-          featuredProduct.availability_status =
-            availRow.availability_status ?? featuredProduct.availability_status ?? null;
-          featuredProduct.availability_raw =
-            availRow.availability_raw ?? featuredProduct.availability_raw ?? null;
-        }
+        // Price and availability data is already included in the consolidated views
+        // No need for separate lookups
       }
 
       if (rankedProducts.length) {

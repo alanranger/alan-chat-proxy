@@ -1,0 +1,422 @@
+// /api/csv-multi-import.js
+// Combined CSV import for all content types
+// Handles: blog, workshop, service, product, and event imports
+
+export const config = { runtime: 'nodejs' };
+
+import { createClient } from '@supabase/supabase-js';
+import crypto from 'node:crypto';
+
+/* ========== utils ========== */
+const need = (k) => {
+  const v = process.env[k];
+  if (!v || !String(v).trim()) throw new Error(`missing_env:${k}`);
+  return v;
+};
+
+const asString = (e) => {
+  if (!e) return '(unknown)';
+  if (typeof e === 'string') return e;
+  if (e.message && typeof e.message === 'string') return e.message;
+  try { return JSON.stringify(e); } catch { return String(e); }
+};
+
+const sendJSON = (res, status, obj) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  if (obj && 'detail' in obj) obj.detail = asString(obj.detail);
+  res.status(status).send(JSON.stringify(obj));
+};
+
+/* ========== CSV parsing ========== */
+function parseCSV(csvText) {
+  const lines = csvText.split('\n').filter(line => line.trim());
+  if (lines.length < 2) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const rows = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim());
+    if (values.length !== headers.length) continue;
+    
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index];
+    });
+    rows.push(row);
+  }
+  
+  return rows;
+}
+
+/* ========== Blog data transformation ========== */
+function transformBlogData(row) {
+  const title = row.title;
+  const url = row.full_url || row.url;
+  const categories = row.categories ? row.categories.split(';').map(c => c.trim()) : [];
+  const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
+  const imageUrl = row.image;
+  const publishDate = row.publish_on;
+  
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": title,
+    "url": url,
+    "datePublished": publishDate,
+    "author": { "@type": "Person", "name": "Alan Ranger" },
+    "publisher": { "@type": "Organization", "name": "Alan Ranger Photography" },
+    "image": imageUrl,
+    "keywords": tags.join(', '),
+    "articleSection": categories.join(', ')
+  };
+  
+  return {
+    url: url,
+    kind: 'article',
+    title: title,
+    description: null,
+    date_start: publishDate,
+    date_end: null,
+    location: null,
+    price: null,
+    price_currency: null,
+    availability: null,
+    sku: null,
+    provider: 'Alan Ranger Photography',
+    source_url: url,
+    raw: jsonLd,
+    entity_hash: crypto.createHash('sha1').update(`${url}::article::${title}::${publishDate}::${JSON.stringify(jsonLd)}`).digest('hex'),
+    last_seen: new Date().toISOString()
+  };
+}
+
+/* ========== Workshop data transformation ========== */
+function transformWorkshopData(row) {
+  const title = row.title;
+  const url = row.full_url || row.url;
+  const categories = row.categories ? row.categories.split(';').map(c => c.trim()) : [];
+  const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
+  const imageUrl = row.image;
+  
+  // Extract location hints from tags
+  const locationHints = [];
+  if (tags.includes('warwickshire')) locationHints.push('Warwickshire');
+  if (tags.includes('suffolk')) locationHints.push('Suffolk');
+  if (tags.includes('derbyshire')) locationHints.push('Derbyshire');
+  if (tags.includes('devon')) locationHints.push('Devon');
+  if (tags.includes('northumbria')) locationHints.push('Northumberland');
+  if (tags.includes('coventry')) locationHints.push('Coventry');
+  if (tags.includes('cumbria')) locationHints.push('Cumbria');
+  
+  // Determine workshop type from categories
+  let workshopType = 'workshop';
+  if (categories.includes('half-day photo workshops')) workshopType = 'half-day';
+  else if (categories.includes('one day photo workshops')) workshopType = 'one-day';
+  else if (categories.includes('weekend residential photo workshops')) workshopType = 'weekend';
+  
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": title,
+    "url": url,
+    "eventStatus": "https://schema.org/EventScheduled",
+    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+    "organizer": { "@type": "Organization", "name": "Alan Ranger Photography" },
+    "image": imageUrl,
+    "keywords": tags.join(', '),
+    "eventType": workshopType,
+    "location": locationHints.length > 0 ? { "@type": "Place", "name": locationHints.join(', ') } : undefined
+  };
+  
+  // Remove undefined values
+  Object.keys(jsonLd).forEach(key => {
+    if (jsonLd[key] === undefined) delete jsonLd[key];
+  });
+  
+  return {
+    url: url,
+    kind: 'event',
+    title: title,
+    description: null,
+    date_start: null,
+    date_end: null,
+    location: locationHints.join(', ') || null,
+    price: null,
+    price_currency: null,
+    availability: null,
+    sku: null,
+    provider: 'Alan Ranger Photography',
+    source_url: url,
+    raw: jsonLd,
+    entity_hash: crypto.createHash('sha1').update(`${url}::event::${title}::${JSON.stringify(jsonLd)}`).digest('hex'),
+    last_seen: new Date().toISOString()
+  };
+}
+
+/* ========== Service data transformation ========== */
+function transformServiceData(row) {
+  const title = row.title;
+  const url = row.full_url || row.url;
+  const categories = row.categories ? row.categories.split(';').map(c => c.trim()) : [];
+  const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
+  const imageUrl = row.image;
+  
+  // Determine service type from categories
+  let serviceType = 'service';
+  if (categories.includes('photography-classes')) serviceType = 'course';
+  else if (categories.includes('photography-courses')) serviceType = 'course';
+  else if (categories.includes('1-2-1-private-lessons')) serviceType = 'private-lesson';
+  else if (categories.includes('photography-tuition')) serviceType = 'tuition';
+  else if (categories.includes('print')) serviceType = 'product';
+  
+  // Extract location from tags
+  const locations = [];
+  if (tags.includes('coventry')) locations.push('Coventry');
+  if (tags.includes('kenilworth')) locations.push('Kenilworth');
+  if (tags.includes('solihull')) locations.push('Solihull');
+  if (tags.includes('or-online')) locations.push('Online');
+  
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": title,
+    "url": url,
+    "provider": { "@type": "Organization", "name": "Alan Ranger Photography" },
+    "image": imageUrl,
+    "keywords": tags.join(', '),
+    "serviceType": serviceType,
+    "areaServed": locations.length > 0 ? locations : undefined,
+    "offers": { "@type": "Offer", "availability": "https://schema.org/InStock" }
+  };
+  
+  // Remove undefined values
+  Object.keys(jsonLd).forEach(key => {
+    if (jsonLd[key] === undefined) delete jsonLd[key];
+  });
+  
+  return {
+    url: url,
+    kind: 'service',
+    title: title,
+    description: null,
+    date_start: null,
+    date_end: null,
+    location: locations.join(', ') || null,
+    price: null,
+    price_currency: null,
+    availability: 'InStock',
+    sku: null,
+    provider: 'Alan Ranger Photography',
+    source_url: url,
+    raw: jsonLd,
+    entity_hash: crypto.createHash('sha1').update(`${url}::service::${title}::${JSON.stringify(jsonLd)}`).digest('hex'),
+    last_seen: new Date().toISOString()
+  };
+}
+
+/* ========== Product data transformation ========== */
+function transformProductData(row) {
+  const title = row.title;
+  const url = row.product_url;
+  const description = row.description;
+  const sku = row.sku;
+  const price = parseFloat(row.price) || 0;
+  const salePrice = parseFloat(row.sale_price) || 0;
+  const onSale = row.on_sale === 'Yes';
+  const stock = row.stock;
+  const categories = row.categories ? row.categories.split(',').map(c => c.trim()) : [];
+  const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
+  const imageUrls = row.hosted_image_urls ? row.hosted_image_urls.split(' ').filter(url => url.trim()) : [];
+  
+  // Determine availability
+  let availability = 'OutOfStock';
+  if (stock === 'Unlimited' || (parseInt(stock) || 0) > 0) {
+    availability = 'InStock';
+  }
+  
+  // Use sale price if on sale, otherwise regular price
+  const finalPrice = onSale && salePrice > 0 ? salePrice : price;
+  
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": title,
+    "url": url,
+    "description": description,
+    "sku": sku,
+    "image": imageUrls,
+    "brand": { "@type": "Brand", "name": "Alan Ranger Photography" },
+    "offers": {
+      "@type": "Offer",
+      "price": finalPrice,
+      "priceCurrency": "GBP",
+      "availability": `https://schema.org/${availability}`,
+      "seller": { "@type": "Organization", "name": "Alan Ranger Photography" }
+    },
+    "category": categories.join(', '),
+    "keywords": tags.join(', ')
+  };
+  
+  return {
+    url: url,
+    kind: 'product',
+    title: title,
+    description: description,
+    date_start: null,
+    date_end: null,
+    location: null,
+    price: finalPrice,
+    price_currency: 'GBP',
+    availability: availability,
+    sku: sku,
+    provider: 'Alan Ranger Photography',
+    source_url: url,
+    raw: jsonLd,
+    entity_hash: crypto.createHash('sha1').update(`${url}::product::${title}::${sku}::${finalPrice}::${JSON.stringify(jsonLd)}`).digest('hex'),
+    last_seen: new Date().toISOString()
+  };
+}
+
+/* ========== Event data transformation ========== */
+function transformEventData(row) {
+  const eventUrl = row.event_url || row.url;
+  const eventTitle = row.event_title || row.title;
+  const startDate = row.start_date;
+  const startTime = row.start_time;
+  const endDate = row.end_date;
+  const endTime = row.end_time;
+  const location = row.location_business_name || row.location_address || row.location;
+  const category = row.category || '';
+  
+  // Determine event type
+  let subtype = 'event';
+  if (eventUrl && eventUrl.includes('beginners-photography-lessons')) {
+    subtype = 'course';
+  } else if (eventUrl && eventUrl.includes('photographic-workshops-near-me')) {
+    subtype = 'workshop';
+  }
+  
+  // Create combined datetime
+  const dateStart = startDate && startTime ? `${startDate}T${startTime}:00+00:00` : null;
+  const dateEnd = endDate && endTime ? `${endDate}T${endTime}:00+00:00` : null;
+  
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": eventTitle,
+    "url": eventUrl,
+    "startDate": dateStart,
+    "endDate": dateEnd,
+    "location": location ? { "@type": "Place", "name": location } : undefined,
+    "eventStatus": "https://schema.org/EventScheduled",
+    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode"
+  };
+  
+  // Remove undefined values
+  Object.keys(jsonLd).forEach(key => {
+    if (jsonLd[key] === undefined) delete jsonLd[key];
+  });
+  
+  return {
+    url: eventUrl,
+    kind: 'event',
+    title: eventTitle,
+    description: null,
+    date_start: dateStart,
+    date_end: dateEnd,
+    location: location,
+    price: null,
+    price_currency: null,
+    availability: null,
+    sku: null,
+    provider: 'Alan Ranger Photography',
+    source_url: eventUrl,
+    raw: jsonLd,
+    entity_hash: crypto.createHash('sha1').update(`${eventUrl}::event::${eventTitle}::${dateStart}::${dateEnd}::${JSON.stringify(jsonLd)}`).digest('hex'),
+    last_seen: new Date().toISOString()
+  };
+}
+
+/* ========== handler ========== */
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return sendJSON(res, 405, { error: 'method_not_allowed' });
+
+  let stage = 'start';
+  try {
+    stage = 'auth';
+    const token = req.headers['authorization']?.trim();
+    if (token !== `Bearer ${need('INGEST_TOKEN')}`) return sendJSON(res, 401, { error: 'unauthorized', stage });
+
+    stage = 'parse_body';
+    const { csvData, contentType } = req.body || {};
+    if (!csvData) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "csvData"', stage });
+    if (!contentType) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "contentType" (blog, workshop, service, product, event)', stage });
+
+    stage = 'db_client';
+    const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
+
+    stage = 'parse_csv';
+    const rows = parseCSV(csvData);
+    if (!rows.length) return sendJSON(res, 400, { error: 'bad_request', detail: 'No valid CSV data found', stage });
+
+    stage = 'transform_data';
+    const entities = [];
+    
+    for (const row of rows) {
+      let entity = null;
+      
+      switch (contentType) {
+        case 'blog':
+          if (!row.full_url && !row.url) continue;
+          entity = transformBlogData(row);
+          break;
+        case 'workshop':
+          if (!row.full_url && !row.url) continue;
+          entity = transformWorkshopData(row);
+          break;
+        case 'service':
+          if (!row.full_url && !row.url) continue;
+          entity = transformServiceData(row);
+          break;
+        case 'product':
+          if (!row.product_url && !row.url) continue;
+          entity = transformProductData(row);
+          break;
+        case 'event':
+          if (!row.event_url && !row.url) continue;
+          entity = transformEventData(row);
+          break;
+        default:
+          return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid contentType. Use: blog, workshop, service, product, event', stage });
+      }
+      
+      if (entity) entities.push(entity);
+    }
+
+    if (!entities.length) return sendJSON(res, 400, { error: 'bad_request', detail: `No valid ${contentType} entities found in CSV`, stage });
+
+    stage = 'import_entities';
+    // Delete existing entities for these URLs to avoid duplicates
+    const urls = entities.map(e => e.url);
+    if (urls.length) {
+      const { error: delE } = await supa.from('page_entities').delete().in('url', urls);
+      if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
+    }
+
+    // Insert new entities
+    const { error: insE } = await supa.from('page_entities').insert(entities);
+    if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
+
+    stage = 'done';
+    return sendJSON(res, 200, {
+      ok: true,
+      imported: entities.length,
+      content_type: contentType,
+      stage
+    });
+  } catch (err) {
+    return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
+  }
+}
+

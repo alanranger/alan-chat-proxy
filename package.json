@@ -8,10 +8,12 @@
   },
   "scripts": {
     "build": "echo \"no build step\"",
-    "start": "vercel dev"
+    "start": "vercel dev",
+    "call:fn": "node call-fn.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
-    "html-to-text": "^9.0.5"
+    "html-to-text": "^9.0.5",
+    "pg": "^8.16.3"
   }
 }
