@@ -443,8 +443,16 @@ export default async function handler(req, res) {
     // ALWAYS replace data - never skip duplicates
     const urls = entities.map(e => e.url);
     if (urls.length) {
+      // Delete by URL first
       const { error: delE } = await supa.from('page_entities').delete().in('url', urls);
       if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
+      
+      // Also delete from event_dates table to clean up any orphaned records
+      const { error: delDates } = await supa.from('event_dates').delete().in('event_url', urls);
+      if (delDates) {
+        // Don't fail on this, just log it
+        console.warn('Failed to delete from event_dates:', delDates.message);
+      }
     }
     
     // Insert all entities (no more skipping)
@@ -454,7 +462,19 @@ export default async function handler(req, res) {
       if (insE.message && insE.message.includes('uniq_events_with_date')) {
         let imported = 0;
         for (const e of entities) {
-          const { error: upsertE } = await supa.from('page_entities').upsert([e]);
+          // First try to delete any existing records with same URL and date_start
+          const { error: delExisting } = await supa.from('page_entities')
+            .delete()
+            .eq('url', e.url)
+            .eq('date_start', e.date_start)
+            .eq('kind', 'event');
+          
+          if (delExisting) {
+            console.warn('Failed to delete existing event:', delExisting.message);
+          }
+          
+          // Then insert the new record
+          const { error: upsertE } = await supa.from('page_entities').insert([e]);
           if (upsertE) {
             return sendJSON(res, 500, { error: 'supabase_entities_upsert_failed', detail: upsertE.message || upsertE, stage, url: e.url });
           }
