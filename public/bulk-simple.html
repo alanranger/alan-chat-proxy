@@ -60,7 +60,7 @@
     <div class="header">
       <h1>🎯 Alan Ranger Photography - Data Pipeline</h1>
       <p>Simple CSV Import & Web Scraping Tool</p>
-      <small>v1.0.0 - Simplified Interface</small>
+      <small>v1.0.3 - Simplified Interface</small>
     </div>
 
     <!-- Token Section -->
@@ -735,7 +735,14 @@
           const afterCount = result.afterCount || 0;
           const beforeCount = before?.afterCount ?? before?.count ?? (afterCount - mappingsCreated);
           // also show live totals from the chat view
-          const counts = await getMappingCounts();
+          // try backend counts first (service role), then fallback to REST counts
+          let counts;
+          try {
+            const resp = await fetch('/api/mapping-counts', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+            const j = await resp.json();
+            if (resp.ok && j && j.ok) counts = { total: j.total, mapped: j.mapped };
+          } catch {}
+          if (!counts) counts = await getMappingCounts();
           addResult(`✅ Event → Product mapping complete! Created ${mappingsCreated} new mappings (${afterCount} auto-links). View totals: ${counts.mapped}/${counts.total} mapped.`, 'success');
           if (result.sampleMappings && result.sampleMappings.length > 0) {
             addResult(`📊 Sample mappings: ${result.sampleMappings.map(m => `${m.event_url} → ${m.product_url} (score: ${m.score})`).join(', ')}`, 'info');
