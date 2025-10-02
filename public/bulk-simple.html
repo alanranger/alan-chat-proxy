@@ -23,6 +23,7 @@
     .status.success { background: #4CAF50; color: white; }
     .status.error { background: #f44336; color: white; }
     .status.info { background: #2196F3; color: white; }
+    .status.skipped { background: #f39c12; color: #111; }
     .results { background: #000; padding: 15px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
     .progress { width: 100%; background: #333; border-radius: 5px; margin: 10px 0; }
     .progress-bar { height: 20px; background: #4CAF50; border-radius: 5px; transition: width 0.3s; }
@@ -159,7 +160,7 @@
     <div class="section">
       <h3>🔧 Debug & Control</h3>
       <div class="card">
-            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 10px;">
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 10px;">
               <div class="stat-box" title="Total URLs loaded from site_urls.csv for scraping">
                 <div class="stat-label">Loaded Rows</div>
                 <div class="stat-value" id="loadedRows">0</div>
@@ -195,9 +196,15 @@
     <!-- Results Section -->
     <div class="section">
       <h2>📋 Results & Debug</h2>
-      <div style="margin-bottom: 10px;">
+      <div style="margin-bottom: 10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <button class="btn" onclick="copyDebugLog()">📋 Copy Debug Log</button>
+        <button class="btn" onclick="downloadDebugLog()">⬇️ Download Debug Log</button>
         <button class="btn" onclick="clearResults()">🗑️ Clear Log</button>
+        <span style="margin-left:12px;color:#bbb;">Filter:</span>
+        <button class="btn" id="filterAll" onclick="setLogFilter('all')">All</button>
+        <button class="btn" id="filterSuccess" onclick="setLogFilter('success')">Success</button>
+        <button class="btn" id="filterError" onclick="setLogFilter('error')">Failed</button>
+        <button class="btn" id="filterSkipped" onclick="setLogFilter('skipped')">Skipped</button>
       </div>
       <div class="results" id="results">
         Ready to import your data. Select your CSV files and click "Import All CSV Files".
@@ -256,15 +263,36 @@
     }
 
     // Results management
-    function addResult(message, type = 'info') {
+    let logEntries = [];
+    let logFilter = 'all';
+
+    function setLogFilter(f) {
+      logFilter = f;
+      renderLog();
+    }
+
+    function renderLog() {
       const results = document.getElementById('results');
-      const timestamp = new Date().toLocaleTimeString();
-      const statusClass = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
-      results.innerHTML += `<div class="status ${statusClass}">[${timestamp}] ${message}</div>`;
+      const visible = logEntries.filter(e => logFilter === 'all' || e.type === logFilter);
+      results.innerHTML = visible.map(e => `<div class="status ${e.type}">[${e.time}] ${e.message}</div>`).join('');
       results.scrollTop = results.scrollHeight;
     }
 
+    function addResult(message, type = 'info') {
+      // Promote certain messages to 'skipped' type
+      if (type === 'success' && /Skipped duplicate/i.test(message)) type = 'skipped';
+      const entry = { time: new Date().toLocaleTimeString(), type, message };
+      logEntries.push(entry);
+      // fast append if it matches current filter
+      if (logFilter === 'all' || logFilter === type) {
+        const results = document.getElementById('results');
+        results.innerHTML += `<div class="status ${type}">[${entry.time}] ${message}</div>`;
+        results.scrollTop = results.scrollHeight;
+      }
+    }
+
     function clearResults() {
+      logEntries = [];
       document.getElementById('results').innerHTML = 'Results cleared. Ready for new operations.';
     }
 
@@ -374,26 +402,35 @@
     async function runQaChecks() {
       const el = document.getElementById('qaResults');
       el.textContent = 'Running QA checks...';
-      const rows = [];
-      async function add(label, path) {
-        const c = await restCount(path);
-        rows.push(`${label.padEnd(36)} ${String(c)}`);
+      try {
+        const token = getToken();
+        const resp = await fetch('/api/qa-spot-checks', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const text = await resp.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = { ok:false, raw:text }; }
+        if (!resp.ok || !data?.ok) {
+          el.textContent = `QA request failed: ${data?.error || resp.status} ${data?.detail || ''}`;
+          return;
+        }
+        const rows = [];
+        const checks = data.checks || {};
+        const order = [
+          'page_entities','page_chunks','event_product_links_auto',
+          'v_events_real_data','v_event_product_mappings','v_event_product_pricing_combined',
+          'v_blog_content','v_workshop_content','v_service_content','v_product_content'
+        ];
+        for (const name of order) {
+          const c = checks[name];
+          const count = (c && c.status === 'ok') ? (c.count ?? 0) : 0;
+          rows.push(`${name.padEnd(36)} ${String(count)}`);
+        }
+        el.textContent = rows.join('\n');
+      } catch (e) {
+        el.textContent = `QA error: ${e.message}`;
       }
-      await add('page_entities (all)', 'page_entities?select=url&limit=1');
-      await add('page_entities (events)', 'page_entities?kind=eq.event&select=url&limit=1');
-      await add('page_entities (articles)', 'page_entities?kind=eq.article&select=url&limit=1');
-      await add('page_entities (products)', 'page_entities?kind=eq.product&select=url&limit=1');
-      await add('page_chunks', 'page_chunks?select=url&limit=1');
-      await add('event_product_links_auto', 'event_product_links_auto?select=event_url&limit=1');
-      // Views (if exposed via REST)
-      await add('v_events_real_data', 'v_events_real_data?select=event_url&limit=1');
-      await add('v_event_product_mappings', 'v_event_product_mappings?select=event_url&limit=1');
-      await add('v_event_product_pricing_combined', 'v_event_product_pricing_combined?select=event_url&limit=1');
-      await add('v_blog_content', 'v_blog_content?select=url&limit=1');
-      await add('v_workshop_content', 'v_workshop_content?select=url&limit=1');
-      await add('v_service_content', 'v_service_content?select=url&limit=1');
-      await add('v_product_content', 'v_product_content?select=url&limit=1');
-      el.textContent = rows.join('\n');
     }
 
     // CSV Import functions
@@ -739,8 +776,7 @@
 
     // Download debug log
     function downloadDebugLog() {
-      const results = document.getElementById('results');
-      const logText = results.textContent || results.innerText || '';
+      const logText = logEntries.map(e => `[${e.time}] ${e.message}`).join('\n');
       const blob = new Blob([logText], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
