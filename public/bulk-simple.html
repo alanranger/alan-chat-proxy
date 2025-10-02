@@ -137,7 +137,12 @@
         </button>
       </div>
       <div style="margin-top: 10px; padding: 10px; background: #2a2a2a; border-radius: 5px;">
-        <small><strong>Workflow:</strong> 1️⃣ Import CSVs → 2️⃣ Scrape URLs → 3️⃣ Create Mappings</small>
+        <small>
+          <strong>Workflow:</strong>
+          <span id="stepImport" style="padding:2px 6px;border-radius:4px;background:#555;margin-right:6px;">1️⃣ Import CSVs: idle</span>
+          <span id="stepScrape" style="padding:2px 6px;border-radius:4px;background:#555;margin-right:6px;">2️⃣ Scrape URLs: idle</span>
+          <span id="stepMap" style="padding:2px 6px;border-radius:4px;background:#555;">3️⃣ Create Mappings: idle</span>
+        </small>
       </div>
     </div>
 
@@ -171,6 +176,9 @@
             <div class="stat-label">Stopped</div>
             <div class="stat-value" id="stoppedCount">0</div>
           </div>
+        </div>
+        <div id="categoryStats" style="margin-top: 10px;">
+          <!-- per-category stats will render here -->
         </div>
         <div style="display: flex; gap: 10px;">
           <button class="btn" onclick="copyDebugLog()">📋 Copy Debug Log</button>
@@ -310,7 +318,8 @@
           },
           body: data ? JSON.stringify(data) : undefined
         });
-        return await response.json();
+        const text = await response.text();
+        try { return JSON.parse(text); } catch { return { ok: response.ok, status: response.status, text }; }
       } catch (error) {
         addResult(`❌ API Error: ${error.message}`, 'error');
         return null;
@@ -355,6 +364,8 @@
     async function importAllCSVs() {
       const token = getToken();
       addResult('🔐 Using hardcoded token for authentication');
+      document.getElementById('stepImport').style.background = '#3a3';
+      document.getElementById('stepImport').textContent = '1️⃣ Import CSVs: running';
 
       updateProgress(0, 'Starting CSV imports...');
       addResult('🚀 Starting CSV import process...');
@@ -389,6 +400,8 @@
 
       updateProgress(100, `Import complete: ${successCount}/${totalCount} successful`);
       addResult(`🎉 CSV import process complete! ${successCount}/${totalCount} files imported successfully.`, 'success');
+      document.getElementById('stepImport').style.background = successCount===totalCount ? '#2a6' : '#a62';
+      document.getElementById('stepImport').textContent = `1️⃣ Import CSVs: ${successCount}/${totalCount}`;
     }
 
     // Website scraping
@@ -405,6 +418,8 @@
       document.getElementById('stopScrapeBtn').style.display = 'inline-block';
 
       addResult('🕷️ Starting website scraping...');
+      document.getElementById('stepScrape').style.background = '#3a3';
+      document.getElementById('stepScrape').textContent = '2️⃣ Scrape URLs: running';
       const csvText = await siteUrlsFile.text();
       const lines = csvText.split('\n').filter(line => line.trim());
       const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
@@ -418,25 +433,57 @@
       stats.stoppedCount = 0;
       updateStats();
 
+      // per-category stats
+      const cat = () => ({ success: 0, failed: 0, skipped: 0 });
+      let catStats = {
+        events: cat(),
+        workshops: cat(),
+        blogs: cat(),
+        services: cat(),
+        products: cat(),
+        other: cat()
+      };
+
+      function categorize(url, result) {
+        const u = (url||'').toLowerCase();
+        if (u.includes('/blog-on-photography')) return 'blogs';
+        if (u.includes('/beginners-photography-lessons')) return 'events';
+        if (u.includes('/photographic-workshops-near-me') || u.includes('/photo-workshops-uk')) return 'workshops';
+        if (u.includes('/photography-services-near-me')) return 'services';
+        if (u.includes('/photography-shop') || u.includes('/photography-presents')) return 'products';
+        return 'other';
+      }
+
+      function renderCategoryStats() {
+        const el = document.getElementById('categoryStats');
+        const rows = Object.entries(catStats).map(([k,v]) => `<tr><td style="padding:4px 8px;">${k}</td><td style="color:#51cf66">${v.success}</td><td style="color:#ff6b6b">${v.failed}</td><td style="color:#74c0fc">${v.skipped}</td></tr>`).join('');
+        el.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
+      }
+
       for (let i = 0; i < urls.length; i++) {
         updateProgress((i / urls.length) * 100, `Scraping ${urls[i]}...`);
         const result = await apiCall('/api/ingest-embed-replace', { url: urls[i] });
-        if (result && result.ok) {
+        const category = categorize(urls[i], result);
+        if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
           addResult(`✅ Scraped: ${urls[i]}`, 'success');
           stats.successCount++;
+          catStats[category].success++;
         } else {
           const src = lines[i+1] || '';
-          const reason = result && (result.error || result.detail) ? `${result.error || ''} ${result.detail || ''}`.trim() : 'unknown';
+          const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
           const reasonLc = reason.toLowerCase();
           if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
             addResult(`✅ Skipped duplicate: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'success');
             stats.successCount++;
+            catStats[category].skipped++;
           } else {
             addResult(`❌ Failed: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
             stats.failedCount++;
+            catStats[category].failed++;
           }
         }
         updateStats();
+        renderCategoryStats();
 
         if (stopRequested) {
           stats.stoppedCount = urls.length - (i + 1);
@@ -447,6 +494,8 @@
 
       updateProgress(100, 'Website scraping complete');
       addResult('🎉 Website scraping complete!', 'success');
+      document.getElementById('stepScrape').style.background = stats.failedCount === 0 ? '#2a6' : '#a62';
+      document.getElementById('stepScrape').textContent = `2️⃣ Scrape URLs: ${stats.successCount} ok, ${stats.failedCount} failed, ${stats.stoppedCount} stopped`;
       document.getElementById('stopScrapeBtn').style.display = 'none';
     }
 
@@ -457,11 +506,27 @@
     // Event-Product mapping
     async function runMapping() {
       addResult('🔗 Running event → product mapping...');
-      const result = await apiCall('/rest/v1/rpc/refresh_event_product_autolinks');
-      if (result) {
-        addResult('✅ Event → Product mapping complete!', 'success');
-      } else {
-        addResult('❌ Event → Product mapping failed', 'error');
+      document.getElementById('stepMap').style.background = '#3a3';
+      document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: running';
+      const token = getToken();
+      try {
+        const resp = await fetch('/rest/v1/rpc/refresh_event_product_autolinks', { headers: { 'Authorization': `Bearer ${token}` } });
+        const raw = await resp.text();
+        let parsed;
+        try { parsed = JSON.parse(raw); } catch { parsed = { text: raw }; }
+        if (resp.ok) {
+          addResult('✅ Event → Product mapping complete!', 'success');
+          document.getElementById('stepMap').style.background = '#2a6';
+          document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: complete';
+        } else {
+          addResult(`❌ Mapping failed: ${raw.substring(0,180)}`, 'error');
+          document.getElementById('stepMap').style.background = '#a62';
+          document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: failed';
+        }
+      } catch (e) {
+        addResult(`❌ Mapping error: ${e.message}`, 'error');
+        document.getElementById('stepMap').style.background = '#a62';
+        document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: failed';
       }
     }
 
