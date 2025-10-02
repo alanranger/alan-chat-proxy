@@ -124,6 +124,10 @@
     <!-- Results Section -->
     <div class="section">
       <h2>📋 Results & Debug</h2>
+      <div style="margin-bottom: 10px;">
+        <button class="btn" onclick="copyDebugLog()">📋 Copy Debug Log</button>
+        <button class="btn" onclick="clearResults()">🗑️ Clear Log</button>
+      </div>
       <div class="results" id="results">
         Ready to import your data. Select your CSV files and click "Import All CSV Files".
       </div>
@@ -159,6 +163,48 @@
 
     function clearResults() {
       document.getElementById('results').innerHTML = 'Results cleared. Ready for new operations.';
+    }
+
+    // Copy debug log to clipboard
+    function copyDebugLog() {
+      const results = document.getElementById('results');
+      const logText = results.textContent || results.innerText;
+      
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(logText).then(() => {
+          addResult('✅ Debug log copied to clipboard!', 'success');
+        }).catch(err => {
+          addResult('❌ Failed to copy to clipboard: ' + err.message, 'error');
+          fallbackCopyTextToClipboard(logText);
+        });
+      } else {
+        fallbackCopyTextToClipboard(logText);
+      }
+    }
+
+    // Fallback copy method for older browsers
+    function fallbackCopyTextToClipboard(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.position = "fixed";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          addResult('✅ Debug log copied to clipboard!', 'success');
+        } else {
+          addResult('❌ Failed to copy to clipboard', 'error');
+        }
+      } catch (err) {
+        addResult('❌ Failed to copy to clipboard: ' + err.message, 'error');
+      }
+      
+      document.body.removeChild(textArea);
     }
 
     // Progress management
@@ -201,13 +247,21 @@
 
       addResult(`📥 Importing ${contentType} data...`);
       const csvText = await file.text();
+      
+      // Log CSV preview for debugging
+      const lines = csvText.split('\n');
+      addResult(`📊 CSV Preview: ${lines.length} lines, first line: ${lines[0]?.substring(0, 100)}...`);
+      
       const result = await apiCall('/api/csv-multi-import', { csvData: csvText, contentType });
       
       if (result && result.ok) {
         addResult(`✅ ${contentType} import successful: ${result.imported} records`, 'success');
         return true;
       } else {
-        addResult(`❌ ${contentType} import failed: ${result?.error || 'Unknown error'}`, 'error');
+        addResult(`❌ ${contentType} import failed: ${result?.error || result?.detail || 'Unknown error'}`, 'error');
+        if (result?.detail) {
+          addResult(`🔍 Error details: ${JSON.stringify(result.detail)}`, 'error');
+        }
         return false;
       }
     }
