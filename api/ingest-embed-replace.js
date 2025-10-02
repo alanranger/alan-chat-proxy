@@ -320,15 +320,52 @@ export default async function handler(req, res) {
       entities.push(e);
     }
 
-    /* 3) REPLACE entities for this URL (delete → insert) */
-    stage = 'replace_entities';
+    /* 3) INSERT entities for this URL (handle duplicates gracefully) */
+    stage = 'insert_entities';
     {
-      const { error: delE } = await supa.from('page_entities').delete().eq('url', url);
-      if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
-
       if (entities.length) {
-        const { error: insE } = await supa.from('page_entities').insert(entities); // DB has UNIQUE (url, entity_hash)
-        if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
+        // For events, try individual inserts to handle duplicates gracefully
+        const eventEntities = entities.filter(e => e.kind === 'event');
+        const nonEventEntities = entities.filter(e => e.kind !== 'event');
+        
+        let insertedCount = 0;
+        let skippedCount = 0;
+        
+        // Handle event entities individually
+        for (const entity of eventEntities) {
+          const { error: insE } = await supa.from('page_entities').insert([entity]);
+          if (insE) {
+            const msg = String(insE.message || insE);
+            if (/uniq_events_with_date/i.test(msg) || /duplicate key value/i.test(msg)) {
+              skippedCount++;
+              continue; // Skip duplicate events
+            } else {
+              return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
+            }
+          } else {
+            insertedCount++;
+          }
+        }
+        
+        // Handle non-event entities in batch
+        if (nonEventEntities.length) {
+          const { error: insE } = await supa.from('page_entities').insert(nonEventEntities);
+          if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
+          insertedCount += nonEventEntities.length;
+        }
+        
+        // If all events were skipped, that's still a success - the content was already there
+        if (insertedCount === 0 && skippedCount > 0) {
+          return sendJSON(res, 200, {
+            ok: true,
+            id: null,
+            len: rawText.length,
+            chunks: 0,
+            entities: 0,
+            stage: 'done',
+            message: 'All entities were duplicates - content already exists'
+          });
+        }
       }
     }
 

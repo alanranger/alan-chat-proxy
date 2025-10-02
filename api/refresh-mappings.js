@@ -48,6 +48,7 @@ export default async function handler(req, res) {
     const beforeCount = beforeData?.length || 0;
 
     // Call the refresh function directly
+    console.log('Calling refresh_event_product_autolinks function...');
     const { data: refreshData, error: refreshError } = await supabase
       .rpc('refresh_event_product_autolinks');
 
@@ -55,9 +56,13 @@ export default async function handler(req, res) {
       console.error('Error calling refresh function:', refreshError);
       return res.status(500).json({ 
         error: 'Failed to refresh mappings', 
-        detail: refreshError.message 
+        detail: refreshError.message,
+        code: refreshError.code,
+        hint: refreshError.hint
       });
     }
+
+    console.log('Refresh function completed successfully');
 
     // Get count after refresh
     const { data: afterData, error: afterError } = await supabase

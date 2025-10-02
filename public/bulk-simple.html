@@ -513,9 +513,16 @@
         const result = await apiCall('/api/ingest-embed-replace', { url: urls[i] });
         const category = categorize(urls[i], result);
         if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
-          addResult(`✅ Scraped: ${urls[i]}`, 'success');
-          stats.successCount++;
-          urlScrapingStats[category].success++;
+          // Check if this was a "duplicates only" response
+          if (result.message && result.message.includes('duplicates')) {
+            addResult(`✅ Content already exists: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${result.message}`, 'success');
+            urlScrapingStats[category].skipped++;
+            stats.skippedCount++;
+          } else {
+            addResult(`✅ Scraped: ${urls[i]}`, 'success');
+            stats.successCount++;
+            urlScrapingStats[category].success++;
+          }
         } else {
           const src = lines[i+1] || '';
           const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
@@ -523,8 +530,7 @@
           if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
             addResult(`✅ Skipped duplicate: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'success');
             urlScrapingStats[category].skipped++;
-            // Count skipped as success for UI purposes but track separately
-            stats.successCount++;
+            stats.skippedCount++;
           } else {
             addResult(`❌ Failed: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
             stats.failedCount++;
