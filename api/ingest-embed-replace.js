@@ -336,7 +336,7 @@ export default async function handler(req, res) {
           const { error: insE } = await supa.from('page_entities').insert([entity]);
           if (insE) {
             const msg = String(insE.message || insE);
-            if (/uniq_events_with_date/i.test(msg) || /duplicate key value/i.test(msg)) {
+            if (/uniq_events_with_date/i.test(msg) || /duplicate key value/i.test(msg) || /uniq_page_entities_url_hash/i.test(msg)) {
               skippedCount++;
               continue; // Skip duplicate events
             } else {
