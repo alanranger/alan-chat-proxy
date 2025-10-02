@@ -168,12 +168,12 @@ export default async function handler(req, res) {
       try{
         const { data, error } = await supa
           .from('v_events_for_chat')
-          .select('event_url,subtype,product_url,price_gbp,availability,date_start,date_end,event_location,map_method')
+          .select('event_url,subtype,product_url,price_gbp,availability,date_start,date_end,event_location,map_method,confidence')
           .order('event_url', { ascending: true })
           .limit(5000);
         if (error) return sendJSON(res, 500, { error:'supabase_error', detail:error.message });
         const rows = data || [];
-        const header = ['event_url','subtype','product_url','price_gbp','availability','date_start','date_end','event_location','map_method'];
+        const header = ['event_url','subtype','product_url','price_gbp','availability','date_start','date_end','event_location','map_method','confidence'];
         const esc = (v) => {
           const s = (v==null?'':String(v));
           return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
