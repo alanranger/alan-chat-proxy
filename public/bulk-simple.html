@@ -126,6 +126,9 @@
         <button class="btn" onclick="scrapeWebsite()" id="scrapeBtn">
           2️⃣ 🕷️ Scrape Website URLs
         </button>
+        <button class="btn" onclick="stopScrape()" id="stopScrapeBtn" style="display:none">
+          ⏹️ Stop Scrape
+        </button>
         <button class="btn" onclick="runMapping()" id="mappingBtn">
           3️⃣ 🔗 Run Event → Product Mapping
         </button>
@@ -171,6 +174,7 @@
         </div>
         <div style="display: flex; gap: 10px;">
           <button class="btn" onclick="copyDebugLog()">📋 Copy Debug Log</button>
+          <button class="btn" onclick="downloadDebugLog()">⬇️ Download Debug Log</button>
           <button class="btn" onclick="clearResults()">🗑️ Clear Log</button>
         </div>
       </div>
@@ -395,6 +399,11 @@
         return;
       }
 
+      // enable stop button
+      let stopRequested = false;
+      window.__stopScrape = () => { stopRequested = true; addResult('⏹️ Stop requested. Finishing current URL...', 'info'); };
+      document.getElementById('stopScrapeBtn').style.display = 'inline-block';
+
       addResult('🕷️ Starting website scraping...');
       const csvText = await siteUrlsFile.text();
       const lines = csvText.split('\n').filter(line => line.trim());
@@ -402,18 +411,40 @@
 
       addResult(`📊 Found ${urls.length} URLs to scrape`);
 
+      // stats counters
+      stats.loadedRows = urls.length;
+      stats.successCount = 0;
+      stats.failedCount = 0;
+      stats.stoppedCount = 0;
+      updateStats();
+
       for (let i = 0; i < urls.length; i++) {
         updateProgress((i / urls.length) * 100, `Scraping ${urls[i]}...`);
         const result = await apiCall('/api/ingest-embed-replace', { url: urls[i] });
         if (result && result.ok) {
           addResult(`✅ Scraped: ${urls[i]}`, 'success');
+          stats.successCount++;
         } else {
-          addResult(`❌ Failed: ${urls[i]}`, 'error');
+          const src = lines[i+1] || '';
+          addResult(`❌ Failed: ${urls[i]}  (source: site_urls.csv line ${i+2})`, 'error');
+          stats.failedCount++;
+        }
+        updateStats();
+
+        if (stopRequested) {
+          stats.stoppedCount = urls.length - (i + 1);
+          updateStats();
+          break;
         }
       }
 
       updateProgress(100, 'Website scraping complete');
       addResult('🎉 Website scraping complete!', 'success');
+      document.getElementById('stopScrapeBtn').style.display = 'none';
+    }
+
+    function stopScrape() {
+      if (typeof window.__stopScrape === 'function') window.__stopScrape();
     }
 
     // Event-Product mapping
@@ -489,6 +520,22 @@
     
     function clearExtractResults() {
       document.getElementById('extractResults').textContent = '';
+    }
+
+    // Download debug log
+    function downloadDebugLog() {
+      const results = document.getElementById('results');
+      const logText = results.textContent || results.innerText || '';
+      const blob = new Blob([logText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `debug-log-${new Date().toISOString().replace(/[:.]/g,'-')}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      addResult('⬇️ Debug log downloaded.', 'success');
     }
     
     // Statistics tracking
