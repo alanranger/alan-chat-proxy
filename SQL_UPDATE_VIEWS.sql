@@ -35,23 +35,14 @@ WITH base AS (
     b.event_url,
     b.path                           AS event_path,
     regexp_replace(b.path, '.*/', '') AS event_slug_raw,
-    -- remove common date/week suffix noise (week-1/2/3, dd, ddmon, yyyy, variants)
+    -- simplified cleanup: strip common suffixes, collapse dashes, trim
     regexp_replace(
       regexp_replace(
-        regexp_replace(
-          regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(
-            regexp_replace(regexp_replace(regexp_replace(regexp_replace(
-              regexp_replace(lower(regexp_replace(b.path, '.*/', '')),
-                '(week|wk)[-_]?\d+$', '', 'i'),
-              '-\d{1,2}(st|nd|rd|th)$', '', 'i'),
-            '-\d{1,2}[a-z]{3}$', '', 'i'),
-          '-\d{4}$', '', 'i'),
-        '-\d{1,2}$', '', 'i'),
-      '-(spring|summer|autumn|winter)$', '', 'i'),
-    '-(sunrise|sunset)$', '', 'i'),
-  '-+$', '', 'g'),
-  '-{2,}', '-', 'g'),
-  '(^-|-$)', '', 'g') AS event_slug
+        regexp_replace(lower(regexp_replace(b.path, '.*/', '')),
+          '(-\d{1,2}(st|nd|rd|th)|-\d{1,2}[a-z]{3}|-\d{4}|-(spring|summer|autumn|winter)|-(sunrise|sunset)|(week|wk)[-_]?\d+)$',
+          '', 'gi'),
+        '-{2,}', '-', 'g'),
+      '(^-|-$)', '', 'g') AS event_slug
   FROM base b
 ), ptokens AS (
   SELECT
@@ -60,20 +51,11 @@ WITH base AS (
     regexp_replace(p.path, '.*/', '') AS product_slug_raw,
     regexp_replace(
       regexp_replace(
-        regexp_replace(
-          regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(
-            regexp_replace(regexp_replace(regexp_replace(regexp_replace(
-              regexp_replace(lower(regexp_replace(p.path, '.*/', '')),
-                '(week|wk)[-_]?\d+$', '', 'i'),
-              '-\d{1,2}(st|nd|rd|th)$', '', 'i'),
-            '-\d{1,2}[a-z]{3}$', '', 'i'),
-          '-\d{4}$', '', 'i'),
-        '-\d{1,2}$', '', 'i'),
-      '-(spring|summer|autumn|winter)$', '', 'i'),
-    '-(sunrise|sunset)$', '', 'i'),
-  '-+$', '', 'g'),
-  '-{2,}', '-', 'g'),
-  '(^-|-$)', '', 'g') AS product_slug
+        regexp_replace(lower(regexp_replace(p.path, '.*/', '')),
+          '(-\d{1,2}(st|nd|rd|th)|-\d{1,2}[a-z]{3}|-\d{4}|-(spring|summer|autumn|winter)|-(sunrise|sunset)|(week|wk)[-_]?\d+)$',
+          '', 'gi'),
+        '-{2,}', '-', 'g'),
+      '(^-|-$)', '', 'g') AS product_slug
   FROM prod p
 )
 SELECT DISTINCT

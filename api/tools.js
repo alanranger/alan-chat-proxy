@@ -203,6 +203,34 @@ export default async function handler(req, res) {
       }
     }
 
+    // --- export_unmapped: CSV of events with no product mapping ---
+    if (req.method === 'GET' && action === 'export_unmapped') {
+      try{
+        const sel = 'event_url,subtype,date_start,date_end,event_location,price_gbp,availability';
+        const { data: allEvents, error: e1 } = await supa
+          .from('v_events_real_data')
+          .select(sel)
+          .or('event_url.ilike."https://www.alanranger.com/photographic-workshops-near-me/%",event_url.ilike."https://www.alanranger.com/beginners-photography-lessons/%"')
+          .limit(5000);
+        if (e1) return sendJSON(res, 500, { error:'supabase_error', detail:e1.message });
+        const { data: mapped, error: e2 } = await supa
+          .from('v_events_for_chat')
+          .select('event_url')
+          .limit(5000);
+        if (e2) return sendJSON(res, 500, { error:'supabase_error', detail:e2.message });
+        const mappedSet = new Set((mapped||[]).map(r=>r.event_url));
+        const rows = (allEvents||[]).filter(r => !mappedSet.has(r.event_url));
+        const header = ['event_url','subtype','date_start','date_end','event_location','price_gbp','availability'];
+        const esc = (v) => { const s=(v==null?'':String(v)); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+        const csv = [header.join(',')].concat(rows.map(r => header.map(k => esc(r[k])).join(','))).join('\n');
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="unmapped_events.csv"');
+        return res.status(200).send(csv);
+      }catch(e){
+        return sendJSON(res, 500, { error:'server_error', detail:String(e?.message||e) });
+      }
+    }
+
     // Unknown/unsupported
     return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify (GET) or action=search (POST)' });
   } catch (e) {
