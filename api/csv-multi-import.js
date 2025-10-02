@@ -421,6 +421,21 @@ export default async function handler(req, res) {
       if (entity) entities.push(entity);
     }
 
+    // For events, deduplicate by (url, date_start) to avoid unique constraint violations
+    if (contentType === 'event' && entities.length) {
+      const seen = new Set();
+      const deduped = [];
+      for (const e of entities) {
+        const key = `${e.url}::${e.date_start || ''}`;
+        if (!seen.has(key)) { seen.add(key); deduped.push(e); }
+      }
+      if (deduped.length !== entities.length) {
+        // replace with deduped list
+        entities.length = 0;
+        entities.push(...deduped);
+      }
+    }
+
     if (!entities.length) return sendJSON(res, 400, { error: 'bad_request', detail: `No valid ${contentType} entities found in CSV`, stage });
 
     stage = 'import_entities';
