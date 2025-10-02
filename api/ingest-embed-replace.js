@@ -347,9 +347,11 @@ export default async function handler(req, res) {
           }
         }
         
-        // Handle non-event entities in batch
+        // Handle non-event entities in batch using UPSERT to avoid unique collisions
         if (nonEventEntities.length) {
-          const { error: insE } = await supa.from('page_entities').insert(nonEventEntities);
+          const { error: insE } = await supa
+            .from('page_entities')
+            .insert(nonEventEntities, { upsert: true, onConflict: 'url,entity_hash' });
           if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
           insertedCount += nonEventEntities.length;
         }

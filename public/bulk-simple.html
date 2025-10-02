@@ -204,6 +204,18 @@
       </div>
     </div>
 
+    <!-- QA Spot Checks Section -->
+    <div class="section">
+      <h2>🧪 QA Spot Checks</h2>
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn" onclick="runQaChecks()">Run QA Spot Checks</button>
+          <small style="color:#bbb">Checks counts via Supabase REST; no new functions needed.</small>
+        </div>
+        <div id="qaResults" style="margin-top:10px; font-family: monospace; white-space: pre-wrap;"></div>
+      </div>
+    </div>
+
     <!-- Extract Structured JSON Section -->
     <div class="section">
       <h2>🔍 Extract Structured JSON (JSON-LD)</h2>
@@ -336,6 +348,50 @@
         addResult(`❌ API Error: ${error.message}`, 'error');
         return null;
       }
+    }
+
+    // Supabase REST GET with count=exact helper
+    async function restCount(path) {
+      const token = getToken();
+      try {
+        const resp = await fetch(`${process.env?.NEXT_PUBLIC_SUPABASE_URL || ''}/rest/v1/${path}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': token,
+            'Prefer': 'count=exact'
+          }
+        });
+        const total = parseInt(resp.headers.get('content-range')?.split('/')?.[1] || '0', 10);
+        return isNaN(total) ? 0 : total;
+      } catch (e) {
+        return `err:${e.message}`;
+      }
+    }
+
+    async function runQaChecks() {
+      const el = document.getElementById('qaResults');
+      el.textContent = 'Running QA checks...';
+      const rows = [];
+      async function add(label, path) {
+        const c = await restCount(path);
+        rows.push(`${label.padEnd(36)} ${String(c)}`);
+      }
+      await add('page_entities (all)', 'page_entities?select=url&limit=1');
+      await add('page_entities (events)', 'page_entities?kind=eq.event&select=url&limit=1');
+      await add('page_entities (articles)', 'page_entities?kind=eq.article&select=url&limit=1');
+      await add('page_entities (products)', 'page_entities?kind=eq.product&select=url&limit=1');
+      await add('page_chunks', 'page_chunks?select=url&limit=1');
+      await add('event_product_links_auto', 'event_product_links_auto?select=event_url&limit=1');
+      // Views (if exposed via REST)
+      await add('v_events_real_data', 'v_events_real_data?select=event_url&limit=1');
+      await add('v_event_product_mappings', 'v_event_product_mappings?select=event_url&limit=1');
+      await add('v_event_product_pricing_combined', 'v_event_product_pricing_combined?select=event_url&limit=1');
+      await add('v_blog_content', 'v_blog_content?select=url&limit=1');
+      await add('v_workshop_content', 'v_workshop_content?select=url&limit=1');
+      await add('v_service_content', 'v_service_content?select=url&limit=1');
+      await add('v_product_content', 'v_product_content?select=url&limit=1');
+      el.textContent = rows.join('\n');
     }
 
     // CSV Import functions
