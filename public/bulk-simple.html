@@ -60,7 +60,7 @@
     <div class="header">
       <h1>🎯 Alan Ranger Photography - Data Pipeline</h1>
       <p>Simple CSV Import & Web Scraping Tool</p>
-      <small>v1.0.3 - Simplified Interface</small>
+      <small>v1.0.4 - Simplified Interface</small>
     </div>
 
     <!-- Token Section -->
@@ -409,16 +409,18 @@
 
     // Parity: compare distinct URLs in entities vs chunks for each required path
     async function getParity() {
+      // Prefer backend (service role) parity
+      try {
+        const resp = await fetch('/api/parity', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+        const j = await resp.json();
+        if (resp.ok && j && j.ok) return j;
+      } catch {}
+      // Fallback to REST counts
       const entitiesWorkshops = await restCount('page_entities?select=url&url=ilike.*photographic-workshops-near-me*');
       const chunksWorkshops   = await restCount('page_chunks?select=url&url=ilike.*photographic-workshops-near-me*');
       const entitiesCourses   = await restCount('page_entities?select=url&url=ilike.*beginners-photography-lessons*');
       const chunksCourses     = await restCount('page_chunks?select=url&url=ilike.*beginners-photography-lessons*');
-      return {
-        entitiesWorkshops: Number(entitiesWorkshops)||0,
-        chunksWorkshops: Number(chunksWorkshops)||0,
-        entitiesCourses: Number(entitiesCourses)||0,
-        chunksCourses: Number(chunksCourses)||0
-      };
+      return { entitiesWorkshops: Number(entitiesWorkshops)||0, chunksWorkshops: Number(chunksWorkshops)||0, entitiesCourses: Number(entitiesCourses)||0, chunksCourses: Number(chunksCourses)||0 };
     }
 
     async function updateParityPill() {
