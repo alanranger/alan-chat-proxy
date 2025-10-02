@@ -163,6 +163,30 @@ export default async function handler(req, res) {
       return sendJSON(res, 200, { matches });
     }
 
+    // --- export: CSV of v_events_for_chat ---
+    if (req.method === 'GET' && action === 'export') {
+      try{
+        const { data, error } = await supa
+          .from('v_events_for_chat')
+          .select('event_url,subtype,product_url,price_gbp,availability,date_start,date_end,event_location,map_method')
+          .order('event_url', { ascending: true })
+          .limit(5000);
+        if (error) return sendJSON(res, 500, { error:'supabase_error', detail:error.message });
+        const rows = data || [];
+        const header = ['event_url','subtype','product_url','price_gbp','availability','date_start','date_end','event_location','map_method'];
+        const esc = (v) => {
+          const s = (v==null?'':String(v));
+          return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+        };
+        const csv = [header.join(',')].concat(rows.map(r => header.map(k => esc(r[k])).join(','))).join('\n');
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="event_product_mappings.csv"');
+        return res.status(200).send(csv);
+      }catch(e){
+        return sendJSON(res, 500, { error:'server_error', detail:String(e?.message||e) });
+      }
+    }
+
     // Unknown/unsupported
     return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify (GET) or action=search (POST)' });
   } catch (e) {

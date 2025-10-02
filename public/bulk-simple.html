@@ -144,6 +144,7 @@
           <span id="stepScrape" style="padding:2px 6px;border-radius:4px;background:#555;margin-right:6px;">2️⃣ Scrape URLs: idle</span>
           <span id="stepMap" style="padding:2px 6px;border-radius:4px;background:#555;">3️⃣ Create Mappings: idle</span>
           <span id="parityStatus" style="padding:2px 6px;border-radius:4px;background:#444;margin-left:8px;display:inline-block;">Parity: …</span>
+          <button class="btn" style="margin-left:8px" onclick="exportMappings()">⬇️ Export Mappings CSV</button>
         </small>
       </div>
     </div>
@@ -844,6 +845,20 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       addResult('⬇️ Debug log downloaded.', 'success');
+    }
+
+    // Export mappings CSV
+    async function exportMappings(){
+      try{
+        const resp = await fetch('/api/tools?action=export', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+        if (!resp.ok){ addResult(`❌ Export failed: ${resp.status}`, 'error'); return; }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `event-product-mappings-${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        addResult('⬇️ Exported mappings CSV', 'success');
+      }catch(e){ addResult(`❌ Export error: ${e.message}`, 'error'); }
     }
     
     // Statistics tracking
