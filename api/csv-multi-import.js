@@ -315,9 +315,18 @@ function transformEventData(row) {
     subtype = 'workshop';
   }
   
-  // Create combined datetime
-  const dateStart = startDate && startTime ? `${startDate}T${startTime}:00+00:00` : null;
-  const dateEnd = endDate && endTime ? `${endDate}T${endTime}:00+00:00` : null;
+  // Normalize HH:MM vs HH:MM:SS and create combined datetime
+  const normalizeTime = (t) => {
+    if (!t) return null;
+    const tt = String(t).trim();
+    if (/^\d{2}:\d{2}:\d{2}$/.test(tt)) return tt;
+    if (/^\d{2}:\d{2}$/.test(tt)) return `${tt}:00`;
+    return tt; // leave as-is, DB will validate
+  };
+  const sTime = normalizeTime(startTime);
+  const eTime = normalizeTime(endTime);
+  const dateStart = startDate && sTime ? `${startDate}T${sTime}+00:00` : null;
+  const dateEnd = endDate && eTime ? `${endDate}T${eTime}+00:00` : null;
   
   const jsonLd = {
     "@context": "https://schema.org",
