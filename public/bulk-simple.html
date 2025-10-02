@@ -354,7 +354,9 @@
     async function restCount(path) {
       const token = getToken();
       try {
-        const resp = await fetch(`${process.env?.NEXT_PUBLIC_SUPABASE_URL || ''}/rest/v1/${path}`, {
+        // Use hardcoded Supabase URL since process.env doesn't work in browser
+        const supabaseUrl = 'https://igzvwbvgvmzvvzoclufx.supabase.co';
+        const resp = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

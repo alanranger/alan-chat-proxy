@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_SERVICE_KEY; // Use service key for RLS bypass
-const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
+const SUPABASE_URL = 'https://igzvwbvgvmzvvzoclufx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNzQ0NzQ5MCwiZXhwIjoyMDUzMDIzNDkwfQ.7J8J8J8J8J8J8J8J8J8J8J8J8J8J8J8J8J8J8J8J8';
+const EXPECTED_TOKEN = 'your-secret-token-here';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
