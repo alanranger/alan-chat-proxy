@@ -166,14 +166,30 @@ export default async function handler(req, res) {
     // --- export: CSV of v_events_for_chat ---
     if (req.method === 'GET' && action === 'export') {
       try{
-        const { data, error } = await supa
-          .from('v_events_for_chat')
-          .select('event_url,subtype,product_url,price_gbp,availability,date_start,date_end,event_location,map_method,confidence')
-          .order('event_url', { ascending: true })
-          .limit(5000);
-        if (error) return sendJSON(res, 500, { error:'supabase_error', detail:error.message });
-        const rows = data || [];
-        const header = ['event_url','subtype','product_url','price_gbp','availability','date_start','date_end','event_location','map_method','confidence'];
+        const headerWith = ['event_url','subtype','product_url','price_gbp','availability','date_start','date_end','event_location','map_method','confidence'];
+        const headerBase = ['event_url','subtype','product_url','price_gbp','availability','date_start','date_end','event_location','map_method'];
+
+        async function fetchRows(selectStr){
+          const { data, error } = await supa
+            .from('v_events_for_chat')
+            .select(selectStr)
+            .order('event_url', { ascending: true })
+            .limit(5000);
+          return { data, error };
+        }
+
+        // Try with confidence first; if the column doesn't exist yet, fall back
+        let rows = [];
+        let header = headerWith;
+        let r = await fetchRows('event_url,subtype,product_url,price_gbp,availability,date_start,date_end,event_location,map_method,confidence');
+        if (r.error) {
+          // fallback without confidence
+          header = headerBase;
+          r = await fetchRows('event_url,subtype,product_url,price_gbp,availability,date_start,date_end,event_location,map_method');
+          if (r.error) return sendJSON(res, 500, { error:'supabase_error', detail:r.error.message });
+        }
+        rows = r.data || [];
+
         const esc = (v) => {
           const s = (v==null?'':String(v));
           return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
