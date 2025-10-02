@@ -453,6 +453,22 @@ export default async function handler(req, res) {
         // Don't fail on this, just log it
         console.warn('Failed to delete from event_dates:', delDates.message);
       }
+      
+      // For events, also delete any potential duplicates by (url, date_start) combination
+      if (contentType === 'event') {
+        for (const e of entities) {
+          if (e.date_start) {
+            const { error: delDup } = await supa.from('page_entities')
+              .delete()
+              .eq('url', e.url)
+              .eq('date_start', e.date_start)
+              .eq('kind', 'event');
+            if (delDup) {
+              console.warn('Failed to delete potential duplicates:', delDup.message);
+            }
+          }
+        }
+      }
     }
     
     // Insert all entities (no more skipping)
