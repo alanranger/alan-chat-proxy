@@ -252,6 +252,12 @@
       const lines = csvText.split('\n');
       addResult(`📊 CSV Preview: ${lines.length} lines, first line: ${lines[0]?.substring(0, 100)}...`);
       
+      // Handle special cases that don't use the multi-import endpoint
+      if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'test_questions') {
+        addResult(`ℹ️ ${contentType} files are for reference only - not imported to database`, 'info');
+        return true; // Count as successful since these are reference files
+      }
+      
       const result = await apiCall('/api/csv-multi-import', { csvData: csvText, contentType });
       
       if (result && result.ok) {
@@ -279,7 +285,10 @@
         { file: document.getElementById('courseEventsCsv').files[0], type: 'event', name: 'Course Events' },
         { file: document.getElementById('workshopEventsCsv').files[0], type: 'workshop', name: 'Workshop Events' },
         { file: document.getElementById('servicePagesCsv').files[0], type: 'service', name: 'Service Pages' },
-        { file: document.getElementById('productsCsv').files[0], type: 'product', name: 'Physical Products' }
+        { file: document.getElementById('productsCsv').files[0], type: 'product', name: 'Physical Products' },
+        { file: document.getElementById('siteUrlsCsv').files[0], type: 'site_urls', name: 'Site URLs' },
+        { file: document.getElementById('landingPagesCsv').files[0], type: 'landing_pages', name: 'Landing Pages' },
+        { file: document.getElementById('testQuestionsCsv').files[0], type: 'test_questions', name: 'Test Questions' }
       ];
 
       let successCount = 0;
