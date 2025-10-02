@@ -388,14 +388,13 @@ export default async function handler(req, res) {
 
         const entities = [];
         
-        // Debug: Log the actual headers found
-        console.log(`DEBUG: ${contentType} headers:`, rows[0]);
-        console.log(`DEBUG: ${contentType} first data row:`, rows[1]);
-        
-        // Add debug info to results
-        results.push({ fileName, contentType, success: false, error: `DEBUG: Headers found: ${JSON.stringify(rows[0])}` });
-        if (rows[1]) {
-          results.push({ fileName, contentType, success: false, error: `DEBUG: First data row: ${JSON.stringify(rows[1])}` });
+        // Add debug info for field checking
+        if (contentType === 'blog') {
+          results.push({ fileName, contentType, success: false, error: `DEBUG: Looking for 'full url': ${rows[1]?.['full url']}, 'url id': ${rows[1]?.['url id']}` });
+        } else if (contentType === 'event') {
+          results.push({ fileName, contentType, success: false, error: `DEBUG: Looking for 'event_url': ${rows[1]?.['event_url']}, 'event url': ${rows[1]?.['event url']}` });
+        } else if (contentType === 'product') {
+          results.push({ fileName, contentType, success: false, error: `DEBUG: Looking for 'product url': ${rows[1]?.['product url']}, 'product_url': ${rows[1]?.['product_url']}` });
         }
         
         for (const row of rows) {
