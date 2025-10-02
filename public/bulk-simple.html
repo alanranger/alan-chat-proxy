@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Alan Ranger Photography - Data Pipeline</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .card { background: #2a2a2a; padding: 20px; margin: 20px 0; border-radius: 8px; }
+    .section { margin: 30px 0; }
+    .file-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .file-item { background: #333; padding: 15px; border-radius: 5px; }
+    .file-item h4 { margin: 0 0 10px 0; color: #4CAF50; }
+    .file-item input[type="file"] { width: 100%; margin: 10px 0; }
+    .file-item small { color: #ccc; display: block; margin: 5px 0; }
+    .btn { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+    .btn:hover { background: #45a049; }
+    .btn-danger { background: #f44336; }
+    .btn-danger:hover { background: #da190b; }
+    .btn-primary { background: #2196F3; }
+    .btn-primary:hover { background: #1976D2; }
+    .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .status.success { background: #4CAF50; color: white; }
+    .status.error { background: #f44336; color: white; }
+    .status.info { background: #2196F3; color: white; }
+    .results { background: #000; padding: 15px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+    .progress { width: 100%; background: #333; border-radius: 5px; margin: 10px 0; }
+    .progress-bar { height: 20px; background: #4CAF50; border-radius: 5px; transition: width 0.3s; }
+    .hidden { display: none; }
+    .token-section { background: #333; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+    .token-section input { width: 100%; padding: 8px; margin: 5px 0; background: #444; color: white; border: 1px solid #666; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 Alan Ranger Photography - Data Pipeline</h1>
+      <p>Simple CSV Import & Web Scraping Tool</p>
+      <small>v1.0.0 - Simplified Interface</small>
+    </div>
+
+    <!-- Token Section -->
+    <div class="token-section">
+      <h3>🔐 Authentication</h3>
+      <input type="password" id="ingestToken" placeholder="Enter your INGEST_TOKEN" />
+      <button class="btn" onclick="saveToken()">Save Token</button>
+      <small>This token is required for all operations</small>
+    </div>
+
+    <!-- CSV Files Section -->
+    <div class="section">
+      <h2>📁 Upload Your CSV Files</h2>
+      <div class="file-grid">
+        <div class="file-item">
+          <h4>📝 Blog Articles</h4>
+          <input type="file" id="blogCsv" accept=".csv" />
+          <small>Blog posts with categories, tags, content</small>
+        </div>
+        <div class="file-item">
+          <h4>🎓 Course Events</h4>
+          <input type="file" id="courseEventsCsv" accept=".csv" />
+          <small>Scheduled course events with dates, times, locations</small>
+        </div>
+        <div class="file-item">
+          <h4>🏞️ Workshop Pages</h4>
+          <input type="file" id="workshopPagesCsv" accept=".csv" />
+          <small>Workshop page content (not individual events)</small>
+        </div>
+        <div class="file-item">
+          <h4>🎯 Service Pages</h4>
+          <input type="file" id="servicePagesCsv" accept=".csv" />
+          <small>Service and course page content</small>
+        </div>
+        <div class="file-item">
+          <h4>🛍️ Physical Products</h4>
+          <input type="file" id="productsCsv" accept=".csv" />
+          <small>Physical products with pricing and inventory</small>
+        </div>
+        <div class="file-item">
+          <h4>🌐 Site URLs</h4>
+          <input type="file" id="siteUrlsCsv" accept=".csv" />
+          <small>List of URLs to scrape from your website</small>
+        </div>
+        <div class="file-item">
+          <h4>📄 Landing Pages</h4>
+          <input type="file" id="landingPagesCsv" accept=".csv" />
+          <small>Landing page content and metadata</small>
+        </div>
+        <div class="file-item">
+          <h4>❓ Test Questions</h4>
+          <input type="file" id="testQuestionsCsv" accept=".csv" />
+          <small>Test questions for AI bot validation</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="section">
+      <h2>🚀 Actions</h2>
+      <div class="card">
+        <button class="btn btn-primary" onclick="importAllCSVs()" id="importAllBtn">
+          📥 Import All CSV Files
+        </button>
+        <button class="btn" onclick="scrapeWebsite()" id="scrapeBtn">
+          🕷️ Scrape Website URLs
+        </button>
+        <button class="btn" onclick="runMapping()" id="mappingBtn">
+          🔗 Run Event → Product Mapping
+        </button>
+        <button class="btn btn-danger" onclick="clearResults()">
+          🗑️ Clear Results
+        </button>
+      </div>
+    </div>
+
+    <!-- Progress Section -->
+    <div class="section" id="progressSection" class="hidden">
+      <h3>📊 Progress</h3>
+      <div class="progress">
+        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+      </div>
+      <div id="progressText">Ready to start...</div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="section">
+      <h2>📋 Results & Debug</h2>
+      <div class="results" id="results">
+        Ready to import your data. Select your CSV files and click "Import All CSV Files".
+      </div>
+    </div>
+
+    <!-- Quick Test Section -->
+    <div class="section">
+      <h2>🧪 Quick Test</h2>
+      <div class="card">
+        <input type="text" id="testUrl" placeholder="Enter URL to test" style="width: 70%; padding: 8px; margin: 5px; background: #444; color: white; border: 1px solid #666; border-radius: 3px;" />
+        <button class="btn" onclick="testSingleUrl()">Test URL</button>
+        <br>
+        <input type="text" id="testQuery" placeholder="Ask a question" style="width: 70%; padding: 8px; margin: 5px; background: #444; color: white; border: 1px solid #666; border-radius: 3px;" />
+        <button class="btn" onclick="testQuery()">Ask AI</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Token management
+    function saveToken() {
+      const token = document.getElementById('ingestToken').value;
+      if (token) {
+        localStorage.setItem('ingestToken', token);
+        addResult('✅ Token saved successfully');
+      } else {
+        addResult('❌ Please enter a token');
+      }
+    }
+
+    function getToken() {
+      return localStorage.getItem('ingestToken') || '';
+    }
+
+    // Results management
+    function addResult(message, type = 'info') {
+      const results = document.getElementById('results');
+      const timestamp = new Date().toLocaleTimeString();
+      const statusClass = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+      results.innerHTML += `<div class="status ${statusClass}">[${timestamp}] ${message}</div>`;
+      results.scrollTop = results.scrollHeight;
+    }
+
+    function clearResults() {
+      document.getElementById('results').innerHTML = 'Results cleared. Ready for new operations.';
+    }
+
+    // Progress management
+    function updateProgress(percent, text) {
+      document.getElementById('progressBar').style.width = percent + '%';
+      document.getElementById('progressText').textContent = text;
+      document.getElementById('progressSection').classList.remove('hidden');
+    }
+
+    // API calls
+    async function apiCall(endpoint, data = null) {
+      const token = getToken();
+      if (!token) {
+        addResult('❌ No token found. Please save your token first.', 'error');
+        return null;
+      }
+
+      try {
+        const response = await fetch(endpoint, {
+          method: data ? 'POST' : 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: data ? JSON.stringify(data) : undefined
+        });
+        return await response.json();
+      } catch (error) {
+        addResult(`❌ API Error: ${error.message}`, 'error');
+        return null;
+      }
+    }
+
+    // CSV Import functions
+    async function importCSV(file, contentType) {
+      if (!file) {
+        addResult(`❌ No ${contentType} file selected`, 'error');
+        return false;
+      }
+
+      addResult(`📥 Importing ${contentType} data...`);
+      const csvText = await file.text();
+      const result = await apiCall('/api/csv-multi-import', { csvData: csvText, contentType });
+      
+      if (result && result.ok) {
+        addResult(`✅ ${contentType} import successful: ${result.imported} records`, 'success');
+        return true;
+      } else {
+        addResult(`❌ ${contentType} import failed: ${result?.error || 'Unknown error'}`, 'error');
+        return false;
+      }
+    }
+
+    // Main import function
+    async function importAllCSVs() {
+      const token = getToken();
+      if (!token) {
+        addResult('❌ Please save your token first', 'error');
+        return;
+      }
+
+      updateProgress(0, 'Starting CSV imports...');
+      addResult('🚀 Starting CSV import process...');
+
+      const files = [
+        { file: document.getElementById('blogCsv').files[0], type: 'blog', name: 'Blog Articles' },
+        { file: document.getElementById('courseEventsCsv').files[0], type: 'event', name: 'Course Events' },
+        { file: document.getElementById('workshopPagesCsv').files[0], type: 'workshop', name: 'Workshop Pages' },
+        { file: document.getElementById('servicePagesCsv').files[0], type: 'service', name: 'Service Pages' },
+        { file: document.getElementById('productsCsv').files[0], type: 'product', name: 'Physical Products' }
+      ];
+
+      let successCount = 0;
+      let totalCount = files.filter(f => f.file).length;
+
+      if (totalCount === 0) {
+        addResult('❌ No CSV files selected', 'error');
+        return;
+      }
+
+      for (let i = 0; i < files.length; i++) {
+        const { file, type, name } = files[i];
+        if (file) {
+          updateProgress((i / totalCount) * 100, `Importing ${name}...`);
+          const success = await importCSV(file, type);
+          if (success) successCount++;
+        }
+      }
+
+      updateProgress(100, `Import complete: ${successCount}/${totalCount} successful`);
+      addResult(`🎉 CSV import process complete! ${successCount}/${totalCount} files imported successfully.`, 'success');
+    }
+
+    // Website scraping
+    async function scrapeWebsite() {
+      const siteUrlsFile = document.getElementById('siteUrlsCsv').files[0];
+      if (!siteUrlsFile) {
+        addResult('❌ Please select a Site URLs CSV file first', 'error');
+        return;
+      }
+
+      addResult('🕷️ Starting website scraping...');
+      const csvText = await siteUrlsFile.text();
+      const lines = csvText.split('\n').filter(line => line.trim());
+      const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
+
+      addResult(`📊 Found ${urls.length} URLs to scrape`);
+
+      for (let i = 0; i < urls.length; i++) {
+        updateProgress((i / urls.length) * 100, `Scraping ${urls[i]}...`);
+        const result = await apiCall('/api/ingest-embed-replace', { url: urls[i] });
+        if (result && result.ok) {
+          addResult(`✅ Scraped: ${urls[i]}`, 'success');
+        } else {
+          addResult(`❌ Failed: ${urls[i]}`, 'error');
+        }
+      }
+
+      updateProgress(100, 'Website scraping complete');
+      addResult('🎉 Website scraping complete!', 'success');
+    }
+
+    // Event-Product mapping
+    async function runMapping() {
+      addResult('🔗 Running event → product mapping...');
+      const result = await apiCall('/rest/v1/rpc/refresh_event_product_autolinks');
+      if (result) {
+        addResult('✅ Event → Product mapping complete!', 'success');
+      } else {
+        addResult('❌ Event → Product mapping failed', 'error');
+      }
+    }
+
+    // Test functions
+    async function testSingleUrl() {
+      const url = document.getElementById('testUrl').value;
+      if (!url) {
+        addResult('❌ Please enter a URL to test', 'error');
+        return;
+      }
+
+      addResult(`🧪 Testing URL: ${url}`);
+      const result = await apiCall('/api/ingest-embed-replace', { url });
+      if (result && result.ok) {
+        addResult(`✅ URL test successful: ${url}`, 'success');
+      } else {
+        addResult(`❌ URL test failed: ${url}`, 'error');
+      }
+    }
+
+    async function testQuery() {
+      const query = document.getElementById('testQuery').value;
+      if (!query) {
+        addResult('❌ Please enter a question to test', 'error');
+        return;
+      }
+
+      addResult(`🤖 Testing AI query: "${query}"`);
+      const result = await apiCall('/api/chat', { query });
+      if (result && result.answer) {
+        addResult(`✅ AI Response: ${result.answer}`, 'success');
+      } else {
+        addResult(`❌ AI query failed`, 'error');
+      }
+    }
+
+    // Load saved token on page load
+    window.onload = function() {
+      const savedToken = getToken();
+      if (savedToken) {
+        document.getElementById('ingestToken').value = savedToken;
+        addResult('✅ Token loaded from storage');
+      }
+    };
+  </script>
+</body>
+</html>
