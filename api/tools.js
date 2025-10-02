@@ -104,6 +104,42 @@ export default async function handler(req, res) {
       return sendJSON(res, 200, { ok: true, url, chunks: count ?? (rows?.length || 0), total_len });
     }
 
+    // --- counts: mapping totals from v_events_for_chat ---
+    if (req.method === 'GET' && action === 'counts') {
+      const { count: total, error: e1 } = await supa
+        .from('v_events_for_chat')
+        .select('*', { head: true, count: 'exact' });
+      if (e1) return sendJSON(res, 500, { error: 'supabase_error', detail: e1.message });
+      const { count: mapped, error: e2 } = await supa
+        .from('v_events_for_chat')
+        .select('*', { head: true, count: 'exact' })
+        .not('product_url', 'is', null);
+      if (e2) return sendJSON(res, 500, { error: 'supabase_error', detail: e2.message });
+      return sendJSON(res, 200, { ok: true, total: total || 0, mapped: mapped || 0 });
+    }
+
+    // --- parity: distinct URL counts by path using service role ---
+    if (req.method === 'GET' && action === 'parity') {
+      async function distinct(table, pattern){
+        const { data, error } = await supa
+          .from(table)
+          .select('url')
+          .ilike('url', `*${pattern}*`)
+          .limit(2000);
+        if (error) throw error;
+        return new Set((data||[]).map(r=>r.url)).size;
+      }
+      try{
+        const entitiesWorkshops = await distinct('page_entities','photographic-workshops-near-me');
+        const chunksWorkshops   = await distinct('page_chunks','photographic-workshops-near-me');
+        const entitiesCourses   = await distinct('page_entities','beginners-photography-lessons');
+        const chunksCourses     = await distinct('page_chunks','beginners-photography-lessons');
+        return sendJSON(res, 200, { ok:true, entitiesWorkshops, chunksWorkshops, entitiesCourses, chunksCourses });
+      }catch(e){
+        return sendJSON(res, 500, { error:'supabase_error', detail: String(e?.message||e) });
+      }
+    }
+
     // --- search: embed query, similarity search via RPC ---
     if (req.method === 'POST' && action === 'search') {
       const { query, topK } = req.body || {};
