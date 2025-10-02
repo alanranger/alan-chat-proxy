@@ -325,8 +325,8 @@ function transformEventData(row) {
   };
   const sTime = normalizeTime(startTime);
   const eTime = normalizeTime(endTime);
-  const dateStart = startDate && sTime ? `${startDate}T${sTime}+00:00` : null;
-  const dateEnd = endDate && eTime ? `${endDate}T${eTime}+00:00` : null;
+  const dateStart = startDate && sTime ? `${startDate}T${sTime}` : null;
+  const dateEnd = endDate && eTime ? `${endDate}T${eTime}` : null;
   
   const jsonLd = {
     "@context": "https://schema.org",
