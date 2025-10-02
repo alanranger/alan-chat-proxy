@@ -427,8 +427,14 @@
         } else {
           const src = lines[i+1] || '';
           const reason = result && (result.error || result.detail) ? `${result.error || ''} ${result.detail || ''}`.trim() : 'unknown';
-          addResult(`❌ Failed: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
-          stats.failedCount++;
+          const reasonLc = reason.toLowerCase();
+          if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
+            addResult(`✅ Skipped duplicate: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'success');
+            stats.successCount++;
+          } else {
+            addResult(`❌ Failed: ${urls[i]}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
+            stats.failedCount++;
+          }
         }
         updateStats();
 
