@@ -29,6 +29,29 @@
     .hidden { display: none; }
     .token-section { background: #333; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
     .token-section input { width: 100%; padding: 8px; margin: 5px 0; background: #444; color: white; border: 1px solid #666; border-radius: 3px; }
+    
+    .stat-box {
+      text-align: center;
+      padding: 10px;
+      background: #2a2a2a;
+      border-radius: 5px;
+      border: 1px solid #444;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 5px;
+    }
+    
+    .stat-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+    }
+    
+    .stat-value.success { color: #51cf66; }
+    .stat-value.error { color: #ff6b6b; }
   </style>
 </head>
 <body>
@@ -95,20 +118,23 @@
 
     <!-- Action Buttons -->
     <div class="section">
-      <h2>🚀 Actions</h2>
+      <h2>🚀 Actions (Execute in Order)</h2>
       <div class="card">
         <button class="btn btn-primary" onclick="importAllCSVs()" id="importAllBtn">
-          📥 Import All CSV Files
+          1️⃣ 📥 Import All CSV Files
         </button>
         <button class="btn" onclick="scrapeWebsite()" id="scrapeBtn">
-          🕷️ Scrape Website URLs
+          2️⃣ 🕷️ Scrape Website URLs
         </button>
         <button class="btn" onclick="runMapping()" id="mappingBtn">
-          🔗 Run Event → Product Mapping
+          3️⃣ 🔗 Run Event → Product Mapping
         </button>
         <button class="btn btn-danger" onclick="clearResults()">
           🗑️ Clear Results
         </button>
+      </div>
+      <div style="margin-top: 10px; padding: 10px; background: #2a2a2a; border-radius: 5px;">
+        <small><strong>Workflow:</strong> 1️⃣ Import CSVs → 2️⃣ Scrape URLs → 3️⃣ Create Mappings</small>
       </div>
     </div>
 
@@ -121,6 +147,35 @@
       <div id="progressText">Ready to start...</div>
     </div>
 
+    <!-- Debug & Control Section -->
+    <div class="section">
+      <h3>🔧 Debug & Control</h3>
+      <div class="card">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px;">
+          <div class="stat-box">
+            <div class="stat-label">Loaded Rows</div>
+            <div class="stat-value" id="loadedRows">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Success</div>
+            <div class="stat-value success" id="successCount">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Failed</div>
+            <div class="stat-value error" id="failedCount">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Stopped</div>
+            <div class="stat-value" id="stoppedCount">0</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn" onclick="copyDebugLog()">📋 Copy Debug Log</button>
+          <button class="btn" onclick="clearResults()">🗑️ Clear Log</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Results Section -->
     <div class="section">
       <h2>📋 Results & Debug</h2>
@@ -130,6 +185,26 @@
       </div>
       <div class="results" id="results">
         Ready to import your data. Select your CSV files and click "Import All CSV Files".
+      </div>
+    </div>
+
+    <!-- Extract Structured JSON Section -->
+    <div class="section">
+      <h2>🔍 Extract Structured JSON (JSON-LD)</h2>
+      <div class="card">
+        <div style="margin-bottom: 15px;">
+          <label>URL to extract from:</label>
+          <input type="text" id="extractUrl" placeholder="https://www.alanranger.com/some-page" style="width: 100%; margin-bottom: 10px;" />
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+          <button class="btn" onclick="extractContent('events')">📅 Events/Courses</button>
+          <button class="btn" onclick="extractContent('articles')">📝 Articles</button>
+          <button class="btn" onclick="extractContent('products')">🛍️ Products</button>
+          <button class="btn" onclick="extractContent('services')">🎯 Services</button>
+          <button class="btn" onclick="extractContent('all')">🔍 All Content</button>
+          <button class="btn" onclick="clearExtractResults()">🗑️ Clear</button>
+        </div>
+        <div id="extractResults" style="margin-top: 15px; padding: 10px; background: #1a1a1a; border-radius: 5px; min-height: 100px; font-family: monospace; white-space: pre-wrap;"></div>
       </div>
     </div>
 
@@ -385,9 +460,61 @@
       }
     }
 
+    // Extract structured JSON functions
+    async function extractContent(contentType) {
+      const url = document.getElementById('extractUrl').value;
+      if (!url) {
+        document.getElementById('extractResults').textContent = 'Please enter a URL first';
+        return;
+      }
+      
+      document.getElementById('extractResults').textContent = `Extracting ${contentType} from ${url}...`;
+      
+      try {
+        const response = await fetch('/api/ingest-embed-replace', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({ url })
+        });
+        
+        const result = await response.json();
+        document.getElementById('extractResults').textContent = JSON.stringify(result, null, 2);
+      } catch (error) {
+        document.getElementById('extractResults').textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    function clearExtractResults() {
+      document.getElementById('extractResults').textContent = '';
+    }
+    
+    // Statistics tracking
+    let stats = {
+      loadedRows: 0,
+      successCount: 0,
+      failedCount: 0,
+      stoppedCount: 0
+    };
+    
+    function updateStats() {
+      document.getElementById('loadedRows').textContent = stats.loadedRows;
+      document.getElementById('successCount').textContent = stats.successCount;
+      document.getElementById('failedCount').textContent = stats.failedCount;
+      document.getElementById('stoppedCount').textContent = stats.stoppedCount;
+    }
+    
+    function resetStats() {
+      stats = { loadedRows: 0, successCount: 0, failedCount: 0, stoppedCount: 0 };
+      updateStats();
+    }
+
     // Load hardcoded token on page load
     window.onload = function() {
       addResult('✅ Hardcoded token ready for use');
+      updateStats();
     };
   </script>
 </body>
