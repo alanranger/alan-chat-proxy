@@ -148,6 +148,10 @@
           <button class="btn" style="margin-left:8px" onclick="runTestQuestions()">🤖 Test Questions Batch</button>
         </small>
       </div>
+      <div style="margin-top:8px">
+        <small>Test Questions CSV (query,expected): </small>
+        <input id="testQuestionsCsv" type="file" accept=".csv"/>
+      </div>
     </div>
 
     <!-- Progress Section -->
@@ -860,6 +864,34 @@
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         addResult('⬇️ Exported mappings CSV', 'success');
       }catch(e){ addResult(`❌ Export error: ${e.message}`, 'error'); }
+    }
+
+    // CSV parser (minimal, quoted fields supported)
+    function parseCSV(text){
+      const rows=[]; let row=[], val='', inQ=false;
+      function pushVal(){ row.push(val); val=''; }
+      function pushRow(){ if(row.length){ rows.push(row); } row=[]; }
+      for(let i=0;i<text.length;i++){
+        const ch=text[i];
+        if(inQ){
+          if(ch==='"'){
+            if(text[i+1]==='"'){ val+='"'; i++; } else { inQ=false; }
+          } else { val+=ch; }
+        } else {
+          if(ch==='"'){ inQ=true; }
+          else if(ch===','){ pushVal(); }
+          else if(ch==='\n'){ pushVal(); pushRow(); }
+          else if(ch!=='\r'){ val+=ch; }
+        }
+      }
+      if(val.length||row.length){ pushVal(); pushRow(); }
+      if(!rows.length) return [];
+      const header = rows[0].map(h => (h||'').trim().toLowerCase());
+      return rows.slice(1).map(r => {
+        const o={};
+        for(let i=0;i<header.length;i++){ o[header[i]]=(r[i]||'').trim(); }
+        return o;
+      });
     }
 
     // Test Questions Batch Runner
