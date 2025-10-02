@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Alan Ranger Assistant</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
+  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
+  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
+  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
+  --user-bg:#e6edf7; --user-text:#0b0f16;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
+.badge-wrap{position:relative;height:0}
+.version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px}
+
+/* Sticky header (keeps logo, title and contact pills visible) */
+.header-sticky{
+  position:sticky; top:10px; z-index:50;
+  background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98));
+  border-radius:12px; padding:0 0 10px 0; margin:-8px -8px 12px -8px;
+}
+.header{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:12px}
+.logo{display:block;height:72px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.title{margin:0;font-size:34px;font-weight:300;letter-spacing:.2px}
+.sub{margin:0;text-align:center;color:var(--muted);max-width:720px;font-size:16px}
+.pills{display:flex;gap:10px;margin:12px 0 4px;flex-wrap:wrap}
+.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
+
+/* Chat surface */
+.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
+.thread{display:flex;flex-direction:column;gap:12px}
+.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
+.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
+.answer h1,.answer h2,.answer h3{margin:.2em 0}
+.answer p{margin:.5em 0}
+.answer ul{margin:.4em 0 .6em 1.25em}
+.answer li{margin:.15em 0}
+.answer a{color:var(--link);text-decoration:underline}
+.answer a:hover{color:var(--link-hover)}
+
+/* Global pill row at end (from payload chips) */
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.actions .pill{background:var(--brand);color:#0b0f16;border:none}
+
+/* Composer + utilities */
+.tools{display:flex;justify-content:flex-end;gap:10px;margin:8px 0 6px}
+.tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
+.tools button:hover{border-color:#3c548b}
+.composer{display:flex;gap:10px;margin-top:8px;padding:12px;background:var(--panel);border-radius:12px}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid var(--input-border);border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
+.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
+.send{background:var(--brand);color:#0b0f16;font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer}
+
+/* Debug panel */
+details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
+details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
+.kv label{color:#93A4C1}
+pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
+
+/* Typing dots */
+.typing{position:relative;display:inline-block}
+.typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
+.typing .dot:nth-child(2){animation-delay:.15s}
+.typing .dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+
+@media (max-width:540px){
+  .title{font-size:26px}.logo{height:60px}.kv{grid-template-columns:1fr}
+  .header-sticky{top:6px;margin:-6px -6px 10px -6px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Keeps the badge under the orange rule -->
+  <div class="badge-wrap"><span class="version">v0.9.21</span></div>
+
+  <div class="card">
+
+    <!-- Sticky header block -->
+    <div class="header-sticky">
+      <div class="header">
+        <img class="logo" src="./chat%20white.png" alt="AR logo">
+        <h2 class="title">Alan Ranger Assistant</h2>
+        <p class="sub">I’m Alan’s AI assistant, trained on content from this website to help with workshops, tuition, and
+          photography questions. I won’t always get everything right — if I can’t help, please contact
+          Alan directly:</p>
+        <div class="pills">
+          <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
+          <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat">
+      <div id="thread" class="thread">
+        <div class="bubble">Hi! I can help with workshops, tuition, and photography advice.</div>
+      </div>
+
+      <!-- Utility buttons -->
+      <div class="tools">
+        <button id="btn-email">Email transcript</button>
+        <button id="btn-reset">Reset chat</button>
+      </div>
+
+      <details id="debugPanel" class="debug">
+        <summary>🔎 Show debug</summary>
+        <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
+        <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
+        <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
+        <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
+        <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
+        <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
+        <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
+        <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
+        <div class="kv"><label>Note</label><pre id="dbg-note" class="json">–</pre></div>
+      </details>
+
+      <div class="composer">
+        <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
+        <button id="send" class="send">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CHAT_ENDPOINT = '/api/chat';
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
+
+const thread = document.getElementById('thread');
+const input  = document.getElementById('q');
+const sendBtn= document.getElementById('send');
+const btnEmail = document.getElementById('btn-email');
+const btnReset = document.getElementById('btn-reset');
+
+const dbgStatus = document.getElementById('dbg-status');
+const dbgReq    = document.getElementById('dbg-req');
+const dbgRes    = document.getElementById('dbg-res');
+const dbgHeaders= document.getElementById('dbg-headers');
+const dbgStruct = document.getElementById('dbg-struct');
+const dbgProv   = document.getElementById('dbg-prov');
+const dbgCopy   = document.getElementById('dbg-copy');
+const dbgNote   = document.getElementById('dbg-note');
+
+function safeJSONString(v){ try{ return JSON.stringify(v,null,2); }catch{ return String(v); } }
+
+dbgCopy?.addEventListener('click', ()=>{
+  const all = [
+    'Status: '+dbgStatus.textContent,
+    'Headers:\n'+dbgHeaders.textContent,
+    'Request:\n'+dbgReq.textContent,
+    'Response:\n'+dbgRes.textContent,
+    'Structured:\n'+dbgStruct.textContent,
+    'Provenance:\n'+dbgProv.textContent,
+    'Note:\n'+dbgNote.textContent
+  ].join('\n\n');
+  navigator.clipboard.writeText(all).then(()=>{ dbgCopy.textContent='Copied!'; setTimeout(()=>dbgCopy.textContent='Copy all',1500); });
+});
+
+/* ---------- UI helpers ---------- */
+function addBubble(html, opts={}) {
+  const div = document.createElement('div');
+  div.className = 'bubble' + (opts.user ? ' user' : '');
+  div.innerHTML = html;
+  thread.appendChild(div);
+  div.scrollIntoView({behavior:'smooth', block:'end'});
+  return div;
+}
+function addTyping() {
+  const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
+  return ()=> el && el.remove();
+}
+function mdToHtml(md){
+  if (!md) return { html:'', liIds:[], items:[] };
+  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  const lines = s.split(/\r?\n/);
+  let out='', inList=false;
+  const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
+  for (const line of lines){
+    const m = line.match(/^\s*-\s+(.*)$/);
+    if (m){ if(!inList){ out+='<ul>'; inList=true; } out += `<li>${m[1].trim()}</li>`; }
+    else { flush(); out += line.trim()? `<p>${line}</p>` : ''; }
+  }
+  flush();
+  return { html:`<div class="answer">${out}</div>` };
+}
+function fmtDate(iso){
+  try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
+}
+
+/* ---------------- Product merging & parsing (client safety net) ---------------- */
+function mergeProducts(list){
+  if(!Array.isArray(list) || !list.length) return [];
+  const map = new Map();
+  for(const p of list){
+    const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
+    if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
+    const m = map.get(key);
+    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
+    const mAgg = m?.raw?.offers?.lowPrice!=null || m?.raw?.offers?.highPrice!=null;
+    const pAgg = p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null;
+    if(pAgg && !mAgg){ m.raw = m.raw || {}; m.raw.offers = p.raw.offers; }
+    if(p?.raw?.offers?.price!=null && m?.raw?.offers?.price==null){ m.raw = m.raw || {}; m.raw.offers = Object.assign({}, m.raw.offers, {price:p.raw.offers.price, priceCurrency:p.raw.offers.priceCurrency}); }
+  }
+  return [...map.values()];
+}
+
+function extractFacts(desc){
+  const txt = String(desc||'')
+    .split(/\r?\n/).filter(l=>{
+      if(/^dates\s*\(/i.test(l)) return false;
+      if(/^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/i.test(l)) return false;
+      if(/\b\d{2}-[A-Za-z]{3}-\d{2}\b/.test(l)) return false;
+      return true;
+    });
+
+  const grab = (label)=>{
+    const r = new RegExp(`^\\s*${label}\\s*:?\\s*(.+)$`,'i');
+    const m = txt.find(l=>r.test(l));
+    return m ? m.replace(r,'$1').trim() : null;
+  };
+
+  const location     = grab('Location');
+  const participants = grab('Participants');
+  const fitness      = grab('Fitness');
+  const availability = grab('Availability');
+
+  const optionLines = txt.filter(l =>
+    /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) ||
+    /^\s*OR\s*1\s*day\b/i.test(l)
+  ).slice(0,4);
+
+  return {location, participants, fitness, availability, optionLines};
+}
+
+function currency(amount, ccy){
+  if(amount==null || amount==='') return null;
+  const n = Number(amount); if(!isFinite(n)) return null;
+  try{ return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n); }
+  catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
+}
+function deriveOptions(prod, facts){
+  const ccy = prod.price_currency || prod?.raw?.offers?.priceCurrency || 'GBP';
+  const base = prod.price ?? prod?.raw?.offers?.price;
+  const low  = prod?.raw?.offers?.lowPrice;
+  const high = prod?.raw?.offers?.highPrice;
+
+  const text = (facts.optionLines||[]).join('\n').toLowerCase();
+  const has4h  = /(?:^|\n)\s*(?:4\s*hrs?|4\s*hours?|half\s*day)\b/.test(text);
+  const has1d  = /(?:^|\n)\s*(?:1\s*day|full\s*day|day)\b/.test(text);
+
+  const opts = [];
+
+  if(low!=null && high!=null && has4h && has1d){
+    opts.push({label:'4 hours', price:currency(low,ccy)});
+    opts.push({label:'1 day',   price:currency(high,ccy)});
+  } else {
+    if(base!=null) opts.push({label:'Standard', price:currency(base,ccy)});
+    if(low!=null || high!=null){
+      const range = [low,high].filter(v=>v!=null).map(v=>currency(v,ccy)).join(' – ');
+      if(range) opts.push({label:'Pricing', price:range});
+    }
+  }
+
+  const timePat = /(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm))(?:\s*or\s*(\d{1,2}:\d{2}\s*(?:am|pm))\s*[–-]\s*(\d{1,2}:\d{2}\s*(?:am|pm)))?/i;
+  for(const ln of facts.optionLines||[]){
+    const label = ln.replace(/\s*—.*$/,'').replace(/^OR\s*/i,'').trim();
+    const tm = ln.match(timePat);
+    const window = tm ? `${tm[1]} – ${tm[2]}${tm[3]?` or ${tm[3]} – ${tm[4]}`:''}` : null;
+    if(label && !opts.some(o=>o.label.toLowerCase()===label.toLowerCase())){
+      opts.push({label, time:window});
+    } else if(window){
+      const o = opts.find(o=>o.label.toLowerCase()===label.toLowerCase());
+      if(o && !o.time) o.time = window;
+    }
+  }
+  return opts;
+}
+
+/* Chips from structured (render once, at the end) */
+function buildActionPills(structured, prod){
+  const chips=[];
+  const productUrl = prod?.url || prod?.page_url || prod?.source_url || structured?.products?.[0]?.url || null;
+  const priceUrl   = productUrl ? `${productUrl}#prices` : null;
+  const upcoming   = (structured?.events?.[0]?.page_url || structured?.events?.[0]?.source_url) || null;
+  const infoUrl    = productUrl ? `${productUrl}#info` : productUrl;
+
+  if(productUrl) chips.push({label:'Book Now', href:productUrl});
+  if(upcoming)   chips.push({label:'Event Listing', href:upcoming});
+  chips.push({label:'More Events', href: `${location.origin}/search?query=workshops`});
+  chips.push({label:'Photos', href: `${location.origin}/gallery-image-portfolios`});
+
+  return chips.slice(0,4);
+}
+
+/* ---------------- Renderers ---------------- */
+function renderProductCard(prod){
+  const facts = extractFacts(prod.description||'');
+  const options = deriveOptions(prod, facts);
+
+  const infoP = [];
+  if(facts.location)     infoP.push(`<p><strong>Location:</strong> ${facts.location}</p>`);
+  if(facts.participants) infoP.push(`<p><strong>Participants:</strong> ${facts.participants}</p>`);
+  if(facts.fitness)      infoP.push(`<p><strong>Fitness:</strong> ${facts.fitness}</p>`);
+  if(facts.availability) infoP.push(`<p><strong>Availability:</strong> ${facts.availability}</p>`);
+
+  const li = options.map(o=>{
+    const bits = [o.label, o.time ? `— ${o.time}` : null, o.price ? `— ${o.price}` : null].filter(Boolean).join(' ');
+    return `<li>${bits}</li>`;
+  }).join('');
+
+  return `
+    <div class="answer">
+      <h3>${prod.title || 'Workshop'}</h3>
+      ${infoP.join('')}
+      ${li? `<ul>${li}</ul>`:''}
+    </div>
+  `;
+}
+
+function renderEventsBlock(structured){
+  const now=new Date();
+  const future=(structured?.events||[])
+    .filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now)
+    .sort((a,b)=>new Date(a.date_start)-new Date(b.date_start))
+    .slice(0,12);
+
+  if(!future.length) return '';
+
+  const topic = (structured?.topic||'').toString().trim();
+  const title = topic ? `Upcoming ${topic} Workshops` : 'Upcoming Workshops';
+
+  const lis = future.map(e=>{
+    const when=fmtDate(e.date_start);
+    const href=e.page_url||e.source_url||'#';
+    const loc=e.location||'';
+    return `<li>${when} — <a href="${href}" target="_blank" rel="noopener">Link</a> — ${loc}</li>`;
+  }).join('');
+
+  return `<div class="answer"><h3>${title}</h3><ul>${lis}</ul></div>`;
+}
+
+/* Full render */
+function renderAnswer(payload){
+  const s = payload.structured||{};
+  const merged = mergeProducts(s.products||[]);
+  const note = {
+    resolver: 'default',
+    merged_products: merged.length,
+    events_found: (s.events||[]).length,
+    pills_rendered: 0
+  };
+
+  if(merged.length || (s.events||[]).length || (s.articles?.length)){
+    // Product/events flow
+    if(merged.length){
+      let prod = merged.find(p=>p?.price!=null) ||
+               merged.find(p=>p?.raw?.offers?.lowPrice!=null || p?.raw?.offers?.highPrice!=null) ||
+               merged[0];
+      if(prod){ addBubble(renderProductCard(prod)); }
+    }
+    const evHTML = renderEventsBlock(s);
+    if(evHTML) addBubble(evHTML);
+
+    // Advice articles list (if present)
+    if (s.articles && s.articles.length){
+      const list = s.articles.map(a => `- <a href="${a.url}" target="_blank" rel="noopener">${a.title}</a>`).join('');
+      addBubble(`<div class="answer"><h3>Here are Alan’s guides that match your question:</h3><ul>${list}</ul></div>`);
+    }
+
+    // single pill row at the end (from server pills/chips if present)
+    const pills = (s.pills||s.chips||[]).map(c => ({label:c.label, href:c.url||c.href}));
+    if(pills.length){
+      const wrap = document.createElement('div');
+      wrap.className='actions';
+      pills.forEach(p=>{
+        const a=document.createElement('a'); a.className='pill'; a.textContent=p.label;
+        a.href=p.href; a.target='_blank'; a.rel='noopener';
+        wrap.appendChild(a);
+      });
+      thread.appendChild(wrap);
+      note.pills_rendered = pills.length;
+    }
+  } else {
+    // generic markdown fallback with explicit prompt to contact Alan
+    const md = payload.answer_markdown || payload.answer || '';
+    const extra = `<p>If you need a quick answer, please use the <strong>Contact form</strong> or <strong>WhatsApp</strong> buttons above to reach Alan directly.</p>`;
+    const {html}=mdToHtml(md || "I don’t have a specific answer for that yet.");
+    addBubble(html.replace('</div>', `${extra}</div>`));
+  }
+
+  // Debug dumps
+  dbgStruct.textContent = safeJSONString(payload.structured||{});
+  dbgNote.textContent   = safeJSONString(note);
+}
+
+/* ---------------- Networking ---------------- */
+async function sendQuery(query){
+  const req = { query, topK: 8 };
+  dbgReq.textContent = safeJSONString(req);
+  const closeTyping = addTyping();
+  try{
+    const res = await fetch(CHAT_ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(req)
+    });
+    dbgStatus.textContent = res.status;
+    const headers = {}; res.headers.forEach((v,k)=>headers[k]=v);
+    dbgHeaders.textContent = safeJSONString(headers);
+
+    const data = await res.json();
+    dbgRes.textContent = safeJSONString(data);
+    dbgProv.textContent = safeJSONString({ citations: data.citations || [] });
+
+    closeTyping();
+    if (data && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
+      renderAnswer(data);
+    } else {
+      const {html}=mdToHtml("I don’t have a specific answer for that yet.");
+      addBubble(html);
+    }
+  } catch (err){
+    closeTyping();
+    dbgStatus.textContent = 'error';
+    addBubble(`<div class="answer"><p>Something went wrong: ${String(err)}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
+  }
+}
+
+/* ---------------- Transcript helpers ---------------- */
+function nodeToPlain(div){
+  // strip UI-only nodes
+  return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+function buildTranscript(){
+  const rows = [];
+  rows.push(`Alan Ranger Assistant — transcript`);
+  rows.push(new Date().toISOString());
+  rows.push('');
+  for (const el of thread.children){
+    if (el.classList.contains('actions')) continue;
+    const role = el.classList.contains('user') ? 'User' : 'Assistant';
+    rows.push(`${role}:\n${nodeToPlain(el)}`);
+    rows.push('');
+  }
+  return rows.join('\n');
+}
+function emailTranscript(){
+  const body = buildTranscript();
+  const subject = 'Alan Ranger Assistant chat transcript';
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,2000))}`;
+  // If too long for mailto, also drop a downloadable file bubble
+  if (body.length > 2000){
+    const blob = new Blob([body], {type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p></div>`);
+  }
+  location.href = mailto;
+}
+function resetChat(){
+  // remove all thread nodes & action rows
+  thread.innerHTML = '';
+  addBubble('Hi! I can help with workshops, tuition, and photography advice.');
+  // clear debug panes
+  [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgProv, dbgNote].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
+}
+
+/* ---------------- Wire up composer & tools ---------------- */
+function submit(){
+  const val = input.value.trim();
+  if(!val) return;
+  addBubble(val, {user:true});
+  input.value='';
+  sendQuery(val);
+}
+sendBtn.addEventListener('click', submit);
+input.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
+});
+btnEmail.addEventListener('click', emailTranscript);
+btnReset.addEventListener('click', resetChat);
+
+/* Optional: prefill a quick sanity query during dev
+   sendQuery("give me the next bluebell workshop dates and prices");
+*/
+</script>
+</body>
+</html>

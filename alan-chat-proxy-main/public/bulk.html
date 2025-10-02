@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Upload URL List to Train AI Bot — v0.3.2</title>
+  <link rel="stylesheet" href="/_next/static/css/081a0fca5a9bd20.css"/>
+  <style>
+    body { background:#0b1220; color:#dbe4ff; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:24px; }
+    a { color:#93c5fd; text-decoration:none } a:hover{text-decoration:underline}
+    .container{ max-width:1200px; margin:0 auto; }
+    .row{ display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+    .card{ background:#0f172a; border:1px solid #1b2540; border-radius:8px; padding:16px; margin-bottom:16px; }
+    .w-1{ flex:1 } .w-2{ flex:2 } .w-3{ flex:3 }
+    input, textarea{ width:100%; background:#0b1426; border:1px solid #1b2540; color:#dbe4ff; padding:10px 12px; border-radius:6px; }
+    button{ background:#2563eb; color:#fff; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
+    button:disabled{ opacity:.5; cursor:not-allowed }
+    .pill{ padding:3px 10px; border-radius:999px; border:1px solid #1b2540; background:#0b1426; font-weight:600; letter-spacing:.2px; }
+    .ok{ color:#22c55e } .bad{ color:#ef4444 }
+    .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ padding:8px 10px; border-bottom:1px solid #1b2540; text-align:left; vertical-align:top; }
+    .muted{ color:#A9B8E8 }
+    .answer{ white-space:pre-wrap }
+    .chips a{ display:inline-block; margin-right:6px; margin-bottom:6px; border:1px solid #1b2540; border-radius:999px; padding:4px 8px; color:#dbe4ff; text-decoration:none; }
+    .chips a:hover{ background:#13203e; }
+    .header{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:16px; }
+    .header h2{ margin:0 }
+    .pill.ver{ background:#13203e; border-color:#26406f }
+
+    /* Collapsible console (FAILED ONLY) */
+    details.console{border:1px solid #1b2540; border-radius:8px; background:#0b1426;}
+    details.console summary{cursor:pointer; list-style:none; padding:10px 12px; font-weight:700; color:#c7d7ff;}
+    details.console summary::-webkit-details-marker{display:none}
+    .console-body{border-top:1px solid #1b2540; padding:10px 12px;}
+    #console{ max-height:260px; overflow:auto; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h2>Upload URL List to Train AI Bot</h2>
+    <span id="ver" class="pill ver mono">v0.3.2</span>
+  </div>
+
+  <!-- top controls -->
+  <div class="row">
+    <div class="card w-1">
+      <div><small>INGEST TOKEN (BEARER)</small></div>
+      <input id="token" placeholder="your token"/>
+      <small>Saved locally; sent as <span class="mono">Authorization: Bearer …</span></small>
+    </div>
+
+    <div class="card w-2">
+      <div><small>CSV FILE</small></div>
+      <input id="csv" type="file" accept=".csv"/>
+      <small>Must include a <span class="mono">url</span> column (optional <span class="mono">title</span>).</small>
+    </div>
+
+    <div class="card w-1">
+      <div class="row">
+        <div class="w-1">
+          <div><small>CONCURRENCY</small></div>
+          <input id="concurrency" value="3"/>
+        </div>
+        <div class="w-1">
+          <div><small>DELAY BETWEEN REQUESTS (MS)</small></div>
+          <input id="delay" value="400"/>
+        </div>
+      </div>
+      <small>Each request goes to <span class="mono">/api/ingest-embed-replace</span>.</small>
+    </div>
+  </div>
+
+  <!-- single test -->
+  <div class="card">
+    <div><small>Test a Single URL</small></div>
+    <div class="row">
+      <input id="single" class="w-3" placeholder="https://example.com/page"/>
+      <button id="test">Test Single URL</button>
+    </div>
+    <pre id="debug" class="mono"></pre>
+  </div>
+
+  <!-- paste + crawl -->
+  <div class="card">
+    <div><small>Paste URLs (one per line) — OPTIONAL</small></div>
+    <textarea id="paste" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+    <div style="margin-top:10px" class="row">
+      <button id="crawl">Crawl & Ingest</button>
+      <button id="stop" disabled>Stop</button>
+      <span class="pill">Loaded <span id="loaded">0</span> rows</span>
+      <span id="succPill" class="pill ok">Success: <span id="succ">0</span></span>
+      <span id="failPill" class="pill bad">Failed: <span id="fail">0</span></span>
+      <span class="pill">Stopped: <span id="stopped">0</span></span>
+    </div>
+  </div>
+
+  <!-- debug console (FAILED ONLY; collapsed until the first error) -->
+  <div class="card">
+    <details id="consoleWrap" class="console">
+      <summary>Debug console (what the client sees)</summary>
+      <div class="console-body">
+        <pre id="console" class="mono"></pre>
+      </div>
+    </details>
+  </div>
+
+  <!-- results table -->
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th style="width:60px">#</th><th>URL</th><th>Result <span class="muted">(includes DB verify)</span></th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <!-- AI Search tester -->
+  <div class="card">
+    <h3 style="margin-top:4px;margin-bottom:8px">AI Search Tester</h3>
+    <div class="row">
+      <div class="w-3">
+        <div><small>Query</small></div>
+        <input id="query" placeholder="e.g. photography workshops in Coventry"/>
+      </div>
+      <div class="w-1">
+        <div><small>topK</small></div>
+        <input id="topk" value="8"/>
+      </div>
+      <div class="w-1" style="display:flex;align-items:flex-end">
+        <button id="runSearch" style="width:100%">Run Search</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div><small>Search Results (grouped by URL)</small></div>
+    <table>
+      <thead><tr><th style="width:120px">Best Score / Chunks</th><th>URL</th><th>Snippet</th></tr></thead>
+      <tbody id="srows"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div><small>Search Raw Response</small></div>
+    <pre id="sraw" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
+  </div>
+
+  <!-- JSON-LD extraction tester -->
+  <div class="card">
+    <h3 style="margin:4px 0 12px">Extract structured content (JSON-LD)</h3>
+    <div class="row">
+      <div class="w-3">
+        <div><small>URL</small></div>
+        <input id="exUrl" placeholder="https://www.alanranger.com/some-page"/>
+      </div>
+      <div class="w-1" style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap">
+        <button id="exEvents">Events/Courses</button>
+        <button id="exArticles">Articles</button>
+        <button id="exProducts">Products</button>
+        <button id="exServices">Services</button>
+        <button id="exAll">All</button>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="muted" style="margin-bottom:6px"><small>Result</small></div>
+      <pre id="exOut" class="mono" style="white-space:pre-wrap;word-break:break-word"></pre>
+    </div>
+  </div>
+
+  <!-- AI Bot (RAG) -->
+  <div class="card">
+    <h3 style="margin:4px 0 12px">AI Bot (RAG)</h3>
+    <div class="row">
+      <div class="w-3">
+        <div><small>Ask a question</small></div>
+        <input id="chatQ" placeholder="e.g. Which workshops are best for beginners?"/>
+      </div>
+      <div class="w-1">
+        <div><small>topK (context docs)</small></div>
+        <input id="chatTopK" value="8"/>
+      </div>
+      <div class="w-1" style="display:flex;align-items:flex-end">
+        <button id="ask" style="width:100%">Ask</button>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <div class="muted" style="margin-bottom:6px"><small>Answer</small></div>
+      <div id="answer" class="answer mono"></div>
+    </div>
+    <div style="margin-top:12px">
+      <div class="muted" style="margin-bottom:6px"><small>Citations</small></div>
+      <div id="citations" class="chips"></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+/* ====== Version badge ====== */
+const VERSION = 'v0.3.2';
+document.title = `Upload URL List to Train AI Bot — ${VERSION}`;
+window.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('ver');
+  if (el) el.textContent = VERSION;
+});
+
+/* ====== Helpers & state ====== */
+const $ = (id) => document.getElementById(id);
+const escapeHtml = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const saveToken = () => localStorage.setItem('ingest_token', $('token').value || '');
+$('token').value = localStorage.getItem('ingest_token') || '';
+
+/* Failed-only console (collapsed until first error) */
+const consoleWrap = $('consoleWrap'); consoleWrap.open = false;
+const logError = (s) => {
+  if (!consoleWrap.open) consoleWrap.open = true; // auto-open on first fail
+  const c=$('console'); c.textContent += s + "\n"; c.scrollTop = c.scrollHeight;
+};
+
+/* ---------- CSV handling ---------- */
+let csvUrls = [];
+function parseCSV(text) {
+  const firstLine = text.split(/\r?\n/)[0] || '';
+  let delim = ',';
+  const counts = [[',',(firstLine.match(/,/g)||[]).length],[';',(firstLine.match(/;/g)||[]).length],['\t',(firstLine.match(/\t/g)||[]).length]].sort((a,b)=>b[1]-a[1]);
+  if (counts[0][1] > 0) delim = counts[0][0];
+
+  const rows = []; let row=[], val='', inQ=false;
+  function pushVal(){ row.push(val); val=''; }
+  function pushRow(){ rows.push(row); row=[]; }
+  for (let i=0;i<text.length;i++){
+    const ch = text[i];
+    if (inQ){
+      if (ch === '"'){ if (text[i+1] === '"'){ val+='"'; i++; } else { inQ=false; } }
+      else val += ch;
+    } else {
+      if (ch === '"'){ inQ = true; }
+      else if (ch === delim){ pushVal(); }
+      else if (ch === '\n'){ pushVal(); pushRow(); }
+      else if (ch !== '\r'){ val += ch; }
+    }
+  }
+  if (val.length || row.length){ pushVal(); pushRow(); }
+  if (!rows.length) return [];
+
+  const header = rows[0].map(h => (h||'').trim().toLowerCase());
+  const data = rows.slice(1).map(r => { const o = {}; for (let i=0;i<header.length;i++){ o[header[i]] = (r[i]||'').trim(); } return o; });
+  data.__header = header;
+  return data;
+}
+function updateLoadedPill() {
+  const pasted = $('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const set = new Set([...csvUrls, ...pasted]);
+  $('loaded').textContent = String(set.size);
+}
+$('csv').addEventListener('change', async (e)=>{
+  csvUrls = [];
+  const f = e.target.files && e.target.files[0];
+  if (!f) { updateLoadedPill(); return; }
+  const text = await f.text();
+  const rows = parseCSV(text);
+  const h = rows.__header || [];
+  const idx = h.indexOf('url');
+  if (idx !== -1) {
+    for (const r of rows) if (r.url) csvUrls.push(r.url.trim());
+  }
+  updateLoadedPill();
+});
+$('paste').addEventListener('input', updateLoadedPill);
+
+/* ---------- fetch helpers (retry for transient 503/OpenAI hiccups) ---------- */
+const bearer = () => {
+  const tok = $('token').value.trim();
+  return tok ? { 'Authorization': `Bearer ${tok}` } : {};
+};
+async function fetchJson(url, opts={}, retry=2){
+  const res = await fetch(url, opts);
+  const txt = await res.text();
+  let j; try{ j = JSON.parse(txt); }catch{ j = null; }
+  if (!res.ok || (j && j.ok===false)){
+    const detail = (j && (j.detail || j.error)) ? String(j.detail || j.error) : `${res.status} ${res.statusText}`;
+    const transient = /503|upstream connect error|connection termination|ECONNRESET|ETIMEDOUT|openai_error:503/i.test(detail);
+    if (transient && retry>0){ await new Promise(r=>setTimeout(r, 600*(3-retry))); return fetchJson(url, opts, retry-1); }
+    throw new Error(detail);
+  }
+  return j ?? { ok:false, error:'bad_json', raw: txt.slice(0,400) };
+}
+
+/* ---------- API wrappers ---------- */
+async function callIngest(url){
+  return fetchJson('/api/ingest-embed-replace', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', ...bearer() },
+    body: JSON.stringify({ url })
+  });
+}
+async function callVerify(url){
+  return fetchJson(`/api/tools?action=verify&url=${encodeURIComponent(url)}`, { headers: { ...bearer() } });
+}
+async function callSearch(query, topK){
+  return fetchJson('/api/tools?action=search', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', ...bearer() },
+    body: JSON.stringify({ q: query, topK: Number(topK||8) })
+  });
+}
+async function callExtract(action, url){
+  return fetchJson(`/api/extract?action=${encodeURIComponent(action)}&url=${encodeURIComponent(url)}`, {
+    headers: { ...bearer() }
+  });
+}
+
+/* >>>>>>>>>>>>>  FIXED HERE: send { query, topK }  <<<<<<<<<<<<< */
+async function callChat(query, topK){
+  return fetchJson('/api/chat', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', ...bearer() },
+    body: JSON.stringify({ query, topK: Number(topK||8) })
+  });
+}
+
+/* ---------- table helpers ---------- */
+function addRow(url, text, ok){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="mono"></td>
+    <td><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a></td>
+    <td class="mono">${ok?'<span class="ok">OK</span>':'<span class="bad">FAILED</span>'} ${escapeHtml(text||'')}</td>`;
+  $('rows').appendChild(tr);
+  tr.firstChild.textContent = String($('rows').children.length);
+  return tr;
+}
+async function verifyAndAnnotate(url, tr){
+  try {
+    const v = await callVerify(url);
+    const extra = (v && v.ok) ? ` | DB: chunks=${v.chunks ?? '?'} len=${v.len ?? '?'}` : '';
+    tr.lastChild.innerHTML += escapeHtml(extra);
+  } catch(e) {
+    logError(`DB verify FAILED for ${url} — ${e && e.message ? e.message : e}`);
+  }
+}
+
+/* ---------- ingest single (same behavior as batch: table + DB verify) ---------- */
+$('test').onclick = async () => {
+  saveToken();
+  const u = $('single').value.trim();
+  if (!u) return;
+  $('debug').textContent = '…';
+  try {
+    const body = await callIngest(u);
+    $('debug').textContent = JSON.stringify(body, null, 2);
+    const tr = addRow(u, `id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
+    verifyAndAnnotate(u, tr);
+  } catch (e) {
+    $('debug').textContent = JSON.stringify({ ok:false, error: String(e?.message||e) }, null, 2);
+    addRow(u, String(e?.message||e), false);
+    logError(`Single ingest FAILED for ${u} — ${e && e.message ? e.message : e}`);
+  }
+};
+
+/* ---------- crawl & ingest (concurrency + delay) ---------- */
+let stopFlag = false;
+$('stop').onclick = () => { stopFlag = true; $('stop').disabled = true; };
+$('crawl').onclick = async () => {
+  saveToken();
+  stopFlag = false; $('stop').disabled = false;
+
+  const pasted = $('paste').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const combined = [...new Set([...csvUrls, ...pasted])];
+  $('loaded').textContent = String(combined.length);
+  $('succ').textContent = '0'; $('fail').textContent = '0';
+
+  const conc = Math.max(1, Number($('concurrency').value||1));
+  const delayMs = Math.max(0, Number($('delay').value||0));
+  const q = combined.slice();
+
+  const runners = Array.from({length:conc}, ()=> (async function run(){
+    while (!stopFlag && q.length) {
+      const u = q.shift();
+      try {
+        await new Promise(r=>setTimeout(r, delayMs));
+        const body = await callIngest(u);
+        const tr = addRow(u, `id=${body.id} len=${body.len} chunks=${body.chunks}`, true);
+        $('succ').textContent = String(Number($('succ').textContent) + 1);
+        verifyAndAnnotate(u, tr);
+      } catch (e) {
+        addRow(u, String(e?.message||e), false);
+        $('fail').textContent = String(Number($('fail').textContent) + 1);
+        logError(`FAILED ${u} — ${e && e.message ? e.message : e}`);
+      }
+    }
+  })());
+  await Promise.all(runners);
+  if (stopFlag) $('stopped').textContent = String(Number($('stopped').textContent) + 1);
+};
+
+/* ---------- search tester ---------- */
+function normalizeMdLinks(s){ if(!s) return ''; s=s.replace(/!\[([^\]]*)\]\([^)]+\)/g,'$1'); s=s.replace(/\[([^\]]+)\]\([^)]+\)/g,'$1'); return s; }
+function cleanText(s){ s=normalizeMdLinks(s||''); s=s.replace(/[\[\]\(\)]/g,' '); s=s.replace(/https?:\/\/\S+/g,' '); return s.replace(/\s+/g,' ').trim(); }
+function sentenceSpans(text){ const spans=[]; let start=0; for(let i=0;i<text.length;i++){ const ch=text[i]; if(ch==='.'||ch==='!'||ch==='?'||ch==='\n'||ch==='|'){ const end=i+1; const seg=text.slice(start,end).trim(); if(seg)spans.push([start,end,seg]); start=end; } } if(start<text.length){ const seg=text.slice(start).trim(); if(seg)spans.push([start,text.length,seg]); } return spans; }
+function tidyStart(s){ s=(s||'').replace(/^[\)\]\}\.,;:\/\\\-—–•\s]+/u,'').trim(); const sp=s.indexOf(' '); if(s && !/^[A-Za-z0-9]/.test(s[0]) && sp>0) s=s.slice(sp+1).trim(); return s; }
+function sentenceSnippet(content,terms,minChars=80){ const text=cleanText(content); if(!text) return ''; const lc=text.toLowerCase(); let pos=-1; if(terms.length){ for(const t of terms){ const i=lc.indexOf(t); if(i!==-1) pos=(pos===-1)?i:Math.min(pos,i);} } const spans=sentenceSpans(text); if(!spans.length) return text; let idx=0; if(pos!==-1){ for(let i=0;i<spans.length;i++){ const[s,e]=spans[i]; if(pos>=s && pos<e){ idx=i; break; } } } let snippet=tidyStart(spans[idx][2]); if(snippet.length<minChars && spans[idx+1]) snippet=(snippet+' '+tidyStart(spans[idx+1][2])).trim(); return snippet; }
+
+$('runSearch').onclick = async () => {
+  saveToken();
+  const query = $('query').value.trim();
+  const topk = Number($('topk').value||8);
+  if (!query) return;
+
+  $('srows').innerHTML = '';
+  $('sraw').textContent = '…';
+
+  try{
+    const body = await callSearch(query, topk);
+    $('sraw').textContent = JSON.stringify(body, null, 2);
+
+    const matches = (body && (body.matches || body.results || body.data)) || [];
+    const groups = new Map();
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+
+    for (const m of matches) {
+      if (!m || !m.url) continue;
+      const url = m.url;
+      const arr = groups.get(url) || [];
+      arr.push(m);
+      groups.set(url, arr);
+    }
+
+    const rows = [];
+    for (const [url, arr] of groups.entries()) {
+      const best = arr.reduce((a,b) => (a.score||0) > (b.score||0) ? a : b, arr[0]||{});
+      const chunks = arr.length;
+      const snippet = sentenceSnippet(best.snippet || best.content || best.chunk_text || '', terms, 120);
+      rows.push({ url, bestScore: best.score, chunks, snippet });
+    }
+    rows.sort((a,b)=> (b.bestScore||0) - (a.bestScore||0));
+
+    for (const r of rows) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="mono">${(r.bestScore!=null?r.bestScore.toFixed?r.bestScore.toFixed(3):r.bestScore:'?')} / ${r.chunks}</td>
+        <td><a href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.url)}</a></td>
+        <td>${escapeHtml(r.snippet||'')}</td>`;
+      $('srows').appendChild(tr);
+    }
+  }catch(e){
+    $('sraw').textContent = JSON.stringify({ ok:false, error:String(e?.message||e) }, null, 2);
+    logError(`Search FAILED — ${e && e.message ? e.message : e}`);
+  }
+};
+
+/* ---------- Extract tester bindings ---------- */
+async function runExtract(action){
+  saveToken();
+  const url = $('exUrl').value.trim();
+  if (!url) { $('exOut').textContent = 'Please enter a URL.'; return; }
+  $('exOut').textContent = 'Fetching…';
+  try{
+    const out = await callExtract(action, url);
+    $('exOut').textContent = JSON.stringify(out, null, 2);
+  }catch(e){
+    $('exOut').textContent = JSON.stringify({ ok:false, error:String(e?.message||e) }, null, 2);
+    logError(`Extract FAILED for ${url} — ${e && e.message ? e.message : e}`);
+  }
+}
+$('exEvents').onclick   = () => runExtract('events-extract');
+$('exArticles').onclick = () => runExtract('articles-extract');
+$('exProducts').onclick = () => runExtract('products-extract');
+$('exServices').onclick = () => runExtract('services-extract');
+$('exAll').onclick      = () => runExtract('extract-all');
+
+/* ---------- RAG chat ---------- */
+$('ask').onclick = async () => {
+  saveToken();
+  const query = $('chatQ').value.trim(); if(!query) return;
+  const topK = Number($('chatTopK').value||8);
+  $('answer').textContent = '…'; $('citations').innerHTML = '';
+  try{
+    const res = await callChat(query, topK);
+    if (!res || res.error || res.detail) {
+      $('answer').textContent = (res && (res.detail || res.error)) || 'chat_failed';
+      return;
+    }
+    $('answer').textContent = res.answer || '';
+    const cites = Array.from(new Set(res.citations || []));
+    $('citations').innerHTML = cites.map(u => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`).join('');
+  }catch(e){
+    $('answer').textContent = `Error: ${String(e?.message||e)}`;
+    logError(`Chat FAILED — ${e && e.message ? e.message : e}`);
+  }
+};
+
+/* sensible default single test url */
+$('single').value = 'https://www.alanranger.com/photography-workshops';
+</script>
+</body>
+</html>

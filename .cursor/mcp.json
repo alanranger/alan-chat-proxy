@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "postgres-ro": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-postgres@latest",
+        "postgresql://postgres.igzvwbvgvmzvvzoclufx:Ipswich196805091968@aws-1-eu-west-2.pooler.supabase.com:6543/postgres?sslmode=require"
+      ],
+      "env": {
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+      }
+    },
+    "postgres-rw": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-postgres@latest",
+        "postgresql://postgres:Ipswich196805091968@db.igzvwbvgvmzvvzoclufx.supabase.co:5432/postgres?sslmode=require&options=-c%20default_transaction_read_only%3Doff"
+      ],
+      "env": {
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+      }
+    }
+  }
+}
