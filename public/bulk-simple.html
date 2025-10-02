@@ -61,9 +61,9 @@
           <small>Scheduled course events with dates, times, locations</small>
         </div>
         <div class="file-item">
-          <h4>🏞️ Workshop Pages</h4>
-          <input type="file" id="workshopPagesCsv" accept=".csv" />
-          <small>Workshop page content (not individual events)</small>
+          <h4>🏞️ Workshop Events</h4>
+          <input type="file" id="workshopEventsCsv" accept=".csv" />
+          <small>Scheduled workshop events with dates, times, locations</small>
         </div>
         <div class="file-item">
           <h4>🎯 Service Pages</h4>
@@ -223,7 +223,7 @@
       const files = [
         { file: document.getElementById('blogCsv').files[0], type: 'blog', name: 'Blog Articles' },
         { file: document.getElementById('courseEventsCsv').files[0], type: 'event', name: 'Course Events' },
-        { file: document.getElementById('workshopPagesCsv').files[0], type: 'workshop', name: 'Workshop Pages' },
+        { file: document.getElementById('workshopEventsCsv').files[0], type: 'workshop', name: 'Workshop Events' },
         { file: document.getElementById('servicePagesCsv').files[0], type: 'service', name: 'Service Pages' },
         { file: document.getElementById('productsCsv').files[0], type: 'product', name: 'Physical Products' }
       ];
