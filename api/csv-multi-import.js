@@ -439,16 +439,37 @@ export default async function handler(req, res) {
     if (!entities.length) return sendJSON(res, 400, { error: 'bad_request', detail: `No valid ${contentType} entities found in CSV`, stage });
 
     stage = 'import_entities';
-    // Delete existing entities for these URLs to avoid duplicates
-    const urls = entities.map(e => e.url);
-    if (urls.length) {
-      const { error: delE } = await supa.from('page_entities').delete().in('url', urls);
-      if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
+    
+    if (contentType === 'event') {
+      // For events, insert individually to handle unique constraint gracefully
+      let imported = 0;
+      for (const e of entities) {
+        const { error: insEi } = await supa.from('page_entities').insert([e]);
+        if (insEi) {
+          const msg = String(insEi.message || insEi);
+          if (/uniq_events_with_date/i.test(msg) || /duplicate key value/i.test(msg)) {
+            // Skip duplicate - this is expected for events with same url+date
+            continue;
+          } else {
+            return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: msg, stage, url: e.url, date_start: e.date_start });
+          }
+        } else {
+          imported++;
+        }
+      }
+      stage = 'done';
+      return sendJSON(res, 200, { ok: true, imported, content_type: contentType, stage });
+    } else {
+      // For non-events, delete existing and insert new
+      const urls = entities.map(e => e.url);
+      if (urls.length) {
+        const { error: delE } = await supa.from('page_entities').delete().in('url', urls);
+        if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
+      }
+      
+      const { error: insE } = await supa.from('page_entities').insert(entities);
+      if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
     }
-
-    // Insert new entities
-    const { error: insE } = await supa.from('page_entities').insert(entities);
-    if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
 
     stage = 'done';
     return sendJSON(res, 200, {
