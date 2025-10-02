@@ -385,6 +385,9 @@ export default async function handler(req, res) {
         if (rows[1]) {
           results.push({ fileName, contentType, success: false, error: `DEBUG: First data row: ${JSON.stringify(rows[1])}` });
         }
+        
+        // Add simple test debug
+        results.push({ fileName, contentType, success: false, error: `DEBUG: TEST - This should appear in results` });
 
         const entities = [];
         
