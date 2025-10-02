@@ -42,9 +42,8 @@
     <!-- Token Section -->
     <div class="token-section">
       <h3>🔐 Authentication</h3>
-      <input type="password" id="ingestToken" placeholder="Enter your INGEST_TOKEN" />
-      <button class="btn" onclick="saveToken()">Save Token</button>
-      <small>This token is required for all operations</small>
+      <div class="status success">✅ Token: b6c3f0c9e6f44cce9e1a4f3f2d3a5c76 (Hardcoded)</div>
+      <small>Token is automatically configured for this private interface</small>
     </div>
 
     <!-- CSV Files Section -->
@@ -144,19 +143,9 @@
   </div>
 
   <script>
-    // Token management
-    function saveToken() {
-      const token = document.getElementById('ingestToken').value;
-      if (token) {
-        localStorage.setItem('ingestToken', token);
-        addResult('✅ Token saved successfully');
-      } else {
-        addResult('❌ Please enter a token');
-      }
-    }
-
+    // Token management - hardcoded for private use
     function getToken() {
-      return localStorage.getItem('ingestToken') || '';
+      return 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
     }
 
     // Results management
@@ -226,10 +215,7 @@
     // Main import function
     async function importAllCSVs() {
       const token = getToken();
-      if (!token) {
-        addResult('❌ Please save your token first', 'error');
-        return;
-      }
+      addResult('🔐 Using hardcoded token for authentication');
 
       updateProgress(0, 'Starting CSV imports...');
       addResult('🚀 Starting CSV import process...');
@@ -336,13 +322,9 @@
       }
     }
 
-    // Load saved token on page load
+    // Load hardcoded token on page load
     window.onload = function() {
-      const savedToken = getToken();
-      if (savedToken) {
-        document.getElementById('ingestToken').value = savedToken;
-        addResult('✅ Token loaded from storage');
-      }
+      addResult('✅ Hardcoded token ready for use');
     };
   </script>
 </body>
