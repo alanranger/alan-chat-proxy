@@ -356,6 +356,12 @@ export default async function handler(req, res) {
         // Debug: Log the actual headers found
         console.log(`DEBUG: ${contentType} headers:`, rows[0]);
         console.log(`DEBUG: ${contentType} first data row:`, rows[1]);
+        
+        // Add debug info to results
+        results.push({ fileName, contentType, success: false, error: `DEBUG: Headers found: ${JSON.stringify(rows[0])}` });
+        if (rows[1]) {
+          results.push({ fileName, contentType, success: false, error: `DEBUG: First data row: ${JSON.stringify(rows[1])}` });
+        }
 
         const entities = [];
         
@@ -367,6 +373,9 @@ export default async function handler(req, res) {
               console.log(`DEBUG: blog row keys:`, Object.keys(row));
               console.log(`DEBUG: blog Full Url:`, row['Full Url']);
               console.log(`DEBUG: blog Url Id:`, row['Url Id']);
+              results.push({ fileName, contentType, success: false, error: `DEBUG: blog row keys: ${JSON.stringify(Object.keys(row))}` });
+              results.push({ fileName, contentType, success: false, error: `DEBUG: blog Full Url: ${row['Full Url']}` });
+              results.push({ fileName, contentType, success: false, error: `DEBUG: blog Url Id: ${row['Url Id']}` });
               if (!row['Full Url'] && !row['Url Id']) continue;
               entity = transformBlogData(row);
               break;
