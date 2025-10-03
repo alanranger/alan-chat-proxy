@@ -320,21 +320,13 @@ export default async function handler(req, res) {
       entities.push(e);
     }
 
-    /* 3) REPLACE entities for this URL (delete → insert) */
-    stage = 'replace_entities';
-    {
-      // ALWAYS replace data for this URL so we never keep stale rows
-      const { error: delE } = await supa.from('page_entities').delete().eq('url', url);
-      if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
-
-      // Also clear any event_dates rows linked to this URL to avoid uniq_events_with_date conflicts
-      const { error: delDates } = await supa.from('event_dates').delete().eq('event_url', url);
-      if (delDates) return sendJSON(res, 500, { error: 'supabase_event_dates_delete_failed', detail: delDates.message || delDates, stage });
-
-      if (entities.length) {
-        const { error: insE } = await supa.from('page_entities').insert(entities);
-        if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
-      }
+    // 3) Do NOT modify event records from scraper.
+    // Filter out event entities entirely (CSV is the sole source of truth for events)
+    const nonEventEntities = entities.filter(e => e.kind !== 'event');
+    if (nonEventEntities.length) {
+      stage = 'upsert_non_event_entities';
+      const { error: insE } = await supa.from('page_entities').insert(nonEventEntities, { upsert: true, onConflict: 'url,entity_hash' });
+      if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
     }
 
     /* 4) Enrich text with entity snippets, then chunk + embed */
