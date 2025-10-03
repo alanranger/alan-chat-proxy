@@ -632,6 +632,7 @@
       previewEl.textContent = 'Detecting file types...';
 
       const plan = [];
+      addResult(`🔍 Processing ${files.length} files for bulk upload...`);
       for (const f of files){
         const text = await f.text();
         const first = text.split('\n')[0] || '';
@@ -642,6 +643,7 @@
           addResult(`❓ Could not detect type for ${f.name}. Skipping.`, 'error');
           continue;
         }
+        addResult(`✅ Detected ${f.name} as ${type}`);
         plan.push({ file: f, type, first });
       }
 
