@@ -569,7 +569,12 @@
         // Store CSV count for dashboard display even for reference files (accumulate, don't overwrite)
         const csvKey = contentTypeToCsvKey[contentType] || contentType;
         if (csvRowCounts.hasOwnProperty(csvKey)) {
-          csvRowCounts[csvKey] += actualRowCount; // Add to existing count
+          // For site_urls, only keep the largest count (main site URLs file)
+          if (contentType === 'site_urls') {
+            csvRowCounts[csvKey] = Math.max(csvRowCounts[csvKey], actualRowCount);
+          } else {
+            csvRowCounts[csvKey] += actualRowCount; // Add to existing count
+          }
           // Update dashboard immediately
           renderCategoryStats();
         }
@@ -590,7 +595,12 @@
         const csvKey = contentTypeToCsvKey[contentType] || contentType;
         console.log(`DEBUG: ${contentType} -> ${csvKey}, adding ${actualRowCount} rows`);
         if (csvRowCounts.hasOwnProperty(csvKey)) {
-          csvRowCounts[csvKey] += actualRowCount; // Add to existing count
+          // For site_urls, only keep the largest count (main site URLs file)
+          if (contentType === 'site_urls') {
+            csvRowCounts[csvKey] = Math.max(csvRowCounts[csvKey], actualRowCount);
+          } else {
+            csvRowCounts[csvKey] += actualRowCount; // Add to existing count
+          }
           console.log(`DEBUG: csvRowCounts[${csvKey}] is now ${csvRowCounts[csvKey]}`);
           // Update dashboard immediately
           renderCategoryStats();
@@ -718,12 +728,33 @@
 
       previewEl.innerHTML = plan.map(p => `<div>• ${p.file.name} → <strong>${p.type}</strong></div>`).join('');
 
+      // Show progress bar
+      const progressContainer = document.createElement('div');
+      progressContainer.innerHTML = `
+        <div style="margin: 10px 0; padding: 10px; background: #1b1b1b; border: 1px solid #333; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span>Bulk Import Progress</span>
+            <span id="bulkProgressText">0/${plan.length}</span>
+          </div>
+          <div style="width: 100%; background: #333; border-radius: 2px; height: 20px; overflow: hidden;">
+            <div id="bulkProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #51cf66, #69db7c); transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+      `;
+      document.getElementById('results').appendChild(progressContainer);
+
       // Import sequentially for clear logs
       let ok = 0;
       let totalCsvRows = 0;
       let totalImported = 0;
       for (let i=0;i<plan.length;i++){
         const p = plan[i];
+        
+        // Update progress
+        const progress = ((i + 1) / plan.length) * 100;
+        document.getElementById('bulkProgressBar').style.width = progress + '%';
+        document.getElementById('bulkProgressText').textContent = `${i + 1}/${plan.length}`;
+        
         addResult(`📦 Bulk importing ${p.file.name} as ${p.type}...`);
         try {
           const result = await importCSV(p.file, p.type);
@@ -739,9 +770,13 @@
           addResult(`❌ ${p.file.name} threw error: ${error.message}`, 'error');
         }
       }
+      
+      // Remove progress bar
+      progressContainer.remove();
+      
       addResult(`✅ Bulk import finished: ${ok}/${plan.length} files imported`, 'success');
       addResult(`📊 Summary: ${totalImported}/${totalCsvRows} records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
-      
+
       // Update dashboard with CSV counts
       renderCategoryStats();
     }
@@ -1188,7 +1223,6 @@
       'blog_articles': 0,
       'course_events': 0,
       'workshop_events': 0,
-      'service_pages': 0,
       'service_products': 0,
       'website_urls': 0
     };
@@ -1198,7 +1232,6 @@
       'blog_articles': { success: 0, failed: 0, skipped: 0 },
       'course_events': { success: 0, failed: 0, skipped: 0 },
       'workshop_events': { success: 0, failed: 0, skipped: 0 },
-      'service_pages': { success: 0, failed: 0, skipped: 0 },
       'service_products': { success: 0, failed: 0, skipped: 0 },
       'website_urls': { success: 0, failed: 0, skipped: 0 },
       'json_extraction': { success: 0, failed: 0, skipped: 0 }
@@ -1208,8 +1241,7 @@
     const contentTypeToCsvKey = {
       'blog': 'blog_articles',
       'event': 'course_events',
-      'workshop': 'workshop_events', 
-      'service': 'service_pages',
+      'workshop': 'workshop_events',
       'product': 'service_products',
       'site_urls': 'website_urls',
       'test_questions': 'test_questions'
@@ -1224,9 +1256,8 @@
       const formatCategory = (cat) => {
         const labels = {
           'blog_articles': 'Blog Articles',
-          'course_events': 'Course Events', 
+          'course_events': 'Course Events',
           'workshop_events': 'Workshop Events',
-          'service_pages': 'Service Pages',
           'service_products': 'Service Products',
           'website_urls': 'Website URLs',
           'json_extraction': 'JSON Extraction'
