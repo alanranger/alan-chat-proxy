@@ -452,7 +452,9 @@ export default async function handler(req, res) {
         if (e.date_start) {
           await supa.from('page_entities').delete().eq('url', e.url).eq('date_start', e.date_start).eq('kind', 'event');
         }
-        const { error: insOne } = await supa.from('page_entities').insert([e]);
+        const { error: insOne } = await supa
+          .from('page_entities')
+          .insert([e], { upsert: true, onConflict: 'url,date_start,kind' });
         if (insOne) {
           return sendJSON(res, 500, { error: 'supabase_entities_upsert_failed', detail: insOne.message || insOne, stage: 'event_insert', url: e.url });
         }
