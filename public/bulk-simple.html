@@ -503,6 +503,13 @@
       
       // Handle special cases that don't use the multi-import endpoint
       if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'test_questions') {
+        // Store CSV count for dashboard display even for reference files
+        const csvKey = contentTypeToCsvKey[contentType] || contentType;
+        if (csvRowCounts.hasOwnProperty(csvKey)) {
+          csvRowCounts[csvKey] = csvRowCount;
+          // Update dashboard immediately
+          renderCategoryStats();
+        }
         // Cache site_urls for Scrape when coming from bulk box
         if (contentType === 'site_urls') {
           window.__cachedSiteUrlsText = csvText;
