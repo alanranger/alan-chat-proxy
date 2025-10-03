@@ -496,17 +496,47 @@
       addResult(`📥 Importing ${contentType} data...`);
       const csvText = await file.text();
       
-      // Count CSV rows (excluding header)
+      // Count CSV rows by actually parsing the CSV (excluding header)
       const lines = csvText.split('\n').filter(line => line.trim());
-      const csvRowCount = Math.max(0, lines.length - 1); // Subtract header
-      addResult(`📊 CSV has ${csvRowCount} data rows (${lines.length} total lines)`);
+      const headerLine = lines[0];
+      const headers = headerLine.split(',').map(h => h.toLowerCase().trim());
+      
+      // Parse CSV properly to get actual row count
+      let actualRowCount = 0;
+      let i = 1;
+      while (i < lines.length) {
+        let line = lines[i];
+        if (!line.trim()) {
+          i++;
+          continue;
+        }
+        
+        // Handle multi-line quoted fields
+        let quoteCount = (line.match(/"/g) || []).length;
+        let j = i + 1;
+        while (quoteCount % 2 !== 0 && j < lines.length) {
+          line += '\n' + lines[j];
+          quoteCount = (line.match(/"/g) || []).length;
+          j++;
+        }
+        
+        // Parse the line to count columns
+        const values = line.split(',').map(v => v.trim());
+        if (values.length === headers.length) {
+          actualRowCount++;
+        }
+        
+        i = j;
+      }
+      
+      addResult(`📊 CSV has ${actualRowCount} data rows (${lines.length} total lines)`);
       
       // Handle special cases that don't use the multi-import endpoint
       if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'test_questions') {
         // Store CSV count for dashboard display even for reference files (accumulate, don't overwrite)
         const csvKey = contentTypeToCsvKey[contentType] || contentType;
         if (csvRowCounts.hasOwnProperty(csvKey)) {
-          csvRowCounts[csvKey] += csvRowCount; // Add to existing count
+          csvRowCounts[csvKey] += actualRowCount; // Add to existing count
           // Update dashboard immediately
           renderCategoryStats();
         }
@@ -516,18 +546,18 @@
           addResult('🔗 Site URLs cached for Scrape step.', 'info');
         }
         addResult(`ℹ️ ${contentType} files are for reference only - not imported to database`, 'info');
-        return { success: true, csvRows: csvRowCount, imported: 0 }; // Count as successful since these are reference files
+        return { success: true, csvRows: actualRowCount, imported: 0 }; // Count as successful since these are reference files
       }
       
       const result = await apiCall('/api/csv-multi-import', { csvData: csvText, contentType });
       
       if (result && result.ok) {
-        addResult(`✅ ${contentType} import successful: ${result.imported}/${csvRowCount} records (CSV rows → ingested)`, 'success');
+        addResult(`✅ ${contentType} import successful: ${result.imported}/${actualRowCount} records (CSV rows → ingested)`, 'success');
         // Store CSV count for dashboard display (accumulate, don't overwrite)
         const csvKey = contentTypeToCsvKey[contentType] || contentType;
-        console.log(`DEBUG: ${contentType} -> ${csvKey}, adding ${csvRowCount} rows`);
+        console.log(`DEBUG: ${contentType} -> ${csvKey}, adding ${actualRowCount} rows`);
         if (csvRowCounts.hasOwnProperty(csvKey)) {
-          csvRowCounts[csvKey] += csvRowCount; // Add to existing count
+          csvRowCounts[csvKey] += actualRowCount; // Add to existing count
           console.log(`DEBUG: csvRowCounts[${csvKey}] is now ${csvRowCounts[csvKey]}`);
           // Update dashboard immediately
           renderCategoryStats();
@@ -538,13 +568,13 @@
         if (contentType === 'site_urls') {
           try { window.__cachedSiteUrlsText = await file.text(); addResult('🔗 Site URLs cached for Scrape step.', 'info'); } catch {}
         }
-        return { success: true, csvRows: csvRowCount, imported: result.imported };
+        return { success: true, csvRows: actualRowCount, imported: result.imported };
       } else {
         addResult(`❌ ${contentType} import failed: ${result?.error || result?.detail || 'Unknown error'}`, 'error');
         if (result?.detail) {
           addResult(`🔍 Error details: ${JSON.stringify(result.detail)}`, 'error');
         }
-        return { success: false, csvRows: csvRowCount, imported: 0 };
+        return { success: false, csvRows: actualRowCount, imported: 0 };
       }
     }
 
