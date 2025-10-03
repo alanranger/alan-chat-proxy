@@ -1122,6 +1122,17 @@
       'website_urls': 0
     };
     
+    // URL scraping stats for dashboard display
+    let urlScrapingStats = {
+      'blog_articles': { success: 0, failed: 0, skipped: 0 },
+      'course_events': { success: 0, failed: 0, skipped: 0 },
+      'workshop_events': { success: 0, failed: 0, skipped: 0 },
+      'service_pages': { success: 0, failed: 0, skipped: 0 },
+      'service_products': { success: 0, failed: 0, skipped: 0 },
+      'website_urls': { success: 0, failed: 0, skipped: 0 },
+      'json_extraction': { success: 0, failed: 0, skipped: 0 }
+    };
+    
     // Map import content types to dashboard category keys
     const contentTypeToCsvKey = {
       'blog': 'blog_articles',
