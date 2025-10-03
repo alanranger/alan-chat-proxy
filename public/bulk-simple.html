@@ -503,10 +503,10 @@
       
       // Handle special cases that don't use the multi-import endpoint
       if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'test_questions') {
-        // Store CSV count for dashboard display even for reference files
+        // Store CSV count for dashboard display even for reference files (accumulate, don't overwrite)
         const csvKey = contentTypeToCsvKey[contentType] || contentType;
         if (csvRowCounts.hasOwnProperty(csvKey)) {
-          csvRowCounts[csvKey] = csvRowCount;
+          csvRowCounts[csvKey] += csvRowCount; // Add to existing count
           // Update dashboard immediately
           renderCategoryStats();
         }
@@ -523,10 +523,10 @@
       
       if (result && result.ok) {
         addResult(`✅ ${contentType} import successful: ${result.imported}/${csvRowCount} records (CSV rows → ingested)`, 'success');
-        // Store CSV count for dashboard display
+        // Store CSV count for dashboard display (accumulate, don't overwrite)
         const csvKey = contentTypeToCsvKey[contentType] || contentType;
         if (csvRowCounts.hasOwnProperty(csvKey)) {
-          csvRowCounts[csvKey] = csvRowCount;
+          csvRowCounts[csvKey] += csvRowCount; // Add to existing count
           // Update dashboard immediately
           renderCategoryStats();
         }
@@ -768,10 +768,12 @@
               addResult(`✅ Content already exists: ${url}  (source: site_urls.csv line ${i+2}) — ${result.message}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
+              renderCategoryStats();
             } else {
               addResult(`✅ Scraped: ${url}`, 'success');
               stats.successCount++;
               urlScrapingStats[category].success++;
+              renderCategoryStats();
             }
           } else {
             const src = lines[i+1] || '';
@@ -781,20 +783,22 @@
               addResult(`✅ Skipped duplicate: ${url}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
+              renderCategoryStats();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
               addResult(`❌ Timeout: ${url}  (source: site_urls.csv line ${i+2})`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
+              renderCategoryStats();
             } else {
               addResult(`❌ Failed: ${url}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
+              renderCategoryStats();
             }
           }
           completed++;
           updateProgress((completed / urls.length) * 100, `Scraping (${completed}/${urls.length})`);
           updateStats();
-          renderCategoryStats();
         }
       }
 
