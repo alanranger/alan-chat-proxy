@@ -715,9 +715,13 @@
     }
 
     async function bulkUploadCSVs(){
-      const input = document.getElementById('bulkCsvs');
-      const files = Array.from(input.files||[]);
-      if (!files.length){ addResult('❌ No files selected for bulk upload','error'); return; }
+      console.log('bulkUploadCSVs called');
+      try {
+        const input = document.getElementById('bulkCsvs');
+        console.log('Input element:', input);
+        const files = Array.from(input.files||[]);
+        console.log('Files:', files);
+        if (!files.length){ addResult('❌ No files selected for bulk upload','error'); return; }
       const previewEl = document.getElementById('bulkPreview');
       previewEl.textContent = 'Detecting file types...';
 
@@ -835,6 +839,10 @@
 
       // Update dashboard with CSV counts
       renderCategoryStats();
+      } catch (error) {
+        console.error('Error in bulkUploadCSVs:', error);
+        addResult(`❌ Bulk upload failed: ${error.message}`, 'error');
+      }
     }
 
     // Website scraping
