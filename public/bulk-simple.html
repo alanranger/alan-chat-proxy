@@ -906,14 +906,7 @@
         'test_questions': cat()
       };
       
-      let urlScrapingStats = {
-        'blog_articles': cat(),
-        'course_events': cat(),
-        'workshop_events': cat(),
-        'service_products': cat(),
-        'website_urls': cat(),
-        'json_extraction': cat()
-      };
+      // Use global urlScrapingStats - don't redeclare
 
       function categorize(url, result) {
         const u = (url||'').toLowerCase();
