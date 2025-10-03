@@ -1008,7 +1008,7 @@
 
 
       // Parallel worker pool
-      const CONCURRENCY = 8;
+      const CONCURRENCY = 2; // Reduced concurrency since we're processing more URLs
       const TIMEOUT_MS = 20000;
       let nextIndex = 0;
       let completed = 0;
@@ -1020,6 +1020,12 @@
           if (i >= urls.length) break;
           const url = urls[i];
           updateProgress((completed / urls.length) * 100, `Scraping ${url}...`);
+          
+          // Add throttling delay to prevent overwhelming the server
+          if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between requests
+          }
+          
           const result = await apiCall('/api/ingest-embed-replace', { url }, { timeoutMs: TIMEOUT_MS });
           const category = categorize(url, result);
           addResult(`🔍 DEBUG: ${url} -> Category: ${category}`, 'info');
