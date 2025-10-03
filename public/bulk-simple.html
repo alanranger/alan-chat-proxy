@@ -964,13 +964,15 @@
               addResult(`✅ Content already exists: ${url}  (source: site_urls.csv line ${i+2}) — ${result.message}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              console.log(`Updated ${category}: skipped=${urlScrapingStats[category].skipped}`);
+              console.log(`🔄 Updated ${category}: skipped=${urlScrapingStats[category].skipped}`);
+              console.log(`📊 urlScrapingStats[${category}]:`, urlScrapingStats[category]);
               renderCategoryStats();
             } else {
               addResult(`✅ Scraped: ${url}`, 'success');
               stats.successCount++;
               urlScrapingStats[category].success++;
-              console.log(`Updated ${category}: success=${urlScrapingStats[category].success}`);
+              console.log(`🔄 Updated ${category}: success=${urlScrapingStats[category].success}`);
+              console.log(`📊 urlScrapingStats[${category}]:`, urlScrapingStats[category]);
               renderCategoryStats();
             }
           } else {
@@ -1353,8 +1355,15 @@
     
     // Global function to render category stats
     function renderCategoryStats() {
+      console.log('🔍 renderCategoryStats called');
+      console.log('urlScrapingStats:', urlScrapingStats);
+      console.log('csvRowCounts:', csvRowCounts);
+      
       const el = document.getElementById('categoryStats');
-      if (!el) return; // Element might not exist yet
+      if (!el) {
+        console.warn('❌ categoryStats element not found!');
+        return; // Element might not exist yet
+      }
       
       // Format category names for display
       const formatCategory = (cat) => {
@@ -1377,14 +1386,18 @@
           failed: (urlScrapingStats[key]?.failed || 0),
           skipped: (urlScrapingStats[key]?.skipped || 0)
         };
+        console.log(`📊 Category ${key}:`, combinedStats[key]);
       });
-      
+
       const rows = Object.entries(combinedStats).map(([k,v]) => {
         const csvCount = csvRowCounts[k] || 0;
         const csvDisplay = csvCount > 0 ? ` (${csvCount} CSV)` : '';
         return `<tr><td style="padding:4px 8px;">${formatCategory(k)}${csvDisplay}</td><td style="color:#51cf66">${v.success}</td><td style="color:#ff6b6b">${v.failed}</td><td style="color:#74c0fc">${v.skipped}</td></tr>`;
       }).join('');
+      
+      console.log('📋 Generated HTML rows:', rows);
       el.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
+      console.log('✅ Category stats rendered');
     }
     
     function updateStats() {
