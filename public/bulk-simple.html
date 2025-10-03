@@ -114,6 +114,13 @@
           <input type="file" id="testQuestionsCsv" accept=".csv" />
           <small>Test questions for AI bot validation</small>
         </div>
+        <div class="file-item">
+          <h4>📦 Bulk CSV Upload</h4>
+          <input type="file" id="bulkCsvs" accept=".csv" multiple />
+          <small>Drop multiple CSVs. Types auto-detected by headers/filename.</small>
+          <button class="btn" onclick="bulkUploadCSVs()">📥 Import Selected CSVs</button>
+          <div id="bulkPreview" style="margin-top:8px;color:#bbb;font-size:12px"></div>
+        </div>
       </div>
     </div>
 
@@ -555,6 +562,67 @@
       addResult(`🎉 CSV import process complete! ${successCount}/${totalCount} files imported successfully.`, 'success');
       document.getElementById('stepImport').style.background = successCount===totalCount ? '#2a6' : '#a62';
       document.getElementById('stepImport').textContent = `1️⃣ Import CSVs: ${successCount}/${totalCount}`;
+    }
+
+    // --- Bulk CSV Upload ---
+    function detectTypeFromHeaders(firstLine){
+      const h = (firstLine||'').toLowerCase();
+      if (h.includes('event_title') && h.includes('start_date') && h.includes('start_time')) return 'event';
+      if (h.includes('title,') && h.includes('url')) return 'blog';
+      if (h.includes('product url') || h.includes('price')) return 'product';
+      if (h.includes('service') || h.includes('mentoring')) return 'service';
+      if (h.startsWith('url')) return 'site_urls';
+      if (h.includes('landing')) return 'landing_pages';
+      return null;
+    }
+
+    function detectTypeByName(name){
+      const n = (name||'').toLowerCase();
+      if (n.includes('workshop')) return 'workshop';
+      if (n.includes('event')) return 'event';
+      if (n.includes('blog') || n.includes('news')) return 'blog';
+      if (n.includes('product')) return 'product';
+      if (n.includes('service')) return 'service';
+      if (n.includes('site') && n.includes('url')) return 'site_urls';
+      if (n.includes('landing')) return 'landing_pages';
+      if (n.includes('question')) return 'test_questions';
+      return null;
+    }
+
+    async function bulkUploadCSVs(){
+      const input = document.getElementById('bulkCsvs');
+      const files = Array.from(input.files||[]);
+      if (!files.length){ addResult('❌ No files selected for bulk upload','error'); return; }
+      const previewEl = document.getElementById('bulkPreview');
+      previewEl.textContent = 'Detecting file types...';
+
+      const plan = [];
+      for (const f of files){
+        const text = await f.text();
+        const first = text.split('\n')[0] || '';
+        let type = detectTypeFromHeaders(first) || detectTypeByName(f.name);
+        if (type === 'workshop') type = 'workshop';
+        if (type === 'event' && f.name.includes('workshop')) type = 'workshop';
+        if (!type){
+          addResult(`❓ Could not detect type for ${f.name}. Skipping.`, 'error');
+          continue;
+        }
+        plan.push({ file: f, type, first });
+      }
+
+      if (!plan.length){ addResult('❌ No recognizable CSVs in bulk selection','error'); return; }
+
+      previewEl.innerHTML = plan.map(p => `<div>• ${p.file.name} → <strong>${p.type}</strong></div>`).join('');
+
+      // Import sequentially for clear logs
+      let ok = 0;
+      for (let i=0;i<plan.length;i++){
+        const p = plan[i];
+        addResult(`📦 Bulk importing ${p.file.name} as ${p.type}...`);
+        const success = await importCSV(p.file, p.type);
+        if (success) ok++;
+      }
+      addResult(`✅ Bulk import finished: ${ok}/${plan.length} files imported`, 'success');
     }
 
     // Website scraping
