@@ -502,6 +502,11 @@
       
       // Handle special cases that don't use the multi-import endpoint
       if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'test_questions') {
+        // Cache site_urls for Scrape when coming from bulk box
+        if (contentType === 'site_urls') {
+          window.__cachedSiteUrlsText = csvText;
+          addResult('🔗 Site URLs cached for Scrape step.', 'info');
+        }
         addResult(`ℹ️ ${contentType} files are for reference only - not imported to database`, 'info');
         return true; // Count as successful since these are reference files
       }
