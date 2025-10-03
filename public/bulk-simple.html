@@ -1459,10 +1459,11 @@
       const rows = Object.entries(urlScrapingStats || {}).map(([key, stats]) => {
         const csvCount = csvRowCounts[key] || 0;
         const csvDisplay = csvCount > 0 ? ` (${csvCount} CSV)` : '';
-        return `<tr><td style="padding:4px 8px;">${formatCategory(key)}${csvDisplay}</td><td style="color:#51cf66">${stats.success || 0}</td><td style="color:#ff6b6b">${stats.failed || 0}</td><td style="color:#74c0fc">${stats.skipped || 0}</td></tr>`;
+        const duplicatesRemoved = Math.max(0, csvCount - (stats.success + stats.failed + stats.skipped));
+        return `<tr><td style="padding:4px 8px;">${formatCategory(key)}${csvDisplay}</td><td style="color:#51cf66">${stats.success || 0}</td><td style="color:#ff6b6b">${stats.failed || 0}</td><td style="color:#74c0fc">${stats.skipped || 0}</td><td style="color:#ffd43b">${duplicatesRemoved}</td></tr>`;
       }).join('');
       
-      const html = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
+      const html = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th><th style="text-align:left;padding:4px 8px;">Duplicates Removed</th></tr></thead><tbody>${rows}</tbody></table>`;
       el.innerHTML = html;
     }
     
