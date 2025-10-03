@@ -669,9 +669,9 @@
     function detectTypeFromHeaders(firstLine){
       const h = (firstLine||'').toLowerCase();
       if (h.includes('event_title') && h.includes('start_date') && h.includes('start_time')) return 'event';
-      if (h.includes('title,') && h.includes('url')) return 'blog';
+      if (h.includes('title,') && h.includes('url') && h.includes('categories') && h.includes('tags')) return 'blog';
       if (h.includes('product url') || h.includes('price')) return 'product';
-      if (h.includes('service') || h.includes('mentoring')) return 'service';
+      if (h.includes('service') || h.includes('mentoring') || h.includes('course') || h.includes('class')) return 'service';
       if (h.startsWith('url') || h.includes('url') && !h.includes('title')) return 'site_urls';
       if (h.includes('landing')) return 'landing_pages';
       return null;
@@ -683,7 +683,7 @@
       if (n.includes('event')) return 'event';
       if (n.includes('blog') || n.includes('news')) return 'blog';
       if (n.includes('product')) return 'product';
-      if (n.includes('service')) return 'service';
+      if (n.includes('service') || n.includes('mentoring') || n.includes('course') || n.includes('class')) return 'service';
       if (n.includes('site') && n.includes('url')) return 'site_urls';
       if (n.includes('urls') || n.includes('url')) return 'site_urls';
       if (n.includes('landing')) return 'landing_pages';
