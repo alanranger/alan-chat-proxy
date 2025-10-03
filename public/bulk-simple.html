@@ -496,9 +496,10 @@
       addResult(`📥 Importing ${contentType} data...`);
       const csvText = await file.text();
       
-      // Log CSV preview for debugging
-      const lines = csvText.split('\n');
-      addResult(`📊 CSV Preview: ${lines.length} lines, first line: ${lines[0]?.substring(0, 100)}...`);
+      // Count CSV rows (excluding header)
+      const lines = csvText.split('\n').filter(line => line.trim());
+      const csvRowCount = Math.max(0, lines.length - 1); // Subtract header
+      addResult(`📊 CSV has ${csvRowCount} data rows (${lines.length} total lines)`);
       
       // Handle special cases that don't use the multi-import endpoint
       if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'test_questions') {
@@ -508,24 +509,24 @@
           addResult('🔗 Site URLs cached for Scrape step.', 'info');
         }
         addResult(`ℹ️ ${contentType} files are for reference only - not imported to database`, 'info');
-        return true; // Count as successful since these are reference files
+        return { success: true, csvRows: csvRowCount, imported: 0 }; // Count as successful since these are reference files
       }
       
       const result = await apiCall('/api/csv-multi-import', { csvData: csvText, contentType });
       
       if (result && result.ok) {
-        addResult(`✅ ${contentType} import successful: ${result.imported} records`, 'success');
+        addResult(`✅ ${contentType} import successful: ${result.imported}/${csvRowCount} records (CSV rows → ingested)`, 'success');
         // Cache site_urls text for scrape step if it was imported via bulk box
         if (contentType === 'site_urls') {
           try { window.__cachedSiteUrlsText = await file.text(); addResult('🔗 Site URLs cached for Scrape step.', 'info'); } catch {}
         }
-        return true;
+        return { success: true, csvRows: csvRowCount, imported: result.imported };
       } else {
         addResult(`❌ ${contentType} import failed: ${result?.error || result?.detail || 'Unknown error'}`, 'error');
         if (result?.detail) {
           addResult(`🔍 Error details: ${JSON.stringify(result.detail)}`, 'error');
         }
-        return false;
+        return { success: false, csvRows: csvRowCount, imported: 0 };
       }
     }
 
@@ -552,6 +553,8 @@
 
       let successCount = 0;
       let totalCount = files.filter(f => f.file).length;
+      let totalCsvRows = 0;
+      let totalImported = 0;
 
       if (totalCount === 0) {
         addResult('❌ No CSV files selected', 'error');
@@ -562,15 +565,20 @@
         const { file, type, name } = files[i];
         if (file) {
           updateProgress((i / totalCount) * 100, `Importing ${name}...`);
-          const success = await importCSV(file, type);
-          if (success) successCount++;
+          const result = await importCSV(file, type);
+          if (result && result.success) {
+            successCount++;
+            totalCsvRows += result.csvRows || 0;
+            totalImported += result.imported || 0;
+          }
         }
       }
 
       updateProgress(100, `Import complete: ${successCount}/${totalCount} successful`);
       addResult(`🎉 CSV import process complete! ${successCount}/${totalCount} files imported successfully.`, 'success');
+      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
       document.getElementById('stepImport').style.background = successCount===totalCount ? '#2a6' : '#a62';
-      document.getElementById('stepImport').textContent = `1️⃣ Import CSVs: ${successCount}/${totalCount}`;
+      document.getElementById('stepImport').textContent = `1️⃣ Import CSVs: ${successCount}/${totalCount} (${totalImported}/${totalCsvRows} records)`;
     }
 
     // --- Bulk CSV Upload ---
@@ -625,13 +633,20 @@
 
       // Import sequentially for clear logs
       let ok = 0;
+      let totalCsvRows = 0;
+      let totalImported = 0;
       for (let i=0;i<plan.length;i++){
         const p = plan[i];
         addResult(`📦 Bulk importing ${p.file.name} as ${p.type}...`);
-        const success = await importCSV(p.file, p.type);
-        if (success) ok++;
+        const result = await importCSV(p.file, p.type);
+        if (result && result.success) {
+          ok++;
+          totalCsvRows += result.csvRows || 0;
+          totalImported += result.imported || 0;
+        }
       }
       addResult(`✅ Bulk import finished: ${ok}/${plan.length} files imported`, 'success');
+      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
     }
 
     // Website scraping
