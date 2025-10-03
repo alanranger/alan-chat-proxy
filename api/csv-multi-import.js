@@ -117,6 +117,17 @@ function transformWorkshopData(row) {
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
   const imageUrl = row.image || row['event image'] || row['event_image'];
   
+  // Map date/time/location fields from CSV
+  const startDate = row.Start_Date || row.start_date;
+  const startTime = row.Start_Time || row.start_time;
+  const endDate = row.End_Date || row.end_date;
+  const endTime = row.End_Time || row.end_time;
+  const location = row.Location_Business_Name || row.location_business_name || row.location;
+  
+  // Combine date and time for database storage
+  const dateStart = startDate && startTime ? `${startDate}T${startTime}` : (startDate || null);
+  const dateEnd = endDate && endTime ? `${endDate}T${endTime}` : (endDate || null);
+  
   // Extract location hints from tags
   const locationHints = [];
   if (tags.includes('warwickshire')) locationHints.push('Warwickshire');
@@ -157,9 +168,9 @@ function transformWorkshopData(row) {
     kind: 'event',
     title: title,
     description: null,
-    date_start: null,
-    date_end: null,
-    location: locationHints.join(', ') || null,
+    date_start: dateStart,
+    date_end: dateEnd,
+    location: location || locationHints.join(', ') || null,
     price: null,
     price_currency: null,
     availability: 'https://schema.org/EventScheduled',
