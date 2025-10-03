@@ -517,8 +517,9 @@
       if (result && result.ok) {
         addResult(`✅ ${contentType} import successful: ${result.imported}/${csvRowCount} records (CSV rows → ingested)`, 'success');
         // Store CSV count for dashboard display
-        if (csvRowCounts.hasOwnProperty(contentType)) {
-          csvRowCounts[contentType] = csvRowCount;
+        const csvKey = contentTypeToCsvKey[contentType] || contentType;
+        if (csvRowCounts.hasOwnProperty(csvKey)) {
+          csvRowCounts[csvKey] = csvRowCount;
           // Update dashboard immediately
           renderCategoryStats();
         }
@@ -1136,8 +1137,19 @@
       'workshop_events': 0,
       'service_pages': 0,
       'service_products': 0,
-      'landing_pages': 0,
-      'test_questions': 0
+      'website_urls': 0,
+      'json_extraction': 0
+    };
+    
+    // Map import content types to dashboard category keys
+    const contentTypeToCsvKey = {
+      'blog': 'blog_articles',
+      'event': 'course_events',
+      'workshop': 'workshop_events', 
+      'service': 'service_pages',
+      'product': 'service_products',
+      'site_urls': 'website_urls',
+      'test_questions': 'test_questions'
     };
     
     function updateStats() {
