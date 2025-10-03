@@ -1367,6 +1367,7 @@
       
       // Combine both stats for display
       const combinedStats = {};
+      console.log('🔍 renderCategoryStats - urlScrapingStats:', urlScrapingStats);
       Object.keys(urlScrapingStats || {}).forEach(key => {
         combinedStats[key] = {
           success: (urlScrapingStats[key]?.success || 0),
@@ -1375,6 +1376,7 @@
         };
         console.log(`📊 Category ${key}:`, combinedStats[key]);
       });
+      console.log('🔍 renderCategoryStats - combinedStats:', combinedStats);
 
       const rows = Object.entries(combinedStats).map(([k,v]) => {
         const csvCount = csvRowCounts[k] || 0;
