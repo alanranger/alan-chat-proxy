@@ -1007,24 +1007,19 @@
       }
 
 
-      // Parallel worker pool
-      const CONCURRENCY = 2; // Reduced concurrency since we're processing more URLs
+      // Batch processing with throttling
+      const BATCH_SIZE = 10; // Process 10 URLs at a time
+      const BATCH_DELAY = 3000; // 3 second delay between batches
       const TIMEOUT_MS = 20000;
-      let nextIndex = 0;
       let completed = 0;
 
-      async function worker(workerId) {
-        while (true) {
-          if (stopRequested) break;
-          const i = nextIndex++;
-          if (i >= urls.length) break;
-          const url = urls[i];
+      async function processBatch(batchUrls, batchIndex) {
+        addResult(`📦 Processing batch ${batchIndex + 1}: ${batchUrls.length} URLs`, 'info');
+        
+        // Process all URLs in this batch concurrently
+        const promises = batchUrls.map(async (url, urlIndex) => {
+          const globalIndex = batchIndex * BATCH_SIZE + urlIndex;
           updateProgress((completed / urls.length) * 100, `Scraping ${url}...`);
-          
-          // Add throttling delay to prevent overwhelming the server
-          if (i > 0) {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between requests
-          }
           
           const result = await apiCall('/api/ingest-embed-replace', { url }, { timeoutMs: TIMEOUT_MS });
           const category = categorize(url, result);
@@ -1038,7 +1033,7 @@
           
           if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
             if (result.message && result.message.includes('duplicates')) {
-              addResult(`✅ Content already exists: ${url}  (source: site_urls.csv line ${i+2}) — ${result.message}`, 'success');
+              addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
               renderCategoryStats();
@@ -1050,21 +1045,20 @@
               renderCategoryStats();
             }
           } else {
-            const src = lines[i+1] || '';
             const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
             const reasonLc = reason.toLowerCase();
             if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
-              addResult(`✅ Skipped duplicate: ${url}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'success');
+              addResult(`✅ Skipped duplicate: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
               renderCategoryStats();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
-              addResult(`❌ Timeout: ${url}  (source: site_urls.csv line ${i+2})`, 'error');
+              addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
               renderCategoryStats();
             } else {
-              addResult(`❌ Failed: ${url}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
+              addResult(`❌ Failed: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
               renderCategoryStats();
@@ -1073,11 +1067,31 @@
           completed++;
           updateProgress((completed / urls.length) * 100, `Scraping (${completed}/${urls.length})`);
           updateStats();
-        }
+        });
+        
+        // Wait for all URLs in this batch to complete
+        await Promise.all(promises);
       }
 
-      const workers = Array.from({ length: Math.min(CONCURRENCY, urls.length) }, (_, idx) => worker(idx));
-      await Promise.all(workers);
+      // Process URLs in batches
+      const batches = [];
+      for (let i = 0; i < urls.length; i += BATCH_SIZE) {
+        batches.push(urls.slice(i, i + BATCH_SIZE));
+      }
+      
+      addResult(`📊 Processing ${urls.length} URLs in ${batches.length} batches of ${BATCH_SIZE}`, 'info');
+      
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        if (stopRequested) break;
+        
+        await processBatch(batches[batchIndex], batchIndex);
+        
+        // Add delay between batches (except for the last batch)
+        if (batchIndex < batches.length - 1) {
+          addResult(`⏳ Waiting ${BATCH_DELAY/1000}s before next batch...`, 'info');
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+        }
+      }
 
       if (stopRequested) {
         stats.stoppedCount = urls.length - completed;
