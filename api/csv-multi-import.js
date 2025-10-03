@@ -439,76 +439,37 @@ export default async function handler(req, res) {
     if (!entities.length) return sendJSON(res, 400, { error: 'bad_request', detail: `No valid ${contentType} entities found in CSV`, stage });
 
     stage = 'import_entities';
-    
-    // ALWAYS replace data - never skip duplicates
+
     const urls = entities.map(e => e.url);
+
+    // For events: perform strict per-row replace to avoid UNIQUE conflicts
+    if (contentType === 'event') {
+      let imported = 0;
+      for (const e of entities) {
+        // delete any existing rows for this URL (and event_dates)
+        await supa.from('event_dates').delete().eq('event_url', e.url);
+        await supa.from('page_entities').delete().eq('url', e.url).eq('kind', 'event');
+        if (e.date_start) {
+          await supa.from('page_entities').delete().eq('url', e.url).eq('date_start', e.date_start).eq('kind', 'event');
+        }
+        const { error: insOne } = await supa.from('page_entities').insert([e]);
+        if (insOne) {
+          return sendJSON(res, 500, { error: 'supabase_entities_upsert_failed', detail: insOne.message || insOne, stage: 'event_insert', url: e.url });
+        }
+        imported++;
+      }
+      stage = 'done';
+      return sendJSON(res, 200, { ok: true, imported, content_type: contentType, stage: 'inserted' });
+    }
+
+    // Non-event: batch replace (delete by URLs, then insert)
     if (urls.length) {
-      // Delete by URL first
       const { error: delE } = await supa.from('page_entities').delete().in('url', urls);
       if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
-      
-      // Also delete from event_dates table to clean up any orphaned records
-      const { error: delDates } = await supa.from('event_dates').delete().in('event_url', urls);
-      if (delDates) {
-        // Don't fail on this, just log it
-        console.warn('Failed to delete from event_dates:', delDates.message);
-      }
-      
-      // For events, also delete any potential duplicates by (url, date_start) combination
-      if (contentType === 'event') {
-        for (const e of entities) {
-          if (e.date_start) {
-            const { error: delDup } = await supa.from('page_entities')
-              .delete()
-              .eq('url', e.url)
-              .eq('date_start', e.date_start)
-              .eq('kind', 'event');
-            if (delDup) {
-              console.warn('Failed to delete potential duplicates:', delDup.message);
-            }
-          }
-        }
-      }
     }
-    
-    // Insert all entities (no more skipping)
-    const { error: insE } = await supa.from('page_entities').insert(entities);
-    if (insE) {
-      // If still getting constraint violation, try individual inserts with upsert
-      if (insE.message && insE.message.includes('uniq_events_with_date')) {
-        let imported = 0;
-        for (const e of entities) {
-          // Clean related event_dates rows first to avoid uniq_events_with_date conflicts
-          const { error: delDatesEach } = await supa
-            .from('event_dates')
-            .delete()
-            .eq('event_url', e.url);
-          if (delDatesEach) {
-            console.warn('Failed to delete event_dates for', e.url, delDatesEach.message);
-          }
+    const { error: insE2 } = await supa.from('page_entities').insert(entities);
+    if (insE2) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE2.message || insE2, stage });
 
-          // Then delete any existing page_entities rows with the same (url, date_start)
-          const { error: delExisting } = await supa.from('page_entities')
-            .delete()
-            .eq('url', e.url)
-            .eq('date_start', e.date_start)
-            .eq('kind', 'event');
-          if (delExisting) {
-            console.warn('Failed to delete existing event:', delExisting.message);
-          }
-
-          // Insert the new record
-          const { error: upsertE } = await supa.from('page_entities').insert([e]);
-          if (upsertE) {
-            return sendJSON(res, 500, { error: 'supabase_entities_upsert_failed', detail: upsertE.message || upsertE, stage, url: e.url });
-          }
-          imported++;
-        }
-        return sendJSON(res, 200, { ok: true, imported, content_type: contentType, stage: 'upserted' });
-      }
-      return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
-    }
-    
     stage = 'done';
     return sendJSON(res, 200, { ok: true, imported: entities.length, content_type: contentType, stage });
   } catch (err) {
