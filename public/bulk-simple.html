@@ -586,14 +586,38 @@
           // Update dashboard immediately
           renderCategoryStats();
         }
-        // Cache site_urls for Scrape when coming from bulk box
+        // Cache URLs for scraping from ALL CSV types
+        if (!window.__cachedCsvData) {
+          window.__cachedCsvData = {};
+        }
+        
+        // Extract URLs from this CSV
+        const lines = csvText.split('\n').filter(line => line.trim());
+        const urls = lines.slice(1).map(line => {
+          const values = line.split(',');
+          // Try different URL columns based on CSV type
+          if (contentType === 'site_urls' || contentType === 'landing_pages') {
+            return values[0]; // First column for site URLs
+          } else if (contentType === 'blog') {
+            return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+          } else if (contentType === 'event' || contentType === 'workshop') {
+            return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+          } else if (contentType === 'product' || contentType === 'service') {
+            return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+          }
+          return null;
+        }).filter(url => url && url.startsWith('http'));
+        
+        // Store URLs for this CSV type
+        window.__cachedCsvData[contentType] = {
+          urls: urls,
+          count: urls.length
+        };
+        
+        addResult(`🔗 ${contentType} URLs cached for Scrape step: ${urls.length} URLs`, 'info');
+        
+        // Update "Web Scraping" count for site_urls
         if (contentType === 'site_urls') {
-          window.__cachedSiteUrlsText = csvText;
-          addResult('🔗 Site URLs cached for Scrape step.', 'info');
-          
-          // Update Web Scraping count
-          const lines = csvText.split('\n').filter(line => line.trim());
-          const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
           stats.loadedRows = urls.length;
           updateStats();
           addResult(`📊 Found ${urls.length} URLs ready for scraping`);
@@ -627,6 +651,36 @@
           } else {
             console.log(`DEBUG: csvRowCounts does not have key: ${csvKey}`);
           }
+          
+          // Cache URLs for scraping from ALL CSV types (including regular imports)
+          if (!window.__cachedCsvData) {
+            window.__cachedCsvData = {};
+          }
+          
+          // Extract URLs from this CSV
+          const lines = csvText.split('\n').filter(line => line.trim());
+          const urls = lines.slice(1).map(line => {
+            const values = line.split(',');
+            // Try different URL columns based on CSV type
+            if (contentType === 'site_urls' || contentType === 'landing_pages') {
+              return values[0]; // First column for site URLs
+            } else if (contentType === 'blog') {
+              return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+            } else if (contentType === 'event' || contentType === 'workshop') {
+              return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+            } else if (contentType === 'product' || contentType === 'service') {
+              return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+            }
+            return null;
+          }).filter(url => url && url.startsWith('http'));
+          
+          // Store URLs for this CSV type
+          window.__cachedCsvData[contentType] = {
+            urls: urls,
+            count: urls.length
+          };
+          
+          addResult(`🔗 ${contentType} URLs cached for Scrape step: ${urls.length} URLs`, 'info');
         // Cache site_urls text for scrape step if it was imported via bulk box
         if (contentType === 'site_urls') {
           try { 
@@ -867,11 +921,38 @@
 
     // Website scraping
     async function scrapeWebsite() {
+      // Collect URLs from ALL CSV files, not just site_urls
+      let allUrls = [];
+      let urlSources = [];
+
+      // 1. Collect from site_urls CSV (if available)
       const siteUrlsFile = document.getElementById('siteUrlsCsv').files[0];
-      if (!siteUrlsFile && !window.__cachedSiteUrlsText) {
-        addResult('❌ Please select a Site URLs CSV file first', 'error');
+      if (siteUrlsFile || window.__cachedSiteUrlsText) {
+        const csvText = siteUrlsFile ? await siteUrlsFile.text() : String(window.__cachedSiteUrlsText || '');
+        const lines = csvText.split('\n').filter(line => line.trim());
+        const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
+        allUrls = allUrls.concat(urls);
+        urlSources.push(`site_urls: ${urls.length}`);
+      }
+
+      // 2. Collect from cached CSV data (from bulk import)
+      if (window.__cachedCsvData) {
+        for (const [type, data] of Object.entries(window.__cachedCsvData)) {
+          if (data.urls && data.urls.length > 0) {
+            allUrls = allUrls.concat(data.urls);
+            urlSources.push(`${type}: ${data.urls.length}`);
+          }
+        }
+      }
+
+      if (allUrls.length === 0) {
+        addResult('❌ No URLs found to scrape. Please import CSV files first.', 'error');
         return;
       }
+
+      // Remove duplicates while preserving order
+      const uniqueUrls = [...new Set(allUrls)];
+      const duplicateCount = allUrls.length - uniqueUrls.length;
 
       // enable stop button
       let stopRequested = false;
@@ -881,11 +962,11 @@
       addResult('🕷️ Starting website scraping...');
       document.getElementById('stepScrape').style.background = '#3a3';
       document.getElementById('stepScrape').textContent = '2️⃣ Scrape URLs: running';
-      const csvText = siteUrlsFile ? await siteUrlsFile.text() : String(window.__cachedSiteUrlsText || '');
-      const lines = csvText.split('\n').filter(line => line.trim());
-      const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
+      
+      addResult(`📊 Found ${uniqueUrls.length} unique URLs to scrape (${allUrls.length} total, ${duplicateCount} duplicates removed)`);
+      addResult(`📋 Sources: ${urlSources.join(', ')}`);
 
-      addResult(`📊 Found ${urls.length} URLs to scrape`);
+      const urls = uniqueUrls;
 
       // stats counters
       stats.loadedRows = urls.length;
