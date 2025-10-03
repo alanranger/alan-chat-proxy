@@ -658,11 +658,18 @@
       for (let i=0;i<plan.length;i++){
         const p = plan[i];
         addResult(`📦 Bulk importing ${p.file.name} as ${p.type}...`);
-        const result = await importCSV(p.file, p.type);
-        if (result && result.success) {
-          ok++;
-          totalCsvRows += result.csvRows || 0;
-          totalImported += result.imported || 0;
+        try {
+          const result = await importCSV(p.file, p.type);
+          if (result && result.success) {
+            ok++;
+            totalCsvRows += result.csvRows || 0;
+            totalImported += result.imported || 0;
+            addResult(`✅ ${p.file.name} completed successfully`, 'success');
+          } else {
+            addResult(`❌ ${p.file.name} failed to import`, 'error');
+          }
+        } catch (error) {
+          addResult(`❌ ${p.file.name} threw error: ${error.message}`, 'error');
         }
       }
       addResult(`✅ Bulk import finished: ${ok}/${plan.length} files imported`, 'success');
