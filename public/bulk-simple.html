@@ -516,6 +516,10 @@
       
       if (result && result.ok) {
         addResult(`✅ ${contentType} import successful: ${result.imported}/${csvRowCount} records (CSV rows → ingested)`, 'success');
+        // Store CSV count for dashboard display
+        if (csvRowCounts.hasOwnProperty(contentType)) {
+          csvRowCounts[contentType] = csvRowCount;
+        }
         // Cache site_urls text for scrape step if it was imported via bulk box
         if (contentType === 'site_urls') {
           try { window.__cachedSiteUrlsText = await file.text(); addResult('🔗 Site URLs cached for Scrape step.', 'info'); } catch {}
@@ -579,6 +583,9 @@
       addResult(`📊 Summary: ${totalImported}/${totalCsvRows} records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
       document.getElementById('stepImport').style.background = successCount===totalCount ? '#2a6' : '#a62';
       document.getElementById('stepImport').textContent = `1️⃣ Import CSVs: ${successCount}/${totalCount} (${totalImported}/${totalCsvRows} records)`;
+      
+      // Update dashboard with CSV counts
+      renderCategoryStats();
     }
 
     // --- Bulk CSV Upload ---
@@ -647,6 +654,9 @@
       }
       addResult(`✅ Bulk import finished: ${ok}/${plan.length} files imported`, 'success');
       addResult(`📊 Summary: ${totalImported}/${totalCsvRows} records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
+      
+      // Update dashboard with CSV counts
+      renderCategoryStats();
     }
 
     // Website scraping
@@ -745,7 +755,11 @@
           };
         });
         
-        const rows = Object.entries(combinedStats).map(([k,v]) => `<tr><td style="padding:4px 8px;">${formatCategory(k)}</td><td style="color:#51cf66">${v.success}</td><td style="color:#ff6b6b">${v.failed}</td><td style="color:#74c0fc">${v.skipped}</td></tr>`).join('');
+        const rows = Object.entries(combinedStats).map(([k,v]) => {
+          const csvCount = csvRowCounts[k] || 0;
+          const csvDisplay = csvCount > 0 ? ` (${csvCount} CSV)` : '';
+          return `<tr><td style="padding:4px 8px;">${formatCategory(k)}${csvDisplay}</td><td style="color:#51cf66">${v.success}</td><td style="color:#ff6b6b">${v.failed}</td><td style="color:#74c0fc">${v.skipped}</td></tr>`;
+        }).join('');
         el.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
       }
 
@@ -1111,6 +1125,17 @@
       successCount: 0,
       failedCount: 0,
       stoppedCount: 0
+    };
+    
+    // CSV row counts for dashboard display
+    let csvRowCounts = {
+      'blog_articles': 0,
+      'course_events': 0,
+      'workshop_events': 0,
+      'service_pages': 0,
+      'service_products': 0,
+      'landing_pages': 0,
+      'test_questions': 0
     };
     
     function updateStats() {
