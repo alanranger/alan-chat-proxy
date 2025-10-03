@@ -183,6 +183,10 @@ function normalizeEntity(item, pageUrl) {
   } else if (t === 'article' || t === 'blogposting' || t === 'newsarticle') {
     kind = 'article';
     date_start = firstOf(item.datePublished, item.dateCreated);
+    // Normalize date-only strings to ISO timestamp to satisfy timestamptz
+    if (date_start && /^\d{4}-\d{2}-\d{2}$/.test(String(date_start))) {
+      date_start = `${date_start}T00:00:00Z`;
+    }
     date_end = firstOf(item.dateModified);
   } else {
     return null; // ignore unrelated types
