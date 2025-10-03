@@ -948,12 +948,12 @@
           updateProgress((completed / urls.length) * 100, `Scraping ${url}...`);
           const result = await apiCall('/api/ingest-embed-replace', { url }, { timeoutMs: TIMEOUT_MS });
           const category = categorize(url, result);
-          console.log(`URL: ${url} -> Category: ${category}`);
+          addResult(`🔍 DEBUG: ${url} -> Category: ${category}`, 'info');
           
           // Ensure category exists in urlScrapingStats
           if (!urlScrapingStats[category]) {
             urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };
-            console.log(`Created category: ${category}`);
+            addResult(`🔍 DEBUG: Created category: ${category}`, 'info');
           }
           
           if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
@@ -966,7 +966,7 @@
               addResult(`✅ Scraped: ${url}`, 'success');
               stats.successCount++;
               urlScrapingStats[category].success++;
-              console.log(`Updated ${category}: success=${urlScrapingStats[category].success}`);
+              addResult(`🔍 DEBUG: Updated ${category}: success=${urlScrapingStats[category].success}`, 'info');
               renderCategoryStats();
             }
           } else {
