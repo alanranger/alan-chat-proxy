@@ -478,18 +478,26 @@ export default async function handler(req, res) {
       if (insE.message && insE.message.includes('uniq_events_with_date')) {
         let imported = 0;
         for (const e of entities) {
-          // First try to delete any existing records with same URL and date_start
+          // Clean related event_dates rows first to avoid uniq_events_with_date conflicts
+          const { error: delDatesEach } = await supa
+            .from('event_dates')
+            .delete()
+            .eq('event_url', e.url);
+          if (delDatesEach) {
+            console.warn('Failed to delete event_dates for', e.url, delDatesEach.message);
+          }
+
+          // Then delete any existing page_entities rows with the same (url, date_start)
           const { error: delExisting } = await supa.from('page_entities')
             .delete()
             .eq('url', e.url)
             .eq('date_start', e.date_start)
             .eq('kind', 'event');
-          
           if (delExisting) {
             console.warn('Failed to delete existing event:', delExisting.message);
           }
-          
-          // Then insert the new record
+
+          // Insert the new record
           const { error: upsertE } = await supa.from('page_entities').insert([e]);
           if (upsertE) {
             return sendJSON(res, 500, { error: 'supabase_entities_upsert_failed', detail: upsertE.message || upsertE, stage, url: e.url });

@@ -327,6 +327,10 @@ export default async function handler(req, res) {
       const { error: delE } = await supa.from('page_entities').delete().eq('url', url);
       if (delE) return sendJSON(res, 500, { error: 'supabase_entities_delete_failed', detail: delE.message || delE, stage });
 
+      // Also clear any event_dates rows linked to this URL to avoid uniq_events_with_date conflicts
+      const { error: delDates } = await supa.from('event_dates').delete().eq('event_url', url);
+      if (delDates) return sendJSON(res, 500, { error: 'supabase_event_dates_delete_failed', detail: delDates.message || delDates, stage });
+
       if (entities.length) {
         const { error: insE } = await supa.from('page_entities').insert(entities);
         if (insE) return sendJSON(res, 500, { error: 'supabase_entities_insert_failed', detail: insE.message || insE, stage });
