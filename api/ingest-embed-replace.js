@@ -261,31 +261,61 @@ function entitySnippets(entities) {
 async function getEmbeddings(inputs) {
   const oaKey = need('OPENAI_API_KEY');
 
-  const body = JSON.stringify({ model: 'text-embedding-3-small', input: inputs });
-  const resp = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    redirect: 'follow',
-    headers: {
-      Authorization: `Bearer ${oaKey}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'User-Agent': PRIMARY_UA
-    },
-    body
-  });
+  // Batch to reduce token-per-minute spikes; retry on 429 with backoff
+  const BATCH = 20;
+  const MAX_RETRIES = 5;
+  const results = [];
 
-  const ct = (resp.headers.get('content-type') || '').toLowerCase();
-  const text = await resp.text();
+  for (let i = 0; i < inputs.length; i += BATCH) {
+    const slice = inputs.slice(i, i + BATCH);
 
-  if (!resp.ok) throw new Error(`openai_error:${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
-  if (!ct.includes('application/json')) throw new Error(`openai_bad_content_type:${ct || '(none)'}:status=${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
+    let attempt = 0;
+    while (true) {
+      attempt++;
+      const body = JSON.stringify({ model: 'text-embedding-3-small', input: slice });
+      const resp = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        redirect: 'follow',
+        headers: {
+          Authorization: `Bearer ${oaKey}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'User-Agent': PRIMARY_UA
+        },
+        body
+      });
 
-  let j;
-  try { j = JSON.parse(text); } catch (e) { throw new Error(`openai_bad_json:${String(e?.message || e)}`); }
-  const out = (j?.data || []).map(d => d?.embedding);
-  if (!out.length) throw new Error('openai_empty_embeddings');
-  if (!Array.isArray(out[0]) || out[0].length !== 1536) throw new Error('openai_bad_embedding_dim');
-  return out;
+      const ct = (resp.headers.get('content-type') || '').toLowerCase();
+      const text = await resp.text();
+
+      if (resp.status === 429 && attempt <= MAX_RETRIES) {
+        // Respect Retry-After if present; else exponential backoff with jitter
+        const ra = parseFloat(resp.headers.get('retry-after') || '0');
+        const base = ra > 0 ? ra * 1000 : Math.min(2000 * Math.pow(2, attempt - 1), 8000);
+        const jitter = Math.floor(Math.random() * 250);
+        await new Promise(r => setTimeout(r, base + jitter));
+        continue;
+      }
+
+      if (!resp.ok)
+        throw new Error(`openai_error:${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
+      if (!ct.includes('application/json'))
+        throw new Error(`openai_bad_content_type:${ct || '(none)'}:status=${resp.status}:url=${resp.url || '(unknown)'}:${text.slice(0, 300)}`);
+
+      let j;
+      try { j = JSON.parse(text); } catch (e) { throw new Error(`openai_bad_json:${String(e?.message || e)}`); }
+      const out = (j?.data || []).map(d => d?.embedding);
+      if (!out.length) throw new Error('openai_empty_embeddings');
+      if (!Array.isArray(out[0]) || out[0].length !== 1536) throw new Error('openai_bad_embedding_dim');
+      results.push(...out);
+
+      // small pacing between batches to smooth TPM
+      await new Promise(r => setTimeout(r, 150));
+      break;
+    }
+  }
+
+  return results;
 }
 
 /* ========== handler ========== */
