@@ -800,9 +800,9 @@
         }
         
         // Update main dashboard progress
-        const progressEl = document.getElementById('csvImportedRows');
-        if (progressEl) {
-          progressEl.textContent = `Importing ${i + 1}/${plan.length}...`;
+        const dashboardEl = document.getElementById('csvImportedRows');
+        if (dashboardEl) {
+          dashboardEl.textContent = `Importing ${i + 1}/${plan.length}...`;
         }
         
         addResult(`📦 Bulk importing ${p.file.name} as ${p.type}...`);
@@ -822,9 +822,9 @@
       }
       
       // Remove progress bar
-      const progressEl = document.getElementById('bulkProgressContainer');
-      if (progressEl) {
-        progressEl.remove();
+      const progressContainer = document.getElementById('bulkProgressContainer');
+      if (progressContainer) {
+        progressContainer.remove();
       }
       
       // Reset main dashboard to show final count
