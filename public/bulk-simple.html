@@ -177,11 +177,11 @@
       <div class="card">
         <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 10px;">
               <div class="stat-box" title="Total CSV data imported (blogs, events, workshops, products)">
-                <div class="stat-label">CSV Imported</div>
+                <div class="stat-label">Content Imported</div>
                 <div class="stat-value" id="csvImportedRows">0</div>
               </div>
-              <div class="stat-box" title="Total URLs loaded from site_urls.csv for scraping">
-                <div class="stat-label">URLs to Scrape</div>
+              <div class="stat-box" title="Total URLs loaded from site_urls.csv for web scraping">
+                <div class="stat-label">Web Scraping</div>
                 <div class="stat-value" id="loadedRows">0</div>
               </div>
               <div class="stat-box" title="URLs successfully scraped or skipped as duplicates">
@@ -761,6 +761,13 @@
       addResult('🔄 Starting bulk import with progress tracking...', 'info');
       progressContainer.scrollIntoView({ behavior: 'smooth' });
       
+      // Show progress in main dashboard too
+      const progressEl = document.getElementById('csvImportedRows');
+      if (progressEl) {
+        progressEl.textContent = 'Importing...';
+        progressEl.style.color = '#69db7c';
+      }
+      
       // Debug: Check if elements exist
       console.log('Progress bar elements:', {
         container: document.getElementById('bulkProgressContainer'),
@@ -788,6 +795,12 @@
           console.warn('Progress bar elements not found!', { progressBar, progressText });
         }
         
+        // Update main dashboard progress
+        const progressEl = document.getElementById('csvImportedRows');
+        if (progressEl) {
+          progressEl.textContent = `Importing ${i + 1}/${plan.length}...`;
+        }
+        
         addResult(`📦 Bulk importing ${p.file.name} as ${p.type}...`);
         try {
           const result = await importCSV(p.file, p.type);
@@ -808,6 +821,13 @@
       const progressEl = document.getElementById('bulkProgressContainer');
       if (progressEl) {
         progressEl.remove();
+      }
+      
+      // Reset main dashboard to show final count
+      const finalProgressEl = document.getElementById('csvImportedRows');
+      if (finalProgressEl) {
+        finalProgressEl.textContent = stats.csvImportedRows;
+        finalProgressEl.style.color = '';
       }
       
       addResult(`✅ Bulk import finished: ${ok}/${plan.length} files imported`, 'success');
@@ -844,7 +864,7 @@
       stats.successCount = 0;
       stats.failedCount = 0;
       stats.stoppedCount = 0;
-      updateStats();
+      updateStats(); // Update dashboard immediately
 
       // Separate CSV import stats from URL scraping stats for clarity
       const cat = () => ({ success: 0, failed: 0, skipped: 0 });
