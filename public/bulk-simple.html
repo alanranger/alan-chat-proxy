@@ -730,6 +730,7 @@
 
       // Show progress bar
       const progressContainer = document.createElement('div');
+      progressContainer.id = 'bulkProgressContainer';
       progressContainer.innerHTML = `
         <div style="margin: 10px 0; padding: 10px; background: #1b1b1b; border: 1px solid #333; border-radius: 4px;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
@@ -742,6 +743,9 @@
         </div>
       `;
       document.getElementById('results').appendChild(progressContainer);
+      
+      // Force initial display
+      addResult('🔄 Starting bulk import with progress tracking...', 'info');
 
       // Import sequentially for clear logs
       let ok = 0;
@@ -752,8 +756,16 @@
         
         // Update progress
         const progress = ((i + 1) / plan.length) * 100;
-        document.getElementById('bulkProgressBar').style.width = progress + '%';
-        document.getElementById('bulkProgressText').textContent = `${i + 1}/${plan.length}`;
+        const progressBar = document.getElementById('bulkProgressBar');
+        const progressText = document.getElementById('bulkProgressText');
+        
+        if (progressBar && progressText) {
+          progressBar.style.width = progress + '%';
+          progressText.textContent = `${i + 1}/${plan.length}`;
+          console.log(`Progress: ${i + 1}/${plan.length} (${progress.toFixed(1)}%)`);
+        } else {
+          console.warn('Progress bar elements not found!', { progressBar, progressText });
+        }
         
         addResult(`📦 Bulk importing ${p.file.name} as ${p.type}...`);
         try {
@@ -772,7 +784,10 @@
       }
       
       // Remove progress bar
-      progressContainer.remove();
+      const progressEl = document.getElementById('bulkProgressContainer');
+      if (progressEl) {
+        progressEl.remove();
+      }
       
       addResult(`✅ Bulk import finished: ${ok}/${plan.length} files imported`, 'success');
       addResult(`📊 Summary: ${totalImported}/${totalCsvRows} records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
@@ -838,9 +853,9 @@
         if (u.includes('/blog') || u.includes('/news') || u.includes('/blog-on-photography')) return 'blog_articles';
         if (u.includes('/course') || u.includes('/lesson') || u.includes('/beginners-photography-lessons')) return 'course_events';
         if (u.includes('/workshop') || u.includes('/photo-workshop') || u.includes('/photographic-workshops-near-me') || u.includes('/photo-workshops-uk')) return 'workshop_events';
-        if (u.includes('/service') || u.includes('/mentoring') || u.includes('/photography-services-near-me')) return 'service_pages';
+        if (u.includes('/service') || u.includes('/mentoring') || u.includes('/photography-services-near-me')) return 'service_products'; // Changed from service_pages
         if (u.includes('/shop') || u.includes('/product') || u.includes('/photography-shop') || u.includes('/photography-presents')) return 'service_products';
-        if (u.includes('/landing') || u.includes('/page')) return 'landing_pages';
+        if (u.includes('/landing') || u.includes('/page')) return 'website_urls'; // Changed from landing_pages
         
         // Check for JSON-LD content in result
         if (result && result.jsonLdFound) return 'json_extraction';
