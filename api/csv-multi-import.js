@@ -162,7 +162,7 @@ function transformWorkshopData(row) {
     location: locationHints.join(', ') || null,
     price: null,
     price_currency: null,
-    availability: null,
+    availability: 'https://schema.org/EventScheduled',
     sku: null,
     provider: 'Alan Ranger Photography',
     source_url: url,

@@ -903,6 +903,71 @@ function buildEventPills(firstEvent, productOrNull, fallbackProduct = null) {
   return pills;
 }
 
+/* ================= Enrichment helpers ================= */
+async function fetchProductEntitiesByUrl(client, productUrls = []) {
+  const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
+  if (!urls.length) return new Map();
+  const { data, error } = await client
+    .from("page_entities")
+    .select("page_url, source_url, title, description, raw")
+    .in("page_url", urls);
+  if (error) return new Map();
+  const map = new Map();
+  for (const row of data || []) {
+    map.set(baseUrl(pickUrl(row)), row);
+  }
+  return map;
+}
+
+async function enrichEventsWithProductData(client, events = [], products = []) {
+  if (!events?.length) return events;
+  const productUrlSet = new Set(
+    (events || [])
+      .map((e) => e?.raw?.product_url || e.product_url)
+      .filter(Boolean)
+      .map(baseUrl)
+  );
+  if (!productUrlSet.size) return events;
+
+  const productUrls = Array.from(productUrlSet);
+  const [availMap, entitiesMap] = await Promise.all([
+    fetchAvailability(client, productUrls),
+    fetchProductEntitiesByUrl(client, productUrls),
+  ]);
+
+  return (events || []).map((e) => {
+    const pUrl = baseUrl(e?.raw?.product_url || e.product_url || "");
+    if (!pUrl) return e;
+
+    // Availability: prefer event.availability; else availability view; else product view field
+    const avail = e.raw?.availability || e.availability;
+    const byView = availMap.get(pUrl)?.availability_status || null;
+    const availability = avail || byView || null;
+
+    // Participants / Fitness from product description/meta
+    const ent = entitiesMap.get(pUrl) || null;
+    let participants = e.raw?.participants || e.participants || null;
+    let fitness_level = e.raw?.fitness_level || e.fitness_level || null;
+    if (ent) {
+      const longDesc =
+        ent?.raw?.metaDescription ||
+        ent?.raw?.meta?.description ||
+        ent?.description ||
+        "";
+      const parsed = parseProductBlock(longDesc);
+      participants = participants || parsed.participants || null;
+      fitness_level = fitness_level || parsed.fitness || null;
+    }
+
+    return {
+      ...e,
+      availability,
+      participants,
+      fitness_level,
+    };
+  });
+}
+
 /* === location filtering with phrase support === */
 function filterEventsByLocationKeywords(events, keywords, rawQuery) {
   const expanded = expandLocationKeywords(
@@ -977,6 +1042,13 @@ export default async function handler(req, res) {
         products = (products || []).filter(isCourseProduct);
       } else if (subtype === "workshop") {
         products = (products || []).filter(isWorkshopProduct);
+      }
+
+      // Enrich events with product-derived availability/participants/fitness when missing
+      try {
+        events = await enrichEventsWithProductData(client, events, products);
+      } catch {
+        // best-effort enrichment; ignore failures
       }
     } else {
       [articles, products] = await Promise.all([
