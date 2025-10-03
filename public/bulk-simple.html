@@ -1455,15 +1455,29 @@
         return labels[cat] || cat;
       };
       
+      // Calculate totals
+      let totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0, totalCsvCount = 0;
+      
       // Create rows from urlScrapingStats
       const rows = Object.entries(urlScrapingStats || {}).map(([key, stats]) => {
         const csvCount = csvRowCounts[key] || 0;
         const csvDisplay = csvCount > 0 ? ` (${csvCount} CSV)` : '';
         const duplicatesRemoved = Math.max(0, csvCount - (stats.success + stats.failed + stats.skipped));
+        
+        // Add to totals
+        totalSuccess += stats.success || 0;
+        totalFailed += stats.failed || 0;
+        totalSkipped += stats.skipped || 0;
+        totalDuplicatesRemoved += duplicatesRemoved;
+        totalCsvCount += csvCount;
+        
         return `<tr><td style="padding:4px 8px;">${formatCategory(key)}${csvDisplay}</td><td style="color:#51cf66">${stats.success || 0}</td><td style="color:#ff6b6b">${stats.failed || 0}</td><td style="color:#74c0fc">${stats.skipped || 0}</td><td style="color:#ffd43b">${duplicatesRemoved}</td></tr>`;
       }).join('');
       
-      const html = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th><th style="text-align:left;padding:4px 8px;">Duplicates Removed</th></tr></thead><tbody>${rows}</tbody></table>`;
+      // Add totals row
+      const totalsRow = `<tr style="border-top:2px solid #666;font-weight:bold;background:#2a2a2a;"><td style="padding:4px 8px;">TOTALS (${totalCsvCount} CSV)</td><td style="color:#51cf66">${totalSuccess}</td><td style="color:#ff6b6b">${totalFailed}</td><td style="color:#74c0fc">${totalSkipped}</td><td style="color:#ffd43b">${totalDuplicatesRemoved}</td></tr>`;
+      
+      const html = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th><th style="text-align:left;padding:4px 8px;">Duplicates Removed</th></tr></thead><tbody>${rows}${totalsRow}</tbody></table>`;
       el.innerHTML = html;
     }
     
