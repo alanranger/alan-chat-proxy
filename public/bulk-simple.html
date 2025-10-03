@@ -590,6 +590,13 @@
         if (contentType === 'site_urls') {
           window.__cachedSiteUrlsText = csvText;
           addResult('🔗 Site URLs cached for Scrape step.', 'info');
+          
+          // Update Web Scraping count
+          const lines = csvText.split('\n').filter(line => line.trim());
+          const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
+          stats.loadedRows = urls.length;
+          updateStats();
+          addResult(`📊 Found ${urls.length} URLs ready for scraping`);
         }
         addResult(`ℹ️ ${contentType} files are for reference only - not imported to database`, 'info');
         return { success: true, csvRows: actualRowCount, imported: 0 }; // Count as successful since these are reference files
@@ -622,7 +629,17 @@
           }
         // Cache site_urls text for scrape step if it was imported via bulk box
         if (contentType === 'site_urls') {
-          try { window.__cachedSiteUrlsText = await file.text(); addResult('🔗 Site URLs cached for Scrape step.', 'info'); } catch {}
+          try { 
+            window.__cachedSiteUrlsText = await file.text(); 
+            addResult('🔗 Site URLs cached for Scrape step.', 'info');
+            
+            // Update Web Scraping count
+            const lines = window.__cachedSiteUrlsText.split('\n').filter(line => line.trim());
+            const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
+            stats.loadedRows = urls.length;
+            updateStats();
+            addResult(`📊 Found ${urls.length} URLs ready for scraping`);
+          } catch {}
         }
         return { success: true, csvRows: actualRowCount, imported: result.imported };
       } else {
@@ -778,6 +795,9 @@
         bar: document.getElementById('bulkProgressBar'),
         text: document.getElementById('bulkProgressText')
       });
+      
+      // Force a small delay to ensure DOM is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Import sequentially for clear logs
       let ok = 0;
@@ -936,6 +956,9 @@
             console.log(`Created category ${category} in urlScrapingStats`);
           }
           
+          // Debug: Log the category being processed
+          console.log(`Processing URL: ${url} -> Category: ${category}`);
+          
           if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
             if (result.message && result.message.includes('duplicates')) {
               addResult(`✅ Content already exists: ${url}  (source: site_urls.csv line ${i+2}) — ${result.message}`, 'success');
@@ -990,6 +1013,10 @@
 
       updateProgress(100, 'Website scraping complete');
       addResult('🎉 Website scraping complete!', 'success');
+      
+      // Debug: Log final urlScrapingStats
+      console.log('Final urlScrapingStats:', urlScrapingStats);
+      
       document.getElementById('stepScrape').style.background = stats.failedCount === 0 ? '#2a6' : '#a62';
       document.getElementById('stepScrape').textContent = `2️⃣ Scrape URLs: ${stats.successCount} ok, ${stats.failedCount} failed, ${stats.stoppedCount} stopped`;
       document.getElementById('stopScrapeBtn').style.display = 'none';
