@@ -1399,6 +1399,7 @@
         const html = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
         console.log('🔍 renderCategoryStats - HTML length:', html.length);
         console.log('🔍 renderCategoryStats - rows count:', rows.split('</tr>').length - 1);
+        addResult(`🔍 renderCategoryStats - HTML length: ${html.length}, rows: ${rows.split('</tr>').length - 1}`, 'info');
         el2.innerHTML = html;
       }, 10); // Small delay to ensure DOM is ready
     }
