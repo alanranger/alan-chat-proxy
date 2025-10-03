@@ -29,41 +29,84 @@ const sendJSON = (res, status, obj) => {
 
 /* ========== CSV parsing ========== */
 function parseCSV(csvText) {
-  const lines = csvText.split('\n').filter(line => line.trim());
+  const lines = csvText.split('\n');
   if (lines.length < 2) return [];
 
-  function parseCSVLine(line) {
+  // Proper CSV parser that handles multi-line content within quoted fields
+  function parseCSVLine(line, startIndex = 0) {
     const result = [];
     let current = '';
     let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
+    let i = startIndex;
+    
+    while (i < line.length) {
       const ch = line[i];
       if (ch === '"') {
-        // toggle quotes; handle doubled quotes by consuming second quote
-        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-        else { inQuotes = !inQuotes; }
+        // Handle escaped quotes
+        if (inQuotes && line[i + 1] === '"') { 
+          current += '"'; 
+          i += 2; 
+          continue; 
+        }
+        inQuotes = !inQuotes;
       } else if (ch === ',' && !inQuotes) {
         result.push(current);
         current = '';
+        i++;
+        continue;
       } else {
         current += ch;
       }
+      i++;
     }
     result.push(current);
     return result.map(s => s.replace(/^\s+|\s+$/g, '').replace(/^"|"$/g, ''));
   }
 
-  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
+  // Find the header line
+  const headerLine = lines[0];
+  const headers = parseCSVLine(headerLine).map(h => h.toLowerCase());
+  
   const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
-    if (values.length !== headers.length) continue;
-    const row = {};
-    headers.forEach((header, idx) => {
-      row[header] = values[idx];
-    });
-    rows.push(row);
+  let i = 1;
+  
+  while (i < lines.length) {
+    let line = lines[i];
+    
+    // If line is empty, skip
+    if (!line.trim()) {
+      i++;
+      continue;
+    }
+    
+    // Check if we're in the middle of a multi-line quoted field
+    let quoteCount = (line.match(/"/g) || []).length;
+    let j = i + 1;
+    
+    // If odd number of quotes, we're in a multi-line field - keep concatenating
+    while (quoteCount % 2 !== 0 && j < lines.length) {
+      line += '\n' + lines[j];
+      quoteCount = (line.match(/"/g) || []).length;
+      j++;
+    }
+    
+    const values = parseCSVLine(line);
+    
+    // Only process if we have the right number of columns
+    if (values.length === headers.length) {
+      const row = {};
+      headers.forEach((header, idx) => {
+        row[header] = values[idx];
+      });
+      rows.push(row);
+    } else {
+      // Log problematic rows for debugging
+      console.warn(`CSV row ${i} has ${values.length} columns, expected ${headers.length}:`, values.slice(0, 3));
+    }
+    
+    i = j;
   }
+  
   return rows;
 }
 
