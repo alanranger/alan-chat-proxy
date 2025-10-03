@@ -510,6 +510,10 @@
       
       if (result && result.ok) {
         addResult(`✅ ${contentType} import successful: ${result.imported} records`, 'success');
+        // Cache site_urls text for scrape step if it was imported via bulk box
+        if (contentType === 'site_urls') {
+          try { window.__cachedSiteUrlsText = await file.text(); addResult('🔗 Site URLs cached for Scrape step.', 'info'); } catch {}
+        }
         return true;
       } else {
         addResult(`❌ ${contentType} import failed: ${result?.error || result?.detail || 'Unknown error'}`, 'error');
@@ -628,7 +632,7 @@
     // Website scraping
     async function scrapeWebsite() {
       const siteUrlsFile = document.getElementById('siteUrlsCsv').files[0];
-      if (!siteUrlsFile) {
+      if (!siteUrlsFile && !window.__cachedSiteUrlsText) {
         addResult('❌ Please select a Site URLs CSV file first', 'error');
         return;
       }
@@ -641,7 +645,7 @@
       addResult('🕷️ Starting website scraping...');
       document.getElementById('stepScrape').style.background = '#3a3';
       document.getElementById('stepScrape').textContent = '2️⃣ Scrape URLs: running';
-      const csvText = await siteUrlsFile.text();
+      const csvText = siteUrlsFile ? await siteUrlsFile.text() : String(window.__cachedSiteUrlsText || '');
       const lines = csvText.split('\n').filter(line => line.trim());
       const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
 
