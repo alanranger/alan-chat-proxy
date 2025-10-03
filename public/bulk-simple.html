@@ -1344,7 +1344,7 @@
             }
             
             const data = await response.json();
-            const answer = data.answer || 'No answer provided';
+            const answer = data.answer_markdown || data.answer || 'No answer provided';
             const citations = (data.citations || []).join('; ');
             
             results.push({
