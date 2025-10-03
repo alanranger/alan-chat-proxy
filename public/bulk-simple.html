@@ -953,26 +953,18 @@
           // Ensure category exists in urlScrapingStats
           if (!urlScrapingStats[category]) {
             urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };
-            console.log(`Created category ${category} in urlScrapingStats`);
           }
-          
-          // Debug: Log the category being processed
-          console.log(`Processing URL: ${url} -> Category: ${category}`);
           
           if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
             if (result.message && result.message.includes('duplicates')) {
               addResult(`✅ Content already exists: ${url}  (source: site_urls.csv line ${i+2}) — ${result.message}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              console.log(`🔄 Updated ${category}: skipped=${urlScrapingStats[category].skipped}`);
-              console.log(`📊 urlScrapingStats[${category}]:`, urlScrapingStats[category]);
               renderCategoryStats();
             } else {
               addResult(`✅ Scraped: ${url}`, 'success');
               stats.successCount++;
               urlScrapingStats[category].success++;
-              console.log(`🔄 Updated ${category}: success=${urlScrapingStats[category].success}`);
-              console.log(`📊 urlScrapingStats[${category}]:`, urlScrapingStats[category]);
               renderCategoryStats();
             }
           } else {
@@ -983,19 +975,16 @@
               addResult(`✅ Skipped duplicate: ${url}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              console.log(`Updated ${category}: skipped=${urlScrapingStats[category].skipped}`);
               renderCategoryStats();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
               addResult(`❌ Timeout: ${url}  (source: site_urls.csv line ${i+2})`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
-              console.log(`Updated ${category}: failed=${urlScrapingStats[category].failed}`);
               renderCategoryStats();
             } else {
               addResult(`❌ Failed: ${url}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
-              console.log(`Updated ${category}: failed=${urlScrapingStats[category].failed}`);
               renderCategoryStats();
             }
           }
@@ -1017,7 +1006,6 @@
       addResult('🎉 Website scraping complete!', 'success');
       
       // Debug: Log final urlScrapingStats
-      console.log('Final urlScrapingStats:', urlScrapingStats);
       
       document.getElementById('stepScrape').style.background = stats.failedCount === 0 ? '#2a6' : '#a62';
       document.getElementById('stepScrape').textContent = `2️⃣ Scrape URLs: ${stats.successCount} ok, ${stats.failedCount} failed, ${stats.stoppedCount} stopped`;
@@ -1355,9 +1343,6 @@
     
     // Global function to render category stats
     function renderCategoryStats() {
-      console.log('🔍 renderCategoryStats called');
-      console.log('urlScrapingStats:', urlScrapingStats);
-      console.log('csvRowCounts:', csvRowCounts);
       
       const el = document.getElementById('categoryStats');
       if (!el) {
@@ -1395,9 +1380,7 @@
         return `<tr><td style="padding:4px 8px;">${formatCategory(k)}${csvDisplay}</td><td style="color:#51cf66">${v.success}</td><td style="color:#ff6b6b">${v.failed}</td><td style="color:#74c0fc">${v.skipped}</td></tr>`;
       }).join('');
       
-      console.log('📋 Generated HTML rows:', rows);
       el.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
-      console.log('✅ Category stats rendered');
     }
     
     function updateStats() {
