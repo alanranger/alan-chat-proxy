@@ -605,7 +605,7 @@
       if (h.includes('title,') && h.includes('url')) return 'blog';
       if (h.includes('product url') || h.includes('price')) return 'product';
       if (h.includes('service') || h.includes('mentoring')) return 'service';
-      if (h.startsWith('url')) return 'site_urls';
+      if (h.startsWith('url') || h.includes('url') && !h.includes('title')) return 'site_urls';
       if (h.includes('landing')) return 'landing_pages';
       return null;
     }
@@ -618,6 +618,7 @@
       if (n.includes('product')) return 'product';
       if (n.includes('service')) return 'service';
       if (n.includes('site') && n.includes('url')) return 'site_urls';
+      if (n.includes('urls') || n.includes('url')) return 'site_urls';
       if (n.includes('landing')) return 'landing_pages';
       if (n.includes('question')) return 'test_questions';
       return null;
