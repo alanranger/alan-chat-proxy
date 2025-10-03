@@ -1343,15 +1343,28 @@
       'test_questions': 'test_questions'
     };
     
-    // Simple function to update category stats
+    // Global function to render category stats
     function renderCategoryStats() {
+      console.log('🔍 renderCategoryStats called!');
       const el = document.getElementById('categoryStats');
-      if (!el) return;
+      if (!el) {
+        console.warn('❌ categoryStats element not found!');
+        return; // Element might not exist yet
+      }
       
+      // Force a small delay to ensure DOM is ready
+      setTimeout(() => {
+        const el2 = document.getElementById('categoryStats');
+        if (!el2) {
+          console.warn('❌ categoryStats element still not found after delay!');
+          return;
+        }
+      
+      // Format category names for display
       const formatCategory = (cat) => {
         const labels = {
           'blog_articles': 'Blog Articles',
-          'course_events': 'Course Events', 
+          'course_events': 'Course Events',
           'workshop_events': 'Workshop Events',
           'service_products': 'Service Products',
           'website_urls': 'Website URLs',
@@ -1360,13 +1373,32 @@
         return labels[cat] || cat;
       };
       
-      const rows = Object.entries(urlScrapingStats || {}).map(([key, stats]) => {
-        const csvCount = csvRowCounts[key] || 0;
+      // Combine both stats for display
+      const combinedStats = {};
+      console.log('🔍 renderCategoryStats - urlScrapingStats:', urlScrapingStats);
+      Object.keys(urlScrapingStats || {}).forEach(key => {
+        combinedStats[key] = {
+          success: (urlScrapingStats[key]?.success || 0),
+          failed: (urlScrapingStats[key]?.failed || 0),
+          skipped: (urlScrapingStats[key]?.skipped || 0)
+        };
+        console.log(`📊 Category ${key}:`, combinedStats[key]);
+      });
+      console.log('🔍 renderCategoryStats - combinedStats:', combinedStats);
+      console.log('🔍 renderCategoryStats - element found:', !!el);
+      console.log('🔍 renderCategoryStats - innerHTML length:', el.innerHTML.length);
+
+      const rows = Object.entries(combinedStats).map(([k,v]) => {
+        const csvCount = csvRowCounts[k] || 0;
         const csvDisplay = csvCount > 0 ? ` (${csvCount} CSV)` : '';
-        return `<tr><td style="padding:4px 8px;">${formatCategory(key)}${csvDisplay}</td><td style="color:#51cf66">${stats.success || 0}</td><td style="color:#ff6b6b">${stats.failed || 0}</td><td style="color:#74c0fc">${stats.skipped || 0}</td></tr>`;
+        return `<tr><td style="padding:4px 8px;">${formatCategory(k)}${csvDisplay}</td><td style="color:#51cf66">${v.success}</td><td style="color:#ff6b6b">${v.failed}</td><td style="color:#74c0fc">${v.skipped}</td></tr>`;
       }).join('');
       
-      el.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
+        const html = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
+        console.log('🔍 renderCategoryStats - HTML length:', html.length);
+        console.log('🔍 renderCategoryStats - rows count:', rows.split('</tr>').length - 1);
+        el2.innerHTML = html;
+      }, 10); // Small delay to ensure DOM is ready
     }
     
     function updateStats() {
