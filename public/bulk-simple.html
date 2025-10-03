@@ -747,41 +747,6 @@
         return 'website_urls';
       }
 
-      function renderCategoryStats() {
-        const el = document.getElementById('categoryStats');
-        // Format category names for display
-        const formatCategory = (cat) => {
-          const labels = {
-            'blog_articles': 'Blog Articles',
-            'course_events': 'Course Events', 
-            'workshop_events': 'Workshop Events',
-            'service_pages': 'Service Pages',
-            'service_products': 'Service Products',
-            'landing_pages': 'Landing Pages',
-            'test_questions': 'Test Questions',
-            'website_urls': 'Website URLs',
-            'json_extraction': 'JSON Extraction'
-          };
-          return labels[cat] || cat;
-        };
-        
-        // Combine both stats for display
-        const combinedStats = {};
-        Object.keys(urlScrapingStats).forEach(key => {
-          combinedStats[key] = {
-            success: urlScrapingStats[key].success,
-            failed: urlScrapingStats[key].failed,
-            skipped: urlScrapingStats[key].skipped
-          };
-        });
-        
-        const rows = Object.entries(combinedStats).map(([k,v]) => {
-          const csvCount = csvRowCounts[k] || 0;
-          const csvDisplay = csvCount > 0 ? ` (${csvCount} CSV)` : '';
-          return `<tr><td style="padding:4px 8px;">${formatCategory(k)}${csvDisplay}</td><td style="color:#51cf66">${v.success}</td><td style="color:#ff6b6b">${v.failed}</td><td style="color:#74c0fc">${v.skipped}</td></tr>`;
-        }).join('');
-        el.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
-      }
 
       // Parallel worker pool
       const CONCURRENCY = 8;
@@ -1167,6 +1132,43 @@
       'site_urls': 'website_urls',
       'test_questions': 'test_questions'
     };
+    
+    // Global function to render category stats
+    function renderCategoryStats() {
+      const el = document.getElementById('categoryStats');
+      if (!el) return; // Element might not exist yet
+      
+      // Format category names for display
+      const formatCategory = (cat) => {
+        const labels = {
+          'blog_articles': 'Blog Articles',
+          'course_events': 'Course Events', 
+          'workshop_events': 'Workshop Events',
+          'service_pages': 'Service Pages',
+          'service_products': 'Service Products',
+          'website_urls': 'Website URLs',
+          'json_extraction': 'JSON Extraction'
+        };
+        return labels[cat] || cat;
+      };
+      
+      // Combine both stats for display
+      const combinedStats = {};
+      Object.keys(urlScrapingStats || {}).forEach(key => {
+        combinedStats[key] = {
+          success: (urlScrapingStats[key]?.success || 0),
+          failed: (urlScrapingStats[key]?.failed || 0),
+          skipped: (urlScrapingStats[key]?.skipped || 0)
+        };
+      });
+      
+      const rows = Object.entries(combinedStats).map(([k,v]) => {
+        const csvCount = csvRowCounts[k] || 0;
+        const csvDisplay = csvCount > 0 ? ` (${csvCount} CSV)` : '';
+        return `<tr><td style="padding:4px 8px;">${formatCategory(k)}${csvDisplay}</td><td style="color:#51cf66">${v.success}</td><td style="color:#ff6b6b">${v.failed}</td><td style="color:#74c0fc">${v.skipped}</td></tr>`;
+      }).join('');
+      el.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
     
     function updateStats() {
       document.getElementById('loadedRows').textContent = stats.loadedRows;
