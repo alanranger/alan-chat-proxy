@@ -419,6 +419,7 @@ export default async function handler(req, res) {
       len: fullText.length,
       chunks: rows.length,
       entities: entities.length,
+      jsonLdFound: entities.length > 0,
       stage
     });
   } catch (err) {
