@@ -744,8 +744,16 @@
       `;
       document.getElementById('results').appendChild(progressContainer);
       
-      // Force initial display
+      // Force initial display and scroll to progress bar
       addResult('🔄 Starting bulk import with progress tracking...', 'info');
+      progressContainer.scrollIntoView({ behavior: 'smooth' });
+      
+      // Debug: Check if elements exist
+      console.log('Progress bar elements:', {
+        container: document.getElementById('bulkProgressContainer'),
+        bar: document.getElementById('bulkProgressBar'),
+        text: document.getElementById('bulkProgressText')
+      });
 
       // Import sequentially for clear logs
       let ok = 0;
@@ -880,16 +888,25 @@
           updateProgress((completed / urls.length) * 100, `Scraping ${url}...`);
           const result = await apiCall('/api/ingest-embed-replace', { url }, { timeoutMs: TIMEOUT_MS });
           const category = categorize(url, result);
+          
+          // Ensure category exists in urlScrapingStats
+          if (!urlScrapingStats[category]) {
+            urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };
+            console.log(`Created category ${category} in urlScrapingStats`);
+          }
+          
           if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
             if (result.message && result.message.includes('duplicates')) {
               addResult(`✅ Content already exists: ${url}  (source: site_urls.csv line ${i+2}) — ${result.message}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
+              console.log(`Updated ${category}: skipped=${urlScrapingStats[category].skipped}`);
               renderCategoryStats();
             } else {
               addResult(`✅ Scraped: ${url}`, 'success');
               stats.successCount++;
               urlScrapingStats[category].success++;
+              console.log(`Updated ${category}: success=${urlScrapingStats[category].success}`);
               renderCategoryStats();
             }
           } else {
@@ -900,16 +917,19 @@
               addResult(`✅ Skipped duplicate: ${url}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
+              console.log(`Updated ${category}: skipped=${urlScrapingStats[category].skipped}`);
               renderCategoryStats();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
               addResult(`❌ Timeout: ${url}  (source: site_urls.csv line ${i+2})`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
+              console.log(`Updated ${category}: failed=${urlScrapingStats[category].failed}`);
               renderCategoryStats();
             } else {
               addResult(`❌ Failed: ${url}  (source: site_urls.csv line ${i+2}) — ${reason}`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
+              console.log(`Updated ${category}: failed=${urlScrapingStats[category].failed}`);
               renderCategoryStats();
             }
           }
