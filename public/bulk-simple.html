@@ -525,10 +525,14 @@
         addResult(`✅ ${contentType} import successful: ${result.imported}/${csvRowCount} records (CSV rows → ingested)`, 'success');
         // Store CSV count for dashboard display (accumulate, don't overwrite)
         const csvKey = contentTypeToCsvKey[contentType] || contentType;
+        console.log(`DEBUG: ${contentType} -> ${csvKey}, adding ${csvRowCount} rows`);
         if (csvRowCounts.hasOwnProperty(csvKey)) {
           csvRowCounts[csvKey] += csvRowCount; // Add to existing count
+          console.log(`DEBUG: csvRowCounts[${csvKey}] is now ${csvRowCounts[csvKey]}`);
           // Update dashboard immediately
           renderCategoryStats();
+        } else {
+          console.log(`DEBUG: csvRowCounts does not have key: ${csvKey}`);
         }
         // Cache site_urls text for scrape step if it was imported via bulk box
         if (contentType === 'site_urls') {
