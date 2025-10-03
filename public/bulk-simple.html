@@ -519,6 +519,8 @@
         // Store CSV count for dashboard display
         if (csvRowCounts.hasOwnProperty(contentType)) {
           csvRowCounts[contentType] = csvRowCount;
+          // Update dashboard immediately
+          renderCategoryStats();
         }
         // Cache site_urls text for scrape step if it was imported via bulk box
         if (contentType === 'site_urls') {
