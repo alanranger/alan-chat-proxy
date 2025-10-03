@@ -1346,9 +1346,11 @@
     // Global function to render category stats
     function renderCategoryStats() {
       console.log('🔍 renderCategoryStats called!');
+      addResult('🔍 renderCategoryStats called!', 'info');
       const el = document.getElementById('categoryStats');
       if (!el) {
         console.warn('❌ categoryStats element not found!');
+        addResult('❌ categoryStats element not found!', 'error');
         return; // Element might not exist yet
       }
       
