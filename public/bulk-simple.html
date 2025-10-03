@@ -1377,6 +1377,8 @@
         console.log(`📊 Category ${key}:`, combinedStats[key]);
       });
       console.log('🔍 renderCategoryStats - combinedStats:', combinedStats);
+      console.log('🔍 renderCategoryStats - element found:', !!el);
+      console.log('🔍 renderCategoryStats - innerHTML length:', el.innerHTML.length);
 
       const rows = Object.entries(combinedStats).map(([k,v]) => {
         const csvCount = csvRowCounts[k] || 0;
