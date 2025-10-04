@@ -387,7 +387,7 @@
           }
         };
         
-        log(`📥 RPC response:`, response);
+        log(`📥 RPC response: ${eventsResult.data?.length || 0} events, ${productsResult.data?.length || 0} products, ${articlesResult.data?.length || 0} articles`);
         return response;
       } catch (error) {
         log('❌ RPC calls failed:', error.message);
@@ -514,7 +514,7 @@
     async function runBothTests() {
       const query = $byId('queryInput').value.trim();
       if (!query) {
-        log('❌ Please enter a query');
+        // Please enter a query
         return;
       }
       
@@ -578,11 +578,11 @@
       lastChatResponse = null;
       lastRpcResponse = null;
       
-      log('🧹 Results cleared');
+      // Results cleared
     }
 
     async function testConnections() {
-      log('🔍 Testing connections...');
+      // Testing connections
       await Promise.all([
         testChatConnection(),
         testRpcConnection()
@@ -592,7 +592,7 @@
     // ------- Export Functions -------
     async function copyComparison() {
       if (!lastChatResponse || !lastRpcResponse) {
-        log('❌ No results to copy');
+        // No results to copy
         return;
       }
       
@@ -604,7 +604,7 @@
       };
       
       await navigator.clipboard.writeText(JSON.stringify(comparison, null, 2));
-      log('📋 Comparison copied to clipboard');
+      // Comparison copied to clipboard
     }
 
     function downloadLogs() {
@@ -654,7 +654,7 @@
 
     // Auto-test connections on load
     window.addEventListener('load', () => {
-      log('🚀 Split Testbench loaded');
+      // Split Testbench loaded
       testConnections();
     });
   </script>
