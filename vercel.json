@@ -1,6 +1,5 @@
 {
   "version": 2,
-  // Force deployment
   "builds": [
     {
       "src": "public/**/*",
