@@ -779,64 +779,13 @@ async function generateIntelligentResponse({ query, intent, events, products, ar
 }
 
 function buildDataContext({ events, products, articles, featuredProduct, firstEvent }) {
-  const context = {
+  return {
     events: events || [],
     products: products || [],
     articles: articles || [],
     featuredProduct: featuredProduct || null,
     firstEvent: firstEvent || null
   };
-  
-  // Extract key information from all data sources
-  const extractedInfo = {
-    participantCounts: [],
-    locations: [],
-    dates: [],
-    prices: [],
-    fitnessLevels: [],
-    availability: [],
-    descriptions: []
-  };
-  
-  // Extract from products
-  console.log('DEBUG: Extracting from', context.products.length, 'products');
-  console.log('DEBUG: First product keys:', context.products[0] ? Object.keys(context.products[0]) : 'No products');
-  console.log('DEBUG: First product participants_parsed:', context.products[0]?.participants_parsed);
-  
-  for (const product of context.products) {
-    if (product.participants_parsed) {
-      console.log('DEBUG: Found participants_parsed:', product.participants_parsed);
-      extractedInfo.participantCounts.push(product.participants_parsed);
-    }
-    if (product.location_parsed) {
-      extractedInfo.locations.push(product.location_parsed);
-    }
-    if (product.fitness_parsed) {
-      extractedInfo.fitnessLevels.push(product.fitness_parsed);
-    }
-    if (product.display_price) {
-      extractedInfo.prices.push(product.display_price);
-    }
-    if (product.availability_status) {
-      extractedInfo.availability.push(product.availability_status);
-    }
-    if (product.description) {
-      extractedInfo.descriptions.push(product.description);
-    }
-  }
-  console.log('DEBUG: Final participantCounts array:', extractedInfo.participantCounts);
-  
-  // Extract from events
-  for (const event of context.events) {
-    if (event.location) {
-      extractedInfo.locations.push(event.location);
-    }
-    if (event.date_start) {
-      extractedInfo.dates.push(new Date(event.date_start).toLocaleDateString());
-    }
-  }
-  
-  return { ...context, extractedInfo, products: context.products };
 }
 
 function isSimpleFollowUp(query) {
@@ -852,7 +801,7 @@ async function generateRAGResponse(query, dataContext, intent) {
   // For simple follow-up questions, use extracted information to answer directly
   if (isSimpleFollowUp(query)) {
     console.log('DEBUG: Calling generateDirectAnswer');
-    const result = generateDirectAnswer(query, dataContext.extractedInfo);
+    const result = await generateDirectAnswer(query, dataContext);
     console.log('DEBUG: generateDirectAnswer result:', result);
     return result;
   }
@@ -868,76 +817,88 @@ async function generateRAGResponse(query, dataContext, intent) {
   return generateGeneralResponse(query, dataContext);
 }
 
-function generateDirectAnswer(query, extractedInfo) {
+async function generateDirectAnswer(query, dataContext) {
   console.log('DEBUG: generateDirectAnswer called with query:', query);
-  console.log('DEBUG: extractedInfo:', extractedInfo);
+  console.log('DEBUG: dataContext:', dataContext);
+  
+  // Use AI to intelligently extract relevant information from the data context
+  const relevantInfo = await extractRelevantInfo(query, dataContext);
+  
+  if (relevantInfo) {
+    return `**${relevantInfo}**`;
+  }
+  
+  // If no specific information found, provide a helpful response
+  return `I'd be happy to help with that! Could you provide more details about what specific information you're looking for?`;
+}
+
+async function extractRelevantInfo(query, dataContext) {
+  const { products, events, articles } = dataContext;
   const lowerQuery = query.toLowerCase();
   
-  // Answer participant questions
-  if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
-    console.log('DEBUG: Looking for participant info in:', extractedInfo.participantCounts);
-    console.log('DEBUG: participantCounts length:', extractedInfo.participantCounts.length);
-    console.log('DEBUG: participantCounts contents:', JSON.stringify(extractedInfo.participantCounts));
-    
-    // Try to find participant info in the extracted data
-    let participantInfo = extractedInfo.participantCounts.find(p => p && p.includes('Max'));
-    
-    // If not found in extracted data, try to find it in the original products array
-    if (!participantInfo && extractedInfo.products) {
-      console.log('DEBUG: Trying to find participant info in products array');
-      for (const product of extractedInfo.products) {
-        if (product.participants_parsed && product.participants_parsed.includes('Max')) {
-          participantInfo = product.participants_parsed;
-          console.log('DEBUG: Found participant info in products:', participantInfo);
-          break;
-        }
+  // Search through all available data sources for relevant information
+  const allData = [...(products || []), ...(events || []), ...(articles || [])];
+  
+  for (const item of allData) {
+    // Check for participant information
+    if ((lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) ||
+        lowerQuery.includes('participants') || lowerQuery.includes('capacity')) {
+      const participants = item.participants_parsed || item.participants;
+      if (participants && participants.includes('Max')) {
+        return participants.replace(/\n•/g, '').trim();
       }
     }
     
-    if (participantInfo) {
-      console.log('DEBUG: Found participant info:', participantInfo);
-      return `**${participantInfo.replace(/\n•/g, '').trim()}**`;
-    } else {
-      console.log('DEBUG: No participant info found');
-      console.log('DEBUG: All participantCounts:', extractedInfo.participantCounts);
-      return `I'd be happy to help with that! Could you provide more details about what specific information you're looking for?`;
+    // Check for location information
+    if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
+      const location = item.location_parsed || item.location;
+      if (location) {
+        return location.replace(/\n•/g, '').trim();
+      }
+    }
+    
+    // Check for fitness/difficulty information
+    if (lowerQuery.includes('fitness') || lowerQuery.includes('difficulty') || lowerQuery.includes('level')) {
+      const fitness = item.fitness_parsed || item.fitness;
+      if (fitness) {
+        return fitness.replace(/\n•/g, '').trim();
+      }
+    }
+    
+    // Check for price information
+    if (lowerQuery.includes('how much') || lowerQuery.includes('price') || lowerQuery.includes('cost')) {
+      const price = item.display_price || item.price_gbp || item.price;
+      if (price) {
+        return `£${price}`;
+      }
+    }
+    
+    // Check for availability information
+    if (lowerQuery.includes('available') || lowerQuery.includes('book') || lowerQuery.includes('booking')) {
+      const availability = item.availability_status || item.availability_raw;
+      if (availability) {
+        return availability.replace(/\n•/g, '').trim();
+      }
+    }
+    
+    // Check for date/time information
+    if (lowerQuery.includes('when') || lowerQuery.includes('date') || lowerQuery.includes('time')) {
+      const date = item.date_start || item.dates_parsed;
+      if (date) {
+        return new Date(date).toLocaleDateString();
+      }
+    }
+    
+    // Check for duration information
+    if (lowerQuery.includes('how long') || lowerQuery.includes('duration')) {
+      const duration = item.duration || item.time_parsed;
+      if (duration) {
+        return duration.replace(/\n•/g, '').trim();
+      }
     }
   }
   
-  // Answer location questions
-  if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
-    const location = extractedInfo.locations[0];
-    if (location) {
-      return `**${location.replace(/\n•/g, '').trim()}**`;
-    }
-  }
-  
-  // Answer fitness questions
-  if (lowerQuery.includes('fitness') || lowerQuery.includes('difficulty')) {
-    const fitness = extractedInfo.fitnessLevels[0];
-    if (fitness) {
-      return `**${fitness.replace(/\n•/g, '').trim()}**`;
-    }
-  }
-  
-  // Answer price questions
-  if (lowerQuery.includes('how much') || lowerQuery.includes('price') || lowerQuery.includes('cost')) {
-    const price = extractedInfo.prices[0];
-    if (price) {
-      return `**${price}**`;
-    }
-  }
-  
-  // Answer availability questions
-  if (lowerQuery.includes('available') || lowerQuery.includes('book')) {
-    const availability = extractedInfo.availability[0];
-    if (availability) {
-      return `**${availability}**`;
-    }
-  }
-  
-  // Default response for unrecognized follow-up questions
-  return `I'd be happy to help with that! Could you provide more details about what specific information you're looking for?`;
+  return null;
 }
 
 function generateEventResponse(query, dataContext) {
