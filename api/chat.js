@@ -191,123 +191,51 @@ function buildOrIlike(keys, keywords) {
 }
 
 async function findEvents(client, { keywords = [], topK = 12 } = {}) {
-  // Use enhanced view with all missing fields properly extracted
-  let q = client.from("v_event_product_final_enhanced").select(`
-    event_url,
-    subtype,
-    date_start,
-    date_end,
-    start_time,
-    end_time,
-    event_location,
-    product_url,
-    product_title,
-    map_method,
-    confidence,
-    price_gbp,
-    availability,
-    participants,
-    fitness_level,
-    event_title,
-    json_price,
-    json_availability,
-    price_currency
-  `);
-  
+  let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "event");
   q = q.gte("date_start", new Date().toISOString());
-  
   if (keywords.length) {
     q = q.or(
       buildOrIlike(
         [
-          "event_url",
-          "event_location",
+          "title",
+          "page_url",
+          "location",
+          "description",
+          "raw->>metaDescription",
+          "raw->meta->>description",
         ],
         keywords
       )
     );
   }
-  
   q = q.order("date_start", { ascending: true }).limit(topK);
   const { data, error } = await q;
   if (error) throw error;
-  
-  // Transform to match expected format
-  return (data || []).map(event => ({
-    id: event.event_url, // Use event_url as ID
-    kind: "event",
-    title: event.event_title || event.product_title || event.event_url.split('/').pop().replace(/-/g, ' '), // Use event title if available
-    page_url: event.event_url,
-    source_url: event.event_url,
-    last_seen: new Date().toISOString(),
-    location: event.event_location,
-    date_start: event.date_start,
-    date_end: event.date_end,
-    price: event.price_gbp || event.json_price,
-    description: `Event type: ${event.subtype}`,
-    raw: {
-      subtype: event.subtype,
-      start_time: event.start_time,
-      end_time: event.end_time,
-      product_url: event.product_url,
-      product_title: event.product_title,
-      method: event.map_method,
-      confidence: event.confidence,
-      availability: event.availability || event.json_availability,
-      participants: event.participants,
-      fitness_level: event.fitness_level,
-      price_currency: event.price_currency
-    }
-  }));
+  return data || [];
 }
 
 async function findProducts(client, { keywords = [], topK = 12 } = {}) {
-  // Use consolidated products view instead of raw page_entities
-  let q = client.from("v_products_unified_open").select(`
-    product_url,
-    product_title,
-    product_kind_resolved,
-    display_price_gbp,
-    price_source,
-    availability_status,
-    location_hint,
-    last_seen
-  `);
-  
-  if (keywords.length) {
+  let q = client
+    .from("page_entities")
+    .select(SELECT_COLS)
+    .eq("kind", "product");
+  if (keywords.length)
     q = q.or(
       buildOrIlike(
         [
-          "product_url",
-          "product_title",
-          "location_hint",
+          "title",
+          "page_url",
+          "description",
+          "raw->>metaDescription",
+          "raw->meta->>description",
         ],
         keywords
       )
     );
-  }
-  
   q = q.order("last_seen", { ascending: false }).limit(topK);
   const { data, error } = await q;
   if (error) throw error;
-  
-  // Transform to match expected format
-  return (data || []).map(product => ({
-    id: product.product_url, // Use product_url as ID
-    kind: "product",
-    title: product.product_title,
-    page_url: product.product_url,
-    source_url: product.product_url,
-    last_seen: product.last_seen,
-    location: product.location_hint,
-    price: product.display_price_gbp,
-    description: `Product type: ${product.product_kind_resolved}`,
-    raw: {
-      product_kind_resolved: product.product_kind_resolved,
-      price_source: product.price_source,
-      availability_status: product.availability_status
-    }
-  }));
+  return data || [];
 }
 
 async function findArticles(client, { keywords = [], topK = 12 } = {}) {
@@ -903,71 +831,6 @@ function buildEventPills(firstEvent, productOrNull, fallbackProduct = null) {
   return pills;
 }
 
-/* ================= Enrichment helpers ================= */
-async function fetchProductEntitiesByUrl(client, productUrls = []) {
-  const urls = uniq((productUrls || []).map(baseUrl)).filter(Boolean);
-  if (!urls.length) return new Map();
-  const { data, error } = await client
-    .from("page_entities")
-    .select("page_url, source_url, title, description, raw")
-    .in("page_url", urls);
-  if (error) return new Map();
-  const map = new Map();
-  for (const row of data || []) {
-    map.set(baseUrl(pickUrl(row)), row);
-  }
-  return map;
-}
-
-async function enrichEventsWithProductData(client, events = [], products = []) {
-  if (!events?.length) return events;
-  const productUrlSet = new Set(
-    (events || [])
-      .map((e) => e?.raw?.product_url || e.product_url)
-      .filter(Boolean)
-      .map(baseUrl)
-  );
-  if (!productUrlSet.size) return events;
-
-  const productUrls = Array.from(productUrlSet);
-  const [availMap, entitiesMap] = await Promise.all([
-    fetchAvailability(client, productUrls),
-    fetchProductEntitiesByUrl(client, productUrls),
-  ]);
-
-  return (events || []).map((e) => {
-    const pUrl = baseUrl(e?.raw?.product_url || e.product_url || "");
-    if (!pUrl) return e;
-
-    // Availability: prefer event.availability; else availability view; else product view field
-    const avail = e.raw?.availability || e.availability;
-    const byView = availMap.get(pUrl)?.availability_status || null;
-    const availability = avail || byView || null;
-
-    // Participants / Fitness from product description/meta
-    const ent = entitiesMap.get(pUrl) || null;
-    let participants = e.raw?.participants || e.participants || null;
-    let fitness_level = e.raw?.fitness_level || e.fitness_level || null;
-    if (ent) {
-      const longDesc =
-        ent?.raw?.metaDescription ||
-        ent?.raw?.meta?.description ||
-        ent?.description ||
-        "";
-      const parsed = parseProductBlock(longDesc);
-      participants = participants || parsed.participants || null;
-      fitness_level = fitness_level || parsed.fitness || null;
-    }
-
-    return {
-      ...e,
-      availability,
-      participants,
-      fitness_level,
-    };
-  });
-}
-
 /* === location filtering with phrase support === */
 function filterEventsByLocationKeywords(events, keywords, rawQuery) {
   const expanded = expandLocationKeywords(
@@ -1046,13 +909,6 @@ export default async function handler(req, res) {
       } else if (subtype === "workshop") {
         products = (products || []).filter(isWorkshopProduct);
       }
-
-      // Enrich events with product-derived availability/participants/fitness when missing
-      try {
-        events = await enrichEventsWithProductData(client, events, products);
-      } catch {
-        // best-effort enrichment; ignore failures
-      }
     } else {
       [articles, products] = await Promise.all([
         findArticles(client, { keywords, topK: Math.max(12, topK) }),
@@ -1061,8 +917,24 @@ export default async function handler(req, res) {
     }
     t_supabase += Date.now() - s1;
 
-    // Price and availability data is already included in the consolidated views
-    // No need for separate lookups
+    const allProdUrls = (products || []).map((p) => pickUrl(p)).filter(Boolean);
+    const [priceMap, availMap] = await Promise.all([
+      fetchDisplayPrices(client, allProdUrls),
+      fetchAvailability(client, allProdUrls),
+    ]);
+    products = (products || []).map((p) => {
+      const u = baseUrl(pickUrl(p));
+      const priceRow = priceMap.get(u);
+      const availRow = availMap.get(u);
+      return {
+        ...p,
+        display_price_gbp: priceRow?.display_price_gbp ?? null,
+        product_kind_resolved: priceRow?.product_kind ?? null,
+        price_source: priceRow?.preferred_source ?? null,
+        availability_status: availRow?.availability_status ?? null,
+        availability_raw: availRow?.availability_raw ?? null,
+      };
+    });
 
     const s2 = Date.now();
     const qTokens = keywords;
@@ -1129,8 +1001,23 @@ export default async function handler(req, res) {
       if (matched) {
         featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
 
-        // Price and availability data is already included in the consolidated views
-        // No need for separate lookups
+        const u = baseUrl(pickUrl(featuredProduct));
+        const priceRow = (await fetchDisplayPrices(client, [u])).get(u);
+        const availRow = (await fetchAvailability(client, [u])).get(u);
+        if (priceRow) {
+          featuredProduct.display_price_gbp =
+            priceRow.display_price_gbp ?? featuredProduct.display_price_gbp ?? null;
+          featuredProduct.product_kind_resolved =
+            priceRow.product_kind ?? featuredProduct.product_kind_resolved ?? null;
+          featuredProduct.price_source =
+            priceRow.preferred_source ?? featuredProduct.price_source ?? null;
+        }
+        if (availRow) {
+          featuredProduct.availability_status =
+            availRow.availability_status ?? featuredProduct.availability_status ?? null;
+          featuredProduct.availability_raw =
+            availRow.availability_raw ?? featuredProduct.availability_raw ?? null;
+        }
       }
 
       if (rankedProducts.length) {
