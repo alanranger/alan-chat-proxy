@@ -334,24 +334,12 @@
         const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js@2');
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Call all three RPC functions with ALL required parameters
+        // Call all three RPC functions with ONLY the keys parameter
         log(`🔍 Calling RPC functions with query: "${query}"`);
         const [eventsResult, productsResult, articlesResult] = await Promise.all([
           supabase.rpc('search_events', { keys: [query] }),
-          supabase.rpc('search_products', { 
-            keys: [query], 
-            title: [query], 
-            url: [query], 
-            price: [query], 
-            tags: [query] 
-          }),
-          supabase.rpc('search_articles', { 
-            keys: [query], 
-            title: [query], 
-            url: [query], 
-            snippet: [query], 
-            kind: [query] 
-          })
+          supabase.rpc('search_products', { keys: [query] }),
+          supabase.rpc('search_articles', { keys: [query] })
         ]);
         
         log(`🔍 RPC Results:`, {
