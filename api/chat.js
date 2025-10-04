@@ -888,8 +888,13 @@ export default async function handler(req, res) {
 
     const health = await probeSupabaseHealth();
 
-    // Use previous query for context if current query is short or unclear
-    const contextualQuery = (q.length < 20 && prevQ) ? `${prevQ} ${q}` : q;
+    // Use previous query for context if current query is short, unclear, or a follow-up question
+    const isFollowUp = prevQ && (
+      q.length < 30 || // Short questions
+      /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(q) || // Follow-up patterns
+      !q.includes('workshop') && !q.includes('course') && !q.includes('photography') // No topic keywords
+    );
+    const contextualQuery = isFollowUp ? `${prevQ} ${q}` : q;
     const intent = detectIntent(contextualQuery);
     const subtype = detectEventSubtype(contextualQuery);
     const rawKeywords = extractKeywords(contextualQuery, intent, subtype);
@@ -1008,7 +1013,13 @@ export default async function handler(req, res) {
 
     let featuredProduct = null;
 
-    if (firstEvent) {
+    // Skip product selection for follow-up questions that don't need product blocks
+    const isSimpleFollowUp = isFollowUp && (
+      /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(q) &&
+      !q.includes('book') && !q.includes('buy') && !q.includes('price') && !q.includes('cost')
+    );
+
+    if (firstEvent && !isSimpleFollowUp) {
       const matched = await findBestProductForEvent(
         client,
         firstEvent,
