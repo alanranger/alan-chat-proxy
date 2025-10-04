@@ -243,6 +243,28 @@
         .slice(0, 5); // Limit to 5 keywords
     }
 
+    // Build a contextual query for short follow-ups like "how many/how much/when/where"
+    function buildContextualQuery(currentQuery, previousQuery) {
+      if (!previousQuery) return currentQuery;
+
+      const q = (currentQuery || '').trim().toLowerCase();
+      const prev = (previousQuery || '').trim();
+
+      const followUpStarts = [
+        'how many', 'how much', 'when', 'where', 'how long', 'what price', 'price',
+        'cost', 'how to book', 'how do i book', 'fitness level', 'how fit'
+      ];
+
+      const isShort = q.split(/\s+/).length <= 6;
+      const isFollowUp = followUpStarts.some(p => q.startsWith(p));
+
+      // Only merge context for short or follow-up style questions
+      if (isFollowUp || isShort) {
+        return `${prev} ${currentQuery}`.trim();
+      }
+      return currentQuery;
+    }
+
     // ------- Chat.js API Functions -------
     async function testChatConnection() {
       // Try multiple possible URLs
@@ -518,17 +540,25 @@
         return;
       }
       
-      lastQuery = query;
+      // Capture previous query for context before updating lastQuery
+      const previousQuery = lastQuery;
+      lastQuery = query; // update last asked query
       log(`🚀 Running both tests for: "${query}"`);
       
+      // Build contextual query for RPC keywordization
+      const contextualQuery = buildContextualQuery(query, previousQuery);
+      if (previousQuery) {
+        log(`🧩 Contextual query: "${contextualQuery}" (prev: "${previousQuery}")`);
+      }
+
       // Clear previous results
       $byId('chatResponse').innerHTML = '<div class="response-title">Response:</div><div class="response-content">Loading...</div>';
       $byId('rpcResponse').innerHTML = '<div class="response-title">Response:</div><div class="response-content">Loading...</div>';
       
       // Run both tests in parallel
       const [chatResult, rpcResult] = await Promise.allSettled([
-        callChatAPI(query, lastQuery),
-        callRpcFunctions(query)
+        callChatAPI(query, previousQuery),
+        callRpcFunctions(contextualQuery)
       ]);
       
       // Handle chat.js result
@@ -554,7 +584,7 @@
       }
       
       // Update context info
-      $byId('contextInfo').textContent = lastQuery ? 'Has context' : 'No context';
+      $byId('contextInfo').textContent = previousQuery ? 'Has context' : 'No context';
     }
 
     function clearResults() {
