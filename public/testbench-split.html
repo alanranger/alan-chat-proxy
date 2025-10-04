@@ -202,6 +202,7 @@
     
     // ------- State -------
     let lastQuery = null;
+    let originalQuery = null; // Keep track of the original query for context
     let lastChatResponse = null;
     let lastRpcResponse = null;
     let isRunning = false; // Prevent duplicate runs
@@ -625,8 +626,8 @@
       
       isRunning = true;
       
-      // Capture previous query for context - don't update lastQuery yet
-      const previousQuery = lastQuery;
+      // Use original query for context if this is a follow-up, otherwise use lastQuery
+      const previousQuery = originalQuery || lastQuery;
       log(`🚀 Running both tests for: "${query}"`);
       
       // Build contextual query for RPC keywordization
@@ -670,8 +671,13 @@
       // Update context info
       $byId('contextInfo').textContent = previousQuery ? 'Has context' : 'No context';
       
-      // Update lastQuery AFTER all processing is complete
+      // Update lastQuery and originalQuery AFTER all processing is complete
       lastQuery = query;
+      
+      // If this is the first query or a new topic, set it as the original query
+      if (!originalQuery || !buildContextualQuery(query, originalQuery).includes(originalQuery)) {
+        originalQuery = query;
+      }
       
       // Reset running flag
       isRunning = false;
@@ -695,6 +701,7 @@
       
       $byId('contextInfo').textContent = 'None';
       lastQuery = null;
+      originalQuery = null; // Reset original query
       lastChatResponse = null;
       lastRpcResponse = null;
       
