@@ -17,23 +17,37 @@ const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY";
 
 function supabaseAdmin() {
+  console.log('🔧 Supabase config:', {
+    url: SUPABASE_URL,
+    hasServiceKey: !!SUPABASE_SERVICE_ROLE_KEY,
+    serviceKeyLength: SUPABASE_SERVICE_ROLE_KEY?.length
+  });
+  
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("Missing SUPABASE_URL or SERVICE_ROLE_KEY");
   }
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  
+  const client = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
     global: { fetch },
   });
+  
+  console.log('✅ Supabase client created with URL:', SUPABASE_URL);
+  return client;
 }
 
 async function probeSupabaseHealth() {
   const url = `${String(SUPABASE_URL).replace(/\/+$/, "")}/auth/v1/health`;
+  console.log('🏥 Probing Supabase health at:', url);
   const out = { url, ok: false, status: null, error: null };
   try {
+    console.log('📡 Making request to:', url);
     const resp = await fetch(url);
     out.status = resp.status;
     out.ok = resp.ok;
+    console.log('📡 Health check response:', { ok: resp.ok, status: resp.status });
   } catch (e) {
+    console.error('❌ Health check failed:', e);
     out.error = String(e && e.message ? e.message : e);
   }
   return out;
