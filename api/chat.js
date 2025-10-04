@@ -799,11 +799,14 @@ function buildDataContext({ events, products, articles, featuredProduct, firstEv
   };
   
   // Extract from products
+  console.log('DEBUG: Extracting from', context.products.length, 'products');
   for (const product of context.products) {
     if (product.participants_parsed) {
       console.log('DEBUG: Found participants_parsed:', product.participants_parsed);
       extractedInfo.participantCounts.push(product.participants_parsed);
     }
+  }
+  console.log('DEBUG: Final participantCounts array:', extractedInfo.participantCounts);
     if (product.location_parsed) {
       extractedInfo.locations.push(product.location_parsed);
     }
@@ -857,6 +860,8 @@ function isSimpleFollowUp(query) {
 }
 
 function generateDirectAnswer(query, extractedInfo) {
+  console.log('DEBUG: generateDirectAnswer called with query:', query);
+  console.log('DEBUG: extractedInfo:', extractedInfo);
   const lowerQuery = query.toLowerCase();
   
   // Answer participant questions
