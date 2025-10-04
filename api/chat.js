@@ -1073,12 +1073,20 @@ async function chatHandler(req, res) {
 
   const started = Date.now();
   try {
+    console.log('🚀 Chat.js API handler started');
     const { query, topK = 8, previousQuery } = req.body || {};
     const q = String(query || "").trim();
     const prevQ = String(previousQuery || "").trim();
+    
+    console.log('📝 Query:', q, 'Previous:', prevQ);
+    
+    console.log('🔗 Creating Supabase client...');
     const client = supabaseAdmin();
+    console.log('✅ Supabase client created');
 
+    console.log('🏥 Probing Supabase health...');
     const health = await probeSupabaseHealth();
+    console.log('✅ Supabase health check completed:', health);
 
     // Use previous query for context if current query is short, unclear, or a follow-up question
     const isFollowUp = prevQ && (
@@ -1102,11 +1110,20 @@ async function chatHandler(req, res) {
 
     const s1 = Date.now();
     let events = [], products = [], articles = [];
+    console.log('🔍 Intent detected:', intent, 'Keywords:', keywords);
+    
     if (intent === "events") {
-      [events, products] = await Promise.all([
-        findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
-        findProducts(client, { keywords, topK: 24 }),
-      ]);
+      console.log('📅 Fetching events and products...');
+      try {
+        [events, products] = await Promise.all([
+          findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
+          findProducts(client, { keywords, topK: 24 }),
+        ]);
+        console.log('✅ Events and products fetched:', events.length, 'events,', products.length, 'products');
+      } catch (error) {
+        console.error('❌ Error fetching events/products:', error);
+        throw error;
+      }
 
       if (subtype === "workshop") events = events.filter(isWorkshopEvent);
       else if (subtype === "course") events = events.filter(isCourseEvent);
@@ -1464,8 +1481,14 @@ async function chatHandler(req, res) {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     return res.status(200).send(payload);
   } catch (err) {
+    console.error('❌ Chat.js API error:', err);
+    console.error('❌ Error stack:', err.stack);
+    console.error('❌ Error message:', err.message);
+    console.error('❌ Error name:', err.name);
+    
     const msg = (err && (err.message || err.toString())) || "Unknown server error";
     const body = { ok: false, error: msg };
+    console.log('📤 Sending error response:', body);
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     return res.status(200).send(body);
   }
