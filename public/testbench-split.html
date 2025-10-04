@@ -315,7 +315,7 @@
           }
 
           const data = await response.json();
-          log(`📥 Chat.js response: OK - ${data.structured?.events?.length || 0} events, ${data.structured?.products?.length || 0} products, ${data.structured?.articles?.length || 0} articles`);
+          // Chat.js response received
           return data;
         } catch (error) {
           log(`❌ Failed with ${apiUrl}: ${error.message}`);
@@ -390,7 +390,7 @@
           data: articlesResult.data.slice(0, 3).concat(articlesResult.data.length > 3 ? [`... (${articlesResult.data.length - 3} more articles)`] : [])
         } : articlesResult;
         
-        log(`🔍 RPC Results: ${truncatedEvents.length} events, ${truncatedProducts.length} products, ${truncatedArticles.length} articles`);
+        // RPC results processed
         
         const response = {
           events: eventsResult.data || [],
