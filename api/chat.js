@@ -769,42 +769,166 @@ function parseProductBlock(desc) {
   return out;
 }
 async function generateIntelligentResponse({ query, intent, events, products, articles, featuredProduct, firstEvent, isSimpleFollowUp }) {
-  // For simple follow-up questions, generate a direct answer
-  if (isSimpleFollowUp) {
-    // Extract participant info from products/events
-    const participantInfo = extractParticipantInfo(products, events);
-    if (participantInfo) {
-      return `**${participantInfo}**`;
+  // Create a comprehensive data context from all retrieved information
+  const dataContext = buildDataContext({ events, products, articles, featuredProduct, firstEvent });
+  
+  // Use RAG to generate intelligent response based on query and data context
+  const response = await generateRAGResponse(query, dataContext, intent);
+  
+  return response;
+}
+
+function buildDataContext({ events, products, articles, featuredProduct, firstEvent }) {
+  const context = {
+    events: events || [],
+    products: products || [],
+    articles: articles || [],
+    featuredProduct: featuredProduct || null,
+    firstEvent: firstEvent || null
+  };
+  
+  // Extract key information from all data sources
+  const extractedInfo = {
+    participantCounts: [],
+    locations: [],
+    dates: [],
+    prices: [],
+    fitnessLevels: [],
+    availability: [],
+    descriptions: []
+  };
+  
+  // Extract from products
+  for (const product of context.products) {
+    if (product.participants_parsed) {
+      extractedInfo.participantCounts.push(product.participants_parsed);
     }
-    
-    // If no specific info found, give a helpful response
-    return `I'd be happy to help with that! Could you provide more details about what specific information you're looking for?`;
+    if (product.location_parsed) {
+      extractedInfo.locations.push(product.location_parsed);
+    }
+    if (product.fitness_parsed) {
+      extractedInfo.fitnessLevels.push(product.fitness_parsed);
+    }
+    if (product.display_price) {
+      extractedInfo.prices.push(product.display_price);
+    }
+    if (product.availability_status) {
+      extractedInfo.availability.push(product.availability_status);
+    }
+    if (product.description) {
+      extractedInfo.descriptions.push(product.description);
+    }
   }
   
-  // For other queries, use the existing logic but make it more flexible
-  if (intent === "advice") {
-    return buildAdviceMarkdown(articles);
-  } else {
-    if (featuredProduct) {
-      return buildProductPanelMarkdown(featuredProduct);
-    } else if (firstEvent) {
-      return buildEventPanelMarkdown(firstEvent);
-    } else {
-      return "";
+  // Extract from events
+  for (const event of context.events) {
+    if (event.location) {
+      extractedInfo.locations.push(event.location);
     }
+    if (event.date_start) {
+      extractedInfo.dates.push(new Date(event.date_start).toLocaleDateString());
+    }
+  }
+  
+  return { ...context, extractedInfo };
+}
+
+async function generateRAGResponse(query, dataContext, intent) {
+  // For simple follow-up questions, use extracted information to answer directly
+  if (isSimpleFollowUp(query)) {
+    return generateDirectAnswer(query, dataContext.extractedInfo);
+  }
+  
+  // For event/product queries, determine the best response format based on available data
+  if (intent === "events") {
+    return generateEventResponse(query, dataContext);
+  } else if (intent === "advice") {
+    return generateAdviceResponse(query, dataContext);
+  }
+  
+  // Fallback to general response
+  return generateGeneralResponse(query, dataContext);
+}
+
+function isSimpleFollowUp(query) {
+  const followUpPatterns = /^(how many|what|when|where|how much|how long|can i|do you|is there|what time|what's the|how do i)/i;
+  return followUpPatterns.test(query.trim());
+}
+
+function generateDirectAnswer(query, extractedInfo) {
+  const lowerQuery = query.toLowerCase();
+  
+  // Answer participant questions
+  if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
+    const participantInfo = extractedInfo.participantCounts.find(p => p.includes('Max'));
+    if (participantInfo) {
+      return `**${participantInfo.replace(/\n•/g, '').trim()}**`;
+    }
+  }
+  
+  // Answer location questions
+  if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
+    const location = extractedInfo.locations[0];
+    if (location) {
+      return `**${location.replace(/\n•/g, '').trim()}**`;
+    }
+  }
+  
+  // Answer fitness questions
+  if (lowerQuery.includes('fitness') || lowerQuery.includes('difficulty')) {
+    const fitness = extractedInfo.fitnessLevels[0];
+    if (fitness) {
+      return `**${fitness.replace(/\n•/g, '').trim()}**`;
+    }
+  }
+  
+  // Answer price questions
+  if (lowerQuery.includes('how much') || lowerQuery.includes('price') || lowerQuery.includes('cost')) {
+    const price = extractedInfo.prices[0];
+    if (price) {
+      return `**${price}**`;
+    }
+  }
+  
+  // Answer availability questions
+  if (lowerQuery.includes('available') || lowerQuery.includes('book')) {
+    const availability = extractedInfo.availability[0];
+    if (availability) {
+      return `**${availability}**`;
+    }
+  }
+  
+  // Default response for unrecognized follow-up questions
+  return `I'd be happy to help with that! Could you provide more details about what specific information you're looking for?`;
+}
+
+function generateEventResponse(query, dataContext) {
+  if (dataContext.featuredProduct) {
+    return buildProductPanelMarkdown(dataContext.featuredProduct);
+  } else if (dataContext.firstEvent) {
+    return buildEventPanelMarkdown(dataContext.firstEvent);
+  } else {
+    return "";
   }
 }
 
-function extractParticipantInfo(products, events) {
-  // Look for participant information in the data
-  for (const item of [...products, ...events]) {
-    const participants = item.participants_parsed || item.participants || '';
-    if (participants && participants.includes('Max')) {
-      return participants.replace(/\n•/g, '').trim();
-    }
-  }
-  return null;
+function generateAdviceResponse(query, dataContext) {
+  return buildAdviceMarkdown(dataContext.articles);
 }
+
+function generateGeneralResponse(query, dataContext) {
+  // For general queries, provide the most relevant information
+  if (dataContext.featuredProduct) {
+    return buildProductPanelMarkdown(dataContext.featuredProduct);
+  } else if (dataContext.firstEvent) {
+    return buildEventPanelMarkdown(dataContext.firstEvent);
+  } else if (dataContext.articles.length > 0) {
+    return buildAdviceMarkdown(dataContext.articles);
+  } else {
+    return "";
+  }
+}
+
 
 function buildAdviceMarkdown(articles) {
   const lines = ["**Guides**"];
