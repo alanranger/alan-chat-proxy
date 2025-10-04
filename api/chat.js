@@ -1098,7 +1098,7 @@ export default async function handler(req, res) {
           strictlyMatchesEvent(featuredProduct, rankedEvents[0], subtype)));
 
     const fallbackProductCandidate =
-      !hasStrictProduct && rankedProducts.length ? rankedProducts[0] : null;
+      !hasStrictProduct && rankedProducts.length && !isSimpleFollowUp ? rankedProducts[0] : null;
 
     const scoresForConf = [
       ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),

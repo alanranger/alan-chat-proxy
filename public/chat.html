@@ -465,6 +465,14 @@ function decideProductRendering(payload, mergedProducts, query){
   if (intent === 'products')            return {show:true,  reason:'intent-products'};
   if (isPriceyQuery(query))             return {show:true,  reason:'pricey-query'};
   if (bookNowUrl)                       return {show:true,  reason:'book-pill-present'};
+  
+  // Skip product blocks for simple follow-up questions
+  const isSimpleFollowUp = query && (
+    /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
+    !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost')
+  );
+  if (isSimpleFollowUp)                 return {show:false, reason:'simple-follow-up'};
+  
   if (!hasEvs)                          return {show:true,  reason:'no-events-fallback'};
 
   const prod = mergedProducts[0];
