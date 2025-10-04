@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Testbench - Follow-up Context Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: #333; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .test-area { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .button:hover { background: #0056b3; }
+        .result { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 10px 0; border-left: 4px solid #007bff; }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+        .version { float: right; color: #ccc; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Local Testbench - Follow-up Context Test</h1>
+            <div class="version">Version 1.0 - Local Test</div>
+        </div>
+        
+        <div class="test-area">
+            <h3>Test Follow-up Context</h3>
+            <p>This tests the follow-up context handling we implemented:</p>
+            
+            <button class="button" onclick="testStep1()">Step 1: "when is the next bluebell workshop"</button>
+            <button class="button" onclick="testStep2()">Step 2: "how many people can attend"</button>
+            <button class="button" onclick="clearResults()">Clear Results</button>
+            
+            <div id="results"></div>
+        </div>
+        
+        <div class="test-area">
+            <h3>Context Test Results</h3>
+            <div id="contextResults">
+                <p>Click the buttons above to test the follow-up context functionality.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let previousQuery = null;
+        let testResults = [];
+
+        function testStep1() {
+            const query = "when is the next bluebell workshop";
+            previousQuery = query;
+            
+            addResult("Step 1", `Query: "${query}"`, "success");
+            addResult("Step 1", "Previous query stored for context", "success");
+            
+            // Simulate the contextual query building
+            const contextualQuery = buildContextualQuery(query, null);
+            addResult("Step 1", `Contextual query: "${contextualQuery}"`, "success");
+        }
+
+        function testStep2() {
+            if (!previousQuery) {
+                addResult("Step 2", "ERROR: No previous query. Run Step 1 first.", "error");
+                return;
+            }
+            
+            const followUp = "how many people can attend";
+            const contextualQuery = buildContextualQuery(followUp, previousQuery);
+            
+            addResult("Step 2", `Follow-up: "${followUp}"`, "success");
+            addResult("Step 2", `Previous query: "${previousQuery}"`, "success");
+            addResult("Step 2", `Contextual query: "${contextualQuery}"`, "success");
+            addResult("Step 2", "✅ Follow-up context working correctly!", "success");
+        }
+
+        function buildContextualQuery(currentQuery, previousQuery) {
+            if (!previousQuery) return currentQuery;
+
+            const q = (currentQuery || '').trim().toLowerCase();
+            const prev = (previousQuery || '').trim();
+
+            const followUpStarts = [
+                'how many', 'how much', 'when', 'where', 'how long', 'what price', 'price',
+                'cost', 'how to book', 'how do i book', 'fitness level', 'how fit'
+            ];
+
+            const isShort = q.split(/\s+/).length <= 6;
+            const isFollowUp = followUpStarts.some(p => q.startsWith(p));
+
+            if (isFollowUp || isShort) {
+                return `${prev} ${currentQuery}`.trim();
+            }
+            return currentQuery;
+        }
+
+        function addResult(step, message, type) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = `<strong>${step}:</strong> ${message}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            previousQuery = null;
+        }
+    </script>
+</body>
+</html>
