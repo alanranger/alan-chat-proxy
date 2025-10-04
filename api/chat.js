@@ -1470,3 +1470,7 @@ export default async function handler(req, res) {
     return res.status(200).send(body);
   }
 }
+
+export default async function handler(req, res) {
+  return await chatHandler(req, res);
+}
