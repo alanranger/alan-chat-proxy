@@ -800,6 +800,9 @@ function buildDataContext({ events, products, articles, featuredProduct, firstEv
   
   // Extract from products
   console.log('DEBUG: Extracting from', context.products.length, 'products');
+  console.log('DEBUG: First product keys:', context.products[0] ? Object.keys(context.products[0]) : 'No products');
+  console.log('DEBUG: First product participants_parsed:', context.products[0]?.participants_parsed);
+  
   for (const product of context.products) {
     if (product.participants_parsed) {
       console.log('DEBUG: Found participants_parsed:', product.participants_parsed);
@@ -873,12 +876,16 @@ function generateDirectAnswer(query, extractedInfo) {
   // Answer participant questions
   if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
     console.log('DEBUG: Looking for participant info in:', extractedInfo.participantCounts);
-    const participantInfo = extractedInfo.participantCounts.find(p => p.includes('Max'));
+    console.log('DEBUG: participantCounts length:', extractedInfo.participantCounts.length);
+    console.log('DEBUG: participantCounts contents:', JSON.stringify(extractedInfo.participantCounts));
+    
+    const participantInfo = extractedInfo.participantCounts.find(p => p && p.includes('Max'));
     if (participantInfo) {
       console.log('DEBUG: Found participant info:', participantInfo);
       return `**${participantInfo.replace(/\n•/g, '').trim()}**`;
     } else {
       console.log('DEBUG: No participant info found');
+      console.log('DEBUG: All participantCounts:', extractedInfo.participantCounts);
       return `I'd be happy to help with that! Could you provide more details about what specific information you're looking for?`;
     }
   }
