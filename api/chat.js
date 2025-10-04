@@ -1366,7 +1366,7 @@ export default async function handler(req, res) {
     };
 
     const debug = {
-      version: "v1.1.5-clean5",
+      version: "v1.1.6-rag-fix",
       intent,
       keywords,
       event_subtype: subtype,
