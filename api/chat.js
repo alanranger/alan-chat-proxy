@@ -842,8 +842,13 @@ function isSimpleFollowUp(query) {
 }
 
 async function generateRAGResponse(query, dataContext, intent) {
+  console.log('DEBUG: generateRAGResponse called with query:', query);
+  console.log('DEBUG: isSimpleFollowUp result:', isSimpleFollowUp(query));
+  console.log('DEBUG: dataContext.extractedInfo:', dataContext.extractedInfo);
+  
   // For simple follow-up questions, use extracted information to answer directly
   if (isSimpleFollowUp(query)) {
+    console.log('DEBUG: Calling generateDirectAnswer');
     return generateDirectAnswer(query, dataContext.extractedInfo);
   }
   
