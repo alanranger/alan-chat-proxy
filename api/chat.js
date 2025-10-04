@@ -866,11 +866,18 @@ async function extractRelevantInfo(query, dataContext) {
   // Search through all available data sources for relevant information
   const allData = [...(products || []), ...(events || []), ...(articles || [])];
   
+  // Debug: Log the actual data structure
+  console.log(`🔍 RAG: Query="${query}" | Data=${allData.length} items`);
+  if (allData.length > 0) {
+    console.log(`🔍 RAG: Sample item keys:`, Object.keys(allData[0] || {}));
+    console.log(`🔍 RAG: Sample item:`, JSON.stringify(allData[0], null, 2).substring(0, 500));
+  }
+  
   // Check if this is a participant question
   const isParticipantQuestion = (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) ||
                                lowerQuery.includes('participants') || lowerQuery.includes('capacity');
   
-  console.log(`🔍 RAG: Query="${query}" | ParticipantQ=${isParticipantQuestion} | Data=${allData.length} items`);
+  console.log(`🔍 RAG: ParticipantQ=${isParticipantQuestion}`);
   
   if (isParticipantQuestion) {
     // Look for participant data in first few items only
