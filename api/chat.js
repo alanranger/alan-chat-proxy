@@ -829,12 +829,20 @@ async function generateDirectAnswer(query, dataContext) {
   }
   
   // If no specific information found, provide a helpful response
-  return `I'd be happy to help with that! Could you provide more details about what specific information you're looking for?`;
+  return `I don't have a confident answer to that yet. I'm trained on Alan's site, so I may miss things. If you'd like to follow up, please reach out:`;
 }
 
 async function extractRelevantInfo(query, dataContext) {
   const { products, events, articles } = dataContext;
   const lowerQuery = query.toLowerCase();
+  
+  console.log('DEBUG: extractRelevantInfo called with query:', query);
+  console.log('DEBUG: lowerQuery:', lowerQuery);
+  console.log('DEBUG: products length:', products?.length);
+  console.log('DEBUG: first product participants_parsed:', products?.[0]?.participants_parsed);
+  console.log('DEBUG: Query includes how many:', lowerQuery.includes('how many'));
+  console.log('DEBUG: Query includes people:', lowerQuery.includes('people'));
+  console.log('DEBUG: Query includes attend:', lowerQuery.includes('attend'));
   
   // Search through all available data sources for relevant information
   const allData = [...(products || []), ...(events || []), ...(articles || [])];
@@ -843,8 +851,11 @@ async function extractRelevantInfo(query, dataContext) {
     // Check for participant information
     if ((lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) ||
         lowerQuery.includes('participants') || lowerQuery.includes('capacity')) {
+      console.log('DEBUG: Checking participant info for item:', item.title);
       const participants = item.participants_parsed || item.participants;
+      console.log('DEBUG: participants field:', participants);
       if (participants && participants.includes('Max')) {
+        console.log('DEBUG: Found participant info:', participants);
         return participants.replace(/\n•/g, '').trim();
       }
     }
