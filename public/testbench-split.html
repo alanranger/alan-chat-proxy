@@ -13,6 +13,9 @@
     }
     *{box-sizing:border-box}
     body{background:var(--bg);color:var(--text);font:14px/1.5 var(--sans);margin:0;padding:24px}
+    a{color:white;text-decoration:underline}
+    a:visited{color:#ccc}
+    a:hover{color:var(--orange)}
     h1{margin:0 0 8px 0}
     .muted{color:var(--muted)}
     .row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
@@ -312,7 +315,17 @@
           }
 
           const data = await response.json();
-          log(`📥 Chat.js response:`, data);
+          // Log truncated Chat.js response for debugging
+          const truncatedData = {
+            ...data,
+            structured: data.structured ? {
+              ...data.structured,
+              events: data.structured.events ? data.structured.events.slice(0, 3).concat(data.structured.events.length > 3 ? [`... (${data.structured.events.length - 3} more events)`] : []) : [],
+              products: data.structured.products ? data.structured.products.slice(0, 3).concat(data.structured.products.length > 3 ? [`... (${data.structured.products.length - 3} more products)`] : []) : [],
+              articles: data.structured.articles ? data.structured.articles.slice(0, 3).concat(data.structured.articles.length > 3 ? [`... (${data.structured.articles.length - 3} more articles)`] : []) : []
+            } : null
+          };
+          log(`📥 Chat.js response:`, truncatedData);
           return data;
         } catch (error) {
           log(`❌ Failed with ${apiUrl}: ${error.message}`);
