@@ -1058,6 +1058,16 @@ function filterEventsByLocationKeywords(events, keywords, rawQuery) {
 
 /* ================= Handler ================= */
 export default async function handler(req, res) {
+  // Add CORS headers to allow browser requests
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ ok: false, error: "Method Not Allowed" });
