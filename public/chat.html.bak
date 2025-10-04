@@ -361,37 +361,15 @@ function renderProductCard(prod){
   if (priceHead) lines.push(`<p class="kvline"><strong>Price:</strong> ${escapeHTML(priceHead)}</p>`);
   const md = getMetaDescription(prod);
   if(md) lines.push(`<p class="meta">${escapeHTML(md)}</p>`);
-  
-  // Check multiple sources for availability
   if (prod.availability_status){
     lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(String(prod.availability_status).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2'))}</p>`);
-  } else if (prod.availability_raw) {
-    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(String(prod.availability_raw).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2'))}</p>`);
   } else if(facts.availability){
     const avail = (facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
     lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
   }
-  
-  // Check multiple sources for location
-  if (prod.location_parsed) {
-    lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(prod.location_parsed)}</p>`);
-  } else if (prod.location) {
-    lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(prod.location)}</p>`);
-  } else if(facts.location) {
-    lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
-  }
-  
-  // Check multiple sources for participants
-  if (prod.participants_parsed) {
-    lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(prod.participants_parsed)}</p>`);
-  } else if (prod.participants) {
-    lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(prod.participants)}</p>`);
-  } else if(facts.participants) {
-    lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
-  }
-  
-  if(facts.fitness) lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
-  
+  if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
+  if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
+  if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
   const li = options.map(o=>`<li>${escapeHTML(o.label||'')}${o.price ? ` — ${o.price}` : ''}</li>`).join('');
   const href = prod.page_url || prod.source_url || prod.url || '#';
   const book = href && href !== '#' ? `<p style="margin-top:8px"><a href="${href}" target="_blank" rel="noopener">Book now →</a></p>` : '';
@@ -619,7 +597,7 @@ function renderAnswer(payload){
 /* ================= Networking ================= */
 async function sendQuery(query){
   __lastQuery = String(query||'');
-  const req = { query, topK: 8, previousQuery: __lastQuery };
+  const req = { query, topK: 8 };
   setDebugJSON(dbgReq, req);
   const closeTyping = addTyping();
   try{

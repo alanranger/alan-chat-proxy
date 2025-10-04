@@ -1001,19 +1001,16 @@ export default async function handler(req, res) {
 
   const started = Date.now();
   try {
-    const { query, topK = 8, previousQuery } = req.body || {};
+    const { query, topK = 8 } = req.body || {};
     const q = String(query || "").trim();
-    const prevQ = String(previousQuery || "").trim();
     const client = supabaseAdmin();
 
     const health = await probeSupabaseHealth();
 
-    // Use previous query for context if current query is short or unclear
-    const contextualQuery = (q.length < 20 && prevQ) ? `${prevQ} ${q}` : q;
-    const intent = detectIntent(contextualQuery);
-    const subtype = detectEventSubtype(contextualQuery);
-    const rawKeywords = extractKeywords(contextualQuery, intent, subtype);
-    const keywords = expandLocationKeywords(rawKeywords, contextualQuery);
+    const intent = detectIntent(q);
+    const subtype = detectEventSubtype(q);
+    const rawKeywords = extractKeywords(q, intent, subtype);
+    const keywords = expandLocationKeywords(rawKeywords, q);
     const topic = topicFromKeywords(keywords);
 
     const queryHasLocationPhrase = hasAny(q, LOCATION_HINTS);
@@ -1032,7 +1029,7 @@ export default async function handler(req, res) {
       if (subtype === "workshop") events = events.filter(isWorkshopEvent);
       else if (subtype === "course") events = events.filter(isCourseEvent);
 
-      const locFiltered = filterEventsByLocationKeywords(events, keywords, contextualQuery);
+      const locFiltered = filterEventsByLocationKeywords(events, keywords, q);
       if (locFiltered.length) events = locFiltered;
 
       try {
