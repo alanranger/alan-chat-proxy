@@ -1055,7 +1055,7 @@ function truncateForDebug(obj, maxItems = 3) {
   return obj;
 }
 
-export default async function handler(req, res) {
+async function chatHandler(req, res) {
   // Add CORS headers to allow browser requests
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
