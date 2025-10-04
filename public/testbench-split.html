@@ -270,11 +270,15 @@
     async function testChatConnection() {
       // Try multiple possible URLs
       const possibleUrls = [
+        'https://alan-chat-proxy.vercel.app/api/chat',
         'https://alan-chat-bot.vercel.app/api/chat'
       ];
       
+      log('🔍 Testing Chat.js API connections...');
+      
       for (const apiUrl of possibleUrls) {
         try {
+          log(`📤 Testing Chat.js API: ${apiUrl}`);
           // Trying Chat.js API
           const response = await fetch(apiUrl, {
             method: 'POST',
@@ -282,7 +286,11 @@
             body: JSON.stringify({ query: 'test', topK: 1 })
           });
         
+          log(`📥 Chat.js API response: ${response.status} ${response.statusText}`);
+          
           if (response.ok) {
+            const data = await response.json();
+            log(`✅ Chat.js API success:`, data);
             $('#chatStatus').classList.add('connected');
             $('#chatStatusText').textContent = 'Chat.js: Connected';
             $('#chatStatusBadge').textContent = 'Connected';
@@ -290,9 +298,12 @@
             // Chat.js API connection successful
             return true;
           } else {
-            throw new Error(`HTTP ${response.status}`);
+            const errorText = await response.text();
+            log(`❌ Chat.js API HTTP error ${response.status}:`, errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
           }
         } catch (error) {
+          log(`❌ Chat.js API failed for ${apiUrl}:`, error.message);
           // Failed with API URL
           continue; // Try next URL
         }
@@ -309,40 +320,56 @@
 
     async function callChatAPI(query, previousQuery = null) {
       // Calling Chat.js API
+      log(`🚀 Calling Chat.js API with query: "${query}"`);
+      if (previousQuery) {
+        log(`🧩 Previous query context: "${previousQuery}"`);
+      }
       
       // Use the same URL discovery logic as testChatConnection
       const possibleUrls = [
+        'https://alan-chat-proxy.vercel.app/api/chat',
         'https://alan-chat-bot.vercel.app/api/chat'
       ];
       
       for (const apiUrl of possibleUrls) {
         try {
+          log(`📤 Trying Chat.js API: ${apiUrl}`);
           // Trying Chat.js API
+          
+          const requestBody = { 
+            query, 
+            topK: 8, 
+            previousQuery 
+          };
+          log(`📤 Request body:`, requestBody);
           
           const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              query, 
-              topK: 8, 
-              previousQuery 
-            })
+            body: JSON.stringify(requestBody)
           });
 
+          log(`📥 Chat.js API response: ${response.status} ${response.statusText}`);
+          
           if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const errorText = await response.text();
+            log(`❌ Chat.js API HTTP error:`, errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
           }
 
           const data = await response.json();
+          log(`✅ Chat.js API success:`, data);
           // Chat.js response received
           return data;
         } catch (error) {
+          log(`❌ Chat.js API failed for ${apiUrl}:`, error.message);
           // Failed with API URL
           continue; // Try next URL
         }
       }
       
       // If we get here, all URLs failed
+      log(`❌ All Chat.js API URLs failed`);
       throw new Error('All Chat.js API URLs failed');
     }
 
