@@ -75,7 +75,7 @@
   <header class="mb16">
     <h1>Split Testbench – <span class="orange">Chat.js</span> vs <span class="green">RPC RAG</span></h1>
     <div class="muted">Compare chat.js API responses with direct Supabase RPC calls</div>
-    <div class="muted" style="text-align: right; margin-top: 8px;">Version 2.8 - Force Deployment</div>
+    <div class="muted" style="text-align: right; margin-top: 8px;">Version 2.9 - Use Working API URLs</div>
   </header>
 
   <section class="row mb16">
@@ -271,10 +271,8 @@
       // Try multiple possible URLs
       const possibleUrls = [
         'https://alan-chat-r3onjlam0-info-alanrangercs-projects.vercel.app/api/chat',
-        'https://alan-chat-bot.vercel.app/api/chat',
         'https://alan-chat-proxy.vercel.app/api/chat',
         'https://alan-ranger-chat.vercel.app/api/chat',
-        '/api/chat'  // fallback to relative path
       ];
       
       for (const apiUrl of possibleUrls) {
@@ -317,10 +315,8 @@
       // Use the same URL discovery logic as testChatConnection
       const possibleUrls = [
         'https://alan-chat-r3onjlam0-info-alanrangercs-projects.vercel.app/api/chat',
-        'https://alan-chat-bot.vercel.app/api/chat',
         'https://alan-chat-proxy.vercel.app/api/chat',
         'https://alan-ranger-chat.vercel.app/api/chat',
-        '/api/chat'  // fallback to relative path
       ];
       
       for (const apiUrl of possibleUrls) {
