@@ -187,7 +187,7 @@ function buildOrIlike(keys, keywords) {
   const clauses = [];
   for (const k of keywords)
     for (const col of keys) clauses.push(`${col}.ilike.%${k}%`);
-  return clauses.join(",");
+  return clauses;
 }
 
 async function findEvents(client, { keywords = [], topK = 12 } = {}) {
@@ -202,7 +202,7 @@ async function findEvents(client, { keywords = [], topK = 12 } = {}) {
           "event_location",
         ],
         keywords
-      )
+      ).join(",")
     );
   }
   q = q.order("date_start", { ascending: true }).limit(topK);
@@ -227,7 +227,7 @@ async function findProducts(client, { keywords = [], topK = 12 } = {}) {
           "raw->meta->>description",
         ],
         keywords
-      )
+      ).join(",")
     );
   q = q.order("last_seen", { ascending: false }).limit(topK);
   const { data, error } = await q;
@@ -251,7 +251,7 @@ async function findArticles(client, { keywords = [], topK = 12 } = {}) {
           "raw->meta->>description",
         ],
         keywords
-      )
+      ).join(",")
     );
   q = q.order("last_seen", { ascending: false }).limit(topK);
   const { data, error } = await q;
