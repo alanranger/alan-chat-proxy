@@ -972,4 +972,501 @@ function buildEventPanelMarkdown(ev) {
   if (!ev) return "";
   const title = ev.title || ev.raw?.name || "Upcoming Workshop";
   const when = ev.date_start ? new Date(ev.date_start).toUTCString() : null;
-  const loc = ev.locatio
+  const loc = ev.location || null;
+  const url = pickUrl(ev) || null;
+
+  const items = [`**${title}**`];
+  if (loc) items.push(`- **Location:** ${loc}`);
+  if (when) items.push(`- **When:** ${when}`);
+  return items.join("\n") + (url ? `\n\n[View event](${url})` : "");
+}
+function buildAdvicePills(articles, originalQuery) {
+  const pills = [];
+  const top = articles?.[0] ? pickUrl(articles[0]) : null;
+  if (top) pills.push({ label: "Read Guide", url: top, brand: "primary" });
+  pills.push({
+    label: "More Articles",
+    url: `https://www.alanranger.com/search?query=${encodeURIComponent(
+      String(originalQuery || "")
+    )}`,
+    brand: "secondary",
+  });
+  return pills;
+}
+function buildEventPills(firstEvent, productOrNull, fallbackProduct = null) {
+  const pills = [];
+  const eventUrl = pickUrl(firstEvent);
+  const bookProduct = productOrNull || fallbackProduct;
+  const productUrl = pickUrl(bookProduct);
+  const bookUrl = productUrl || null;
+
+  if (bookUrl) pills.push({ label: "Book now", url: bookUrl, brand: "primary" });
+  if (eventUrl) pills.push({ label: "View event", url: eventUrl, brand: "secondary" });
+  pills.push({
+    label: "Photos",
+    url: "https://www.alanranger.com/photography-portfolio",
+    brand: "secondary",
+  });
+  return pills;
+}
+
+/* === location filtering with phrase support === */
+function filterEventsByLocationKeywords(events, keywords, rawQuery) {
+  const expanded = expandLocationKeywords(
+    keywords.filter((k) => LOCATION_HINTS.includes(k.toLowerCase())),
+    rawQuery
+  );
+  for (const phrase of LOCATION_HINTS) {
+    if (lc(rawQuery).includes(lc(phrase))) expanded.push(lc(phrase));
+  }
+  const needles = Array.from(new Set(expanded));
+  if (!needles.length) return events;
+
+  return events.filter((e) => {
+    const hay = (
+      (e.title || "") +
+      " " +
+      (e.location || "") +
+      " " +
+      (pickUrl(e) || "")
+    ).toLowerCase();
+    return needles.some((l) => hay.includes(l));
+  });
+}
+
+/* ================= Handler ================= */
+// Helper to truncate large objects for debug logging
+function truncateForDebug(obj, maxItems = 3) {
+  if (Array.isArray(obj)) {
+    if (obj.length <= maxItems) return obj;
+    return [...obj.slice(0, maxItems), `... (${obj.length - maxItems} more items)`];
+  }
+  if (obj && typeof obj === 'object') {
+    const truncated = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (Array.isArray(value) && value.length > maxItems) {
+        truncated[key] = [...value.slice(0, maxItems), `... (${value.length - maxItems} more items)`];
+      } else {
+        truncated[key] = value;
+      }
+    }
+    return truncated;
+  }
+  return obj;
+}
+
+export default async function handler(req, res) {
+  // Add CORS headers to allow browser requests
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ ok: false, error: "Method Not Allowed" });
+  }
+
+  const started = Date.now();
+  try {
+    const { query, topK = 8, previousQuery } = req.body || {};
+    const q = String(query || "").trim();
+    const prevQ = String(previousQuery || "").trim();
+    const client = supabaseAdmin();
+
+    const health = await probeSupabaseHealth();
+
+    // Use previous query for context if current query is short, unclear, or a follow-up question
+    const isFollowUp = prevQ && (
+      q.length < 30 || // Short questions
+      /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(q) || // Follow-up patterns
+      !q.includes('workshop') && !q.includes('course') && !q.includes('photography') // No topic keywords
+    );
+    const contextualQuery = isFollowUp ? `${prevQ} ${q}` : q;
+    
+    console.log(`🔄 Context: "${q}" | Prev: "${prevQ || 'none'}" | FollowUp: ${isFollowUp} | Contextual: "${contextualQuery}"`);
+    const intent = detectIntent(contextualQuery);
+    const subtype = detectEventSubtype(contextualQuery);
+    const rawKeywords = extractKeywords(contextualQuery, intent, subtype);
+    const keywords = expandLocationKeywords(rawKeywords, contextualQuery);
+    const topic = topicFromKeywords(keywords);
+
+    const queryHasLocationPhrase = hasAny(q, LOCATION_HINTS);
+    const queryHasTopicAnchor = hasAny(q, TOPIC_ANCHORS);
+
+    let t_supabase = 0, t_rank = 0, t_comp = 0;
+
+    const s1 = Date.now();
+    let events = [], products = [], articles = [];
+    if (intent === "events") {
+      [events, products] = await Promise.all([
+        findEvents(client, { keywords, topK: Math.max(10, topK + 2) }),
+        findProducts(client, { keywords, topK: 24 }),
+      ]);
+
+      if (subtype === "workshop") events = events.filter(isWorkshopEvent);
+      else if (subtype === "course") events = events.filter(isCourseEvent);
+
+      const locFiltered = filterEventsByLocationKeywords(events, keywords, contextualQuery);
+      if (locFiltered.length) events = locFiltered;
+
+      try {
+        articles = await findArticles(client, { keywords, topK: 6 });
+      } catch {
+        articles = [];
+      }
+
+      if (subtype === "course") {
+        products = (products || []).filter(isCourseProduct);
+      } else if (subtype === "workshop") {
+        products = (products || []).filter(isWorkshopProduct);
+      }
+    } else {
+      [articles, products] = await Promise.all([
+        findArticles(client, { keywords, topK: Math.max(12, topK) }),
+        findProducts(client, { keywords, topK: 12 }),
+      ]);
+    }
+    t_supabase += Date.now() - s1;
+
+    const allProdUrls = (products || []).map((p) => pickUrl(p)).filter(Boolean);
+    const [priceMap, availMap] = await Promise.all([
+      fetchDisplayPrices(client, allProdUrls),
+      fetchAvailability(client, allProdUrls),
+    ]);
+    products = (products || []).map((p) => {
+      const u = baseUrl(pickUrl(p));
+      const priceRow = priceMap.get(u);
+      const availRow = availMap.get(u);
+      return {
+        ...p,
+        display_price_gbp: priceRow?.display_price_gbp ?? null,
+        product_kind_resolved: priceRow?.product_kind ?? null,
+        price_source: priceRow?.preferred_source ?? null,
+        availability_status: availRow?.availability_status ?? null,
+        availability_raw: availRow?.availability_raw ?? null,
+      };
+    });
+
+    const s2 = Date.now();
+    const qTokens = keywords;
+
+    const scoreWrap = (arr) =>
+      (arr || [])
+        .map((e) => {
+          let s = scoreEntity(e, qTokens);
+          const hay = lc(
+            (e?.title || e?.raw?.name || "") +
+              " " +
+              (pickUrl(e) || "") +
+              " " +
+              (e?.description || e?.raw?.metaDescription || e?.raw?.meta?.description || "")
+          );
+          if (queryHasLocationPhrase && hasAny(hay, LOCATION_HINTS)) s += 0.12;
+          if (queryHasTopicAnchor && hasAny(hay, TOPIC_ANCHORS)) s += 0.12;
+          return { e, s };
+        })
+        .sort((a, b) => {
+          if (b.s !== a.s) return b.s - a.s;
+          const by = Date.parse(b.e?.last_seen || "") || 0;
+          const ax = Date.parse(a.e?.last_seen || "") || 0;
+          return by - ax;
+        })
+        .map((x) => Object.assign({ _score: Math.round(x.s * 100) / 100 }, x.e));
+
+    const rankedEvents = (events || [])
+      .slice()
+      .sort(
+        (a, b) =>
+          (Date.parse(a.date_start || 0) || 0) -
+          (Date.parse(b.date_start || 0) || 0)
+      )
+      .map((e) => {
+        let s = scoreEntity(e, qTokens);
+        const hay = lc(
+          (e?.title || e?.raw?.name || "") +
+            " " +
+            (e?.location || "") +
+            " " +
+            (pickUrl(e) || "")
+        );
+        if (queryHasLocationPhrase && hasAny(hay, LOCATION_HINTS)) s += 0.15;
+        if (queryHasTopicAnchor && hasAny(hay, TOPIC_ANCHORS)) s += 0.12;
+        return { ...e, _score: Math.round(Math.min(1, s) * 100) / 100 };
+      });
+
+    let rankedProducts = scoreWrap(products);
+    const rankedArticles = scoreWrap(articles).slice(0, 12);
+
+    const firstEvent = rankedEvents[0] || null;
+    t_rank += Date.now() - s2;
+
+    let featuredProduct = null;
+
+    // Skip product selection for follow-up questions that don't need product blocks
+    const isSimpleFollowUp = isFollowUp && (
+      /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(q) &&
+      !q.includes('book') && !q.includes('buy') && !q.includes('price') && !q.includes('cost')
+    );
+
+    if (firstEvent && !isSimpleFollowUp) {
+      const matched = await findBestProductForEvent(
+        client,
+        firstEvent,
+        rankedProducts,
+        subtype
+      );
+      if (matched) {
+        featuredProduct = upgradeToRichestByUrl(rankedProducts, matched);
+
+        const u = baseUrl(pickUrl(featuredProduct));
+        const priceRow = (await fetchDisplayPrices(client, [u])).get(u);
+        const availRow = (await fetchAvailability(client, [u])).get(u);
+        if (priceRow) {
+          featuredProduct.display_price_gbp =
+            priceRow.display_price_gbp ?? featuredProduct.display_price_gbp ?? null;
+          featuredProduct.product_kind_resolved =
+            priceRow.product_kind ?? featuredProduct.product_kind_resolved ?? null;
+          featuredProduct.price_source =
+            priceRow.preferred_source ?? featuredProduct.price_source ?? null;
+        }
+        if (availRow) {
+          featuredProduct.availability_status =
+            availRow.availability_status ?? featuredProduct.availability_status ?? null;
+          featuredProduct.availability_raw =
+            availRow.availability_raw ?? featuredProduct.availability_raw ?? null;
+        }
+      }
+
+      if (rankedProducts.length) {
+        const evTokens = new Set(
+          uniq([...titleTokens(firstEvent), ...urlTokens(firstEvent)])
+        );
+        rankedProducts = rankedProducts
+          .map((p) => {
+            const { f1 } = symmetricOverlap(evTokens, pickUrl(p), p.title);
+            let s = (p._score || 0) + f1;
+            if (sameHost(p, firstEvent)) s += 0.15;
+
+            const anchors = productAnchorTokens(p);
+            if (anchors.length) {
+              if (anchors.some((a) => evTokens.has(a))) s += 0.4;
+              else s -= 0.35;
+            }
+
+            const evtLower = lc(
+              (firstEvent?.title || "") + " " + (pickUrl(firstEvent) || "")
+            );
+            if (/portrait/.test(lc(p.title || "")) && !/portrait/.test(evtLower)) s -= 0.45;
+            if (/(lightroom|editing)/.test(lc(p.title || "")) && !/(lightroom|editing)/.test(evtLower)) s -= 0.45;
+
+            const slug = lc(((pickUrl(p) || "") + " " + (p.title || "")));
+            if (/beginners[-\s]photography[-\s]course/.test(slug)) s += 0.35;
+            if (hasAny(slug, TOPIC_ANCHORS)) s += 0.1;
+
+            return { p, s };
+          })
+          .sort((a, b) => b.s - a.s)
+          .map((x) => x.p);
+      }
+    }
+
+    let preferredProduct = featuredProduct || rankedProducts[0] || null;
+    preferredProduct = upgradeToRichestByUrl(rankedProducts, preferredProduct);
+
+    if (preferredProduct) {
+      const topUrl = baseUrl(pickUrl(preferredProduct));
+      rankedProducts = [
+        preferredProduct,
+        ...rankedProducts.filter((p) => baseUrl(pickUrl(p)) !== topUrl),
+      ];
+    }
+
+    // Treat mapping as "strict" so we render the product panel
+    const hasStrictProduct =
+      !!(featuredProduct && (featuredProduct._matched_via === "mapping" ||
+          strictlyMatchesEvent(featuredProduct, rankedEvents[0], subtype)));
+
+    const fallbackProductCandidate =
+      !hasStrictProduct && rankedProducts.length && !isSimpleFollowUp ? rankedProducts[0] : null;
+
+    const scoresForConf = [
+      ...(rankedArticles[0]?._score ? [rankedArticles[0]._score] : []),
+      ...(rankedEvents[0]?._score ? [rankedEvents[0]._score] : []),
+      ...(rankedProducts[0]?._score ? [rankedProducts[0]._score] : []),
+    ].map((x) => x / 100);
+    const confidence_pct = confidenceFrom(scoresForConf);
+
+    const s4 = Date.now();
+    // Generate intelligent response using AI instead of rigid templates
+    let answer_markdown = await generateIntelligentResponse({
+      query: contextualQuery,
+      intent,
+      events: rankedEvents,
+      products: rankedProducts,
+      articles: rankedArticles,
+      featuredProduct,
+      firstEvent,
+      isSimpleFollowUp
+    });
+    t_comp += Date.now() - s4;
+
+    const citations = uniq([
+      ...rankedArticles.slice(0, 3).map(pickUrl),
+      ...(hasStrictProduct ? [pickUrl(featuredProduct)] : []),
+      ...(firstEvent ? [pickUrl(firstEvent)] : []),
+    ]);
+
+    const structured = {
+      intent,
+      topic,
+      event_subtype: subtype,
+      events: (rankedEvents || []).map((e) => ({
+        id: e.id,
+        title: e.event_title,
+        page_url: e.event_url,
+        source_url: e.event_url,
+        date_start: e.date_start,
+        date_end: e.date_end,
+        location: e.event_location,
+        when: e.date_start ? new Date(e.date_start).toUTCString() : null,
+        href: e.event_url,
+        _score: e._score,
+      })),
+      products: (rankedProducts || []).map((p) => {
+        const long =
+          p?.raw?.metaDescription ||
+          p?.raw?.meta?.description ||
+          p?.description ||
+          "";
+        const parsed = parseProductBlock(long);
+        const priceNum = selectDisplayPriceNumber(p);
+        const priceStr = formatDisplayPriceGBP(priceNum);
+        return {
+          id: p.id,
+          title: p.title,
+          page_url: p.page_url,
+          source_url: p.source_url,
+          description: p.description,
+          price: p.price ?? null,
+          price_gbp:
+            p.display_price_gbp != null ? p.display_price_gbp : p.price_gbp ?? null,
+          display_price_number: priceNum,
+          display_price: priceStr,
+          price_source: p.price_source || null,
+          product_kind_resolved: p.product_kind_resolved || null,
+          location: p.location,
+          _score: p._score,
+          availability_status: p.availability_status || null,
+          availability_raw: p.availability_raw || null,
+          location_parsed: parsed.location || null,
+          participants_parsed: parsed.participants || null,
+          time_parsed: parsed.time || null,
+          dates_parsed: parsed.dates || null,
+          fitness_parsed: parsed.fitness || null,
+          _matched_via: p._matched_via || null,
+        };
+      }),
+      articles: (rankedArticles || []).map((a) => ({
+        id: a.id,
+        title: a.title,
+        page_url: a.page_url,
+        source_url: a.source_url,
+        last_seen: a.last_seen,
+      })),
+      pills:
+        intent === "events"
+          ? buildEventPills(
+              rankedEvents[0] || null,
+              hasStrictProduct ? featuredProduct : null,
+              fallbackProductCandidate
+            )
+          : buildAdvicePills(rankedArticles, q),
+    };
+
+    const debug = {
+      version: "v1.1.6-rag-fix",
+      intent,
+      keywords,
+      event_subtype: subtype,
+      anchor_flags: {
+        queryHasLocationPhrase,
+        queryHasTopicAnchor,
+      },
+      first_event: rankedEvents[0]
+        ? {
+            id: rankedEvents[0].id,
+            title: rankedEvents[0].title,
+            url: pickUrl(rankedEvents[0]),
+            date_start: rankedEvents[0].date_start,
+          }
+        : null,
+      featured_product: featuredProduct
+        ? {
+            id: featuredProduct.id,
+            title: featuredProduct.title,
+            url: pickUrl(featuredProduct),
+            strictly_matches_first_event:
+              strictlyMatchesEvent(featuredProduct, rankedEvents[0], subtype),
+            matched_via: featuredProduct._matched_via || null,
+            display_price: formatDisplayPriceGBP(
+              selectDisplayPriceNumber(featuredProduct)
+            ),
+            availability_status: featuredProduct.availability_status || null,
+            price_source: featuredProduct.price_source || null,
+          }
+        : null,
+      strict_product_gate: hasStrictProduct,
+      fallback_product_for_pill: fallbackProductCandidate
+        ? { id: fallbackProductCandidate.id, title: fallbackProductCandidate.title, url: pickUrl(fallbackProductCandidate) }
+        : null,
+      pills: {
+        book_now:
+          structured.pills?.find((p) => p.label.toLowerCase() === "book now")?.url ||
+          null,
+      },
+      counts: {
+        events: (structured.events || []).length,
+        products: (structured.products || []).length,
+        articles: (structured.articles || []).length,
+      },
+      probes: { supabase_health: health },
+      views: {
+        price_view: "public.v_product_display",
+        availability_view: "public.v_product_availability (optional)",
+        event_map_view: "public.v_event_product_links_all",
+      },
+    };
+
+    const payload = {
+      ok: true,
+      answer_markdown,
+      citations,
+      structured,
+      confidence: confidence_pct / 100,
+      confidence_pct,
+      debug,
+      meta: {
+        duration_ms: Date.now() - started,
+        endpoint: "/api/chat",
+        topK,
+        intent,
+      },
+    };
+
+    // Log truncated response for debugging
+    console.log(`📤 RAG: Sending response | Answer="${payload.answer_markdown?.substring(0, 50)}..." | Events=${payload.structured?.events?.length || 0} | Products=${payload.structured?.products?.length || 0} | Articles=${payload.structured?.articles?.length || 0}`);
+    
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return res.status(200).send(payload);
+  } catch (err) {
+    const msg = (err && (err.message || err.toString())) || "Unknown server error";
+    const body = { ok: false, error: msg };
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return res.status(200).send(body);
+  }
+}
