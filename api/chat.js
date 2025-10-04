@@ -1088,12 +1088,7 @@ export default async function handler(req, res) {
     );
     const contextualQuery = isFollowUp ? `${prevQ} ${q}` : q;
     
-    console.log('DEBUG: Context tracking:', {
-      originalQuery: q,
-      previousQuery: prevQ,
-      isFollowUp,
-      contextualQuery
-    });
+    console.log(`🔄 Context: "${q}" | Prev: "${prevQ || 'none'}" | FollowUp: ${isFollowUp} | Contextual: "${contextualQuery}"`);
     const intent = detectIntent(contextualQuery);
     const subtype = detectEventSubtype(contextualQuery);
     const rawKeywords = extractKeywords(contextualQuery, intent, subtype);
