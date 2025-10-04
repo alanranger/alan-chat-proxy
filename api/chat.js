@@ -44,7 +44,7 @@ const SELECT_COLS =
   "id, kind, title, page_url, source_url, last_seen, location, date_start, date_end, price, description, raw";
 
 function pickUrl(e) {
-  return e?.page_url || e?.source_url || e?.url || null;
+  return e?.event_url || e?.page_url || e?.source_url || e?.url || null;
 }
 function baseUrl(u) {
   return String(u || "").split("?")[0];
@@ -313,8 +313,8 @@ async function fetchAvailability(client, productUrls = []) {
 
 /* ================= Matching helpers ================= */
 function isWorkshopEvent(e) {
-  const u = (pickUrl(e) || "").toLowerCase();
-  const t = (e?.title || e?.raw?.name || "").toLowerCase();
+  const u = (pickUrl(e) || e?.event_url || "").toLowerCase();
+  const t = (e?.event_title || e?.title || e?.raw?.name || "").toLowerCase();
   const hasWorkshop =
     /workshop/.test(u) ||
     /workshop/.test(t) ||
@@ -325,8 +325,8 @@ function isWorkshopEvent(e) {
   return hasWorkshop && !looksCourse;
 }
 function isCourseEvent(e) {
-  const u = (pickUrl(e) || "").toLowerCase();
-  const t = (e?.title || e?.raw?.name || "").toLowerCase();
+  const u = (pickUrl(e) || e?.event_url || "").toLowerCase();
+  const t = (e?.event_title || e?.title || e?.raw?.name || "").toLowerCase();
   const hasCourse = /(lesson|lessons|tuition|course|courses|class|classes)/.test(
     u + " " + t
   );
