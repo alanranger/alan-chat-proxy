@@ -847,19 +847,31 @@ async function extractRelevantInfo(query, dataContext) {
   // Search through all available data sources for relevant information
   const allData = [...(products || []), ...(events || []), ...(articles || [])];
   
-  for (const item of allData) {
-    // Check for participant information
-    if ((lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) ||
-        lowerQuery.includes('participants') || lowerQuery.includes('capacity')) {
-      console.log('DEBUG: Checking participant info for item:', item.title);
+  // Check if this is a participant question
+  const isParticipantQuestion = (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) ||
+                               lowerQuery.includes('participants') || lowerQuery.includes('capacity');
+  
+  console.log('DEBUG: isParticipantQuestion:', isParticipantQuestion);
+  
+  if (isParticipantQuestion) {
+    console.log('DEBUG: Looking for participant info in', allData.length, 'items');
+    
+    for (const item of allData) {
+      console.log('DEBUG: Checking item:', item.title);
       const participants = item.participants_parsed || item.participants;
       console.log('DEBUG: participants field:', participants);
+      
       if (participants && participants.includes('Max')) {
         console.log('DEBUG: Found participant info:', participants);
         return participants.replace(/\n•/g, '').trim();
       }
     }
     
+    console.log('DEBUG: No participant info found in any items');
+  }
+  
+  // Check for other types of information
+  for (const item of allData) {
     // Check for location information
     if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
       const location = item.location_parsed || item.location;
