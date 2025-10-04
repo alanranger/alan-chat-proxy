@@ -204,6 +204,7 @@
     let lastQuery = null;
     let lastChatResponse = null;
     let lastRpcResponse = null;
+    let isRunning = false; // Prevent duplicate runs
 
     // ------- Utilities -------
     const logEl = document.getElementById('log');
@@ -592,11 +593,18 @@
 
     // ------- Main Functions -------
     async function runBothTests() {
+      if (isRunning) {
+        log('⚠️ Test already running, please wait...');
+        return;
+      }
+      
       const query = $byId('queryInput').value.trim();
       if (!query) {
         // Please enter a query
         return;
       }
+      
+      isRunning = true;
       
       // Capture previous query for context before updating lastQuery
       const previousQuery = lastQuery;
@@ -643,6 +651,9 @@
       
       // Update context info
       $byId('contextInfo').textContent = previousQuery ? 'Has context' : 'No context';
+      
+      // Reset running flag
+      isRunning = false;
     }
 
     function clearResults() {
@@ -729,7 +740,8 @@
     Object.entries(quickTests).forEach(([btnId, query]) => {
       $byId(btnId).addEventListener('click', () => {
         $byId('queryInput').value = query;
-        runBothTests();
+        // Use setTimeout to ensure the input value is set before running
+        setTimeout(() => runBothTests(), 0);
       });
     });
 

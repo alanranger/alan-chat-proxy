@@ -20,7 +20,17 @@ function supabaseAdmin() {
   console.log('🔧 Supabase config:', {
     url: SUPABASE_URL,
     hasServiceKey: !!SUPABASE_SERVICE_ROLE_KEY,
-    serviceKeyLength: SUPABASE_SERVICE_ROLE_KEY?.length
+    serviceKeyLength: SUPABASE_SERVICE_ROLE_KEY?.length,
+    usingEnvVars: {
+      SUPABASE_URL: !!process.env.SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY
+    },
+    envValues: {
+      SUPABASE_URL: process.env.SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT_SET',
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? 'SET' : 'NOT_SET'
+    }
   });
   
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
