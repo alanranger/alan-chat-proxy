@@ -316,13 +316,31 @@
 
           const data = await response.json();
           // Log truncated Chat.js response for debugging
+          const truncateItem = (item) => {
+            if (typeof item === 'string') return item.length > 100 ? item.substring(0, 100) + '...' : item;
+            if (typeof item === 'object' && item !== null) {
+              const truncated = {};
+              for (const [key, value] of Object.entries(item)) {
+                if (typeof value === 'string' && value.length > 100) {
+                  truncated[key] = value.substring(0, 100) + '...';
+                } else if (typeof value === 'object' && value !== null) {
+                  truncated[key] = '[Object]';
+                } else {
+                  truncated[key] = value;
+                }
+              }
+              return truncated;
+            }
+            return item;
+          };
+          
           const truncatedData = {
             ...data,
             structured: data.structured ? {
               ...data.structured,
-              events: data.structured.events ? data.structured.events.slice(0, 3).concat(data.structured.events.length > 3 ? [`... (${data.structured.events.length - 3} more events)`] : []) : [],
-              products: data.structured.products ? data.structured.products.slice(0, 3).concat(data.structured.products.length > 3 ? [`... (${data.structured.products.length - 3} more products)`] : []) : [],
-              articles: data.structured.articles ? data.structured.articles.slice(0, 3).concat(data.structured.articles.length > 3 ? [`... (${data.structured.articles.length - 3} more articles)`] : []) : []
+              events: data.structured.events ? data.structured.events.slice(0, 2).map(truncateItem).concat(data.structured.events.length > 2 ? [`... (${data.structured.events.length - 2} more events)`] : []) : [],
+              products: data.structured.products ? data.structured.products.slice(0, 2).map(truncateItem).concat(data.structured.products.length > 2 ? [`... (${data.structured.products.length - 2} more products)`] : []) : [],
+              articles: data.structured.articles ? data.structured.articles.slice(0, 2).map(truncateItem).concat(data.structured.articles.length > 2 ? [`... (${data.structured.articles.length - 2} more articles)`] : []) : []
             } : null
           };
           log(`📥 Chat.js response:`, truncatedData);
