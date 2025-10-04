@@ -876,7 +876,7 @@ async function extractRelevantInfo(query, dataContext) {
       const participants = item.participants_parsed || item.participants;
       console.log('DEBUG: participants field:', participants);
       
-      if (participants && participants.includes('Max')) {
+      if (participants && participants.trim().length > 0) {
         console.log('DEBUG: Found participant info:', participants);
         return participants.replace(/\n•/g, '').trim();
       }
