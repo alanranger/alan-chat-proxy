@@ -800,22 +800,15 @@ function buildDataContext({ events, products, articles, featuredProduct, firstEv
 
 function isSimpleFollowUp(query) {
   const followUpPatterns = /^(how many|what|when|where|how much|how long|can i|do you|is there|what time|what's the|how do i)/i;
-  const result = followUpPatterns.test(query.trim());
-  console.log('DEBUG: isSimpleFollowUp check:', { query, result });
-  return result;
+  return followUpPatterns.test(query.trim());
 }
 
 async function generateRAGResponse(query, dataContext, intent) {
-  console.log('DEBUG: generateRAGResponse called with query:', query);
-  console.log('DEBUG: isSimpleFollowUp result:', isSimpleFollowUp(query));
-  console.log('DEBUG: dataContext.extractedInfo:', dataContext.extractedInfo);
+  console.log(`🤖 RAG: Processing "${query}" | Intent=${intent} | SimpleFollowUp=${isSimpleFollowUp(query)}`);
   
   // For simple follow-up questions, use extracted information to answer directly
   if (isSimpleFollowUp(query)) {
-    console.log('DEBUG: Calling generateDirectAnswer');
-    const result = await generateDirectAnswer(query, dataContext);
-    console.log('DEBUG: generateDirectAnswer result:', result);
-    return result;
+    return await generateDirectAnswer(query, dataContext);
   }
   
   // For event/product queries, determine the best response format based on available data
@@ -830,19 +823,17 @@ async function generateRAGResponse(query, dataContext, intent) {
 }
 
 async function generateDirectAnswer(query, dataContext) {
-  console.log('DEBUG: generateDirectAnswer called with query:', query);
-  console.log('DEBUG: dataContext:', dataContext);
-  console.log('DEBUG: dataContext.products:', dataContext.products);
-  console.log('DEBUG: dataContext.products length:', dataContext.products?.length);
+  console.log(`🎯 RAG: Direct answer for "${query}" | Products=${dataContext.products?.length || 0}`);
   
   // Use AI to intelligently extract relevant information from the data context
   const relevantInfo = await extractRelevantInfo(query, dataContext);
-  console.log('DEBUG: extractRelevantInfo returned:', relevantInfo);
   
   if (relevantInfo) {
+    console.log(`✅ RAG: Returning answer="${relevantInfo}"`);
     return `**${relevantInfo}**`;
   }
   
+  console.log('❌ RAG: No relevant info found, using fallback');
   // If no specific information found, provide a helpful response
   return `I don't have a confident answer to that yet. I'm trained on Alan's site, so I may miss things. If you'd like to follow up, please reach out:`;
 }
@@ -851,14 +842,6 @@ async function extractRelevantInfo(query, dataContext) {
   const { products, events, articles } = dataContext;
   const lowerQuery = query.toLowerCase();
   
-  console.log('DEBUG: extractRelevantInfo called with query:', query);
-  console.log('DEBUG: lowerQuery:', lowerQuery);
-  console.log('DEBUG: products length:', products?.length);
-  console.log('DEBUG: first product participants_parsed:', products?.[0]?.participants_parsed);
-  console.log('DEBUG: Query includes how many:', lowerQuery.includes('how many'));
-  console.log('DEBUG: Query includes people:', lowerQuery.includes('people'));
-  console.log('DEBUG: Query includes attend:', lowerQuery.includes('attend'));
-  
   // Search through all available data sources for relevant information
   const allData = [...(products || []), ...(events || []), ...(articles || [])];
   
@@ -866,40 +849,34 @@ async function extractRelevantInfo(query, dataContext) {
   const isParticipantQuestion = (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) ||
                                lowerQuery.includes('participants') || lowerQuery.includes('capacity');
   
-  console.log('DEBUG: isParticipantQuestion:', isParticipantQuestion);
+  console.log(`🔍 RAG: Query="${query}" | ParticipantQ=${isParticipantQuestion} | Data=${allData.length} items`);
   
   if (isParticipantQuestion) {
-    console.log('DEBUG: Looking for participant info in', allData.length, 'items');
+    // Look for participant data in first few items only
+    const sampleItems = allData.slice(0, 3);
+    console.log(`🔍 RAG: Checking ${sampleItems.length} items for participants`);
     
-    for (const item of allData) {
-      console.log('DEBUG: Checking item:', item.title);
+    for (const item of sampleItems) {
       const participants = item.participants_parsed || item.participants;
-      console.log('DEBUG: participants field:', participants);
       
       if (participants && participants.trim().length > 0) {
-        console.log('DEBUG: Found participant info:', participants);
+        console.log(`✅ RAG: Found participants="${participants}" in "${item.title?.substring(0, 30)}..."`);
         return participants.replace(/\n•/g, '').trim();
       }
     }
     
-    console.log('DEBUG: No participant info found in any items');
+    console.log('❌ RAG: No participant data found in sample items');
   }
   
-  // Check for other types of information
-  for (const item of allData) {
+  // Check for other types of information (location, price, etc.)
+  const sampleItems = allData.slice(0, 2); // Only check first 2 items for other info
+  for (const item of sampleItems) {
     // Check for location information
     if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
       const location = item.location_parsed || item.location;
       if (location) {
+        console.log(`✅ RAG: Found location="${location}"`);
         return location.replace(/\n•/g, '').trim();
-      }
-    }
-    
-    // Check for fitness/difficulty information
-    if (lowerQuery.includes('fitness') || lowerQuery.includes('difficulty') || lowerQuery.includes('level')) {
-      const fitness = item.fitness_parsed || item.fitness;
-      if (fitness) {
-        return fitness.replace(/\n•/g, '').trim();
       }
     }
     
@@ -907,15 +884,8 @@ async function extractRelevantInfo(query, dataContext) {
     if (lowerQuery.includes('how much') || lowerQuery.includes('price') || lowerQuery.includes('cost')) {
       const price = item.display_price || item.price_gbp || item.price;
       if (price) {
+        console.log(`✅ RAG: Found price="${price}"`);
         return `£${price}`;
-      }
-    }
-    
-    // Check for availability information
-    if (lowerQuery.includes('available') || lowerQuery.includes('book') || lowerQuery.includes('booking')) {
-      const availability = item.availability_status || item.availability_raw;
-      if (availability) {
-        return availability.replace(/\n•/g, '').trim();
       }
     }
     
@@ -923,15 +893,8 @@ async function extractRelevantInfo(query, dataContext) {
     if (lowerQuery.includes('when') || lowerQuery.includes('date') || lowerQuery.includes('time')) {
       const date = item.date_start || item.dates_parsed;
       if (date) {
+        console.log(`✅ RAG: Found date="${date}"`);
         return new Date(date).toLocaleDateString();
-      }
-    }
-    
-    // Check for duration information
-    if (lowerQuery.includes('how long') || lowerQuery.includes('duration')) {
-      const duration = item.duration || item.time_parsed;
-      if (duration) {
-        return duration.replace(/\n•/g, '').trim();
       }
     }
   }
