@@ -191,18 +191,15 @@ function buildOrIlike(keys, keywords) {
 }
 
 async function findEvents(client, { keywords = [], topK = 12 } = {}) {
-  let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "event");
+  let q = client.from("v_events_for_chat").select("*");
   q = q.gte("date_start", new Date().toISOString());
   if (keywords.length) {
     q = q.or(
       buildOrIlike(
         [
-          "title",
-          "page_url",
-          "location",
-          "description",
-          "raw->>metaDescription",
-          "raw->meta->>description",
+          "event_title",
+          "event_url",
+          "event_location",
         ],
         keywords
       )
@@ -1106,14 +1103,14 @@ export default async function handler(req, res) {
       event_subtype: subtype,
       events: (rankedEvents || []).map((e) => ({
         id: e.id,
-        title: e.title,
-        page_url: e.page_url,
-        source_url: e.source_url,
+        title: e.event_title,
+        page_url: e.event_url,
+        source_url: e.event_url,
         date_start: e.date_start,
         date_end: e.date_end,
-        location: e.location,
+        location: e.event_location,
         when: e.date_start ? new Date(e.date_start).toUTCString() : null,
-        href: pickUrl(e),
+        href: e.event_url,
         _score: e._score,
       })),
       products: (rankedProducts || []).map((p) => {
