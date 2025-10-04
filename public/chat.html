@@ -402,7 +402,14 @@ function eventHeaderLabel(structured){
   if (/\b(workshop|workshops)\b/.test(q) || structured?.event_subtype==='workshop') return 'Upcoming Workshops';
   return 'Upcoming Events';
 }
-function renderEventsBlock(structured){
+function renderEventsBlock(structured, query){
+  // Skip events block for simple follow-up questions
+  const isSimpleFollowUp = query && (
+    /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
+    !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost')
+  );
+  if (isSimpleFollowUp) return '';
+  
   const all = futureEvents(structured);
   if(!all.length) return '';
   const kp = extractKeyPhrases(structured?.topic||'', __lastQuery);
@@ -425,6 +432,13 @@ function pickArticles(structured, query, topic){
   return ranked;
 }
 function renderArticlesBlock(structured, query){
+  // Skip articles block for simple follow-up questions
+  const isSimpleFollowUp = query && (
+    /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
+    !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost')
+  );
+  if (isSimpleFollowUp) return '';
+  
   const topic = structured?.topic || '';
   const list = pickArticles(structured, query, topic);
   if(!list.length) return '';
@@ -569,7 +583,7 @@ function renderAnswer(payload){
     if (prod) addBubble(renderProductCard(prod));
   }
 
-  const evHTML = renderEventsBlock(s);
+  const evHTML = renderEventsBlock(s, __lastQuery);
   if(evHTML) addBubble(evHTML);
 
   const artHTML = renderArticlesBlock(s, __lastQuery);
