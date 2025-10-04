@@ -1,6 +1,6 @@
 // /api/chat.js
 
-export const config = { runtime: "nodejs22.x" };
+export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
 
