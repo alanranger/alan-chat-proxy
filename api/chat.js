@@ -594,9 +594,19 @@ async function findBestProductForEvent(client, firstEvent, preloadProducts = [],
       if (data && data[0]) prod = data[0];
     }
     if (prod) {
-      // mark provenance so downstream treats it as approved
-      prod._matched_via = "mapping";
-      return prod;
+      // VALIDATION: Check if mapped product actually matches the event topic
+      const eventTitle = (firstEvent?.event_title || firstEvent?.title || "").toLowerCase();
+      const productTitle = (prod?.title || "").toLowerCase();
+      
+      // If event is about bluebell but product is not, skip the mapping
+      if (eventTitle.includes("bluebell") && !productTitle.includes("bluebell")) {
+        console.log("Skipping bad mapping: bluebell event -> non-bluebell product");
+        prod = null;
+      } else {
+        // mark provenance so downstream treats it as approved
+        prod._matched_via = "mapping";
+        return prod;
+      }
     }
   }
 
