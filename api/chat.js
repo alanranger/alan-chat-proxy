@@ -205,16 +205,15 @@ async function findEvents(client, { keywords = [], topK = 12 } = {}) {
   let q = client.from("v_events_for_chat").select("*");
   q = q.gte("date_start", new Date().toISOString());
   if (keywords.length) {
-    q = q.or(
-      buildOrIlike(
-        [
-          "event_title",
-          "event_url",
-          "event_location",
-        ],
-        keywords
-      )
+    const orClauses = buildOrIlike(
+      [
+        "event_title",
+        "event_url",
+        "event_location",
+      ],
+      keywords
     );
+    q = q.or(orClauses.join(","));
   }
   q = q.order("date_start", { ascending: true }).limit(topK);
   const { data, error } = await q;
