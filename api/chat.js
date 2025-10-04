@@ -805,8 +805,6 @@ function buildDataContext({ events, products, articles, featuredProduct, firstEv
       console.log('DEBUG: Found participants_parsed:', product.participants_parsed);
       extractedInfo.participantCounts.push(product.participants_parsed);
     }
-  }
-  console.log('DEBUG: Final participantCounts array:', extractedInfo.participantCounts);
     if (product.location_parsed) {
       extractedInfo.locations.push(product.location_parsed);
     }
@@ -823,6 +821,7 @@ function buildDataContext({ events, products, articles, featuredProduct, firstEv
       extractedInfo.descriptions.push(product.description);
     }
   }
+  console.log('DEBUG: Final participantCounts array:', extractedInfo.participantCounts);
   
   // Extract from events
   for (const event of context.events) {
