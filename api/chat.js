@@ -836,6 +836,11 @@ function buildDataContext({ events, products, articles, featuredProduct, firstEv
   return { ...context, extractedInfo };
 }
 
+function isSimpleFollowUp(query) {
+  const followUpPatterns = /^(how many|what|when|where|how much|how long|can i|do you|is there|what time|what's the|how do i)/i;
+  return followUpPatterns.test(query.trim());
+}
+
 async function generateRAGResponse(query, dataContext, intent) {
   // For simple follow-up questions, use extracted information to answer directly
   if (isSimpleFollowUp(query)) {
@@ -851,11 +856,6 @@ async function generateRAGResponse(query, dataContext, intent) {
   
   // Fallback to general response
   return generateGeneralResponse(query, dataContext);
-}
-
-function isSimpleFollowUp(query) {
-  const followUpPatterns = /^(how many|what|when|where|how much|how long|can i|do you|is there|what time|what's the|how do i)/i;
-  return followUpPatterns.test(query.trim());
 }
 
 function generateDirectAnswer(query, extractedInfo) {
