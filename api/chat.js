@@ -801,6 +801,7 @@ function buildDataContext({ events, products, articles, featuredProduct, firstEv
   // Extract from products
   for (const product of context.products) {
     if (product.participants_parsed) {
+      console.log('DEBUG: Found participants_parsed:', product.participants_parsed);
       extractedInfo.participantCounts.push(product.participants_parsed);
     }
     if (product.location_parsed) {
@@ -860,9 +861,13 @@ function generateDirectAnswer(query, extractedInfo) {
   
   // Answer participant questions
   if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
+    console.log('DEBUG: Looking for participant info in:', extractedInfo.participantCounts);
     const participantInfo = extractedInfo.participantCounts.find(p => p.includes('Max'));
     if (participantInfo) {
+      console.log('DEBUG: Found participant info:', participantInfo);
       return `**${participantInfo.replace(/\n•/g, '').trim()}**`;
+    } else {
+      console.log('DEBUG: No participant info found');
     }
   }
   
