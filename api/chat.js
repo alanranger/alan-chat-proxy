@@ -202,23 +202,28 @@ function buildOrIlike(keys, keywords) {
 }
 
 async function findEvents(client, { keywords = [], topK = 12 } = {}) {
+  console.log("DEBUG: findEvents called with keywords:", keywords);
   let q = client.from("v_events_for_chat").select("*");
   q = q.gte("date_start", new Date().toISOString());
   if (keywords.length) {
-    q = q.or(
-      buildOrIlike(
-        [
-          "event_title",
-          "event_url",
-          "event_location",
-        ],
-        keywords
-      ).join(",")
-    );
+    const orClause = buildOrIlike(
+      [
+        "event_title",
+        "event_url",
+        "event_location",
+      ],
+      keywords
+    ).join(",");
+    console.log("DEBUG: Event OR clause:", orClause);
+    q = q.or(orClause);
   }
   q = q.order("date_start", { ascending: true }).limit(topK);
   const { data, error } = await q;
-  if (error) throw error;
+  if (error) {
+    console.log("DEBUG: Event query error:", error);
+    throw error;
+  }
+  console.log("DEBUG: Found events:", data?.length || 0, data?.map(e => e.event_title));
   return data || [];
 }
 
@@ -885,6 +890,13 @@ export default async function handler(req, res) {
     const subtype = detectEventSubtype(contextualQuery);
     const rawKeywords = extractKeywords(contextualQuery, intent, subtype);
     const keywords = expandLocationKeywords(rawKeywords, contextualQuery);
+    
+    // Debug logging
+    console.log("DEBUG: Query:", q);
+    console.log("DEBUG: Contextual query:", contextualQuery);
+    console.log("DEBUG: Intent:", intent);
+    console.log("DEBUG: Subtype:", subtype);
+    console.log("DEBUG: Keywords:", keywords);
     const topic = topicFromKeywords(keywords);
 
     const queryHasLocationPhrase = hasAny(q, LOCATION_HINTS);
