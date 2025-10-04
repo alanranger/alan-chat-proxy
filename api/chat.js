@@ -849,7 +849,9 @@ async function generateRAGResponse(query, dataContext, intent) {
   // For simple follow-up questions, use extracted information to answer directly
   if (isSimpleFollowUp(query)) {
     console.log('DEBUG: Calling generateDirectAnswer');
-    return generateDirectAnswer(query, dataContext.extractedInfo);
+    const result = generateDirectAnswer(query, dataContext.extractedInfo);
+    console.log('DEBUG: generateDirectAnswer result:', result);
+    return result;
   }
   
   // For event/product queries, determine the best response format based on available data
@@ -877,6 +879,7 @@ function generateDirectAnswer(query, extractedInfo) {
       return `**${participantInfo.replace(/\n•/g, '').trim()}**`;
     } else {
       console.log('DEBUG: No participant info found');
+      return `I'd be happy to help with that! Could you provide more details about what specific information you're looking for?`;
     }
   }
   
