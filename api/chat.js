@@ -1035,6 +1035,26 @@ function filterEventsByLocationKeywords(events, keywords, rawQuery) {
 }
 
 /* ================= Handler ================= */
+// Helper to truncate large objects for debug logging
+function truncateForDebug(obj, maxItems = 3) {
+  if (Array.isArray(obj)) {
+    if (obj.length <= maxItems) return obj;
+    return [...obj.slice(0, maxItems), `... (${obj.length - maxItems} more items)`];
+  }
+  if (obj && typeof obj === 'object') {
+    const truncated = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (Array.isArray(value) && value.length > maxItems) {
+        truncated[key] = [...value.slice(0, maxItems), `... (${value.length - maxItems} more items)`];
+      } else {
+        truncated[key] = value;
+      }
+    }
+    return truncated;
+  }
+  return obj;
+}
+
 export default async function handler(req, res) {
   // Add CORS headers to allow browser requests
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1443,6 +1463,9 @@ export default async function handler(req, res) {
       },
     };
 
+    // Log truncated response for debugging
+    console.log(`📤 RAG: Sending response | Answer="${payload.answer_markdown?.substring(0, 50)}..." | Events=${payload.structured?.events?.length || 0} | Products=${payload.structured?.products?.length || 0} | Articles=${payload.structured?.articles?.length || 0}`);
+    
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     return res.status(200).send(payload);
   } catch (err) {
