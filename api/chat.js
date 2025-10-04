@@ -132,6 +132,17 @@ function extractKeywords(q, intent, subtype) {
   const kept = tokens
     .map(normaliseToken)
     .filter((t) => t.length >= 3 && !STOPWORDS.has(t));
+  
+  // For event queries, be more permissive - include location and topic words
+  if (intent === "events" && kept.length === 0) {
+    const eventTokens = tokens
+      .map(normaliseToken)
+      .filter((t) => t.length >= 3);
+    if (eventTokens.length > 0) {
+      return eventTokens;
+    }
+  }
+  
   if (!kept.length)
     return [
       intent === "events"
@@ -194,22 +205,20 @@ async function findEvents(client, { keywords = [], topK = 12 } = {}) {
   let q = client.from("v_events_for_chat").select("*");
   q = q.gte("date_start", new Date().toISOString());
   if (keywords.length) {
-    const orClause = buildOrIlike(
-      [
-        "event_title",
-        "event_url",
-        "event_location",
-      ],
-      keywords
-    ).join(",");
-    console.log("DEBUG: Event keywords:", keywords);
-    console.log("DEBUG: Event OR clause:", orClause);
-    q = q.or(orClause);
+    q = q.or(
+      buildOrIlike(
+        [
+          "event_title",
+          "event_url",
+          "event_location",
+        ],
+        keywords
+      ).join(",")
+    );
   }
   q = q.order("date_start", { ascending: true }).limit(topK);
   const { data, error } = await q;
   if (error) throw error;
-  console.log("DEBUG: Found events:", data?.length || 0, data?.map(e => e.event_title));
   return data || [];
 }
 
@@ -876,9 +885,6 @@ export default async function handler(req, res) {
     const subtype = detectEventSubtype(contextualQuery);
     const rawKeywords = extractKeywords(contextualQuery, intent, subtype);
     const keywords = expandLocationKeywords(rawKeywords, contextualQuery);
-    console.log("DEBUG: Contextual query:", contextualQuery);
-    console.log("DEBUG: Raw keywords:", rawKeywords);
-    console.log("DEBUG: Expanded keywords:", keywords);
     const topic = topicFromKeywords(keywords);
 
     const queryHasLocationPhrase = hasAny(q, LOCATION_HINTS);
