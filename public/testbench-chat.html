@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Chat Testbench – RAG Conversation Testing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#0f172a; --line:#1b2540; --text:#dbe4ff; --muted:#9fb3ff;
+      --orange:#E57200; --green:#00B67A; --bad:#f87171; --good:#34d399;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{background:var(--bg);color:var(--text);font:14px/1.5 var(--sans);margin:0;padding:24px}
+    h1{margin:0 0 8px 0}
+    .muted{color:var(--muted)}
+    .row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .col{flex:1;min-width:280px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+    input,button,select,textarea{background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px}
+    button{cursor:pointer}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border-top:1px solid var(--line);padding:6px 8px;vertical-align:top}
+    th{color:var(--muted);text-align:left}
+    code, .mono{font-family:var(--mono)}
+    .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:6px 10px;margin:4px 6px 0 0;text-decoration:none;color:var(--text);font-weight:600}
+    .pill.brand{background:transparent;border-color:var(--orange);color:var(--orange)}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .span-12{grid-column:span 12}
+    .span-4{grid-column:span 4}
+    .kpi{display:flex;gap:10px;align-items:center}
+    .badge{display:inline-block;padding:2px 6px;border-radius:6px;background:#0b1220;border:1px solid var(--line);font-size:12px}
+    .badge.good{border-color:#1e3a2a;color:#86efac}
+    .badge.bad{border-color:#3a1e1e;color:#fecaca}
+    details.debug{border:1px dashed var(--line);border-radius:8px;padding:10px;margin-top:12px}
+    .small{font-size:12px}
+    .mb8{margin-bottom:8px}
+    .mb16{margin-bottom:16px}
+    .orange{color:var(--orange)}
+    .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .w100{width:100%}
+    .nowrap{white-space:nowrap}
+    .table-wrap{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+    .hint{color:#94a3b8}
+    .conversation{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:16px;max-height:300px;overflow-y:auto}
+    .message{display:flex;gap:8px;margin-bottom:8px}
+    .message.user{flex-direction:row-reverse}
+    .message-content{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;max-width:70%}
+    .message.user .message-content{background:var(--orange);color:white}
+    .message-time{font-size:11px;color:var(--muted)}
+    .api-status{display:flex;gap:8px;align-items:center}
+    .status-indicator{width:8px;height:8px;border-radius:50%;background:var(--bad)}
+    .status-indicator.connected{background:var(--good)}
+  </style>
+</head>
+<body>
+  <header class="mb16">
+    <h1>Chat Testbench – <span class="orange">RAG Conversation Testing</span></h1>
+    <div class="muted">Test the chat.js API with conversation context. Debug RAG system issues.</div>
+  </header>
+
+  <section class="row mb16">
+    <div class="col card">
+      <h3 class="mb8">API Connection</h3>
+      <label class="small">Chat API URL</label>
+      <input id="api_url" class="w100 mb8" value="/api/chat">
+      <div class="api-status">
+        <div id="status_indicator" class="status-indicator"></div>
+        <span id="connStatus">Not connected</span>
+      </div>
+      <div class="flex mb8">
+        <button id="btnTestConnection">Test Connection</button>
+        <button id="btnClearConversation">Clear Conversation</button>
+      </div>
+    </div>
+
+    <div class="col card">
+      <h3 class="mb8">Send Message</h3>
+      <input id="messageInput" class="w100 mb8" placeholder="Type your message here...">
+      <div class="flex mb8">
+        <button id="btnSend">Send</button>
+        <span class="small">Context: <span id="contextInfo" class="badge">None</span></span>
+      </div>
+      <div class="flex small">
+        <button id="btnCopyResponse">Copy Response</button>
+        <button id="btnCopyConversation">Copy Conversation</button>
+        <button id="btnDownloadLogs">Download Logs</button>
+        <span id="copyStatus" class="badge">Ready</span>
+      </div>
+    </div>
+
+    <div class="col card">
+      <h3 class="mb8">Quick Tests</h3>
+      <div class="flex mb8">
+        <button id="btnTestBluebell">Bluebell Workshop</button>
+        <button id="btnTestParticipants">How many people?</button>
+        <button id="btnTestPrice">How much does it cost?</button>
+      </div>
+      <div class="flex mb8">
+        <button id="btnTestLocation">Where is it?</button>
+        <button id="btnTestDates">When is it?</button>
+        <button id="btnTestAdvice">Photography tips</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="span-4 card">
+      <div class="kpi mb8">
+        <h3 class="mb8">Events</h3>
+        <span id="countEvents" class="badge">0</span>
+      </div>
+      <div class="table-wrap"><table id="tblEvents">
+        <thead><tr><th>Title</th><th class="nowrap">When</th><th>Location</th><th>£</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div class="span-4 card">
+      <div class="kpi mb8">
+        <h3 class="mb8">Products</h3>
+        <span id="countProducts" class="badge">0</span>
+      </div>
+      <div class="table-wrap"><table id="tblProducts">
+        <thead><tr><th>Title</th><th>£</th><th>Tags</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div class="span-4 card">
+      <div class="kpi mb8">
+        <h3 class="mb8">Articles</h3>
+        <span id="countArticles" class="badge">0</span>
+      </div>
+      <div class="table-wrap"><table id="tblArticles">
+        <thead><tr><th>Title</th><th>Snippet</th><th>Kind</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div class="span-12">
+      <div class="card">
+        <h3 class="mb8">Conversation</h3>
+        <div id="conversation" class="conversation">
+          <div class="message">
+            <div class="message-content">
+              <div>Welcome! Start a conversation to test the RAG system.</div>
+              <div class="message-time">System</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="span-12">
+      <details class="debug" open>
+        <summary>Debug & Logs</summary>
+        <div id="log" class="mono small"></div>
+      </details>
+    </div>
+  </section>
+
+  <script>
+    // ------- State -------
+    let conversationHistory = [];
+    let lastResponse = null;
+
+    // ------- Utilities -------
+    const logEl = document.getElementById('log');
+    const log = (...args) => {
+      const line = args.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join(' ');
+      logEl.textContent += line + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+    };
+
+    const $ = sel => document.querySelector(sel);
+    const $byId = id => document.getElementById(id);
+
+    // ------- API Functions -------
+    async function testConnection() {
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: 'test', topK: 1 })
+        });
+        
+        if (response.ok) {
+          $('#connStatus').textContent = 'Connected';
+          $('#connStatus').classList.add('good');
+          $('#status_indicator').classList.add('connected');
+          log('✅ API connection successful');
+          return true;
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        $('#connStatus').textContent = 'Failed';
+        $('#connStatus').classList.remove('good');
+        $('#status_indicator').classList.remove('connected');
+        log('❌ API connection failed:', error.message);
+        return false;
+      }
+    }
+
+    async function sendMessage(query) {
+      const previousQuery = conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1].query : null;
+      
+      log(`📤 Sending: "${query}" (previous: "${previousQuery || 'none'}")`);
+      
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            query, 
+            topK: 8, 
+            previousQuery 
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        log(`📥 Response received:`, data);
+        
+        return data;
+      } catch (error) {
+        log('❌ API call failed:', error.message);
+        throw error;
+      }
+    }
+
+    // ------- Rendering -------
+    function addMessageToConversation(query, response) {
+      const conversationEl = $byId('conversation');
+      
+      // Add user message
+      const userMessage = document.createElement('div');
+      userMessage.className = 'message user';
+      userMessage.innerHTML = `
+        <div class="message-content">
+          <div>${escapeHTML(query)}</div>
+          <div class="message-time">User</div>
+        </div>
+      `;
+      conversationEl.appendChild(userMessage);
+      
+      // Add bot response
+      const botMessage = document.createElement('div');
+      botMessage.className = 'message';
+      botMessage.innerHTML = `
+        <div class="message-content">
+          <div><strong>Answer:</strong> ${escapeHTML(response.answer_markdown || 'No answer')}</div>
+          <div><strong>Intent:</strong> ${response.structured?.intent || 'unknown'}</div>
+          <div><strong>Confidence:</strong> ${(response.confidence_pct || 0)}%</div>
+          <div class="message-time">Bot</div>
+        </div>
+      `;
+      conversationEl.appendChild(botMessage);
+      
+      // Scroll to bottom
+      conversationEl.scrollTop = conversationEl.scrollHeight;
+    }
+
+    function renderStructuredData(data) {
+      if (!data.structured) return;
+      
+      const { events, products, articles } = data.structured;
+      
+      // Render events
+      renderEvents(events || []);
+      renderProducts(products || []);
+      renderArticles(articles || []);
+      
+      // Update context info
+      const contextInfo = data.structured.previousQuery ? 'Has context' : 'No context';
+      $byId('contextInfo').textContent = contextInfo;
+    }
+
+    function renderEvents(rows) {
+      const tb = $('#tblEvents tbody');
+      tb.innerHTML = '';
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        const tTitle = `<a href="${r.href || r.page_url}" target="_blank">${escapeHTML(r.title || '')}</a>`;
+        const when = r.when || r.date_start || '';
+        const loc = r.location || '';
+        const price = (r.price != null) ? `£${r.price}` : '';
+        tr.innerHTML = `<td>${tTitle}</td><td class="nowrap">${escapeHTML(when)}</td><td>${escapeHTML(loc)}</td><td>${price}</td>`;
+        tb.appendChild(tr);
+      });
+      $('#countEvents').textContent = rows.length;
+    }
+
+    function renderProducts(rows) {
+      const tb = $('#tblProducts tbody');
+      tb.innerHTML = '';
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        const tTitle = `<a href="${r.page_url}" target="_blank">${escapeHTML(r.title || '')}</a>`;
+        const price = (r.display_price || r.price != null) ? `£${r.display_price || r.price}` : '';
+        tr.innerHTML = `<td>${tTitle}</td><td>${price}</td><td>${escapeHTML(r.tags || '')}</td>`;
+        tb.appendChild(tr);
+      });
+      $('#countProducts').textContent = rows.length;
+    }
+
+    function renderArticles(rows) {
+      const tb = $('#tblArticles tbody');
+      tb.innerHTML = '';
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        const tTitle = `<a href="${r.page_url}" target="_blank">${escapeHTML(r.title || '')}</a>`;
+        tr.innerHTML = `<td>${tTitle}</td><td>${escapeHTML(r.snippet || '')}</td><td>${escapeHTML(r.kind || '')}</td>`;
+        tb.appendChild(tr);
+      });
+      $('#countArticles').textContent = rows.length;
+    }
+
+    function escapeHTML(s) { 
+      return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) 
+    }
+
+    // ------- Event Handlers -------
+    async function handleSendMessage() {
+      const query = $byId('messageInput').value.trim();
+      if (!query) return;
+      
+      $byId('messageInput').value = '';
+      
+      try {
+        const response = await sendMessage(query);
+        
+        // Store in conversation history
+        conversationHistory.push({ query, response });
+        lastResponse = response;
+        
+        // Add to conversation display
+        addMessageToConversation(query, response);
+        
+        // Render structured data
+        renderStructuredData(response);
+        
+        log(`✅ Message processed successfully`);
+        
+      } catch (error) {
+        log(`❌ Failed to process message: ${error.message}`);
+        
+        // Add error to conversation
+        const conversationEl = $byId('conversation');
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'message';
+        errorMessage.innerHTML = `
+          <div class="message-content">
+            <div style="color: var(--bad)">❌ Error: ${escapeHTML(error.message)}</div>
+            <div class="message-time">System</div>
+          </div>
+        `;
+        conversationEl.appendChild(errorMessage);
+        conversationEl.scrollTop = conversationEl.scrollHeight;
+      }
+    }
+
+    function clearConversation() {
+      conversationHistory = [];
+      lastResponse = null;
+      $byId('conversation').innerHTML = `
+        <div class="message">
+          <div class="message-content">
+            <div>Conversation cleared. Start a new conversation to test the RAG system.</div>
+            <div class="message-time">System</div>
+          </div>
+        </div>
+      `;
+      renderEvents([]);
+      renderProducts([]);
+      renderArticles([]);
+      $byId('contextInfo').textContent = 'None';
+      log('🧹 Conversation cleared');
+    }
+
+    // ------- Quick Test Functions -------
+    const quickTests = {
+      'btnTestBluebell': 'when is the next bluebell workshop',
+      'btnTestParticipants': 'how many people can attend',
+      'btnTestPrice': 'how much does it cost',
+      'btnTestLocation': 'where is it',
+      'btnTestDates': 'when is it',
+      'btnTestAdvice': 'photography tips for beginners'
+    };
+
+    // ------- Export Functions -------
+    async function copyResponse() {
+      if (!lastResponse) {
+        flashCopyStatus('No response to copy');
+        return;
+      }
+      await navigator.clipboard.writeText(JSON.stringify(lastResponse, null, 2));
+      flashCopyStatus('Response copied');
+    }
+
+    async function copyConversation() {
+      const conversationText = conversationHistory.map(entry => 
+        `User: ${entry.query}\nBot: ${entry.response.answer_markdown || 'No answer'}\n---`
+      ).join('\n');
+      await navigator.clipboard.writeText(conversationText);
+      flashCopyStatus('Conversation copied');
+    }
+
+    function downloadLogs() {
+      const blob = new Blob([logEl.textContent], {type:'text/plain'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'chat-testbench-logs.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function flashCopyStatus(msg) {
+      const el = $byId('copyStatus');
+      el.textContent = msg;
+      setTimeout(() => { el.textContent = 'Ready'; }, 1200);
+    }
+
+    // ------- Event Wiring -------
+    $byId('btnTestConnection').addEventListener('click', testConnection);
+    $byId('btnSend').addEventListener('click', handleSendMessage);
+    $byId('btnClearConversation').addEventListener('click', clearConversation);
+    $byId('btnCopyResponse').addEventListener('click', copyResponse);
+    $byId('btnCopyConversation').addEventListener('click', copyConversation);
+    $byId('btnDownloadLogs').addEventListener('click', downloadLogs);
+
+    // Quick test buttons
+    Object.entries(quickTests).forEach(([btnId, query]) => {
+      $byId(btnId).addEventListener('click', () => {
+        $byId('messageInput').value = query;
+        handleSendMessage();
+      });
+    });
+
+    // Enter key to send
+    $byId('messageInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        handleSendMessage();
+      }
+    });
+
+    // Auto-test connection on load
+    window.addEventListener('load', () => {
+      log('🚀 Chat Testbench loaded');
+      testConnection();
+    });
+  </script>
+</body>
+</html>
