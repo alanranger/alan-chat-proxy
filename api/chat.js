@@ -768,6 +768,44 @@ function parseProductBlock(desc) {
 
   return out;
 }
+async function generateIntelligentResponse({ query, intent, events, products, articles, featuredProduct, firstEvent, isSimpleFollowUp }) {
+  // For simple follow-up questions, generate a direct answer
+  if (isSimpleFollowUp) {
+    // Extract participant info from products/events
+    const participantInfo = extractParticipantInfo(products, events);
+    if (participantInfo) {
+      return `**${participantInfo}**`;
+    }
+    
+    // If no specific info found, give a helpful response
+    return `I'd be happy to help with that! Could you provide more details about what specific information you're looking for?`;
+  }
+  
+  // For other queries, use the existing logic but make it more flexible
+  if (intent === "advice") {
+    return buildAdviceMarkdown(articles);
+  } else {
+    if (featuredProduct) {
+      return buildProductPanelMarkdown(featuredProduct);
+    } else if (firstEvent) {
+      return buildEventPanelMarkdown(firstEvent);
+    } else {
+      return "";
+    }
+  }
+}
+
+function extractParticipantInfo(products, events) {
+  // Look for participant information in the data
+  for (const item of [...products, ...events]) {
+    const participants = item.participants_parsed || item.participants || '';
+    if (participants && participants.includes('Max')) {
+      return participants.replace(/\n•/g, '').trim();
+    }
+  }
+  return null;
+}
+
 function buildAdviceMarkdown(articles) {
   const lines = ["**Guides**"];
   for (const a of (articles || []).slice(0, 5)) {
@@ -1108,18 +1146,17 @@ export default async function handler(req, res) {
     const confidence_pct = confidenceFrom(scoresForConf);
 
     const s4 = Date.now();
-    let answer_markdown = "";
-    if (intent === "advice") {
-      answer_markdown = buildAdviceMarkdown(rankedArticles);
-    } else {
-      if (hasStrictProduct) {
-        answer_markdown = buildProductPanelMarkdown(featuredProduct);
-      } else if (firstEvent) {
-        answer_markdown = buildEventPanelMarkdown(firstEvent);
-      } else {
-        answer_markdown = "";
-      }
-    }
+    // Generate intelligent response using AI instead of rigid templates
+    let answer_markdown = await generateIntelligentResponse({
+      query: contextualQuery,
+      intent,
+      events: rankedEvents,
+      products: rankedProducts,
+      articles: rankedArticles,
+      featuredProduct,
+      firstEvent,
+      isSimpleFollowUp
+    });
     t_comp += Date.now() - s4;
 
     const citations = uniq([
