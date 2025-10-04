@@ -371,10 +371,26 @@
           supabase.rpc('search_articles', { keys: keywords })
         ]);
         
+        // Log truncated RPC results for debugging
+        const truncatedEvents = eventsResult.data ? {
+          ...eventsResult,
+          data: eventsResult.data.slice(0, 3).concat(eventsResult.data.length > 3 ? [`... (${eventsResult.data.length - 3} more events)`] : [])
+        } : eventsResult;
+        
+        const truncatedProducts = productsResult.data ? {
+          ...productsResult,
+          data: productsResult.data.slice(0, 3).concat(productsResult.data.length > 3 ? [`... (${productsResult.data.length - 3} more products)`] : [])
+        } : productsResult;
+        
+        const truncatedArticles = articlesResult.data ? {
+          ...articlesResult,
+          data: articlesResult.data.slice(0, 3).concat(articlesResult.data.length > 3 ? [`... (${articlesResult.data.length - 3} more articles)`] : [])
+        } : articlesResult;
+        
         log(`🔍 RPC Results:`, {
-          events: eventsResult,
-          products: productsResult,
-          articles: articlesResult
+          events: truncatedEvents,
+          products: truncatedProducts,
+          articles: truncatedArticles
         });
         
         const response = {
