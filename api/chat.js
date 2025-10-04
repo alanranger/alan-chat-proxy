@@ -202,28 +202,26 @@ function buildOrIlike(keys, keywords) {
 }
 
 async function findEvents(client, { keywords = [], topK = 12 } = {}) {
-  console.log("DEBUG: findEvents called with keywords:", keywords);
-  let q = client.from("v_events_for_chat").select("*");
+  let q = client.from("page_entities").select(SELECT_COLS).eq("kind", "event");
   q = q.gte("date_start", new Date().toISOString());
   if (keywords.length) {
-    const orClause = buildOrIlike(
-      [
-        "event_title",
-        "event_url",
-        "event_location",
-      ],
-      keywords
-    ).join(",");
-    console.log("DEBUG: Event OR clause:", orClause);
-    q = q.or(orClause);
+    q = q.or(
+      buildOrIlike(
+        [
+          "title",
+          "page_url",
+          "location",
+          "description",
+          "raw->>metaDescription",
+          "raw->meta->>description",
+        ],
+        keywords
+      )
+    );
   }
   q = q.order("date_start", { ascending: true }).limit(topK);
   const { data, error } = await q;
-  if (error) {
-    console.log("DEBUG: Event query error:", error);
-    throw error;
-  }
-  console.log("DEBUG: Found events:", data?.length || 0, data?.map(e => e.event_title));
+  if (error) throw error;
   return data || [];
 }
 
@@ -890,13 +888,6 @@ export default async function handler(req, res) {
     const subtype = detectEventSubtype(contextualQuery);
     const rawKeywords = extractKeywords(contextualQuery, intent, subtype);
     const keywords = expandLocationKeywords(rawKeywords, contextualQuery);
-    
-    // Debug logging
-    console.log("DEBUG: Query:", q);
-    console.log("DEBUG: Contextual query:", contextualQuery);
-    console.log("DEBUG: Intent:", intent);
-    console.log("DEBUG: Subtype:", subtype);
-    console.log("DEBUG: Keywords:", keywords);
     const topic = topicFromKeywords(keywords);
 
     const queryHasLocationPhrase = hasAny(q, LOCATION_HINTS);
@@ -1126,14 +1117,14 @@ export default async function handler(req, res) {
       event_subtype: subtype,
       events: (rankedEvents || []).map((e) => ({
         id: e.id,
-        title: e.event_title,
-        page_url: e.event_url,
-        source_url: e.event_url,
+        title: e.title,
+        page_url: e.page_url,
+        source_url: e.source_url,
         date_start: e.date_start,
         date_end: e.date_end,
-        location: e.event_location,
+        location: e.location,
         when: e.date_start ? new Date(e.date_start).toUTCString() : null,
-        href: e.event_url,
+        href: pickUrl(e),
         _score: e._score,
       })),
       products: (rankedProducts || []).map((p) => {
