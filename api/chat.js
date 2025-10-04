@@ -800,7 +800,9 @@ function buildDataContext({ events, products, articles, featuredProduct, firstEv
 
 function isSimpleFollowUp(query) {
   const followUpPatterns = /^(how many|what|when|where|how much|how long|can i|do you|is there|what time|what's the|how do i)/i;
-  return followUpPatterns.test(query.trim());
+  const result = followUpPatterns.test(query.trim());
+  console.log('DEBUG: isSimpleFollowUp check:', { query, result });
+  return result;
 }
 
 async function generateRAGResponse(query, dataContext, intent) {
