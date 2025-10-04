@@ -1102,6 +1102,12 @@ async function chatHandler(req, res) {
   const started = Date.now();
   try {
     console.log('🚀 Chat.js API handler started');
+    console.log('🔧 Environment check:', {
+      SUPABASE_URL: !!process.env.SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
+      OPENAI_API_KEY: !!process.env.OPENAI_API_KEY
+    });
     const { query, topK = 8, previousQuery } = req.body || {};
     const q = String(query || "").trim();
     const prevQ = String(previousQuery || "").trim();
