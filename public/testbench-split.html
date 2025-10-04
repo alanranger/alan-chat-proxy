@@ -625,7 +625,7 @@
       
       isRunning = true;
       
-      // Capture previous query for context before updating lastQuery
+      // Capture previous query for context - don't update lastQuery yet
       const previousQuery = lastQuery;
       log(`🚀 Running both tests for: "${query}"`);
       
@@ -634,9 +634,6 @@
       if (previousQuery) {
         log(`🧩 Contextual query: "${contextualQuery}" (prev: "${previousQuery}")`);
       }
-      
-      // Update lastQuery AFTER building contextual query
-      lastQuery = query;
 
       // Clear previous results
       $byId('chatResponse').innerHTML = '<div class="response-title">Response:</div><div class="response-content">Loading...</div>';
@@ -672,6 +669,9 @@
       
       // Update context info
       $byId('contextInfo').textContent = previousQuery ? 'Has context' : 'No context';
+      
+      // Update lastQuery AFTER all processing is complete
+      lastQuery = query;
       
       // Reset running flag
       isRunning = false;
