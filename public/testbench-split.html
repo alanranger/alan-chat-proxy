@@ -212,6 +212,17 @@
     const $ = sel => document.querySelector(sel);
     const $byId = id => document.getElementById(id);
 
+    // Extract keywords from query for RPC functions
+    function extractKeywords(query) {
+      const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'when', 'where', 'what', 'how', 'why', 'who', 'which', 'next', 'last', 'this', 'that', 'these', 'those'];
+      
+      return query.toLowerCase()
+        .replace(/[^\w\s]/g, ' ') // Remove punctuation
+        .split(/\s+/)
+        .filter(word => word.length > 2 && !stopWords.includes(word))
+        .slice(0, 5); // Limit to 5 keywords
+    }
+
     // ------- Chat.js API Functions -------
     async function testChatConnection() {
       // Try multiple possible URLs
@@ -334,12 +345,13 @@
         const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js@2');
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Call all three RPC functions with ONLY the keys parameter
-        log(`🔍 Calling RPC functions with query: "${query}"`);
+        // Extract keywords from the query for better RPC matching
+        const keywords = extractKeywords(query);
+        log(`🔍 Calling RPC functions with query: "${query}" and keywords: [${keywords.join(', ')}]`);
         const [eventsResult, productsResult, articlesResult] = await Promise.all([
-          supabase.rpc('search_events', { keys: [query] }),
-          supabase.rpc('search_products', { keys: [query] }),
-          supabase.rpc('search_articles', { keys: [query] })
+          supabase.rpc('search_events', { keys: keywords }),
+          supabase.rpc('search_products', { keys: keywords }),
+          supabase.rpc('search_articles', { keys: keywords })
         ]);
         
         log(`🔍 RPC Results:`, {
