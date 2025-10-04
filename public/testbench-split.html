@@ -358,7 +358,26 @@
           }
 
           const data = await response.json();
-          log(`✅ Chat.js API success:`, data);
+          // Truncate large responses for debugging
+          const truncatedData = {
+            ok: data.ok,
+            error: data.error,
+            answer_markdown: data.answer_markdown?.substring(0, 100) + (data.answer_markdown?.length > 100 ? '...' : ''),
+            structured: data.structured ? {
+              intent: data.structured.intent,
+              events_count: data.structured.events?.length || 0,
+              products_count: data.structured.products?.length || 0,
+              articles_count: data.structured.articles?.length || 0
+            } : null,
+            confidence: data.confidence,
+            debug: data.debug ? {
+              version: data.debug.version,
+              intent: data.debug.intent,
+              keywords: data.debug.keywords,
+              counts: data.debug.counts
+            } : null
+          };
+          log(`✅ Chat.js API success:`, truncatedData);
           // Chat.js response received
           return data;
         } catch (error) {
@@ -434,6 +453,9 @@
         };
         
         log(`📥 RPC response: ${eventsResult.data?.length || 0} events, ${productsResult.data?.length || 0} products, ${articlesResult.data?.length || 0} articles`);
+        if (eventsResult.error) log(`❌ RPC events error:`, eventsResult.error);
+        if (productsResult.error) log(`❌ RPC products error:`, productsResult.error);
+        if (articlesResult.error) log(`❌ RPC articles error:`, articlesResult.error);
         return response;
       } catch (error) {
         log('❌ RPC calls failed:', error.message);
@@ -445,8 +467,17 @@
     function renderChatResponse(data) {
       const responseEl = $byId('chatResponse');
       
-      // Debug: log the actual response structure
-      log('🔍 Chat.js response structure:', JSON.stringify(data, null, 2));
+      // Debug: log the actual response structure (truncated)
+      const debugData = {
+        ok: data.ok,
+        error: data.error,
+        answer_length: data.answer_markdown?.length || 0,
+        events_count: data.structured?.events?.length || 0,
+        products_count: data.structured?.products?.length || 0,
+        articles_count: data.structured?.articles?.length || 0,
+        confidence: data.confidence
+      };
+      log('🔍 Chat.js response structure:', debugData);
       
       if (data.error) {
         responseEl.innerHTML = `
