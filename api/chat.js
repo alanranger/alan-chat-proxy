@@ -836,7 +836,7 @@ function buildDataContext({ events, products, articles, featuredProduct, firstEv
     }
   }
   
-  return { ...context, extractedInfo };
+  return { ...context, extractedInfo, products: context.products };
 }
 
 function isSimpleFollowUp(query) {
@@ -879,7 +879,21 @@ function generateDirectAnswer(query, extractedInfo) {
     console.log('DEBUG: participantCounts length:', extractedInfo.participantCounts.length);
     console.log('DEBUG: participantCounts contents:', JSON.stringify(extractedInfo.participantCounts));
     
-    const participantInfo = extractedInfo.participantCounts.find(p => p && p.includes('Max'));
+    // Try to find participant info in the extracted data
+    let participantInfo = extractedInfo.participantCounts.find(p => p && p.includes('Max'));
+    
+    // If not found in extracted data, try to find it in the original products array
+    if (!participantInfo && extractedInfo.products) {
+      console.log('DEBUG: Trying to find participant info in products array');
+      for (const product of extractedInfo.products) {
+        if (product.participants_parsed && product.participants_parsed.includes('Max')) {
+          participantInfo = product.participants_parsed;
+          console.log('DEBUG: Found participant info in products:', participantInfo);
+          break;
+        }
+      }
+    }
+    
     if (participantInfo) {
       console.log('DEBUG: Found participant info:', participantInfo);
       return `**${participantInfo.replace(/\n•/g, '').trim()}**`;
