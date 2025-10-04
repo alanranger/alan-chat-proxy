@@ -598,8 +598,9 @@ function renderAnswer(payload){
 
 /* ================= Networking ================= */
 async function sendQuery(query){
+  const prevQuery = __lastQuery; // Store the previous query before updating
   __lastQuery = String(query||'');
-  const req = { query, topK: 8, previousQuery: __lastQuery };
+  const req = { query, topK: 8, previousQuery: prevQuery };
   setDebugJSON(dbgReq, req);
   const closeTyping = addTyping();
   try{
