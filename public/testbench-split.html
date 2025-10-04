@@ -254,7 +254,7 @@
       
       for (const apiUrl of possibleUrls) {
         try {
-          log(`🔍 Trying Chat.js API: ${apiUrl}`);
+          // Trying Chat.js API
           const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -266,13 +266,13 @@
             $('#chatStatusText').textContent = 'Chat.js: Connected';
             $('#chatStatusBadge').textContent = 'Connected';
             $('#chatStatusBadge').classList.add('good');
-            log(`✅ Chat.js API connection successful: ${apiUrl}`);
+            // Chat.js API connection successful
             return true;
           } else {
             throw new Error(`HTTP ${response.status}`);
           }
         } catch (error) {
-          log(`❌ Failed with ${apiUrl}: ${error.message}`);
+          // Failed with API URL
           continue; // Try next URL
         }
       }
@@ -282,12 +282,12 @@
       $('#chatStatusText').textContent = 'Chat.js: Failed';
       $('#chatStatusBadge').textContent = 'Failed';
       $('#chatStatusBadge').classList.remove('good');
-      log('❌ All Chat.js API URLs failed');
+      // All Chat.js API URLs failed
       return false;
     }
 
     async function callChatAPI(query, previousQuery = null) {
-      log(`📤 Chat.js API: "${query}" (previous: "${previousQuery || 'none'}")`);
+      // Calling Chat.js API
       
       // Use the same URL discovery logic as testChatConnection
       const possibleUrls = [
@@ -298,7 +298,7 @@
       
       for (const apiUrl of possibleUrls) {
         try {
-          log(`🔍 Trying Chat.js API: ${apiUrl}`);
+          // Trying Chat.js API
           
           const response = await fetch(apiUrl, {
             method: 'POST',
@@ -318,7 +318,7 @@
           // Chat.js response received
           return data;
         } catch (error) {
-          log(`❌ Failed with ${apiUrl}: ${error.message}`);
+          // Failed with API URL
           continue; // Try next URL
         }
       }
@@ -346,14 +346,14 @@
         $('#rpcStatusText').textContent = 'Supabase RPC: Connected';
         $('#rpcStatusBadge').textContent = 'Connected';
         $('#rpcStatusBadge').classList.add('good');
-        log('✅ Supabase RPC connection successful');
+        // Supabase RPC connection successful
         return true;
       } catch (error) {
         $('#rpcStatus').classList.remove('connected');
         $('#rpcStatusText').textContent = 'Supabase RPC: Failed';
         $('#rpcStatusBadge').textContent = 'Failed';
         $('#rpcStatusBadge').classList.remove('good');
-        log('❌ Supabase RPC connection failed:', error.message);
+        // Supabase RPC connection failed
         return false;
       }
     }
