@@ -390,11 +390,7 @@
           data: articlesResult.data.slice(0, 3).concat(articlesResult.data.length > 3 ? [`... (${articlesResult.data.length - 3} more articles)`] : [])
         } : articlesResult;
         
-        log(`🔍 RPC Results:`, {
-          events: truncatedEvents,
-          products: truncatedProducts,
-          articles: truncatedArticles
-        });
+        log(`🔍 RPC Results: ${truncatedEvents.length} events, ${truncatedProducts.length} products, ${truncatedArticles.length} articles`);
         
         const response = {
           events: eventsResult.data || [],
