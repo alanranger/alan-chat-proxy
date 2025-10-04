@@ -75,7 +75,7 @@
   <header class="mb16">
     <h1>Split Testbench – <span class="orange">Chat.js</span> vs <span class="green">RPC RAG</span></h1>
     <div class="muted">Compare chat.js API responses with direct Supabase RPC calls</div>
-    <div class="muted" style="text-align: right; margin-top: 8px;">Version 2.1 - Follow-up Context Fix</div>
+    <div class="muted" style="text-align: right; margin-top: 8px;">Version 2.2 - New Project URL Fix</div>
   </header>
 
   <section class="row mb16">
@@ -270,6 +270,7 @@
     async function testChatConnection() {
       // Try multiple possible URLs
       const possibleUrls = [
+        'https://alan-chat-bot.vercel.app/api/chat',
         'https://alan-chat-proxy.vercel.app/api/chat',
         'https://alan-ranger-chat.vercel.app/api/chat',
         '/api/chat'  // fallback to relative path
@@ -314,6 +315,7 @@
       
       // Use the same URL discovery logic as testChatConnection
       const possibleUrls = [
+        'https://alan-chat-bot.vercel.app/api/chat',
         'https://alan-chat-proxy.vercel.app/api/chat',
         'https://alan-ranger-chat.vercel.app/api/chat',
         '/api/chat'  // fallback to relative path
@@ -695,5 +697,6 @@
  
  < ! - -   P o w e r S h e l l   d e p l o y m e n t   t r i g g e r   1 0 / 0 4 / 2 0 2 5   1 7 : 2 6 : 4 3   - - > 
  
- < ! - -   F o r c e   d e p l o y m e n t   1 0 / 0 4 / 2 0 2 5   1 7 : 5 3 : 0 8   - - >  
+ < ! - -   F o r c e   d e p l o y m e n t   1 0 / 0 4 / 2 0 2 5   1 7 : 5 3 : 0 8   - - > 
+ 
  
