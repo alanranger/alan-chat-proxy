@@ -105,6 +105,16 @@ function sameHost(a, b) {
 /* ================= Intent & Keywords ================= */
 function detectIntent(q) {
   const s = String(q || "").toLowerCase();
+  
+  // Check for follow-up questions first
+  if (/^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(s)) {
+    // If it's a follow-up question, check if it's about events/workshops
+    if (s.includes("people") || s.includes("attend") || s.includes("participants") || 
+        s.includes("cost") || s.includes("price") || s.includes("when") || s.includes("where")) {
+      return "events"; // Treat as event-related follow-up
+    }
+  }
+  
   const eventish =
     /\b(when|date|dates|where|location|next|upcoming|availability|available|schedule|book|booking|time|how much|price|cost)\b/;
   const classish =
@@ -820,9 +830,12 @@ async function generateRAGResponse(query, dataContext, intent) {
 async function generateDirectAnswer(query, dataContext) {
   console.log('DEBUG: generateDirectAnswer called with query:', query);
   console.log('DEBUG: dataContext:', dataContext);
+  console.log('DEBUG: dataContext.products:', dataContext.products);
+  console.log('DEBUG: dataContext.products length:', dataContext.products?.length);
   
   // Use AI to intelligently extract relevant information from the data context
   const relevantInfo = await extractRelevantInfo(query, dataContext);
+  console.log('DEBUG: extractRelevantInfo returned:', relevantInfo);
   
   if (relevantInfo) {
     return `**${relevantInfo}**`;
@@ -1089,6 +1102,13 @@ export default async function handler(req, res) {
       !q.includes('workshop') && !q.includes('course') && !q.includes('photography') // No topic keywords
     );
     const contextualQuery = isFollowUp ? `${prevQ} ${q}` : q;
+    
+    console.log('DEBUG: Context tracking:', {
+      originalQuery: q,
+      previousQuery: prevQ,
+      isFollowUp,
+      contextualQuery
+    });
     const intent = detectIntent(contextualQuery);
     const subtype = detectEventSubtype(contextualQuery);
     const rawKeywords = extractKeywords(contextualQuery, intent, subtype);
