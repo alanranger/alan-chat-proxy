@@ -3,18 +3,15 @@
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
+import { ENV } from "./config.js";
 
 /* ================= Supabase ================= */
-const FALLBACK_URL = "https://igzvwvbvgvmzvvzoclufx.supabase.co";
-const SUPABASE_URL = process.env.SUPABASE_URL || FALLBACK_URL;
-
-const SUPABASE_SERVICE_ROLE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M";
-
-const SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY";
+const SUPABASE_URL = ENV.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = ENV.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
+const OPENAI_API_KEY = ENV.OPENAI_API_KEY;
+const INGEST_TOKEN = ENV.INGEST_TOKEN;
+const OPENROUTER_API_KEY = ENV.OPENROUTER_API_KEY;
 
 function supabaseAdmin() {
   console.log('🔧 Supabase config:', {
