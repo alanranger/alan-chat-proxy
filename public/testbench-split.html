@@ -212,6 +212,23 @@
     const $ = sel => document.querySelector(sel);
     const $byId = id => document.getElementById(id);
 
+    // Helper to format Chat.js API response for display, truncating large arrays
+    function formatChatJsResponse(response) {
+      const MAX_ARRAY_ITEMS = 3; // Display only first N items of large arrays
+      const formattedResponse = JSON.parse(JSON.stringify(response)); // Deep copy to avoid modifying original
+
+      if (formattedResponse.structured) {
+        ['events', 'products', 'articles'].forEach(key => {
+          if (Array.isArray(formattedResponse.structured[key]) && formattedResponse.structured[key].length > MAX_ARRAY_ITEMS) {
+            const originalLength = formattedResponse.structured[key].length;
+            formattedResponse.structured[key] = formattedResponse.structured[key].slice(0, MAX_ARRAY_ITEMS);
+            formattedResponse.structured[key].push(`... (${originalLength - MAX_ARRAY_ITEMS} more items)`);
+          }
+        });
+      }
+      return JSON.stringify(formattedResponse, null, 2);
+    }
+
     // Extract keywords from query for RPC functions
     function extractKeywords(query) {
       const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'when', 'where', 'what', 'how', 'why', 'who', 'which', 'next', 'last', 'this', 'that', 'these', 'those'];
