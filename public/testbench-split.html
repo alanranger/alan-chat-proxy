@@ -627,7 +627,6 @@
       
       // Capture previous query for context before updating lastQuery
       const previousQuery = lastQuery;
-      lastQuery = query; // update last asked query
       log(`🚀 Running both tests for: "${query}"`);
       
       // Build contextual query for RPC keywordization
@@ -635,6 +634,9 @@
       if (previousQuery) {
         log(`🧩 Contextual query: "${contextualQuery}" (prev: "${previousQuery}")`);
       }
+      
+      // Update lastQuery AFTER building contextual query
+      lastQuery = query;
 
       // Clear previous results
       $byId('chatResponse').innerHTML = '<div class="response-title">Response:</div><div class="response-content">Loading...</div>';
