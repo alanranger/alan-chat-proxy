@@ -885,7 +885,10 @@ async function extractRelevantInfo(query, dataContext) {
     console.log(`🔍 RAG: Checking ${sampleItems.length} items for participants`);
     
     for (const item of sampleItems) {
-      const participants = item.participants_parsed || item.participants;
+      // Check multiple possible fields for participant information
+      const participants = item.participants_parsed || item.participants || 
+                          item.description?.match(/(\d+)\s*(?:people|participants|attendees)/i)?.[1] ||
+                          item.raw?.description?.match(/(\d+)\s*(?:people|participants|attendees)/i)?.[1];
       
       if (participants && participants.trim().length > 0) {
         console.log(`✅ RAG: Found participants="${participants}" in "${item.title?.substring(0, 30)}..."`);
@@ -898,6 +901,33 @@ async function extractRelevantInfo(query, dataContext) {
   
   // Check for other types of information (location, price, etc.)
   const sampleItems = allData.slice(0, 2); // Only check first 2 items for other info
+  
+  // Check for price information
+  if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
+    for (const item of sampleItems) {
+      const price = item.display_price_gbp || item.price || item.display_price || 
+                   item.raw?.price || item.description?.match(/£(\d+)/i)?.[1];
+      
+      if (price && price.toString().trim().length > 0) {
+        console.log(`✅ RAG: Found price="${price}" in "${item.title?.substring(0, 30)}..."`);
+        return `£${price}`;
+      }
+    }
+  }
+  
+  // Check for location information
+  if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
+    for (const item of sampleItems) {
+      const location = item.location || item.location_parsed || 
+                      item.description?.match(/(?:in|at|near)\s+([A-Za-z\s]+)/i)?.[1];
+      
+      if (location && location.trim().length > 0) {
+        console.log(`✅ RAG: Found location="${location}" in "${item.title?.substring(0, 30)}..."`);
+        return location.trim();
+      }
+    }
+  }
+  
   for (const item of sampleItems) {
     // Check for location information
     if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
