@@ -1,5 +1,6 @@
 // /api/chat.js
-// Force deployment: 2025-10-05 00:50 - Fix findEvents RPC function - Vercel sync issue
+// MAJOR FIX: 2025-10-05 01:00 - Use search_events RPC instead of direct view queries
+// This fixes bluebell workshop detection by using proper RPC functions
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
