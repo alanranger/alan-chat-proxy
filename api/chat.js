@@ -480,15 +480,25 @@ async function extractRelevantInfo(query, dataContext) {
     // Find the most relevant event based on the query context
     let event = events[0]; // Default to first event
     
-    // If the query mentions "bluebell", find the bluebell workshop
-    if (lowerQuery.includes('bluebell') || (dataContext.originalQuery && dataContext.originalQuery.toLowerCase().includes('bluebell'))) {
-      const bluebellEvent = events.find(e => 
-        e.event_title?.toLowerCase().includes('bluebell') || 
-        e.product_title?.toLowerCase().includes('bluebell')
-      );
-      if (bluebellEvent) {
-        event = bluebellEvent;
-        console.log(`🔍 RAG: Found bluebell-specific event: ${event.event_title || event.product_title}`);
+    // If we have a previous query context, try to find the most relevant event
+    if (dataContext.originalQuery) {
+      const originalQueryLower = dataContext.originalQuery.toLowerCase();
+      console.log(`🔍 RAG: Looking for event matching original query: "${dataContext.originalQuery}"`);
+      
+      // Extract key terms from the original query to match against events
+      const keyTerms = dataContext.originalQuery.toLowerCase()
+        .split(/\s+/)
+        .filter(term => term.length > 3 && !['when', 'where', 'how', 'what', 'next', 'workshop', 'photography'].includes(term));
+      
+      // Find event that best matches the original query terms
+      const matchingEvent = events.find(e => {
+        const eventText = `${e.event_title || ''} ${e.product_title || ''} ${e.event_location || ''}`.toLowerCase();
+        return keyTerms.some(term => eventText.includes(term));
+      });
+      
+      if (matchingEvent) {
+        event = matchingEvent;
+        console.log(`🔍 RAG: Found contextually relevant event: ${event.event_title || event.product_title}`);
       }
     }
     
