@@ -485,7 +485,7 @@ async function extractRelevantInfo(query, dataContext) {
     
     // Check for price information
     if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
-      if (event.price_gbp && String(event.price_gbp).trim().length > 0) {
+      if (event.price_gbp && event.price_gbp > 0) {
         console.log(`✅ RAG: Found price="${event.price_gbp}" in structured event data`);
         return `£${event.price_gbp}`;
       }
