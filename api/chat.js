@@ -917,11 +917,22 @@ async function extractRelevantInfo(query, dataContext) {
   if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
     for (const item of sampleItems) {
       const price = item.display_price_gbp || item.price || item.display_price || 
-                   item.raw?.price || item.description?.match(/£(\d+)/i)?.[1];
+                   item.raw?.price || item.description?.match(/£(\d+)/i)?.[1] ||
+                   item.title?.match(/£(\d+)/i)?.[1];
       
       if (price && price.toString().trim().length > 0) {
         console.log(`✅ RAG: Found price="${price}" in "${item.title?.substring(0, 30)}..."`);
         return `£${price}`;
+      }
+    }
+    
+    // If no specific price found, try to extract from any text
+    for (const item of sampleItems) {
+      const text = (item.title || '') + ' ' + (item.description || '');
+      const match = text.match(/£(\d+)/i);
+      if (match) {
+        console.log(`✅ RAG: Found price="${match[1]}" in text`);
+        return `£${match[1]}`;
       }
     }
   }
@@ -930,11 +941,22 @@ async function extractRelevantInfo(query, dataContext) {
   if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
     for (const item of sampleItems) {
       const location = item.location || item.location_parsed || 
-                      item.description?.match(/(?:in|at|near)\s+([A-Za-z\s]+)/i)?.[1];
+                      item.description?.match(/(?:in|at|near)\s+([A-Za-z\s]+)/i)?.[1] ||
+                      item.title?.match(/(?:in|at|near)\s+([A-Za-z\s]+)/i)?.[1];
       
       if (location && location.trim().length > 0) {
         console.log(`✅ RAG: Found location="${location}" in "${item.title?.substring(0, 30)}..."`);
         return location.trim();
+      }
+    }
+    
+    // If no specific location found, try to extract from any text
+    for (const item of sampleItems) {
+      const text = (item.title || '') + ' ' + (item.description || '');
+      const match = text.match(/(?:in|at|near)\s+([A-Za-z\s]+)/i);
+      if (match) {
+        console.log(`✅ RAG: Found location="${match[1]}" in text`);
+        return match[1].trim();
       }
     }
   }
