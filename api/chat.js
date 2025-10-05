@@ -1,5 +1,5 @@
 // /api/chat.js
-// Force deployment: 2025-10-05 00:35 - Vercel cache issue
+// Force deployment: 2025-10-05 00:45 - Fix findEvents RPC function
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
