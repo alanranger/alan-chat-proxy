@@ -871,6 +871,12 @@ async function extractRelevantInfo(query, dataContext) {
   if (allData.length > 0) {
     console.log(`🔍 RAG: Sample item keys:`, Object.keys(allData[0] || {}));
     console.log(`🔍 RAG: Sample item:`, JSON.stringify(allData[0], null, 2).substring(0, 500));
+    
+    // For debugging, let's return the first item's data to see what we're working with
+    if (allData.length > 0) {
+      console.log(`🔍 RAG: Returning sample data for debugging`);
+      return JSON.stringify(allData[0], null, 2).substring(0, 200);
+    }
   }
   
   // Check if this is a participant question
