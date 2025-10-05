@@ -111,6 +111,16 @@ function detectIntent(q) {
   if (hasEventWord && mentionsWorkshop) return "events";
   // heuristic: if question starts with "when/where" + includes 'workshop' → events
   if (/^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop) return "events";
+  
+  // Handle follow-up questions for events (price, location, etc.)
+  const followUpQuestions = [
+    "how much", "cost", "price", "where", "location", "when", "date",
+    "how many", "people", "attend", "fitness", "level", "duration", "long"
+  ];
+  if (followUpQuestions.some(word => lc.includes(word))) {
+    return "events";
+  }
+  
   // default
   return "advice";
 }
