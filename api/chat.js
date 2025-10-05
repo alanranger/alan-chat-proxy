@@ -868,9 +868,62 @@ async function extractRelevantInfo(query, dataContext) {
   
   // Debug: Log the actual data structure
   console.log(`🔍 RAG: Query="${query}" | Data=${allData.length} items`);
+  console.log(`🔍 RAG: Products=${products?.length || 0}, Events=${events?.length || 0}, Articles=${articles?.length || 0}`);
   if (allData.length > 0) {
     console.log(`🔍 RAG: Sample item keys:`, Object.keys(allData[0] || {}));
     console.log(`🔍 RAG: Sample item:`, JSON.stringify(allData[0], null, 2).substring(0, 500));
+  }
+  
+  // For event-based questions, prioritize the structured event data
+  if (events && events.length > 0) {
+    console.log(`🔍 RAG: Found ${events.length} events, checking structured data`);
+    const event = events[0]; // Use the first (most relevant) event
+    
+    // Check for participant information
+    if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
+      if (event.participants && event.participants.trim().length > 0) {
+        console.log(`✅ RAG: Found participants="${event.participants}" in structured event data`);
+        return event.participants;
+      }
+    }
+    
+    // Check for location information
+    if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
+      if (event.event_location && event.event_location.trim().length > 0) {
+        console.log(`✅ RAG: Found location="${event.event_location}" in structured event data`);
+        return event.event_location;
+      }
+    }
+    
+    // Check for price information
+    if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
+      if (event.price_gbp && event.price_gbp.trim().length > 0) {
+        console.log(`✅ RAG: Found price="${event.price_gbp}" in structured event data`);
+        return `£${event.price_gbp}`;
+      }
+    }
+    
+    // Check for date information
+    if (lowerQuery.includes('when') || lowerQuery.includes('date')) {
+      if (event.date_start) {
+        const date = new Date(event.date_start);
+        const formattedDate = date.toLocaleDateString('en-GB', { 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        });
+        console.log(`✅ RAG: Found date="${formattedDate}" in structured event data`);
+        return formattedDate;
+      }
+    }
+    
+    // Check for fitness level information
+    if (lowerQuery.includes('fitness') || lowerQuery.includes('level') || lowerQuery.includes('experience')) {
+      if (event.fitness_level && event.fitness_level.trim().length > 0) {
+        console.log(`✅ RAG: Found fitness level="${event.fitness_level}" in structured event data`);
+        return event.fitness_level;
+      }
+    }
   }
   
   // Check if this is a participant question
