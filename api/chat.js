@@ -907,7 +907,9 @@ async function extractRelevantInfo(query, dataContext) {
       }
     }
     
+    // If still no participant data found, return a helpful message instead of wrong info
     console.log('❌ RAG: No participant data found in sample items');
+    return "I don't have specific participant information for this workshop. Please contact Alan directly for details.";
   }
   
   // Check for other types of information (location, price, etc.)
@@ -944,7 +946,7 @@ async function extractRelevantInfo(query, dataContext) {
                       item.description?.match(/(?:in|at|near)\s+([A-Za-z\s]+)/i)?.[1] ||
                       item.title?.match(/(?:in|at|near)\s+([A-Za-z\s]+)/i)?.[1];
       
-      if (location && location.trim().length > 0) {
+      if (location && location.trim().length > 0 && location.length > 3) {
         console.log(`✅ RAG: Found location="${location}" in "${item.title?.substring(0, 30)}..."`);
         return location.trim();
       }
@@ -953,12 +955,16 @@ async function extractRelevantInfo(query, dataContext) {
     // If no specific location found, try to extract from any text
     for (const item of sampleItems) {
       const text = (item.title || '') + ' ' + (item.description || '');
-      const match = text.match(/(?:in|at|near)\s+([A-Za-z\s]+)/i);
-      if (match) {
+      const match = text.match(/(?:in|at|near)\s+([A-Za-z\s]{3,})/i);
+      if (match && match[1].trim().length > 3) {
         console.log(`✅ RAG: Found location="${match[1]}" in text`);
         return match[1].trim();
       }
     }
+    
+    // If no specific location found, return a helpful message
+    console.log('❌ RAG: No specific location found');
+    return "I don't have the specific location details. Please check the workshop page or contact Alan directly.";
   }
   
   // Check for time/duration information
@@ -996,8 +1002,11 @@ async function extractRelevantInfo(query, dataContext) {
     }
   }
   
-  // Check for date/time information
-  if (lowerQuery.includes('when') || lowerQuery.includes('date') || lowerQuery.includes('time')) {
+  // Check for date/time information - but only for specific date questions
+  if ((lowerQuery.includes('when') || lowerQuery.includes('date')) && 
+      !lowerQuery.includes('people') && !lowerQuery.includes('attend') && 
+      !lowerQuery.includes('cost') && !lowerQuery.includes('price') && 
+      !lowerQuery.includes('where') && !lowerQuery.includes('location')) {
     for (const item of sampleItems) {
       const text = (item.title || '') + ' ' + (item.description || '');
       const match = text.match(/(\d{1,2}\s*(?:st|nd|rd|th)?\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*\d{4})/i);
