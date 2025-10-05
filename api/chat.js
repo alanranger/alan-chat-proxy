@@ -476,7 +476,21 @@ async function extractRelevantInfo(query, dataContext) {
   // For event-based questions, prioritize the structured event data
   if (events && events.length > 0) {
     console.log(`🔍 RAG: Found ${events.length} events, checking structured data`);
-    const event = events[0]; // Use the first (most relevant) event
+    
+    // Find the most relevant event based on the query context
+    let event = events[0]; // Default to first event
+    
+    // If the query mentions "bluebell", find the bluebell workshop
+    if (lowerQuery.includes('bluebell') || (dataContext.originalQuery && dataContext.originalQuery.toLowerCase().includes('bluebell'))) {
+      const bluebellEvent = events.find(e => 
+        e.event_title?.toLowerCase().includes('bluebell') || 
+        e.product_title?.toLowerCase().includes('bluebell')
+      );
+      if (bluebellEvent) {
+        event = bluebellEvent;
+        console.log(`🔍 RAG: Found bluebell-specific event: ${event.event_title || event.product_title}`);
+      }
+    }
     
     // Check for participant information
     if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
@@ -559,7 +573,7 @@ export default async function handler(req, res) {
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
 
       // Use extractRelevantInfo to get specific answers for follow-up questions
-      const dataContext = { events, products: product ? [product] : [], articles: [] };
+      const dataContext = { events, products: product ? [product] : [], articles: [], originalQuery: previousQuery };
       const specificAnswer = await extractRelevantInfo(query, dataContext);
       
       // If we got a specific answer, use it; otherwise use the product panel
