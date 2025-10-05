@@ -137,23 +137,38 @@ function anyIlike(col, words) {
 }
 
 async function findEvents(client, { keywords, limit = 50 }) {
-  const nowIso = new Date().toISOString();
-  let q = client
-    .from("v_events_for_chat")
-    .select("*")
-    .gte("date_start", nowIso)
-    .order("date_start", { ascending: true })
-    .limit(limit);
-
-  const orExpr =
-    anyIlike("event_title", keywords) ||
-    anyIlike("event_url", keywords) ||
-    anyIlike("event_location", keywords);
-  if (orExpr) q = q.or(orExpr);
-
-  const { data, error } = await q;
-  if (error) return [];
-  return data || [];
+  // Use the search_events RPC function instead of direct view query
+  const { data, error } = await client.rpc('search_events', { 
+    keys: keywords 
+  });
+  
+  if (error) {
+    console.error('❌ RPC search_events error:', error);
+    return [];
+  }
+  
+  // Convert RPC result format to expected format
+  const events = (data || []).map(item => {
+    const searchResult = item.search_events;
+    if (typeof searchResult === 'string') {
+      // Parse the RPC result string format
+      const match = searchResult.match(/^\(([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+)\)$/);
+      if (match) {
+        return {
+          event_title: match[1].replace(/"/g, ''),
+          event_url: match[2],
+          when: match[3].replace(/"/g, ''),
+          date_start: match[5],
+          date_end: match[6],
+          event_location: match[7],
+          price_currency: match[9]
+        };
+      }
+    }
+    return null;
+  }).filter(Boolean);
+  
+  return events;
 }
 
 async function findProducts(client, { keywords, limit = 20 }) {
