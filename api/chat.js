@@ -139,38 +139,30 @@ function anyIlike(col, words) {
 }
 
 async function findEvents(client, { keywords, limit = 50 }) {
-  // Use the search_events RPC function instead of direct view query
-  const { data, error } = await client.rpc('search_events', { 
-    keys: keywords 
-  });
-  
+  // Use page_entities table directly like the original working version
+  let q = client
+    .from("page_entities")
+    .select("id, kind, title, page_url, source_url, last_seen, location, date_start, date_end, price, description, raw")
+    .eq("kind", "event")
+    .gte("date_start", new Date().toISOString())
+    .order("date_start", { ascending: true })
+    .limit(limit);
+
+  if (keywords.length) {
+    const orExpr = anyIlike("title", keywords) || 
+                   anyIlike("page_url", keywords) || 
+                   anyIlike("location", keywords) || 
+                   anyIlike("description", keywords) || null;
+    if (orExpr) q = q.or(orExpr);
+  }
+
+  const { data, error } = await q;
   if (error) {
-    console.error('❌ RPC search_events error:', error);
+    console.error('❌ page_entities query error:', error);
     return [];
   }
   
-  // Convert RPC result format to expected format
-  const events = (data || []).map(item => {
-    const searchResult = item.search_events;
-    if (typeof searchResult === 'string') {
-      // Parse the RPC result string format: ("title",url,"when",date_start,"start_time","end_time",location,,currency)
-      const match = searchResult.match(/^\("([^"]+)",([^,]+),"([^"]+)",([^,]+),"([^"]+)","([^"]+)",([^,]*),([^,]*),([^)]+)\)$/);
-      if (match) {
-        return {
-          event_title: match[1],
-          event_url: match[2],
-          when: match[3],
-          date_start: match[4],
-          date_end: match[4], // Same date for single-day events
-          event_location: match[7] || null,
-          price_currency: match[9] || 'GBP'
-        };
-      }
-    }
-    return null;
-  }).filter(Boolean);
-  
-  return events;
+  return data || [];
 }
 
 async function findProducts(client, { keywords, limit = 20 }) {
@@ -428,7 +420,9 @@ function formatEventsForUi(events) {
   return (events || [])
     .map((e) => ({
       ...e,
+      title: e.title,
       when: fmtDateLondon(e.date_start),
+      location: e.location,
       href: pickUrl(e),
     }))
     .slice(0, 12);
@@ -509,13 +503,13 @@ async function extractRelevantInfo(query, dataContext) {
       
       // Find event that best matches the original query terms
       const matchingEvent = events.find(e => {
-        const eventText = `${e.event_title || ''} ${e.product_title || ''} ${e.event_location || ''}`.toLowerCase();
+        const eventText = `${e.title || ''} ${e.location || ''}`.toLowerCase();
         return keyTerms.some(term => eventText.includes(term));
       });
       
       if (matchingEvent) {
         event = matchingEvent;
-        console.log(`🔍 RAG: Found contextually relevant event: ${event.event_title || event.product_title}`);
+        console.log(`🔍 RAG: Found contextually relevant event: ${event.title}`);
       }
     }
     
@@ -529,17 +523,17 @@ async function extractRelevantInfo(query, dataContext) {
     
     // Check for location information
     if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
-      if (event.event_location && event.event_location.trim().length > 0) {
-        console.log(`✅ RAG: Found location="${event.event_location}" in structured event data`);
-        return event.event_location;
+      if (event.location && event.location.trim().length > 0) {
+        console.log(`✅ RAG: Found location="${event.location}" in structured event data`);
+        return event.location;
       }
     }
     
     // Check for price information
     if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
-      if (event.price_gbp && event.price_gbp > 0) {
-        console.log(`✅ RAG: Found price="${event.price_gbp}" in structured event data`);
-        return `£${event.price_gbp}`;
+      if (event.price && event.price > 0) {
+        console.log(`✅ RAG: Found price="${event.price}" in structured event data`);
+        return `£${event.price}`;
       }
     }
     
@@ -645,7 +639,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.1.7-rpc-fix",
+          version: "v1.1.8-revert-to-page-entities",
           intent: "events",
           keywords: keywords,
           counts: {
