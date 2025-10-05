@@ -871,12 +871,6 @@ async function extractRelevantInfo(query, dataContext) {
   if (allData.length > 0) {
     console.log(`🔍 RAG: Sample item keys:`, Object.keys(allData[0] || {}));
     console.log(`🔍 RAG: Sample item:`, JSON.stringify(allData[0], null, 2).substring(0, 500));
-    
-    // For debugging, let's return the first item's data to see what we're working with
-    if (allData.length > 0) {
-      console.log(`🔍 RAG: Returning sample data for debugging`);
-      return JSON.stringify(allData[0], null, 2).substring(0, 200);
-    }
   }
   
   // Check if this is a participant question
@@ -894,11 +888,22 @@ async function extractRelevantInfo(query, dataContext) {
       // Check multiple possible fields for participant information
       const participants = item.participants_parsed || item.participants || 
                           item.description?.match(/(\d+)\s*(?:people|participants|attendees)/i)?.[1] ||
-                          item.raw?.description?.match(/(\d+)\s*(?:people|participants|attendees)/i)?.[1];
+                          item.raw?.description?.match(/(\d+)\s*(?:people|participants|attendees)/i)?.[1] ||
+                          item.title?.match(/(\d+)\s*(?:people|participants|attendees)/i)?.[1];
       
       if (participants && participants.trim().length > 0) {
         console.log(`✅ RAG: Found participants="${participants}" in "${item.title?.substring(0, 30)}..."`);
         return participants.replace(/\n•/g, '').trim();
+      }
+    }
+    
+    // If no specific participant data found, try to extract from title or description
+    for (const item of sampleItems) {
+      const text = (item.title || '') + ' ' + (item.description || '');
+      const match = text.match(/(\d+)\s*(?:people|participants|attendees|max|maximum)/i);
+      if (match) {
+        console.log(`✅ RAG: Found participants="${match[1]}" in text`);
+        return match[1];
       }
     }
     
