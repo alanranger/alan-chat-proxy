@@ -149,11 +149,33 @@ async function findEvents(client, { keywords, limit = 50 }) {
     .limit(limit);
 
   if (keywords.length) {
-    const orExpr = anyIlike("title", keywords) || 
-                   anyIlike("page_url", keywords) || 
-                   anyIlike("location", keywords) || 
-                   anyIlike("description", keywords) || null;
-    if (orExpr) q = q.or(orExpr);
+    // Prioritize specific keywords like "bluebell" over generic ones like "workshop"
+    const specificKeywords = keywords.filter(k => !['workshop', 'when', 'next', 'photography'].includes(k.toLowerCase()));
+    const genericKeywords = keywords.filter(k => ['workshop', 'when', 'next', 'photography'].includes(k.toLowerCase()));
+    
+    const orParts = [];
+    
+    // First, try to match specific keywords (like "bluebell")
+    for (const keyword of specificKeywords) {
+      orParts.push(`title.ilike.%${keyword}%`);
+      orParts.push(`page_url.ilike.%${keyword}%`);
+      orParts.push(`location.ilike.%${keyword}%`);
+      orParts.push(`description.ilike.%${keyword}%`);
+    }
+    
+    // If no specific keywords, fall back to generic ones
+    if (orParts.length === 0) {
+      for (const keyword of genericKeywords) {
+        orParts.push(`title.ilike.%${keyword}%`);
+        orParts.push(`page_url.ilike.%${keyword}%`);
+        orParts.push(`location.ilike.%${keyword}%`);
+        orParts.push(`description.ilike.%${keyword}%`);
+      }
+    }
+    
+    if (orParts.length) {
+      q = q.or(orParts.join(","));
+    }
   }
 
   const { data, error } = await q;
@@ -639,7 +661,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.1.8-revert-to-page-entities",
+          version: "v1.1.9-fix-keyword-priority",
           intent: "events",
           keywords: keywords,
           counts: {
