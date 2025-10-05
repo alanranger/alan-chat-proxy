@@ -911,7 +911,7 @@ async function extractRelevantInfo(query, dataContext) {
   }
   
   // Check for other types of information (location, price, etc.)
-  const sampleItems = allData.slice(0, 2); // Only check first 2 items for other info
+  const sampleItems = allData.slice(0, 5); // Check more items for better coverage
   
   // Check for price information
   if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
@@ -957,6 +957,53 @@ async function extractRelevantInfo(query, dataContext) {
       if (match) {
         console.log(`✅ RAG: Found location="${match[1]}" in text`);
         return match[1].trim();
+      }
+    }
+  }
+  
+  // Check for time/duration information
+  if (lowerQuery.includes('long') || lowerQuery.includes('duration') || lowerQuery.includes('time')) {
+    for (const item of sampleItems) {
+      const text = (item.title || '') + ' ' + (item.description || '');
+      const match = text.match(/(\d+)\s*(?:hours?|days?|weeks?|months?)/i);
+      if (match) {
+        console.log(`✅ RAG: Found duration="${match[0]}" in text`);
+        return match[0];
+      }
+    }
+  }
+  
+  // Check for booking information
+  if (lowerQuery.includes('book') || lowerQuery.includes('reserve') || lowerQuery.includes('register')) {
+    for (const item of sampleItems) {
+      const text = (item.title || '') + ' ' + (item.description || '');
+      if (text.toLowerCase().includes('book') || text.toLowerCase().includes('reserve') || text.toLowerCase().includes('register')) {
+        console.log(`✅ RAG: Found booking info in text`);
+        return "You can book through the website or contact Alan directly";
+      }
+    }
+  }
+  
+  // Check for fitness/experience level information
+  if (lowerQuery.includes('fitness') || lowerQuery.includes('level') || lowerQuery.includes('experience')) {
+    for (const item of sampleItems) {
+      const text = (item.title || '') + ' ' + (item.description || '');
+      const match = text.match(/(beginner|intermediate|advanced|all levels?|any level)/i);
+      if (match) {
+        console.log(`✅ RAG: Found fitness level="${match[0]}" in text`);
+        return match[0];
+      }
+    }
+  }
+  
+  // Check for date/time information
+  if (lowerQuery.includes('when') || lowerQuery.includes('date') || lowerQuery.includes('time')) {
+    for (const item of sampleItems) {
+      const text = (item.title || '') + ' ' + (item.description || '');
+      const match = text.match(/(\d{1,2}\s*(?:st|nd|rd|th)?\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*\d{4})/i);
+      if (match) {
+        console.log(`✅ RAG: Found date="${match[0]}" in text`);
+        return match[0];
       }
     }
   }
