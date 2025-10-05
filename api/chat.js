@@ -138,16 +138,10 @@ function anyIlike(col, words) {
 
 async function findEvents(client, { keywords, limit = 50 }) {
   const nowIso = new Date().toISOString();
-  // For bluebell/spring workshops, extend the date range to include next year's spring
-  const nextYear = new Date();
-  nextYear.setFullYear(nextYear.getFullYear() + 1);
-  const nextYearIso = nextYear.toISOString();
-  
   let q = client
     .from("v_events_for_chat")
     .select("*")
     .gte("date_start", nowIso)
-    .lte("date_start", nextYearIso) // Include events up to next year
     .order("date_start", { ascending: true })
     .limit(limit);
 
