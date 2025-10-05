@@ -153,17 +153,17 @@ async function findEvents(client, { keywords, limit = 50 }) {
   const events = (data || []).map(item => {
     const searchResult = item.search_events;
     if (typeof searchResult === 'string') {
-      // Parse the RPC result string format
-      const match = searchResult.match(/^\(([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+)\)$/);
+      // Parse the RPC result string format: ("title",url,"when",date_start,"start_time","end_time",location,,currency)
+      const match = searchResult.match(/^\("([^"]+)",([^,]+),"([^"]+)",([^,]+),"([^"]+)","([^"]+)",([^,]*),([^,]*),([^)]+)\)$/);
       if (match) {
         return {
-          event_title: match[1].replace(/"/g, ''),
+          event_title: match[1],
           event_url: match[2],
-          when: match[3].replace(/"/g, ''),
-          date_start: match[5],
-          date_end: match[6],
-          event_location: match[7],
-          price_currency: match[9]
+          when: match[3],
+          date_start: match[4],
+          date_end: match[4], // Same date for single-day events
+          event_location: match[7] || null,
+          price_currency: match[9] || 'GBP'
         };
       }
     }
@@ -642,6 +642,17 @@ export default async function handler(req, res) {
           events: eventList,
           products: product ? [product] : [],
           pills,
+        },
+        confidence: events.length > 0 ? 0.8 : 0.2,
+        debug: {
+          version: "v1.1.7-rpc-fix",
+          intent: "events",
+          keywords: keywords,
+          counts: {
+            events: events.length,
+            products: product ? 1 : 0,
+            articles: 0
+          }
         },
         meta: {
           duration_ms: Date.now() - started,
