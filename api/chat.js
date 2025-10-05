@@ -1,4 +1,5 @@
 // /api/chat.js
+// Force deployment: 2025-10-05 00:30
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
