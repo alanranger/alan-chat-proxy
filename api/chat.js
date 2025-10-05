@@ -540,11 +540,14 @@ export default async function handler(req, res) {
       return;
     }
 
-    const { query, topK } = req.body || {};
+    const { query, topK, previousQuery } = req.body || {};
     const client = supabaseAdmin();
 
+    // Build contextual query for keyword extraction (merge with previous query)
+    const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
+    
     const intent = detectIntent(query || "");
-    const keywords = extractKeywords(query || "");
+    const keywords = extractKeywords(contextualQuery || "");
 
     if (intent === "events") {
       const { events, product, landing } = await resolveEventsAndProduct(
