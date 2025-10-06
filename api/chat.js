@@ -1,7 +1,7 @@
 // /api/chat.js
-// FIX: 2025-10-06 03:45 - Fixed intent detection for follow-up questions
-// This fixes the issue where follow-up questions were classified as "advice" instead of "events"
-// Now uses contextual query (previousQuery + current query) for better intent detection
+// FIX: 2025-10-06 04:00 - Fixed fitness level question intent detection
+// This fixes the issue where "what fitness level is required" was classified as "advice" instead of "events"
+// Now prioritizes workshop context over general advice words like "what"
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
@@ -320,7 +320,8 @@ function detectIntent(q) {
   // Check if this is a follow-up question about event details
   const isFollowUpQuestion = followUpQuestions.some(word => lc.includes(word));
   
-  // If it's a follow-up question AND the context mentions workshops/courses, it's events
+  // PRIORITY: If it's a follow-up question AND the context mentions workshops/courses, it's events
+  // This takes precedence over general advice words like "what"
   if (isFollowUpQuestion && mentionsWorkshop) {
     return "events";
   }
@@ -898,7 +899,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-          version: "v1.2.11-contextual-intent",
+          version: "v1.2.12-fitness-level-fix",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -989,7 +990,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-          version: "v1.2.11-contextual-intent",
+          version: "v1.2.12-fitness-level-fix",
         intent: "advice",
         keywords: keywords,
       counts: {
