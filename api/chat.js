@@ -11,6 +11,13 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
   
+  // DEBUG: Log what we're working with
+  console.log(`🔍 generateDirectAnswer: Query="${query}"`);
+  console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
+  if (contentChunks.length > 0) {
+    console.log(`🔍 generateDirectAnswer: First chunk preview="${(contentChunks[0].chunk_text || contentChunks[0].content || "").substring(0, 200)}..."`);
+  }
+  
   // Try to find relevant content from chunks first
   const relevantChunk = contentChunks.find(chunk => {
     const chunkText = (chunk.chunk_text || chunk.content || "").toLowerCase();
@@ -22,8 +29,12 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
       chunkText.includes(word) || chunkTitle.includes(word)
     );
     
+    console.log(`🔍 generateDirectAnswer: Chunk check - hasFullQuery=${hasFullQuery}, hasKeyTerms=${hasKeyTerms}`);
+    
     return hasFullQuery || hasKeyTerms;
   });
+  
+  console.log(`🔍 generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
   
   if (relevantChunk) {
     let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
@@ -34,6 +45,8 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     
     // SPECIAL CASE: Look for fitness level information first
     if (lc.includes('fitness') || lc.includes('level')) {
+      console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
+      
       const fitnessPatterns = [
         /Fitness:\s*(\d+\.?\s*[^\\n]+)/i,           // "Fitness: 2. Easy-Moderate"
         /Fitness\s*Level:\s*([^\\n]+)/i,            // "Fitness Level: Easy"
@@ -45,8 +58,10 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
       
       for (const pattern of fitnessPatterns) {
         const match = chunkText.match(pattern);
+        console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
         if (match && match[1]) {
           const fitnessLevel = match[1].trim();
+          console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
           return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
         }
       }
@@ -1048,17 +1063,17 @@ export default async function handler(req, res) {
         pills,
       },
       confidence: confidence,
-      debug: {
-          version: "v1.2.18-fitness-chunks",
-        intent: "advice",
-        keywords: keywords,
-      counts: {
-          events: 0,
-          products: 0,
-          articles: articles?.length || 0,
-          contentChunks: contentChunks?.length || 0,
+        debug: {
+          version: "v1.2.19-debug-chunks",
+          intent: "advice",
+          keywords: keywords,
+          counts: {
+            events: 0,
+            products: 0,
+            articles: articles?.length || 0,
+            contentChunks: contentChunks?.length || 0,
+          },
         },
-      },
       meta: {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
