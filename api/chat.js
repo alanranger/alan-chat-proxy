@@ -49,6 +49,16 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
   const exactTerm = lc.replace(/^what\s+is\s+/, "").trim();
+  const hasWord = (text, term) => {
+    if (!term) return false;
+    try {
+      const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\b${esc}\\b`, "i");
+      return re.test(text || "");
+    } catch {
+      return (text || "").toLowerCase().includes((term || "").toLowerCase());
+    }
+  };
   
   // DEBUG: Log what we're working with
   console.log(`🔍 generateDirectAnswer: Query="${query}"`);
@@ -68,17 +78,17 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     const url = String(c.url||"").toLowerCase();
     const title = String(c.title||"").toLowerCase();
     const text = String(c.chunk_text||c.content||"").toLowerCase();
-    return text.includes(exactTerm) || title.includes(exactTerm) || url.includes(exactTerm) || url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || text.includes(`what is ${exactTerm}`);
+    return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm) || url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || text.includes(`what is ${exactTerm}`);
   }) : (contentChunks || []);
   const scoredChunks = candidateChunks.map(chunk => {
     const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
     const title = (chunk.title || "").toLowerCase();
     const url = String(chunk.url || "").toLowerCase();
     let s = 0;
-    for (const w of importantWords) { if (text.includes(w)) s += 2; if (title.includes(w)) s += 3; if (url.includes(w)) s += 2; }
+    for (const w of importantWords) { if (hasWord(text,w)) s += 2; if (hasWord(title,w)) s += 3; if (hasWord(url,w)) s += 2; }
     if (exactTerm) {
-      if (text.includes(exactTerm)) s += 6;
-      if (title.includes(exactTerm)) s += 8;
+      if (hasWord(text, exactTerm)) s += 6;
+      if (hasWord(title, exactTerm)) s += 8;
       const slug = exactTerm.replace(/\s+/g, "-");
       if (url.includes(`/what-is-${slug}`)) s += 10;
     }
@@ -133,7 +143,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   const sentencesAll = chunkText.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
   const defSentence = sentencesAll.find(s => {
     const sLower = s.toLowerCase();
-    const hasTerm = exactTerm && sLower.includes(exactTerm);
+    const hasTerm = exactTerm && hasWord(sLower, exactTerm);
     const hasVerb = coreVerbs.some(v => sLower.includes(v));
     return hasTerm && hasVerb && s.length >= 30 && s.length <= 220;
   });
