@@ -152,6 +152,21 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
   "publisher": { "@type": "Organization", "name": "Alan Ranger Photography", "url": "https://www.alanranger.com" }
 }
 </script>
+<!-- GA4 (optional) -- set GA4_ID via data attribute in embed or inline here -->
+<script>
+  (function(){
+    var GA4_ID = (new URL(location.href)).searchParams.get('ga4') || '';
+    if (!GA4_ID) return;
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    window.gtag = gtag;
+    gtag('js', new Date());
+    gtag('config', GA4_ID, { send_page_view: false });
+    var s=document.createElement('script'); s.async=true; s.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(GA4_ID);
+    document.head.appendChild(s);
+    window.__ga4_id = GA4_ID;
+  })();
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -239,6 +254,7 @@ const sendBtn= document.getElementById('send');
 const btnEmail = document.getElementById('btn-email');
 const btnReset = document.getElementById('btn-reset');
 const soundToggle = document.getElementById('sound-toggle');
+function gaTrack(name, params){ try{ if(window.gtag&&window.__ga4_id){ window.gtag('event', name, params||{}); } }catch{} }
 
 const dbgStatus = document.getElementById('dbg-status');
 const dbgReq    = document.getElementById('dbg-req');
@@ -801,11 +817,13 @@ function renderAnswer(payload){
 
 /* ================= Networking ================= */
 async function sendQuery(query){
+  var t0 = performance.now();
   const prevQuery = __lastQuery; // Store the previous query before updating
   __lastQuery = String(query||'');
   const req = { query, topK: 8, previousQuery: prevQuery };
   setDebugJSON(dbgReq, req);
   const closeTyping = addTyping();
+  gaTrack('question_sent', { query_length: (query||'').length });
   try{
     const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(req) });
     dbgStatus.textContent = res.status;
@@ -818,6 +836,7 @@ async function sendQuery(query){
     closeTyping();
     if (data && data.ok && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
       renderAnswer(data);
+      gaTrack('answer_rendered', { ms: Math.round(performance.now()-t0), confidence_pct: Math.round((data.confidence||0)*100) });
     } else if (data && !data.ok) {
       const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf red">Confidence: 20%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
       addBubble(`<div class="answer"><p>Server error: ${escapeHTML(String(data.error||'Unknown'))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
@@ -930,6 +949,7 @@ sendBtn.addEventListener('click', submit);
 input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }});
 btnEmail.addEventListener('click', emailTranscript);
 btnReset.addEventListener('click', resetChat);
+gaTrack('chat_loaded');
 dbgCopy && dbgCopy.addEventListener('click', copyAllDebug);
 
 /* Sound toggle + initial state */

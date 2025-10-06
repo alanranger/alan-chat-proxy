@@ -21,8 +21,25 @@
     position: (scriptEl.getAttribute('data-position') || 'br').toLowerCase(),
     color: scriptEl.getAttribute('data-color') || '#4CAF50',
     size: scriptEl.getAttribute('data-size') || '420x640',
-    offset: parseInt(scriptEl.getAttribute('data-offset') || '20', 10)
+    offset: parseInt(scriptEl.getAttribute('data-offset') || '20', 10),
+    ga4: scriptEl.getAttribute('data-ga4-id') || ''
   };
+
+  function ensureGA(){
+    if (!cfg.ga4) return;
+    if (window.gtag) return;
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    window.gtag = gtag;
+    gtag('js', new Date());
+    gtag('config', cfg.ga4, { send_page_view: false });
+    const s = doc.createElement('script'); s.async = true; s.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(cfg.ga4)}`;
+    doc.head.appendChild(s);
+  }
+
+  function track(eventName, params){
+    try{ if (window.gtag) window.gtag('event', eventName, params||{}); else if (window.dataLayer) window.dataLayer.push({ event: eventName, ...params }); }catch{}
+  }
 
   function injectStyles(){
     const style = doc.createElement('style');
@@ -58,6 +75,7 @@
   function openPanel(){
     let wrap = doc.getElementById('alan-chat-frame-wrap');
     if (!wrap){
+      ensureGA();
       wrap = doc.createElement('div');
       wrap.id = 'alan-chat-frame-wrap';
       wrap.style.inset = '0';
@@ -88,9 +106,11 @@
       wrap.appendChild(panel);
     }
     wrap.style.display = 'block';
+    track('chat_opened', { source: 'embed', page_location: location.href });
   }
 
   function init(){
+    ensureGA();
     injectStyles();
     createLauncher();
   }
