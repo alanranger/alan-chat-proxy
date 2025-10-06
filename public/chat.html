@@ -401,6 +401,14 @@ function deriveOptions(prod, facts){
   return opts;
 }
 function renderProductCard(prod){
+  const SITE_ORIGIN = 'https://www.alanranger.com';
+  const absolutize = (u)=>{
+    if (!u) return '#'; const s=String(u);
+    if (/^https?:\/\//i.test(s)) return s;
+    if (s.startsWith('/')) return SITE_ORIGIN + s;
+    // slug only → assume product section path
+    return SITE_ORIGIN + '/photographic-workshops-near-me/' + s.replace(/^\/+/, '');
+  };
   const facts = extractFacts(prod.description||'');
   const options = deriveOptions(prod, facts);
   const priceHead = productHeadlinePrice(prod);
@@ -418,7 +426,7 @@ function renderProductCard(prod){
   if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
   if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
   const li = options.map(o=>`<li>${escapeHTML(o.label||'')}${o.price ? ` — ${o.price}` : ''}</li>`).join('');
-  const href = prod.page_url || prod.source_url || prod.url || '#';
+  const href = absolutize(prod.page_url || prod.source_url || prod.url || '#');
   const book = href && href !== '#' ? `<p style="margin-top:8px"><a href="${href}" target="_blank" rel="noopener">Book now →</a></p>` : '';
   return `<div class="answer"><h3>${escapeHTML(prod.title || 'Workshop')}</h3>${lines.join('')}${li? `<ul>${li}</ul>`:''}${book}</div>`;
 }

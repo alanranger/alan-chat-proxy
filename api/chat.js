@@ -1138,6 +1138,17 @@ export default async function handler(req, res) {
         }
       }
       
+      // Ensure product link is absolute and points to live site
+      if (product) {
+        const normalize = (u)=>{
+          if (!u) return null; const s=String(u);
+          if (/^https?:\/\//i.test(s)) return s;
+          if (s.startsWith('/')) return `https://www.alanranger.com${s}`;
+          // Most product slugs live under /photographic-workshops-near-me/
+          return `https://www.alanranger.com/photographic-workshops-near-me/${s.replace(/^\/+/, '')}`;
+        };
+        product.page_url = normalize(product.page_url || product.source_url || product.url);
+      }
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
 
       // Use extractRelevantInfo to get specific answers for follow-up questions
