@@ -1,7 +1,7 @@
 // /api/chat.js
-// FIX: 2025-10-06 03:30 - Fixed extractRelevantInfo to return comprehensive answers
-// This fixes the regression where answers were too short (just "£175" instead of full context)
-// Now returns detailed, helpful responses with proper formatting
+// FIX: 2025-10-06 03:45 - Fixed intent detection for follow-up questions
+// This fixes the issue where follow-up questions were classified as "advice" instead of "events"
+// Now uses contextual query (previousQuery + current query) for better intent detection
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
@@ -310,15 +310,30 @@ function detectIntent(q) {
   // heuristic: if question starts with "when/where" + includes 'workshop' → events
   if (/^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop) return "events";
   
-  // Handle follow-up questions for events (price, location, etc.) - but only if context suggests events
+  // Handle follow-up questions for events (price, location, etc.) - IMPROVED LOGIC
   const followUpQuestions = [
     "how much", "cost", "price", "where", "location", "when", "date",
-    "how many", "people", "attend", "fitness", "level", "duration", "long"
+    "how many", "people", "attend", "fitness", "level", "duration", "long",
+    "how do i book", "book", "booking"
   ];
   
-  // Only classify as events if it's clearly about event details AND mentions workshop/course
-  if (followUpQuestions.some(word => lc.includes(word)) && mentionsWorkshop) {
+  // Check if this is a follow-up question about event details
+  const isFollowUpQuestion = followUpQuestions.some(word => lc.includes(word));
+  
+  // If it's a follow-up question AND the context mentions workshops/courses, it's events
+  if (isFollowUpQuestion && mentionsWorkshop) {
     return "events";
+  }
+  
+  // If it's a follow-up question but no workshop context, check if it's about general advice
+  if (isFollowUpQuestion && !mentionsWorkshop) {
+    // Check if it's asking about general photography advice vs specific event details
+    const generalAdviceWords = ["what is", "how does", "explain", "tell me about", "difference between"];
+    if (generalAdviceWords.some(word => lc.includes(word))) {
+      return "advice";
+    }
+    // If it's a simple follow-up without context, default to advice
+    return "advice";
   }
   
   // default
@@ -813,7 +828,7 @@ export default async function handler(req, res) {
     // Build contextual query for keyword extraction (merge with previous query)
     const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
     
-    const intent = detectIntent(query || "");
+    const intent = detectIntent(contextualQuery || "");
     const keywords = extractKeywords(contextualQuery || "");
 
     if (intent === "events") {
@@ -883,7 +898,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-          version: "v1.2.10-comprehensive-answers",
+          version: "v1.2.11-contextual-intent",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -974,7 +989,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-          version: "v1.2.10-comprehensive-answers",
+          version: "v1.2.11-contextual-intent",
         intent: "advice",
         keywords: keywords,
       counts: {
