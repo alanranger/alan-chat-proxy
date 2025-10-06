@@ -755,7 +755,13 @@ function extractFromDescription(desc) {
   };
   if (!desc) return out;
 
-  const lines = desc.split(/\r?\n/).map((s) => s.trim());
+  // Strip HTML tags and data attributes that sometimes appear in Squarespace blocks
+  const cleanText = String(desc)
+    .replace(/<[^>]*>/g, ' ') // remove all HTML tags
+    .replace(/\s+/g, ' ')    // collapse whitespace
+    .trim();
+
+  const lines = cleanText.split(/\r?\n/).map((s) => s.trim());
   const nonEmpty = lines.filter(Boolean);
   if (nonEmpty.length) out.summary = nonEmpty[0];
 
