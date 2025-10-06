@@ -18,14 +18,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     console.log(`🔍 generateDirectAnswer: First chunk preview="${(contentChunks[0].chunk_text || contentChunks[0].content || "").substring(0, 200)}..."`);
   }
   
-  // SPECIAL CASE: Direct ISO summary if asked (works even if chunks ranking misses)
-  if (lc.includes(" iso" ) || lc.startsWith("iso") || /\biso\b/i.test(lc)) {
-    const isoChunk = (contentChunks || []).find(c => (c.url || "").includes("what-is-iso-in-photography"));
-    const isoArticle = (articles || []).find(a => (a.page_url || a.source_url || "").includes("what-is-iso-in-photography"));
-    const isoUrl = (isoChunk && isoChunk.url) || (isoArticle && (isoArticle.page_url || isoArticle.source_url)) || null;
-    const summary = "**ISO controls your camera sensor's sensitivity to light.** Raise ISO to keep shutter speeds safe or freeze motion in low light, but expect more image noise. Use the lowest ISO that still gives you your desired shutter speed and aperture.";
-    return `${summary}\n\n${isoUrl ? `*From Alan's blog: ${isoUrl}*\n\n` : ""}`;
-  }
+  // No hardcoded fallbacks; rely on chunk/article relevance below
 
   // Try to find relevant content from chunks first
   const relevantChunk = contentChunks.find(chunk => {
@@ -499,12 +492,12 @@ async function findProducts(client, { keywords, limit = 20 }) {
 }
 
 async function findArticles(client, { keywords, limit = 12 }) {
+  // Fetch a wider pool then rank deterministically by relevance
   let q = client
     .from("page_entities")
     .select("id, title, page_url, source_url, raw, last_seen")
     .in("kind", ["article", "blog", "page"])
-    .order("last_seen", { ascending: false })
-    .limit(limit);
+    .limit(limit * 3);
 
   const orExpr =
     anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
@@ -512,7 +505,29 @@ async function findArticles(client, { keywords, limit = 12 }) {
 
   const { data, error } = await q;
   if (error) return [];
-  return data || [];
+  const rows = data || [];
+
+  const kw = (keywords || []).map(k => String(k || "").toLowerCase());
+  const scoreRow = (r) => {
+    const t = (r.title || r.raw?.name || "").toLowerCase();
+    const u = (r.page_url || r.source_url || "").toLowerCase();
+    let s = 0;
+    for (const k of kw) {
+      if (!k) continue;
+      if (t.includes(k)) s += 3; // strong match in title
+      if (u.includes(k)) s += 1;
+      if (/^what\s+is\b/.test(t) && k.length >= 3) s += 1; // prefer "what is" explainers
+    }
+    // slight recency tie-breaker
+    const seen = r.last_seen ? Date.parse(r.last_seen) || 0 : 0;
+    return s * 1_000_000 + seen;
+  };
+
+  return rows
+    .map(r => ({ r, s: scoreRow(r) }))
+    .sort((a,b) => b.s - a.s)
+    .slice(0, limit)
+    .map(x => x.r);
 }
 
 async function findContentChunks(client, { keywords, limit = 5 }) {
