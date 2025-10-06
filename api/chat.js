@@ -494,7 +494,7 @@ async function findProducts(client, { keywords, limit = 20 }) {
 async function findArticles(client, { keywords, limit = 12 }) {
   // Fetch a wider pool then rank deterministically by relevance
   let q = client
-    .from("page_entities")
+        .from("page_entities")
     .select("id, title, page_url, source_url, raw, last_seen")
     .in("kind", ["article", "blog", "page"])
     .limit(limit * 3);
@@ -512,11 +512,31 @@ async function findArticles(client, { keywords, limit = 12 }) {
     const t = (r.title || r.raw?.name || "").toLowerCase();
     const u = (r.page_url || r.source_url || "").toLowerCase();
     let s = 0;
+    // base keyword presence
     for (const k of kw) {
       if (!k) continue;
-      if (t.includes(k)) s += 3; // strong match in title
-      if (u.includes(k)) s += 1;
-      if (/^what\s+is\b/.test(t) && k.length >= 3) s += 1; // prefer "what is" explainers
+      if (t.includes(k)) s += 3;        // strong match in title
+      if (u.includes(k)) s += 1;        // weak match in URL
+    }
+
+    // Core concept boosting
+    const coreConcepts = [
+      "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering"
+    ];
+    const hasCore = coreConcepts.some(c => kw.includes(c));
+    if (hasCore) {
+      // exact phrase boosts
+      for (const c of coreConcepts) {
+        const slug = c.replace(/\s+/g, "-");
+        if (t.startsWith(`what is ${c}`)) s += 20; // ideal explainer
+        if (t.includes(`what is ${c}`)) s += 10;
+        if (u.includes(`/what-is-${slug}`)) s += 12;
+        if (u.includes(`${slug}`)) s += 3;
+      }
+      // penalize generic Lightroom news posts for concept questions
+      if (/(lightroom|what's new|whats new)/i.test(t) || /(lightroom|whats-new)/.test(u)) {
+        s -= 12;
+      }
     }
     // slight recency tie-breaker
     const seen = r.last_seen ? Date.parse(r.last_seen) || 0 : 0;
