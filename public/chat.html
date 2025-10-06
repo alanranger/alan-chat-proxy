@@ -125,7 +125,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.2.33-email-html-clipboard</span></div>
+  <div class="badge-wrap"><span class="version">v1.2.34-events-links</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -464,7 +464,7 @@ function renderEventsBlock(structured, query){
   const list = all.map(e=>({e, s: scoreEventMatch(e, kp)})).sort((a,b)=> (b.s - a.s) || (new Date(a.e.date_start) - new Date(b.e.date_start))).map(x=>x.e);
   const lis = list.map(e=>{
     const when=fmtDate(e.date_start);
-    const href=e.page_url||e.source_url||e.url||'#';
+    const href=e.href || e.event_url || e.page_url || e.source_url || e.url || '#';
     const where=e.location ? `${escapeHTML(e.location)}` : '';
     const title=e.title ? `${escapeHTML(e.title)}` : '';
     return `<li><div><strong>${when}${where ? ' — ' + where : ''}</strong> — <a href="${href}" target="_blank" rel="noopener">Link</a></div><div>${title}</div></li>`;
