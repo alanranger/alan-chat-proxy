@@ -10,6 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
+  const exactTerm = lc.replace(/^what\s+is\s+/, "").trim();
   
   // DEBUG: Log what we're working with
   console.log(`🔍 generateDirectAnswer: Query="${query}"`);
@@ -85,6 +86,19 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
       }
     }
     
+    // Prefer definitional sentences for core concepts
+    const coreVerbs = [" is ", " means ", " controls "];
+    const sentencesAll = chunkText.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+    const defSentence = sentencesAll.find(s => {
+      const sLower = s.toLowerCase();
+      const hasTerm = exactTerm && sLower.includes(exactTerm);
+      const hasVerb = coreVerbs.some(v => sLower.includes(v));
+      return hasTerm && hasVerb && s.length >= 30 && s.length <= 200;
+    });
+    if (defSentence) {
+      return `**${defSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+    }
+
     // Look for sentences that contain key terms from the query
     const sentences = chunkText.split(/[.!?]+/).filter(s => s.trim().length > 20);
     const relevantSentence = sentences.find(s => {
@@ -105,6 +119,15 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
       return `**${relevantSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
     }
     
+    // Fallback: if no good sentence found, try to extract the first paragraph containing "what is <term>"
+    if (exactTerm) {
+      const byPara = chunkText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 50);
+      const para = byPara.find(p => p.toLowerCase().includes(`what is ${exactTerm}`) && p.length <= 300);
+      if (para) {
+        return `**${para.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+      }
+    }
+
     // Fallback: if no good sentence found, try to extract a relevant paragraph
     const paragraphs = chunkText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
     const relevantParagraph = paragraphs.find(p => {
