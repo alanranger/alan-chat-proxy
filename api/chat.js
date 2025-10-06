@@ -139,10 +139,10 @@ function anyIlike(col, words) {
 }
 
 async function findEvents(client, { keywords, limit = 50 }) {
-  // Use v_event_product_final_enhanced view that contains correct event-product mappings
+  // Use v_event_product_mappings view for events, courses and workshops
   let q = client
-    .from("v_event_product_final_enhanced")
-    .select("event_url, event_title, product_url, product_title, date_start, date_end, event_location, price_gbp, participants, fitness_level, availability, map_method, confidence")
+    .from("v_event_product_mappings")
+    .select("event_url, event_title, product_url, product_title, date_start, date_end, event_location, price_gbp, participants, fitness_level, availability, map_method, confidence, subtype")
     .gte("date_start", new Date().toISOString())
     .order("date_start", { ascending: true })
     .limit(limit);
@@ -177,7 +177,7 @@ async function findEvents(client, { keywords, limit = 50 }) {
 
   const { data, error } = await q;
   if (error) {
-    console.error('❌ v_event_product_final_enhanced query error:', error);
+    console.error('❌ v_event_product_mappings query error:', error);
     return [];
   }
   
@@ -670,7 +670,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.0-use-enhanced-view",
+          version: "v1.2.1-use-mappings-view",
           intent: "events",
           keywords: keywords,
           counts: {
