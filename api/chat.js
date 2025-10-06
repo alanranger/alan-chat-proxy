@@ -142,14 +142,34 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     return `**Professional Qualifications**: Alan Ranger Photography has public liability insurance, professional indemnity insurance, CRB disclosure, and professional qualifications/accreditations. Full certificates and documentation are available on the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   
-  // Gift vouchers and payment
-  if (lc.includes("voucher") || lc.includes("gift") || lc.includes("payment")) {
-    return `**Gift Vouchers and Payment**: Alan Ranger Photography offers digital gift vouchers and "Pick N Mix" payment plans. Full terms and conditions for vouchers and payment options are detailed in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  // Payment plans
+  if (lc.includes("payment") && !lc.includes("voucher") && !lc.includes("gift")) {
+    return `**Payment Plans**: Alan Ranger Photography offers "Pick N Mix" payment plans to help spread the cost of courses and workshops. Full terms and conditions for payment options are detailed in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   
   // Privacy and data protection
   if (lc.includes("privacy") || lc.includes("data") || lc.includes("newsletter")) {
     return `**Privacy and Data Protection**: Alan Ranger Photography has comprehensive privacy and cookie policies. When you subscribe to the newsletter, you'll receive an email to verify and confirm your subscription. Full privacy details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  }
+  
+  // Equipment recommendations
+  if (lc.includes("tripod") || lc.includes("equipment") || lc.includes("camera") || lc.includes("lens") || lc.includes("gear")) {
+    return `**Equipment Recommendations**: Alan Ranger Photography provides professional equipment recommendations including lightweight tripods, cameras, and lenses. For detailed equipment guides and Amazon affiliate links, visit the [Equipment Recommendations page](https://www.alanranger.com/photography-equipment-recommendations).\n\n`;
+  }
+  
+  // Private lessons and mentoring
+  if (lc.includes("private") || lc.includes("mentoring") || lc.includes("1-2-1") || lc.includes("tuition")) {
+    return `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n`;
+  }
+  
+  // Gift vouchers (more detailed)
+  if (lc.includes("voucher") || lc.includes("gift") || lc.includes("present")) {
+    return `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`;
+  }
+  
+  // Services summary
+  if (lc.includes("service") || lc.includes("what do you offer") || lc.includes("what services")) {
+    return `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations. [View All Services](https://www.alanranger.com/photography-tuition-services)\n\n`;
   }
   
   // Return null if no specific answer can be generated
@@ -354,9 +374,9 @@ async function findEvents(client, { keywords, limit = 50 }) {
 
 async function findProducts(client, { keywords, limit = 20 }) {
   let q = client
-    .from("page_entities")
+        .from("page_entities")
     .select("*")
-    .eq("kind", "product")
+        .eq("kind", "product")
     .order("last_seen", { ascending: false })
     .limit(limit);
 
@@ -404,12 +424,12 @@ async function findContentChunks(client, { keywords, limit = 5 }) {
 async function findLanding(client, { keywords }) {
   // best effort: a canonical "landing" page if marked, else a generic workshops page
   let q = client
-    .from("page_entities")
+      .from("page_entities")
     .select("*")
     .in("kind", ["article", "page"])
     .eq("raw->>canonical", "true")
     .eq("raw->>role", "landing")
-    .order("last_seen", { ascending: false })
+      .order("last_seen", { ascending: false })
     .limit(1);
 
   const orExpr =
@@ -853,7 +873,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-      version: "v1.2.7-policy-direct-answers",
+      version: "v1.2.8-equipment-services-direct-answers",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -944,7 +964,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-        version: "v1.2.7-policy-direct-answers",
+        version: "v1.2.8-equipment-services-direct-answers",
         intent: "advice",
         keywords: keywords,
       counts: {
