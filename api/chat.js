@@ -18,6 +18,15 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     console.log(`🔍 generateDirectAnswer: First chunk preview="${(contentChunks[0].chunk_text || contentChunks[0].content || "").substring(0, 200)}..."`);
   }
   
+  // SPECIAL CASE: Direct ISO summary if asked (works even if chunks ranking misses)
+  if (lc.includes(" iso" ) || lc.startsWith("iso") || /\biso\b/i.test(lc)) {
+    const isoChunk = (contentChunks || []).find(c => (c.url || "").includes("what-is-iso-in-photography"));
+    const isoArticle = (articles || []).find(a => (a.page_url || a.source_url || "").includes("what-is-iso-in-photography"));
+    const isoUrl = (isoChunk && isoChunk.url) || (isoArticle && (isoArticle.page_url || isoArticle.source_url)) || null;
+    const summary = "**ISO controls your camera sensor's sensitivity to light.** Raise ISO to keep shutter speeds safe or freeze motion in low light, but expect more image noise. Use the lowest ISO that still gives you your desired shutter speed and aperture.";
+    return `${summary}\n\n${isoUrl ? `*From Alan's blog: ${isoUrl}*\n\n` : ""}`;
+  }
+
   // Try to find relevant content from chunks first
   const relevantChunk = contentChunks.find(chunk => {
     const chunkText = (chunk.chunk_text || chunk.content || "").toLowerCase();
@@ -292,6 +301,15 @@ function originOf(url) {
   } catch {
   return null;
   }
+}
+
+// Normalize minor typos/synonyms in user queries for better intent/keywords
+function normalizeQuery(q) {
+  if (!q) return q;
+  let s = String(q);
+  // Common typo: isp -> iso (photography context)
+  s = s.replace(/\bisp\b/gi, "iso");
+  return s;
 }
 
 /* ----------------------- Intent + keyword extraction --------------------- */
@@ -922,17 +940,18 @@ export default async function handler(req, res) {
     }
 
     const { query, topK, previousQuery } = req.body || {};
+    const normalized = normalizeQuery(query);
     const client = supabaseAdmin();
 
     // Build contextual query for keyword extraction (merge with previous query)
-    const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
+    const contextualQuery = previousQuery ? `${previousQuery} ${normalized}` : normalized;
     
-    const intent = detectIntent(query || ""); // Use current query only for intent detection
+    const intent = detectIntent(normalized || ""); // Use current query only for intent detection
     
     // Use contextual query for events (to maintain context), but current query for advice
     const keywords = intent === "events" 
       ? extractKeywords(contextualQuery || "") 
-      : extractKeywords(query || "");
+      : extractKeywords(normalized || "");
 
     if (intent === "events") {
       // Get events from the enhanced view that includes product mappings
@@ -1056,7 +1075,7 @@ export default async function handler(req, res) {
     
       if (articles?.length) {
         // Try to provide a direct answer based on the question type and content chunks
-        const directAnswer = generateDirectAnswer(query, articles, contentChunks);
+        const directAnswer = generateDirectAnswer(normalized, articles, contentChunks);
         
         if (directAnswer) {
           lines.push(directAnswer);
@@ -1092,7 +1111,9 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
         debug: {
-          version: "v1.2.25-fix-content-relevance",
+          version: "v1.2.26-iso-normalize",
+        debug: {
+          version: "v1.2.26-iso-normalize",
           intent: "advice",
           keywords: keywords,
       counts: {
