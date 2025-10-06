@@ -1,7 +1,7 @@
 // /api/chat.js
-// FIX: 2025-10-06 04:00 - Fixed fitness level question intent detection
-// This fixes the issue where "what fitness level is required" was classified as "advice" instead of "events"
-// Now prioritizes workshop context over general advice words like "what"
+// FIX: 2025-10-06 04:15 - Fixed fitness level extraction from description field
+// This extracts fitness level information from product chunks description field
+// Now parses patterns like "Fitness: 1. Easy" and "Experience - Level: Beginner"
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
@@ -356,7 +356,7 @@ async function findEvents(client, { keywords, limit = 50 }) {
   // Use v_event_product_mappings view for events, courses and workshops
   let q = client
     .from("v_event_product_mappings")
-    .select("event_url, event_title, product_url, product_title, date_start, date_end, event_location, price_gbp, participants, fitness_level, availability, map_method, confidence, subtype")
+    .select("event_url, event_title, product_url, product_title, date_start, date_end, event_location, price_gbp, participants, fitness_level, availability, map_method, confidence, subtype, description")
     .gte("date_start", new Date().toISOString())
     .order("date_start", { ascending: true })
     .limit(limit);
@@ -456,7 +456,7 @@ async function findLanding(client, { keywords }) {
     .eq("raw->>canonical", "true")
     .eq("raw->>role", "landing")
       .order("last_seen", { ascending: false })
-    .limit(1);
+      .limit(1);
 
   const orExpr =
     anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
@@ -801,9 +801,45 @@ async function extractRelevantInfo(query, dataContext) {
     
     // Check for fitness level information
     if (lowerQuery.includes('fitness') || lowerQuery.includes('level') || lowerQuery.includes('experience')) {
+      // First check structured fitness_level field
       if (event.fitness_level && event.fitness_level.trim().length > 0) {
         console.log(`✅ RAG: Found fitness level="${event.fitness_level}" in structured event data`);
         return `The fitness level required is **${event.fitness_level}**. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`;
+      }
+      
+      // If not found in structured field, parse from description
+      if (event.description && event.description.trim().length > 0) {
+        const description = event.description;
+        console.log(`🔍 RAG: Parsing fitness level from description: "${description.substring(0, 200)}..."`);
+        
+        // Look for fitness level patterns in description
+        const fitnessPatterns = [
+          /Fitness:\s*(\d+\.?\s*\w+)/i,           // "Fitness: 1. Easy"
+          /Fitness\s*Level:\s*(\w+)/i,            // "Fitness Level: Easy"
+          /Experience\s*-\s*Level:\s*([^\\n]+)/i, // "Experience - Level: Beginner and Novice"
+          /Level:\s*([^\\n]+)/i,                  // "Level: Beginners"
+          /Fitness\s*Required:\s*(\w+)/i,         // "Fitness Required: Easy"
+          /Physical\s*Level:\s*(\w+)/i            // "Physical Level: Easy"
+        ];
+        
+        for (const pattern of fitnessPatterns) {
+          const match = description.match(pattern);
+          if (match && match[1]) {
+            const fitnessLevel = match[1].trim();
+            console.log(`✅ RAG: Extracted fitness level="${fitnessLevel}" from description using pattern: ${pattern}`);
+            return `The fitness level required is **${fitnessLevel}**. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`;
+          }
+        }
+        
+        // Fallback: look for common fitness level words in description
+        const fitnessWords = ['easy', 'moderate', 'hard', 'beginner', 'intermediate', 'advanced', 'low', 'medium', 'high'];
+        const descriptionLower = description.toLowerCase();
+        const foundFitnessWord = fitnessWords.find(word => descriptionLower.includes(word));
+        
+        if (foundFitnessWord) {
+          console.log(`✅ RAG: Found fitness level word="${foundFitnessWord}" in description`);
+          return `The fitness level required is **${foundFitnessWord}**. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`;
+        }
       }
     }
   }
@@ -899,7 +935,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-          version: "v1.2.12-fitness-level-fix",
+          version: "v1.2.13-description-parsing",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -990,7 +1026,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-          version: "v1.2.12-fitness-level-fix",
+          version: "v1.2.13-description-parsing",
         intent: "advice",
         keywords: keywords,
       counts: {
