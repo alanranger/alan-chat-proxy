@@ -122,6 +122,36 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     return `Sharp images come from proper technique: use a fast enough shutter speed to avoid camera shake, focus accurately, and use appropriate aperture settings. Tripods help with stability, and good lighting makes focusing easier.\n\n`;
   }
   
+  // Policy and Terms questions
+  if (lc.includes("terms") || lc.includes("conditions") || lc.includes("policy")) {
+    return `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated. For full details, visit the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  }
+  
+  // Contact information
+  if (lc.includes("contact") || lc.includes("phone") || lc.includes("address") || lc.includes("email")) {
+    return `**Contact Information**:\n- **Address**: 45 Hathaway Road, Coventry, CV4 9HW, United Kingdom\n- **Phone**: +44 781 701 7994\n- **Email**: info@alanranger.com\n- **Hours**: Monday-Sunday, 9am-5pm\n\n`;
+  }
+  
+  // Refund and cancellation policies
+  if (lc.includes("refund") || lc.includes("cancel") || lc.includes("booking")) {
+    return `**Booking and Cancellation**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions, public liability insurance, and CRB disclosure. Full details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  }
+  
+  // Insurance and qualifications
+  if (lc.includes("insurance") || lc.includes("qualified") || lc.includes("professional")) {
+    return `**Professional Qualifications**: Alan Ranger Photography has public liability insurance, professional indemnity insurance, CRB disclosure, and professional qualifications/accreditations. Full certificates and documentation are available on the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  }
+  
+  // Gift vouchers and payment
+  if (lc.includes("voucher") || lc.includes("gift") || lc.includes("payment")) {
+    return `**Gift Vouchers and Payment**: Alan Ranger Photography offers digital gift vouchers and "Pick N Mix" payment plans. Full terms and conditions for vouchers and payment options are detailed in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  }
+  
+  // Privacy and data protection
+  if (lc.includes("privacy") || lc.includes("data") || lc.includes("newsletter")) {
+    return `**Privacy and Data Protection**: Alan Ranger Photography has comprehensive privacy and cookie policies. When you subscribe to the newsletter, you'll receive an email to verify and confirm your subscription. Full privacy details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  }
+  
   // Return null if no specific answer can be generated
   return null;
 }
@@ -823,7 +853,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-      version: "v1.2.6-filter-metadata",
+      version: "v1.2.7-policy-direct-answers",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -914,7 +944,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-        version: "v1.2.6-filter-metadata",
+        version: "v1.2.7-policy-direct-answers",
         intent: "advice",
         keywords: keywords,
       counts: {
