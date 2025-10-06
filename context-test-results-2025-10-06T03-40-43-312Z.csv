@@ -1,0 +1,50 @@
+Question,PreviousQuery,Confidence,ExpectedIntent,ActualIntent,IntentCorrect,AnswerLength,IsComprehensive,MaintainsContext,ExpectedInfo,Version,Answer
+"when is the next bluebell workshop","",80,events,events,true,115,true,true,"date and bluebell workshop details",v1.2.10-comprehensive-answers,"The next workshop is scheduled for **20 April 2026**. This gives you plenty of time to prepare and book your place."
+"how many people can attend","when is the next bluebell workshop",50,events,advice,false,997,true,true,"participant count",v1.2.10-comprehensive-answers,"Here are Alan's guides that match your question:
+
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Comprehensive Guide: Preparing for Your Photography Workshop — [Link](https://www.alanranger.com/blog-on-photography/guide-preparing-for-your-photography-workshop)
+- Discover the Midlands Photography Workshops with Alan Ranger — [Link](https://www.alanranger.com/blog-on-photography/midlands-photography-workshops-with-alan-ranger)
+- Capturing Springs Blue Charm: Top Bluebell Woodland Tips — [Link](https://www.alanranger.com/blog-on-photography/top-bluebell-woodland-tips)
+- Full-Frame vs Cropped Sensor — What Changes and When It Matters — [Link](https://www.alanranger.com/blog-on-photography/full-frame-vs-cropped-sensor)"
+"how much does it cost","when is the next bluebell workshop",50,events,advice,false,991,true,true,"price information",v1.2.10-comprehensive-answers,"Here are Alan's guides that match your question:
+
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Comprehensive Guide: Preparing for Your Photography Workshop — [Link](https://www.alanranger.com/blog-on-photography/guide-preparing-for-your-photography-workshop)
+- Discover the Midlands Photography Workshops with Alan Ranger — [Link](https://www.alanranger.com/blog-on-photography/midlands-photography-workshops-with-alan-ranger)
+- How Much Do Photographers Earn: 2025 Industry Report UK — [Link](https://www.alanranger.com/blog-on-photography/how-much-do-photographers-earn)
+- Capturing Springs Blue Charm: Top Bluebell Woodland Tips — [Link](https://www.alanranger.com/blog-on-photography/top-bluebell-woodland-tips)"
+"where is it","when is the next bluebell workshop",50,events,advice,false,997,true,true,"location details",v1.2.10-comprehensive-answers,"Here are Alan's guides that match your question:
+
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Comprehensive Guide: Preparing for Your Photography Workshop — [Link](https://www.alanranger.com/blog-on-photography/guide-preparing-for-your-photography-workshop)
+- Discover the Midlands Photography Workshops with Alan Ranger — [Link](https://www.alanranger.com/blog-on-photography/midlands-photography-workshops-with-alan-ranger)
+- Capturing Springs Blue Charm: Top Bluebell Woodland Tips — [Link](https://www.alanranger.com/blog-on-photography/top-bluebell-woodland-tips)
+- Full-Frame vs Cropped Sensor — What Changes and When It Matters — [Link](https://www.alanranger.com/blog-on-photography/full-frame-vs-cropped-sensor)"
+"how long does it take","when is the next bluebell workshop",50,events,advice,false,1014,true,true,"duration information",v1.2.10-comprehensive-answers,"Here are Alan's guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- How to Take Professional Photos : Beginners Guide - FREE — [Link](https://www.alanranger.com/blog-on-photography/how-to-take-professional-photos)
+- Comprehensive Guide: Preparing for Your Photography Workshop — [Link](https://www.alanranger.com/blog-on-photography/guide-preparing-for-your-photography-workshop)
+- Discover the Midlands Photography Workshops with Alan Ranger — [Link](https://www.alanranger.com/blog-on-photography/midlands-photography-workshops-with-alan-ranger)"
+"what fitness level is required","when is the next bluebell workshop",50,events,advice,false,986,true,true,"fitness requirements",v1.2.10-comprehensive-answers,"Here are Alan's guides that match your question:
+
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- Comprehensive Guide: Preparing for Your Photography Workshop — [Link](https://www.alanranger.com/blog-on-photography/guide-preparing-for-your-photography-workshop)
+- 06 What is METERING in photography: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-is-metering-in-photography)"
+"how do I book","when is the next bluebell workshop",50,events,advice,false,997,true,true,"booking information",v1.2.10-comprehensive-answers,"Here are Alan's guides that match your question:
+
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Comprehensive Guide: Preparing for Your Photography Workshop — [Link](https://www.alanranger.com/blog-on-photography/guide-preparing-for-your-photography-workshop)
+- Discover the Midlands Photography Workshops with Alan Ranger — [Link](https://www.alanranger.com/blog-on-photography/midlands-photography-workshops-with-alan-ranger)
+- Capturing Springs Blue Charm: Top Bluebell Woodland Tips — [Link](https://www.alanranger.com/blog-on-photography/top-bluebell-woodland-tips)
+- Full-Frame vs Cropped Sensor — What Changes and When It Matters — [Link](https://www.alanranger.com/blog-on-photography/full-frame-vs-cropped-sensor)"

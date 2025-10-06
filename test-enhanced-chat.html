@@ -1,0 +1,218 @@
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Read the test questions CSV
+const csvPath = join(__dirname, 'CSVSs from website', 'test quesitons.csv');
+const csvContent = fs.readFileSync(csvPath, 'utf-8');
+
+// Parse CSV
+const lines = csvContent.split('\n').filter(line => line.trim());
+const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+const questions = lines.slice(1).map(line => {
+  const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+  const obj = {};
+  headers.forEach((header, index) => {
+    obj[header] = values[index] || '';
+  });
+  return obj;
+}).filter(q => q.Question && q.Question.trim());
+
+console.log(`🧪 Testing Enhanced Chat.html with ${questions.length} questions...`);
+console.log('📊 API Endpoint: https://alan-chat-proxy.vercel.app/api/chat');
+console.log('🎯 Expected: Enhanced markdown rendering, better confidence display, improved pills\n');
+
+const results = [];
+let totalConfidence = 0;
+let highConfidence = 0;
+let mediumConfidence = 0;
+let lowConfidence = 0;
+
+for (let i = 0; i < questions.length; i++) {
+  const question = questions[i];
+  const questionText = question.Question.trim();
+  
+  console.log(`\n🔍 Test ${i + 1}/${questions.length}: "${questionText}"`);
+  
+  try {
+    const response = await fetch('https://alan-chat-proxy.vercel.app/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: questionText,
+        topK: 8,
+        previousQuery: null
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    // Extract confidence (handle both decimal and percentage)
+    let confidence = 0;
+    if (typeof data.confidence === 'number') {
+      confidence = Math.round(data.confidence * 100);
+    } else if (typeof data.confidence_pct === 'number') {
+      confidence = data.confidence_pct;
+    } else {
+      // Fallback to heuristic
+      const structured = data.structured || {};
+      if (structured.products?.length) confidence += 40;
+      if (structured.events?.length) confidence += 40;
+      if (structured.articles?.length) confidence += 20;
+      confidence = Math.min(95, Math.max(20, confidence || 25));
+    }
+
+    // Categorize confidence
+    if (confidence >= 80) highConfidence++;
+    else if (confidence >= 50) mediumConfidence++;
+    else lowConfidence++;
+
+    totalConfidence += confidence;
+
+    // Check for enhanced features
+    const hasMarkdown = data.answer_markdown && data.answer_markdown.includes('**');
+    const hasDirectAnswer = data.answer_markdown && data.answer_markdown.length > 100;
+    const hasPills = data.structured?.pills?.length > 0;
+    const hasContentChunks = data.debug?.counts?.contentChunks > 0;
+
+    const result = {
+      question: questionText,
+      confidence,
+      intent: data.structured?.intent || 'unknown',
+      hasMarkdown,
+      hasDirectAnswer,
+      hasPills,
+      hasContentChunks,
+      answerLength: data.answer_markdown?.length || 0,
+      eventsCount: data.structured?.events?.length || 0,
+      articlesCount: data.structured?.articles?.length || 0,
+      productsCount: data.structured?.products?.length || 0,
+      version: data.debug?.version || 'unknown'
+    };
+
+    results.push(result);
+
+    console.log(`  ✅ Confidence: ${confidence}% (${confidence >= 80 ? '🟢 High' : confidence >= 50 ? '🟡 Medium' : '🔴 Low'})`);
+    console.log(`  📝 Intent: ${result.intent}`);
+    console.log(`  📊 Features: Markdown: ${hasMarkdown ? '✅' : '❌'}, Direct: ${hasDirectAnswer ? '✅' : '❌'}, Pills: ${hasPills ? '✅' : '❌'}, Chunks: ${hasContentChunks ? '✅' : '❌'}`);
+    console.log(`  📏 Answer Length: ${result.answerLength} chars`);
+    console.log(`  🔢 Data: ${result.eventsCount} events, ${result.articlesCount} articles, ${result.productsCount} products`);
+
+  } catch (error) {
+    console.log(`  ❌ Error: ${error.message}`);
+    results.push({
+      question: questionText,
+      confidence: 0,
+      intent: 'error',
+      hasMarkdown: false,
+      hasDirectAnswer: false,
+      hasPills: false,
+      hasContentChunks: false,
+      answerLength: 0,
+      eventsCount: 0,
+      articlesCount: 0,
+      productsCount: 0,
+      version: 'error',
+      error: error.message
+    });
+  }
+
+  // Small delay to avoid rate limiting
+  await new Promise(resolve => setTimeout(resolve, 100));
+}
+
+// Calculate statistics
+const avgConfidence = Math.round(totalConfidence / questions.length);
+const highConfidencePct = Math.round((highConfidence / questions.length) * 100);
+const mediumConfidencePct = Math.round((mediumConfidence / questions.length) * 100);
+const lowConfidencePct = Math.round((lowConfidence / questions.length) * 100);
+
+// Feature usage statistics
+const markdownUsage = results.filter(r => r.hasMarkdown).length;
+const directAnswerUsage = results.filter(r => r.hasDirectAnswer).length;
+const pillsUsage = results.filter(r => r.hasPills).length;
+const contentChunksUsage = results.filter(r => r.hasContentChunks).length;
+
+// Intent distribution
+const intentCounts = {};
+results.forEach(r => {
+  intentCounts[r.intent] = (intentCounts[r.intent] || 0) + 1;
+});
+
+console.log('\n' + '='.repeat(80));
+console.log('📊 ENHANCED CHAT.HTML TEST RESULTS');
+console.log('='.repeat(80));
+
+console.log(`\n🎯 OVERALL PERFORMANCE:`);
+console.log(`   Average Confidence: ${avgConfidence}%`);
+console.log(`   High Confidence (80%+): ${highConfidence} (${highConfidencePct}%)`);
+console.log(`   Medium Confidence (50-79%): ${mediumConfidence} (${mediumConfidencePct}%)`);
+console.log(`   Low Confidence (<50%): ${lowConfidence} (${lowConfidencePct}%)`);
+
+console.log(`\n🚀 ENHANCED FEATURES USAGE:`);
+console.log(`   Markdown Rendering: ${markdownUsage}/${questions.length} (${Math.round(markdownUsage/questions.length*100)}%)`);
+console.log(`   Direct Answers: ${directAnswerUsage}/${questions.length} (${Math.round(directAnswerUsage/questions.length*100)}%)`);
+console.log(`   Action Pills: ${pillsUsage}/${questions.length} (${Math.round(pillsUsage/questions.length*100)}%)`);
+console.log(`   Content Chunks: ${contentChunksUsage}/${questions.length} (${Math.round(contentChunksUsage/questions.length*100)}%)`);
+
+console.log(`\n📈 INTENT DISTRIBUTION:`);
+Object.entries(intentCounts).forEach(([intent, count]) => {
+  const pct = Math.round((count / questions.length) * 100);
+  console.log(`   ${intent}: ${count} (${pct}%)`);
+});
+
+console.log(`\n📊 DATA RETRIEVAL:`);
+const avgEvents = Math.round(results.reduce((sum, r) => sum + r.eventsCount, 0) / questions.length);
+const avgArticles = Math.round(results.reduce((sum, r) => sum + r.articlesCount, 0) / questions.length);
+const avgProducts = Math.round(results.reduce((sum, r) => sum + r.productsCount, 0) / questions.length);
+const avgAnswerLength = Math.round(results.reduce((sum, r) => sum + r.answerLength, 0) / questions.length);
+
+console.log(`   Average Events per Query: ${avgEvents}`);
+console.log(`   Average Articles per Query: ${avgArticles}`);
+console.log(`   Average Products per Query: ${avgProducts}`);
+console.log(`   Average Answer Length: ${avgAnswerLength} characters`);
+
+// Grade the system
+let grade = 'F';
+if (avgConfidence >= 80) grade = 'A';
+else if (avgConfidence >= 70) grade = 'B';
+else if (avgConfidence >= 60) grade = 'C';
+else if (avgConfidence >= 50) grade = 'D';
+
+console.log(`\n🏆 SYSTEM GRADE: ${grade} (${avgConfidence}/100)`);
+
+// Save detailed results
+const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+const resultsPath = `enhanced-chat-test-results-${timestamp}.csv`;
+
+const csvHeaders = 'Question,Confidence,Intent,HasMarkdown,HasDirectAnswer,HasPills,HasContentChunks,AnswerLength,EventsCount,ArticlesCount,ProductsCount,Version,Error';
+const csvRows = results.map(r => [
+  `"${r.question}"`,
+  r.confidence,
+  r.intent,
+  r.hasMarkdown,
+  r.hasDirectAnswer,
+  r.hasPills,
+  r.hasContentChunks,
+  r.answerLength,
+  r.eventsCount,
+  r.articlesCount,
+  r.productsCount,
+  r.version,
+  r.error ? `"${r.error}"` : ''
+].join(','));
+
+fs.writeFileSync(resultsPath, csvHeaders + '\n' + csvRows.join('\n'));
+console.log(`\n💾 Detailed results saved to: ${resultsPath}`);
+
+console.log('\n🎉 Enhanced Chat.html testing completed!');
+

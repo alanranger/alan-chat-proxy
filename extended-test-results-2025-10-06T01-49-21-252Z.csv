@@ -1,0 +1,444 @@
+Index,Question,Expected,Actual,Answer,Confidence,Events_Count,Products_Count,Articles_Count,Response_Time_ms,Version
+1,"whens the next bluebell workshops and whats the cost","auto-detect","events","£175",0.8,0,0,0,410,"v1.2.2-improved-intent-detection"
+2,"when is the next devon workshop","auto-detect","events","19 February 2026",0.8,0,0,0,151,"v1.2.2-improved-intent-detection"
+3,"what is your next workshop date and where is it","auto-detect","events","Devon",0.8,0,0,0,144,"v1.2.2-improved-intent-detection"
+4,"when are your next Autumn workshops and where are they?","auto-detect","events","Peak District",0.8,0,0,0,316,"v1.2.2-improved-intent-detection"
+5,"How much is a residential photography course and does it include B&B","auto-detect","events","£150",0.8,0,0,0,136,"v1.2.2-improved-intent-detection"
+6,"What tripod do you recommend","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- The Perfect Travel Tripod: Benro Cyanbird Tripod Review — [Link](https://www.alanranger.com/blog-on-photography/the-perfect-travel-tripod-benro-cyanbird)
+- Tripods – Photographers Best Friend or Creativity Stifler — [Link](https://www.alanranger.com/blog-on-photography/tripods-a-photographers-best-friend)
+- Manfrotto Befree Tripod Review: A Compact Travel Companion — [Link](https://www.alanranger.com/blog-on-photography/manfrotto-befree-tripod-review)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- 06 What is METERING in photography: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-is-metering-in-photography)
+- Tripod for Camera: Guide To Which, Why, How to Use A Tripod — [Link](https://www.alanranger.com/blog-on-photography/tripod-for-cameras-essential-guide)
+- The Best Product Photography Tripod: Review and Features — [Link](https://www.alanranger.com/blog-on-photography/best-product-photography-tripod)",0,0,0,0,504,"unknown"
+7,"Do you I get a certificate with the photography course","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- Photo Classes | Learn Photography Basics | With a Mentor — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-basics-with-a-mentor)
+- Free Autumn Photography Tips | Equipment | Approach — [Link](https://www.alanranger.com/blog-on-photography/autumn-photography-tips)
+- Photographic Filters:Enhancing Your Photos with Kase Filters — [Link](https://www.alanranger.com/blog-on-photography/enhancing-your-photography-with-kase-filters)
+- Northumberland Landscape Photography  | Why Northumbria? — [Link](https://www.alanranger.com/blog-on-photography/northumberland-landscape-photography-why-northumbria)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)",0,0,0,0,487,"unknown"
+8,"What sort of camera do I need for your camera course","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Photographic Filters:Enhancing Your Photos with Kase Filters — [Link](https://www.alanranger.com/blog-on-photography/enhancing-your-photography-with-kase-filters)
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Guide: How to Prepare for Photography Courses for Beginners — [Link](https://www.alanranger.com/blog-on-photography/prepare-for-photography-courses)
+- How Mirrorless Cameras Are Shaping Photography's Future — [Link](https://www.alanranger.com/blog-on-photography/how-mirrorless-cameras-are-shaping-photography)
+- Unleash Your Creative Potential with Nik Collection 7 — [Link](https://www.alanranger.com/blog-on-photography/creative-potential-with-nik-collection-7)
+- Kickstart 2024: Beginners Photography Course in Coventry — [Link](https://www.alanranger.com/blog-on-photography/beginners-photography-course-in-coventry)
+- Do You Know Your Camera Filters? | Professional Guide — [Link](https://www.alanranger.com/blog-on-photography/know-your-camera-filters)",0,0,0,0,453,"unknown"
+9,"Do I need a laptop for the lightroom course","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Guide: How to Prepare for Photography Courses for Beginners — [Link](https://www.alanranger.com/blog-on-photography/prepare-for-photography-courses)
+- Kickstart 2024: Beginners Photography Course in Coventry — [Link](https://www.alanranger.com/blog-on-photography/beginners-photography-course-in-coventry)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- 7 Essential Camera Accessories You Need in Your Kit — [Link](https://www.alanranger.com/blog-on-photography/7-essential-camera-accessories)
+- Professional Black and White Photography Course | Coventry — [Link](https://www.alanranger.com/photography-services-near-me/black-and-white-photography-course)
+- Lightroom Courses for Beginners Photo Editing - Coventry — [Link](https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry)
+- Beginners Photography Course | 3 Weekly Evening Classes — [Link](https://www.alanranger.com/photography-services-near-me/beginners-photography-course)",0,0,0,0,469,"unknown"
+10,"Do you do astrophotography workshops","auto-detect","events","**PEAK DISTRICT Photography Workshops - May, Oct and Nov** — £175 • £175–£175
+
+Workshop in Peak District",0.8,0,0,0,124,"v1.2.2-improved-intent-detection"
+11,"How do I get personalised feedback on my images","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Calendar 2022 - UK Landscape Images from Alan Ranger — [Link](https://www.alanranger.com/photography-services-near-me/calendar-2022)
+- How to Make Images That are Moving | Moving Photographs — [Link](https://www.alanranger.com/blog-on-photography/how-to-make-moving-photographs)
+- Photographers Copyright - digital images and the internet — [Link](https://www.alanranger.com/blog-on-photography/photographers-copyright-digital-images-photographs)",0,0,0,0,618,"unknown"
+12,"Is the online photography course really free","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- Photo Classes | Learn Photography Basics | With a Mentor — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-basics-with-a-mentor)
+- Free Autumn Photography Tips | Equipment | Approach — [Link](https://www.alanranger.com/blog-on-photography/autumn-photography-tips)
+- Northumberland Landscape Photography  | Why Northumbria? — [Link](https://www.alanranger.com/blog-on-photography/northumberland-landscape-photography-why-northumbria)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- How to Take Professional Photos : Beginners Guide - FREE — [Link](https://www.alanranger.com/blog-on-photography/how-to-take-professional-photos)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)",0,0,0,0,454,"unknown"
+13,"Can my 14yr old attend your workshop","auto-detect","events","No answer",0.2,0,0,0,119,"v1.2.2-improved-intent-detection"
+14,"What is long exposure and how can I find out more about it","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Exposure Bracketing Photos - Dynamic Range | A Guide — [Link](https://www.alanranger.com/blog-on-photography/exposure-bracketing-photos)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- 06 What is METERING in photography: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-is-metering-in-photography)
+- 05 What is MANUAL EXPOSURE in photography:Guide for beginner — [Link](https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography)
+- What do CAMERA LENS FILTERS DO: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-do-camera-lens-filters-do)
+- What Are LEADING LINES in Photography: A How-To-Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)",0,0,0,0,458,"unknown"
+15,"My pictures never seem sharp.  Can you advise on what I am doing wrong","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- 06 What is METERING in photography: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-is-metering-in-photography)
+- 05 What is MANUAL EXPOSURE in photography:Guide for beginner — [Link](https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography)
+- What do CAMERA LENS FILTERS DO: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-do-camera-lens-filters-do)
+- What Are LEADING LINES in Photography: A How-To-Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)
+- What Are LEADING LINES in Photography: A How-To Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)
+- How to Improve your Woodland Photography | Woodland Pictures — [Link](https://www.alanranger.com/blog-on-photography/how-to-improve-your-woodland-pictures)",0,0,0,0,464,"unknown"
+16,"General / About / Navigation","auto-detect","advice","I couldn’t find a specific guide for that yet.",0,0,0,0,116,"unknown"
+17,"1. Who is Alan Ranger and what is his photographic background?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Photographic Filters:Enhancing Your Photos with Kase Filters — [Link](https://www.alanranger.com/blog-on-photography/enhancing-your-photography-with-kase-filters)
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- Photography Evening Classes: In Coventry with Alan Ranger — [Link](https://www.alanranger.com/blog-on-photography/photography-evening-classes-fun-informative)
+- 06 What is METERING in photography: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-is-metering-in-photography)
+- 05 What is MANUAL EXPOSURE in photography:Guide for beginner — [Link](https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography)
+- What do CAMERA LENS FILTERS DO: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-do-camera-lens-filters-do)
+- Discover the Midlands Photography Workshops with Alan Ranger — [Link](https://www.alanranger.com/blog-on-photography/midlands-photography-workshops-with-alan-ranger)",0,0,0,0,474,"unknown"
+18,"2. Where is Alan Ranger based?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Photography Evening Classes: In Coventry with Alan Ranger — [Link](https://www.alanranger.com/blog-on-photography/photography-evening-classes-fun-informative)
+- Discover the Midlands Photography Workshops with Alan Ranger — [Link](https://www.alanranger.com/blog-on-photography/midlands-photography-workshops-with-alan-ranger)
+- What is White Balance in Photography — [Link](https://www.alanranger.com/blog-on-photography/what-is-white-balance-in-photography)
+- 11 What is WHITE BALANCE in photography: A Beginners Guide — [Link](https://www.alanranger.com/blog-on-photography/what-is-white-balance-in-photography)
+- Finding Your Compositional Balance — [Link](https://www.alanranger.com/blog-on-photography/finding-your-compositional-balance)
+- Finding Your Compositional Balance: A Guide For Beginner's — [Link](https://www.alanranger.com/blog-on-photography/finding-your-compositional-balance)
+- Calendar 2022 - UK Landscape Images from Alan Ranger — [Link](https://www.alanranger.com/photography-services-near-me/calendar-2022)
+- Alan Ranger Academy - Photography Foundation Course eBook — [Link](https://www.alanranger.com/photography-services-near-me/photography-foundation-course-ebook)",0,0,0,0,490,"unknown"
+19,"3. What types of photography services do you offer?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- Photo Classes | Learn Photography Basics | With a Mentor — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-basics-with-a-mentor)
+- Free Autumn Photography Tips | Equipment | Approach — [Link](https://www.alanranger.com/blog-on-photography/autumn-photography-tips)
+- Northumberland Landscape Photography  | Why Northumbria? — [Link](https://www.alanranger.com/blog-on-photography/northumberland-landscape-photography-why-northumbria)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)",0,0,0,0,467,"unknown"
+20,"4. What is “Pick N Mix” in the payment plans?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- 06 What is METERING in photography: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-is-metering-in-photography)
+- 05 What is MANUAL EXPOSURE in photography:Guide for beginner — [Link](https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography)
+- What do CAMERA LENS FILTERS DO: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-do-camera-lens-filters-do)
+- What Are LEADING LINES in Photography: A How-To Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)
+- What Are LEADING LINES in Photography: A How-To-Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)
+- 09 What is DEPTH OF FIELD in Photography: A Beginners Guide — [Link](https://www.alanranger.com/blog-on-photography/what-is-depth-of-field)",0,0,0,0,473,"unknown"
+21,"5. How can I contact you or book a discovery call?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Alan Ranger Academy - Photography Foundation Course eBook — [Link](https://www.alanranger.com/photography-services-near-me/photography-foundation-course-ebook)",0,0,0,0,464,"unknown"
+22,"6. Do you offer gift vouchers?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Photography Gift Vouchers | Digital eCard | Email Delivery — [Link](https://www.alanranger.com/photography-services-near-me/photography-gift-vouchers)",0,0,0,0,462,"unknown"
+23,"7. What is your cancellation or refund policy for courses/workshops?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,144,"v1.2.2-improved-intent-detection"
+24,"8. How do I subscribe to the free online photography course?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- Photo Classes | Learn Photography Basics | With a Mentor — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-basics-with-a-mentor)
+- Free Autumn Photography Tips | Equipment | Approach — [Link](https://www.alanranger.com/blog-on-photography/autumn-photography-tips)
+- Northumberland Landscape Photography  | Why Northumbria? — [Link](https://www.alanranger.com/blog-on-photography/northumberland-landscape-photography-why-northumbria)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- How to Take Professional Photos : Beginners Guide - FREE — [Link](https://www.alanranger.com/blog-on-photography/how-to-take-professional-photos)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)",0,0,0,0,484,"unknown"
+25,"9. Where is your gallery and can I submit my images for feedback?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Photographic Filters:Enhancing Your Photos with Kase Filters — [Link](https://www.alanranger.com/blog-on-photography/enhancing-your-photography-with-kase-filters)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Unleash Your Creative Potential with Nik Collection 7 — [Link](https://www.alanranger.com/blog-on-photography/creative-potential-with-nik-collection-7)
+- Do You Know Your Camera Filters? | Professional Guide — [Link](https://www.alanranger.com/blog-on-photography/know-your-camera-filters)
+- Selecting the Ideal Product Photographer for Your Business — [Link](https://www.alanranger.com/blog-on-photography/selecting-the-ideal-product-photographer)
+- Comprehensive Guide: Preparing for Your Photography Workshop — [Link](https://www.alanranger.com/blog-on-photography/guide-preparing-for-your-photography-workshop)
+- How to Improve your Woodland Photography | Woodland Pictures — [Link](https://www.alanranger.com/blog-on-photography/how-to-improve-your-woodland-pictures)
+- 7 Essential Camera Accessories You Need in Your Kit — [Link](https://www.alanranger.com/blog-on-photography/7-essential-camera-accessories)",0,0,0,0,461,"unknown"
+26,"10. What ethical guidelines do you follow as a photography tutor?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- Photo Classes | Learn Photography Basics | With a Mentor — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-basics-with-a-mentor)
+- Free Autumn Photography Tips | Equipment | Approach — [Link](https://www.alanranger.com/blog-on-photography/autumn-photography-tips)
+- Northumberland Landscape Photography  | Why Northumbria? — [Link](https://www.alanranger.com/blog-on-photography/northumberland-landscape-photography-why-northumbria)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)",0,0,0,0,459,"unknown"
+27,""Courses","Workshops & Tuition"","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,124,"v1.2.2-improved-intent-detection"
+28,"11. What courses do you offer for complete beginners?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,124,"v1.2.2-improved-intent-detection"
+29,"12. Do you run evening classes in Coventry?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,127,"v1.2.2-improved-intent-detection"
+30,"13. How many weeks is the beginners’ photography course?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,127,"v1.2.2-improved-intent-detection"
+31,"14. Can I just take the “Get Off Auto” class as a standalone?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,134,"v1.2.2-improved-intent-detection"
+32,"15. What topics are covered in the 5-week beginner course?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,146,"v1.2.2-improved-intent-detection"
+33,"16. What if I miss one of the weekly classes—can I make it up?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,129,"v1.2.2-improved-intent-detection"
+34,"17. Do you offer online or Zoom lessons / mentoring?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Take the free online colour test - how good is your vision? — [Link](https://www.alanranger.com/blog-on-photography/take-the-on-line-colour-test)
+- Take the Online Colour Test (Farnsworth-Munsell 100 Hue) — Why It Matters for Photographers — [Link](https://www.alanranger.com/blog-on-photography/take-the-on-line-colour-test)
+- Learn photography from home - Online Photography Classes — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-online-photography-classes)
+- Online Photography Classes 121 - Zoom - Package Options — [Link](https://www.alanranger.com/photography-services-near-me/private-online-photography-classes-zoom)
+- RPS Courses - Independent RPS Mentoring for RPS Distinctions — [Link](https://www.alanranger.com/photography-services-near-me/rps-mentoring-photography-course)
+- Monthly Photography Mentoring Sessions - Online - Zoom — [Link](https://www.alanranger.com/photography-services-near-me/monthly-online-photography-mentoring)
+- Monthly Online Photography Mentoring for 1 Year - Zoom — [Link](https://www.alanranger.com/photography-services-near-me/monthly-online-photography-mentoring-one-year)
+- Photography Lessons for beginners to learn and practice — [Link](https://www.alanranger.com/blog-on-photography/photography-lessons-for-beginners)",0,0,0,0,550,"unknown"
+35,"18. How much do 1-2-1 private lessons cost?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- How Much Do Photographers Earn: 2025 Industry Report UK — [Link](https://www.alanranger.com/blog-on-photography/how-much-do-photographers-earn)
+- 4 x 2hr Private Photography Classes - Face to Face Coventry — [Link](https://www.alanranger.com/photography-services-near-me/four-private-photography-classes)
+- Photography Lessons for beginners to learn and practice — [Link](https://www.alanranger.com/blog-on-photography/photography-lessons-for-beginners)
+- How Much Do Photographers Earn: 2025 Industry Report UK — [Link](https://www.alanranger.com/blog-on-photography/how-much-do-photographers-earn)",0,0,0,0,448,"unknown"
+36,"19. Do you offer residential workshops or multi-day field trips?","auto-detect","events","**PEAK DISTRICT Photography Workshops - May, Oct and Nov** — £175 • £175–£175
+
+Workshop in Peak District",0.8,0,0,0,138,"v1.2.2-improved-intent-detection"
+37,"20. How many students per workshop / class?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,131,"v1.2.2-improved-intent-detection"
+38,"21. What gear or equipment do I need to bring to a workshop?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Free Autumn Photography Tips | Equipment | Approach — [Link](https://www.alanranger.com/blog-on-photography/autumn-photography-tips)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- Comprehensive Guide: Preparing for Your Photography Workshop — [Link](https://www.alanranger.com/blog-on-photography/guide-preparing-for-your-photography-workshop)
+- 06 What is METERING in photography: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-is-metering-in-photography)
+- 05 What is MANUAL EXPOSURE in photography:Guide for beginner — [Link](https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography)",0,0,0,0,502,"unknown"
+39,"22. Can I sign up to monthly mentoring assignments?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- RPS Courses - Independent RPS Mentoring for RPS Distinctions — [Link](https://www.alanranger.com/photography-services-near-me/rps-mentoring-photography-course)
+- Monthly Pick N Mix Subscription | Interest Free Payment Plan — [Link](https://www.alanranger.com/photography-services-near-me/monthly-pick-n-mix-subscription)
+- Monthly Photography Mentoring Sessions - Online - Zoom — [Link](https://www.alanranger.com/photography-services-near-me/monthly-online-photography-mentoring)
+- Monthly Online Photography Mentoring for 1 Year - Zoom — [Link](https://www.alanranger.com/photography-services-near-me/monthly-online-photography-mentoring-one-year)
+- RPS Distinctions: Gain Licentiate &amp; Associate Mentoring — [Link](https://www.alanranger.com/blog-on-photography/rps-distinctions-group-cfp5t)",0,0,0,0,460,"unknown"
+40,"23. Do you offer Lightroom / post-processing courses?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,128,"v1.2.2-improved-intent-detection"
+41,""24. What is RPS Mentoring","and can you help me with that?"","advice","Here are Alan’s guides that match your question:
+
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- 06 What is METERING in photography: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-is-metering-in-photography)
+- 05 What is MANUAL EXPOSURE in photography:Guide for beginner — [Link](https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography)
+- What do CAMERA LENS FILTERS DO: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-do-camera-lens-filters-do)
+- What Are LEADING LINES in Photography: A How-To Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)
+- What Are LEADING LINES in Photography: A How-To-Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)
+- 09 What is DEPTH OF FIELD in Photography: A Beginners Guide — [Link](https://www.alanranger.com/blog-on-photography/what-is-depth-of-field)",0,0,0,0,459,"unknown"
+42,"25. Are there any prerequisites for advanced courses?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,128,"v1.2.2-improved-intent-detection"
+43,"Services / Commercial & Private Shoots","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Power of Professional Commercial Photography in Coventry — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-in-coventry)
+- 4 x 2hr Private Photography Classes - Face to Face Coventry — [Link](https://www.alanranger.com/photography-services-near-me/four-private-photography-classes)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Power of Professional Commercial Photography in Coventry — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-in-coventry)",0,0,0,0,470,"unknown"
+44,"26. Do you do property photography / real estate photography?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- Photo Classes | Learn Photography Basics | With a Mentor — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-basics-with-a-mentor)
+- Free Autumn Photography Tips | Equipment | Approach — [Link](https://www.alanranger.com/blog-on-photography/autumn-photography-tips)
+- Northumberland Landscape Photography  | Why Northumbria? — [Link](https://www.alanranger.com/blog-on-photography/northumberland-landscape-photography-why-northumbria)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Guide: How to Prepare for Photography Courses for Beginners — [Link](https://www.alanranger.com/blog-on-photography/prepare-for-photography-courses)",0,0,0,0,459,"unknown"
+45,"27. Can you do product photography for my e-commerce store?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- Photo Classes | Learn Photography Basics | With a Mentor — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-basics-with-a-mentor)
+- Free Autumn Photography Tips | Equipment | Approach — [Link](https://www.alanranger.com/blog-on-photography/autumn-photography-tips)
+- Northumberland Landscape Photography  | Why Northumbria? — [Link](https://www.alanranger.com/blog-on-photography/northumberland-landscape-photography-why-northumbria)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Guide: How to Prepare for Photography Courses for Beginners — [Link](https://www.alanranger.com/blog-on-photography/prepare-for-photography-courses)",0,0,0,0,451,"unknown"
+46,"28. What is your pricing structure for portrait / headshot work?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Photographic Filters:Enhancing Your Photos with Kase Filters — [Link](https://www.alanranger.com/blog-on-photography/enhancing-your-photography-with-kase-filters)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Unleash Your Creative Potential with Nik Collection 7 — [Link](https://www.alanranger.com/blog-on-photography/creative-potential-with-nik-collection-7)
+- Do You Know Your Camera Filters? | Professional Guide — [Link](https://www.alanranger.com/blog-on-photography/know-your-camera-filters)
+- Selecting the Ideal Product Photographer for Your Business — [Link](https://www.alanranger.com/blog-on-photography/selecting-the-ideal-product-photographer)",0,0,0,0,473,"unknown"
+47,"29. Do you train staff in corporate photography for businesses?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- Photo Classes | Learn Photography Basics | With a Mentor — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-basics-with-a-mentor)
+- Free Autumn Photography Tips | Equipment | Approach — [Link](https://www.alanranger.com/blog-on-photography/autumn-photography-tips)
+- Northumberland Landscape Photography  | Why Northumbria? — [Link](https://www.alanranger.com/blog-on-photography/northumberland-landscape-photography-why-northumbria)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Guide: How to Prepare for Photography Courses for Beginners — [Link](https://www.alanranger.com/blog-on-photography/prepare-for-photography-courses)",0,0,0,0,494,"unknown"
+48,"30. How far will you travel for a shoot (within UK / internationally)?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- The Perfect Travel Tripod: Benro Cyanbird Tripod Review — [Link](https://www.alanranger.com/blog-on-photography/the-perfect-travel-tripod-benro-cyanbird)
+- Manfrotto Befree Tripod Review: A Compact Travel Companion — [Link](https://www.alanranger.com/blog-on-photography/manfrotto-befree-tripod-review)
+- Case Study - Alistair Willis - ARPS | RPS Distinctions Panel — [Link](https://www.alanranger.com/blog-on-photography/alistair-willis-rps-distinctions)
+- Beyond A Point and Shoot Camera: Unlocking DSLR Photography — [Link](https://www.alanranger.com/blog-on-photography/beyond-a-point-and-shoot-camera)
+- STREET PHOTOGRAPHY Tips That Every Traveller Should Know — [Link](https://www.alanranger.com/blog-on-photography/street-photography-tips)
+- The Perfect Travel Tripod: Benro Cyanbird Tripod Review — [Link](https://www.alanranger.com/blog-on-photography/the-perfect-travel-tripod-benro-cyanbird)
+- Shooting In Low Light | Long Exposure Photography Guide — [Link](https://www.alanranger.com/blog-on-photography/shooting-in-low-light)
+- Shoot the magic of landscape winter photography | Guide — [Link](https://www.alanranger.com/blog-on-photography/winter-photography-magic)",0,0,0,0,437,"unknown"
+49,"31. Do you provide retouching / editing services?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- 2025 Photo Editing Software: Which One is Right for You — [Link](https://www.alanranger.com/blog-on-photography/photo-editing-software)
+- Intermediates Lightroom Photo Editing Course | Coventry — [Link](https://www.alanranger.com/photography-services-near-me/intermediates-lightroom-photography-course)
+- Lightroom Courses for Beginners Photo Editing - Coventry — [Link](https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry)
+- Tip of the day - Advanced Photo Editing with NIK Collection — [Link](https://www.alanranger.com/blog-on-photography/advanced-editing-with-nik-collection)
+- Creative Photo Editing MasterClass | Professional Tuition — [Link](https://www.alanranger.com/blog-on-photography/creative-photo-editing)
+- Creative Photo Editing with DXO NIK Collection 6 - — [Link](https://www.alanranger.com/blog-on-photography/creative-editing-with-nik-collection-6)
+- Tip of the day - photography basics - Creative Editing — [Link](https://www.alanranger.com/blog-on-photography/photography-basics-creative-editing)
+- 2025 Photo Editing Software: Which One is Right for You — [Link](https://www.alanranger.com/blog-on-photography/photo-editing-software)",0,0,0,0,449,"unknown"
+50,"32. Can I order fine art prints from you?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Explore the world of Landscape Fine Art Photography Prints — [Link](https://www.alanranger.com/blog-on-photography/landscape-fine-art-photography-prints)
+- Learn photography from home - Online Photography Classes — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-online-photography-classes)
+- Calendar 2022 - UK Landscape Images from Alan Ranger — [Link](https://www.alanranger.com/photography-services-near-me/calendar-2022)
+- A3 Mounted Fine Art Print - Unframed | Professional — [Link](https://www.alanranger.com/photography-services-near-me/print)
+- Framed Fine Art Photography Prints - Multiple Sizes — [Link](https://www.alanranger.com/photography-services-near-me/framed-fine-art-photography-prints)
+- Fine Art Photography Prints - Unframed Prints - Multi Sizes — [Link](https://www.alanranger.com/photography-services-near-me/fine-art-photography-prints-unframed)
+- Fine Art Photography Prints - Canvas wrap-round - Multi Size — [Link](https://www.alanranger.com/photography-services-near-me/fine-art-photography-prints-canvas)
+- Top 6 Tips for Photographing Fireworks from a Professional — [Link](https://www.alanranger.com/blog-on-photography/top-6-tips-for-photographing-fireworks)",0,0,0,0,461,"unknown"
+51,"33. What is your turnaround time for delivering images?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Photographic Filters:Enhancing Your Photos with Kase Filters — [Link](https://www.alanranger.com/blog-on-photography/enhancing-your-photography-with-kase-filters)
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Unleash Your Creative Potential with Nik Collection 7 — [Link](https://www.alanranger.com/blog-on-photography/creative-potential-with-nik-collection-7)
+- Do You Know Your Camera Filters? | Professional Guide — [Link](https://www.alanranger.com/blog-on-photography/know-your-camera-filters)
+- Selecting the Ideal Product Photographer for Your Business — [Link](https://www.alanranger.com/blog-on-photography/selecting-the-ideal-product-photographer)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- Comprehensive Guide: Preparing for Your Photography Workshop — [Link](https://www.alanranger.com/blog-on-photography/guide-preparing-for-your-photography-workshop)",0,0,0,0,458,"unknown"
+52,"34. Do you provide usage rights or licensing for your photos?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Photographic Filters:Enhancing Your Photos with Kase Filters — [Link](https://www.alanranger.com/blog-on-photography/enhancing-your-photography-with-kase-filters)
+- How to Take Professional Photos : Beginners Guide - FREE — [Link](https://www.alanranger.com/blog-on-photography/how-to-take-professional-photos)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Exposure Bracketing Photos - Dynamic Range | A Guide — [Link](https://www.alanranger.com/blog-on-photography/exposure-bracketing-photos)
+- Unleash Your Creative Potential with Nik Collection 7 — [Link](https://www.alanranger.com/blog-on-photography/creative-potential-with-nik-collection-7)
+- Do You Know Your Camera Filters? | Professional Guide — [Link](https://www.alanranger.com/blog-on-photography/know-your-camera-filters)
+- Selecting the Ideal Product Photographer for Your Business — [Link](https://www.alanranger.com/blog-on-photography/selecting-the-ideal-product-photographer)
+- Comprehensive Guide: Preparing for Your Photography Workshop — [Link](https://www.alanranger.com/blog-on-photography/guide-preparing-for-your-photography-workshop)",0,0,0,0,474,"unknown"
+53,"35. Can I commission you for a commercial photography project?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- Photo Classes | Learn Photography Basics | With a Mentor — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-basics-with-a-mentor)
+- Free Autumn Photography Tips | Equipment | Approach — [Link](https://www.alanranger.com/blog-on-photography/autumn-photography-tips)
+- Northumberland Landscape Photography  | Why Northumbria? — [Link](https://www.alanranger.com/blog-on-photography/northumberland-landscape-photography-why-northumbria)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Guide: How to Prepare for Photography Courses for Beginners — [Link](https://www.alanranger.com/blog-on-photography/prepare-for-photography-courses)",0,0,0,0,447,"unknown"
+54,""Booking","Payment & Logistics"","advice","I couldn’t find a specific guide for that yet.",0,0,0,0,117,"unknown"
+55,"36. How do I book a course or workshop?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,124,"v1.2.2-improved-intent-detection"
+56,"37. What payment options are available?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- 06 What is METERING in photography: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-is-metering-in-photography)
+- 05 What is MANUAL EXPOSURE in photography:Guide for beginner — [Link](https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography)
+- What do CAMERA LENS FILTERS DO: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-do-camera-lens-filters-do)
+- What Are LEADING LINES in Photography: A How-To Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)
+- What Are LEADING LINES in Photography: A How-To-Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)
+- 09 What is DEPTH OF FIELD in Photography: A Beginners Guide — [Link](https://www.alanranger.com/blog-on-photography/what-is-depth-of-field)",0,0,0,0,464,"unknown"
+57,"38. Do you offer payment plans or spreading the cost?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Monthly Pick N Mix Subscription | Interest Free Payment Plan — [Link](https://www.alanranger.com/photography-services-near-me/monthly-pick-n-mix-subscription)
+- Quarterly Pick N Mix Subscription | Interest Free Payments — [Link](https://www.alanranger.com/photography-services-near-me/quarterly-pick-n-mix-subscription)
+- Annual Pick N Mix Subscription | Interest Free Payment Plan — [Link](https://www.alanranger.com/photography-services-near-me/annual-pick-n-mix-subscription)",0,0,0,0,455,"unknown"
+58,"39. What happens if a course is canceled due to low enrolment or weather?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,141,"v1.2.2-improved-intent-detection"
+59,""40. What are the location details for your courses (venues","parking etc.)?"","events","Coventry",0.8,0,0,0,141,"v1.2.2-improved-intent-detection"
+60,"41. Are there discounts for multiple bookings (e.g. bundle deals)?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- 10 Genre PDFs — Photography Field Checklists Bundle — [Link](https://www.alanranger.com/photography-services-near-me/photography-genre-photography-field-checklists)
+- 35 PDFs — 1 Page Photography Field Checklists Bundle — [Link](https://www.alanranger.com/photography-services-near-me/photography-35bundle-photography-field-checklists)
+- Framed Fine Art Photography Prints - Multiple Sizes — [Link](https://www.alanranger.com/photography-services-near-me/framed-fine-art-photography-prints)
+- 15 Camera Settings — Photography Field Checklists PDF Bundle — [Link](https://www.alanranger.com/photography-services-near-me/camera-settings-photography-field-checklists)
+- 10 Composition PDFs — Photography Field Checklists Bundle — [Link](https://www.alanranger.com/photography-services-near-me/composition-settings-photography-field-checklists)
+- Kase Filters and Adobe Lightroom Queen Partner Deals | — [Link](https://www.alanranger.com/blog-on-photography/kase-filters-and-lightroom-queen-deals)",0,0,0,0,466,"unknown"
+61,""42. If a workshop is outdoors","what happens in bad weather?"","events","No answer",0.2,0,0,0,124,"v1.2.2-improved-intent-detection"
+62,"43. Can I change the date of my booking?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Full-Frame vs Cropped Sensor — What Changes and When It Matters — [Link](https://www.alanranger.com/blog-on-photography/full-frame-vs-cropped-sensor)",0,0,0,0,523,"unknown"
+63,"44. How early should I arrive before a class or workshop begins?","auto-detect","events","**Beginners Photography Course | 3 Weekly Evening Classes** — £150 • £150–£150
+
+Workshop in Coventry",0.8,0,0,0,144,"v1.2.2-improved-intent-detection"
+64,""45. Do you require a deposit","and when is full payment due?"","advice","I couldn’t find a specific guide for that yet.",0,0,0,0,121,"unknown"
+65,"Technical / Photography Questions","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- Photo Classes | Learn Photography Basics | With a Mentor — [Link](https://www.alanranger.com/blog-on-photography/learn-photography-basics-with-a-mentor)
+- Free Autumn Photography Tips | Equipment | Approach — [Link](https://www.alanranger.com/blog-on-photography/autumn-photography-tips)
+- Northumberland Landscape Photography  | Why Northumbria? — [Link](https://www.alanranger.com/blog-on-photography/northumberland-landscape-photography-why-northumbria)
+- Why Go on Snowdonia Landscape Photography Workshops ? — [Link](https://www.alanranger.com/blog-on-photography/why-snowdonia-landscape-photography-workshops)
+- Hartland Quay - Devon Photography Workshops | Why Devon? — [Link](https://www.alanranger.com/blog-on-photography/north-devon-photography-workshops-why-devon)
+- Professional Commercial Photography: Elevate Your Business — [Link](https://www.alanranger.com/blog-on-photography/professional-commercial-photography-elevate-your-business)
+- Guide: How to Prepare for Photography Courses for Beginners — [Link](https://www.alanranger.com/blog-on-photography/prepare-for-photography-courses)",0,0,0,0,461,"unknown"
+66,"46. How do I choose between shooting JPEG vs RAW?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- 13 JPEG vs RAW: The Key Differences: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/jpeg-vs-raw-the-key-differences)
+- JPEG vs RAW — The Key Differences — [Link](https://www.alanranger.com/blog-on-photography/jpeg-vs-raw-the-key-differences)
+- Night time photography - Shooting in Low Light Tips — [Link](https://www.alanranger.com/blog-on-photography/shooting-night-time-photography-tips)
+- Shooting In Low Light | Long Exposure Photography Guide — [Link](https://www.alanranger.com/blog-on-photography/shooting-in-low-light)
+- 13 JPEG vs RAW: The Key Differences: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/jpeg-vs-raw-the-key-differences)",0,0,0,0,471,"unknown"
+67,""47. What is the exposure triangle (aperture","shutter","advice","Here are Alan’s guides that match your question:
+
+- Tip of the day -  Alternative Long Exposure Photography — [Link](https://www.alanranger.com/blog-on-photography/alternative-long-exposure-photography-techniques)
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Exposure Bracketing Photos - Dynamic Range | A Guide — [Link](https://www.alanranger.com/blog-on-photography/exposure-bracketing-photos)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- 06 What is METERING in photography: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-is-metering-in-photography)
+- 05 What is MANUAL EXPOSURE in photography:Guide for beginner — [Link](https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography)
+- What do CAMERA LENS FILTERS DO: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-do-camera-lens-filters-do)
+- What Are LEADING LINES in Photography: A How-To Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)",0,0,0,0,475,"unknown"
+68,"48. How do I improve my composition and storytelling in photos?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Photographic Filters:Enhancing Your Photos with Kase Filters — [Link](https://www.alanranger.com/blog-on-photography/enhancing-your-photography-with-kase-filters)
+- How to Take Professional Photos : Beginners Guide - FREE — [Link](https://www.alanranger.com/blog-on-photography/how-to-take-professional-photos)
+- Exposure Bracketing Photos - Dynamic Range | A Guide — [Link](https://www.alanranger.com/blog-on-photography/exposure-bracketing-photos)
+- How to Back Up Photos: The Best 3-2-1 Backup Method Guide — [Link](https://www.alanranger.com/blog-on-photography/how-to-back-up-photos)
+- How to Back Up Photos: The Best 3-2-1 Backup Method Guide — [Link](https://www.alanranger.com/blog-on-photography/how-to-back-up-photos)
+- How to Improve your Woodland Photography | Woodland Pictures — [Link](https://www.alanranger.com/blog-on-photography/how-to-improve-your-woodland-pictures)
+- Mastering Photography Composition Rules — [Link](https://www.alanranger.com/blog-on-photography/mastering-photography-composition-rules#blogpost)
+- Photography COMPOSITION RULES: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/mastering-photography-composition-rules)",0,0,0,0,462,"unknown"
+69,"49. When should I use ND filters or graduated filters?","auto-detect","advice","Here are Alan’s guides that match your question:
+
+- Photographic Filters:Enhancing Your Photos with Kase Filters — [Link](https://www.alanranger.com/blog-on-photography/enhancing-your-photography-with-kase-filters)
+- Do You Know Your Camera Filters? | Professional Guide — [Link](https://www.alanranger.com/blog-on-photography/know-your-camera-filters)
+- Are camera UV filters worth it? Pros and cons explained — [Link](https://www.alanranger.com/blog-on-photography/are-camera-uv-filters-worth-it)
+- What do CAMERA LENS FILTERS DO: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-do-camera-lens-filters-do)
+- Full-Frame vs Cropped Sensor — What Changes and When It Matters — [Link](https://www.alanranger.com/blog-on-photography/full-frame-vs-cropped-sensor)
+- Camera Lenses: When to Buy New, Used, or Rent: A Guide — [Link](https://www.alanranger.com/blog-on-photography/camera-lenses-hire-or-buy)
+- STREET PHOTOGRAPHY Tips That Every Traveller Should Know — [Link](https://www.alanranger.com/blog-on-photography/street-photography-tips)
+- Photographic Filters:Enhancing Your Photos with Kase Filters — [Link](https://www.alanranger.com/blog-on-photography/enhancing-your-photography-with-kase-filters)",0,0,0,0,473,"unknown"
+70,""50. What is depth of field","and how do I control it?"","advice","Here are Alan’s guides that match your question:
+
+- What's new in Lightroom Classic 13 (2024) - First Glance — [Link](https://www.alanranger.com/blog-on-photography/whats-new-in-lightroom-classic-13)
+- Lightroom Classic Latest Version 13.3 - What's New — [Link](https://www.alanranger.com/blog-on-photography/lightroom-classic-latest-version-whats-new)
+- 06 What is METERING in photography: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-is-metering-in-photography)
+- 05 What is MANUAL EXPOSURE in photography:Guide for beginner — [Link](https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography)
+- What do CAMERA LENS FILTERS DO: A Guide for Beginners — [Link](https://www.alanranger.com/blog-on-photography/what-do-camera-lens-filters-do)
+- What Are LEADING LINES in Photography: A How-To Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)
+- What Are LEADING LINES in Photography: A How-To-Guide — [Link](https://www.alanranger.com/blog-on-photography/what-are-leading-lines-in-photography)
+- Mastering the Art of Winter Photography: An In-depth Guide — [Link](https://www.alanranger.com/blog-on-photography/mastering-the-art-of-winter-photography)",0,0,0,0,479,"unknown"

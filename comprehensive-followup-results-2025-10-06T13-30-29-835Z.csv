@@ -1,0 +1,3 @@
+Index,Query,PrevQuery,Intent,Confidence,Events,Products,Articles,Chunks,AnswerLen,Version,DurationMs
+1,"whens the next bluebell workshops and whats the cost","",events,0.8,38,1,0,0,114,v1.2.27-no-typo-normalize,1313
+2,"when is the next devon workshop","whens the next bluebell workshops and whats the cost",events,0.8,38,1,0,0,119,v1.2.27-no-typo-normalize,687
