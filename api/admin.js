@@ -169,6 +169,36 @@ export default async function handler(req, res) {
         detail: error.message 
       });
     }
+  } else if (action === 'cron_status') {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed for cron_status action' });
+    }
+    try {
+      const { data: cronJobs, error: cronError } = await supabase
+        .from('cron.job')
+        .select('*')
+        .eq('active', true);
+
+      if (cronError) {
+        console.error('Error getting cron jobs:', cronError);
+        return res.status(500).json({ 
+          error: 'Failed to get cron jobs', 
+          detail: cronError.message 
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        cron_jobs: cronJobs || []
+      });
+
+    } catch (error) {
+      console.error('Unexpected error in cron status check:', error);
+      return res.status(500).json({ 
+        error: 'Internal server error', 
+        detail: error.message 
+      });
+    }
   } else if (action === 'aggregate_analytics') {
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed for aggregate_analytics action' });

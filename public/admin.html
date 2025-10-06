@@ -269,7 +269,7 @@
       showStatus('aggregation-status', 'Checking cron status...', 'info');
       
       try {
-        const response = await fetch('/api/tools?action=cron_status', {
+        const response = await fetch('/api/admin?action=cron_status', {
           headers: {
             'Authorization': 'Bearer ' + getAdminToken()
           }
