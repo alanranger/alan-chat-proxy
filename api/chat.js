@@ -32,6 +32,35 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
     chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
     
+    // SPECIAL CASE: Look for fitness level information first
+    if (lc.includes('fitness') || lc.includes('level')) {
+      const fitnessPatterns = [
+        /Fitness:\s*(\d+\.?\s*[^\\n]+)/i,           // "Fitness: 2. Easy-Moderate"
+        /Fitness\s*Level:\s*([^\\n]+)/i,            // "Fitness Level: Easy"
+        /Experience\s*-\s*Level:\s*([^\\n]+)/i,     // "Experience - Level: Beginner and Novice"
+        /Level:\s*([^\\n]+)/i,                      // "Level: Beginners"
+        /Fitness\s*Required:\s*([^\\n]+)/i,         // "Fitness Required: Easy"
+        /Physical\s*Level:\s*([^\\n]+)/i            // "Physical Level: Easy"
+      ];
+      
+      for (const pattern of fitnessPatterns) {
+        const match = chunkText.match(pattern);
+        if (match && match[1]) {
+          const fitnessLevel = match[1].trim();
+          return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+        }
+      }
+      
+      // Fallback: look for common fitness level words in the chunk
+      const fitnessWords = ['easy', 'moderate', 'hard', 'beginner', 'intermediate', 'advanced', 'low', 'medium', 'high'];
+      const chunkTextLower = chunkText.toLowerCase();
+      const foundFitnessWord = fitnessWords.find(word => chunkTextLower.includes(word));
+      
+      if (foundFitnessWord) {
+        return `**The fitness level required is ${foundFitnessWord}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+      }
+    }
+    
     // Look for sentences that contain key terms from the query
     const sentences = chunkText.split(/[.!?]+/).filter(s => s.trim().length > 20);
     const relevantSentence = sentences.find(s => {
@@ -929,7 +958,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-          version: "v1.2.17-simplified-intent",
+          version: "v1.2.18-fitness-chunks",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -1020,7 +1049,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-          version: "v1.2.17-simplified-intent",
+          version: "v1.2.18-fitness-chunks",
         intent: "advice",
         keywords: keywords,
       counts: {
