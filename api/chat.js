@@ -25,11 +25,18 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     
     // Prioritize chunks that contain the full query or key terms
     const hasFullQuery = chunkText.includes(lc);
-    const hasKeyTerms = queryWords.filter(w => w.length > 3).every(word => 
+    
+    // Include technical terms (3+ chars) and general words (4+ chars)
+    const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+    const importantWords = queryWords.filter(w => 
+      w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
+    );
+    
+    const hasKeyTerms = importantWords.every(word => 
       chunkText.includes(word) || chunkTitle.includes(word)
     );
     
-    console.log(`🔍 generateDirectAnswer: Chunk check - hasFullQuery=${hasFullQuery}, hasKeyTerms=${hasKeyTerms}`);
+    console.log(`🔍 generateDirectAnswer: Chunk check - hasFullQuery=${hasFullQuery}, hasKeyTerms=${hasKeyTerms}, importantWords=${importantWords.join(',')}`);
     
     return hasFullQuery || hasKeyTerms;
   });
@@ -80,7 +87,11 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     const sentences = chunkText.split(/[.!?]+/).filter(s => s.trim().length > 20);
     const relevantSentence = sentences.find(s => {
       const sLower = s.toLowerCase();
-      return queryWords.some(word => sLower.includes(word)) && 
+      const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+      const importantWords = queryWords.filter(w => 
+        w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
+      );
+      return importantWords.some(word => sLower.includes(word)) && 
              sLower.length > 30 && sLower.length < 200 && // Good length for a direct answer
              !sLower.includes('[article]') && // Skip metadata
              !sLower.includes('published:') && // Skip metadata
@@ -96,7 +107,11 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     const paragraphs = chunkText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
     const relevantParagraph = paragraphs.find(p => {
       const pLower = p.toLowerCase();
-      return queryWords.some(word => pLower.includes(word)) &&
+      const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+      const importantWords = queryWords.filter(w => 
+        w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
+      );
+      return importantWords.some(word => pLower.includes(word)) &&
              !pLower.includes('[article]') &&
              !pLower.includes('published:') &&
              !pLower.includes('url:') &&
@@ -312,6 +327,21 @@ const TOPIC_KEYWORDS = [
   "long exposure",
   "landscape",
   "woodlands",
+  // technical photography terms
+  "iso",
+  "aperture",
+  "shutter",
+  "exposure",
+  "metering",
+  "manual",
+  "depth of field",
+  "focal length",
+  "white balance",
+  "tripod",
+  "filters",
+  "lens",
+  "camera",
+  "equipment",
 ];
 
 function extractKeywords(q) {
@@ -320,12 +350,15 @@ function extractKeywords(q) {
   for (const t of TOPIC_KEYWORDS) {
     if (lc.includes(t)) kws.add(t);
   }
-  // also add any single words ≥ 4 chars that look meaningful
+  
+  // Add technical terms (3+ chars) and general words (4+ chars)
+  const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
   lc
     .replace(/[^\p{L}\p{N}\s-]/gu, " ")
     .split(/\s+/)
-    .filter((w) => w.length >= 4)
+    .filter((w) => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4))
     .forEach((w) => kws.add(w));
+    
   return Array.from(kws);
 }
 
@@ -943,7 +976,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-          version: "v1.2.23-fix-keyword-contamination",
+          version: "v1.2.24-fix-iso-extraction",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -1034,7 +1067,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
         debug: {
-          version: "v1.2.23-fix-keyword-contamination",
+          version: "v1.2.24-fix-iso-extraction",
           intent: "advice",
           keywords: keywords,
       counts: {
