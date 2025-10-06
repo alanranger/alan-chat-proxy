@@ -4,6 +4,16 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Alan Ranger Assistant</title>
+<meta name="description" content="Alan Ranger Assistant — AI chat for workshops, tuition and photography questions."/>
+<meta property="og:title" content="Alan Ranger Assistant"/>
+<meta property="og:description" content="Ask about workshops, tuition and photography techniques. Smart, accurate answers with links."/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://alan-chat-proxy.vercel.app/chat.html"/>
+<meta property="og:image" content="https://alan-chat-proxy.vercel.app/chat%20white.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Alan Ranger Assistant"/>
+<meta name="twitter:description" content="Ask about workshops, tuition and photography techniques."/>
+<meta name="twitter:image" content="https://alan-chat-proxy.vercel.app/chat%20white.png"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600&display=swap" rel="stylesheet">
 <style>
@@ -40,6 +50,11 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
 .pill:hover{filter:brightness(1.05)}
 .pill:focus{outline:0;box-shadow:0 0 0 3px var(--ring)}
+
+/* Trust strip */
+.trust{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+.trust .badge{background:#0f1b31;border:1px solid #15223a;color:#cfe3ff;border-radius:9999px;padding:6px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.trust .badge .dot{width:6px;height:6px;border-radius:999px;background:var(--brand)}
 
 /* Chat surface */
 .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
@@ -123,6 +138,18 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 .reason-pop pre{max-height:260px;overflow:auto}
 .reason-pop .close{position:absolute;top:6px;right:8px;background:transparent;border:0;color:#9eb2d3;cursor:pointer;font-size:18px}
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Alan Ranger Assistant",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "url": "https://alan-chat-proxy.vercel.app/chat.html",
+  "author": { "@type": "Person", "name": "Alan Ranger" },
+  "publisher": { "@type": "Organization", "name": "Alan Ranger Photography", "url": "https://www.alanranger.com" }
+}
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -149,6 +176,11 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
               <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
             </span>
           </p>
+        </div>
+        <div class="trust" aria-label="Accreditations and ratings">
+          <span class="badge"><span class="dot"></span> BIPP Accredited</span>
+          <span class="badge"><span class="dot"></span> 20+ years teaching</span>
+          <span class="badge"><span class="dot"></span> Reviews ★★★★☆</span>
         </div>
         <!-- ======== /EDITABLE HERO SECTION ======== -->
 
