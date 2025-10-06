@@ -363,7 +363,7 @@ function mergeProducts(list){
 function getMetaDescription(prod){
   const stripTags = (t)=> String(t||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
   const pick = (...c)=>{ for(const v of c){ if(typeof v==='string' && v.trim()) return v.trim(); } return ''; };
-  const firstSentence = t=>{ const s=String(t||'').trim(); const m=s.match(/^(.*?\.)\s|^(.+)$ /); return m? (m[1]||m[2]||s).trim() : s; };
+  const firstSentence = t=>{ const s=String(t||'').trim(); const m=s.match(/^(.*?\.)\s|^(.+)$/); return m? (m[1]||m[2]||s).trim() : s; };
   const limit = (t,max=220)=>{ const m=String(t||'').trim().match(new RegExp(`^(.{0,${max}}?[.!?])\\s`)); if(m&&m[1]) return m[1].trim(); return (t||'').length>max ? String(t).slice(0,max).replace(/\s+\S*$/,'')+'…' : t; };
   const raw = pick(prod?.meta_description, prod?.metaDescription, prod?.meta?.description, prod?.seo?.metaDescription, prod?.seo?.description, prod?.raw?.metaDescription, prod?.raw?.meta?.description);
   const fallback = firstSentence(stripTags(prod?.description||''));
@@ -806,11 +806,34 @@ function buildTranscript(){
   return rows.join('\n');
 }
 function emailTranscript(){
+  const SITE_ORIGIN = 'https://www.alanranger.com';
+  const convertLinks = (html)=>{
+    const temp = document.createElement('div'); temp.innerHTML = html;
+    const as = temp.querySelectorAll('a');
+    as.forEach(a=>{
+      try{
+        const href = a.getAttribute('href')||'';
+        if (!href) return;
+        if (/^https?:\/\//i.test(href)) return; // already absolute
+        if (href.startsWith('//')) { a.href = 'https:' + href; return; }
+        if (href.startsWith('#')) { a.removeAttribute('href'); return; }
+        if (href.startsWith('/')) { a.href = SITE_ORIGIN + href; return; }
+        // relative like ./path or path
+        a.href = SITE_ORIGIN + (href.startsWith('.')? href.slice(1): ('/'+href));
+      }catch{}
+    });
+    return temp.innerHTML;
+  };
   // Build compact HTML transcript preserving links
   const parts = [];
   parts.push('<h2>Alan Ranger Assistant — transcript</h2>');
   parts.push(`<p><em>${new Date().toLocaleString()}</em></p>`);
-  for (const el of thread.children){ if (el.classList.contains('actions')) continue; const role = el.classList.contains('user') ? 'User' : 'Assistant'; parts.push(`<h4 style="margin:8px 0 4px">${role}</h4>`); parts.push(`<div>${el.innerHTML}</div>`); }
+  for (const el of thread.children){
+    if (el.classList.contains('actions')) continue;
+    const role = el.classList.contains('user') ? 'User' : 'Assistant';
+    parts.push(`<h4 style="margin:8px 0 4px">${role}</h4>`);
+    parts.push(`<div>${convertLinks(el.innerHTML)}</div>`);
+  }
   const inlineHtml = parts.join('');
 
   const subject = 'Alan Ranger Assistant chat transcript';
@@ -818,7 +841,6 @@ function emailTranscript(){
   const body = preface + inlineHtml;
   try { if (navigator.clipboard?.writeText) navigator.clipboard.writeText(body); } catch {}
   const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,1500))}`;
-  // Also provide a downloadable full HTML for guaranteed fidelity
   const fullDoc = `<!doctype html><html><head><meta charset="utf-8"><title>${subject}</title></head><body>${inlineHtml}</body></html>`;
   const blob = new Blob([fullDoc], {type:'text/html'});
   const url = URL.createObjectURL(blob);
