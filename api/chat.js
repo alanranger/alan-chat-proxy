@@ -26,14 +26,22 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   });
   
   if (relevantChunk) {
-    const chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
+    let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
+    
+    // Remove metadata headers that start with [ARTICLE] or similar
+    chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
+    chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
     
     // Look for sentences that contain key terms from the query
     const sentences = chunkText.split(/[.!?]+/).filter(s => s.trim().length > 20);
     const relevantSentence = sentences.find(s => {
       const sLower = s.toLowerCase();
       return queryWords.some(word => sLower.includes(word)) && 
-             sLower.length > 30 && sLower.length < 200; // Good length for a direct answer
+             sLower.length > 30 && sLower.length < 200 && // Good length for a direct answer
+             !sLower.includes('[article]') && // Skip metadata
+             !sLower.includes('published:') && // Skip metadata
+             !sLower.includes('url:') && // Skip metadata
+             !sLower.includes('alan ranger photography'); // Skip navigation
     });
     
     if (relevantSentence) {
@@ -44,7 +52,11 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     const paragraphs = chunkText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
     const relevantParagraph = paragraphs.find(p => {
       const pLower = p.toLowerCase();
-      return queryWords.some(word => pLower.includes(word));
+      return queryWords.some(word => pLower.includes(word)) &&
+             !pLower.includes('[article]') &&
+             !pLower.includes('published:') &&
+             !pLower.includes('url:') &&
+             !pLower.includes('alan ranger photography');
     });
     
     if (relevantParagraph && relevantParagraph.length < 300) {
@@ -159,7 +171,7 @@ function originOf(url) {
     const u = new URL(url);
     return `${u.protocol}//${u.host}`;
   } catch {
-    return null;
+  return null;
   }
 }
 
@@ -811,7 +823,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-      version: "v1.2.5-improved-content-matching",
+      version: "v1.2.6-filter-metadata",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -902,7 +914,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-        version: "v1.2.5-improved-content-matching",
+        version: "v1.2.6-filter-metadata",
         intent: "advice",
         keywords: keywords,
       counts: {
