@@ -1161,14 +1161,14 @@ export default async function handler(req, res) {
         : productPanel;
 
       const firstEventUrl = firstEvent?.event_url || null;
-      // Prefer selected product URL; fallback to event's mapped product; ensure absolute URL for relative slugs
+      // Prefer event-mapped product URL (from Supabase view) first; then selected product; ensure absolute URL
       const pickAbsolute = (u)=>{
         if (!u) return null; const s = String(u);
         if (/^https?:\/\//i.test(s)) return s;
         if (s.startsWith('/')) return `https://www.alanranger.com${s}`;
         return `https://www.alanranger.com/${s}`;
       };
-      const productUrl = pickAbsolute(product?.page_url || product?.source_url || product?.url) || firstEvent?.product_url || firstEventUrl || null;
+      const productUrl = pickAbsolute(firstEvent?.product_url) || pickAbsolute(product?.page_url || product?.source_url || product?.url) || firstEventUrl || null;
       // prefer an explicit landing; else derive from first event origin
       const landingUrl = firstEventUrl ? originOf(firstEventUrl) + "/photography-workshops" : null;
 
