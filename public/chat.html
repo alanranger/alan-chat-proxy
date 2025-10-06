@@ -361,12 +361,13 @@ function mergeProducts(list){
   return [...map.values()];
 }
 function getMetaDescription(prod){
+  const stripTags = (t)=> String(t||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
   const pick = (...c)=>{ for(const v of c){ if(typeof v==='string' && v.trim()) return v.trim(); } return ''; };
-  const firstSentence = t=>{ const s=String(t||'').trim(); const m=s.match(/^(.*?\.)(\s|$)/); return m? m[1].trim() : s; };
+  const firstSentence = t=>{ const s=String(t||'').trim(); const m=s.match(/^(.*?\.)\s|^(.+)$ /); return m? (m[1]||m[2]||s).trim() : s; };
   const limit = (t,max=220)=>{ const m=String(t||'').trim().match(new RegExp(`^(.{0,${max}}?[.!?])\\s`)); if(m&&m[1]) return m[1].trim(); return (t||'').length>max ? String(t).slice(0,max).replace(/\s+\S*$/,'')+'…' : t; };
   const raw = pick(prod?.meta_description, prod?.metaDescription, prod?.meta?.description, prod?.seo?.metaDescription, prod?.seo?.description, prod?.raw?.metaDescription, prod?.raw?.meta?.description);
-  const fallback = firstSentence(prod?.description||'');
-  return limit(raw || fallback, 220);
+  const fallback = firstSentence(stripTags(prod?.description||''));
+  return limit(stripTags(raw) || fallback, 220);
 }
 function extractFacts(desc){
   const txt = String(desc||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
@@ -812,19 +813,17 @@ function emailTranscript(){
   for (const el of thread.children){ if (el.classList.contains('actions')) continue; const role = el.classList.contains('user') ? 'User' : 'Assistant'; parts.push(`<h4 style="margin:8px 0 4px">${role}</h4>`); parts.push(`<div>${el.innerHTML}</div>`); }
   const inlineHtml = parts.join('');
 
-  // Try to embed HTML as best-effort: many desktop clients (Outlook) ignore HTML in mailto body.
-  // We include a minimal plain-text preface followed by the HTML snippet. Links remain visible/clickable in many clients.
   const subject = 'Alan Ranger Assistant chat transcript';
   const preface = 'Transcript pasted below. If formatting is lost, attach the HTML file from the link in chat.\n\n';
   const body = preface + inlineHtml;
   try { if (navigator.clipboard?.writeText) navigator.clipboard.writeText(body); } catch {}
-  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,1800))}`;
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,1500))}`;
   // Also provide a downloadable full HTML for guaranteed fidelity
   const fullDoc = `<!doctype html><html><head><meta charset="utf-8"><title>${subject}</title></head><body>${inlineHtml}</body></html>`;
   const blob = new Blob([fullDoc], {type:'text/html'});
   const url = URL.createObjectURL(blob);
-  addBubble(`<div class="answer"><p>Email draft opened. Transcript copied to clipboard. If your mail client stripped formatting, <a href="${url}" download="alan-ranger-assistant-transcript.html">download the full HTML transcript</a> and attach it.</p></div>`);
-  location.href = mailto;
+  addBubble(`<div class="answer"><p>Email draft opened (or will open shortly). Transcript copied to clipboard. If your mail client stripped formatting, <a href="${url}" download="alan-ranger-assistant-transcript.html">download the full HTML transcript</a> and attach it.</p></div>`);
+  const a = document.createElement('a'); a.href = mailto; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>{ document.body.removeChild(a); }, 0);
 }
 function resetChat(){
   thread.innerHTML = '';
