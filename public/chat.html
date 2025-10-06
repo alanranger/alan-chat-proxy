@@ -52,6 +52,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer li{margin:.2em 0}
 .answer a{color:var(--link);text-decoration:underline}
 .answer a:hover{color:var(--link-hover)}
+.answer code{background:#1a2332;color:#e2e8f0;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:0.9em}
+.answer em{font-style:italic;color:#cbd5e1}
+.answer strong{font-weight:600;color:#f1f5f9}
 .meta{color:var(--muted);font-size:14px}
 .kvline{margin:0}
 .kvline strong{font-weight:600}
@@ -73,9 +76,12 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
   background:var(--brand); color:#0b0f16; border:none; border-radius:28px;
   padding:8px 12px; font-weight:600; font-size:14px; line-height:1;
   text-decoration:none; cursor:pointer; box-shadow:0 1px 0 rgba(0,0,0,.2);
+  transition:all 0.2s ease;
 }
-.actions .pill:hover{filter:brightness(1.05)}
+.actions .pill:hover{filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 2px 4px rgba(0,0,0,.3)}
 .actions .pill:focus{outline:0; box-shadow:0 0 0 3px var(--ring)}
+.actions .pill.priority{background:var(--wa); color:#fff; font-weight:700}
+.actions .pill.secondary{background:#4a5568; color:#e2e8f0; font-weight:500}
 
 /* Composer + utilities */
 .tools{display:flex;justify-content:flex-end;gap:10px;margin:8px 0 6px}
@@ -113,7 +119,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.1.5</span></div>
+  <div class="badge-wrap"><span class="version">v1.2.9-enhanced</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -166,6 +172,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
         <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
         <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
         <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
+        <div class="kv"><label>Debug Info</label><pre id="dbg-debug" class="json">–</pre></div>
         <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
         <div class="kv"><label>Note</label><pre id="dbg-note" class="json">–</pre></div>
       </details>
@@ -197,6 +204,7 @@ const dbgReq    = document.getElementById('dbg-req');
 const dbgRes    = document.getElementById('dbg-res');
 const dbgHeaders= document.getElementById('dbg-headers');
 const dbgStruct = document.getElementById('dbg-struct');
+const dbgDebug  = document.getElementById('dbg-debug');
 const dbgProv   = document.getElementById('dbg-prov');
 const dbgCopy   = document.getElementById('dbg-copy');
 const dbgNote   = document.getElementById('dbg-note');
@@ -229,6 +237,7 @@ function collectDebugText(){
     ['Request', get(dbgReq)],
     ['Response', get(dbgRes)],
     ['Structured', get(dbgStruct)],
+    ['Debug Info', get(dbgDebug)],
     ['Provenance', get(dbgProv)],
     ['Note', get(dbgNote)],
   ];
@@ -273,14 +282,45 @@ function addTyping() {
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
   let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  
+  // Enhanced markdown processing for improved API content
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>'); // Bold
+  s = s.replace(/\*(.+?)\*/g,'<em>$1</em>'); // Italic
+  s = s.replace(/`(.+?)`/g,'<code>$1</code>'); // Inline code
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>'); // Links
+  
   const lines = s.split(/\r?\n/);
   let out='', inList=false;
   const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
+  
   for (const line of lines){
+    const trimmed = line.trim();
+    if (!trimmed) { flush(); continue; }
+    
+    // Handle list items
     const m = line.match(/^\s*-\s+(.*)$/);
-    if (m){ if(!inList){ out+='<ul>'; inList=true; } out += `<li>${m[1].trim()}</li>`; }
-    else { flush(); out += line.trim()? `<p>${line}</p>` : ''; }
+    if (m){ 
+      if(!inList){ out+='<ul>'; inList=true; } 
+      out += `<li>${m[1].trim()}</li>`; 
+    }
+    // Handle headers
+    else if (trimmed.startsWith('###')) {
+      flush();
+      out += `<h3>${trimmed.substring(3).trim()}</h3>`;
+    }
+    else if (trimmed.startsWith('##')) {
+      flush();
+      out += `<h2>${trimmed.substring(2).trim()}</h2>`;
+    }
+    else if (trimmed.startsWith('#')) {
+      flush();
+      out += `<h1>${trimmed.substring(1).trim()}</h1>`;
+    }
+    // Handle regular paragraphs
+    else { 
+      flush(); 
+      out += `<p>${trimmed}</p>`; 
+    }
   }
   flush();
   return { html:`<div class="answer">${out}</div>` };
@@ -449,9 +489,37 @@ function renderArticlesBlock(structured, query){
 /* ===== Action Pills ===== */
 function buildActionPillsFromStructured(structured, query){
   const safe = []; const used = new Set();
-  const add = (label, href) => { if(!label || !href) return; const key = `${label}::${href}`; if(used.has(key)) return; used.add(key); safe.push({label,href}); };
-  for (const p of (structured?.pills || structured?.chips || [])) add(p.label || p.text || 'Open', p.url || p.href);
-  for (const a of pickArticles(structured, query, structured?.topic||'').slice(0,2)) add(articleTitle(a) || 'Read Guide', articleUrl(a));
+  const add = (label, href, priority = false, secondary = false) => { 
+    if(!label || !href) return; 
+    const key = `${label}::${href}`; 
+    if(used.has(key)) return; 
+    used.add(key); 
+    safe.push({label, href, priority, secondary}); 
+  };
+  
+  // Prioritize booking/contact actions
+  for (const p of (structured?.pills || structured?.chips || [])) {
+    const label = p.label || p.text || 'Open';
+    const href = p.url || p.href;
+    const isPriority = /book|contact|whatsapp|call|buy|purchase/i.test(label);
+    const isSecondary = /read|guide|learn|more/i.test(label);
+    add(label, href, isPriority, isSecondary);
+  }
+  
+  // Add article links as secondary
+  for (const a of pickArticles(structured, query, structured?.topic||'').slice(0,2)) {
+    add(articleTitle(a) || 'Read Guide', articleUrl(a), false, true);
+  }
+  
+  // Sort by priority: priority first, then regular, then secondary
+  safe.sort((a, b) => {
+    if (a.priority && !b.priority) return -1;
+    if (!a.priority && b.priority) return 1;
+    if (a.secondary && !b.secondary) return 1;
+    if (!a.secondary && b.secondary) return -1;
+    return 0;
+  });
+  
   return safe.slice(0,5);
 }
 
@@ -569,9 +637,20 @@ window.addEventListener('touchstart', unlockAudio, { once:false, passive:true })
 let __lastQuery = '';
 function renderAnswer(payload){
   try { if (dbgSrvVer) dbgSrvVer.textContent = payload?.debug?.version || '–'; } catch {}
-  let confidencePct = (typeof payload.confidence_pct === 'number') ? payload.confidence_pct : null;
+  
+  // Handle both decimal (0-1) and percentage (0-100) confidence values
+  let confidencePct = null;
+  if (typeof payload.confidence === 'number') {
+    // API returns decimal confidence (0-1), convert to percentage
+    confidencePct = Math.round(payload.confidence * 100);
+  } else if (typeof payload.confidence_pct === 'number') {
+    // Legacy percentage format
+    confidencePct = payload.confidence_pct;
+  }
+  
   const heuristic = heuristicConfidence(payload.structured||{});
-  if (confidencePct == null || confidencePct < 50) confidencePct = heuristic;
+  // Use heuristic only if confidence is very low (< 30%) or missing
+  if (confidencePct == null || confidencePct < 30) confidencePct = heuristic;
   const __rounded = Math.round(confidencePct);
 
   const s = payload.structured||{};
@@ -592,28 +671,57 @@ function renderAnswer(payload){
   const pills = buildActionPillsFromStructured(s, __lastQuery);
   if(pills.length){
     const wrap = document.createElement('div'); wrap.className='actions';
-    pills.forEach(p=>{ const a=document.createElement('a'); a.className='pill'; a.textContent=p.label; a.href=p.href; a.target='_blank'; a.rel='noopener'; wrap.appendChild(a); });
+    pills.forEach(p=>{ 
+      const a=document.createElement('a'); 
+      a.className='pill' + (p.priority ? ' priority' : '') + (p.secondary ? ' secondary' : ''); 
+      a.textContent=p.label; 
+      a.href=p.href; 
+      a.target='_blank'; 
+      a.rel='noopener'; 
+      wrap.appendChild(a); 
+    });
     thread.appendChild(wrap);
   }
 
   const footer = document.createElement('div');
   footer.className = 'footer-status';
-  footer.innerHTML = `<span class="badge conf ${__rounded>=70?'green':__rounded>=35?'amber':'red'}">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+  // Updated confidence thresholds: 80%+ green, 50%+ amber, below 50% red
+  footer.innerHTML = `<span class="badge conf ${__rounded>=80?'green':__rounded>=50?'amber':'red'}">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
   thread.appendChild(footer);
 
   // Play chime when the answer is rendered.
   // If the tab is backgrounded, this is particularly useful.
   playChime();
 
-  // Fallback answer if nothing rendered
-  if(!gate.show && !(s.events||[]).length && !(s.articles||[]).length){
-    const md = payload.answer_markdown || payload.answer || '';
-    const extra = `<p>If this doesn’t answer your question, please use the Contact or WhatsApp buttons above to reach Alan directly.</p>`;
-    const {html}=mdToHtml(md || "I don’t have a specific answer for that yet.");
-    addBubble(html.replace('</div>', `${extra}</div>`));
+  // Enhanced answer rendering - prioritize markdown content from improved API
+  const md = payload.answer_markdown || payload.answer || '';
+  if (md && md.trim()) {
+    const {html} = mdToHtml(md);
+    addBubble(html);
+  }
+  
+  // Enhanced fallback messaging based on confidence level
+  if(!gate.show && !(s.events||[]).length && !(s.articles||[]).length && !md?.trim()){
+    let fallbackMessage = "I don't have a specific answer for that yet.";
+    let extraMessage = "";
+    
+    if (__rounded >= 50) {
+      fallbackMessage = "I found some relevant information, but I'm not completely confident about the specifics.";
+      extraMessage = `<p>For the most accurate and up-to-date information, I'd recommend using the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+    } else if (__rounded >= 30) {
+      fallbackMessage = "I'm not entirely sure about this question, but I can try to help.";
+      extraMessage = `<p>For the best assistance, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+    } else {
+      fallbackMessage = "I don't have a specific answer for that yet.";
+      extraMessage = `<p>If this doesn't answer your question, please use the Contact or WhatsApp buttons above to reach Alan directly.</p>`;
+    }
+    
+    const {html}=mdToHtml(fallbackMessage);
+    addBubble(html.replace('</div>', `${extraMessage}</div>`));
   }
 
   setDebugJSON(dbgStruct, payload.structured||{});
+  setDebugJSON(dbgDebug, payload.debug||{});
   const note = payload.debug ? {...payload.debug, product_gate: gate} : { product_gate: gate };
   setDebugJSON(dbgNote, note);
 }
@@ -638,20 +746,20 @@ async function sendQuery(query){
     if (data && data.ok && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
       renderAnswer(data);
     } else if (data && !data.ok) {
-      const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf red">Confidence: 25%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
+      const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf red">Confidence: 20%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
       addBubble(`<div class="answer"><p>Server error: ${escapeHTML(String(data.error||'Unknown'))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
       playChime();
     } else {
-      const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf amber">Confidence: 50%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
-      const fallback = "I don’t have a specific answer for that yet."; const {html}=mdToHtml(fallback);
-      const extra = `<p>If this doesn’t answer your question, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+      const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf amber">Confidence: 40%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
+      const fallback = "I'm not entirely sure about this question, but I can try to help."; const {html}=mdToHtml(fallback);
+      const extra = `<p>For the best assistance, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
       addBubble(html.replace('</div>', `${extra}</div>`));
       playChime();
     }
   } catch (err){
     closeTyping(); dbgStatus.textContent = 'error';
     const footer = document.createElement('div'); footer.className = 'footer-status';
-    footer.innerHTML = `<span class="badge conf red">Confidence: 25%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+    footer.innerHTML = `<span class="badge conf red">Confidence: 15%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
     thread.appendChild(footer);
     addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
     playChime();
@@ -680,7 +788,7 @@ function emailTranscript(){
 function resetChat(){
   thread.innerHTML = '';
   addBubble('Hi! I can help with workshops, tuition, and photography advice.');
-  [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgProv, dbgNote, dbgSrvVer].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
+  [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgDebug, dbgProv, dbgNote, dbgSrvVer].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
 }
 function submit(){
   const val = input.value.trim(); if(!val) return;
