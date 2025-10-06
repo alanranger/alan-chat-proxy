@@ -870,7 +870,11 @@ export default async function handler(req, res) {
     const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
     
     const intent = detectIntent(query || ""); // Use current query only for intent detection
-    const keywords = extractKeywords(contextualQuery || ""); // Use contextual query for keyword extraction
+    
+    // Use contextual query for events (to maintain context), but current query for advice
+    const keywords = intent === "events" 
+      ? extractKeywords(contextualQuery || "") 
+      : extractKeywords(query || "");
 
     if (intent === "events") {
       // Get events from the enhanced view that includes product mappings
@@ -939,7 +943,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-          version: "v1.2.22-fix-followup-context",
+          version: "v1.2.23-fix-keyword-contamination",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -1030,7 +1034,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
         debug: {
-          version: "v1.2.22-fix-followup-context",
+          version: "v1.2.23-fix-keyword-contamination",
           intent: "advice",
           keywords: keywords,
       counts: {
