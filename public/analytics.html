@@ -197,15 +197,33 @@
       <h1>Chat Analytics Dashboard</h1>
       <p>Monitor chat bot performance, user interactions, and insights</p>
       <div class="help-box">
-        <h3>📊 How to Use This Dashboard</h3>
-        <ul>
+        <h3>📊 Step-by-Step Guide to Using This Dashboard</h3>
+        
+        <h4>🚀 First Time Setup (Do This Once):</h4>
+        <ol>
+          <li><strong>Go to Admin Panel:</strong> Click <a href="admin.html" style="color: var(--brand);">Admin Panel</a> link below</li>
+          <li><strong>Run Analytics Aggregation:</strong> Click "Run Analytics Aggregation" button</li>
+          <li><strong>Wait for Success:</strong> You should see "✅ Analytics aggregation completed successfully"</li>
+          <li><strong>Return Here:</strong> Come back to this Analytics Dashboard</li>
+        </ol>
+
+        <h4>📈 Daily Usage (What Each Tab Shows):</h4>
+        <ol>
           <li><strong>Overview Tab:</strong> See total sessions, questions, confidence scores, and response times</li>
           <li><strong>Questions Tab:</strong> View most frequently asked questions and their confidence levels</li>
           <li><strong>Sessions Tab:</strong> Browse individual chat sessions - search and click "View" for details</li>
           <li><strong>Performance Tab:</strong> Monitor confidence and response time trends over time</li>
           <li><strong>Insights Tab:</strong> Get automated recommendations for content improvements</li>
-        </ul>
-        <p><strong>💡 Tip:</strong> Data updates automatically. Use the Admin Panel to run manual analytics aggregation if needed.</p>
+        </ol>
+
+        <h4>🔄 When Data Looks Empty or Old:</h4>
+        <ol>
+          <li><strong>Check Admin Panel:</strong> Go to <a href="admin.html" style="color: var(--brand);">Admin Panel</a></li>
+          <li><strong>Run Manual Aggregation:</strong> Click "Run Analytics Aggregation" again</li>
+          <li><strong>Refresh This Page:</strong> Come back and refresh the dashboard</li>
+        </ol>
+
+        <p><strong>💡 Pro Tip:</strong> The system runs automatically every day at 1 AM, but you can trigger it manually anytime!</p>
       </div>
     </div>
 
@@ -330,6 +348,13 @@
           <div id="insights-list"></div>
         </div>
       </div>
+    </div>
+
+    <!-- Quick Admin Access -->
+    <div class="card" style="margin-top: 30px; text-align: center;">
+      <h3>🔧 Need to Update Data?</h3>
+      <p>If you don't see any data or need to refresh the analytics, use the Admin Panel:</p>
+      <a href="admin.html" class="btn btn-primary">Open Admin Panel</a>
     </div>
   </div>
 

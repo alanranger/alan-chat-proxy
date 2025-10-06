@@ -124,15 +124,46 @@
       <h1>Admin Panel</h1>
       <p>Manage chat analytics and system operations</p>
       <div class="help-box">
-        <h3>🔧 How to Use This Admin Panel</h3>
-        <ul>
-          <li><strong>Analytics Management:</strong> Run manual analytics aggregation or check if automated jobs are working</li>
-          <li><strong>Quick Actions:</strong> Run system health checks, refresh data mappings, and finalize data processing</li>
-          <li><strong>Dashboard Links:</strong> Access the Analytics Dashboard, Bulk Upload tool, and Test Bench</li>
-        </ul>
-        <p><strong>💡 Tip:</strong> Most operations run automatically via cron jobs. Use manual triggers for immediate updates or troubleshooting.</p>
-        <p><strong>📊 Next Step:</strong> Click "Open Dashboard" to view your chat analytics and insights!</p>
+        <h3>🔧 Step-by-Step Admin Instructions</h3>
+        
+        <h4>🚀 First Time Setup (Do This Now):</h4>
+        <ol>
+          <li><strong>Run Analytics Aggregation:</strong> Click the "Run Analytics Aggregation" button below</li>
+          <li><strong>Wait for Success Message:</strong> You should see "✅ Analytics aggregation completed successfully"</li>
+          <li><strong>Check Cron Status:</strong> Click "Check Cron Status" to verify automated jobs are running</li>
+          <li><strong>View Your Data:</strong> Click "Open Dashboard" to see your analytics</li>
+        </ol>
+
+        <h4>📊 Daily Operations (What Each Button Does):</h4>
+        <ol>
+          <li><strong>"Run Analytics Aggregation":</strong> Processes chat data into reports (run this if data looks old)</li>
+          <li><strong>"Check Cron Status":</strong> Verifies automated daily jobs are working</li>
+          <li><strong>"Run QA Check":</strong> Tests system health and data integrity</li>
+          <li><strong>"Refresh Mappings":</strong> Updates event-to-product links</li>
+          <li><strong>"Finalize Data":</strong> Completes data processing pipeline</li>
+        </ol>
+
+        <h4>🔄 When Things Go Wrong:</h4>
+        <ol>
+          <li><strong>No Data in Dashboard:</strong> Run "Analytics Aggregation" first</li>
+          <li><strong>Errors in Chat:</strong> Run "QA Check" to diagnose issues</li>
+          <li><strong>Wrong Product Links:</strong> Run "Refresh Mappings"</li>
+          <li><strong>Still Having Issues:</strong> Run "Finalize Data" to reset everything</li>
+        </ol>
+
+        <p><strong>💡 Pro Tip:</strong> The system runs automatically every day at 1 AM. You only need to use these buttons for immediate updates or troubleshooting!</p>
       </div>
+    </div>
+
+    <!-- Quick Start Section -->
+    <div class="card" style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success);">
+      <h2>🚀 Quick Start - Do This First!</h2>
+      <p><strong>New to this system? Follow these steps in order:</strong></p>
+      <ol style="margin: 12px 0; padding-left: 20px;">
+        <li>Click "Run Analytics Aggregation" below</li>
+        <li>Wait for the green success message</li>
+        <li>Click "Open Dashboard" to see your data</li>
+      </ol>
     </div>
 
     <div class="card">
