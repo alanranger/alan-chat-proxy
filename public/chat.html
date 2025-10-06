@@ -781,6 +781,23 @@ function renderAnswer(payload){
       a.href=p.href; 
       a.target='_blank'; 
       a.rel='noopener'; 
+      
+      // Add click event logging
+      a.addEventListener('click', () => {
+        fetch('/api/chat-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'event',
+            data: { 
+              sessionId, 
+              eventType: 'pill_click', 
+              eventData: { label: p.label, href: p.href, priority: p.priority } 
+            }
+          })
+        }).catch(err => console.warn('Event logging failed:', err));
+      });
+      
       wrap.appendChild(a); 
     });
     thread.appendChild(wrap);
@@ -851,11 +868,38 @@ function renderAnswer(payload){
 }
 
 /* ================= Networking ================= */
+// Generate session ID if not exists
+let sessionId = sessionStorage.getItem('chat_session_id');
+if (!sessionId) {
+  sessionId = 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  sessionStorage.setItem('chat_session_id', sessionId);
+  
+  // Log session start
+  fetch('/api/chat-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'session_start',
+      data: { sessionId }
+    })
+  }).catch(err => console.warn('Session logging failed:', err));
+}
+
+// Log session end when page is unloaded
+window.addEventListener('beforeunload', () => {
+  if (sessionId) {
+    navigator.sendBeacon('/api/chat-log', JSON.stringify({
+      action: 'session_end',
+      data: { sessionId }
+    }));
+  }
+});
+
 async function sendQuery(query){
   var t0 = performance.now();
   const prevQuery = __lastQuery; // Store the previous query before updating
   __lastQuery = String(query||'');
-  const req = { query, topK: 8, previousQuery: prevQuery };
+  const req = { query, topK: 8, previousQuery: prevQuery, sessionId };
   setDebugJSON(dbgReq, req);
   const closeTyping = addTyping();
   gaTrack('question_sent', { query_length: (query||'').length });

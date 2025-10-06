@@ -6,6 +6,45 @@ export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
 
+/* ----------------------- Chat Logging ----------------------- */
+const logQuestion = async (sessionId, question) => {
+  try {
+    const response = await fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/chat-log`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.INGEST_TOKEN}`
+      },
+      body: JSON.stringify({
+        action: 'question',
+        data: { sessionId, question }
+      })
+    });
+    if (!response.ok) throw new Error(`Logging failed: ${response.status}`);
+  } catch (err) {
+    console.warn('Question logging failed:', err.message);
+  }
+};
+
+const logAnswer = async (sessionId, question, answer, intent, confidence, responseTimeMs, sourcesUsed) => {
+  try {
+    const response = await fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/chat-log`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.INGEST_TOKEN}`
+      },
+      body: JSON.stringify({
+        action: 'question',
+        data: { sessionId, question, answer, intent, confidence, responseTimeMs, sourcesUsed }
+      })
+    });
+    if (!response.ok) throw new Error(`Logging failed: ${response.status}`);
+  } catch (err) {
+    console.warn('Answer logging failed:', err.message);
+  }
+};
+
 /* ----------------------- Direct Answer Generation ----------------------- */
 function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
   const q = (query || "").toLowerCase();
@@ -1048,8 +1087,15 @@ export default async function handler(req, res) {
       return;
     }
 
-    const { query, topK, previousQuery } = req.body || {};
+    const { query, topK, previousQuery, sessionId } = req.body || {};
     const client = supabaseAdmin();
+
+    // Log the question (async, don't wait for it)
+    if (sessionId && query) {
+      logQuestion(sessionId, query).catch(err => 
+        console.warn('Failed to log question:', err.message)
+      );
+    }
 
     // Build contextual query for keyword extraction (merge with previous query)
     const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
@@ -1198,6 +1244,15 @@ export default async function handler(req, res) {
         ...((events || []).map(e => e.event_url)),
       ]).filter(Boolean);
 
+      // Log the answer (async, don't wait for it)
+      if (sessionId && query) {
+        const responseTimeMs = Date.now() - started;
+        const sourcesUsed = citations || [];
+        logAnswer(sessionId, query, answerMarkdown, "events", 0.8, responseTimeMs, sourcesUsed).catch(err => 
+          console.warn('Failed to log answer:', err.message)
+        );
+      }
+
       res.status(200).json({
         ok: true,
         answer_markdown: answerMarkdown,
@@ -1301,6 +1356,15 @@ export default async function handler(req, res) {
     } else {
       lines.push("I couldn't find a specific guide for that yet.");
       confidence = 0.1; // Low confidence when no articles found
+    }
+
+    // Log the answer (async, don't wait for it)
+    if (sessionId && query) {
+      const responseTimeMs = Date.now() - started;
+      const sourcesUsed = citations || [];
+      logAnswer(sessionId, query, lines.join("\n"), "advice", confidence, responseTimeMs, sourcesUsed).catch(err => 
+        console.warn('Failed to log answer:', err.message)
+      );
     }
 
     res.status(200).json({
