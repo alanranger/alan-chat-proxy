@@ -125,7 +125,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.2.29-ui-popover</span></div>
+  <div class="badge-wrap"><span class="version">v1.2.30-final-tweaks</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -168,7 +168,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
         <button id="btn-reset">Reset chat</button>
       </div>
 
-      <details id="debugPanel" class="debug">
+      <details id="debugPanel" class="debug" style="display:none">
         <summary>🔎 Show debug</summary>
         <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
         <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
@@ -703,10 +703,13 @@ function renderAnswer(payload){
     confEl.addEventListener('click', ()=>{
       const old = document.getElementById('reason-pop'); if (old) old.remove();
       const box = document.createElement('div'); box.id='reason-pop'; box.className='reason-pop';
-      box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Confidence reasoning</h4><pre class="json"></pre>`;
+      box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Confidence reasoning</h4><pre class="json"></pre><div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button id="reason-copy" class="send" style="padding:6px 10px">Copy log</button></div>`;
       const pre = box.querySelector('pre');
       const data = { structured: s, debug: payload.debug||{}, heuristic: heuristic, final: __rounded };
       setDebugJSON(pre, data, { maxLen: 2000, maxItems: 50 });
+      box.querySelector('#reason-copy').addEventListener('click', async ()=>{
+        try { await navigator.clipboard.writeText(pre.textContent||''); confEl.textContent = confEl.textContent.replace('Confidence','Copied'); setTimeout(()=>{ confEl.textContent = `Confidence: ${__rounded}%`; }, 1200); } catch{}
+      });
       box.querySelector('.close').addEventListener('click', ()=> box.remove());
       document.body.appendChild(box);
     });
@@ -802,13 +805,22 @@ function buildTranscript(){
   return rows.join('\n');
 }
 function emailTranscript(){
-  const body = buildTranscript();
+  const plain = buildTranscript();
+  // Build simple HTML transcript preserving links from bubbles
+  const parts = [];
+  parts.push('<!doctype html><html><head><meta charset="utf-8"><title>Alan Ranger Assistant — transcript</title></head><body>');
+  parts.push('<h2>Alan Ranger Assistant — transcript</h2>');
+  parts.push(`<p><em>${new Date().toLocaleString()}</em></p>`);
+  for (const el of thread.children){ if (el.classList.contains('actions')) continue; const role = el.classList.contains('user') ? 'User' : 'Assistant'; parts.push(`<h4>${role}</h4>`); parts.push(`<div>${el.innerHTML}</div>`); }
+  parts.push('</body></html>');
+  const html = parts.join('');
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  // Some email clients accept data URLs, but safest is download and manual attach
+  addBubble(`<div class="answer"><p>Email draft opened with a brief note. For full HTML transcript, <a href="${url}" download="alan-ranger-assistant-transcript.html">download it here</a> and attach to your email.</p></div>`);
   const subject = 'Alan Ranger Assistant chat transcript';
-  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,2000))}`;
-  if (body.length > 2000){
-    const blob = new Blob([body], {type:'text/plain'}); const url = URL.createObjectURL(blob);
-    addBubble(`<div class="answer"><p>Transcript is quite long. You can <a href="${url}" download="alan-ranger-assistant-transcript.txt">download the full transcript</a> or use the shortened email draft that just opened.</p></div>`);
-  }
+  const shortNote = 'Attached is the HTML transcript. If not attached automatically, please use the download link provided in chat.';
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shortNote)}`;
   location.href = mailto;
 }
 function resetChat(){

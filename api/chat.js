@@ -1199,7 +1199,15 @@ export default async function handler(req, res) {
 
     // --------- ADVICE -----------
     // return article answers + upgraded pills
-    const articles = await findArticles(client, { keywords, limit: 12 });
+    let articles = await findArticles(client, { keywords, limit: 12 });
+    // Ensure concept article is first when asking "what is <term>"
+    const qlc = (query||'').toLowerCase();
+    const mConcept = qlc.match(/^\s*what\s+is\s+(.+?)\s*\??$/);
+    if (mConcept) {
+      const term = mConcept[1].trim(); const slug = term.replace(/\s+/g,'-');
+      const idx = articles.findIndex(a => (a.page_url||a.source_url||'').toLowerCase().includes(`/what-is-${slug}`));
+      if (idx > 0) { const [hit] = articles.splice(idx,1); articles.unshift(hit); }
+    }
     const topArticle = articles?.[0] || null;
     const articleUrl = pickUrl(topArticle) || null;
     
@@ -1276,7 +1284,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
         debug: {
-          version: "v1.2.28-service-faq",
+          version: "v1.2.30-final-tweaks",
           intent: "advice",
           keywords: keywords,
       counts: {
