@@ -169,11 +169,60 @@ export default async function handler(req, res) {
         detail: error.message 
       });
     }
+  } else if (action === 'aggregate_analytics') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed for aggregate_analytics action' });
+    }
+    try {
+      const { date } = req.body || {};
+      const targetDate = date || new Date().toISOString().split('T')[0];
+
+      console.log('Running analytics aggregation for date:', targetDate);
+      
+      const { data: aggData, error: aggError } = await supabase
+        .rpc('aggregate_daily_analytics', { target_date: targetDate });
+
+      if (aggError) {
+        console.error('Error running analytics aggregation:', aggError);
+        return res.status(500).json({ 
+          error: 'Failed to aggregate analytics', 
+          detail: aggError.message 
+        });
+      }
+
+      console.log('Analytics aggregation completed successfully');
+
+      const { data: updateData, error: updateError } = await supabase
+        .rpc('update_question_frequency');
+
+      if (updateError) {
+        console.error('Error updating question frequency:', updateError);
+        return res.status(500).json({ 
+          error: 'Failed to update question frequency', 
+          detail: updateError.message 
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        message: 'Analytics aggregation completed successfully',
+        date: targetDate,
+        aggregationResult: aggData,
+        frequencyUpdateResult: updateData
+      });
+
+    } catch (error) {
+      console.error('Unexpected error in analytics aggregation:', error);
+      return res.status(500).json({ 
+        error: 'Internal server error', 
+        detail: error.message 
+      });
+    }
   }
 
   // Default response
   return res.status(400).json({ 
     error: 'bad_request', 
-    detail: 'Use ?action=qa for spot checks or ?action=refresh for mapping refresh' 
+    detail: 'Use ?action=qa for spot checks, ?action=refresh for mapping refresh, or ?action=aggregate_analytics for analytics aggregation' 
   });
 }

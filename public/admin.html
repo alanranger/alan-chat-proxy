@@ -238,7 +238,7 @@
       showStatus('aggregation-status', 'Running analytics aggregation...', 'info');
       
       try {
-        const response = await fetch('/api/tools', {
+        const response = await fetch('/api/admin', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
