@@ -59,28 +59,24 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   
   // No hardcoded fallbacks; rely on chunk/article relevance below
 
-  // Try to find relevant content from chunks first
-  const relevantChunk = contentChunks.find(chunk => {
-    const chunkText = (chunk.chunk_text || chunk.content || "").toLowerCase();
-    const chunkTitle = (chunk.title || "").toLowerCase();
-    
-    // Prioritize chunks that contain the full query or key terms
-    const hasFullQuery = chunkText.includes(lc);
-    
-    // Include technical terms (3+ chars) and general words (4+ chars)
-    const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
-    const importantWords = queryWords.filter(w => 
-      w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
-    );
-    
-    const hasKeyTerms = importantWords.every(word => 
-      chunkText.includes(word) || chunkTitle.includes(word)
-    );
-    
-    console.log(`🔍 generateDirectAnswer: Chunk check - hasFullQuery=${hasFullQuery}, hasKeyTerms=${hasKeyTerms}, importantWords=${importantWords.join(',')}`);
-    
-    return hasFullQuery || hasKeyTerms;
-  });
+  // Try to find relevant content from chunks first (score by exact-term relevance)
+  const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+  const importantWords = queryWords.filter(w => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4));
+  const scoredChunks = (contentChunks || []).map(chunk => {
+    const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
+    const title = (chunk.title || "").toLowerCase();
+    const url = String(chunk.url || "").toLowerCase();
+    let s = 0;
+    for (const w of importantWords) { if (text.includes(w)) s += 2; if (title.includes(w)) s += 3; if (url.includes(w)) s += 2; }
+    if (exactTerm) {
+      if (text.includes(exactTerm)) s += 6;
+      if (title.includes(exactTerm)) s += 8;
+      const slug = exactTerm.replace(/\s+/g, "-");
+      if (url.includes(`/what-is-${slug}`)) s += 10;
+    }
+    return { chunk, s };
+  }).sort((a,b)=>b.s-a.s);
+  const relevantChunk = scoredChunks.length ? scoredChunks[0].chunk : null;
   
   console.log(`🔍 generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
   
@@ -124,15 +120,15 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
       }
     }
     
-    // Prefer definitional sentences for core concepts
-    const coreVerbs = [" is ", " means ", " controls "];
-    const sentencesAll = chunkText.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
-    const defSentence = sentencesAll.find(s => {
-      const sLower = s.toLowerCase();
-      const hasTerm = exactTerm && sLower.includes(exactTerm);
-      const hasVerb = coreVerbs.some(v => sLower.includes(v));
-      return hasTerm && hasVerb && s.length >= 30 && s.length <= 200;
-    });
+  // Prefer definitional sentences for core concepts
+  const coreVerbs = [" is ", " means ", " stands for ", " controls ", " refers to "];
+  const sentencesAll = chunkText.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+  const defSentence = sentencesAll.find(s => {
+    const sLower = s.toLowerCase();
+    const hasTerm = exactTerm && sLower.includes(exactTerm);
+    const hasVerb = coreVerbs.some(v => sLower.includes(v));
+    return hasTerm && hasVerb && s.length >= 30 && s.length <= 220;
+  });
     if (defSentence) {
       return `**${defSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
     }
