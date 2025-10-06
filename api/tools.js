@@ -48,14 +48,21 @@ async function embedQuery(text) {
 
 export default async function handler(req, res) {
   try {
-    // Auth
-    const token = req.headers['authorization']?.trim();
-    if (token !== `Bearer ${need('INGEST_TOKEN')}`) {
-      return sendJSON(res, 401, { error: 'unauthorized' });
-    }
-
-    // Action routing
+    // Action routing (determine early so we can allow public export if toggled)
     const action = (req.query?.action || req.query?.a || '').toString().toLowerCase();
+
+    // Optional public export toggle: allow unauthenticated CSV export when explicitly enabled
+    const isExportAction = req.method === 'GET' && (action === 'export' || action === 'export_unmapped');
+    const publicExportEnabled = process.env.PUBLIC_EXPORT_ENABLED === '1' || (req.query?.public === '1');
+    const allowPublicExport = isExportAction && publicExportEnabled;
+
+    // Auth (skip when public export is explicitly allowed)
+    if (!allowPublicExport) {
+      const token = req.headers['authorization']?.trim();
+      if (token !== `Bearer ${need('INGEST_TOKEN')}`) {
+        return sendJSON(res, 401, { error: 'unauthorized' });
+      }
+    }
 
     // DB client
     const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
