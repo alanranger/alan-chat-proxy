@@ -54,6 +54,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 /* Trust strip */
 .trust{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:6px}
 .trust .badge{background:#0f1b31;border:1px solid #15223a;color:#cfe3ff;border-radius:9999px;padding:6px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.trust a.badge{ text-decoration:none; color:inherit; cursor:default }
 .trust .badge .dot{width:6px;height:6px;border-radius:999px;background:var(--brand)}
 .trust .stars{color:#f5c518}
 
@@ -179,9 +180,9 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
           </p>
         </div>
         <div class="trust" aria-label="Accreditations and ratings">
-          <span class="badge"><span class="dot"></span> BIPP Accredited</span>
-          <span class="badge"><span class="dot"></span> 20+ years teaching</span>
-          <span class="badge"><span class="dot"></span> Reviews 4.9 <span class="stars">★★★★☆</span></span>
+          <a class="badge" href="https://www.alanranger.com/about-me" target="_blank" rel="noopener"><span class="dot"></span> BIPP Accredited</a>
+          <a class="badge" href="https://www.alanranger.com/about-me" target="_blank" rel="noopener"><span class="dot"></span> 20+ years teaching</a>
+          <a class="badge" href="https://www.alanranger.com/testimonials" target="_blank" rel="noopener"><span class="dot"></span> Reviews 4.9 <span class="stars">★★★★☆</span></a>
         </div>
         <!-- ======== /EDITABLE HERO SECTION ======== -->
 
