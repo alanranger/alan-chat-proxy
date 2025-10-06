@@ -1067,7 +1067,7 @@ export default async function handler(req, res) {
     
       if (articles?.length) {
         // Try to provide a direct answer based on the question type and content chunks
-        const directAnswer = generateDirectAnswer(normalized, articles, contentChunks);
+        const directAnswer = generateDirectAnswer(query, articles, contentChunks);
         
         if (directAnswer) {
           lines.push(directAnswer);
