@@ -125,7 +125,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.2.34-events-links</span></div>
+  <div class="badge-wrap"><span class="version">v1.2.35-email-eml</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -836,7 +836,7 @@ function emailTranscript(){
   const htmlBody = parts.join('');
   const subject = 'Alan Ranger Assistant chat transcript';
 
-  // Copy HTML to clipboard (preserves formatting when pasting)
+  // Copy HTML to clipboard (rich paste where supported)
   (async () => {
     try{
       if (navigator.clipboard && window.ClipboardItem) {
@@ -851,13 +851,24 @@ function emailTranscript(){
     }catch{}
   })();
 
-  // Downloadable full HTML as fallback
+  // Provide downloadable full HTML
   const fullDoc = `<!doctype html><html><head><meta charset="utf-8"><title>${subject}</title></head><body>${htmlBody}</body></html>`;
-  const blob = new Blob([fullDoc], {type:'text/html'});
-  const url = URL.createObjectURL(blob);
-  addBubble(`<div class="answer"><p>Email draft opened. The transcript was copied to your clipboard (rich HTML). If your mail client strips formatting, <a href="${url}" download="alan-ranger-assistant-transcript.html">download the full HTML transcript</a> and attach it.</p></div>`);
+  const blobHtml = new Blob([fullDoc], {type:'text/html'});
+  const urlHtml = URL.createObjectURL(blobHtml);
 
-  // Open a minimal mailto (subject only) to guarantee a draft opens; user can paste (Ctrl+V)
+  // Also generate .eml draft for Outlook/desktop clients (pre-populated body)
+  const emlHeaders = [
+    'Content-Type: text/html; charset=UTF-8',
+    'MIME-Version: 1.0',
+    `Subject: ${subject}`
+  ].join('\r\n');
+  const emlContent = emlHeaders + '\r\n\r\n' + fullDoc;
+  const emlBlob = new Blob([emlContent], { type: 'message/rfc822' });
+  const emlUrl = URL.createObjectURL(emlBlob);
+
+  addBubble(`<div class="answer"><p>Email draft opened. If the body is empty, either paste (Ctrl+V) — already copied — or <a href="${emlUrl}" download="alan-ranger-assistant-draft.eml">download the email draft (.eml)</a> and open it in your mail client. You can also <a href="${urlHtml}" download="alan-ranger-assistant-transcript.html">download the full HTML transcript</a>.</p></div>`);
+
+  // Open a minimal mailto (subject only) to create a draft; user can paste or open the .eml
   const mailto = `mailto:?subject=${encodeURIComponent(subject)}`;
   const a = document.createElement('a'); a.href = mailto; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>{ document.body.removeChild(a); }, 0);
 }
