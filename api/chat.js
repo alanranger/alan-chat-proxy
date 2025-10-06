@@ -303,14 +303,7 @@ function originOf(url) {
   }
 }
 
-// Normalize minor typos/synonyms in user queries for better intent/keywords
-function normalizeQuery(q) {
-  if (!q) return q;
-  let s = String(q);
-  // Common typo: isp -> iso (photography context)
-  s = s.replace(/\bisp\b/gi, "iso");
-  return s;
-}
+// Note: We deliberately do not normalize typos; we ask users to rephrase instead.
 
 /* ----------------------- Intent + keyword extraction --------------------- */
 const EVENT_HINTS = [
@@ -940,18 +933,17 @@ export default async function handler(req, res) {
     }
 
     const { query, topK, previousQuery } = req.body || {};
-    const normalized = normalizeQuery(query);
     const client = supabaseAdmin();
 
     // Build contextual query for keyword extraction (merge with previous query)
-    const contextualQuery = previousQuery ? `${previousQuery} ${normalized}` : normalized;
+    const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
     
-    const intent = detectIntent(normalized || ""); // Use current query only for intent detection
+    const intent = detectIntent(query || ""); // Use current query only for intent detection
     
     // Use contextual query for events (to maintain context), but current query for advice
     const keywords = intent === "events" 
       ? extractKeywords(contextualQuery || "") 
-      : extractKeywords(normalized || "");
+      : extractKeywords(query || "");
 
     if (intent === "events") {
       // Get events from the enhanced view that includes product mappings
@@ -1020,7 +1012,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-          version: "v1.2.25-fix-content-relevance",
+          version: "v1.2.27-no-typo-normalize",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -1111,9 +1103,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
         debug: {
-          version: "v1.2.26-iso-normalize",
-        debug: {
-          version: "v1.2.26-iso-normalize",
+          version: "v1.2.27-no-typo-normalize",
           intent: "advice",
           keywords: keywords,
       counts: {
