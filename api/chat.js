@@ -1201,8 +1201,8 @@ export default async function handler(req, res) {
     // return article answers + upgraded pills
     let articles = await findArticles(client, { keywords, limit: 12 });
     // Ensure concept article is first when asking "what is <term>"
-    const qlc = (query||'').toLowerCase();
-    const mConcept = qlc.match(/^\s*what\s+is\s+(.+?)\s*\??$/);
+    const qlc2 = (query||'').toLowerCase();
+    const mConcept = qlc2.match(/^\s*what\s+is\s+(.+?)\s*\??$/);
     if (mConcept) {
       const term = mConcept[1].trim(); const slug = term.replace(/\s+/g,'-');
       const idx = articles.findIndex(a => (a.page_url||a.source_url||'').toLowerCase().includes(`/what-is-${slug}`));
