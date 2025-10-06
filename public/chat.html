@@ -19,7 +19,7 @@
   --status-red-bg:#3c161b; --status-red-br:#6f2831; --status-red-tx:#ffc3cc;
 }
 *{box-sizing:border-box} html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45;font-size:15px}
 .wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
 .badge-wrap{position:relative;height:0}
 .version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
@@ -44,9 +44,10 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 /* Chat surface */
 .chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px}
 .thread{display:flex;flex-direction:column;gap:12px}
-.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px}
+.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px;font-size:15px}
 .bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
 .answer h1,.answer h2,.answer h3{margin:.2em 0}
+.answer h3{font-size:20px}
 .answer p{margin:.5em 0}
 .answer ul{margin:.4em 0 .6em 1.25em}
 .answer li{margin:.2em 0}
