@@ -1047,20 +1047,40 @@ export default async function handler(req, res) {
 
       const eventList = formatEventsForUi(events);
       
-      // Extract product info from the first event (since the view includes product data)
+      // Pick the most relevant product deterministically across all returned events
+      const kwSet = new Set((keywords||[]).map(k=>String(k||'').toLowerCase()));
+      const scoreProduct = (ev)=>{
+        const pt = String(ev.product_title||'').toLowerCase();
+        const pu = String(ev.product_url||'').toLowerCase();
+        const et = String(ev.event_title||'').toLowerCase();
+        let s = 0;
+        // keyword overlap in product title/url
+        kwSet.forEach(k=>{ if(!k) return; if(pt.includes(k)) s+=5; if(pu.includes(k)) s+=2; });
+        // overlap between event title words and product title words
+        const eWords = et.match(/[a-z]+/g)||[]; const pWords = pt.match(/[a-z]+/g)||[];
+        const eSet = new Set(eWords);
+        for (const w of pWords){ if (w.length>=5 && eSet.has(w)) s+=1; }
+        return s;
+      };
+      const grouped = new Map();
+      for (const ev of (events||[])){
+        const key = ev.product_url||'';
+        const s = scoreProduct(ev) + 1; // +1 for frequency signal
+        const prev = grouped.get(key) || { ev, score:0, count:0 };
+        prev.score += s; prev.count += 1; if (!prev.ev) prev.ev = ev; grouped.set(key, prev);
+      }
+      let best = null; for (const [,v] of grouped){ if (!best || v.score>best.score) best = v; }
       const firstEvent = events?.[0];
-      const product = firstEvent ? {
-        title: firstEvent.product_title,
-        page_url: firstEvent.product_url,
-        price: firstEvent.price_gbp,
-        description: `Workshop in ${firstEvent.event_location}`,
-        raw: {
-          offers: {
-            lowPrice: firstEvent.price_gbp,
-            highPrice: firstEvent.price_gbp
-          }
-        }
-      } : null;
+      let product = null;
+      if (best && best.ev && best.score >= 5) { // require some semantic match
+        product = {
+          title: best.ev.product_title,
+          page_url: best.ev.product_url,
+          price: best.ev.price_gbp,
+          description: `Workshop in ${best.ev.event_location}`,
+          raw: { offers: { lowPrice: best.ev.price_gbp, highPrice: best.ev.price_gbp } }
+        };
+      }
       
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
 
