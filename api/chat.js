@@ -107,19 +107,37 @@ function extractKeywords(q) {
 
 function detectIntent(q) {
   const lc = (q || "").toLowerCase();
+  
+  // ADVICE keywords - these should override event classification
+  const adviceKeywords = [
+    "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
+    "need", "require", "recommend", "advise", "help", "wrong", "problem",
+    "free", "online", "sort of", "what do i", "do i need", "get a"
+  ];
+  
+  // If it contains advice keywords, it's likely advice
+  if (adviceKeywords.some(word => lc.includes(word))) {
+    return "advice";
+  }
+  
   const hasEventWord = EVENT_HINTS.some((w) => lc.includes(w));
   const mentionsWorkshop =
     lc.includes("workshop") || lc.includes("course") || lc.includes("class");
+  
+  // Only classify as events if it has both event words AND workshop mentions
   if (hasEventWord && mentionsWorkshop) return "events";
+  
   // heuristic: if question starts with "when/where" + includes 'workshop' → events
   if (/^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop) return "events";
   
-  // Handle follow-up questions for events (price, location, etc.)
+  // Handle follow-up questions for events (price, location, etc.) - but only if context suggests events
   const followUpQuestions = [
     "how much", "cost", "price", "where", "location", "when", "date",
     "how many", "people", "attend", "fitness", "level", "duration", "long"
   ];
-  if (followUpQuestions.some(word => lc.includes(word))) {
+  
+  // Only classify as events if it's clearly about event details AND mentions workshop/course
+  if (followUpQuestions.some(word => lc.includes(word)) && mentionsWorkshop) {
     return "events";
   }
   
@@ -669,8 +687,8 @@ export default async function handler(req, res) {
           pills,
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
-        debug: {
-          version: "v1.2.1-use-mappings-view",
+    debug: {
+      version: "v1.2.2-improved-intent-detection",
           intent: "events",
           keywords: keywords,
           counts: {
