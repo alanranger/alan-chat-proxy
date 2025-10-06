@@ -7,6 +7,44 @@ export const config = { runtime: "nodejs" };
 import { createClient } from "@supabase/supabase-js";
 
 /* ----------------------- Direct Answer Generation ----------------------- */
+function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
+  const q = (query || "").toLowerCase();
+  const topics = [
+    { key: "payment", hints: ["payment", "pick n mix", "plan", "instalment", "installment"], prefer: ["/photography-payment-plan", "/terms-and-conditions"] },
+    { key: "contact", hints: ["contact", "discovery", "call", "phone", "email"], prefer: ["/contact-us", "/contact-us-alan-ranger-photography"] },
+    { key: "certificate", hints: ["certificate"], prefer: ["/beginners-photography-classes", "/photography-courses"] },
+    { key: "course-topics", hints: ["topics", "5-week", "beginner"], prefer: ["/beginners-photography-classes", "/get-off-auto"] },
+    { key: "standalone", hints: ["standalone", "get off auto"], prefer: ["/get-off-auto", "/beginners-photography-classes"] },
+    { key: "refund", hints: ["refund", "cancel", "cancellation"], prefer: ["/terms-and-conditions"] }
+  ];
+
+  const match = topics.find(t => t.hints.some(h => q.includes(h)));
+  if (!match) return null;
+
+  const prefer = (u) => (match.prefer || []).some(p => (u || "").includes(p));
+
+  // Choose a chunk from preferred URLs first
+  const prioritizedChunk = (contentChunks || []).find(c => prefer(c.url)) || contentChunks.find(c => {
+    const text = (c.chunk_text || c.content || "").toLowerCase();
+    return match.hints.some(h => text.includes(h));
+  });
+
+  const pickUrl = () => {
+    if (prioritizedChunk?.url) return prioritizedChunk.url;
+    const art = (articles || []).find(a => prefer(a.page_url || a.source_url || ""));
+    return art ? (art.page_url || art.source_url) : null;
+  };
+
+  const url = pickUrl();
+  if (!prioritizedChunk && !url) return null;
+
+  const text = (prioritizedChunk?.chunk_text || prioritizedChunk?.content || "");
+  const paras = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 40);
+  const para = paras.find(p => match.hints.some(h => p.toLowerCase().includes(h))) || paras[0];
+  if (!para) return null;
+
+  return `**${para.substring(0, 300).trim()}**\n\n${url ? `*Source: ${url}*\n\n` : ""}`;
+}
 function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
@@ -1124,6 +1162,12 @@ export default async function handler(req, res) {
     let confidence = 0.3; // Base confidence for advice questions
     
       if (articles?.length) {
+        // Service FAQ deterministic lane
+        const serviceAnswer = generateServiceFAQAnswer(query, contentChunks, articles);
+        if (serviceAnswer) {
+          lines.push(serviceAnswer);
+          confidence = 0.8;
+        } else {
         // Try to provide a direct answer based on the question type and content chunks
         const directAnswer = generateDirectAnswer(query, articles, contentChunks);
         
@@ -1135,6 +1179,7 @@ export default async function handler(req, res) {
           lines.push("Here are Alan's guides that match your question:\n");
           confidence = 0.5; // Medium confidence for article lists
         }
+      }
       
       // Add relevant articles
       for (const a of articles.slice(0, 6)) {
