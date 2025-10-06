@@ -125,7 +125,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.2.32-email-clipboard</span></div>
+  <div class="badge-wrap"><span class="version">v1.2.33-email-html-clipboard</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -818,13 +818,12 @@ function emailTranscript(){
         if (href.startsWith('//')) { a.href = 'https:' + href; return; }
         if (href.startsWith('#')) { a.removeAttribute('href'); return; }
         if (href.startsWith('/')) { a.href = SITE_ORIGIN + href; return; }
-        // relative like ./path or path
         a.href = SITE_ORIGIN + (href.startsWith('.')? href.slice(1): ('/'+href));
       }catch{}
     });
     return temp.innerHTML;
   };
-  // Build compact HTML transcript preserving links
+  // Build HTML transcript
   const parts = [];
   parts.push('<h2>Alan Ranger Assistant — transcript</h2>');
   parts.push(`<p><em>${new Date().toLocaleString()}</em></p>`);
@@ -834,17 +833,32 @@ function emailTranscript(){
     parts.push(`<h4 style="margin:8px 0 4px">${role}</h4>`);
     parts.push(`<div>${convertLinks(el.innerHTML)}</div>`);
   }
-  const inlineHtml = parts.join('');
-
+  const htmlBody = parts.join('');
   const subject = 'Alan Ranger Assistant chat transcript';
-  const preface = 'Transcript pasted below. If formatting is lost, attach the HTML file from the link in chat.\n\n';
-  const body = preface + inlineHtml;
-  try { if (navigator.clipboard?.writeText) navigator.clipboard.writeText(body); } catch {}
-  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,1500))}`;
-  const fullDoc = `<!doctype html><html><head><meta charset="utf-8"><title>${subject}</title></head><body>${inlineHtml}</body></html>`;
+
+  // Copy HTML to clipboard (preserves formatting when pasting)
+  (async () => {
+    try{
+      if (navigator.clipboard && window.ClipboardItem) {
+        const data = new ClipboardItem({
+          'text/html': new Blob([htmlBody], { type: 'text/html' }),
+          'text/plain': new Blob([htmlBody.replace(/<[^>]*>/g,' ')], { type: 'text/plain' })
+        });
+        await navigator.clipboard.write([data]);
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(htmlBody);
+      }
+    }catch{}
+  })();
+
+  // Downloadable full HTML as fallback
+  const fullDoc = `<!doctype html><html><head><meta charset="utf-8"><title>${subject}</title></head><body>${htmlBody}</body></html>`;
   const blob = new Blob([fullDoc], {type:'text/html'});
   const url = URL.createObjectURL(blob);
-  addBubble(`<div class="answer"><p>Email draft opened (or will open shortly). Transcript copied to clipboard. If your mail client stripped formatting, <a href="${url}" download="alan-ranger-assistant-transcript.html">download the full HTML transcript</a> and attach it.</p></div>`);
+  addBubble(`<div class="answer"><p>Email draft opened. The transcript was copied to your clipboard (rich HTML). If your mail client strips formatting, <a href="${url}" download="alan-ranger-assistant-transcript.html">download the full HTML transcript</a> and attach it.</p></div>`);
+
+  // Open a minimal mailto (subject only) to guarantee a draft opens; user can paste (Ctrl+V)
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}`;
   const a = document.createElement('a'); a.href = mailto; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>{ document.body.removeChild(a); }, 0);
 }
 function resetChat(){
