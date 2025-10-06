@@ -14,20 +14,41 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   // Try to find relevant content from chunks first
   const relevantChunk = contentChunks.find(chunk => {
     const chunkText = (chunk.chunk_text || chunk.content || "").toLowerCase();
-    return queryWords.some(word => chunkText.includes(word));
+    const chunkTitle = (chunk.title || "").toLowerCase();
+    
+    // Prioritize chunks that contain the full query or key terms
+    const hasFullQuery = chunkText.includes(lc);
+    const hasKeyTerms = queryWords.filter(w => w.length > 3).every(word => 
+      chunkText.includes(word) || chunkTitle.includes(word)
+    );
+    
+    return hasFullQuery || hasKeyTerms;
   });
   
   if (relevantChunk) {
     const chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
-    // Extract a relevant sentence or paragraph
+    
+    // Look for sentences that contain key terms from the query
     const sentences = chunkText.split(/[.!?]+/).filter(s => s.trim().length > 20);
-    const relevantSentence = sentences.find(s => 
-      s.toLowerCase().includes(lc.split(" ")[0]) || 
-      s.toLowerCase().includes(lc.split(" ")[1])
-    );
+    const relevantSentence = sentences.find(s => {
+      const sLower = s.toLowerCase();
+      return queryWords.some(word => sLower.includes(word)) && 
+             sLower.length > 30 && sLower.length < 200; // Good length for a direct answer
+    });
     
     if (relevantSentence) {
       return `**${relevantSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+    }
+    
+    // Fallback: if no good sentence found, try to extract a relevant paragraph
+    const paragraphs = chunkText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
+    const relevantParagraph = paragraphs.find(p => {
+      const pLower = p.toLowerCase();
+      return queryWords.some(word => pLower.includes(word));
+    });
+    
+    if (relevantParagraph && relevantParagraph.length < 300) {
+      return `**${relevantParagraph.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
     }
   }
   
@@ -790,7 +811,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-      version: "v1.2.4-rag-content-chunks",
+      version: "v1.2.5-improved-content-matching",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -881,7 +902,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-        version: "v1.2.4-rag-content-chunks",
+        version: "v1.2.5-improved-content-matching",
         intent: "advice",
         keywords: keywords,
       counts: {
