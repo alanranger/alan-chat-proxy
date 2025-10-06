@@ -1036,9 +1036,15 @@ export default async function handler(req, res) {
     
     const intent = detectIntent(query || ""); // Use current query only for intent detection
     
-    // Use contextual query for events (to maintain context), but current query for advice
-    const keywords = intent === "events" 
-      ? extractKeywords(contextualQuery || "") 
+    // For events, only use previous context for follow-up style questions.
+    const qlc = (query || "").toLowerCase();
+    const isFollowUp = [
+      "how much","cost","price","where","location","when","date",
+      "how many","people","attend","fitness","level","duration","long",
+      "how do i book","book","booking","required","needed","suitable"
+    ].some(w=>qlc.includes(w));
+    const keywords = intent === "events"
+      ? extractKeywords((isFollowUp ? contextualQuery : query) || "")
       : extractKeywords(query || "");
 
     if (intent === "events") {
