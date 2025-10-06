@@ -508,15 +508,40 @@ async function findContentChunks(client, { keywords, limit = 5 }) {
   let q = client
     .from("page_chunks")
     .select("title, chunk_text, url, content")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(limit * 2); // Get more results to filter
 
   const orExpr = anyIlike("chunk_text", keywords) || anyIlike("content", keywords) || null;
   if (orExpr) q = q.or(orExpr);
 
   const { data, error } = await q;
   if (error) return [];
-  return data || [];
+  
+  // Sort by relevance: prioritize chunks that contain the full query or key terms
+  const sortedData = (data || []).sort((a, b) => {
+    const aText = (a.chunk_text || a.content || "").toLowerCase();
+    const bText = (b.chunk_text || b.content || "").toLowerCase();
+    const aTitle = (a.title || "").toLowerCase();
+    const bTitle = (b.title || "").toLowerCase();
+    
+    // Score based on how many keywords are found
+    const aScore = keywords.reduce((score, keyword) => {
+      if (aText.includes(keyword.toLowerCase()) || aTitle.includes(keyword.toLowerCase())) {
+        return score + 1;
+      }
+      return score;
+    }, 0);
+    
+    const bScore = keywords.reduce((score, keyword) => {
+      if (bText.includes(keyword.toLowerCase()) || bTitle.includes(keyword.toLowerCase())) {
+        return score + 1;
+      }
+      return score;
+    }, 0);
+    
+    return bScore - aScore; // Higher score first
+  });
+  
+  return sortedData.slice(0, limit);
 }
 
 async function findLanding(client, { keywords }) {
@@ -976,7 +1001,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-          version: "v1.2.24-fix-iso-extraction",
+          version: "v1.2.25-fix-content-relevance",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -1067,7 +1092,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
         debug: {
-          version: "v1.2.24-fix-iso-extraction",
+          version: "v1.2.25-fix-content-relevance",
           intent: "advice",
           keywords: keywords,
       counts: {
