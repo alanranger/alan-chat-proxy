@@ -7,8 +7,29 @@ export const config = { runtime: "nodejs" };
 import { createClient } from "@supabase/supabase-js";
 
 /* ----------------------- Direct Answer Generation ----------------------- */
-function generateDirectAnswer(query, articles) {
+function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
+  const queryWords = lc.split(" ").filter(w => w.length > 2);
+  
+  // Try to find relevant content from chunks first
+  const relevantChunk = contentChunks.find(chunk => {
+    const chunkText = (chunk.chunk_text || chunk.content || "").toLowerCase();
+    return queryWords.some(word => chunkText.includes(word));
+  });
+  
+  if (relevantChunk) {
+    const chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
+    // Extract a relevant sentence or paragraph
+    const sentences = chunkText.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    const relevantSentence = sentences.find(s => 
+      s.toLowerCase().includes(lc.split(" ")[0]) || 
+      s.toLowerCase().includes(lc.split(" ")[1])
+    );
+    
+    if (relevantSentence) {
+      return `**${relevantSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+    }
+  }
   
   // Tripod recommendations
   if (lc.includes("tripod") && lc.includes("recommend")) {
@@ -295,6 +316,21 @@ async function findArticles(client, { keywords, limit = 12 }) {
 
   const orExpr =
     anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
+  if (orExpr) q = q.or(orExpr);
+
+  const { data, error } = await q;
+  if (error) return [];
+  return data || [];
+}
+
+async function findContentChunks(client, { keywords, limit = 5 }) {
+  let q = client
+    .from("page_chunks")
+    .select("title, chunk_text, url, content")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  const orExpr = anyIlike("chunk_text", keywords) || anyIlike("content", keywords) || null;
   if (orExpr) q = q.or(orExpr);
 
   const { data, error } = await q;
@@ -754,7 +790,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-      version: "v1.2.3-enhanced-advice-responses",
+      version: "v1.2.4-rag-content-chunks",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -778,6 +814,9 @@ export default async function handler(req, res) {
     const articles = await findArticles(client, { keywords, limit: 12 });
     const topArticle = articles?.[0] || null;
     const articleUrl = pickUrl(topArticle) || null;
+    
+    // Try to get content chunks for better RAG responses
+    const contentChunks = await findContentChunks(client, { keywords, limit: 5 });
 
     let pdfUrl = null,
       relatedUrl = null,
@@ -804,18 +843,18 @@ export default async function handler(req, res) {
     const lines = [];
     let confidence = 0.3; // Base confidence for advice questions
     
-    if (articles?.length) {
-      // Try to provide a direct answer based on the question type
-      const directAnswer = generateDirectAnswer(query, articles);
-      
-      if (directAnswer) {
-        lines.push(directAnswer);
-        confidence = 0.7; // Higher confidence for direct answers
-      } else {
-        // Fall back to article list with better formatting
-        lines.push("Here are Alan's guides that match your question:\n");
-        confidence = 0.5; // Medium confidence for article lists
-      }
+      if (articles?.length) {
+        // Try to provide a direct answer based on the question type and content chunks
+        const directAnswer = generateDirectAnswer(query, articles, contentChunks);
+        
+        if (directAnswer) {
+          lines.push(directAnswer);
+          confidence = 0.8; // Higher confidence for RAG-based direct answers
+        } else {
+          // Fall back to article list with better formatting
+          lines.push("Here are Alan's guides that match your question:\n");
+          confidence = 0.5; // Medium confidence for article lists
+        }
       
       // Add relevant articles
       for (const a of articles.slice(0, 6)) {
@@ -841,6 +880,17 @@ export default async function handler(req, res) {
         pills,
       },
       confidence: confidence,
+      debug: {
+        version: "v1.2.4-rag-content-chunks",
+        intent: "advice",
+        keywords: keywords,
+      counts: {
+          events: 0,
+          products: 0,
+          articles: articles?.length || 0,
+          contentChunks: contentChunks?.length || 0,
+        },
+      },
       meta: {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
