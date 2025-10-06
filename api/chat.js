@@ -6,6 +6,72 @@ export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
 
+/* ----------------------- Direct Answer Generation ----------------------- */
+function generateDirectAnswer(query, articles) {
+  const lc = (query || "").toLowerCase();
+  
+  // Tripod recommendations
+  if (lc.includes("tripod") && lc.includes("recommend")) {
+    const tripodArticles = articles.filter(a => 
+      a.title?.toLowerCase().includes("tripod") || 
+      a.raw?.name?.toLowerCase().includes("tripod")
+    );
+    
+    if (tripodArticles.length > 0) {
+      const topTripod = tripodArticles[0];
+      const title = topTripod.title || topTripod.raw?.name || "tripod guide";
+      return `Based on Alan's experience, I'd recommend checking out his **${title}**. He has detailed reviews and recommendations for different types of photography and budgets.\n\n`;
+    }
+  }
+  
+  // Camera recommendations
+  if (lc.includes("camera") && (lc.includes("need") || lc.includes("recommend"))) {
+    return `For photography courses, Alan recommends bringing any camera you have - even a smartphone can work for learning the fundamentals! The key is understanding composition, lighting, and technique rather than having expensive gear.\n\n`;
+  }
+  
+  // Certificate questions
+  if (lc.includes("certificate")) {
+    return `Alan's photography courses focus on practical learning and skill development. While formal certificates aren't typically provided, you'll gain valuable hands-on experience and knowledge that's much more valuable than a piece of paper.\n\n`;
+  }
+  
+  // Equipment questions
+  if (lc.includes("equipment") || lc.includes("gear") || lc.includes("laptop")) {
+    return `For most of Alan's courses, you don't need expensive equipment. A basic camera (even a smartphone) and enthusiasm to learn are the most important things. Alan will guide you on what works best for your specific needs.\n\n`;
+  }
+  
+  // Technical questions (JPEG vs RAW, exposure triangle, etc.)
+  if (lc.includes("jpeg") && lc.includes("raw")) {
+    return `**JPEG vs RAW**: JPEG files are smaller and ready to use, while RAW files give you more editing flexibility but require post-processing. For beginners, JPEG is fine to start with, but RAW becomes valuable as you develop your editing skills.\n\n`;
+  }
+  
+  if (lc.includes("exposure triangle")) {
+    return `**The Exposure Triangle** consists of three key settings:\n- **Aperture** (f-stop): Controls depth of field and light\n- **Shutter Speed**: Controls motion blur and light\n- **ISO**: Controls sensor sensitivity and light\n\nBalancing these three creates proper exposure.\n\n`;
+  }
+  
+  // Composition questions
+  if (lc.includes("composition") || lc.includes("storytelling")) {
+    return `Great composition is about leading the viewer's eye through your image. Key techniques include the rule of thirds, leading lines, framing, and creating visual balance. The goal is to tell a story or convey emotion through your arrangement of elements.\n\n`;
+  }
+  
+  // Filter questions
+  if (lc.includes("filter") || lc.includes("nd filter")) {
+    return `**ND (Neutral Density) filters** reduce light entering your camera, allowing for longer exposures. They're great for blurring water, creating motion effects, or shooting in bright conditions. **Graduated filters** help balance exposure between bright skies and darker foregrounds.\n\n`;
+  }
+  
+  // Depth of field questions
+  if (lc.includes("depth of field")) {
+    return `**Depth of field** is the area of your image that appears sharp. You control it with aperture: wider apertures (lower f-numbers) create shallow depth of field, while smaller apertures (higher f-numbers) keep more of the image in focus.\n\n`;
+  }
+  
+  // Sharpness questions
+  if (lc.includes("sharp") || lc.includes("blurry")) {
+    return `Sharp images come from proper technique: use a fast enough shutter speed to avoid camera shake, focus accurately, and use appropriate aperture settings. Tripods help with stability, and good lighting makes focusing easier.\n\n`;
+  }
+  
+  // Return null if no specific answer can be generated
+  return null;
+}
+
 /* ---------------------------- Supabase client ---------------------------- */
 function supabaseAdmin() {
   const url = process.env.SUPABASE_URL;
@@ -688,7 +754,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-      version: "v1.2.2-improved-intent-detection",
+      version: "v1.2.3-enhanced-advice-responses",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -734,17 +800,32 @@ export default async function handler(req, res) {
 
     const citations = uniq([articleUrl]).filter(Boolean);
 
-    // If we have multiple articles, render a neat bullet list (title — Link)
+    // Generate contextual advice response
     const lines = [];
+    let confidence = 0.3; // Base confidence for advice questions
+    
     if (articles?.length) {
-      lines.push("Here are Alan’s guides that match your question:\n");
-      for (const a of articles.slice(0, 8)) {
+      // Try to provide a direct answer based on the question type
+      const directAnswer = generateDirectAnswer(query, articles);
+      
+      if (directAnswer) {
+        lines.push(directAnswer);
+        confidence = 0.7; // Higher confidence for direct answers
+      } else {
+        // Fall back to article list with better formatting
+        lines.push("Here are Alan's guides that match your question:\n");
+        confidence = 0.5; // Medium confidence for article lists
+      }
+      
+      // Add relevant articles
+      for (const a of articles.slice(0, 6)) {
         const t = a.title || a.raw?.name || "Read more";
         const u = pickUrl(a);
         lines.push(`- ${t} — ${u ? `[Link](${u})` : ""}`.trim());
       }
     } else {
-      lines.push("I couldn’t find a specific guide for that yet.");
+      lines.push("I couldn't find a specific guide for that yet.");
+      confidence = 0.1; // Low confidence when no articles found
     }
 
     res.status(200).json({
@@ -759,6 +840,7 @@ export default async function handler(req, res) {
         articles: articles || [],
         pills,
       },
+      confidence: confidence,
       meta: {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
