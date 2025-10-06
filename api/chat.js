@@ -1043,8 +1043,13 @@ export default async function handler(req, res) {
       "how many","people","attend","fitness","level","duration","long",
       "how do i book","book","booking","required","needed","suitable"
     ].some(w=>qlc.includes(w));
+    // If the new query names a concrete topic (e.g., lightroom, ISO, bluebell), don't merge context
+    const GENERIC_EVENT_TERMS = new Set(["workshop","workshops","course","courses","class","classes","event","events"]);
+    const hasSignificantTopic = TOPIC_KEYWORDS
+      .filter(t => !GENERIC_EVENT_TERMS.has(t))
+      .some(t => qlc.includes(t));
     const keywords = intent === "events"
-      ? extractKeywords((isFollowUp ? contextualQuery : query) || "")
+      ? extractKeywords((isFollowUp && !hasSignificantTopic ? contextualQuery : query) || "")
       : extractKeywords(query || "");
 
     if (intent === "events") {
