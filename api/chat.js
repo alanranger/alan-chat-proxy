@@ -139,11 +139,10 @@ function anyIlike(col, words) {
 }
 
 async function findEvents(client, { keywords, limit = 50 }) {
-  // Use page_entities table directly like the original working version
+  // Use v_event_product_final_enhanced view that contains correct event-product mappings
   let q = client
-    .from("page_entities")
-    .select("id, kind, title, page_url, source_url, last_seen, location, date_start, date_end, price, description, raw")
-    .eq("kind", "event")
+    .from("v_event_product_final_enhanced")
+    .select("event_url, event_title, product_url, product_title, date_start, date_end, event_location, price_gbp, participants, fitness_level, availability, map_method, confidence")
     .gte("date_start", new Date().toISOString())
     .order("date_start", { ascending: true })
     .limit(limit);
@@ -157,19 +156,17 @@ async function findEvents(client, { keywords, limit = 50 }) {
     
     // First, try to match specific keywords (like "bluebell")
     for (const keyword of specificKeywords) {
-      orParts.push(`title.ilike.%${keyword}%`);
-      orParts.push(`page_url.ilike.%${keyword}%`);
-      orParts.push(`location.ilike.%${keyword}%`);
-      orParts.push(`description.ilike.%${keyword}%`);
+      orParts.push(`event_title.ilike.%${keyword}%`);
+      orParts.push(`product_title.ilike.%${keyword}%`);
+      orParts.push(`event_location.ilike.%${keyword}%`);
     }
     
     // If no specific keywords, fall back to generic ones
     if (orParts.length === 0) {
       for (const keyword of genericKeywords) {
-        orParts.push(`title.ilike.%${keyword}%`);
-        orParts.push(`page_url.ilike.%${keyword}%`);
-        orParts.push(`location.ilike.%${keyword}%`);
-        orParts.push(`description.ilike.%${keyword}%`);
+        orParts.push(`event_title.ilike.%${keyword}%`);
+        orParts.push(`product_title.ilike.%${keyword}%`);
+        orParts.push(`event_location.ilike.%${keyword}%`);
       }
     }
     
@@ -180,7 +177,7 @@ async function findEvents(client, { keywords, limit = 50 }) {
 
   const { data, error } = await q;
   if (error) {
-    console.error('❌ page_entities query error:', error);
+    console.error('❌ v_event_product_final_enhanced query error:', error);
     return [];
   }
   
@@ -442,10 +439,10 @@ function formatEventsForUi(events) {
   return (events || [])
     .map((e) => ({
       ...e,
-      title: e.title,
+      title: e.event_title,
       when: fmtDateLondon(e.date_start),
-      location: e.location,
-      href: pickUrl(e),
+      location: e.event_location,
+      href: e.event_url,
     }))
     .slice(0, 12);
 }
@@ -525,13 +522,13 @@ async function extractRelevantInfo(query, dataContext) {
       
       // Find event that best matches the original query terms
       const matchingEvent = events.find(e => {
-        const eventText = `${e.title || ''} ${e.location || ''}`.toLowerCase();
+        const eventText = `${e.event_title || ''} ${e.event_location || ''}`.toLowerCase();
         return keyTerms.some(term => eventText.includes(term));
       });
       
       if (matchingEvent) {
         event = matchingEvent;
-        console.log(`🔍 RAG: Found contextually relevant event: ${event.title}`);
+        console.log(`🔍 RAG: Found contextually relevant event: ${event.event_title}`);
       }
     }
     
@@ -545,17 +542,17 @@ async function extractRelevantInfo(query, dataContext) {
     
     // Check for location information
     if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
-      if (event.location && event.location.trim().length > 0) {
-        console.log(`✅ RAG: Found location="${event.location}" in structured event data`);
-        return event.location;
+      if (event.event_location && event.event_location.trim().length > 0) {
+        console.log(`✅ RAG: Found location="${event.event_location}" in structured event data`);
+        return event.event_location;
       }
     }
     
     // Check for price information
     if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
-      if (event.price && event.price > 0) {
-        console.log(`✅ RAG: Found price="${event.price}" in structured event data`);
-        return `£${event.price}`;
+      if (event.price_gbp && event.price_gbp > 0) {
+        console.log(`✅ RAG: Found price="${event.price_gbp}" in structured event data`);
+        return `£${event.price_gbp}`;
       }
     }
     
@@ -607,12 +604,26 @@ export default async function handler(req, res) {
     const keywords = extractKeywords(contextualQuery || "");
 
     if (intent === "events") {
-      const { events, product, landing } = await resolveEventsAndProduct(
-        client,
-        { keywords }
-      );
+      // Get events from the enhanced view that includes product mappings
+      const events = await findEvents(client, { keywords, limit: 80 });
 
       const eventList = formatEventsForUi(events);
+      
+      // Extract product info from the first event (since the view includes product data)
+      const firstEvent = events?.[0];
+      const product = firstEvent ? {
+        title: firstEvent.product_title,
+        page_url: firstEvent.product_url,
+        price: firstEvent.price_gbp,
+        description: `Workshop in ${firstEvent.event_location}`,
+        raw: {
+          offers: {
+            lowPrice: firstEvent.price_gbp,
+            highPrice: firstEvent.price_gbp
+          }
+        }
+      } : null;
+      
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
 
       // Use extractRelevantInfo to get specific answers for follow-up questions
@@ -624,12 +635,10 @@ export default async function handler(req, res) {
         ? specificAnswer 
         : productPanel;
 
-      const firstEventUrl = pickUrl(events?.[0]) || null;
-      const productUrl = pickUrl(product) || firstEventUrl || null;
+      const firstEventUrl = firstEvent?.event_url || null;
+      const productUrl = firstEvent?.product_url || firstEventUrl || null;
       // prefer an explicit landing; else derive from first event origin
-      const landingUrl =
-        pickUrl(landing) ||
-        (firstEventUrl ? originOf(firstEventUrl) + "/photography-workshops" : null);
+      const landingUrl = firstEventUrl ? originOf(firstEventUrl) + "/photography-workshops" : null;
 
       const photosUrl =
         (firstEventUrl && originOf(firstEventUrl) + "/gallery-image-portfolios") ||
@@ -643,9 +652,9 @@ export default async function handler(req, res) {
       });
 
       const citations = uniq([
-        pickUrl(product),
-        pickUrl(landing),
-        ...((events || []).map(pickUrl)),
+        productUrl,
+        landingUrl,
+        ...((events || []).map(e => e.event_url)),
       ]).filter(Boolean);
 
       res.status(200).json({
@@ -661,7 +670,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.1.9-fix-keyword-priority",
+          version: "v1.2.0-use-enhanced-view",
           intent: "events",
           keywords: keywords,
           counts: {
