@@ -238,14 +238,13 @@
       showStatus('aggregation-status', 'Running analytics aggregation...', 'info');
       
       try {
-        const response = await fetch('/api/admin', {
+        const response = await fetch('/api/admin?action=aggregate_analytics', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + getAdminToken()
           },
           body: JSON.stringify({
-            action: 'aggregate_analytics',
             date: date || null
           })
         });
