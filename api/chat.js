@@ -336,7 +336,8 @@ function detectIntent(q) {
   const adviceKeywords = [
     "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
     "need", "require", "recommend", "advise", "help", "wrong", "problem",
-    "free", "online", "sort of", "what do i", "do i need", "get a"
+    "free", "online", "sort of", "what do i", "do i need", "get a",
+    "what is", "what are", "how does", "explain", "define", "meaning"
   ];
   
   // If it contains advice keywords, it's likely advice
@@ -868,8 +869,8 @@ export default async function handler(req, res) {
     // Build contextual query for keyword extraction (merge with previous query)
     const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
     
-    const intent = detectIntent(contextualQuery || "");
-    const keywords = extractKeywords(contextualQuery || "");
+    const intent = detectIntent(query || ""); // Use current query only for intent detection
+    const keywords = extractKeywords(contextualQuery || ""); // Use contextual query for keyword extraction
 
     if (intent === "events") {
       // Get events from the enhanced view that includes product mappings
@@ -938,7 +939,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-          version: "v1.2.21-fix-description-column",
+          version: "v1.2.22-fix-followup-context",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -1029,10 +1030,10 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
         debug: {
-          version: "v1.2.21-fix-description-column",
+          version: "v1.2.22-fix-followup-context",
           intent: "advice",
           keywords: keywords,
-          counts: {
+      counts: {
             events: 0,
             products: 0,
             articles: articles?.length || 0,

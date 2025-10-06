@@ -119,7 +119,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.2.20-A-grade</span></div>
+  <div class="badge-wrap"><span class="version">v1.2.22-fixed</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -443,10 +443,11 @@ function eventHeaderLabel(structured){
   return 'Upcoming Events';
 }
 function renderEventsBlock(structured, query){
-  // Skip events block for simple follow-up questions
+  // Skip events block for simple follow-up questions (but not for legitimate event queries)
   const isSimpleFollowUp = query && (
     /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
-    !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost')
+    !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost') &&
+    !query.includes('workshop') && !query.includes('course') && !query.includes('event') && !query.includes('class')
   );
   if (isSimpleFollowUp) return '';
   
@@ -472,10 +473,11 @@ function pickArticles(structured, query, topic){
   return ranked;
 }
 function renderArticlesBlock(structured, query){
-  // Skip articles block for simple follow-up questions
+  // Skip articles block for simple follow-up questions (but not for legitimate event queries)
   const isSimpleFollowUp = query && (
     /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
-    !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost')
+    !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost') &&
+    !query.includes('workshop') && !query.includes('course') && !query.includes('event') && !query.includes('class')
   );
   if (isSimpleFollowUp) return '';
   
