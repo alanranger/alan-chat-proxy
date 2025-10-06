@@ -1,7 +1,7 @@
 // /api/chat.js
-// EMERGENCY FIX: 2025-10-05 01:05 - VERCEL NOT DEPLOYING - Use search_events RPC
-// This fixes bluebell workshop detection by using proper RPC functions
-// If you see this comment, the deployment worked!
+// FIX: 2025-10-06 03:30 - Fixed extractRelevantInfo to return comprehensive answers
+// This fixes the regression where answers were too short (just "£175" instead of full context)
+// Now returns detailed, helpful responses with proper formatting
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
@@ -749,7 +749,7 @@ async function extractRelevantInfo(query, dataContext) {
     if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
       if (event.participants && String(event.participants).trim().length > 0) {
         console.log(`✅ RAG: Found participants="${event.participants}" in structured event data`);
-        return event.participants;
+        return `**${event.participants}** people can attend this workshop. This ensures everyone gets personalized attention and guidance from Alan.`;
       }
     }
     
@@ -757,7 +757,7 @@ async function extractRelevantInfo(query, dataContext) {
     if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
       if (event.event_location && event.event_location.trim().length > 0) {
         console.log(`✅ RAG: Found location="${event.event_location}" in structured event data`);
-        return event.event_location;
+        return `The workshop is held at **${event.event_location}**. Full location details and meeting instructions will be provided when you book.`;
       }
     }
     
@@ -765,7 +765,7 @@ async function extractRelevantInfo(query, dataContext) {
     if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
       if (event.price_gbp && event.price_gbp > 0) {
         console.log(`✅ RAG: Found price="${event.price_gbp}" in structured event data`);
-        return `£${event.price_gbp}`;
+        return `The workshop costs **£${event.price_gbp}**. This includes all tuition, guidance, and any materials provided during the session.`;
       }
     }
     
@@ -779,7 +779,7 @@ async function extractRelevantInfo(query, dataContext) {
           year: 'numeric' 
         });
         console.log(`✅ RAG: Found date="${formattedDate}" in structured event data`);
-        return formattedDate;
+        return `The next workshop is scheduled for **${formattedDate}**. This gives you plenty of time to prepare and book your place.`;
       }
     }
     
@@ -787,7 +787,7 @@ async function extractRelevantInfo(query, dataContext) {
     if (lowerQuery.includes('fitness') || lowerQuery.includes('level') || lowerQuery.includes('experience')) {
       if (event.fitness_level && event.fitness_level.trim().length > 0) {
         console.log(`✅ RAG: Found fitness level="${event.fitness_level}" in structured event data`);
-        return event.fitness_level;
+        return `The fitness level required is **${event.fitness_level}**. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`;
       }
     }
   }
@@ -883,7 +883,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-      version: "v1.2.9-about-alan-ethical-patterns",
+          version: "v1.2.10-comprehensive-answers",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -974,7 +974,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-        version: "v1.2.9-about-alan-ethical-patterns",
+          version: "v1.2.10-comprehensive-answers",
         intent: "advice",
         keywords: keywords,
       counts: {
