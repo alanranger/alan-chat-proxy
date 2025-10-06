@@ -125,7 +125,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.2.31-email-html</span></div>
+  <div class="badge-wrap"><span class="version">v1.2.32-email-clipboard</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -815,13 +815,15 @@ function emailTranscript(){
   // Try to embed HTML as best-effort: many desktop clients (Outlook) ignore HTML in mailto body.
   // We include a minimal plain-text preface followed by the HTML snippet. Links remain visible/clickable in many clients.
   const subject = 'Alan Ranger Assistant chat transcript';
-  const preface = 'Transcript (HTML below may appear as plain text in some clients).\n\n';
-  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(preface + inlineHtml)}`;
+  const preface = 'Transcript pasted below. If formatting is lost, attach the HTML file from the link in chat.\n\n';
+  const body = preface + inlineHtml;
+  try { if (navigator.clipboard?.writeText) navigator.clipboard.writeText(body); } catch {}
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.slice(0,1800))}`;
   // Also provide a downloadable full HTML for guaranteed fidelity
   const fullDoc = `<!doctype html><html><head><meta charset="utf-8"><title>${subject}</title></head><body>${inlineHtml}</body></html>`;
   const blob = new Blob([fullDoc], {type:'text/html'});
   const url = URL.createObjectURL(blob);
-  addBubble(`<div class="answer"><p>If your mail client stripped formatting, <a href="${url}" download="alan-ranger-assistant-transcript.html">download the full HTML transcript</a> and attach it.</p></div>`);
+  addBubble(`<div class="answer"><p>Email draft opened. Transcript copied to clipboard. If your mail client stripped formatting, <a href="${url}" download="alan-ranger-assistant-transcript.html">download the full HTML transcript</a> and attach it.</p></div>`);
   location.href = mailto;
 }
 function resetChat(){
