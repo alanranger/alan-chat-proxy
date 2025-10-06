@@ -32,13 +32,13 @@
     function gtag(){ dataLayer.push(arguments); }
     window.gtag = gtag;
     gtag('js', new Date());
-    gtag('config', cfg.ga4, { send_page_view: false });
+    gtag('config', cfg.ga4, { send_page_view: false, debug_mode: true });
     const s = doc.createElement('script'); s.async = true; s.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(cfg.ga4)}`;
     doc.head.appendChild(s);
   }
 
   function track(eventName, params){
-    try{ if (window.gtag) window.gtag('event', eventName, params||{}); else if (window.dataLayer) window.dataLayer.push({ event: eventName, ...params }); }catch{}
+    try{ if (window.gtag) window.gtag('event', eventName, { debug_mode: true, ...(params||{}) }); else if (window.dataLayer) window.dataLayer.push({ event: eventName, debug_mode: true, ...params }); }catch{}
   }
 
   function injectStyles(){
