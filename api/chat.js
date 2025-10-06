@@ -1107,8 +1107,8 @@ export default async function handler(req, res) {
           pills,
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
-    debug: {
-          version: "v1.2.27-no-typo-normalize",
+        debug: {
+          version: "v1.2.28-service-faq",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -1134,7 +1134,7 @@ export default async function handler(req, res) {
     const articleUrl = pickUrl(topArticle) || null;
     
     // Try to get content chunks for better RAG responses
-    const contentChunks = await findContentChunks(client, { keywords, limit: 5 });
+    const contentChunks = await findContentChunks(client, { keywords, limit: 15 });
 
     let pdfUrl = null,
       relatedUrl = null,
@@ -1206,7 +1206,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
         debug: {
-          version: "v1.2.27-no-typo-normalize",
+          version: "v1.2.28-service-faq",
           intent: "advice",
           keywords: keywords,
       counts: {
