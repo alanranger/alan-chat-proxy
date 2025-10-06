@@ -1112,7 +1112,16 @@ export default async function handler(req, res) {
       let best = null; for (const [,v] of grouped){ if (!best || v.score>best.score) best = v; }
       const firstEvent = (filteredEvents.length ? filteredEvents : events)?.[0];
       let product = null;
-      if (best && best.ev && best.score >= 5) { // require some semantic match
+      // PRIMARY: trust Supabase view mapping from the first (most relevant) event
+      if (firstEvent && firstEvent.product_url) {
+        product = {
+          title: firstEvent.product_title,
+          page_url: firstEvent.product_url,
+          price: firstEvent.price_gbp,
+          description: `Workshop in ${firstEvent.event_location}`,
+          raw: { offers: { lowPrice: firstEvent.price_gbp, highPrice: firstEvent.price_gbp } }
+        };
+      } else if (best && best.ev && best.score >= 5) { // fallback: semantic best
         product = {
           title: best.ev.product_title,
           page_url: best.ev.product_url,
@@ -1125,7 +1134,7 @@ export default async function handler(req, res) {
       // If product doesn't reflect the core keyword (e.g., bluebell), try a direct product lookup
       const needsKeywordProduct = (!product || !String(product.title||'').toLowerCase().includes('bluebell')) && kwSet.has('bluebell');
       if (needsKeywordProduct) {
-        const bluebellProducts = await findProducts(client, { keywords: ['bluebell','woodland'], limit: 3 });
+        const bluebellProducts = await findProducts(client, { keywords: ['bluebell','woodlands','woodland'], limit: 5 });
         const bp = bluebellProducts?.find(p => String(p.title||'').toLowerCase().includes('bluebell')) || bluebellProducts?.[0] || null;
         if (bp) {
           product = {
@@ -1144,8 +1153,8 @@ export default async function handler(req, res) {
           if (!u) return null; const s=String(u);
           if (/^https?:\/\//i.test(s)) return s;
           if (s.startsWith('/')) return `https://www.alanranger.com${s}`;
-          // Most product slugs live under /photographic-workshops-near-me/
-          return `https://www.alanranger.com/photographic-workshops-near-me/${s.replace(/^\/+/, '')}`;
+          // Known product base path
+          return `https://www.alanranger.com/photo-workshops-uk/${s.replace(/^\/+/, '')}`;
         };
         product.page_url = normalize(product.page_url || product.source_url || product.url);
       }
