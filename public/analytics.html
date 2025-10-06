@@ -170,6 +170,19 @@
     .insight-priority-medium { border-left-color: var(--warning); }
     .insight-priority-low { border-left-color: var(--success); }
 
+    .help-box { 
+      background: rgba(59, 130, 246, 0.1); 
+      border: 1px solid #3b82f6; 
+      border-radius: 8px; 
+      padding: 16px; 
+      margin: 20px 0;
+      font-size: 0.9rem;
+    }
+    .help-box h3 { color: #3b82f6; margin-bottom: 12px; }
+    .help-box ul { margin: 8px 0; padding-left: 20px; }
+    .help-box li { margin: 6px 0; }
+    .help-box p { margin: 8px 0 0 0; }
+
     @media (max-width: 768px) {
       .container { padding: 10px; }
       .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
@@ -183,6 +196,17 @@
     <div class="header">
       <h1>Chat Analytics Dashboard</h1>
       <p>Monitor chat bot performance, user interactions, and insights</p>
+      <div class="help-box">
+        <h3>📊 How to Use This Dashboard</h3>
+        <ul>
+          <li><strong>Overview Tab:</strong> See total sessions, questions, confidence scores, and response times</li>
+          <li><strong>Questions Tab:</strong> View most frequently asked questions and their confidence levels</li>
+          <li><strong>Sessions Tab:</strong> Browse individual chat sessions - search and click "View" for details</li>
+          <li><strong>Performance Tab:</strong> Monitor confidence and response time trends over time</li>
+          <li><strong>Insights Tab:</strong> Get automated recommendations for content improvements</li>
+        </ul>
+        <p><strong>💡 Tip:</strong> Data updates automatically. Use the Admin Panel to run manual analytics aggregation if needed.</p>
+      </div>
     </div>
 
     <!-- Overview Tab -->
