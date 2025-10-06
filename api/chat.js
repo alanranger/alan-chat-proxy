@@ -288,10 +288,6 @@ function extractKeywords(q) {
 function detectIntent(q) {
   const lc = (q || "").toLowerCase();
   
-  // Debug logging
-  console.log(`🔍 detectIntent: Query="${q}"`);
-  console.log(`🔍 detectIntent: Lowercase="${lc}"`);
-  
   // ADVICE keywords - these should override event classification
   const adviceKeywords = [
     "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
@@ -301,15 +297,12 @@ function detectIntent(q) {
   
   // If it contains advice keywords, it's likely advice
   if (adviceKeywords.some(word => lc.includes(word))) {
-    console.log(`🔍 detectIntent: Matched advice keyword, returning "advice"`);
     return "advice";
   }
   
   const hasEventWord = EVENT_HINTS.some((w) => lc.includes(w));
   const mentionsWorkshop =
     lc.includes("workshop") || lc.includes("course") || lc.includes("class");
-  
-  console.log(`🔍 detectIntent: hasEventWord=${hasEventWord}, mentionsWorkshop=${mentionsWorkshop}`);
   
   // Only classify as events if it has both event words AND workshop mentions
   if (hasEventWord && mentionsWorkshop) return "events";
@@ -327,12 +320,9 @@ function detectIntent(q) {
   // Check if this is a follow-up question about event details
   const isFollowUpQuestion = followUpQuestions.some(word => lc.includes(word));
   
-  console.log(`🔍 detectIntent: isFollowUpQuestion=${isFollowUpQuestion}, followUpQuestions=[${followUpQuestions.join(', ')}]`);
-  
   // PRIORITY: If it's a follow-up question AND the context mentions workshops/courses, it's events
   // This takes precedence over general advice words like "what"
   if (isFollowUpQuestion && mentionsWorkshop) {
-    console.log(`🔍 detectIntent: Follow-up question with workshop context, returning "events"`);
     return "events";
   }
   
@@ -945,7 +935,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-          version: "v1.2.14-debug-intent",
+          version: "v1.2.15-intent-fix",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -1036,7 +1026,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-          version: "v1.2.14-debug-intent",
+          version: "v1.2.15-intent-fix",
         intent: "advice",
         keywords: keywords,
       counts: {
