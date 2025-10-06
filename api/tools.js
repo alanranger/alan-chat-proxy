@@ -147,6 +147,98 @@ export default async function handler(req, res) {
       }
     }
 
+    // --- cron_status: surface basic status and related counters (no direct pg_cron access via REST) ---
+    if (req.method === 'GET' && action === 'cron_status') {
+      try {
+        // Reuse existing counters for a useful dashboard snapshot
+        let counts;
+        try {
+          const resp = await fetch(`${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : ''}/api/tools?action=counts`, {
+            headers: { Authorization: `Bearer ${need('INGEST_TOKEN')}` }
+          });
+          const j = await resp.json();
+          if (resp.ok && j && j.ok) counts = { total: j.total, mapped: j.mapped };
+        } catch {}
+        if (!counts) {
+          // Fallback to view counts directly
+          const { count: total } = await supa
+            .from('v_event_product_final_enhanced')
+            .select('*', { head: true, count: 'exact' });
+          const { count: mapped } = await supa
+            .from('v_event_product_final_enhanced')
+            .select('*', { head: true, count: 'exact' })
+            .not('product_url', 'is', null);
+          counts = { total: total || 0, mapped: mapped || 0 };
+        }
+
+        // Parity snapshot
+        let parity = null;
+        try {
+          const { data: entW } = await supa
+            .from('page_entities').select('url').ilike('url', '*photographic-workshops-near-me*').limit(2000);
+          const { data: chkW } = await supa
+            .from('page_chunks').select('url').ilike('url', '*photographic-workshops-near-me*').limit(2000);
+          const { data: entC } = await supa
+            .from('page_entities').select('url').ilike('url', '*beginners-photography-lessons*').limit(2000);
+          const { data: chkC } = await supa
+            .from('page_chunks').select('url').ilike('url', '*beginners-photography-lessons*').limit(2000);
+          parity = {
+            entitiesWorkshops: new Set((entW||[]).map(r=>r.url)).size,
+            chunksWorkshops: new Set((chkW||[]).map(r=>r.url)).size,
+            entitiesCourses: new Set((entC||[]).map(r=>r.url)).size,
+            chunksCourses: new Set((chkC||[]).map(r=>r.url)).size
+          };
+        } catch {}
+
+        // We cannot read cron.job via REST; expose configured schedule note
+        const schedule = '23:00 daily';
+        const tz = 'Europe/London (assumed)';
+        return sendJSON(res, 200, { ok: true, schedule, tz, counts, parity });
+      } catch (e) {
+        return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message||e) });
+      }
+    }
+
+    // --- finalize: run mapping refresh and warm common views/tables ---
+    if (req.method === 'POST' && action === 'finalize') {
+      try {
+        const token = need('INGEST_TOKEN');
+        const base = process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : '';
+        let before = null, after = null;
+        try {
+          const r1 = await fetch(`${base}/api/refresh-mappings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ preview: true })
+          });
+          before = await r1.json();
+        } catch {}
+        try {
+          const r2 = await fetch(`${base}/api/refresh-mappings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({})
+          });
+          after = await r2.json();
+        } catch {}
+
+        // Warm critical views/tables with cheap head selects
+        const warm = {};
+        try {
+          const { count } = await supa.from('v_event_product_mappings').select('*', { head: true, count: 'estimated' }).limit(1);
+          warm.v_event_product_mappings = count ?? null;
+        } catch {}
+        try {
+          const { count } = await supa.from('page_chunks').select('id', { head: true, count: 'estimated' }).limit(1);
+          warm.page_chunks = count ?? null;
+        } catch {}
+
+        return sendJSON(res, 200, { ok: true, before, after, warm });
+      } catch (e) {
+        return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message||e) });
+      }
+    }
+
     // --- search: embed query, similarity search via RPC ---
     if (req.method === 'POST' && action === 'search') {
       const { query, topK } = req.body || {};
