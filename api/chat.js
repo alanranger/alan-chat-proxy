@@ -353,7 +353,7 @@ function originOf(url) {
     const u = new URL(url);
     return `${u.protocol}//${u.host}`;
   } catch {
-  return null;
+    return null;
   }
 }
 
@@ -1080,6 +1080,22 @@ export default async function handler(req, res) {
           description: `Workshop in ${best.ev.event_location}`,
           raw: { offers: { lowPrice: best.ev.price_gbp, highPrice: best.ev.price_gbp } }
         };
+      }
+
+      // If product doesn't reflect the core keyword (e.g., bluebell), try a direct product lookup
+      const needsKeywordProduct = (!product || !String(product.title||'').toLowerCase().includes('bluebell')) && kwSet.has('bluebell');
+      if (needsKeywordProduct) {
+        const bluebellProducts = await findProducts(client, { keywords: ['bluebell','woodland'], limit: 3 });
+        const bp = bluebellProducts?.find(p => String(p.title||'').toLowerCase().includes('bluebell')) || bluebellProducts?.[0] || null;
+        if (bp) {
+          product = {
+            title: bp.title,
+            page_url: bp.page_url || bp.source_url || bp.url,
+            price: bp.price_gbp || bp.price || null,
+            description: bp.description || 'Bluebell workshop',
+            raw: bp.raw || {}
+          };
+        }
       }
       
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
