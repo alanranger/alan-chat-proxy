@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Alan Ranger Assistant</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a1f2e;
+      --text: #e2e8f0;
+      --text-muted: #9ca3af;
+      --brand: #f59e0b;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --border: #374151;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+    }
+
+    .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+    .header { margin-bottom: 30px; text-align: center; }
+    .header h1 { font-size: 2rem; margin-bottom: 8px; }
+    .header p { color: var(--text-muted); }
+
+    .card { 
+      background: var(--panel); 
+      border-radius: 12px; 
+      padding: 24px; 
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .btn { 
+      display: inline-block; 
+      padding: 12px 24px; 
+      border-radius: 8px; 
+      border: none; 
+      cursor: pointer; 
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      margin: 8px;
+    }
+    .btn-primary { background: var(--brand); color: #000; }
+    .btn-primary:hover { background: #d97706; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-secondary:hover { background: #4b5563; }
+    .btn-success { background: var(--success); color: #000; }
+    .btn-success:hover { background: #059669; }
+
+    .status { 
+      padding: 12px; 
+      border-radius: 8px; 
+      margin: 12px 0;
+      font-weight: 500;
+    }
+    .status.success { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+    .status.error { background: rgba(239, 68, 68, 0.2); color: var(--error); border: 1px solid var(--error); }
+    .status.info { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid #3b82f6; }
+
+    .loading { 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      padding: 20px; 
+      color: var(--text-muted);
+    }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+    .form-group input { 
+      width: 100%; 
+      padding: 8px 12px; 
+      background: var(--bg); 
+      border: 1px solid var(--border); 
+      border-radius: 6px; 
+      color: var(--text);
+    }
+
+    .links { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+      gap: 16px; 
+      margin-top: 20px;
+    }
+
+    .link-card { 
+      background: var(--panel); 
+      border: 1px solid var(--border); 
+      border-radius: 8px; 
+      padding: 16px; 
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .link-card:hover { border-color: var(--brand); }
+    .link-card h3 { margin-bottom: 8px; color: var(--brand); }
+    .link-card p { color: var(--text-muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Admin Panel</h1>
+      <p>Manage chat analytics and system operations</p>
+    </div>
+
+    <div class="card">
+      <h2>Analytics Management</h2>
+      <p>Run analytics aggregation and manage data processing.</p>
+      
+      <div class="form-group">
+        <label for="aggregation-date">Date for aggregation (leave empty for today):</label>
+        <input type="date" id="aggregation-date" />
+      </div>
+      
+      <button class="btn btn-primary" onclick="runAggregation()">Run Analytics Aggregation</button>
+      <button class="btn btn-secondary" onclick="checkCronStatus()">Check Cron Status</button>
+      
+      <div id="aggregation-status"></div>
+    </div>
+
+    <div class="card">
+      <h2>Quick Actions</h2>
+      <p>Common administrative tasks and system checks.</p>
+      
+      <button class="btn btn-secondary" onclick="runQA()">Run QA Check</button>
+      <button class="btn btn-secondary" onclick="refreshMappings()">Refresh Mappings</button>
+      <button class="btn btn-secondary" onclick="finalizeData()">Finalize Data</button>
+      
+      <div id="action-status"></div>
+    </div>
+
+    <div class="card">
+      <h2>Dashboard & Analytics</h2>
+      <p>Access analytics dashboard and monitoring tools.</p>
+      
+      <div class="links">
+        <div class="link-card">
+          <h3>Analytics Dashboard</h3>
+          <p>View chat analytics, sessions, and performance metrics</p>
+          <a href="analytics.html" class="btn btn-success">Open Dashboard</a>
+        </div>
+        
+        <div class="link-card">
+          <h3>Bulk Upload</h3>
+          <p>Upload CSV data and manage content ingestion</p>
+          <a href="bulk-simple.html" class="btn btn-success">Open Bulk Upload</a>
+        </div>
+        
+        <div class="link-card">
+          <h3>Test Bench</h3>
+          <p>Test chat responses and validate system performance</p>
+          <a href="testbench-split.html" class="btn btn-success">Open Test Bench</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let adminToken = null;
+
+    // Get admin token
+    function getAdminToken() {
+      if (!adminToken) {
+        adminToken = prompt('Enter admin token:');
+      }
+      return adminToken;
+    }
+
+    // Show status message
+    function showStatus(elementId, message, type = 'info') {
+      const element = document.getElementById(elementId);
+      element.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+
+    // Run analytics aggregation
+    async function runAggregation() {
+      const date = document.getElementById('aggregation-date').value;
+      showStatus('aggregation-status', 'Running analytics aggregation...', 'info');
+      
+      try {
+        const response = await fetch('/api/tools', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getAdminToken()
+          },
+          body: JSON.stringify({
+            action: 'aggregate_analytics',
+            date: date || null
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.ok) {
+          showStatus('aggregation-status', 
+            `✅ Analytics aggregation completed successfully for ${data.date}`, 'success');
+        } else {
+          showStatus('aggregation-status', 
+            `❌ Error: ${data.error} - ${data.detail}`, 'error');
+        }
+      } catch (error) {
+        showStatus('aggregation-status', 
+          `❌ Network error: ${error.message}`, 'error');
+      }
+    }
+
+    // Check cron status
+    async function checkCronStatus() {
+      showStatus('aggregation-status', 'Checking cron status...', 'info');
+      
+      try {
+        const response = await fetch('/api/tools?action=cron_status', {
+          headers: {
+            'Authorization': 'Bearer ' + getAdminToken()
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.ok) {
+          const cronJobs = data.cron_jobs || [];
+          const status = cronJobs.length > 0 ? 
+            `✅ Found ${cronJobs.length} active cron jobs` : 
+            '⚠️ No active cron jobs found';
+          showStatus('aggregation-status', status, cronJobs.length > 0 ? 'success' : 'error');
+        } else {
+          showStatus('aggregation-status', 
+            `❌ Error: ${data.error} - ${data.detail}`, 'error');
+        }
+      } catch (error) {
+        showStatus('aggregation-status', 
+          `❌ Network error: ${error.message}`, 'error');
+      }
+    }
+
+    // Run QA check
+    async function runQA() {
+      showStatus('action-status', 'Running QA check...', 'info');
+      
+      try {
+        const response = await fetch('/api/admin?action=qa', {
+          headers: {
+            'Authorization': 'Bearer ' + getAdminToken()
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.ok) {
+          const checks = Object.keys(data.checks || {}).length;
+          showStatus('action-status', 
+            `✅ QA check completed - ${checks} checks performed`, 'success');
+        } else {
+          showStatus('action-status', 
+            `❌ Error: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        showStatus('action-status', 
+          `❌ Network error: ${error.message}`, 'error');
+      }
+    }
+
+    // Refresh mappings
+    async function refreshMappings() {
+      showStatus('action-status', 'Refreshing mappings...', 'info');
+      
+      try {
+        const response = await fetch('/api/admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getAdminToken()
+          },
+          body: JSON.stringify({
+            action: 'refresh'
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.ok) {
+          showStatus('action-status', 
+            `✅ Mappings refreshed - ${data.mappingsCreated} new mappings created`, 'success');
+        } else {
+          showStatus('action-status', 
+            `❌ Error: ${data.error} - ${data.detail}`, 'error');
+        }
+      } catch (error) {
+        showStatus('action-status', 
+          `❌ Network error: ${error.message}`, 'error');
+      }
+    }
+
+    // Finalize data
+    async function finalizeData() {
+      showStatus('action-status', 'Finalizing data...', 'info');
+      
+      try {
+        const response = await fetch('/api/tools', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getAdminToken()
+          },
+          body: JSON.stringify({
+            action: 'finalize'
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.ok) {
+          showStatus('action-status', 
+            `✅ Data finalized successfully`, 'success');
+        } else {
+          showStatus('action-status', 
+            `❌ Error: ${data.error} - ${data.detail}`, 'error');
+        }
+      } catch (error) {
+        showStatus('action-status', 
+          `❌ Network error: ${error.message}`, 'error');
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set default date to today
+      document.getElementById('aggregation-date').value = new Date().toISOString().split('T')[0];
+    });
+  </script>
+</body>
+</html>

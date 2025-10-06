@@ -333,8 +333,57 @@ export default async function handler(req, res) {
       }
     }
 
+    // --- aggregate_analytics: Run analytics aggregation for a specific date ---
+    if (req.method === 'POST' && action === 'aggregate_analytics') {
+      try {
+        const { date } = req.body || {};
+        const targetDate = date || new Date().toISOString().split('T')[0];
+
+        console.log('Running analytics aggregation for date:', targetDate);
+        
+        const { data: aggData, error: aggError } = await supabase
+          .rpc('aggregate_daily_analytics', { target_date: targetDate });
+
+        if (aggError) {
+          console.error('Error running analytics aggregation:', aggError);
+          return sendJSON(res, 500, { 
+            error: 'Failed to aggregate analytics', 
+            detail: aggError.message 
+          });
+        }
+
+        console.log('Analytics aggregation completed successfully');
+
+        const { data: updateData, error: updateError } = await supabase
+          .rpc('update_question_frequency');
+
+        if (updateError) {
+          console.error('Error updating question frequency:', updateError);
+          return sendJSON(res, 500, { 
+            error: 'Failed to update question frequency', 
+            detail: updateError.message 
+          });
+        }
+
+        return sendJSON(res, 200, {
+          ok: true,
+          message: 'Analytics aggregation completed successfully',
+          date: targetDate,
+          aggregationResult: aggData,
+          frequencyUpdateResult: updateData
+        });
+
+      } catch (error) {
+        console.error('Unexpected error in analytics aggregation:', error);
+        return sendJSON(res, 500, { 
+          error: 'Internal server error', 
+          detail: error.message 
+        });
+      }
+    }
+
     // Unknown/unsupported
-    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify (GET) or action=search (POST)' });
+    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify (GET) or action=search (POST) or action=aggregate_analytics (POST)' });
   } catch (e) {
     return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message || e) });
   }

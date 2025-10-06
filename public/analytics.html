@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Analytics Dashboard - Alan Ranger Assistant</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a1f2e;
+      --text: #e2e8f0;
+      --text-muted: #9ca3af;
+      --brand: #f59e0b;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --border: #374151;
+      --ring: rgba(245, 158, 11, 0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+    }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    .header { margin-bottom: 30px; }
+    .header h1 { font-size: 2rem; margin-bottom: 8px; }
+    .header p { color: var(--text-muted); }
+
+    .grid { display: grid; gap: 20px; margin-bottom: 30px; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+    .card { 
+      background: var(--panel); 
+      border-radius: 12px; 
+      padding: 24px; 
+      border: 1px solid var(--border);
+    }
+
+    .metric { text-align: center; }
+    .metric-value { font-size: 2.5rem; font-weight: 700; margin-bottom: 8px; }
+    .metric-label { color: var(--text-muted); font-size: 0.9rem; }
+    .metric-change { font-size: 0.8rem; margin-top: 4px; }
+    .metric-change.positive { color: var(--success); }
+    .metric-change.negative { color: var(--error); }
+
+    .chart-container { height: 300px; margin-top: 20px; }
+    .chart-placeholder { 
+      height: 100%; 
+      background: var(--bg); 
+      border-radius: 8px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      color: var(--text-muted);
+      border: 1px dashed var(--border);
+    }
+
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { 
+      padding: 12px; 
+      text-align: left; 
+      border-bottom: 1px solid var(--border); 
+    }
+    .table th { 
+      background: var(--bg); 
+      font-weight: 600; 
+      color: var(--text-muted);
+      position: sticky;
+      top: 0;
+    }
+    .table tbody tr:hover { background: rgba(255, 255, 255, 0.05); }
+
+    .badge { 
+      display: inline-block; 
+      padding: 4px 8px; 
+      border-radius: 4px; 
+      font-size: 0.8rem; 
+      font-weight: 500;
+    }
+    .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .badge-error { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+    .badge-info { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+
+    .btn { 
+      display: inline-block; 
+      padding: 8px 16px; 
+      border-radius: 6px; 
+      border: none; 
+      cursor: pointer; 
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--brand); color: #000; }
+    .btn-primary:hover { background: #d97706; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-secondary:hover { background: #4b5563; }
+
+    .loading { 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      padding: 40px; 
+      color: var(--text-muted);
+    }
+
+    .error { 
+      background: rgba(239, 68, 68, 0.1); 
+      border: 1px solid var(--error); 
+      color: var(--error); 
+      padding: 16px; 
+      border-radius: 8px; 
+      margin: 20px 0;
+    }
+
+    .tabs { 
+      display: flex; 
+      border-bottom: 1px solid var(--border); 
+      margin-bottom: 20px;
+    }
+    .tab { 
+      padding: 12px 20px; 
+      cursor: pointer; 
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab.active { 
+      border-bottom-color: var(--brand); 
+      color: var(--brand);
+    }
+    .tab:hover { background: rgba(255, 255, 255, 0.05); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .search-box { 
+      width: 100%; 
+      padding: 8px 12px; 
+      background: var(--bg); 
+      border: 1px solid var(--border); 
+      border-radius: 6px; 
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .pagination { 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      gap: 10px; 
+      margin-top: 20px;
+    }
+
+    .insight-card { 
+      background: var(--panel); 
+      border-radius: 8px; 
+      padding: 16px; 
+      margin-bottom: 12px;
+      border-left: 4px solid var(--brand);
+    }
+    .insight-priority-high { border-left-color: var(--error); }
+    .insight-priority-medium { border-left-color: var(--warning); }
+    .insight-priority-low { border-left-color: var(--success); }
+
+    @media (max-width: 768px) {
+      .container { padding: 10px; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .table { font-size: 0.9rem; }
+      .metric-value { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Chat Analytics Dashboard</h1>
+      <p>Monitor chat bot performance, user interactions, and insights</p>
+    </div>
+
+    <!-- Overview Tab -->
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('overview')">Overview</div>
+      <div class="tab" onclick="showTab('questions')">Questions</div>
+      <div class="tab" onclick="showTab('sessions')">Sessions</div>
+      <div class="tab" onclick="showTab('performance')">Performance</div>
+      <div class="tab" onclick="showTab('insights')">Insights</div>
+    </div>
+
+    <!-- Overview Tab Content -->
+    <div id="overview" class="tab-content active">
+      <div class="grid grid-4">
+        <div class="card metric">
+          <div class="metric-value" id="total-sessions">-</div>
+          <div class="metric-label">Total Sessions</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-value" id="total-questions">-</div>
+          <div class="metric-label">Total Questions</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-value" id="avg-confidence">-</div>
+          <div class="metric-label">Avg Confidence</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-value" id="avg-response-time">-</div>
+          <div class="metric-label">Avg Response Time</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Recent Sessions</h3>
+          <div class="chart-container">
+            <div class="chart-placeholder" id="recent-sessions">Loading recent sessions...</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Daily Activity</h3>
+          <div class="chart-container">
+            <div class="chart-placeholder" id="daily-activity">Loading daily activity...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Questions Tab Content -->
+    <div id="questions" class="tab-content">
+      <div class="card">
+        <h3>Top Questions</h3>
+        <div class="loading" id="questions-loading">Loading questions...</div>
+        <div id="questions-content" style="display: none;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Question</th>
+                <th>Frequency</th>
+                <th>Avg Confidence</th>
+                <th>Last Seen</th>
+              </tr>
+            </thead>
+            <tbody id="questions-table">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sessions Tab Content -->
+    <div id="sessions" class="tab-content">
+      <div class="card">
+        <h3>Chat Sessions</h3>
+        <input type="text" class="search-box" placeholder="Search sessions..." id="session-search">
+        <div class="loading" id="sessions-loading">Loading sessions...</div>
+        <div id="sessions-content" style="display: none;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Session ID</th>
+                <th>Started</th>
+                <th>Duration</th>
+                <th>Questions</th>
+                <th>Device</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="sessions-table">
+            </tbody>
+          </table>
+          <div class="pagination" id="sessions-pagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Tab Content -->
+    <div id="performance" class="tab-content">
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Confidence Trends</h3>
+          <div class="chart-container">
+            <div class="chart-placeholder" id="confidence-chart">Loading confidence data...</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Response Time Trends</h3>
+          <div class="chart-container">
+            <div class="chart-placeholder" id="response-time-chart">Loading response time data...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Insights Tab Content -->
+    <div id="insights" class="tab-content">
+      <div class="card">
+        <h3>Recommendations & Insights</h3>
+        <div class="loading" id="insights-loading">Loading insights...</div>
+        <div id="insights-content" style="display: none;">
+          <div id="insights-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api/analytics';
+    let currentPage = 1;
+    let currentSearch = '';
+
+    // Tab switching
+    function showTab(tabName) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      event.target.classList.add('active');
+      document.getElementById(tabName).classList.add('active');
+      
+      // Load tab data
+      switch(tabName) {
+        case 'overview': loadOverview(); break;
+        case 'questions': loadQuestions(); break;
+        case 'sessions': loadSessions(); break;
+        case 'performance': loadPerformance(); break;
+        case 'insights': loadInsights(); break;
+      }
+    }
+
+    // API calls
+    async function apiCall(action, params = {}) {
+      const url = new URL(API_BASE, window.location.origin);
+      url.searchParams.set('action', action);
+      Object.keys(params).forEach(key => url.searchParams.set(key, params[key]));
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': 'Bearer ' + prompt('Enter admin token:')
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status}`);
+      }
+      
+      return response.json();
+    }
+
+    // Load overview data
+    async function loadOverview() {
+      try {
+        const data = await apiCall('overview', { days: 7 });
+        const { totals, dailyData } = data.overview;
+        
+        document.getElementById('total-sessions').textContent = totals.sessions.toLocaleString();
+        document.getElementById('total-questions').textContent = totals.questions.toLocaleString();
+        document.getElementById('avg-confidence').textContent = (totals.avgConfidence * 100).toFixed(1) + '%';
+        document.getElementById('avg-response-time').textContent = Math.round(totals.avgResponseTime) + 'ms';
+        
+        // Simple chart placeholders
+        document.getElementById('recent-sessions').innerHTML = 
+          `<div>Recent Sessions: ${data.overview.recentSessions.length}</div>`;
+        document.getElementById('daily-activity').innerHTML = 
+          `<div>Daily Data Points: ${dailyData.length}</div>`;
+          
+      } catch (error) {
+        showError('Failed to load overview data: ' + error.message);
+      }
+    }
+
+    // Load questions data
+    async function loadQuestions() {
+      try {
+        document.getElementById('questions-loading').style.display = 'block';
+        document.getElementById('questions-content').style.display = 'none';
+        
+        const data = await apiCall('questions');
+        const { topQuestions } = data.questions;
+        
+        const tbody = document.getElementById('questions-table');
+        tbody.innerHTML = '';
+        
+        topQuestions.forEach(q => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${q.question_text.substring(0, 100)}${q.question_text.length > 100 ? '...' : ''}</td>
+            <td><span class="badge badge-info">${q.frequency}</span></td>
+            <td><span class="badge ${q.avg_confidence >= 0.8 ? 'badge-success' : q.avg_confidence >= 0.5 ? 'badge-warning' : 'badge-error'}">${(q.avg_confidence * 100).toFixed(1)}%</span></td>
+            <td>${new Date(q.last_seen).toLocaleDateString()}</td>
+          `;
+          tbody.appendChild(row);
+        });
+        
+        document.getElementById('questions-loading').style.display = 'none';
+        document.getElementById('questions-content').style.display = 'block';
+        
+      } catch (error) {
+        showError('Failed to load questions data: ' + error.message);
+      }
+    }
+
+    // Load sessions data
+    async function loadSessions(page = 1, search = '') {
+      try {
+        document.getElementById('sessions-loading').style.display = 'block';
+        document.getElementById('sessions-content').style.display = 'none';
+        
+        const data = await apiCall('sessions', { page, limit: 20, search });
+        const { data: sessions, pagination } = data.sessions;
+        
+        const tbody = document.getElementById('sessions-table');
+        tbody.innerHTML = '';
+        
+        sessions.forEach(session => {
+          const row = document.createElement('tr');
+          const duration = session.ended_at ? 
+            Math.round((new Date(session.ended_at) - new Date(session.started_at)) / 1000 / 60) + 'm' : 
+            'Active';
+          
+          row.innerHTML = `
+            <td>${session.session_id.substring(0, 20)}...</td>
+            <td>${new Date(session.started_at).toLocaleString()}</td>
+            <td>${duration}</td>
+            <td>${session.total_questions || 0}</td>
+            <td><span class="badge badge-info">${session.device_type || 'unknown'}</span></td>
+            <td><button class="btn btn-secondary" onclick="viewSession('${session.session_id}')">View</button></td>
+          `;
+          tbody.appendChild(row);
+        });
+        
+        // Update pagination
+        updatePagination(pagination);
+        
+        document.getElementById('sessions-loading').style.display = 'none';
+        document.getElementById('sessions-content').style.display = 'block';
+        
+      } catch (error) {
+        showError('Failed to load sessions data: ' + error.message);
+      }
+    }
+
+    // Load performance data
+    async function loadPerformance() {
+      try {
+        const data = await apiCall('performance', { days: 7 });
+        const { data: performanceData } = data.performance;
+        
+        document.getElementById('confidence-chart').innerHTML = 
+          `<div>Confidence Data Points: ${performanceData.length}</div>`;
+        document.getElementById('response-time-chart').innerHTML = 
+          `<div>Response Time Data Points: ${performanceData.length}</div>`;
+          
+      } catch (error) {
+        showError('Failed to load performance data: ' + error.message);
+      }
+    }
+
+    // Load insights data
+    async function loadInsights() {
+      try {
+        document.getElementById('insights-loading').style.display = 'block';
+        document.getElementById('insights-content').style.display = 'none';
+        
+        const data = await apiCall('insights');
+        const { recommendations } = data.insights;
+        
+        const insightsList = document.getElementById('insights-list');
+        insightsList.innerHTML = '';
+        
+        recommendations.forEach(rec => {
+          const card = document.createElement('div');
+          card.className = `insight-card insight-priority-${rec.priority}`;
+          card.innerHTML = `
+            <h4>${rec.type.replace('_', ' ').toUpperCase()}</h4>
+            <p>${rec.message}</p>
+            ${rec.frequency ? `<small>Frequency: ${rec.frequency} | Avg Confidence: ${(rec.avgConfidence * 100).toFixed(1)}%</small>` : ''}
+          `;
+          insightsList.appendChild(card);
+        });
+        
+        document.getElementById('insights-loading').style.display = 'none';
+        document.getElementById('insights-content').style.display = 'block';
+        
+      } catch (error) {
+        showError('Failed to load insights data: ' + error.message);
+      }
+    }
+
+    // View session details
+    async function viewSession(sessionId) {
+      try {
+        const data = await apiCall('session_detail', { sessionId });
+        const { session, interactions, events } = data.session;
+        
+        alert(`Session Details:\n\nSession: ${session.session_id}\nStarted: ${new Date(session.started_at).toLocaleString()}\nQuestions: ${interactions.length}\nEvents: ${events.length}`);
+        
+      } catch (error) {
+        showError('Failed to load session details: ' + error.message);
+      }
+    }
+
+    // Update pagination
+    function updatePagination(pagination) {
+      const paginationEl = document.getElementById('sessions-pagination');
+      paginationEl.innerHTML = '';
+      
+      if (pagination.pages > 1) {
+        for (let i = 1; i <= Math.min(pagination.pages, 10); i++) {
+          const btn = document.createElement('button');
+          btn.className = `btn ${i === pagination.page ? 'btn-primary' : 'btn-secondary'}`;
+          btn.textContent = i;
+          btn.onclick = () => {
+            currentPage = i;
+            loadSessions(i, currentSearch);
+          };
+          paginationEl.appendChild(btn);
+        }
+      }
+    }
+
+    // Search functionality
+    document.getElementById('session-search').addEventListener('input', (e) => {
+      currentSearch = e.target.value;
+      currentPage = 1;
+      loadSessions(1, currentSearch);
+    });
+
+    // Error display
+    function showError(message) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error';
+      errorDiv.textContent = message;
+      document.querySelector('.container').insertBefore(errorDiv, document.querySelector('.tabs'));
+      
+      setTimeout(() => errorDiv.remove(), 5000);
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadOverview();
+    });
+  </script>
+</body>
+</html>
