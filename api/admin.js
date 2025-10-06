@@ -175,9 +175,7 @@ export default async function handler(req, res) {
     }
     try {
       const { data: cronJobs, error: cronError } = await supabase
-        .from('cron.job')
-        .select('*')
-        .eq('active', true);
+        .rpc('get_cron_jobs');
 
       if (cronError) {
         console.error('Error getting cron jobs:', cronError);
