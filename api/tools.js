@@ -178,7 +178,7 @@ export default async function handler(req, res) {
 
             async function fetchRows(selectStr){
             const { data, error } = await supa
-              .from('v_event_product_final_enhanced')
+              .from('v_event_product_mappings')
                 .select(selectStr)
                 .order('event_url', { ascending: true })
                 .limit(5000);
