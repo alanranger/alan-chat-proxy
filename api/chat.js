@@ -354,11 +354,11 @@ function detectIntent(q) {
   // heuristic: if question starts with "when/where" + includes 'workshop' → events
   if (/^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop) return "events";
   
-  // Handle follow-up questions for events (price, location, etc.) - SIMPLIFIED LOGIC
+  // Handle follow-up questions for events (price, location, etc.) - ENHANCED LOGIC
   const followUpQuestions = [
     "how much", "cost", "price", "where", "location", "when", "date",
     "how many", "people", "attend", "fitness", "level", "duration", "long",
-    "how do i book", "book", "booking"
+    "how do i book", "book", "booking", "required", "needed", "suitable"
   ];
   
   // Check if this is a follow-up question about event details
@@ -1064,7 +1064,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
         debug: {
-          version: "v1.2.19-debug-chunks",
+          version: "v1.2.20-fix-intent-detection",
           intent: "advice",
           keywords: keywords,
           counts: {
