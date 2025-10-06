@@ -52,8 +52,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .pill:focus{outline:0;box-shadow:0 0 0 3px var(--ring)}
 
 /* Trust strip */
-.trust{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:6px}
-.trust .badge{background:#0f1b31;border:1px solid #15223a;color:#cfe3ff;border-radius:9999px;padding:6px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.trust{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;margin-top:6px}
+.trust .badge{background:#0f1b31;border:1px solid #15223a;color:#cfe3ff;border-radius:9999px;padding:5px 8px;font-size:11px;display:inline-flex;align-items:center;gap:4px}
 .trust a.badge{ text-decoration:none; color:inherit; cursor:default }
 .trust .badge .dot{width:6px;height:6px;border-radius:999px;background:var(--brand)}
 .trust .stars{color:#f5c518}
@@ -147,8 +147,8 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
   .tools button{padding:8px 12px;font-size:14px;min-height:44px} /* Better touch targets */
   .actions{gap:8px;margin-top:10px}
   .actions .pill{padding:10px 14px;font-size:14px;min-height:44px}
-  .trust{gap:8px;margin-top:8px}
-  .trust .badge{padding:8px 12px;font-size:13px}
+  .trust{gap:4px;margin-top:8px}
+  .trust .badge{padding:4px 6px;font-size:10px}
   .footer-status{gap:8px;margin-top:10px}
   .badge{padding:8px 12px;font-size:13px;min-height:40px}
   .sub{font-size:14px;line-height:1.6}
@@ -165,7 +165,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
   .send{padding:0 14px;font-size:13px}
   .tools button{padding:6px 10px;font-size:13px;min-height:40px}
   .actions .pill{padding:8px 12px;font-size:13px;min-height:40px}
-  .trust .badge{padding:6px 10px;font-size:12px}
+  .trust .badge{padding:3px 5px;font-size:9px}
   .badge{padding:6px 10px;font-size:12px;min-height:36px}
   .sub{font-size:13px}
   .sub-wrap{max-width:95%}
@@ -207,7 +207,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.2.36-responsive</span></div>
+  <div class="badge-wrap"><span class="version">v1.2.37-concise</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -220,21 +220,19 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
           <h2 class="title">Alan Ranger Assistant</h2>
         </div>
 
+        <div class="trust" aria-label="Accreditations and ratings">
+          <a class="badge" href="https://www.alanranger.com/about-alan-ranger" target="_blank" rel="noopener"><span class="dot"></span> BIPP Accredited</a>
+          <a class="badge" href="https://www.alanranger.com/about-alan-ranger" target="_blank" rel="noopener"><span class="dot"></span> 20+ years teaching</a>
+          <a class="badge" href="https://www.alanranger.com/testimonials-customer-reviews/" target="_blank" rel="noopener"><span class="dot"></span> Reviews 4.9 <span class="stars">★★★★☆</span></a>
+        </div>
         <div class="sub-wrap">
           <p class="sub">
-            I'm Alan's AI assistant, trained on comprehensive content from this website to help with workshops, tuition, and
-            photography questions. I can provide detailed answers on technical topics, equipment recommendations, and course information.
-            If I can't help with something specific, please contact Alan directly:
+            Alan's AI assistant. Ask about workshops, tuition, or photography. Can't help? Contact Alan directly:
             <span class="pill-inline">
               <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Contact form</a>
               <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
             </span>
           </p>
-        </div>
-        <div class="trust" aria-label="Accreditations and ratings">
-          <a class="badge" href="https://www.alanranger.com/about-alan-ranger" target="_blank" rel="noopener"><span class="dot"></span> BIPP Accredited</a>
-          <a class="badge" href="https://www.alanranger.com/about-alan-ranger" target="_blank" rel="noopener"><span class="dot"></span> 20+ years teaching</a>
-          <a class="badge" href="https://www.alanranger.com/testimonials-customer-reviews/" target="_blank" rel="noopener"><span class="dot"></span> Reviews 4.9 <span class="stars">★★★★☆</span></a>
         </div>
         <!-- ======== /EDITABLE HERO SECTION ======== -->
 
