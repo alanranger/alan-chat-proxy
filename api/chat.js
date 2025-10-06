@@ -55,7 +55,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
       const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const re = new RegExp(`\\b${esc}\\b`, "i");
       return re.test(text || "");
-    } catch {
+  } catch {
       return (text || "").toLowerCase().includes((term || "").toLowerCase());
     }
   };
@@ -1150,7 +1150,14 @@ export default async function handler(req, res) {
         : productPanel;
 
       const firstEventUrl = firstEvent?.event_url || null;
-      const productUrl = firstEvent?.product_url || firstEventUrl || null;
+      // Prefer selected product URL; fallback to event's mapped product; ensure absolute URL for relative slugs
+      const pickAbsolute = (u)=>{
+        if (!u) return null; const s = String(u);
+        if (/^https?:\/\//i.test(s)) return s;
+        if (s.startsWith('/')) return `https://www.alanranger.com${s}`;
+        return `https://www.alanranger.com/${s}`;
+      };
+      const productUrl = pickAbsolute(product?.page_url || product?.source_url || product?.url) || firstEvent?.product_url || firstEventUrl || null;
       // prefer an explicit landing; else derive from first event origin
       const landingUrl = firstEventUrl ? originOf(firstEventUrl) + "/photography-workshops" : null;
 
