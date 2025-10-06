@@ -1055,10 +1055,19 @@ export default async function handler(req, res) {
     if (intent === "events") {
       // Get events from the enhanced view that includes product mappings
       const events = await findEvents(client, { keywords, limit: 80 });
+      // If the new query names a significant topic (e.g., lightroom), prefer events matching that topic
+      const GENERIC_EVENT_TERMS = new Set(["workshop","workshops","course","courses","class","classes","event","events","next","when","your"]);
+      const significant = (keywords || []).find(k => k && !GENERIC_EVENT_TERMS.has(String(k).toLowerCase()) && String(k).length >= 4);
+      const matchEvent = (e, term)=>{
+        const t = term.toLowerCase();
+        const hay = `${e.event_title||''} ${e.product_title||''} ${e.event_location||''}`.toLowerCase();
+        return hay.includes(t);
+      };
+      const filteredEvents = significant ? events.filter(e => matchEvent(e, significant)) : events;
 
-      const eventList = formatEventsForUi(events);
+      const eventList = formatEventsForUi(filteredEvents.length ? filteredEvents : events);
       
-      // Pick the most relevant product deterministically across all returned events
+      // Pick the most relevant product deterministically across filtered events
       const kwSet = new Set((keywords||[]).map(k=>String(k||'').toLowerCase()));
       const scoreProduct = (ev)=>{
         const pt = String(ev.product_title||'').toLowerCase();
@@ -1074,14 +1083,14 @@ export default async function handler(req, res) {
         return s;
       };
       const grouped = new Map();
-      for (const ev of (events||[])){
+      for (const ev of (filteredEvents.length ? filteredEvents : events)){
         const key = ev.product_url||'';
         const s = scoreProduct(ev) + 1; // +1 for frequency signal
         const prev = grouped.get(key) || { ev, score:0, count:0 };
         prev.score += s; prev.count += 1; if (!prev.ev) prev.ev = ev; grouped.set(key, prev);
       }
       let best = null; for (const [,v] of grouped){ if (!best || v.score>best.score) best = v; }
-      const firstEvent = events?.[0];
+      const firstEvent = (filteredEvents.length ? filteredEvents : events)?.[0];
       let product = null;
       if (best && best.ev && best.score >= 5) { // require some semantic match
         product = {
