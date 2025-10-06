@@ -62,18 +62,15 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   // Try to find relevant content from chunks first (score by exact-term relevance)
   const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
   const importantWords = queryWords.filter(w => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4));
-  // Fast-path: if we have an exact term like "iso", prefer a chunk whose URL/title clearly targets it
-  let priorityChunk = null;
-  if (exactTerm) {
-    const slug = exactTerm.replace(/\s+/g, "-");
-    priorityChunk = (contentChunks || []).find(c => {
-      const url = String(c.url||"").toLowerCase();
-      const title = String(c.title||"").toLowerCase();
-      const text = String(c.chunk_text||c.content||"").toLowerCase();
-      return url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || text.includes(`what is ${exactTerm}`);
-    }) || null;
-  }
-  const scoredChunks = (contentChunks || []).map(chunk => {
+  // If exactTerm exists, first narrow candidates to chunks that clearly contain that term
+  const slug = exactTerm ? exactTerm.replace(/\s+/g, "-") : null;
+  const candidateChunks = exactTerm ? (contentChunks || []).filter(c => {
+    const url = String(c.url||"").toLowerCase();
+    const title = String(c.title||"").toLowerCase();
+    const text = String(c.chunk_text||c.content||"").toLowerCase();
+    return text.includes(exactTerm) || title.includes(exactTerm) || url.includes(exactTerm) || url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || text.includes(`what is ${exactTerm}`);
+  }) : (contentChunks || []);
+  const scoredChunks = candidateChunks.map(chunk => {
     const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
     const title = (chunk.title || "").toLowerCase();
     const url = String(chunk.url || "").toLowerCase();
@@ -87,7 +84,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     }
     return { chunk, s };
   }).sort((a,b)=>b.s-a.s);
-  const relevantChunk = priorityChunk || (scoredChunks.length ? scoredChunks[0].chunk : null);
+  const relevantChunk = (scoredChunks.length ? scoredChunks[0].chunk : null);
   
   console.log(`🔍 generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
   
