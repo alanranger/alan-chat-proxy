@@ -172,6 +172,16 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     return `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations. [View All Services](https://www.alanranger.com/photography-tuition-services)\n\n`;
   }
   
+  // About Alan and his background
+  if (lc.includes("alan ranger") && (lc.includes("who") || lc.includes("background") || lc.includes("about"))) {
+    return `**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)\n\n`;
+  }
+  
+  // Ethical guidelines and policies
+  if (lc.includes("ethical") || lc.includes("guidelines") || lc.includes("environmental") || lc.includes("carbon")) {
+    return `**Ethical Guidelines**: Alan Ranger Photography follows strict ethical policies focused on environmental consciousness and responsible education. The business maintains a carbon-neutral footprint through annual carbon impact assessments and offsetting projects. A tree is planted for every workshop place sold to help offset travel carbon footprint. Alan practices the Nature First code of ethics to ensure responsible custodianship of nature. Workshops are limited to 6 or fewer participants for personalised 1-2-1 time, with detailed itineraries including weather backups and health and safety prioritised. [View Ethical Policy](https://www.alanranger.com/my-ethical-policy)\n\n`;
+  }
+  
   // Return null if no specific answer can be generated
   return null;
 }
@@ -873,7 +883,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
     debug: {
-      version: "v1.2.8-equipment-services-direct-answers",
+      version: "v1.2.9-about-alan-ethical-patterns",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -964,7 +974,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-        version: "v1.2.8-equipment-services-direct-answers",
+        version: "v1.2.9-about-alan-ethical-patterns",
         intent: "advice",
         keywords: keywords,
       counts: {
