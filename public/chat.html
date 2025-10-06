@@ -125,7 +125,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-  <div class="badge-wrap"><span class="version">v1.2.30-final-tweaks</span></div>
+  <div class="badge-wrap"><span class="version">v1.2.31-email-html</span></div>
 
   <div class="card">
     <!-- Sticky header -->
@@ -805,22 +805,23 @@ function buildTranscript(){
   return rows.join('\n');
 }
 function emailTranscript(){
-  const plain = buildTranscript();
-  // Build simple HTML transcript preserving links from bubbles
+  // Build compact HTML transcript preserving links
   const parts = [];
-  parts.push('<!doctype html><html><head><meta charset="utf-8"><title>Alan Ranger Assistant — transcript</title></head><body>');
   parts.push('<h2>Alan Ranger Assistant — transcript</h2>');
   parts.push(`<p><em>${new Date().toLocaleString()}</em></p>`);
-  for (const el of thread.children){ if (el.classList.contains('actions')) continue; const role = el.classList.contains('user') ? 'User' : 'Assistant'; parts.push(`<h4>${role}</h4>`); parts.push(`<div>${el.innerHTML}</div>`); }
-  parts.push('</body></html>');
-  const html = parts.join('');
-  const blob = new Blob([html], {type:'text/html'});
-  const url = URL.createObjectURL(blob);
-  // Some email clients accept data URLs, but safest is download and manual attach
-  addBubble(`<div class="answer"><p>Email draft opened with a brief note. For full HTML transcript, <a href="${url}" download="alan-ranger-assistant-transcript.html">download it here</a> and attach to your email.</p></div>`);
+  for (const el of thread.children){ if (el.classList.contains('actions')) continue; const role = el.classList.contains('user') ? 'User' : 'Assistant'; parts.push(`<h4 style="margin:8px 0 4px">${role}</h4>`); parts.push(`<div>${el.innerHTML}</div>`); }
+  const inlineHtml = parts.join('');
+
+  // Try to embed HTML as best-effort: many desktop clients (Outlook) ignore HTML in mailto body.
+  // We include a minimal plain-text preface followed by the HTML snippet. Links remain visible/clickable in many clients.
   const subject = 'Alan Ranger Assistant chat transcript';
-  const shortNote = 'Attached is the HTML transcript. If not attached automatically, please use the download link provided in chat.';
-  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shortNote)}`;
+  const preface = 'Transcript (HTML below may appear as plain text in some clients).\n\n';
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(preface + inlineHtml)}`;
+  // Also provide a downloadable full HTML for guaranteed fidelity
+  const fullDoc = `<!doctype html><html><head><meta charset="utf-8"><title>${subject}</title></head><body>${inlineHtml}</body></html>`;
+  const blob = new Blob([fullDoc], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  addBubble(`<div class="answer"><p>If your mail client stripped formatting, <a href="${url}" download="alan-ranger-assistant-transcript.html">download the full HTML transcript</a> and attach it.</p></div>`);
   location.href = mailto;
 }
 function resetChat(){
