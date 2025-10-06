@@ -1,6 +1,7 @@
-// /api/csv-multi-import.js
-// Combined CSV import for all content types
+// /api/csv-import.js
+// Consolidated CSV import for all content types
 // Handles: blog, workshop, service, product, and event imports
+// Replaces: csv-bulk-import.js, csv-multi-import.js, csv-events-import.js
 
 export const config = { runtime: 'nodejs' };
 
@@ -532,4 +533,3 @@ export default async function handler(req, res) {
     return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
   }
 }
-
