@@ -586,6 +586,7 @@
 
     // Sorting functions
     function sortQuestions(column) {
+      console.log('Sorting questions by:', column);
       if (questionsSortColumn === column) {
         questionsSortDirection = questionsSortDirection === 'asc' ? 'desc' : 'asc';
       } else {
@@ -597,6 +598,7 @@
     }
 
     function sortSessions(column) {
+      console.log('Sorting sessions by:', column);
       if (sessionsSortColumn === column) {
         sessionsSortDirection = sessionsSortDirection === 'asc' ? 'desc' : 'asc';
       } else {

@@ -5,8 +5,57 @@
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
+import crypto from 'node:crypto';
+
+/* ----------------------- Helper Functions ----------------------- */
+// Hash IP for privacy
+const hashIP = (ip) => {
+  if (!ip) return null;
+  return crypto.createHash('sha256').update(ip + 'chat-log-salt').digest('hex').substring(0, 16);
+};
+
+// Detect device type from user agent
+const detectDeviceType = (userAgent) => {
+  if (!userAgent) return 'unknown';
+  const ua = userAgent.toLowerCase();
+  if (/mobile|android|iphone|ipad/.test(ua)) return 'mobile';
+  if (/tablet|ipad/.test(ua)) return 'tablet';
+  return 'desktop';
+};
 
 /* ----------------------- Chat Logging ----------------------- */
+const createSession = async (sessionId, userAgent, ip) => {
+  try {
+    const client = supabaseAdmin();
+    
+    // Check if session already exists
+    const { data: existingSession } = await client
+      .from('chat_sessions')
+      .select('session_id')
+      .eq('session_id', sessionId)
+      .single();
+    
+    if (existingSession) {
+      return; // Session already exists
+    }
+    
+    // Create new session
+    const { error } = await client.from('chat_sessions').insert([{
+      session_id: sessionId,
+      started_at: new Date().toISOString(),
+      total_questions: 0,
+      total_interactions: 0,
+      device_type: detectDeviceType(userAgent),
+      user_agent: userAgent,
+      ip_hash: hashIP(ip)
+    }]);
+    
+    if (error) throw new Error(`Session creation failed: ${error.message}`);
+  } catch (err) {
+    console.warn('Session creation failed:', err.message);
+  }
+};
+
 const logQuestion = async (sessionId, question) => {
   try {
     const client = supabaseAdmin();
@@ -1096,6 +1145,15 @@ export default async function handler(req, res) {
 
     const { query, topK, previousQuery, sessionId } = req.body || {};
     const client = supabaseAdmin();
+
+    // Create session if it doesn't exist (async, don't wait for it)
+    if (sessionId) {
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+      createSession(sessionId, userAgent, ip).catch(err => 
+        console.warn('Failed to create session:', err.message)
+      );
+    }
 
     // Log the question (async, don't wait for it)
     if (sessionId && query) {
