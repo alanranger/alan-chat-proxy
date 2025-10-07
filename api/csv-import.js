@@ -296,6 +296,72 @@ function transformServiceData(row) {
 
 /* ========== Product data transformation ========== */
 function transformProductData(row) {
+  // Path A: CSV supplies a JSON-LD blob column (e.g. "JSON-LD Structured Data")
+  const jsonLdRaw = row['json-ld structured data'] || row['jsonld'] || row['structured_data'] || row['structured data'];
+  if (jsonLdRaw) {
+    // Strip <script> tags and attempt to parse
+    const stripped = String(jsonLdRaw)
+      .replace(/<script[^>]*>/gi, '')
+      .replace(/<\/script>/gi, '')
+      .trim();
+    let parsed;
+    try {
+      // Some cells may include leading/trailing quotes or whitespace
+      const candidate = stripped.replace(/^\s*"|"\s*$/g, '').trim();
+      // Attempt direct parse, otherwise try to find first JSON object/array
+      try {
+        parsed = JSON.parse(candidate);
+      } catch {
+        const start = candidate.indexOf('{');
+        const startArr = candidate.indexOf('[');
+        const s = (startArr !== -1 && (startArr < start || start === -1)) ? startArr : start;
+        const end = Math.max(candidate.lastIndexOf('}'), candidate.lastIndexOf(']')) + 1;
+        parsed = JSON.parse(candidate.slice(s, end));
+      }
+    } catch (e) {
+      // If JSON-LD cannot be parsed, skip this row
+      return null;
+    }
+    // If array, use first Product-like object
+    const obj = Array.isArray(parsed) ? (parsed.find(o => (o && (o['@type']==='Product' || (o['@type']||'').includes('Product')))) || parsed[0]) : parsed;
+    if (!obj) return null;
+    const offers = obj.offers || {};
+    const title = obj.name || row.title || '';
+    const url = obj.url || row.url || row['page url'] || row.page_url || '';
+    const sku = obj.sku || row.sku || null;
+    const price = Number(offers.price || row.price || row['low price'] || row.low_price || 0) || 0;
+    const availability = (offers.availability && /InStock/i.test(offers.availability)) ? 'InStock' : 'OutOfStock';
+    const images = Array.isArray(obj.image) ? obj.image : (obj.image ? [obj.image] : []);
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": title,
+      "url": url,
+      "sku": sku,
+      "image": images,
+      "offers": { "@type": "Offer", "price": price, "priceCurrency": "GBP", "availability": `https://schema.org/${availability}` }
+    };
+    return {
+      url: url,
+      kind: 'product',
+      title: title,
+      description: obj.description || null,
+      date_start: null,
+      date_end: null,
+      location: null,
+      price: price,
+      price_currency: 'GBP',
+      availability: availability,
+      sku: sku,
+      provider: 'Alan Ranger Photography',
+      source_url: url,
+      raw: obj,
+      entity_hash: crypto.createHash('sha1').update(`${url}::product::${title}::${sku}::${price}::${JSON.stringify(obj)}`).digest('hex'),
+      last_seen: new Date().toISOString()
+    };
+  }
+
+  // Path B: Column-mapped products
   const title = row.title || row['product title'] || row.name;
   const url = row['product url'] || row.product_url || row.url || row['page url'] || row.page_url;
   const description = row.description;
@@ -308,15 +374,11 @@ function transformProductData(row) {
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
   const imageUrls = row['hosted image urls'] ? row['hosted image urls'].split(' ').filter(u => u.trim()) : (row.hosted_image_urls ? row.hosted_image_urls.split(' ').filter(u => u.trim()) : (row.image ? [row.image] : []));
   
-  // Determine availability
   let availability = 'OutOfStock';
   if (stock === 'Unlimited' || (parseInt(stock) || 0) > 0) {
     availability = 'InStock';
   }
-  
-  // Use sale price if on sale, otherwise regular price
   const finalPrice = onSale && salePrice > 0 ? salePrice : price;
-  
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -336,7 +398,6 @@ function transformProductData(row) {
     "category": categories.join(', '),
     "keywords": tags.join(', ')
   };
-  
   return {
     url: url,
     kind: 'product',
@@ -468,7 +529,8 @@ export default async function handler(req, res) {
           entity = transformServiceData(row);
           break;
         case 'product':
-          if (!row['product url'] && !row.product_url && !row.url) continue;
+          // Accept either explicit product columns OR a JSON-LD column
+          if (!row['product url'] && !row.product_url && !row.url && !row['json-ld structured data'] && !row['jsonld'] && !row['structured_data'] && !row['structured data']) continue;
           entity = transformProductData(row);
           break;
         case 'event':
