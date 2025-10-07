@@ -166,6 +166,30 @@
       margin-bottom: 12px;
       border-left: 4px solid var(--brand);
     }
+
+    .performance-metric {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .performance-metric h4 {
+      color: #f9fafb;
+      margin-bottom: 16px;
+      font-size: 18px;
+    }
+
+    .metric-value {
+      font-size: 36px;
+      font-weight: bold;
+      color: #10b981;
+      margin-bottom: 8px;
+    }
+
+    .metric-detail {
+      color: #9ca3af;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
     .insight-priority-high { border-left-color: var(--error); }
     .insight-priority-medium { border-left-color: var(--warning); }
     .insight-priority-low { border-left-color: var(--success); }
@@ -412,10 +436,10 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Question</th>
-                <th>Frequency</th>
-                <th>Avg Confidence</th>
-                <th>Last Seen</th>
+                <th onclick="sortQuestions('question_text')" style="cursor: pointer;">Question <span id="sort-question_text">↓</span></th>
+                <th onclick="sortQuestions('frequency')" style="cursor: pointer;">Frequency <span id="sort-frequency"></span></th>
+                <th onclick="sortQuestions('avg_confidence')" style="cursor: pointer;">Avg Confidence <span id="sort-avg_confidence"></span></th>
+                <th onclick="sortQuestions('last_seen')" style="cursor: pointer;">Last Seen <span id="sort-last_seen">↓</span></th>
               </tr>
             </thead>
             <tbody id="questions-table">
@@ -435,11 +459,11 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Session ID</th>
-                <th>Started</th>
+                <th onclick="sortSessions('session_id')" style="cursor: pointer;">Session ID <span id="sort-session_id"></span></th>
+                <th onclick="sortSessions('started_at')" style="cursor: pointer;">Started <span id="sort-started_at">↓</span></th>
                 <th>Duration</th>
-                <th>Questions</th>
-                <th>Device</th>
+                <th onclick="sortSessions('total_questions')" style="cursor: pointer;">Questions <span id="sort-total_questions"></span></th>
+                <th onclick="sortSessions('device_type')" style="cursor: pointer;">Device <span id="sort-device_type"></span></th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -552,6 +576,159 @@
       }
     }
 
+    // Global variables for sorting
+    let currentQuestionsData = [];
+    let currentSessionsData = [];
+    let questionsSortColumn = 'last_seen';
+    let questionsSortDirection = 'desc';
+    let sessionsSortColumn = 'started_at';
+    let sessionsSortDirection = 'desc';
+
+    // Sorting functions
+    function sortQuestions(column) {
+      if (questionsSortColumn === column) {
+        questionsSortDirection = questionsSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        questionsSortColumn = column;
+        questionsSortDirection = 'desc';
+      }
+      updateSortIndicators('questions');
+      renderQuestionsTable();
+    }
+
+    function sortSessions(column) {
+      if (sessionsSortColumn === column) {
+        sessionsSortDirection = sessionsSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sessionsSortColumn = column;
+        sessionsSortDirection = 'desc';
+      }
+      updateSortIndicators('sessions');
+      renderSessionsTable();
+    }
+
+    function updateSortIndicators(table) {
+      if (table === 'questions') {
+        // Clear all indicators
+        ['question_text', 'frequency', 'avg_confidence', 'last_seen'].forEach(col => {
+          const indicator = document.getElementById(`sort-${col}`);
+          if (indicator) indicator.textContent = '';
+        });
+        // Set current indicator
+        const currentIndicator = document.getElementById(`sort-${questionsSortColumn}`);
+        if (currentIndicator) {
+          currentIndicator.textContent = questionsSortDirection === 'asc' ? '↑' : '↓';
+        }
+      } else if (table === 'sessions') {
+        // Clear all indicators
+        ['session_id', 'started_at', 'total_questions', 'device_type'].forEach(col => {
+          const indicator = document.getElementById(`sort-${col}`);
+          if (indicator) indicator.textContent = '';
+        });
+        // Set current indicator
+        const currentIndicator = document.getElementById(`sort-${sessionsSortColumn}`);
+        if (currentIndicator) {
+          currentIndicator.textContent = sessionsSortDirection === 'asc' ? '↑' : '↓';
+        }
+      }
+    }
+
+    function renderQuestionsTable() {
+      const tbody = document.getElementById('questions-table');
+      tbody.innerHTML = '';
+      
+      // Sort the data
+      const sortedData = [...currentQuestionsData].sort((a, b) => {
+        let aVal, bVal;
+        switch (questionsSortColumn) {
+          case 'question_text':
+            aVal = a.question_text.toLowerCase();
+            bVal = b.question_text.toLowerCase();
+            break;
+          case 'frequency':
+            aVal = a.frequency;
+            bVal = b.frequency;
+            break;
+          case 'avg_confidence':
+            aVal = a.avg_confidence || 0;
+            bVal = b.avg_confidence || 0;
+            break;
+          case 'last_seen':
+            aVal = new Date(a.last_seen);
+            bVal = new Date(b.last_seen);
+            break;
+          default:
+            return 0;
+        }
+        
+        if (aVal < bVal) return questionsSortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return questionsSortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+      
+      sortedData.forEach(q => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${q.question_text.substring(0, 100)}${q.question_text.length > 100 ? '...' : ''}</td>
+          <td><span class="badge badge-info">${q.frequency}</span></td>
+          <td><span class="badge ${q.avg_confidence >= 0.8 ? 'badge-success' : q.avg_confidence >= 0.5 ? 'badge-warning' : 'badge-error'}">${(q.avg_confidence * 100).toFixed(1)}%</span></td>
+          <td>${new Date(q.last_seen).toLocaleString()}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function renderSessionsTable() {
+      const tbody = document.getElementById('sessions-table');
+      tbody.innerHTML = '';
+      
+      // Sort the data
+      const sortedData = [...currentSessionsData].sort((a, b) => {
+        let aVal, bVal;
+        switch (sessionsSortColumn) {
+          case 'session_id':
+            aVal = a.session_id.toLowerCase();
+            bVal = b.session_id.toLowerCase();
+            break;
+          case 'started_at':
+            aVal = new Date(a.started_at);
+            bVal = new Date(b.started_at);
+            break;
+          case 'total_questions':
+            aVal = a.total_questions || 0;
+            bVal = b.total_questions || 0;
+            break;
+          case 'device_type':
+            aVal = a.device_type || '';
+            bVal = b.device_type || '';
+            break;
+          default:
+            return 0;
+        }
+        
+        if (aVal < bVal) return sessionsSortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sessionsSortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+      
+      sortedData.forEach(session => {
+        const row = document.createElement('tr');
+        const duration = session.ended_at ? 
+          Math.round((new Date(session.ended_at) - new Date(session.started_at)) / 1000 / 60) + 'm' : 
+          'Active';
+        
+        row.innerHTML = `
+          <td>${session.session_id.substring(0, 20)}...</td>
+          <td>${new Date(session.started_at).toLocaleString()}</td>
+          <td>${duration}</td>
+          <td>${session.total_questions || 0}</td>
+          <td><span class="badge badge-info">${session.device_type || 'unknown'}</span></td>
+          <td><button class="btn btn-secondary" onclick="viewSession('${session.session_id}')">View</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
     // Load questions data
     async function loadQuestions() {
       try {
@@ -561,19 +738,11 @@
         const data = await apiCall('questions');
         const { topQuestions } = data.questions;
         
-        const tbody = document.getElementById('questions-table');
-        tbody.innerHTML = '';
+        // Store data globally for sorting
+        currentQuestionsData = topQuestions;
         
-        topQuestions.forEach(q => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${q.question_text.substring(0, 100)}${q.question_text.length > 100 ? '...' : ''}</td>
-            <td><span class="badge badge-info">${q.frequency}</span></td>
-            <td><span class="badge ${q.avg_confidence >= 0.8 ? 'badge-success' : q.avg_confidence >= 0.5 ? 'badge-warning' : 'badge-error'}">${(q.avg_confidence * 100).toFixed(1)}%</span></td>
-            <td>${new Date(q.last_seen).toLocaleDateString()}</td>
-          `;
-          tbody.appendChild(row);
-        });
+        // Render the table with current sort settings
+        renderQuestionsTable();
         
         document.getElementById('questions-loading').style.display = 'none';
         document.getElementById('questions-content').style.display = 'block';
@@ -592,25 +761,11 @@
         const data = await apiCall('sessions', { page, limit: 20, search });
         const { data: sessions, pagination } = data.sessions;
         
-        const tbody = document.getElementById('sessions-table');
-        tbody.innerHTML = '';
+        // Store data globally for sorting
+        currentSessionsData = sessions;
         
-        sessions.forEach(session => {
-          const row = document.createElement('tr');
-          const duration = session.ended_at ? 
-            Math.round((new Date(session.ended_at) - new Date(session.started_at)) / 1000 / 60) + 'm' : 
-            'Active';
-          
-          row.innerHTML = `
-            <td>${session.session_id.substring(0, 20)}...</td>
-            <td>${new Date(session.started_at).toLocaleString()}</td>
-            <td>${duration}</td>
-            <td>${session.total_questions || 0}</td>
-            <td><span class="badge badge-info">${session.device_type || 'unknown'}</span></td>
-            <td><button class="btn btn-secondary" onclick="viewSession('${session.session_id}')">View</button></td>
-          `;
-          tbody.appendChild(row);
-        });
+        // Render the table with current sort settings
+        renderSessionsTable();
         
         // Update pagination
         updatePagination(pagination);
@@ -629,10 +784,34 @@
         const data = await apiCall('performance', { days: 7 });
         const { data: performanceData } = data.performance;
         
-        document.getElementById('confidence-chart').innerHTML = 
-          `<div>Confidence Data Points: ${performanceData.length}</div>`;
-        document.getElementById('response-time-chart').innerHTML = 
-          `<div>Response Time Data Points: ${performanceData.length}</div>`;
+        // Calculate actual metrics
+        const totalDataPoints = performanceData.length;
+        const avgConfidence = performanceData.length > 0 ? 
+          (performanceData.reduce((sum, d) => sum + (d.avg_confidence || 0), 0) / performanceData.length * 100).toFixed(1) : 0;
+        const avgResponseTime = performanceData.length > 0 ? 
+          (performanceData.reduce((sum, d) => sum + (d.avg_response_time_ms || 0), 0) / performanceData.length).toFixed(0) : 0;
+        
+        // Get recent session and question counts
+        const overviewData = await apiCall('overview', { days: 7 });
+        const { totals } = overviewData.overview;
+        
+        document.getElementById('confidence-chart').innerHTML = `
+          <div class="performance-metric">
+            <h4>Confidence Trends (7 days)</h4>
+            <div class="metric-value">${avgConfidence}%</div>
+            <div class="metric-detail">Average confidence across ${totalDataPoints} data points</div>
+            <div class="metric-detail">Total questions: ${totals.questions}</div>
+          </div>
+        `;
+        
+        document.getElementById('response-time-chart').innerHTML = `
+          <div class="performance-metric">
+            <h4>Response Time Trends (7 days)</h4>
+            <div class="metric-value">${avgResponseTime}ms</div>
+            <div class="metric-detail">Average response time across ${totalDataPoints} data points</div>
+            <div class="metric-detail">Total sessions: ${totals.sessions}</div>
+          </div>
+        `;
           
       } catch (error) {
         showError('Failed to load performance data: ' + error.message);
@@ -651,16 +830,61 @@
         const insightsList = document.getElementById('insights-list');
         insightsList.innerHTML = '';
         
-        recommendations.forEach(rec => {
-          const card = document.createElement('div');
-          card.className = `insight-card insight-priority-${rec.priority}`;
-          card.innerHTML = `
-            <h4>${rec.type.replace('_', ' ').toUpperCase()}</h4>
-            <p>${rec.message}</p>
-            ${rec.frequency ? `<small>Frequency: ${rec.frequency} | Avg Confidence: ${(rec.avgConfidence * 100).toFixed(1)}%</small>` : ''}
-          `;
-          insightsList.appendChild(card);
-        });
+        // Filter out test data and generate meaningful insights
+        const realRecommendations = recommendations.filter(rec => 
+          !rec.question.toLowerCase().includes('test') && 
+          !rec.question.toLowerCase().includes('debug') &&
+          !rec.question.toLowerCase().includes('diagnostic')
+        );
+        
+        if (realRecommendations.length === 0) {
+          // Generate general insights based on available data
+          const overviewData = await apiCall('overview', { days: 7 });
+          const { totals } = overviewData.overview;
+          
+          const generalInsights = [
+            {
+              type: 'system_status',
+              priority: 'medium',
+              message: `Your chat bot has handled ${totals.questions} questions across ${totals.sessions} sessions in the last 7 days.`,
+              frequency: totals.questions
+            },
+            {
+              type: 'content_opportunity',
+              priority: 'high',
+              message: 'Consider adding more content about photography techniques, equipment recommendations, and workshop details to improve answer quality.',
+              frequency: null
+            },
+            {
+              type: 'user_engagement',
+              priority: 'medium',
+              message: `Average of ${(totals.questions / totals.sessions).toFixed(1)} questions per session shows good user engagement.`,
+              frequency: totals.questions
+            }
+          ];
+          
+          generalInsights.forEach(rec => {
+            const card = document.createElement('div');
+            card.className = `insight-card insight-priority-${rec.priority}`;
+            card.innerHTML = `
+              <h4>${rec.type.replace('_', ' ').toUpperCase()}</h4>
+              <p>${rec.message}</p>
+              ${rec.frequency ? `<small>Based on ${rec.frequency} total interactions</small>` : ''}
+            `;
+            insightsList.appendChild(card);
+          });
+        } else {
+          realRecommendations.forEach(rec => {
+            const card = document.createElement('div');
+            card.className = `insight-card insight-priority-${rec.priority}`;
+            card.innerHTML = `
+              <h4>${rec.type.replace('_', ' ').toUpperCase()}</h4>
+              <p>${rec.message}</p>
+              ${rec.frequency ? `<small>Frequency: ${rec.frequency} | Avg Confidence: ${(rec.avgConfidence * 100).toFixed(1)}%</small>` : ''}
+            `;
+            insightsList.appendChild(card);
+          });
+        }
         
         document.getElementById('insights-loading').style.display = 'none';
         document.getElementById('insights-content').style.display = 'block';
