@@ -30,7 +30,8 @@ async function analyzeQuestionLogs(supa) {
       confidence,
       intent,
       created_at,
-      sources_used
+      sources_used,
+      page_context
     `)
     .not('answer', 'is', null)
     .not('confidence', 'is', null)
@@ -302,7 +303,7 @@ async function generateImprovedContent(question, currentAnswer, recommendations)
         improvements.push({
           type: 'add_content',
           message: 'Add specific content for this question type',
-          suggestedContent: generateContentForQuestion(question)
+          suggestedContent: generateContentForQuestion(question, question.page_context)
         });
         break;
         
@@ -327,25 +328,52 @@ async function generateImprovedContent(question, currentAnswer, recommendations)
   return improvements;
 }
 
-function generateContentForQuestion(question) {
+function generateContentForQuestion(question, pageContext = null) {
   const q = question.toLowerCase();
   
+  // Extract context from page if available
+  let pageKeywords = [];
+  if (pageContext && pageContext.pathname) {
+    const pathParts = pageContext.pathname.split('/').filter(part => part.length > 2);
+    pageKeywords = pathParts.map(part => part.toLowerCase());
+  }
+  
   if (q.includes('book') && q.includes('english')) {
-    return {
-      title: 'Photography Books and Guides',
-      content: 'All of Alan Ranger\'s photography books and guides are written in English. They cover topics including landscape photography, camera techniques, and post-processing methods. The books are designed for photographers of all skill levels.',
-      keywords: ['book', 'guide', 'english', 'photography', 'alan ranger'],
-      intent: 'advice'
-    };
+    // Context-aware book language information
+    if (pageKeywords.includes('beginners') || pageKeywords.includes('course')) {
+      return {
+        title: 'Beginners Photography Course - Course Materials and Language',
+        content: 'The Beginners Photography Course materials, including any books or guides provided, are written in English. The course is designed for English-speaking students and covers fundamental photography concepts in clear, accessible language. All course materials, handouts, and resources are provided in English to ensure comprehensive understanding.',
+        keywords: ['beginners', 'course', 'book', 'guide', 'english', 'materials', 'photography'],
+        intent: 'advice'
+      };
+    } else {
+      return {
+        title: 'Photography Books and Guides',
+        content: 'All of Alan Ranger\'s photography books and guides are written in English. They cover topics including landscape photography, camera techniques, and post-processing methods. The books are designed for photographers of all skill levels.',
+        keywords: ['book', 'guide', 'english', 'photography', 'alan ranger'],
+        intent: 'advice'
+      };
+    }
   }
   
   if (q.includes('cost') && q.includes('dollar')) {
-    return {
-      title: 'Pricing Information',
-      content: 'All prices are listed in British Pounds (GBP). For current exchange rates to US Dollars or other currencies, please check with your bank or currency converter. Workshop prices typically range from £150-£300 depending on duration and location.',
-      keywords: ['price', 'cost', 'dollar', 'currency', 'gbp'],
-      intent: 'events'
-    };
+    // Context-aware pricing information
+    if (pageKeywords.includes('beginners') || pageKeywords.includes('course')) {
+      return {
+        title: 'Beginners Photography Course - Pricing and Currency',
+        content: 'The Beginners Photography Course is priced in British Pounds (GBP). The course fee includes all materials, instruction, and resources. For international students, you can use current exchange rates to convert GBP to your local currency. The pricing reflects the comprehensive nature of the course and small class sizes for personalized attention.',
+        keywords: ['beginners', 'course', 'cost', 'price', 'currency', 'pound', 'gbp'],
+        intent: 'events'
+      };
+    } else {
+      return {
+        title: 'Pricing Information',
+        content: 'All prices are listed in British Pounds (GBP). For current exchange rates to US Dollars or other currencies, please check with your bank or currency converter. Workshop prices typically range from £150-£300 depending on duration and location.',
+        keywords: ['price', 'cost', 'dollar', 'currency', 'gbp'],
+        intent: 'events'
+      };
+    }
   }
   
   if (q.includes('purchase') && q.includes('guide')) {
@@ -471,7 +499,7 @@ async function createContentImprovementPlan(questionAnalysis) {
         improvementPlan.contentToAdd.push({
           question: question.question,
           reason: rec.message,
-          suggestedContent: generateContentForQuestion(question.question)
+          suggestedContent: generateContentForQuestion(question.question, question.page_context)
         });
       } else if (rec.type === 'content_improvement') {
         improvementPlan.contentToEnhance.push({

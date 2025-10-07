@@ -14,6 +14,40 @@ const hashIP = (ip) => {
   return crypto.createHash('sha256').update(ip + 'chat-log-salt').digest('hex').substring(0, 16);
 };
 
+// Extract keywords from page path for context
+const extractKeywordsFromPath = (pathname) => {
+  if (!pathname) return [];
+  
+  // Extract meaningful keywords from URL path
+  const pathParts = pathname.split('/').filter(part => part.length > 2);
+  const keywords = [];
+  
+  // Map common path patterns to relevant keywords
+  const pathMappings = {
+    'beginners': ['beginner', 'basic', 'intro'],
+    'photography': ['photography', 'photo'],
+    'course': ['course', 'class', 'training'],
+    'workshop': ['workshop', 'session'],
+    'lightroom': ['lightroom', 'editing', 'post-processing'],
+    'landscape': ['landscape', 'nature', 'outdoor'],
+    'portrait': ['portrait', 'people', 'studio'],
+    'macro': ['macro', 'close-up', 'detail'],
+    'street': ['street', 'urban', 'city'],
+    'wedding': ['wedding', 'ceremony', 'event']
+  };
+  
+  pathParts.forEach(part => {
+    const lowerPart = part.toLowerCase();
+    if (pathMappings[lowerPart]) {
+      keywords.push(...pathMappings[lowerPart]);
+    } else if (part.length > 3) {
+      keywords.push(part);
+    }
+  });
+  
+  return [...new Set(keywords)]; // Remove duplicates
+};
+
 // Detect device type from user agent
 const detectDeviceType = (userAgent) => {
   if (!userAgent) return 'unknown';
@@ -77,7 +111,7 @@ const logQuestion = async (sessionId, question) => {
   }
 };
 
-const logAnswer = async (sessionId, question, answer, intent, confidence, responseTimeMs, sourcesUsed) => {
+const logAnswer = async (sessionId, question, answer, intent, confidence, responseTimeMs, sourcesUsed, pageContext = null) => {
   try {
     const client = supabaseAdmin();
     
@@ -89,7 +123,12 @@ const logAnswer = async (sessionId, question, answer, intent, confidence, respon
       intent: intent,
       confidence: confidence ? parseFloat(confidence) : null,
       response_time_ms: responseTimeMs ? parseInt(responseTimeMs) : null,
-      sources_used: sourcesUsed || null
+      sources_used: sourcesUsed || null,
+      page_context: pageContext ? {
+        url: pageContext.url,
+        title: pageContext.title,
+        pathname: pageContext.pathname
+      } : null
     }]);
     
     if (error) throw new Error(`Answer log failed: ${error.message}`);
@@ -599,7 +638,7 @@ function anyIlike(col, words) {
   return parts.length ? parts.join(",") : null;
 }
 
-async function findEvents(client, { keywords, limit = 50 }) {
+async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
   // Use v_event_product_mappings view for events, courses and workshops
   let q = client
     .from("v_event_product_mappings")
@@ -607,6 +646,16 @@ async function findEvents(client, { keywords, limit = 50 }) {
     .gte("date_start", new Date().toISOString())
     .order("date_start", { ascending: true })
     .limit(limit);
+
+  // If we have page context, try to find related content first
+  if (pageContext && pageContext.pathname) {
+    const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
+    if (pathKeywords.length > 0) {
+      console.log('Page context keywords:', pathKeywords);
+      // Add page context to search terms
+      keywords = [...pathKeywords, ...keywords];
+    }
+  }
 
   if (keywords.length) {
     // Prioritize specific keywords like "bluebell" over generic ones like "workshop"
@@ -645,7 +694,17 @@ async function findEvents(client, { keywords, limit = 50 }) {
   return data || [];
 }
 
-async function findProducts(client, { keywords, limit = 20 }) {
+async function findProducts(client, { keywords, limit = 20, pageContext = null }) {
+  // If we have page context, try to find related products first
+  if (pageContext && pageContext.pathname) {
+    const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
+    if (pathKeywords.length > 0) {
+      console.log('Product search - Page context keywords:', pathKeywords);
+      // Add page context to search terms
+      keywords = [...pathKeywords, ...keywords];
+    }
+  }
+
   let q = client
         .from("page_entities")
     .select("*")
@@ -662,7 +721,17 @@ async function findProducts(client, { keywords, limit = 20 }) {
   return data || [];
 }
 
-async function findArticles(client, { keywords, limit = 12 }) {
+async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
+  // If we have page context, try to find related articles first
+  if (pageContext && pageContext.pathname) {
+    const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
+    if (pathKeywords.length > 0) {
+      console.log('Article search - Page context keywords:', pathKeywords);
+      // Add page context to search terms
+      keywords = [...pathKeywords, ...keywords];
+    }
+  }
+
   // Fetch a wider pool then rank deterministically by relevance
   let q = client
         .from("page_entities")
@@ -1033,12 +1102,12 @@ function buildAdvicePills({ articleUrl, query, pdfUrl, relatedUrl, relatedLabel 
 
 /* --------------------------- Generic resolvers --------------------------- */
 
-async function resolveEventsAndProduct(client, { keywords }) {
+async function resolveEventsAndProduct(client, { keywords, pageContext = null }) {
   // Events filtered by keywords (stronger locality match)
-  const events = await findEvents(client, { keywords, limit: 80 });
+  const events = await findEvents(client, { keywords, limit: 80, pageContext });
 
   // Try to pick the best-matching product for these keywords
-  const products = await findProducts(client, { keywords, limit: 10 });
+  const products = await findProducts(client, { keywords, limit: 10, pageContext });
   const product = products?.[0] || null;
 
   // Landing page (if any), else the event origin's workshops root
@@ -1144,8 +1213,17 @@ export default async function handler(req, res) {
       return;
     }
 
-    const { query, topK, previousQuery, sessionId } = req.body || {};
+    const { query, topK, previousQuery, sessionId, pageContext } = req.body || {};
     const client = supabaseAdmin();
+    
+    // Log page context for debugging
+    if (pageContext) {
+      console.log('Page context received:', {
+        url: pageContext.url,
+        title: pageContext.title,
+        pathname: pageContext.pathname
+      });
+    }
 
     // Create session if it doesn't exist (async, don't wait for it)
     if (sessionId) {
@@ -1186,7 +1264,7 @@ export default async function handler(req, res) {
 
     if (intent === "events") {
       // Get events from the enhanced view that includes product mappings
-      const events = await findEvents(client, { keywords, limit: 80 });
+      const events = await findEvents(client, { keywords, limit: 80, pageContext });
       // If the new query names a significant topic (e.g., lightroom), prefer events matching that topic
       const GENERIC_EVENT_TERMS = new Set(["workshop","workshops","course","courses","class","classes","event","events","next","when","your"]);
       const significant = (keywords || []).find(k => k && !GENERIC_EVENT_TERMS.has(String(k).toLowerCase()) && String(k).length >= 4);
@@ -1246,7 +1324,7 @@ export default async function handler(req, res) {
       // If product doesn't reflect the core keyword (e.g., bluebell), try a direct product lookup
       const needsKeywordProduct = (!product || !String(product.title||'').toLowerCase().includes('bluebell')) && kwSet.has('bluebell');
       if (needsKeywordProduct) {
-        const bluebellProducts = await findProducts(client, { keywords: ['bluebell','woodlands','woodland'], limit: 5 });
+        const bluebellProducts = await findProducts(client, { keywords: ['bluebell','woodlands','woodland'], limit: 5, pageContext });
         const bp = bluebellProducts?.find(p => String(p.title||'').toLowerCase().includes('bluebell')) || bluebellProducts?.[0] || null;
         if (bp) {
           product = {
@@ -1314,7 +1392,7 @@ export default async function handler(req, res) {
       if (sessionId && query) {
         const responseTimeMs = Date.now() - started;
         const sourcesUsed = citations || [];
-        logAnswer(sessionId, query, answerMarkdown, "events", 0.8, responseTimeMs, sourcesUsed).catch(err => 
+        logAnswer(sessionId, query, answerMarkdown, "events", 0.8, responseTimeMs, sourcesUsed, pageContext).catch(err => 
           console.warn('Failed to log answer:', err.message)
         );
       }
@@ -1353,7 +1431,7 @@ export default async function handler(req, res) {
 
     // --------- ADVICE -----------
     // return article answers + upgraded pills
-    let articles = await findArticles(client, { keywords, limit: 12 });
+    let articles = await findArticles(client, { keywords, limit: 12, pageContext });
     // Ensure concept article is first when asking "what is <term>"
     const qlc2 = (query||'').toLowerCase();
     const mConcept = qlc2.match(/^\s*what\s+is\s+(.+?)\s*\??$/);
@@ -1428,7 +1506,7 @@ export default async function handler(req, res) {
     if (sessionId && query) {
       const responseTimeMs = Date.now() - started;
       const sourcesUsed = citations || [];
-      logAnswer(sessionId, query, lines.join("\n"), "advice", confidence, responseTimeMs, sourcesUsed).catch(err => 
+      logAnswer(sessionId, query, lines.join("\n"), "advice", confidence, responseTimeMs, sourcesUsed, pageContext).catch(err => 
         console.warn('Failed to log answer:', err.message)
       );
     }

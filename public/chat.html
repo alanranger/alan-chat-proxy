@@ -939,7 +939,22 @@ async function sendQuery(query){
   var t0 = performance.now();
   const prevQuery = __lastQuery; // Store the previous query before updating
   __lastQuery = String(query||'');
-  const req = { query, topK: 8, previousQuery: prevQuery, sessionId };
+  
+  // Capture page context for better answers
+  const pageContext = {
+    url: window.location.href,
+    title: document.title,
+    hostname: window.location.hostname,
+    pathname: window.location.pathname
+  };
+  
+  const req = { 
+    query, 
+    topK: 8, 
+    previousQuery: prevQuery, 
+    sessionId,
+    pageContext
+  };
   setDebugJSON(dbgReq, req);
   const closeTyping = addTyping();
   gaTrack('question_sent', { query_length: (query||'').length });
