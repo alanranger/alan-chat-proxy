@@ -1062,6 +1062,7 @@
         
         // Calculate actual metrics
         const totalDataPoints = performanceData.length;
+        const totalQuestions = performanceData.reduce((sum, d) => sum + (d.questions || 0), 0);
         const avgConfidence = performanceData.length > 0 ? 
           (performanceData.reduce((sum, d) => sum + (d.avg_confidence || 0), 0) / performanceData.length * 100).toFixed(1) : 0;
         const avgResponseTime = performanceData.length > 0 ? 
@@ -1075,8 +1076,8 @@
           <div class="performance-metric">
             <h4>Confidence Trends (7 days)</h4>
             <div class="metric-value">${avgConfidence}%</div>
-            <div class="metric-detail">Average confidence across ${totalDataPoints} data points</div>
-            <div class="metric-detail">Total questions: ${totals.questions}</div>
+            <div class="metric-detail">Average confidence across ${totalDataPoints} days</div>
+            <div class="metric-detail">Total questions: ${totalQuestions}</div>
           </div>
         `;
         
@@ -1084,7 +1085,7 @@
           <div class="performance-metric">
             <h4>Response Time Trends (7 days)</h4>
             <div class="metric-value">${avgResponseTime}ms</div>
-            <div class="metric-detail">Average response time across ${totalDataPoints} data points</div>
+            <div class="metric-detail">Average response time across ${totalDataPoints} days</div>
             <div class="metric-detail">Total sessions: ${totals.sessions}</div>
           </div>
         `;

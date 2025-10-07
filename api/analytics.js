@@ -233,21 +233,37 @@ export default async function handler(req, res) {
 
       case 'performance':
         {
-          // Get performance metrics for the last N days
-          const { data: performanceData, error: perfError } = await supa
-            .from('chat_analytics_daily')
-            .select('date, avg_confidence, avg_response_time_ms')
-            .gte('date', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-            .order('date', { ascending: true });
+          // Build performance metrics from answered interactions (live, not stale aggregates)
+          const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-          if (perfError) throw new Error(`Performance data failed: ${perfError.message}`);
+          const { data: interactions, error: interactionsError } = await supa
+            .from('chat_interactions')
+            .select('created_at, confidence, response_time_ms')
+            .not('answer', 'is', null)
+            .gte('created_at', sinceIso)
+            .order('created_at', { ascending: true });
 
-          return sendJSON(res, 200, {
-            ok: true,
-            performance: {
-              data: performanceData || []
-            }
-          });
+          if (interactionsError) throw new Error(`Performance data failed: ${interactionsError.message}`);
+
+          // Aggregate by day (local date string YYYY-MM-DD)
+          const byDay = {};
+          for (const row of interactions || []) {
+            const day = new Date(row.created_at).toISOString().split('T')[0];
+            if (!byDay[day]) byDay[day] = { count: 0, confSum: 0, rtSum: 0 };
+            byDay[day].count += 1;
+            byDay[day].confSum += typeof row.confidence === 'number' ? row.confidence : 0;
+            byDay[day].rtSum += typeof row.response_time_ms === 'number' ? row.response_time_ms : 0;
+          }
+
+          const dates = Object.keys(byDay).sort();
+          const performanceData = dates.map(d => ({
+            date: d,
+            avg_confidence: byDay[d].count ? byDay[d].confSum / byDay[d].count : 0,
+            avg_response_time_ms: byDay[d].count ? Math.round(byDay[d].rtSum / byDay[d].count) : 0,
+            questions: byDay[d].count
+          }));
+
+          return sendJSON(res, 200, { ok: true, performance: { data: performanceData } });
         }
 
       case 'insights':
