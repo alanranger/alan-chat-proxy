@@ -562,6 +562,8 @@
         const hasJsonLd = headers.some(h => h.includes('json-ld') || h.includes('structured data'));
         const lowerName = (name||'').toLowerCase();
         if (contentType === 'product' && hasJsonLd) return 'json_extraction';
+        // Treat the 05 bundle (Photo Workshops UK ...) as Workshop Products row in dashboard
+        if (lowerName.includes('photo workshops uk')) return 'workshop_products';
         if (contentType === 'product' && lowerName.includes('workshop')) return 'workshop_products';
         if (contentType === 'service') return 'course_products';
         return contentTypeToCsvKey[contentType] || contentType;
