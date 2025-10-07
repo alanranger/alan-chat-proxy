@@ -97,7 +97,7 @@ function parseCSV(csvText) {
 const PRIMARY_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const SECONDARY_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-async function fetchOnce(url, ua, referer, method = 'GET', lang) {
+async function fetchOnce(url, ua, referer, method = 'GET', lang, cookie) {
   return fetch(url, {
     method,
     redirect: 'follow',
@@ -112,6 +112,14 @@ async function fetchOnce(url, ua, referer, method = 'GET', lang) {
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache',
       'Origin': 'https://www.alanranger.com',
+      // Browser-like fetch hints
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not=A?Brand";v="99"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      ...(cookie ? { 'Cookie': cookie } : {}),
       ...(referer ? { 'Referer': referer } : {})
     }
   });
@@ -123,6 +131,18 @@ async function fetchPage(url) {
   const baseDelay = 400; // ms
   let lastError = null;
   const attempts = [];
+  let warmedCookie = '';
+
+  // Cookie warm-up: hit homepage to receive Set-Cookie and reuse
+  try {
+    const base = 'https://www.alanranger.com';
+    const warm = await fetchOnce(base, PRIMARY_UA, base, 'GET');
+    const setCookie = warm.headers.get('set-cookie') || '';
+    if (setCookie) warmedCookie = setCookie.split('\n').map(s => s.split(';')[0]).join('; ');
+    attempts.push({ method: 'GET', ua: 'primary', url: base, warmup: true, status: warm.status, hasCookie: !!warmedCookie });
+  } catch (e) {
+    attempts.push({ method: 'GET', ua: 'primary', url: 'https://www.alanranger.com', warmup: true, error: e.message });
+  }
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -138,23 +158,23 @@ async function fetchPage(url) {
 
       // For events, skip HEAD (Squarespace sometimes 404s HEAD). Try GET primary first
       if (isWorkshopEvent || isCourseEvent) {
-        let res = await fetchOnce(url, PRIMARY_UA, eventReferer, 'GET');
+        let res = await fetchOnce(url, PRIMARY_UA, eventReferer, 'GET', undefined, warmedCookie);
         attempts.push({ method: 'GET', ua: 'primary', referer: eventReferer, status: res.status });
         if (!res.ok && (res.status === 404 || res.status === 429 || (res.status >= 500 && res.status <= 599))) {
           // Retry with secondary UA
-          res = await fetchOnce(url, SECONDARY_UA, eventReferer, 'GET');
+          res = await fetchOnce(url, SECONDARY_UA, eventReferer, 'GET', undefined, warmedCookie);
           attempts.push({ method: 'GET', ua: 'secondary', referer: eventReferer, status: res.status });
           // If still failing 404, try with/without trailing slash and homepage referer
           if (!res.ok && res.status === 404) {
             const altUrl = url.endsWith('/') ? url.slice(0,-1) : (url + '/');
             const altReferer = url.split('/').slice(0,3).join('/');
-            res = await fetchOnce(altUrl, SECONDARY_UA, altReferer, 'GET');
+            res = await fetchOnce(altUrl, SECONDARY_UA, altReferer, 'GET', undefined, warmedCookie);
             attempts.push({ method: 'GET', ua: 'secondary', referer: altReferer, urlVariant: 'slash_toggle', status: res.status });
             // Final language-tuned attempt if still 404
             if (!res.ok && res.status === 404) {
               await sleep(150);
               const lang = 'en-GB,en;q=0.8,en-US;q=0.7';
-              res = await fetchOnce(url, SECONDARY_UA, eventReferer, 'GET', lang);
+              res = await fetchOnce(url, SECONDARY_UA, eventReferer, 'GET', lang, warmedCookie);
               attempts.push({ method: 'GET', ua: 'secondary', referer: eventReferer, lang, status: res.status, note: 'final_lang_retry' });
             }
           }
@@ -162,27 +182,27 @@ async function fetchPage(url) {
         if (res.ok) return res;
         lastError = new Error(`HTTP ${res.status}: ${res.statusText}`);
       } else {
-        const head = await fetchOnce(url, PRIMARY_UA, referer, 'HEAD');
+        const head = await fetchOnce(url, PRIMARY_UA, referer, 'HEAD', undefined, warmedCookie);
         attempts.push({ method: 'HEAD', ua: 'primary', referer, status: head.status });
         if (head.ok || head.status === 405 /* method not allowed */) {
           // Proceed to GET with primary UA
-          let res = await fetchOnce(url, PRIMARY_UA, referer, 'GET');
+          let res = await fetchOnce(url, PRIMARY_UA, referer, 'GET', undefined, warmedCookie);
           attempts.push({ method: 'GET', ua: 'primary', referer, status: res.status });
           if (!res.ok && (res.status === 404 || res.status === 429 || (res.status >= 500 && res.status <= 599))) {
             // Retry with secondary UA
-            res = await fetchOnce(url, SECONDARY_UA, referer, 'GET');
+            res = await fetchOnce(url, SECONDARY_UA, referer, 'GET', undefined, warmedCookie);
             attempts.push({ method: 'GET', ua: 'secondary', referer, status: res.status });
             // If still failing 404, try with/without trailing slash and homepage referer
             if (!res.ok && res.status === 404) {
               const altUrl = url.endsWith('/') ? url.slice(0,-1) : (url + '/');
               const altReferer = url.split('/').slice(0,3).join('/');
-              res = await fetchOnce(altUrl, SECONDARY_UA, altReferer, 'GET');
+              res = await fetchOnce(altUrl, SECONDARY_UA, altReferer, 'GET', undefined, warmedCookie);
               attempts.push({ method: 'GET', ua: 'secondary', referer: altReferer, urlVariant: 'slash_toggle', status: res.status });
               // Final language-tuned attempt if still 404
               if (!res.ok && res.status === 404) {
                 await sleep(150);
                 const lang = 'en-GB,en;q=0.8,en-US;q=0.7';
-                res = await fetchOnce(url, SECONDARY_UA, referer, 'GET', lang);
+                res = await fetchOnce(url, SECONDARY_UA, referer, 'GET', lang, warmedCookie);
                 attempts.push({ method: 'GET', ua: 'secondary', referer, lang, status: res.status, note: 'final_lang_retry' });
               }
             }
