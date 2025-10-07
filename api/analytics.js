@@ -47,27 +47,40 @@ export default async function handler(req, res) {
     switch (action) {
       case 'overview':
         {
-          // Get overview metrics for the last N days
-          const { data: dailyData, error: dailyError } = await supa
+          // Get overview metrics for the last N days (fallback to live counts to avoid stale aggregates)
+          const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+          // Try to load daily aggregates for charts (may be empty during testing)
+          const { data: dailyData = [], error: dailyError } = await supa
             .from('chat_analytics_daily')
             .select('*')
-            .gte('date', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+            .gte('date', sinceIso.split('T')[0])
             .order('date', { ascending: true });
 
-          if (dailyError) throw new Error(`Daily data failed: ${dailyError.message}`);
+          if (dailyError) console.warn('Daily data failed:', dailyError.message);
 
-          // Calculate totals
-          const totals = dailyData.reduce((acc, day) => ({
-            sessions: acc.sessions + (day.total_sessions || 0),
-            questions: acc.questions + (day.total_questions || 0),
+          // Live totals from base tables so they always reflect reality
+          const [{ data: sessionsCount }, { data: answeredCount }] = await Promise.all([
+            supa.from('chat_sessions').select('session_id', { count: 'exact', head: true }).gte('started_at', sinceIso),
+            supa.from('chat_interactions').select('id', { count: 'exact', head: true }).not('answer', 'is', null).gte('created_at', sinceIso)
+          ]);
+
+          // Compute averages from dailyData if present, else default to 0
+          const totalsFromDaily = dailyData.reduce((acc, day) => ({
             interactions: acc.interactions + (day.total_interactions || 0),
             avgConfidence: acc.avgConfidence + (day.avg_confidence || 0),
             avgResponseTime: acc.avgResponseTime + (day.avg_response_time_ms || 0)
-          }), { sessions: 0, questions: 0, interactions: 0, avgConfidence: 0, avgResponseTime: 0 });
+          }), { interactions: 0, avgConfidence: 0, avgResponseTime: 0 });
 
           const dayCount = dailyData.length || 1;
-          totals.avgConfidence = totals.avgConfidence / dayCount;
-          totals.avgResponseTime = totals.avgResponseTime / dayCount;
+
+          const totals = {
+            sessions: sessionsCount || 0,
+            questions: answeredCount || 0,
+            interactions: totalsFromDaily.interactions || (answeredCount || 0),
+            avgConfidence: (totalsFromDaily.avgConfidence / dayCount) || 0,
+            avgResponseTime: (totalsFromDaily.avgResponseTime / dayCount) || 0
+          };
 
           // Get recent sessions
           const { data: recentSessions, error: sessionsError } = await supa
@@ -82,7 +95,7 @@ export default async function handler(req, res) {
             ok: true,
             overview: {
               totals,
-              dailyData,
+              dailyData: dailyData || [],
               recentSessions: recentSessions || []
             }
           });
@@ -135,6 +148,25 @@ export default async function handler(req, res) {
           const { data: sessions, error: sessionsError } = await query;
 
           if (sessionsError) throw new Error(`Sessions failed: ${sessionsError.message}`);
+
+          // Recompute per-session answered question counts to avoid stale totals
+          if (sessions && sessions.length) {
+            const sessionIds = sessions.map(s => s.session_id);
+            const { data: perSessionCounts, error: perSessionError } = await supa
+              .from('chat_interactions')
+              .select('session_id', { count: 'exact' })
+              .not('answer', 'is', null)
+              .in('session_id', sessionIds);
+            if (!perSessionError && Array.isArray(perSessionCounts)) {
+              const countsBySession = {};
+              perSessionCounts.forEach(r => {
+                countsBySession[r.session_id] = (countsBySession[r.session_id] || 0) + 1;
+              });
+              sessions.forEach(s => {
+                s.total_questions = countsBySession[s.session_id] || 0;
+              });
+            }
+          }
 
           // Get total count
           const { count, error: countError } = await supa
