@@ -97,19 +97,21 @@ function parseCSV(csvText) {
 const PRIMARY_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const SECONDARY_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-async function fetchOnce(url, ua, referer, method = 'GET') {
+async function fetchOnce(url, ua, referer, method = 'GET', lang) {
   return fetch(url, {
     method,
     redirect: 'follow',
     headers: {
       'User-Agent': ua,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Accept-Language': 'en-GB,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': lang || 'en-GB,en;q=0.9',
       'Accept-Encoding': 'gzip, deflate, br',
       'DNT': '1',
       'Connection': 'keep-alive',
       'Upgrade-Insecure-Requests': '1',
       'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Origin': 'https://www.alanranger.com',
       ...(referer ? { 'Referer': referer } : {})
     }
   });
@@ -148,6 +150,13 @@ async function fetchPage(url) {
             const altReferer = url.split('/').slice(0,3).join('/');
             res = await fetchOnce(altUrl, SECONDARY_UA, altReferer, 'GET');
             attempts.push({ method: 'GET', ua: 'secondary', referer: altReferer, urlVariant: 'slash_toggle', status: res.status });
+            // Final language-tuned attempt if still 404
+            if (!res.ok && res.status === 404) {
+              await sleep(150);
+              const lang = 'en-GB,en;q=0.8,en-US;q=0.7';
+              res = await fetchOnce(url, SECONDARY_UA, eventReferer, 'GET', lang);
+              attempts.push({ method: 'GET', ua: 'secondary', referer: eventReferer, lang, status: res.status, note: 'final_lang_retry' });
+            }
           }
         }
         if (res.ok) return res;
@@ -169,6 +178,13 @@ async function fetchPage(url) {
               const altReferer = url.split('/').slice(0,3).join('/');
               res = await fetchOnce(altUrl, SECONDARY_UA, altReferer, 'GET');
               attempts.push({ method: 'GET', ua: 'secondary', referer: altReferer, urlVariant: 'slash_toggle', status: res.status });
+              // Final language-tuned attempt if still 404
+              if (!res.ok && res.status === 404) {
+                await sleep(150);
+                const lang = 'en-GB,en;q=0.8,en-US;q=0.7';
+                res = await fetchOnce(url, SECONDARY_UA, referer, 'GET', lang);
+                attempts.push({ method: 'GET', ua: 'secondary', referer, lang, status: res.status, note: 'final_lang_retry' });
+              }
             }
           }
           if (res.ok) return res;
