@@ -510,11 +510,17 @@ export default async function handler(req, res) {
         {
           try {
             const questionAnalysis = await analyzeQuestionLogs(supa);
+            console.log('Question analysis result:', JSON.stringify(questionAnalysis, null, 2));
             const improvementPlan = await createContentImprovementPlan(questionAnalysis);
+            console.log('Improvement plan result:', JSON.stringify(improvementPlan, null, 2));
 
             return sendJSON(res, 200, {
               ok: true,
-              improvementPlan
+              improvementPlan,
+              debug: {
+                questionAnalysisCount: questionAnalysis?.length || 0,
+                questionAnalysis: questionAnalysis?.slice(0, 2) // First 2 for debugging
+              }
             });
           } catch (error) {
             console.error('Improvement plan error:', error);
