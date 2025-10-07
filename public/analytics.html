@@ -167,6 +167,16 @@
       border-left: 4px solid var(--brand);
     }
 
+    .keyword-tag {
+      display: inline-block;
+      background: var(--brand);
+      color: var(--bg);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      margin: 2px 4px 2px 0;
+    }
+
     .performance-metric {
       text-align: center;
       padding: 20px;
@@ -1112,66 +1122,99 @@
         document.getElementById('insights-loading').style.display = 'block';
         document.getElementById('insights-content').style.display = 'none';
         
-        const data = await apiCall('insights');
-        const { recommendations } = data.insights;
+        // Call the new chat improvement API
+        const response = await fetch('/api/chat-improvement?action=analyze', {
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+          }
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        
+        if (!data.ok) throw new Error(data.error || 'Unknown error');
+        
+        const { analysis } = data;
         
         const insightsList = document.getElementById('insights-list');
         insightsList.innerHTML = '';
         
-        // Filter out test data and generate meaningful insights
-        const realRecommendations = recommendations.filter(rec => 
-          !rec.question.toLowerCase().includes('test') && 
-          !rec.question.toLowerCase().includes('debug') &&
-          !rec.question.toLowerCase().includes('diagnostic')
-        );
+        // Display analysis summary
+        const summaryCard = document.createElement('div');
+        summaryCard.className = 'insight-card insight-priority-high';
+        summaryCard.innerHTML = `
+          <h4>📊 Analysis Summary</h4>
+          <p>Analyzed ${analysis.totalQuestions} low-confidence questions</p>
+          <p>${analysis.highPriorityCount} high-priority issues identified</p>
+          <p>Average confidence: ${(analysis.avgConfidence * 100).toFixed(1)}%</p>
+        `;
+        insightsList.appendChild(summaryCard);
         
-        if (realRecommendations.length === 0) {
-          // Generate general insights based on available data
-          const overviewData = await apiCall('overview', { days: 7 });
-          const { totals } = overviewData.overview;
+        // Display top recommendations
+        if (analysis.recommendations && analysis.recommendations.length > 0) {
+          const recTitle = document.createElement('h3');
+          recTitle.textContent = '🎯 Top Improvement Recommendations';
+          recTitle.style.marginTop = '20px';
+          recTitle.style.marginBottom = '15px';
+          insightsList.appendChild(recTitle);
           
-          const generalInsights = [
-            {
-              type: 'system_status',
-              priority: 'medium',
-              message: `Your chat bot has handled ${totals.questions} questions across ${totals.sessions} sessions in the last 7 days.`,
-              frequency: totals.questions
-            },
-            {
-              type: 'content_opportunity',
-              priority: 'high',
-              message: 'Consider adding more content about photography techniques, equipment recommendations, and workshop details to improve answer quality.',
-              frequency: null
-            },
-            {
-              type: 'user_engagement',
-              priority: 'medium',
-              message: `Average of ${(totals.questions / totals.sessions).toFixed(1)} questions per session shows good user engagement.`,
-              frequency: totals.questions
-            }
-          ];
-          
-          generalInsights.forEach(rec => {
+          analysis.recommendations.slice(0, 10).forEach(rec => {
             const card = document.createElement('div');
-            card.className = `insight-card insight-priority-${rec.priority}`;
+            card.className = `insight-card insight-priority-${rec.recommendations[0]?.severity || 'medium'}`;
+            
+            const recommendationsHtml = rec.recommendations.map(r => 
+              `<li><strong>${r.type.replace('_', ' ').toUpperCase()}:</strong> ${r.message}</li>`
+            ).join('');
+            
             card.innerHTML = `
-              <h4>${rec.type.replace('_', ' ').toUpperCase()}</h4>
-              <p>${rec.message}</p>
-              ${rec.frequency ? `<small>Based on ${rec.frequency} total interactions</small>` : ''}
+              <h4>❓ "${rec.question}"</h4>
+              <p><strong>Frequency:</strong> ${rec.frequency} times | <strong>Confidence:</strong> ${(rec.avgConfidence * 100).toFixed(1)}%</p>
+              <p><strong>Current Answer:</strong> ${rec.currentAnswer.substring(0, 100)}${rec.currentAnswer.length > 100 ? '...' : ''}</p>
+              <ul>${recommendationsHtml}</ul>
             `;
             insightsList.appendChild(card);
           });
-        } else {
-          realRecommendations.forEach(rec => {
+        }
+        
+        // Display content suggestions
+        if (analysis.contentSuggestions && analysis.contentSuggestions.length > 0) {
+          const contentTitle = document.createElement('h3');
+          contentTitle.textContent = '📝 Content Improvement Suggestions';
+          contentTitle.style.marginTop = '20px';
+          contentTitle.style.marginBottom = '15px';
+          insightsList.appendChild(contentTitle);
+          
+          analysis.contentSuggestions.forEach(suggestion => {
             const card = document.createElement('div');
-            card.className = `insight-card insight-priority-${rec.priority}`;
+            card.className = 'insight-card insight-priority-medium';
+            
+            const patternsHtml = suggestion.commonPatterns.topKeywords.map(k => 
+              `<span class="keyword-tag">${k.word} (${k.count})</span>`
+            ).join('');
+            
             card.innerHTML = `
-              <h4>${rec.type.replace('_', ' ').toUpperCase()}</h4>
-              <p>${rec.message}</p>
-              ${rec.frequency ? `<small>Frequency: ${rec.frequency} | Avg Confidence: ${(rec.avgConfidence * 100).toFixed(1)}%</small>` : ''}
+              <h4>🎯 ${suggestion.intent.toUpperCase()} Intent</h4>
+              <p><strong>Affected Questions:</strong> ${suggestion.affectedQuestions}/${suggestion.totalQuestions} | <strong>Avg Confidence:</strong> ${(suggestion.avgConfidence * 100).toFixed(1)}%</p>
+              <p><strong>Recommendation:</strong> ${suggestion.recommendation.message}</p>
+              <div><strong>Common Keywords:</strong> ${patternsHtml}</div>
+              <ul>
+                ${suggestion.recommendation.actions.map(action => `<li>${action}</li>`).join('')}
+              </ul>
             `;
             insightsList.appendChild(card);
           });
+        }
+        
+        // If no data, show general insights
+        if (!analysis.recommendations || analysis.recommendations.length === 0) {
+          const generalCard = document.createElement('div');
+          generalCard.className = 'insight-card insight-priority-medium';
+          generalCard.innerHTML = `
+            <h4>✅ System Status</h4>
+            <p>No low-confidence questions found in the last 30 days. Your chat bot is performing well!</p>
+            <p>Continue monitoring to identify any emerging issues.</p>
+          `;
+          insightsList.appendChild(generalCard);
         }
         
         document.getElementById('insights-loading').style.display = 'none';

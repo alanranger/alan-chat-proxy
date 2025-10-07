@@ -1,0 +1,335 @@
+import { createClient } from '@supabase/supabase-js';
+import { need } from './lib/supabaseAdmin.js';
+
+const supabaseAdmin = () => createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
+
+function sendJSON(res, status, obj) {
+  res.setHeader('Content-Type', 'application/json');
+  res.status(status).json(obj);
+}
+
+function asString(err) {
+  if (typeof err === 'string') return err;
+  if (err?.message) return err.message;
+  return JSON.stringify(err);
+}
+
+/* ========== Analysis Functions ========== */
+
+async function analyzeQuestionLogs(supa) {
+  // Get questions with low confidence and high frequency
+  const { data: lowConfidenceQuestions, error: lowConfError } = await supa
+    .from('chat_interactions')
+    .select(`
+      question,
+      answer,
+      confidence,
+      intent,
+      created_at,
+      sources_used
+    `)
+    .not('answer', 'is', null)
+    .not('confidence', 'is', null)
+    .lt('confidence', 0.6) // Low confidence threshold
+    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Last 30 days
+    .order('created_at', { ascending: false });
+
+  if (lowConfError) throw new Error(`Low confidence analysis failed: ${lowConfError.message}`);
+
+  // Group by question and calculate metrics
+  const questionGroups = {};
+  (lowConfidenceQuestions || []).forEach(interaction => {
+    const q = interaction.question;
+    if (!questionGroups[q]) {
+      questionGroups[q] = {
+        question: q,
+        interactions: [],
+        frequency: 0,
+        avgConfidence: 0,
+        lastSeen: null,
+        intents: new Set(),
+        commonAnswers: new Map()
+      };
+    }
+    
+    questionGroups[q].interactions.push(interaction);
+    questionGroups[q].frequency++;
+    questionGroups[q].intents.add(interaction.intent);
+    questionGroups[q].lastSeen = Math.max(
+      questionGroups[q].lastSeen || 0, 
+      new Date(interaction.created_at).getTime()
+    );
+    
+    // Track common answers
+    const answer = interaction.answer;
+    questionGroups[q].commonAnswers.set(
+      answer, 
+      (questionGroups[q].commonAnswers.get(answer) || 0) + 1
+    );
+  });
+
+  // Calculate average confidence for each question
+  Object.values(questionGroups).forEach(group => {
+    const totalConfidence = group.interactions.reduce((sum, i) => sum + (i.confidence || 0), 0);
+    group.avgConfidence = totalConfidence / group.interactions.length;
+  });
+
+  // Sort by priority (frequency * (1 - confidence))
+  const prioritizedQuestions = Object.values(questionGroups)
+    .map(q => ({
+      ...q,
+      priority: q.frequency * (1 - q.avgConfidence),
+      intents: Array.from(q.intents),
+      topAnswer: Array.from(q.commonAnswers.entries())
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || 'No answer'
+    }))
+    .sort((a, b) => b.priority - a.priority);
+
+  return prioritizedQuestions;
+}
+
+async function generateImprovementRecommendations(questionAnalysis) {
+  const recommendations = [];
+
+  for (const question of questionAnalysis.slice(0, 10)) { // Top 10 priority questions
+    const rec = {
+      question: question.question,
+      priority: question.priority,
+      frequency: question.frequency,
+      avgConfidence: Math.round(question.avgConfidence * 100) / 100,
+      currentAnswer: question.topAnswer,
+      intents: question.intents,
+      recommendations: []
+    };
+
+    // Analyze the current answer quality
+    if (question.avgConfidence < 0.3) {
+      rec.recommendations.push({
+        type: 'content_gap',
+        severity: 'high',
+        message: 'Very low confidence suggests missing or inadequate content',
+        action: 'Add specific content for this question type'
+      });
+    } else if (question.avgConfidence < 0.5) {
+      rec.recommendations.push({
+        type: 'content_improvement',
+        severity: 'medium',
+        message: 'Low confidence indicates content needs improvement',
+        action: 'Enhance existing content or add more specific information'
+      });
+    }
+
+    // Check for generic answers
+    if (question.topAnswer.includes("I couldn't find") || 
+        question.topAnswer.includes("I don't have") ||
+        question.topAnswer.includes("not available")) {
+      rec.recommendations.push({
+        type: 'missing_content',
+        severity: 'high',
+        message: 'Generic "not found" response indicates missing content',
+        action: 'Create specific content for this question'
+      });
+    }
+
+    // Check for intent mismatches
+    if (question.intents.length > 1) {
+      rec.recommendations.push({
+        type: 'intent_confusion',
+        severity: 'medium',
+        message: 'Multiple intents detected for same question',
+        action: 'Clarify question intent handling'
+      });
+    }
+
+    // High frequency with low confidence
+    if (question.frequency > 100 && question.avgConfidence < 0.5) {
+      rec.recommendations.push({
+        type: 'high_impact',
+        severity: 'high',
+        message: 'High frequency question with poor performance',
+        action: 'Priority fix - affects many users'
+      });
+    }
+
+    recommendations.push(rec);
+  }
+
+  return recommendations;
+}
+
+async function createContentSuggestions(questionAnalysis) {
+  const suggestions = [];
+
+  // Group by intent to identify patterns
+  const intentGroups = {};
+  questionAnalysis.forEach(q => {
+    q.intents.forEach(intent => {
+      if (!intentGroups[intent]) intentGroups[intent] = [];
+      intentGroups[intent].push(q);
+    });
+  });
+
+  // Generate suggestions for each intent
+  Object.entries(intentGroups).forEach(([intent, questions]) => {
+    const lowConfQuestions = questions.filter(q => q.avgConfidence < 0.5);
+    
+    if (lowConfQuestions.length > 0) {
+      suggestions.push({
+        intent: intent,
+        affectedQuestions: lowConfQuestions.length,
+        totalQuestions: questions.length,
+        avgConfidence: questions.reduce((sum, q) => sum + q.avgConfidence, 0) / questions.length,
+        commonPatterns: extractCommonPatterns(lowConfQuestions),
+        recommendation: generateIntentRecommendation(intent, lowConfQuestions)
+      });
+    }
+  });
+
+  return suggestions;
+}
+
+function extractCommonPatterns(questions) {
+  const patterns = {
+    keywords: new Map(),
+    questionTypes: new Map()
+  };
+
+  questions.forEach(q => {
+    const words = q.question.toLowerCase().split(/\s+/);
+    words.forEach(word => {
+      if (word.length > 3) {
+        patterns.keywords.set(word, (patterns.keywords.get(word) || 0) + 1);
+      }
+    });
+
+    // Categorize question types
+    if (q.question.toLowerCase().includes('how much') || q.question.toLowerCase().includes('cost')) {
+      patterns.questionTypes.set('pricing', (patterns.questionTypes.get('pricing') || 0) + 1);
+    }
+    if (q.question.toLowerCase().includes('when') || q.question.toLowerCase().includes('next')) {
+      patterns.questionTypes.set('scheduling', (patterns.questionTypes.get('scheduling') || 0) + 1);
+    }
+    if (q.question.toLowerCase().includes('where') || q.question.toLowerCase().includes('location')) {
+      patterns.questionTypes.set('location', (patterns.questionTypes.get('location') || 0) + 1);
+    }
+  });
+
+  return {
+    topKeywords: Array.from(patterns.keywords.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([word, count]) => ({ word, count })),
+    questionTypes: Array.from(patterns.questionTypes.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([type, count]) => ({ type, count }))
+  };
+}
+
+function generateIntentRecommendation(intent, questions) {
+  switch (intent) {
+    case 'events':
+      return {
+        type: 'content_expansion',
+        message: 'Add more specific event information, pricing, and scheduling details',
+        actions: [
+          'Verify event data is up-to-date',
+          'Add more detailed event descriptions',
+          'Ensure pricing information is accurate'
+        ]
+      };
+    case 'advice':
+      return {
+        type: 'knowledge_base_expansion',
+        message: 'Expand knowledge base with more comprehensive guides and tutorials',
+        actions: [
+          'Create detailed guides for common topics',
+          'Add step-by-step tutorials',
+          'Include more practical examples'
+        ]
+      };
+    default:
+      return {
+        type: 'general_improvement',
+        message: 'Improve content quality and specificity',
+        actions: [
+          'Review and enhance existing content',
+          'Add more specific information',
+          'Improve answer relevance'
+        ]
+      };
+  }
+}
+
+/* ========== Handler ========== */
+export default async function handler(req, res) {
+  try {
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+
+    // Auth
+    const token = req.headers['authorization']?.trim();
+    const ingest = `Bearer ${need('INGEST_TOKEN')}`;
+    const adminUi = process.env.ADMIN_UI_TOKEN ? `Bearer ${process.env.ADMIN_UI_TOKEN}` : null;
+    const legacyAdmin = 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
+    const ok = token === ingest || (adminUi && token === adminUi) || token === legacyAdmin;
+    if (!ok) return sendJSON(res, 401, { error: 'unauthorized' });
+
+    const supa = supabaseAdmin();
+    const { action } = req.query || {};
+
+    switch (action) {
+      case 'analyze':
+        {
+          const questionAnalysis = await analyzeQuestionLogs(supa);
+          const recommendations = await generateImprovementRecommendations(questionAnalysis);
+          const contentSuggestions = await createContentSuggestions(questionAnalysis);
+
+          return sendJSON(res, 200, {
+            ok: true,
+            analysis: {
+              totalQuestions: questionAnalysis.length,
+              highPriorityCount: questionAnalysis.filter(q => q.priority > 50).length,
+              avgConfidence: questionAnalysis.reduce((sum, q) => sum + q.avgConfidence, 0) / questionAnalysis.length,
+              recommendations,
+              contentSuggestions
+            }
+          });
+        }
+
+      case 'recommendations':
+        {
+          const questionAnalysis = await analyzeQuestionLogs(supa);
+          const recommendations = await generateImprovementRecommendations(questionAnalysis);
+
+          return sendJSON(res, 200, {
+            ok: true,
+            recommendations: recommendations.slice(0, 20) // Top 20 recommendations
+          });
+        }
+
+      case 'content_gaps':
+        {
+          const questionAnalysis = await analyzeQuestionLogs(supa);
+          const contentSuggestions = await createContentSuggestions(questionAnalysis);
+
+          return sendJSON(res, 200, {
+            ok: true,
+            contentGaps: contentSuggestions
+          });
+        }
+
+      default:
+        return sendJSON(res, 400, { error: 'bad_request', detail: 'Valid actions: analyze, recommendations, content_gaps' });
+    }
+
+  } catch (err) {
+    console.error('Chat improvement error:', err);
+    return sendJSON(res, 500, { error: 'server_error', detail: asString(err) });
+  }
+}
