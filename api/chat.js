@@ -9,18 +9,20 @@ import { createClient } from "@supabase/supabase-js";
 /* ----------------------- Chat Logging ----------------------- */
 const logQuestion = async (sessionId, question) => {
   try {
-    const response = await fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/chat-log`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.INGEST_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'}`
-      },
-      body: JSON.stringify({
-        action: 'question',
-        data: { sessionId, question }
-      })
-    });
-    if (!response.ok) throw new Error(`Logging failed: ${response.status}`);
+    const client = supabaseAdmin();
+    
+    // Insert the question into chat_interactions
+    const { error } = await client.from('chat_interactions').insert([{
+      session_id: sessionId,
+      question: question,
+      answer: null,
+      intent: null,
+      confidence: null,
+      response_time_ms: null,
+      sources_used: null
+    }]);
+    
+    if (error) throw new Error(`Question log failed: ${error.message}`);
   } catch (err) {
     console.warn('Question logging failed:', err.message);
   }
@@ -28,18 +30,23 @@ const logQuestion = async (sessionId, question) => {
 
 const logAnswer = async (sessionId, question, answer, intent, confidence, responseTimeMs, sourcesUsed) => {
   try {
-    const response = await fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/chat-log`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.INGEST_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'}`
-      },
-      body: JSON.stringify({
-        action: 'question',
-        data: { sessionId, question, answer, intent, confidence, responseTimeMs, sourcesUsed }
-      })
-    });
-    if (!response.ok) throw new Error(`Logging failed: ${response.status}`);
+    const client = supabaseAdmin();
+    
+    // Insert the complete interaction into chat_interactions
+    const { error } = await client.from('chat_interactions').insert([{
+      session_id: sessionId,
+      question: question,
+      answer: answer,
+      intent: intent,
+      confidence: confidence ? parseFloat(confidence) : null,
+      response_time_ms: responseTimeMs ? parseInt(responseTimeMs) : null,
+      sources_used: sourcesUsed || null
+    }]);
+    
+    if (error) throw new Error(`Answer log failed: ${error.message}`);
+    
+    // Update session question count
+    await client.rpc('increment_session_questions', { session_id: sessionId });
   } catch (err) {
     console.warn('Answer logging failed:', err.message);
   }
