@@ -103,20 +103,24 @@ export default async function handler(req, res) {
             return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide sessionId and question', stage });
           }
 
+          // If answer is provided, this is a complete interaction (logAnswer call)
+          // If answer is null/undefined, this is just a question (logQuestion call)
           const { error } = await supa.from('chat_interactions').insert([{
             session_id: sessionId,
             question: question,
             answer: answer || null,
             intent: intent || null,
-            confidence: confidence || null,
-            response_time_ms: responseTimeMs || null,
+            confidence: confidence ? parseFloat(confidence) : null,
+            response_time_ms: responseTimeMs ? parseInt(responseTimeMs) : null,
             sources_used: sourcesUsed || null
           }]);
 
           if (error) throw new Error(`Question log failed: ${error.message}`);
 
-          // Update session question count
-          await supa.rpc('increment_session_questions', { session_id: sessionId });
+          // Update session question count only if this is a complete interaction (has answer)
+          if (answer) {
+            await supa.rpc('increment_session_questions', { session_id: sessionId });
+          }
 
           return sendJSON(res, 200, { ok: true, action: 'question' });
         }
