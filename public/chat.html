@@ -426,8 +426,19 @@ function fmtDate(iso){
 function currency(amount, ccy){
   if(amount==null || amount==='') return null;
   const n = Number(amount); if(!isFinite(n)) return null;
-  try{ return new Intl.NumberFormat(undefined,{style:'currency',currency:ccy||'GBP',maximumFractionDigits:0}).format(n); }
-  catch{ return `£${String(amount).replace(/\.00$/,'')}`; }
+  const hasFraction = Math.abs(n % 1) > 1e-6;
+  try{
+    return new Intl.NumberFormat(undefined,{
+      style:'currency',
+      currency:ccy||'GBP',
+      minimumFractionDigits: hasFraction ? 2 : 0,
+      maximumFractionDigits: hasFraction ? 2 : 0
+    }).format(n);
+  }
+  catch{
+    const s = hasFraction ? Number(n).toFixed(2) : String(Math.round(n));
+    return `£${s}`;
+  }
 }
 function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]) )}
 
@@ -823,7 +834,21 @@ function renderAnswer(payload){
       const data = { structured: s, debug: payload.debug||{}, heuristic: heuristic, final: __rounded };
       setDebugJSON(pre, data, { maxLen: 2000, maxItems: 50 });
       box.querySelector('#reason-copy').addEventListener('click', async ()=>{
-        try { await navigator.clipboard.writeText(pre.textContent||''); confEl.textContent = confEl.textContent.replace('Confidence','Copied'); setTimeout(()=>{ confEl.textContent = `Confidence: ${__rounded}%`; }, 1200); } catch{}
+        try {
+          const blob = new Blob([pre.textContent||''], { type: 'text/plain' });
+          if (navigator.clipboard && window.ClipboardItem) {
+            await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]);
+          } else if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(pre.textContent||'');
+          } else {
+            const ta=document.createElement('textarea');
+            ta.value=pre.textContent||''; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+          }
+          confEl.textContent = confEl.textContent.replace('Confidence','Copied');
+          setTimeout(()=>{ confEl.textContent = `Confidence: ${__rounded}%`; }, 1200);
+        } catch(e) {
+          alert('Copy failed. Select the text and press Ctrl/Cmd+C.');
+        }
       });
       box.querySelector('.close').addEventListener('click', ()=> box.remove());
       document.body.appendChild(box);
