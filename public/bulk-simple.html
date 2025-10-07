@@ -557,6 +557,15 @@
       }
       
       const headers = parseCSVLine(headerLine).map(h => h.toLowerCase());
+
+      function resolveCsvKey(contentType, headers, name){
+        const hasJsonLd = headers.some(h => h.includes('json-ld') || h.includes('structured data'));
+        const lowerName = (name||'').toLowerCase();
+        if (contentType === 'product' && hasJsonLd) return 'json_extraction';
+        if (contentType === 'product' && lowerName.includes('workshop')) return 'workshop_products';
+        if (contentType === 'service') return 'course_products';
+        return contentTypeToCsvKey[contentType] || contentType;
+      }
       
       // Parse CSV properly to get actual row count
       let actualRowCount = 0;
@@ -597,7 +606,7 @@
         updateStats();
         
         // Store CSV count for dashboard display even for reference files (accumulate, don't overwrite)
-        const csvKey = contentTypeToCsvKey[contentType] || contentType;
+        const csvKey = resolveCsvKey(contentType, headers, file?.name);
         if (csvRowCounts.hasOwnProperty(csvKey)) {
           // For site_urls, only keep the largest count (main site URLs file)
           if (contentType === 'site_urls') {
@@ -659,7 +668,7 @@
           updateStats();
           
           // Store CSV count for dashboard display (accumulate, don't overwrite)
-          const csvKey = contentTypeToCsvKey[contentType] || contentType;
+          const csvKey = resolveCsvKey(contentType, headers, file?.name);
           console.log(`DEBUG: ${contentType} -> ${csvKey}, adding ${actualRowCount} rows`);
           if (csvRowCounts.hasOwnProperty(csvKey)) {
             // For site_urls, only keep the largest count (main site URLs file)
