@@ -797,6 +797,8 @@
 
     function detectTypeByName(name){
       const n = (name||'').toLowerCase();
+      if (n.includes('photo workshops uk')) return 'product';
+      if (n.includes('photography services')) return 'product';
       if (n.includes('workshop')) return 'workshop';
       if (n.includes('event')) return 'event';
       if (n.includes('blog') || n.includes('news')) return 'blog';

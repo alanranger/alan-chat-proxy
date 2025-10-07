@@ -290,17 +290,17 @@ function transformServiceData(row) {
 
 /* ========== Product data transformation ========== */
 function transformProductData(row) {
-  const title = row.title;
-  const url = row['product url'] || row.product_url || row.url;
+  const title = row.title || row['product title'] || row.name;
+  const url = row['product url'] || row.product_url || row.url || row['page url'] || row.page_url;
   const description = row.description;
   const sku = row.sku;
-  const price = parseFloat(row.price) || 0;
+  const price = parseFloat(row.price || row['low price'] || row.low_price) || 0;
   const salePrice = parseFloat(row['sale price'] || row.sale_price) || 0;
   const onSale = (row['on sale'] || row.on_sale) === 'Yes' || (row['on sale'] || row.on_sale) === 'TRUE';
   const stock = row.stock;
   const categories = row.categories ? row.categories.split(',').map(c => c.trim()) : [];
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
-  const imageUrls = row['hosted image urls'] ? row['hosted image urls'].split(' ').filter(u => u.trim()) : (row.hosted_image_urls ? row.hosted_image_urls.split(' ').filter(u => u.trim()) : []);
+  const imageUrls = row['hosted image urls'] ? row['hosted image urls'].split(' ').filter(u => u.trim()) : (row.hosted_image_urls ? row.hosted_image_urls.split(' ').filter(u => u.trim()) : (row.image ? [row.image] : []));
   
   // Determine availability
   let availability = 'OutOfStock';
