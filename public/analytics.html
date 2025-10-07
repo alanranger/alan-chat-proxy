@@ -338,6 +338,56 @@
       color: #9ca3af;
       font-size: 12px;
     }
+
+    .qa-display {
+      max-width: 100%;
+    }
+
+    .question-section, .answer-section {
+      margin-bottom: 20px;
+    }
+
+    .question-section h4, .answer-section h4 {
+      color: #f9fafb;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    .question-text {
+      background: #374151;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #60a5fa;
+      color: #f9fafb;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .answer-text {
+      background: #374151;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #10b981;
+      color: #d1d5db;
+      line-height: 1.6;
+    }
+
+    .qa-metadata {
+      background: #1f2937;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #4b5563;
+    }
+
+    .qa-metadata p {
+      margin: 5px 0;
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    .qa-metadata strong {
+      color: #f9fafb;
+    }
     .insight-priority-high { border-left-color: var(--error); }
     .insight-priority-medium { border-left-color: var(--warning); }
     .insight-priority-low { border-left-color: var(--success); }
@@ -589,6 +639,7 @@
                 <th onclick="sortQuestions('frequency')" style="cursor: pointer;">Frequency <span id="sort-frequency"></span></th>
                 <th onclick="sortQuestions('avg_confidence')" style="cursor: pointer;">Avg Confidence <span id="sort-avg_confidence"></span></th>
                 <th onclick="sortQuestions('last_seen')" style="cursor: pointer;">Last Seen <span id="sort-last_seen">↓</span></th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="questions-table">
@@ -897,6 +948,7 @@
           <td><span class="badge badge-info">${q.frequency}</span></td>
           <td><span class="badge ${q.avg_confidence >= 0.8 ? 'badge-success' : q.avg_confidence >= 0.5 ? 'badge-warning' : 'badge-error'}">${(q.avg_confidence * 100).toFixed(1)}%</span></td>
           <td>${new Date(q.last_seen).toLocaleString()}</td>
+          <td><button class="btn btn-secondary" onclick="viewQuestion('${q.question_text.replace(/'/g, "\\'")}')">View</button></td>
         `;
         tbody.appendChild(row);
       });
@@ -1136,6 +1188,61 @@
         .replace(/<\/ul><ul>/g, '');
       
       return formatted;
+    }
+
+    // View question details
+    async function viewQuestion(questionText) {
+      try {
+        // Get interactions for this specific question
+        const data = await apiCall('question_detail', { question: questionText });
+        const { interactions } = data.question;
+        
+        if (!interactions || interactions.length === 0) {
+          showError('No interactions found for this question.');
+          return;
+        }
+        
+        // Get the most recent interaction with an answer
+        const latestInteraction = interactions.find(i => i.answer) || interactions[0];
+        
+        // Create a modal to show the question and answer
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3>Question & Answer</h3>
+              <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="qa-display">
+                <div class="question-section">
+                  <h4>Question:</h4>
+                  <div class="question-text">${latestInteraction.question}</div>
+                </div>
+                <div class="answer-section">
+                  <h4>Answer:</h4>
+                  <div class="answer-text">${formatAnswer(latestInteraction.answer || 'No answer available')}</div>
+                </div>
+                <div class="qa-metadata">
+                  <p><strong>Frequency:</strong> ${interactions.length} time(s) asked</p>
+                  <p><strong>Last Asked:</strong> ${new Date(latestInteraction.created_at).toLocaleString()}</p>
+                  <p><strong>Confidence:</strong> ${latestInteraction.confidence ? (latestInteraction.confidence * 100).toFixed(1) + '%' : 'N/A'}</p>
+                  <p><strong>Response Time:</strong> ${latestInteraction.response_time_ms || 'N/A'}ms</p>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Close</button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+      } catch (error) {
+        showError('Failed to load question details: ' + error.message);
+      }
     }
 
     // View session details

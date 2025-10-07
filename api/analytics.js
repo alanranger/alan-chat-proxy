@@ -264,6 +264,30 @@ export default async function handler(req, res) {
           });
         }
 
+      case 'question_detail':
+        {
+          const { question } = req.query || {};
+          if (!question) {
+            return sendJSON(res, 400, { error: 'bad_request', detail: 'Question parameter is required' });
+          }
+
+          // Get all interactions for this specific question
+          const { data: interactions, error: interactionsError } = await supa
+            .from('chat_interactions')
+            .select('*')
+            .eq('question', question)
+            .order('created_at', { ascending: false });
+
+          if (interactionsError) throw new Error(`Question detail failed: ${interactionsError.message}`);
+
+          return sendJSON(res, 200, {
+            ok: true,
+            question: {
+              interactions: interactions || []
+            }
+          });
+        }
+
       case 'admin_preview':
         {
           const { startDate, endDate, questionText, sessionId, confidence } = req.query || {};
@@ -430,7 +454,7 @@ export default async function handler(req, res) {
         }
 
       default:
-        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, performance, insights, admin_preview, admin_delete, admin_clear_all' });
+        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, question_detail, performance, insights, admin_preview, admin_delete, admin_clear_all' });
     }
 
   } catch (err) {
