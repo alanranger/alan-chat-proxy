@@ -1163,7 +1163,7 @@
           const globalIndex = batchIndex * BATCH_SIZE + urlIndex;
           updateProgress((completed / urls.length) * 100, `Scraping ${url}...`);
           
-          const result = await apiCall('/api/ingest-embed-replace', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
+          const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
           const category = categorize(url, result);
           addResult(`🔍 DEBUG: ${url} -> Category: ${category}`, 'info');
           
@@ -1348,7 +1348,7 @@
       }
 
       addResult(`🧪 Testing URL: ${url}`);
-      const result = await apiCall('/api/ingest-embed-replace', { url });
+      const result = await apiCall('/api/ingest', { url });
       if (result && result.ok) {
         addResult(`✅ URL test successful: ${url}`, 'success');
       } else {
@@ -1383,7 +1383,7 @@
       document.getElementById('extractResults').textContent = `Extracting ${contentType} from ${url}...`;
       
       try {
-        const response = await fetch('/api/ingest-embed-replace', {
+        const response = await fetch('/api/ingest', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
