@@ -1204,7 +1204,17 @@
               urlScrapingStats[category].failed++;
               renderCategoryStats();
             } else {
-              addResult(`❌ Failed: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'error');
+              // Improve diagnostics formatting when backend attaches attempt details
+              let extra = '';
+              try {
+                const j = typeof result === 'string' ? JSON.parse(result) : result;
+                if (j && j.detail && /attempts/.test(j.detail)) {
+                  extra = `\n↪ Attempts: ${j.detail}`;
+                } else if (j && j.attempts) {
+                  extra = `\n↪ Attempts: ${JSON.stringify(j.attempts)}`;
+                }
+              } catch {}
+              addResult(`❌ Failed: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
               renderCategoryStats();

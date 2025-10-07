@@ -120,31 +120,62 @@ async function fetchPage(url) {
   const maxAttempts = 3;
   const baseDelay = 400; // ms
   let lastError = null;
+  const attempts = [];
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       // Try with original URL and with trailing slash as fallback
       // Prefer blog listing referer for blog articles
       const isBlogArticle = /\/blog-on-photography\//.test(url);
+      const isWorkshopEvent = /\/photographic-workshops-near-me(\/|$)/.test(url);
+      const isCourseEvent = /\/beginners-photography-lessons(\/|$)/.test(url);
       const referer = isBlogArticle ? 'https://www.alanranger.com/blog-on-photography' : url;
-      const head = await fetchOnce(url, PRIMARY_UA, referer, 'HEAD');
-      if (head.ok || head.status === 405 /* method not allowed */) {
-        // Proceed to GET with primary UA
-        let res = await fetchOnce(url, PRIMARY_UA, referer, 'GET');
+      const eventReferer = isWorkshopEvent ? 'https://www.alanranger.com/photographic-workshops-near-me'
+                          : isCourseEvent ? 'https://www.alanranger.com/beginners-photography-lessons'
+                          : referer;
+
+      // For events, skip HEAD (Squarespace sometimes 404s HEAD). Try GET primary first
+      if (isWorkshopEvent || isCourseEvent) {
+        let res = await fetchOnce(url, PRIMARY_UA, eventReferer, 'GET');
+        attempts.push({ method: 'GET', ua: 'primary', referer: eventReferer, status: res.status });
         if (!res.ok && (res.status === 404 || res.status === 429 || (res.status >= 500 && res.status <= 599))) {
           // Retry with secondary UA
-          res = await fetchOnce(url, SECONDARY_UA, referer, 'GET');
+          res = await fetchOnce(url, SECONDARY_UA, eventReferer, 'GET');
+          attempts.push({ method: 'GET', ua: 'secondary', referer: eventReferer, status: res.status });
           // If still failing 404, try with/without trailing slash and homepage referer
           if (!res.ok && res.status === 404) {
             const altUrl = url.endsWith('/') ? url.slice(0,-1) : (url + '/');
             const altReferer = url.split('/').slice(0,3).join('/');
             res = await fetchOnce(altUrl, SECONDARY_UA, altReferer, 'GET');
+            attempts.push({ method: 'GET', ua: 'secondary', referer: altReferer, urlVariant: 'slash_toggle', status: res.status });
           }
         }
         if (res.ok) return res;
         lastError = new Error(`HTTP ${res.status}: ${res.statusText}`);
       } else {
-        lastError = new Error(`HEAD ${head.status}`);
+        const head = await fetchOnce(url, PRIMARY_UA, referer, 'HEAD');
+        attempts.push({ method: 'HEAD', ua: 'primary', referer, status: head.status });
+        if (head.ok || head.status === 405 /* method not allowed */) {
+          // Proceed to GET with primary UA
+          let res = await fetchOnce(url, PRIMARY_UA, referer, 'GET');
+          attempts.push({ method: 'GET', ua: 'primary', referer, status: res.status });
+          if (!res.ok && (res.status === 404 || res.status === 429 || (res.status >= 500 && res.status <= 599))) {
+            // Retry with secondary UA
+            res = await fetchOnce(url, SECONDARY_UA, referer, 'GET');
+            attempts.push({ method: 'GET', ua: 'secondary', referer, status: res.status });
+            // If still failing 404, try with/without trailing slash and homepage referer
+            if (!res.ok && res.status === 404) {
+              const altUrl = url.endsWith('/') ? url.slice(0,-1) : (url + '/');
+              const altReferer = url.split('/').slice(0,3).join('/');
+              res = await fetchOnce(altUrl, SECONDARY_UA, altReferer, 'GET');
+              attempts.push({ method: 'GET', ua: 'secondary', referer: altReferer, urlVariant: 'slash_toggle', status: res.status });
+            }
+          }
+          if (res.ok) return res;
+          lastError = new Error(`HTTP ${res.status}: ${res.statusText}`);
+        } else {
+          lastError = new Error(`HEAD ${head.status}`);
+        }
       }
     } catch (e) {
       lastError = e;
@@ -153,7 +184,9 @@ async function fetchPage(url) {
     const jitter = Math.floor(Math.random() * 250);
     await sleep(baseDelay * attempt + jitter);
   }
-  throw lastError || new Error('fetch_failed');
+  const err = lastError || new Error('fetch_failed');
+  err.attempts = attempts;
+  throw err;
 }
 
 /* ========== JSON-LD extraction ========== */
@@ -315,7 +348,8 @@ async function ingestSingleUrl(url, supa, options = {}) {
     };
     
   } catch (err) {
-    throw new Error(`${stage}: ${err.message}`);
+    const diag = (err && err.attempts) ? ` attempts=${JSON.stringify(err.attempts)}` : '';
+    throw new Error(`${stage}: ${err.message}${diag}`);
   }
 }
 
