@@ -60,10 +60,12 @@ export default async function handler(req, res) {
           if (dailyError) console.warn('Daily data failed:', dailyError.message);
 
           // Live totals from base tables so they always reflect reality
-          const [{ data: sessionsCount }, { data: answeredCount }] = await Promise.all([
+          const [sessionsCountRes, answeredCountRes] = await Promise.all([
             supa.from('chat_sessions').select('session_id', { count: 'exact', head: true }).gte('started_at', sinceIso),
             supa.from('chat_interactions').select('id', { count: 'exact', head: true }).not('answer', 'is', null).gte('created_at', sinceIso)
           ]);
+          const sessionsCount = sessionsCountRes?.count || 0;
+          const answeredCount = answeredCountRes?.count || 0;
 
           // Compute averages from dailyData if present, else default to 0
           const totalsFromDaily = dailyData.reduce((acc, day) => ({
