@@ -369,27 +369,59 @@ async function ingestSingleUrl(url, supa, options = {}) {
       }));
       
       if (!options.dryRun) {
-        // Merge strategy: upsert by (url, kind, entity_hash) but do not overwrite non-null existing values
+        // Merge strategy: always update existing entity for same (url, kind)
+        // Rationale: event pages get rescheduled with same URL; dates/times must refresh
         for (const e of entities) {
-          // Try fetch existing row with same url+kind+entity_hash
-          const { data: existing } = await supa
-            .from('page_entities')
-            .select('*')
-            .eq('url', e.url)
-            .eq('kind', e.kind)
-            .eq('entity_hash', e.entity_hash)
-            .single();
+          // Fetch by natural key (url + kind); assume one primary entity per page
+          let existing = null;
+          try {
+            const resSel = await supa
+              .from('page_entities')
+              .select('*')
+              .eq('url', e.url)
+              .eq('kind', e.kind)
+              .limit(1)
+              .maybeSingle();
+            existing = resSel?.data || null;
+          } catch {}
+
           if (existing) {
             const merged = { ...existing };
-            for (const k of ['title','description','date_start','date_end','location','price','price_currency','availability','sku','provider','raw']) {
-              if (merged[k] == null || merged[k] === '') merged[k] = e[k];
+            // Fields that should refresh if new data present
+            const overwriteFields = e.kind === 'event'
+              ? ['title','description','date_start','date_end','location','price','price_currency','availability','sku','provider','raw']
+              : ['title','description','location','price','price_currency','availability','sku','provider','raw'];
+            for (const k of overwriteFields) {
+              if (e[k] !== undefined && e[k] !== null && e[k] !== '') merged[k] = e[k];
             }
             merged.last_seen = e.last_seen;
             const { error: updErr } = await supa.from('page_entities').update(merged).eq('id', existing.id);
             if (updErr) throw new Error(`Entity update failed: ${updErr.message}`);
           } else {
+            // Try insert; if unique constraint blocks, fallback to update existing natural key
             const { error: insErr } = await supa.from('page_entities').insert([e]);
-            if (insErr) throw new Error(`Entity insert failed: ${insErr.message}`);
+            if (insErr) {
+              // Fallback: update by (url, kind)
+              const { error: updErr } = await supa
+                .from('page_entities')
+                .update({
+                  title: e.title,
+                  description: e.description,
+                  date_start: e.date_start,
+                  date_end: e.date_end,
+                  location: e.location,
+                  price: e.price,
+                  price_currency: e.price_currency,
+                  availability: e.availability,
+                  sku: e.sku,
+                  provider: e.provider,
+                  raw: e.raw,
+                  last_seen: e.last_seen
+                })
+                .eq('url', e.url)
+                .eq('kind', e.kind);
+              if (updErr) throw new Error(`Entity upsert failed: ${updErr.message}`);
+            }
           }
         }
       }
