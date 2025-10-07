@@ -272,6 +272,11 @@ async function generateImprovedContent(question, currentAnswer, recommendations)
   
   const improvements = [];
   
+  // Handle invalid input
+  if (!recommendations || !Array.isArray(recommendations)) {
+    return improvements;
+  }
+  
   recommendations.forEach(rec => {
     switch (rec.type) {
       case 'content_gap':
@@ -368,7 +373,16 @@ async function createContentImprovementPlan(questionAnalysis) {
     contentToEnhance: []
   };
   
+  // Handle empty or invalid input
+  if (!questionAnalysis || !Array.isArray(questionAnalysis)) {
+    return improvementPlan;
+  }
+  
   for (const question of questionAnalysis) {
+    // Skip if question doesn't have required properties
+    if (!question || !question.question || !question.recommendations) {
+      continue;
+    }
     if (question.priority > 100) {
       // High priority - needs immediate attention
       const improvements = await generateImprovedContent(
@@ -487,13 +501,21 @@ export default async function handler(req, res) {
 
       case 'improvement_plan':
         {
-          const questionAnalysis = await analyzeQuestionLogs(supa);
-          const improvementPlan = await createContentImprovementPlan(questionAnalysis);
+          try {
+            const questionAnalysis = await analyzeQuestionLogs(supa);
+            const improvementPlan = await createContentImprovementPlan(questionAnalysis);
 
-          return sendJSON(res, 200, {
-            ok: true,
-            improvementPlan
-          });
+            return sendJSON(res, 200, {
+              ok: true,
+              improvementPlan
+            });
+          } catch (error) {
+            console.error('Improvement plan error:', error);
+            return sendJSON(res, 500, { 
+              error: 'improvement_plan_failed', 
+              detail: error.message 
+            });
+          }
         }
 
       case 'generate_content':
