@@ -1519,9 +1519,18 @@
           'website_urls': 'Website URLs',
           'json_extraction': 'JSON Product Extraction'
         };
+        const codes = {
+          'blog_articles': '01',
+          'course_events': '02',
+          'workshop_events': '03',
+          'course_products': '04',
+          'workshop_products': '05',
+          'website_urls': '06',
+          'json_extraction': '07'
+        };
         const name = labels[cat] || cat;
-        const file = csvFileNames && csvFileNames[cat];
-        return file ? `${name} — ${file}` : name;
+        const code = codes[cat] ? ` — ${codes[cat]}` : '';
+        return `${name}${code}`;
       };
       
       // Calculate totals
