@@ -40,11 +40,28 @@ async function analyzeQuestionLogs(supa) {
 
   console.log('Found low confidence questions:', lowConfidenceQuestions?.length || 0);
 
+  // Get already improved or ignored questions to exclude them
+  const { data: excludedQuestions, error: excludeError } = await supa
+    .from('content_improvement_tracking')
+    .select('question')
+    .in('improvement_status', ['improved', 'ignored']);
+
+  if (excludeError) {
+    console.error('Error fetching excluded questions:', excludeError);
+  }
+
+  const excludedQuestionSet = new Set(excludedQuestions?.map(q => q.question) || []);
+  console.log('Excluding already processed questions:', excludedQuestionSet.size);
+
+  // Filter out already processed questions
+  const filteredQuestions = lowConfidenceQuestions?.filter(q => !excludedQuestionSet.has(q.question)) || [];
+  console.log('Questions remaining after filtering:', filteredQuestions.length);
+
   if (lowConfError) throw new Error(`Low confidence analysis failed: ${lowConfError.message}`);
 
   // Group by question and calculate metrics
   const questionGroups = {};
-  (lowConfidenceQuestions || []).forEach(interaction => {
+  filteredQuestions.forEach(interaction => {
     const q = interaction.question;
     if (!questionGroups[q]) {
       questionGroups[q] = {
@@ -614,6 +631,96 @@ export default async function handler(req, res) {
           }
         }
 
+      case 'improvement_status':
+        {
+          try {
+            // Get counts of different improvement statuses
+            const { data: statusCounts, error: countError } = await supa
+              .from('content_improvement_tracking')
+              .select('improvement_status')
+              .not('improvement_status', 'is', null);
+
+            if (countError) throw new Error(`Failed to fetch status counts: ${countError.message}`);
+
+            // Count by status
+            const counts = {
+              improved: 0,
+              ignored: 0,
+              pending: 0,
+              failed: 0
+            };
+
+            statusCounts?.forEach(item => {
+              if (counts.hasOwnProperty(item.improvement_status)) {
+                counts[item.improvement_status]++;
+              }
+            });
+
+            // Get recent improvements with before/after data
+            const { data: recentImprovements, error: improvementsError } = await supa
+              .from('content_improvement_tracking')
+              .select(`
+                question,
+                original_confidence,
+                original_answer,
+                improvement_status,
+                implemented_at,
+                page_entities!implemented_content_id (
+                  title,
+                  raw->>'content' as content
+                )
+              `)
+              .eq('improvement_status', 'improved')
+              .order('implemented_at', { ascending: false })
+              .limit(5);
+
+            if (improvementsError) throw new Error(`Failed to fetch recent improvements: ${improvementsError.message}`);
+
+            return sendJSON(res, 200, {
+              ok: true,
+              counts,
+              recentImprovements: recentImprovements || []
+            });
+          } catch (error) {
+            console.error('Improvement status error:', error);
+            return sendJSON(res, 500, { 
+              error: 'improvement_status_failed', 
+              detail: error.message 
+            });
+          }
+        }
+
+      case 'ignore_question':
+        {
+          const { question } = req.body || {};
+          if (!question) {
+            return sendJSON(res, 400, { error: 'bad_request', detail: 'Question is required' });
+          }
+
+          try {
+            const { error: ignoreError } = await supa.from('content_improvement_tracking').upsert({
+              question: question,
+              improvement_status: 'ignored',
+              ignored_at: new Date().toISOString()
+            }, {
+              onConflict: 'question'
+            });
+
+            if (ignoreError) throw new Error(`Failed to ignore question: ${ignoreError.message}`);
+
+            return sendJSON(res, 200, {
+              ok: true,
+              message: 'Question marked as ignored'
+            });
+          } catch (error) {
+            console.error('Ignore question error:', error);
+            return sendJSON(res, 500, { 
+              error: 'ignore_question_failed', 
+              detail: error.message 
+            });
+          }
+        }
+
       case 'list_implemented':
         {
           try {
@@ -670,6 +777,16 @@ export default async function handler(req, res) {
             });
           }
 
+          // Get original confidence for tracking
+          const { data: originalInteraction } = await supa
+            .from('chat_interactions')
+            .select('confidence, answer')
+            .eq('question', question)
+            .not('confidence', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
           // Ensure we have the required fields
           const title = suggestedContent.title || `Content for: ${question}`;
           const content = suggestedContent.content || 'Content improvement added';
@@ -677,7 +794,7 @@ export default async function handler(req, res) {
           const intent = suggestedContent.intent || 'advice';
 
           // Add the improved content to page_entities as an article
-          const { error: insertError } = await supa.from('page_entities').insert([{
+          const { data: insertedContent, error: insertError } = await supa.from('page_entities').insert([{
             url: `https://www.alanranger.com/improved-content/${Date.now()}`,
             kind: 'article',
             title: title,
@@ -692,18 +809,36 @@ export default async function handler(req, res) {
               created_at: new Date().toISOString()
             },
             last_seen: new Date().toISOString()
-          }]);
+          }]).select().single();
 
           if (insertError) {
             console.error('Insert error:', insertError);
             throw new Error(`Content insertion failed: ${insertError.message}`);
           }
 
+          // Track the improvement
+          const { error: trackingError } = await supa.from('content_improvement_tracking').upsert({
+            question: question,
+            original_confidence: originalInteraction?.confidence || null,
+            original_answer: originalInteraction?.answer || null,
+            improvement_status: 'improved',
+            implemented_content_id: insertedContent.id,
+            implemented_at: new Date().toISOString()
+          }, {
+            onConflict: 'question'
+          });
+
+          if (trackingError) {
+            console.error('Tracking error:', trackingError);
+            // Don't fail the whole operation for tracking errors
+          }
+
           return sendJSON(res, 200, {
             ok: true,
             message: 'Content improvement implemented successfully',
             question,
-            content: suggestedContent
+            content: suggestedContent,
+            originalConfidence: originalInteraction?.confidence || null
           });
         }
 

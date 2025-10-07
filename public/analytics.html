@@ -1150,6 +1150,65 @@
         `;
         insightsList.appendChild(summaryCard);
         
+        // Load and display improvement status dashboard
+        try {
+          const statusResponse = await fetch('/api/chat-improvement?action=improvement_status', {
+            headers: {
+              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+            }
+          });
+          
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            if (statusData.ok) {
+              const { counts, recentImprovements } = statusData;
+              
+              // Create improvement status dashboard
+              const statusCard = document.createElement('div');
+              statusCard.className = 'insight-card insight-priority-medium';
+              statusCard.innerHTML = `
+                <h4>📈 Improvement Status Dashboard</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin: 15px 0;">
+                  <div style="text-align: center; padding: 10px; background: #0f5132; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #10b981;">${counts.improved || 0}</div>
+                    <div style="font-size: 12px; color: #ccc;">Improved</div>
+                  </div>
+                  <div style="text-align: center; padding: 10px; background: #58151c; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #dc3545;">${counts.ignored || 0}</div>
+                    <div style="font-size: 12px; color: #ccc;">Ignored</div>
+                  </div>
+                  <div style="text-align: center; padding: 10px; background: #1a1f2e; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #ffc107;">${counts.pending || 0}</div>
+                    <div style="font-size: 12px; color: #ccc;">Remaining</div>
+                  </div>
+                  <div style="text-align: center; padding: 10px; background: #6c757d; border-radius: 5px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #6c757d;">${counts.failed || 0}</div>
+                    <div style="font-size: 12px; color: #ccc;">Failed</div>
+                  </div>
+                </div>
+                ${recentImprovements.length > 0 ? `
+                  <details style="margin-top: 15px;">
+                    <summary style="cursor: pointer; color: #10b981;">📋 Recent Improvements (${recentImprovements.length})</summary>
+                    <div style="margin-top: 10px;">
+                      ${recentImprovements.map(imp => `
+                        <div style="border: 1px solid #444; padding: 10px; margin: 8px 0; border-radius: 5px; background: #2a2f3e;">
+                          <div style="color: #fff; font-weight: bold;">${imp.page_entities?.title || 'Content Improvement'}</div>
+                          <div style="color: #ccc; font-size: 0.9em;">Question: "${imp.question}"</div>
+                          <div style="color: #10b981; font-size: 0.8em;">Before: ${Math.round((imp.original_confidence || 0) * 100)}% confidence</div>
+                          <div style="color: #666; font-size: 0.8em;">Added: ${new Date(imp.implemented_at).toLocaleDateString()}</div>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </details>
+                ` : ''}
+              `;
+              insightsList.appendChild(statusCard);
+            }
+          }
+        } catch (statusError) {
+          console.error('Failed to load improvement status:', statusError);
+        }
+        
         // Display top recommendations
         if (analysis.recommendations && analysis.recommendations.length > 0) {
           const recTitle = document.createElement('h3');
@@ -1330,8 +1389,11 @@
                   <button onclick="approveContent(${index}, '${preview.question.replace(/'/g, "\\'")}', ${JSON.stringify(preview.suggestedContent).replace(/"/g, '&quot;')})" class="btn btn-success btn-sm" style="margin-right: 10px;">
                     ✅ Approve
                   </button>
-                  <button onclick="rejectContent(${index})" class="btn btn-danger btn-sm">
+                  <button onclick="rejectContent(${index})" class="btn btn-danger btn-sm" style="margin-right: 10px;">
                     ❌ Reject
+                  </button>
+                  <button onclick="ignoreQuestion('${preview.question.replace(/'/g, "\\'")}', ${index})" class="btn btn-warning btn-sm">
+                    ⏭️ Ignore
                   </button>
                 </div>
               ` : '<p style="color: #666;">No content suggestion available</p>'}
@@ -1383,6 +1445,45 @@
       approveButtons.forEach(btn => {
         btn.style.display = 'none';
       });
+    }
+
+    async function ignoreQuestion(question, index) {
+      try {
+        const response = await fetch('/api/chat-improvement?action=ignore_question', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ question })
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        
+        if (!data.ok) throw new Error(data.error || 'Unknown error');
+        
+        // Update the button to show it's ignored
+        const buttons = document.querySelectorAll(`button[onclick*="ignoreQuestion('${question.replace(/'/g, "\\'")}', ${index}"]`);
+        buttons.forEach(btn => {
+          btn.innerHTML = '⏭️ Ignored';
+          btn.disabled = true;
+          btn.style.backgroundColor = '#ffc107';
+        });
+        
+        // Hide other buttons
+        const approveButtons = document.querySelectorAll(`button[onclick*="approveContent(${index}"]`);
+        const rejectButtons = document.querySelectorAll(`button[onclick*="rejectContent(${index}"]`);
+        [...approveButtons, ...rejectButtons].forEach(btn => {
+          btn.style.display = 'none';
+        });
+        
+        console.log('Question ignored:', question);
+        
+      } catch (error) {
+        console.error('Failed to ignore question:', error);
+        alert('Failed to ignore question: ' + error.message);
+      }
     }
 
     async function implementTopImprovements() {
