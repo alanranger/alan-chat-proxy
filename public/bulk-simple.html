@@ -1324,10 +1324,25 @@
           // Update parity as well (entities likely increased via backfill/refresh)
           updateParityPill();
         } else {
-          const errorDetail = result?.detail || result?.error || 'Unknown error';
-          addResult(`❌ Mapping failed: ${errorDetail}`, 'error');
-          document.getElementById('stepMap').style.background = '#a62';
-          document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: failed';
+          // Fallback: if the RPC failed (e.g., timeout), check live counts.
+          let counts;
+          try {
+            const resp = await fetch('/api/tools?action=counts', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+            const j = await resp.json();
+            if (resp.ok && j && j.ok) counts = { total: j.total, mapped: j.mapped };
+          } catch {}
+          if (!counts) counts = await getMappingCounts();
+          if (counts && counts.total && counts.mapped === counts.total) {
+            addResult(`✅ Mapping likely completed despite timeout. Totals now ${counts.mapped}/${counts.total} mapped.`, 'success');
+            document.getElementById('stepMap').style.background = '#2a6';
+            document.getElementById('stepMap').textContent = `3️⃣ Create Mappings: ${counts.mapped}/${counts.total} mapped`;
+            updateParityPill();
+          } else {
+            const errorDetail = result?.detail || result?.error || 'Unknown error';
+            addResult(`❌ Mapping failed: ${errorDetail}`, 'error');
+            document.getElementById('stepMap').style.background = '#a62';
+            document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: failed';
+          }
         }
       } catch (e) {
         addResult(`❌ Mapping error: ${e.message}`, 'error');
