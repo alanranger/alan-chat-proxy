@@ -78,11 +78,11 @@ async function analyzeQuestionLogs(supa) {
     group.avgConfidence = totalConfidence / group.interactions.length;
   });
 
-  // Sort by priority (frequency * (1 - confidence))
+  // Sort by priority (focus on confidence since frequency is low)
   const prioritizedQuestions = Object.values(questionGroups)
     .map(q => ({
       ...q,
-      priority: q.frequency * (1 - q.avgConfidence),
+      priority: (1 - q.avgConfidence) * 100, // Focus on confidence, scale to 0-100
       intents: Array.from(q.intents),
       topAnswer: Array.from(q.commonAnswers.entries())
         .sort((a, b) => b[1] - a[1])[0]?.[0] || 'No answer'
@@ -383,8 +383,10 @@ async function createContentImprovementPlan(questionAnalysis) {
     if (!question || !question.question || !question.recommendations) {
       continue;
     }
-    if (question.priority > 100) {
-      // High priority - needs immediate attention
+    
+    // Adjusted thresholds for your data (frequency is low, so focus on confidence)
+    if (question.avgConfidence < 0.3) {
+      // High priority - very low confidence (like 10%)
       const improvements = await generateImprovedContent(
         question.question, 
         question.topAnswer, 
@@ -397,8 +399,8 @@ async function createContentImprovementPlan(questionAnalysis) {
         confidence: question.avgConfidence,
         improvements
       });
-    } else if (question.priority > 50) {
-      // Medium priority
+    } else if (question.avgConfidence < 0.6) {
+      // Medium priority - low confidence (like 50%)
       const improvements = await generateImprovedContent(
         question.question, 
         question.topAnswer, 
