@@ -1217,11 +1217,162 @@
           insightsList.appendChild(generalCard);
         }
         
+        // Add improvement actions section
+        if (analysis.recommendations && analysis.recommendations.length > 0) {
+          const actionsTitle = document.createElement('h3');
+          actionsTitle.textContent = '🚀 Take Action';
+          actionsTitle.style.marginTop = '20px';
+          actionsTitle.style.marginBottom = '15px';
+          insightsList.appendChild(actionsTitle);
+          
+          const actionsCard = document.createElement('div');
+          actionsCard.className = 'insight-card insight-priority-high';
+          actionsCard.innerHTML = `
+            <h4>📋 Improvement Plan</h4>
+            <p>Click the buttons below to automatically implement content improvements:</p>
+            <div style="margin-top: 15px;">
+              <button onclick="generateImprovementPlan()" class="btn btn-primary" style="margin-right: 10px;">
+                📝 Generate Improvement Plan
+              </button>
+              <button onclick="implementTopImprovements()" class="btn btn-success">
+                ⚡ Implement Top 3 Improvements
+              </button>
+            </div>
+            <div id="improvement-status" style="margin-top: 15px; display: none;"></div>
+          `;
+          insightsList.appendChild(actionsCard);
+        }
+        
         document.getElementById('insights-loading').style.display = 'none';
         document.getElementById('insights-content').style.display = 'block';
         
       } catch (error) {
         showError('Failed to load insights data: ' + error.message);
+      }
+    }
+
+    // Content improvement functions
+    async function generateImprovementPlan() {
+      const statusDiv = document.getElementById('improvement-status');
+      statusDiv.style.display = 'block';
+      statusDiv.innerHTML = '<p>🔄 Generating improvement plan...</p>';
+      
+      try {
+        const response = await fetch('/api/chat-improvement?action=improvement_plan', {
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+          }
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        
+        if (!data.ok) throw new Error(data.error || 'Unknown error');
+        
+        const { improvementPlan } = data;
+        
+        statusDiv.innerHTML = `
+          <div style="background: #1a1f2e; padding: 15px; border-radius: 8px; margin-top: 10px;">
+            <h4>📋 Improvement Plan Generated</h4>
+            <p><strong>High Priority:</strong> ${improvementPlan.highPriority.length} items</p>
+            <p><strong>Medium Priority:</strong> ${improvementPlan.mediumPriority.length} items</p>
+            <p><strong>Content to Add:</strong> ${improvementPlan.contentToAdd.length} items</p>
+            <p><strong>Content to Enhance:</strong> ${improvementPlan.contentToEnhance.length} items</p>
+            <button onclick="implementTopImprovements()" class="btn btn-success" style="margin-top: 10px;">
+              ⚡ Implement Top Improvements
+            </button>
+          </div>
+        `;
+        
+      } catch (error) {
+        statusDiv.innerHTML = `<p style="color: #ef4444;">❌ Error: ${error.message}</p>`;
+      }
+    }
+    
+    async function implementTopImprovements() {
+      const statusDiv = document.getElementById('improvement-status');
+      statusDiv.style.display = 'block';
+      statusDiv.innerHTML = '<p>🔄 Implementing top improvements...</p>';
+      
+      try {
+        // Get the current analysis data
+        const response = await fetch('/api/chat-improvement?action=analyze', {
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+          }
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        
+        if (!data.ok) throw new Error(data.error || 'Unknown error');
+        
+        const { analysis } = data;
+        const topRecommendations = analysis.recommendations.slice(0, 3);
+        
+        let implemented = 0;
+        let errors = [];
+        
+        for (const rec of topRecommendations) {
+          try {
+            // Generate content for this recommendation
+            const contentResponse = await fetch('/api/chat-improvement?action=generate_content', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                question: rec.question,
+                currentAnswer: rec.currentAnswer,
+                recommendations: rec.recommendations
+              })
+            });
+            
+            if (!contentResponse.ok) throw new Error(`Content generation failed: ${contentResponse.status}`);
+            const contentData = await contentResponse.json();
+            
+            if (!contentData.ok) throw new Error(contentData.error || 'Content generation error');
+            
+            // Implement the improvement
+            const implementResponse = await fetch('/api/chat-improvement?action=implement_improvement', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                question: rec.question,
+                suggestedContent: contentData.improvements[0]?.suggestedContent
+              })
+            });
+            
+            if (!implementResponse.ok) throw new Error(`Implementation failed: ${implementResponse.status}`);
+            const implementData = await implementResponse.json();
+            
+            if (!implementData.ok) throw new Error(implementData.error || 'Implementation error');
+            
+            implemented++;
+            
+          } catch (error) {
+            errors.push(`${rec.question}: ${error.message}`);
+          }
+        }
+        
+        statusDiv.innerHTML = `
+          <div style="background: #1a1f2e; padding: 15px; border-radius: 8px; margin-top: 10px;">
+            <h4>✅ Implementation Complete</h4>
+            <p><strong>Successfully implemented:</strong> ${implemented} improvements</p>
+            ${errors.length > 0 ? `<p><strong>Errors:</strong> ${errors.length}</p>` : ''}
+            <p style="color: #10b981; margin-top: 10px;">🎉 Content improvements have been added to your knowledge base!</p>
+            <button onclick="loadInsights()" class="btn btn-primary" style="margin-top: 10px;">
+              🔄 Refresh Insights
+            </button>
+          </div>
+        `;
+        
+      } catch (error) {
+        statusDiv.innerHTML = `<p style="color: #ef4444;">❌ Error: ${error.message}</p>`;
       }
     }
 

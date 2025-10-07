@@ -260,6 +260,163 @@ function generateIntentRecommendation(intent, questions) {
   }
 }
 
+/* ========== Content Improvement Functions ========== */
+
+async function generateImprovedContent(question, currentAnswer, recommendations) {
+  // This would integrate with OpenAI to generate better content
+  // For now, we'll create structured improvements based on the recommendations
+  
+  const improvements = [];
+  
+  recommendations.forEach(rec => {
+    switch (rec.type) {
+      case 'content_gap':
+        improvements.push({
+          type: 'add_content',
+          message: 'Add specific content for this question type',
+          suggestedContent: generateContentForQuestion(question)
+        });
+        break;
+        
+      case 'missing_content':
+        improvements.push({
+          type: 'create_content',
+          message: 'Create specific content for this question',
+          suggestedContent: generateMissingContent(question)
+        });
+        break;
+        
+      case 'content_improvement':
+        improvements.push({
+          type: 'enhance_content',
+          message: 'Enhance existing content with more specific information',
+          suggestedContent: enhanceExistingContent(currentAnswer, question)
+        });
+        break;
+    }
+  });
+  
+  return improvements;
+}
+
+function generateContentForQuestion(question) {
+  const q = question.toLowerCase();
+  
+  if (q.includes('book') && q.includes('english')) {
+    return {
+      title: 'Photography Books and Guides',
+      content: 'All of Alan Ranger\'s photography books and guides are written in English. They cover topics including landscape photography, camera techniques, and post-processing methods. The books are designed for photographers of all skill levels.',
+      keywords: ['book', 'guide', 'english', 'photography', 'alan ranger'],
+      intent: 'advice'
+    };
+  }
+  
+  if (q.includes('cost') && q.includes('dollar')) {
+    return {
+      title: 'Pricing Information',
+      content: 'All prices are listed in British Pounds (GBP). For current exchange rates to US Dollars or other currencies, please check with your bank or currency converter. Workshop prices typically range from £150-£300 depending on duration and location.',
+      keywords: ['price', 'cost', 'dollar', 'currency', 'gbp'],
+      intent: 'events'
+    };
+  }
+  
+  if (q.includes('purchase') && q.includes('guide')) {
+    return {
+      title: 'Purchase Guide',
+      content: 'To purchase photography workshops or courses: 1) Browse available workshops on the website, 2) Select your preferred date and location, 3) Click "Book Now" to complete your purchase, 4) You\'ll receive confirmation and workshop details via email.',
+      keywords: ['purchase', 'guide', 'book', 'workshop', 'course'],
+      intent: 'advice'
+    };
+  }
+  
+  // Generic fallback
+  return {
+    title: 'General Information',
+    content: `This question about "${question}" requires more specific content. Please add detailed information to help users get accurate answers.`,
+    keywords: question.toLowerCase().split(' ').filter(w => w.length > 3),
+    intent: 'advice'
+  };
+}
+
+function generateMissingContent(question) {
+  return {
+    title: `Content for: ${question}`,
+    content: `This question needs specific content to be added to the knowledge base. The current response is too generic and doesn't provide helpful information to users.`,
+    keywords: question.toLowerCase().split(' ').filter(w => w.length > 3),
+    intent: 'advice'
+  };
+}
+
+function enhanceExistingContent(currentAnswer, question) {
+  return {
+    title: `Enhanced: ${question}`,
+    content: `Current answer: "${currentAnswer}"\n\nThis answer could be improved with more specific details, examples, or step-by-step instructions.`,
+    keywords: question.toLowerCase().split(' ').filter(w => w.length > 3),
+    intent: 'advice'
+  };
+}
+
+async function createContentImprovementPlan(questionAnalysis) {
+  const improvementPlan = {
+    highPriority: [],
+    mediumPriority: [],
+    contentToAdd: [],
+    contentToEnhance: []
+  };
+  
+  for (const question of questionAnalysis) {
+    if (question.priority > 100) {
+      // High priority - needs immediate attention
+      const improvements = await generateImprovedContent(
+        question.question, 
+        question.topAnswer, 
+        question.recommendations
+      );
+      
+      improvementPlan.highPriority.push({
+        question: question.question,
+        frequency: question.frequency,
+        confidence: question.avgConfidence,
+        improvements
+      });
+    } else if (question.priority > 50) {
+      // Medium priority
+      const improvements = await generateImprovedContent(
+        question.question, 
+        question.topAnswer, 
+        question.recommendations
+      );
+      
+      improvementPlan.mediumPriority.push({
+        question: question.question,
+        frequency: question.frequency,
+        confidence: question.avgConfidence,
+        improvements
+      });
+    }
+    
+    // Categorize content needs
+    question.recommendations.forEach(rec => {
+      if (rec.type === 'content_gap' || rec.type === 'missing_content') {
+        improvementPlan.contentToAdd.push({
+          question: question.question,
+          reason: rec.message,
+          suggestedContent: generateContentForQuestion(question.question)
+        });
+      } else if (rec.type === 'content_improvement') {
+        improvementPlan.contentToEnhance.push({
+          question: question.question,
+          currentAnswer: question.topAnswer,
+          reason: rec.message,
+          suggestedContent: enhanceExistingContent(question.topAnswer, question.question)
+        });
+      }
+    });
+  }
+  
+  return improvementPlan;
+}
+
 /* ========== Handler ========== */
 export default async function handler(req, res) {
   try {
@@ -324,8 +481,70 @@ export default async function handler(req, res) {
           });
         }
 
+      case 'improvement_plan':
+        {
+          const questionAnalysis = await analyzeQuestionLogs(supa);
+          const improvementPlan = await createContentImprovementPlan(questionAnalysis);
+
+          return sendJSON(res, 200, {
+            ok: true,
+            improvementPlan
+          });
+        }
+
+      case 'generate_content':
+        {
+          const { question, currentAnswer, recommendations } = req.body || {};
+          if (!question) {
+            return sendJSON(res, 400, { error: 'bad_request', detail: 'Question is required' });
+          }
+
+          const improvements = await generateImprovedContent(question, currentAnswer, recommendations || []);
+
+          return sendJSON(res, 200, {
+            ok: true,
+            question,
+            improvements
+          });
+        }
+
+      case 'implement_improvement':
+        {
+          const { question, suggestedContent } = req.body || {};
+          if (!question || !suggestedContent) {
+            return sendJSON(res, 400, { error: 'bad_request', detail: 'Question and suggestedContent are required' });
+          }
+
+          // Add the improved content to page_entities as an article
+          const { error: insertError } = await supa.from('page_entities').insert([{
+            url: `https://www.alanranger.com/improved-content/${Date.now()}`,
+            kind: 'article',
+            title: suggestedContent.title,
+            description: suggestedContent.content,
+            raw: {
+              title: suggestedContent.title,
+              content: suggestedContent.content,
+              keywords: suggestedContent.keywords,
+              intent: suggestedContent.intent,
+              source: 'automated_improvement',
+              original_question: question,
+              created_at: new Date().toISOString()
+            },
+            last_seen: new Date().toISOString()
+          }]);
+
+          if (insertError) throw new Error(`Content insertion failed: ${insertError.message}`);
+
+          return sendJSON(res, 200, {
+            ok: true,
+            message: 'Content improvement implemented successfully',
+            question,
+            content: suggestedContent
+          });
+        }
+
       default:
-        return sendJSON(res, 400, { error: 'bad_request', detail: 'Valid actions: analyze, recommendations, content_gaps' });
+        return sendJSON(res, 400, { error: 'bad_request', detail: 'Valid actions: analyze, recommendations, content_gaps, improvement_plan, generate_content, implement_improvement' });
     }
 
   } catch (err) {
