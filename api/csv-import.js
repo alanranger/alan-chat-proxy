@@ -118,7 +118,13 @@ function transformBlogData(row) {
   const categories = row.categories ? row.categories.split(';').map(c => c.trim()) : [];
   const tags = row.tags ? row.tags.split(',').map(t => t.trim()) : [];
   const imageUrl = row.image;
-  const publishDate = row['publish on'] || row.publish_on;
+  // Accept UK-style dates like 23/07/2018 and normalize to YYYY-MM-DD
+  const rawDate = row['publish on'] || row.publish_on;
+  let publishDate = rawDate;
+  if (rawDate && /^\d{2}\/\d{2}\/\d{4}$/.test(rawDate)) {
+    const [dd, mm, yyyy] = rawDate.split('/');
+    publishDate = `${yyyy}-${mm}-${dd}`;
+  }
   
   const jsonLd = {
     "@context": "https://schema.org",

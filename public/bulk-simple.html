@@ -827,7 +827,10 @@
       for (const f of files){
         const text = await f.text();
         const first = text.split('\n')[0] || '';
-        let type = detectTypeFromHeaders(first) || detectTypeByName(f.name);
+        // Prefer filename hints when they indicate product (04/05), then fall back to headers
+        const nameHint = detectTypeByName(f.name);
+        const headerHint = detectTypeFromHeaders(first);
+        let type = (nameHint === 'product') ? 'product' : (headerHint || nameHint);
         if (type === 'workshop') type = 'workshop';
         if (type === 'event' && f.name.includes('workshop')) type = 'workshop';
         if (!type){
