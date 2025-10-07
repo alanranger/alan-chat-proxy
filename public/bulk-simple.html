@@ -175,6 +175,29 @@
       </div>
     </div>
 
+    <!-- Legend / Help Section -->
+    <div class="section">
+      <h2>ℹ️ What the Numbers Mean</h2>
+      <div class="card" style="font-size:14px;color:#ddd;line-height:1.5">
+        <ul style="margin:0 0 8px 18px;">
+          <li><strong>Content Imported</strong>: Rows read from your CSVs (input size by category).</li>
+          <li><strong>Web Scraping</strong>: Unique URLs queued for Step 2 based on selected sources; duplicates across sources are removed here.</li>
+          <li><strong>Success / Failed / Stopped / Skipped</strong>: Outcome of Step 2 for this run (Success means text saved to <code>page_chunks</code> and JSON‑LD merged into <code>page_entities</code>).</li>
+          <li><strong>CSV Count</strong> (per category): Rows imported from CSVs in Step 1 for that category label.</li>
+          <li><strong>Duplicates Removed</strong> (per category): URLs eliminated from the scrape queue because they appeared more than once across sources. This is de‑dupe of the queue, not database duplicates.</li>
+        </ul>
+        <div style="margin-top:8px;">
+          <strong>Where data goes:</strong>
+          <ul style="margin:6px 0 0 18px;">
+            <li><code>page_chunks</code>: Plain‑text chunks per URL (replaced on each successful scrape).</li>
+            <li><code>page_entities</code>: Normalized JSON‑LD entities {event, product, article, service}. Existing (url, kind) are always updated so rescheduled events refresh.</li>
+            <li><code>event_product_links_auto</code>: Created by Step 3 (Run Mapping).</li>
+            <li>Views used by chat/analytics: <code>v_events_for_chat</code>, <code>v_service_content</code>, <code>v_product_content</code>, <code>v_blog_content</code>. “Finalize” warms/refreshes these.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
     <!-- Progress Section -->
     <div class="section" id="progressSection" class="hidden">
       <h3>📊 Progress</h3>
