@@ -113,7 +113,7 @@
       wrap.appendChild(panel);
     }
     wrap.style.display = 'block';
-    track('chat_opened', { source: 'embed', page_location: location.href });
+    track('chat_start { source: 'embed', page_location: location.href });
   }
 
   function init(){

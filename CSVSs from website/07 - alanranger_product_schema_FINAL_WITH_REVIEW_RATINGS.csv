@@ -1,0 +1,2318 @@
+Title,JSON-LD Structured Data
+Professional Black and White Photography Course | Coventry,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Professional Black and White Photography Course | Coventry"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/b8c2a6b2-9a51-492d-a6c0-b685f5e16cc2/Beginners+Photography+Classes.png"",
+  ""description"": ""Enter the date of the event on Customer Information Notes Field when you go through the checkout process. Black and White Photography Course for beginners"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/black-and-white-photography-course"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 165.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Lightroom Courses for Beginners Photo Editing - Coventry,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Lightroom Courses for Beginners Photo Editing - Coventry"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/fe40a5e1-7fa2-4057-982e-555479b97022/Lightroom+courses+-+photo+editing+course.png"",
+  ""description"": ""For those who want to implement the best workflow for image management and all the dos and don'ts of post-production with these\nPhoto Editing Classes\nwith Lightroom\nAdobe Lightroom Classic Courses for Beginners - Coventry\nSummary\nLocation:\n45 Hathaway Road, Tile Hill Village, Coventry, CV4 9HW\nDuration: 3 Weekly 2hr Evening Classes - All evening classes are from 19:00 to 21:00\nParticipants:\nMax 3\nLightroom Courses\nEvent Details\n:\nEditing Course\nCoventry 3 wks - Wed 21 May - 4 Jun 2025\nCoventry 3 wks - Wed 3 Sep - 17 Sep 2025\nCoventry 3 wks - Tue 4 Nov - 18 Nov 2025\nCoventry 3 wks - Wed 7 Jan - 21 Jan 2026\nExperience - Level: Beginners\nThe beginners Lightroom photo editing classes are aimed at anyone wishing to learn photo editing and photo management with a workflow and consistency\nEquipment Needed:\nYou will need a laptop with Adobe Lightroom Classic subscription and the App installed\nAlan will provide you with training Lightroom Library with images and use that to explain and then demonstrate the various tools"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 150.00,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""David Pitt""
+      },
+      ""datePublished"": ""2024-04-03"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""Really enjoyed the Lightroom Classic course with Alan. It was well structured over the 6 evenings and I learned a lot about the software structure and editing capabilities.""
+    }
+  ]
+}
+</script>"
+RPS Courses - Independent RPS Mentoring for RPS Distinctions,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""RPS Courses - Independent RPS Mentoring for RPS Distinctions"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707307452323-G3C2AIXAHRLLVB36VASA/RPS+Courses.jpg"",
+  ""description"": ""RPS Courses - Independant RPS Mentoring for RPS Distinctions - Start anytime, you select six online Zoom sessions within twelve months at intervals to suit you\nRPS Courses - Mentoring for Distinctions\nVia Zoom online in a group of max 3\nOr direct 1-2-1 via Zoom\nDropbox used for updated portfolios and images\nSessions must be taken within 12 months of booking the course or forfeited, but there are options to extend the timeline and retain unused classes or add additional classes.\nTechnical and creative critique with suggestions for improvement\nAdvice on image selection and panel layout\nMore Details about the\nRPS Mentoring Course\n*Note\n: Your tutor, Alan Ranger, holds both the RPS's Licentiate and Associate Distinctions, but the RPS does not accredit this Course. This is not an approved course or endorsed by the RPS as an organisation. Alan\u00e2\u20ac\u2122s advice is private, unofficial and based on his experience and understanding of the elements required to reach the standard that may result in being awarded a distinction without any guarantee."",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/rps-mentoring-photography-course"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 395.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Professional Digital DSLR Camera Sensor Clean | Coventry,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Professional Digital DSLR Camera Sensor Clean | Coventry"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1522495201980-KD6BKH54J01HJR93XXR6/photography-support-Services-1.png"",
+  ""description"": ""Get a camera sensor clean in Coventry . Sensor checked and cleaned using professional equipment, swabs | Full Frame and Cropped Sensors | 24hr Turnaround"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/camera-sensor-clean"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 30.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Beginners Photography Classes - Coventry - Get Off Auto,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Beginners Photography Classes - Coventry - Get Off Auto"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1629114920224-P61RYFJEFOEEQTD3KP0Y/beginners-photography-class-get-off-auto.jpg"",
+  ""description"": ""The 2-hour Get Off Auto beginners photography classes in Coventry are for those wishing to absorb new skills and learn how and why to get off Auto Exposure on their camera.\nSummary - Get Off Auto\nDates: 2024/2025 - 19:00 - 21:00\nTue May 7th\nMon June 10th\nLocation:\n45 Hathaway Road, Tile Hill Village, Coventry, CV4 9HW\nParticipants:\nMax 4\nBeginners Photography Classes Event Details\n:\nGet Off Auto\nExperience - Level:  Beginner and Novice\nThis get off auto photography class is aimed at anyone with a digital camera wishing to get off auto exposure mode and learn about photography exposure.\nEquipment Needed:\nThis class is a theory, lecture style so a camera is not required\nDescription:\nSimplifying camera exposure modes:\nGet off Auto Beginner Photography Classes Content\nThe photographic Workflow\nSee | Design | Shoot | Enhance |Share\nCamera Exposure Settings\nUnderstanding scene modes, aperture priority, shutter priority or manual exposure and metering\nAperture, ISO, Shutter breakdown\nHolding the camera properly and understanding the exposure triangle\nBy switching to the manual modes, you gain full control over the exposure settings, allowing you to unleash your creativity and capture the perfect shot in any lighting situation."",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/beginners-photography-classes-coventry"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 30.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+4 x 2hr Private Photography Classes - Face to Face Coventry,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""4 x 2hr Private Photography Classes - Face to Face Coventry"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1522495550918-139R34YFWLG3Q89CXENT/PRIVATE-PHOTOGRAPHY-LESSONS.png"",
+  ""description"": ""Package Option - 4 Private Photography Classes Face to Face Coventry - 2 hrs each to suit you - Available 9-5 on weekdays. You will be sent a code to book dates"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/four-private-photography-classes"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 480.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 4.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Kevin Atkins""
+      },
+      ""datePublished"": ""2025-01-05"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""4"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""Alan is very knowledgeable and was able to quickly give feedback on my photos and also give me information about the LRPS assessment process which wasn't on their website...""
+    }
+  ]
+}
+</script>"
+Monthly Pick N Mix Subscription | Interest Free Payment Plan,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Monthly Pick N Mix Subscription | Interest Free Payment Plan"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/7c76925a-43b0-425c-995e-4f4e0190221c/Photography+Payment+Plan.png"",
+  ""description"": ""Monthly Pick N Mix Subscription Package. 10% Discount on events/services for one year | Interest Free Payment Plan | Take events or lessons immediately |"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/monthly-pick-n-mix-subscription"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 42.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Quarterly Pick N Mix Subscription | Interest Free Payments,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Quarterly Pick N Mix Subscription | Interest Free Payments"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/fbab50ee-2fe8-4fe9-8804-e691b883cf4b/Photography+Payment+Plan.png"",
+  ""description"": ""Quarterly Pick N Mix Subscription Package. 15% Discount on events/services for one year | Interest Free Payment Plan | Take events or lessons immediately |"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/quarterly-pick-n-mix-subscription"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 250.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Annual Pick N Mix Subscription | Interest Free Payment Plan,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Annual Pick N Mix Subscription | Interest Free Payment Plan"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/4c6bb1a6-8752-4aea-a250-484fb1acdf75/Photography+Payment+Plan.png"",
+  ""description"": ""Make a one-off payment by bank transfer or through this to get 20% discount on events booked for 12 Months  | Tailored Pick N Mix photography training plan"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/annual-pick-n-mix-subscription"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 1200.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Monthly Photography Mentoring Sessions - Online - Zoom,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Monthly Photography Mentoring Sessions - Online - Zoom"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1559474612221-TBJKYSCMOO6IM7FTXJJI/online-photography-mentoring.png"",
+  ""description"": ""Photography mentoring online.  Receive a monthly assignment to increase your skills across multiple genres and get expert feedback on your images each month"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/monthly-online-photography-mentoring"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 15.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Beginners Photography Course | 3 Weekly Evening Classes,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Beginners Photography Course | 3 Weekly Evening Classes"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/bceae6f2-91b8-4012-a00b-7b7b177d346f/Beginners+Photography+Classes.png"",
+  ""description"": ""Beginners Photography Course Coventry\nSummary - Camera Courses For Beginners - Key Information\nLocation:\n45 Hathaway Road, Tile Hill Village, Coventry, CV4 9HW\nParticipants:\nMax 4\nTime:\n19:00 - 21:00\nMulti Course Start Dates\n: Beginners\nPhotography Course\n3wks Wednesdays - Apr 16 - Apr 30 Coventry\n3wks Tuesdays - May 27 - Jun 10 Coventry\n3wks Thursdays - Jun 12th - 26th Coventry\n3wks Wednesdays - Jul 2 Jul 16 Coventry\n3wks Mondays - Sep 8 - 22 Sep Coventry\n3wks Thursdays - Sep 11 - 25 Sep Coventry\n3wks Thursdays - Oct 2 - Oct 16 Coventry\n3wks Mondays - Oct 6 - Oct 20 Coventry\n3wks Mondays - Nov 3 - Nov 17 Coventry\n3wks Tuesdays - Dec 2 - Dec 16 Coventry\n3wks Tuesdays - Jan 6 - Jan 20 Coventry\nExperience - Level\n: Beginner and Novice\nThis beginners photography course is aimed at anyone with a digital camera wishing to get off auto exposure mode and learn about key camera settings and composition to make better photos."",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/beginners-photography-course"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 150.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Ann Hume""
+      },
+      ""datePublished"": ""2023-02-27"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""I really enjoyed my beginners course. It inspired me to use more of my cameras functions and be more creative with my work. Alan is a very talented photographer but he is also a good...""
+    }
+  ]
+}
+</script>"
+Intermediates Intentions Photography Project Course,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Intermediates Intentions Photography Project Course"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707220703945-94B0SK8PWUMOS78FTJMO/photography+project+-+intentions+photography+course.jpg"",
+  ""description"": ""Embark on a six-month photography project and showcase your images in a public exhibition in Warwickshire on this photography course | Coventry | 6-Classes\nNO DATES SET FOR 2025 - Check back soon"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/intermediates-intentions-photography-project-course"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 495.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Intermediates Lightroom Photo Editing Course | Coventry,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Intermediates Lightroom Photo Editing Course | Coventry"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707221471553-A8VBLICLESJWCMAJESNC/Advanced+Lightroom+photo+editing+Course.jpg"",
+  ""description"": ""Photo Editing Course for intermediates, and those who have done or have equivalent knowledge from the Beginners Lightroom Course | Coventry | 4-Weekly Classes"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/intermediates-lightroom-photography-course"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 275.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Photography Masterclasses-Learn and improve your photography,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Photography Masterclasses-Learn and improve your photography"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1675588273356-8MVS4YXJTH3Y5PRQ36N7/photography-tuition-Package-2.jpg"",
+  ""description"": ""Bite-sized (2.5hrs) Photography Masterclasses on specific topics. These are the perfect refresher lesson or learn more in-depth theory on particular issues."",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/photography-masterclasses-coventry"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 35.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Fine Art Photography Prints | Canvas wrap-round | Multi Size,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Fine Art Photography Prints | Canvas wrap-round | Multi Size"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1572426141642-UH9GBUDOUFH8QMTUA0KA/cavas%2Bsizes.jpg"",
+  ""description"": ""Fine Art Photography Prints - Canvas wrap-round creates a contemporary finish to your photo- available in seven sizes. Include in the image title when ordering"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/fine-art-photography-prints-canvas"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 135.95,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Fine Art Photography Prints | Unframed Prints | Multi Sizes,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Fine Art Photography Prints | Unframed Prints | Multi Sizes"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707240002916-MMJ7CA3MX9HLO60532BO/fine+art+photography+prints.jpg"",
+  ""description"": ""Fine Art Photography Prints available in seven sizes. Giclee print on archival paper. Please include in the image title when ordering | Pro-Lab Printing"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/fine-art-photography-prints-unframed"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 50.57,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Framed Fine Art Photography Prints | Multiple Sizes,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Framed Fine Art Photography Prints | Multiple Sizes"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707240165500-DB965TUR2FYMNEFPXS90/fine+art+photography+prints+-+framed.jpg"",
+  ""description"": ""Fine Art Photography Prints - Giclee Framed Prints available in four sizes. Black frame with white mount. Please include in the image title when ordering"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/framed-fine-art-photography-prints"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 133.85,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Monthly Online Photography Mentoring for 1 Year | Zoom,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Monthly Online Photography Mentoring for 1 Year | Zoom"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1559474612221-TBJKYSCMOO6IM7FTXJJI/online-photography-mentoring.png"",
+  ""description"": ""Annual online photography mentoring programme. Receive 12 monthly assignments increase your skills across multiple genres and get expert feedback on your images"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/monthly-online-photography-mentoring-one-year"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 180.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Beginners Portrait Photography Course - Coventry - 1 Day,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Beginners Portrait Photography Course - Coventry - 1 Day"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707238641610-VHWSAVN4IPEHPVRGJNQZ/portrait+photography+course.jpg"",
+  ""description"": ""Beginners Portrait Photography Course - Suitable for any amateur who wants to learn the fundamentals of portrait photography - Coventry - 1-Day Course"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/beginners-portrait-photography-course"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 195.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+A3 Mounted Fine Art Print - Unframed | Professional,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""A3 Mounted Fine Art Print - Unframed | Professional"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707221726040-8EZZ3VZ67TLH18974P5X/fine+art+print.jpg"",
+  ""description"": ""High Quality 8x12\"" Professional Photograph on 12x16 Mount | Printed on fine art\nphotographic\npaper\n| 7-day Turnaround | Pro-Lab Printing | Order Today"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/print"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 75.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Online Photography Classes 121 - Zoom  | Package Options,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Online Photography Classes 121 - Zoom  | Package Options"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1698395506000-MRZ4RFY6D3D1ZT6B2MND/photography-classes-online.png"",
+  ""description"": ""Private online photography classes tailored to your needs - Tuition & support on any aspect of photography - Pay Now - Book dates later.\nOnline photography classes and support are run via Zoom (free to use)\nMust be used within 12 months of purchase date\nIf you want a package (series) of lessons, these package options offer a discount for purchasing multiples.  Mon - Fri - 9 am - 5 pm\n1 x 1hr - \u00c2\u00a350 - Normal Price for lesson\n4 x 1hr - 15% Off normal price\n6 x 1hr - 20% Off normal price\n8 x 1hr - 25% Off normal price\n12 x 1hr - 25% Off normal price"",
+  ""url"": ""https://www.alanranger.com/photography-services-near-me/private-online-photography-classes-zoom"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 50.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+,
+WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707217364251-99ITJH38DI58S3G3YA47/Woodland+Photography+Walk.jpg"",
+  ""description"": ""Informal woodland photography walks in and around Warwickshire Woodlands - All Levels and types of camera welcome - Length 2hrs. 9:30 am-11:30 am\nSummary\nLocation:\nVarious Warwickshire Woodlands\n2025 - 09:30 - 11:30\nPiles Coppice, Coventry - Fri Oct 17\nCrackley Wood, Kenilworth - Fri Nov 7\nHay Woods - Solihull Fri Dec 5\nTile Hill Nature Reserve Mon Dec 8\n2026 - 09:30 - 11:30\nHay Woods - Solihull Fri Jan 2\nTile Hill Nature Reserve Mon Feb 2\nMillisons Wood, Meriden -Sun May 3\nParticipants:\nMax 6\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nWoodland Walks\nDescription:\nSimplifying Woodland Photography: Unlocking the Secrets to Capturing the Beauty of Nature on a photography walk\nMy aim is not to instruct you what to shoot, instead, I want to help you develop your own sense of visual awareness, photographic eye and your personal interpretation. I will be happy to help you with the \u00e2\u20ac\u0153how to shoot\u00e2\u20ac\u009d whatever it is you feel drawn to and wish to express through your creative vision using the camera to construct your intention.\nThe photography walks around these selected woodlands are aimed to promote our senses and connection to trees/woodland/nature - as we walk, observe and take in our environment we may decide to make a photograph, or not."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 15.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Bindu Felix""
+      },
+      ""datePublished"": ""2023-11-22"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""I recently attended my first walk with a group of photographers, which was organized by Alan. I wanted to express my appreciation for Alan's extensive experience as...""
+    }
+  ]
+}
+</script>"
+BATSFORD Arboretum Autumn Photography Workshops 24 - 31 Oct,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""BATSFORD Arboretum Autumn Photography Workshops 24 - 31 Oct"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1715155253660-I9BNV2CJV5TPWB56WH93/Batsford+Autumn+7.jpg"",
+  ""description"": ""Batsford Arboretum Photography Workshops in autumn. Enjoy the colour and expert photographic guidance | Half or One Day Sessions | Any Level and Camera\nSummary\nLocation:\nBatsford Arboretum - Gloucestershire\nDates:\n2025\nDaily From: Fri 24th Oct to Fri 31st Oct\nHalf-Day morning workshops are 8 am to 11.30 am\nHalf-Day afternoon workshops are from 12:00 pm to 3:30 pm\nOne Day workshops are 8 am to 3:30 pm\nParticipants:\nMax 6\nFitness:2. Easy-Moderate\nPhotography Workshop\nEvent Details\n:\nBatsford Arboretum\nDescription:\nBatsford Arboretum always provides a terrific display of colour, texture and contrasts throughout Autumn. The Batsford Arboretum photography workshops are always very popular and and attract every level of photographer. There really is a complete range and choice for everyone here so it's not to be missed with expert guidance and support."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/batsford-arboretum-photography-workshops"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 125.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Sara Taylor""
+      },
+      ""datePublished"": ""2023-11-06"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""Alan was very friendly and knowledgeable - happy to answer the many and varied questions the group asked him""
+    }
+  ]
+}
+</script>"
+BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707309659883-DPISYTNT0T584VPXCK39/bluebell+photography+workshops.jpg"",
+  ""description"": ""Bluebell woodlands photography workshop - Choose a sunrise or mid-morning 4hr bluebell photography shoot or both sessions at this private bluebell woodland with exclusive access\nSummary\nLocation:\nWarwickshire (Near Stratford Upon Avon)\nDates (are subject to the timing of the bluebell flowering and their peek display - you will be contacted nearer the time to consider alt-dates, please pick your initial first date choice but be flexible if nearer the time it needs to change)\nMon-20-Apr-26\nTue-21-Apr-26\nWed-22-Apr-26\nThu-23-Apr-26\nFri-24-Apr-26\nSat-25-Apr-26\nSun-26-Apr-26\nMon-27-Apr-26\nTue-28-Apr-26\nWed-29-Apr-26\nThu-30-Apr-26\nFri-01-May-26\nBook and select either:\n4hrs - 5:45 am to 9:45 am or 10:30 am to 2:30 pm\nOR 1 day - 5:45 am to 2:30 pm\nBrunch between 9:45-10:30 (not included)\nParticipants:\nMax 6\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nBluebell Woods\nDescription: bluebell woodland Photography -\nJoin our Bluebell Woodland Photography Workshops in Warwickshire to explore beautiful bluebell woods and enhance your photography skills. Led by a professional photographer, you'll capture stunning photos while enjoying easy walks through bluebell trails and receive valuable photography tips for capturing spring blooms in soft woodland light."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 125.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Kurt Mueller""
+      },
+      ""datePublished"": ""2024-05-13"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""I signed on for 2 workshops on the same day and enjoyed both of them. The wonderful private woods provided a perfect setting for a variety of images. Alan provided whatever help...""
+    }
+  ]
+}
+</script>"
+Photography Workshops CHESTERTON WINDMILL - Warwickshire,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Photography Workshops CHESTERTON WINDMILL - Warwickshire"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714682519866-NVMB6B7Q4F93DGOGPQIK/Moonlit+Chesterton.jpg"",
+  ""description"": ""Chesterton windmill is one of Warwickshire's most famous landmarks. Join me in a sunset landscape photography workshop and learn about composition and light\nSummary\nLocation:\nWarwickshire - Chesterton\nDates:\nTue 16th Sep - 18:00 - 20:30\nWed 1st Oct - 17:30 - 20:00\nMon 30th Mar 2026 - 17:30 - 20:00\nMon 18th May 2026 - 18:30 - 21:00\nParticipants:\nMax 6\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nChesterton\nDescription:\nImmerse yourself in the beauty of Warwickshire's iconic Chesterton Windmill with our exclusive sunset landscape photography workshop. Join us for an enriching experience where you'll delve into the art of composition and light, guided by experienced photography professionals."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/photography-workshops-chesterton-windmill"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 65.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Landscape Photography DEVON Workshops - Various Dates,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Landscape Photography DEVON Workshops - Various Dates"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714299365471-K36RWNIKFNGJ4C70UEXB/Atlantic+Force.jpg"",
+  ""description"": ""Hartland Quay - Landscape Photography Devon Workshop - Join me for this photo workshop to the best coastal and dramatic parts of Devon.\nSummary\nLocation:\nNorth Devon - Hartland Quay\nDates:\nFri 26th Sep - Sun 28th Sep 2025 - 3 Days/2 Nights\nThu 19th 12:30 - Sun 22nd 12:30 Feb 2026 - 4 Days/3 Nights\nParticipants:\nMax 4\nFitness:\n2. Moderate\nPhotography Workshop Event Details\n:\nDevon\nDescription:\nOur landscape photography devon workshops are carefully crafted to provide you with an immersive and educational experience. Led by experienced and passionate photographers, these workshops offer a structured learning environment that ensures personal development and skill enhancement. From the moment you join us, you'll be guided through the intricacies of seascape photography, learning new techniques and refining your artistic vision."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/landscape-photography-devon-hartland-quay"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 750.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Poppy Fields Photography Workshops | Worcestershire,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Poppy Fields Photography Workshops | Worcestershire"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714575407530-MBS3PUSXD9GGHA68754C/poppy+dawn.jpg"",
+  ""description"": ""Poppy fields photography workshop - Choose a sunrise or sunset 2.5hrs photo workshop at amazing poppy fields in Worcestershire | Seasonal Dependant\nSummary\nLocation:\nWorcestershire\nDates:\n(dates are subject to change based on when the poppy fields flower in June)\n8th Jun 19:15 - 21:45\n9th Jun 05:00 - 07:30\nParticipants:\nMax 6\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nPoppies\nDescription:\nRolling hills full of poppies takes some beating. Join me for one of the poppy fields photography location shoots from early June to end of June in Worcestershire - These are provisional dates and may change depending on mother nature."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/poppy-fields-photography-workshops"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 95.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+FAIRY GLEN and Fairy Falls Long Exposure Photography,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""FAIRY GLEN and Fairy Falls Long Exposure Photography"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707214813724-6QPD5O2XJNRQNOEIRBXO/Fairy+Glen+Betws-y-Coed+Photography+Workshop.jpg"",
+  ""description"": ""A magical gorge on the River Conwy at Betws-y-Coed. Fairy Glen and Fairy Falls provide an opportunity to practise long exposure photography on the magic of this river.\nFairy Glen Betws-y-Coed Long Exposure Photography Workshop\nSummary\nLocation:\nWales - Betws-y-Coed\nDates:\nSat 4th Oct 2025 - 10:00 - 13:30\nSat 7th Mar 2026 - 10:00 - 13:30\nFri 8th May 2026 - 10:00 - 13:30\nParticipants:\nMax 4\nFitness:\n3. Moderate\nPhotography Workshop Event Details\n:\nFairy Glen\nDescription:\nLong exposure and creating spectacular movement photos. Two great locations within a couple of miles of each other. Flowing River through gorge. A magical serene and secluded gorge through the river Conwy at Betws-y- Coed provides a great opportunity to practise long exposure photography and make images that capture the wonderful natural colours and light that frequently falls into this glen."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/long-exposure-photography-workshop-fairy-glen"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 125.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Jeremy Troth""
+      },
+      ""datePublished"": ""2022-05-13"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""As always, with any booking I have made with Alan, everything went extremely smoothly and I cannot recommend him enough.""
+    }
+  ]
+}
+</script>"
+BURNHAM ON SEA Long Exposure Photography Workshop 23 Aug,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""BURNHAM ON SEA Long Exposure Photography Workshop 23 Aug"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714573609279-RSKP2ELI51B1VY87SOCS/Burnham+Still.jpg"",
+  ""description"": ""Seascape and Long Exposure Photography workshop at this iconic location in Somerset with the lighthouse at Burnham on Sea\nSummary\nLocation:\nSomerset - Burnham On Sea\nDates:\nSat 23rd Aug 2025 - 17:30 - 20:15\nParticipants:\nMax 6\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nBurnham\nDescription:\nExperience the magic of long exposure photography against the breathtaking backdrop of Burnham on Sea's iconic lighthouse. Join us for an unforgettable workshop where you'll master the art of capturing stunning sunset seascapes. Our expert instructors will guide you through the process, helping you harness the beauty of this picturesque location in Somerset"",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/long-exposure-photography-workshops-burnham"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 95.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+LAVENDER FIELD Photography Workshop - Gloucestershire July,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""LAVENDER FIELD Photography Workshop - Gloucestershire July"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714571149035-8ZN5I6UWJRIY2TG52JNT/Lavender+Photography+Workshop.jpg"",
+  ""description"": ""Join me in the Cotswolds for a spectacular lavender field landscape workshop. \u00a0Photograph in the evening hours by arrangement of owners (date is subject to change or weather on the day)  Price includes entry fee of \u00c2\u00a330\nSummary\nLocation:\nSnowshill - Gloucestershire\nDates:\nSat 4th Jul 2026 - 17:00 20:00\nSat 11th Jul 2025 - 17:00 20:00\nParticipants:\nMax 6\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nLavender\nDescription:\nJoin me in the Cotswolds for a spectacular sight of Lavender. We will shoot into the evening hours and capture some great colour - go abstract or vista; the choice is yours."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/photography-workshops-lavender-fields"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 150.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+LAKE DISTRICT Photography Workshops - Jan - Mar - Sep - Nov,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""LAKE DISTRICT Photography Workshops - Jan - Mar - Sep - Nov"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714301696717-TME057MTL131H9UHU82H/Bassenthwaite+Rise.jpg"",
+  ""description"": ""An exciting 3 day/2 night residential lake district photography workshop visiting some gorgeous spots around Cumbria. Runs every Jan, Mar, Sep, Nov\nSummary\nLocation:\nCumbria - Lake District\nDates:\nFri 19 Sep - Sun 21 Sep - 3 Days/2 Nights 2025\nFri 14 Nov - Sun 16 Nov - 3 Days/2 Nights 2025\nFri 23 Jan - Sun 25 Jan - 3 Days/2 Nights 2026\nFri 20 Mar - Sun 22 Mar - 3 Days/2 Nights 2026\nExtra night B&B available for Thu in the dropdown\nParticipants:\nMax 4\nFitness:\n2. Moderate\nPhotography Workshop Event Details\n:\nLake District\nDescription:\nWe will be based in the north lakes and visit some of the top spots in the Lake District for photographs. The Lake District has been a favourite location for photographers for decades. It offers a rich variety of landscapes and the seasonal weather means it can be different every time you visit.\nThe weather creates unique windows to capture, reflections, mist, stormy skies and subtle and strong colours - often all in the space of 1-2 days and sometimes just hours.\nWe will visit approximately 2-3 locations a day in a weekend subject to the wishes of the group, time, weather and other factors: Sign up today for an amazing\nlake district photography workshop"",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/lake-district-photography-workshop"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 1050.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Martin Lancaster""
+      },
+      ""datePublished"": ""2024-04-07"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""Had a great workshop experience with Alan in the Lake District. He's very knowledgeable, practical and unflappable in his approach. You can learn from him whatever your...""
+    }
+  ]
+}
+</script>"
+"PEAK DISTRICT Photography Workshops - May, Oct and Nov","<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""PEAK DISTRICT Photography Workshops - May, Oct and Nov"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1709626967694-M4DJSC9GYR1R1LZFYBUF/Padley+Gorge+%2304+-+Mar+2024.jpg"",
+  ""description"": ""Join me in the Peak District in Hope Valley. Padley Gorge and Bolehill Quarry throughout the year on Peak District photography workshops | All levels welcome\nSummary\nLocation:\nPeak District - Derbyshire\nDates:\nSat 18th Oct - 09:30 - 16:15\nSat 1st Nov - 09:00 - 16:00\nSun 2nd Nov - 09:00 - 16:00\nSat 16th May 2026 - 09:00 - 16:00\nParticipants:\nMax 6\nFitness:\n3. Moderate\nPhotography Workshop Event Details\n:\nPadley Gorge And Bolehill Quarry\nDescription:\nPadley Gorge is a deep but narrow valley in the Peak District, Derbyshire, between the village of Grindleford and the A6187 road. The gorge is wooded with a stream, the Burbage Brook, at the bottom. Padley provides numerous opportunities to refine your composition in many aspects. You can opt for close-up sketches of woodland growth, rocks and water or tackle a wider vista showing the river and work on long exposures, water abstracts and much more.\nBolehill Quarry -\nCreated hundreds of millions of years ago by the power of natural forces, the last few centuries have seen the rugged landscape surrounding Padley Gorge sculpted by man who long ago quarried these gritstone Edges for stone and tunnelled deep beneath the moors to drive a railway line through the hills. Now an area of outstanding natural beauty, this walk takes in the breathtaking heights of Millstone Edge and majestic silver birch woodlands. It's a great location for any level of photographer to hone their skills and techniques."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 175.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+ANGLESEY Landscape Photography Workshop -  May 2026,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""ANGLESEY Landscape Photography Workshop -  May 2026"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707225841274-TEMCPAEP5DHDVCBJP2RD/anglesey+photography+workshop.jpg"",
+  ""description"": ""Join me for this exciting Anglesey landscape photography workshop, where we will shoot along the stunning coastline features to capture breathtaking vistas that showcase the natural beauty surrounding the shorelines and iconic lighthouses.\nSummary -\nAnglesey Landscape Photography Workshop\nLocation:\nWales - Anglesey Island\nDates:\nFri 8th May 15:00 - Sun 10th May 14:00, 2026\nDuration:\n3 Days/2 Nights\nParticipants:\nMax 4 (1 Car, transport between locations included)\nFitness:\n2. Moderate (15-30 min walks)\nPhotography Workshop Event Details\n: A\nnglesey Photography\nDescription:\nA great location for a Landscape Photography Workshop\nAnglesey is a large island of 220 square miles of mainly farmland, but the coastline is excellent for photography with sandy coves, harbours, and rocky headlands in addition to the lighthouses.\nWe will also explore some other areas, Parys Mountain, once the world's biggest copper mine, which has been used in many science fiction films and TV shows for its Martian-like coloured appearance."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/landscape-photography-workshops-anglesey"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 875.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Jeremy Troth""
+      },
+      ""datePublished"": ""2022-06-07"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""Excellently organised. Always Alan is prepared to give you the full benefit of his skills and knowledge, which is extensive. His criticism of your photographs is constructive and I benefited...""
+    }
+  ]
+}
+</script>"
+NORTHUMBERLAND Photography Workshops - Feb 26 - Mar 1,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""NORTHUMBERLAND Photography Workshops - Feb 26 - Mar 1"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714235981485-EF5PRA0X9C6ZNGQUO265/dunstanburgh+boulders.jpg"",
+  ""description"": ""Exciting 4 day residential Northumberland Landscape Photography Workshops - Coastline Photography visiting the iconic spots on the Northumbrian coast\nSummary\nLocation:\nNorthumberland, Lowick\nDates:\nThu 26th Feb 13:00 - Sun 1st Mar, 13:00 2026 - 4 Days/3 Nights\nParticipants:\nMax 4\nFitness:\n2. Moderate\nNorthumberland Photography Workshops Event Details\n:\nNorthumberland\nDescription: Northumberland Photography Workshops -\nOne of the highlights of Northumberland's landscape is its impressive collection of over seventy castles, the highest number in any English county. These historic fortresses not only showcase the region's rich heritage but also serve as captivating subjects for your photographs. The iconic Bamburgh Castle, dating back to the 11th century, stands majestically on a rocky outcrop, offering panoramic views of the surrounding coastline. Alnwick Castle, made famous by its appearance in the Harry Potter films, is another must-visit location for photography enthusiasts.\nLindisfarne Castle and Dunstanburgh Castle are two other gems that beckon photographers with their unique charm. Lindisfarne Castle, perched on a basalt rock outcrop, creates a striking silhouette against the backdrop of the North Sea. Dunstanburgh Castle, situated atop a grassy cliff edge, is flanked by smooth black boulders on Embleton Beach, creating a dramatic composition that is sure to leave a lasting impression on your photographs.\nSign up to Northumberland Photography Workshops - Coastline Photography\nto take your photography to the next level."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/coastal-northumberland-photography-workshops"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 995.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+NANT MILL Woodlands and Waterfalls Photo Workshop 30 May,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""NANT MILL Woodlands and Waterfalls Photo Workshop 30 May"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/83fecb77-55e2-4a1b-b532-efa4213e832a/limbs.jpg"",
+  ""description"": ""Long exposures photography on the river and waterfalls that run through this enchanting woodland, secluded Welsh valley at Nant Mill\nSummary\nLocation:\nWales - Wrexham - Nant Mill\nDates:\nSat 7th June 2025\n10:30 am to 2 pm\nParticipants:\nMax 6\nFitness:\n2. Easy-Moderate\nPhotography Workshop Event Details\n:\nNant Mill\nDescription:\nEmbark on a captivating journey of long-exposure photography amidst the secluded Welsh valley of Nant Mill. Join us for an immersive workshop where you'll discover the mesmerizing art of capturing river and waterfall scenes in this ancient woodland near Wrexham."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/landscape-photography-workshops-nant-mill"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 125.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Landscape Photography Workshop Glencoe | 15 - 17 Mar 2021,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Landscape Photography Workshop Glencoe | 15 - 17 Mar 2021"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1b59cb9c-8434-469e-837f-90867a3f4fbd/Glencoe+Photography+Workshop.jpg"",
+  ""description"": ""Join me on this landscape photography workshop Glencoe in the iconic mountain, lochs, waterfall areas of Scotland's Glencoe.\nSummary\nLocation:\nLandscape Photography Workshop Glencoe\nDates:\nFri 15th - Sun 17th Mar 2021 3 Days/2 Nights\nParticipants:\nMax 4\nFitness:\n4. Moderate-Hard\nPhoto Workshop Event Details\n:\nGlencoe\nDescription:\nThe weather creates unique windows to capture, reflections, mist, stormy skies and subtle and strong colours - often all in the space of 1-2 days and sometimes just hours. We will visit approximately 2-3 locations a day in a weekend subject to the wishes of the group, time, weather and other factors on this Landscape Glencoe Photography Workshop"",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/landscape-photography-workshops-glencoe"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 875.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Landscape Photography Workshop NORFOLK - Coastal 12 - 14 Sep,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Landscape Photography Workshop NORFOLK - Coastal 12 - 14 Sep"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1711625462292-PCMT7Q118L1X51MPSENJ/Wells+Next+To+Sea+%2302+-+Sep+2022.jpg"",
+  ""description"": ""Landscape Photography Workshop Norfolk\n- Coastal Photography Based Nr Cromer\nSummary -\nNorfolk Photography Workshop\nLocation:\nNorth Norfolk Coast - Blakeney Area\nDates:\nFri 12th, 09:30am - Sun 14th Sep 2025, 14:00 - 3 Days/2 Nights\nParticipants:\nMax 4\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nNorfolk\nDescription:\nPhotography Workshop Norfolk -\nWe will photograph the North Norfolk coastline ranging from Overstand and Cromer sea fronts and groynes to the atmospheric estuaries of Morston Quay and Blakeney Harbour. Beach huts, boats, estuaries, marshland, there is something for everyone on this 3 day North Norfolk photography workshop.\nAbandoned boats, windmills, nature reserve, sand dunes, coastal erosion, coastal path/estuary, optional seal trip and of course seascapes. The silting has left a fascinating landscape of marshes, sandhills and mud banks, with many creeks and channels twisting and turning their way through. Blakeney village is set on a small hill leading down to the harbour and has pretty flint cottages."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/landscape-photography-workshop-norfolk"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 1025.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Nicholas Barber""
+      },
+      ""datePublished"": ""2022-09-26"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""An excellent and full on weekend in which we visited a range of locations/subjects and took some great shots. Advice was always on hand and we all learned a lot. Good fun too!""
+    }
+  ]
+}
+</script>"
+KERRY - Southern Ireland Photography Workshop - Mar 2026,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""KERRY - Southern Ireland Photography Workshop - Mar 2026"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1710060195646-WLFJL2H358FJD4GKV1CP/Coumeenoole+Strand+2.jpg"",
+  ""description"": ""Photograph amazing areas in South Kerry, Dingle, and Killarney National Park on this 5-day Ireland photography workshop\nSummary\nLocation:\nDingle and Killarney - Kerry Southern Ireland\nDates:\nThu 5th - Mon 10th Mar 2026 - 5 Days/4 Nights\nParticipants:\nMax 4\nFitness:\n2. Easy-Moderate\nPhotography Workshop Event Details\n:\nDingle\nDescription:\nWe will be based near Dingle and visit some of the top spots around the Dingle Peninsula, South Kerry (Skellig Ring) and finally Killarney National Park.\nThere is a wide variety of subjects: Mountains, Lakes, Waterfalls, Trees/woodlands, Coastline, Rock Formations to name a few. All set in stunning scenery to wow any visitor and photographer. We will visit several locations in a day, some are short 10-15 min stops (layby shoots) others will require more time to perfectly capturing the perfect moment with tides and light."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/ireland-photography-workshops-dingle"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 1595.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+MACRO Photography Workshops Warwickshire - Feb and Mar,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""MACRO Photography Workshops Warwickshire - Feb and Mar"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/25c550a3-a242-4303-a11b-367dd7055dbe/Abstract%2Band%2BMacro%2BPhotography%2BWorkshops%2B%25282%2529.jpg"",
+  ""description"": ""Abstract and Macro Photography Workshop\u00a0. Learn about camera settings, lens use, controlling DoF and composition. Various Dates in Warwickshire | Half Day\nSummary\nLocation:\nWarwickshire\nDates:\nMacro Photography Workshops\nMacro Photography - Sat 8 Nov 10:00 - 12:30\nMacro Photography - Sun 17 May 10:00 - 12:30\nParticipants:\nMax 6\nFitness:\n1. Easy\nMacro Photography Workshop Event Details\n:\nMacro Photography and Abstract\nDescription:\nJoin me at a Warwickshire location for this macro photography workshop: We will work around the area in search of macro and abstract shapes, form, colour, tone and patterns.\nThere are beautiful trees with loads of interesting trunks - in addition, all around the area is water, stone and nature\u00e2\u20ac\u2122s imprint creating some great textures, shapes, patterns and colours for us to explore and practise and learn macro photography."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/abstract-and-macro-photography-workshops"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 65.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Sara Orsbourn""
+      },
+      ""datePublished"": ""2023-05-02"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""As always a fabulous workshop. Gave great advice on composition. Will be back for another workshop""
+    }
+  ]
+}
+</script>"
+Christmas Photography Seasonal Workshops | Warwickshire,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Christmas Photography Seasonal Workshops | Warwickshire"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1573822266360-1I7REB8B91RNZXW2PNKP/christmas-sparkle-photography-workshop.jpg"",
+  ""description"": ""Christmas photography workshops. A Leisurely Christmas photography walk and photograph the countryside - Lapworth or the Christmas lights Stratford Upon Avon photography- Warwickshire - Expert Advice Given\nSummary\nLocation:\nWarwickshire\nDates:\n2024 Dates\nMonday 16 December 2024 - 18:30 - 21:00 - Stratford Upon Avon Evening Shoot\nSunday, 29 December 2024 - 1 day Christmas Photo Walk\n08:45 15:15\nBreak for pub lunch around 12:45 - Not included\nParticipants:\nMax 6\nFitness:\n2. Easy-Moderate\nChristmas Photography Workshop Event Details\n:\nChristmas Photowalk\nDescription: Christmas photography Workshops -\nWill you need to escape the heat and fuss of Christmas festivities and start walking off some of the overindulgences of Christmas? Join me for the informal christmas photography photo walk and discover just how much there is to photograph as you walk around the countryside."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/christmas-photography-workshops"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 50.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Landscape YORKSHIRE DALES Photography Workshop - 3 - 5 Oct,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Landscape YORKSHIRE DALES Photography Workshop - 3 - 5 Oct"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714659095505-TB874TXCA6ADNDFC82FX/Muker+%2302+-+July+2021.jpg"",
+  ""description"": ""Yorkshire Dales Photography Workshop - Join me for this fantastic landscape workshop on limestone pavements and waterfalls.\nSummary\nLocation:\nYorkshire Dales\nDates:\nFri 3rd - Sun 5th Oct 2025 - 3 Days/2 Nights\nParticipants:\nMax 4\nFitness:\n3. Moderate\nPhotography Workshop Event Details\n:\nYorkshire Dales\nDescription: Yorkshire Dales photography workshop -\nAn exciting 3-day residential photography workshop visiting some gorgeous spots around the Yorkshire Dales. Includes early morning shoots and a variety of moody and dramatic scenes for you to practice, learn and hone your photographic skills."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/yorkshire-dales-photography-workshops"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 875.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+SUFFOLK Landscape Photography Workshops - 21st - 23rd Nov,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""SUFFOLK Landscape Photography Workshops - 21st - 23rd Nov"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714650055069-5DPM44ERXSX234XAGLA9/Southwold+%2304+-+February+2024.jpg"",
+  ""description"": ""Join us for an inspiring Suffolk landscape photography workshop, where you'll have the opportunity to create stunning long exposures during breathtaking sunrises and vibrant sunsets. We will explore picturesque quays, serene estuaries, intriguing piers, and tranquil marshes, all while capturing the beauty of charming beach huts and ancient woodlands. Emphasising artistic expression, we'll also delve into the world of black and white photography, allowing you to bring a classic touch to your coastal images.\nSummary\nLocation:\nSuffolk - East Anglia / Southwold/Aldeburgh Area\nDates:\nFri 21st 09:30 - Sun 23rd 14:30 Nov 2025 - 3 Days/2 Nights\nParticipants:\nMax 4 (1 Car, transport between locations included)\nFitness:\n2. Moderate (15-30 min walks)\nPhotography Workshop Event Details\n:\nSuffolk\nDescription: Suffolk Landscape Photography Workshop -\nThe Suffolk coastline offers a wide variety of views and caters for all styles and ways of interpreting the land and seascapes.\nThere will be a rich mixture of coastal shoreline vista to shoreline architecture including piers, beach huts and iconic sea defence structures."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/suffolk-landscape-photography-workshops"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 995.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+NORTH YORKSHIRE Landscape Photography Workshop - May and Sep,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""NORTH YORKSHIRE Landscape Photography Workshop - May and Sep"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707212716744-VYD7AYV9U6N6VEZ3C4D1/North+Yorkshire+Photography+Workshop.jpg"",
+  ""description"": ""An exciting 4-day residential Yorkshire Landscape Photography Workshop - visiting some of the iconic spots around the North Yorkshire Coast and Moors\nSummary - Photography Workshops Yorkshire\nLocation:\nNorth Yorkshire\nDates:\nThu 15 May - Sun 18 May 2025 - 4 Days/3 Nights\nThu 4 Sep - Sun 7 Sep 2025 - 4 Days/3 Nights\nParticipants:\nMax 3\nFitness:\n2. Moderate\nPhotography Workshop Event Details\n:\nNorth Yorkshire\nDescription:\nNorth Yorkshire Landscape Photography -\nWe will be based on the northeast coast of England (North Yorkshire and the Moors) and visit some of the iconic coastlines of Staithes, Runswick, Whitby and more. We will concentrate our workshop time along the impressive coastline and work from sunrise to sunset to ensure we make use of the best light, tides and empty beaches. This is the perfect workshop for practising long exposures and working at sunrise and sunsets to get those iconic views on the coast."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/north-yorkshire-landscape-photography"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 1495.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+WALES Photography Workshop | Lake Vyrnwy 29 - 30 Nov,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""WALES Photography Workshop | Lake Vyrnwy 29 - 30 Nov"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714636535694-5SWM865PVWA9MMT8LCQB/Dawn+at+Lake+Vyrnwy_.jpg"",
+  ""description"": ""Join me for this fantastic Wales photography workshop of woodlands, lakes and waterfalls in Mid-Wales\nLocation:\nWales - Dee Valley\nDates:\nSat 29th - Sun 30th Nov 2025 - 2 Days/1 Night\nParticipants:\nMax 4\nFitness:\n1. Easy\nWales Photography Workshop Event Details\n:\nLake Vyrnwy\nDescription:\nPistyll Rhaeadr is an enchanting waterfall in the Berwyn Mountains, just inside Wales, west of Oswestry and Shrewsbury. At 240ft (73m) high, Britain's tallest single-drop waterfall (with a drop 20m higher than Niagara Falls) captivates all who visit her\u00e2\u20ac\u201dknown as one of the seven wonders of Wales with its three stages of drops. Generation after generation take in the spirit and presence of this remarkable place. Surrounding the falls is a viewing platform, bridge, and woodland alongside the Afon Rhaeadr.\nPistyll Rhaeadr offers an excellent opportunity to practice long exposure photography of moving water with many viewpoints of the falls and also down at water level with its laminated slate beds and plenty of mini falls and closer-up compositions to make.\nLake Vyrnwy is a reservoir in Powys, Wales, built in the 1880s for Liverpool Corporation Waterworks to supply Liverpool with fresh water. It flooded the head of the Vyrnwy valley and submerged the village of Llanwddyn. These two locations to give you a real taste of Wales photography"",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/wales-photography-workshop-pistyll-rhaeadr"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 595.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Landscape Photography SNOWDONIA - Sat 7th - Sun 8th Mar 2026,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Landscape Photography SNOWDONIA - Sat 7th - Sun 8th Mar 2026"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1711625824431-22D7V1RNKR8H2LBRW4Z9/Snowdonia+%2301+-+Oct+2023.jpg"",
+  ""description"": ""Join me on this landscape photography Snowdonia workshop in the iconic mountains, quarries and landscape of Snowdonia national park.\nSummary - Snowdonia\nLandscape photography workshop\nLocation:\nWales - Snowdonia National Park\nDates:\nSat 7th - Sun 8th Mar 2026 - 2 Days/1 Night\nParticipants:\nMax 4 (1 Car, transport between locations included)\nFitness:\n2. Moderate (15-30 min walks)\nPhotography Workshop Event Details\n:\nSnowdonia\nDescription:\nSnowdonia National Park, located in North Wales, offers a diverse range of landscapes that will inspire and challenge any photographer. Snowdonia has everything from rugged mountains, flowing rivers, serene lakes, and ancient quarries.\nThe park is home to some of the highest mountain ranges in England and Wales, providing a stunning backdrop for your photography journey. The terrain and landscape of Snowdonia, with its waterfalls, are great for long exposure techniques, the quarries and slate mines provide a starker but striking landscape to create images from the historic mining relics in the area, and last but not least, there are majestic lakes with reflections and mountains to practise and be inspired by to create compelling compositions from this rugged and serene landscape."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/landscape-photography-snowdonia-workshops"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 595.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Gabriela Goncalves""
+      },
+      ""datePublished"": ""2023-04-18"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""Great weekend, I definitely learned a lot that I will be using in future. Would happily book another workshop with Alan.""
+    }
+  ]
+}
+</script>"
+DORSET Landscape Photography Workshop Purbeck 16 - 18 Jan,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""DORSET Landscape Photography Workshop Purbeck 16 - 18 Jan"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714681245814-0QW8DK4XQ18FM0JLBXYN/Harry+Rocks+%2301+-+Mar+2024.jpg"",
+  ""description"": ""Join me on this 3-day/2-night fantastic Dorset Photography workshop along the Jurassic coastline of Dorset - Purbeck\nSummary - Dorset Landscape Photography\nLocation:\nDorset\nDates:\nFri 16th - Sun 18th Jan 2026 3 Days/2 Nights\n(Price includes B&B and evening meal - Half Board)\nParticipants:\nMax 4\nFitness:\n3. Moderate\nPhotography Workshop Event Details\n:\nDorset\nDescription:\nThe Dorset Photography Workshop along the coastline is an exciting and great part of the UK to capture seascapes. We will work around Durdle Door and surrounding areas to make coastal images. Not limited to just the classic seascapes we can cover any genre or style of photography, beit B&W or abstract this prehistoric coastline offers lots of variety and scope to suit all interests."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/dorset-landscape-photography-workshop"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 925.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Fiona Clifford""
+      },
+      ""datePublished"": ""2022-04-02"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""Well organised course, great locations. Alan was a knowledgeable host with patience and flexibility. Looking forward to attending more workshops.""
+    }
+  ]
+}
+</script>"
+URBAN ARCHITECTURE Photography Workshops - Coventry 24 Sep,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""URBAN ARCHITECTURE Photography Workshops - Coventry 24 Sep"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1658913526124-UHAZAOPDEELSFKC627FT/Coventry+1.jpg"",
+  ""description"": ""We will walk around several historic parts of Coventry in this 2.5hr Urban\nArchitecture Photography Workshop\n, photographing buildings and ruins.\nSummary\nLocation:\nCoventry City Centre\nDates:\nWed 24th Sep 2025 - 18:00-20:00\nParticipants:\nMax 6\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nStreet Photography\nDescription:\nJoin me on this evening urban architecture photography workshop and learn how to see and design images at night! We will walk around several historic parts of Coventry in this 2.5hr workshop, photographing buildings and ruins - all to practise the art of dealing with tricky light, learning how to focus in the dark, long exposures and hopefully some good skies to help us capture that big space above us."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/urban-architecture-photography-workshops-coventry"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 65.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Long Exposure Photography Workshop KENILWORTH Sunset,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Long Exposure Photography Workshop KENILWORTH Sunset"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1712472502735-OHOKCDKMCP1BAMQ0JQUA/kenilworth+defenses.jpg"",
+  ""description"": ""Sunset landscape long exposure photography workshop shoots around Kenilworth Castle - Warwickshire - Various Dates | Long Exposures | Open to all levels| Book Today\nSummary\nLocation:\nWarwickshire - Kenilworth\nDates:\nThu 28th Aug 2025 - 18:15 - 20:45\nTue 23rd Sep 2025 - 17:30 - 19:30\nTue 31st Mar 2026 - 18:00 - 20:00\nMon 13th Apr 2026 - 18:30 - 20:30\nParticipants:\nMax 6\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nKenilworth\nDescription:\nJoin me for this evening Long Exposure Photography Workshop, where we will shoot Kenilworth Castle ruins against the night sky.\nKenilworth Castle, formerly one of the strongest fortifications in the country, was reinvented in the Elizabethan era by Robert Dudley as an impressive palace for his queen. Initially built in the 1120s by Geoffrey de Clinton, the Norman keep served as a basis for the structure, and King John later added an external stone wall, as well as a reservoir, to the complex."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/long-exposure-photography-kenilworth"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 65.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""David Pitt""
+      },
+      ""datePublished"": ""2022-06-29"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""Great workshop for getting know the camera better with Alan's help and guidance. Got some great photos. Recommend this course.""
+    }
+  ]
+}
+</script>"
+Brandon Marsh Photography Workshop | Nature Reserve Coventry,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Brandon Marsh Photography Workshop | Nature Reserve Coventry"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707214623566-6JWS3BTWNOGHF60YTLIU/Photography+Workshop.jpg"",
+  ""description"": ""Brandon Marsh Nature Reserve Photography Workshop - outskirts of Coventry - offers a variety of subjects to shoot close-up/macro or wider views."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/brandon-marsh-nature-reserve-photography-workshop"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 50.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+SOMERSET Landscape Photography Workshops 9 - 11 May 2025,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""SOMERSET Landscape Photography Workshops 9 - 11 May 2025"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707309019991-SB0FXQX0176H2D3ZNVBZ/landscape+photography+workshop.jpg"",
+  ""description"": ""2 Nights/3 Days -day residential Somerset landscape photography workshop visiting some of the iconic spots around the Somerset and Wiltshire county\nSummary\nLocation:\nSomerset\nDates:\nFri 9th - Sun 11th May 2025 - 3 Days/2 Nights\nParticipants:\nMax 4\nFitness:\n2. Moderate\nPhotography Workshop Event Details\n:\nSomerset\nDescription:\nWe will be based in the heart of Somerset with easy access to many beautiful locations ranging from marshes and nature reserves, iconic hills and gorges to woodlands and maybe some coastline too,"",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/somerset-landscape-photography-workshops"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 895.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+The Art of GARDEN PHOTOGRAPHY  - Coventry -  May and July,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""The Art of GARDEN PHOTOGRAPHY  - Coventry -  May and July"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1709974516534-UJBRDOK5RXR4QNLPTECD/_-677.jpg"",
+  ""description"": ""Join us for an unforgettable journey into macro and abstract on this garden photography workshop. Secure your spot today and embark on a transformative learning experience in\ngarden photography.\nSummary\nLocation:\nCoventry - CV4\nDates:\n2026 Dates\nSun May 17th 2026 - 15:00 - 17:00\nSun Jul 12th 2026 - 15:00 - 17:00\nParticipants:\nMax 4\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nGarden Photography\nDescription:\nElevate Your Garden Photography Skills With\nGarden Photography Workshops\nImmerse yourself in the art of macro and abstract garden photography with our enriching workshops. Discover the nuances of camera settings, lens utilisation, and composition techniques tailored for capturing the captivating beauty of gardens.\nWhat to Expect:\nDive into the intricacies of capturing stunning macro and abstract garden photography images\nLearn about specialised equipment and lens utilisation for breathtaking garden photography\nEngage in hands-on assignments and receive personalised guidance\nUnwind with afternoon tea as part of the enriching\ngarden photography\nworkshop experience"",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/garden-photography-workshop"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 35.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""mark godfrey""
+      },
+      ""datePublished"": ""2022-09-06"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""It was a good afternoon. Always come away with something useful. Many thanks.""
+    }
+  ]
+}
+</script>"
+GOWER Landscape Photography Wales - 30 Jan - 1 Feb 2026,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""GOWER Landscape Photography Wales - 30 Jan - 1 Feb 2026"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1715702409761-590M3MJ45KYXBDH1KSM0/Gower+%2305+-+May+2024.jpg"",
+  ""description"": ""Stunning shorelines and beauty of South Wales and the Gower Peninsular. Max 3 places for this residential photography workshop - landscape photography wales\nSummary\nLocation:\nSouth Wales - Gower Peninsular\nDates:\nFri 30th Jan - Sun 1st Feb 2026 - 3 Days/2 Nights\nParticipants:\nMax 3\nFitness:\n3. Hard\nLandscape photography Wales Photography Workshop Event Details\n:\nGower\nDescription:\nJust a short distance away from Swansea, the Gower Peninsula is a remarkable sight for landscape photography in Wales.\nGower is a truly unique environment that boasts heathlands, limestone grasslands, brackish and freshwater marshes, dunes and oak woodlands. It is characterised by a distinct combination of features, including lofty limestone cliffs, sandy beaches, and jagged rocky shores that together form its southern coastline. In the north, the coast is a series of tranquil salt marshes and dune systems. This is a perfect location for landscape photography Wales"",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/landscape-photography-wales-photo-workshop"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 825.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Fireworks Photography Workshop | Long Exposure | Kenilworth,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Fireworks Photography Workshop | Long Exposure | Kenilworth"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1713518270092-GJSBASA0ZLL4NBMCK355/Kenilworth+Fireworks+2017+-+2.jpg"",
+  ""description"": ""Fireworks Photography Workshop - Long exposure and fireworks. Learn about camera settings, exposure use and composition.\nSummary\nLocation:\nKenilworth\nDates:\nTBC\nParticipants:\nMax 4\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nFireworks\nDescription: Fireworks photography workshop Kenilworth.\nWe will be photographing from outside the castle walls so you don't need to by a ticket for the display. \u00a0Kenilworth castle acts an excellent backdrop for the amazing fireworks display organised by the Round Table every year."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/fireworks-photography-workshop-kenilworth"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 75.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+North Cotswolds Landscape Photography Workshop | 1 Day,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""North Cotswolds Landscape Photography Workshop | 1 Day"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1673276231738-ZM3T9H8TX8U5H0T841B7/autumn+mist.jpg"",
+  ""description"": ""One day Cotswolds landscape photography workshops - North Cotswolds Countryside | All Levels Welcome | Max 4 Places | Transport Included | Sun 14th May 06:30 - 14:00\nSummary\nLocation:\nCotswolds\nDates:\nSun May 14th 2023 - 06:30 - 14:00\nParticipants:\nMax 4\nFitness:\n2. Easy-Moderate\nCotswolds Landscape Photography Workshop Event Details\n: Cotswolds\nDescription: Cotswolds\nLandscape photography allows us to freeze moments in time, preserving the timeless beauty of nature. When photographing the quaint villages and picturesque countryside of the Cotswolds, there are several key elements to consider to encapsulate the essence of this idyllic region.\n1. Golden Stone Architecture\nThe distinctive honey-colored limestone buildings characteristic of the Cotswolds create a stunning contrast against the lush greenery. Photographing these structures in the soft glow of dawn or the warm hues of sunset can add a captivating allure to the composition.\n2. Rolling Countryside\nThe undulating hills and meandering streams of the Cotswolds offer endless opportunities for capturing the serene beauty of the rural landscape. Utilizing leading lines and the play of light and shadow can enhance the depth and dimension of these scenes."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/cotswolds-landscape-photography-workshop"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 125.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+Shropshire Landscape Photography Workshop | Shrewsbury,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""Shropshire Landscape Photography Workshop | Shrewsbury"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1708246697809-TOQRFQ21APSQU4016DDJ/landscape+photography+workshops+%282%29.jpg"",
+  ""description"": ""One day Shropshire landscape photography workshop in the countryside | Max 4 Places | Transport Included | All Levels Welcome\nSummary\nLocation:\nShropshire\nDates:\nSun 11th June 2023 - 06:30 - 1400\nParticipants:\nMax 4\nFitness:\n3. Moderate\nPhotography Workshop Event Details\n:\nShropshire\nDescription:\nEmbarking on a Shropshire landscape photography workshop promises to be an enriching experience, allowing participants to hone their craft amidst the breathtaking scenery of this captivating region. Through the guidance of expert mentors and the camaraderie of fellow photographers, attendees can elevate their skills while immortalizing the timeless allure of Shropshire's landscape."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/shropshire-landscape-photography-workshops"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 125.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+EXMOOR Photography Workshop - Sat 15th - Sun 16th Mar 2025,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""EXMOOR Photography Workshop - Sat 15th - Sun 16th Mar 2025"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714638630127-79B9OMJPFF60L8Q9VLJL/Timeless+Memories.jpg"",
+  ""description"": ""Lynmouth - Exmoor Photography Workshop - Join me for this exciting and inspiring trip to explore and capture the stunning coastal landscapes and breathtaking natural beauty of North Devon.\nSummary\nLocation:\nLynmouth - Exmoor\nDates:\nSat 15th 10:00 - Sun 16th Mar 15:00 2025 2 Days/1 Night\nParticipants:\nMax 4 (1 Car, transport between locations included)\nFitness:\n1. Easy (5-15 min walks)\nExmoor Photography Workshop Event Details\n:\nLynmouth\nDescription:\nLynmouth and the surrounding area in Exmoor - North Devon, provide beautiful little secluded bays to shoot rock formations, seascapes and whatever your creative vision allows. We visit many small bays and coves during the weekend and some impressive rock formations in the \""valley of rocks\"" nearby."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/exmoor-photography-workshops-lynmouth"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 575.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+PEAK DISTRICT HEATHER Photography Workshops - 16-17 Aug,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""PEAK DISTRICT HEATHER Photography Workshops - 16-17 Aug"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707246605883-FVZKLJN54Z455J1Q13CV/peak+district+heather.jpg"",
+  ""description"": ""Join me for the Peak District heather displays over this iconic landscape in August - 4hr Heather Peak District Photography Workshops | All levels welcome\nSummary\nLocation:\nPeak District - Derbyshire/Staffordshire\n2025 -\nSat 16th Aug\n18:00 21:30 - Derbyshire Surprise View\n2025 -\nSun 17th Aug\n05:15 09:30 - Staffordshire - The Roaches\nParticipants:\nMax 6\nFitness:\n3. Moderate\nPhotography Workshop Event Details:\nHeathers\nDescription:\nPeak District heather Workshops\nSurprise View, perched atop Hathersage, is one of the best viewpoints in the Peak District. It's a perfect spot to admire the sunset and, on a clear night, is a designated 'Dark Skies' stargazing location. To access this special place, head uphill in a northerly direction from the car park and find the strangely shaped Mother Cap stone. Then, marvel at the vivid stars filling the Peak District's dark skies.\nThe Roaches, with Hen Cloud and Ramshaw Rocks, form a gritstone escarpment that marks the Peak's south-western edge. Best viewed from the approach along the Leek road, they stand as a line of silent sentinels guarding the entrance to the Peak District, worn into fantastic shapes by the elements."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/peak-district-heather-photography-workshop"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 145.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+SEZINCOTE Garden Photography Workshop - Gloucs 29 May,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""SEZINCOTE Garden Photography Workshop - Gloucs 29 May"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1715077805264-XJYPE427XFHYBMW7L4TL/_.jpg"",
+  ""description"": ""Macro and abstract Garden photography workshop. Camera settings, controlling DoF and composition at this Mughal Indian palace in the Cotswolds.\nSummary\nLocation:\nMoreton on Marsh (Sezincote) - Gloucestershire\nDates:\nThu 29th May 2026 - 11:00 - 13:30\nParticipants:\nMax 6\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nGarden Photography\nDescription:\nSezincote is a Mughal Indian palace set in the Cotswold Hills, created by the nabob Charles Cockerell in 1805.\nThe house is surmounted by a copper dome and minarets, and set in a picturesque water garden with seven pools, waterfalls, a grotto and a temple to Surya, the Hindu Sun God. A curving Orangery frames the Persian Garden of Paradise."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/sezincote-garden-photography-workshop"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 55.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  },
+  ""aggregateRating"": {
+    ""@type"": ""AggregateRating"",
+    ""ratingValue"": 5.0,
+    ""reviewCount"": 1
+  },
+  ""review"": [
+    {
+      ""@type"": ""Review"",
+      ""author"": {
+        ""@type"": ""Person"",
+        ""name"": ""Linda Newbery""
+      },
+      ""datePublished"": ""2023-09-12"",
+      ""reviewRating"": {
+        ""@type"": ""Rating"",
+        ""ratingValue"": ""5"",
+        ""bestRating"": ""5""
+      },
+      ""reviewBody"": ""Lovely venue and good tuition in a group of just 4 (including Alan). Enjoyable and informative.""
+    }
+  ]
+}
+</script>"
+"The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct","<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1714646680111-Q5Q0TGNXQGIBY5TY26R6/Plant+Hill+Woods+%2312+-+Jan+2022.jpg"",
+  ""description"": ""Simplifying Woodland Photography | Unlocking the Secrets to Capturing the Beauty of woods | Three sessions - Theory - Practical - Editing in one day\nSummary\nLocation:\nCoventry - CV4 9HW\nDates:\n- 10:00 - 16:00\nSun 31 Aug - Summer\nSun 19th Oct - Autumn\nSun 11th Jan (2026) - Winter\nSun 19th Apr (2026) - Spring\nParticipants:\nMax 3\nFitness:\n1. Easy\nPhotography Workshop Event Details\n:\nWoodland Photography Masterclass\nDescription:\nIt will be different from other workshops in the format as it will be divided into separate sessions during the day to tackle theory, set-up, shooting, image review, and post-production.\nA theory session and discussion on woodland photography and its challenges and some answers, followed by practical advice on settings, lenses, equipment, etc.\nA presentation on developing creative vision and simplification in woodland settings\nA 2hr woodland exploration and walk-making compositions and turning theory into practice in the field.\nInitial image reviews and critiques to shortlist images to edit\nDemonstration, advice and post-production of your woodland images"",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 125.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
+DARTMOOR Photography Workshop - Landscapes - 10th - 12th Oct,"<script type=""application/ld+json"">
+{
+  ""@context"": ""https://schema.org/"",
+  ""@type"": ""Product"",
+  ""name"": ""DARTMOOR Photography Workshop - Landscapes - 10th - 12th Oct"",
+  ""image"": ""https://images.squarespace-cdn.com/content/v1/5013f4b2c4aaa4752ac69b17/1707237329064-99H533NMXCONH5J276LM/dartmoor+photography+workshop.jpg"",
+  ""description"": ""Join me on this Landscape Dartmoor Photography Workshop - in the iconic woodlands, and landscape of Dartmoor Tors\nSummary\nLocation:\nDartmoor - South Devon\nDates:\nFri 10th - Sun 12th Oct 2025\nParticipants:\nMax 4\nFitness:\n3. Hard\nPhotography Workshop Event Details\n:\nDartmoor\nDescription: Dartmoor Photography Workshop -\nNestled amidst the stunning landscapes of southwest England, Dartmoor National Park presents a captivating playground for photographers of all levels. This diverse and dynamic environment boasts rugged moors, ancient woodlands, dramatic granite tors, mysterious valleys, and serene rivers \u00e2\u20ac\u201c all waiting to be captured and immortalised in your photographs. From sunrise to sunset, each moment offers a spectacle of natural wonders ready to be transformed into breathtaking images."",
+  ""url"": ""https://www.alanranger.com/photo-workshops-uk/dartmoor-photography-landscape-workshop"",
+  ""offers"": {
+    ""@type"": ""Offer"",
+    ""priceCurrency"": ""GBP"",
+    ""price"": 875.0,
+    ""availability"": ""http://schema.org/InStock"",
+    ""shippingDetails"": {
+      ""@type"": ""OfferShippingDetails"",
+      ""doesNotShip"": ""http://schema.org/True"",
+      ""shippingDestination"": {
+        ""@type"": ""DefinedRegion"",
+        ""addressCountry"": ""GB""
+      }
+    },
+    ""hasMerchantReturnPolicy"": {
+      ""@type"": ""MerchantReturnPolicy"",
+      ""returnPolicyCategory"": ""http://schema.org/MerchantReturnFiniteReturnWindow"",
+      ""merchantReturnDays"": 28,
+      ""returnMethod"": ""http://schema.org/ReturnByMail"",
+      ""returnFees"": ""http://schema.org/FreeReturn"",
+      ""applicableCountry"": ""GB"",
+      ""refundType"": ""http://schema.org/FullRefund""
+    }
+  }
+}
+</script>"
