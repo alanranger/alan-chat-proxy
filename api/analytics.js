@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   try {
     stage = 'auth';
     const token = req.headers['authorization']?.trim();
-    const expectedToken = process.env.INGEST_TOKEN || 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
+    const expectedToken = process.env.INGEST_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
     if (token !== `Bearer ${expectedToken}`) {
       return sendJSON(res, 401, { error: 'unauthorized', stage });
     }
