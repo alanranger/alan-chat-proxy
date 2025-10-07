@@ -582,17 +582,26 @@ export default async function handler(req, res) {
             return sendJSON(res, 400, { error: 'bad_request', detail: 'Question and suggestedContent are required' });
           }
 
+          console.log('Implementing improvement for question:', question);
+          console.log('Suggested content:', JSON.stringify(suggestedContent, null, 2));
+
+          // Ensure we have the required fields
+          const title = suggestedContent.title || `Content for: ${question}`;
+          const content = suggestedContent.content || 'Content improvement added';
+          const keywords = suggestedContent.keywords || [];
+          const intent = suggestedContent.intent || 'advice';
+
           // Add the improved content to page_entities as an article
           const { error: insertError } = await supa.from('page_entities').insert([{
             url: `https://www.alanranger.com/improved-content/${Date.now()}`,
             kind: 'article',
-            title: suggestedContent.title,
-            description: suggestedContent.content,
+            title: title,
+            description: content.substring(0, 500), // Limit description length
             raw: {
-              title: suggestedContent.title,
-              content: suggestedContent.content,
-              keywords: suggestedContent.keywords,
-              intent: suggestedContent.intent,
+              title: title,
+              content: content,
+              keywords: keywords,
+              intent: intent,
               source: 'automated_improvement',
               original_question: question,
               created_at: new Date().toISOString()
@@ -600,7 +609,10 @@ export default async function handler(req, res) {
             last_seen: new Date().toISOString()
           }]);
 
-          if (insertError) throw new Error(`Content insertion failed: ${insertError.message}`);
+          if (insertError) {
+            console.error('Insert error:', insertError);
+            throw new Error(`Content insertion failed: ${insertError.message}`);
+          }
 
           return sendJSON(res, 200, {
             ok: true,
