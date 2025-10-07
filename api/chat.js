@@ -95,7 +95,8 @@ const logAnswer = async (sessionId, question, answer, intent, confidence, respon
     if (error) throw new Error(`Answer log failed: ${error.message}`);
     
     // Update session question count
-    await client.rpc('increment_session_questions', { session_id: sessionId });
+    const { error: rpcError } = await client.rpc('increment_session_questions', { session_id: sessionId });
+    if (rpcError) throw new Error(`RPC failed: ${rpcError.message}`);
   } catch (err) {
     console.warn('Answer logging failed:', err.message);
   }
