@@ -123,6 +123,7 @@ async function fetchPage(url) {
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
+      // Try with original URL and with trailing slash as fallback
       const head = await fetchOnce(url, PRIMARY_UA, url, 'HEAD');
       if (head.ok || head.status === 405 /* method not allowed */) {
         // Proceed to GET with primary UA
@@ -130,6 +131,12 @@ async function fetchPage(url) {
         if (!res.ok && (res.status === 404 || res.status === 429 || (res.status >= 500 && res.status <= 599))) {
           // Retry with secondary UA
           res = await fetchOnce(url, SECONDARY_UA, url, 'GET');
+          // If still failing 404, try with/without trailing slash and homepage referer
+          if (!res.ok && res.status === 404) {
+            const altUrl = url.endsWith('/') ? url.slice(0,-1) : (url + '/');
+            const altReferer = url.split('/').slice(0,3).join('/');
+            res = await fetchOnce(altUrl, SECONDARY_UA, altReferer, 'GET');
+          }
         }
         if (res.ok) return res;
         lastError = new Error(`HTTP ${res.status}: ${res.statusText}`);

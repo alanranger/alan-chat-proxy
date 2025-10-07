@@ -304,6 +304,55 @@
       setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; }, Math.max(500, timeoutMs - 300));
       setTimeout(() => { toast.remove(); }, timeoutMs);
     }
+
+    // Fullscreen overlay progress for CSV imports
+    function showOverlayProgress(title, total) {
+      let overlay = document.getElementById('overlay-progress');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'overlay-progress';
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.background = 'rgba(0,0,0,0.6)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = '2147483600';
+        overlay.innerHTML = `
+          <div style="width: min(520px, 90vw); background:#1b1b1b; border:1px solid #333; border-radius:8px; padding:18px; box-shadow:0 20px 60px rgba(0,0,0,.5); text-align:center;">
+            <div id="overlay-progress-title" style="color:#fff; font-weight:600; margin-bottom:10px;">Preparing…</div>
+            <div style="height:8px; background:#333; border-radius:4px; overflow:hidden;">
+              <div id="overlay-progress-bar" style="height:100%; width:0%; background:linear-gradient(90deg,#51cf66,#69db7c);"></div>
+            </div>
+            <div id="overlay-progress-text" style="margin-top:8px; color:#bbb; font-family:monospace">0%</div>
+          </div>`;
+        document.body.appendChild(overlay);
+      }
+      document.getElementById('overlay-progress-title').textContent = title || 'Processing…';
+      overlay.dataset.total = String(total || 0);
+      overlay.dataset.current = '0';
+      updateOverlayProgress(0, total || 0);
+      overlay.style.display = 'flex';
+    }
+
+    function updateOverlayProgress(current, total){
+      const overlay = document.getElementById('overlay-progress');
+      if (!overlay) return;
+      overlay.dataset.current = String(current);
+      if (total) overlay.dataset.total = String(total);
+      const t = Number(overlay.dataset.total||0);
+      const c = Number(overlay.dataset.current||0);
+      const pct = t>0 ? Math.max(0, Math.min(100, Math.round((c/t)*100))) : 0;
+      const bar = document.getElementById('overlay-progress-bar');
+      const txt = document.getElementById('overlay-progress-text');
+      if (bar) bar.style.width = pct + '%';
+      if (txt) txt.textContent = `${pct}% (${c}/${t})`;
+    }
+
+    function hideOverlayProgress(){
+      const overlay = document.getElementById('overlay-progress');
+      if (overlay) overlay.style.display = 'none';
+    }
     // Token management - hardcoded for private use
     function getToken() {
       // Use production INGEST_TOKEN for authenticated admin operations
@@ -799,11 +848,14 @@
         return;
       }
 
+      if (totalCount) { showOverlayProgress('Importing selected CSVs…', totalCount); }
+
       for (let i = 0; i < files.length; i++) {
         const { file, type, name } = files[i];
         if (file) {
           updateProgress((i / totalCount) * 100, `Importing ${name}...`);
           const result = await importCSV(file, type);
+          updateOverlayProgress(Math.min((i+1), totalCount), totalCount);
           if (result && result.success) {
             successCount++;
             totalCsvRows += result.csvRows || 0;
@@ -818,6 +870,7 @@
       document.getElementById('stepImport').style.background = successCount===totalCount ? '#2a6' : '#a62';
       document.getElementById('stepImport').textContent = `1️⃣ Import CSVs: ${successCount}/${totalCount} (${totalImported}/${totalCsvRows} records)`;
       
+      hideOverlayProgress();
       // Update dashboard with CSV counts
       renderCategoryStats();
     }
@@ -922,7 +975,8 @@
       // Force a small delay to ensure DOM is updated
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Import sequentially for clear logs
+      // Import sequentially for clear logs with overlay progress
+      showOverlayProgress('Importing selected CSVs…', plan.length);
       let ok = 0;
       let totalCsvRows = 0;
       let totalImported = 0;
@@ -962,6 +1016,7 @@
         } catch (error) {
           addResult(`❌ ${p.file.name} threw error: ${error.message}`, 'error');
         }
+        updateOverlayProgress(i+1, plan.length);
       }
       
       // Remove progress bar
@@ -982,6 +1037,7 @@
 
       // Update dashboard with CSV counts
       renderCategoryStats();
+      hideOverlayProgress();
       } catch (error) {
         console.error('Error in bulkUploadCSVs:', error);
         addResult(`❌ Bulk upload failed: ${error.message}`, 'error');
