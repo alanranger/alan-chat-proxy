@@ -1369,8 +1369,31 @@
         if (!data.ok) throw new Error(data.error || 'Unknown error');
         
         const { previews } = data;
+        totalPreviews = previews.length;
         
-        let previewHTML = '<h5 style="color: #fff;">📋 Content Improvement Previews</h5><p style="color: #ccc;">Review these suggestions before implementing:</p>';
+        // Reset tracking arrays
+        approvedContent = [];
+        rejectedContent = [];
+        ignoredContent = [];
+        
+        let previewHTML = `
+          <h5 style="color: #fff;">📋 Content Improvement Previews</h5>
+          <div style="background: #1a1f2e; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #444;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="color: #fff; font-weight: bold;">Progress:</span>
+              <span id="progress-count" style="color: #10b981; font-weight: bold;">0 / ${totalPreviews} reviewed</span>
+            </div>
+            <div style="background: #0f1419; height: 8px; border-radius: 4px; overflow: hidden;">
+              <div id="progress-bar" style="background: linear-gradient(90deg, #10b981, #059669); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+            </div>
+            <div style="display: flex; gap: 20px; margin-top: 10px; font-size: 0.9em;">
+              <span style="color: #10b981;">✅ <span id="approved-count">0</span> Approved</span>
+              <span style="color: #dc3545;">❌ <span id="rejected-count">0</span> Rejected</span>
+              <span style="color: #ffc107;">⏭️ <span id="ignored-count">0</span> Ignored</span>
+            </div>
+          </div>
+          <p style="color: #ccc;">Review these suggestions before implementing:</p>
+        `;
         
         previews.forEach((preview, index) => {
           previewHTML += `
@@ -1409,7 +1432,120 @@
       }
     }
 
+    // Global state for tracking approvals
     let approvedContent = [];
+    let rejectedContent = [];
+    let ignoredContent = [];
+    let totalPreviews = 0;
+    
+    // Toast notification system
+    function showToast(message, type = 'info') {
+      // Create toast container if it doesn't exist
+      let toastContainer = document.getElementById('toast-container');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          z-index: 10000;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        `;
+        document.body.appendChild(toastContainer);
+      }
+      
+      // Create toast element
+      const toast = document.createElement('div');
+      const colors = {
+        success: '#10b981',
+        error: '#dc3545',
+        warning: '#ffc107',
+        info: '#3b82f6'
+      };
+      
+      toast.style.cssText = `
+        background: ${colors[type] || colors.info};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        font-size: 14px;
+        font-weight: 500;
+        max-width: 300px;
+        animation: slideIn 0.3s ease-out;
+        position: relative;
+      `;
+      
+      toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>${message}</span>
+          <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; margin-left: auto;">×</button>
+        </div>
+      `;
+      
+      toastContainer.appendChild(toast);
+      
+      // Auto-remove after 3 seconds
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.style.animation = 'slideOut 0.3s ease-in';
+          setTimeout(() => toast.remove(), 300);
+        }
+      }, 3000);
+    }
+    
+    // Add CSS animations
+    if (!document.getElementById('toast-styles')) {
+      const style = document.createElement('style');
+      style.id = 'toast-styles';
+      style.textContent = `
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(100%); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    function updateProgress() {
+      const total = approvedContent.length + rejectedContent.length + ignoredContent.length;
+      const progressPercent = totalPreviews > 0 ? (total / totalPreviews) * 100 : 0;
+      
+      // Update progress bar
+      const progressBar = document.getElementById('progress-bar');
+      const progressCount = document.getElementById('progress-count');
+      const approvedCount = document.getElementById('approved-count');
+      const rejectedCount = document.getElementById('rejected-count');
+      const ignoredCount = document.getElementById('ignored-count');
+      const implementBtn = document.getElementById('implementBtn');
+      
+      if (progressBar) progressBar.style.width = `${progressPercent}%`;
+      if (progressCount) progressCount.textContent = `${total} / ${totalPreviews} reviewed`;
+      if (approvedCount) approvedCount.textContent = approvedContent.length;
+      if (rejectedCount) rejectedCount.textContent = rejectedContent.length;
+      if (ignoredCount) ignoredCount.textContent = ignoredContent.length;
+      
+      // Update implement button
+      if (implementBtn) {
+        if (approvedContent.length > 0) {
+          implementBtn.disabled = false;
+          implementBtn.innerHTML = `⚡ Implement Approved Improvements (${approvedContent.length})`;
+        } else {
+          implementBtn.disabled = true;
+          implementBtn.innerHTML = '⚡ Implement Approved Improvements (0)';
+        }
+      }
+      
+      // Show toast notification
+      showToast(`Progress: ${total}/${totalPreviews} reviewed (${approvedContent.length} approved)`, 'info');
+    }
     
     async function approveContent(index, question, suggestedContent) {
       approvedContent.push({ question, suggestedContent });
@@ -1422,16 +1558,22 @@
         btn.style.backgroundColor = '#28a745';
       });
       
-      // Hide the reject button
+      // Hide other buttons
       const rejectButtons = document.querySelectorAll(`button[onclick*="rejectContent(${index}"]`);
-      rejectButtons.forEach(btn => {
+      const ignoreButtons = document.querySelectorAll(`button[onclick*="ignoreQuestion('${question.replace(/'/g, "\\'")}', ${index}"]`);
+      [...rejectButtons, ...ignoreButtons].forEach(btn => {
         btn.style.display = 'none';
       });
+      
+      // Update progress
+      updateProgress();
       
       console.log('Approved content:', approvedContent);
     }
     
     function rejectContent(index) {
+      rejectedContent.push({ index, timestamp: Date.now() });
+      
       // Update the button to show it's rejected
       const buttons = document.querySelectorAll(`button[onclick*="rejectContent(${index}"]`);
       buttons.forEach(btn => {
@@ -1440,11 +1582,15 @@
         btn.style.backgroundColor = '#dc3545';
       });
       
-      // Hide the approve button
+      // Hide other buttons
       const approveButtons = document.querySelectorAll(`button[onclick*="approveContent(${index}"]`);
-      approveButtons.forEach(btn => {
+      const ignoreButtons = document.querySelectorAll(`button[onclick*="ignoreQuestion"][onclick*="${index}"]`);
+      [...approveButtons, ...ignoreButtons].forEach(btn => {
         btn.style.display = 'none';
       });
+      
+      // Update progress
+      updateProgress();
     }
 
     async function ignoreQuestion(question, index) {
@@ -1478,6 +1624,9 @@
           btn.style.display = 'none';
         });
         
+        // Update progress
+        updateProgress();
+        
         console.log('Question ignored:', question);
         
       } catch (error) {
@@ -1489,25 +1638,159 @@
     async function implementTopImprovements() {
       const statusDiv = document.getElementById('improvement-status');
       statusDiv.style.display = 'block';
-      statusDiv.innerHTML = '<p>🔄 Implementing top improvements...</p>';
       
+      if (approvedContent.length === 0) {
+        statusDiv.innerHTML = '<p style="color: #ffc107;">⚠️ No approved content to implement. Please approve some suggestions first.</p>';
+        showToast('No approved content to implement', 'warning');
+        return;
+      }
+
+      // Show progress overlay
+      const progressOverlay = document.createElement('div');
+      progressOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        color: white;
+      `;
+      progressOverlay.innerHTML = `
+        <div style="text-align: center;">
+          <div style="font-size: 24px; margin-bottom: 20px;">🔄 Implementing Improvements...</div>
+          <div style="background: #1a1f2e; width: 400px; height: 8px; border-radius: 4px; overflow: hidden;">
+            <div id="implementation-progress" style="background: linear-gradient(90deg, #10b981, #059669); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+          </div>
+          <div id="implementation-status" style="margin-top: 15px; font-size: 14px; color: #ccc;">Starting implementation...</div>
+        </div>
+      `;
+      document.body.appendChild(progressOverlay);
+
       try {
-        // Get the current analysis data
-        const response = await fetch('/api/chat-improvement?action=analyze', {
-          headers: {
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+        const results = [];
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (let i = 0; i < approvedContent.length; i++) {
+          const item = approvedContent[i];
+          const progress = ((i + 1) / approvedContent.length) * 100;
+          
+          // Update progress
+          const progressBar = document.getElementById('implementation-progress');
+          const statusText = document.getElementById('implementation-status');
+          if (progressBar) progressBar.style.width = `${progress}%`;
+          if (statusText) statusText.textContent = `Implementing: "${item.question}" (${i + 1}/${approvedContent.length})`;
+
+          try {
+            const response = await fetch('/api/chat-improvement?action=implement_improvement', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                question: item.question,
+                suggestedContent: item.suggestedContent,
+                approved: true
+              })
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            
+            if (!data.ok) throw new Error(data.error || 'Unknown error');
+            
+            results.push({ question: item.question, success: true, data, originalConfidence: data.originalConfidence });
+            successCount++;
+            showToast(`✅ Implemented: "${item.question}"`, 'success');
+          } catch (error) {
+            results.push({ question: item.question, success: false, error: error.message });
+            errorCount++;
+            showToast(`❌ Failed: "${item.question}"`, 'error');
           }
-        });
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        
-        if (!data.ok) throw new Error(data.error || 'Unknown error');
-        
-        const { analysis } = data;
-        const topRecommendations = analysis.recommendations.slice(0, 3);
-        
-        let implemented = 0;
+        }
+
+        // Remove progress overlay
+        document.body.removeChild(progressOverlay);
+
+        // Display comprehensive results
+        let resultHTML = `
+          <div style="background: #1a1f2e; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h4 style="color: #fff; margin-bottom: 15px;">📊 Implementation Complete</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+              <div style="text-align: center; padding: 15px; background: #0f5132; border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: bold; color: #10b981;">${successCount}</div>
+                <div style="color: #ccc;">Successfully Implemented</div>
+              </div>
+              <div style="text-align: center; padding: 15px; background: #58151c; border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: bold; color: #dc3545;">${errorCount}</div>
+                <div style="color: #ccc;">Failed</div>
+              </div>
+            </div>
+        `;
+
+        if (successCount > 0) {
+          resultHTML += `
+            <div style="margin-bottom: 20px;">
+              <h5 style="color: #10b981;">✅ Successfully Implemented:</h5>
+              <div style="background: #0f1419; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                ${results.filter(r => r.success).map(r => `
+                  <div style="border-bottom: 1px solid #333; padding: 10px 0; ${r === results.filter(r => r.success)[results.filter(r => r.success).length - 1] ? 'border-bottom: none;' : ''}">
+                    <div style="color: #fff; font-weight: bold;">"${r.question}"</div>
+                    <div style="color: #10b981; font-size: 0.9em;">Before: ${Math.round((r.originalConfidence || 0) * 100)}% confidence → After: Content added</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        if (errorCount > 0) {
+          resultHTML += `
+            <div style="margin-bottom: 20px;">
+              <h5 style="color: #dc3545;">❌ Failed to Implement:</h5>
+              <div style="background: #0f1419; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                ${results.filter(r => !r.success).map(r => `
+                  <div style="border-bottom: 1px solid #333; padding: 10px 0; ${r === results.filter(r => !r.success)[results.filter(r => !r.success).length - 1] ? 'border-bottom: none;' : ''}">
+                    <div style="color: #fff; font-weight: bold;">"${r.question}"</div>
+                    <div style="color: #dc3545; font-size: 0.9em;">Error: ${r.error}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        resultHTML += `
+            <div style="text-align: center; margin-top: 20px;">
+              <button onclick="showImplementedContent()" class="btn btn-primary" style="margin-right: 10px;">
+                📋 View What Was Added
+              </button>
+              <button onclick="loadInsights()" class="btn btn-secondary">
+                🔄 Refresh Insights
+              </button>
+            </div>
+          </div>
+        `;
+
+        statusDiv.innerHTML = resultHTML;
+        showToast(`Implementation complete: ${successCount} successful, ${errorCount} failed`, successCount > 0 ? 'success' : 'error');
+
+      } catch (error) {
+        console.error('Implementation failed:', error);
+        if (document.body.contains(progressOverlay)) {
+          document.body.removeChild(progressOverlay);
+        }
+        statusDiv.innerHTML = `<p style="color: #dc3545;">❌ Implementation failed: ${error.message}</p>`;
+        showToast('Implementation failed', 'error');
+      }
+    }
         let errors = [];
         
         for (const rec of topRecommendations) {
