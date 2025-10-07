@@ -425,6 +425,9 @@ async function ingestSingleUrl(url, supa, options = {}) {
           }
         }
       }
+      
+      // Sync pricing to display table after entity updates
+      await supa.rpc('upsert_display_price_all');
     }
     
     return {
