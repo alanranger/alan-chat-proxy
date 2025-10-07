@@ -288,6 +288,37 @@ export default async function handler(req, res) {
           });
         }
 
+      case 'admin_counts':
+        {
+          // Get real-time counts for admin panel
+          const { data: interactionsCount, error: interactionsError } = await supa
+            .from('chat_interactions')
+            .select('id', { count: 'exact', head: true });
+          
+          if (interactionsError) throw new Error(`Count interactions failed: ${interactionsError.message}`);
+          
+          const { data: sessionsCount, error: sessionsError } = await supa
+            .from('chat_sessions')
+            .select('session_id', { count: 'exact', head: true });
+          
+          if (sessionsError) throw new Error(`Count sessions failed: ${sessionsError.message}`);
+          
+          const { data: questionsCount, error: questionsError } = await supa
+            .from('chat_question_frequency')
+            .select('id', { count: 'exact', head: true });
+          
+          if (questionsError) throw new Error(`Count questions failed: ${questionsError.message}`);
+          
+          return sendJSON(res, 200, {
+            ok: true,
+            counts: {
+              interactions: interactionsCount || 0,
+              sessions: sessionsCount || 0,
+              questions: questionsCount || 0
+            }
+          });
+        }
+
       case 'admin_preview':
         {
           const { startDate, endDate, questionText, sessionId, confidence } = req.query || {};
@@ -439,7 +470,7 @@ export default async function handler(req, res) {
         }
 
       default:
-        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, question_detail, performance, insights, admin_preview, admin_delete, admin_clear_all' });
+        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, question_detail, performance, insights, admin_counts, admin_preview, admin_delete, admin_clear_all' });
     }
 
   } catch (err) {

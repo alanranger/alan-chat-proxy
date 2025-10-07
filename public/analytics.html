@@ -1354,13 +1354,13 @@
     // Admin functions
     async function loadAdmin() {
       try {
-        // Load current data counts
-        const overviewData = await apiCall('overview', { days: 30 });
-        const { totals } = overviewData.overview;
+        // Load real-time data counts
+        const countsData = await apiCall('admin_counts');
+        const { counts } = countsData;
         
-        document.getElementById('total-questions-count').textContent = totals.questions || 0;
-        document.getElementById('total-sessions-count').textContent = totals.sessions || 0;
-        document.getElementById('total-interactions-count').textContent = totals.interactions || 0;
+        document.getElementById('total-questions-count').textContent = counts.questions || 0;
+        document.getElementById('total-sessions-count').textContent = counts.sessions || 0;
+        document.getElementById('total-interactions-count').textContent = counts.interactions || 0;
         
         // Set default date range (last 7 days)
         const endDate = new Date();
