@@ -1311,20 +1311,20 @@
         
         const { previews } = data;
         
-        let previewHTML = '<h5>📋 Content Improvement Previews</h5><p>Review these suggestions before implementing:</p>';
+        let previewHTML = '<h5 style="color: #fff;">📋 Content Improvement Previews</h5><p style="color: #ccc;">Review these suggestions before implementing:</p>';
         
         previews.forEach((preview, index) => {
           previewHTML += `
-            <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px;">
-              <h6>Question ${index + 1}: "${preview.question}"</h6>
-              <p><strong>Current Answer:</strong> ${preview.currentAnswer}</p>
-              <p><strong>Confidence:</strong> ${Math.round(preview.confidence * 100)}%</p>
+            <div style="border: 1px solid #444; padding: 15px; margin: 10px 0; border-radius: 5px; background: #2a2f3e;">
+              <h6 style="color: #fff;">Question ${index + 1}: "${preview.question}"</h6>
+              <p style="color: #ccc;"><strong>Current Answer:</strong> ${preview.currentAnswer || 'No answer available'}</p>
+              <p style="color: #ccc;"><strong>Confidence:</strong> ${Math.round(preview.confidence * 100)}%</p>
               ${preview.suggestedContent ? `
-                <div style="background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 3px;">
-                  <h6>Suggested New Content:</h6>
-                  <p><strong>Title:</strong> ${preview.suggestedContent.title}</p>
-                  <p><strong>Content:</strong> ${preview.suggestedContent.content}</p>
-                  <p><strong>Keywords:</strong> ${preview.suggestedContent.keywords?.join(', ') || 'None'}</p>
+                <div style="background: #1a1f2e; padding: 10px; margin: 10px 0; border-radius: 3px; border: 1px solid #555;">
+                  <h6 style="color: #fff;">Suggested New Content:</h6>
+                  <p style="color: #ccc;"><strong>Title:</strong> ${preview.suggestedContent.title}</p>
+                  <p style="color: #ccc;"><strong>Content:</strong> ${preview.suggestedContent.content}</p>
+                  <p style="color: #ccc;"><strong>Keywords:</strong> ${preview.suggestedContent.keywords?.join(', ') || 'None'}</p>
                 </div>
                 <div style="margin-top: 10px;">
                   <button onclick="approveContent(${index}, '${preview.question.replace(/'/g, "\\'")}', ${JSON.stringify(preview.suggestedContent).replace(/"/g, '&quot;')})" class="btn btn-success btn-sm" style="margin-right: 10px;">
