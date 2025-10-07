@@ -647,7 +647,8 @@
         return { success: true, csvRows: actualRowCount, imported: 0 }; // Count as successful since these are reference files
       }
       
-      const result = await apiCall('/api/csv-multi-import', { csvData: csvText, contentType });
+      // Correct endpoint (csv-import) so imports actually run
+      const result = await apiCall('/api/csv-import', { csvData: csvText, contentType });
       
         if (result && result.ok) {
           addResult(`✅ ${contentType} import successful: ${result.imported}/${actualRowCount} records (CSV rows → ingested)`, 'success');
@@ -719,6 +720,7 @@
         return { success: true, csvRows: actualRowCount, imported: result.imported };
       } else {
         addResult(`❌ ${contentType} import failed: ${result?.error || result?.detail || 'Unknown error'}`, 'error');
+        if (result && result.text) addResult(`↪︎ server said: ${result.text.slice(0,400)}`, 'error');
         if (result?.detail) {
           addResult(`🔍 Error details: ${JSON.stringify(result.detail)}`, 'error');
         }
