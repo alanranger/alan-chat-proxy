@@ -13,12 +13,16 @@
     .file-item h4 { margin: 0 0 10px 0; color: #4CAF50; }
     .file-item input[type="file"] { width: 100%; margin: 10px 0; }
     .file-item small { color: #ccc; display: block; margin: 5px 0; }
-    .btn { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+    .btn { background: #4CAF50; color: white; border: none; padding: 12px 22px; border-radius: 6px; cursor: pointer; margin: 6px; font-size: 15px; }
     .btn:hover { background: #45a049; }
     .btn-danger { background: #f44336; }
     .btn-danger:hover { background: #da190b; }
     .btn-primary { background: #2196F3; }
     .btn-primary:hover { background: #1976D2; }
+    /* Emphasized step buttons */
+    .btn.step { padding: 14px 24px; font-weight: 600; }
+    .btn.step .step-num { font-size: 18px; font-weight: 800; display: inline-block; margin-right: 6px; }
+    @media (min-width: 900px){ .btn.step { font-size: 16px; } .btn.step .step-num { font-size: 20px; } }
     .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
     .status.success { background: #4CAF50; color: white; }
     .status.error { background: #f44336; color: white; }
@@ -128,11 +132,11 @@
     <div class="section">
       <h2>🚀 Actions (Execute in Order)</h2>
       <div class="card">
-        <button class="btn btn-primary" onclick="importAllCSVs()" id="importAllBtn">
-          1️⃣ 📥 Import All CSV Files
+        <button class="btn btn-primary step" onclick="importAllCSVs()" id="importAllBtn">
+          <span class="step-num">1️⃣</span> 📥 Import All CSV Files
         </button>
-        <button class="btn" onclick="scrapeWebsite()" id="scrapeBtn" title="Fetch pages and extract text + JSON-LD to augment CSV data">
-          2️⃣ 🕷️ Scrape Website URLs
+        <button class="btn step" onclick="scrapeWebsite()" id="scrapeBtn" title="Fetch pages and extract text + JSON-LD to augment CSV data">
+          <span class="step-num">2️⃣</span> 🕷️ Scrape Website URLs
         </button>
         <label style="margin-left:8px;color:#bbb;display:inline-flex;gap:8px;align-items:center">
           Sources:
@@ -142,14 +146,14 @@
           <span><input type="checkbox" id="src_workshop"> workshops</span>
           <span><input type="checkbox" id="src_service"> services</span>
         </label>
-        <button class="btn" onclick="scrapeWebsite(true)" id="dryRunBtn" title="Preview changes without writing to DB">
+        <button class="btn step" onclick="scrapeWebsite(true)" id="dryRunBtn" title="Preview changes without writing to DB">
           🧪 Dry‑Run Scrape
         </button>
         <button class="btn" onclick="stopScrape()" id="stopScrapeBtn" style="display:none">
           ⏹️ Stop Scrape
         </button>
-        <button class="btn" onclick="runMapping()" id="mappingBtn">
-          3️⃣ 🔗 Run Event → Product Mapping
+        <button class="btn step" onclick="runMapping()" id="mappingBtn">
+          <span class="step-num">3️⃣</span> 🔗 Run Event → Product Mapping
         </button>
         <button class="btn btn-danger" onclick="clearResults()">
           🗑️ Clear Results
@@ -166,7 +170,7 @@
           <button class="btn" style="margin-left:8px" onclick="exportMappings()">⬇️ Export Mappings CSV</button>
           <button class="btn" style="margin-left:8px" onclick="exportUnmapped()">⬇️ Export Unmapped CSV</button>
           <button class="btn" style="margin-left:8px" onclick="runTestQuestions()">🤖 Test Questions Batch</button>
-          <button class="btn btn-primary" style="margin-left:8px" onclick="finalizeNow()">4️⃣ ✅ Finalize (Warm + Refresh)</button>
+          <button class="btn btn-primary step" style="margin-left:8px" onclick="finalizeNow()"><span class="step-num">4️⃣</span> ✅ Finalize (Warm + Refresh)</button>
           <span id="finalizeStatus" style="padding:2px 6px;border-radius:4px;background:#444;margin-left:8px;display:inline-block;">Finalize: …</span>
         </small>
       </div>
