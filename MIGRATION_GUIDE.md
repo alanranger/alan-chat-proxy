@@ -205,3 +205,5 @@ WHERE rule_name = 'Problematic Rule';
 This scalable system ensures that as your website grows and new events/products are added, the mapping system will automatically handle them without requiring code changes or manual intervention.
 
 
+
+

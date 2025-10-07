@@ -213,3 +213,5 @@ SELECT
 FROM v_event_product_qa_corrected;
 
 
+
+

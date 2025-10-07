@@ -116,3 +116,5 @@ WHERE event_location IS NULL
 ORDER BY location_issue, event_url;
 
 
+
+

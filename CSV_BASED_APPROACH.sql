@@ -145,3 +145,4 @@ SELECT
 FROM v_event_product_pricing_csv_based;
 
 
+
