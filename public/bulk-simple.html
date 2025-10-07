@@ -278,6 +278,32 @@
   </div>
 
   <script>
+    // Simple toast notifications
+    function showToast(message, timeoutMs = 2500) {
+      let holder = document.getElementById('toast-holder');
+      if (!holder) {
+        holder = document.createElement('div');
+        holder.id = 'toast-holder';
+        holder.style.position = 'fixed';
+        holder.style.right = '16px';
+        holder.style.bottom = '16px';
+        holder.style.zIndex = '2147483647';
+        document.body.appendChild(holder);
+      }
+      const toast = document.createElement('div');
+      toast.style.background = '#2a2a2a';
+      toast.style.border = '1px solid #444';
+      toast.style.color = '#fff';
+      toast.style.padding = '10px 14px';
+      toast.style.marginTop = '8px';
+      toast.style.borderRadius = '6px';
+      toast.style.boxShadow = '0 6px 18px rgba(0,0,0,0.35)';
+      toast.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+      toast.textContent = message;
+      holder.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; }, Math.max(500, timeoutMs - 300));
+      setTimeout(() => { toast.remove(); }, timeoutMs);
+    }
     // Token management - hardcoded for private use
     function getToken() {
       // Use production INGEST_TOKEN for authenticated admin operations
@@ -519,6 +545,7 @@
         return false;
       }
 
+      showToast(`Reading ${file.name}…`);
       addResult(`📥 Importing ${contentType} data...`);
       const csvText = await file.text();
       
@@ -743,6 +770,7 @@
     // Main import function
     async function importAllCSVs() {
       const token = getToken();
+      showToast('Starting Import All…');
       addResult('🔐 Using hardcoded token for authentication');
       document.getElementById('stepImport').style.background = '#3a3';
       document.getElementById('stepImport').textContent = '1️⃣ Import CSVs: running';
@@ -823,6 +851,7 @@
     }
 
     async function bulkUploadCSVs(){
+      showToast('Preparing selected CSVs…');
       console.log('bulkUploadCSVs called');
       try {
         const input = document.getElementById('bulkCsvs');
