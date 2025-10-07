@@ -797,8 +797,8 @@
 
     function detectTypeByName(name){
       const n = (name||'').toLowerCase();
-      if (n.includes('photo workshops uk')) return 'product';
-      if (n.includes('photography services')) return 'product';
+      if (n.includes('photo workshops uk')) return 'workshop';
+      if (n.includes('photography services')) return 'service';
       if (n.includes('workshop')) return 'workshop';
       if (n.includes('event')) return 'event';
       if (n.includes('blog') || n.includes('news')) return 'blog';
@@ -827,10 +827,10 @@
       for (const f of files){
         const text = await f.text();
         const first = text.split('\n')[0] || '';
-        // Prefer filename hints when they indicate product (04/05), then fall back to headers
+        // Prefer filename hint when present (more specific per bundle), else headers
         const nameHint = detectTypeByName(f.name);
         const headerHint = detectTypeFromHeaders(first);
-        let type = (nameHint === 'product') ? 'product' : (headerHint || nameHint);
+        let type = nameHint || headerHint;
         if (type === 'workshop') type = 'workshop';
         if (type === 'event' && f.name.includes('workshop')) type = 'workshop';
         if (!type){
