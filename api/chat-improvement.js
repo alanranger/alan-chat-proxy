@@ -385,8 +385,36 @@ async function createContentImprovementPlan(questionAnalysis) {
   
   for (const question of questionAnalysis) {
     // Skip if question doesn't have required properties
-    if (!question || !question.question || !question.recommendations) {
+    if (!question || !question.question) {
       continue;
+    }
+    
+    // Create recommendations based on confidence level
+    const recommendations = [];
+    if (question.avgConfidence < 0.3) {
+      recommendations.push({
+        type: 'content_gap',
+        severity: 'high',
+        message: 'Very low confidence suggests missing or inadequate content',
+        action: 'Add specific content for this question type'
+      });
+    } else if (question.avgConfidence < 0.5) {
+      recommendations.push({
+        type: 'content_improvement',
+        severity: 'medium',
+        message: 'Low confidence indicates content needs improvement',
+        action: 'Enhance existing content or add more specific information'
+      });
+    }
+    
+    // Check for generic "not found" responses
+    if (question.topAnswer && question.topAnswer.toLowerCase().includes("couldn't find")) {
+      recommendations.push({
+        type: 'missing_content',
+        severity: 'high',
+        message: 'Generic "not found" response indicates missing content',
+        action: 'Create specific content for this question'
+      });
     }
     
     // Adjusted thresholds for your data (frequency is low, so focus on confidence)
@@ -395,7 +423,7 @@ async function createContentImprovementPlan(questionAnalysis) {
       const improvements = await generateImprovedContent(
         question.question, 
         question.topAnswer, 
-        question.recommendations
+        recommendations
       );
       
       improvementPlan.highPriority.push({
@@ -409,7 +437,7 @@ async function createContentImprovementPlan(questionAnalysis) {
       const improvements = await generateImprovedContent(
         question.question, 
         question.topAnswer, 
-        question.recommendations
+        recommendations
       );
       
       improvementPlan.mediumPriority.push({
@@ -421,7 +449,7 @@ async function createContentImprovementPlan(questionAnalysis) {
     }
     
     // Categorize content needs
-    question.recommendations.forEach(rec => {
+    recommendations.forEach(rec => {
       if (rec.type === 'content_gap' || rec.type === 'missing_content') {
         improvementPlan.contentToAdd.push({
           question: question.question,
