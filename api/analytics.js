@@ -264,8 +264,173 @@ export default async function handler(req, res) {
           });
         }
 
+      case 'admin_preview':
+        {
+          const { startDate, endDate, questionText, sessionId, confidence } = req.query || {};
+          
+          // Build WHERE conditions
+          let whereConditions = [];
+          let params = [];
+          
+          if (startDate) {
+            whereConditions.push(`created_at >= $${params.length + 1}`);
+            params.push(startDate);
+          }
+          if (endDate) {
+            whereConditions.push(`created_at <= $${params.length + 1}`);
+            params.push(endDate + ' 23:59:59');
+          }
+          if (questionText) {
+            whereConditions.push(`question ILIKE $${params.length + 1}`);
+            params.push(`%${questionText}%`);
+          }
+          if (sessionId) {
+            whereConditions.push(`session_id ILIKE $${params.length + 1}`);
+            params.push(`%${sessionId}%`);
+          }
+          if (confidence) {
+            if (confidence === 'low') {
+              whereConditions.push(`confidence < 0.5`);
+            } else if (confidence === 'medium') {
+              whereConditions.push(`confidence >= 0.5 AND confidence <= 0.8`);
+            } else if (confidence === 'high') {
+              whereConditions.push(`confidence > 0.8`);
+            }
+          }
+          
+          const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+          
+          // Get filtered interactions
+          const { data: interactions, error: interactionsError } = await supa
+            .rpc('execute_sql', { 
+              query: `SELECT * FROM chat_interactions ${whereClause} ORDER BY created_at DESC LIMIT 100`,
+              params: params
+            });
+          
+          if (interactionsError) throw new Error(`Preview interactions failed: ${interactionsError.message}`);
+          
+          // Get filtered sessions
+          const { data: sessions, error: sessionsError } = await supa
+            .rpc('execute_sql', { 
+              query: `SELECT * FROM chat_sessions ${whereClause.replace('created_at', 'started_at')} ORDER BY started_at DESC LIMIT 100`,
+              params: params
+            });
+          
+          if (sessionsError) throw new Error(`Preview sessions failed: ${sessionsError.message}`);
+          
+          // Get filtered questions
+          const { data: questions, error: questionsError } = await supa
+            .rpc('execute_sql', { 
+              query: `SELECT * FROM chat_question_frequency ${whereClause.replace('created_at', 'last_seen')} ORDER BY last_seen DESC LIMIT 100`,
+              params: params
+            });
+          
+          if (questionsError) throw new Error(`Preview questions failed: ${questionsError.message}`);
+          
+          return sendJSON(res, 200, {
+            ok: true,
+            preview: {
+              interactions: interactions || [],
+              sessions: sessions || [],
+              questions: questions || []
+            }
+          });
+        }
+
+      case 'admin_delete':
+        {
+          const { startDate, endDate, questionText, sessionId, confidence } = req.query || {};
+          
+          let deletedCounts = { interactions: 0, sessions: 0, questions: 0 };
+          
+          // Build WHERE conditions for interactions
+          let whereConditions = [];
+          let params = [];
+          
+          if (startDate) {
+            whereConditions.push(`created_at >= $${params.length + 1}`);
+            params.push(startDate);
+          }
+          if (endDate) {
+            whereConditions.push(`created_at <= $${params.length + 1}`);
+            params.push(endDate + ' 23:59:59');
+          }
+          if (questionText) {
+            whereConditions.push(`question ILIKE $${params.length + 1}`);
+            params.push(`%${questionText}%`);
+          }
+          if (sessionId) {
+            whereConditions.push(`session_id ILIKE $${params.length + 1}`);
+            params.push(`%${sessionId}%`);
+          }
+          if (confidence) {
+            if (confidence === 'low') {
+              whereConditions.push(`confidence < 0.5`);
+            } else if (confidence === 'medium') {
+              whereConditions.push(`confidence >= 0.5 AND confidence <= 0.8`);
+            } else if (confidence === 'high') {
+              whereConditions.push(`confidence > 0.8`);
+            }
+          }
+          
+          const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+          
+          // Delete interactions
+          const { data: interactionsResult, error: interactionsError } = await supa
+            .rpc('execute_sql', { 
+              query: `DELETE FROM chat_interactions ${whereClause}`,
+              params: params
+            });
+          
+          if (interactionsError) throw new Error(`Delete interactions failed: ${interactionsError.message}`);
+          deletedCounts.interactions = interactionsResult?.rowCount || 0;
+          
+          // Delete sessions (if no interactions left)
+          const { data: sessionsResult, error: sessionsError } = await supa
+            .rpc('execute_sql', { 
+              query: `DELETE FROM chat_sessions WHERE session_id NOT IN (SELECT DISTINCT session_id FROM chat_interactions)`,
+              params: []
+            });
+          
+          if (sessionsError) throw new Error(`Delete sessions failed: ${sessionsError.message}`);
+          deletedCounts.sessions = sessionsResult?.rowCount || 0;
+          
+          // Delete questions (if no interactions left)
+          const { data: questionsResult, error: questionsError } = await supa
+            .rpc('execute_sql', { 
+              query: `DELETE FROM chat_question_frequency WHERE question_text NOT IN (SELECT DISTINCT question FROM chat_interactions)`,
+              params: []
+            });
+          
+          if (questionsError) throw new Error(`Delete questions failed: ${questionsError.message}`);
+          deletedCounts.questions = questionsResult?.rowCount || 0;
+          
+          return sendJSON(res, 200, {
+            ok: true,
+            deleted: deletedCounts
+          });
+        }
+
+      case 'admin_clear_all':
+        {
+          // Clear all data
+          const { error: interactionsError } = await supa.from('chat_interactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          if (interactionsError) throw new Error(`Clear interactions failed: ${interactionsError.message}`);
+          
+          const { error: sessionsError } = await supa.from('chat_sessions').delete().neq('session_id', 'dummy');
+          if (sessionsError) throw new Error(`Clear sessions failed: ${sessionsError.message}`);
+          
+          const { error: questionsError } = await supa.from('chat_question_frequency').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          if (questionsError) throw new Error(`Clear questions failed: ${questionsError.message}`);
+          
+          return sendJSON(res, 200, {
+            ok: true,
+            message: 'All data cleared successfully'
+          });
+        }
+
       default:
-        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, performance, insights' });
+        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, performance, insights, admin_preview, admin_delete, admin_clear_all' });
     }
 
   } catch (err) {

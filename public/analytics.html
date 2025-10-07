@@ -234,6 +234,110 @@
       border-top: 1px solid #4b5563;
       padding-top: 8px;
     }
+
+    .admin-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #374151;
+      border-radius: 8px;
+      border-left: 4px solid #f59e0b;
+    }
+
+    .admin-section h4 {
+      color: #f9fafb;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+
+    .metric-card {
+      background: #1f2937;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid #4b5563;
+    }
+
+    .metric-card .metric-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #10b981;
+      margin-bottom: 5px;
+    }
+
+    .metric-card .metric-label {
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    .filter-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .filter-group label {
+      color: #f9fafb;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .filter-input {
+      padding: 8px 12px;
+      background: #1f2937;
+      border: 1px solid #4b5563;
+      border-radius: 6px;
+      color: #f9fafb;
+      font-size: 14px;
+    }
+
+    .filter-input:focus {
+      outline: none;
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .preview-container {
+      background: #1f2937;
+      border: 1px solid #4b5563;
+      border-radius: 8px;
+      padding: 15px;
+      min-height: 100px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .preview-item {
+      background: #374151;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      border-left: 3px solid #f59e0b;
+    }
+
+    .preview-item .question {
+      color: #f9fafb;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .preview-item .metadata {
+      color: #9ca3af;
+      font-size: 12px;
+    }
     .insight-priority-high { border-left-color: var(--error); }
     .insight-priority-medium { border-left-color: var(--warning); }
     .insight-priority-low { border-left-color: var(--success); }
@@ -432,6 +536,7 @@
       <div class="tab" onclick="showTab('sessions')">Sessions</div>
       <div class="tab" onclick="showTab('performance')">Performance</div>
       <div class="tab" onclick="showTab('insights')">Insights</div>
+      <div class="tab" onclick="showTab('admin')">Admin</div>
     </div>
 
     <!-- Overview Tab Content -->
@@ -548,6 +653,78 @@
       </div>
     </div>
 
+    <!-- Admin Tab Content -->
+    <div id="admin" class="tab-content">
+      <div class="card">
+        <h3>🗑️ Log Management</h3>
+        <p>Manage and maintain your chat bot logs and history.</p>
+        
+        <div class="admin-section">
+          <h4>📊 Current Data Overview</h4>
+          <div class="grid grid-3">
+            <div class="metric-card">
+              <div class="metric-value" id="total-questions-count">-</div>
+              <div class="metric-label">Total Questions</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" id="total-sessions-count">-</div>
+              <div class="metric-label">Total Sessions</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" id="total-interactions-count">-</div>
+              <div class="metric-label">Total Interactions</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-section">
+          <h4>🔍 Filter & Delete Options</h4>
+          
+          <div class="filter-controls">
+            <div class="filter-group">
+              <label>Date Range:</label>
+              <input type="date" id="filter-start-date" class="filter-input">
+              <span>to</span>
+              <input type="date" id="filter-end-date" class="filter-input">
+            </div>
+            
+            <div class="filter-group">
+              <label>Question Contains:</label>
+              <input type="text" id="filter-question-text" placeholder="e.g., test, debug" class="filter-input">
+            </div>
+            
+            <div class="filter-group">
+              <label>Session ID Contains:</label>
+              <input type="text" id="filter-session-id" placeholder="e.g., test_session" class="filter-input">
+            </div>
+            
+            <div class="filter-group">
+              <label>Confidence Level:</label>
+              <select id="filter-confidence" class="filter-input">
+                <option value="">All</option>
+                <option value="low">Low (< 50%)</option>
+                <option value="medium">Medium (50-80%)</option>
+                <option value="high">High (> 80%)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="action-buttons">
+            <button class="btn btn-secondary" onclick="previewFilteredData()">🔍 Preview Filtered Data</button>
+            <button class="btn btn-warning" onclick="deleteFilteredData()">🗑️ Delete Filtered Data</button>
+            <button class="btn btn-danger" onclick="clearAllData()">⚠️ Clear All Data</button>
+          </div>
+        </div>
+
+        <div class="admin-section">
+          <h4>📋 Preview Results</h4>
+          <div id="preview-results" class="preview-container">
+            <p>Click "Preview Filtered Data" to see what will be deleted.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Quick Admin Access -->
     <div class="card" style="margin-top: 30px; text-align: center;">
       <h3>🔧 Need to Update Data?</h3>
@@ -576,6 +753,7 @@
         case 'sessions': loadSessions(); break;
         case 'performance': loadPerformance(); break;
         case 'insights': loadInsights(); break;
+        case 'admin': loadAdmin(); break;
       }
     }
 
@@ -1064,6 +1242,157 @@
       document.querySelector('.container').insertBefore(errorDiv, document.querySelector('.tabs'));
       
       setTimeout(() => errorDiv.remove(), 5000);
+    }
+
+    // Admin functions
+    async function loadAdmin() {
+      try {
+        // Load current data counts
+        const overviewData = await apiCall('overview', { days: 30 });
+        const { totals } = overviewData.overview;
+        
+        document.getElementById('total-questions-count').textContent = totals.questions || 0;
+        document.getElementById('total-sessions-count').textContent = totals.sessions || 0;
+        document.getElementById('total-interactions-count').textContent = totals.interactions || 0;
+        
+        // Set default date range (last 7 days)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+        
+        document.getElementById('filter-start-date').value = startDate.toISOString().split('T')[0];
+        document.getElementById('filter-end-date').value = endDate.toISOString().split('T')[0];
+        
+      } catch (error) {
+        showError('Failed to load admin data: ' + error.message);
+      }
+    }
+
+    async function previewFilteredData() {
+      try {
+        const filters = getFilterValues();
+        const previewContainer = document.getElementById('preview-results');
+        
+        previewContainer.innerHTML = '<p>Loading preview...</p>';
+        
+        // Get filtered data
+        const data = await apiCall('admin_preview', filters);
+        const { interactions, sessions, questions } = data.preview;
+        
+        let html = `
+          <h5>Preview Results:</h5>
+          <div class="preview-summary">
+            <strong>Interactions:</strong> ${interactions.length} | 
+            <strong>Sessions:</strong> ${sessions.length} | 
+            <strong>Questions:</strong> ${questions.length}
+          </div>
+        `;
+        
+        if (interactions.length > 0) {
+          html += '<h6>Sample Interactions:</h6>';
+          interactions.slice(0, 10).forEach(interaction => {
+            html += `
+              <div class="preview-item">
+                <div class="question">${interaction.question}</div>
+                <div class="metadata">
+                  Session: ${interaction.session_id.substring(0, 20)}... | 
+                  Date: ${new Date(interaction.created_at).toLocaleString()} | 
+                  Confidence: ${interaction.confidence ? (interaction.confidence * 100).toFixed(1) + '%' : 'N/A'}
+                </div>
+              </div>
+            `;
+          });
+          
+          if (interactions.length > 10) {
+            html += `<p><em>... and ${interactions.length - 10} more interactions</em></p>`;
+          }
+        }
+        
+        previewContainer.innerHTML = html;
+        
+      } catch (error) {
+        showError('Failed to preview data: ' + error.message);
+      }
+    }
+
+    async function deleteFilteredData() {
+      if (!confirm('Are you sure you want to delete the filtered data? This action cannot be undone.')) {
+        return;
+      }
+      
+      try {
+        const filters = getFilterValues();
+        const result = await apiCall('admin_delete', filters);
+        
+        if (result.ok) {
+          showSuccess(`Successfully deleted ${result.deleted.interactions} interactions, ${result.deleted.sessions} sessions, and ${result.deleted.questions} questions.`);
+          loadAdmin(); // Refresh the counts
+          previewFilteredData(); // Refresh preview
+        } else {
+          showError('Failed to delete data: ' + result.error);
+        }
+        
+      } catch (error) {
+        showError('Failed to delete data: ' + error.message);
+      }
+    }
+
+    async function clearAllData() {
+      if (!confirm('⚠️ WARNING: This will delete ALL chat data including real user interactions. Are you absolutely sure?')) {
+        return;
+      }
+      
+      if (!confirm('This action cannot be undone. Type "DELETE ALL" to confirm.')) {
+        return;
+      }
+      
+      try {
+        const result = await apiCall('admin_clear_all');
+        
+        if (result.ok) {
+          showSuccess('All data has been cleared successfully.');
+          loadAdmin(); // Refresh the counts
+          previewFilteredData(); // Refresh preview
+        } else {
+          showError('Failed to clear data: ' + result.error);
+        }
+        
+      } catch (error) {
+        showError('Failed to clear data: ' + error.message);
+      }
+    }
+
+    function getFilterValues() {
+      return {
+        startDate: document.getElementById('filter-start-date').value,
+        endDate: document.getElementById('filter-end-date').value,
+        questionText: document.getElementById('filter-question-text').value,
+        sessionId: document.getElementById('filter-session-id').value,
+        confidence: document.getElementById('filter-confidence').value
+      };
+    }
+
+    function showSuccess(message) {
+      // Create a temporary success message
+      const successDiv = document.createElement('div');
+      successDiv.className = 'success-message';
+      successDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #10b981;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      `;
+      successDiv.textContent = message;
+      document.body.appendChild(successDiv);
+      
+      setTimeout(() => {
+        document.body.removeChild(successDiv);
+      }, 5000);
     }
 
     // Initialize
