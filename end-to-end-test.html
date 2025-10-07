@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>End-to-End Chat Logging Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1f2937; color: white; }
+        .test-section { background: #374151; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .warning { color: #f59e0b; }
+        .info { color: #3b82f6; }
+        button { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #2563eb; }
+        .log { background: #111827; padding: 10px; border-radius: 4px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; }
+        .step { margin: 10px 0; padding: 10px; border-left: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.1); }
+    </style>
+</head>
+<body>
+    <h1>🔍 End-to-End Chat Logging Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Configuration</h2>
+        <p><strong>API Base:</strong> https://alan-chat-proxy.vercel.app</p>
+        <p><strong>Test Session ID:</strong> <span id="sessionId">Generating...</span></p>
+        <p><strong>Test Question:</strong> "what is ISO in photography?"</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Steps</h2>
+        <button onclick="runFullTest()">🚀 Run Complete End-to-End Test</button>
+        <button onclick="clearLogs()">🗑️ Clear Logs</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="testLog" class="log">Ready to run test...</div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://alan-chat-proxy.vercel.app';
+        const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M';
+        
+        let testSessionId = 'e2e_test_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        document.getElementById('sessionId').textContent = testSessionId;
+        
+        let logDiv = document.getElementById('testLog');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function clearLogs() {
+            logDiv.innerHTML = 'Logs cleared. Ready to run test...';
+        }
+
+        async function runFullTest() {
+            clearLogs();
+            log('🚀 Starting End-to-End Chat Logging Test', 'info');
+            log(`📋 Test Session ID: ${testSessionId}`, 'info');
+            
+            try {
+                // Step 1: Test Session Start
+                await testSessionStart();
+                
+                // Step 2: Test Chat API Call
+                await testChatAPI();
+                
+                // Step 3: Test Question Logging
+                await testQuestionLogging();
+                
+                // Step 4: Test Answer Logging
+                await testAnswerLogging();
+                
+                // Step 5: Test Session End
+                await testSessionEnd();
+                
+                // Step 6: Verify Data in Database
+                await verifyDatabaseData();
+                
+                log('✅ End-to-End Test Completed!', 'success');
+                
+            } catch (error) {
+                log(`❌ Test Failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSessionStart() {
+            log('📝 Step 1: Testing Session Start Logging...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/chat-log`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        action: 'session_start',
+                        data: { 
+                            sessionId: testSessionId,
+                            userAgent: navigator.userAgent,
+                            deviceType: 'desktop'
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Session Start: ${response.status} - ${JSON.stringify(result)}`, 'success');
+                } else {
+                    log(`❌ Session Start Failed: ${response.status} - ${JSON.stringify(result)}`, 'error');
+                    throw new Error(`Session start failed: ${response.status}`);
+                }
+                
+            } catch (error) {
+                log(`❌ Session Start Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        async function testChatAPI() {
+            log('📝 Step 2: Testing Chat API Call...', 'info');
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: 'what is ISO in photography?',
+                        topK: 8,
+                        previousQuery: null,
+                        sessionId: testSessionId
+                    })
+                });
+                
+                const responseTime = Date.now() - startTime;
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Chat API: ${response.status} - Response time: ${responseTime}ms`, 'success');
+                    log(`📊 Chat Response: Intent=${result.intent}, Confidence=${result.confidence}`, 'info');
+                    log(`📝 Answer Length: ${result.answer ? result.answer.length : 0} characters`, 'info');
+                    
+                    // Store the response for later use
+                    window.testChatResponse = result;
+                    window.testResponseTime = responseTime;
+                    
+                } else {
+                    log(`❌ Chat API Failed: ${response.status} - ${JSON.stringify(result)}`, 'error');
+                    throw new Error(`Chat API failed: ${response.status}`);
+                }
+                
+            } catch (error) {
+                log(`❌ Chat API Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        async function testQuestionLogging() {
+            log('📝 Step 3: Testing Question Logging...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/chat-log`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        action: 'question',
+                        data: {
+                            sessionId: testSessionId,
+                            question: 'what is ISO in photography?'
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Question Logging: ${response.status} - ${JSON.stringify(result)}`, 'success');
+                } else {
+                    log(`❌ Question Logging Failed: ${response.status} - ${JSON.stringify(result)}`, 'error');
+                    throw new Error(`Question logging failed: ${response.status}`);
+                }
+                
+            } catch (error) {
+                log(`❌ Question Logging Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        async function testAnswerLogging() {
+            log('📝 Step 4: Testing Answer Logging...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/chat-log`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        action: 'question',
+                        data: {
+                            sessionId: testSessionId,
+                            question: 'what is ISO in photography?',
+                            answer: window.testChatResponse?.answer || 'Test answer',
+                            intent: window.testChatResponse?.intent || 'advice',
+                            confidence: window.testChatResponse?.confidence || 0.5,
+                            responseTimeMs: window.testResponseTime || 1000,
+                            sourcesUsed: window.testChatResponse?.citations || []
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Answer Logging: ${response.status} - ${JSON.stringify(result)}`, 'success');
+                } else {
+                    log(`❌ Answer Logging Failed: ${response.status} - ${JSON.stringify(result)}`, 'error');
+                    throw new Error(`Answer logging failed: ${response.status}`);
+                }
+                
+            } catch (error) {
+                log(`❌ Answer Logging Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        async function testSessionEnd() {
+            log('📝 Step 5: Testing Session End Logging...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/chat-log`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        action: 'session_end',
+                        data: { sessionId: testSessionId }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Session End: ${response.status} - ${JSON.stringify(result)}`, 'success');
+                } else {
+                    log(`❌ Session End Failed: ${response.status} - ${JSON.stringify(result)}`, 'error');
+                    throw new Error(`Session end failed: ${response.status}`);
+                }
+                
+            } catch (error) {
+                log(`❌ Session End Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        async function verifyDatabaseData() {
+            log('📝 Step 6: Verifying Data in Database...', 'info');
+            
+            try {
+                // Wait a moment for the data to be processed
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Check if session exists
+                const sessionResponse = await fetch(`${API_BASE}/api/analytics?action=sessions`, {
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    }
+                });
+                
+                if (sessionResponse.ok) {
+                    const sessionData = await sessionResponse.json();
+                    const ourSession = sessionData.sessions.data.find(s => s.session_id === testSessionId);
+                    
+                    if (ourSession) {
+                        log(`✅ Session Found in Database: ${ourSession.session_id}`, 'success');
+                        log(`📊 Session Details: Started=${ourSession.started_at}, Questions=${ourSession.total_questions}`, 'info');
+                    } else {
+                        log(`⚠️ Session NOT Found in Database`, 'warning');
+                    }
+                } else {
+                    log(`❌ Failed to check sessions: ${sessionResponse.status}`, 'error');
+                }
+                
+                // Check if interactions exist
+                const interactionResponse = await fetch(`${API_BASE}/api/analytics?action=session_detail&sessionId=${testSessionId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN}`
+                    }
+                });
+                
+                if (interactionResponse.ok) {
+                    const interactionData = await interactionResponse.json();
+                    const interactions = interactionData.session.interactions;
+                    
+                    if (interactions && interactions.length > 0) {
+                        log(`✅ Interactions Found: ${interactions.length} interactions`, 'success');
+                        interactions.forEach((interaction, index) => {
+                            log(`📝 Interaction ${index + 1}: Q="${interaction.question}", A="${interaction.answer ? interaction.answer.substring(0, 50) + '...' : 'No answer'}"`, 'info');
+                        });
+                    } else {
+                        log(`⚠️ No Interactions Found in Database`, 'warning');
+                    }
+                } else {
+                    log(`❌ Failed to check interactions: ${interactionResponse.status}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Database Verification Error: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
