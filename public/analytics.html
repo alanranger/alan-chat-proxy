@@ -190,6 +190,50 @@
       font-size: 14px;
       margin-bottom: 4px;
     }
+
+    .interaction {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #374151;
+      border-radius: 8px;
+      border-left: 4px solid #f59e0b;
+    }
+
+    .question {
+      margin-bottom: 10px;
+      color: #f9fafb;
+    }
+
+    .answer {
+      margin-bottom: 10px;
+      color: #d1d5db;
+      line-height: 1.6;
+    }
+
+    .answer ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .answer li {
+      margin-bottom: 5px;
+    }
+
+    .answer a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+
+    .answer a:hover {
+      text-decoration: underline;
+    }
+
+    .metadata {
+      color: #9ca3af;
+      font-size: 12px;
+      border-top: 1px solid #4b5563;
+      padding-top: 8px;
+    }
     .insight-priority-high { border-left-color: var(--error); }
     .insight-priority-medium { border-left-color: var(--warning); }
     .insight-priority-low { border-left-color: var(--success); }
@@ -896,6 +940,26 @@
       }
     }
 
+    // Format answer text for better readability
+    function formatAnswer(answer) {
+      if (!answer) return 'No answer recorded';
+      
+      // Convert markdown-style formatting to HTML
+      let formatted = answer
+        // Convert line breaks to <br> tags
+        .replace(/\n/g, '<br>')
+        // Convert markdown links to HTML links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+        // Convert bullet points to proper HTML lists
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        // Wrap consecutive list items in <ul> tags
+        .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+        // Clean up multiple <ul> tags
+        .replace(/<\/ul><ul>/g, '');
+      
+      return formatted;
+    }
+
     // View session details
     async function viewSession(sessionId) {
       try {
@@ -922,13 +986,13 @@
               ${interactions.length > 0 ? `
                 <div class="conversation">
                   <h4>Conversation:</h4>
-                  ${interactions.map((interaction, index) => `
+                  ${interactions.filter(interaction => interaction.answer).map((interaction, index) => `
                     <div class="interaction">
                       <div class="question">
                         <strong>Q${index + 1}:</strong> ${interaction.question || 'No question recorded'}
                       </div>
                       <div class="answer">
-                        <strong>A${index + 1}:</strong> ${interaction.answer || 'No answer recorded'}
+                        <strong>A${index + 1}:</strong> ${formatAnswer(interaction.answer)}
                       </div>
                       <div class="metadata">
                         <small>
