@@ -614,6 +614,40 @@ export default async function handler(req, res) {
           }
         }
 
+      case 'list_implemented':
+        {
+          try {
+            const { data: implementedContent, error } = await supa
+              .from('page_entities')
+              .select(`
+                url,
+                title,
+                description,
+                raw->>'source' as source,
+                raw->>'original_question' as original_question,
+                raw->>'content' as full_content,
+                last_seen
+              `)
+              .eq('raw->>source', 'automated_improvement')
+              .order('last_seen', { ascending: false })
+              .limit(10);
+
+            if (error) throw new Error(`Failed to fetch implemented content: ${error.message}`);
+
+            return sendJSON(res, 200, {
+              ok: true,
+              implementedContent: implementedContent || [],
+              count: implementedContent?.length || 0
+            });
+          } catch (error) {
+            console.error('List implemented error:', error);
+            return sendJSON(res, 500, { 
+              error: 'list_implemented_failed', 
+              detail: error.message 
+            });
+          }
+        }
+
       case 'implement_improvement':
         {
           const { question, suggestedContent, approved = false } = req.body || {};

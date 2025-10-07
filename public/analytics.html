@@ -1455,20 +1455,118 @@
           }
         }
         
-        statusDiv.innerHTML = `
+        let resultHTML = `
           <div style="background: #1a1f2e; padding: 15px; border-radius: 8px; margin-top: 10px;">
             <h4>✅ Implementation Complete</h4>
             <p><strong>Successfully implemented:</strong> ${implemented} improvements</p>
             ${errors.length > 0 ? `<p><strong>Errors:</strong> ${errors.length}</p>` : ''}
+        `;
+        
+        // Show what was successfully implemented
+        if (implemented > 0) {
+          resultHTML += `<div style="margin: 15px 0; padding: 10px; background: #0f5132; border-radius: 5px; border-left: 4px solid #10b981;">
+            <h6 style="color: #10b981; margin: 0 0 10px 0;">✅ Successfully Added to Knowledge Base:</h6>
+          `;
+          
+          // Show the first few successful implementations
+          let successCount = 0;
+          for (const rec of topRecommendations) {
+            if (successCount < implemented) {
+              resultHTML += `
+                <div style="margin: 8px 0; padding: 8px; background: #1a1f2e; border-radius: 3px;">
+                  <strong style="color: #fff;">${rec.question}</strong><br>
+                  <span style="color: #ccc; font-size: 0.9em;">Content added to knowledge base</span>
+                </div>
+              `;
+              successCount++;
+            }
+          }
+          
+          resultHTML += `</div>`;
+        }
+        
+        // Show what failed
+        if (errors.length > 0) {
+          resultHTML += `<div style="margin: 15px 0; padding: 10px; background: #58151c; border-radius: 5px; border-left: 4px solid #dc3545;">
+            <h6 style="color: #dc3545; margin: 0 0 10px 0;">❌ Failed to Implement:</h6>
+            <ul style="margin: 0; color: #ccc;">
+              ${errors.map(e => `<li>${e}</li>`).join('')}
+            </ul>
+          </div>`;
+        }
+        
+        resultHTML += `
             <p style="color: #10b981; margin-top: 10px;">🎉 Content improvements have been added to your knowledge base!</p>
-            <button onclick="loadInsights()" class="btn btn-primary" style="margin-top: 10px;">
-              🔄 Refresh Insights
+            <div style="margin-top: 15px;">
+              <button onclick="loadInsights()" class="btn btn-primary" style="margin-right: 10px;">
+                🔄 Refresh Insights
+              </button>
+              <button onclick="showImplementedContent()" class="btn btn-info">
+                📋 View What Was Added
+              </button>
+            </div>
+          </div>
+        `;
+        
+        statusDiv.innerHTML = resultHTML;
+        
+      } catch (error) {
+        statusDiv.innerHTML = `<p style="color: #ef4444;">❌ Error: ${error.message}</p>`;
+      }
+    }
+
+    async function showImplementedContent() {
+      const statusDiv = document.getElementById('improvement-status');
+      statusDiv.style.display = 'block';
+      statusDiv.innerHTML = '<p>🔄 Loading implemented content...</p>';
+      
+      try {
+        const response = await fetch('/api/chat-improvement?action=list_implemented', {
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+          }
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        
+        if (!data.ok) throw new Error(data.error || 'Unknown error');
+        
+        const { implementedContent, count } = data;
+        
+        if (count === 0) {
+          statusDiv.innerHTML = '<p style="color: orange;">⚠️ No automated improvements have been implemented yet.</p>';
+          return;
+        }
+        
+        let contentHTML = `
+          <div style="background: #1a1f2e; padding: 15px; border-radius: 8px; margin-top: 10px;">
+            <h4>📋 Implemented Content (${count} items)</h4>
+            <p style="color: #ccc;">These are the automated improvements that have been added to your knowledge base:</p>
+        `;
+        
+        implementedContent.forEach((content, index) => {
+          contentHTML += `
+            <div style="border: 1px solid #444; padding: 15px; margin: 10px 0; border-radius: 5px; background: #2a2f3e;">
+              <h6 style="color: #fff;">${index + 1}. ${content.title}</h6>
+              <p style="color: #ccc;"><strong>Original Question:</strong> "${content.original_question}"</p>
+              <p style="color: #ccc;"><strong>Content:</strong> ${content.full_content}</p>
+              <p style="color: #666; font-size: 0.9em;"><strong>Added:</strong> ${new Date(content.last_seen).toLocaleString()}</p>
+            </div>
+          `;
+        });
+        
+        contentHTML += `
+            <button onclick="loadInsights()" class="btn btn-primary" style="margin-top: 15px;">
+              🔄 Back to Insights
             </button>
           </div>
         `;
         
+        statusDiv.innerHTML = contentHTML;
+        
       } catch (error) {
-        statusDiv.innerHTML = `<p style="color: #ef4444;">❌ Error: ${error.message}</p>`;
+        statusDiv.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
       }
     }
 
