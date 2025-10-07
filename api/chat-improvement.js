@@ -1,7 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import { need } from './lib/supabaseAdmin.js';
 
-const supabaseAdmin = () => createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
+function supabaseAdmin() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error("Missing SUPABASE_URL or KEY");
+  return createClient(url, key, { auth: { persistSession: false } });
+}
 
 function sendJSON(res, status, obj) {
   res.setHeader('Content-Type', 'application/json');
@@ -431,7 +435,7 @@ export default async function handler(req, res) {
 
     // Auth
     const token = req.headers['authorization']?.trim();
-    const ingest = `Bearer ${need('INGEST_TOKEN')}`;
+    const ingest = `Bearer ${process.env.INGEST_TOKEN}`;
     const adminUi = process.env.ADMIN_UI_TOKEN ? `Bearer ${process.env.ADMIN_UI_TOKEN}` : null;
     const legacyAdmin = 'Bearer b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
     const ok = token === ingest || (adminUi && token === adminUi) || token === legacyAdmin;
