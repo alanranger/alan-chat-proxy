@@ -276,6 +276,8 @@ export default async function handler(req, res) {
             .from('chat_interactions')
             .select('*')
             .eq('question', question)
+            // Only count answered interactions to avoid double-counting question-only rows
+            .not('answer', 'is', null)
             .order('created_at', { ascending: false });
 
           if (interactionsError) throw new Error(`Question detail failed: ${interactionsError.message}`);

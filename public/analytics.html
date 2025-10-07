@@ -1202,8 +1202,9 @@
           return;
         }
         
-        // Get the most recent interaction with an answer
-        const latestInteraction = interactions.find(i => i.answer) || interactions[0];
+        // Interactions already filtered to answered only by backend; compute frequency from answered items
+        const answeredInteractions = interactions.filter(i => i.answer);
+        const latestInteraction = answeredInteractions[0] || interactions[0];
         
         // Create a modal to show the question and answer
         const modal = document.createElement('div');
@@ -1225,7 +1226,7 @@
                   <div class="answer-text">${formatAnswer(latestInteraction.answer || 'No answer available')}</div>
                 </div>
                 <div class="qa-metadata">
-                  <p><strong>Frequency:</strong> ${interactions.length} time(s) asked</p>
+                  <p><strong>Frequency:</strong> ${answeredInteractions.length} time(s) asked</p>
                   <p><strong>Last Asked:</strong> ${new Date(latestInteraction.created_at).toLocaleString()}</p>
                   <p><strong>Confidence:</strong> ${latestInteraction.confidence ? (latestInteraction.confidence * 100).toFixed(1) + '%' : 'N/A'}</p>
                   <p><strong>Response Time:</strong> ${latestInteraction.response_time_ms || 'N/A'}ms</p>
