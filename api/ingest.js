@@ -97,32 +97,53 @@ function parseCSV(csvText) {
 const PRIMARY_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const SECONDARY_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-async function fetchOnce(url, ua, referer) {
+async function fetchOnce(url, ua, referer, method = 'GET') {
   return fetch(url, {
+    method,
     redirect: 'follow',
     headers: {
       'User-Agent': ua,
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.5',
+      'Accept-Language': 'en-GB,en;q=0.9',
       'Accept-Encoding': 'gzip, deflate, br',
       'DNT': '1',
       'Connection': 'keep-alive',
       'Upgrade-Insecure-Requests': '1',
+      'Cache-Control': 'no-cache',
       ...(referer ? { 'Referer': referer } : {})
     }
   });
 }
 
 async function fetchPage(url) {
-  // Pass referer to reduce chances of anti-bot responses and get correct JSON-LD
-  let res = await fetchOnce(url, PRIMARY_UA, url);
-  if (!res.ok) {
-    res = await fetchOnce(url, SECONDARY_UA, url);
+  // Preflight HEAD with retry/backoff; then GET with UA fallbacks
+  const maxAttempts = 3;
+  const baseDelay = 400; // ms
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const head = await fetchOnce(url, PRIMARY_UA, url, 'HEAD');
+      if (head.ok || head.status === 405 /* method not allowed */) {
+        // Proceed to GET with primary UA
+        let res = await fetchOnce(url, PRIMARY_UA, url, 'GET');
+        if (!res.ok && (res.status === 404 || res.status === 429 || (res.status >= 500 && res.status <= 599))) {
+          // Retry with secondary UA
+          res = await fetchOnce(url, SECONDARY_UA, url, 'GET');
+        }
+        if (res.ok) return res;
+        lastError = new Error(`HTTP ${res.status}: ${res.statusText}`);
+      } else {
+        lastError = new Error(`HEAD ${head.status}`);
+      }
+    } catch (e) {
+      lastError = e;
+    }
+    // Backoff with jitter
+    const jitter = Math.floor(Math.random() * 250);
+    await sleep(baseDelay * attempt + jitter);
   }
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-  }
-  return res;
+  throw lastError || new Error('fetch_failed');
 }
 
 /* ========== JSON-LD extraction ========== */
