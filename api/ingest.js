@@ -281,6 +281,25 @@ function extractJSONLD(html) {
   return jsonLdObjects.length > 0 ? jsonLdObjects : null;
 }
 
+// Normalize JSON-LD @type to allowed page_entities.kind values
+function normalizeKind(item, url) {
+  const rawType = (item && (item['@type'] || item['@type[]'])) || '';
+  const t = Array.isArray(rawType) ? String(rawType[0] || '').toLowerCase() : String(rawType || '').toLowerCase();
+  const u = String(url || '').toLowerCase();
+  // Map common schema.org types to our compact set
+  if (t.includes('event') || t === 'course' || t === 'educationevent') return 'event';
+  if (t === 'product' || t === 'offer' || t === 'aggregateoffer') return 'product';
+  if (t === 'article' || t === 'blogposting' || t === 'newsarticle' || t === 'creativework') return 'article';
+  if (t === 'service' || t === 'organization' || t === 'localbusiness' || t === 'person') return 'service';
+  if (t === 'website' || t === 'webpage') return 'article';
+  // Fallback by URL context
+  if (u.includes('/photographic-workshops-near-me') || u.includes('/photo-workshops-uk') || u.includes('/beginners-photography-lessons')) return 'event';
+  if (u.includes('/blog') || u.includes('/blog-on-photography') || u.includes('/news')) return 'article';
+  if (u.includes('/photography-services-near-me') || u.includes('/service') || u.includes('/mentoring')) return 'service';
+  // Safe default to 'article' to satisfy DB constraint
+  return 'article';
+}
+
 /* ========== single URL ingestion ========== */
 async function ingestSingleUrl(url, supa, options = {}) {
   let stage = 'fetch';
@@ -332,7 +351,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
     if (jsonLd) {
       const entities = jsonLd.map((item, idx) => ({
         url: url,
-        kind: item['@type']?.toLowerCase() || 'unknown',
+        kind: normalizeKind(item, url),
         title: item.name || item.headline || item.title || null,
         description: item.description || null,
         date_start: item.datePublished || item.startDate || null,
