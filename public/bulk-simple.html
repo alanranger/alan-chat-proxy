@@ -130,53 +130,104 @@
 
     <!-- Action Buttons -->
     <div class="section">
-      <h2>🚀 Actions (Execute in Order)</h2>
+      <h2>🚀 Data Pipeline Steps (Execute in Order)</h2>
       <div class="card">
-        <button class="btn btn-primary step" onclick="importAllCSVs()" id="importAllBtn">
-          <span class="step-num">1️⃣</span> 📥 Import All CSV Files
-        </button>
-        <button class="btn step" onclick="scrapeWebsite()" id="scrapeBtn" title="Fetch pages and extract text + JSON-LD to augment CSV data">
-          <span class="step-num">2️⃣</span> 🕷️ Scrape Website URLs
-        </button>
-        <label style="margin-left:8px;color:#bbb;display:inline-flex;gap:8px;align-items:center">
-          Sources:
-          <span><input type="checkbox" id="src_site" checked> site_urls</span>
-          <span><input type="checkbox" id="src_blog"> blog</span>
-          <span><input type="checkbox" id="src_event"> events</span>
-          <span><input type="checkbox" id="src_workshop"> workshops</span>
-          <span><input type="checkbox" id="src_service"> services</span>
-        </label>
-        <button class="btn step" onclick="scrapeWebsite(true)" id="dryRunBtn" title="Preview changes without writing to DB">
-          🧪 Dry‑Run Scrape
-        </button>
-        <button class="btn" onclick="stopScrape()" id="stopScrapeBtn" style="display:none">
-          ⏹️ Stop Scrape
-        </button>
-        <button class="btn step" onclick="runMapping()" id="mappingBtn">
-          <span class="step-num">3️⃣</span> 🔗 Run Event → Product Mapping
-        </button>
-        <button class="btn btn-danger" onclick="clearResults()">
-          🗑️ Clear Results
-        </button>
-      </div>
-      <div style="margin-top: 10px; padding: 10px; background: #2a2a2a; border-radius: 5px;">
-        <small>
-          <strong>Workflow:</strong>
-          <span id="stepImport" style="padding:2px 6px;border-radius:4px;background:#555;margin-right:6px;">1️⃣ Import CSVs: idle</span>
-          <span id="stepScrape" style="padding:2px 6px;border-radius:4px;background:#555;margin-right:6px;">2️⃣ Scrape URLs: idle</span>
-          <span id="stepMap" style="padding:2px 6px;border-radius:4px;background:#555;">3️⃣ Create Mappings: idle</span>
-          <span id="parityStatus" style="padding:2px 6px;border-radius:4px;background:#444;margin-left:8px;display:inline-block;">Parity: …</span>
-          <span id="cronStatus" style="padding:2px 6px;border-radius:4px;background:#444;margin-left:8px;display:inline-block;">Cron: …</span>
-          <button class="btn" style="margin-left:8px" onclick="exportMappings()">⬇️ Export Mappings CSV</button>
-          <button class="btn" style="margin-left:8px" onclick="exportUnmapped()">⬇️ Export Unmapped CSV</button>
-          <button class="btn" style="margin-left:8px" onclick="runTestQuestions()">🤖 Test Questions Batch</button>
-          <button class="btn btn-primary step" style="margin-left:8px" onclick="finalizeNow()"><span class="step-num">4️⃣</span> ✅ Finalize (Warm + Refresh)</button>
-          <span id="finalizeStatus" style="padding:2px 6px;border-radius:4px;background:#444;margin-left:8px;display:inline-block;">Finalize: …</span>
-        </small>
-      </div>
-      <div style="margin-top:8px">
-        <small>Test Questions CSV (query,expected): </small>
-        <input id="testQuestionsCsv" type="file" accept=".csv"/>
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start;">
+          
+          <!-- Step 1 -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn btn-primary step" onclick="importAllCSVs()" id="importAllBtn">
+              <span class="step-num">1️⃣</span> 📥 Import CSVs
+            </button>
+            <span id="stepImport" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
+          </div>
+          <div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Import CSV Data</h4>
+            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
+              Reads your CSV files and imports structured data into the database. 
+              Updates: <code>page_entities</code> table with events, products, articles, and services.
+            </p>
+          </div>
+
+          <!-- Step 2 -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn step" onclick="scrapeWebsite()" id="scrapeBtn">
+              <span class="step-num">2️⃣</span> 🕷️ Scrape URLs
+            </button>
+            <span id="stepScrape" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
+            <div style="font-size:11px;color:#888;">
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_site" checked> site_urls</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_blog"> blog</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_event"> events</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_workshop"> workshops</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_service"> services</label>
+            </div>
+            <button class="btn" onclick="scrapeWebsite(true)" id="dryRunBtn" style="font-size:11px;padding:6px 10px;">
+              🧪 Dry‑Run
+            </button>
+            <button class="btn" onclick="stopScrape()" id="stopScrapeBtn" style="display:none;font-size:11px;padding:6px 10px;">
+              ⏹️ Stop
+            </button>
+          </div>
+          <div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Scrape Website Content</h4>
+            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
+              Fetches web pages and extracts text content + JSON-LD structured data. 
+              Updates: <code>page_chunks</code> (text) and <code>page_entities</code> (structured data).
+            </p>
+          </div>
+
+          <!-- Step 3 -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn step" onclick="runMapping()" id="mappingBtn">
+              <span class="step-num">3️⃣</span> 🔗 Create Mappings
+            </button>
+            <span id="stepMap" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
+          </div>
+          <div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Link Events to Products</h4>
+            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
+              Automatically matches events with related products/services using AI. 
+              Updates: <code>event_product_links_auto</code> table with intelligent connections.
+            </p>
+          </div>
+
+          <!-- Step 4 -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn btn-primary step" onclick="finalizeNow()">
+              <span class="step-num">4️⃣</span> ✅ Finalize
+            </button>
+            <span id="stepFinalize" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
+          </div>
+          <div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Warm & Refresh Views</h4>
+            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
+              Refreshes database views and warms caches for optimal AI performance. 
+              Updates: All chat views (<code>v_events_for_chat</code>, <code>v_service_content</code>, etc.).
+            </p>
+          </div>
+
+        </div>
+        
+        <!-- Status & Tools Row -->
+        <div style="margin-top: 20px; padding: 15px; background: #1a1a1a; border-radius: 6px; border: 1px solid #333;">
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px;">
+            <span style="color:#888;font-weight:600;">System Status:</span>
+            <span id="parityStatus" style="padding:4px 8px;border-radius:4px;background:#444;font-size:12px;">Parity: …</span>
+            <span id="cronStatus" style="padding:4px 8px;border-radius:4px;background:#444;font-size:12px;">Cron: …</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+            <span style="color:#888;font-weight:600;">Tools:</span>
+            <button class="btn" onclick="exportMappings()" style="font-size:12px;padding:6px 10px;">⬇️ Export Mappings</button>
+            <button class="btn" onclick="exportUnmapped()" style="font-size:12px;padding:6px 10px;">⬇️ Export Unmapped</button>
+            <button class="btn" onclick="runTestQuestions()" style="font-size:12px;padding:6px 10px;">🤖 Test Questions</button>
+            <button class="btn btn-danger" onclick="clearResults()" style="font-size:12px;padding:6px 10px;">🗑️ Clear Log</button>
+          </div>
+          <div style="margin-top: 12px;">
+            <small style="color:#888;">Test Questions CSV (query,expected): </small>
+            <input id="testQuestionsCsv" type="file" accept=".csv" style="margin-left:8px;font-size:12px;"/>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -857,7 +908,7 @@
       showToast('Starting Import All…');
       addResult('🔐 Using hardcoded token for authentication');
       document.getElementById('stepImport').style.background = '#3a3';
-      document.getElementById('stepImport').textContent = '1️⃣ Import CSVs: running';
+      document.getElementById('stepImport').textContent = 'Status: running';
 
       updateProgress(0, 'Starting CSV imports...');
       addResult('🚀 Starting CSV import process...');
@@ -903,7 +954,7 @@
       addResult(`🎉 CSV import process complete! ${successCount}/${totalCount} files imported successfully.`, 'success');
       addResult(`📊 Summary: ${totalImported}/${totalCsvRows} records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
       document.getElementById('stepImport').style.background = successCount===totalCount ? '#2a6' : '#a62';
-      document.getElementById('stepImport').textContent = `1️⃣ Import CSVs: ${successCount}/${totalCount} (${totalImported}/${totalCsvRows} records)`;
+      document.getElementById('stepImport').textContent = `Status: ${successCount}/${totalCount} (${totalImported}/${totalCsvRows} records)`;
       
       hideOverlayProgress();
       // Update dashboard with CSV counts
@@ -1131,7 +1182,7 @@
 
       addResult('🕷️ Starting website scraping...');
       document.getElementById('stepScrape').style.background = '#3a3';
-      document.getElementById('stepScrape').textContent = '2️⃣ Scrape URLs: running';
+      document.getElementById('stepScrape').textContent = 'Status: running';
       
       addResult(`📊 Found ${uniqueUrls.length} unique URLs to scrape (${allUrls.length} total, ${duplicateCount} duplicates removed)`);
       addResult(`📋 Sources: ${urlSources.join(', ')}`);
@@ -1284,7 +1335,7 @@
       // Debug: Log final urlScrapingStats
       
       document.getElementById('stepScrape').style.background = stats.failedCount === 0 ? '#2a6' : '#a62';
-      document.getElementById('stepScrape').textContent = `2️⃣ Scrape URLs: ${stats.successCount} ok, ${stats.failedCount} failed, ${stats.stoppedCount} stopped`;
+      document.getElementById('stepScrape').textContent = `Status: ${stats.successCount} ok, ${stats.failedCount} failed, ${stats.stoppedCount} stopped`;
       document.getElementById('stopScrapeBtn').style.display = 'none';
 
       // Update parity after scraping completes
@@ -1300,7 +1351,7 @@
     async function runMapping() {
       addResult('🔗 Running event → product mapping...');
       document.getElementById('stepMap').style.background = '#3a3';
-      document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: running';
+      document.getElementById('stepMap').textContent = 'Status: running';
       const token = getToken();
       try {
         // fetch before/after counts for dashboard clarity
@@ -1324,7 +1375,7 @@
             addResult(`📊 Sample mappings: ${result.sampleMappings.map(m => `${m.event_url} → ${m.product_url} (score: ${m.score})`).join(', ')}`, 'info');
           }
           document.getElementById('stepMap').style.background = '#2a6';
-          document.getElementById('stepMap').textContent = `3️⃣ Create Mappings: ${counts.mapped}/${counts.total} mapped`;
+          document.getElementById('stepMap').textContent = `Status: ${counts.mapped}/${counts.total} mapped`;
 
           // Update parity as well (entities likely increased via backfill/refresh)
           updateParityPill();
@@ -1340,25 +1391,27 @@
           if (counts && counts.total && counts.mapped === counts.total) {
             addResult(`✅ Mapping likely completed despite timeout. Totals now ${counts.mapped}/${counts.total} mapped.`, 'success');
             document.getElementById('stepMap').style.background = '#2a6';
-            document.getElementById('stepMap').textContent = `3️⃣ Create Mappings: ${counts.mapped}/${counts.total} mapped`;
+            document.getElementById('stepMap').textContent = `Status: ${counts.mapped}/${counts.total} mapped`;
             updateParityPill();
           } else {
             const errorDetail = result?.detail || result?.error || 'Unknown error';
             addResult(`❌ Mapping failed: ${errorDetail}`, 'error');
             document.getElementById('stepMap').style.background = '#a62';
-            document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: failed';
+            document.getElementById('stepMap').textContent = 'Status: failed';
           }
         }
       } catch (e) {
         addResult(`❌ Mapping error: ${e.message}`, 'error');
         document.getElementById('stepMap').style.background = '#a62';
-        document.getElementById('stepMap').textContent = '3️⃣ Create Mappings: failed';
+        document.getElementById('stepMap').textContent = 'Status: failed';
       }
     }
 
     // Finalize: trigger mapping refresh and warm views/tables
     async function finalizeNow() {
       addResult('✅ Finalize requested: refreshing mappings and warming views...');
+      document.getElementById('stepFinalize').style.background = '#3a3';
+      document.getElementById('stepFinalize').textContent = 'Status: running';
       showToast('Finalizing… refreshing mappings and warming views', 2500);
       try {
         const resp = await fetch('/api/tools?action=finalize', {
@@ -1370,31 +1423,28 @@
         let j; try { j = JSON.parse(text); } catch { j = { ok:false, raw:text }; }
         if (!resp.ok || !j?.ok) {
           addResult(`❌ Finalize failed: ${j?.error || resp.status} ${j?.detail || ''}`, 'error');
-          const pill = document.getElementById('finalizeStatus');
-          if (pill) { pill.textContent = 'Finalize: failed'; pill.style.background = '#a62'; }
+          document.getElementById('stepFinalize').textContent = 'Status: failed';
+          document.getElementById('stepFinalize').style.background = '#a62';
           return;
         }
         addResult('✅ Finalize completed.', 'success');
         if (j.before) addResult(`Before: ${JSON.stringify(j.before)}`, 'info');
         if (j.after) addResult(`After: ${JSON.stringify(j.after)}`, 'info');
         if (j.warm) addResult(`Warm: ${JSON.stringify(j.warm)}`, 'info');
-        const pill = document.getElementById('finalizeStatus');
-        if (pill) {
-          const m = (j?.after?.afterCount ?? j?.after?.mappingsCreated ?? '')
-          const warm = j?.warm || {};
-          const warmed = [];
-          if (warm.v_event_product_mappings != null) warmed.push(`mappings ${warm.v_event_product_mappings}`);
-          if (warm.page_chunks != null) warmed.push(`chunks ${warm.page_chunks}`);
-          pill.textContent = warmed.length ? `Finalize: warmed ${warmed.join(', ')}` : 'Finalize: done';
-          pill.style.background = '#2a6';
-        }
+        const m = (j?.after?.afterCount ?? j?.after?.mappingsCreated ?? '')
+        const warm = j?.warm || {};
+        const warmed = [];
+        if (warm.v_event_product_mappings != null) warmed.push(`mappings ${warm.v_event_product_mappings}`);
+        if (warm.page_chunks != null) warmed.push(`chunks ${warm.page_chunks}`);
+        document.getElementById('stepFinalize').textContent = warmed.length ? `Status: warmed ${warmed.join(', ')}` : 'Status: done';
+        document.getElementById('stepFinalize').style.background = '#2a6';
         showToast('Finalize complete ✓', 2000);
         updateParityPill();
         updateCronPill();
       } catch (e) {
         addResult(`❌ Finalize error: ${e.message}`, 'error');
-        const pill = document.getElementById('finalizeStatus');
-        if (pill) { pill.textContent = 'Finalize: error'; pill.style.background = '#a62'; }
+        document.getElementById('stepFinalize').textContent = 'Status: error';
+        document.getElementById('stepFinalize').style.background = '#a62';
       }
     }
 
