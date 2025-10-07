@@ -183,6 +183,136 @@
     .help-box li { margin: 6px 0; }
     .help-box p { margin: 8px 0 0 0; }
 
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: #1f2937;
+      border-radius: 8px;
+      max-width: 800px;
+      max-height: 80vh;
+      width: 90%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: #f9fafb;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      color: #f9fafb;
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      padding: 20px;
+      border-top: 1px solid #374151;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .session-info {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .session-info p {
+      margin: 8px 0;
+      color: #d1d5db;
+    }
+
+    .conversation {
+      margin-top: 20px;
+    }
+
+    .conversation h4 {
+      color: #f9fafb;
+      margin-bottom: 16px;
+    }
+
+    .interaction {
+      background: #374151;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .question {
+      color: #60a5fa;
+      margin-bottom: 8px;
+    }
+
+    .answer {
+      color: #34d399;
+      margin-bottom: 8px;
+    }
+
+    .metadata {
+      color: #9ca3af;
+      font-size: 12px;
+    }
+
+    .events {
+      margin-top: 20px;
+    }
+
+    .events h4 {
+      color: #f9fafb;
+      margin-bottom: 16px;
+    }
+
+    .event {
+      background: #374151;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 8px;
+      color: #d1d5db;
+    }
+
     @media (max-width: 768px) {
       .container { padding: 10px; }
       .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
@@ -546,7 +676,64 @@
         const data = await apiCall('session_detail', { sessionId });
         const { session, interactions, events } = data.session;
         
-        alert(`Session Details:\n\nSession: ${session.session_id}\nStarted: ${new Date(session.started_at).toLocaleString()}\nQuestions: ${interactions.length}\nEvents: ${events.length}`);
+        // Create a proper modal instead of alert
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3>Session Details: ${session.session_id}</h3>
+              <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="session-info">
+                <p><strong>Started:</strong> ${new Date(session.started_at).toLocaleString()}</p>
+                <p><strong>Questions:</strong> ${interactions.length}</p>
+                <p><strong>Events:</strong> ${events.length}</p>
+                <p><strong>Device:</strong> ${session.device_type || 'Unknown'}</p>
+              </div>
+              
+              ${interactions.length > 0 ? `
+                <div class="conversation">
+                  <h4>Conversation:</h4>
+                  ${interactions.map((interaction, index) => `
+                    <div class="interaction">
+                      <div class="question">
+                        <strong>Q${index + 1}:</strong> ${interaction.question || 'No question recorded'}
+                      </div>
+                      <div class="answer">
+                        <strong>A${index + 1}:</strong> ${interaction.answer || 'No answer recorded'}
+                      </div>
+                      <div class="metadata">
+                        <small>
+                          Intent: ${interaction.intent || 'Unknown'} | 
+                          Confidence: ${interaction.confidence ? (interaction.confidence * 100).toFixed(1) + '%' : 'Unknown'} | 
+                          Response Time: ${interaction.response_time_ms || 'Unknown'}ms
+                        </small>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : '<p>No interactions recorded for this session.</p>'}
+              
+              ${events.length > 0 ? `
+                <div class="events">
+                  <h4>Events:</h4>
+                  ${events.map(event => `
+                    <div class="event">
+                      <strong>${event.event_type}:</strong> ${JSON.stringify(event.event_data)}
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Close</button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(modal);
         
       } catch (error) {
         showError('Failed to load session details: ' + error.message);
