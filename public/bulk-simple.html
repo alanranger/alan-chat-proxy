@@ -1299,8 +1299,8 @@
       const token = getToken();
       try {
         // fetch before/after counts for dashboard clarity
-        const before = await apiCall('/api/refresh-mappings', { preview: true });
-        const result = await apiCall('/api/refresh-mappings', {});
+        const before = await apiCall('/api/admin?action=refresh', { preview: true });
+        const result = await apiCall('/api/admin?action=refresh', {});
         if (result && result.ok) {
           const mappingsCreated = result.mappingsCreated || 0;
           const afterCount = result.afterCount || 0;
