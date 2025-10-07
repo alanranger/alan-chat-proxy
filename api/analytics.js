@@ -347,31 +347,21 @@ export default async function handler(req, res) {
 
       case 'admin_counts':
         {
-          // Get real-time counts for admin panel
-          const { data: interactionsCount, error: interactionsError } = await supa
-            .from('chat_interactions')
-            .select('id', { count: 'exact', head: true });
-          
-          if (interactionsError) throw new Error(`Count interactions failed: ${interactionsError.message}`);
-          
-          const { data: sessionsCount, error: sessionsError } = await supa
-            .from('chat_sessions')
-            .select('session_id', { count: 'exact', head: true });
-          
-          if (sessionsError) throw new Error(`Count sessions failed: ${sessionsError.message}`);
-          
-          const { data: questionsCount, error: questionsError } = await supa
-            .from('chat_question_frequency')
-            .select('id', { count: 'exact', head: true });
-          
-          if (questionsError) throw new Error(`Count questions failed: ${questionsError.message}`);
-          
+          // Use the same definitions as Overview: questions == answered interactions
+          const [sessionsRes, answeredRes] = await Promise.all([
+            supa.from('chat_sessions').select('session_id', { count: 'exact', head: true }),
+            supa.from('chat_interactions').select('id', { count: 'exact', head: true }).not('answer', 'is', null)
+          ]);
+          if (sessionsRes.error) throw new Error(`Count sessions failed: ${sessionsRes.error.message}`);
+          if (answeredRes.error) throw new Error(`Count answered interactions failed: ${answeredRes.error.message}`);
+          const sessions = sessionsRes.count || 0;
+          const answered = answeredRes.count || 0;
           return sendJSON(res, 200, {
             ok: true,
             counts: {
-              interactions: interactionsCount || 0,
-              sessions: sessionsCount || 0,
-              questions: questionsCount || 0
+              interactions: answered,
+              sessions,
+              questions: answered
             }
           });
         }

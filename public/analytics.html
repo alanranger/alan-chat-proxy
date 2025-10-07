@@ -838,11 +838,22 @@
         document.getElementById('avg-confidence').textContent = (totals.avgConfidence * 100).toFixed(1) + '%';
         document.getElementById('avg-response-time').textContent = Math.round(totals.avgResponseTime) + 'ms';
         
-        // Simple chart placeholders
-        document.getElementById('recent-sessions').innerHTML = 
-          `<div>Recent Sessions: ${data.overview.recentSessions.length}</div>`;
-        document.getElementById('daily-activity').innerHTML = 
-          `<div>Daily Data Points: ${dailyData.length}</div>`;
+        // Replace placeholders with a mini table and day list
+        const recent = data.overview.recentSessions || [];
+        const rows = recent.slice(0,5).map(s => `
+          <tr>
+            <td>${s.session_id.substring(0,8)}…</td>
+            <td>${new Date(s.started_at).toLocaleString()}</td>
+          </tr>
+        `).join('');
+        document.getElementById('recent-sessions').innerHTML = `
+          <table class="table">
+            <thead><tr><th>Session</th><th>Started</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="2">No sessions</td></tr>'}</tbody>
+          </table>`;
+        const dayItems = dailyData.map(d => `<li>${d.date}: ${(d.total_interactions||0)} interactions</li>`).join('');
+        document.getElementById('daily-activity').innerHTML = `
+          <ul>${dayItems || '<li>No activity</li>'}</ul>`;
           
       } catch (error) {
         showError('Failed to load overview data: ' + error.message);
