@@ -124,13 +124,16 @@ async function fetchPage(url) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       // Try with original URL and with trailing slash as fallback
-      const head = await fetchOnce(url, PRIMARY_UA, url, 'HEAD');
+      // Prefer blog listing referer for blog articles
+      const isBlogArticle = /\/blog-on-photography\//.test(url);
+      const referer = isBlogArticle ? 'https://www.alanranger.com/blog-on-photography' : url;
+      const head = await fetchOnce(url, PRIMARY_UA, referer, 'HEAD');
       if (head.ok || head.status === 405 /* method not allowed */) {
         // Proceed to GET with primary UA
-        let res = await fetchOnce(url, PRIMARY_UA, url, 'GET');
+        let res = await fetchOnce(url, PRIMARY_UA, referer, 'GET');
         if (!res.ok && (res.status === 404 || res.status === 429 || (res.status >= 500 && res.status <= 599))) {
           // Retry with secondary UA
-          res = await fetchOnce(url, SECONDARY_UA, url, 'GET');
+          res = await fetchOnce(url, SECONDARY_UA, referer, 'GET');
           // If still failing 404, try with/without trailing slash and homepage referer
           if (!res.ok && res.status === 404) {
             const altUrl = url.endsWith('/') ? url.slice(0,-1) : (url + '/');
@@ -210,7 +213,7 @@ function extractJSONLD(html) {
 }
 
 /* ========== single URL ingestion ========== */
-async function ingestSingleUrl(url, supa) {
+async function ingestSingleUrl(url, supa, options = {}) {
   let stage = 'fetch';
   try {
     const res = await fetchPage(url);
@@ -246,13 +249,14 @@ async function ingestSingleUrl(url, supa) {
       tokens: Math.ceil(chunk.length / 4)
     }));
     
-    // Delete existing chunks for this URL
-    await supa.from('page_chunks').delete().eq('url', url);
-    
-    // Insert new chunks
-    if (chunkInserts.length > 0) {
-      const { error: chunkError } = await supa.from('page_chunks').insert(chunkInserts);
-      if (chunkError) throw new Error(`Chunk insert failed: ${chunkError.message}`);
+    if (!options.dryRun) {
+      // Delete existing chunks for this URL
+      await supa.from('page_chunks').delete().eq('url', url);
+      // Insert new chunks
+      if (chunkInserts.length > 0) {
+        const { error: chunkError } = await supa.from('page_chunks').insert(chunkInserts);
+        if (chunkError) throw new Error(`Chunk insert failed: ${chunkError.message}`);
+      }
     }
     
     stage = 'store_entities';
@@ -276,13 +280,30 @@ async function ingestSingleUrl(url, supa) {
         last_seen: new Date().toISOString()
       }));
       
-      // Delete existing entities for this URL
-      await supa.from('page_entities').delete().eq('url', url);
-      
-      // Insert new entities
-      if (entities.length > 0) {
-        const { error: entityError } = await supa.from('page_entities').insert(entities);
-        if (entityError) throw new Error(`Entity insert failed: ${entityError.message}`);
+      if (!options.dryRun) {
+        // Merge strategy: upsert by (url, kind, entity_hash) but do not overwrite non-null existing values
+        for (const e of entities) {
+          // Try fetch existing row with same url+kind+entity_hash
+          const { data: existing } = await supa
+            .from('page_entities')
+            .select('*')
+            .eq('url', e.url)
+            .eq('kind', e.kind)
+            .eq('entity_hash', e.entity_hash)
+            .single();
+          if (existing) {
+            const merged = { ...existing };
+            for (const k of ['title','description','date_start','date_end','location','price','price_currency','availability','sku','provider','raw']) {
+              if (merged[k] == null || merged[k] === '') merged[k] = e[k];
+            }
+            merged.last_seen = e.last_seen;
+            const { error: updErr } = await supa.from('page_entities').update(merged).eq('id', existing.id);
+            if (updErr) throw new Error(`Entity update failed: ${updErr.message}`);
+          } else {
+            const { error: insErr } = await supa.from('page_entities').insert([e]);
+            if (insErr) throw new Error(`Entity insert failed: ${insErr.message}`);
+          }
+        }
       }
     }
     
@@ -386,7 +407,7 @@ export default async function handler(req, res) {
     }
     
     stage = 'parse_body';
-    const { url, csvUrls } = req.body || {};
+    const { url, csvUrls, dryRun } = req.body || {};
     if (!url && !csvUrls) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "url" or "csvUrls"', stage });
     
     stage = 'db_client';
@@ -399,7 +420,7 @@ export default async function handler(req, res) {
       for (let i = 0; i < csvUrls.length; i++) {
         const u = csvUrls[i];
         try {
-          const r = await ingestSingleUrl(u, supa);
+          const r = await ingestSingleUrl(u, supa, { dryRun: !!dryRun });
           results.push({ url: u, ok: true, ...r });
           // small delay to be polite
           await sleep(500);
@@ -412,7 +433,7 @@ export default async function handler(req, res) {
     }
     
     stage = 'ingest_single';
-    const result = await ingestSingleUrl(url, supa);
+    const result = await ingestSingleUrl(url, supa, { dryRun: !!dryRun });
     return sendJSON(res, 200, { ok: true, ...result });
     
   } catch (err) {

@@ -131,8 +131,19 @@
         <button class="btn btn-primary" onclick="importAllCSVs()" id="importAllBtn">
           1️⃣ 📥 Import All CSV Files
         </button>
-        <button class="btn" onclick="scrapeWebsite()" id="scrapeBtn">
+        <button class="btn" onclick="scrapeWebsite()" id="scrapeBtn" title="Fetch pages and extract text + JSON-LD to augment CSV data">
           2️⃣ 🕷️ Scrape Website URLs
+        </button>
+        <label style="margin-left:8px;color:#bbb;display:inline-flex;gap:8px;align-items:center">
+          Sources:
+          <span><input type="checkbox" id="src_site" checked> site_urls</span>
+          <span><input type="checkbox" id="src_blog"> blog</span>
+          <span><input type="checkbox" id="src_event"> events</span>
+          <span><input type="checkbox" id="src_workshop"> workshops</span>
+          <span><input type="checkbox" id="src_service"> services</span>
+        </label>
+        <button class="btn" onclick="scrapeWebsite(true)" id="dryRunBtn" title="Preview changes without writing to DB">
+          🧪 Dry‑Run Scrape
         </button>
         <button class="btn" onclick="stopScrape()" id="stopScrapeBtn" style="display:none">
           ⏹️ Stop Scrape
@@ -1045,14 +1056,20 @@
     }
 
     // Website scraping
-    async function scrapeWebsite() {
+    async function scrapeWebsite(dryRun=false) {
       // Collect URLs from ALL CSV files, not just site_urls
       let allUrls = [];
       let urlSources = [];
 
+      const includeSite = document.getElementById('src_site')?.checked !== false;
+      const includeBlog = document.getElementById('src_blog')?.checked === true;
+      const includeEvent = document.getElementById('src_event')?.checked === true;
+      const includeWorkshop = document.getElementById('src_workshop')?.checked === true;
+      const includeService = document.getElementById('src_service')?.checked === true;
+
       // 1. Collect from site_urls CSV (if available)
       const siteUrlsFile = document.getElementById('siteUrlsCsv').files[0];
-      if (siteUrlsFile || window.__cachedSiteUrlsText) {
+      if (includeSite && (siteUrlsFile || window.__cachedSiteUrlsText)) {
         const csvText = siteUrlsFile ? await siteUrlsFile.text() : String(window.__cachedSiteUrlsText || '');
         const lines = csvText.split('\n').filter(line => line.trim());
         const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
@@ -1064,6 +1081,10 @@
       if (window.__cachedCsvData) {
         for (const [type, data] of Object.entries(window.__cachedCsvData)) {
           if (data.urls && data.urls.length > 0) {
+            if (type==='blog' && !includeBlog) continue;
+            if (type==='event' && !includeEvent) continue;
+            if (type==='workshop' && !includeWorkshop) continue;
+            if (type==='service' && !includeService) continue;
             allUrls = allUrls.concat(data.urls);
             urlSources.push(`${type}: ${data.urls.length}`);
           }
@@ -1146,7 +1167,7 @@
           const globalIndex = batchIndex * BATCH_SIZE + urlIndex;
           updateProgress((completed / urls.length) * 100, `Scraping ${url}...`);
           
-          const result = await apiCall('/api/ingest-embed-replace', { url }, { timeoutMs: TIMEOUT_MS });
+          const result = await apiCall('/api/ingest-embed-replace', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
           const category = categorize(url, result);
           addResult(`🔍 DEBUG: ${url} -> Category: ${category}`, 'info');
           
