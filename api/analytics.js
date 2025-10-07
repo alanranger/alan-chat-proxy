@@ -67,21 +67,26 @@ export default async function handler(req, res) {
           const sessionsCount = sessionsCountRes?.count || 0;
           const answeredCount = answeredCountRes?.count || 0;
 
-          // Compute averages from dailyData if present, else default to 0
-          const totalsFromDaily = dailyData.reduce((acc, day) => ({
-            interactions: acc.interactions + (day.total_interactions || 0),
-            avgConfidence: acc.avgConfidence + (day.avg_confidence || 0),
-            avgResponseTime: acc.avgResponseTime + (day.avg_response_time_ms || 0)
-          }), { interactions: 0, avgConfidence: 0, avgResponseTime: 0 });
+          // Live averages from answered interactions for accuracy
+          const { data: answeredRows = [], error: answeredRowsError } = await supa
+            .from('chat_interactions')
+            .select('confidence,response_time_ms')
+            .not('answer', 'is', null)
+            .gte('created_at', sinceIso);
+          if (answeredRowsError) console.warn('Answered rows fetch failed:', answeredRowsError.message);
 
-          const dayCount = dailyData.length || 1;
+          let confSum = 0, confN = 0, rtSum = 0, rtN = 0;
+          for (const r of answeredRows) {
+            if (typeof r.confidence === 'number') { confSum += r.confidence; confN += 1; }
+            if (typeof r.response_time_ms === 'number') { rtSum += r.response_time_ms; rtN += 1; }
+          }
 
           const totals = {
             sessions: sessionsCount || 0,
             questions: answeredCount || 0,
-            interactions: totalsFromDaily.interactions || (answeredCount || 0),
-            avgConfidence: (totalsFromDaily.avgConfidence / dayCount) || 0,
-            avgResponseTime: (totalsFromDaily.avgResponseTime / dayCount) || 0
+            interactions: answeredCount || 0,
+            avgConfidence: confN ? (confSum / confN) : 0,
+            avgResponseTime: rtN ? (rtSum / rtN) : 0
           };
 
           // Get recent sessions
