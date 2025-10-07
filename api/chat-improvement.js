@@ -38,6 +38,8 @@ async function analyzeQuestionLogs(supa) {
     .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Last 30 days
     .order('created_at', { ascending: false });
 
+  console.log('Found low confidence questions:', lowConfidenceQuestions?.length || 0);
+
   if (lowConfError) throw new Error(`Low confidence analysis failed: ${lowConfError.message}`);
 
   // Group by question and calculate metrics
@@ -375,8 +377,11 @@ async function createContentImprovementPlan(questionAnalysis) {
   
   // Handle empty or invalid input
   if (!questionAnalysis || !Array.isArray(questionAnalysis)) {
+    console.log('No question analysis data provided');
     return improvementPlan;
   }
+  
+  console.log('Processing', questionAnalysis.length, 'questions for improvement plan');
   
   for (const question of questionAnalysis) {
     // Skip if question doesn't have required properties
