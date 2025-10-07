@@ -1018,8 +1018,8 @@
         if (u.includes('/blog') || u.includes('/news') || u.includes('/blog-on-photography')) return 'blog_articles';
         if (u.includes('/course') || u.includes('/lesson') || u.includes('/beginners-photography-lessons')) return 'course_events';
         if (u.includes('/workshop') || u.includes('/photo-workshop') || u.includes('/photographic-workshops-near-me') || u.includes('/photo-workshops-uk')) return 'workshop_events';
-        if (u.includes('/service') || u.includes('/mentoring') || u.includes('/photography-services-near-me')) return 'service_products'; // Changed from service_pages
-        if (u.includes('/shop') || u.includes('/product') || u.includes('/photography-shop') || u.includes('/photography-presents')) return 'service_products';
+        if (u.includes('/service') || u.includes('/mentoring') || u.includes('/photography-services-near-me')) return 'course_products';
+        if (u.includes('/shop') || u.includes('/product') || u.includes('/photography-shop') || u.includes('/photography-presents')) return 'course_products';
         if (u.includes('/landing') || u.includes('/page')) return 'website_urls'; // Changed from landing_pages
         
         // Check for JSON-LD content in result
@@ -1464,8 +1464,10 @@
       'blog_articles': 0,
       'course_events': 0,
       'workshop_events': 0,
-      'service_products': 0,
-      'website_urls': 0
+      'course_products': 0,
+      'workshop_products': 0,
+      'website_urls': 0,
+      'json_extraction': 0
     };
     
     // URL scraping stats for dashboard display
@@ -1473,7 +1475,8 @@
       'blog_articles': { success: 0, failed: 0, skipped: 0 },
       'course_events': { success: 0, failed: 0, skipped: 0 },
       'workshop_events': { success: 0, failed: 0, skipped: 0 },
-      'service_products': { success: 0, failed: 0, skipped: 0 },
+      'course_products': { success: 0, failed: 0, skipped: 0 },
+      'workshop_products': { success: 0, failed: 0, skipped: 0 },
       'website_urls': { success: 0, failed: 0, skipped: 0 },
       'json_extraction': { success: 0, failed: 0, skipped: 0 }
     };
@@ -1483,9 +1486,20 @@
       'blog': 'blog_articles',
       'event': 'course_events',
       'workshop': 'workshop_events',
-      'product': 'service_products',
+      'product': 'course_products',
       'site_urls': 'website_urls',
       'test_questions': 'test_questions'
+    };
+
+    // Track CSV filenames per category for display
+    const csvFileNames = {
+      'blog_articles': '01-Alan Ranger Blog On Photography - Tips, Offers and News-CSV',
+      'course_events': '02 - www-alanranger-com__5013f4b2c4aaa4752ac69b17__beginners-photography-lessons.csv',
+      'workshop_events': '03 - www-alanranger-com__5013f4b2c4aaa4752ac69b17__photographic-workshops-near-me.csv',
+      'course_products': '04 - Photography Services _ courses, 1-2-1 _ mentoring-CSV.csv',
+      'workshop_products': '05 - Photo Workshops UK _ Landscape Photography Workshops-CSV.csv',
+      'website_urls': '06 - site urls - Sheet1.csv',
+      'json_extraction': '07 - alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS'
     };
     
     // Global function to render category stats
@@ -1499,11 +1513,14 @@
           'blog_articles': 'Blog Articles',
           'course_events': 'Course Events',
           'workshop_events': 'Workshop Events',
-          'service_products': 'Service Products',
+          'course_products': 'Course/Service Products',
+          'workshop_products': 'Workshop Products',
           'website_urls': 'Website URLs',
-          'json_extraction': 'JSON Extraction'
+          'json_extraction': 'JSON Product Extraction'
         };
-        return labels[cat] || cat;
+        const name = labels[cat] || cat;
+        const file = csvFileNames && csvFileNames[cat];
+        return file ? `${name} — ${file}` : name;
       };
       
       // Calculate totals
