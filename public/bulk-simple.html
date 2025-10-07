@@ -1261,7 +1261,8 @@
           body: JSON.stringify({ url })
         });
         
-        const result = await response.json();
+        const text = await response.text();
+        let result; try { result = JSON.parse(text); } catch { result = { ok:false, raw:text }; }
         document.getElementById('extractResults').textContent = JSON.stringify(result, null, 2);
       } catch (error) {
         document.getElementById('extractResults').textContent = `Error: ${error.message}`;

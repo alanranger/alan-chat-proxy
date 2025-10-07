@@ -114,9 +114,10 @@ async function fetchOnce(url, ua, referer) {
 }
 
 async function fetchPage(url) {
-  let res = await fetchOnce(url, PRIMARY_UA);
+  // Pass referer to reduce chances of anti-bot responses and get correct JSON-LD
+  let res = await fetchOnce(url, PRIMARY_UA, url);
   if (!res.ok) {
-    res = await fetchOnce(url, SECONDARY_UA);
+    res = await fetchOnce(url, SECONDARY_UA, url);
   }
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -131,16 +132,49 @@ function extractJSONLD(html) {
   
   const jsonLdObjects = [];
   for (const match of jsonLdMatches) {
-    const jsonContent = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
-    try {
-      const parsed = JSON.parse(jsonContent);
-      if (Array.isArray(parsed)) {
-        jsonLdObjects.push(...parsed);
-      } else {
-        jsonLdObjects.push(parsed);
+    let jsonContent = match.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+    // Harden: strip HTML comments, CDATA, and try to repair common issues
+    jsonContent = jsonContent
+      .replace(/<!--([\s\S]*?)-->/g, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '')
+      .trim();
+
+    const attempts = [];
+    attempts.push(jsonContent);
+    // If raw content isn't valid JSON, try to isolate the main object/array
+    const firstBrace = jsonContent.indexOf('{');
+    const firstBracket = jsonContent.indexOf('[');
+    const start = (firstBracket !== -1 && (firstBracket < firstBrace || firstBrace === -1)) ? firstBracket : firstBrace;
+    if (start !== -1) {
+      const lastBrace = jsonContent.lastIndexOf('}');
+      const lastBracket = jsonContent.lastIndexOf(']');
+      const end = Math.max(lastBrace, lastBracket);
+      if (end > start) {
+        let sliced = jsonContent.slice(start, end + 1);
+        // Remove trailing commas before } or ]
+        sliced = sliced.replace(/,\s*([}\]])/g, '$1');
+        attempts.push(sliced);
       }
-    } catch (e) {
-      console.warn('Failed to parse JSON-LD:', e.message);
+    }
+
+    let parsedOk = false;
+    for (const candidate of attempts) {
+      try {
+        const parsed = JSON.parse(candidate);
+        if (Array.isArray(parsed)) {
+          jsonLdObjects.push(...parsed);
+        } else {
+          jsonLdObjects.push(parsed);
+        }
+        parsedOk = true;
+        break;
+      } catch (e) {
+        // keep trying next strategy
+      }
+    }
+    if (!parsedOk) {
+      console.warn('Failed to parse JSON-LD block after repairs. First 80 chars:', jsonContent.slice(0, 80));
     }
   }
   
@@ -324,15 +358,33 @@ export default async function handler(req, res) {
     }
     
     stage = 'parse_body';
-    const { url } = req.body || {};
-    if (!url) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "url"', stage });
+    const { url, csvUrls } = req.body || {};
+    if (!url && !csvUrls) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "url" or "csvUrls"', stage });
     
     stage = 'db_client';
     const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
     
-    stage = 'ingest';
-    const result = await ingestSingleUrl(url, supa);
+    // New mode: ingest multiple URLs from CSV files (array of URL strings)
+    if (Array.isArray(csvUrls) && csvUrls.length) {
+      stage = 'ingest_bulk_urls';
+      const results = [];
+      for (let i = 0; i < csvUrls.length; i++) {
+        const u = csvUrls[i];
+        try {
+          const r = await ingestSingleUrl(u, supa);
+          results.push({ url: u, ok: true, ...r });
+          // small delay to be polite
+          await sleep(500);
+        } catch (e) {
+          results.push({ url: u, ok: false, error: asString(e) });
+        }
+      }
+      const ok = results.filter(r=>r.ok).length;
+      return sendJSON(res, 200, { ok: true, ingested: ok, total: results.length, results });
+    }
     
+    stage = 'ingest_single';
+    const result = await ingestSingleUrl(url, supa);
     return sendJSON(res, 200, { ok: true, ...result });
     
   } catch (err) {
