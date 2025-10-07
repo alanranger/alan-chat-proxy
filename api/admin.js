@@ -94,6 +94,11 @@ export default async function handler(req, res) {
   // Refresh Mappings (POST /api/admin?action=refresh)
   if (req.method === 'POST' && action === 'refresh') {
     try {
+      // Attempt to raise statement timeout for this session (best-effort)
+      try {
+        await supabase.rpc('set_config', { parameter: 'statement_timeout', value: '120000', is_local: true });
+      } catch {}
+
       // Get current count before refresh
       const { data: beforeData, error: beforeError } = await supabase
         .from('event_product_links_auto')
