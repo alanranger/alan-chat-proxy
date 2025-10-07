@@ -1234,8 +1234,11 @@
               <button onclick="generateImprovementPlan()" class="btn btn-primary" style="margin-right: 10px;">
                 📝 Generate Improvement Plan
               </button>
-              <button onclick="implementTopImprovements()" class="btn btn-success">
-                ⚡ Implement Top 3 Improvements
+              <button onclick="previewImprovements()" class="btn btn-info" style="margin-right: 10px;">
+                👁️ Preview Content Improvements
+              </button>
+              <button onclick="implementTopImprovements()" class="btn btn-success" style="display: none;" id="implementBtn">
+                ⚡ Implement Approved Improvements
               </button>
             </div>
             <div id="improvement-status" style="margin-top: 15px; display: none;"></div>
@@ -1289,6 +1292,99 @@
       }
     }
     
+    async function previewImprovements() {
+      const statusDiv = document.getElementById('improvement-status');
+      statusDiv.style.display = 'block';
+      statusDiv.innerHTML = '<p>🔄 Generating content previews...</p>';
+      
+      try {
+        const response = await fetch('/api/chat-improvement?action=preview_improvements', {
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+          }
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        
+        if (!data.ok) throw new Error(data.error || 'Unknown error');
+        
+        const { previews } = data;
+        
+        let previewHTML = '<h5>📋 Content Improvement Previews</h5><p>Review these suggestions before implementing:</p>';
+        
+        previews.forEach((preview, index) => {
+          previewHTML += `
+            <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px;">
+              <h6>Question ${index + 1}: "${preview.question}"</h6>
+              <p><strong>Current Answer:</strong> ${preview.currentAnswer}</p>
+              <p><strong>Confidence:</strong> ${Math.round(preview.confidence * 100)}%</p>
+              ${preview.suggestedContent ? `
+                <div style="background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 3px;">
+                  <h6>Suggested New Content:</h6>
+                  <p><strong>Title:</strong> ${preview.suggestedContent.title}</p>
+                  <p><strong>Content:</strong> ${preview.suggestedContent.content}</p>
+                  <p><strong>Keywords:</strong> ${preview.suggestedContent.keywords?.join(', ') || 'None'}</p>
+                </div>
+                <div style="margin-top: 10px;">
+                  <button onclick="approveContent(${index}, '${preview.question.replace(/'/g, "\\'")}', ${JSON.stringify(preview.suggestedContent).replace(/"/g, '&quot;')})" class="btn btn-success btn-sm" style="margin-right: 10px;">
+                    ✅ Approve
+                  </button>
+                  <button onclick="rejectContent(${index})" class="btn btn-danger btn-sm">
+                    ❌ Reject
+                  </button>
+                </div>
+              ` : '<p style="color: #666;">No content suggestion available</p>'}
+            </div>
+          `;
+        });
+        
+        statusDiv.innerHTML = previewHTML;
+        document.getElementById('implementBtn').style.display = 'inline-block';
+        
+      } catch (error) {
+        statusDiv.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+      }
+    }
+
+    let approvedContent = [];
+    
+    async function approveContent(index, question, suggestedContent) {
+      approvedContent.push({ question, suggestedContent });
+      
+      // Update the button to show it's approved
+      const buttons = document.querySelectorAll(`button[onclick*="approveContent(${index}"]`);
+      buttons.forEach(btn => {
+        btn.innerHTML = '✅ Approved';
+        btn.disabled = true;
+        btn.style.backgroundColor = '#28a745';
+      });
+      
+      // Hide the reject button
+      const rejectButtons = document.querySelectorAll(`button[onclick*="rejectContent(${index}"]`);
+      rejectButtons.forEach(btn => {
+        btn.style.display = 'none';
+      });
+      
+      console.log('Approved content:', approvedContent);
+    }
+    
+    function rejectContent(index) {
+      // Update the button to show it's rejected
+      const buttons = document.querySelectorAll(`button[onclick*="rejectContent(${index}"]`);
+      buttons.forEach(btn => {
+        btn.innerHTML = '❌ Rejected';
+        btn.disabled = true;
+        btn.style.backgroundColor = '#dc3545';
+      });
+      
+      // Hide the approve button
+      const approveButtons = document.querySelectorAll(`button[onclick*="approveContent(${index}"]`);
+      approveButtons.forEach(btn => {
+        btn.style.display = 'none';
+      });
+    }
+
     async function implementTopImprovements() {
       const statusDiv = document.getElementById('improvement-status');
       statusDiv.style.display = 'block';

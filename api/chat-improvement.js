@@ -575,15 +575,66 @@ export default async function handler(req, res) {
           });
         }
 
+      case 'preview_improvements':
+        {
+          try {
+            const questionAnalysis = await analyzeQuestionLogs(supa);
+            const improvementPlan = await createContentImprovementPlan(questionAnalysis);
+            
+            // Generate previews for top improvements
+            const previews = [];
+            const topQuestions = [...improvementPlan.highPriority, ...improvementPlan.mediumPriority].slice(0, 3);
+            
+            for (const question of topQuestions) {
+              const contentResponse = await generateImprovedContent(
+                question.question, 
+                question.topAnswer, 
+                [{ type: 'content_gap', message: 'Preview content' }]
+              );
+              
+              previews.push({
+                question: question.question,
+                currentAnswer: question.topAnswer,
+                confidence: question.confidence,
+                suggestedContent: contentResponse[0]?.suggestedContent || null
+              });
+            }
+            
+            return sendJSON(res, 200, {
+              ok: true,
+              previews,
+              message: 'Content previews generated - review before implementing'
+            });
+          } catch (error) {
+            console.error('Preview error:', error);
+            return sendJSON(res, 500, { 
+              error: 'preview_failed', 
+              detail: error.message 
+            });
+          }
+        }
+
       case 'implement_improvement':
         {
-          const { question, suggestedContent } = req.body || {};
+          const { question, suggestedContent, approved = false } = req.body || {};
           if (!question || !suggestedContent) {
             return sendJSON(res, 400, { error: 'bad_request', detail: 'Question and suggestedContent are required' });
           }
 
           console.log('Implementing improvement for question:', question);
+          console.log('Approved:', approved);
           console.log('Suggested content:', JSON.stringify(suggestedContent, null, 2));
+
+          // If not approved, just return the preview
+          if (!approved) {
+            return sendJSON(res, 200, {
+              ok: true,
+              message: 'Content preview generated - approval required',
+              question,
+              content: suggestedContent,
+              preview: true
+            });
+          }
 
           // Ensure we have the required fields
           const title = suggestedContent.title || `Content for: ${question}`;
