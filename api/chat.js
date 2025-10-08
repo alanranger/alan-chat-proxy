@@ -180,6 +180,55 @@ function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
 
   return `**${para.substring(0, 300).trim()}**\n\n${url ? `*Source: ${url}*\n\n` : ""}`;
 }
+function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
+  const lc = (query || "").toLowerCase();
+  const equipmentKeywords = new Set(['tripod','tripods','head','ballhead','levelling','leveling','recommend','recommendation','recommendations','equipment']);
+  
+  // Check if this is an equipment recommendation question
+  const isEquipmentQuery = Array.from(equipmentKeywords).some(k => lc.includes(k));
+  if (!isEquipmentQuery) return null;
+  
+  // Find relevant content chunks about equipment
+  const equipmentChunks = (contentChunks || []).filter(chunk => {
+    const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
+    const title = (chunk.title || "").toLowerCase();
+    return Array.from(equipmentKeywords).some(k => text.includes(k) || title.includes(k));
+  });
+  
+  if (equipmentChunks.length === 0) return null;
+  
+  // Extract key advice points
+  const advicePoints = [];
+  for (const chunk of equipmentChunks.slice(0, 3)) {
+    const text = chunk.chunk_text || chunk.content || "";
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    
+    for (const sentence of sentences) {
+      const sLower = sentence.toLowerCase();
+      if (Array.from(equipmentKeywords).some(k => sLower.includes(k)) && 
+          (sLower.includes('recommend') || sLower.includes('best') || sLower.includes('choose') || 
+           sLower.includes('important') || sLower.includes('consider'))) {
+        advicePoints.push(sentence.trim());
+        if (advicePoints.length >= 3) break;
+      }
+    }
+    if (advicePoints.length >= 3) break;
+  }
+  
+  if (advicePoints.length === 0) return null;
+  
+  // Format as equipment advice
+  let response = "**Equipment Recommendations:**\n\n";
+  advicePoints.forEach((point, i) => {
+    response += `• ${point}\n`;
+  });
+  
+  // Add context about Alan's experience
+  response += "\n*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
+  
+  return response;
+}
+
 function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
@@ -793,6 +842,74 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
     .sort((a,b) => b.s - a.s)
     .slice(0, limit)
     .map(x => x.r);
+}
+
+// De-duplicate articles by canonical URL and enrich titles
+async function dedupeAndEnrichArticles(client, articles) {
+  if (!Array.isArray(articles) || !articles.length) return [];
+  
+  // Group by canonical URL
+  const byUrl = new Map();
+  for (const a of articles) {
+    const url = a.page_url || a.source_url || a.url || '';
+    if (!url) continue;
+    
+    const existing = byUrl.get(url);
+    if (!existing) {
+      byUrl.set(url, [a]);
+    } else {
+      existing.push(a);
+    }
+  }
+  
+  // For each URL, pick the best variant and enrich title
+  const enriched = [];
+  for (const [url, variants] of byUrl) {
+    // Prefer variant with real title, then by kind preference
+    const best = variants.reduce((prev, curr) => {
+      const prevTitle = prev.title || prev.raw?.name || '';
+      const currTitle = curr.title || curr.raw?.name || '';
+      
+      // Prefer non-generic titles
+      const prevGeneric = /^alan ranger photography$/i.test(prevTitle);
+      const currGeneric = /^alan ranger photography$/i.test(currTitle);
+      
+      if (prevGeneric && !currGeneric) return curr;
+      if (!prevGeneric && currGeneric) return prev;
+      
+      // If both generic or both real, prefer article over service
+      if (prev.kind === 'article' && curr.kind !== 'article') return prev;
+      if (curr.kind === 'article' && prev.kind !== 'article') return curr;
+      
+      return prev;
+    });
+    
+    // Enrich title
+    let title = best.title || best.raw?.name || '';
+    if (!title || /^alan ranger photography$/i.test(title)) {
+      // Try to get real title from page_chunks
+      try {
+        const { data: chunks } = await client
+          .from('page_chunks')
+          .select('title')
+          .eq('url', url)
+          .not('title', 'is', null)
+          .limit(1);
+        if (chunks?.[0]?.title) {
+          title = chunks[0].title;
+        }
+      } catch {}
+      
+      // Fallback to slug-derived title
+      if (!title || /^alan ranger photography$/i.test(title)) {
+        title = deriveTitleFromUrl(url);
+      }
+    }
+    
+    enriched.push({ ...best, title });
+  }
+  
+  return enriched;
 }
 function deriveTitleFromUrl(u) {
   try {
@@ -1449,14 +1566,17 @@ export default async function handler(req, res) {
     // --------- ADVICE -----------
     // return article answers + upgraded pills
     let articles = await findArticles(client, { keywords, limit: 12, pageContext });
+    
+    // De-duplicate and enrich titles
+    articles = await dedupeAndEnrichArticles(client, articles);
+    
     // Re-rank articles by topical overlap with the query (title/url tokens)
     const qlcRank = (query||'').toLowerCase();
     const queryTokens = (qlcRank.match(/[a-z0-9]+/g) || []).filter(t=>t.length>2);
     const equipmentKeywords = new Set(['tripod','tripods','head','ballhead','levelling','leveling','recommend','recommendation','recommendations','equipment']);
     const scoreArticle = (a)=>{
-      const title = String(a.title||a.raw?.name||'').toLowerCase();
+      const title = String(a.title||'').toLowerCase();
       const url = String(a.page_url||a.source_url||a.url||'').toLowerCase();
-      const allText = `${title} ${url}`;
       let s = 0;
       for (const t of queryTokens){ if (!t) continue; if (title.includes(t)) s += 3; if (url.includes(t)) s += 2; }
       // Boost for equipment-related matches on either side
@@ -1467,10 +1587,10 @@ export default async function handler(req, res) {
     };
     if (Array.isArray(articles) && articles.length){
       articles = articles
-        .filter(a=> (a.page_url||a.source_url||a.url) && (a.title||a.raw?.name))
         .map(a=> ({ a, s: scoreArticle(a) }))
         .sort((x,y)=> y.s - x.s)
-        .map(x=> x.a);
+        .map(x=> x.a)
+        .slice(0, 5); // Limit to top 5 after deduplication
     }
     // Ensure concept article is first when asking "what is <term>"
     const qlc2 = (query||'').toLowerCase();
@@ -1510,58 +1630,54 @@ export default async function handler(req, res) {
     // Generate contextual advice response
     const lines = [];
     let confidence = 0.3; // Base confidence for advice questions
+    let hasEvidenceBasedAnswer = false;
     
-      if (articles?.length) {
-        // Service FAQ deterministic lane
-        const serviceAnswer = generateServiceFAQAnswer(query, contentChunks, articles);
-        if (serviceAnswer) {
-          lines.push(serviceAnswer);
-          confidence = 0.8;
-        } else {
-        // Try to provide a direct answer based on the question type and content chunks
-        const directAnswer = generateDirectAnswer(query, articles, contentChunks);
-        
-        if (directAnswer) {
-          lines.push(directAnswer);
-          confidence = 0.8; // Higher confidence for RAG-based direct answers
-        } else {
-          // Fall back to article list with better formatting
-          lines.push("Here are Alan's guides that match your question:\n");
-          confidence = 0.5; // Medium confidence for article lists
+    if (articles?.length) {
+      // Equipment advice lane - synthesize evidence-based recommendations
+      const mentionsEquipment = Array.from(equipmentKeywords).some(k => qlcRank.includes(k));
+      if (mentionsEquipment) {
+        const equipmentAnswer = generateEquipmentAdvice(query, contentChunks, articles);
+        if (equipmentAnswer) {
+          lines.push(equipmentAnswer);
+          hasEvidenceBasedAnswer = true;
+          confidence = 0.6; // Evidence-based equipment advice
         }
       }
       
-      // Add relevant articles with normalized titles
-      for (const a of articles.slice(0, 6)) {
-        const u = pickUrl(a);
-        let t = a.title || a.raw?.name || '';
-        if (!t || /^alan ranger photography$/i.test(t)) {
-          const dt = deriveTitleFromUrl(u||'');
-          if (dt) t = dt;
+      // Service FAQ deterministic lane
+      if (!hasEvidenceBasedAnswer) {
+        const serviceAnswer = generateServiceFAQAnswer(query, contentChunks, articles);
+        if (serviceAnswer) {
+          lines.push(serviceAnswer);
+          hasEvidenceBasedAnswer = true;
+          confidence = 0.7; // Service FAQ answers
         }
-        if (!t) t = "Read more";
-        lines.push(`- ${t} — ${u ? `[Link](${u})` : ""}`.trim());
+      }
+      
+      // Try to provide a direct answer based on the question type and content chunks
+      if (!hasEvidenceBasedAnswer) {
+        const directAnswer = generateDirectAnswer(query, articles, contentChunks);
+        if (directAnswer) {
+          lines.push(directAnswer);
+          hasEvidenceBasedAnswer = true;
+          confidence = 0.6; // RAG-based direct answers
+        }
+      }
+      
+      // If no evidence-based answer, provide contextual introduction
+      if (!hasEvidenceBasedAnswer) {
+        if (mentionsEquipment) {
+          lines.push("Based on Alan's experience with photography equipment, here are his recommended guides:\n");
+        } else {
+          lines.push("Here are Alan's guides that match your question:\n");
+        }
+        confidence = 0.3; // Links-only responses
       }
     } else {
       lines.push("I couldn't find a specific guide for that yet.");
       confidence = 0.1; // Low confidence when no articles found
     }
 
-    // Confidence damping: if the query clearly mentions equipment but none of the
-    // top articles contain those terms, reduce confidence to avoid inflated 0.8
-    try {
-      const mentionsEquipment = Array.from(equipmentKeywords).some(k=>qlcRank.includes(k));
-      if (mentionsEquipment) {
-        const hasRelevant = (articles||[]).some(a=>{
-          const title = String(a.title||a.raw?.name||'').toLowerCase();
-          const url = String(a.page_url||a.source_url||a.url||'').toLowerCase();
-          return Array.from(equipmentKeywords).some(k=> title.includes(k) || url.includes(k));
-        });
-        if (!hasRelevant) {
-          confidence = Math.min(confidence, 0.3);
-        }
-      }
-    } catch {}
 
     // Log the answer (async, don't wait for it)
     if (sessionId && query) {
@@ -1585,17 +1701,17 @@ export default async function handler(req, res) {
         pills,
       },
       confidence: confidence,
-        debug: {
-          version: "v1.2.30-final-tweaks",
-          intent: "advice",
-          keywords: keywords,
-      counts: {
-            events: 0,
-            products: 0,
-            articles: articles?.length || 0,
-            contentChunks: contentChunks?.length || 0,
-          },
+      debug: {
+        version: "v1.2.31-equipment-advice",
+        intent: "advice",
+        keywords: keywords,
+        counts: {
+          events: 0,
+          products: 0,
+          articles: articles?.length || 0,
+          contentChunks: contentChunks?.length || 0,
         },
+      },
       meta: {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",
