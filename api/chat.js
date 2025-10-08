@@ -188,27 +188,47 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   const isEquipmentQuery = Array.from(equipmentKeywords).some(k => lc.includes(k));
   if (!isEquipmentQuery) return null;
   
-  // Find relevant content chunks about equipment
+  // Find relevant content chunks about equipment - be more specific
   const equipmentChunks = (contentChunks || []).filter(chunk => {
     const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
     const title = (chunk.title || "").toLowerCase();
-    return Array.from(equipmentKeywords).some(k => text.includes(k) || title.includes(k));
+    const url = (chunk.url || "").toLowerCase();
+    
+    // Skip navigation/service chunks
+    if (text.includes('cart 0') || text.includes('sign in') || text.includes('back photography courses') || 
+        text.includes('workshops calendar') || text.includes('services summary') || 
+        text.includes('hire a professional') || text.includes('book a free consultation')) {
+      return false;
+    }
+    
+    // Must contain equipment keywords AND be substantial content
+    const hasEquipmentKeyword = Array.from(equipmentKeywords).some(k => text.includes(k));
+    const isSubstantial = text.length > 100 && !text.includes('[/') && !text.includes('](');
+    
+    return hasEquipmentKeyword && isSubstantial;
   });
   
   if (equipmentChunks.length === 0) return null;
   
-  // Extract key advice points
+  // Extract key advice points from the most relevant chunks
   const advicePoints = [];
-  for (const chunk of equipmentChunks.slice(0, 3)) {
+  for (const chunk of equipmentChunks.slice(0, 2)) {
     const text = chunk.chunk_text || chunk.content || "";
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 30);
     
     for (const sentence of sentences) {
       const sLower = sentence.toLowerCase();
-      if (Array.from(equipmentKeywords).some(k => sLower.includes(k)) && 
+      // Look for specific equipment advice patterns
+      if ((sLower.includes('tripod') || sLower.includes('equipment')) && 
           (sLower.includes('recommend') || sLower.includes('best') || sLower.includes('choose') || 
-           sLower.includes('important') || sLower.includes('consider'))) {
-        advicePoints.push(sentence.trim());
+           sLower.includes('important') || sLower.includes('consider') || sLower.includes('essential') ||
+           sLower.includes('should') || sLower.includes('must'))) {
+        // Clean up the sentence
+        let cleanSentence = sentence.trim();
+        if (cleanSentence.length > 200) {
+          cleanSentence = cleanSentence.substring(0, 200) + "...";
+        }
+        advicePoints.push(cleanSentence);
         if (advicePoints.length >= 3) break;
       }
     }
