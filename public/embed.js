@@ -24,6 +24,9 @@
     offset: parseInt(scriptEl.getAttribute('data-offset') || '20', 10),
     ga4: scriptEl.getAttribute('data-ga4-id') || ''
   };
+  // Read optional cache-busting version from script src (?v=...)
+  let scriptVersion = '';
+  try { const u = new URL(scriptEl.src, location.href); scriptVersion = u.searchParams.get('v') || ''; } catch {}
 
   function ensureGA(){
     if (!cfg.ga4) return;
@@ -112,12 +115,15 @@
         u.searchParams.set('parentTitle', document.title || '');
         u.searchParams.set('parentHost', location.hostname || '');
         u.searchParams.set('parentPath', location.pathname || '');
+        if (scriptVersion) u.searchParams.set('v', scriptVersion);
         iframe.src = u.toString();
       }catch{
         iframe.src = cfg.chatSrc;
       }
       iframe.setAttribute('title','Alan Ranger Assistant');
       iframe.setAttribute('loading','lazy');
+      // Allow clipboard for Copy log button inside iframe
+      try { iframe.allow = [iframe.allow||'', 'clipboard-read', 'clipboard-write'].filter(Boolean).join('; '); } catch{}
       panel.appendChild(iframe);
 
       wrap.appendChild(panel);
