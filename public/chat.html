@@ -608,7 +608,8 @@ function renderArticlesBlock(structured, query){
   const isSimpleFollowUp = query && (
     /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
     !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost') &&
-    !query.includes('workshop') && !query.includes('course') && !query.includes('event') && !query.includes('class')
+    !query.includes('workshop') && !query.includes('course') && !query.includes('event') && !query.includes('class') &&
+    !query.includes('recommend') && !query.includes('equipment') && !query.includes('tripod')
   );
   if (isSimpleFollowUp) return '';
   
@@ -652,10 +653,7 @@ function buildActionPillsFromStructured(structured, query){
     add(label, href, isPriority, isSecondary);
   }
   
-  // Add article links as secondary
-  for (const a of pickArticles(structured, query, structured?.topic||'').slice(0,2)) {
-    add(articleTitle(a) || 'Read Guide', articleUrl(a), false, true);
-  }
+  // Articles are now shown in the "Guides that match your question" section instead of as pills
   
   // Sort by priority: priority first, then regular, then secondary
   safe.sort((a, b) => {
