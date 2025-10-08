@@ -155,12 +155,24 @@
               <span class="step-num">2️⃣</span> 🕷️ Scrape URLs
             </button>
             <span id="stepScrape" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
-            <div style="font-size:11px;color:#888;">
-              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_site" checked> site_urls</label>
-              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_blog"> blog</label>
-              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_event"> events</label>
-              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_workshop"> workshops</label>
-              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_service"> services</label>
+            <div style="font-size:11px;color:#888;margin-bottom:8px;">
+              <div style="margin-bottom:6px;padding:6px;background:#1a3a1a;border-radius:4px;border-left:3px solid #4ade80;">
+                <label style="display:block;margin:0;color:#4ade80;font-weight:bold;">
+                  <input type="checkbox" id="foundation_mode" checked style="margin-right:4px;"> 
+                  📋 Foundation Layer (site_urls)
+                </label>
+                <div style="font-size:10px;color:#ccc;margin-left:16px;">Creates base data chunks for RAG</div>
+              </div>
+              <div style="padding:6px;background:#2a2a2a;border-radius:4px;border-left:3px solid #fbbf24;">
+                <label style="display:block;margin:0;color:#fbbf24;font-weight:bold;">
+                  <input type="checkbox" id="enhancement_mode" checked style="margin-right:4px;"> 
+                  ✨ Enhancement Layers
+                </label>
+                <div style="font-size:10px;color:#ccc;margin-left:16px;">Enriches same URLs with additional context</div>
+                <div id="enhancement_sources" style="font-size:9px;color:#888;margin-left:16px;margin-top:2px;">
+                  <!-- Auto-detected CSV sources will appear here -->
+                </div>
+              </div>
             </div>
             <button class="btn" onclick="scrapeWebsite(true)" id="dryRunBtn" style="font-size:11px;padding:6px 10px;">
               🧪 Dry‑Run
@@ -170,9 +182,10 @@
             </button>
           </div>
           <div>
-            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Scrape Website Content</h4>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Foundation → Enhancement Scraping</h4>
             <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
-              Fetches web pages and extracts text content + JSON-LD structured data. 
+              <strong>Foundation:</strong> Scrapes basic content from site_urls CSV<br>
+              <strong>Enhancement:</strong> Enriches same URLs with additional context from other CSVs<br>
               Updates: <code>page_chunks</code> (text) and <code>page_entities</code> (structured data).
             </p>
           </div>
@@ -817,6 +830,9 @@
           updateStats();
           addResult(`📊 Found ${urls.length} URLs ready for scraping`);
         }
+        
+        // Update enhancement sources display
+        updateEnhancementSources();
         addResult(`ℹ️ ${contentType} files are for reference only - not imported to database`, 'info');
         return { success: true, csvRows: actualRowCount, imported: 0 }; // Count as successful since these are reference files
       }
@@ -877,6 +893,11 @@
           };
           
           addResult(`🔗 ${contentType} URLs cached for Scrape step: ${urls.length} URLs`, 'info');
+          
+          // Update enhancement sources display
+          updateEnhancementSources();
+        }
+        
         // Cache site_urls text for scrape step if it was imported via bulk box
         if (contentType === 'site_urls') {
           try { 
@@ -1136,15 +1157,12 @@
       let allUrlsWithCategories = [];
       let urlSources = [];
 
-      const includeSite = document.getElementById('src_site')?.checked !== false;
-      const includeBlog = document.getElementById('src_blog')?.checked === true;
-      const includeEvent = document.getElementById('src_event')?.checked === true;
-      const includeWorkshop = document.getElementById('src_workshop')?.checked === true;
-      const includeService = document.getElementById('src_service')?.checked === true;
+      const foundationMode = document.getElementById('foundation_mode')?.checked !== false;
+      const enhancementMode = document.getElementById('enhancement_mode')?.checked === true;
 
-      // 1. Collect from site_urls CSV (if available)
+      // 1. Foundation Layer: Collect from site_urls CSV (if available)
       const siteUrlsFile = document.getElementById('siteUrlsCsv').files[0];
-      if (includeSite && (siteUrlsFile || window.__cachedSiteUrlsText)) {
+      if (foundationMode && (siteUrlsFile || window.__cachedSiteUrlsText)) {
         const csvText = siteUrlsFile ? await siteUrlsFile.text() : String(window.__cachedSiteUrlsText || '');
         const lines = csvText.split('\n').filter(line => line.trim());
         const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
@@ -1152,23 +1170,18 @@
         urls.forEach(url => {
           allUrlsWithCategories.push({ url, sourceCategory: 'site_urls' });
         });
-        urlSources.push(`site_urls: ${urls.length}`);
+        urlSources.push(`📋 Foundation (site_urls): ${urls.length}`);
       }
 
-      // 2. Collect from cached CSV data (from bulk import) with source categories
-      if (window.__cachedCsvData) {
+      // 2. Enhancement Layers: Collect from cached CSV data (from bulk import) with source categories
+      if (enhancementMode && window.__cachedCsvData) {
         for (const [type, data] of Object.entries(window.__cachedCsvData)) {
           if (data.urls && data.urls.length > 0) {
-            if (type==='blog' && !includeBlog) continue;
-            if (type==='event' && !includeEvent) continue;
-            if (type==='workshop' && !includeWorkshop) continue;
-            if (type==='service' && !includeService) continue;
-            
             // Add URLs with their source category
             data.urls.forEach(url => {
               allUrlsWithCategories.push({ url, sourceCategory: type });
             });
-            urlSources.push(`${type}: ${data.urls.length}`);
+            urlSources.push(`✨ Enhancement (${type}): ${data.urls.length}`);
           }
         }
       }
@@ -1931,12 +1944,34 @@
       updateStats();
     }
 
+    // Update enhancement sources display
+    function updateEnhancementSources() {
+      const sourcesEl = document.getElementById('enhancement_sources');
+      if (!sourcesEl) return;
+      
+      const sources = [];
+      if (window.__cachedCsvData) {
+        for (const [type, data] of Object.entries(window.__cachedCsvData)) {
+          if (data.urls && data.urls.length > 0) {
+            sources.push(`${type} (${data.urls.length} URLs)`);
+          }
+        }
+      }
+      
+      if (sources.length > 0) {
+        sourcesEl.innerHTML = `Available: ${sources.join(', ')}`;
+      } else {
+        sourcesEl.innerHTML = 'No CSV data imported yet';
+      }
+    }
+
     // Load hardcoded token on page load
     window.onload = function() {
       addResult('✅ Hardcoded token ready for use');
       updateStats();
       updateParityPill();
       updateCronPill();
+      updateEnhancementSources();
     };
   </script>
 </body>
