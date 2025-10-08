@@ -614,7 +614,20 @@ function renderArticlesBlock(structured, query){
   const topic = structured?.topic || '';
   const list = pickArticles(structured, query, topic);
   if(!list.length) return '';
-  const lis = list.map(a=>`<li><a href="${articleUrl(a)}" target="_blank" rel="noopener">${escapeHTML(articleTitle(a))}</a></li>`).join('');
+  const lis = list.map(a=>{
+    const href = articleUrl(a);
+    let t = articleTitle(a);
+    if (!t || /^alan ranger photography$/i.test(t)) {
+      try {
+        const u = new URL(href);
+        const last = (u.pathname||'').split('/').filter(Boolean).pop()||'';
+        t = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim();
+        t = t.split(' ').map(w=> w? w[0].toUpperCase()+w.slice(1):'').join(' ');
+      } catch {}
+    }
+    if (!t) t = 'Read more';
+    return `<li><a href="${href}" target="_blank" rel="noopener">${escapeHTML(t)}</a></li>`;
+  }).join('');
   return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul></div>`;
 }
 

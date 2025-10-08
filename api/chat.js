@@ -794,6 +794,18 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
     .slice(0, limit)
     .map(x => x.r);
 }
+function deriveTitleFromUrl(u) {
+  try {
+    const url = new URL(u);
+    const parts = (url.pathname || '').split('/').filter(Boolean);
+    const last = parts[parts.length - 1] || '';
+    if (!last) return null;
+    const words = last.replace(/[-_]+/g, ' ').replace(/\.(html?)$/i,' ').trim();
+    // Title case important words
+    return words.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ').trim();
+  } catch { return null; }
+}
+
 
 async function findContentChunks(client, { keywords, limit = 5 }) {
   let q = client
@@ -1519,10 +1531,15 @@ export default async function handler(req, res) {
         }
       }
       
-      // Add relevant articles
+      // Add relevant articles with normalized titles
       for (const a of articles.slice(0, 6)) {
-        const t = a.title || a.raw?.name || "Read more";
         const u = pickUrl(a);
+        let t = a.title || a.raw?.name || '';
+        if (!t || /^alan ranger photography$/i.test(t)) {
+          const dt = deriveTitleFromUrl(u||'');
+          if (dt) t = dt;
+        }
+        if (!t) t = "Read more";
         lines.push(`- ${t} — ${u ? `[Link](${u})` : ""}`.trim());
       }
     } else {
