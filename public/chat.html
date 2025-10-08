@@ -804,6 +804,13 @@ function renderAnswer(payload){
   if (confidencePct == null || confidencePct < 30) confidencePct = heuristic;
   const __rounded = Math.round(confidencePct);
 
+  // Render the main textual answer first
+  const md = payload.answer_markdown || payload.answer || '';
+  if (md && md.trim()) {
+    const {html} = mdToHtml(md);
+    addBubble(html);
+  }
+
   const s = payload.structured||{};
   const merged = mergeProducts(s.products||[]);
   const gate = decideProductRendering(payload, merged, __lastQuery);
@@ -897,12 +904,6 @@ function renderAnswer(payload){
   // If the tab is backgrounded, this is particularly useful.
   playChime();
 
-  // Enhanced answer rendering - prioritize markdown content from improved API
-  const md = payload.answer_markdown || payload.answer || '';
-  if (md && md.trim()) {
-    const {html} = mdToHtml(md);
-    addBubble(html);
-  }
   
   // Enhanced fallback messaging based on confidence level
   if(!gate.show && !(s.events||[]).length && !(s.articles||[]).length && !md?.trim()){
