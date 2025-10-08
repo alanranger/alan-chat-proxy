@@ -934,7 +934,6 @@
             addResult(`📊 Found ${urls.length} URLs ready for scraping`);
           } catch {}
         }
-        
         return { success: true, csvRows: actualRowCount, imported: result.imported };
       } else {
         addResult(`❌ ${contentType} import failed: ${result?.error || result?.detail || 'Unknown error'}`, 'error');
