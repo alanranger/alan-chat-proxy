@@ -1212,8 +1212,12 @@
       document.getElementById('stepScrape').style.background = '#3a3';
       document.getElementById('stepScrape').textContent = 'Status: running';
       
-      addResult(`📊 Found ${urlsToScrape.length} URLs to scrape (${allUrlsWithCategories.length} total, ${trueDuplicatesRemoved} true duplicates removed)`);
-      addResult(`📋 Sources: ${urlSources.join(', ')}`);
+      addResult(`📊 FOUNDATION → ENHANCEMENT SCRAPING PLAN:`);
+      addResult(`   • Total URLs collected: ${allUrlsWithCategories.length}`);
+      addResult(`   • URLs to scrape: ${urlsToScrape.length} (same URLs scraped multiple times for enhancement)`);
+      addResult(`   • Within-CSV duplicates removed: ${trueDuplicatesRemoved}`);
+      addResult(`   • Cross-CSV enhancement: ${Object.keys(urlGroups).filter(url => urlGroups[url].length > 1).length} URLs will be enhanced by multiple CSVs`);
+      addResult(`📋 Data Sources: ${urlSources.join(', ')}`);
 
       const urls = urlsToScrape;
 
@@ -1282,7 +1286,11 @@
           
           const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
           const category = categorize(url, result, sourceCategory);
-          addResult(`🔍 DEBUG: ${url} -> Category: ${category} (source: ${sourceCategory})`, 'info');
+          
+          // Show enhancement process clearly
+          const isEnhancement = urlGroups[url] && urlGroups[url].length > 1;
+          const enhancementNote = isEnhancement ? ` (ENHANCING: ${urlGroups[url].join(' → ')})` : '';
+          addResult(`🔍 ${url} → ${category} (source: ${sourceCategory})${enhancementNote}`, 'info');
           
           // Ensure category exists in urlScrapingStats
           if (!urlScrapingStats[category]) {
@@ -1297,7 +1305,8 @@
               stats.skippedCount++;
               renderCategoryStats();
             } else {
-              addResult(`✅ Scraped: ${url}`, 'success');
+              const enhancementInfo = isEnhancement ? ` [ENHANCED by ${sourceCategory}]` : '';
+              addResult(`✅ Scraped: ${url}${enhancementInfo}`, 'success');
               stats.successCount++;
               urlScrapingStats[category].success++;
               addResult(`🔍 DEBUG: Updated ${category}: success=${urlScrapingStats[category].success}`, 'info');
@@ -1369,6 +1378,14 @@
 
       updateProgress(100, 'Website scraping complete');
       addResult('🎉 Website scraping complete!', 'success');
+      
+      // Show foundation → enhancement summary
+      addResult('📊 FOUNDATION → ENHANCEMENT SUMMARY:');
+      const enhancementUrls = Object.keys(urlGroups).filter(url => urlGroups[url].length > 1);
+      addResult(`   • Foundation URLs scraped: ${urlScrapingStats['website_urls']?.success || 0}`);
+      addResult(`   • Enhancement layers added: ${enhancementUrls.length} URLs enhanced by multiple CSVs`);
+      addResult(`   • Total data chunks created: ${stats.successCount} successful scrapes`);
+      addResult(`   • Cross-CSV enhancement: ${enhancementUrls.length > 0 ? '✅ Active' : '❌ No cross-CSV enhancement detected'}`);
       
       // Debug: Log final urlScrapingStats
       
@@ -1830,52 +1847,62 @@
       const totalsRow = `<tr style="border-top:2px solid #666;font-weight:bold;background:#2a2a2a;"><td style="padding:4px 8px;">TOTALS</td><td style="padding:4px 8px;">${totalCsvCount}</td><td style="color:#51cf66">${totalSuccess}</td><td style="color:#ff6b6b">${totalFailed}</td><td style="color:#74c0fc">${totalSkipped}</td><td style="color:#ffd43b">${totalDuplicatesRemoved}</td></tr>`;
       
       const html = `
-        <div style="margin-bottom: 20px; padding: 15px; background: #2a2a2a; border-radius: 8px; border: 1px solid #444;">
-          <h4 style="margin: 0 0 10px 0; color: #fff;">📊 Data Flow Explanation</h4>
-          <div style="margin-bottom: 8px; color: #ccc;">
-            <strong>1. Foundation Layer:</strong> <code style="background: #333; padding: 2px 4px; border-radius: 3px;">site_urls</code> CSV scrapes basic content from all website pages
+        <div style="margin-bottom: 20px; padding: 15px; background: #1a3a1a; border-radius: 8px; border: 1px solid #2a5a2a;">
+          <h4 style="margin: 0 0 15px 0; color: #4ade80;">🏗️ Foundation → Enhancement Data Flow</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div style="padding: 10px; background: #2a4a2a; border-radius: 6px; border-left: 4px solid #4ade80;">
+              <h5 style="margin: 0 0 8px 0; color: #4ade80;">📋 FOUNDATION LAYER</h5>
+              <div style="color: #ccc; font-size: 14px;">
+                <strong>site_urls CSV:</strong> Scrapes basic content from all website pages<br>
+                <strong>Purpose:</strong> Creates the foundational data chunks for RAG
+              </div>
+            </div>
+            <div style="padding: 10px; background: #2a4a2a; border-radius: 6px; border-left: 4px solid #fbbf24;">
+              <h5 style="margin: 0 0 8px 0; color: #fbbf24;">✨ ENHANCEMENT LAYERS</h5>
+              <div style="color: #ccc; font-size: 14px;">
+                <strong>Other CSVs:</strong> Add specific metadata, product mappings, relationships<br>
+                <strong>Purpose:</strong> Enrich same URLs with additional context for better responses
+              </div>
+            </div>
           </div>
-          <div style="margin-bottom: 8px; color: #ccc;">
-            <strong>2. Enhancement Layers:</strong> Other CSVs add specific metadata, product mappings, and relationships to relevant pages
-          </div>
-          <div style="margin-bottom: 8px; color: #ccc;">
-            <strong>3. Result:</strong> Same URLs get enriched with multiple data layers for richer chatbot responses
-          </div>
-          <div style="color: #ccc;">
-            <strong>4. RAG Enhancement:</strong> Each CSV contributes different content chunks to Supabase for better intent matching
+          <div style="padding: 10px; background: #2a4a2a; border-radius: 6px; border-left: 4px solid #8b5cf6;">
+            <h5 style="margin: 0 0 8px 0; color: #8b5cf6;">🎯 RESULT</h5>
+            <div style="color: #ccc; font-size: 14px;">
+              <strong>Same URLs get scraped multiple times</strong> - once per CSV category - to build rich, layered data that gives the chatbot comprehensive understanding for better intent matching and responses.
+            </div>
           </div>
         </div>
         
-        <table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333">
-          <thead>
-            <tr>
-              <th style="text-align:left;padding:4px 8px;">Category</th>
-              <th style="text-align:left;padding:4px 8px;">CSV Count</th>
-              <th style="text-align:left;padding:4px 8px;">Success</th>
-              <th style="text-align:left;padding:4px 8px;">Failed</th>
-              <th style="text-align:left;padding:4px 8px;">Skipped</th>
-              <th style="text-align:left;padding:4px 8px;">Duplicates Removed</th>
-            </tr>
-          </thead>
-          <tbody>${rows}${totalsRow}</tbody>
-        </table>
+        <div style="margin-bottom: 15px; padding: 12px; background: #2a2a2a; border-radius: 6px; border: 1px solid #444;">
+          <h4 style="margin: 0 0 10px 0; color: #fff;">📊 Scraping Results by Category</h4>
+          <table style="width:100%;border-collapse:collapse;background:#1b1b1b;border:1px solid #333">
+            <thead>
+              <tr style="background: #333;">
+                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">Category</th>
+                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">CSV Count</th>
+                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">Success</th>
+                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">Failed</th>
+                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">Skipped</th>
+                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">Within-CSV Duplicates</th>
+              </tr>
+            </thead>
+            <tbody>${rows}${totalsRow}</tbody>
+          </table>
+        </div>
         
-        <div style="margin-top: 15px; padding: 15px; background: #2a2a2a; border-radius: 8px; border: 1px solid #444;">
-          <h4 style="margin: 0 0 10px 0; color: #fff;">🔍 What The Numbers Mean</h4>
-          <div style="margin-bottom: 6px; color: #ccc;">
-            <strong>CSV Count:</strong> Total URLs in this CSV file
-          </div>
-          <div style="margin-bottom: 6px; color: #ccc;">
-            <strong>Success:</strong> URLs successfully scraped and content stored in Supabase
-          </div>
-          <div style="margin-bottom: 6px; color: #ccc;">
-            <strong>Failed:</strong> URLs that couldn't be scraped (404, server errors, etc.)
-          </div>
-          <div style="margin-bottom: 6px; color: #ccc;">
-            <strong>Skipped:</strong> URLs already processed in this session (prevents duplicate work)
-          </div>
-          <div style="color: #ccc;">
-            <strong>Duplicates Removed:</strong> URLs that were exact duplicates within this CSV (not cross-CSV duplicates)
+        <div style="padding: 15px; background: #2a2a2a; border-radius: 8px; border: 1px solid #444;">
+          <h4 style="margin: 0 0 12px 0; color: #fff;">🔍 What Each Number Means</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div style="color: #ccc; font-size: 14px;">
+              <strong style="color: #4ade80;">CSV Count:</strong> Total URLs in this CSV file<br>
+              <strong style="color: #4ade80;">Success:</strong> URLs successfully scraped and stored<br>
+              <strong style="color: #ff6b6b;">Failed:</strong> URLs that couldn't be scraped (404, errors)
+            </div>
+            <div style="color: #ccc; font-size: 14px;">
+              <strong style="color: #74c0fc;">Skipped:</strong> URLs already processed this session<br>
+              <strong style="color: #ffd43b;">Within-CSV Duplicates:</strong> Exact duplicates removed within this CSV only<br>
+              <strong style="color: #8b5cf6;">Cross-CSV:</strong> Same URL from different CSVs = intentional enhancement
+            </div>
           </div>
         </div>
       `;
