@@ -296,7 +296,12 @@
       });
     }
     wrap.style.display = 'block';
-    track('chat_start', { source: 'embed', page_location: location.href });
+
+    // fire only once per browser session
+    if (!sessionStorage.getItem('chat_started')) {
+      track('chat_start', { source: 'embed', page_location: location.href });
+      sessionStorage.setItem('chat_started', 'true');
+    }
   }
 
   function init(){
