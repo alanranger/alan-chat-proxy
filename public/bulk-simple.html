@@ -123,6 +123,7 @@
           <input type="file" id="bulkCsvs" accept=".csv" multiple />
           <small>Drop multiple CSVs. Types auto-detected by headers/filename.</small>
           <button class="btn" onclick="bulkUploadCSVs()">📥 Import Selected CSVs</button>
+          <button class="btn" onclick="alert('Test button works!')" style="margin-left: 10px; background: #ff6b6b;">🧪 Test</button>
           <div id="bulkPreview" style="margin-top:8px;color:#bbb;font-size:12px"></div>
         </div>
       </div>
@@ -2004,6 +2005,13 @@
       updateParityPill();
       updateCronPill();
       updateEnhancementSources();
+      
+      // Test if bulkUploadCSVs function is defined
+      if (typeof bulkUploadCSVs === 'function') {
+        addResult('✅ bulkUploadCSVs function is defined', 'info');
+      } else {
+        addResult('❌ bulkUploadCSVs function is NOT defined', 'error');
+      }
     };
   </script>
 </body>
