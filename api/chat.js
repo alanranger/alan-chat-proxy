@@ -188,7 +188,7 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   const isEquipmentQuery = Array.from(equipmentKeywords).some(k => lc.includes(k));
   if (!isEquipmentQuery) return null;
   
-  // Find relevant content chunks about equipment - be more specific
+  // Find relevant content chunks about equipment - prioritize specific tripod content
   const equipmentChunks = (contentChunks || []).filter(chunk => {
     const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
     const title = (chunk.title || "").toLowerCase();
@@ -197,7 +197,8 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
     // Skip navigation/service chunks
     if (text.includes('cart 0') || text.includes('sign in') || text.includes('back photography courses') || 
         text.includes('workshops calendar') || text.includes('services summary') || 
-        text.includes('hire a professional') || text.includes('book a free consultation')) {
+        text.includes('hire a professional') || text.includes('book a free consultation') ||
+        text.includes('my account') || text.includes('search') || text.includes('gallery')) {
       return false;
     }
     
@@ -205,31 +206,52 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
     const hasEquipmentKeyword = Array.from(equipmentKeywords).some(k => text.includes(k));
     const isSubstantial = text.length > 100 && !text.includes('[/') && !text.includes('](');
     
-    return hasEquipmentKeyword && isSubstantial;
+    // Prioritize chunks from specific tripod articles
+    const isTripodArticle = url.includes('tripod') || url.includes('gitzo') || url.includes('benro') || 
+                           url.includes('equipment-recommendations');
+    
+    return hasEquipmentKeyword && isSubstantial && (isTripodArticle || text.includes('tripod'));
   });
   
   if (equipmentChunks.length === 0) return null;
   
   // Extract key advice points from the most relevant chunks
   const advicePoints = [];
-  for (const chunk of equipmentChunks.slice(0, 2)) {
+  for (const chunk of equipmentChunks.slice(0, 3)) {
     const text = chunk.chunk_text || chunk.content || "";
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 30);
     
     for (const sentence of sentences) {
       const sLower = sentence.toLowerCase();
-      // Look for specific equipment advice patterns
-      if ((sLower.includes('tripod') || sLower.includes('equipment')) && 
-          (sLower.includes('recommend') || sLower.includes('best') || sLower.includes('choose') || 
-           sLower.includes('important') || sLower.includes('consider') || sLower.includes('essential') ||
-           sLower.includes('should') || sLower.includes('must'))) {
+      
+      // Look for specific product recommendations and advice patterns
+      const hasProductRecommendation = sLower.includes('mefoto') || sLower.includes('gitzo') || 
+                                     sLower.includes('benro') || sLower.includes('manfrotto') ||
+                                     sLower.includes('£') || sLower.includes('$') || sLower.includes('budget');
+      
+      const hasAdvicePattern = sLower.includes('recommend') || sLower.includes('best') || sLower.includes('choose') || 
+                              sLower.includes('important') || sLower.includes('consider') || sLower.includes('essential') ||
+                              sLower.includes('should') || sLower.includes('must') || sLower.includes('excellent') ||
+                              sLower.includes('value') || sLower.includes('combination');
+      
+      const hasTripodContent = sLower.includes('tripod') || sLower.includes('equipment');
+      
+      if (hasTripodContent && (hasProductRecommendation || hasAdvicePattern)) {
         // Clean up the sentence
-        let cleanSentence = sentence.trim();
-        if (cleanSentence.length > 200) {
-          cleanSentence = cleanSentence.substring(0, 200) + "...";
+        let cleanSentence = sentence.trim()
+          .replace(/\[.*?\]/g, '') // Remove markdown links
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .trim();
+        
+        if (cleanSentence.length > 250) {
+          cleanSentence = cleanSentence.substring(0, 250) + "...";
         }
-        advicePoints.push(cleanSentence);
-        if (advicePoints.length >= 3) break;
+        
+        // Avoid duplicates
+        if (cleanSentence && !advicePoints.some(existing => existing.includes(cleanSentence.substring(0, 50)))) {
+          advicePoints.push(cleanSentence);
+          if (advicePoints.length >= 3) break;
+        }
       }
     }
     if (advicePoints.length >= 3) break;
@@ -1599,8 +1621,24 @@ export default async function handler(req, res) {
       const url = String(a.page_url||a.source_url||a.url||'').toLowerCase();
       let s = 0;
       for (const t of queryTokens){ if (!t) continue; if (title.includes(t)) s += 3; if (url.includes(t)) s += 2; }
-      // Boost for equipment-related matches on either side
-      for (const k of equipmentKeywords){ if (qlcRank.includes(k) && (title.includes(k) || url.includes(k))) s += 4; }
+      
+      // Enhanced boost for equipment-related matches
+      for (const k of equipmentKeywords){ 
+        if (qlcRank.includes(k) && (title.includes(k) || url.includes(k))) {
+          s += 6; // Increased from 4
+          // Extra boost for specific tripod brands/models
+          if (k === 'tripod' && (title.includes('gitzo') || title.includes('benro') || url.includes('gitzo') || url.includes('benro'))) {
+            s += 8;
+          }
+        }
+      }
+      
+      // Penalize irrelevant articles for tripod queries
+      if (qlcRank.includes('tripod') && !title.includes('tripod') && !url.includes('tripod') && 
+          !title.includes('equipment') && !url.includes('equipment') && !title.includes('gitzo') && !title.includes('benro')) {
+        s -= 3;
+      }
+      
       // Slight freshness bonus if we have last_seen
       try{ const seen = Date.parse(a.last_seen||''); if (!isNaN(seen)) { const ageDays = (Date.now()-seen)/(1000*60*60*24); if (ageDays < 365) s += 2; } }catch{}
       return s;
