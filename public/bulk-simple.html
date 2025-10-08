@@ -1033,14 +1033,24 @@
     }
 
     async function bulkUploadCSVs(){
-      showToast('Preparing selected CSVs…');
       console.log('bulkUploadCSVs called');
+      alert('bulkUploadCSVs function called!'); // Temporary debug
+      addResult('🔍 bulkUploadCSVs function called', 'info');
+      showToast('Preparing selected CSVs…');
+      
       try {
         const input = document.getElementById('bulkCsvs');
         console.log('Input element:', input);
+        addResult(`🔍 Input element found: ${input ? 'YES' : 'NO'}`, 'info');
+        
         const files = Array.from(input.files||[]);
         console.log('Files:', files);
-        if (!files.length){ addResult('❌ No files selected for bulk upload','error'); return; }
+        addResult(`🔍 Files found: ${files.length}`, 'info');
+        
+        if (!files.length){ 
+          addResult('❌ No files selected for bulk upload','error'); 
+          return; 
+        }
       const previewEl = document.getElementById('bulkPreview');
       previewEl.textContent = 'Detecting file types...';
 
