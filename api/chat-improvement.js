@@ -106,7 +106,8 @@ async function analyzeQuestionLogs(supa) {
       priority: (1 - q.avgConfidence) * 100, // Focus on confidence, scale to 0-100
       intents: Array.from(q.intents),
       topAnswer: Array.from(q.commonAnswers.entries())
-        .sort((a, b) => b[1] - a[1])[0]?.[0] || 'No answer'
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || 'No answer',
+      interactions: q.interactions // Include interactions for page context extraction
     }))
     .sort((a, b) => b.priority - a.priority);
 
