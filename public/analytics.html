@@ -649,6 +649,7 @@
                 <th onclick="sortQuestions('frequency')" style="cursor: pointer;">Frequency <span id="sort-frequency"></span></th>
                 <th onclick="sortQuestions('avg_confidence')" style="cursor: pointer;">Avg Confidence <span id="sort-avg_confidence"></span></th>
                 <th onclick="sortQuestions('last_seen')" style="cursor: pointer;">Last Seen <span id="sort-last_seen">↓</span></th>
+                <th>Page</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -965,11 +966,14 @@
       
       sortedData.forEach(q => {
         const row = document.createElement('tr');
+        // Best-effort derive a representative page from recent interactions if available
+        const page = (q.page_context && (q.page_context.pathname || q.page_context.url)) || q.last_page || '';
         row.innerHTML = `
           <td>${q.question_text.substring(0, 100)}${q.question_text.length > 100 ? '...' : ''}</td>
           <td><span class="badge badge-info">${q.frequency}</span></td>
           <td><span class="badge ${q.avg_confidence >= 0.8 ? 'badge-success' : q.avg_confidence >= 0.5 ? 'badge-warning' : 'badge-error'}">${(q.avg_confidence * 100).toFixed(1)}%</span></td>
           <td>${new Date(q.last_seen).toLocaleString()}</td>
+          <td>${page ? `<span class="badge">${page}</span>` : '-'}</td>
           <td><button class="btn btn-secondary" onclick="viewQuestion('${q.question_text.replace(/'/g, "\\'")}')">View</button></td>
         `;
         tbody.appendChild(row);
@@ -1917,6 +1921,7 @@
                   <p><strong>Last Asked:</strong> ${new Date(latestInteraction.created_at).toLocaleString()}</p>
                   <p><strong>Confidence:</strong> ${latestInteraction.confidence ? (latestInteraction.confidence * 100).toFixed(1) + '%' : 'N/A'}</p>
                   <p><strong>Response Time:</strong> ${latestInteraction.response_time_ms || 'N/A'}ms</p>
+                  <p><strong>Page:</strong> ${latestInteraction.page_context?.pathname || latestInteraction.page_context?.url || 'N/A'}</p>
                 </div>
               </div>
             </div>

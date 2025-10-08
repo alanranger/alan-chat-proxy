@@ -119,19 +119,34 @@ export default async function handler(req, res) {
 
           if (questionsError) throw new Error(`Top questions failed: ${questionsError.message}`);
 
-          // Get recent questions
+          // Get recent questions with page context to surface representative page per question
           const { data: recentQuestions, error: recentError } = await supa
             .from('chat_interactions')
-            .select('*')
+            .select('question, created_at, page_context')
             .order('created_at', { ascending: false })
             .limit(50);
 
           if (recentError) throw new Error(`Recent questions failed: ${recentError.message}`);
 
+          // Build a quick map of last page per question
+          const lastPageByQuestion = {};
+          (recentQuestions || []).forEach((r) => {
+            if (!lastPageByQuestion[r.question]) {
+              const pc = r.page_context || {};
+              lastPageByQuestion[r.question] = pc.pathname || pc.url || null;
+            }
+          });
+
+          // Attach last_page to topQuestions if available
+          const topWithPage = (topQuestions || []).map((q) => ({
+            ...q,
+            last_page: lastPageByQuestion[q.question_text] || null
+          }));
+
           return sendJSON(res, 200, {
             ok: true,
             questions: {
-              topQuestions: topQuestions || [],
+              topQuestions: topWithPage,
               recentQuestions: recentQuestions || []
             }
           });
