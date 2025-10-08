@@ -1132,8 +1132,8 @@
 
     // Website scraping
     async function scrapeWebsite(dryRun=false) {
-      // Collect URLs from ALL CSV files, not just site_urls
-      let allUrls = [];
+      // Collect URLs from ALL CSV files with their source categories
+      let allUrlsWithCategories = [];
       let urlSources = [];
 
       const includeSite = document.getElementById('src_site')?.checked !== false;
@@ -1148,11 +1148,14 @@
         const csvText = siteUrlsFile ? await siteUrlsFile.text() : String(window.__cachedSiteUrlsText || '');
         const lines = csvText.split('\n').filter(line => line.trim());
         const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
-        allUrls = allUrls.concat(urls);
+        // Add URLs with their source category
+        urls.forEach(url => {
+          allUrlsWithCategories.push({ url, sourceCategory: 'site_urls' });
+        });
         urlSources.push(`site_urls: ${urls.length}`);
       }
 
-      // 2. Collect from cached CSV data (from bulk import)
+      // 2. Collect from cached CSV data (from bulk import) with source categories
       if (window.__cachedCsvData) {
         for (const [type, data] of Object.entries(window.__cachedCsvData)) {
           if (data.urls && data.urls.length > 0) {
@@ -1160,20 +1163,45 @@
             if (type==='event' && !includeEvent) continue;
             if (type==='workshop' && !includeWorkshop) continue;
             if (type==='service' && !includeService) continue;
-            allUrls = allUrls.concat(data.urls);
+            
+            // Add URLs with their source category
+            data.urls.forEach(url => {
+              allUrlsWithCategories.push({ url, sourceCategory: type });
+            });
             urlSources.push(`${type}: ${data.urls.length}`);
           }
         }
       }
 
-      if (allUrls.length === 0) {
+      if (allUrlsWithCategories.length === 0) {
         addResult('❌ No URLs found to scrape. Please import CSV files first.', 'error');
         return;
       }
 
-      // Remove duplicates while preserving order
-      const uniqueUrls = [...new Set(allUrls)];
-      const duplicateCount = allUrls.length - uniqueUrls.length;
+      // Group URLs by their actual URL to identify true duplicates within categories
+      const urlGroups = {};
+      allUrlsWithCategories.forEach(({ url, sourceCategory }) => {
+        if (!urlGroups[url]) {
+          urlGroups[url] = [];
+        }
+        urlGroups[url].push(sourceCategory);
+      });
+
+      // Create final URL list - allow same URL to be scraped multiple times if from different categories
+      const urlsToScrape = [];
+      let trueDuplicatesRemoved = 0;
+      
+      Object.entries(urlGroups).forEach(([url, categories]) => {
+        // Remove duplicates within the same category (keep only one per category)
+        const uniqueCategories = [...new Set(categories)];
+        const duplicatesWithinCategory = categories.length - uniqueCategories.length;
+        trueDuplicatesRemoved += duplicatesWithinCategory;
+        
+        // Add one entry per unique category
+        uniqueCategories.forEach(category => {
+          urlsToScrape.push({ url, sourceCategory: category });
+        });
+      });
 
       // enable stop button
       let stopRequested = false;
@@ -1184,10 +1212,10 @@
       document.getElementById('stepScrape').style.background = '#3a3';
       document.getElementById('stepScrape').textContent = 'Status: running';
       
-      addResult(`📊 Found ${uniqueUrls.length} unique URLs to scrape (${allUrls.length} total, ${duplicateCount} duplicates removed)`);
+      addResult(`📊 Found ${urlsToScrape.length} URLs to scrape (${allUrlsWithCategories.length} total, ${trueDuplicatesRemoved} true duplicates removed)`);
       addResult(`📋 Sources: ${urlSources.join(', ')}`);
 
-      const urls = uniqueUrls;
+      const urls = urlsToScrape;
 
       // stats counters
       stats.loadedRows = urls.length;
@@ -1210,15 +1238,24 @@
       
       // Use global urlScrapingStats - don't redeclare
 
-      function categorize(url, result) {
+      function categorize(url, result, sourceCategory) {
         const u = (url||'').toLowerCase();
-        // Broader patterns to catch more content
+        
+        // First, try to use the source category if it's specific enough
+        if (sourceCategory === 'blog') return 'blog_articles';
+        if (sourceCategory === 'event') return 'course_events';
+        if (sourceCategory === 'workshop') return 'workshop_events';
+        if (sourceCategory === 'service') return 'course_products';
+        if (sourceCategory === 'product') return 'workshop_products';
+        if (sourceCategory === 'site_urls') return 'website_urls';
+        
+        // Fallback to URL pattern matching
         if (u.includes('/blog') || u.includes('/news') || u.includes('/blog-on-photography')) return 'blog_articles';
         if (u.includes('/course') || u.includes('/lesson') || u.includes('/beginners-photography-lessons')) return 'course_events';
         if (u.includes('/workshop') || u.includes('/photo-workshop') || u.includes('/photographic-workshops-near-me') || u.includes('/photo-workshops-uk')) return 'workshop_events';
         if (u.includes('/service') || u.includes('/mentoring') || u.includes('/photography-services-near-me')) return 'course_products';
         if (u.includes('/shop') || u.includes('/product') || u.includes('/photography-shop') || u.includes('/photography-presents')) return 'course_products';
-        if (u.includes('/landing') || u.includes('/page')) return 'website_urls'; // Changed from landing_pages
+        if (u.includes('/landing') || u.includes('/page')) return 'website_urls';
         
         // Check for JSON-LD content in result
         if (result && result.jsonLdFound) return 'json_extraction';
@@ -1238,13 +1275,14 @@
         addResult(`📦 Processing batch ${batchIndex + 1}: ${batchUrls.length} URLs`, 'info');
         
         // Process all URLs in this batch concurrently
-        const promises = batchUrls.map(async (url, urlIndex) => {
+        const promises = batchUrls.map(async (urlEntry, urlIndex) => {
+          const { url, sourceCategory } = urlEntry;
           const globalIndex = batchIndex * BATCH_SIZE + urlIndex;
           updateProgress((completed / urls.length) * 100, `Scraping ${url}...`);
           
           const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
-          const category = categorize(url, result);
-          addResult(`🔍 DEBUG: ${url} -> Category: ${category}`, 'info');
+          const category = categorize(url, result, sourceCategory);
+          addResult(`🔍 DEBUG: ${url} -> Category: ${category} (source: ${sourceCategory})`, 'info');
           
           // Ensure category exists in urlScrapingStats
           if (!urlScrapingStats[category]) {
@@ -1254,7 +1292,7 @@
           
           if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
             if (result.message && result.message.includes('duplicates')) {
-              addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
+              addResult(`✅ Content already exists: ${url}  (source: ${sourceCategory}, batch ${batchIndex + 1}) — ${result.message}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
               renderCategoryStats();
@@ -1269,12 +1307,12 @@
             const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
             const reasonLc = reason.toLowerCase();
             if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
-              addResult(`✅ Skipped duplicate: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'success');
+              addResult(`✅ Skipped duplicate: ${url}  (source: ${sourceCategory}, batch ${batchIndex + 1}) — ${reason}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
               renderCategoryStats();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
-              addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
+              addResult(`❌ Timeout: ${url}  (source: ${sourceCategory}, batch ${batchIndex + 1})`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
               renderCategoryStats();
@@ -1289,7 +1327,7 @@
                   extra = `\n↪ Attempts: ${JSON.stringify(j.attempts)}`;
                 }
               } catch {}
-              addResult(`❌ Failed: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
+              addResult(`❌ Failed: ${url}  (source: ${sourceCategory}, batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
               renderCategoryStats();
