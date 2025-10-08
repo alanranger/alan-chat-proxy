@@ -334,16 +334,24 @@ async function ingestSingleUrl(url, supa, options = {}) {
     const chunks = chunkText(text);
     
     stage = 'store_chunks';
-    const chunkInserts = chunks.map(chunk => ({
-      url: url,
-      title: null,
-      chunk_text: chunk,
-      embedding: null,
-      chunk_hash: sha1(chunk),
-      content: chunk,
-      hash: sha1(url + chunk),
-      tokens: Math.ceil(chunk.length / 4)
-    }));
+    const chunkInserts = chunks.map(chunk => {
+      // Clean chunk content to prevent JSON syntax errors
+      const cleanChunk = chunk
+        .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove control characters
+        .replace(/\u0000/g, '') // Remove null bytes
+        .trim();
+      
+      return {
+        url: url,
+        title: null,
+        chunk_text: cleanChunk,
+        embedding: null,
+        chunk_hash: sha1(cleanChunk),
+        content: cleanChunk,
+        hash: sha1(url + cleanChunk),
+        tokens: Math.ceil(cleanChunk.length / 4)
+      };
+    });
     
     if (!options.dryRun) {
       // Delete existing chunks for this URL
@@ -351,7 +359,10 @@ async function ingestSingleUrl(url, supa, options = {}) {
       // Insert new chunks
       if (chunkInserts.length > 0) {
         const { error: chunkError } = await supa.from('page_chunks').insert(chunkInserts);
-        if (chunkError) throw new Error(`Chunk insert failed: ${chunkError.message}`);
+        if (chunkError) {
+          console.error(`Chunk insert failed for ${url}:`, chunkError);
+          throw new Error(`Chunk insert failed: ${chunkError.message}`);
+        }
       }
     }
     

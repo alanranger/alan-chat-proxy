@@ -1829,7 +1829,56 @@
       // Add totals row
       const totalsRow = `<tr style="border-top:2px solid #666;font-weight:bold;background:#2a2a2a;"><td style="padding:4px 8px;">TOTALS</td><td style="padding:4px 8px;">${totalCsvCount}</td><td style="color:#51cf66">${totalSuccess}</td><td style="color:#ff6b6b">${totalFailed}</td><td style="color:#74c0fc">${totalSkipped}</td><td style="color:#ffd43b">${totalDuplicatesRemoved}</td></tr>`;
       
-      const html = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">CSV Count</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th><th style="text-align:left;padding:4px 8px;">Duplicates Removed</th></tr></thead><tbody>${rows}${totalsRow}</tbody></table>`;
+      const html = `
+        <div style="margin-bottom: 20px; padding: 15px; background: #2a2a2a; border-radius: 8px; border: 1px solid #444;">
+          <h4 style="margin: 0 0 10px 0; color: #fff;">📊 Data Flow Explanation</h4>
+          <div style="margin-bottom: 8px; color: #ccc;">
+            <strong>1. Foundation Layer:</strong> <code style="background: #333; padding: 2px 4px; border-radius: 3px;">site_urls</code> CSV scrapes basic content from all website pages
+          </div>
+          <div style="margin-bottom: 8px; color: #ccc;">
+            <strong>2. Enhancement Layers:</strong> Other CSVs add specific metadata, product mappings, and relationships to relevant pages
+          </div>
+          <div style="margin-bottom: 8px; color: #ccc;">
+            <strong>3. Result:</strong> Same URLs get enriched with multiple data layers for richer chatbot responses
+          </div>
+          <div style="color: #ccc;">
+            <strong>4. RAG Enhancement:</strong> Each CSV contributes different content chunks to Supabase for better intent matching
+          </div>
+        </div>
+        
+        <table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:4px 8px;">Category</th>
+              <th style="text-align:left;padding:4px 8px;">CSV Count</th>
+              <th style="text-align:left;padding:4px 8px;">Success</th>
+              <th style="text-align:left;padding:4px 8px;">Failed</th>
+              <th style="text-align:left;padding:4px 8px;">Skipped</th>
+              <th style="text-align:left;padding:4px 8px;">Duplicates Removed</th>
+            </tr>
+          </thead>
+          <tbody>${rows}${totalsRow}</tbody>
+        </table>
+        
+        <div style="margin-top: 15px; padding: 15px; background: #2a2a2a; border-radius: 8px; border: 1px solid #444;">
+          <h4 style="margin: 0 0 10px 0; color: #fff;">🔍 What The Numbers Mean</h4>
+          <div style="margin-bottom: 6px; color: #ccc;">
+            <strong>CSV Count:</strong> Total URLs in this CSV file
+          </div>
+          <div style="margin-bottom: 6px; color: #ccc;">
+            <strong>Success:</strong> URLs successfully scraped and content stored in Supabase
+          </div>
+          <div style="margin-bottom: 6px; color: #ccc;">
+            <strong>Failed:</strong> URLs that couldn't be scraped (404, server errors, etc.)
+          </div>
+          <div style="margin-bottom: 6px; color: #ccc;">
+            <strong>Skipped:</strong> URLs already processed in this session (prevents duplicate work)
+          </div>
+          <div style="color: #ccc;">
+            <strong>Duplicates Removed:</strong> URLs that were exact duplicates within this CSV (not cross-CSV duplicates)
+          </div>
+        </div>
+      `;
       el.innerHTML = html;
       
       // Update header blocks to match table totals
