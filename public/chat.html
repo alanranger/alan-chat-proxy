@@ -581,8 +581,26 @@ function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
 function articleTitle(a){ return a?.title || a?.raw?.name || ''; }
 function pickArticles(structured, query, topic){
   const all = Array.isArray(structured?.articles) ? structured.articles : [];
-  const ranked = all.filter(a => articleUrl(a) && articleTitle(a)).slice(0,5);
-  return ranked;
+  if (!all.length) return [];
+  const q = String(query||'').toLowerCase();
+  const toks = tokenize2(q);
+  const KEY_BONUS = new Set(['tripod','tripods','head','ballhead','levelling','recommend','recommendation','recommendations','equipment']);
+  const score = (a)=>{
+    const title = (articleTitle(a)||'').toLowerCase();
+    const url = (articleUrl(a)||'').toLowerCase();
+    let s = 0;
+    for (const t of toks){ if (!t) continue; if (title.includes(t)) s += 3; if (url.includes(t)) s += 2; }
+    for (const k of KEY_BONUS){ if (title.includes(k) || url.includes(k)) s += 5; }
+    // Prefer newer content slightly
+    const seen = Date.parse(a.last_seen||''); if (!isNaN(seen)) s += Math.min(5, Math.max(0, (Date.now()-seen)/(1000*60*60*24) < 365 ? 3 : 0));
+    return s;
+  };
+  return all
+    .filter(a => articleUrl(a) && articleTitle(a))
+    .map(a => ({ a, s: score(a) }))
+    .sort((x,y)=> y.s - x.s)
+    .slice(0,5)
+    .map(x=>x.a);
 }
 function renderArticlesBlock(structured, query){
   // Skip articles block for simple follow-up questions (but not for legitimate event queries)
@@ -683,10 +701,16 @@ function decideProductRendering(payload, mergedProducts, query){
 /* Confidence heuristic (client-side floor) */
 function heuristicConfidence(structured){
   let score = 0;
-  if (structured?.products?.length) score += 40;
-  if (structured?.events?.length)   score += 40;
-  if (structured?.articles?.length) score += 20;
-  return Math.min(95, Math.max(20, score || 25));
+  const articles = Array.isArray(structured?.articles) ? structured.articles : [];
+  if (structured?.products?.length) score += 35;
+  if (structured?.events?.length)   score += 35;
+  if (articles.length)              score += 15;
+  // Penalize generic responses that only point to recommendations/search without relevance
+  const hasTripodArticle = articles.some(a=>/tripod/i.test(articleTitle(a)||'') || /tripod/i.test(articleUrl(a)||''));
+  if (articles.length && !hasTripodArticle && /tripod|head|tripods/i.test(String(__lastQuery||''))) {
+    score = Math.max(20, score - 25);
+  }
+  return Math.min(95, Math.max(15, score || 20));
 }
 
 /* ===================== Chime (with autoplay unlock) ===================== */
@@ -835,14 +859,15 @@ function renderAnswer(payload){
       setDebugJSON(pre, data, { maxLen: 2000, maxItems: 50 });
       box.querySelector('#reason-copy').addEventListener('click', async ()=>{
         try {
-          const blob = new Blob([pre.textContent||''], { type: 'text/plain' });
-          if (navigator.clipboard && window.ClipboardItem) {
+          const text = pre.textContent||'';
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+          } else if (navigator.clipboard && window.ClipboardItem) {
+            const blob = new Blob([text], { type: 'text/plain' });
             await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]);
-          } else if (navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(pre.textContent||'');
           } else {
             const ta=document.createElement('textarea');
-            ta.value=pre.textContent||''; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+            ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
           }
           confEl.textContent = confEl.textContent.replace('Confidence','Copied');
           setTimeout(()=>{ confEl.textContent = `Confidence: ${__rounded}%`; }, 1200);
