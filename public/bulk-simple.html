@@ -121,7 +121,8 @@
         <div class="file-item">
           <h4>📦 Bulk CSV Upload</h4>
           <input type="file" id="bulkCsvs" accept=".csv" multiple />
-          <small>Select multiple CSVs, then use Step 1 below to import them.</small>
+          <small>Drop multiple CSVs. Types auto-detected by headers/filename.</small>
+          <button class="btn" onclick="bulkUploadCSVs()">📥 Import Selected CSVs</button>
           <div id="bulkPreview" style="margin-top:8px;color:#bbb;font-size:12px"></div>
         </div>
       </div>
@@ -158,10 +159,9 @@
           <div>
             <h4 style="margin:0 0 8px 0;color:#4CAF50;">Step 1: Import CSV Data</h4>
             <div style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
-              <p style="margin:0 0 8px 0;"><strong>What it does:</strong> Imports all selected CSV files (individual + bulk) into the database.</p>
-              <p style="margin:0 0 8px 0;"><strong>Process:</strong> Auto-detects file types and imports structured data</p>
-              <p style="margin:0 0 8px 0;"><strong>Updates:</strong> <code>page_entities</code> table with events, products, articles, and services</p>
-              <p style="margin:0 0 8px 0;"><strong>Result:</strong> Your CSV data is now available for the chatbot to reference</p>
+              <p style="margin:0 0 8px 0;"><strong>What it does:</strong> Reads your CSV files and imports structured data into the database.</p>
+              <p style="margin:0 0 8px 0;"><strong>Updates:</strong> <code>page_entities</code> table with events, products, articles, and services.</p>
+              <p style="margin:0 0 8px 0;"><strong>Result:</strong> Your CSV data is now available for the chatbot to reference.</p>
             </div>
           </div>
 
@@ -947,9 +947,6 @@
 
     // Main import function
     async function importAllCSVs() {
-      console.log('importAllCSVs called');
-      addResult('🔍 importAllCSVs function called', 'info');
-      
       const token = getToken();
       showToast('Starting Import All…');
       addResult('🔐 Using hardcoded token for authentication');
@@ -959,8 +956,7 @@
       updateProgress(0, 'Starting CSV imports...');
       addResult('🚀 Starting CSV import process...');
 
-      // Collect individual files
-      const individualFiles = [
+      const files = [
         { file: document.getElementById('blogCsv').files[0], type: 'blog', name: 'Blog Articles' },
         { file: document.getElementById('courseEventsCsv').files[0], type: 'event', name: 'Course Events' },
         { file: document.getElementById('workshopEventsCsv').files[0], type: 'workshop', name: 'Workshop Events' },
@@ -971,30 +967,6 @@
         { file: document.getElementById('testQuestionsCsv').files[0], type: 'test_questions', name: 'Test Questions' }
       ];
 
-      // Collect bulk files
-      const bulkFiles = Array.from(document.getElementById('bulkCsvs').files || []);
-      const bulkFilesWithTypes = [];
-      
-      for (const f of bulkFiles) {
-        const text = await f.text();
-        const first = text.split('\n')[0] || '';
-        const nameHint = detectTypeByName(f.name);
-        const headerHint = detectTypeFromHeaders(first);
-        let type = nameHint || headerHint;
-        if (type === 'workshop') type = 'workshop';
-        if (type === 'event' && f.name.includes('workshop')) type = 'workshop';
-        if (type) {
-          bulkFilesWithTypes.push({ file: f, type, name: `${f.name} (${type})` });
-        }
-      }
-
-      // Combine all files
-      const files = [...individualFiles.filter(f => f.file), ...bulkFilesWithTypes];
-      
-      addResult(`🔍 Found ${individualFiles.filter(f => f.file).length} individual files`, 'info');
-      addResult(`🔍 Found ${bulkFilesWithTypes.length} bulk files`, 'info');
-      addResult(`🔍 Total files to process: ${files.length}`, 'info');
-
       let successCount = 0;
       let totalCount = files.filter(f => f.file).length;
       let totalCsvRows = 0;
@@ -1002,8 +974,6 @@
 
       if (totalCount === 0) {
         addResult('❌ No CSV files selected', 'error');
-        document.getElementById('stepImport').style.background = '#a62';
-        document.getElementById('stepImport').textContent = 'Status: no files';
         return;
       }
 
@@ -1062,13 +1032,16 @@
       return null;
     }
 
-    // This function is now handled by importAllCSVs() in Step 1
     async function bulkUploadCSVs(){
-      addResult('ℹ️ Use Step 1 "Import CSVs" button to import your selected files', 'info');
-      showToast('Please use Step 1 to import your CSV files');
-    }
-
-    // Website scraping
+      showToast('Preparing selected CSVs…');
+      console.log('bulkUploadCSVs called');
+      try {
+        const input = document.getElementById('bulkCsvs');
+        console.log('Input element:', input);
+        const files = Array.from(input.files||[]);
+        console.log('Files:', files);
+        if (!files.length){ addResult('❌ No files selected for bulk upload','error'); return; }
+      const previewEl = document.getElementById('bulkPreview');
       previewEl.textContent = 'Detecting file types...';
 
       const plan = [];
@@ -2021,7 +1994,6 @@
       updateParityPill();
       updateCronPill();
       updateEnhancementSources();
-      
     };
   </script>
 </body>
