@@ -322,6 +322,14 @@ async function ingestSingleUrl(url, supa, options = {}) {
     stage = 'extract_jsonld';
     const jsonLd = extractJSONLD(html);
     
+    // Extract HTML title as fallback
+    const htmlTitleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
+    const htmlTitle = htmlTitleMatch ? htmlTitleMatch[1].trim() : null;
+    
+    // Extract H1 as another fallback
+    const h1Match = html.match(/<h1[^>]*>(.*?)<\/h1>/i);
+    const h1Title = h1Match ? h1Match[1].replace(/<[^>]*>/g, '').trim() : null;
+    
     stage = 'chunk_text';
     const chunks = chunkText(text);
     
@@ -352,7 +360,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
       const entities = jsonLd.map((item, idx) => ({
         url: url,
         kind: normalizeKind(item, url),
-        title: item.name || item.headline || item.title || null,
+        title: item.headline || item.title || item.name || htmlTitle || h1Title || null,
         description: item.description || null,
         date_start: item.datePublished || item.startDate || null,
         date_end: item.endDate || null,

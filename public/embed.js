@@ -58,7 +58,7 @@
       #alan-chat-resize-handle{position:absolute;bottom:0;right:0;width:20px;height:20px;background:#E57200;cursor:nw-resize;border-radius:0 0 12px 0;opacity:0.7;transition:opacity 0.2s;z-index:10;}
       #alan-chat-resize-handle:hover{opacity:1}
       #alan-chat-resize-handle::after{content:'';position:absolute;bottom:4px;right:4px;width:0;height:0;border-left:6px solid transparent;border-bottom:6px solid #0b0f16;} 
-      #alan-chat-close{position:absolute;right:8px;top:8px;width:40px;height:40px;border-radius:999px;background:rgba(0,0,0,0.55);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,0.15);font-size:18px;font-weight:bold;transition:all 0.2s ease;}
+      #alan-chat-close{position:absolute;right:8px;top:8px;width:40px;height:40px;border-radius:999px;background:rgba(0,0,0,0.55);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,0.15);font-size:18px;font-weight:bold;transition:all 0.2s ease;z-index:20;padding:4px;}
       #alan-chat-close:hover{background:rgba(0,0,0,0.75);transform:scale(1.1);}
       #alan-chat-iframe{border:0;width:100%;height:100%;}
       @media (max-width: 768px){
