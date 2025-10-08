@@ -52,7 +52,12 @@
       #alan-chat-launcher{position:fixed;z-index:2147483000;display:flex;align-items:center;justify-content:center;border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,0.3);width:56px;height:56px;color:#fff;cursor:pointer;}
       #alan-chat-launcher:hover{filter:brightness(1.05)}
       #alan-chat-frame-wrap{position:fixed;z-index:2147482999;display:none;background:rgba(0,0,0,0.35);} 
-      #alan-chat-panel{position:absolute;background:#111;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.45);overflow:hidden;border:1px solid rgba(255,255,255,0.08);} 
+      #alan-chat-panel{position:absolute;background:#111;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.45);overflow:hidden;border:1px solid rgba(255,255,255,0.08);min-width:400px;min-height:300px;max-width:90vw;max-height:90vh;}
+      #alan-chat-panel .drag-handle{position:absolute;top:0;left:0;right:0;height:40px;cursor:move;z-index:5;background:transparent;}
+      #alan-chat-panel.resizing{cursor:nw-resize}
+      #alan-chat-resize-handle{position:absolute;bottom:0;right:0;width:20px;height:20px;background:#E57200;cursor:nw-resize;border-radius:0 0 12px 0;opacity:0.7;transition:opacity 0.2s;z-index:10;}
+      #alan-chat-resize-handle:hover{opacity:1}
+      #alan-chat-resize-handle::after{content:'';position:absolute;bottom:4px;right:4px;width:0;height:0;border-left:6px solid transparent;border-bottom:6px solid #0b0f16;} 
       #alan-chat-close{position:absolute;right:8px;top:8px;width:40px;height:40px;border-radius:999px;background:rgba(0,0,0,0.55);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,0.15);font-size:18px;font-weight:bold;transition:all 0.2s ease;}
       #alan-chat-close:hover{background:rgba(0,0,0,0.75);transform:scale(1.1);}
       #alan-chat-iframe{border:0;width:100%;height:100%;}
@@ -107,6 +112,14 @@
       close.addEventListener('click', ()=>{ wrap.style.display='none'; });
       panel.appendChild(close);
 
+      const dragHandle = doc.createElement('div');
+      dragHandle.className = 'drag-handle';
+      panel.appendChild(dragHandle);
+
+      const resizeHandle = doc.createElement('div');
+      resizeHandle.id = 'alan-chat-resize-handle';
+      panel.appendChild(resizeHandle);
+
       const iframe = doc.createElement('iframe');
       iframe.id = 'alan-chat-iframe';
       // Append parent page context so chat can log/display real host page, not /chat.html
@@ -128,6 +141,159 @@
       panel.appendChild(iframe);
 
       wrap.appendChild(panel);
+
+      // Add drag and resize functionality
+      let isDragging = false;
+      let isResizing = false;
+      let startX, startY, startWidth, startHeight, startLeft, startTop;
+
+      // Make panel draggable via drag handle
+      dragHandle.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = panel.offsetLeft;
+        startTop = panel.offsetTop;
+        
+        doc.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+
+      // Handle resize
+      resizeHandle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = panel.offsetWidth;
+        startHeight = panel.offsetHeight;
+        
+        panel.classList.add('resizing');
+        doc.body.style.userSelect = 'none';
+        e.preventDefault();
+        e.stopPropagation();
+      });
+
+      // Mouse move handler
+      doc.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+          const deltaX = e.clientX - startX;
+          const deltaY = e.clientY - startY;
+          
+          let newLeft = startLeft + deltaX;
+          let newTop = startTop + deltaY;
+          
+          // Keep within viewport bounds
+          const maxLeft = window.innerWidth - panel.offsetWidth;
+          const maxTop = window.innerHeight - panel.offsetHeight;
+          
+          newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+          newTop = Math.max(0, Math.min(newTop, maxTop));
+          
+          panel.style.left = newLeft + 'px';
+          panel.style.top = newTop + 'px';
+          panel.style.right = 'auto';
+          panel.style.bottom = 'auto';
+        }
+        
+        if (isResizing) {
+          const deltaX = e.clientX - startX;
+          const deltaY = e.clientY - startY;
+          
+          let newWidth = startWidth + deltaX;
+          let newHeight = startHeight + deltaY;
+          
+          // Enforce min/max constraints
+          newWidth = Math.max(400, Math.min(newWidth, window.innerWidth - panel.offsetLeft));
+          newHeight = Math.max(300, Math.min(newHeight, window.innerHeight - panel.offsetTop));
+          
+          panel.style.width = newWidth + 'px';
+          panel.style.height = newHeight + 'px';
+        }
+      });
+
+      // Mouse up handler
+      doc.addEventListener('mouseup', () => {
+        if (isDragging || isResizing) {
+          isDragging = false;
+          isResizing = false;
+          panel.classList.remove('resizing');
+          doc.body.style.userSelect = '';
+        }
+      });
+
+      // Touch support for mobile
+      dragHandle.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        startLeft = panel.offsetLeft;
+        startTop = panel.offsetTop;
+        
+        e.preventDefault();
+      });
+
+      resizeHandle.addEventListener('touchstart', (e) => {
+        isResizing = true;
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        startWidth = panel.offsetWidth;
+        startHeight = panel.offsetHeight;
+        
+        panel.classList.add('resizing');
+        e.preventDefault();
+        e.stopPropagation();
+      });
+
+      doc.addEventListener('touchmove', (e) => {
+        if (isDragging || isResizing) {
+          const touch = e.touches[0];
+          
+          if (isDragging) {
+            const deltaX = touch.clientX - startX;
+            const deltaY = touch.clientY - startY;
+            
+            let newLeft = startLeft + deltaX;
+            let newTop = startTop + deltaY;
+            
+            const maxLeft = window.innerWidth - panel.offsetWidth;
+            const maxTop = window.innerHeight - panel.offsetHeight;
+            
+            newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+            newTop = Math.max(0, Math.min(newTop, maxTop));
+            
+            panel.style.left = newLeft + 'px';
+            panel.style.top = newTop + 'px';
+            panel.style.right = 'auto';
+            panel.style.bottom = 'auto';
+          }
+          
+          if (isResizing) {
+            const deltaX = touch.clientX - startX;
+            const deltaY = touch.clientY - startY;
+            
+            let newWidth = startWidth + deltaX;
+            let newHeight = startHeight + deltaY;
+            
+            newWidth = Math.max(400, Math.min(newWidth, window.innerWidth - panel.offsetLeft));
+            newHeight = Math.max(300, Math.min(newHeight, window.innerHeight - panel.offsetTop));
+            
+            panel.style.width = newWidth + 'px';
+            panel.style.height = newHeight + 'px';
+          }
+          
+          e.preventDefault();
+        }
+      });
+
+      doc.addEventListener('touchend', () => {
+        if (isDragging || isResizing) {
+          isDragging = false;
+          isResizing = false;
+          panel.classList.remove('resizing');
+        }
+      });
     }
     wrap.style.display = 'block';
     track('chat_start', { source: 'embed', page_location: location.href });
