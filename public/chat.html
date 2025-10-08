@@ -941,11 +941,17 @@ async function sendQuery(query){
   __lastQuery = String(query||'');
   
   // Capture page context for better answers
+  // Prefer parent page context passed by embed (so we don't log /chat.html)
+  const qp = new URLSearchParams(location.search);
+  const parentUrl  = qp.get('parentUrl');
+  const parentTitle= qp.get('parentTitle');
+  const parentHost = qp.get('parentHost');
+  const parentPath = qp.get('parentPath');
   const pageContext = {
-    url: window.location.href,
-    title: document.title,
-    hostname: window.location.hostname,
-    pathname: window.location.pathname
+    url: parentUrl  || window.location.href,
+    title: parentTitle || document.title,
+    hostname: parentHost || window.location.hostname,
+    pathname: parentPath || window.location.pathname
   };
   
   const req = { 

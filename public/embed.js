@@ -105,7 +105,17 @@
 
       const iframe = doc.createElement('iframe');
       iframe.id = 'alan-chat-iframe';
-      iframe.src = cfg.chatSrc;
+      // Append parent page context so chat can log/display real host page, not /chat.html
+      try{
+        const u = new URL(cfg.chatSrc, location.origin);
+        u.searchParams.set('parentUrl', location.href);
+        u.searchParams.set('parentTitle', document.title || '');
+        u.searchParams.set('parentHost', location.hostname || '');
+        u.searchParams.set('parentPath', location.pathname || '');
+        iframe.src = u.toString();
+      }catch{
+        iframe.src = cfg.chatSrc;
+      }
       iframe.setAttribute('title','Alan Ranger Assistant');
       iframe.setAttribute('loading','lazy');
       panel.appendChild(iframe);
