@@ -1432,6 +1432,29 @@ export default async function handler(req, res) {
     // --------- ADVICE -----------
     // return article answers + upgraded pills
     let articles = await findArticles(client, { keywords, limit: 12, pageContext });
+    // Re-rank articles by topical overlap with the query (title/url tokens)
+    const qlcRank = (query||'').toLowerCase();
+    const queryTokens = (qlcRank.match(/[a-z0-9]+/g) || []).filter(t=>t.length>2);
+    const equipmentKeywords = new Set(['tripod','tripods','head','ballhead','levelling','leveling','recommend','recommendation','recommendations','equipment']);
+    const scoreArticle = (a)=>{
+      const title = String(a.title||a.raw?.name||'').toLowerCase();
+      const url = String(a.page_url||a.source_url||a.url||'').toLowerCase();
+      const allText = `${title} ${url}`;
+      let s = 0;
+      for (const t of queryTokens){ if (!t) continue; if (title.includes(t)) s += 3; if (url.includes(t)) s += 2; }
+      // Boost for equipment-related matches on either side
+      for (const k of equipmentKeywords){ if (qlcRank.includes(k) && (title.includes(k) || url.includes(k))) s += 4; }
+      // Slight freshness bonus if we have last_seen
+      try{ const seen = Date.parse(a.last_seen||''); if (!isNaN(seen)) { const ageDays = (Date.now()-seen)/(1000*60*60*24); if (ageDays < 365) s += 2; } }catch{}
+      return s;
+    };
+    if (Array.isArray(articles) && articles.length){
+      articles = articles
+        .filter(a=> (a.page_url||a.source_url||a.url) && (a.title||a.raw?.name))
+        .map(a=> ({ a, s: scoreArticle(a) }))
+        .sort((x,y)=> y.s - x.s)
+        .map(x=> x.a);
+    }
     // Ensure concept article is first when asking "what is <term>"
     const qlc2 = (query||'').toLowerCase();
     const mConcept = qlc2.match(/^\s*what\s+is\s+(.+?)\s*\??$/);
@@ -1501,6 +1524,22 @@ export default async function handler(req, res) {
       lines.push("I couldn't find a specific guide for that yet.");
       confidence = 0.1; // Low confidence when no articles found
     }
+
+    // Confidence damping: if the query clearly mentions equipment but none of the
+    // top articles contain those terms, reduce confidence to avoid inflated 0.8
+    try {
+      const mentionsEquipment = Array.from(equipmentKeywords).some(k=>qlcRank.includes(k));
+      if (mentionsEquipment) {
+        const hasRelevant = (articles||[]).some(a=>{
+          const title = String(a.title||a.raw?.name||'').toLowerCase();
+          const url = String(a.page_url||a.source_url||a.url||'').toLowerCase();
+          return Array.from(equipmentKeywords).some(k=> title.includes(k) || url.includes(k));
+        });
+        if (!hasRelevant) {
+          confidence = Math.min(confidence, 0.3);
+        }
+      }
+    } catch {}
 
     // Log the answer (async, don't wait for it)
     if (sessionId && query) {

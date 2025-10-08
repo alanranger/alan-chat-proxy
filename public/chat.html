@@ -557,7 +557,7 @@ function eventHeaderLabel(structured){
 function renderEventsBlock(structured, query){
   // Skip events block for simple follow-up questions (but not for legitimate event queries)
   const isSimpleFollowUp = query && (
-    /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
+    /^(how many|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
     !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost') &&
     !query.includes('workshop') && !query.includes('course') && !query.includes('event') && !query.includes('class')
   );

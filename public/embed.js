@@ -27,6 +27,7 @@
   // Read optional cache-busting version from script src (?v=...)
   let scriptVersion = '';
   try { const u = new URL(scriptEl.src, location.href); scriptVersion = u.searchParams.get('v') || ''; } catch {}
+  if (!scriptVersion) { scriptVersion = String(Date.now()); }
 
   function ensureGA(){
     if (!cfg.ga4) return;
