@@ -128,21 +128,6 @@
       </div>
     </div>
 
-    <!-- Process Overview -->
-    <div class="section">
-      <h2>📋 Process Overview</h2>
-      <div class="card" style="background: #1a3a1a; border: 1px solid #2a5a2a;">
-        <div style="color: #4ade80; font-weight: bold; margin-bottom: 10px;">🏗️ Foundation → Enhancement Data Pipeline</div>
-        <div style="color: #ccc; font-size: 14px; line-height: 1.5;">
-          <p style="margin: 0 0 8px 0;"><strong>Step 1:</strong> Import your CSV data (events, products, articles) into the database</p>
-          <p style="margin: 0 0 8px 0;"><strong>Step 2:</strong> Scrape website content using foundation → enhancement approach</p>
-          <p style="margin: 0 0 8px 0;"><strong>Step 3:</strong> Create intelligent mappings between events and products</p>
-          <p style="margin: 0 0 8px 0;"><strong>Step 4:</strong> Finalize and optimize everything for the chatbot</p>
-          <p style="margin: 0 0 0 0;"><strong>Result:</strong> Your chatbot has rich, layered data for accurate responses</p>
-        </div>
-      </div>
-    </div>
-
     <!-- Action Buttons -->
     <div class="section">
       <h2>🚀 Data Pipeline Steps (Execute in Order)</h2>
@@ -157,12 +142,11 @@
             <span id="stepImport" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
           </div>
           <div>
-            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Step 1: Import CSV Data</h4>
-            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
-              <p style="margin:0 0 8px 0;"><strong>What it does:</strong> Reads your CSV files and imports structured data into the database.</p>
-              <p style="margin:0 0 8px 0;"><strong>Updates:</strong> <code>page_entities</code> table with events, products, articles, and services.</p>
-              <p style="margin:0 0 8px 0;"><strong>Result:</strong> Your CSV data is now available for the chatbot to reference.</p>
-            </div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Import CSV Data</h4>
+            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
+              Reads your CSV files and imports structured data into the database. 
+              Updates: <code>page_entities</code> table with events, products, articles, and services.
+            </p>
           </div>
 
           <!-- Step 2 -->
@@ -171,24 +155,12 @@
               <span class="step-num">2️⃣</span> 🕷️ Scrape URLs
             </button>
             <span id="stepScrape" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
-            <div style="font-size:11px;color:#888;margin-bottom:8px;">
-              <div style="margin-bottom:6px;padding:6px;background:#1a3a1a;border-radius:4px;border-left:3px solid #4ade80;">
-                <label style="display:block;margin:0;color:#4ade80;font-weight:bold;">
-                  <input type="checkbox" id="foundation_mode" checked style="margin-right:4px;"> 
-                  📋 Foundation Layer (site_urls)
-                </label>
-                <div style="font-size:10px;color:#ccc;margin-left:16px;">Creates base data chunks for RAG</div>
-              </div>
-              <div style="padding:6px;background:#2a2a2a;border-radius:4px;border-left:3px solid #fbbf24;">
-                <label style="display:block;margin:0;color:#fbbf24;font-weight:bold;">
-                  <input type="checkbox" id="enhancement_mode" checked style="margin-right:4px;"> 
-                  ✨ Enhancement Layers
-                </label>
-                <div style="font-size:10px;color:#ccc;margin-left:16px;">Enriches same URLs with additional context</div>
-                <div id="enhancement_sources" style="font-size:9px;color:#888;margin-left:16px;margin-top:2px;">
-                  <!-- Auto-detected CSV sources will appear here -->
-                </div>
-              </div>
+            <div style="font-size:11px;color:#888;">
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_site" checked> site_urls</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_blog"> blog</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_event"> events</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_workshop"> workshops</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_service"> services</label>
             </div>
             <button class="btn" onclick="scrapeWebsite(true)" id="dryRunBtn" style="font-size:11px;padding:6px 10px;">
               🧪 Dry‑Run
@@ -198,14 +170,11 @@
             </button>
           </div>
           <div>
-            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Step 2: Foundation → Enhancement Scraping</h4>
-            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
-              <p style="margin:0 0 8px 0;"><strong>What it does:</strong> Scrapes web pages to extract text content and structured data.</p>
-              <p style="margin:0 0 8px 0;"><strong>Foundation Layer:</strong> Scrapes basic content from site_urls CSV (creates base data chunks for RAG)</p>
-              <p style="margin:0 0 8px 0;"><strong>Enhancement Layers:</strong> Enriches same URLs with additional context from other CSVs</p>
-              <p style="margin:0 0 8px 0;"><strong>Updates:</strong> <code>page_chunks</code> (text) and <code>page_entities</code> (structured data)</p>
-              <p style="margin:0 0 8px 0;"><strong>Result:</strong> Rich, layered data that gives the chatbot comprehensive understanding</p>
-            </div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Scrape Website Content</h4>
+            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
+              Fetches web pages and extracts text content + JSON-LD structured data. 
+              Updates: <code>page_chunks</code> (text) and <code>page_entities</code> (structured data).
+            </p>
           </div>
 
           <!-- Step 3 -->
@@ -216,13 +185,11 @@
             <span id="stepMap" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
           </div>
           <div>
-            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Step 3: Create Event → Product Mappings</h4>
-            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
-              <p style="margin:0 0 8px 0;"><strong>What it does:</strong> Automatically matches events with related products/services using AI.</p>
-              <p style="margin:0 0 8px 0;"><strong>Process:</strong> Analyzes event descriptions and product details to find connections</p>
-              <p style="margin:0 0 8px 0;"><strong>Updates:</strong> <code>event_product_links_auto</code> table with intelligent connections</p>
-              <p style="margin:0 0 8px 0;"><strong>Result:</strong> Chatbot can now recommend relevant products for events and vice versa</p>
-            </div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Link Events to Products</h4>
+            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
+              Automatically matches events with related products/services using AI. 
+              Updates: <code>event_product_links_auto</code> table with intelligent connections.
+            </p>
           </div>
 
           <!-- Step 4 -->
@@ -233,13 +200,11 @@
             <span id="stepFinalize" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
           </div>
           <div>
-            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Step 4: Finalize & Optimize</h4>
-            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
-              <p style="margin:0 0 8px 0;"><strong>What it does:</strong> Refreshes database views and warms caches for optimal AI performance.</p>
-              <p style="margin:0 0 8px 0;"><strong>Process:</strong> Updates all chat views and ensures data is ready for the chatbot</p>
-              <p style="margin:0 0 8px 0;"><strong>Updates:</strong> All chat views (<code>v_events_for_chat</code>, <code>v_service_content</code>, etc.)</p>
-              <p style="margin:0 0 8px 0;"><strong>Result:</strong> Chatbot is ready to provide fast, accurate responses with all your data</p>
-            </div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Warm & Refresh Views</h4>
+            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
+              Refreshes database views and warms caches for optimal AI performance. 
+              Updates: All chat views (<code>v_events_for_chat</code>, <code>v_service_content</code>, etc.).
+            </p>
           </div>
 
         </div>
@@ -852,9 +817,6 @@
           updateStats();
           addResult(`📊 Found ${urls.length} URLs ready for scraping`);
         }
-        
-        // Update enhancement sources display
-        updateEnhancementSources();
         addResult(`ℹ️ ${contentType} files are for reference only - not imported to database`, 'info');
         return { success: true, csvRows: actualRowCount, imported: 0 }; // Count as successful since these are reference files
       }
@@ -915,11 +877,6 @@
           };
           
           addResult(`🔗 ${contentType} URLs cached for Scrape step: ${urls.length} URLs`, 'info');
-          
-          // Update enhancement sources display
-          updateEnhancementSources();
-        }
-        
         // Cache site_urls text for scrape step if it was imported via bulk box
         if (contentType === 'site_urls') {
           try { 
@@ -1175,68 +1132,48 @@
 
     // Website scraping
     async function scrapeWebsite(dryRun=false) {
-      // Collect URLs from ALL CSV files with their source categories
-      let allUrlsWithCategories = [];
+      // Collect URLs from ALL CSV files, not just site_urls
+      let allUrls = [];
       let urlSources = [];
 
-      const foundationMode = document.getElementById('foundation_mode')?.checked !== false;
-      const enhancementMode = document.getElementById('enhancement_mode')?.checked === true;
+      const includeSite = document.getElementById('src_site')?.checked !== false;
+      const includeBlog = document.getElementById('src_blog')?.checked === true;
+      const includeEvent = document.getElementById('src_event')?.checked === true;
+      const includeWorkshop = document.getElementById('src_workshop')?.checked === true;
+      const includeService = document.getElementById('src_service')?.checked === true;
 
-      // 1. Foundation Layer: Collect from site_urls CSV (if available)
+      // 1. Collect from site_urls CSV (if available)
       const siteUrlsFile = document.getElementById('siteUrlsCsv').files[0];
-      if (foundationMode && (siteUrlsFile || window.__cachedSiteUrlsText)) {
+      if (includeSite && (siteUrlsFile || window.__cachedSiteUrlsText)) {
         const csvText = siteUrlsFile ? await siteUrlsFile.text() : String(window.__cachedSiteUrlsText || '');
         const lines = csvText.split('\n').filter(line => line.trim());
         const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
-        // Add URLs with their source category
-        urls.forEach(url => {
-          allUrlsWithCategories.push({ url, sourceCategory: 'site_urls' });
-        });
-        urlSources.push(`📋 Foundation (site_urls): ${urls.length}`);
+        allUrls = allUrls.concat(urls);
+        urlSources.push(`site_urls: ${urls.length}`);
       }
 
-      // 2. Enhancement Layers: Collect from cached CSV data (from bulk import) with source categories
-      if (enhancementMode && window.__cachedCsvData) {
+      // 2. Collect from cached CSV data (from bulk import)
+      if (window.__cachedCsvData) {
         for (const [type, data] of Object.entries(window.__cachedCsvData)) {
           if (data.urls && data.urls.length > 0) {
-            // Add URLs with their source category
-            data.urls.forEach(url => {
-              allUrlsWithCategories.push({ url, sourceCategory: type });
-            });
-            urlSources.push(`✨ Enhancement (${type}): ${data.urls.length}`);
+            if (type==='blog' && !includeBlog) continue;
+            if (type==='event' && !includeEvent) continue;
+            if (type==='workshop' && !includeWorkshop) continue;
+            if (type==='service' && !includeService) continue;
+            allUrls = allUrls.concat(data.urls);
+            urlSources.push(`${type}: ${data.urls.length}`);
           }
         }
       }
 
-      if (allUrlsWithCategories.length === 0) {
+      if (allUrls.length === 0) {
         addResult('❌ No URLs found to scrape. Please import CSV files first.', 'error');
         return;
       }
 
-      // Group URLs by their actual URL to identify true duplicates within categories
-      const urlGroups = {};
-      allUrlsWithCategories.forEach(({ url, sourceCategory }) => {
-        if (!urlGroups[url]) {
-          urlGroups[url] = [];
-        }
-        urlGroups[url].push(sourceCategory);
-      });
-
-      // Create final URL list - allow same URL to be scraped multiple times if from different categories
-      const urlsToScrape = [];
-      let trueDuplicatesRemoved = 0;
-      
-      Object.entries(urlGroups).forEach(([url, categories]) => {
-        // Remove duplicates within the same category (keep only one per category)
-        const uniqueCategories = [...new Set(categories)];
-        const duplicatesWithinCategory = categories.length - uniqueCategories.length;
-        trueDuplicatesRemoved += duplicatesWithinCategory;
-        
-        // Add one entry per unique category
-        uniqueCategories.forEach(category => {
-          urlsToScrape.push({ url, sourceCategory: category });
-        });
-      });
+      // Remove duplicates while preserving order
+      const uniqueUrls = [...new Set(allUrls)];
+      const duplicateCount = allUrls.length - uniqueUrls.length;
 
       // enable stop button
       let stopRequested = false;
@@ -1247,14 +1184,10 @@
       document.getElementById('stepScrape').style.background = '#3a3';
       document.getElementById('stepScrape').textContent = 'Status: running';
       
-      addResult(`📊 FOUNDATION → ENHANCEMENT SCRAPING PLAN:`);
-      addResult(`   • Total URLs collected: ${allUrlsWithCategories.length}`);
-      addResult(`   • URLs to scrape: ${urlsToScrape.length} (same URLs scraped multiple times for enhancement)`);
-      addResult(`   • Within-CSV duplicates removed: ${trueDuplicatesRemoved}`);
-      addResult(`   • Cross-CSV enhancement: ${Object.keys(urlGroups).filter(url => urlGroups[url].length > 1).length} URLs will be enhanced by multiple CSVs`);
-      addResult(`📋 Data Sources: ${urlSources.join(', ')}`);
+      addResult(`📊 Found ${uniqueUrls.length} unique URLs to scrape (${allUrls.length} total, ${duplicateCount} duplicates removed)`);
+      addResult(`📋 Sources: ${urlSources.join(', ')}`);
 
-      const urls = urlsToScrape;
+      const urls = uniqueUrls;
 
       // stats counters
       stats.loadedRows = urls.length;
@@ -1277,24 +1210,15 @@
       
       // Use global urlScrapingStats - don't redeclare
 
-      function categorize(url, result, sourceCategory) {
+      function categorize(url, result) {
         const u = (url||'').toLowerCase();
-        
-        // First, try to use the source category if it's specific enough
-        if (sourceCategory === 'blog') return 'blog_articles';
-        if (sourceCategory === 'event') return 'course_events';
-        if (sourceCategory === 'workshop') return 'workshop_events';
-        if (sourceCategory === 'service') return 'course_products';
-        if (sourceCategory === 'product') return 'workshop_products';
-        if (sourceCategory === 'site_urls') return 'website_urls';
-        
-        // Fallback to URL pattern matching
+        // Broader patterns to catch more content
         if (u.includes('/blog') || u.includes('/news') || u.includes('/blog-on-photography')) return 'blog_articles';
         if (u.includes('/course') || u.includes('/lesson') || u.includes('/beginners-photography-lessons')) return 'course_events';
         if (u.includes('/workshop') || u.includes('/photo-workshop') || u.includes('/photographic-workshops-near-me') || u.includes('/photo-workshops-uk')) return 'workshop_events';
         if (u.includes('/service') || u.includes('/mentoring') || u.includes('/photography-services-near-me')) return 'course_products';
         if (u.includes('/shop') || u.includes('/product') || u.includes('/photography-shop') || u.includes('/photography-presents')) return 'course_products';
-        if (u.includes('/landing') || u.includes('/page')) return 'website_urls';
+        if (u.includes('/landing') || u.includes('/page')) return 'website_urls'; // Changed from landing_pages
         
         // Check for JSON-LD content in result
         if (result && result.jsonLdFound) return 'json_extraction';
@@ -1314,18 +1238,13 @@
         addResult(`📦 Processing batch ${batchIndex + 1}: ${batchUrls.length} URLs`, 'info');
         
         // Process all URLs in this batch concurrently
-        const promises = batchUrls.map(async (urlEntry, urlIndex) => {
-          const { url, sourceCategory } = urlEntry;
+        const promises = batchUrls.map(async (url, urlIndex) => {
           const globalIndex = batchIndex * BATCH_SIZE + urlIndex;
           updateProgress((completed / urls.length) * 100, `Scraping ${url}...`);
           
           const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
-          const category = categorize(url, result, sourceCategory);
-          
-          // Show enhancement process clearly
-          const isEnhancement = urlGroups[url] && urlGroups[url].length > 1;
-          const enhancementNote = isEnhancement ? ` (ENHANCING: ${urlGroups[url].join(' → ')})` : '';
-          addResult(`🔍 ${url} → ${category} (source: ${sourceCategory})${enhancementNote}`, 'info');
+          const category = categorize(url, result);
+          addResult(`🔍 DEBUG: ${url} -> Category: ${category}`, 'info');
           
           // Ensure category exists in urlScrapingStats
           if (!urlScrapingStats[category]) {
@@ -1335,13 +1254,12 @@
           
           if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
             if (result.message && result.message.includes('duplicates')) {
-              addResult(`✅ Content already exists: ${url}  (source: ${sourceCategory}, batch ${batchIndex + 1}) — ${result.message}`, 'success');
+              addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
               renderCategoryStats();
             } else {
-              const enhancementInfo = isEnhancement ? ` [ENHANCED by ${sourceCategory}]` : '';
-              addResult(`✅ Scraped: ${url}${enhancementInfo}`, 'success');
+              addResult(`✅ Scraped: ${url}`, 'success');
               stats.successCount++;
               urlScrapingStats[category].success++;
               addResult(`🔍 DEBUG: Updated ${category}: success=${urlScrapingStats[category].success}`, 'info');
@@ -1351,12 +1269,12 @@
             const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
             const reasonLc = reason.toLowerCase();
             if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
-              addResult(`✅ Skipped duplicate: ${url}  (source: ${sourceCategory}, batch ${batchIndex + 1}) — ${reason}`, 'success');
+              addResult(`✅ Skipped duplicate: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
               renderCategoryStats();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
-              addResult(`❌ Timeout: ${url}  (source: ${sourceCategory}, batch ${batchIndex + 1})`, 'error');
+              addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
               renderCategoryStats();
@@ -1371,7 +1289,7 @@
                   extra = `\n↪ Attempts: ${JSON.stringify(j.attempts)}`;
                 }
               } catch {}
-              addResult(`❌ Failed: ${url}  (source: ${sourceCategory}, batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
+              addResult(`❌ Failed: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
               renderCategoryStats();
@@ -1413,14 +1331,6 @@
 
       updateProgress(100, 'Website scraping complete');
       addResult('🎉 Website scraping complete!', 'success');
-      
-      // Show foundation → enhancement summary
-      addResult('📊 FOUNDATION → ENHANCEMENT SUMMARY:');
-      const enhancementUrls = Object.keys(urlGroups).filter(url => urlGroups[url].length > 1);
-      addResult(`   • Foundation URLs scraped: ${urlScrapingStats['website_urls']?.success || 0}`);
-      addResult(`   • Enhancement layers added: ${enhancementUrls.length} URLs enhanced by multiple CSVs`);
-      addResult(`   • Total data chunks created: ${stats.successCount} successful scrapes`);
-      addResult(`   • Cross-CSV enhancement: ${enhancementUrls.length > 0 ? '✅ Active' : '❌ No cross-CSV enhancement detected'}`);
       
       // Debug: Log final urlScrapingStats
       
@@ -1881,66 +1791,7 @@
       // Add totals row
       const totalsRow = `<tr style="border-top:2px solid #666;font-weight:bold;background:#2a2a2a;"><td style="padding:4px 8px;">TOTALS</td><td style="padding:4px 8px;">${totalCsvCount}</td><td style="color:#51cf66">${totalSuccess}</td><td style="color:#ff6b6b">${totalFailed}</td><td style="color:#74c0fc">${totalSkipped}</td><td style="color:#ffd43b">${totalDuplicatesRemoved}</td></tr>`;
       
-      const html = `
-        <div style="margin-bottom: 20px; padding: 15px; background: #1a3a1a; border-radius: 8px; border: 1px solid #2a5a2a;">
-          <h4 style="margin: 0 0 15px 0; color: #4ade80;">🏗️ Foundation → Enhancement Data Flow</h4>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-            <div style="padding: 10px; background: #2a4a2a; border-radius: 6px; border-left: 4px solid #4ade80;">
-              <h5 style="margin: 0 0 8px 0; color: #4ade80;">📋 FOUNDATION LAYER</h5>
-              <div style="color: #ccc; font-size: 14px;">
-                <strong>site_urls CSV:</strong> Scrapes basic content from all website pages<br>
-                <strong>Purpose:</strong> Creates the foundational data chunks for RAG
-              </div>
-            </div>
-            <div style="padding: 10px; background: #2a4a2a; border-radius: 6px; border-left: 4px solid #fbbf24;">
-              <h5 style="margin: 0 0 8px 0; color: #fbbf24;">✨ ENHANCEMENT LAYERS</h5>
-              <div style="color: #ccc; font-size: 14px;">
-                <strong>Other CSVs:</strong> Add specific metadata, product mappings, relationships<br>
-                <strong>Purpose:</strong> Enrich same URLs with additional context for better responses
-              </div>
-            </div>
-          </div>
-          <div style="padding: 10px; background: #2a4a2a; border-radius: 6px; border-left: 4px solid #8b5cf6;">
-            <h5 style="margin: 0 0 8px 0; color: #8b5cf6;">🎯 RESULT</h5>
-            <div style="color: #ccc; font-size: 14px;">
-              <strong>Same URLs get scraped multiple times</strong> - once per CSV category - to build rich, layered data that gives the chatbot comprehensive understanding for better intent matching and responses.
-            </div>
-          </div>
-        </div>
-        
-        <div style="margin-bottom: 15px; padding: 12px; background: #2a2a2a; border-radius: 6px; border: 1px solid #444;">
-          <h4 style="margin: 0 0 10px 0; color: #fff;">📊 Scraping Results by Category</h4>
-          <table style="width:100%;border-collapse:collapse;background:#1b1b1b;border:1px solid #333">
-            <thead>
-              <tr style="background: #333;">
-                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">Category</th>
-                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">CSV Count</th>
-                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">Success</th>
-                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">Failed</th>
-                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">Skipped</th>
-                <th style="text-align:left;padding:8px;border-bottom:1px solid #555;">Within-CSV Duplicates</th>
-              </tr>
-            </thead>
-            <tbody>${rows}${totalsRow}</tbody>
-          </table>
-        </div>
-        
-        <div style="padding: 15px; background: #2a2a2a; border-radius: 8px; border: 1px solid #444;">
-          <h4 style="margin: 0 0 12px 0; color: #fff;">🔍 What Each Number Means</h4>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div style="color: #ccc; font-size: 14px;">
-              <strong style="color: #4ade80;">CSV Count:</strong> Total URLs in this CSV file<br>
-              <strong style="color: #4ade80;">Success:</strong> URLs successfully scraped and stored<br>
-              <strong style="color: #ff6b6b;">Failed:</strong> URLs that couldn't be scraped (404, errors)
-            </div>
-            <div style="color: #ccc; font-size: 14px;">
-              <strong style="color: #74c0fc;">Skipped:</strong> URLs already processed this session<br>
-              <strong style="color: #ffd43b;">Within-CSV Duplicates:</strong> Exact duplicates removed within this CSV only<br>
-              <strong style="color: #8b5cf6;">Cross-CSV:</strong> Same URL from different CSVs = intentional enhancement
-            </div>
-          </div>
-        </div>
-      `;
+      const html = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">CSV Count</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th><th style="text-align:left;padding:4px 8px;">Duplicates Removed</th></tr></thead><tbody>${rows}${totalsRow}</tbody></table>`;
       el.innerHTML = html;
       
       // Update header blocks to match table totals
@@ -1966,34 +1817,12 @@
       updateStats();
     }
 
-    // Update enhancement sources display
-    function updateEnhancementSources() {
-      const sourcesEl = document.getElementById('enhancement_sources');
-      if (!sourcesEl) return;
-      
-      const sources = [];
-      if (window.__cachedCsvData) {
-        for (const [type, data] of Object.entries(window.__cachedCsvData)) {
-          if (data.urls && data.urls.length > 0) {
-            sources.push(`${type} (${data.urls.length} URLs)`);
-          }
-        }
-      }
-      
-      if (sources.length > 0) {
-        sourcesEl.innerHTML = `Available: ${sources.join(', ')}`;
-      } else {
-        sourcesEl.innerHTML = 'No CSV data imported yet';
-      }
-    }
-
     // Load hardcoded token on page load
     window.onload = function() {
       addResult('✅ Hardcoded token ready for use');
       updateStats();
       updateParityPill();
       updateCronPill();
-      updateEnhancementSources();
     };
   </script>
 </body>
