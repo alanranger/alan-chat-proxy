@@ -1408,6 +1408,7 @@
               <h6 style="color: #fff;">Question ${index + 1}: "${preview.question}"</h6>
               <p style="color: #ccc;"><strong>Current Answer:</strong> ${preview.currentAnswer || 'No answer available'}</p>
               <p style="color: #ccc;"><strong>Confidence:</strong> ${Math.round(preview.confidence * 100)}%</p>
+              ${preview.pagePath ? `<p style=\"color: #ccc;\"><strong>Page:</strong> ${preview.pagePath}</p>` : ''}
               ${preview.suggestedContent ? `
                 <div style="background: #1a1f2e; padding: 10px; margin: 10px 0; border-radius: 3px; border: 1px solid #555;">
                   <h6 style="color: #fff;">Suggested New Content:</h6>

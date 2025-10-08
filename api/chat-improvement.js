@@ -632,6 +632,13 @@ export default async function handler(req, res) {
             const topQuestions = [...improvementPlan.highPriority, ...improvementPlan.mediumPriority].slice(0, 3);
             
             for (const question of topQuestions) {
+              // Derive a representative page from the latest interaction's page_context
+              let pagePath = null;
+              if (question.interactions && question.interactions.length > 0) {
+                const latest = [...question.interactions].sort((a,b)=> new Date(b.created_at)-new Date(a.created_at))[0];
+                const pc = latest?.page_context || {};
+                pagePath = pc.pathname || pc.url || null;
+              }
               const contentResponse = await generateImprovedContent(
                 question.question, 
                 question.topAnswer, 
@@ -642,6 +649,7 @@ export default async function handler(req, res) {
                 question: question.question,
                 currentAnswer: question.topAnswer,
                 confidence: question.confidence,
+                pagePath,
                 suggestedContent: contentResponse[0]?.suggestedContent || null
               });
             }
