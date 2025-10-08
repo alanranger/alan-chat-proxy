@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createHash } from 'crypto';
 
 function supabaseAdmin() {
   const url = process.env.SUPABASE_URL;
@@ -822,10 +823,15 @@ export default async function handler(req, res) {
           const intent = suggestedContent.intent || 'advice';
 
           // Add the improved content to page_entities as an article
+          const newUrl = `https://www.alanranger.com/improved-content/${Date.now()}`;
+          const entityHash = createHash('sha1')
+            .update(JSON.stringify({ url: newUrl, kind: 'article', title }))
+            .digest('hex');
+
           const { data: insertedContent, error: insertError } = await supa
             .from('page_entities')
             .insert([{
-            url: `https://www.alanranger.com/improved-content/${Date.now()}`,
+              url: newUrl,
             kind: 'article',
             title: title,
             description: content.substring(0, 500), // Limit description length
@@ -838,7 +844,8 @@ export default async function handler(req, res) {
               original_question: question,
               created_at: new Date().toISOString()
             },
-            last_seen: new Date().toISOString()
+              last_seen: new Date().toISOString(),
+              entity_hash: entityHash
             }])
             .select()
             .single();
