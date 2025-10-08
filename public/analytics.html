@@ -1369,6 +1369,8 @@
         
         if (!data.ok) throw new Error(data.error || 'Unknown error');
         
+        // Store all previews globally to avoid embedding large JSON in onclick attributes
+        window.latestImprovementPreviews = data.previews || [];
         const { previews } = data;
         totalPreviews = previews.length;
         
@@ -1410,13 +1412,13 @@
                   <p style="color: #ccc;"><strong>Keywords:</strong> ${preview.suggestedContent.keywords?.join(', ') || 'None'}</p>
                 </div>
                 <div style="margin-top: 10px;">
-                  <button onclick="approveContent(${index}, '${preview.question.replace(/'/g, "\\'")}', ${JSON.stringify(preview.suggestedContent).replace(/"/g, '&quot;')})" class="btn btn-success btn-sm" style="margin-right: 10px;">
+                  <button id="approve-btn-${index}" onclick="approveContent(${index})" class="btn btn-success btn-sm" style="margin-right: 10px;">
                     ✅ Approve
                   </button>
-                  <button onclick="rejectContent(${index})" class="btn btn-danger btn-sm" style="margin-right: 10px;">
+                  <button id="reject-btn-${index}" onclick="rejectContent(${index})" class="btn btn-danger btn-sm" style="margin-right: 10px;">
                     ❌ Reject
                   </button>
-                  <button onclick="ignoreQuestion('${preview.question.replace(/'/g, "\\'")}', ${index})" class="btn btn-warning btn-sm">
+                  <button id="ignore-btn-${index}" onclick="ignoreQuestion('${preview.question.replace(/'/g, "\\'")}', ${index})" class="btn btn-warning btn-sm">
                     ⏭️ Ignore
                   </button>
                 </div>
@@ -1548,23 +1550,26 @@
       showToast(`Progress: ${total}/${totalPreviews} reviewed (${approvedContent.length} approved)`, 'info');
     }
     
-    async function approveContent(index, question, suggestedContent) {
+    async function approveContent(index) {
+      const preview = (window.latestImprovementPreviews || [])[index];
+      if (!preview || !preview.suggestedContent) return;
+      const question = preview.question;
+      const suggestedContent = preview.suggestedContent;
       approvedContent.push({ question, suggestedContent });
-      
+
       // Update the button to show it's approved
-      const buttons = document.querySelectorAll(`button[onclick*="approveContent(${index}"]`);
-      buttons.forEach(btn => {
-        btn.innerHTML = '✅ Approved';
-        btn.disabled = true;
-        btn.style.backgroundColor = '#28a745';
-      });
+      const approveBtn = document.getElementById(`approve-btn-${index}`);
+      if (approveBtn) {
+        approveBtn.innerHTML = '✅ Approved';
+        approveBtn.disabled = true;
+        approveBtn.style.backgroundColor = '#28a745';
+      }
       
       // Hide other buttons
-      const rejectButtons = document.querySelectorAll(`button[onclick*="rejectContent(${index}"]`);
-      const ignoreButtons = document.querySelectorAll(`button[onclick*="ignoreQuestion('${question.replace(/'/g, "\\'")}', ${index}"]`);
-      [...rejectButtons, ...ignoreButtons].forEach(btn => {
-        btn.style.display = 'none';
-      });
+      const rejectBtn = document.getElementById(`reject-btn-${index}`);
+      const ignoreBtn = document.getElementById(`ignore-btn-${index}`);
+      if (rejectBtn) rejectBtn.style.display = 'none';
+      if (ignoreBtn) ignoreBtn.style.display = 'none';
       
       // Update progress
       updateProgress();
@@ -1702,7 +1707,12 @@
               })
             });
 
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) {
+              // Try to extract error details from body
+              let detail = '';
+              try { detail = await response.text(); } catch (e) { /* ignore */ }
+              throw new Error(`HTTP ${response.status}${detail ? ` — ${detail}` : ''}`);
+            }
             const data = await response.json();
             
             if (!data.ok) throw new Error(data.error || 'Unknown error');

@@ -822,7 +822,9 @@ export default async function handler(req, res) {
           const intent = suggestedContent.intent || 'advice';
 
           // Add the improved content to page_entities as an article
-          const { data: insertedContent, error: insertError } = await supa.from('page_entities').insert([{
+          const { data: insertedContent, error: insertError } = await supa
+            .from('page_entities')
+            .insert([{
             url: `https://www.alanranger.com/improved-content/${Date.now()}`,
             kind: 'article',
             title: title,
@@ -837,15 +839,19 @@ export default async function handler(req, res) {
               created_at: new Date().toISOString()
             },
             last_seen: new Date().toISOString()
-          }]).select().single();
+            }])
+            .select()
+            .single();
 
           if (insertError) {
             console.error('Insert error:', insertError);
-            throw new Error(`Content insertion failed: ${insertError.message}`);
+            return sendJSON(res, 500, { error: 'insert_failed', detail: insertError.message });
           }
 
           // Track the improvement
-          const { error: trackingError } = await supa.from('content_improvement_tracking').upsert({
+          const { error: trackingError } = await supa
+            .from('content_improvement_tracking')
+            .upsert({
             question: question,
             original_confidence: originalInteraction?.confidence || null,
             original_answer: originalInteraction?.answer || null,
@@ -858,7 +864,15 @@ export default async function handler(req, res) {
 
           if (trackingError) {
             console.error('Tracking error:', trackingError);
-            // Don't fail the whole operation for tracking errors
+            // Return warning but not fail the insert
+            return sendJSON(res, 200, {
+              ok: true,
+              message: 'Content improvement implemented, tracking failed',
+              question,
+              content: suggestedContent,
+              originalConfidence: originalInteraction?.confidence || null,
+              trackingWarning: trackingError.message
+            });
           }
 
           return sendJSON(res, 200, {
