@@ -947,6 +947,9 @@
 
     // Main import function
     async function importAllCSVs() {
+      console.log('importAllCSVs called');
+      addResult('🔍 importAllCSVs function called', 'info');
+      
       const token = getToken();
       showToast('Starting Import All…');
       addResult('🔐 Using hardcoded token for authentication');
@@ -987,6 +990,10 @@
 
       // Combine all files
       const files = [...individualFiles.filter(f => f.file), ...bulkFilesWithTypes];
+      
+      addResult(`🔍 Found ${individualFiles.filter(f => f.file).length} individual files`, 'info');
+      addResult(`🔍 Found ${bulkFilesWithTypes.length} bulk files`, 'info');
+      addResult(`🔍 Total files to process: ${files.length}`, 'info');
 
       let successCount = 0;
       let totalCount = files.filter(f => f.file).length;
@@ -995,6 +1002,8 @@
 
       if (totalCount === 0) {
         addResult('❌ No CSV files selected', 'error');
+        document.getElementById('stepImport').style.background = '#a62';
+        document.getElementById('stepImport').textContent = 'Status: no files';
         return;
       }
 
