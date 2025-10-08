@@ -733,15 +733,20 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   }
 
   // Fetch a wider pool then rank deterministically by relevance
+  // Some tripod posts may be stored with varying kinds (e.g., BlogPosting, FAQPage).
+  // Start broad (no kind restriction) and search across title, url and raw JSON fields.
   let q = client
-        .from("page_entities")
-    .select("id, title, page_url, source_url, raw, last_seen")
-    .in("kind", ["article", "blog", "page"])
+    .from("page_entities")
+    .select("id, title, page_url, source_url, raw, last_seen, kind")
     .limit(limit * 3);
 
-  const orExpr =
-    anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
-  if (orExpr) q = q.or(orExpr);
+  const parts = [];
+  const t1 = anyIlike("title", keywords); if (t1) parts.push(t1);
+  const t2 = anyIlike("page_url", keywords); if (t2) parts.push(t2);
+  // JSON fields (headline/name) where schema types store titles
+  const t3 = anyIlike("raw->>headline", keywords); if (t3) parts.push(t3);
+  const t4 = anyIlike("raw->>name", keywords); if (t4) parts.push(t4);
+  if (parts.length) q = q.or(parts.join(","));
 
   const { data, error } = await q;
   if (error) return [];
