@@ -767,9 +767,7 @@ export default async function handler(req, res) {
                 url,
                 title,
                 description,
-                raw->>'source' as source,
-                raw->>'original_question' as original_question,
-                raw->>'content' as full_content,
+                raw,
                 last_seen
               `)
               .eq('raw->>source', 'automated_improvement')
@@ -778,10 +776,21 @@ export default async function handler(req, res) {
 
             if (error) throw new Error(`Failed to fetch implemented content: ${error.message}`);
 
+            // Transform the data to extract the fields from raw JSONB
+            const transformedContent = (implementedContent || []).map(item => ({
+              url: item.url,
+              title: item.title,
+              description: item.description,
+              source: item.raw?.source || 'automated_improvement',
+              original_question: item.raw?.original_question || 'Unknown question',
+              full_content: item.raw?.content || 'No content available',
+              last_seen: item.last_seen
+            }));
+
             return sendJSON(res, 200, {
               ok: true,
-              implementedContent: implementedContent || [],
-              count: implementedContent?.length || 0
+              implementedContent: transformedContent,
+              count: transformedContent.length
             });
           } catch (error) {
             console.error('List implemented error:', error);
