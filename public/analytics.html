@@ -1976,7 +1976,8 @@
                         <small>
                           Intent: ${interaction.intent || 'Unknown'} | 
                           Confidence: ${interaction.confidence ? (interaction.confidence * 100).toFixed(1) + '%' : 'Unknown'} | 
-                          Response Time: ${interaction.response_time_ms || 'Unknown'}ms
+                          Response Time: ${interaction.response_time_ms || 'Unknown'}ms |
+                          Page: ${interaction.page_context?.pathname || interaction.page_context?.url || 'N/A'}
                         </small>
                       </div>
                     </div>
