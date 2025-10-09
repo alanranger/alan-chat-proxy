@@ -404,12 +404,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Unknown/unsupported
-    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify (GET) or action=search (POST) or action=aggregate_analytics (POST)' });
-  } catch (e) {
-    return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message || e) });
-  }
-
     // --- export_reconcile: compare exported mappings vs event CSV view ---
     if (req.method === 'GET' && action === 'export_reconcile') {
       try {
@@ -458,4 +452,10 @@ export default async function handler(req, res) {
         return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message||e) });
       }
     }
+
+    // Unknown/unsupported
+    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify|counts|parity|cron_status|export|export_unmapped|export_reconcile (GET) or action=search|finalize|aggregate_analytics (POST)' });
+  } catch (e) {
+    return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message || e) });
+  }
 }
