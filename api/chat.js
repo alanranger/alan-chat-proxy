@@ -1688,15 +1688,20 @@ export default async function handler(req, res) {
                 raw: { ...product.raw, ...productDetails.raw }
               };
               console.log('DEBUG: Enriched product with full details from page_entities');
+              console.log('DEBUG: Final enriched product description:', product.description);
             } else {
               console.log('DEBUG: No product details found for URL:', product.page_url);
             }
           } catch (error) {
             console.log('DEBUG: Could not fetch full product details:', error.message);
           }
+        } else {
+          console.log('DEBUG: No product.page_url found, skipping enrichment');
         }
       }
+      console.log('DEBUG: About to build product panel for product:', JSON.stringify(product, null, 2));
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
+      console.log('DEBUG: Generated product panel:', productPanel);
 
       // Use extractRelevantInfo to get specific answers for follow-up questions
       const dataContext = { events, products: product ? [product] : [], articles: [], originalQuery: previousQuery };
@@ -1758,7 +1763,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.34-summary-fix-debug",
+          version: "v1.2.35-full-debug",
           intent: "events",
           keywords: keywords,
           counts: {
