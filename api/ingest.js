@@ -408,7 +408,6 @@ async function ingestSingleUrl(url, supa, options = {}) {
             const merged = { ...existing };
             // Event preservation: keep CSV-derived schedule if present; merge RAW to retain CSV hints
             if (e.kind === 'event') {
-              // Preserve existing date_start/date_end (from CSV import) and only update other fields
               merged.title = e.title ?? merged.title;
               merged.description = e.description ?? merged.description;
               merged.location = e.location ?? merged.location;
@@ -417,21 +416,28 @@ async function ingestSingleUrl(url, supa, options = {}) {
               merged.availability = e.availability ?? merged.availability;
               merged.sku = e.sku ?? merged.sku;
               merged.provider = e.provider ?? merged.provider;
-              // Merge raw, preserving CSV time hints if they exist on existing.raw
+
               const prevRaw = existing.raw || {};
               const nextRaw = e.raw || {};
-              // Merge raw: prefer previous (CSV-preserved) fields first, then overlay new scrape
-              // Explicitly preserve CSV time hints if they already exist
-              merged.raw = {
-                ...prevRaw,
-                ...nextRaw,
-                _csv_start_time: (prevRaw._csv_start_time != null && prevRaw._csv_start_time !== '')
-                  ? prevRaw._csv_start_time
-                  : (nextRaw._csv_start_time ?? null),
-                _csv_end_time: (prevRaw._csv_end_time != null && prevRaw._csv_end_time !== '')
-                  ? prevRaw._csv_end_time
-                  : (nextRaw._csv_end_time ?? null)
-              };
+
+              // Strong safeguard: never drop CSV time hints; prefer previous values
+              const preservedCsvStart = (prevRaw._csv_start_time != null && prevRaw._csv_start_time !== '') ? prevRaw._csv_start_time : (nextRaw._csv_start_time ?? null);
+              const preservedCsvEnd   = (prevRaw._csv_end_time   != null && prevRaw._csv_end_time   !== '') ? prevRaw._csv_end_time   : (nextRaw._csv_end_time   ?? null);
+
+              // Build merged.raw with prev-first, then next, then explicitly re-assert CSV fields
+              merged.raw = { ...prevRaw, ...nextRaw };
+              merged.raw._csv_start_time = preservedCsvStart;
+              merged.raw._csv_end_time   = preservedCsvEnd;
+
+              // Guard schedule: if CSV hints exist, keep existing timestamps; otherwise allow scrape to set
+              const hasCsvHints = !!(preservedCsvStart || preservedCsvEnd);
+              if (hasCsvHints) {
+                merged.date_start = existing.date_start;
+                merged.date_end   = existing.date_end;
+              } else {
+                merged.date_start = e.date_start ?? existing.date_start;
+                merged.date_end   = e.date_end ?? existing.date_end;
+              }
             } else {
               // Non-event: update with fresh fields
               const overwriteFields = ['title','description','location','price','price_currency','availability','sku','provider','raw'];
