@@ -1254,6 +1254,11 @@ function buildProductPanelMarkdown(products) {
   console.log("Info participants:", info.participants);
   console.log("Info fitness:", info.fitness);
   console.log("Info location:", info.location);
+  
+  // Test the extraction function directly
+  const testDesc = "Participants:\nMax 6\nFitness:2. Easy-Moderate";
+  const testInfo = extractFromDescription(testDesc);
+  console.log("Test extraction result:", JSON.stringify(testInfo, null, 2));
   let summary = null; // Don't use info.summary, generate our own
   
   if (fullDescription) {
