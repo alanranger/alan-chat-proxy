@@ -351,37 +351,7 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
     return response;
   }
   
-  // Fallback: try FAQ content only if no written content found
-  try {
-    for (const article of articles) {
-      if (article && article.raw && article.raw.mainEntity && Array.isArray(article.raw.mainEntity)) {
-        for (const faq of article.raw.mainEntity) {
-          if (faq && faq.acceptedAnswer && faq.acceptedAnswer.text) {
-            const answer = faq.acceptedAnswer.text.replace(/<[^>]*>/g, '').trim();
-            if (answer.length > 50 && answer.length < 500) {
-              if (answer.toLowerCase().includes('best') || answer.toLowerCase().includes('recommend')) {
-                productRecommendations.push(answer);
-              }
-            }
-          }
-        }
-      }
-    }
-    
-    if (productRecommendations.length > 0) {
-      let response = "**Equipment Recommendations:**\n\n";
-      response += "**General Information:**\n";
-      productRecommendations.forEach((point, i) => {
-        response += `• ${point}\n`;
-      });
-      response += "\n*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
-      
-      console.log('DEBUG: Generated fallback response from FAQ content with', productRecommendations.length, 'items');
-      return response;
-    }
-  } catch (error) {
-    console.log('DEBUG: Error extracting FAQ content:', error.message);
-  }
+  // No fallback to FAQ content - rely only on your written articles
   
   // If no good content found, return null to fall back to other logic
   console.log('DEBUG: No quality tripod content found, returning null');
