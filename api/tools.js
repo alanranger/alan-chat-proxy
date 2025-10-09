@@ -414,14 +414,15 @@ export default async function handler(req, res) {
           .limit(5000);
         if (mapErr) return sendJSON(res, 500, { error: 'supabase_error', detail: mapErr.message });
 
-        // Load event schedule directly from events view (CSV-derived)
+        // Load event schedule directly from page_entities (CSV-origin values)
         const { data: evRows, error: evErr } = await supa
-          .from('v_events_for_chat')
-          .select('event_url,date_start,date_end,start_time,end_time')
+          .from('page_entities')
+          .select('url,date_start,date_end,start_time,end_time,kind')
+          .eq('kind','event')
           .limit(5000);
         if (evErr) return sendJSON(res, 500, { error: 'supabase_error', detail: evErr.message });
 
-        const evByUrl = new Map((evRows||[]).map(r => [r.event_url, r]));
+        const evByUrl = new Map((evRows||[]).map(r => [r.url, r]));
         const header = [
           'event_url','subtype','product_url','product_title','price_gbp','availability',
           'export_date_start','export_date_end','export_start_time','export_end_time',
