@@ -1251,15 +1251,13 @@ function buildProductPanelMarkdown(products) {
   if (lowTx && highTx) headBits.push(`${lowTx}–${highTx}`);
   const priceHead = headBits.length ? ` — ${headBits.join(" • ")}` : "";
 
-  const info =
-    extractFromDescription(
-      primary.description || primary?.raw?.description || ""
-    ) || {};
+  const fullDescription = primary.description || primary?.raw?.description || "";
+  console.log('DEBUG: Full description being processed:', fullDescription.substring(0, 200) + '...');
   
+  const info = extractFromDescription(fullDescription) || {};
   console.log('DEBUG: Extracted info from description:', JSON.stringify(info, null, 2));
 
   // Create a better summary from the full description
-  const fullDescription = primary.description || primary?.raw?.description || "";
   let summary = info.summary;
   
   if (!summary && fullDescription) {
@@ -1763,7 +1761,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.36-debug-response",
+          version: "v1.2.37-extract-debug",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -1772,7 +1770,8 @@ export default async function handler(req, res) {
             articles: 0
           },
           productPanel: productPanel,
-          productDescription: product ? product.description : null
+          productDescription: product ? product.description : null,
+          extractedInfo: info
         },
         meta: {
           duration_ms: Date.now() - started,
