@@ -101,6 +101,201 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .actions .pill.priority{background:var(--wa); color:#fff; font-weight:700}
 .actions .pill.secondary{background:#4a5568; color:#e2e8f0; font-weight:500}
 
+/* Article Cards */
+.articles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.article-card {
+  background: #1a1f2e;
+  border: 1px solid #2a3441;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.article-card:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.article-title {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.article-title a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.article-title a:hover {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
+.article-meta {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Event Cards */
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.event-card {
+  background: #1a1f2e;
+  border: 1px solid #2a3441;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.event-card:hover {
+  border-color: #10b981;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.event-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.event-title a {
+  color: #10b981;
+  text-decoration: none;
+}
+
+.event-title a:hover {
+  color: #34d399;
+  text-decoration: underline;
+}
+
+.event-price {
+  background: #065f46;
+  color: #10b981;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.event-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.event-date,
+.event-location,
+.event-availability {
+  font-size: 13px;
+  color: #d1d5db;
+}
+
+.event-availability {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+/* Product Cards */
+.product-card {
+  background: #1a1f2e;
+  border: 1px solid #2a3441;
+  border-radius: 8px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.product-card:hover {
+  border-color: #f59e0b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+
+.product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.product-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #f59e0b;
+  flex: 1;
+}
+
+.product-price {
+  background: #451a03;
+  color: #f59e0b;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-left: 12px;
+}
+
+.product-content {
+  margin-bottom: 16px;
+}
+
+.product-description {
+  color: #d1d5db;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.product-options ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #9ca3af;
+}
+
+.product-options li {
+  margin-bottom: 4px;
+}
+
+.product-book-btn {
+  display: inline-block;
+  background: #f59e0b;
+  color: #0b0f16;
+  padding: 10px 20px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.product-book-btn:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
 /* Composer + utilities */
 .tools{display:flex;justify-content:flex-end;gap:10px;margin:8px 0 6px}
 .tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
@@ -643,8 +838,27 @@ function renderProductCard(prod){
   if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
   const li = options.map(o=>`<li>${escapeHTML(o.label||'')}${o.price ? ` — ${o.price}` : ''}</li>`).join('');
   const href = absolutize(prod.page_url || prod.source_url || prod.url || '#');
-  const book = href && href !== '#' ? `<p style="margin-top:8px"><a href="${href}" target="_blank" rel="noopener">Book now →</a></p>` : '';
-  return `<div class="answer"><h3>${escapeHTML(prod.title || 'Workshop')}</h3>${lines.join('')}${li? `<ul>${li}</ul>`:''}${book}</div>`;
+  
+  // Create a more visually appealing product card
+  const bookButton = href && href !== '#' ? 
+    `<a href="${href}" target="_blank" rel="noopener" class="product-book-btn">Book Now →</a>` : '';
+  
+  return `
+    <div class="answer">
+      <div class="product-card">
+        <div class="product-header">
+          <h3 class="product-title">${escapeHTML(prod.title || 'Photography Workshop')}</h3>
+          ${priceHead ? `<div class="product-price">${escapeHTML(priceHead)}</div>` : ''}
+        </div>
+        <div class="product-content">
+          ${md ? `<p class="product-description">${escapeHTML(md)}</p>` : ''}
+          ${lines.join('')}
+          ${li ? `<div class="product-options"><ul>${li}</ul></div>` : ''}
+        </div>
+        ${bookButton}
+      </div>
+    </div>
+  `;
 }
 
 /* ===== Events & Guides ===== */
@@ -686,15 +900,46 @@ function renderEventsBlock(structured, query){
   if(!all.length) return '';
   const kp = extractKeyPhrases(structured?.topic||'', __lastQuery);
   const list = all.map(e=>({e, s: scoreEventMatch(e, kp)})).sort((a,b)=> (b.s - a.s) || (new Date(a.e.date_start) - new Date(b.e.date_start))).map(x=>x.e);
-  const lis = list.map(e=>{
-    const when=fmtDate(e.date_start);
-    const href=e.href || e.event_url || e.page_url || e.source_url || e.url || '#';
-    const where=e.location ? `${escapeHTML(e.location)}` : '';
-    const title=e.title ? `${escapeHTML(e.title)}` : '';
-    return `<li><div><strong>${when}${where ? ' — ' + where : ''}</strong> — <a href="${href}" target="_blank" rel="noopener">Link</a></div><div>${title}</div></li>`;
+  
+  const eventsHTML = list.map(e=>{
+    const when = fmtDate(e.date_start);
+    const href = e.href || e.event_url || e.page_url || e.source_url || e.url || '#';
+    const where = e.location ? `${escapeHTML(e.location)}` : '';
+    const title = e.title ? `${escapeHTML(e.title)}` : '';
+    const price = e.price_gbp ? `£${e.price_gbp}` : '';
+    const availability = e.availability ? `${escapeHTML(e.availability)}` : '';
+    
+    // Create a more visually appealing event card
+    return `
+      <div class="event-card">
+        <div class="event-content">
+          <div class="event-header">
+            <h4 class="event-title">
+              <a href="${href}" target="_blank" rel="noopener">${title || 'Photography Event'}</a>
+            </h4>
+            ${price ? `<span class="event-price">${price}</span>` : ''}
+          </div>
+          <div class="event-details">
+            <div class="event-date">📅 ${when}</div>
+            ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
+            ${availability ? `<div class="event-availability">${availability}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
   }).join('');
+  
   const header = eventHeaderLabel(structured);
-  return `<div class="answer"><h3>${header}</h3><ul>${lis}</ul></div>`;
+  const headerIcon = header.includes('Course') ? '🎓' : header.includes('Workshop') ? '🔧' : '📅';
+  
+  return `
+    <div class="answer">
+      <h3>${headerIcon} ${header}</h3>
+      <div class="events-grid">
+        ${eventsHTML}
+      </div>
+    </div>
+  `;
 }
 function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
 function articleTitle(a){ return a?.title || a?.raw?.name || ''; }
@@ -734,21 +979,53 @@ function renderArticlesBlock(structured, query){
   const topic = structured?.topic || '';
   const list = pickArticles(structured, query, topic);
   if(!list.length) return '';
-  const lis = list.map(a=>{
+  
+  const articlesHTML = list.map(a=>{
     const href = articleUrl(a);
     let t = articleTitle(a);
+    
+    // Better title extraction with multiple fallbacks
     if (!t || /^alan ranger photography$/i.test(t)) {
-      try {
-        const u = new URL(href);
-        const last = (u.pathname||'').split('/').filter(Boolean).pop()||'';
-        t = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim();
-        t = t.split(' ').map(w=> w? w[0].toUpperCase()+w.slice(1):'').join(' ');
-      } catch {}
+      // Try raw fields first
+      t = a?.raw?.headline || a?.raw?.name || '';
+      
+      // If still generic, extract from URL
+      if (!t || /^alan ranger photography$/i.test(t)) {
+        try {
+          const u = new URL(href);
+          const pathParts = (u.pathname||'').split('/').filter(Boolean);
+          const lastPart = pathParts[pathParts.length - 1] || '';
+          t = lastPart.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim();
+          t = t.split(' ').map(w=> w? w[0].toUpperCase()+w.slice(1):'').join(' ');
+        } catch {}
+      }
     }
-    if (!t) t = 'Read more';
-    return `<li><a href="${href}" target="_blank" rel="noopener">${escapeHTML(t)}</a></li>`;
+    
+    if (!t || /^alan ranger photography$/i.test(t)) t = 'Read more';
+    
+    // Create a more visually appealing article card
+    return `
+      <div class="article-card">
+        <div class="article-content">
+          <h4 class="article-title">
+            <a href="${href}" target="_blank" rel="noopener">${escapeHTML(t)}</a>
+          </h4>
+          <div class="article-meta">
+            <span class="article-source">📖 Photography Guide</span>
+          </div>
+        </div>
+      </div>
+    `;
   }).join('');
-  return `<div class="answer"><h3>Guides that match your question</h3><ul>${lis}</ul></div>`;
+  
+  return `
+    <div class="answer">
+      <h3>📚 Related Photography Guides</h3>
+      <div class="articles-grid">
+        ${articlesHTML}
+      </div>
+    </div>
+  `;
 }
 
 /* ===== Action Pills ===== */
