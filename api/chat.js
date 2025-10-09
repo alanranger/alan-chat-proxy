@@ -1,4 +1,4 @@
-// /api/chat.js - Step 2: Add intent detection and keyword extraction
+// /api/chat.js - Step 3: Add article search functionality
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
@@ -33,19 +33,37 @@ function detectIntent(query) {
     return "events";
   }
   
-  return "advice";
+    return "advice";
+  }
+  
+// Simple article search
+async function findArticles(client, keywords, limit = 6) {
+  if (!keywords || keywords.length === 0) return [];
+  
+  try {
+    const { data, error } = await client
+      .from('page_entities')
+      .select('*')
+      .eq('kind', 'article')
+    .limit(limit);
+
+  if (error) return [];
+  return data || [];
+  } catch (error) {
+    return [];
+  }
 }
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== "POST") {
+  if (req.method !== "POST") {
       res.status(405).json({ ok: false, error: "method_not_allowed" });
       return;
     }
 
     const { query } = req.body || {};
     const client = supabaseAdmin();
-    
+
     // Extract keywords and detect intent
     const keywords = extractKeywords(query);
     const intent = detectIntent(query);
@@ -63,39 +81,48 @@ export default async function handler(req, res) {
       }
     }
     
+    // Query articles for advice intent
+    let articles = [];
+    if (intent === "advice") {
+      articles = await findArticles(client, keywords, 6);
+    }
+    
     // Generate response based on intent
     let answerMarkdown = "";
     if (intent === "events" && events.length > 0) {
       answerMarkdown = `I found ${events.length} upcoming workshops. Here are the details:`;
     } else if (intent === "events") {
       answerMarkdown = "I couldn't find any upcoming workshops at the moment.";
+    } else if (intent === "advice" && articles.length > 0) {
+      answerMarkdown = `I found ${articles.length} relevant articles that might help with your question.`;
     } else {
       answerMarkdown = "I can help with photography advice and equipment recommendations.";
     }
     
     res.json({
-      ok: true,
-      answer_markdown: answerMarkdown,
-      structured: {
+        ok: true,
+        answer_markdown: answerMarkdown,
+        structured: {
         intent: intent,
         topic: keywords.join(' '),
         events: events,
         products: [],
-        articles: []
+        articles: articles
       },
-      confidence: events.length > 0 ? 0.8 : 0.4,
-      debug: {
-        version: "v1.2.44-intent-test",
+      confidence: events.length > 0 || articles.length > 0 ? 0.8 : 0.4,
+        debug: {
+        version: "v1.2.45-articles-test",
         query: query || "no query",
-        keywords: keywords,
+          keywords: keywords,
         intent: intent,
-        eventCount: events.length
+        eventCount: events.length,
+        articleCount: articles.length
       }
     });
     
   } catch (error) {
-    res.status(500).json({ 
-      ok: false, 
+    res.status(500).json({
+      ok: false,
       error: "server_error", 
       message: error.message
     });
