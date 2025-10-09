@@ -292,17 +292,18 @@ export default async function handler(req, res) {
         }
         rows = r.data || [];
 
-        // Overwrite date/time strictly from events view (CSV-derived), no tz conversion
+        // Overwrite date/time strictly from page_entities (CSV-derived), no tz conversion
         try {
+          const norm = (u) => (u||'').replace(/\/+$/,'');
           const { data: eventRows, error: evErr } = await supa
             .from('page_entities')
             .select('url, date_start, date_end, start_time, end_time, kind')
             .eq('kind','event')
             .limit(5000);
           if (!evErr && Array.isArray(eventRows)) {
-            const byUrl = new Map(eventRows.map(e => [e.url, e]));
+            const byUrl = new Map(eventRows.map(e => [norm(e.url), e]));
             rows = rows.map(row => {
-              const ev = byUrl.get(row.event_url);
+              const ev = byUrl.get(norm(row.event_url));
               if (ev) {
                 row.date_start = ev.date_start;
                 row.date_end = ev.date_end;
@@ -422,7 +423,8 @@ export default async function handler(req, res) {
           .limit(5000);
         if (evErr) return sendJSON(res, 500, { error: 'supabase_error', detail: evErr.message });
 
-        const evByUrl = new Map((evRows||[]).map(r => [r.url, r]));
+        const norm = (u) => (u||'').replace(/\/+$/,'');
+        const evByUrl = new Map((evRows||[]).map(r => [norm(r.url), r]));
         const header = [
           'event_url','subtype','product_url','product_title','price_gbp','availability',
           'export_date_start','export_date_end','export_start_time','export_end_time',
@@ -434,7 +436,7 @@ export default async function handler(req, res) {
           return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
         }
         const rows = (mapRows||[]).map(m => {
-          const ev = evByUrl.get(m.event_url) || {};
+          const ev = evByUrl.get(norm(m.event_url)) || {};
           const dateMismatch = (String(m.date_start||'') !== String(ev.date_start||'')) || (String(m.date_end||'') !== String(ev.date_end||''));
           const timeMismatch = (String(m.start_time||'') !== String(ev.start_time||'')) || (String(m.end_time||'') !== String(ev.end_time||''));
           const r = [
