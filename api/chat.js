@@ -189,53 +189,101 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   const isEquipmentQuery = Array.from(equipmentKeywords).some(k => lc.includes(k));
   if (!isEquipmentQuery) return null;
   
-  // For now, return null to avoid server errors - we'll fix the content extraction later
-  console.log('DEBUG: Equipment advice generation disabled temporarily to fix server errors');
-  return null;
+  // Extract recommendations from your written content with simple, robust logic
+  const productRecommendations = [];
+  const brandComparisons = [];
+  const specificTips = [];
+  
+  // Simple content extraction from chunks - avoid complex processing
+  try {
+    for (const chunk of (contentChunks || []).slice(0, 5)) {
+      const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
+      
+      // Skip navigation/service chunks
+      if (text.includes('cart 0') || text.includes('sign in') || text.includes('my account') || 
+          text.includes('search') || text.includes('gallery') || text.length < 50) {
+        continue;
+      }
+      
+      // Look for equipment keywords
+      const hasEquipmentKeyword = Array.from(equipmentKeywords).some(k => text.includes(k));
+      if (!hasEquipmentKeyword) continue;
+      
+      // Clean up the text
+      const cleanText = (chunk.chunk_text || chunk.content || "")
+        .replace(/\[.*?\]/g, '') // Remove markdown links
+        .replace(/jpg\]/g, '') // Remove image artifacts
+        .replace(/\*+/g, '') // Remove asterisks
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim();
+      
+      // Split into sentences and find relevant ones
+      const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim().length > 40);
+      
+      for (const sentence of sentences.slice(0, 3)) { // Limit to 3 sentences per chunk
+        const sLower = sentence.toLowerCase();
+        let cleanSentence = sentence.trim();
+        
+        // Skip problematic content
+        if (cleanSentence.includes('jpg]') || cleanSentence.includes('* Tripod/IBIS:') || 
+            cleanSentence.includes('This table represents') || cleanSentence.length < 40) {
+          continue;
+        }
+        
+        if (cleanSentence.length > 250) {
+          cleanSentence = cleanSentence.substring(0, 250) + "...";
+        }
+        
+        // Categorize content
+        if (sLower.includes('benro') || sLower.includes('gitzo') || sLower.includes('manfrotto') ||
+            sLower.includes('£') || sLower.includes('$') || sLower.includes('recommend')) {
+          if (productRecommendations.length < 3) {
+            productRecommendations.push(cleanSentence);
+          }
+        } else if (sLower.includes('vs') || sLower.includes('versus') || sLower.includes('compare')) {
+          if (brandComparisons.length < 2) {
+            brandComparisons.push(cleanSentence);
+          }
+        } else if (sLower.includes('tip') || sLower.includes('setup') || sLower.includes('stability')) {
+          if (specificTips.length < 2) {
+            specificTips.push(cleanSentence);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.log('DEBUG: Error in content extraction:', error.message);
+  }
   
   // If we have good content from your written articles, build a comprehensive response
   if (productRecommendations.length > 0 || brandComparisons.length > 0 || specificTips.length > 0) {
     let response = "**Equipment Recommendations:**\n\n";
     
-    // Add product recommendations first
     if (productRecommendations.length > 0) {
-      response += "**Specific Tripod Recommendations:**\n";
-      productRecommendations.forEach((point, i) => {
-        response += `• ${point}\n`;
+      response += "**Specific Recommendations:**\n";
+      productRecommendations.forEach((rec, i) => {
+        response += `${i + 1}. ${rec}\n\n`;
       });
-      response += "\n";
     }
     
-    // Add brand comparisons
     if (brandComparisons.length > 0) {
       response += "**Brand Comparisons:**\n";
-      brandComparisons.forEach((point, i) => {
-        response += `• ${point}\n`;
+      brandComparisons.forEach((comp, i) => {
+        response += `${i + 1}. ${comp}\n\n`;
       });
-      response += "\n";
     }
     
-    // Add specific tips
     if (specificTips.length > 0) {
-      response += "**Key Tips for Choosing Tripods:**\n";
-      specificTips.forEach((point, i) => {
-        response += `• ${point}\n`;
+      response += "**Setup Tips:**\n";
+      specificTips.forEach((tip, i) => {
+        response += `${i + 1}. ${tip}\n\n`;
       });
-      response += "\n";
     }
-    
-    // Add context about Alan's experience
-    response += "*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
-    
-    console.log('DEBUG: Generated response with', productRecommendations.length, 'product recs,', brandComparisons.length, 'comparisons,', specificTips.length, 'tips');
     
     return response;
   }
   
-  // No fallback to FAQ content - rely only on your written articles
-  
-  // If no good content found, return null to fall back to other logic
-  console.log('DEBUG: No quality tripod content found, returning null');
+  // Fallback: return null to use other response logic
   return null;
 }
 
