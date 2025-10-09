@@ -181,7 +181,7 @@ function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
   return `**${para.substring(0, 300).trim()}**\n\n${url ? `*Source: ${url}*\n\n` : ""}`;
 }
 function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
-  console.log('DEBUG: generateEquipmentAdvice called with query:', query, 'chunks:', contentChunks.length, 'articles:', articles.length);
+  // generateEquipmentAdvice called
   const lc = (query || "").toLowerCase();
   const equipmentKeywords = new Set(['tripod','tripods','head','ballhead','levelling','leveling','recommend','recommendation','recommendations','equipment']);
   
@@ -252,7 +252,7 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
       }
     }
   } catch (error) {
-    console.log('DEBUG: Error in content extraction:', error.message);
+    // Error in content extraction
   }
   
   // If we have good content from your written articles, build a comprehensive response
@@ -303,11 +303,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   };
   
   // DEBUG: Log what we're working with
-  console.log(`🔍 generateDirectAnswer: Query="${query}"`);
-  console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
-  if (contentChunks.length > 0) {
-    console.log(`🔍 generateDirectAnswer: First chunk preview="${(contentChunks[0].chunk_text || contentChunks[0].content || "").substring(0, 200)}..."`);
-  }
+  // generateDirectAnswer called
   
   // No hardcoded fallbacks; rely on chunk/article relevance below
 
@@ -338,7 +334,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   }).sort((a,b)=>b.s-a.s);
   const relevantChunk = (scoredChunks.length ? scoredChunks[0].chunk : null);
   
-  console.log(`🔍 generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
+  // Found relevantChunk
   
   if (relevantChunk) {
     let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
@@ -349,7 +345,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     
     // SPECIAL CASE: Look for fitness level information first
     if (lc.includes('fitness') || lc.includes('level')) {
-      console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
+      // Looking for fitness level in chunk text
       
       const fitnessPatterns = [
         /Fitness:\s*(\d+\.?\s*[^\\n]+)/i,           // "Fitness: 2. Easy-Moderate"
@@ -362,10 +358,8 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
       
       for (const pattern of fitnessPatterns) {
         const match = chunkText.match(pattern);
-        console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
         if (match && match[1]) {
           const fitnessLevel = match[1].trim();
-          console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
           return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
         }
       }
@@ -758,7 +752,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
-      console.log('Page context keywords:', pathKeywords);
+      // Page context keywords
       // Add page context to search terms
       keywords = [...pathKeywords, ...keywords];
     }
@@ -806,7 +800,7 @@ async function findProducts(client, { keywords, limit = 20, pageContext = null }
   if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
-      console.log('Product search - Page context keywords:', pathKeywords);
+      // Product search - Page context keywords
       // Add page context to search terms
       keywords = [...pathKeywords, ...keywords];
     }
@@ -833,7 +827,7 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
-      console.log('Article search - Page context keywords:', pathKeywords);
+      // Article search - Page context keywords
       // Add page context to search terms
       keywords = [...pathKeywords, ...keywords];
     }
@@ -1425,7 +1419,6 @@ async function extractRelevantInfo(query, dataContext) {
   
   // For event-based questions, prioritize the structured event data
   if (events && events.length > 0) {
-    console.log(`🔍 RAG: Found ${events.length} events, checking structured data`);
     
     // Find the most relevant event based on the query context
     let event = events[0]; // Default to first event
@@ -1433,7 +1426,6 @@ async function extractRelevantInfo(query, dataContext) {
     // If we have a previous query context, try to find the most relevant event
     if (dataContext.originalQuery) {
       const originalQueryLower = dataContext.originalQuery.toLowerCase();
-      console.log(`🔍 RAG: Looking for event matching original query: "${dataContext.originalQuery}"`);
       
       // Extract key terms from the original query to match against events
       const keyTerms = dataContext.originalQuery.toLowerCase()
@@ -1448,14 +1440,12 @@ async function extractRelevantInfo(query, dataContext) {
       
       if (matchingEvent) {
         event = matchingEvent;
-        console.log(`🔍 RAG: Found contextually relevant event: ${event.event_title}`);
       }
     }
     
     // Check for participant information
     if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
       if (event.participants && String(event.participants).trim().length > 0) {
-        console.log(`✅ RAG: Found participants="${event.participants}" in structured event data`);
         return `**${event.participants}** people can attend this workshop. This ensures everyone gets personalized attention and guidance from Alan.`;
       }
     }
@@ -1463,7 +1453,6 @@ async function extractRelevantInfo(query, dataContext) {
     // Check for location information
     if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
       if (event.event_location && event.event_location.trim().length > 0) {
-        console.log(`✅ RAG: Found location="${event.event_location}" in structured event data`);
         return `The workshop is held at **${event.event_location}**. Full location details and meeting instructions will be provided when you book.`;
       }
     }
@@ -1471,7 +1460,6 @@ async function extractRelevantInfo(query, dataContext) {
     // Check for price information
     if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
       if (event.price_gbp && event.price_gbp > 0) {
-        console.log(`✅ RAG: Found price="${event.price_gbp}" in structured event data`);
         return `The workshop costs **£${event.price_gbp}**. This includes all tuition, guidance, and any materials provided during the session.`;
       }
     }
@@ -1485,7 +1473,6 @@ async function extractRelevantInfo(query, dataContext) {
           month: 'long', 
           year: 'numeric' 
         });
-        console.log(`✅ RAG: Found date="${formattedDate}" in structured event data`);
         return `The next workshop is scheduled for **${formattedDate}**. This gives you plenty of time to prepare and book your place.`;
       }
     }
@@ -1494,7 +1481,6 @@ async function extractRelevantInfo(query, dataContext) {
     if (lowerQuery.includes('fitness') || lowerQuery.includes('level') || lowerQuery.includes('experience')) {
       // Check structured fitness_level field
       if (event.fitness_level && event.fitness_level.trim().length > 0) {
-        console.log(`✅ RAG: Found fitness level="${event.fitness_level}" in structured event data`);
         return `The fitness level required is **${event.fitness_level}**. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`;
       }
     }
@@ -1506,7 +1492,6 @@ async function extractRelevantInfo(query, dataContext) {
 
 /* -------------------------------- Handler -------------------------------- */
 export default async function handler(req, res) {
-  console.log('DEBUG: Chat API handler called - NEW VERSION DEPLOYED');
   const started = Date.now();
   try {
   if (req.method !== "POST") {
@@ -1521,11 +1506,7 @@ export default async function handler(req, res) {
     
     // Log page context for debugging
     if (pageContext) {
-      console.log('Page context received:', {
-        url: pageContext.url,
-        title: pageContext.title,
-        pathname: pageContext.pathname
-      });
+      // Page context received
     }
 
     // Create session if it doesn't exist (async, don't wait for it)
@@ -1737,7 +1718,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.39-syntax-fix",
+          version: "v1.2.40-clean",
           intent: "events",
           keywords: keywords,
           counts: {
