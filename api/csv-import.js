@@ -111,6 +111,35 @@ function parseCSV(csvText) {
   return rows;
 }
 
+// Normalize a date string that may be in UK day-first format (DD/MM/YYYY)
+// to ISO date (YYYY-MM-DD). Leaves ISO-like inputs unchanged.
+function normalizeDateDayFirst(input) {
+  if (!input) return null;
+  const s = String(input).trim();
+  // Already ISO (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // DD/MM/YYYY or D/M/YYYY
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) {
+    const dd = m[1].padStart(2, '0');
+    const mm = m[2].padStart(2, '0');
+    const yyyy = m[3];
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  // If it contains a 'T' already like DD/MM/YYYYTHH:mm[:ss]
+  const m2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})T(.+)$/);
+  if (m2) {
+    const dd = m2[1].padStart(2, '0');
+    const mm = m2[2].padStart(2, '0');
+    const yyyy = m2[3];
+    const rest = m2[4];
+    // Return just the date part; caller will re-attach time
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  // Fallback: return as-is; DB will validate
+  return s;
+}
+
 /* ========== Blog data transformation ========== */
 function transformBlogData(row) {
   const title = row.title;
@@ -168,10 +197,21 @@ function transformWorkshopData(row) {
   const imageUrl = row.image || row['event image'] || row['event_image'];
   
   // Map date/time/location fields from CSV
-  const startDate = row.Start_Date || row.start_date;
-  const startTime = row.Start_Time || row.start_time;
-  const endDate = row.End_Date || row.end_date;
-  const endTime = row.End_Time || row.end_time;
+  // Normalize dates (accept DD/MM/YYYY and YYYY-MM-DD)
+  const startDateRaw = row.Start_Date || row.start_date;
+  const endDateRaw = row.End_Date || row.end_date;
+  const startDate = normalizeDateDayFirst(startDateRaw);
+  const endDate = normalizeDateDayFirst(endDateRaw);
+  // Normalize times to HH:MM:SS without timezone shifts
+  const normalizeTime = (t) => {
+    if (!t) return null;
+    const tt = String(t).trim();
+    if (/^\d{2}:\d{2}:\d{2}$/.test(tt)) return tt;
+    if (/^\d{2}:\d{2}$/.test(tt)) return `${tt}:00`;
+    return tt;
+  };
+  const startTime = normalizeTime(row.Start_Time || row.start_time);
+  const endTime = normalizeTime(row.End_Time || row.end_time);
   const location = row.Location_Business_Name || row.location_business_name || row.location;
   
   // Combine date and time for database storage
@@ -422,9 +462,9 @@ function transformProductData(row) {
 function transformEventData(row) {
   const eventUrl = row.event_url || row['event url'] || row.url;
   const eventTitle = row.event_title || row['event title'] || row.title;
-  const startDate = row.start_date || row['start date'];
+  const startDate = normalizeDateDayFirst(row.start_date || row['start date']);
   const startTime = row.start_time || row['start time'];
-  const endDate = row.end_date || row['end date'];
+  const endDate = normalizeDateDayFirst(row.end_date || row['end date']);
   const endTime = row.end_time || row['end time'];
   const location = row.location_business_name || row['location business name'] || row.location_address || row['location address'] || row.location;
   const category = row.category || '';
