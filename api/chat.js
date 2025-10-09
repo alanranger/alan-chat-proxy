@@ -1154,7 +1154,7 @@ function extractFromDescription(desc) {
       if (!t) continue;
       return t;
     }
-  return null;
+    return null;
   };
 
   for (let i = 0; i < lines.length; i++) {
@@ -1737,7 +1737,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.38-stable",
+          version: "v1.2.39-syntax-fix",
           intent: "events",
           keywords: keywords,
           counts: {
