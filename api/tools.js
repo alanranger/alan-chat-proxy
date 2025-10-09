@@ -273,7 +273,7 @@ export default async function handler(req, res) {
       const u = norm(url);
       try {
         const [pe, vf, ve] = await Promise.all([
-          supa.from('page_entities').select('url,kind,title,date_start,date_end').eq('kind','event').eq('url', u).limit(1),
+          supa.from('page_entities').select('url,kind,title,date_start,date_end,raw').eq('kind','event').eq('url', u).limit(1),
           supa.from('v_event_product_final_enhanced').select('event_url,date_start,date_end,start_time,end_time,product_url,product_title').eq('event_url', u).limit(5),
           supa.from('v_events_for_chat').select('event_url,date_start,date_end,start_time,end_time').eq('event_url', u).limit(1)
         ]);
