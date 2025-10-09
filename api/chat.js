@@ -1763,14 +1763,16 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.35-full-debug",
+          version: "v1.2.36-debug-response",
           intent: "events",
           keywords: keywords,
           counts: {
             events: events.length,
             products: product ? 1 : 0,
             articles: 0
-          }
+          },
+          productPanel: productPanel,
+          productDescription: product ? product.description : null
         },
         meta: {
           duration_ms: Date.now() - started,
