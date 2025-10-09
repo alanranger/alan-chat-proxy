@@ -408,4 +408,53 @@ export default async function handler(req, res) {
   } catch (e) {
     return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message || e) });
   }
+
+    // --- export_reconcile: compare exported mappings vs event CSV view ---
+    if (req.method === 'GET' && action === 'export_reconcile') {
+      try {
+        // Load mappings (final enhanced view)
+        const { data: mapRows, error: mapErr } = await supa
+          .from('v_event_product_final_enhanced')
+          .select('event_url,subtype,product_url,product_title,price_gbp,availability,date_start,date_end,start_time,end_time')
+          .limit(5000);
+        if (mapErr) return sendJSON(res, 500, { error: 'supabase_error', detail: mapErr.message });
+
+        // Load event schedule directly from events view (CSV-derived)
+        const { data: evRows, error: evErr } = await supa
+          .from('v_events_for_chat')
+          .select('event_url,date_start,date_end,start_time,end_time')
+          .limit(5000);
+        if (evErr) return sendJSON(res, 500, { error: 'supabase_error', detail: evErr.message });
+
+        const evByUrl = new Map((evRows||[]).map(r => [r.event_url, r]));
+        const header = [
+          'event_url','subtype','product_url','product_title','price_gbp','availability',
+          'export_date_start','export_date_end','export_start_time','export_end_time',
+          'csv_date_start','csv_date_end','csv_start_time','csv_end_time',
+          'date_mismatch','time_mismatch'
+        ];
+        function esc(v){
+          const s = v==null?'':String(v);
+          return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+        }
+        const rows = (mapRows||[]).map(m => {
+          const ev = evByUrl.get(m.event_url) || {};
+          const dateMismatch = (String(m.date_start||'') !== String(ev.date_start||'')) || (String(m.date_end||'') !== String(ev.date_end||''));
+          const timeMismatch = (String(m.start_time||'') !== String(ev.start_time||'')) || (String(m.end_time||'') !== String(ev.end_time||''));
+          const r = [
+            m.event_url, m.subtype, m.product_url, m.product_title, m.price_gbp, m.availability,
+            m.date_start, m.date_end, m.start_time, m.end_time,
+            ev.date_start||'', ev.date_end||'', ev.start_time||'', ev.end_time||'',
+            dateMismatch ? '1' : '0', timeMismatch ? '1' : '0'
+          ];
+          return r.map(esc).join(',');
+        });
+        const csv = [header.join(',')].concat(rows).join('\n');
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="reconcile-event-mapping.csv"');
+        return res.status(200).send(csv);
+      } catch (e) {
+        return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message||e) });
+      }
+    }
 }
