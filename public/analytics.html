@@ -558,6 +558,14 @@
     <div class="header">
       <h1>Chat Analytics Dashboard</h1>
       <p>Monitor chat bot performance, user interactions, and insights</p>
+      <div style="margin-top: 15px;">
+        <button onclick="exportAllInsightsAndFeedback()" class="btn btn-primary" style="font-size: 14px; padding: 8px 16px;">
+          📊 Export All Insights & Feedback
+        </button>
+        <span style="margin-left: 10px; color: #888; font-size: 12px;">
+          Download comprehensive report for analysis and logic improvements
+        </span>
+      </div>
       <div class="help-box">
         <h3>📊 Step-by-Step Guide to Using This Dashboard</h3>
         
@@ -1441,6 +1449,9 @@
                 </button>
                 <button onclick="exportFeedbackReport()" class="btn btn-info">
                   📊 Export Feedback Report
+                </button>
+                <button onclick="exportAllInsightsAndFeedback()" class="btn btn-success">
+                  🚀 Export All Data
                 </button>
               </div>
             </div>
@@ -2535,6 +2546,115 @@
         showToast('Feedback report exported successfully!', 'success');
       } catch (error) {
         showToast('Failed to export feedback report', 'error');
+      }
+    }
+    
+    async function exportAllInsightsAndFeedback() {
+      try {
+        showToast('🔄 Generating comprehensive insights and feedback report...', 'info');
+        
+        // Gather all data from different tabs
+        const [overviewData, questionsData, sessionsData, performanceData, insightsData, feedbackData] = await Promise.all([
+          apiCall('overview'),
+          apiCall('questions'),
+          apiCall('sessions'),
+          apiCall('performance'),
+          apiCall('insights'),
+          apiCall('feedback')
+        ]);
+        
+        // Create comprehensive report
+        const report = {
+          exportDate: new Date().toISOString(),
+          exportVersion: '1.0',
+          summary: {
+            totalSessions: overviewData.overview?.totalSessions || 0,
+            totalQuestions: overviewData.overview?.totalQuestions || 0,
+            avgConfidence: overviewData.overview?.avgConfidence || 0,
+            totalFeedback: feedbackData.feedback?.summary?.totalFeedback || 0,
+            satisfactionRate: feedbackData.feedback?.summary?.satisfactionRate || 0
+          },
+          overview: overviewData.overview || {},
+          questions: questionsData.questions || [],
+          sessions: sessionsData.sessions || [],
+          performance: performanceData.performance || {},
+          insights: {
+            lowConfidenceQuestions: insightsData.insights?.lowConfidenceQuestions || [],
+            frequentQuestions: insightsData.insights?.frequentQuestions || [],
+            recommendations: insightsData.insights?.recommendations || [],
+            contentSuggestions: insightsData.insights?.contentSuggestions || []
+          },
+          feedback: {
+            summary: feedbackData.feedback?.summary || {},
+            recentFeedback: feedbackData.feedback?.recentFeedback || [],
+            analytics: feedbackData.feedback?.analytics || []
+          }
+        };
+        
+        // Create downloadable JSON file
+        const jsonContent = JSON.stringify(report, null, 2);
+        const blob = new Blob([jsonContent], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chatbot-insights-feedback-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        // Also create a CSV summary for quick analysis
+        const csvHeaders = [
+          'Metric', 'Value', 'Category', 'Notes'
+        ];
+        
+        const csvRows = [
+          ['Total Sessions', report.summary.totalSessions, 'Overview', ''],
+          ['Total Questions', report.summary.totalQuestions, 'Overview', ''],
+          ['Average Confidence', `${report.summary.avgConfidence}%`, 'Overview', ''],
+          ['Total Feedback', report.summary.totalFeedback, 'Feedback', ''],
+          ['Satisfaction Rate', `${report.summary.satisfactionRate}%`, 'Feedback', ''],
+          ['Low Confidence Questions', report.insights.lowConfidenceQuestions.length, 'Insights', 'Need improvement'],
+          ['Frequent Questions', report.insights.frequentQuestions.length, 'Insights', 'High priority'],
+          ['Thumbs Down Feedback', report.feedback.summary.thumbsDown || 0, 'Feedback', 'User dissatisfaction'],
+          ['High Priority Issues', report.feedback.recentFeedback.filter(f => f.confidence_score > 70 && f.rating === 'thumbs_down').length, 'Feedback', 'High confidence + poor satisfaction']
+        ];
+        
+        const csvContent = [
+          csvHeaders.join(','),
+          ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+        
+        const csvBlob = new Blob([csvContent], { type: 'text/csv' });
+        const csvUrl = window.URL.createObjectURL(csvBlob);
+        const csvA = document.createElement('a');
+        csvA.href = csvUrl;
+        csvA.download = `chatbot-summary-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(csvA);
+        csvA.click();
+        document.body.removeChild(csvA);
+        window.URL.revokeObjectURL(csvUrl);
+        
+        showToast('✅ Comprehensive report exported! (JSON + CSV)', 'success');
+        
+        // Log key insights for immediate review
+        console.log('📊 Key Insights for Logic Improvements:');
+        console.log(`- ${report.summary.totalQuestions} total questions asked`);
+        console.log(`- ${report.summary.avgConfidence}% average confidence`);
+        console.log(`- ${report.feedback.summary.thumbsDown || 0} thumbs down feedback`);
+        console.log(`- ${report.insights.lowConfidenceQuestions.length} low confidence questions`);
+        console.log(`- ${report.feedback.recentFeedback.filter(f => f.confidence_score > 70 && f.rating === 'thumbs_down').length} high priority issues`);
+        
+        if (report.feedback.recentFeedback.length > 0) {
+          console.log('🚨 Recent Feedback Issues:');
+          report.feedback.recentFeedback.forEach(f => {
+            console.log(`  - "${f.query}" (${f.confidence_score}% confidence, ${f.rating}, reason: ${f.reason})`);
+          });
+        }
+        
+      } catch (error) {
+        console.error('Export error:', error);
+        showToast('❌ Failed to export comprehensive report', 'error');
       }
     }
 
