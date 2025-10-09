@@ -214,7 +214,12 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
     return hasEquipmentKeyword && isSubstantial && (isTripodArticle || text.includes('tripod'));
   });
   
-  if (equipmentChunks.length === 0) return null;
+  if (equipmentChunks.length === 0) {
+    console.log('DEBUG: No equipment chunks found. Total chunks:', contentChunks.length);
+    return null;
+  }
+  
+  console.log('DEBUG: Found', equipmentChunks.length, 'equipment chunks');
   
   // Extract comprehensive advice from all relevant chunks
   const productRecommendations = [];
@@ -333,6 +338,8 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   
   // Add context about Alan's experience
   response += "*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
+  
+  console.log('DEBUG: Generated response with', productRecommendations.length, 'product recs,', brandComparisons.length, 'comparisons,', specificTips.length, 'tips,', generalAdvice.length, 'general advice');
   
   return response;
 }
