@@ -963,7 +963,7 @@ function pickArticles(structured, query, topic){
     .filter(a => articleUrl(a) && articleTitle(a))
     .map(a => ({ a, s: score(a) }))
     .sort((x,y)=> y.s - x.s)
-    .slice(0,5)
+    .slice(0,6)
     .map(x=>x.a);
 }
 function renderArticlesBlock(structured, query){
@@ -1059,7 +1059,7 @@ function buildActionPillsFromStructured(structured, query){
     return 0;
   });
   
-  return safe.slice(0,5);
+  return safe.slice(0,6);
 }
 
 /* ===== Intent helpers / gating ===== */
