@@ -420,10 +420,17 @@ async function ingestSingleUrl(url, supa, options = {}) {
               // Merge raw, preserving CSV time hints if they exist on existing.raw
               const prevRaw = existing.raw || {};
               const nextRaw = e.raw || {};
+              // Merge raw: prefer previous (CSV-preserved) fields first, then overlay new scrape
+              // Explicitly preserve CSV time hints if they already exist
               merged.raw = {
+                ...prevRaw,
                 ...nextRaw,
-                _csv_start_time: prevRaw._csv_start_time ?? nextRaw._csv_start_time ?? null,
-                _csv_end_time: prevRaw._csv_end_time ?? nextRaw._csv_end_time ?? null
+                _csv_start_time: (prevRaw._csv_start_time != null && prevRaw._csv_start_time !== '')
+                  ? prevRaw._csv_start_time
+                  : (nextRaw._csv_start_time ?? null),
+                _csv_end_time: (prevRaw._csv_end_time != null && prevRaw._csv_end_time !== '')
+                  ? prevRaw._csv_end_time
+                  : (nextRaw._csv_end_time ?? null)
               };
             } else {
               // Non-event: update with fresh fields
