@@ -340,6 +340,9 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   // Add context about Alan's experience
   response += "*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
   
+  // Add version marker to confirm new code is running
+  response += "**DEBUG: New equipment advice version v2.0**\n\n";
+  
   console.log('DEBUG: Generated response with', productRecommendations.length, 'product recs,', brandComparisons.length, 'comparisons,', specificTips.length, 'tips,', generalAdvice.length, 'general advice');
   
   return response;
