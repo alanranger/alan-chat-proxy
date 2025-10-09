@@ -1573,6 +1573,31 @@ export default async function handler(req, res) {
           return `https://www.alanranger.com/photo-workshops-uk/${s.replace(/^\/+/, '')}`;
         };
         product.page_url = normalize(product.page_url || product.source_url || product.url);
+        
+        // Enrich product with full details from page_entities if we have a product URL
+        if (product.page_url) {
+          try {
+            const { data: productDetails } = await client
+              .from('page_entities')
+              .select('*')
+              .eq('kind', 'product')
+              .eq('page_url', product.page_url)
+              .single();
+            
+            if (productDetails) {
+              // Merge the full product details with the existing product data
+              product = {
+                ...product,
+                title: productDetails.title || product.title,
+                description: productDetails.description || product.description,
+                raw: { ...product.raw, ...productDetails.raw }
+              };
+              console.log('DEBUG: Enriched product with full details from page_entities');
+            }
+          } catch (error) {
+            console.log('DEBUG: Could not fetch full product details:', error.message);
+          }
+        }
       }
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
 
