@@ -1175,12 +1175,6 @@ function extractFromDescription(desc) {
       if (v) out.fitness = v;
       continue;
     }
-    // Handle the specific format from the Batsford description
-    if (/^fitness:\s*\d+\.\s*[a-z-]+$/i.test(ln)) {
-      const match = ln.match(/^fitness:\s*(.+)$/i);
-      if (match) out.fitness = match[1].trim();
-      continue;
-    }
     // Also look for fitness information in other formats
     if (/fitness level|fitness requirement|physical requirement|walking/i.test(ln)) {
       if (!out.fitness) out.fitness = ln.trim();
@@ -1202,14 +1196,6 @@ function extractFromDescription(desc) {
       }
     }
     
-    // Handle single-line format: "Fitness:2. Easy-Moderate"
-    if (/^fitness:\s*\d+\.\s*[a-z-]+$/i.test(ln)) {
-      const match = ln.match(/^fitness:\s*(\d+\.\s*[a-z-]+)$/i);
-      if (match) {
-        out.fitness = match[1];
-      }
-      continue;
-    }
 
     const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
     if (m1) {
