@@ -319,6 +319,7 @@
       <div style="margin-bottom: 10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <button class="btn" onclick="copyDebugLog()">📋 Copy Debug Log</button>
         <button class="btn" onclick="downloadDebugLog()">⬇️ Download Debug Log</button>
+        <button class="btn" onclick="downloadFailed404()">⬇️ Download 404 URLs</button>
         <button class="btn" onclick="clearResults()">🗑️ Clear Log</button>
         <span style="margin-left:12px;color:#bbb;">Filter:</span>
         <button class="btn" id="filterAll" onclick="setLogFilter('all')">All</button>
@@ -461,6 +462,7 @@
     // Results management
     let logEntries = [];
     let logFilter = 'all';
+    let failed404Set = new Set(); // collect failing 404 URLs during Step 2
 
     function setLogFilter(f) {
       logFilter = f;
@@ -490,6 +492,20 @@
     function clearResults() {
       logEntries = [];
       document.getElementById('results').innerHTML = 'Results cleared. Ready for new operations.';
+    }
+
+    // Download list of 404 URLs collected during scraping
+    function downloadFailed404(){
+      const urls = Array.from(failed404Set);
+      if (!urls.length){ addResult('ℹ️ No 404 URLs collected in this session','info'); return; }
+      const header = 'url\n';
+      const body = urls.map(u => `"${u.replace(/"/g,'""')}"`).join('\n');
+      const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `failed-404-urls-${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      addResult(`⬇️ Downloaded ${urls.length} 404 URLs`, 'success');
     }
 
     // Copy debug log to clipboard
@@ -656,29 +672,20 @@
       const el = document.getElementById('qaResults');
       el.textContent = 'Running QA checks...';
       try {
-        const token = getToken();
-        const resp = await fetch('/api/qa-spot-checks', {
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const text = await resp.text();
-        let data;
-        try { data = JSON.parse(text); } catch { data = { ok:false, raw:text }; }
-        if (!resp.ok || !data?.ok) {
-          el.textContent = `QA request failed: ${data?.error || resp.status} ${data?.detail || data?.raw || ''}`;
-          return;
-        }
-        const rows = [];
-        const checks = data.checks || {};
-        const order = [
-          'page_entities','page_chunks','event_product_links_auto',
-          'v_events_real_data','v_events_for_chat',
-          'v_blog_content','v_service_content','v_product_content'
+        // Use Supabase REST counts directly (no backend endpoint)
+        const checks = [
+          { name: 'page_entities', path: 'page_entities?select=id' },
+          { name: 'page_chunks', path: 'page_chunks?select=id' },
+          { name: 'event_product_links_auto', path: 'event_product_links_auto?select=id' },
+          { name: 'v_events_for_chat', path: 'v_events_for_chat?select=event_url' },
+          { name: 'v_blog_content', path: 'v_blog_content?select=url' },
+          { name: 'v_service_content', path: 'v_service_content?select=url' },
+          { name: 'v_product_content', path: 'v_product_content?select=url' }
         ];
-        for (const name of order) {
-          const c = checks[name];
-          const count = (c && c.status === 'ok') ? (c.count ?? 0) : 0;
-          rows.push(`${name.padEnd(36)} ${String(count)}`);
+        const rows = [];
+        for (const c of checks) {
+          const n = await restCount(c.path);
+          rows.push(`${c.name.padEnd(36)} ${String(n)}`);
         }
         el.textContent = rows.join('\n');
       } catch (e) {
@@ -1230,7 +1237,8 @@
       const enhancementCount = uniqueEntries.length - foundationCount;
       window.__foundationEnhancementBreakdown = { foundation: foundationCount, enhancement: enhancementCount };
 
-      // enable stop button
+      // reset 404 collection and enable stop button
+      failed404Set = new Set();
       let stopRequested = false;
       window.__stopScrape = () => { stopRequested = true; addResult('⏹️ Stop requested. Finishing current URL...', 'info'); };
       document.getElementById('stopScrapeBtn').style.display = 'inline-block';
@@ -1355,6 +1363,10 @@
                   extra = `\n↪ Attempts: ${JSON.stringify(j.attempts)}`;
                 }
               } catch {}
+              // collect 404s for export
+              if (reasonLc.includes(' 404') || /\b404\b/.test(reasonLc)) {
+                try { failed404Set.add(url); } catch {}
+              }
               addResult(`❌ Failed: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
@@ -1416,12 +1428,15 @@
     // Event-Product mapping
     async function runMapping() {
       addResult('🔗 Running event → product mapping...');
+      showOverlayProgress('Creating event → product mappings…', 3);
       document.getElementById('stepMap').style.background = '#3a3';
       document.getElementById('stepMap').textContent = 'Status: running';
       const token = getToken();
       try {
+        updateOverlayProgress(1, 3);
         // fetch before/after counts for dashboard clarity
         const before = await apiCall('/api/admin?action=refresh', { preview: true });
+        updateOverlayProgress(2, 3);
         const result = await apiCall('/api/admin?action=refresh', {});
         if (result && result.ok) {
           const mappingsCreated = result.mappingsCreated || 0;
@@ -1442,7 +1457,7 @@
           }
           document.getElementById('stepMap').style.background = '#2a6';
           document.getElementById('stepMap').textContent = `Status: ${counts.mapped}/${counts.total} mapped`;
-
+          updateOverlayProgress(3, 3);
           // Update parity as well (entities likely increased via backfill/refresh)
           updateParityPill();
         } else {
@@ -1471,15 +1486,18 @@
         document.getElementById('stepMap').style.background = '#a62';
         document.getElementById('stepMap').textContent = 'Status: failed';
       }
+      hideOverlayProgress();
     }
 
     // Finalize: trigger mapping refresh and warm views/tables
     async function finalizeNow() {
       addResult('✅ Finalize requested: refreshing mappings and warming views...');
+      showOverlayProgress('Finalizing (refreshing & warming)…', 3);
       document.getElementById('stepFinalize').style.background = '#3a3';
       document.getElementById('stepFinalize').textContent = 'Status: running';
       showToast('Finalizing… refreshing mappings and warming views', 2500);
       try {
+        updateOverlayProgress(1, 3);
         const resp = await fetch('/api/tools?action=finalize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
@@ -1491,8 +1509,10 @@
           addResult(`❌ Finalize failed: ${j?.error || resp.status} ${j?.detail || ''}`, 'error');
           document.getElementById('stepFinalize').textContent = 'Status: failed';
           document.getElementById('stepFinalize').style.background = '#a62';
+          hideOverlayProgress();
           return;
         }
+        updateOverlayProgress(2, 3);
         addResult('✅ Finalize completed.', 'success');
         if (j.before) addResult(`Before: ${JSON.stringify(j.before)}`, 'info');
         if (j.after) addResult(`After: ${JSON.stringify(j.after)}`, 'info');
@@ -1512,6 +1532,7 @@
         document.getElementById('stepFinalize').textContent = 'Status: error';
         document.getElementById('stepFinalize').style.background = '#a62';
       }
+      hideOverlayProgress();
     }
 
     // Test functions
