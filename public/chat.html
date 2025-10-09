@@ -130,6 +130,116 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 .typing .dot:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
 
+/* Feedback buttons styles */
+.feedback-container { margin-top: 8px; padding: 8px 0; border-top: 1px solid #e9ecef; }
+.feedback-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+.feedback-btn { 
+  background: none; 
+  border: 1px solid #ddd; 
+  border-radius: 4px; 
+  padding: 4px 8px; 
+  cursor: pointer; 
+  font-size: 16px; 
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+.feedback-btn:hover { 
+  opacity: 1; 
+  border-color: #007bff; 
+  background: #f8f9fa; 
+}
+.feedback-btn:disabled { 
+  opacity: 0.5; 
+  cursor: not-allowed; 
+}
+.thumbs-up:hover { border-color: #28a745; }
+.thumbs-down:hover { border-color: #dc3545; }
+
+/* Feedback form styles */
+.feedback-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.feedback-form {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+.feedback-form h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 16px;
+}
+.feedback-form p {
+  margin: 0 0 16px 0;
+  color: #666;
+  font-size: 14px;
+}
+.feedback-options {
+  margin-bottom: 16px;
+}
+.feedback-option {
+  display: block;
+  margin-bottom: 8px;
+}
+.feedback-option input[type="radio"] {
+  margin-right: 8px;
+}
+.feedback-option label {
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+.feedback-text {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  resize: vertical;
+  margin-bottom: 16px;
+}
+.feedback-buttons-form {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.feedback-buttons-form button {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.feedback-cancel {
+  background: #f8f9fa;
+  color: #666;
+}
+.feedback-cancel:hover {
+  background: #e9ecef;
+}
+.feedback-submit {
+  background: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+.feedback-submit:hover {
+  background: #c82333;
+  border-color: #bd2130;
+}
+
 /* Mobile and tablet responsive design */
 @media (max-width:768px){
   .title{font-size:28px}
@@ -866,6 +976,36 @@ function renderAnswer(payload){
   footer.innerHTML = `<span id="conf-pill" class="badge conf small ${__rounded>=80?'green':__rounded>=50?'amber':'red'}">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
   thread.appendChild(footer);
 
+  // Add feedback buttons
+  const feedbackContainer = document.createElement('div');
+  feedbackContainer.className = 'feedback-container';
+  feedbackContainer.innerHTML = `
+    <div class="feedback-buttons">
+      <button class="feedback-btn thumbs-up" data-rating="thumbs_up" title="This response was helpful">
+        👍
+      </button>
+      <button class="feedback-btn thumbs-down" data-rating="thumbs_down" title="This response was not helpful">
+        👎
+      </button>
+    </div>
+  `;
+  thread.appendChild(feedbackContainer);
+
+  // Add feedback event listeners
+  const thumbsUpBtn = feedbackContainer.querySelector('.thumbs-up');
+  const thumbsDownBtn = feedbackContainer.querySelector('.thumbs-down');
+  
+  thumbsUpBtn.addEventListener('click', () => {
+    submitFeedback('thumbs_up', null, null, __lastQuery, payload, __rounded, s.intent);
+    thumbsUpBtn.style.opacity = '0.5';
+    thumbsUpBtn.disabled = true;
+    thumbsDownBtn.disabled = true;
+  });
+
+  thumbsDownBtn.addEventListener('click', () => {
+    showFeedbackForm(__lastQuery, payload, __rounded, s.intent, thumbsUpBtn, thumbsDownBtn);
+  });
+
   // Clickable reasoning popover
   const confEl = document.getElementById('conf-pill');
   if (confEl) {
@@ -972,6 +1112,124 @@ window.addEventListener('beforeunload', () => {
     }).catch(err => console.warn('Session end logging failed:', err));
   }
 });
+
+// Feedback functions
+async function submitFeedback(rating, reason, userFeedbackText, query, payload, confidence, intent) {
+  try {
+    const feedbackData = {
+      query: query,
+      responseId: payload?.debug?.version || null,
+      rating: rating,
+      reason: reason,
+      userFeedbackText: userFeedbackText,
+      confidenceScore: confidence,
+      intent: intent,
+      sessionId: sessionId,
+      userAgent: navigator.userAgent,
+      pageUrl: window.location.href
+    };
+
+    const response = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(feedbackData)
+    });
+
+    if (response.ok) {
+      console.log('Feedback submitted successfully');
+    } else {
+      console.error('Failed to submit feedback:', response.statusText);
+    }
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+  }
+}
+
+function showFeedbackForm(query, payload, confidence, intent, thumbsUpBtn, thumbsDownBtn) {
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'feedback-form-overlay';
+  
+  overlay.innerHTML = `
+    <div class="feedback-form">
+      <h3>What was wrong with this response?</h3>
+      <p>Your feedback helps us improve the chatbot's responses.</p>
+      
+      <div class="feedback-options">
+        <label class="feedback-option">
+          <input type="radio" name="reason" value="incorrect_info">
+          <span>Incorrect information</span>
+        </label>
+        <label class="feedback-option">
+          <input type="radio" name="reason" value="not_helpful">
+          <span>Not helpful/irrelevant</span>
+        </label>
+        <label class="feedback-option">
+          <input type="radio" name="reason" value="missing_details">
+          <span>Missing key details</span>
+        </label>
+        <label class="feedback-option">
+          <input type="radio" name="reason" value="wrong_intent">
+          <span>Wrong intent detected</span>
+        </label>
+        <label class="feedback-option">
+          <input type="radio" name="reason" value="other">
+          <span>Other</span>
+        </label>
+      </div>
+      
+      <textarea class="feedback-text" placeholder="Additional details (optional)"></textarea>
+      
+      <div class="feedback-buttons-form">
+        <button class="feedback-cancel">Cancel</button>
+        <button class="feedback-submit">Submit Feedback</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Event listeners
+  const cancelBtn = overlay.querySelector('.feedback-cancel');
+  const submitBtn = overlay.querySelector('.feedback-submit');
+  const reasonInputs = overlay.querySelectorAll('input[name="reason"]');
+  const textArea = overlay.querySelector('.feedback-text');
+
+  cancelBtn.addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  submitBtn.addEventListener('click', () => {
+    const selectedReason = overlay.querySelector('input[name="reason"]:checked')?.value;
+    const additionalText = textArea.value.trim();
+
+    if (!selectedReason) {
+      alert('Please select a reason for your feedback.');
+      return;
+    }
+
+    // Submit feedback
+    submitFeedback('thumbs_down', selectedReason, additionalText, query, payload, confidence, intent);
+    
+    // Disable buttons
+    thumbsUpBtn.style.opacity = '0.5';
+    thumbsUpBtn.disabled = true;
+    thumbsDownBtn.style.opacity = '0.5';
+    thumbsDownBtn.disabled = true;
+    
+    // Close form
+    document.body.removeChild(overlay);
+  });
+
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
+}
 
 async function sendQuery(query){
   var t0 = performance.now();
