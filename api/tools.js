@@ -297,7 +297,7 @@ export default async function handler(req, res) {
           const norm = (u) => (u||'').replace(/\/+$/,'');
           const { data: eventRows, error: evErr } = await supa
             .from('page_entities')
-            .select('url, date_start, date_end, start_time, end_time, kind')
+            .select('url, date_start, date_end, kind')
             .eq('kind','event')
             .limit(5000);
           if (!evErr && Array.isArray(eventRows)) {
@@ -307,8 +307,13 @@ export default async function handler(req, res) {
               if (ev) {
                 row.date_start = ev.date_start;
                 row.date_end = ev.date_end;
-                row.start_time = ev.start_time;
-                row.end_time = ev.end_time;
+                // derive HH:MM:SS from timestamp strings if present
+                const ds = typeof ev.date_start === 'string' ? ev.date_start : (ev.date_start?.toString?.() || '');
+                const de = typeof ev.date_end === 'string' ? ev.date_end : (ev.date_end?.toString?.() || '');
+                const t1 = ds.includes('T') ? ds.split('T')[1].slice(0,8) : '';
+                const t2 = de.includes('T') ? de.split('T')[1].slice(0,8) : '';
+                if (t1) row.start_time = t1;
+                if (t2) row.end_time = t2;
               }
               return row;
             });
@@ -418,13 +423,19 @@ export default async function handler(req, res) {
         // Load event schedule directly from page_entities (CSV-origin values)
         const { data: evRows, error: evErr } = await supa
           .from('page_entities')
-          .select('url,date_start,date_end,start_time,end_time,kind')
+          .select('url,date_start,date_end,kind')
           .eq('kind','event')
           .limit(5000);
         if (evErr) return sendJSON(res, 500, { error: 'supabase_error', detail: evErr.message });
 
         const norm = (u) => (u||'').replace(/\/+$/,'');
-        const evByUrl = new Map((evRows||[]).map(r => [norm(r.url), r]));
+        const evByUrl = new Map((evRows||[]).map(r => {
+          const ds = typeof r.date_start === 'string' ? r.date_start : (r.date_start?.toString?.() || '');
+          const de = typeof r.date_end === 'string' ? r.date_end : (r.date_end?.toString?.() || '');
+          const start_time = ds.includes('T') ? ds.split('T')[1].slice(0,8) : '';
+          const end_time = de.includes('T') ? de.split('T')[1].slice(0,8) : '';
+          return [norm(r.url), { ...r, start_time, end_time }];
+        }));
         const header = [
           'event_url','subtype','product_url','product_title','price_gbp','availability',
           'export_date_start','export_date_end','export_start_time','export_end_time',
