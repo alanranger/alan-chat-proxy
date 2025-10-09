@@ -1170,9 +1170,23 @@ function extractFromDescription(desc) {
       if (v) out.participants = v;
       continue;
     }
+    
+    // Handle chunk format: "* Participants: Max 6 *"
+    if (/\*\s*participants:\s*([^*]+)\s*\*/i.test(ln)) {
+      const match = ln.match(/\*\s*participants:\s*([^*]+)\s*\*/i);
+      if (match) out.participants = match[1].trim();
+      continue;
+    }
     if (/^fitness:/i.test(ln)) {
       const v = ln.replace(/^fitness:\s*/i, "").trim() || nextVal(i);
       if (v) out.fitness = v;
+      continue;
+    }
+    
+    // Handle chunk format: "* Fitness:2. Easy-Moderate *"
+    if (/\*\s*fitness:\s*([^*]+)\s*\*/i.test(ln)) {
+      const match = ln.match(/\*\s*fitness:\s*([^*]+)\s*\*/i);
+      if (match) out.fitness = match[1].trim();
       continue;
     }
     // Also look for fitness information in other formats
@@ -1246,19 +1260,27 @@ function buildProductPanelMarkdown(products) {
   // Create a better summary from the full description
   const fullDescription = primary.description || primary?.raw?.description || "";
   
-  const info =
-    extractFromDescription(fullDescription) || {};
+  // Also try to get chunk data for more detailed information
+  let chunkData = "";
+  try {
+    const chunkResponse = await supabase
+      .from('page_chunks')
+      .select('chunk_text')
+      .eq('url', primary.page_url)
+      .limit(1)
+      .single();
+    
+    if (chunkResponse.data) {
+      chunkData = chunkResponse.data.chunk_text || "";
+    }
+  } catch (e) {
+    // Ignore chunk fetch errors
+  }
   
-  console.log("Extracted info:", JSON.stringify(info, null, 2));
-  console.log("Full description:", fullDescription);
-  console.log("Info participants:", info.participants);
-  console.log("Info fitness:", info.fitness);
-  console.log("Info location:", info.location);
+  // Use chunk data if available, otherwise fall back to description
+  const sourceText = chunkData || fullDescription;
+  const info = extractFromDescription(sourceText) || {};
   
-  // Test the extraction function directly
-  const testDesc = "Participants:\nMax 6\nFitness:2. Easy-Moderate";
-  const testInfo = extractFromDescription(testDesc);
-  console.log("Test extraction result:", JSON.stringify(testInfo, null, 2));
   let summary = null; // Don't use info.summary, generate our own
   
   if (fullDescription) {
@@ -1345,10 +1367,6 @@ function buildProductPanelMarkdown(products) {
   if (info.fitness) facts.push(`**Fitness:** ${info.fitness}`);
   if (info.availability) facts.push(`**Availability:** ${info.availability}`);
   
-  console.log("Final summary:", summary);
-  console.log("Facts to add:", facts);
-  console.log("Info object keys:", Object.keys(info));
-  console.log("Info values:", info);
   if (facts.length) {
     lines.push("");
     for (const f of facts) lines.push(f);
