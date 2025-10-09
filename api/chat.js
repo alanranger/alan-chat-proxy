@@ -205,14 +205,15 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
     
     // Must contain equipment keywords AND be substantial content
     const hasEquipmentKeyword = Array.from(equipmentKeywords).some(k => text.includes(k));
-    const isSubstantial = text.length > 50 && !text.includes('[/') && !text.includes('](');
+    const isSubstantial = text.length > 30 && !text.includes('[/') && !text.includes('](');
     
     // Prioritize chunks from specific tripod articles
     const isTripodArticle = url.includes('tripod') || url.includes('gitzo') || url.includes('benro') || 
                            url.includes('equipment-recommendations') || url.includes('manfrotto') ||
                            url.includes('travel') || url.includes('lightweight');
     
-    return hasEquipmentKeyword && isSubstantial && (isTripodArticle || text.includes('tripod'));
+    // Be more inclusive - accept any equipment-related content
+    return hasEquipmentKeyword && isSubstantial;
   });
   
   if (equipmentChunks.length === 0) {
@@ -265,13 +266,16 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
                             sLower.includes('how to') || sLower.includes('when to') || sLower.includes('why') ||
                             sLower.includes('benefit') || sLower.includes('advantage') || sLower.includes('feature');
       
-      // Look for general advice patterns
+      // Look for general advice patterns - be more inclusive
       const hasAdvicePattern = sLower.includes('recommend') || sLower.includes('best') || sLower.includes('choose') || 
                               sLower.includes('important') || sLower.includes('consider') || sLower.includes('essential') ||
                               sLower.includes('should') || sLower.includes('must') || sLower.includes('excellent') ||
                               sLower.includes('value') || sLower.includes('combination') || sLower.includes('ideal') ||
                               sLower.includes('perfect') || sLower.includes('top') || sLower.includes('favorite') ||
-                              sLower.includes('quality') || sLower.includes('stability') || sLower.includes('durability');
+                              sLower.includes('quality') || sLower.includes('stability') || sLower.includes('durability') ||
+                              sLower.includes('help') || sLower.includes('improve') || sLower.includes('enhance') ||
+                              sLower.includes('benefit') || sLower.includes('advantage') || sLower.includes('feature') ||
+                              sLower.includes('tip') || sLower.includes('trick') || sLower.includes('technique');
       
       const hasTripodContent = sLower.includes('tripod') || sLower.includes('equipment');
       
@@ -339,9 +343,6 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   
   // Add context about Alan's experience
   response += "*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
-  
-  // Add version marker to confirm new code is running
-  response += "**DEBUG: New equipment advice version v2.0**\n\n";
   
   console.log('DEBUG: Generated response with', productRecommendations.length, 'product recs,', brandComparisons.length, 'comparisons,', specificTips.length, 'tips,', generalAdvice.length, 'general advice');
   
