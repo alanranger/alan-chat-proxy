@@ -676,6 +676,8 @@
         const checks = [
           { name: 'page_entities', path: 'page_entities?select=id' },
           { name: 'page_chunks', path: 'page_chunks?select=id' },
+          // Raw blog entity count for clarity alongside v_blog_content
+          { name: 'page_entities_articles', path: 'page_entities?select=id&kind=eq.article' },
           // canonical mapping view (may aggregate manual + auto)
           { name: 'v_event_product_mappings', path: 'v_event_product_mappings?select=event_url' },
           // raw auto table (may be empty if only view is used)
