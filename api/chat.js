@@ -307,51 +307,48 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
     }
   }
   
-  // Build comprehensive response
-  let response = "**Equipment Recommendations:**\n\n";
-  
-  // Add product recommendations first
-  if (productRecommendations.length > 0) {
-    response += "**Specific Tripod Recommendations:**\n";
-    productRecommendations.forEach((point, i) => {
-      response += `• ${point}\n`;
-    });
-    response += "\n";
+  // If we have good content, build a comprehensive response
+  if (productRecommendations.length > 0 || brandComparisons.length > 0 || specificTips.length > 0) {
+    let response = "**Equipment Recommendations:**\n\n";
+    
+    // Add product recommendations first
+    if (productRecommendations.length > 0) {
+      response += "**Specific Tripod Recommendations:**\n";
+      productRecommendations.forEach((point, i) => {
+        response += `• ${point}\n`;
+      });
+      response += "\n";
+    }
+    
+    // Add brand comparisons
+    if (brandComparisons.length > 0) {
+      response += "**Brand Comparisons:**\n";
+      brandComparisons.forEach((point, i) => {
+        response += `• ${point}\n`;
+      });
+      response += "\n";
+    }
+    
+    // Add specific tips
+    if (specificTips.length > 0) {
+      response += "**Key Tips for Choosing Tripods:**\n";
+      specificTips.forEach((point, i) => {
+        response += `• ${point}\n`;
+      });
+      response += "\n";
+    }
+    
+    // Add context about Alan's experience
+    response += "*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
+    
+    console.log('DEBUG: Generated response with', productRecommendations.length, 'product recs,', brandComparisons.length, 'comparisons,', specificTips.length, 'tips');
+    
+    return response;
   }
   
-  // Add brand comparisons
-  if (brandComparisons.length > 0) {
-    response += "**Brand Comparisons:**\n";
-    brandComparisons.forEach((point, i) => {
-      response += `• ${point}\n`;
-    });
-    response += "\n";
-  }
-  
-  // Add specific tips
-  if (specificTips.length > 0) {
-    response += "**Key Tips for Choosing Tripods:**\n";
-    specificTips.forEach((point, i) => {
-      response += `• ${point}\n`;
-    });
-    response += "\n";
-  }
-  
-  // Add general advice
-  if (generalAdvice.length > 0) {
-    response += "**General Advice:**\n";
-    generalAdvice.forEach((point, i) => {
-      response += `• ${point}\n`;
-    });
-    response += "\n";
-  }
-  
-  // Add context about Alan's experience
-  response += "*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
-  
-  console.log('DEBUG: Generated response with', productRecommendations.length, 'product recs,', brandComparisons.length, 'comparisons,', specificTips.length, 'tips,', generalAdvice.length, 'general advice');
-  
-  return response;
+  // If no good content found, return null to fall back to other logic
+  console.log('DEBUG: No quality tripod content found, returning null');
+  return null;
 }
 
 function generateDirectAnswer(query, articles, contentChunks = []) {
@@ -1750,6 +1747,16 @@ export default async function handler(req, res) {
         }
       }
       
+      // Special boost for tripod recommendation articles
+      if (qlcRank.includes('tripod') && qlcRank.includes('recommend')) {
+        if (title.includes('recommended') && title.includes('tripod')) s += 15;
+        if (url.includes('recommended-travel-lightweight-tripods')) s += 20;
+        if (url.includes('tripod-for-cameras-essential-guide')) s += 18;
+        if (url.includes('tripods-gitzo-vs-benro-review')) s += 16;
+        if (url.includes('perfect-travel-tripod') || url.includes('cyanbird')) s += 14;
+        if (url.includes('5-reasons-to-use-a-tripod')) s += 12;
+      }
+      
       // Penalize irrelevant articles for tripod queries
       if (qlcRank.includes('tripod') && !title.includes('tripod') && !url.includes('tripod') && 
           !title.includes('equipment') && !url.includes('equipment') && !title.includes('gitzo') && !title.includes('benro')) {
@@ -1765,7 +1772,7 @@ export default async function handler(req, res) {
         .map(a=> ({ a, s: scoreArticle(a) }))
         .sort((x,y)=> y.s - x.s)
         .map(x=> x.a)
-        .slice(0, 5); // Limit to top 5 after deduplication
+        .slice(0, 6); // Limit to top 6 after deduplication
     }
     // Ensure concept article is first when asking "what is <term>"
     const qlc2 = (query||'').toLowerCase();
