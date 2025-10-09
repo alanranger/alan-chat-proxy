@@ -250,8 +250,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 }
 
 .product-price {
-  background: #451a03;
-  color: #f59e0b;
+  background: #064e3b;
+  color: #10b981;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 14px;
@@ -826,17 +826,23 @@ function renderProductCard(prod){
   const priceHead = productHeadlinePrice(prod);
   const lines = [];
   if (priceHead) lines.push(`<p class="kvline"><strong>Price:</strong> ${escapeHTML(priceHead)}</p>`);
-  const md = getMetaDescription(prod);
-  if(md) lines.push(`<p class="meta">${escapeHTML(md)}</p>`);
+  
+  // Prioritize specific facts over generic meta description
   if (prod.availability_status){
     lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(String(prod.availability_status).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2'))}</p>`);
   } else if(facts.availability){
     const avail = (facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
     lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
   }
-  if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
   if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
   if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
+  if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
+  
+  // Only show meta description if we don't have specific facts
+  const md = getMetaDescription(prod);
+  if(md && !facts.participants && !facts.fitness && !facts.location) {
+    lines.push(`<p class="meta">${escapeHTML(md)}</p>`);
+  }
   const li = options.map(o=>`<li>${escapeHTML(o.label||'')}${o.price ? ` — ${o.price}` : ''}</li>`).join('');
   const href = absolutize(prod.page_url || prod.source_url || prod.url || '#');
   
@@ -909,14 +915,20 @@ function renderEventsBlock(structured, query){
     const title = e.title ? `${escapeHTML(e.title)}` : '';
     const price = e.price_gbp ? `£${e.price_gbp}` : '';
     
-    // Format start and end times
+    // Format start and end times - use CSV times directly to avoid DST issues
     let timeInfo = '';
     if (e.start_time && e.end_time) {
       timeInfo = `<div class="event-time">🕐 ${escapeHTML(e.start_time)} - ${escapeHTML(e.end_time)}</div>`;
+    } else if (e._csv_start_time && e._csv_end_time) {
+      // Use CSV times directly from raw data to avoid timezone conversion
+      timeInfo = `<div class="event-time">🕐 ${escapeHTML(e._csv_start_time)} - ${escapeHTML(e._csv_end_time)}</div>`;
     } else if (e.date_start && e.date_end) {
-      const startTime = new Date(e.date_start).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      const endTime = new Date(e.date_end).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      timeInfo = `<div class="event-time">🕐 ${startTime} - ${endTime}</div>`;
+      // Fallback: extract time from date strings without timezone conversion
+      const startTime = e.date_start.split('T')[1]?.substring(0, 5) || '';
+      const endTime = e.date_end.split('T')[1]?.substring(0, 5) || '';
+      if (startTime && endTime) {
+        timeInfo = `<div class="event-time">🕐 ${startTime} - ${endTime}</div>`;
+      }
     }
     
     // Create a more visually appealing event card
@@ -927,7 +939,6 @@ function renderEventsBlock(structured, query){
             <h4 class="event-title">
               <a href="${href}" target="_blank" rel="noopener">${title || 'Photography Event'}</a>
             </h4>
-            ${price ? `<span class="event-price">${price}</span>` : ''}
           </div>
           <div class="event-details">
             <div class="event-date">📅 ${when}</div>
