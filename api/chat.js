@@ -1,4 +1,4 @@
-// /api/chat.js - Step 1: Add basic Supabase connection
+// /api/chat.js - Step 2: Add intent detection and keyword extraction
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
@@ -11,6 +11,31 @@ function supabaseAdmin() {
   return createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
 }
 
+// Simple keyword extraction
+function extractKeywords(query) {
+  if (!query) return [];
+  const words = query.toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2)
+    .filter(w => !['the', 'and', 'or', 'but', 'for', 'with', 'when', 'where', 'what', 'how', 'why'].includes(w));
+  return [...new Set(words)];
+}
+
+// Simple intent detection
+function detectIntent(query) {
+  if (!query) return "advice";
+  const lc = query.toLowerCase();
+  
+  if (lc.includes('workshop') || lc.includes('course') || lc.includes('class') || 
+      lc.includes('when') || lc.includes('next') || lc.includes('book') || 
+      lc.includes('batsford') || lc.includes('chesterton')) {
+    return "events";
+  }
+  
+  return "advice";
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
@@ -21,48 +46,49 @@ export default async function handler(req, res) {
     const { query } = req.body || {};
     const client = supabaseAdmin();
     
-    // Simple test: try to query events
-    const { data: events, error } = await client
-      .from('v_events_for_chat')
-      .select('*')
-      .limit(3);
+    // Extract keywords and detect intent
+    const keywords = extractKeywords(query);
+    const intent = detectIntent(query);
     
-    if (error) {
-      res.json({
-        ok: true,
-        answer_markdown: "Test response - Supabase connection failed",
-        structured: {
-          intent: "test",
-          topic: query || "test",
-          events: [],
-          products: [],
-          articles: []
-        },
-        confidence: 0.3,
-        debug: {
-          version: "v1.2.43-supabase-test",
-          query: query || "no query",
-          error: error.message
-        }
-      });
-      return;
+    // Query events with keywords
+    let events = [];
+    if (intent === "events") {
+      const { data, error } = await client
+        .from('v_events_for_chat')
+        .select('*')
+        .limit(5);
+      
+      if (!error && data) {
+        events = data;
+      }
     }
     
-    // Success - return events
+    // Generate response based on intent
+    let answerMarkdown = "";
+    if (intent === "events" && events.length > 0) {
+      answerMarkdown = `I found ${events.length} upcoming workshops. Here are the details:`;
+    } else if (intent === "events") {
+      answerMarkdown = "I couldn't find any upcoming workshops at the moment.";
+    } else {
+      answerMarkdown = "I can help with photography advice and equipment recommendations.";
+    }
+    
     res.json({
       ok: true,
-      answer_markdown: `Found ${events.length} events in database`,
+      answer_markdown: answerMarkdown,
       structured: {
-        intent: "events",
-        topic: query || "test",
-        events: events || [],
+        intent: intent,
+        topic: keywords.join(' '),
+        events: events,
         products: [],
         articles: []
       },
-      confidence: 0.7,
+      confidence: events.length > 0 ? 0.8 : 0.4,
       debug: {
-        version: "v1.2.43-supabase-test",
+        version: "v1.2.44-intent-test",
         query: query || "no query",
+        keywords: keywords,
+        intent: intent,
         eventCount: events.length
       }
     });
