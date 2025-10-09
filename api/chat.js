@@ -1700,9 +1700,9 @@ export default async function handler(req, res) {
       if (sessionId && query) {
         const responseTimeMs = Date.now() - started;
         const sourcesUsed = citations || [];
-        logAnswer(sessionId, query, answerMarkdown, "events", 0.8, responseTimeMs, sourcesUsed, pageContext).catch(err => 
+        logAnswer(sessionId, query, answerMarkdown, "events", 0.8, responseTimeMs, sourcesUsed, pageContext).catch(err => {
           // Failed to log answer
-        );
+        });
       }
 
       res.status(200).json({
@@ -1911,9 +1911,9 @@ export default async function handler(req, res) {
     if (sessionId && query) {
       const responseTimeMs = Date.now() - started;
       const sourcesUsed = citations || [];
-      logAnswer(sessionId, query, lines.join("\n"), "advice", confidence, responseTimeMs, sourcesUsed, pageContext).catch(err => 
+      logAnswer(sessionId, query, lines.join("\n"), "advice", confidence, responseTimeMs, sourcesUsed, pageContext).catch(err => {
         // Failed to log answer
-      );
+      });
     }
 
     res.status(200).json({
