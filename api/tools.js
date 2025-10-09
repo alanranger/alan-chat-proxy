@@ -265,6 +265,27 @@ export default async function handler(req, res) {
       return sendJSON(res, 200, { matches });
     }
 
+    // --- event_debug: inspect a single event across sources ---
+    if (req.method === 'GET' && action === 'event_debug') {
+      const url = (req.query?.url || '').toString().trim();
+      if (!url) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "url"' });
+      const norm = (u) => (u||'').replace(/\/+$/,'');
+      const u = norm(url);
+      try {
+        const [pe, vf, ve] = await Promise.all([
+          supa.from('page_entities').select('url,kind,title,date_start,date_end').eq('kind','event').eq('url', u).limit(1),
+          supa.from('v_event_product_final_enhanced').select('event_url,date_start,date_end,start_time,end_time,product_url,product_title').eq('event_url', u).limit(5),
+          supa.from('v_events_for_chat').select('event_url,date_start,date_end,start_time,end_time').eq('event_url', u).limit(1)
+        ]);
+        const peRow = pe.data?.[0] || null;
+        const vfRows = vf.data || [];
+        const veRow = ve.data?.[0] || null;
+        return sendJSON(res, 200, { ok:true, url:u, page_entities: peRow, v_event_product_final_enhanced: vfRows, v_events_for_chat: veRow });
+      } catch (e) {
+        return sendJSON(res, 500, { error:'server_error', detail:String(e?.message||e) });
+      }
+    }
+
         // --- export: CSV of v_event_product_final_enhanced (proper lineage view with all fields) ---
         if (req.method === 'GET' && action === 'export') {
           try{
