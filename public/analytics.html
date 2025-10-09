@@ -2130,6 +2130,91 @@
         const answeredInteractions = interactions.filter(i => i.answer);
         const latestInteraction = answeredInteractions[0] || interactions[0];
         
+        // Fetch feedback data for this question
+        let feedbackData = null;
+        try {
+          const feedbackResponse = await apiCall('feedback');
+          const questionText = latestInteraction.question.toLowerCase().trim();
+          feedbackData = feedbackResponse.feedback?.recentFeedback?.filter(f => 
+            f.query.toLowerCase().trim() === questionText
+          ) || [];
+        } catch (feedbackError) {
+          console.warn('Could not load feedback data:', feedbackError);
+        }
+        
+        // Create feedback display HTML
+        let feedbackHTML = '';
+        if (feedbackData && feedbackData.length > 0) {
+          const thumbsUp = feedbackData.filter(f => f.rating === 'thumbs_up').length;
+          const thumbsDown = feedbackData.filter(f => f.rating === 'thumbs_down').length;
+          const satisfactionRate = feedbackData.length > 0 ? (thumbsUp / feedbackData.length * 100).toFixed(1) : 0;
+          
+          feedbackHTML = `
+            <div class="feedback-section" style="margin-top: 20px; padding: 15px; background: #1a1f2e; border-radius: 8px;">
+              <h4 style="color: #10b981; margin-bottom: 10px;">👥 User Feedback</h4>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
+                  <div style="font-size: 18px; font-weight: bold; color: #10b981;">${thumbsUp}</div>
+                  <div style="font-size: 12px; color: #888;">👍 Thumbs Up</div>
+                </div>
+                <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
+                  <div style="font-size: 18px; font-weight: bold; color: #ef4444;">${thumbsDown}</div>
+                  <div style="font-size: 12px; color: #888;">👎 Thumbs Down</div>
+                </div>
+                <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
+                  <div style="font-size: 18px; font-weight: bold; color: #3b82f6;">${satisfactionRate}%</div>
+                  <div style="font-size: 12px; color: #888;">Satisfaction</div>
+                </div>
+                <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
+                  <div style="font-size: 18px; font-weight: bold; color: #f59e0b;">${feedbackData.length}</div>
+                  <div style="font-size: 12px; color: #888;">Total</div>
+                </div>
+              </div>
+          `;
+          
+          // Show recent feedback details
+          if (feedbackData.length > 0) {
+            feedbackHTML += `
+              <div style="margin-top: 15px;">
+                <h5 style="color: #f59e0b; margin-bottom: 10px;">📝 Recent Feedback Details:</h5>
+                <div style="max-height: 200px; overflow-y: auto;">
+            `;
+            
+            feedbackData.slice(0, 5).forEach(feedback => {
+              const ratingColor = feedback.rating === 'thumbs_up' ? '#10b981' : '#ef4444';
+              const ratingIcon = feedback.rating === 'thumbs_up' ? '👍' : '👎';
+              
+              feedbackHTML += `
+                <div style="margin-bottom: 10px; padding: 10px; background: #0f1419; border-radius: 5px; border-left: 3px solid ${ratingColor};">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <span style="color: ${ratingColor}; font-weight: bold;">${ratingIcon} ${feedback.rating.replace('_', ' ').toUpperCase()}</span>
+                    <span style="color: #888; font-size: 12px;">${new Date(feedback.timestamp).toLocaleString()}</span>
+                  </div>
+                  ${feedback.reason ? `<div style="color: #ccc; font-size: 12px; margin-bottom: 5px;"><strong>Reason:</strong> ${feedback.reason.replace('_', ' ')}</div>` : ''}
+                  ${feedback.user_feedback_text ? `<div style="color: #ccc; font-size: 12px;"><strong>Comment:</strong> "${feedback.user_feedback_text}"</div>` : ''}
+                  <div style="color: #888; font-size: 11px; margin-top: 5px;">
+                    Confidence: ${feedback.confidence_score}% | Intent: ${feedback.intent}
+                  </div>
+                </div>
+              `;
+            });
+            
+            feedbackHTML += `
+                </div>
+              </div>
+            `;
+          }
+          
+          feedbackHTML += `</div>`;
+        } else {
+          feedbackHTML = `
+            <div class="feedback-section" style="margin-top: 20px; padding: 15px; background: #1a1f2e; border-radius: 8px;">
+              <h4 style="color: #888; margin-bottom: 10px;">👥 User Feedback</h4>
+              <p style="color: #888; font-style: italic;">No feedback received for this question yet.</p>
+            </div>
+          `;
+        }
+        
         // Create a modal to show the question and answer
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -2156,6 +2241,7 @@
                   <p><strong>Response Time:</strong> ${latestInteraction.response_time_ms || 'N/A'}ms</p>
                   <p><strong>Page:</strong> ${latestInteraction.page_context?.pathname || latestInteraction.page_context?.url || 'N/A'}</p>
                 </div>
+                ${feedbackHTML}
               </div>
             </div>
             <div class="modal-footer">
