@@ -1081,16 +1081,15 @@ async function getArticleAuxLinks(client, articleUrl) {
         if (!result.related) {
           const rel =
             text.match(
-              /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']+)/i
-            ) || text.match(/href="([^"]*alanranger\.com[^"]+)"/i);
+              /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']*)/i
+            ) || text.match(/href="([^"]*alanranger\.com[^"]*)"/i);
           if (rel && rel[0]) {
             const url = Array.isArray(rel) ? rel[0] : rel[1];
-            // Skip external URLs and complex search URLs
-            if (!url.includes('wexphotovideo.com') && 
-                !url.includes('amazon.com') && 
-                !url.includes('search?') && 
-                !url.includes('gclid=') &&
-                url.includes('alanranger.com')) {
+            // Only accept direct Alan Ranger URLs, not URLs that contain Alan Ranger URLs as parameters
+            if (url.startsWith('https://www.alanranger.com/') || 
+                url.startsWith('https://alanranger.com/') ||
+                url.startsWith('http://www.alanranger.com/') ||
+                url.startsWith('http://alanranger.com/')) {
               result.related = url;
               // crude label guess: look for preceding words like link text
               const labelMatch =
