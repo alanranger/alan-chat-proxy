@@ -143,10 +143,12 @@
           </div>
           <div>
             <h4 style="margin:0 0 8px 0;color:#4CAF50;">Import CSV Data</h4>
-            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
-              Reads your CSV files and imports structured data into the database. 
-              Updates: <code>page_entities</code> table with events, products, articles, and services.
-            </p>
+            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
+              <div><strong>What it does:</strong> Imports all selected CSV files (individual + bulk) into the database.</div>
+              <div><strong>Process:</strong> Auto‑detects the file type and writes normalized records.</div>
+              <div><strong>Updates:</strong> <code>page_entities</code> for events, services, products, articles.</div>
+              <div><strong>Result:</strong> Your structured data is available for mapping and chat.</div>
+            </div>
           </div>
 
           <!-- Step 2 -->
@@ -176,10 +178,12 @@
           </div>
           <div>
             <h4 style="margin:0 0 8px 0;color:#4CAF50;">Scrape Website Content</h4>
-            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
-              Fetches web pages and extracts text content + JSON-LD structured data. 
-              Updates: <code>page_chunks</code> (text) and <code>page_entities</code> (structured data).
-            </p>
+            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
+              <div><strong>What it does:</strong> Crawls pages to extract text and JSON‑LD using the foundation → enhancement approach.</div>
+              <div><strong>Process:</strong> Foundation from <code>site_urls</code>; enhancements from <code>blog</code>, <code>events</code>, <code>workshops</code>, <code>services</code>.</div>
+              <div><strong>Updates:</strong> <code>page_chunks</code> (fresh text chunks), <code>page_entities</code> (merged JSON‑LD).</div>
+              <div><strong>Result:</strong> Rich, layered content for high‑quality RAG answers.</div>
+            </div>
           </div>
 
           <!-- Step 3 -->
@@ -191,10 +195,12 @@
           </div>
           <div>
             <h4 style="margin:0 0 8px 0;color:#4CAF50;">Link Events to Products</h4>
-            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
-              Automatically matches events with related products/services using AI. 
-              Updates: <code>event_product_links_auto</code> table with intelligent connections.
-            </p>
+            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
+              <div><strong>What it does:</strong> Creates intelligent links between events and the right products/services.</div>
+              <div><strong>Process:</strong> Analyzes event description, product details and rules to connect.</div>
+              <div><strong>Updates:</strong> <code>event_product_links_auto</code> with scored mappings.</div>
+              <div><strong>Result:</strong> Accurate course/workshop answers with pricing and availability.</div>
+            </div>
           </div>
 
           <!-- Step 4 -->
@@ -206,10 +212,12 @@
           </div>
           <div>
             <h4 style="margin:0 0 8px 0;color:#4CAF50;">Warm & Refresh Views</h4>
-            <p style="margin:0;color:#ccc;font-size:14px;line-height:1.4;">
-              Refreshes database views and warms caches for optimal AI performance. 
-              Updates: All chat views (<code>v_events_for_chat</code>, <code>v_service_content</code>, etc.).
-            </p>
+            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
+              <div><strong>What it does:</strong> Refreshes views and warms caches used by the chatbot.</div>
+              <div><strong>Process:</strong> Recomputes mapping views and triggers light read‑throughs.</div>
+              <div><strong>Updates:</strong> Chat views such as <code>v_events_for_chat</code>, <code>v_service_content</code>, <code>v_product_content</code>, <code>v_blog_content</code>.</div>
+              <div><strong>Result:</strong> Faster, up‑to‑date answers from the live bot.</div>
+            </div>
           </div>
 
         </div>
