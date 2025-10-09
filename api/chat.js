@@ -1159,7 +1159,6 @@ function extractFromDescription(desc) {
 
   for (let i = 0; i < lines.length; i++) {
     const ln = lines[i];
-    console.log(`DEBUG: Processing line ${i}: "${ln}"`);
 
     if (/^location:/i.test(ln)) {
       const v = ln.replace(/^location:\s*/i, "").trim() || nextVal(i);
@@ -1190,10 +1189,8 @@ function extractFromDescription(desc) {
     // Handle multi-line format: "Participants:\nMax 6"
     if (/^participants:\s*$/i.test(ln)) {
       const nextLine = nextVal(i);
-      console.log(`DEBUG: Found participants line, next line: "${nextLine}"`);
       if (nextLine && /^max\s*\d+$/i.test(nextLine)) {
         out.participants = nextLine.trim();
-        console.log(`DEBUG: Set participants to: "${out.participants}"`);
         i++; // Skip the next line since we processed it
         continue;
       }
@@ -1204,7 +1201,6 @@ function extractFromDescription(desc) {
       const match = ln.match(/^fitness:\s*(\d+\.\s*[a-z-]+)$/i);
       if (match) {
         out.fitness = match[1];
-        console.log(`DEBUG: Set fitness to: "${out.fitness}"`);
       }
       continue;
     }
@@ -1734,7 +1730,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.28-service-faq",
+          version: "v1.2.32-fitness-parsing",
           intent: "events",
           keywords: keywords,
           counts: {
