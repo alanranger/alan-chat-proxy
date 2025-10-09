@@ -291,13 +291,17 @@ export default async function handler(req, res) {
           if (r.error) return sendJSON(res, 500, { error:'supabase_error', detail:r.error.message });
         }
         rows = (r.data || []).map(row => {
-          // simple topic guard to prevent Bluebell → Chesterton mismap in export
+          // Topic guard: if event has a strong token and product_url lacks it, blank the mapping in the CSV
           try{
             const eu = String(row.event_url||'').toLowerCase();
             const pu = String(row.product_url||'').toLowerCase();
-            if (eu.includes('bluebell') && !pu.includes('bluebell')) {
-              // prefer bluebell product if available in view (some rows may lack alternate)
-              // noop here if not present; leave as-is and rely on upstream fix
+            const tokens = ['bluebell','chesterton','lavender','woodland','fairy-glen','exmoor','yorkshire','northumberland'];
+            const eventTokens = tokens.filter(t => eu.includes(t));
+            const hasMismatch = eventTokens.length>0 && !eventTokens.some(t => pu.includes(t));
+            if (hasMismatch) {
+              row.product_url = null;
+              row.product_title = null;
+              row.map_method = 'export_guard_blank';
             }
           }catch{}
           return row;
