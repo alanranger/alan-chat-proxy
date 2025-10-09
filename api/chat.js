@@ -189,69 +189,10 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   const isEquipmentQuery = Array.from(equipmentKeywords).some(k => lc.includes(k));
   if (!isEquipmentQuery) return null;
   
-  // First, try to extract recommendations directly from article raw content (FAQ format)
+  // Extract recommendations from your actual written content and reviews
   const productRecommendations = [];
   const brandComparisons = [];
   const specificTips = [];
-  
-  // Look for FAQ content in articles (like the tripod guide)
-  try {
-    for (const article of articles) {
-      if (article && article.raw && article.raw.mainEntity && Array.isArray(article.raw.mainEntity)) {
-        for (const faq of article.raw.mainEntity) {
-          if (faq && faq.acceptedAnswer && faq.acceptedAnswer.text) {
-            const answer = faq.acceptedAnswer.text.replace(/<[^>]*>/g, '').trim();
-            if (answer.length > 50 && answer.length < 500) {
-              if (answer.toLowerCase().includes('best') || answer.toLowerCase().includes('recommend')) {
-                productRecommendations.push(answer);
-              } else if (answer.toLowerCase().includes('vs') || answer.toLowerCase().includes('compare')) {
-                brandComparisons.push(answer);
-              } else {
-                specificTips.push(answer);
-              }
-            }
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.log('DEBUG: Error extracting FAQ content:', error.message);
-  }
-  
-  // If we found good content from articles, use it
-  if (productRecommendations.length > 0 || brandComparisons.length > 0 || specificTips.length > 0) {
-    let response = "**Equipment Recommendations:**\n\n";
-    
-    if (productRecommendations.length > 0) {
-      response += "**Specific Recommendations:**\n";
-      productRecommendations.forEach((point, i) => {
-        response += `• ${point}\n`;
-      });
-      response += "\n";
-    }
-    
-    if (brandComparisons.length > 0) {
-      response += "**Comparisons:**\n";
-      brandComparisons.forEach((point, i) => {
-        response += `• ${point}\n`;
-      });
-      response += "\n";
-    }
-    
-    if (specificTips.length > 0) {
-      response += "**Key Information:**\n";
-      specificTips.forEach((point, i) => {
-        response += `• ${point}\n`;
-      });
-      response += "\n";
-    }
-    
-    response += "*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
-    
-    console.log('DEBUG: Generated response from article FAQ content with', productRecommendations.length, 'recs,', brandComparisons.length, 'comparisons,', specificTips.length, 'tips');
-    
-    return response;
-  }
   
   // Find relevant content chunks about equipment - be very inclusive for richer content
   const equipmentChunks = (contentChunks || []).filter(chunk => {
@@ -371,7 +312,7 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
     }
   }
   
-  // If we have good content, build a comprehensive response
+  // If we have good content from your written articles, build a comprehensive response
   if (productRecommendations.length > 0 || brandComparisons.length > 0 || specificTips.length > 0) {
     let response = "**Equipment Recommendations:**\n\n";
     
@@ -408,6 +349,38 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
     console.log('DEBUG: Generated response with', productRecommendations.length, 'product recs,', brandComparisons.length, 'comparisons,', specificTips.length, 'tips');
     
     return response;
+  }
+  
+  // Fallback: try FAQ content only if no written content found
+  try {
+    for (const article of articles) {
+      if (article && article.raw && article.raw.mainEntity && Array.isArray(article.raw.mainEntity)) {
+        for (const faq of article.raw.mainEntity) {
+          if (faq && faq.acceptedAnswer && faq.acceptedAnswer.text) {
+            const answer = faq.acceptedAnswer.text.replace(/<[^>]*>/g, '').trim();
+            if (answer.length > 50 && answer.length < 500) {
+              if (answer.toLowerCase().includes('best') || answer.toLowerCase().includes('recommend')) {
+                productRecommendations.push(answer);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    if (productRecommendations.length > 0) {
+      let response = "**Equipment Recommendations:**\n\n";
+      response += "**General Information:**\n";
+      productRecommendations.forEach((point, i) => {
+        response += `• ${point}\n`;
+      });
+      response += "\n*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
+      
+      console.log('DEBUG: Generated fallback response from FAQ content with', productRecommendations.length, 'items');
+      return response;
+    }
+  } catch (error) {
+    console.log('DEBUG: Error extracting FAQ content:', error.message);
   }
   
   // If no good content found, return null to fall back to other logic
