@@ -1342,6 +1342,8 @@ function buildProductPanelMarkdown(products) {
   
   console.log("Final summary:", summary);
   console.log("Facts to add:", facts);
+  console.log("Info object keys:", Object.keys(info));
+  console.log("Info values:", info);
   if (facts.length) {
     lines.push("");
     for (const f of facts) lines.push(f);
