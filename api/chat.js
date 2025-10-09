@@ -1175,6 +1175,11 @@ function extractFromDescription(desc) {
       if (v) out.fitness = v;
       continue;
     }
+    // Also look for fitness information in other formats
+    if (/fitness level|fitness requirement|physical requirement|walking/i.test(ln)) {
+      if (!out.fitness) out.fitness = ln.trim();
+      continue;
+    }
     if (/^availability:/i.test(ln)) {
       const v = ln.replace(/^availability:\s*/i, "").trim() || nextVal(i);
       if (v) out.availability = v;
@@ -1232,6 +1237,25 @@ function buildProductPanelMarkdown(products) {
       primary.description || primary?.raw?.description || ""
     ) || {};
 
+  // Create a better summary from the full description
+  const fullDescription = primary.description || primary?.raw?.description || "";
+  let summary = info.summary;
+  
+  if (!summary && fullDescription) {
+    // Extract first 2-3 sentences from the full description
+    const sentences = fullDescription
+      .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .split(/[.!?]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 20) // Filter out very short fragments
+      .slice(0, 3); // Take first 3 sentences
+    
+    if (sentences.length > 0) {
+      summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
+    }
+  }
+
   // Attach prices to sessions: two sessions → low/high; else fallback single
   const sessions = [...(info.sessions || [])];
   if (sessions.length) {
@@ -1246,7 +1270,7 @@ function buildProductPanelMarkdown(products) {
   const lines = [];
   lines.push(`**${title}**${priceHead}`);
 
-  if (info.summary) lines.push(`\n${info.summary}`);
+  if (summary) lines.push(`\n${summary}`);
 
   const facts = [];
   if (info.location) facts.push(`**Location:** ${info.location}`);
@@ -1577,6 +1601,7 @@ export default async function handler(req, res) {
         // Enrich product with full details from page_entities if we have a product URL
         if (product.page_url) {
           try {
+            console.log('DEBUG: Fetching product details for URL:', product.page_url);
             const { data: productDetails } = await client
               .from('page_entities')
               .select('*')
@@ -1585,6 +1610,7 @@ export default async function handler(req, res) {
               .single();
             
             if (productDetails) {
+              console.log('DEBUG: Found product details:', JSON.stringify(productDetails, null, 2));
               // Merge the full product details with the existing product data
               product = {
                 ...product,
@@ -1593,6 +1619,8 @@ export default async function handler(req, res) {
                 raw: { ...product.raw, ...productDetails.raw }
               };
               console.log('DEBUG: Enriched product with full details from page_entities');
+            } else {
+              console.log('DEBUG: No product details found for URL:', product.page_url);
             }
           } catch (error) {
             console.log('DEBUG: Could not fetch full product details:', error.message);
