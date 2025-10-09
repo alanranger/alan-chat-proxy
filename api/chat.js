@@ -1243,15 +1243,14 @@ function buildProductPanelMarkdown(products) {
   if (lowTx && highTx) headBits.push(`${lowTx}–${highTx}`);
   const priceHead = headBits.length ? ` — ${headBits.join(" • ")}` : "";
 
-  const info =
-    extractFromDescription(
-      primary.description || primary?.raw?.description || ""
-    ) || {};
-  
-  console.log("Extracted info:", JSON.stringify(info, null, 2));
-
   // Create a better summary from the full description
   const fullDescription = primary.description || primary?.raw?.description || "";
+  
+  const info =
+    extractFromDescription(fullDescription) || {};
+  
+  console.log("Extracted info:", JSON.stringify(info, null, 2));
+  console.log("Full description:", fullDescription);
   let summary = null; // Don't use info.summary, generate our own
   
   if (fullDescription) {
