@@ -273,7 +273,7 @@ export default async function handler(req, res) {
 
             async function fetchRows(selectStr){
             const { data, error } = await supa
-              .from('v_events_for_chat')
+              .from('v_event_product_final_enhanced')
                 .select(selectStr)
                 .order('event_url', { ascending: true })
                 .limit(5000);
@@ -290,22 +290,7 @@ export default async function handler(req, res) {
           r = await fetchRows('event_url,subtype,product_url,product_title,price_gbp,availability,date_start,date_end,start_time,end_time,event_location,map_method');
           if (r.error) return sendJSON(res, 500, { error:'supabase_error', detail:r.error.message });
         }
-        rows = (r.data || []).map(row => {
-          // Topic guard: if event has a strong token and product_url lacks it, blank the mapping in the CSV
-          try{
-            const eu = String(row.event_url||'').toLowerCase();
-            const pu = String(row.product_url||'').toLowerCase();
-            const tokens = ['bluebell','chesterton','lavender','woodland','fairy-glen','exmoor','yorkshire','northumberland'];
-            const eventTokens = tokens.filter(t => eu.includes(t));
-            const hasMismatch = eventTokens.length>0 && !eventTokens.some(t => pu.includes(t));
-            if (hasMismatch) {
-              row.product_url = null;
-              row.product_title = null;
-              row.map_method = 'export_guard_blank';
-            }
-          }catch{}
-          return row;
-        });
+        rows = r.data || [];
 
         const esc = (v) => {
           const s = (v==null?'':String(v));
