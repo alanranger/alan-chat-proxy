@@ -86,7 +86,7 @@ const createSession = async (sessionId, userAgent, ip) => {
     
     if (error) throw new Error(`Session creation failed: ${error.message}`);
   } catch (err) {
-    // Session creation failed
+    console.warn('Session creation failed:', err.message);
   }
 };
 
@@ -107,7 +107,7 @@ const logQuestion = async (sessionId, question) => {
     
     if (error) throw new Error(`Question log failed: ${error.message}`);
   } catch (err) {
-    // Question logging failed
+    console.warn('Question logging failed:', err.message);
   }
 };
 
@@ -137,7 +137,7 @@ const logAnswer = async (sessionId, question, answer, intent, confidence, respon
     const { error: rpcError } = await client.rpc('increment_session_questions', { session_id: sessionId });
     if (rpcError) throw new Error(`RPC failed: ${rpcError.message}`);
   } catch (err) {
-    // Answer logging failed
+    console.warn('Answer logging failed:', err.message);
   }
 };
 
@@ -181,7 +181,7 @@ function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
   return `**${para.substring(0, 300).trim()}**\n\n${url ? `*Source: ${url}*\n\n` : ""}`;
 }
 function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
-  // generateEquipmentAdvice called
+  console.log('DEBUG: generateEquipmentAdvice called with query:', query, 'chunks:', contentChunks.length, 'articles:', articles.length);
   const lc = (query || "").toLowerCase();
   const equipmentKeywords = new Set(['tripod','tripods','head','ballhead','levelling','leveling','recommend','recommendation','recommendations','equipment']);
   
@@ -252,7 +252,7 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
       }
     }
   } catch (error) {
-    // Error in content extraction
+    console.log('DEBUG: Error in content extraction:', error.message);
   }
   
   // If we have good content from your written articles, build a comprehensive response
@@ -303,7 +303,11 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   };
   
   // DEBUG: Log what we're working with
-  // generateDirectAnswer called
+  console.log(`🔍 generateDirectAnswer: Query="${query}"`);
+  console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
+  if (contentChunks.length > 0) {
+    console.log(`🔍 generateDirectAnswer: First chunk preview="${(contentChunks[0].chunk_text || contentChunks[0].content || "").substring(0, 200)}..."`);
+  }
   
   // No hardcoded fallbacks; rely on chunk/article relevance below
 
@@ -334,7 +338,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   }).sort((a,b)=>b.s-a.s);
   const relevantChunk = (scoredChunks.length ? scoredChunks[0].chunk : null);
   
-  // Found relevantChunk
+  console.log(`🔍 generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
   
   if (relevantChunk) {
     let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
@@ -345,7 +349,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     
     // SPECIAL CASE: Look for fitness level information first
     if (lc.includes('fitness') || lc.includes('level')) {
-      // Looking for fitness level in chunk text
+      console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
       
       const fitnessPatterns = [
         /Fitness:\s*(\d+\.?\s*[^\\n]+)/i,           // "Fitness: 2. Easy-Moderate"
@@ -358,8 +362,10 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
       
       for (const pattern of fitnessPatterns) {
         const match = chunkText.match(pattern);
+        console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
         if (match && match[1]) {
           const fitnessLevel = match[1].trim();
+          console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
           return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
         }
       }
@@ -752,7 +758,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
-      // Page context keywords
+      console.log('Page context keywords:', pathKeywords);
       // Add page context to search terms
       keywords = [...pathKeywords, ...keywords];
     }
@@ -788,7 +794,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
 
   const { data, error } = await q;
   if (error) {
-    // v_event_product_mappings query error
+    console.error('❌ v_event_product_mappings query error:', error);
     return [];
   }
   
@@ -800,7 +806,7 @@ async function findProducts(client, { keywords, limit = 20, pageContext = null }
   if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
-      // Product search - Page context keywords
+      console.log('Product search - Page context keywords:', pathKeywords);
       // Add page context to search terms
       keywords = [...pathKeywords, ...keywords];
     }
@@ -827,7 +833,7 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
-      // Article search - Page context keywords
+      console.log('Article search - Page context keywords:', pathKeywords);
       // Add page context to search terms
       keywords = [...pathKeywords, ...keywords];
     }
@@ -1148,7 +1154,7 @@ function extractFromDescription(desc) {
       if (!t) continue;
       return t;
     }
-    return null;
+  return null;
   };
 
   for (let i = 0; i < lines.length; i++) {
@@ -1245,21 +1251,29 @@ function buildProductPanelMarkdown(products) {
   if (lowTx && highTx) headBits.push(`${lowTx}–${highTx}`);
   const priceHead = headBits.length ? ` — ${headBits.join(" • ")}` : "";
 
-  const info = extractFromDescription(
-    primary.description || primary?.raw?.description || ""
-  ) || {};
+  const info =
+    extractFromDescription(
+      primary.description || primary?.raw?.description || ""
+    ) || {};
+  
+  console.log('DEBUG: Extracted info from description:', JSON.stringify(info, null, 2));
 
   // Create a better summary from the full description
   const fullDescription = primary.description || primary?.raw?.description || "";
   let summary = info.summary;
   
   if (!summary && fullDescription) {
+    console.log('DEBUG: Summary generation started for product:', primary.title);
+    console.log('DEBUG: Full description length:', fullDescription.length);
+
     let summaryText = '';
     const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
+    console.log('DEBUG: lastDescriptionIndex:', lastDescriptionIndex);
 
     if (lastDescriptionIndex !== -1) {
       // Get text after the last "Description:"
       let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
+      console.log('DEBUG: potentialSummaryText (after last Description:):', potentialSummaryText.substring(0, 100) + '...'); // Log first 100 chars
 
       // Further refine to stop at other section headers if they exist after the description
       const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
@@ -1271,6 +1285,7 @@ function buildProductPanelMarkdown(products) {
         }
       }
       summaryText = potentialSummaryText.substring(0, stopIndex).trim();
+      console.log('DEBUG: summaryText after stop words refinement:', summaryText.substring(0, 100) + '...');
     }
 
     if (summaryText) {
@@ -1281,14 +1296,18 @@ function buildProductPanelMarkdown(products) {
         .map(s => s.trim())
         .filter(s => s.length > 30) // Filter out very short fragments
         .slice(0, 2); // Take first 2 sentences for a concise summary
+      
+      console.log('DEBUG: Sentences extracted from summaryText:', sentences.length, sentences);
 
       if (sentences.length > 0) {
         summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
+        console.log('DEBUG: Final summary from specific section:', summary);
       }
     }
     
     // Fallback: if no specific description section found or summary is still empty
     if (!summary) {
+      console.log('DEBUG: Falling back to general fullDescription summary...');
       const sentences = fullDescription
         .replace(/<[^>]*>/g, ' ') // Remove HTML tags
         .replace(/\s+/g, ' ') // Normalize whitespace
@@ -1296,9 +1315,12 @@ function buildProductPanelMarkdown(products) {
         .map(s => s.trim())
         .filter(s => s.length > 30) // Filter out very short fragments
         .slice(0, 2); // Take first 2 sentences
+      
+      console.log('DEBUG: Sentences from fallback:', sentences.length, sentences);
 
       if (sentences.length > 0) {
         summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
+        console.log('DEBUG: Final summary from fallback:', summary);
       }
     }
   }
@@ -1419,6 +1441,7 @@ async function extractRelevantInfo(query, dataContext) {
   
   // For event-based questions, prioritize the structured event data
   if (events && events.length > 0) {
+    console.log(`🔍 RAG: Found ${events.length} events, checking structured data`);
     
     // Find the most relevant event based on the query context
     let event = events[0]; // Default to first event
@@ -1426,6 +1449,7 @@ async function extractRelevantInfo(query, dataContext) {
     // If we have a previous query context, try to find the most relevant event
     if (dataContext.originalQuery) {
       const originalQueryLower = dataContext.originalQuery.toLowerCase();
+      console.log(`🔍 RAG: Looking for event matching original query: "${dataContext.originalQuery}"`);
       
       // Extract key terms from the original query to match against events
       const keyTerms = dataContext.originalQuery.toLowerCase()
@@ -1440,12 +1464,14 @@ async function extractRelevantInfo(query, dataContext) {
       
       if (matchingEvent) {
         event = matchingEvent;
+        console.log(`🔍 RAG: Found contextually relevant event: ${event.event_title}`);
       }
     }
     
     // Check for participant information
     if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
       if (event.participants && String(event.participants).trim().length > 0) {
+        console.log(`✅ RAG: Found participants="${event.participants}" in structured event data`);
         return `**${event.participants}** people can attend this workshop. This ensures everyone gets personalized attention and guidance from Alan.`;
       }
     }
@@ -1453,6 +1479,7 @@ async function extractRelevantInfo(query, dataContext) {
     // Check for location information
     if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
       if (event.event_location && event.event_location.trim().length > 0) {
+        console.log(`✅ RAG: Found location="${event.event_location}" in structured event data`);
         return `The workshop is held at **${event.event_location}**. Full location details and meeting instructions will be provided when you book.`;
       }
     }
@@ -1460,6 +1487,7 @@ async function extractRelevantInfo(query, dataContext) {
     // Check for price information
     if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
       if (event.price_gbp && event.price_gbp > 0) {
+        console.log(`✅ RAG: Found price="${event.price_gbp}" in structured event data`);
         return `The workshop costs **£${event.price_gbp}**. This includes all tuition, guidance, and any materials provided during the session.`;
       }
     }
@@ -1473,6 +1501,7 @@ async function extractRelevantInfo(query, dataContext) {
           month: 'long', 
           year: 'numeric' 
         });
+        console.log(`✅ RAG: Found date="${formattedDate}" in structured event data`);
         return `The next workshop is scheduled for **${formattedDate}**. This gives you plenty of time to prepare and book your place.`;
       }
     }
@@ -1481,6 +1510,7 @@ async function extractRelevantInfo(query, dataContext) {
     if (lowerQuery.includes('fitness') || lowerQuery.includes('level') || lowerQuery.includes('experience')) {
       // Check structured fitness_level field
       if (event.fitness_level && event.fitness_level.trim().length > 0) {
+        console.log(`✅ RAG: Found fitness level="${event.fitness_level}" in structured event data`);
         return `The fitness level required is **${event.fitness_level}**. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`;
       }
     }
@@ -1492,6 +1522,7 @@ async function extractRelevantInfo(query, dataContext) {
 
 /* -------------------------------- Handler -------------------------------- */
 export default async function handler(req, res) {
+  console.log('DEBUG: Chat API handler called - NEW VERSION DEPLOYED');
   const started = Date.now();
   try {
   if (req.method !== "POST") {
@@ -1506,23 +1537,27 @@ export default async function handler(req, res) {
     
     // Log page context for debugging
     if (pageContext) {
-      // Page context received
+      console.log('Page context received:', {
+        url: pageContext.url,
+        title: pageContext.title,
+        pathname: pageContext.pathname
+      });
     }
 
     // Create session if it doesn't exist (async, don't wait for it)
     if (sessionId) {
       const userAgent = req.headers['user-agent'] || 'unknown';
       const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
-      createSession(sessionId, userAgent, ip).catch(err => {
-        // Failed to create session
-      });
+      createSession(sessionId, userAgent, ip).catch(err => 
+        console.warn('Failed to create session:', err.message)
+      );
     }
 
     // Log the question (async, don't wait for it)
     if (sessionId && query) {
-      logQuestion(sessionId, query).catch(err => {
-        // Failed to log question
-      });
+      logQuestion(sessionId, query).catch(err => 
+        console.warn('Failed to log question:', err.message)
+      );
     }
 
     // Build contextual query for keyword extraction (merge with previous query)
@@ -1635,6 +1670,7 @@ export default async function handler(req, res) {
         // Enrich product with full details from page_entities if we have a product URL
         if (product.page_url) {
           try {
+            console.log('DEBUG: Fetching product details for URL:', product.page_url);
             const { data: productDetails } = await client
               .from('page_entities')
               .select('*')
@@ -1643,6 +1679,7 @@ export default async function handler(req, res) {
               .single();
             
             if (productDetails) {
+              console.log('DEBUG: Found product details:', JSON.stringify(productDetails, null, 2));
               // Merge the full product details with the existing product data
               product = {
                 ...product,
@@ -1650,13 +1687,21 @@ export default async function handler(req, res) {
                 description: productDetails.description || product.description,
                 raw: { ...product.raw, ...productDetails.raw }
               };
+              console.log('DEBUG: Enriched product with full details from page_entities');
+              console.log('DEBUG: Final enriched product description:', product.description);
+            } else {
+              console.log('DEBUG: No product details found for URL:', product.page_url);
             }
           } catch (error) {
-            // Silently handle errors
+            console.log('DEBUG: Could not fetch full product details:', error.message);
           }
+        } else {
+          console.log('DEBUG: No product.page_url found, skipping enrichment');
         }
       }
+      console.log('DEBUG: About to build product panel for product:', JSON.stringify(product, null, 2));
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
+      console.log('DEBUG: Generated product panel:', productPanel);
 
       // Use extractRelevantInfo to get specific answers for follow-up questions
       const dataContext = { events, products: product ? [product] : [], articles: [], originalQuery: previousQuery };
@@ -1700,9 +1745,9 @@ export default async function handler(req, res) {
       if (sessionId && query) {
         const responseTimeMs = Date.now() - started;
         const sourcesUsed = citations || [];
-        logAnswer(sessionId, query, answerMarkdown, "events", 0.8, responseTimeMs, sourcesUsed, pageContext).catch(err => {
-          // Failed to log answer
-        });
+        logAnswer(sessionId, query, answerMarkdown, "events", 0.8, responseTimeMs, sourcesUsed, pageContext).catch(err => 
+          console.warn('Failed to log answer:', err.message)
+        );
       }
 
       res.status(200).json({
@@ -1718,7 +1763,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.46-final-clean",
+          version: "v1.2.36-debug-response",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -1727,8 +1772,7 @@ export default async function handler(req, res) {
             articles: 0
           },
           productPanel: productPanel,
-          productDescription: product ? product.description : null,
-          extractedInfo: info
+          productDescription: product ? product.description : null
         },
         meta: {
           duration_ms: Date.now() - started,
@@ -1911,9 +1955,9 @@ export default async function handler(req, res) {
     if (sessionId && query) {
       const responseTimeMs = Date.now() - started;
       const sourcesUsed = citations || [];
-      logAnswer(sessionId, query, lines.join("\n"), "advice", confidence, responseTimeMs, sourcesUsed, pageContext).catch(err => {
-        // Failed to log answer
-      });
+      logAnswer(sessionId, query, lines.join("\n"), "advice", confidence, responseTimeMs, sourcesUsed, pageContext).catch(err => 
+        console.warn('Failed to log answer:', err.message)
+      );
     }
 
     res.status(200).json({
@@ -1930,7 +1974,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
       debug: {
-        version: "v1.2.46-final-clean",
+        version: "v1.2.31-equipment-advice",
         intent: "advice",
         keywords: keywords,
         counts: {
