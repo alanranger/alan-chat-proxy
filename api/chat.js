@@ -86,7 +86,7 @@ const createSession = async (sessionId, userAgent, ip) => {
     
     if (error) throw new Error(`Session creation failed: ${error.message}`);
   } catch (err) {
-    console.warn('Session creation failed:', err.message);
+    // Session creation failed
   }
 };
 
@@ -107,7 +107,7 @@ const logQuestion = async (sessionId, question) => {
     
     if (error) throw new Error(`Question log failed: ${error.message}`);
   } catch (err) {
-    console.warn('Question logging failed:', err.message);
+    // Question logging failed
   }
 };
 
@@ -137,7 +137,7 @@ const logAnswer = async (sessionId, question, answer, intent, confidence, respon
     const { error: rpcError } = await client.rpc('increment_session_questions', { session_id: sessionId });
     if (rpcError) throw new Error(`RPC failed: ${rpcError.message}`);
   } catch (err) {
-    console.warn('Answer logging failed:', err.message);
+    // Answer logging failed
   }
 };
 
@@ -788,7 +788,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
 
   const { data, error } = await q;
   if (error) {
-    console.error('❌ v_event_product_mappings query error:', error);
+    // v_event_product_mappings query error
     return [];
   }
   
@@ -1513,16 +1513,16 @@ export default async function handler(req, res) {
     if (sessionId) {
       const userAgent = req.headers['user-agent'] || 'unknown';
       const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
-      createSession(sessionId, userAgent, ip).catch(err => 
-        console.warn('Failed to create session:', err.message)
-      );
+      createSession(sessionId, userAgent, ip).catch(err => {
+        // Failed to create session
+      });
     }
 
     // Log the question (async, don't wait for it)
     if (sessionId && query) {
-      logQuestion(sessionId, query).catch(err => 
-        console.warn('Failed to log question:', err.message)
-      );
+      logQuestion(sessionId, query).catch(err => {
+        // Failed to log question
+      });
     }
 
     // Build contextual query for keyword extraction (merge with previous query)
@@ -1701,7 +1701,7 @@ export default async function handler(req, res) {
         const responseTimeMs = Date.now() - started;
         const sourcesUsed = citations || [];
         logAnswer(sessionId, query, answerMarkdown, "events", 0.8, responseTimeMs, sourcesUsed, pageContext).catch(err => 
-          console.warn('Failed to log answer:', err.message)
+          // Failed to log answer
         );
       }
 
@@ -1718,7 +1718,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.40-clean",
+          version: "v1.2.41-no-console",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -1912,7 +1912,7 @@ export default async function handler(req, res) {
       const responseTimeMs = Date.now() - started;
       const sourcesUsed = citations || [];
       logAnswer(sessionId, query, lines.join("\n"), "advice", confidence, responseTimeMs, sourcesUsed, pageContext).catch(err => 
-        console.warn('Failed to log answer:', err.message)
+        // Failed to log answer
       );
     }
 
