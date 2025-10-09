@@ -406,12 +406,31 @@ async function ingestSingleUrl(url, supa, options = {}) {
 
           if (existing) {
             const merged = { ...existing };
-            // Fields that should refresh if new data present
-            const overwriteFields = e.kind === 'event'
-              ? ['title','description','date_start','date_end','location','price','price_currency','availability','sku','provider','raw']
-              : ['title','description','location','price','price_currency','availability','sku','provider','raw'];
-            for (const k of overwriteFields) {
-              if (e[k] !== undefined && e[k] !== null && e[k] !== '') merged[k] = e[k];
+            // Event preservation: keep CSV-derived schedule if present; merge RAW to retain CSV hints
+            if (e.kind === 'event') {
+              // Preserve existing date_start/date_end (from CSV import) and only update other fields
+              merged.title = e.title ?? merged.title;
+              merged.description = e.description ?? merged.description;
+              merged.location = e.location ?? merged.location;
+              merged.price = e.price ?? merged.price;
+              merged.price_currency = e.price_currency ?? merged.price_currency;
+              merged.availability = e.availability ?? merged.availability;
+              merged.sku = e.sku ?? merged.sku;
+              merged.provider = e.provider ?? merged.provider;
+              // Merge raw, preserving CSV time hints if they exist on existing.raw
+              const prevRaw = existing.raw || {};
+              const nextRaw = e.raw || {};
+              merged.raw = {
+                ...nextRaw,
+                _csv_start_time: prevRaw._csv_start_time ?? nextRaw._csv_start_time ?? null,
+                _csv_end_time: prevRaw._csv_end_time ?? nextRaw._csv_end_time ?? null
+              };
+            } else {
+              // Non-event: update with fresh fields
+              const overwriteFields = ['title','description','location','price','price_currency','availability','sku','provider','raw'];
+              for (const k of overwriteFields) {
+                if (e[k] !== undefined && e[k] !== null && e[k] !== '') merged[k] = e[k];
+              }
             }
             merged.last_seen = e.last_seen;
             const { error: updErr } = await supa.from('page_entities').update(merged).eq('id', existing.id);
