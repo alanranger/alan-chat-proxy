@@ -1175,6 +1175,12 @@ function extractFromDescription(desc) {
       if (v) out.fitness = v;
       continue;
     }
+    // Handle the specific format from the Batsford description
+    if (/^fitness:\s*\d+\.\s*[a-z-]+$/i.test(ln)) {
+      const match = ln.match(/^fitness:\s*(.+)$/i);
+      if (match) out.fitness = match[1].trim();
+      continue;
+    }
     // Also look for fitness information in other formats
     if (/fitness level|fitness requirement|physical requirement|walking/i.test(ln)) {
       if (!out.fitness) out.fitness = ln.trim();
@@ -1260,9 +1266,9 @@ function buildProductPanelMarkdown(products) {
 
   // Create a better summary from the full description
   const fullDescription = primary.description || primary?.raw?.description || "";
-  let summary = info.summary;
+  let summary = null; // Don't use info.summary, generate our own
   
-  if (!summary && fullDescription) {
+  if (fullDescription) {
     // Summary generation started
 
     let summaryText = '';
