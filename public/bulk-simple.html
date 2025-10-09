@@ -237,10 +237,10 @@
       <div class="card" style="font-size:14px;color:#ddd;line-height:1.5">
         <ul style="margin:0 0 8px 18px;">
           <li><strong>Content Imported</strong>: Rows read from your CSVs (input size by category).</li>
-          <li><strong>Web Scraping</strong>: Unique URLs queued for Step 2 based on selected sources; duplicates across sources are removed here.</li>
+          <li><strong>Web Scraping</strong>: URLs queued for Step 2. Foundation (<code>site_urls</code>) is the baseline, then Enhancements (blog/events/workshops/services) add more for the same URLs.</li>
           <li><strong>Success / Failed / Stopped / Skipped</strong>: Outcome of Step 2 for this run (Success means text saved to <code>page_chunks</code> and JSON‑LD merged into <code>page_entities</code>).</li>
           <li><strong>CSV Count</strong> (per category): Rows imported from CSVs in Step 1 for that category label.</li>
-          <li><strong>Duplicates Removed</strong> (per category): URLs eliminated from the scrape queue because they appeared more than once across sources. This is de‑dupe of the queue, not database duplicates.</li>
+          <li><strong>Duplicates Removed</strong> (per category): <em>Within-source</em> duplicates removed during Step 2 (e.g., the same blog URL listed twice in the blog CSV). Cross‑CSV duplicates are kept to allow enhancement.</li>
         </ul>
         <div style="margin-top:8px;">
           <strong>Where data goes:</strong>
@@ -1132,8 +1132,9 @@
 
     // Website scraping
     async function scrapeWebsite(dryRun=false) {
-      // Collect URLs from ALL CSV files, not just site_urls
-      let allUrls = [];
+      // Collect URLs from ALL CSV files with their source category (foundation → enhancement)
+      /** @type {{ url: string, source: string }[]} */
+      let allEntries = [];
       let urlSources = [];
 
       const includeSite = document.getElementById('src_site')?.checked !== false;
@@ -1142,17 +1143,17 @@
       const includeWorkshop = document.getElementById('src_workshop')?.checked === true;
       const includeService = document.getElementById('src_service')?.checked === true;
 
-      // 1. Collect from site_urls CSV (if available)
+      // 1. Collect from site_urls CSV (if available) — FOUNDATION
       const siteUrlsFile = document.getElementById('siteUrlsCsv').files[0];
       if (includeSite && (siteUrlsFile || window.__cachedSiteUrlsText)) {
         const csvText = siteUrlsFile ? await siteUrlsFile.text() : String(window.__cachedSiteUrlsText || '');
         const lines = csvText.split('\n').filter(line => line.trim());
         const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
-        allUrls = allUrls.concat(urls);
+        allEntries = allEntries.concat(urls.map(u => ({ url: u, source: 'site' })));
         urlSources.push(`site_urls: ${urls.length}`);
       }
 
-      // 2. Collect from cached CSV data (from bulk import)
+      // 2. Collect from cached CSV data (from bulk import) — ENHANCEMENTS
       if (window.__cachedCsvData) {
         for (const [type, data] of Object.entries(window.__cachedCsvData)) {
           if (data.urls && data.urls.length > 0) {
@@ -1160,20 +1161,61 @@
             if (type==='event' && !includeEvent) continue;
             if (type==='workshop' && !includeWorkshop) continue;
             if (type==='service' && !includeService) continue;
-            allUrls = allUrls.concat(data.urls);
+            const src = (type==='blog'?'blog': type==='event'?'event': type==='workshop'?'workshop': type==='service'?'service': type);
+            allEntries = allEntries.concat(data.urls.map(u => ({ url: u, source: src })));
             urlSources.push(`${type}: ${data.urls.length}`);
           }
         }
       }
 
-      if (allUrls.length === 0) {
+      if (allEntries.length === 0) {
         addResult('❌ No URLs found to scrape. Please import CSV files first.', 'error');
         return;
       }
 
-      // Remove duplicates while preserving order
-      const uniqueUrls = [...new Set(allUrls)];
-      const duplicateCount = allUrls.length - uniqueUrls.length;
+      // De-duplicate within the same source only; keep cross-source duplicates for enhancement
+      const seenBySource = new Map(); // source => Set(url)
+      const dupBySource = new Map();  // source => number
+      const uniqueEntries = [];
+      let withinSourceDuplicates = 0;
+      for (const e of allEntries) {
+        if (!seenBySource.has(e.source)) seenBySource.set(e.source, new Set());
+        if (!dupBySource.has(e.source)) dupBySource.set(e.source, 0);
+        const seenSet = seenBySource.get(e.source);
+        if (seenSet.has(e.url)) {
+          withinSourceDuplicates++;
+          dupBySource.set(e.source, dupBySource.get(e.source) + 1);
+          continue;
+        }
+        seenSet.add(e.url);
+        uniqueEntries.push(e);
+      }
+
+      // Map per-source duplicates to dashboard categories for display
+      withinSourceDupByCategory = {
+        'blog_articles': 0,
+        'course_events': 0,
+        'workshop_events': 0,
+        'course_products': 0,
+        'workshop_products': 0,
+        'website_urls': 0,
+        'json_extraction': 0
+      };
+      const sourceToCategory = (src) => src === 'blog' ? 'blog_articles'
+        : src === 'event' ? 'course_events'
+        : src === 'workshop' ? 'workshop_events'
+        : src === 'service' ? 'course_products'
+        : src === 'site' ? 'website_urls'
+        : 'website_urls';
+      for (const [src, cnt] of dupBySource.entries()) {
+        const catKey = sourceToCategory(src);
+        withinSourceDupByCategory[catKey] = (withinSourceDupByCategory[catKey] || 0) + cnt;
+      }
+
+      // Record foundation vs enhancement breakdown for dashboard
+      const foundationCount = (seenBySource.get('site')?.size || 0);
+      const enhancementCount = uniqueEntries.length - foundationCount;
+      window.__foundationEnhancementBreakdown = { foundation: foundationCount, enhancement: enhancementCount };
 
       // enable stop button
       let stopRequested = false;
@@ -1184,13 +1226,15 @@
       document.getElementById('stepScrape').style.background = '#3a3';
       document.getElementById('stepScrape').textContent = 'Status: running';
       
-      addResult(`📊 Found ${uniqueUrls.length} unique URLs to scrape (${allUrls.length} total, ${duplicateCount} duplicates removed)`);
+      addResult(`📊 Found ${uniqueEntries.length} URLs to scrape (${allEntries.length} total, ${withinSourceDuplicates} within-source duplicates removed)`);
+      const perSrcMsg = Array.from(dupBySource.entries()).map(([s,c]) => `${s}:${c}`).join(', ');
+      if (perSrcMsg) addResult(`📌 Within-source duplicate breakdown — ${perSrcMsg}`);
       addResult(`📋 Sources: ${urlSources.join(', ')}`);
 
-      const urls = uniqueUrls;
+      const entries = uniqueEntries;
 
       // stats counters
-      stats.loadedRows = urls.length;
+      stats.loadedRows = entries.length;
       stats.successCount = 0;
       stats.failedCount = 0;
       stats.stoppedCount = 0;
@@ -1210,8 +1254,16 @@
       
       // Use global urlScrapingStats - don't redeclare
 
-      function categorize(url, result) {
+      function categorize(url, result, sourceCategory) {
         const u = (url||'').toLowerCase();
+        // Prioritize the declared source category when present
+        if (sourceCategory === 'blog') return 'blog_articles';
+        if (sourceCategory === 'event') return 'course_events';
+        if (sourceCategory === 'workshop') return 'workshop_events';
+        if (sourceCategory === 'service') return 'course_products';
+        if (sourceCategory === 'site') {
+          // site foundation can be any; fall through to URL heuristics
+        }
         // Broader patterns to catch more content
         if (u.includes('/blog') || u.includes('/news') || u.includes('/blog-on-photography')) return 'blog_articles';
         if (u.includes('/course') || u.includes('/lesson') || u.includes('/beginners-photography-lessons')) return 'course_events';
@@ -1234,17 +1286,18 @@
       const TIMEOUT_MS = 25000; // allow a little longer per request
       let completed = 0;
 
-      async function processBatch(batchUrls, batchIndex) {
-        addResult(`📦 Processing batch ${batchIndex + 1}: ${batchUrls.length} URLs`, 'info');
+      async function processBatch(batchEntries, batchIndex) {
+        addResult(`📦 Processing batch ${batchIndex + 1}: ${batchEntries.length} URLs`, 'info');
         
         // Process all URLs in this batch concurrently
-        const promises = batchUrls.map(async (url, urlIndex) => {
+        const promises = batchEntries.map(async (entry, urlIndex) => {
+          const { url, source } = entry;
           const globalIndex = batchIndex * BATCH_SIZE + urlIndex;
-          updateProgress((completed / urls.length) * 100, `Scraping ${url}...`);
+          updateProgress((completed / entries.length) * 100, `Scraping ${url}...`);
           
           const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
-          const category = categorize(url, result);
-          addResult(`🔍 DEBUG: ${url} -> Category: ${category}`, 'info');
+          const category = categorize(url, result, source);
+          addResult(`🔍 DEBUG: ${url} (source: ${source}) -> Category: ${category}`, 'info');
           
           // Ensure category exists in urlScrapingStats
           if (!urlScrapingStats[category]) {
@@ -1296,7 +1349,7 @@
             }
           }
           completed++;
-          updateProgress((completed / urls.length) * 100, `Scraping (${completed}/${urls.length})`);
+          updateProgress((completed / entries.length) * 100, `Scraping (${completed}/${entries.length})`);
           updateStats();
         });
         
@@ -1306,11 +1359,11 @@
 
       // Process URLs in batches
       const batches = [];
-      for (let i = 0; i < urls.length; i += BATCH_SIZE) {
-        batches.push(urls.slice(i, i + BATCH_SIZE));
+      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+        batches.push(entries.slice(i, i + BATCH_SIZE));
       }
       
-      addResult(`📊 Processing ${urls.length} URLs in ${batches.length} batches of ${BATCH_SIZE}`, 'info');
+      addResult(`📊 Processing ${entries.length} URLs in ${batches.length} batches of ${BATCH_SIZE}`, 'info');
       
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         if (stopRequested) break;
@@ -1325,7 +1378,7 @@
       }
 
       if (stopRequested) {
-        stats.stoppedCount = urls.length - completed;
+        stats.stoppedCount = entries.length - completed;
         updateStats();
       }
 
@@ -1718,6 +1771,17 @@
       'website_urls': { success: 0, failed: 0, skipped: 0 },
       'json_extraction': { success: 0, failed: 0, skipped: 0 }
     };
+
+    // Track within-source duplicates removed per dashboard category (for Step 2)
+    let withinSourceDupByCategory = {
+      'blog_articles': 0,
+      'course_events': 0,
+      'workshop_events': 0,
+      'course_products': 0,
+      'workshop_products': 0,
+      'website_urls': 0,
+      'json_extraction': 0
+    };
     
     // Map import content types to dashboard category keys
     const contentTypeToCsvKey = {
@@ -1776,7 +1840,8 @@
       // Create rows from urlScrapingStats
       const rows = Object.entries(urlScrapingStats || {}).map(([key, stats]) => {
         const csvCount = csvRowCounts[key] || 0;
-        const duplicatesRemoved = Math.max(0, csvCount - (stats.success + stats.failed + stats.skipped));
+        // Show within-source duplicates removed during Step 2, not cross-CSV
+        const duplicatesRemoved = withinSourceDupByCategory[key] || 0;
         
         // Add to totals
         totalSuccess += stats.success || 0;
@@ -1791,7 +1856,9 @@
       // Add totals row
       const totalsRow = `<tr style="border-top:2px solid #666;font-weight:bold;background:#2a2a2a;"><td style="padding:4px 8px;">TOTALS</td><td style="padding:4px 8px;">${totalCsvCount}</td><td style="color:#51cf66">${totalSuccess}</td><td style="color:#ff6b6b">${totalFailed}</td><td style="color:#74c0fc">${totalSkipped}</td><td style="color:#ffd43b">${totalDuplicatesRemoved}</td></tr>`;
       
-      const html = `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">CSV Count</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th><th style="text-align:left;padding:4px 8px;">Duplicates Removed</th></tr></thead><tbody>${rows}${totalsRow}</tbody></table>`;
+      const breakdown = (window.__foundationEnhancementBreakdown || {foundation:0, enhancement:0});
+      const html = `<div style="margin-bottom:8px;color:#bbb;font-size:12px;">Foundation (site_urls): ${breakdown.foundation} • Enhancements (blog/events/workshops/services): ${breakdown.enhancement}</div>`+
+        `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">CSV Count</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th><th style="text-align:left;padding:4px 8px;">Duplicates Removed</th></tr></thead><tbody>${rows}${totalsRow}</tbody></table>`;
       el.innerHTML = html;
       
       // Update header blocks to match table totals
