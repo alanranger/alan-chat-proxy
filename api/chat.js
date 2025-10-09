@@ -1263,13 +1263,33 @@ function buildProductPanelMarkdown(products) {
   let summary = info.summary;
   
   if (!summary && fullDescription) {
-    // Look for the main description paragraph (after "Description:")
-    const descMatch = fullDescription.match(/Description:\s*([^]*?)(?:\n\n|\n[A-Z]|$)/i);
-    if (descMatch) {
-      const descText = descMatch[1].trim();
-      console.log('DEBUG: Found description section:', descText);
-      // Extract first 2-3 sentences from the description
-      const sentences = descText
+    console.log('DEBUG: Summary generation started for product:', primary.title);
+    console.log('DEBUG: Full description length:', fullDescription.length);
+
+    let summaryText = '';
+    const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
+    console.log('DEBUG: lastDescriptionIndex:', lastDescriptionIndex);
+
+    if (lastDescriptionIndex !== -1) {
+      // Get text after the last "Description:"
+      let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
+      console.log('DEBUG: potentialSummaryText (after last Description:):', potentialSummaryText.substring(0, 100) + '...'); // Log first 100 chars
+
+      // Further refine to stop at other section headers if they exist after the description
+      const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
+      let stopIndex = potentialSummaryText.length;
+      for (const word of stopWords) {
+        const idx = potentialSummaryText.toLowerCase().indexOf(word);
+        if (idx !== -1 && idx < stopIndex) {
+          stopIndex = idx;
+        }
+      }
+      summaryText = potentialSummaryText.substring(0, stopIndex).trim();
+      console.log('DEBUG: summaryText after stop words refinement:', summaryText.substring(0, 100) + '...');
+    }
+
+    if (summaryText) {
+      const sentences = summaryText
         .replace(/<[^>]*>/g, ' ') // Remove HTML tags
         .replace(/\s+/g, ' ') // Normalize whitespace
         .split(/[.!?]+/)
@@ -1277,16 +1297,17 @@ function buildProductPanelMarkdown(products) {
         .filter(s => s.length > 30) // Filter out very short fragments
         .slice(0, 2); // Take first 2 sentences for a concise summary
       
-      console.log('DEBUG: Extracted sentences:', sentences);
+      console.log('DEBUG: Sentences extracted from summaryText:', sentences.length, sentences);
+
       if (sentences.length > 0) {
         summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
-        console.log('DEBUG: Generated summary:', summary);
+        console.log('DEBUG: Final summary from specific section:', summary);
       }
     }
     
-    // Fallback: if no description section found, use the first part
+    // Fallback: if no specific description section found or summary is still empty
     if (!summary) {
-      console.log('DEBUG: No description section found, using fallback');
+      console.log('DEBUG: Falling back to general fullDescription summary...');
       const sentences = fullDescription
         .replace(/<[^>]*>/g, ' ') // Remove HTML tags
         .replace(/\s+/g, ' ') // Normalize whitespace
@@ -1295,10 +1316,11 @@ function buildProductPanelMarkdown(products) {
         .filter(s => s.length > 30) // Filter out very short fragments
         .slice(0, 2); // Take first 2 sentences
       
-      console.log('DEBUG: Fallback sentences:', sentences);
+      console.log('DEBUG: Sentences from fallback:', sentences.length, sentences);
+
       if (sentences.length > 0) {
         summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
-        console.log('DEBUG: Fallback summary:', summary);
+        console.log('DEBUG: Final summary from fallback:', summary);
       }
     }
   }
@@ -1736,7 +1758,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.33-summary-debug",
+          version: "v1.2.34-summary-fix-debug",
           intent: "events",
           keywords: keywords,
           counts: {
