@@ -245,7 +245,10 @@ function transformWorkshopData(row) {
     "image": imageUrl,
     "keywords": tags.join(', '),
     "eventType": workshopType,
-    "location": locationHints.length > 0 ? { "@type": "Place", "name": locationHints.join(', ') } : undefined
+    "location": locationHints.length > 0 ? { "@type": "Place", "name": locationHints.join(', ') } : undefined,
+    // Preserve CSV-local times to avoid timezone drift in exports
+    "_csv_start_time": startTime || null,
+    "_csv_end_time": endTime || null
   };
   
   // Remove undefined values
@@ -499,7 +502,10 @@ function transformEventData(row) {
     "endDate": dateEnd,
     "location": location ? { "@type": "Place", "name": location } : undefined,
     "eventStatus": "https://schema.org/EventScheduled",
-    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode"
+    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+    // Preserve CSV-local times to avoid timezone drift in exports
+    "_csv_start_time": sTime || null,
+    "_csv_end_time": eTime || null
   };
   
   // Remove undefined values
