@@ -161,6 +161,11 @@
               <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_event"> events</label>
               <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_workshop"> workshops</label>
               <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_service"> services</label>
+              <div style="margin-top:6px;line-height:1.5;">
+                <div><strong>Tip:</strong> Keep <code>site_urls</code> checked (foundation). Check <code>blog</code>, <code>events</code>, <code>workshops</code>, <code>services</code> to add enhancement passes.</div>
+                <div><strong>Use all</strong> for full refresh. <strong>Uncheck</strong> categories to target a quick re‑run (e.g., only blog after a new blog CSV).</div>
+                <div>This only affects Step 2’s queue. Step 1 imports are already done.</div>
+              </div>
             </div>
             <button class="btn" onclick="scrapeWebsite(true)" id="dryRunBtn" style="font-size:11px;padding:6px 10px;">
               🧪 Dry‑Run
