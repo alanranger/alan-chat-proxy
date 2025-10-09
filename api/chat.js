@@ -1251,27 +1251,21 @@ function buildProductPanelMarkdown(products) {
   if (lowTx && highTx) headBits.push(`${lowTx}–${highTx}`);
   const priceHead = headBits.length ? ` — ${headBits.join(" • ")}` : "";
 
-  const fullDescription = primary.description || primary?.raw?.description || "";
-  console.log('DEBUG: Full description being processed:', fullDescription.substring(0, 200) + '...');
-  
-  const info = extractFromDescription(fullDescription) || {};
-  console.log('DEBUG: Extracted info from description:', JSON.stringify(info, null, 2));
+  const info = extractFromDescription(
+    primary.description || primary?.raw?.description || ""
+  ) || {};
 
   // Create a better summary from the full description
+  const fullDescription = primary.description || primary?.raw?.description || "";
   let summary = info.summary;
   
   if (!summary && fullDescription) {
-    console.log('DEBUG: Summary generation started for product:', primary.title);
-    console.log('DEBUG: Full description length:', fullDescription.length);
-
     let summaryText = '';
     const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
-    console.log('DEBUG: lastDescriptionIndex:', lastDescriptionIndex);
 
     if (lastDescriptionIndex !== -1) {
       // Get text after the last "Description:"
       let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
-      console.log('DEBUG: potentialSummaryText (after last Description:):', potentialSummaryText.substring(0, 100) + '...'); // Log first 100 chars
 
       // Further refine to stop at other section headers if they exist after the description
       const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
@@ -1283,7 +1277,6 @@ function buildProductPanelMarkdown(products) {
         }
       }
       summaryText = potentialSummaryText.substring(0, stopIndex).trim();
-      console.log('DEBUG: summaryText after stop words refinement:', summaryText.substring(0, 100) + '...');
     }
 
     if (summaryText) {
@@ -1294,18 +1287,14 @@ function buildProductPanelMarkdown(products) {
         .map(s => s.trim())
         .filter(s => s.length > 30) // Filter out very short fragments
         .slice(0, 2); // Take first 2 sentences for a concise summary
-      
-      console.log('DEBUG: Sentences extracted from summaryText:', sentences.length, sentences);
 
       if (sentences.length > 0) {
         summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
-        console.log('DEBUG: Final summary from specific section:', summary);
       }
     }
     
     // Fallback: if no specific description section found or summary is still empty
     if (!summary) {
-      console.log('DEBUG: Falling back to general fullDescription summary...');
       const sentences = fullDescription
         .replace(/<[^>]*>/g, ' ') // Remove HTML tags
         .replace(/\s+/g, ' ') // Normalize whitespace
@@ -1313,12 +1302,9 @@ function buildProductPanelMarkdown(products) {
         .map(s => s.trim())
         .filter(s => s.length > 30) // Filter out very short fragments
         .slice(0, 2); // Take first 2 sentences
-      
-      console.log('DEBUG: Sentences from fallback:', sentences.length, sentences);
 
       if (sentences.length > 0) {
         summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
-        console.log('DEBUG: Final summary from fallback:', summary);
       }
     }
   }
@@ -1668,7 +1654,6 @@ export default async function handler(req, res) {
         // Enrich product with full details from page_entities if we have a product URL
         if (product.page_url) {
           try {
-            console.log('DEBUG: Fetching product details for URL:', product.page_url);
             const { data: productDetails } = await client
               .from('page_entities')
               .select('*')
@@ -1677,7 +1662,6 @@ export default async function handler(req, res) {
               .single();
             
             if (productDetails) {
-              console.log('DEBUG: Found product details:', JSON.stringify(productDetails, null, 2));
               // Merge the full product details with the existing product data
               product = {
                 ...product,
@@ -1685,21 +1669,13 @@ export default async function handler(req, res) {
                 description: productDetails.description || product.description,
                 raw: { ...product.raw, ...productDetails.raw }
               };
-              console.log('DEBUG: Enriched product with full details from page_entities');
-              console.log('DEBUG: Final enriched product description:', product.description);
-            } else {
-              console.log('DEBUG: No product details found for URL:', product.page_url);
             }
           } catch (error) {
-            console.log('DEBUG: Could not fetch full product details:', error.message);
+            // Silently handle errors
           }
-        } else {
-          console.log('DEBUG: No product.page_url found, skipping enrichment');
         }
       }
-      console.log('DEBUG: About to build product panel for product:', JSON.stringify(product, null, 2));
       const productPanel = product ? buildProductPanelMarkdown([product]) : "";
-      console.log('DEBUG: Generated product panel:', productPanel);
 
       // Use extractRelevantInfo to get specific answers for follow-up questions
       const dataContext = { events, products: product ? [product] : [], articles: [], originalQuery: previousQuery };
@@ -1761,7 +1737,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.37-extract-debug",
+          version: "v1.2.38-stable",
           intent: "events",
           keywords: keywords,
           counts: {
