@@ -1084,13 +1084,32 @@ async function getArticleAuxLinks(client, articleUrl) {
               /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']+)/i
             ) || text.match(/href="([^"]*alanranger\.com[^"]+)"/i);
           if (rel && rel[0]) {
-            result.related = Array.isArray(rel) ? rel[0] : rel[1];
-            // crude label guess: look for preceding words like link text
-            const labelMatch =
-              text.match(/\[([^\]]+)\]\([^)]+\)/) ||
-              text.match(/>([^<]{3,60})<\/a>/i);
-            if (labelMatch && labelMatch[1]) {
-              result.relatedLabel = labelMatch[1].trim();
+            const url = Array.isArray(rel) ? rel[0] : rel[1];
+            // Skip external URLs and complex search URLs
+            if (!url.includes('wexphotovideo.com') && 
+                !url.includes('amazon.com') && 
+                !url.includes('search?') && 
+                !url.includes('gclid=') &&
+                url.includes('alanranger.com')) {
+              result.related = url;
+              // crude label guess: look for preceding words like link text
+              const labelMatch =
+                text.match(/\[([^\]]+)\]\([^)]+\)/) ||
+                text.match(/>([^<]{3,60})<\/a>/i) ||
+                text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
+              if (labelMatch && labelMatch[1]) {
+                result.relatedLabel = labelMatch[1].trim();
+              } else {
+                // Generate a clean label from the URL path
+                try {
+                  const urlObj = new URL(url);
+                  const pathParts = urlObj.pathname.split('/').filter(Boolean);
+                  const lastPart = pathParts[pathParts.length - 1] || 'Related Content';
+                  result.relatedLabel = lastPart.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                } catch {
+                  result.relatedLabel = 'Related Content';
+                }
+              }
             }
           }
         }
@@ -1292,7 +1311,14 @@ function buildAdvicePills({ articleUrl, query, pdfUrl, relatedUrl, relatedLabel 
   add("Read Guide", articleUrl, true);
   add("More Articles", `https://www.alanranger.com/search?query=${encodeURIComponent(query || "")}`, true);
   if (pdfUrl) add("Download PDF", pdfUrl, true);
-  if (relatedUrl) add(relatedLabel || "Related", relatedUrl, false);
+  if (relatedUrl) {
+    // Ensure we never show raw URLs as labels
+    let cleanLabel = relatedLabel || "Related";
+    if (cleanLabel.includes('http') || cleanLabel.includes('www.') || cleanLabel.length > 50) {
+      cleanLabel = "Related Content";
+    }
+    add(cleanLabel, relatedUrl, false);
+  }
   return pills.slice(0, 4);
 }
 
