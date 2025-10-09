@@ -1185,6 +1185,18 @@ function extractFromDescription(desc) {
       if (v) out.availability = v;
       continue;
     }
+    
+    // Handle the specific format from the Batsford description
+    if (/^participants:\s*max\s*\d+$/i.test(ln)) {
+      const match = ln.match(/^participants:\s*(max\s*\d+)$/i);
+      if (match) out.participants = match[1];
+      continue;
+    }
+    if (/^fitness:\s*\d+\.\s*[a-z-]+$/i.test(ln)) {
+      const match = ln.match(/^fitness:\s*(\d+\.\s*[a-z-]+)$/i);
+      if (match) out.fitness = match[1];
+      continue;
+    }
 
     const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
     if (m1) {
@@ -1236,23 +1248,45 @@ function buildProductPanelMarkdown(products) {
     extractFromDescription(
       primary.description || primary?.raw?.description || ""
     ) || {};
+  
+  console.log('DEBUG: Extracted info from description:', JSON.stringify(info, null, 2));
 
   // Create a better summary from the full description
   const fullDescription = primary.description || primary?.raw?.description || "";
   let summary = info.summary;
   
   if (!summary && fullDescription) {
-    // Extract first 2-3 sentences from the full description
-    const sentences = fullDescription
-      .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .split(/[.!?]+/)
-      .map(s => s.trim())
-      .filter(s => s.length > 20) // Filter out very short fragments
-      .slice(0, 3); // Take first 3 sentences
+    // Look for the main description paragraph (after "Description:")
+    const descMatch = fullDescription.match(/Description:\s*([^]*?)(?:\n\n|\n[A-Z]|$)/i);
+    if (descMatch) {
+      const descText = descMatch[1].trim();
+      // Extract first 2-3 sentences from the description
+      const sentences = descText
+        .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .split(/[.!?]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 30) // Filter out very short fragments
+        .slice(0, 2); // Take first 2 sentences for a concise summary
+      
+      if (sentences.length > 0) {
+        summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
+      }
+    }
     
-    if (sentences.length > 0) {
-      summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
+    // Fallback: if no description section found, use the first part
+    if (!summary) {
+      const sentences = fullDescription
+        .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .split(/[.!?]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 30) // Filter out very short fragments
+        .slice(0, 2); // Take first 2 sentences
+      
+      if (sentences.length > 0) {
+        summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
+      }
     }
   }
 
