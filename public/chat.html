@@ -169,21 +169,22 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
   z-index: 1000;
 }
 .feedback-form {
-  background: white;
+  background: #2c3e50;
   border-radius: 8px;
   padding: 20px;
   max-width: 400px;
   width: 90%;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid #34495e;
 }
 .feedback-form h3 {
   margin: 0 0 16px 0;
-  color: #333;
+  color: #ecf0f1;
   font-size: 16px;
 }
 .feedback-form p {
   margin: 0 0 16px 0;
-  color: #666;
+  color: #bdc3c7;
   font-size: 14px;
 }
 .feedback-options {
@@ -198,18 +199,23 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 }
 .feedback-option label {
   font-size: 14px;
-  color: #333;
+  color: #ecf0f1;
   cursor: pointer;
 }
 .feedback-text {
   width: 100%;
   min-height: 60px;
   padding: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid #34495e;
   border-radius: 4px;
   font-size: 14px;
   resize: vertical;
   margin-bottom: 16px;
+  background: #34495e;
+  color: #ecf0f1;
+}
+.feedback-text::placeholder {
+  color: #95a5a6;
 }
 .feedback-buttons-form {
   display: flex;
@@ -224,20 +230,22 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
   font-size: 14px;
 }
 .feedback-cancel {
-  background: #f8f9fa;
-  color: #666;
+  background: #34495e;
+  color: #bdc3c7;
+  border-color: #34495e;
 }
 .feedback-cancel:hover {
-  background: #e9ecef;
+  background: #2c3e50;
+  color: #ecf0f1;
 }
 .feedback-submit {
-  background: #dc3545;
+  background: #e74c3c;
   color: white;
-  border-color: #dc3545;
+  border-color: #e74c3c;
 }
 .feedback-submit:hover {
-  background: #c82333;
-  border-color: #bd2130;
+  background: #c0392b;
+  border-color: #c0392b;
 }
 
 /* Mobile and tablet responsive design */
