@@ -181,6 +181,7 @@ function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
   return `**${para.substring(0, 300).trim()}**\n\n${url ? `*Source: ${url}*\n\n` : ""}`;
 }
 function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
+  console.log('DEBUG: generateEquipmentAdvice called with query:', query, 'chunks:', contentChunks.length, 'articles:', articles.length);
   const lc = (query || "").toLowerCase();
   const equipmentKeywords = new Set(['tripod','tripods','head','ballhead','levelling','leveling','recommend','recommendation','recommendations','equipment']);
   
@@ -1486,6 +1487,7 @@ async function extractRelevantInfo(query, dataContext) {
 
 /* -------------------------------- Handler -------------------------------- */
 export default async function handler(req, res) {
+  console.log('DEBUG: Chat API handler called - NEW VERSION DEPLOYED');
   const started = Date.now();
   try {
   if (req.method !== "POST") {
