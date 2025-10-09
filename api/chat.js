@@ -1251,6 +1251,9 @@ function buildProductPanelMarkdown(products) {
   
   console.log("Extracted info:", JSON.stringify(info, null, 2));
   console.log("Full description:", fullDescription);
+  console.log("Info participants:", info.participants);
+  console.log("Info fitness:", info.fitness);
+  console.log("Info location:", info.location);
   let summary = null; // Don't use info.summary, generate our own
   
   if (fullDescription) {
