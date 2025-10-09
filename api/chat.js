@@ -189,6 +189,66 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   const isEquipmentQuery = Array.from(equipmentKeywords).some(k => lc.includes(k));
   if (!isEquipmentQuery) return null;
   
+  // First, try to extract recommendations directly from article raw content (FAQ format)
+  const productRecommendations = [];
+  const brandComparisons = [];
+  const specificTips = [];
+  
+  // Look for FAQ content in articles (like the tripod guide)
+  for (const article of articles) {
+    if (article.raw && article.raw.mainEntity && Array.isArray(article.raw.mainEntity)) {
+      for (const faq of article.raw.mainEntity) {
+        if (faq.acceptedAnswer && faq.acceptedAnswer.text) {
+          const answer = faq.acceptedAnswer.text.replace(/<[^>]*>/g, '').trim();
+          if (answer.length > 50 && answer.length < 500) {
+            if (answer.toLowerCase().includes('best') || answer.toLowerCase().includes('recommend')) {
+              productRecommendations.push(answer);
+            } else if (answer.toLowerCase().includes('vs') || answer.toLowerCase().includes('compare')) {
+              brandComparisons.push(answer);
+            } else {
+              specificTips.push(answer);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // If we found good content from articles, use it
+  if (productRecommendations.length > 0 || brandComparisons.length > 0 || specificTips.length > 0) {
+    let response = "**Equipment Recommendations:**\n\n";
+    
+    if (productRecommendations.length > 0) {
+      response += "**Specific Recommendations:**\n";
+      productRecommendations.forEach((point, i) => {
+        response += `• ${point}\n`;
+      });
+      response += "\n";
+    }
+    
+    if (brandComparisons.length > 0) {
+      response += "**Comparisons:**\n";
+      brandComparisons.forEach((point, i) => {
+        response += `• ${point}\n`;
+      });
+      response += "\n";
+    }
+    
+    if (specificTips.length > 0) {
+      response += "**Key Information:**\n";
+      specificTips.forEach((point, i) => {
+        response += `• ${point}\n`;
+      });
+      response += "\n";
+    }
+    
+    response += "*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
+    
+    console.log('DEBUG: Generated response from article FAQ content with', productRecommendations.length, 'recs,', brandComparisons.length, 'comparisons,', specificTips.length, 'tips');
+    
+    return response;
+  }
+  
   // Find relevant content chunks about equipment - be very inclusive for richer content
   const equipmentChunks = (contentChunks || []).filter(chunk => {
     const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
@@ -1747,14 +1807,10 @@ export default async function handler(req, res) {
         }
       }
       
-      // Special boost for tripod recommendation articles
-      if (qlcRank.includes('tripod') && qlcRank.includes('recommend')) {
-        if (title.includes('recommended') && title.includes('tripod')) s += 15;
-        if (url.includes('recommended-travel-lightweight-tripods')) s += 20;
-        if (url.includes('tripod-for-cameras-essential-guide')) s += 18;
-        if (url.includes('tripods-gitzo-vs-benro-review')) s += 16;
-        if (url.includes('perfect-travel-tripod') || url.includes('cyanbird')) s += 14;
-        if (url.includes('5-reasons-to-use-a-tripod')) s += 12;
+      // Boost for recommendation articles that match the query topic
+      if (qlcRank.includes('recommend')) {
+        if (title.includes('recommended') && title.includes(qlcRank.split(' ')[0])) s += 15;
+        if (url.includes('recommended') && url.includes(qlcRank.split(' ')[0])) s += 12;
       }
       
       // Penalize irrelevant articles for tripod queries
