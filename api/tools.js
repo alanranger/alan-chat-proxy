@@ -295,11 +295,12 @@ export default async function handler(req, res) {
         // Overwrite date/time strictly from events view (CSV-derived), no tz conversion
         try {
           const { data: eventRows, error: evErr } = await supa
-            .from('v_events_for_chat')
-            .select('event_url,date_start,date_end,start_time,end_time')
+            .from('page_entities')
+            .select('url, date_start, date_end, start_time, end_time, kind')
+            .eq('kind','event')
             .limit(5000);
           if (!evErr && Array.isArray(eventRows)) {
-            const byUrl = new Map(eventRows.map(e => [e.event_url, e]));
+            const byUrl = new Map(eventRows.map(e => [e.url, e]));
             rows = rows.map(row => {
               const ev = byUrl.get(row.event_url);
               if (ev) {
