@@ -233,6 +233,7 @@
             <span style="color:#888;font-weight:600;">Tools:</span>
             <button class="btn" onclick="exportMappings()" style="font-size:12px;padding:6px 10px;">⬇️ Export Mappings</button>
             <button class="btn" onclick="exportUnmapped()" style="font-size:12px;padding:6px 10px;">⬇️ Export Unmapped</button>
+            <button class="btn" onclick="exportReconcile()" style="font-size:12px;padding:6px 10px;">⬇️ Export Reconcile</button>
             <button class="btn" onclick="runTestQuestions()" style="font-size:12px;padding:6px 10px;">🤖 Test Questions</button>
             <button class="btn btn-danger" onclick="clearResults()" style="font-size:12px;padding:6px 10px;">🗑️ Clear Log</button>
           </div>
@@ -1646,6 +1647,21 @@
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         addResult('⬇️ Exported unmapped events CSV', 'success');
       }catch(e){ addResult(`❌ Export unmapped error: ${e.message}`, 'error'); }
+    }
+
+    // Export reconcile CSV (public flag for convenience in UI)
+    async function exportReconcile(){
+      try{
+        const url = `/api/tools?action=export_reconcile&public=1`;
+        const resp = await fetch(url);
+        if (!resp.ok){ addResult(`❌ Export reconcile failed: ${resp.status}`, 'error'); return; }
+        const blob = await resp.blob();
+        const dl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = dl; a.download = `reconcile-event-mapping-${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(dl);
+        addResult('⬇️ Exported reconcile CSV', 'success');
+      }catch(e){ addResult(`❌ Export reconcile error: ${e.message}`, 'error'); }
     }
 
     // CSV parser (minimal, quoted fields supported)
