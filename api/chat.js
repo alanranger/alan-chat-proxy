@@ -189,31 +189,22 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   const isEquipmentQuery = Array.from(equipmentKeywords).some(k => lc.includes(k));
   if (!isEquipmentQuery) return null;
   
-  // Find relevant content chunks about equipment - be more inclusive for richer content
+  // Find relevant content chunks about equipment - be very inclusive for richer content
   const equipmentChunks = (contentChunks || []).filter(chunk => {
     const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
     const title = (chunk.title || "").toLowerCase();
     const url = (chunk.url || "").toLowerCase();
     
-    // Skip navigation/service chunks
-    if (text.includes('cart 0') || text.includes('sign in') || text.includes('back photography courses') || 
-        text.includes('workshops calendar') || text.includes('services summary') || 
-        text.includes('hire a professional') || text.includes('book a free consultation') ||
-        text.includes('my account') || text.includes('search') || text.includes('gallery')) {
+    // Skip only obvious navigation/service chunks
+    if (text.includes('cart 0') || text.includes('sign in') || text.includes('my account') || 
+        text.includes('search') || text.includes('gallery') || text.length < 20) {
       return false;
     }
     
-    // Must contain equipment keywords AND be substantial content
+    // Accept any content that mentions equipment keywords - be very permissive
     const hasEquipmentKeyword = Array.from(equipmentKeywords).some(k => text.includes(k));
-    const isSubstantial = text.length > 30 && !text.includes('[/') && !text.includes('](');
     
-    // Prioritize chunks from specific tripod articles
-    const isTripodArticle = url.includes('tripod') || url.includes('gitzo') || url.includes('benro') || 
-                           url.includes('equipment-recommendations') || url.includes('manfrotto') ||
-                           url.includes('travel') || url.includes('lightweight');
-    
-    // Be more inclusive - accept any equipment-related content
-    return hasEquipmentKeyword && isSubstantial;
+    return hasEquipmentKeyword;
   });
   
   if (equipmentChunks.length === 0) {
@@ -247,8 +238,8 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
         cleanSentence = cleanSentence.substring(0, 400) + "...";
       }
       
-      // Skip very short or generic sentences
-      if (cleanSentence.length < 30) continue;
+      // Skip only very short sentences
+      if (cleanSentence.length < 15) continue;
       
       // Look for specific product recommendations
       const hasProductRecommendation = sLower.includes('mefoto') || sLower.includes('gitzo') || 
@@ -280,21 +271,26 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
       const hasTripodContent = sLower.includes('tripod') || sLower.includes('equipment');
       
       if (hasTripodContent) {
-        // Categorize and add advice
-        if (hasProductRecommendation && productRecommendations.length < 5) {
-          if (!productRecommendations.some(existing => existing.includes(cleanSentence.substring(0, 50)))) {
+        // Categorize and add advice - be more inclusive
+        if (hasProductRecommendation && productRecommendations.length < 8) {
+          if (!productRecommendations.some(existing => existing.includes(cleanSentence.substring(0, 30)))) {
             productRecommendations.push(cleanSentence);
           }
-        } else if (hasBrandComparison && brandComparisons.length < 3) {
-          if (!brandComparisons.some(existing => existing.includes(cleanSentence.substring(0, 50)))) {
+        } else if (hasBrandComparison && brandComparisons.length < 5) {
+          if (!brandComparisons.some(existing => existing.includes(cleanSentence.substring(0, 30)))) {
             brandComparisons.push(cleanSentence);
           }
-        } else if (hasSpecificTip && specificTips.length < 4) {
-          if (!specificTips.some(existing => existing.includes(cleanSentence.substring(0, 50)))) {
+        } else if (hasSpecificTip && specificTips.length < 6) {
+          if (!specificTips.some(existing => existing.includes(cleanSentence.substring(0, 30)))) {
             specificTips.push(cleanSentence);
           }
-        } else if (hasAdvicePattern && generalAdvice.length < 4) {
-          if (!generalAdvice.some(existing => existing.includes(cleanSentence.substring(0, 50)))) {
+        } else if (hasAdvicePattern && generalAdvice.length < 6) {
+          if (!generalAdvice.some(existing => existing.includes(cleanSentence.substring(0, 30)))) {
+            generalAdvice.push(cleanSentence);
+          }
+        } else if (generalAdvice.length < 8) {
+          // Fallback: add any tripod-related content to general advice
+          if (!generalAdvice.some(existing => existing.includes(cleanSentence.substring(0, 30)))) {
             generalAdvice.push(cleanSentence);
           }
         }
