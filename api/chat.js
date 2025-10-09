@@ -188,7 +188,7 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   const isEquipmentQuery = Array.from(equipmentKeywords).some(k => lc.includes(k));
   if (!isEquipmentQuery) return null;
   
-  // Find relevant content chunks about equipment - prioritize specific tripod content
+  // Find relevant content chunks about equipment - be more inclusive for richer content
   const equipmentChunks = (contentChunks || []).filter(chunk => {
     const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
     const title = (chunk.title || "").toLowerCase();
@@ -204,60 +204,86 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
     
     // Must contain equipment keywords AND be substantial content
     const hasEquipmentKeyword = Array.from(equipmentKeywords).some(k => text.includes(k));
-    const isSubstantial = text.length > 100 && !text.includes('[/') && !text.includes('](');
+    const isSubstantial = text.length > 50 && !text.includes('[/') && !text.includes('](');
     
     // Prioritize chunks from specific tripod articles
     const isTripodArticle = url.includes('tripod') || url.includes('gitzo') || url.includes('benro') || 
-                           url.includes('equipment-recommendations');
+                           url.includes('equipment-recommendations') || url.includes('manfrotto') ||
+                           url.includes('travel') || url.includes('lightweight');
     
     return hasEquipmentKeyword && isSubstantial && (isTripodArticle || text.includes('tripod'));
   });
   
   if (equipmentChunks.length === 0) return null;
   
-  // Extract key advice points from the most relevant chunks - use more chunks for richer content
-  const advicePoints = [];
+  // Extract comprehensive advice from all relevant chunks
   const productRecommendations = [];
   const generalAdvice = [];
+  const specificTips = [];
+  const brandComparisons = [];
   
-  for (const chunk of equipmentChunks.slice(0, 6)) { // Increased from 3 to 6 chunks
+  // Process more chunks for richer content
+  for (const chunk of equipmentChunks.slice(0, 10)) {
     const text = chunk.chunk_text || chunk.content || "";
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 30);
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
     
     for (const sentence of sentences) {
       const sLower = sentence.toLowerCase();
       
-      // Look for specific product recommendations and advice patterns
+      // Clean up the sentence
+      let cleanSentence = sentence.trim()
+        .replace(/\[.*?\]/g, '') // Remove markdown links
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim();
+      
+      if (cleanSentence.length > 400) {
+        cleanSentence = cleanSentence.substring(0, 400) + "...";
+      }
+      
+      // Skip very short or generic sentences
+      if (cleanSentence.length < 30) continue;
+      
+      // Look for specific product recommendations
       const hasProductRecommendation = sLower.includes('mefoto') || sLower.includes('gitzo') || 
                                      sLower.includes('benro') || sLower.includes('manfrotto') ||
                                      sLower.includes('£') || sLower.includes('$') || sLower.includes('budget') ||
-                                     sLower.includes('rhino') || sLower.includes('cyanbird') || sLower.includes('befree');
+                                     sLower.includes('rhino') || sLower.includes('cyanbird') || sLower.includes('befree') ||
+                                     sLower.includes('travel') || sLower.includes('lightweight');
       
+      // Look for brand comparisons
+      const hasBrandComparison = sLower.includes('vs') || sLower.includes('versus') || sLower.includes('compare') ||
+                                sLower.includes('better than') || sLower.includes('difference') || sLower.includes('head to head');
+      
+      // Look for specific tips and advice
+      const hasSpecificTip = sLower.includes('tip') || sLower.includes('trick') || sLower.includes('technique') ||
+                            sLower.includes('how to') || sLower.includes('when to') || sLower.includes('why') ||
+                            sLower.includes('benefit') || sLower.includes('advantage') || sLower.includes('feature');
+      
+      // Look for general advice patterns
       const hasAdvicePattern = sLower.includes('recommend') || sLower.includes('best') || sLower.includes('choose') || 
                               sLower.includes('important') || sLower.includes('consider') || sLower.includes('essential') ||
                               sLower.includes('should') || sLower.includes('must') || sLower.includes('excellent') ||
                               sLower.includes('value') || sLower.includes('combination') || sLower.includes('ideal') ||
-                              sLower.includes('perfect') || sLower.includes('top') || sLower.includes('favorite');
+                              sLower.includes('perfect') || sLower.includes('top') || sLower.includes('favorite') ||
+                              sLower.includes('quality') || sLower.includes('stability') || sLower.includes('durability');
       
       const hasTripodContent = sLower.includes('tripod') || sLower.includes('equipment');
       
-      if (hasTripodContent && (hasProductRecommendation || hasAdvicePattern)) {
-        // Clean up the sentence
-        let cleanSentence = sentence.trim()
-          .replace(/\[.*?\]/g, '') // Remove markdown links
-          .replace(/\s+/g, ' ') // Normalize whitespace
-          .trim();
-        
-        if (cleanSentence.length > 300) {
-          cleanSentence = cleanSentence.substring(0, 300) + "...";
-        }
-        
-        // Categorize advice
-        if (hasProductRecommendation && productRecommendations.length < 3) {
+      if (hasTripodContent) {
+        // Categorize and add advice
+        if (hasProductRecommendation && productRecommendations.length < 5) {
           if (!productRecommendations.some(existing => existing.includes(cleanSentence.substring(0, 50)))) {
             productRecommendations.push(cleanSentence);
           }
-        } else if (hasAdvicePattern && generalAdvice.length < 3) {
+        } else if (hasBrandComparison && brandComparisons.length < 3) {
+          if (!brandComparisons.some(existing => existing.includes(cleanSentence.substring(0, 50)))) {
+            brandComparisons.push(cleanSentence);
+          }
+        } else if (hasSpecificTip && specificTips.length < 4) {
+          if (!specificTips.some(existing => existing.includes(cleanSentence.substring(0, 50)))) {
+            specificTips.push(cleanSentence);
+          }
+        } else if (hasAdvicePattern && generalAdvice.length < 4) {
           if (!generalAdvice.some(existing => existing.includes(cleanSentence.substring(0, 50)))) {
             generalAdvice.push(cleanSentence);
           }
@@ -266,19 +292,47 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
     }
   }
   
-  // Combine product recommendations and general advice
-  advicePoints.push(...productRecommendations, ...generalAdvice);
-  
-  if (advicePoints.length === 0) return null;
-  
-  // Format as equipment advice
+  // Build comprehensive response
   let response = "**Equipment Recommendations:**\n\n";
-  advicePoints.forEach((point, i) => {
-    response += `• ${point}\n`;
-  });
+  
+  // Add product recommendations first
+  if (productRecommendations.length > 0) {
+    response += "**Specific Tripod Recommendations:**\n";
+    productRecommendations.forEach((point, i) => {
+      response += `• ${point}\n`;
+    });
+    response += "\n";
+  }
+  
+  // Add brand comparisons
+  if (brandComparisons.length > 0) {
+    response += "**Brand Comparisons:**\n";
+    brandComparisons.forEach((point, i) => {
+      response += `• ${point}\n`;
+    });
+    response += "\n";
+  }
+  
+  // Add specific tips
+  if (specificTips.length > 0) {
+    response += "**Key Tips for Choosing Tripods:**\n";
+    specificTips.forEach((point, i) => {
+      response += `• ${point}\n`;
+    });
+    response += "\n";
+  }
+  
+  // Add general advice
+  if (generalAdvice.length > 0) {
+    response += "**General Advice:**\n";
+    generalAdvice.forEach((point, i) => {
+      response += `• ${point}\n`;
+    });
+    response += "\n";
+  }
   
   // Add context about Alan's experience
-  response += "\n*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
+  response += "*Based on Alan's extensive experience with photography equipment and teaching.*\n\n";
   
   return response;
 }
