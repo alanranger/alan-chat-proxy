@@ -676,6 +676,9 @@
         const checks = [
           { name: 'page_entities', path: 'page_entities?select=id' },
           { name: 'page_chunks', path: 'page_chunks?select=id' },
+          // canonical mapping view (may aggregate manual + auto)
+          { name: 'v_event_product_mappings', path: 'v_event_product_mappings?select=event_url' },
+          // raw auto table (may be empty if only view is used)
           { name: 'event_product_links_auto', path: 'event_product_links_auto?select=id' },
           { name: 'v_events_for_chat', path: 'v_events_for_chat?select=event_url' },
           { name: 'v_blog_content', path: 'v_blog_content?select=url' },
