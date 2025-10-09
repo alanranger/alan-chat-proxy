@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     const action = (req.query?.action || req.query?.a || '').toString().toLowerCase();
 
     // Optional public export toggle: allow unauthenticated CSV export when explicitly enabled
-    const isExportAction = req.method === 'GET' && (action === 'export' || action === 'export_unmapped' || action === 'export_reconcile');
+    const isExportAction = req.method === 'GET' && (action === 'export' || action === 'export_unmapped' || action === 'export_reconcile' || action === 'event_debug');
     const publicExportEnabled = process.env.PUBLIC_EXPORT_ENABLED === '1' || (req.query?.public === '1');
     const allowPublicExport = isExportAction && publicExportEnabled;
 
