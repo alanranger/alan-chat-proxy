@@ -308,11 +308,39 @@ export default async function handler(req, res) {
 
           if (freqError) throw new Error(`Frequent questions failed: ${freqError.message}`);
 
+          // Get feedback data
+          const { data: feedbackData, error: feedbackError } = await supa
+            .from('chat_feedback')
+            .select('*')
+            .order('timestamp', { ascending: false })
+            .limit(50);
+
+          if (feedbackError) console.warn('Feedback data failed:', feedbackError.message);
+
+          // Calculate feedback summary
+          const feedbackSummary = {
+            total: feedbackData?.length || 0,
+            thumbsUp: feedbackData?.filter(f => f.rating === 'thumbs_up').length || 0,
+            thumbsDown: feedbackData?.filter(f => f.rating === 'thumbs_down').length || 0,
+            satisfactionRate: 0,
+            avgConfidenceThumbsDown: 0
+          };
+
+          if (feedbackSummary.total > 0) {
+            feedbackSummary.satisfactionRate = (feedbackSummary.thumbsUp / feedbackSummary.total) * 100;
+            const thumbsDownItems = feedbackData?.filter(f => f.rating === 'thumbs_down' && f.confidence_score);
+            if (thumbsDownItems?.length > 0) {
+              feedbackSummary.avgConfidenceThumbsDown = thumbsDownItems.reduce((sum, f) => sum + f.confidence_score, 0) / thumbsDownItems.length;
+            }
+          }
+
           return sendJSON(res, 200, {
             ok: true,
             insights: {
               lowConfidenceQuestions: lowConfidence || [],
               frequentQuestions: frequentQuestions || [],
+              feedbackSummary,
+              recentFeedback: feedbackData?.slice(0, 10) || [],
               recommendations: [
                 ...(lowConfidence || []).map(q => ({
                   type: 'content_gap',
@@ -328,7 +356,16 @@ export default async function handler(req, res) {
                   message: `High-frequency question: "${q.question_text.substring(0, 100)}..."`,
                   question: q.question_text,
                   frequency: q.frequency
-                }))
+                })),
+                // Add feedback-based recommendations
+                ...(feedbackSummary.thumbsDown > 0 ? [{
+                  type: 'user_feedback',
+                  priority: 'high',
+                  message: `${feedbackSummary.thumbsDown} thumbs down feedback received - investigate user satisfaction`,
+                  question: 'User Feedback Analysis',
+                  frequency: feedbackSummary.thumbsDown,
+                  avgConfidence: feedbackSummary.avgConfidenceThumbsDown
+                }] : [])
               ]
             }
           });
@@ -531,8 +568,52 @@ export default async function handler(req, res) {
           });
         }
 
+      case 'feedback':
+        {
+          const { days = 7 } = req.query || {};
+          const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+          // Get feedback data
+          const { data: feedbackData, error: feedbackError } = await supa
+            .from('chat_feedback')
+            .select('*')
+            .gte('timestamp', sinceIso)
+            .order('timestamp', { ascending: false });
+
+          if (feedbackError) throw new Error(`Feedback data failed: ${feedbackError.message}`);
+
+          // Calculate summary stats
+          const totalFeedback = feedbackData?.length || 0;
+          const thumbsUp = feedbackData?.filter(f => f.rating === 'thumbs_up').length || 0;
+          const thumbsDown = feedbackData?.filter(f => f.rating === 'thumbs_down').length || 0;
+          const satisfactionRate = totalFeedback > 0 ? (thumbsUp / totalFeedback) * 100 : 0;
+          
+          // Get average confidence for thumbs down
+          const thumbsDownItems = feedbackData?.filter(f => f.rating === 'thumbs_down' && f.confidence_score);
+          const avgConfidenceThumbsDown = thumbsDownItems?.length > 0 ? 
+            thumbsDownItems.reduce((sum, f) => sum + f.confidence_score, 0) / thumbsDownItems.length : 0;
+
+          // Get recent feedback for investigation
+          const recentFeedback = feedbackData?.slice(0, 20) || [];
+
+          return sendJSON(res, 200, {
+            ok: true,
+            feedback: {
+              summary: {
+                totalFeedback,
+                thumbsUp,
+                thumbsDown,
+                satisfactionRate,
+                avgConfidenceThumbsDown
+              },
+              recentFeedback,
+              allFeedback: feedbackData || []
+            }
+          });
+        }
+
       default:
-        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, question_detail, performance, insights, admin_counts, admin_preview, admin_delete, admin_clear_all' });
+        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, question_detail, performance, insights, feedback, admin_counts, admin_preview, admin_delete, admin_clear_all' });
     }
 
   } catch (err) {

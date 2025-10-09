@@ -596,6 +596,7 @@
       <div class="tab" onclick="showTab('sessions')">Sessions</div>
       <div class="tab" onclick="showTab('performance')">Performance</div>
       <div class="tab" onclick="showTab('insights')">Insights</div>
+      <div class="tab" onclick="showTab('feedback')">Feedback</div>
       <div class="tab" onclick="showTab('admin')">Admin</div>
     </div>
 
@@ -617,6 +618,21 @@
         <div class="card metric">
           <div class="metric-value" id="avg-response-time">-</div>
           <div class="metric-label">Avg Response Time</div>
+        </div>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="card metric">
+          <div class="metric-value" id="overview-total-feedback">-</div>
+          <div class="metric-label">Total Feedback</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-value" id="overview-satisfaction-rate">-</div>
+          <div class="metric-label">Satisfaction Rate</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-value" id="overview-thumbs-down">-</div>
+          <div class="metric-label">Thumbs Down</div>
         </div>
       </div>
 
@@ -711,6 +727,48 @@
         <div class="loading" id="insights-loading">Loading insights...</div>
         <div id="insights-content" style="display: none;">
           <div id="insights-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feedback Tab Content -->
+    <div id="feedback" class="tab-content">
+      <div class="grid grid-4">
+        <div class="card metric">
+          <div class="metric-value" id="total-feedback">-</div>
+          <div class="metric-label">Total Feedback</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-value" id="thumbs-up-count">-</div>
+          <div class="metric-label">Thumbs Up</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-value" id="thumbs-down-count">-</div>
+          <div class="metric-label">Thumbs Down</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-value" id="satisfaction-rate">-</div>
+          <div class="metric-label">Satisfaction Rate</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Recent Thumbs Down Feedback</h3>
+          <div class="loading" id="feedback-loading">Loading feedback...</div>
+          <div id="feedback-content" style="display: none;">
+            <div id="recent-feedback-list"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Feedback Analysis</h3>
+          <div id="feedback-analysis">
+            <div class="performance-metric">
+              <h4>Average Confidence (Thumbs Down)</h4>
+              <div class="metric-value" id="avg-confidence-thumbs-down">-</div>
+              <div class="metric-detail">Lower confidence often correlates with user dissatisfaction</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -816,6 +874,7 @@
         case 'sessions': loadSessions(); break;
         case 'performance': loadPerformance(); break;
         case 'insights': loadInsights(); break;
+        case 'feedback': loadFeedback(); break;
         case 'admin': loadAdmin(); break;
       }
     }
@@ -849,6 +908,21 @@
         document.getElementById('total-questions').textContent = totals.questions.toLocaleString();
         document.getElementById('avg-confidence').textContent = (totals.avgConfidence * 100).toFixed(1) + '%';
         document.getElementById('avg-response-time').textContent = Math.round(totals.avgResponseTime) + 'ms';
+        
+        // Load feedback data for overview
+        try {
+          const feedbackData = await apiCall('feedback', { days: 7 });
+          const { summary } = feedbackData.feedback;
+          
+          document.getElementById('overview-total-feedback').textContent = summary.totalFeedback.toLocaleString();
+          document.getElementById('overview-satisfaction-rate').textContent = summary.satisfactionRate.toFixed(1) + '%';
+          document.getElementById('overview-thumbs-down').textContent = summary.thumbsDown.toLocaleString();
+        } catch (feedbackError) {
+          console.warn('Failed to load feedback data for overview:', feedbackError);
+          document.getElementById('overview-total-feedback').textContent = '-';
+          document.getElementById('overview-satisfaction-rate').textContent = '-';
+          document.getElementById('overview-thumbs-down').textContent = '-';
+        }
         
         // Replace placeholders with a mini table and day list
         const recent = data.overview.recentSessions || [];
@@ -1154,6 +1228,20 @@
           <p>Average confidence: ${(analysis.avgConfidence * 100).toFixed(1)}%</p>
         `;
         insightsList.appendChild(summaryCard);
+
+        // Add feedback summary if available
+        if (analysis.feedbackSummary && analysis.feedbackSummary.total > 0) {
+          const feedbackCard = document.createElement('div');
+          feedbackCard.className = 'insight-card insight-priority-medium';
+          feedbackCard.innerHTML = `
+            <h4>👥 User Feedback Summary</h4>
+            <p><strong>Total Feedback:</strong> ${analysis.feedbackSummary.total}</p>
+            <p><strong>Thumbs Up:</strong> ${analysis.feedbackSummary.thumbsUp} | <strong>Thumbs Down:</strong> ${analysis.feedbackSummary.thumbsDown}</p>
+            <p><strong>Satisfaction Rate:</strong> ${analysis.feedbackSummary.satisfactionRate.toFixed(1)}%</p>
+            ${analysis.feedbackSummary.thumbsDown > 0 ? `<p><strong>Avg Confidence (Thumbs Down):</strong> ${analysis.feedbackSummary.avgConfidenceThumbsDown.toFixed(1)}%</p>` : ''}
+          `;
+          insightsList.appendChild(feedbackCard);
+        }
         
         // Load and display improvement status dashboard
         try {
@@ -1315,6 +1403,59 @@
         
       } catch (error) {
         showError('Failed to load insights data: ' + error.message);
+      }
+    }
+
+    // Load feedback data
+    async function loadFeedback() {
+      try {
+        document.getElementById('feedback-loading').style.display = 'block';
+        document.getElementById('feedback-content').style.display = 'none';
+        
+        const data = await apiCall('feedback', { days: 7 });
+        const { summary, recentFeedback } = data.feedback;
+        
+        // Update summary metrics
+        document.getElementById('total-feedback').textContent = summary.totalFeedback.toLocaleString();
+        document.getElementById('thumbs-up-count').textContent = summary.thumbsUp.toLocaleString();
+        document.getElementById('thumbs-down-count').textContent = summary.thumbsDown.toLocaleString();
+        document.getElementById('satisfaction-rate').textContent = summary.satisfactionRate.toFixed(1) + '%';
+        document.getElementById('avg-confidence-thumbs-down').textContent = summary.avgConfidenceThumbsDown.toFixed(1) + '%';
+        
+        // Display recent feedback
+        const recentFeedbackList = document.getElementById('recent-feedback-list');
+        recentFeedbackList.innerHTML = '';
+        
+        if (recentFeedback.length === 0) {
+          recentFeedbackList.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">No feedback received yet.</p>';
+        } else {
+          recentFeedback.forEach(item => {
+            const feedbackItem = document.createElement('div');
+            feedbackItem.className = 'interaction';
+            feedbackItem.innerHTML = `
+              <div class="question">
+                <strong>Query:</strong> ${item.query}
+              </div>
+              <div class="answer">
+                <strong>Rating:</strong> <span class="badge ${item.rating === 'thumbs_up' ? 'badge-success' : 'badge-error'}">${item.rating.replace('_', ' ')}</span>
+                ${item.reason ? `<br><strong>Reason:</strong> ${item.reason.replace('_', ' ')}` : ''}
+                ${item.user_feedback_text ? `<br><strong>Details:</strong> ${item.user_feedback_text}` : ''}
+              </div>
+              <div class="metadata">
+                <strong>Confidence:</strong> ${item.confidence_score}% | 
+                <strong>Intent:</strong> ${item.intent} | 
+                <strong>Time:</strong> ${new Date(item.timestamp).toLocaleString()}
+              </div>
+            `;
+            recentFeedbackList.appendChild(feedbackItem);
+          });
+        }
+        
+        document.getElementById('feedback-loading').style.display = 'none';
+        document.getElementById('feedback-content').style.display = 'block';
+        
+      } catch (error) {
+        showError('Failed to load feedback data: ' + error.message);
       }
     }
 
