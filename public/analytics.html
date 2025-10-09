@@ -1302,10 +1302,50 @@
           console.error('Failed to load improvement status:', statusError);
         }
         
+        // Display feedback-based recommendations first (highest priority)
+        if (analysis.recentFeedback && analysis.recentFeedback.length > 0) {
+          const feedbackRecTitle = document.createElement('h3');
+          feedbackRecTitle.textContent = '🚨 User Feedback Issues (High Priority)';
+          feedbackRecTitle.style.marginTop = '20px';
+          feedbackRecTitle.style.marginBottom = '15px';
+          feedbackRecTitle.style.color = '#ef4444';
+          insightsList.appendChild(feedbackRecTitle);
+          
+          analysis.recentFeedback.slice(0, 5).forEach(feedback => {
+            const card = document.createElement('div');
+            card.className = 'insight-card insight-priority-high';
+            
+            // Determine priority based on confidence vs user satisfaction
+            const confidenceVsSatisfaction = feedback.confidence_score > 70 && feedback.rating === 'thumbs_down' ? 'HIGH' : 'MEDIUM';
+            const priorityColor = confidenceVsSatisfaction === 'HIGH' ? '#ef4444' : '#f59e0b';
+            
+            card.innerHTML = `
+              <h4 style="color: ${priorityColor};">👎 "${feedback.query}"</h4>
+              <p><strong>User Rating:</strong> <span style="color: #ef4444; font-weight: bold;">THUMBS DOWN</span> | <strong>Bot Confidence:</strong> ${feedback.confidence_score}%</p>
+              <p><strong>Reason:</strong> ${feedback.reason ? feedback.reason.replace('_', ' ') : 'Not specified'}</p>
+              ${feedback.user_feedback_text ? `<p><strong>User Comment:</strong> "${feedback.user_feedback_text}"</p>` : ''}
+              <p><strong>Intent Detected:</strong> ${feedback.intent} | <strong>Priority:</strong> <span style="color: ${priorityColor}; font-weight: bold;">${confidenceVsSatisfaction}</span></p>
+              <div style="background: #1a1f2e; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                <strong>🎯 Action Required:</strong>
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                  ${confidenceVsSatisfaction === 'HIGH' ? 
+                    '<li style="color: #ef4444;">HIGH PRIORITY: Bot shows high confidence but user is dissatisfied</li>' : 
+                    '<li style="color: #f59e0b;">MEDIUM PRIORITY: Review response quality and data sources</li>'
+                  }
+                  <li>Check if response matches user intent (${feedback.intent})</li>
+                  <li>Verify data accuracy for this query</li>
+                  <li>Consider adding more specific content for this topic</li>
+                </ul>
+              </div>
+            `;
+            insightsList.appendChild(card);
+          });
+        }
+
         // Display top recommendations
         if (analysis.recommendations && analysis.recommendations.length > 0) {
           const recTitle = document.createElement('h3');
-          recTitle.textContent = '🎯 Top Improvement Recommendations';
+          recTitle.textContent = '🎯 System-Generated Improvement Recommendations';
           recTitle.style.marginTop = '20px';
           recTitle.style.marginBottom = '15px';
           insightsList.appendChild(recTitle);
@@ -1369,6 +1409,46 @@
           insightsList.appendChild(generalCard);
         }
         
+        // Add feedback-based improvement actions section
+        if (analysis.recentFeedback && analysis.recentFeedback.length > 0) {
+          const feedbackActionsTitle = document.createElement('h3');
+          feedbackActionsTitle.textContent = '🚨 Address User Feedback Issues';
+          feedbackActionsTitle.style.marginTop = '20px';
+          feedbackActionsTitle.style.marginBottom = '15px';
+          feedbackActionsTitle.style.color = '#ef4444';
+          insightsList.appendChild(feedbackActionsTitle);
+          
+          const feedbackActionsCard = document.createElement('div');
+          feedbackActionsCard.className = 'insight-card insight-priority-high';
+          feedbackActionsCard.innerHTML = `
+            <h4>🎯 User Feedback Action Plan</h4>
+            <p>Based on user feedback, here are the immediate actions needed:</p>
+            <div style="margin-top: 15px;">
+              <div style="background: #1a1f2e; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <h5 style="color: #ef4444; margin-bottom: 10px;">📊 Feedback Analysis Summary:</h5>
+                <ul style="margin: 0; padding-left: 20px;">
+                  <li><strong>Total Thumbs Down:</strong> ${analysis.feedbackSummary.thumbsDown}</li>
+                  <li><strong>Average Confidence (Thumbs Down):</strong> ${analysis.feedbackSummary.avgConfidenceThumbsDown.toFixed(1)}%</li>
+                  <li><strong>High Priority Issues:</strong> ${analysis.recentFeedback.filter(f => f.confidence_score > 70 && f.rating === 'thumbs_down').length} queries with high confidence but poor user satisfaction</li>
+                </ul>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                <button onclick="generateFeedbackImprovementPlan()" class="btn btn-primary">
+                  📝 Generate Feedback-Based Plan
+                </button>
+                <button onclick="viewFeedbackDetails()" class="btn btn-secondary">
+                  👁️ View Detailed Feedback
+                </button>
+                <button onclick="exportFeedbackReport()" class="btn btn-info">
+                  📊 Export Feedback Report
+                </button>
+              </div>
+            </div>
+            <div id="feedback-improvement-status" style="margin-top: 15px; display: none;"></div>
+          `;
+          insightsList.appendChild(feedbackActionsCard);
+        }
+
         // Add improvement actions section
         if (analysis.recommendations && analysis.recommendations.length > 0) {
           const actionsTitle = document.createElement('h3');
@@ -2336,6 +2416,126 @@
       setTimeout(() => {
         document.body.removeChild(successDiv);
       }, 5000);
+    }
+
+    // Feedback-based improvement functions
+    async function generateFeedbackImprovementPlan() {
+      const statusDiv = document.getElementById('feedback-improvement-status');
+      statusDiv.style.display = 'block';
+      statusDiv.innerHTML = '<p>🔄 Generating feedback-based improvement plan...</p>';
+      
+      try {
+        // Get current feedback data
+        const data = await apiCall('feedback', { days: 7 });
+        const { recentFeedback } = data.feedback;
+        
+        // Generate improvement plan based on feedback
+        const highPriorityIssues = recentFeedback.filter(f => f.confidence_score > 70 && f.rating === 'thumbs_down');
+        const mediumPriorityIssues = recentFeedback.filter(f => f.confidence_score <= 70 && f.rating === 'thumbs_down');
+        
+        let planHTML = `
+          <div style="background: #1a1f2e; padding: 20px; border-radius: 8px; margin-top: 10px;">
+            <h4>📋 Feedback-Based Improvement Plan</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-top: 15px;">
+        `;
+        
+        if (highPriorityIssues.length > 0) {
+          planHTML += `
+            <div style="background: #58151c; padding: 15px; border-radius: 8px;">
+              <h5 style="color: #ef4444;">🚨 HIGH PRIORITY (${highPriorityIssues.length} issues)</h5>
+              <p style="color: #ccc;">High confidence but poor user satisfaction</p>
+              <ul style="color: #ccc; font-size: 0.9em;">
+                ${highPriorityIssues.map(issue => `
+                  <li><strong>"${issue.query}"</strong><br>
+                    Confidence: ${issue.confidence_score}% | Reason: ${issue.reason}<br>
+                    ${issue.user_feedback_text ? `User: "${issue.user_feedback_text}"` : ''}
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          `;
+        }
+        
+        if (mediumPriorityIssues.length > 0) {
+          planHTML += `
+            <div style="background: #5a4a00; padding: 15px; border-radius: 8px;">
+              <h5 style="color: #f59e0b;">⚠️ MEDIUM PRIORITY (${mediumPriorityIssues.length} issues)</h5>
+              <p style="color: #ccc;">Lower confidence with user dissatisfaction</p>
+              <ul style="color: #ccc; font-size: 0.9em;">
+                ${mediumPriorityIssues.map(issue => `
+                  <li><strong>"${issue.query}"</strong><br>
+                    Confidence: ${issue.confidence_score}% | Reason: ${issue.reason}
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          `;
+        }
+        
+        planHTML += `
+            </div>
+            <div style="margin-top: 20px; padding: 15px; background: #0f1419; border-radius: 8px;">
+              <h5 style="color: #10b981;">🎯 Recommended Actions:</h5>
+              <ol style="color: #ccc; margin: 10px 0; padding-left: 20px;">
+                <li>Review and improve content for high-priority queries</li>
+                <li>Check data accuracy and relevance for flagged topics</li>
+                <li>Improve intent detection for queries with mismatched responses</li>
+                <li>Add more specific content for topics receiving negative feedback</li>
+                <li>Monitor confidence scoring to better align with user satisfaction</li>
+              </ol>
+            </div>
+          </div>
+        `;
+        
+        statusDiv.innerHTML = planHTML;
+        
+      } catch (error) {
+        statusDiv.innerHTML = `<p style="color: #ef4444;">❌ Error: ${error.message}</p>`;
+      }
+    }
+    
+    function viewFeedbackDetails() {
+      // Switch to feedback tab to show detailed feedback
+      showTab('feedback');
+    }
+    
+    function exportFeedbackReport() {
+      // Create a simple CSV export of feedback data
+      try {
+        const data = window.currentFeedbackData || [];
+        if (data.length === 0) {
+          alert('No feedback data available to export');
+          return;
+        }
+        
+        const headers = ['Query', 'Rating', 'Reason', 'User Comment', 'Confidence', 'Intent', 'Timestamp'];
+        const csvContent = [
+          headers.join(','),
+          ...data.map(f => [
+            `"${f.query}"`,
+            f.rating,
+            f.reason || '',
+            `"${f.user_feedback_text || ''}"`,
+            f.confidence_score,
+            f.intent,
+            f.timestamp
+          ].join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `feedback-report-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        showToast('Feedback report exported successfully!', 'success');
+      } catch (error) {
+        showToast('Failed to export feedback report', 'error');
+      }
     }
 
     // Initialize
