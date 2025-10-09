@@ -1232,7 +1232,7 @@ function extractFromDescription(desc) {
 }
 
 /* --------------------- Build product panel (markdown) -------------------- */
-function buildProductPanelMarkdown(products) {
+async function buildProductPanelMarkdown(products) {
   if (!products?.length) return "";
 
   const primary = products.find((p) => p.price != null) || products[0];
@@ -1717,7 +1717,7 @@ export default async function handler(req, res) {
         }
       }
       // About to build product panel
-      const productPanel = product ? buildProductPanelMarkdown([product]) : "";
+      const productPanel = product ? await buildProductPanelMarkdown([product]) : "";
       // Generated product panel
 
       // Use extractRelevantInfo to get specific answers for follow-up questions
