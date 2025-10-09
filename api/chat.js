@@ -1262,7 +1262,7 @@ function buildProductPanelMarkdown(products) {
       primary.description || primary?.raw?.description || ""
     ) || {};
   
-  // Extracted info from description
+  console.log("Extracted info:", JSON.stringify(info, null, 2));
 
   // Create a better summary from the full description
   const fullDescription = primary.description || primary?.raw?.description || "";
@@ -1351,6 +1351,9 @@ function buildProductPanelMarkdown(products) {
   if (info.participants) facts.push(`**Participants:** ${info.participants}`);
   if (info.fitness) facts.push(`**Fitness:** ${info.fitness}`);
   if (info.availability) facts.push(`**Availability:** ${info.availability}`);
+  
+  console.log("Final summary:", summary);
+  console.log("Facts to add:", facts);
   if (facts.length) {
     lines.push("");
     for (const f of facts) lines.push(f);
