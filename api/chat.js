@@ -195,23 +195,27 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   const specificTips = [];
   
   // Look for FAQ content in articles (like the tripod guide)
-  for (const article of articles) {
-    if (article.raw && article.raw.mainEntity && Array.isArray(article.raw.mainEntity)) {
-      for (const faq of article.raw.mainEntity) {
-        if (faq.acceptedAnswer && faq.acceptedAnswer.text) {
-          const answer = faq.acceptedAnswer.text.replace(/<[^>]*>/g, '').trim();
-          if (answer.length > 50 && answer.length < 500) {
-            if (answer.toLowerCase().includes('best') || answer.toLowerCase().includes('recommend')) {
-              productRecommendations.push(answer);
-            } else if (answer.toLowerCase().includes('vs') || answer.toLowerCase().includes('compare')) {
-              brandComparisons.push(answer);
-            } else {
-              specificTips.push(answer);
+  try {
+    for (const article of articles) {
+      if (article && article.raw && article.raw.mainEntity && Array.isArray(article.raw.mainEntity)) {
+        for (const faq of article.raw.mainEntity) {
+          if (faq && faq.acceptedAnswer && faq.acceptedAnswer.text) {
+            const answer = faq.acceptedAnswer.text.replace(/<[^>]*>/g, '').trim();
+            if (answer.length > 50 && answer.length < 500) {
+              if (answer.toLowerCase().includes('best') || answer.toLowerCase().includes('recommend')) {
+                productRecommendations.push(answer);
+              } else if (answer.toLowerCase().includes('vs') || answer.toLowerCase().includes('compare')) {
+                brandComparisons.push(answer);
+              } else {
+                specificTips.push(answer);
+              }
             }
           }
         }
       }
     }
+  } catch (error) {
+    console.log('DEBUG: Error extracting FAQ content:', error.message);
   }
   
   // If we found good content from articles, use it
