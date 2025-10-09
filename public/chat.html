@@ -1137,7 +1137,7 @@ async function submitFeedback(rating, reason, userFeedbackText, query, payload, 
       pageUrl: window.location.href
     };
 
-    const response = await fetch('/api/feedback', {
+    const response = await fetch('/api/analytics?action=feedback_submit', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

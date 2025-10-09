@@ -612,8 +612,65 @@ export default async function handler(req, res) {
           });
         }
 
+      case 'feedback_submit':
+        {
+          // Handle feedback submission (POST only)
+          if (req.method !== 'POST') {
+            return sendJSON(res, 405, { error: 'method_not_allowed', detail: 'POST method required for feedback submission' });
+          }
+
+          const {
+            query,
+            responseId,
+            rating,
+            reason,
+            userFeedbackText,
+            confidenceScore,
+            intent,
+            sessionId,
+            userAgent,
+            pageUrl
+          } = req.body;
+
+          if (!query || !rating) {
+            return sendJSON(res, 400, { error: 'bad_request', detail: 'Missing required fields: query, rating' });
+          }
+
+          if (!['thumbs_up', 'thumbs_down'].includes(rating)) {
+            return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid rating. Must be thumbs_up or thumbs_down' });
+          }
+
+          const { data, error } = await supa
+            .from('chat_feedback')
+            .insert({
+              query: query.trim(),
+              response_id: responseId || null,
+              rating,
+              reason: reason || null,
+              user_feedback_text: userFeedbackText || null,
+              confidence_score: confidenceScore || null,
+              intent: intent || null,
+              session_id: sessionId || null,
+              user_agent: userAgent || null,
+              page_url: pageUrl || null
+            })
+            .select()
+            .single();
+
+          if (error) {
+            console.error('Feedback insert error:', error);
+            return sendJSON(res, 500, { error: 'database_error', detail: error.message });
+          }
+
+          return sendJSON(res, 200, { 
+            success: true, 
+            feedback_id: data.id,
+            message: 'Feedback recorded successfully' 
+          });
+        }
+
       default:
-        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, question_detail, performance, insights, feedback, admin_counts, admin_preview, admin_delete, admin_clear_all' });
+        return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid action. Use: overview, questions, sessions, session_detail, question_detail, performance, insights, feedback, feedback_submit, admin_counts, admin_preview, admin_delete, admin_clear_all' });
     }
 
   } catch (err) {
