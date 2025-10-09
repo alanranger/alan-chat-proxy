@@ -207,6 +207,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 }
 
 .event-date,
+.event-time,
 .event-location,
 .event-availability {
   font-size: 13px;
@@ -280,8 +281,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 .product-book-btn {
   display: inline-block;
-  background: #f59e0b;
-  color: #0b0f16;
+  background: #3b82f6;
+  color: #ffffff;
   padding: 10px 20px;
   border-radius: 6px;
   text-decoration: none;
@@ -291,9 +292,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 }
 
 .product-book-btn:hover {
-  background: #d97706;
+  background: #2563eb;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 /* Composer + utilities */
@@ -907,7 +908,16 @@ function renderEventsBlock(structured, query){
     const where = e.location ? `${escapeHTML(e.location)}` : '';
     const title = e.title ? `${escapeHTML(e.title)}` : '';
     const price = e.price_gbp ? `£${e.price_gbp}` : '';
-    const availability = e.availability ? `${escapeHTML(e.availability)}` : '';
+    
+    // Format start and end times
+    let timeInfo = '';
+    if (e.start_time && e.end_time) {
+      timeInfo = `<div class="event-time">🕐 ${escapeHTML(e.start_time)} - ${escapeHTML(e.end_time)}</div>`;
+    } else if (e.date_start && e.date_end) {
+      const startTime = new Date(e.date_start).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const endTime = new Date(e.date_end).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      timeInfo = `<div class="event-time">🕐 ${startTime} - ${endTime}</div>`;
+    }
     
     // Create a more visually appealing event card
     return `
@@ -921,8 +931,8 @@ function renderEventsBlock(structured, query){
           </div>
           <div class="event-details">
             <div class="event-date">📅 ${when}</div>
+            ${timeInfo}
             ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
-            ${availability ? `<div class="event-availability">${availability}</div>` : ''}
           </div>
         </div>
       </div>
