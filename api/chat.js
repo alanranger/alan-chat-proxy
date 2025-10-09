@@ -1267,6 +1267,7 @@ function buildProductPanelMarkdown(products) {
     const descMatch = fullDescription.match(/Description:\s*([^]*?)(?:\n\n|\n[A-Z]|$)/i);
     if (descMatch) {
       const descText = descMatch[1].trim();
+      console.log('DEBUG: Found description section:', descText);
       // Extract first 2-3 sentences from the description
       const sentences = descText
         .replace(/<[^>]*>/g, ' ') // Remove HTML tags
@@ -1276,13 +1277,16 @@ function buildProductPanelMarkdown(products) {
         .filter(s => s.length > 30) // Filter out very short fragments
         .slice(0, 2); // Take first 2 sentences for a concise summary
       
+      console.log('DEBUG: Extracted sentences:', sentences);
       if (sentences.length > 0) {
         summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
+        console.log('DEBUG: Generated summary:', summary);
       }
     }
     
     // Fallback: if no description section found, use the first part
     if (!summary) {
+      console.log('DEBUG: No description section found, using fallback');
       const sentences = fullDescription
         .replace(/<[^>]*>/g, ' ') // Remove HTML tags
         .replace(/\s+/g, ' ') // Normalize whitespace
@@ -1291,8 +1295,10 @@ function buildProductPanelMarkdown(products) {
         .filter(s => s.length > 30) // Filter out very short fragments
         .slice(0, 2); // Take first 2 sentences
       
+      console.log('DEBUG: Fallback sentences:', sentences);
       if (sentences.length > 0) {
         summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
+        console.log('DEBUG: Fallback summary:', summary);
       }
     }
   }
@@ -1730,7 +1736,7 @@ export default async function handler(req, res) {
         },
         confidence: events.length > 0 ? 0.8 : 0.2,
         debug: {
-          version: "v1.2.32-fitness-parsing",
+          version: "v1.2.33-summary-debug",
           intent: "events",
           keywords: keywords,
           counts: {
