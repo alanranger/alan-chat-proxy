@@ -1281,6 +1281,11 @@ async function buildProductPanelMarkdown(products) {
   const sourceText = chunkData || fullDescription;
   const info = extractFromDescription(sourceText) || {};
   
+  console.log("Full description:", fullDescription);
+  console.log("Chunk data:", chunkData);
+  console.log("Source text for extraction:", sourceText);
+  console.log("Extracted info:", JSON.stringify(info, null, 2));
+  
   let summary = null; // Don't use info.summary, generate our own
   
   if (fullDescription) {
@@ -1366,6 +1371,11 @@ async function buildProductPanelMarkdown(products) {
   if (info.participants) facts.push(`**Participants:** ${info.participants}`);
   if (info.fitness) facts.push(`**Fitness:** ${info.fitness}`);
   if (info.availability) facts.push(`**Availability:** ${info.availability}`);
+  
+  console.log("Facts to add:", facts);
+  console.log("Info participants:", info.participants);
+  console.log("Info fitness:", info.fitness);
+  console.log("Info location:", info.location);
   
   if (facts.length) {
     lines.push("");
