@@ -214,85 +214,94 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   
   console.log('DEBUG: Found', equipmentChunks.length, 'equipment chunks');
   
-  // Extract comprehensive advice from all relevant chunks
+  // Extract specific tripod recommendations from the most relevant articles
   const productRecommendations = [];
-  const generalAdvice = [];
-  const specificTips = [];
   const brandComparisons = [];
+  const specificTips = [];
+  const generalAdvice = [];
   
-  // Process more chunks for richer content
-  for (const chunk of equipmentChunks.slice(0, 10)) {
+  // Prioritize chunks from specific tripod recommendation articles
+  const prioritizedChunks = equipmentChunks.sort((a, b) => {
+    const aUrl = (a.url || "").toLowerCase();
+    const bUrl = (b.url || "").toLowerCase();
+    
+    // Prioritize specific tripod recommendation articles
+    if (aUrl.includes('recommended-travel-lightweight-tripods') && !bUrl.includes('recommended-travel-lightweight-tripods')) return -1;
+    if (bUrl.includes('recommended-travel-lightweight-tripods') && !aUrl.includes('recommended-travel-lightweight-tripods')) return 1;
+    if (aUrl.includes('tripod-for-cameras-essential-guide') && !bUrl.includes('tripod-for-cameras-essential-guide')) return -1;
+    if (bUrl.includes('tripod-for-cameras-essential-guide') && !aUrl.includes('tripod-for-cameras-essential-guide')) return 1;
+    if (aUrl.includes('tripods-gitzo-vs-benro-review') && !bUrl.includes('tripods-gitzo-vs-benro-review')) return -1;
+    if (bUrl.includes('tripods-gitzo-vs-benro-review') && !aUrl.includes('tripods-gitzo-vs-benro-review')) return 1;
+    
+    return 0;
+  });
+  
+  // Process prioritized chunks for specific recommendations
+  for (const chunk of prioritizedChunks.slice(0, 8)) {
     const text = chunk.chunk_text || chunk.content || "";
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    const url = (chunk.url || "").toLowerCase();
+    
+    // Clean up the text and split into meaningful sentences
+    const cleanText = text
+      .replace(/\[.*?\]/g, '') // Remove markdown links
+      .replace(/jpg\]/g, '') // Remove image artifacts
+      .replace(/\*+/g, '') // Remove asterisks
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim().length > 30);
     
     for (const sentence of sentences) {
       const sLower = sentence.toLowerCase();
+      let cleanSentence = sentence.trim();
       
-      // Clean up the sentence
-      let cleanSentence = sentence.trim()
-        .replace(/\[.*?\]/g, '') // Remove markdown links
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .trim();
-      
-      if (cleanSentence.length > 400) {
-        cleanSentence = cleanSentence.substring(0, 400) + "...";
+      // Skip sentences with artifacts or incomplete content
+      if (cleanSentence.includes('jpg]') || cleanSentence.includes('* Tripod/IBIS:') || 
+          cleanSentence.includes('This table represents') || cleanSentence.length < 30) {
+        continue;
       }
       
-      // Skip only very short sentences
-      if (cleanSentence.length < 15) continue;
+      if (cleanSentence.length > 300) {
+        cleanSentence = cleanSentence.substring(0, 300) + "...";
+      }
       
-      // Look for specific product recommendations
-      const hasProductRecommendation = sLower.includes('mefoto') || sLower.includes('gitzo') || 
-                                     sLower.includes('benro') || sLower.includes('manfrotto') ||
-                                     sLower.includes('£') || sLower.includes('$') || sLower.includes('budget') ||
-                                     sLower.includes('rhino') || sLower.includes('cyanbird') || sLower.includes('befree') ||
-                                     sLower.includes('travel') || sLower.includes('lightweight');
+      // Look for specific product recommendations with brands and models
+      const hasSpecificProduct = sLower.includes('benro rhino') || sLower.includes('benro cyanbird') || 
+                                sLower.includes('gitzo') || sLower.includes('manfrotto') ||
+                                sLower.includes('mefoto') || sLower.includes('peak design') ||
+                                (sLower.includes('£') && sLower.includes('tripod')) ||
+                                (sLower.includes('$') && sLower.includes('tripod'));
       
       // Look for brand comparisons
-      const hasBrandComparison = sLower.includes('vs') || sLower.includes('versus') || sLower.includes('compare') ||
-                                sLower.includes('better than') || sLower.includes('difference') || sLower.includes('head to head');
+      const hasBrandComparison = sLower.includes('vs') || sLower.includes('versus') || 
+                                sLower.includes('head to head') || sLower.includes('compare') ||
+                                sLower.includes('better than') || sLower.includes('difference');
       
-      // Look for specific tips and advice
-      const hasSpecificTip = sLower.includes('tip') || sLower.includes('trick') || sLower.includes('technique') ||
-                            sLower.includes('how to') || sLower.includes('when to') || sLower.includes('why') ||
-                            sLower.includes('benefit') || sLower.includes('advantage') || sLower.includes('feature');
+      // Look for specific setup tips
+      const hasSetupTip = sLower.includes('extend the legs') || sLower.includes('setup') ||
+                         sLower.includes('stability') || sLower.includes('wind resistance') ||
+                         sLower.includes('ball head') || sLower.includes('twist lock');
       
-      // Look for general advice patterns - be more inclusive
-      const hasAdvicePattern = sLower.includes('recommend') || sLower.includes('best') || sLower.includes('choose') || 
-                              sLower.includes('important') || sLower.includes('consider') || sLower.includes('essential') ||
-                              sLower.includes('should') || sLower.includes('must') || sLower.includes('excellent') ||
-                              sLower.includes('value') || sLower.includes('combination') || sLower.includes('ideal') ||
-                              sLower.includes('perfect') || sLower.includes('top') || sLower.includes('favorite') ||
-                              sLower.includes('quality') || sLower.includes('stability') || sLower.includes('durability') ||
-                              sLower.includes('help') || sLower.includes('improve') || sLower.includes('enhance') ||
-                              sLower.includes('benefit') || sLower.includes('advantage') || sLower.includes('feature') ||
-                              sLower.includes('tip') || sLower.includes('trick') || sLower.includes('technique');
+      // Look for general tripod advice
+      const hasGeneralAdvice = sLower.includes('recommend') || sLower.includes('best') || 
+                              sLower.includes('essential') || sLower.includes('important') ||
+                              sLower.includes('should') || sLower.includes('must');
       
-      const hasTripodContent = sLower.includes('tripod') || sLower.includes('equipment');
-      
-      if (hasTripodContent) {
-        // Categorize and add advice - be more inclusive
-        if (hasProductRecommendation && productRecommendations.length < 8) {
-          if (!productRecommendations.some(existing => existing.includes(cleanSentence.substring(0, 30)))) {
-            productRecommendations.push(cleanSentence);
-          }
-        } else if (hasBrandComparison && brandComparisons.length < 5) {
-          if (!brandComparisons.some(existing => existing.includes(cleanSentence.substring(0, 30)))) {
-            brandComparisons.push(cleanSentence);
-          }
-        } else if (hasSpecificTip && specificTips.length < 6) {
-          if (!specificTips.some(existing => existing.includes(cleanSentence.substring(0, 30)))) {
-            specificTips.push(cleanSentence);
-          }
-        } else if (hasAdvicePattern && generalAdvice.length < 6) {
-          if (!generalAdvice.some(existing => existing.includes(cleanSentence.substring(0, 30)))) {
-            generalAdvice.push(cleanSentence);
-          }
-        } else if (generalAdvice.length < 8) {
-          // Fallback: add any tripod-related content to general advice
-          if (!generalAdvice.some(existing => existing.includes(cleanSentence.substring(0, 30)))) {
-            generalAdvice.push(cleanSentence);
-          }
+      if (hasSpecificProduct && productRecommendations.length < 5) {
+        if (!productRecommendations.some(existing => existing.includes(cleanSentence.substring(0, 40)))) {
+          productRecommendations.push(cleanSentence);
+        }
+      } else if (hasBrandComparison && brandComparisons.length < 3) {
+        if (!brandComparisons.some(existing => existing.includes(cleanSentence.substring(0, 40)))) {
+          brandComparisons.push(cleanSentence);
+        }
+      } else if (hasSetupTip && specificTips.length < 4) {
+        if (!specificTips.some(existing => existing.includes(cleanSentence.substring(0, 40)))) {
+          specificTips.push(cleanSentence);
+        }
+      } else if (hasGeneralAdvice && generalAdvice.length < 3) {
+        if (!generalAdvice.some(existing => existing.includes(cleanSentence.substring(0, 40)))) {
+          generalAdvice.push(cleanSentence);
         }
       }
     }
