@@ -821,7 +821,14 @@ function extractFacts(desc){
     }
     // Debug logging - add to UI debug panel
     if (label === 'Equipment Needed') {
-      window.debugEquipmentExtraction = { label, idx, txt: txt.slice(Math.max(0, idx-2), idx+5), out };
+      window.debugEquipmentExtraction = { 
+        label, 
+        idx, 
+        txt: txt.slice(Math.max(0, idx-2), idx+5), 
+        out,
+        fullTxt: txt, // Show all lines for debugging
+        cleanedFull: full // Show the cleaned full text
+      };
     }
     return out;
   };
@@ -831,11 +838,18 @@ function extractFacts(desc){
     fitness: findAfter('Fitness'),
     availability: findAfter('Availability'),
     experience: findAfter('Experience - Level') || findAfter('Experience Level'),
-    equipmentItems: captureBulletBlock('Equipment Needed') || (() => {
-      // Fallback: look for equipment information in the text
-      const equipmentMatch = full.match(/equipment needed[:\s]*([^\\n]+)/i);
-      window.debugEquipmentFallback = { equipmentMatch, full: full.substring(0, 500) };
-      return equipmentMatch ? [equipmentMatch[1].trim()] : [];
+    equipmentItems: (() => {
+      // Simple, robust approach: look for "Equipment Needed" anywhere in the text
+      const equipmentMatch = full.match(/equipment needed[:\s\-]*([^\\n]+)/i);
+      if (equipmentMatch) {
+        const equipmentText = equipmentMatch[1].trim();
+        // If it contains bullet points, split them; otherwise return as single item
+        if (equipmentText.includes('-')) {
+          return equipmentText.split('-').map(item => item.trim()).filter(Boolean);
+        }
+        return [equipmentText];
+      }
+      return [];
     })(),
     optionLines: txt.filter(l => /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) || /^\s*OR\s*1\s*day\b/i.test(l))
   };
