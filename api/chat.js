@@ -685,23 +685,22 @@ function extractKeywords(q) {
 
 function detectIntent(q) {
   const lc = (q || "").toLowerCase();
+  // First, prefer explicit event-style questions regardless of other words present
+  const hasEventWord = EVENT_HINTS.some((w) => lc.includes(w));
+  const mentionsWorkshop =
+    lc.includes("workshop") || lc.includes("course") || lc.includes("class");
+  if (hasEventWord && mentionsWorkshop) return "events";
   
-  // ADVICE keywords - these should override event classification
+  // ADVICE keywords
   const adviceKeywords = [
     "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
     "need", "require", "recommend", "advise", "help", "wrong", "problem",
     "free", "online", "sort of", "what do i", "do i need", "get a",
     "what is", "what are", "how does", "explain", "define", "meaning"
   ];
-  
-  // If it contains advice keywords, it's likely advice
   if (adviceKeywords.some(word => lc.includes(word))) {
     return "advice";
   }
-  
-  const hasEventWord = EVENT_HINTS.some((w) => lc.includes(w));
-  const mentionsWorkshop =
-    lc.includes("workshop") || lc.includes("course") || lc.includes("class");
   
   // Only classify as events if it has both event words AND workshop mentions
   if (hasEventWord && mentionsWorkshop) return "events";
