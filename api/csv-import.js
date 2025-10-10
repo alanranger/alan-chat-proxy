@@ -772,8 +772,9 @@ export default async function handler(req, res) {
           break;
         case 'workshop_events':
           // Check if this is actually workshop products (File 05 has same structure as course_products)
-          if (rows[0] && rows[0]['Full Url'] && !rows[0]['Event_URL']) {
+          if (rows[0] && (rows[0]['Full Url'] || rows[0]['full url']) && !rows[0]['Event_URL'] && !rows[0]['event_url']) {
             // This is workshop products, not events
+            console.log('DEBUG: Detected workshop_events CSV as workshop_products due to Full Url column');
             const workshopProductResult = await importWorkshopProductMetadata(rows, supa);
             metadataCount = workshopProductResult.count;
           } else {
