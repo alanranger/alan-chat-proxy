@@ -290,33 +290,16 @@ function extractStructuredInfo(text) {
   
   if (!text) return out;
   
-  // Split by newline and normalize whitespace
-  const lines = text
-    .split(/\r?\n/)
-    .map((s) => s.replace(/\s+/g, ' ').trim())
-    .filter(Boolean);
+  // Equipment Needed extraction - look for the pattern in the text
+  const equipmentMatch = text.match(/\*\s*EQUIPMENT\s*NEEDED:\s*([^*]+?)(?:\*|$)/i);
+  if (equipmentMatch) {
+    out.equipmentNeeded = equipmentMatch[1].trim();
+  }
   
-  for (const line of lines) {
-    // Equipment Needed extraction
-    if (/^\*\s*equipment\s*needed:/i.test(line)) {
-      const match = line.match(/^\*\s*equipment\s*needed:\s*(.+)/i);
-      if (match) {
-        out.equipmentNeeded = match[1].trim();
-      }
-    } else if (/^equipment\s*needed:/i.test(line)) {
-      const match = line.match(/^equipment\s*needed:\s*(.+)/i);
-      if (match) {
-        out.equipmentNeeded = match[1].trim();
-      }
-    }
-    
-    // Experience Level extraction
-    if (/^experience\s*-\s*level:/i.test(line)) {
-      const match = line.match(/^experience\s*-\s*level:\s*(.+)/i);
-      if (match) {
-        out.experienceLevel = match[1].trim();
-      }
-    }
+  // Experience Level extraction - look for the pattern in the text
+  const experienceMatch = text.match(/\*\s*Experience\s*-\s*Level:\s*([^*]+?)(?:\*|$)/i);
+  if (experienceMatch) {
+    out.experienceLevel = experienceMatch[1].trim();
   }
   
   return out;
