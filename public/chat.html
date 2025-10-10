@@ -787,13 +787,17 @@ function getMetaDescription(prod){
   return limit(scrubAttrs(stripTags(raw) || fallback), 220);
 }
 function extractFacts(desc){
-  const txt = String(desc||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const full = String(desc||'');
+  const txt = full.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
   const findAfter = (label)=>{
     const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
     if(i>=0 && i+1<txt.length) return txt[i+1];
     // Accept optional space after colon, including none (e.g., "Fitness:2. Easy-Moderate")
     const flat = txt.find(l=>new RegExp(`^${label}\\s*:?\\s*(.+)$`,'i').test(l));
     if(flat) return flat.replace(new RegExp(`^${label}\\s*:?\\s*`,'i'),'');
+    // Fallback: search the whole text for `Label: value` anywhere
+    const re = new RegExp(`${label}\\s*:?\\s*([^\n-]+)`, 'i');
+    const m = full.match(re); if(m && m[1]) return m[1].trim();
     return null;
   };
   return {

@@ -1580,8 +1580,10 @@ async function extractRelevantInfo(query, dataContext) {
         if (products && products.length && (products[0].description || products[0]?.raw?.description)) {
           brief = summarize(products[0].description || products[0]?.raw?.description);
         }
+        // Keep the intro concise (max ~220 chars)
+        if (brief.length > 220) brief = brief.slice(0, 220).replace(/\s+\S*$/, '') + '…';
         const lead = `The next ${label} is scheduled for **${formattedDate}**.`;
-        return brief ? `${lead} ${brief}` : `${lead} This gives you plenty of time to prepare and book your place.`;
+        return brief ? `${lead} ${brief}` : `${lead}`;
       }
     }
     
