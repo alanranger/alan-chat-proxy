@@ -291,7 +291,7 @@ function extractStructuredInfo(text) {
   if (!text) return out;
   
   // Equipment Needed extraction - look for the pattern in the text
-  const equipmentMatch = text.match(/\*\s*EQUIPMENT\s*NEEDED:\s*([^*]+?)(?:\*|$)/i);
+  const equipmentMatch = text.match(/\*\s*EQUIPMENT\s*NEEDED:\s*(.+?)(?=\s*\*[A-Z]|\s*Dates:|$)/i);
   if (equipmentMatch) {
     out.equipmentNeeded = equipmentMatch[1].trim();
   }
