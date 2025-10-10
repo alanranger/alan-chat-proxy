@@ -486,14 +486,12 @@ async function ingestSingleUrl(url, supa, options = {}) {
       
       const entities = jsonLd.map((item, idx) => {
         const enhancedDescription = enhancedDescriptions[idx] || item.description || null;
-        // Log entity creation directly to database
-        try {
-          await supa.from('debug_logs').insert({
-            url: url,
-            stage: 'entity_creation',
-            data: { idx: idx, kind: normalizeKind(item, url), hasEnhanced: !!enhancedDescriptions[idx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0 }
-          });
-        } catch (e) {} // Ignore errors
+        // Log entity creation directly to database (fire and forget)
+        supa.from('debug_logs').insert({
+          url: url,
+          stage: 'entity_creation',
+          data: { idx: idx, kind: normalizeKind(item, url), hasEnhanced: !!enhancedDescriptions[idx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0 }
+        }).catch(() => {}); // Ignore errors
         
         return {
           url: url,
