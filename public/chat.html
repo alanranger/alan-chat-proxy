@@ -812,9 +812,9 @@ function extractFacts(desc){
         else if (out.length && line) out.push(line); else if(!/^[-•]/.test(line)) break;
       }
     }
-    // Debug logging
+    // Debug logging - add to UI debug panel
     if (label === 'Equipment Needed') {
-      console.log('DEBUG: Equipment Needed extraction:', { label, idx, txt: txt.slice(Math.max(0, idx-2), idx+5), out });
+      window.debugEquipmentExtraction = { label, idx, txt: txt.slice(Math.max(0, idx-2), idx+5), out };
     }
     return out;
   };
@@ -827,7 +827,7 @@ function extractFacts(desc){
     equipmentItems: captureBulletBlock('Equipment Needed') || (() => {
       // Fallback: look for equipment information in the text
       const equipmentMatch = full.match(/equipment needed[:\s]*([^\\n]+)/i);
-      console.log('DEBUG: Equipment Needed fallback:', { equipmentMatch, full: full.substring(0, 500) });
+      window.debugEquipmentFallback = { equipmentMatch, full: full.substring(0, 500) };
       return equipmentMatch ? [equipmentMatch[1].trim()] : [];
     })(),
     optionLines: txt.filter(l => /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) || /^\s*OR\s*1\s*day\b/i.test(l))
@@ -1426,6 +1426,13 @@ function renderAnswer(payload){
   setDebugJSON(dbgStruct, payload.structured||{});
   setDebugJSON(dbgDebug, payload.debug||{});
   const note = payload.debug ? {...payload.debug, product_gate: gate} : { product_gate: gate };
+  // Add equipment extraction debug info
+  if (window.debugEquipmentExtraction) {
+    note.equipmentExtraction = window.debugEquipmentExtraction;
+  }
+  if (window.debugEquipmentFallback) {
+    note.equipmentFallback = window.debugEquipmentFallback;
+  }
   setDebugJSON(dbgNote, note);
 }
 
