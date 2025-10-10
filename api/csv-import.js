@@ -260,12 +260,12 @@ async function importCourseProductMetadata(rows, supa) {
 async function importWorkshopProductMetadata(rows, supa) {
   const metadata = rows.map(row => ({
     csv_type: 'workshop_products',
-    url: row['full url'] || row['Full Url'] || row.url,
-    title: row.title || row.Title,
-    categories: row.categories ? row.categories.split(';').map(c => c.trim()) : (row.Categories ? row.Categories.split(';').map(c => c.trim()) : []),
-    tags: row.tags ? row.tags.split(',').map(t => t.trim()) : (row.Tags ? row.Tags.split(',').map(t => t.trim()) : []),
-    publish_date: normalizeDateDayFirst(row['publish on'] || row['Publish On']),
-    image_url: row.image || row.Image,
+    url: row['Full Url'] || row['full url'] || row.url,
+    title: row.Title || row.title,
+    categories: row.Categories ? row.Categories.split(';').map(c => c.trim()) : (row.categories ? row.categories.split(';').map(c => c.trim()) : []),
+    tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : (row.tags ? row.tags.split(',').map(t => t.trim()) : []),
+    publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
+    image_url: row.Image || row.image,
     excerpt: null
   })).filter(item => item.url);
 
