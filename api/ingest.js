@@ -396,7 +396,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
       let enhancedDescriptions = {};
       if (chunks && chunks.length > 0) {
         // Combine all chunk text for better extraction
-        const combinedText = chunks.map(c => c.chunk_text).join(' ');
+        const combinedText = chunks.join(' ');
         
         // Simple, robust extraction for Equipment Needed
         let equipmentNeeded = null;
