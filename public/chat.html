@@ -774,12 +774,17 @@ function mergeProducts(list){
 }
 function getMetaDescription(prod){
   const stripTags = (t)=> String(t||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+  const scrubAttrs = (t)=> String(t||'')
+    .replace(/\s*style="[^"]*"/gi,'')
+    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
+    .replace(/\s*contenteditable="[^"]*"/gi,'')
+    .replace(/\s*>\s*/g,' ');
   const pick = (...c)=>{ for(const v of c){ if(typeof v==='string' && v.trim()) return v.trim(); } return ''; };
   const firstSentence = t=>{ const s=String(t||'').trim(); const m=s.match(/^(.*?\.)\s|^(.+)$/); return m? (m[1]||m[2]||s).trim() : s; };
   const limit = (t,max=220)=>{ const m=String(t||'').trim().match(new RegExp(`^(.{0,${max}}?[.!?])\\s`)); if(m&&m[1]) return m[1].trim(); return (t||'').length>max ? String(t).slice(0,max).replace(/\s+\S*$/,'')+'…' : t; };
   const raw = pick(prod?.meta_description, prod?.metaDescription, prod?.meta?.description, prod?.seo?.metaDescription, prod?.seo?.description, prod?.raw?.metaDescription, prod?.raw?.meta?.description);
-  const fallback = firstSentence(stripTags(prod?.description||''));
-  return limit(stripTags(raw) || fallback, 220);
+  const fallback = firstSentence(scrubAttrs(stripTags(prod?.description||'')));
+  return limit(scrubAttrs(stripTags(raw) || fallback), 220);
 }
 function extractFacts(desc){
   const txt = String(desc||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
