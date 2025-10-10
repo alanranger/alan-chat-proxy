@@ -80,18 +80,21 @@ export default async function handler(req, res){
 
     if(action==='run'){
       const startedAt = new Date().toISOString();
-      const urls = await readUrlsFromRepo();
-      const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
-      const token = process.env.INGEST_TOKEN || '';
-      const protectionBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN || '';
-      const chunks = [];
+      let urls = [];
+      let chunks = [];
       let ingested = 0;
       let failed = 0;
+      let error = null;
 
-      if (protectionBypass) {
-        const batchSize = 40;
-        for(let i=0;i<urls.length;i+=batchSize){
-          const part = urls.slice(i, i+batchSize);
+      try {
+        urls = await readUrlsFromRepo();
+        const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
+        const token = process.env.INGEST_TOKEN || '';
+        const protectionBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN || '';
+
+        if (protectionBypass && token) {
+          // Try just one small batch first to test
+          const testUrls = urls.slice(0, 5);
           const r = await fetch(`${base}/api/ingest`, {
             method:'POST',
             headers:{
@@ -99,18 +102,23 @@ export default async function handler(req, res){
               Authorization:`Bearer ${token}`,
               'x-vercel-protection-bypass': protectionBypass
             },
-            body: JSON.stringify({ csvUrls: part })
+            body: JSON.stringify({ csvUrls: testUrls })
           });
           const bodyText = await r.text();
           let j = null; try { j = JSON.parse(bodyText); } catch {}
-          if (r.ok && j && j.ok){ ingested += (j.ingested || part.length); chunks.push({ idx:i, count: part.length, ok:true }); }
-          else { failed += part.length; chunks.push({ idx:i, count: part.length, ok:false, error: (j && (j.error||j.detail)) || bodyText }); }
+          if (r.ok && j && j.ok){ 
+            ingested = j.ingested || testUrls.length; 
+            chunks.push({ count: testUrls.length, ok:true, test: true }); 
+          } else { 
+            failed = testUrls.length; 
+            chunks.push({ count: testUrls.length, ok:false, error: (j && (j.error||j.detail)) || bodyText, test: true }); 
+          }
+        } else {
+          chunks.push({ note: `Bypass token: ${protectionBypass ? 'present' : 'missing'}, Ingest token: ${token ? 'present' : 'missing'}` });
         }
-        try{
-          await fetch(`${base}/api/tools?action=finalize`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'x-vercel-protection-bypass': protectionBypass } });
-        }catch{}
-      } else {
-        chunks.push({ note: 'Bypass token missing; ran in log-only mode' });
+      } catch (e) {
+        error = String(e?.message || e);
+        chunks.push({ error });
       }
 
       const finishedAt = new Date().toISOString();
@@ -124,8 +132,19 @@ export default async function handler(req, res){
           failed_count: failed,
           batches_json: chunks
         }]);
-      }catch{}
-      return send(res, 200, { ok:true, started_at: startedAt, finished_at: finishedAt, urls: urls.length, ingested, failed, batches: chunks, mode: protectionBypass ? 'ingest' : 'log-only' });
+      }catch(e){}
+
+      return send(res, 200, { 
+        ok:true, 
+        started_at: startedAt, 
+        finished_at: finishedAt, 
+        urls: urls.length, 
+        ingested, 
+        failed, 
+        batches: chunks,
+        error,
+        mode: protectionBypass && token ? 'ingest' : 'log-only'
+      });
     }
 
     if(action==='status'){
