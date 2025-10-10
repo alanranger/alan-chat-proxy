@@ -35,8 +35,21 @@ function parseCSV(csvText){
 }
 
 async function readUrlsFromRepo(){
-  const buf = await fs.readFile(CSV_PATH, 'utf8');
-  const rows = parseCSV(buf);
+  let content = null;
+  try {
+    content = await fs.readFile(CSV_PATH, 'utf8');
+  } catch (e) {
+    // Fallback: fetch from GitHub raw if local path isn't packaged in the serverless bundle
+    try {
+      const rawUrl = 'https://raw.githubusercontent.com/alanranger/alan-chat-proxy/main/CSVSs%20from%20website/06%20-%20site%20urls%20-%20Sheet1.csv';
+      const resp = await fetch(rawUrl);
+      if (!resp.ok) throw new Error(`raw_fetch_http_${resp.status}`);
+      content = await resp.text();
+    } catch (e2) {
+      throw e; // bubble original error to report ENOENT
+    }
+  }
+  const rows = parseCSV(content);
   if(rows.length<2) return [];
   const headers = rows[0].map(h=>h.toLowerCase());
   const urlIdx = headers.findIndex(h=>h.includes('url'));
