@@ -786,8 +786,9 @@ function extractFacts(desc){
   const findAfter = (label)=>{
     const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
     if(i>=0 && i+1<txt.length) return txt[i+1];
-    const flat = txt.find(l=>new RegExp(`^${label}\\s*:?\\s+(.+)$`,'i').test(l));
-    if(flat) return flat.replace(new RegExp(`^${label}\\s*:?\\s+`,'i'),'');
+    // Accept optional space after colon, including none (e.g., "Fitness:2. Easy-Moderate")
+    const flat = txt.find(l=>new RegExp(`^${label}\\s*:?\\s*(.+)$`,'i').test(l));
+    if(flat) return flat.replace(new RegExp(`^${label}\\s*:?\\s*`,'i'),'');
     return null;
   };
   return {
@@ -909,7 +910,16 @@ function renderEventsBlock(structured, query){
   const list = all.map(e=>({e, s: scoreEventMatch(e, kp)})).sort((a,b)=> (b.s - a.s) || (new Date(a.e.date_start) - new Date(b.e.date_start))).map(x=>x.e);
   
   const eventsHTML = list.map(e=>{
-    const when = fmtDate(e.date_start);
+    const whenStart = fmtDate(e.date_start);
+    let when = whenStart;
+    try{
+      const startDay = new Date(e.date_start);
+      const endDay = e.date_end ? new Date(e.date_end) : null;
+      const sameDay = endDay && startDay.toDateString() === endDay.toDateString();
+      if (endDay && !sameDay) {
+        when = `${whenStart} – ${fmtDate(e.date_end)}`;
+      }
+    }catch{}
     const href = e.href || e.event_url || e.page_url || e.source_url || e.url || '#';
     const where = e.location ? `${escapeHTML(e.location)}` : '';
     const title = e.title ? `${escapeHTML(e.title)}` : '';
