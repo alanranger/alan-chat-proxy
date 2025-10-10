@@ -83,6 +83,7 @@ export default async function handler(req, res){
       const urls = await readUrlsFromRepo();
       const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
       const token = process.env.INGEST_TOKEN || '';
+      const protectionBypass = process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN || '';
       const chunks = [];
       const batchSize = 40; // safe for function time
       let ingested = 0;
@@ -91,7 +92,11 @@ export default async function handler(req, res){
         const part = urls.slice(i, i+batchSize);
         const r = await fetch(`${base}/api/ingest`, {
           method:'POST',
-          headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+          headers:{
+            'Content-Type':'application/json',
+            Authorization:`Bearer ${token}`,
+            ...(protectionBypass ? { 'x-vercel-protection-bypass': protectionBypass } : {})
+          },
           body: JSON.stringify({ csvUrls: part })
         });
         const bodyText = await r.text();
@@ -101,7 +106,7 @@ export default async function handler(req, res){
       }
       // finalize
       try{
-        await fetch(`${base}/api/tools?action=finalize`, { method:'POST', headers:{ Authorization:`Bearer ${token}` } });
+        await fetch(`${base}/api/tools?action=finalize`, { method:'POST', headers:{ Authorization:`Bearer ${token}` , ...(protectionBypass ? { 'x-vercel-protection-bypass': protectionBypass } : {}) } });
       }catch{}
       const finishedAt = new Date().toISOString();
       // Persist a summary row (create table light_refresh_runs manually if not present)
