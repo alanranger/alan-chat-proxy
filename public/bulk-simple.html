@@ -67,6 +67,168 @@
       <small>v1.0.7 - Light Refresh Logs UI</small>
     </div>
 
+    <!-- DATA FLOW DIAGRAMS -->
+    <div class="card">
+      <h2>📊 System Architecture & Data Flow</h2>
+      
+      <!-- CSV Metadata Status -->
+      <div class="section">
+        <h3>CSV Metadata Status</h3>
+        <div class="file-grid">
+          <div class="stat-box">
+            <div class="stat-label">Blog Articles</div>
+            <div class="stat-value" id="blog-count">-</div>
+            <div class="stat-desc">Technical content, tips, guides</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Course Events</div>
+            <div class="stat-value" id="course-events-count">-</div>
+            <div class="stat-desc">Individual course sessions</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Workshop Events</div>
+            <div class="stat-value" id="workshop-events-count">-</div>
+            <div class="stat-desc">Individual workshop sessions</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Course Products</div>
+            <div class="stat-value" id="course-products-count">-</div>
+            <div class="stat-desc">Course product pages</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Workshop Products</div>
+            <div class="stat-value" id="workshop-products-count">-</div>
+            <div class="stat-desc">Workshop product pages</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Processing Status -->
+      <div class="section">
+        <h3>Content Processing Status</h3>
+        <div class="file-grid">
+          <div class="stat-box">
+            <div class="stat-label">Raw HTML</div>
+            <div class="stat-value" id="html-count">-</div>
+            <div class="stat-desc">Stored HTML content</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Entities</div>
+            <div class="stat-value" id="entities-count">-</div>
+            <div class="stat-desc">Page entities with metadata</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Chunks</div>
+            <div class="stat-value" id="chunks-count">-</div>
+            <div class="stat-desc">Text chunks with context</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Mappings</div>
+            <div class="stat-value" id="mappings-count">-</div>
+            <div class="stat-desc">Event-product relationships</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Views</div>
+            <div class="stat-value" id="views-count">-</div>
+            <div class="stat-desc">Enrichment views</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Flow Diagram -->
+      <div class="section">
+        <h3>🔄 Data Flow Pipeline</h3>
+        <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
+          <div style="color: #4CAF50; font-weight: bold; margin-bottom: 15px;">STEP 1: IMPORT CSV METADATA</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Blog Articles (01) → csv_metadata table<br>
+            ├── Course Events (02) → csv_metadata table<br>
+            ├── Workshop Events (03) → csv_metadata table<br>
+            ├── Course Products (04) → csv_metadata table<br>
+            ├── Workshop Products (05) → csv_metadata table<br>
+            ├── Site URLs (06) → csv_metadata table<br>
+            └── Product Schema (07) → csv_metadata table
+          </div>
+          
+          <div style="color: #4CAF50; font-weight: bold; margin: 20px 0 15px 0;">STEP 2: INGEST CONTENT</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Fetch HTML for all URLs<br>
+            ├── Store raw HTML in page_html table<br>
+            ├── Extract text and JSON-LD<br>
+            ├── Create page_chunks with CSV context<br>
+            └── Enhance page_entities with CSV metadata
+          </div>
+          
+          <div style="color: #4CAF50; font-weight: bold; margin: 20px 0 15px 0;">STEP 3: BUILD MAPPINGS</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Event-Product mappings using CSV metadata<br>
+            ├── Category-based relationships<br>
+            ├── Tag-based connections<br>
+            └── Location-based groupings
+          </div>
+          
+          <div style="color: #4CAF50; font-weight: bold; margin: 20px 0 15px 0;">STEP 4: FINALIZE SYSTEM</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Build metadata-driven enrichment views<br>
+            ├── Create CSV-type specific views<br>
+            ├── Warm all views and indexes<br>
+            └── Generate comprehensive data summary
+          </div>
+        </div>
+      </div>
+
+      <!-- File Categories -->
+      <div class="section">
+        <h3>📁 File Categories & Purposes</h3>
+        <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
+          <div style="color: #FF9800; font-weight: bold; margin-bottom: 15px;">RAW HTML STORAGE</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Blog Articles (45 files) - Technical content, tips, guides<br>
+            ├── Course Events (50 files) - Individual course sessions<br>
+            ├── Workshop Events (200 files) - Individual workshop sessions<br>
+            ├── Course Products (15 files) - Course product pages<br>
+            ├── Workshop Products (25 files) - Workshop product pages<br>
+            └── Other Content (0 files) - Miscellaneous pages
+          </div>
+          
+          <div style="color: #FF9800; font-weight: bold; margin: 20px 0 15px 0;">ENRICHED ENTITIES</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Blog Articles (45) - With categories, tags, publish dates<br>
+            ├── Course Events (50) - With dates, times, locations, excerpts<br>
+            ├── Workshop Events (200) - With dates, times, locations, excerpts<br>
+            ├── Course Products (15) - With categories, tags, structured data<br>
+            ├── Workshop Products (25) - With categories, tags, structured data<br>
+            └── Other Content (0) - Miscellaneous entities
+          </div>
+          
+          <div style="color: #FF9800; font-weight: bold; margin: 20px 0 15px 0;">ENRICHMENT VIEWS</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── v_blog_enrichment - Blog articles with metadata<br>
+            ├── v_course_event_enrichment - Course events with structured data<br>
+            ├── v_workshop_event_enrichment - Workshop events with structured data<br>
+            ├── v_course_product_enrichment - Course products with structured data<br>
+            ├── v_workshop_product_enrichment - Workshop products with structured data<br>
+            └── v_metadata_enrichment - Unified metadata-driven enrichment
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Issues -->
+      <div class="section">
+        <h3>⚠️ Current System Issues</h3>
+        <div style="background: #2a1a1a; padding: 20px; border-radius: 8px; border-left: 4px solid #f44336;">
+          <div style="color: #f44336; font-weight: bold; margin-bottom: 10px;">PROBLEMS IDENTIFIED:</div>
+          <div style="color: #fff; margin-left: 20px;">
+            • <strong>URL-Pattern Based Enrichment:</strong> v_workshop_enrichment only processes workshop URLs, ignores courses<br>
+            • <strong>Missing CSV Metadata:</strong> Rich metadata from 7 CSVs not used in enrichment<br>
+            • <strong>Broken Data Flow:</strong> Import → Finalize doesn't use CSV metadata properly<br>
+            • <strong>Inconsistent Views:</strong> Different enrichment logic for different content types<br>
+            • <strong>Data Leakage:</strong> Structured data lost between ingestion and chat responses
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Token Section -->
     <div class="token-section">
       <h3>🔐 Authentication</h3>
@@ -138,16 +300,16 @@
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <button class="btn btn-primary step" onclick="importAllCSVs()" id="importAllBtn">
               <span class="step-num">1️⃣</span> 📥 Import CSVs
-            </button>
+        </button>
             <span id="stepImport" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
           </div>
           <div>
-            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Import CSV Data</h4>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Import CSV Metadata</h4>
             <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
-              <div><strong>What it does:</strong> Imports all selected CSV files (individual + bulk) into the database.</div>
-              <div><strong>Process:</strong> Auto‑detects the file type and writes normalized records.</div>
-              <div><strong>Updates:</strong> <code>page_entities</code> for events, services, products, articles.</div>
-              <div><strong>Result:</strong> Your structured data is available for mapping and chat.</div>
+              <div><strong>What it does:</strong> Imports rich metadata from all 7 CSV files into csv_metadata table.</div>
+              <div><strong>Process:</strong> Parses each CSV type (blog, course_events, workshop_events, course_products, workshop_products, site_urls, product_schema) with specific logic.</div>
+              <div><strong>Updates:</strong> <code>csv_metadata</code> table with categories, tags, dates, locations, excerpts, JSON-LD data.</div>
+              <div><strong>Result:</strong> Rich metadata foundation for all content types, enabling metadata-driven enrichment.</div>
             </div>
           </div>
 
@@ -155,7 +317,7 @@
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <button class="btn step" onclick="scrapeWebsite()" id="scrapeBtn">
               <span class="step-num">2️⃣</span> 🕷️ Scrape URLs
-            </button>
+        </button>
             <span id="stepScrape" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
             <div style="font-size:11px;color:#888;">
               <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_site" checked> site_urls</label>
@@ -171,18 +333,18 @@
             </div>
             <button class="btn" onclick="scrapeWebsite(true)" id="dryRunBtn" style="font-size:11px;padding:6px 10px;">
               🧪 Dry‑Run
-            </button>
+        </button>
             <button class="btn" onclick="stopScrape()" id="stopScrapeBtn" style="display:none;font-size:11px;padding:6px 10px;">
               ⏹️ Stop
-            </button>
+        </button>
           </div>
           <div>
-            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Scrape Website Content</h4>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Ingest Content with CSV Context</h4>
             <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
-              <div><strong>What it does:</strong> Crawls pages to extract text and JSON‑LD using the foundation → enhancement approach.</div>
-              <div><strong>Process:</strong> Foundation from <code>site_urls</code>; enhancements from <code>blog</code>, <code>events</code>, <code>workshops</code>, <code>services</code>.</div>
-              <div><strong>Updates:</strong> <code>page_chunks</code> (fresh text chunks), <code>page_entities</code> (merged JSON‑LD).</div>
-              <div><strong>Result:</strong> Rich, layered content for high‑quality RAG answers.</div>
+              <div><strong>What it does:</strong> Fetches HTML content and combines it with CSV metadata for comprehensive processing.</div>
+              <div><strong>Process:</strong> Fetches HTML → stores raw HTML → extracts text/JSON-LD → creates page_chunks with CSV context → enhances page_entities with CSV metadata.</div>
+              <div><strong>Updates:</strong> <code>page_html</code> (raw HTML), <code>page_chunks</code> (text with CSV context), <code>page_entities</code> (enhanced with CSV metadata).</div>
+              <div><strong>Result:</strong> Content enriched with CSV metadata, ready for metadata-driven mapping and chat.</div>
             </div>
           </div>
 
@@ -190,17 +352,17 @@
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <button class="btn step" onclick="runMapping()" id="mappingBtn">
               <span class="step-num">3️⃣</span> 🔗 Create Mappings
-            </button>
+        </button>
             <span id="stepMap" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
-          </div>
+      </div>
           <div>
-            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Link Events to Products</h4>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Build Metadata-Driven Mappings</h4>
             <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
-              <div><strong>What it does:</strong> Creates intelligent links between events and the right products/services.</div>
-              <div><strong>Process:</strong> Analyzes event description, product details and rules to connect.</div>
-              <div><strong>Updates:</strong> <code>event_product_links_auto</code> with scored mappings.</div>
-              <div><strong>Result:</strong> Accurate course/workshop answers with pricing and availability.</div>
-            </div>
+              <div><strong>What it does:</strong> Creates intelligent relationships using CSV metadata (categories, tags, locations, dates).</div>
+              <div><strong>Process:</strong> Uses CSV metadata to build event-product mappings, category-based relationships, tag-based connections, location-based groupings.</div>
+              <div><strong>Updates:</strong> <code>event_product_links_auto</code> with metadata-driven mappings, category relationships, tag connections.</div>
+              <div><strong>Result:</strong> Comprehensive content relationships based on rich CSV metadata, not just URL patterns.</div>
+      </div>
           </div>
 
           <!-- Step 4 -->
@@ -211,12 +373,12 @@
             <span id="stepFinalize" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
           </div>
           <div>
-            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Warm & Refresh Views</h4>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Build Metadata-Driven Enrichment Views</h4>
             <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
-              <div><strong>What it does:</strong> Refreshes views and warms caches used by the chatbot.</div>
-              <div><strong>Process:</strong> Recomputes mapping views and triggers light read‑throughs.</div>
-              <div><strong>Updates:</strong> Chat views such as <code>v_events_for_chat</code>, <code>v_service_content</code>, <code>v_product_content</code>, <code>v_blog_content</code>.</div>
-              <div><strong>Result:</strong> Faster, up‑to‑date answers from the live bot.</div>
+              <div><strong>What it does:</strong> Builds comprehensive enrichment views using CSV metadata for all content types.</div>
+              <div><strong>Process:</strong> Creates metadata-driven enrichment views, CSV-type specific views, warms all views and indexes, generates comprehensive data summary.</div>
+              <div><strong>Updates:</strong> <code>v_blog_enrichment</code>, <code>v_course_event_enrichment</code>, <code>v_workshop_event_enrichment</code>, <code>v_course_product_enrichment</code>, <code>v_workshop_product_enrichment</code>, <code>v_metadata_enrichment</code>.</div>
+              <div><strong>Result:</strong> Complete metadata-driven enrichment system ready for high-quality chat responses.</div>
             </div>
           </div>
 
@@ -252,19 +414,21 @@
       <h2>ℹ️ What the Numbers Mean</h2>
       <div class="card" style="font-size:14px;color:#ddd;line-height:1.5">
         <ul style="margin:0 0 8px 18px;">
-          <li><strong>Content Imported</strong>: Rows read from your CSVs (input size by category).</li>
-          <li><strong>Web Scraping</strong>: URLs queued for Step 2. Foundation (<code>site_urls</code>) is the baseline, then Enhancements (blog/events/workshops/services) add more for the same URLs.</li>
-          <li><strong>Success / Failed / Stopped / Skipped</strong>: Outcome of Step 2 for this run (Success means text saved to <code>page_chunks</code> and JSON‑LD merged into <code>page_entities</code>).</li>
+          <li><strong>CSV Metadata Imported</strong>: Rich metadata rows imported from each CSV type (blog, course_events, workshop_events, course_products, workshop_products, site_urls, product_schema).</li>
+          <li><strong>Content Ingestion</strong>: URLs processed in Step 2 with CSV metadata context. Each URL gets enriched with its CSV metadata (categories, tags, dates, locations, excerpts).</li>
+          <li><strong>Success / Failed / Stopped / Skipped</strong>: Outcome of Step 2 for this run (Success means HTML stored in <code>page_html</code>, text saved to <code>page_chunks</code> with CSV context, and entities enhanced with CSV metadata).</li>
           <li><strong>CSV Count</strong> (per category): Rows imported from CSVs in Step 1 for that category label.</li>
-          <li><strong>Duplicates Removed</strong> (per category): <em>Within-source</em> duplicates removed during Step 2 (e.g., the same blog URL listed twice in the blog CSV). Cross‑CSV duplicates are kept to allow enhancement.</li>
+          <li><strong>Duplicates Removed</strong> (per category): <em>Within-source</em> duplicates removed during Step 2 (e.g., the same blog URL listed twice in the blog CSV). Cross‑CSV duplicates are kept to allow metadata enhancement.</li>
         </ul>
         <div style="margin-top:8px;">
           <strong>Where data goes:</strong>
           <ul style="margin:6px 0 0 18px;">
-            <li><code>page_chunks</code>: Plain‑text chunks per URL (replaced on each successful scrape).</li>
-            <li><code>page_entities</code>: Normalized JSON‑LD entities {event, product, article, service}. Existing (url, kind) are always updated so rescheduled events refresh.</li>
-            <li><code>event_product_links_auto</code>: Created by Step 3 (Run Mapping).</li>
-            <li>Views used by chat/analytics: <code>v_events_for_chat</code>, <code>v_service_content</code>, <code>v_product_content</code>, <code>v_blog_content</code>. “Finalize” warms/refreshes these.</li>
+            <li><code>csv_metadata</code>: Rich metadata from all 7 CSV types (categories, tags, dates, locations, excerpts, JSON-LD data).</li>
+            <li><code>page_html</code>: Raw HTML content stored for structured data extraction.</li>
+            <li><code>page_chunks</code>: Text chunks with CSV metadata context (replaced on each successful scrape).</li>
+            <li><code>page_entities</code>: Enhanced entities with CSV metadata (categories, tags, locations, excerpts) linked to csv_metadata table.</li>
+            <li><code>event_product_links_auto</code>: Created by Step 3 using CSV metadata for intelligent relationships.</li>
+            <li>Metadata-driven enrichment views: <code>v_blog_enrichment</code>, <code>v_course_event_enrichment</code>, <code>v_workshop_event_enrichment</code>, <code>v_course_product_enrichment</code>, <code>v_workshop_product_enrichment</code>, <code>v_metadata_enrichment</code>. "Finalize" builds these.</li>
           </ul>
         </div>
       </div>
@@ -1482,11 +1646,11 @@
             addResult(`✅ Mapping likely completed despite timeout. Totals now ${counts.mapped}/${counts.total} mapped.`, 'success');
             document.getElementById('stepMap').style.background = '#2a6';
             document.getElementById('stepMap').textContent = `Status: ${counts.mapped}/${counts.total} mapped`;
-            updateParityPill();
-          } else {
-            const errorDetail = result?.detail || result?.error || 'Unknown error';
-            addResult(`❌ Mapping failed: ${errorDetail}`, 'error');
-            document.getElementById('stepMap').style.background = '#a62';
+          updateParityPill();
+        } else {
+          const errorDetail = result?.detail || result?.error || 'Unknown error';
+          addResult(`❌ Mapping failed: ${errorDetail}`, 'error');
+          document.getElementById('stepMap').style.background = '#a62';
             document.getElementById('stepMap').textContent = 'Status: failed';
           }
         }
