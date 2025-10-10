@@ -394,19 +394,18 @@ async function ingestSingleUrl(url, supa, options = {}) {
     if (jsonLd) {
       // Extract structured information from page text for products
       let enhancedDescriptions = {};
-      if (chunks && chunks.length > 0) {
-        const combinedText = chunks.map(chunk => chunk.chunk_text).join(' ');
-        
+      if (text) {
+        // Use the full page text instead of chunks for better extraction
         // Simple, robust extraction for Equipment Needed
         let equipmentNeeded = null;
-        const equipmentMatch = combinedText.match(/EQUIPMENT\s*NEEDED:\s*(.+?)(?=\s*\*[A-Z]|\s*Dates:|$)/i);
+        const equipmentMatch = text.match(/EQUIPMENT\s*NEEDED:\s*(.+?)(?=\s*\*[A-Z]|\s*Dates:|$)/i);
         if (equipmentMatch) {
           equipmentNeeded = equipmentMatch[1].trim();
         }
         
         // Simple, robust extraction for Experience Level
         let experienceLevel = null;
-        const experienceMatch = combinedText.match(/Experience\s*-\s*Level:\s*([^*]+?)(?:\*|$)/i);
+        const experienceMatch = text.match(/Experience\s*-\s*Level:\s*([^*]+?)(?:\*|$)/i);
         if (experienceMatch) {
           experienceLevel = experienceMatch[1].trim();
         }
