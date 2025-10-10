@@ -483,9 +483,9 @@
                 <div class="stat-value" id="skippedCount">0</div>
               </div>
             </div>
-        <div id="categoryStats" style="margin-top: 10px;">
+        <table id="categoryStats" style="margin-top: 10px; width: 100%; border-collapse: collapse; background: #1b1b1b; border: 1px solid #333;">
           <!-- per-category stats will render here -->
-        </div>
+        </table>
         <!-- Controls removed to avoid duplication; use the Results & Debug panel -->
       </div>
     </div>
@@ -2355,25 +2355,25 @@
           
           return `
             <tr>
-              <td>${cat.label}${cat.code}</td>
-              <td>${count}</td>
-              <td style="color: #4CAF50;">${count}</td>
-              <td style="color: #f44336;">0</td>
-              <td style="color: #2196F3;">0</td>
-              <td style="color: #FF9800;">0</td>
+              <td style="padding: 4px 8px; text-align: left;">${cat.label}${cat.code}</td>
+              <td style="padding: 4px 8px; text-align: left;">${count}</td>
+              <td style="padding: 4px 8px; text-align: left; color: #4CAF50;">${count}</td>
+              <td style="padding: 4px 8px; text-align: left; color: #f44336;">0</td>
+              <td style="padding: 4px 8px; text-align: left; color: #2196F3;">0</td>
+              <td style="padding: 4px 8px; text-align: left; color: #FF9800;">0</td>
             </tr>
           `;
         }).join('');
         
         // Add totals row
         const totalsRow = `
-          <tr style="font-weight: bold;">
-            <td>TOTALS</td>
-            <td>${totalCsvCount}</td>
-            <td style="color: #4CAF50;">${totalSuccess}</td>
-            <td style="color: #f44336;">${totalFailed}</td>
-            <td style="color: #2196F3;">${totalSkipped}</td>
-            <td style="color: #FF9800;">${totalDuplicatesRemoved}</td>
+          <tr style="font-weight: bold; border-top: 2px solid #666; background: #2a2a2a;">
+            <td style="padding: 4px 8px; text-align: left;">TOTALS</td>
+            <td style="padding: 4px 8px; text-align: left;">${totalCsvCount}</td>
+            <td style="padding: 4px 8px; text-align: left; color: #4CAF50;">${totalSuccess}</td>
+            <td style="padding: 4px 8px; text-align: left; color: #f44336;">${totalFailed}</td>
+            <td style="padding: 4px 8px; text-align: left; color: #2196F3;">${totalSkipped}</td>
+            <td style="padding: 4px 8px; text-align: left; color: #FF9800;">${totalDuplicatesRemoved}</td>
           </tr>
         `;
         
@@ -2381,12 +2381,12 @@
         el.innerHTML = `
           <thead>
             <tr>
-              <th>Category</th>
-              <th>CSV Count</th>
-              <th>Success</th>
-              <th>Failed</th>
-              <th>Skipped</th>
-              <th>Duplicates Removed</th>
+              <th style="text-align: left; padding: 4px 8px;">Category</th>
+              <th style="text-align: left; padding: 4px 8px;">CSV Count</th>
+              <th style="text-align: left; padding: 4px 8px;">Success</th>
+              <th style="text-align: left; padding: 4px 8px;">Failed</th>
+              <th style="text-align: left; padding: 4px 8px;">Skipped</th>
+              <th style="text-align: left; padding: 4px 8px;">Duplicates Removed</th>
             </tr>
           </thead>
           <tbody>
