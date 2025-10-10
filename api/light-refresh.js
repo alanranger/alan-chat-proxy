@@ -157,7 +157,21 @@ export default async function handler(req, res){
         urls = await readUrlsFromRepo();
         
         // Check which URLs have changed since last run
-        changedUrls = await checkForChangedUrls(urls);
+        // For now, prioritize the camera course URL and limit to avoid timeout
+        const cameraCourseUrl = 'https://www.alanranger.com/photography-services-near-me/beginners-photography-course';
+        const maxUrlsToCheck = 50; // Smaller limit to avoid timeout
+        
+        // Always check the camera course URL first
+        const urlsToCheck = [cameraCourseUrl];
+        
+        // Add other URLs up to the limit
+        for (const url of urls) {
+          if (url !== cameraCourseUrl && urlsToCheck.length < maxUrlsToCheck) {
+            urlsToCheck.push(url);
+          }
+        }
+        
+        changedUrls = await checkForChangedUrls(urlsToCheck);
         
         const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
         const token = process.env.INGEST_TOKEN || '';
