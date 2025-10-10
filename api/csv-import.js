@@ -164,6 +164,10 @@ async function importBlogMetadata(rows, supa) {
 
 // Import CSV metadata for course events
 async function importCourseEventMetadata(rows, supa) {
+  console.log(`DEBUG: Processing ${rows.length} course event rows`);
+  console.log(`DEBUG: First row keys:`, Object.keys(rows[0] || {}));
+  console.log(`DEBUG: First row Event_URL:`, rows[0]?.Event_URL);
+  
   const metadata = rows.map(row => ({
     csv_type: 'course_events',
     url: row.Event_URL || row['Event URL'] || row.url,
@@ -181,6 +185,8 @@ async function importCourseEventMetadata(rows, supa) {
     image_url: row.Event_Image || row['Event Image'],
     workflow_state: row.Workflow_State || row['Workflow State']
   })).filter(item => item.url);
+  
+  console.log(`DEBUG: Filtered to ${metadata.length} course event records with URLs`);
 
   if (metadata.length > 0) {
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
@@ -191,6 +197,10 @@ async function importCourseEventMetadata(rows, supa) {
 
 // Import CSV metadata for workshop events
 async function importWorkshopEventMetadata(rows, supa) {
+  console.log(`DEBUG: Processing ${rows.length} workshop event rows`);
+  console.log(`DEBUG: First row keys:`, Object.keys(rows[0] || {}));
+  console.log(`DEBUG: First row Event_URL:`, rows[0]?.Event_URL);
+  
   const metadata = rows.map(row => ({
     csv_type: 'workshop_events',
     url: row.Event_URL || row['Event URL'] || row.url,
@@ -208,6 +218,8 @@ async function importWorkshopEventMetadata(rows, supa) {
     image_url: row.Event_Image || row['Event Image'],
     workflow_state: row.Workflow_State || row['Workflow State']
   })).filter(item => item.url);
+  
+  console.log(`DEBUG: Filtered to ${metadata.length} workshop event records with URLs`);
 
   if (metadata.length > 0) {
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
