@@ -159,7 +159,7 @@ async function importBlogMetadata(rows, supa) {
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
   }
-  return metadata.length;
+  return { count: metadata.length };
 }
 
 // Import CSV metadata for course events
@@ -253,7 +253,7 @@ async function importCourseProductMetadata(rows, supa) {
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
   }
-  return metadata.length;
+  return { count: metadata.length };
 }
 
 // Import CSV metadata for workshop products
@@ -273,7 +273,7 @@ async function importWorkshopProductMetadata(rows, supa) {
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
   }
-  return metadata.length;
+  return { count: metadata.length };
 }
 
 // Import CSV metadata for site URLs
@@ -293,7 +293,7 @@ async function importSiteUrlMetadata(rows, supa) {
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
   }
-  return metadata.length;
+  return { count: metadata.length };
 }
 
 // Import CSV metadata for product schema
@@ -331,7 +331,7 @@ async function importProductSchemaMetadata(rows, supa) {
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
   }
-  return metadata.length;
+  return { count: metadata.length };
 }
 
 /* ========== Blog data transformation ========== */
@@ -759,7 +759,8 @@ export default async function handler(req, res) {
       let metadataCount = 0;
       switch (csvType) {
         case 'blog':
-          metadataCount = await importBlogMetadata(rows, supa);
+          const blogResult = await importBlogMetadata(rows, supa);
+          metadataCount = blogResult.count;
           break;
         case 'course_events':
           const courseResult = await importCourseEventMetadata(rows, supa);
@@ -772,16 +773,20 @@ export default async function handler(req, res) {
           debugInfo = workshopResult.debug;
           break;
         case 'course_products':
-          metadataCount = await importCourseProductMetadata(rows, supa);
+          const courseProductResult = await importCourseProductMetadata(rows, supa);
+          metadataCount = courseProductResult.count;
           break;
         case 'workshop_products':
-          metadataCount = await importWorkshopProductMetadata(rows, supa);
+          const workshopProductResult = await importWorkshopProductMetadata(rows, supa);
+          metadataCount = workshopProductResult.count;
           break;
         case 'site_urls':
-          metadataCount = await importSiteUrlMetadata(rows, supa);
+          const siteUrlResult = await importSiteUrlMetadata(rows, supa);
+          metadataCount = siteUrlResult.count;
           break;
         case 'product_schema':
-          metadataCount = await importProductSchemaMetadata(rows, supa);
+          const productSchemaResult = await importProductSchemaMetadata(rows, supa);
+          metadataCount = productSchemaResult.count;
           break;
         default:
           return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid csvType for metadata import', stage });

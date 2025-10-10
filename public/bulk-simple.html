@@ -449,15 +449,15 @@
       <div class="card">
         <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 10px;">
               <div class="stat-box" title="Total CSV metadata imported (blogs, events, workshops, products)">
-                <div class="stat-label">Metadata Imported</div>
+                <div class="stat-label">CSV Metadata</div>
                 <div class="stat-value" id="csvImportedRows">0</div>
               </div>
               <div class="stat-box" title="Total URLs loaded from site_urls.csv for content ingestion">
-                <div class="stat-label">Content Ingestion</div>
+                <div class="stat-label">URLs Loaded</div>
                 <div class="stat-value" id="loadedRows">0</div>
               </div>
               <div class="stat-box" title="URLs successfully ingested or skipped as duplicates">
-                <div class="stat-label">Success</div>
+                <div class="stat-label">Ingested</div>
                 <div class="stat-value success" id="successCount">0</div>
               </div>
               <div class="stat-box" title="URLs that failed to ingest">
@@ -2092,45 +2092,46 @@
     
     // CSV row counts for dashboard display
     let csvRowCounts = {
-      'blog_articles': 0,
+      'blog': 0,
       'course_events': 0,
       'workshop_events': 0,
       'course_products': 0,
       'workshop_products': 0,
-      'website_urls': 0,
-      'json_extraction': 0
+      'site_urls': 0,
+      'product_schema': 0
     };
     
     // URL scraping stats for dashboard display
     let urlScrapingStats = {
-      'blog_articles': { success: 0, failed: 0, skipped: 0 },
+      'blog': { success: 0, failed: 0, skipped: 0 },
       'course_events': { success: 0, failed: 0, skipped: 0 },
       'workshop_events': { success: 0, failed: 0, skipped: 0 },
       'course_products': { success: 0, failed: 0, skipped: 0 },
       'workshop_products': { success: 0, failed: 0, skipped: 0 },
-      'website_urls': { success: 0, failed: 0, skipped: 0 },
-      'json_extraction': { success: 0, failed: 0, skipped: 0 }
+      'site_urls': { success: 0, failed: 0, skipped: 0 },
+      'product_schema': { success: 0, failed: 0, skipped: 0 }
     };
 
     // Track within-source duplicates removed per dashboard category (for Step 2)
     let withinSourceDupByCategory = {
-      'blog_articles': 0,
+      'blog': 0,
       'course_events': 0,
       'workshop_events': 0,
       'course_products': 0,
       'workshop_products': 0,
-      'website_urls': 0,
-      'json_extraction': 0
+      'site_urls': 0,
+      'product_schema': 0
     };
     
     // Map import content types to dashboard category keys
     const contentTypeToCsvKey = {
-      'blog': 'blog_articles',
+      'blog': 'blog',
       'event': 'course_events',
       'workshop': 'workshop_events',
-      'product': 'course_products',
-      'site_urls': 'website_urls',
-      'test_questions': 'test_questions'
+      'service': 'course_products',
+      'product': 'workshop_products',
+      'site_urls': 'site_urls',
+      'test_questions': 'product_schema'
     };
 
     // Track CSV filenames per category for display
