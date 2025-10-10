@@ -1138,13 +1138,15 @@ function extractFromDescription(desc) {
   };
   if (!desc) return out;
 
-  // Strip HTML tags and data attributes that sometimes appear in Squarespace blocks
-  const cleanText = String(desc)
-    .replace(/<[^>]*>/g, ' ') // remove all HTML tags
-    .replace(/\s+/g, ' ')    // collapse whitespace
+  // Strip HTML tags but PRESERVE newlines for line-based parsing
+  const rawText = String(desc)
+    .replace(/<[^>]*>/g, ' ')
     .trim();
 
-  const lines = cleanText.split(/\r?\n/).map((s) => s.trim());
+  // Split by newline first, then normalize whitespace per line
+  const lines = rawText
+    .split(/\r?\n/)
+    .map((s) => s.replace(/\s+/g, ' ').trim());
   const nonEmpty = lines.filter(Boolean);
   if (nonEmpty.length) out.summary = nonEmpty[0];
 
