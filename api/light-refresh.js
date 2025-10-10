@@ -143,7 +143,7 @@ export default async function handler(req, res){
         failed, 
         batches: chunks,
         error,
-        mode: (process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN) && token ? 'ingest' : 'log-only'
+        mode: (process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN) && (process.env.INGEST_TOKEN || '') ? 'ingest' : 'log-only'
       });
     }
 
