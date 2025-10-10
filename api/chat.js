@@ -1211,6 +1211,20 @@ function extractFromDescription(desc) {
       }
     }
     
+    // Course-specific extraction: Experience Level
+    if (/^experience\s*-\s*level:/i.test(ln)) {
+      const v = ln.replace(/^experience\s*-\s*level:\s*/i, "").trim() || nextVal(i);
+      if (v) out.experienceLevel = v;
+      continue;
+    }
+    
+    // Course-specific extraction: Equipment Needed
+    if (/^equipment\s*needed:/i.test(ln)) {
+      const v = ln.replace(/^equipment\s*needed:\s*/i, "").trim() || nextVal(i);
+      if (v) out.equipmentNeeded = v;
+      continue;
+    }
+    
 
     const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
     if (m1) {
@@ -1263,7 +1277,11 @@ async function buildProductPanelMarkdown(products) {
   const scrub = (s)=> String(s||'')
     .replace(/\s*style="[^"]*"/gi,'')
     .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
-    .replace(/\s*contenteditable="[^"]*"/gi,'');
+    .replace(/\s*contenteditable="[^"]*"/gi,'')
+    .replace(/\s*•\s*Standard\s*—\s*£\d+/gi,'') // Remove "• Standard — £150" lines
+    .replace(/\s*•\s*Standard\s*-\s*£\d+/gi,'') // Remove "• Standard - £150" lines
+    .replace(/\s*Standard\s*—\s*£\d+/gi,'') // Remove "Standard — £150" lines
+    .replace(/\s*Standard\s*-\s*£\d+/gi,''); // Remove "Standard - £150" lines
   const fullDescription = scrub(primary.description || primary?.raw?.description || "");
   
   // Also try to get chunk data for more detailed information
@@ -1377,11 +1395,15 @@ async function buildProductPanelMarkdown(products) {
   if (info.participants) facts.push(`**Participants:** ${info.participants}`);
   if (info.fitness) facts.push(`**Fitness:** ${info.fitness}`);
   if (info.availability) facts.push(`**Availability:** ${info.availability}`);
+  if (info.experienceLevel) facts.push(`**Experience Level:** ${info.experienceLevel}`);
+  if (info.equipmentNeeded) facts.push(`**Equipment Needed:** ${info.equipmentNeeded}`);
   
   console.log("Facts to add:", facts);
   console.log("Info participants:", info.participants);
   console.log("Info fitness:", info.fitness);
   console.log("Info location:", info.location);
+  console.log("Info experienceLevel:", info.experienceLevel);
+  console.log("Info equipmentNeeded:", info.equipmentNeeded);
   
   if (facts.length) {
     lines.push("");
