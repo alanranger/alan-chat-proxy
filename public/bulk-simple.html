@@ -2241,14 +2241,19 @@
 
     // Global function to render category stats (updated for metadata-driven system)
     async function updateDebugControlDashboard() {
+      console.log('DEBUG: updateDebugControlDashboard called');
       const el = document.getElementById('categoryStats');
-      if (!el) return;
+      if (!el) {
+        console.warn('DEBUG: categoryStats element not found');
+        return;
+      }
       
       try {
         // Get current counts from the API
         const token = getToken();
         const baseUrl = 'https://alan-chat-proxy.vercel.app';
         
+        console.log('DEBUG: Fetching counts from API...');
         const response = await fetch(`${baseUrl}/api/tools?action=counts`, {
           method: 'GET',
           headers: {
@@ -2263,16 +2268,52 @@
         }
         
         const data = await response.json();
+        console.log('DEBUG: API response:', data);
         const csvMetadataCounts = data.csv_metadata || {};
+        console.log('DEBUG: CSV metadata counts:', csvMetadataCounts);
         
         // Update the top summary boxes
         const totalMetadata = Object.values(csvMetadataCounts).reduce((sum, count) => sum + count, 0);
-        document.getElementById('csvMetadataCount').textContent = totalMetadata;
-        document.getElementById('urlsLoadedCount').textContent = data.page_entities || 0;
-        document.getElementById('ingestedCount').textContent = data.page_chunks || 0;
-        document.getElementById('failedCount').textContent = 0; // No failed imports in metadata system
-        document.getElementById('stoppedCount').textContent = 0;
-        document.getElementById('skippedCount').textContent = 0;
+        console.log('DEBUG: Total metadata count:', totalMetadata);
+        
+        // Update summary boxes with proper element IDs
+        const csvMetadataEl = document.getElementById('csvMetadataCount');
+        const urlsLoadedEl = document.getElementById('urlsLoadedCount');
+        const ingestedEl = document.getElementById('ingestedCount');
+        const failedEl = document.getElementById('failedCount');
+        const stoppedEl = document.getElementById('stoppedCount');
+        const skippedEl = document.getElementById('skippedCount');
+        
+        if (csvMetadataEl) {
+          csvMetadataEl.textContent = totalMetadata;
+          console.log('DEBUG: Updated csvMetadataCount to:', totalMetadata);
+        } else {
+          console.warn('DEBUG: csvMetadataCount element not found');
+        }
+        
+        if (urlsLoadedEl) {
+          urlsLoadedEl.textContent = data.page_entities || 0;
+          console.log('DEBUG: Updated urlsLoadedCount to:', data.page_entities || 0);
+        } else {
+          console.warn('DEBUG: urlsLoadedCount element not found');
+        }
+        
+        if (ingestedEl) {
+          ingestedEl.textContent = data.page_chunks || 0;
+          console.log('DEBUG: Updated ingestedCount to:', data.page_chunks || 0);
+        } else {
+          console.warn('DEBUG: ingestedCount element not found');
+        }
+        
+        if (failedEl) {
+          failedEl.textContent = 0; // No failed imports in metadata system
+        }
+        if (stoppedEl) {
+          stoppedEl.textContent = 0;
+        }
+        if (skippedEl) {
+          skippedEl.textContent = 0;
+        }
         
         // Update the foundation/enhancements line
         const foundationCount = csvMetadataCounts.site_urls || 0;
@@ -2336,6 +2377,8 @@
           `;
           tbody.appendChild(totalsRow);
         }
+        
+        console.log('DEBUG: Debug & Control dashboard update complete');
         
       } catch (error) {
         console.warn('Error updating Debug & Control dashboard:', error);
