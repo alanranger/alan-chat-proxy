@@ -787,7 +787,14 @@ function getMetaDescription(prod){
   return limit(scrubAttrs(stripTags(raw) || fallback), 220);
 }
 function extractFacts(desc){
-  const full = String(desc||'');
+  // Clean Squarespace attributes and HTML tags more thoroughly
+  const full = String(desc||'')
+    .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+    .replace(/\s*style="[^"]*"/gi, '') // Remove style attributes
+    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi, '') // Remove data attributes
+    .replace(/\s*contenteditable="[^"]*"/gi, '') // Remove contenteditable
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
   const txt = full.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
   const findAfter = (label)=>{
     const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
