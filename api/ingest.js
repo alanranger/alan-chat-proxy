@@ -373,6 +373,19 @@ async function ingestSingleUrl(url, supa, options = {}) {
     stage = 'chunk_text';
     const chunks = chunkText(text);
     
+    // Find CSV metadata for this URL
+    let csvMetadata = null;
+    try {
+      const { data: metadata } = await supa
+        .from('csv_metadata')
+        .select('*')
+        .eq('url', url)
+        .single();
+      csvMetadata = metadata;
+    } catch (e) {
+      // No CSV metadata found for this URL - that's okay
+    }
+    
     // Debug: Log if Equipment Needed is in the text
     try {
       await supa.from('debug_logs').insert({
@@ -381,7 +394,8 @@ async function ingestSingleUrl(url, supa, options = {}) {
         data: { 
           textLength: text.length, 
           hasEquipmentNeeded: text.includes('EQUIPMENT NEEDED'),
-          textSample: text.substring(0, 1000)
+          textSample: text.substring(0, 1000),
+          hasCsvMetadata: !!csvMetadata
         }
       });
     } catch (e) {} // Ignore errors
@@ -398,6 +412,9 @@ async function ingestSingleUrl(url, supa, options = {}) {
       url: url,
       title: null,
         chunk_text: cleanChunk,
+        // CSV metadata fields
+        csv_type: csvMetadata?.csv_type || null,
+        csv_metadata_id: csvMetadata?.id || null,
       embedding: null,
         chunk_hash: sha1(cleanChunk),
         content: cleanChunk,
@@ -474,7 +491,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
         supa.from('debug_logs').insert({
           url: url,
           stage: 'entity_creation',
-          data: { idx: idx, kind: normalizeKind(item, url), hasEnhanced: !!enhancedDescriptions[idx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0 }
+          data: { idx: idx, kind: normalizeKind(item, url), hasEnhanced: !!enhancedDescriptions[idx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0, hasCsvMetadata: !!csvMetadata }
         }).catch(() => {}); // Ignore errors
         
         return {
@@ -493,7 +510,16 @@ async function ingestSingleUrl(url, supa, options = {}) {
           source_url: url,
           raw: item,
           entity_hash: sha1(url + JSON.stringify(item) + idx),
-          last_seen: new Date().toISOString()
+          last_seen: new Date().toISOString(),
+          // CSV metadata fields
+          csv_type: csvMetadata?.csv_type || null,
+          csv_metadata_id: csvMetadata?.id || null,
+          categories: csvMetadata?.categories || null,
+          tags: csvMetadata?.tags || null,
+          publish_date: csvMetadata?.publish_date || null,
+          location_name: csvMetadata?.location_name || null,
+          location_address: csvMetadata?.location_address || null,
+          excerpt: csvMetadata?.excerpt || null
         };
       });
       
