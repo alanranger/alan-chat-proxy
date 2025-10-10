@@ -2278,33 +2278,33 @@
         const totalMetadata = Object.values(csvMetadataCounts).reduce((sum, count) => sum + count, 0);
         console.log('DEBUG: Total metadata count:', totalMetadata);
         
-        // Update summary boxes with proper element IDs
-        const csvMetadataEl = document.getElementById('csvMetadataCount');
-        const urlsLoadedEl = document.getElementById('urlsLoadedCount');
-        const ingestedEl = document.getElementById('ingestedCount');
+        // Update summary boxes with correct element IDs
+        const csvMetadataEl = document.getElementById('csvImportedRows');
+        const urlsLoadedEl = document.getElementById('loadedRows');
+        const ingestedEl = document.getElementById('successCount');
         const failedEl = document.getElementById('failedCount');
         const stoppedEl = document.getElementById('stoppedCount');
         const skippedEl = document.getElementById('skippedCount');
         
         if (csvMetadataEl) {
           csvMetadataEl.textContent = totalMetadata;
-          console.log('DEBUG: Updated csvMetadataCount to:', totalMetadata);
+          console.log('DEBUG: Updated csvImportedRows to:', totalMetadata);
         } else {
-          console.warn('DEBUG: csvMetadataCount element not found');
+          console.warn('DEBUG: csvImportedRows element not found');
         }
         
         if (urlsLoadedEl) {
           urlsLoadedEl.textContent = data.page_entities || 0;
-          console.log('DEBUG: Updated urlsLoadedCount to:', data.page_entities || 0);
+          console.log('DEBUG: Updated loadedRows to:', data.page_entities || 0);
         } else {
-          console.warn('DEBUG: urlsLoadedCount element not found');
+          console.warn('DEBUG: loadedRows element not found');
         }
         
         if (ingestedEl) {
           ingestedEl.textContent = data.page_chunks || 0;
-          console.log('DEBUG: Updated ingestedCount to:', data.page_chunks || 0);
+          console.log('DEBUG: Updated successCount to:', data.page_chunks || 0);
         } else {
-          console.warn('DEBUG: ingestedCount element not found');
+          console.warn('DEBUG: successCount element not found');
         }
         
         if (failedEl) {
