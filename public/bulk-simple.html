@@ -1224,6 +1224,7 @@
       // Update both dashboards
       renderCategoryStats();
       await updateCsvMetadataDashboard();
+      await updateDebugControlDashboard();
     }
 
     // --- Bulk CSV Upload ---
@@ -1411,6 +1412,7 @@
       // Update both dashboards
       renderCategoryStats();
       await updateCsvMetadataDashboard();
+      await updateDebugControlDashboard();
       hideOverlayProgress();
       } catch (error) {
         console.error('Error in bulkUploadCSVs:', error);
@@ -2238,7 +2240,7 @@
     }
 
     // Global function to render category stats (updated for metadata-driven system)
-    async function renderCategoryStats() {
+    async function updateDebugControlDashboard() {
       const el = document.getElementById('categoryStats');
       if (!el) return;
       
@@ -2339,7 +2341,36 @@
         console.warn('Error updating Debug & Control dashboard:', error);
       }
     }
+
+    // Original synchronous function for backward compatibility
+    function renderCategoryStats() {
+      const el = document.getElementById('categoryStats');
+      if (!el) return;
       
+      // Format category names for display
+      const formatCategory = (cat) => {
+        const labels = {
+          'blog_articles': 'Blog Articles',
+          'course_events': 'Course Events',
+          'workshop_events': 'Workshop Events',
+          'course_products': 'Course/Service Products',
+          'workshop_products': 'Workshop Products',
+          'website_urls': 'Website URLs',
+          'json_extraction': 'JSON Product Extraction'
+        };
+        const codes = {
+          'blog_articles': '01',
+          'course_events': '02',
+          'workshop_events': '03',
+          'course_products': '04',
+          'workshop_products': '05',
+          'website_urls': '06',
+          'json_extraction': '07'
+        };
+        const name = labels[cat] || cat;
+        const code = codes[cat] ? ` — ${codes[cat]}` : '';
+        return `${name}${code}`;
+      };
       
       // Calculate totals
       let totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0, totalCsvCount = 0;
@@ -2357,22 +2388,48 @@
         totalDuplicatesRemoved += duplicatesRemoved;
         totalCsvCount += csvCount;
         
-        return `<tr><td style="padding:4px 8px;">${formatCategory(key)}</td><td style="padding:4px 8px;">${csvCount}</td><td style="color:#51cf66">${stats.success || 0}</td><td style="color:#ff6b6b">${stats.failed || 0}</td><td style="color:#74c0fc">${stats.skipped || 0}</td><td style="color:#ffd43b">${duplicatesRemoved}</td></tr>`;
+        return `
+          <tr>
+            <td>${key}</td>
+            <td>${csvCount}</td>
+            <td style="color: #4CAF50;">${stats.success || 0}</td>
+            <td style="color: #f44336;">${stats.failed || 0}</td>
+            <td style="color: #2196F3;">${stats.skipped || 0}</td>
+            <td style="color: #FF9800;">${duplicatesRemoved}</td>
+          </tr>
+        `;
       }).join('');
       
       // Add totals row
-      const totalsRow = `<tr style="border-top:2px solid #666;font-weight:bold;background:#2a2a2a;"><td style="padding:4px 8px;">TOTALS</td><td style="padding:4px 8px;">${totalCsvCount}</td><td style="color:#51cf66">${totalSuccess}</td><td style="color:#ff6b6b">${totalFailed}</td><td style="color:#74c0fc">${totalSkipped}</td><td style="color:#ffd43b">${totalDuplicatesRemoved}</td></tr>`;
+      const totalsRow = `
+        <tr style="font-weight: bold;">
+          <td>TOTALS</td>
+          <td>${totalCsvCount}</td>
+          <td style="color: #4CAF50;">${totalSuccess}</td>
+          <td style="color: #f44336;">${totalFailed}</td>
+          <td style="color: #2196F3;">${totalSkipped}</td>
+          <td style="color: #FF9800;">${totalDuplicatesRemoved}</td>
+        </tr>
+      `;
       
-      const breakdown = (window.__foundationEnhancementBreakdown || {foundation:0, enhancement:0});
-      const html = `<div style="margin-bottom:8px;color:#bbb;font-size:12px;">Foundation (site_urls): ${breakdown.foundation} • Enhancements (blog/events/workshops/services): ${breakdown.enhancement}</div>`+
-        `<table style="width:100%;border-collapse:collapse;margin-top:6px;background:#1b1b1b;border:1px solid #333"><thead><tr><th style="text-align:left;padding:4px 8px;">Category</th><th style="text-align:left;padding:4px 8px;">CSV Count</th><th style="text-align:left;padding:4px 8px;">Success</th><th style="text-align:left;padding:4px 8px;">Failed</th><th style="text-align:left;padding:4px 8px;">Skipped</th><th style="text-align:left;padding:4px 8px;">Duplicates Removed</th></tr></thead><tbody>${rows}${totalsRow}</tbody></table>`;
-      el.innerHTML = html;
+      el.innerHTML = `
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>CSV Count</th>
+            <th>Success</th>
+            <th>Failed</th>
+            <th>Skipped</th>
+            <th>Duplicates Removed</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+          ${totalsRow}
+        </tbody>
+      `;
       
-      // Update header blocks to match table totals
-      stats.csvImportedRows = totalCsvCount;
-      stats.successCount = totalSuccess;
-      stats.failedCount = totalFailed;
-      stats.skippedCount = totalSkipped;
+      // Update summary stats
       updateStats();
     }
     
@@ -2392,12 +2449,13 @@
     }
 
     // Load hardcoded token on page load
-    window.onload = function() {
+    window.onload = async function() {
       addResult('✅ Hardcoded token ready for use');
       updateStats();
       updateParityPill();
       updateCronPill();
-      updateCsvMetadataDashboard(); // Load initial CSV metadata dashboard
+      await updateCsvMetadataDashboard(); // Load initial CSV metadata dashboard
+      await updateDebugControlDashboard(); // Load initial Debug & Control dashboard
     };
   </script>
 </body>
