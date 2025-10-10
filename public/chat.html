@@ -855,6 +855,9 @@ function extractFacts(desc){
           }
           equipmentText = equipmentText.trim();
           // If it contains bullet points, split them; otherwise return as single item
+          if (equipmentText.includes('*')) {
+            return equipmentText.split('*').map(item => item.trim()).filter(Boolean);
+          }
           if (equipmentText.includes('-')) {
             return equipmentText.split('-').map(item => item.trim()).filter(Boolean);
           }
