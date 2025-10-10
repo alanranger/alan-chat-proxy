@@ -447,23 +447,22 @@ async function ingestSingleUrl(url, supa, options = {}) {
         }
         
         // Store enhanced descriptions for products
-        jsonLd.forEach((item, idx) => {
+        for (let idx = 0; idx < jsonLd.length; idx++) {
+          const item = jsonLd[idx];
           if (normalizeKind(item, url) === 'product') {
             const parts = [];
             if (item.description) parts.push(item.description);
             if (equipmentNeeded) parts.push(`Equipment Needed: ${equipmentNeeded}`);
             if (experienceLevel) parts.push(`Experience Level: ${experienceLevel}`);
             enhancedDescriptions[idx] = parts.join('\n');
-            // Log enhanced description creation directly to database
-            try {
-              await supa.from('debug_logs').insert({
-                url: url,
-                stage: 'enhanced_description',
-                data: { idx: idx, description: enhancedDescriptions[idx].substring(0, 300) }
-              });
-            } catch (e) {} // Ignore errors
+            // Log enhanced description creation directly to database (fire and forget)
+            supa.from('debug_logs').insert({
+              url: url,
+              stage: 'enhanced_description',
+              data: { idx: idx, description: enhancedDescriptions[idx].substring(0, 300) }
+            }).catch(() => {}); // Ignore errors
           }
-        });
+        }
       } else {
         // Log no chunks available directly to database
         try {
