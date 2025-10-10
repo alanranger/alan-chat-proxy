@@ -357,6 +357,19 @@ async function ingestSingleUrl(url, supa, options = {}) {
     stage = 'chunk_text';
     const chunks = chunkText(text);
     
+    // Debug: Log if Equipment Needed is in the text
+    try {
+      await supa.from('debug_logs').insert({
+        url: url,
+        stage: 'text_analysis',
+        data: { 
+          textLength: text.length, 
+          hasEquipmentNeeded: text.includes('EQUIPMENT NEEDED'),
+          textSample: text.substring(0, 1000)
+        }
+      });
+    } catch (e) {} // Ignore errors
+    
     stage = 'store_chunks';
     const chunkInserts = chunks.map(chunk => {
       // Clean chunk content to prevent JSON syntax errors
