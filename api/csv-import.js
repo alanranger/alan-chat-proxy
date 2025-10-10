@@ -759,6 +759,7 @@ export default async function handler(req, res) {
       if (!csvType) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "csvType" for metadata import', stage });
       
       let metadataCount = 0;
+      let debugInfo = null;
       switch (csvType) {
         case 'blog':
           const blogResult = await importBlogMetadata(rows, supa);
