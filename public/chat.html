@@ -800,11 +800,27 @@ function extractFacts(desc){
     const m = full.match(re); if(m && m[1]) return m[1].trim();
     return null;
   };
+  const captureBulletBlock = (label)=>{
+    const idx = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
+    const out = [];
+    if (idx>=0){
+      for(let j=idx+1;j<txt.length;j++){
+        const line = txt[j];
+        if(!line) break;
+        if (/^[A-Za-z].+:$/.test(line)) break; // next section header
+        if (/^[-•]/.test(line)) out.push(line.replace(/^[-•]\s*/,'').trim());
+        else if (out.length && line) out.push(line); else if(!/^[-•]/.test(line)) break;
+      }
+    }
+    return out;
+  };
   return {
     location: findAfter('Location'),
     participants: findAfter('Participants'),
     fitness: findAfter('Fitness'),
     availability: findAfter('Availability'),
+    experience: findAfter('Experience - Level') || findAfter('Experience Level'),
+    equipmentItems: captureBulletBlock('Equipment Needed'),
     optionLines: txt.filter(l => /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) || /^\s*OR\s*1\s*day\b/i.test(l))
   };
 }
@@ -847,6 +863,11 @@ function renderProductCard(prod){
   if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
   if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
   if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
+  if(facts.experience)   lines.push(`<p class="kvline"><strong>Experience Level:</strong> ${escapeHTML(facts.experience)}</p>`);
+  if(Array.isArray(facts.equipmentItems) && facts.equipmentItems.length){
+    const eq = facts.equipmentItems.map(e=>`<li>${escapeHTML(e)}</li>`).join('');
+    lines.push(`<div class="product-options"><strong>Equipment Needed:</strong><ul>${eq}</ul></div>`);
+  }
   
   // Only show meta description if we don't have specific facts
   const md = getMetaDescription(prod);
