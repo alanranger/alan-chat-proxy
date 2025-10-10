@@ -903,6 +903,19 @@
         
         if (result.success) {
           addResult(`✅ ${csvType} metadata import successful: ${result.metadata_imported}/${actualRowCount} records`, 'success');
+          
+          // Show debug info for course_events and workshop_events
+          if (result.debug && (csvType === 'course_events' || csvType === 'workshop_events')) {
+            addResult(`🔍 DEBUG ${csvType}:`, 'info');
+            addResult(`  • Total rows: ${result.debug.totalRows}`, 'info');
+            addResult(`  • Column names: ${result.debug.firstRowKeys?.join(', ')}`, 'info');
+            addResult(`  • First Event_URL: ${result.debug.firstRowEventUrl || 'NOT FOUND'}`, 'info');
+            addResult(`  • Filtered count: ${result.debug.filteredCount}`, 'info');
+            if (result.debug.sampleRow) {
+              addResult(`  • Sample row keys: ${Object.keys(result.debug.sampleRow).join(', ')}`, 'info');
+            }
+          }
+          
           return { success: true, csvRows: actualRowCount, imported: result.metadata_imported };
         } else {
           addResult(`❌ ${csvType} metadata import failed: ${result.error || result.detail || 'Unknown error'}`, 'error');

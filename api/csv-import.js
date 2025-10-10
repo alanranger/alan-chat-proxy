@@ -164,9 +164,12 @@ async function importBlogMetadata(rows, supa) {
 
 // Import CSV metadata for course events
 async function importCourseEventMetadata(rows, supa) {
-  console.log(`DEBUG: Processing ${rows.length} course event rows`);
-  console.log(`DEBUG: First row keys:`, Object.keys(rows[0] || {}));
-  console.log(`DEBUG: First row Event_URL:`, rows[0]?.Event_URL);
+  const debugInfo = {
+    totalRows: rows.length,
+    firstRowKeys: Object.keys(rows[0] || {}),
+    firstRowEventUrl: rows[0]?.Event_URL,
+    sampleRow: rows[0]
+  };
   
   const metadata = rows.map(row => ({
     csv_type: 'course_events',
@@ -186,20 +189,24 @@ async function importCourseEventMetadata(rows, supa) {
     workflow_state: row.Workflow_State || row['Workflow State']
   })).filter(item => item.url);
   
-  console.log(`DEBUG: Filtered to ${metadata.length} course event records with URLs`);
+  debugInfo.filteredCount = metadata.length;
+  debugInfo.sampleMetadata = metadata[0];
 
   if (metadata.length > 0) {
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
   }
-  return metadata.length;
+  return { count: metadata.length, debug: debugInfo };
 }
 
 // Import CSV metadata for workshop events
 async function importWorkshopEventMetadata(rows, supa) {
-  console.log(`DEBUG: Processing ${rows.length} workshop event rows`);
-  console.log(`DEBUG: First row keys:`, Object.keys(rows[0] || {}));
-  console.log(`DEBUG: First row Event_URL:`, rows[0]?.Event_URL);
+  const debugInfo = {
+    totalRows: rows.length,
+    firstRowKeys: Object.keys(rows[0] || {}),
+    firstRowEventUrl: rows[0]?.Event_URL,
+    sampleRow: rows[0]
+  };
   
   const metadata = rows.map(row => ({
     csv_type: 'workshop_events',
@@ -219,13 +226,14 @@ async function importWorkshopEventMetadata(rows, supa) {
     workflow_state: row.Workflow_State || row['Workflow State']
   })).filter(item => item.url);
   
-  console.log(`DEBUG: Filtered to ${metadata.length} workshop event records with URLs`);
+  debugInfo.filteredCount = metadata.length;
+  debugInfo.sampleMetadata = metadata[0];
 
   if (metadata.length > 0) {
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
     if (error) throw error;
   }
-  return metadata.length;
+  return { count: metadata.length, debug: debugInfo };
 }
 
 // Import CSV metadata for course products
@@ -754,10 +762,14 @@ export default async function handler(req, res) {
           metadataCount = await importBlogMetadata(rows, supa);
           break;
         case 'course_events':
-          metadataCount = await importCourseEventMetadata(rows, supa);
+          const courseResult = await importCourseEventMetadata(rows, supa);
+          metadataCount = courseResult.count;
+          debugInfo = courseResult.debug;
           break;
         case 'workshop_events':
-          metadataCount = await importWorkshopEventMetadata(rows, supa);
+          const workshopResult = await importWorkshopEventMetadata(rows, supa);
+          metadataCount = workshopResult.count;
+          debugInfo = workshopResult.debug;
           break;
         case 'course_products':
           metadataCount = await importCourseProductMetadata(rows, supa);
@@ -779,7 +791,8 @@ export default async function handler(req, res) {
         success: true, 
         stage: 'metadata_import_complete',
         metadata_imported: metadataCount,
-        csv_type: csvType
+        csv_type: csvType,
+        debug: debugInfo
       });
     }
     
