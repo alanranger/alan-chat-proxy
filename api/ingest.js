@@ -431,6 +431,22 @@ async function ingestSingleUrl(url, supa, options = {}) {
           // Simple, robust extraction for Equipment Needed
           let equipmentNeeded = null;
           const equipmentMatch = combinedText.match(/\*\s*EQUIPMENT\s*NEEDED:\s*(.+?)(?=\s*\*[A-Z]|\s*Dates:|Select Dates|Quantity:|$)/is);
+          
+          // Debug: Log the exact text around EQUIPMENT NEEDED
+          try {
+            const equipmentIndex = combinedText.indexOf('EQUIPMENT NEEDED');
+            if (equipmentIndex !== -1) {
+              const contextStart = Math.max(0, equipmentIndex - 50);
+              const contextEnd = Math.min(combinedText.length, equipmentIndex + 200);
+              const context = combinedText.substring(contextStart, contextEnd);
+              await supa.from('debug_logs').insert({
+                url: url,
+                stage: 'equipment_context',
+                data: { equipmentIndex: equipmentIndex, context: context, matchResult: equipmentMatch ? equipmentMatch[1] : null }
+              });
+            }
+          } catch (e) {} // Ignore errors
+          
         if (equipmentMatch) {
           equipmentNeeded = equipmentMatch[1].trim();
           // Log successful extraction directly to database
