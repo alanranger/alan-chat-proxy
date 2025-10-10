@@ -34,6 +34,56 @@ function parseCSV(csvText){
   return rows;
 }
 
+async function checkForChangedUrls(urls) {
+  const changedUrls = [];
+  const client = supa();
+  
+  for (const url of urls) {
+    try {
+      // Get last processed timestamp for this URL
+      const { data: existing } = await client
+        .from('url_last_processed')
+        .select('last_modified_header, last_processed_at')
+        .eq('url', url)
+        .single();
+      
+      // Make HEAD request to check Last-Modified header
+      const response = await fetch(url, { method: 'HEAD' });
+      const lastModifiedHeader = response.headers.get('last-modified');
+      
+      if (!lastModifiedHeader) {
+        // If no Last-Modified header, assume it changed (first time or no header)
+        changedUrls.push(url);
+        continue;
+      }
+      
+      const lastModified = new Date(lastModifiedHeader);
+      const lastProcessed = existing ? new Date(existing.last_processed_at) : new Date(0);
+      
+      // If Last-Modified is newer than our last processed time, URL has changed
+      if (lastModified > lastProcessed) {
+        changedUrls.push(url);
+      }
+      
+      // Update our tracking record
+      await client
+        .from('url_last_processed')
+        .upsert({
+          url,
+          last_modified_header: lastModified.toISOString(),
+          last_processed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        
+    } catch (e) {
+      // If we can't check, assume it changed to be safe
+      changedUrls.push(url);
+    }
+  }
+  
+  return changedUrls;
+}
+
 async function readUrlsFromRepo(){
   let content = null;
   try {
@@ -81,6 +131,7 @@ export default async function handler(req, res){
     if(action==='run' || action==='manual'){
       const startedAt = new Date().toISOString();
       let urls = [];
+      let changedUrls = [];
       let chunks = [];
       let ingested = 0;
       let failed = 0;
@@ -88,14 +139,18 @@ export default async function handler(req, res){
 
       try {
         urls = await readUrlsFromRepo();
+        
+        // Check which URLs have changed since last run
+        changedUrls = await checkForChangedUrls(urls);
+        
         const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
         const token = process.env.INGEST_TOKEN || '';
         const protectionBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN || '';
 
-        if (protectionBypass && token) {
-          const batchSize = 20; // Process all URLs in smaller batches to avoid timeouts
-          for(let i=0;i<urls.length;i+=batchSize){
-            const part = urls.slice(i, i+batchSize);
+        if (protectionBypass && token && changedUrls.length > 0) {
+          const batchSize = 20; // Process changed URLs in batches
+          for(let i=0;i<changedUrls.length;i+=batchSize){
+            const part = changedUrls.slice(i, i+batchSize);
             const r = await fetch(`${base}/api/ingest`, {
               method:'POST',
               headers:{
@@ -109,10 +164,10 @@ export default async function handler(req, res){
             let j = null; try { j = JSON.parse(bodyText); } catch {}
             if (r.ok && j && j.ok){ 
               ingested += (j.ingested || part.length); 
-              chunks.push({ idx:i, count: part.length, ok:true }); 
+              chunks.push({ idx:i, count: part.length, ok:true, urls: part }); 
             } else { 
               failed += part.length; 
-              chunks.push({ idx:i, count: part.length, ok:false, error: (j && (j.error||j.detail)) || bodyText }); 
+              chunks.push({ idx:i, count: part.length, ok:false, error: (j && (j.error||j.detail)) || bodyText, urls: part }); 
             }
           }
           // Finalize mappings after all batches
@@ -120,7 +175,9 @@ export default async function handler(req, res){
             await fetch(`${base}/api/tools?action=finalize`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'x-vercel-protection-bypass': protectionBypass } });
           }catch{}
         } else {
-          chunks.push({ note: `Bypass token: ${protectionBypass ? 'present' : 'missing'}, Ingest token: ${token ? 'present' : 'missing'}` });
+          chunks.push({ 
+            note: `Bypass token: ${protectionBypass ? 'present' : 'missing'}, Ingest token: ${token ? 'present' : 'missing'}, Changed URLs: ${changedUrls.length}` 
+          });
         }
       } catch (e) {
         error = String(e?.message || e);
@@ -134,6 +191,7 @@ export default async function handler(req, res){
           started_at: startedAt,
           finished_at: finishedAt,
           urls_total: urls.length,
+          urls_changed: changedUrls.length,
           ingested_count: ingested,
           failed_count: failed,
           batches_json: chunks
