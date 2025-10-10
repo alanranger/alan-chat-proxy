@@ -396,7 +396,13 @@ async function ingestSingleUrl(url, supa, options = {}) {
         // Extract structured information from page text for products
         let enhancedDescription = item.description || null;
         if (normalizeKind(item, url) === 'product' && text) {
+          console.log(`[INGEST DEBUG] Processing product for URL: ${url}`);
+          console.log(`[INGEST DEBUG] Text length: ${text.length}`);
+          console.log(`[INGEST DEBUG] Text sample: ${text.substring(0, 500)}...`);
+          
           const structuredInfo = extractStructuredInfo(text);
+          console.log(`[INGEST DEBUG] Extracted structured info:`, structuredInfo);
+          
           if (structuredInfo.equipmentNeeded || structuredInfo.experienceLevel) {
             // Enhance description with structured information
             const parts = [];
@@ -404,6 +410,9 @@ async function ingestSingleUrl(url, supa, options = {}) {
             if (structuredInfo.equipmentNeeded) parts.push(`Equipment Needed: ${structuredInfo.equipmentNeeded}`);
             if (structuredInfo.experienceLevel) parts.push(`Experience Level: ${structuredInfo.experienceLevel}`);
             enhancedDescription = parts.join('\n');
+            console.log(`[INGEST DEBUG] Enhanced description: ${enhancedDescription}`);
+          } else {
+            console.log(`[INGEST DEBUG] No structured info found, using original description`);
           }
         }
         
