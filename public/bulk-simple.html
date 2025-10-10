@@ -234,6 +234,8 @@
             <button class="btn" onclick="exportMappings()" style="font-size:12px;padding:6px 10px;">⬇️ Export Mappings</button>
             <button class="btn" onclick="exportUnmapped()" style="font-size:12px;padding:6px 10px;">⬇️ Export Unmapped</button>
             <button class="btn" onclick="exportReconcile()" style="font-size:12px;padding:6px 10px;">⬇️ Export Reconcile</button>
+            <button class="btn" onclick="viewLightRefresh()" style="font-size:12px;padding:6px 10px;">🕒 View Light Refresh Logs</button>
+            <button class="btn" onclick="copyLightRefresh()" style="font-size:12px;padding:6px 10px;">📋 Copy Logs</button>
             <button class="btn" onclick="runTestQuestions()" style="font-size:12px;padding:6px 10px;">🤖 Test Questions</button>
             <button class="btn btn-danger" onclick="clearResults()" style="font-size:12px;padding:6px 10px;">🗑️ Clear Log</button>
           </div>
@@ -331,6 +333,7 @@
       <div class="results" id="results">
         Ready to import your data. Select your CSV files and click "Import All CSV Files".
       </div>
+      <div id="lightRefreshResults" class="results" style="margin-top:10px; display:none;"></div>
     </div>
 
     <!-- QA Spot Checks Section -->
@@ -1662,6 +1665,49 @@
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(dl);
         addResult('⬇️ Exported reconcile CSV', 'success');
       }catch(e){ addResult(`❌ Export reconcile error: ${e.message}`, 'error'); }
+    }
+
+    // View hourly light refresh logs
+    async function viewLightRefresh(){
+      try{
+        const resp = await fetch('/api/light-refresh?action=status&limit=20');
+        const j = await resp.json();
+        const box = document.getElementById('lightRefreshResults');
+        if (!box) return;
+        box.style.display = 'block';
+        if (!resp.ok || !j || j.error){
+          box.textContent = `Error loading light refresh logs: ${j?.detail || resp.status}`;
+          addResult(`❌ Light refresh status failed: ${j?.detail || resp.status}`, 'error');
+          return;
+        }
+        const rows = (j.rows||[]).map(r => ({
+          started_at: r.started_at,
+          finished_at: r.finished_at,
+          urls_total: r.urls_total,
+          ingested_count: r.ingested_count,
+          failed_count: r.failed_count
+        }));
+        const header = 'started_at,finished_at,urls_total,ingested,failed';
+        const lines = rows.map(r => `${r.started_at},${r.finished_at},${r.urls_total},${r.ingested_count},${r.failed_count}`);
+        box.textContent = [header].concat(lines).join('\n');
+        addResult(`🕒 Loaded ${rows.length} light refresh runs`, 'info');
+      }catch(e){
+        addResult(`❌ Light refresh status error: ${e.message}`, 'error');
+      }
+    }
+
+    // Copy the light refresh results to clipboard
+    function copyLightRefresh(){
+      const box = document.getElementById('lightRefreshResults');
+      if (!box || !box.textContent){ addResult('ℹ️ No light refresh logs to copy', 'info'); return; }
+      const txt = box.textContent;
+      if (navigator.clipboard && window.isSecureContext){
+        navigator.clipboard.writeText(txt).then(()=>{
+          addResult('✅ Light refresh logs copied to clipboard', 'success');
+        }).catch(e=> addResult('❌ Copy failed: '+e.message, 'error'));
+      } else {
+        fallbackCopyTextToClipboard(txt);
+      }
     }
 
     // CSV parser (minimal, quoted fields supported)
