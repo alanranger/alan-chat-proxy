@@ -258,6 +258,11 @@ async function importCourseProductMetadata(rows, supa) {
 
 // Import CSV metadata for workshop products
 async function importWorkshopProductMetadata(rows, supa) {
+  console.log('DEBUG: importWorkshopProductMetadata - Total rows:', rows.length);
+  console.log('DEBUG: importWorkshopProductMetadata - First row keys:', Object.keys(rows[0] || {}));
+  console.log('DEBUG: importWorkshopProductMetadata - First row Full Url:', rows[0]?.['Full Url']);
+  console.log('DEBUG: importWorkshopProductMetadata - First row full url:', rows[0]?.['full url']);
+  
   const metadata = rows.map(row => ({
     csv_type: 'workshop_products',
     url: row['Full Url'] || row['full url'] || row.url,
@@ -268,6 +273,9 @@ async function importWorkshopProductMetadata(rows, supa) {
     image_url: row.Image || row.image,
     excerpt: null
   })).filter(item => item.url);
+  
+  console.log('DEBUG: importWorkshopProductMetadata - Filtered count:', metadata.length);
+  console.log('DEBUG: importWorkshopProductMetadata - Sample metadata:', metadata[0]);
 
   if (metadata.length > 0) {
     const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
