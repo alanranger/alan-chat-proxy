@@ -771,9 +771,16 @@ export default async function handler(req, res) {
           debugInfo = courseResult.debug;
           break;
         case 'workshop_events':
-          const workshopResult = await importWorkshopEventMetadata(rows, supa);
-          metadataCount = workshopResult.count;
-          debugInfo = workshopResult.debug;
+          // Check if this is actually workshop products (File 05 has same structure as course_products)
+          if (rows[0] && rows[0]['Full Url'] && !rows[0]['Event_URL']) {
+            // This is workshop products, not events
+            const workshopProductResult = await importWorkshopProductMetadata(rows, supa);
+            metadataCount = workshopProductResult.count;
+          } else {
+            const workshopResult = await importWorkshopEventMetadata(rows, supa);
+            metadataCount = workshopResult.count;
+            debugInfo = workshopResult.debug;
+          }
           break;
         case 'course_products':
           const courseProductResult = await importCourseProductMetadata(rows, supa);
