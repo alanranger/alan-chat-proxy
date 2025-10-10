@@ -146,7 +146,7 @@ function normalizeDateDayFirst(input) {
 async function importBlogMetadata(rows, supa) {
   const metadata = rows.map(row => ({
     csv_type: 'blog',
-    url: row['Full Url'] || row['full url'] || row.url,
+    url: row['full url'] || row['Full Url'] || row.url,
     title: row.Title || row.title,
     categories: row.Categories ? row.Categories.split(';').map(c => c.trim()) : [],
     tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
@@ -167,14 +167,14 @@ async function importCourseEventMetadata(rows, supa) {
   const debugInfo = {
     totalRows: rows.length,
     firstRowKeys: Object.keys(rows[0] || {}),
-    firstRowEventUrl: rows[0]?.Event_URL,
+    firstRowEventUrl: rows[0]?.event_url || rows[0]?.Event_URL,
     sampleRow: rows[0]
   };
   
   const metadata = rows.map(row => ({
     csv_type: 'course_events',
-    url: row.Event_URL || row['Event URL'] || row.url,
-    title: row.Event_Title || row['Event Title'] || row.title,
+    url: row.event_url || row.Event_URL || row['Event URL'] || row.url,
+    title: row.event_title || row.Event_Title || row['Event Title'] || row.title,
     categories: row.Category ? row.Category.split(',').map(c => c.trim()) : [],
     tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
     start_date: normalizeDateDayFirst(row.Start_Date || row['Start Date']),
@@ -204,14 +204,14 @@ async function importWorkshopEventMetadata(rows, supa) {
   const debugInfo = {
     totalRows: rows.length,
     firstRowKeys: Object.keys(rows[0] || {}),
-    firstRowEventUrl: rows[0]?.Event_URL,
+    firstRowEventUrl: rows[0]?.event_url || rows[0]?.Event_URL,
     sampleRow: rows[0]
   };
   
   const metadata = rows.map(row => ({
     csv_type: 'workshop_events',
-    url: row.Event_URL || row['Event URL'] || row.url,
-    title: row.Event_Title || row['Event Title'] || row.title,
+    url: row.event_url || row.Event_URL || row['Event URL'] || row.url,
+    title: row.event_title || row.Event_Title || row['Event Title'] || row.title,
     categories: row.Category ? row.Category.split(',').map(c => c.trim()) : [],
     tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
     start_date: normalizeDateDayFirst(row.Start_Date || row['Start Date']),
@@ -240,7 +240,7 @@ async function importWorkshopEventMetadata(rows, supa) {
 async function importCourseProductMetadata(rows, supa) {
   const metadata = rows.map(row => ({
     csv_type: 'course_products',
-    url: row['Full Url'] || row['full url'] || row.url,
+    url: row['full url'] || row['Full Url'] || row.url,
     title: row.Title || row.title,
     categories: row.Categories ? row.Categories.split(';').map(c => c.trim()) : [],
     tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
@@ -260,12 +260,12 @@ async function importCourseProductMetadata(rows, supa) {
 async function importWorkshopProductMetadata(rows, supa) {
   const metadata = rows.map(row => ({
     csv_type: 'workshop_products',
-    url: row['Full Url'] || row['full url'] || row.url,
-    title: row.Title || row.title,
-    categories: row.Categories ? row.Categories.split(';').map(c => c.trim()) : [],
-    tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
-    publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
-    image_url: row.Image || row.image,
+    url: row['full url'] || row['Full Url'] || row.url,
+    title: row.title || row.Title,
+    categories: row.categories ? row.categories.split(';').map(c => c.trim()) : (row.Categories ? row.Categories.split(';').map(c => c.trim()) : []),
+    tags: row.tags ? row.tags.split(',').map(t => t.trim()) : (row.Tags ? row.Tags.split(',').map(t => t.trim()) : []),
+    publish_date: normalizeDateDayFirst(row['publish on'] || row['Publish On']),
+    image_url: row.image || row.Image,
     excerpt: null
   })).filter(item => item.url);
 
