@@ -392,59 +392,51 @@ async function ingestSingleUrl(url, supa, options = {}) {
     
     stage = 'store_entities';
     if (jsonLd) {
-      // Log JSON-LD objects found
-      await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Log JSON-LD objects found directly to database
+      try {
+        await supa.from('debug_logs').insert({
           url: url,
           stage: 'jsonld_objects',
           data: { count: jsonLd.length, objects: jsonLd.map((item, idx) => ({ idx, type: item['@type'], kind: normalizeKind(item, url) })) }
-        })
-      }).catch(() => {}); // Ignore errors
+        });
+      } catch (e) {} // Ignore errors
       
       // Extract structured information from page chunks for products
       let enhancedDescriptions = {};
       if (chunks && chunks.length > 0) {
         // Combine all chunk text for better extraction
         const combinedText = chunks.join(' ');
-        // Log combined text info
-        await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        // Log combined text info directly to database
+        try {
+          await supa.from('debug_logs').insert({
             url: url,
             stage: 'combined_text',
             data: { length: combinedText.length, sample: combinedText.substring(0, 500) }
-          })
-        }).catch(() => {});
+          });
+        } catch (e) {} // Ignore errors
         
         // Simple, robust extraction for Equipment Needed
         let equipmentNeeded = null;
         const equipmentMatch = combinedText.match(/\*\s*EQUIPMENT\s*NEEDED:\s*(.+?)(?=\s*\*[A-Z]|\s*Dates:|$)/i);
         if (equipmentMatch) {
           equipmentNeeded = equipmentMatch[1].trim();
-          // Log successful extraction
-          await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+          // Log successful extraction directly to database
+          try {
+            await supa.from('debug_logs').insert({
               url: url,
               stage: 'equipment_extracted',
               data: { equipmentNeeded: equipmentNeeded }
-            })
-          }).catch(() => {});
+            });
+          } catch (e) {} // Ignore errors
         } else {
-          // Log failed extraction
-          await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+          // Log failed extraction directly to database
+          try {
+            await supa.from('debug_logs').insert({
               url: url,
               stage: 'equipment_failed',
               data: { combinedText: combinedText.substring(0, 1000) }
-            })
-          }).catch(() => {});
+            });
+          } catch (e) {} // Ignore errors
         }
         
         // Simple, robust extraction for Experience Level
@@ -462,54 +454,46 @@ async function ingestSingleUrl(url, supa, options = {}) {
             if (equipmentNeeded) parts.push(`Equipment Needed: ${equipmentNeeded}`);
             if (experienceLevel) parts.push(`Experience Level: ${experienceLevel}`);
             enhancedDescriptions[idx] = parts.join('\n');
-            // Log enhanced description creation
-            await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+            // Log enhanced description creation directly to database
+            try {
+              await supa.from('debug_logs').insert({
                 url: url,
                 stage: 'enhanced_description',
                 data: { idx: idx, description: enhancedDescriptions[idx].substring(0, 300) }
-              })
-            }).catch(() => {});
+              });
+            } catch (e) {} // Ignore errors
           }
         });
       } else {
-        // Log no chunks available
-        await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        // Log no chunks available directly to database
+        try {
+          await supa.from('debug_logs').insert({
             url: url,
             stage: 'no_chunks',
             data: { chunksLength: chunks ? chunks.length : 0 }
-          })
-        }).catch(() => {});
+          });
+        } catch (e) {} // Ignore errors
       }
       
-      // Log enhanced descriptions object
-      await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Log enhanced descriptions object directly to database
+      try {
+        await supa.from('debug_logs').insert({
           url: url,
           stage: 'enhanced_descriptions',
           data: enhancedDescriptions
-        })
-      }).catch(() => {});
+        });
+      } catch (e) {} // Ignore errors
       
       const entities = jsonLd.map((item, idx) => {
         const enhancedDescription = enhancedDescriptions[idx] || item.description || null;
-        // Log entity creation
-        fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        // Log entity creation directly to database
+        try {
+          await supa.from('debug_logs').insert({
             url: url,
             stage: 'entity_creation',
             data: { idx: idx, kind: normalizeKind(item, url), hasEnhanced: !!enhancedDescriptions[idx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0 }
-          })
-        }).catch(() => {});
+          });
+        } catch (e) {} // Ignore errors
         
         return {
           url: url,
