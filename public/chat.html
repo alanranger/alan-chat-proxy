@@ -868,7 +868,7 @@ function renderProductCard(prod){
           ${priceHead ? `<div class="product-price">${escapeHTML(priceHead)}</div>` : ''}
         </div>
         <div class="product-content">
-          ${md ? `<p class="product-description">${escapeHTML(md)}</p>` : ''}
+          ${(!facts.participants && !facts.fitness && !facts.location && md) ? `<p class="product-description">${escapeHTML(md)}</p>` : ''}
           ${lines.join('')}
           ${li ? `<div class="product-options"><ul>${li}</ul></div>` : ''}
         </div>
