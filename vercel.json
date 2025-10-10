@@ -2,8 +2,7 @@
   "crons": [
     {
       "path": "/api/light-refresh?action=run",
-      "schedule": "0 1 * * *",
-      "tz": "Europe/London"
+      "schedule": "0 1 * * *"
     }
   ]
 }
