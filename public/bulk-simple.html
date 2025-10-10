@@ -100,6 +100,16 @@
             <div class="stat-value" id="workshop-products-count">-</div>
             <div class="stat-desc">Workshop product pages</div>
           </div>
+          <div class="stat-box">
+            <div class="stat-label">Site URLs</div>
+            <div class="stat-value" id="site-urls-count">-</div>
+            <div class="stat-desc">Site URLs for content ingestion</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Product Schema</div>
+            <div class="stat-value" id="product-schema-count">-</div>
+            <div class="stat-desc">Product schema and metadata</div>
+          </div>
         </div>
       </div>
 
@@ -1076,7 +1086,7 @@
       }
       
       // Correct endpoint (csv-import) so imports actually run
-      const result = await apiCall('/api/csv-import', { csvData: csvText, contentType });
+      const result = await apiCall('https://alan-chat-proxy.vercel.app/api/csv-import', { csvData: csvText, contentType });
       
         if (result && result.ok) {
           addResult(`✅ ${contentType} import successful: ${result.imported}/${actualRowCount} records (CSV rows → ingested)`, 'success');
