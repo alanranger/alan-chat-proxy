@@ -398,12 +398,8 @@ async function ingestSingleUrl(url, supa, options = {}) {
         if (normalizeKind(item, url) === 'product') {
           // Use the combined text from all chunks for better extraction
           const combinedText = chunks.map(chunk => chunk.chunk_text).join(' ');
-          console.log(`[INGEST DEBUG] Processing product for URL: ${url}`);
-          console.log(`[INGEST DEBUG] Combined text length: ${combinedText.length}`);
-          console.log(`[INGEST DEBUG] Combined text sample: ${combinedText.substring(0, 500)}...`);
           
           const structuredInfo = extractStructuredInfo(combinedText);
-          console.log(`[INGEST DEBUG] Extracted structured info:`, structuredInfo);
           
           if (structuredInfo.equipmentNeeded || structuredInfo.experienceLevel) {
             // Enhance description with structured information
@@ -412,9 +408,6 @@ async function ingestSingleUrl(url, supa, options = {}) {
             if (structuredInfo.equipmentNeeded) parts.push(`Equipment Needed: ${structuredInfo.equipmentNeeded}`);
             if (structuredInfo.experienceLevel) parts.push(`Experience Level: ${structuredInfo.experienceLevel}`);
             enhancedDescription = parts.join('\n');
-            console.log(`[INGEST DEBUG] Enhanced description: ${enhancedDescription}`);
-          } else {
-            console.log(`[INGEST DEBUG] No structured info found, using original description`);
           }
         }
         
