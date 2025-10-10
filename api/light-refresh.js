@@ -78,7 +78,7 @@ export default async function handler(req, res){
       return send(res, 200, { ok:true, count:urls.length, sample:urls.slice(0,10) });
     }
 
-    if(action==='run'){
+    if(action==='run' || action==='manual'){
       const startedAt = new Date().toISOString();
       let urls = [];
       let chunks = [];
@@ -93,7 +93,7 @@ export default async function handler(req, res){
         const protectionBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN || '';
 
         if (protectionBypass && token) {
-          const batchSize = 40; // Process all URLs in batches
+          const batchSize = 20; // Process all URLs in smaller batches to avoid timeouts
           for(let i=0;i<urls.length;i+=batchSize){
             const part = urls.slice(i, i+batchSize);
             const r = await fetch(`${base}/api/ingest`, {
