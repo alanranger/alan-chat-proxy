@@ -2178,6 +2178,9 @@
         const data = await response.json();
         const csvMetadataCounts = data.csv_metadata || {};
         
+        console.log('DEBUG: Dashboard update - API response:', data);
+        console.log('DEBUG: Dashboard update - CSV metadata counts:', csvMetadataCounts);
+        
         // Update dashboard elements
         const updates = {
           'blog-count': csvMetadataCounts.blog || 0,
@@ -2193,8 +2196,11 @@
         Object.entries(updates).forEach(([id, count]) => {
           const element = document.getElementById(id);
           if (element) {
+            console.log(`DEBUG: Updating ${id} to ${count}`);
             element.textContent = count;
             element.style.color = count > 0 ? '#4CAF50' : '#666';
+          } else {
+            console.warn(`DEBUG: Element ${id} not found`);
           }
         });
         
