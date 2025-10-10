@@ -140,6 +140,180 @@ function normalizeDateDayFirst(input) {
   return s;
 }
 
+/* ========== CSV Metadata Import Functions ========== */
+
+// Import CSV metadata for blog articles
+async function importBlogMetadata(rows) {
+  const metadata = rows.map(row => ({
+    csv_type: 'blog',
+    url: row['Full Url'] || row['full url'] || row.url,
+    title: row.Title || row.title,
+    categories: row.Categories ? row.Categories.split(';').map(c => c.trim()) : [],
+    tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
+    publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
+    image_url: row.Image || row.image,
+    excerpt: null
+  })).filter(item => item.url);
+
+  if (metadata.length > 0) {
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    if (error) throw error;
+  }
+  return metadata.length;
+}
+
+// Import CSV metadata for course events
+async function importCourseEventMetadata(rows) {
+  const metadata = rows.map(row => ({
+    csv_type: 'course_events',
+    url: row.Event_URL || row['Event URL'] || row.url,
+    title: row.Event_Title || row['Event Title'] || row.title,
+    categories: row.Category ? row.Category.split(',').map(c => c.trim()) : [],
+    tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
+    start_date: normalizeDateDayFirst(row.Start_Date || row['Start Date']),
+    end_date: normalizeDateDayFirst(row.End_Date || row['End Date']),
+    start_time: row.Start_Time || row['Start Time'],
+    end_time: row.End_Time || row['End Time'],
+    location_name: row.Location_Business_Name || row['Location Business Name'],
+    location_address: row.Location_Address || row['Location Address'],
+    location_city_state_zip: row.Location_City_State_ZIP || row['Location City State ZIP'],
+    excerpt: row.Excerpt || row.excerpt,
+    image_url: row.Event_Image || row['Event Image'],
+    workflow_state: row.Workflow_State || row['Workflow State']
+  })).filter(item => item.url);
+
+  if (metadata.length > 0) {
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    if (error) throw error;
+  }
+  return metadata.length;
+}
+
+// Import CSV metadata for workshop events
+async function importWorkshopEventMetadata(rows) {
+  const metadata = rows.map(row => ({
+    csv_type: 'workshop_events',
+    url: row.Event_URL || row['Event URL'] || row.url,
+    title: row.Event_Title || row['Event Title'] || row.title,
+    categories: row.Category ? row.Category.split(',').map(c => c.trim()) : [],
+    tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
+    start_date: normalizeDateDayFirst(row.Start_Date || row['Start Date']),
+    end_date: normalizeDateDayFirst(row.End_Date || row['End Date']),
+    start_time: row.Start_Time || row['Start Time'],
+    end_time: row.End_Time || row['End Time'],
+    location_name: row.Location_Business_Name || row['Location Business Name'],
+    location_address: row.Location_Address || row['Location Address'],
+    location_city_state_zip: row.Location_City_State_ZIP || row['Location City State ZIP'],
+    excerpt: row.Excerpt || row.excerpt,
+    image_url: row.Event_Image || row['Event Image'],
+    workflow_state: row.Workflow_State || row['Workflow State']
+  })).filter(item => item.url);
+
+  if (metadata.length > 0) {
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    if (error) throw error;
+  }
+  return metadata.length;
+}
+
+// Import CSV metadata for course products
+async function importCourseProductMetadata(rows) {
+  const metadata = rows.map(row => ({
+    csv_type: 'course_products',
+    url: row['Full Url'] || row['full url'] || row.url,
+    title: row.Title || row.title,
+    categories: row.Categories ? row.Categories.split(';').map(c => c.trim()) : [],
+    tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
+    publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
+    image_url: row.Image || row.image,
+    excerpt: null
+  })).filter(item => item.url);
+
+  if (metadata.length > 0) {
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    if (error) throw error;
+  }
+  return metadata.length;
+}
+
+// Import CSV metadata for workshop products
+async function importWorkshopProductMetadata(rows) {
+  const metadata = rows.map(row => ({
+    csv_type: 'workshop_products',
+    url: row['Full Url'] || row['full url'] || row.url,
+    title: row.Title || row.title,
+    categories: row.Categories ? row.Categories.split(';').map(c => c.trim()) : [],
+    tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
+    publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
+    image_url: row.Image || row.image,
+    excerpt: null
+  })).filter(item => item.url);
+
+  if (metadata.length > 0) {
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    if (error) throw error;
+  }
+  return metadata.length;
+}
+
+// Import CSV metadata for site URLs
+async function importSiteUrlMetadata(rows) {
+  const metadata = rows.map(row => ({
+    csv_type: 'site_urls',
+    url: row.url,
+    title: row.title || null,
+    categories: [],
+    tags: [],
+    publish_date: null,
+    image_url: null,
+    excerpt: null
+  })).filter(item => item.url);
+
+  if (metadata.length > 0) {
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    if (error) throw error;
+  }
+  return metadata.length;
+}
+
+// Import CSV metadata for product schema
+async function importProductSchemaMetadata(rows) {
+  const metadata = rows.map(row => {
+    let jsonLdData = null;
+    try {
+      // Extract JSON-LD from the structured data field
+      const jsonLdText = row['JSON-LD Structured Data'] || row['json-ld structured data'];
+      if (jsonLdText) {
+        // Remove script tags and extract JSON
+        const jsonMatch = jsonLdText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          jsonLdData = JSON.parse(jsonMatch[0]);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse JSON-LD for:', row.Title);
+    }
+
+    return {
+      csv_type: 'product_schema',
+      url: jsonLdData?.url || null,
+      title: row.Title || row.title,
+      categories: [],
+      tags: [],
+      publish_date: null,
+      image_url: jsonLdData?.image || null,
+      excerpt: jsonLdData?.description || null,
+      json_ld_data: jsonLdData
+    };
+  }).filter(item => item.url);
+
+  if (metadata.length > 0) {
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    if (error) throw error;
+  }
+  return metadata.length;
+}
+
 /* ========== Blog data transformation ========== */
 function transformBlogData(row) {
   const title = row.title;
@@ -556,6 +730,48 @@ export default async function handler(req, res) {
     if (!rows.length) return sendJSON(res, 400, { error: 'bad_request', detail: 'No valid CSV data found', stage });
 
     stage = 'transform_data';
+    
+    // Check if this is a metadata import (new mode)
+    if (contentType === 'metadata') {
+      const { csvType } = req.body || {};
+      if (!csvType) return sendJSON(res, 400, { error: 'bad_request', detail: 'Provide "csvType" for metadata import', stage });
+      
+      let metadataCount = 0;
+      switch (csvType) {
+        case 'blog':
+          metadataCount = await importBlogMetadata(rows);
+          break;
+        case 'course_events':
+          metadataCount = await importCourseEventMetadata(rows);
+          break;
+        case 'workshop_events':
+          metadataCount = await importWorkshopEventMetadata(rows);
+          break;
+        case 'course_products':
+          metadataCount = await importCourseProductMetadata(rows);
+          break;
+        case 'workshop_products':
+          metadataCount = await importWorkshopProductMetadata(rows);
+          break;
+        case 'site_urls':
+          metadataCount = await importSiteUrlMetadata(rows);
+          break;
+        case 'product_schema':
+          metadataCount = await importProductSchemaMetadata(rows);
+          break;
+        default:
+          return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid csvType for metadata import', stage });
+      }
+      
+      return sendJSON(res, 200, { 
+        success: true, 
+        stage: 'metadata_import_complete',
+        metadata_imported: metadataCount,
+        csv_type: csvType
+      });
+    }
+    
+    // Original entity import logic
     const entities = [];
     
     for (const row of rows) {
@@ -584,7 +800,7 @@ export default async function handler(req, res) {
           entity = transformEventData(row);
           break;
         default:
-          return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid contentType. Use: blog, workshop, service, product, event', stage });
+          return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid contentType. Use: blog, workshop, service, product, event, metadata', stage });
       }
       
       if (entity) entities.push(entity);
