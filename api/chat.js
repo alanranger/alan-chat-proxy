@@ -1499,6 +1499,18 @@ async function resolveEventsAndProduct(client, { keywords, pageContext = null })
 async function extractRelevantInfo(query, dataContext) {
   const { products, events, articles } = dataContext;
   const lowerQuery = query.toLowerCase();
+  const scrubAttrs = (s)=> String(s||'')
+    .replace(/\s*style="[^"]*"/gi,'')
+    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
+    .replace(/\s*contenteditable="[^"]*"/gi,'')
+    .replace(/\s*>\s*/g,' ')
+    .replace(/<[^>]*>/g,' ')
+    .replace(/\s+/g,' ').trim();
+  const summarize = (t)=>{
+    const clean = scrubAttrs(t||'');
+    const parts = clean.split(/[.!?]+/).map(s=>s.trim()).filter(s=>s.length>30);
+    return parts.slice(0,2).join('. ') + (parts.length?'.':'');
+  };
   
   // For event-based questions, prioritize the structured event data
   if (events && events.length > 0) {
@@ -1563,7 +1575,13 @@ async function extractRelevantInfo(query, dataContext) {
           year: 'numeric' 
         });
         console.log(`✅ RAG: Found date="${formattedDate}" in structured event data`);
-        return `The next workshop is scheduled for **${formattedDate}**. This gives you plenty of time to prepare and book your place.`;
+        const label = (event.subtype && String(event.subtype).toLowerCase()==='course') ? 'course' : 'workshop';
+        let brief = '';
+        if (products && products.length && (products[0].description || products[0]?.raw?.description)) {
+          brief = summarize(products[0].description || products[0]?.raw?.description);
+        }
+        const lead = `The next ${label} is scheduled for **${formattedDate}**.`;
+        return brief ? `${lead} ${brief}` : `${lead} This gives you plenty of time to prepare and book your place.`;
       }
     }
     
