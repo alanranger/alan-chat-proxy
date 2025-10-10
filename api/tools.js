@@ -235,6 +235,34 @@ export default async function handler(req, res) {
           const { count } = await supa.from('page_chunks').select('id', { head: true, count: 'estimated' }).limit(1);
           warm.page_chunks = count ?? null;
         } catch {}
+        try {
+          const { count } = await supa.from('csv_metadata').select('id', { head: true, count: 'estimated' }).limit(1);
+          warm.csv_metadata = count ?? null;
+        } catch {}
+        try {
+          const { count } = await supa.from('v_metadata_enrichment').select('*', { head: true, count: 'estimated' }).limit(1);
+          warm.v_metadata_enrichment = count ?? null;
+        } catch {}
+        try {
+          const { count } = await supa.from('v_blog_enrichment').select('*', { head: true, count: 'estimated' }).limit(1);
+          warm.v_blog_enrichment = count ?? null;
+        } catch {}
+        try {
+          const { count } = await supa.from('v_course_event_enrichment').select('*', { head: true, count: 'estimated' }).limit(1);
+          warm.v_course_event_enrichment = count ?? null;
+        } catch {}
+        try {
+          const { count } = await supa.from('v_workshop_event_enrichment').select('*', { head: true, count: 'estimated' }).limit(1);
+          warm.v_workshop_event_enrichment = count ?? null;
+        } catch {}
+        try {
+          const { count } = await supa.from('v_course_product_enrichment').select('*', { head: true, count: 'estimated' }).limit(1);
+          warm.v_course_product_enrichment = count ?? null;
+        } catch {}
+        try {
+          const { count } = await supa.from('v_workshop_product_enrichment').select('*', { head: true, count: 'estimated' }).limit(1);
+          warm.v_workshop_product_enrichment = count ?? null;
+        } catch {}
 
         return sendJSON(res, 200, { ok: true, before, after, warm });
       } catch (e) {
