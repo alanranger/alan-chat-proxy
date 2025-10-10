@@ -396,7 +396,11 @@ async function ingestSingleUrl(url, supa, options = {}) {
       let enhancedDescriptions = {};
       if (chunks && chunks.length > 0) {
         const combinedText = chunks.map(chunk => chunk.chunk_text).join(' ');
+        console.log(`[INGEST DEBUG] Combined text length: ${combinedText.length}`);
+        console.log(`[INGEST DEBUG] Combined text contains Equipment Needed: ${combinedText.includes('EQUIPMENT NEEDED')}`);
+        
         const structuredInfo = extractStructuredInfo(combinedText);
+        console.log(`[INGEST DEBUG] Extracted structured info:`, structuredInfo);
         
         // Store enhanced descriptions for products
         jsonLd.forEach((item, idx) => {
@@ -406,6 +410,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
             if (structuredInfo.equipmentNeeded) parts.push(`Equipment Needed: ${structuredInfo.equipmentNeeded}`);
             if (structuredInfo.experienceLevel) parts.push(`Experience Level: ${structuredInfo.experienceLevel}`);
             enhancedDescriptions[idx] = parts.join('\n');
+            console.log(`[INGEST DEBUG] Enhanced description for product ${idx}:`, enhancedDescriptions[idx]);
           }
         });
       }
