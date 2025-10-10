@@ -396,21 +396,29 @@ async function ingestSingleUrl(url, supa, options = {}) {
       let enhancedDescriptions = {};
       if (chunks && chunks.length > 0) {
         const combinedText = chunks.map(chunk => chunk.chunk_text).join(' ');
-        console.log(`[INGEST DEBUG] Combined text length: ${combinedText.length}`);
-        console.log(`[INGEST DEBUG] Combined text contains Equipment Needed: ${combinedText.includes('EQUIPMENT NEEDED')}`);
         
-        const structuredInfo = extractStructuredInfo(combinedText);
-        console.log(`[INGEST DEBUG] Extracted structured info:`, structuredInfo);
+        // Simple, robust extraction for Equipment Needed
+        let equipmentNeeded = null;
+        const equipmentMatch = combinedText.match(/EQUIPMENT\s*NEEDED:\s*(.+?)(?=\s*\*[A-Z]|\s*Dates:|$)/i);
+        if (equipmentMatch) {
+          equipmentNeeded = equipmentMatch[1].trim();
+        }
+        
+        // Simple, robust extraction for Experience Level
+        let experienceLevel = null;
+        const experienceMatch = combinedText.match(/Experience\s*-\s*Level:\s*([^*]+?)(?:\*|$)/i);
+        if (experienceMatch) {
+          experienceLevel = experienceMatch[1].trim();
+        }
         
         // Store enhanced descriptions for products
         jsonLd.forEach((item, idx) => {
           if (normalizeKind(item, url) === 'product') {
             const parts = [];
             if (item.description) parts.push(item.description);
-            if (structuredInfo.equipmentNeeded) parts.push(`Equipment Needed: ${structuredInfo.equipmentNeeded}`);
-            if (structuredInfo.experienceLevel) parts.push(`Experience Level: ${structuredInfo.experienceLevel}`);
+            if (equipmentNeeded) parts.push(`Equipment Needed: ${equipmentNeeded}`);
+            if (experienceLevel) parts.push(`Experience Level: ${experienceLevel}`);
             enhancedDescriptions[idx] = parts.join('\n');
-            console.log(`[INGEST DEBUG] Enhanced description for product ${idx}:`, enhancedDescriptions[idx]);
           }
         });
       }
