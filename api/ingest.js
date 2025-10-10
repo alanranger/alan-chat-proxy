@@ -425,12 +425,18 @@ async function ingestSingleUrl(url, supa, options = {}) {
             if (equipmentNeeded) parts.push(`Equipment Needed: ${equipmentNeeded}`);
             if (experienceLevel) parts.push(`Experience Level: ${experienceLevel}`);
             enhancedDescriptions[idx] = parts.join('\n');
+            console.log('[INGEST DEBUG] Enhanced description for product idx', idx, ':', enhancedDescriptions[idx].substring(0, 300));
           }
         });
+      } else {
+        console.log('[INGEST DEBUG] No chunks available for extraction');
       }
+      
+      console.log('[INGEST DEBUG] Enhanced descriptions object:', JSON.stringify(enhancedDescriptions));
       
       const entities = jsonLd.map((item, idx) => {
         const enhancedDescription = enhancedDescriptions[idx] || item.description || null;
+        console.log('[INGEST DEBUG] Entity idx', idx, 'kind:', normalizeKind(item, url), 'enhanced:', !!enhancedDescriptions[idx]);
         
         return {
           url: url,
