@@ -1398,6 +1398,7 @@ async function buildProductPanelMarkdown(products) {
 
 /* ----------------------------- Event list UI ----------------------------- */
 function formatEventsForUi(events) {
+  // Preserve original fields so the frontend can format times and ranges
   return (events || [])
     .map((e) => ({
       ...e,
@@ -1405,6 +1406,11 @@ function formatEventsForUi(events) {
       when: fmtDateLondon(e.date_start),
       location: e.event_location,
       href: e.event_url,
+      // Pass-through commonly used fields for time rendering
+      date_start: e.date_start,
+      date_end: e.date_end,
+      _csv_start_time: e._csv_start_time || e.start_time || null,
+      _csv_end_time: e._csv_end_time || e.end_time || null,
     }))
     .slice(0, 12);
 }
