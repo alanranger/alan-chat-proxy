@@ -2237,35 +2237,109 @@
       }
     }
 
-    // Global function to render category stats
-    function renderCategoryStats() {
+    // Global function to render category stats (updated for metadata-driven system)
+    async function renderCategoryStats() {
       const el = document.getElementById('categoryStats');
       if (!el) return;
       
-      // Format category names for display
-      const formatCategory = (cat) => {
-        const labels = {
-          'blog_articles': 'Blog Articles',
-          'course_events': 'Course Events',
-          'workshop_events': 'Workshop Events',
-          'course_products': 'Course/Service Products',
-          'workshop_products': 'Workshop Products',
-          'website_urls': 'Website URLs',
-          'json_extraction': 'JSON Product Extraction'
-        };
-        const codes = {
-          'blog_articles': '01',
-          'course_events': '02',
-          'workshop_events': '03',
-          'course_products': '04',
-          'workshop_products': '05',
-          'website_urls': '06',
-          'json_extraction': '07'
-        };
-        const name = labels[cat] || cat;
-        const code = codes[cat] ? ` — ${codes[cat]}` : '';
-        return `${name}${code}`;
-      };
+      try {
+        // Get current counts from the API
+        const token = getToken();
+        const baseUrl = 'https://alan-chat-proxy.vercel.app';
+        
+        const response = await fetch(`${baseUrl}/api/tools?action=counts`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          console.warn('Failed to fetch counts for Debug & Control dashboard:', response.status);
+          return;
+        }
+        
+        const data = await response.json();
+        const csvMetadataCounts = data.csv_metadata || {};
+        
+        // Update the top summary boxes
+        const totalMetadata = Object.values(csvMetadataCounts).reduce((sum, count) => sum + count, 0);
+        document.getElementById('csvMetadataCount').textContent = totalMetadata;
+        document.getElementById('urlsLoadedCount').textContent = data.page_entities || 0;
+        document.getElementById('ingestedCount').textContent = data.page_chunks || 0;
+        document.getElementById('failedCount').textContent = 0; // No failed imports in metadata system
+        document.getElementById('stoppedCount').textContent = 0;
+        document.getElementById('skippedCount').textContent = 0;
+        
+        // Update the foundation/enhancements line
+        const foundationCount = csvMetadataCounts.site_urls || 0;
+        const enhancementsCount = (csvMetadataCounts.blog || 0) + (csvMetadataCounts.course_events || 0) + 
+                                 (csvMetadataCounts.workshop_events || 0) + (csvMetadataCounts.course_products || 0) + 
+                                 (csvMetadataCounts.workshop_products || 0) + (csvMetadataCounts.product_schema || 0);
+        
+        const foundationEl = document.querySelector('.foundation-enhancements');
+        if (foundationEl) {
+          foundationEl.textContent = `Foundation (site_urls): ${foundationCount} • Enhancements (blog/events/workshops/services): ${enhancementsCount}`;
+        }
+        
+        // Update the detailed table
+        const categories = [
+          { key: 'blog', label: 'blog', code: '' },
+          { key: 'course_events', label: 'Course Events', code: ' — 02' },
+          { key: 'workshop_events', label: 'Workshop Events', code: ' — 03' },
+          { key: 'course_products', label: 'Course/Service Products', code: ' — 04' },
+          { key: 'workshop_products', label: 'Workshop Products', code: ' — 05' },
+          { key: 'site_urls', label: 'site_urls', code: '' },
+          { key: 'product_schema', label: 'product_schema', code: '' }
+        ];
+        
+        // Clear existing rows
+        const tbody = el.querySelector('tbody');
+        if (tbody) {
+          tbody.innerHTML = '';
+          
+          let totalCsvCount = 0, totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0;
+          
+          categories.forEach(cat => {
+            const count = csvMetadataCounts[cat.key] || 0;
+            totalCsvCount += count;
+            totalSuccess += count; // All imported records are considered successful
+            totalFailed += 0; // No failures in metadata system
+            totalSkipped += 0; // No skips in metadata system
+            totalDuplicatesRemoved += 0; // No duplicates in metadata system
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${cat.label}${cat.code}</td>
+              <td>${count}</td>
+              <td style="color: #4CAF50;">${count}</td>
+              <td style="color: #f44336;">0</td>
+              <td style="color: #2196F3;">0</td>
+              <td style="color: #FF9800;">0</td>
+            `;
+            tbody.appendChild(row);
+          });
+          
+          // Add totals row
+          const totalsRow = document.createElement('tr');
+          totalsRow.style.fontWeight = 'bold';
+          totalsRow.innerHTML = `
+            <td>TOTALS</td>
+            <td>${totalCsvCount}</td>
+            <td style="color: #4CAF50;">${totalSuccess}</td>
+            <td style="color: #f44336;">${totalFailed}</td>
+            <td style="color: #2196F3;">${totalSkipped}</td>
+            <td style="color: #FF9800;">${totalDuplicatesRemoved}</td>
+          `;
+          tbody.appendChild(totalsRow);
+        }
+        
+      } catch (error) {
+        console.warn('Error updating Debug & Control dashboard:', error);
+      }
+    }
+      
       
       // Calculate totals
       let totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0, totalCsvCount = 0;
