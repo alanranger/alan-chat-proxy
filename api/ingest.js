@@ -262,14 +262,14 @@ function extractJSONLD(html) {
     for (const candidate of attempts) {
       try {
         const parsed = JSON.parse(candidate);
-        if (Array.isArray(parsed)) {
-          jsonLdObjects.push(...parsed);
-        } else {
-          jsonLdObjects.push(parsed);
-        }
+      if (Array.isArray(parsed)) {
+        jsonLdObjects.push(...parsed);
+      } else {
+        jsonLdObjects.push(parsed);
+      }
         parsedOk = true;
         break;
-      } catch (e) {
+    } catch (e) {
         // keep trying next strategy
       }
     }
@@ -342,10 +342,10 @@ async function ingestSingleUrl(url, supa, options = {}) {
         .trim();
       
       return {
-        url: url,
-        title: null,
+      url: url,
+      title: null,
         chunk_text: cleanChunk,
-        embedding: null,
+      embedding: null,
         chunk_hash: sha1(cleanChunk),
         content: cleanChunk,
         hash: sha1(url + cleanChunk),
@@ -354,11 +354,11 @@ async function ingestSingleUrl(url, supa, options = {}) {
     });
     
     if (!options.dryRun) {
-      // Delete existing chunks for this URL
-      await supa.from('page_chunks').delete().eq('url', url);
-      // Insert new chunks
-      if (chunkInserts.length > 0) {
-        const { error: chunkError } = await supa.from('page_chunks').insert(chunkInserts);
+    // Delete existing chunks for this URL
+    await supa.from('page_chunks').delete().eq('url', url);
+    // Insert new chunks
+    if (chunkInserts.length > 0) {
+      const { error: chunkError } = await supa.from('page_chunks').insert(chunkInserts);
         if (chunkError) {
           console.error(`Chunk insert failed for ${url}:`, chunkError);
           throw new Error(`Chunk insert failed: ${chunkError.message}`);
