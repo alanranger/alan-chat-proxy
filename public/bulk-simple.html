@@ -1286,11 +1286,21 @@
         const csvTypeMapping = {
           'blog': 'blog',
           'event': 'course_events',
-          'workshop': 'workshop_events', 
+          'workshop': 'workshop_events',
           'service': 'course_products',
           'product': 'workshop_products',
           'site_urls': 'site_urls'
         };
+        
+        // Special case: File 05 (Photo Workshops UK) should be workshop_products, not workshop_events
+        if (f.name.includes('Photo Workshops UK _ Landscape Photography Workshops-CSV.csv')) {
+          type = 'workshop_products';
+        }
+        
+        // Special case: File 07 (Product Schema) should be product_schema, not workshop_products
+        if (f.name.includes('alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS.csv')) {
+          type = 'product_schema';
+        }
         
         const csvType = csvTypeMapping[type] || type;
         addResult(`✅ Detected ${f.name} as ${type} → ${csvType} metadata`);
