@@ -395,12 +395,14 @@ async function ingestSingleUrl(url, supa, options = {}) {
       const entities = jsonLd.map((item, idx) => {
         // Extract structured information from page text for products
         let enhancedDescription = item.description || null;
-        if (normalizeKind(item, url) === 'product' && text) {
+        if (normalizeKind(item, url) === 'product') {
+          // Use the combined text from all chunks for better extraction
+          const combinedText = chunks.map(chunk => chunk.chunk_text).join(' ');
           console.log(`[INGEST DEBUG] Processing product for URL: ${url}`);
-          console.log(`[INGEST DEBUG] Text length: ${text.length}`);
-          console.log(`[INGEST DEBUG] Text sample: ${text.substring(0, 500)}...`);
+          console.log(`[INGEST DEBUG] Combined text length: ${combinedText.length}`);
+          console.log(`[INGEST DEBUG] Combined text sample: ${combinedText.substring(0, 500)}...`);
           
-          const structuredInfo = extractStructuredInfo(text);
+          const structuredInfo = extractStructuredInfo(combinedText);
           console.log(`[INGEST DEBUG] Extracted structured info:`, structuredInfo);
           
           if (structuredInfo.equipmentNeeded || structuredInfo.experienceLevel) {
