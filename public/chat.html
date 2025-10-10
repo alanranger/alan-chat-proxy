@@ -820,7 +820,11 @@ function extractFacts(desc){
     fitness: findAfter('Fitness'),
     availability: findAfter('Availability'),
     experience: findAfter('Experience - Level') || findAfter('Experience Level'),
-    equipmentItems: captureBulletBlock('Equipment Needed'),
+    equipmentItems: captureBulletBlock('Equipment Needed') || (() => {
+      // Fallback: look for equipment information in the text
+      const equipmentMatch = full.match(/equipment needed[:\s]*([^\\n]+)/i);
+      return equipmentMatch ? [equipmentMatch[1].trim()] : [];
+    })(),
     optionLines: txt.filter(l => /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) || /^\s*OR\s*1\s*day\b/i.test(l))
   };
 }
@@ -835,7 +839,8 @@ function deriveOptions(prod, facts){
   const ccy = prod.price_currency || 'GBP';
   const base = prod.price ?? prod?.raw?.offers?.price;
   const opts = [];
-  if(base!=null) opts.push({label:'Standard', price:currency(base,ccy)});
+  // Don't add hardcoded "Standard" option to avoid price duplication
+  // Only add options if there are actual different pricing tiers
   return opts;
 }
 function renderProductCard(prod){
