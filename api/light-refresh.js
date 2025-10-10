@@ -94,9 +94,10 @@ export default async function handler(req, res){
           headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
           body: JSON.stringify({ csvUrls: part })
         });
-        const j = await r.json().catch(()=>({}));
+        const bodyText = await r.text();
+        let j = null; try { j = JSON.parse(bodyText); } catch {}
         if (r.ok && j && j.ok){ ingested += (j.ingested || part.length); chunks.push({ idx:i, count: part.length, ok:true }); }
-        else { failed += part.length; chunks.push({ idx:i, count: part.length, ok:false, error: j?.error || await r.text() }); }
+        else { failed += part.length; chunks.push({ idx:i, count: part.length, ok:false, error: (j && (j.error||j.detail)) || bodyText }); }
       }
       // finalize
       try{
