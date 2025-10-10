@@ -392,27 +392,59 @@ async function ingestSingleUrl(url, supa, options = {}) {
     
     stage = 'store_entities';
     if (jsonLd) {
-      console.log('[INGEST DEBUG] JSON-LD objects found:', jsonLd.length);
-      jsonLd.forEach((item, idx) => {
-        console.log('[INGEST DEBUG] JSON-LD idx', idx, 'type:', item['@type'], 'kind:', normalizeKind(item, url));
-      });
+      // Log JSON-LD objects found
+      await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: url,
+          stage: 'jsonld_objects',
+          data: { count: jsonLd.length, objects: jsonLd.map((item, idx) => ({ idx, type: item['@type'], kind: normalizeKind(item, url) })) }
+        })
+      }).catch(() => {}); // Ignore errors
       
       // Extract structured information from page chunks for products
       let enhancedDescriptions = {};
       if (chunks && chunks.length > 0) {
         // Combine all chunk text for better extraction
         const combinedText = chunks.join(' ');
-        console.log('[INGEST DEBUG] Combined text length:', combinedText.length);
-        console.log('[INGEST DEBUG] Combined text sample:', combinedText.substring(0, 500));
+        // Log combined text info
+        await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: url,
+            stage: 'combined_text',
+            data: { length: combinedText.length, sample: combinedText.substring(0, 500) }
+          })
+        }).catch(() => {});
         
         // Simple, robust extraction for Equipment Needed
         let equipmentNeeded = null;
         const equipmentMatch = combinedText.match(/\*\s*EQUIPMENT\s*NEEDED:\s*(.+?)(?=\s*\*[A-Z]|\s*Dates:|$)/i);
         if (equipmentMatch) {
           equipmentNeeded = equipmentMatch[1].trim();
-          console.log('[INGEST DEBUG] Equipment Needed extracted:', equipmentNeeded);
+          // Log successful extraction
+          await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: url,
+              stage: 'equipment_extracted',
+              data: { equipmentNeeded: equipmentNeeded }
+            })
+          }).catch(() => {});
         } else {
-          console.log('[INGEST DEBUG] No Equipment Needed match found');
+          // Log failed extraction
+          await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: url,
+              stage: 'equipment_failed',
+              data: { combinedText: combinedText.substring(0, 1000) }
+            })
+          }).catch(() => {});
         }
         
         // Simple, robust extraction for Experience Level
@@ -430,18 +462,54 @@ async function ingestSingleUrl(url, supa, options = {}) {
             if (equipmentNeeded) parts.push(`Equipment Needed: ${equipmentNeeded}`);
             if (experienceLevel) parts.push(`Experience Level: ${experienceLevel}`);
             enhancedDescriptions[idx] = parts.join('\n');
-            console.log('[INGEST DEBUG] Enhanced description for product idx', idx, ':', enhancedDescriptions[idx].substring(0, 300));
+            // Log enhanced description creation
+            await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                url: url,
+                stage: 'enhanced_description',
+                data: { idx: idx, description: enhancedDescriptions[idx].substring(0, 300) }
+              })
+            }).catch(() => {});
           }
         });
       } else {
-        console.log('[INGEST DEBUG] No chunks available for extraction');
+        // Log no chunks available
+        await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: url,
+            stage: 'no_chunks',
+            data: { chunksLength: chunks ? chunks.length : 0 }
+          })
+        }).catch(() => {});
       }
       
-      console.log('[INGEST DEBUG] Enhanced descriptions object:', JSON.stringify(enhancedDescriptions));
+      // Log enhanced descriptions object
+      await fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: url,
+          stage: 'enhanced_descriptions',
+          data: enhancedDescriptions
+        })
+      }).catch(() => {});
       
       const entities = jsonLd.map((item, idx) => {
         const enhancedDescription = enhancedDescriptions[idx] || item.description || null;
-        console.log('[INGEST DEBUG] Entity idx', idx, 'kind:', normalizeKind(item, url), 'enhanced:', !!enhancedDescriptions[idx]);
+        // Log entity creation
+        fetch(`${process.env.VERCEL_URL || 'https://alan-chat-proxy.vercel.app'}/api/debug-log`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: url,
+            stage: 'entity_creation',
+            data: { idx: idx, kind: normalizeKind(item, url), hasEnhanced: !!enhancedDescriptions[idx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0 }
+          })
+        }).catch(() => {});
         
         return {
           url: url,
