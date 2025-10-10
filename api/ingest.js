@@ -281,6 +281,47 @@ function extractJSONLD(html) {
   return jsonLdObjects.length > 0 ? jsonLdObjects : null;
 }
 
+// Extract structured information from page text
+function extractStructuredInfo(text) {
+  const out = {
+    equipmentNeeded: null,
+    experienceLevel: null,
+  };
+  
+  if (!text) return out;
+  
+  // Split by newline and normalize whitespace
+  const lines = text
+    .split(/\r?\n/)
+    .map((s) => s.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  
+  for (const line of lines) {
+    // Equipment Needed extraction
+    if (/^\*\s*equipment\s*needed:/i.test(line)) {
+      const match = line.match(/^\*\s*equipment\s*needed:\s*(.+)/i);
+      if (match) {
+        out.equipmentNeeded = match[1].trim();
+      }
+    } else if (/^equipment\s*needed:/i.test(line)) {
+      const match = line.match(/^equipment\s*needed:\s*(.+)/i);
+      if (match) {
+        out.equipmentNeeded = match[1].trim();
+      }
+    }
+    
+    // Experience Level extraction
+    if (/^experience\s*-\s*level:/i.test(line)) {
+      const match = line.match(/^experience\s*-\s*level:\s*(.+)/i);
+      if (match) {
+        out.experienceLevel = match[1].trim();
+      }
+    }
+  }
+  
+  return out;
+}
+
 // Normalize JSON-LD @type to allowed page_entities.kind values
 function normalizeKind(item, url) {
   const rawType = (item && (item['@type'] || item['@type[]'])) || '';
@@ -368,24 +409,40 @@ async function ingestSingleUrl(url, supa, options = {}) {
     
     stage = 'store_entities';
     if (jsonLd) {
-      const entities = jsonLd.map((item, idx) => ({
-        url: url,
-        kind: normalizeKind(item, url),
-        title: item.headline || item.title || item.name || htmlTitle || h1Title || null,
-        description: item.description || null,
-        date_start: item.datePublished || item.startDate || null,
-        date_end: item.endDate || null,
-        location: item.location?.name || item.location?.address || null,
-        price: item.offers?.price || null,
-        price_currency: item.offers?.priceCurrency || null,
-        availability: item.offers?.availability || null,
-        sku: item.sku || null,
-        provider: item.provider?.name || item.publisher?.name || 'Alan Ranger Photography',
-        source_url: url,
-        raw: item,
-        entity_hash: sha1(url + JSON.stringify(item) + idx),
-        last_seen: new Date().toISOString()
-      }));
+      const entities = jsonLd.map((item, idx) => {
+        // Extract structured information from page text for products
+        let enhancedDescription = item.description || null;
+        if (normalizeKind(item, url) === 'product' && text) {
+          const structuredInfo = extractStructuredInfo(text);
+          if (structuredInfo.equipmentNeeded || structuredInfo.experienceLevel) {
+            // Enhance description with structured information
+            const parts = [];
+            if (enhancedDescription) parts.push(enhancedDescription);
+            if (structuredInfo.equipmentNeeded) parts.push(`Equipment Needed: ${structuredInfo.equipmentNeeded}`);
+            if (structuredInfo.experienceLevel) parts.push(`Experience Level: ${structuredInfo.experienceLevel}`);
+            enhancedDescription = parts.join('\n');
+          }
+        }
+        
+        return {
+          url: url,
+          kind: normalizeKind(item, url),
+          title: item.headline || item.title || item.name || htmlTitle || h1Title || null,
+          description: enhancedDescription,
+          date_start: item.datePublished || item.startDate || null,
+          date_end: item.endDate || null,
+          location: item.location?.name || item.location?.address || null,
+          price: item.offers?.price || null,
+          price_currency: item.offers?.priceCurrency || null,
+          availability: item.offers?.availability || null,
+          sku: item.sku || null,
+          provider: item.provider?.name || item.publisher?.name || 'Alan Ranger Photography',
+          source_url: url,
+          raw: item,
+          entity_hash: sha1(url + JSON.stringify(item) + idx),
+          last_seen: new Date().toISOString()
+        };
+      });
       
       if (!options.dryRun) {
         // Merge strategy: always update existing entity for same (url, kind)
