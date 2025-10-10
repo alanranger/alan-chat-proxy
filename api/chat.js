@@ -1225,6 +1225,20 @@ function extractFromDescription(desc) {
       continue;
     }
     
+    // Also look for equipment information in other formats
+    if (/equipment needed|equipment required|what you need|you will need/i.test(ln)) {
+      if (!out.equipmentNeeded) {
+        // Extract the equipment requirement from the line
+        const equipmentMatch = ln.match(/(?:equipment needed|equipment required|what you need|you will need)[:\s]*([^\\n]+)/i);
+        if (equipmentMatch) {
+          out.equipmentNeeded = equipmentMatch[1].trim();
+        } else {
+          out.equipmentNeeded = ln.trim();
+        }
+      }
+      continue;
+    }
+    
 
     const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
     if (m1) {
@@ -1278,10 +1292,10 @@ async function buildProductPanelMarkdown(products) {
     .replace(/\s*style="[^"]*"/gi,'')
     .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
     .replace(/\s*contenteditable="[^"]*"/gi,'')
-    .replace(/\s*•\s*Standard\s*—\s*£\d+/gi,'') // Remove "• Standard — £150" lines
-    .replace(/\s*•\s*Standard\s*-\s*£\d+/gi,'') // Remove "• Standard - £150" lines
-    .replace(/\s*Standard\s*—\s*£\d+/gi,'') // Remove "Standard — £150" lines
-    .replace(/\s*Standard\s*-\s*£\d+/gi,''); // Remove "Standard - £150" lines
+    .replace(/•\s*Standard\s*[—\-]\s*£\d+/gi,'') // Remove "• Standard — £150" lines
+    .replace(/Standard\s*[—\-]\s*£\d+/gi,'') // Remove "Standard — £150" lines
+    .replace(/\s*•\s*Standard\s*[—\-]\s*£\d+/gi,'') // Remove " • Standard — £150" lines
+    .replace(/\s*Standard\s*[—\-]\s*£\d+/gi,''); // Remove " Standard — £150" lines
   const fullDescription = scrub(primary.description || primary?.raw?.description || "");
   
   // Also try to get chunk data for more detailed information
@@ -1309,6 +1323,8 @@ async function buildProductPanelMarkdown(products) {
   console.log("Chunk data:", chunkData);
   console.log("Source text for extraction:", sourceText);
   console.log("Extracted info:", JSON.stringify(info, null, 2));
+  console.log("Experience Level extracted:", info.experienceLevel);
+  console.log("Equipment Needed extracted:", info.equipmentNeeded);
   
   let summary = null; // Don't use info.summary, generate our own
   
