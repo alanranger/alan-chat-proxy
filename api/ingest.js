@@ -397,12 +397,17 @@ async function ingestSingleUrl(url, supa, options = {}) {
       if (chunks && chunks.length > 0) {
         // Combine all chunk text for better extraction
         const combinedText = chunks.join(' ');
+        console.log('[INGEST DEBUG] Combined text length:', combinedText.length);
+        console.log('[INGEST DEBUG] Combined text sample:', combinedText.substring(0, 500));
         
         // Simple, robust extraction for Equipment Needed
         let equipmentNeeded = null;
         const equipmentMatch = combinedText.match(/\*\s*EQUIPMENT\s*NEEDED:\s*(.+?)(?=\s*\*[A-Z]|\s*Dates:|$)/i);
         if (equipmentMatch) {
           equipmentNeeded = equipmentMatch[1].trim();
+          console.log('[INGEST DEBUG] Equipment Needed extracted:', equipmentNeeded);
+        } else {
+          console.log('[INGEST DEBUG] No Equipment Needed match found');
         }
         
         // Simple, robust extraction for Experience Level
