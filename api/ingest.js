@@ -392,6 +392,11 @@ async function ingestSingleUrl(url, supa, options = {}) {
     
     stage = 'store_entities';
     if (jsonLd) {
+      console.log('[INGEST DEBUG] JSON-LD objects found:', jsonLd.length);
+      jsonLd.forEach((item, idx) => {
+        console.log('[INGEST DEBUG] JSON-LD idx', idx, 'type:', item['@type'], 'kind:', normalizeKind(item, url));
+      });
+      
       // Extract structured information from page chunks for products
       let enhancedDescriptions = {};
       if (chunks && chunks.length > 0) {
