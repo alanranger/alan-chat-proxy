@@ -840,14 +840,26 @@ function extractFacts(desc){
     experience: findAfter('Experience - Level') || findAfter('Experience Level'),
     equipmentItems: (() => {
       // Simple, robust approach: look for "Equipment Needed" anywhere in the text
-      const equipmentMatch = full.match(/equipment needed[:\s\-]*([^\\n]+)/i);
-      if (equipmentMatch) {
-        const equipmentText = equipmentMatch[1].trim();
-        // If it contains bullet points, split them; otherwise return as single item
-        if (equipmentText.includes('-')) {
-          return equipmentText.split('-').map(item => item.trim()).filter(Boolean);
+      // Find the position of "Equipment Needed:" and capture everything after it
+      const equipmentIndex = full.toLowerCase().indexOf('equipment needed');
+      if (equipmentIndex !== -1) {
+        // Find the colon after "Equipment Needed"
+        const colonIndex = full.indexOf(':', equipmentIndex);
+        if (colonIndex !== -1) {
+          // Get everything after the colon until the next section (look for next ":" or end)
+          let equipmentText = full.substring(colonIndex + 1);
+          // Stop at the next section (look for next ":" that's not part of a URL or time)
+          const nextSectionIndex = equipmentText.search(/[^:]\s*:\s*[A-Z]/);
+          if (nextSectionIndex !== -1) {
+            equipmentText = equipmentText.substring(0, nextSectionIndex);
+          }
+          equipmentText = equipmentText.trim();
+          // If it contains bullet points, split them; otherwise return as single item
+          if (equipmentText.includes('-')) {
+            return equipmentText.split('-').map(item => item.trim()).filter(Boolean);
+          }
+          return [equipmentText];
         }
-        return [equipmentText];
       }
       return [];
     })(),
