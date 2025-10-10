@@ -8,6 +8,7 @@ export const config = { runtime: 'nodejs' };
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
+import { extractStructuredDataFromHTML, enhanceDescriptionWithStructuredData, generateContentHash } from '../lib/htmlExtractor.js';
 
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
@@ -343,6 +344,21 @@ async function ingestSingleUrl(url, supa, options = {}) {
       ]
     });
     
+    stage = 'store_raw_html';
+    const contentHash = generateContentHash(html);
+    try {
+      await supa.from('page_html').upsert({
+        url: url,
+        html_content: html,
+        content_hash: contentHash,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'url,content_hash'
+      });
+    } catch (e) {
+      console.warn('Failed to store raw HTML:', e.message);
+    }
+    
     stage = 'extract_jsonld';
     const jsonLd = extractJSONLD(html);
     
@@ -414,93 +430,33 @@ async function ingestSingleUrl(url, supa, options = {}) {
         });
       } catch (e) {} // Ignore errors
       
-      // Extract structured information from page chunks for products
+      // Extract structured information from raw HTML for products
       let enhancedDescriptions = {};
-      if (chunks && chunks.length > 0) {
-        // Combine all chunk text for better extraction
-        const combinedText = chunks.join(' ');
-        // Log combined text info directly to database
-        try {
-          await supa.from('debug_logs').insert({
-            url: url,
-            stage: 'combined_text',
-            data: { length: combinedText.length, sample: combinedText.substring(0, 500) }
-          });
-        } catch (e) {} // Ignore errors
-        
-          // Simple, robust extraction for Equipment Needed
-          let equipmentNeeded = null;
-          const equipmentMatch = combinedText.match(/\*\s*EQUIPMENT\s*NEEDED:\s*(.+?)(?=\s*\*[A-Z]|\s*Dates:|Select Dates|Quantity:|$)/is);
+      const structuredData = extractStructuredDataFromHTML(html);
+      
+      // Log structured data extraction
+      try {
+        await supa.from('debug_logs').insert({
+          url: url,
+          stage: 'structured_data_extracted',
+          data: structuredData
+        });
+      } catch (e) {} // Ignore errors
+
+      // Store enhanced descriptions for products
+      for (let idx = 0; idx < jsonLd.length; idx++) {
+        const item = jsonLd[idx];
+        if (normalizeKind(item, url) === 'product') {
+          const enhancedDescription = enhanceDescriptionWithStructuredData(item.description || '', structuredData);
+          enhancedDescriptions[idx] = enhancedDescription;
           
-          // Debug: Log the exact text around EQUIPMENT NEEDED
-          try {
-            const equipmentIndex = combinedText.indexOf('EQUIPMENT NEEDED');
-            if (equipmentIndex !== -1) {
-              const contextStart = Math.max(0, equipmentIndex - 50);
-              const contextEnd = Math.min(combinedText.length, equipmentIndex + 200);
-              const context = combinedText.substring(contextStart, contextEnd);
-              await supa.from('debug_logs').insert({
-                url: url,
-                stage: 'equipment_context',
-                data: { equipmentIndex: equipmentIndex, context: context, matchResult: equipmentMatch ? equipmentMatch[1] : null }
-              });
-            }
-          } catch (e) {} // Ignore errors
-          
-        if (equipmentMatch) {
-          equipmentNeeded = equipmentMatch[1].trim();
-          // Log successful extraction directly to database
-          try {
-            await supa.from('debug_logs').insert({
-              url: url,
-              stage: 'equipment_extracted',
-              data: { equipmentNeeded: equipmentNeeded }
-            });
-          } catch (e) {} // Ignore errors
-        } else {
-          // Log failed extraction directly to database
-          try {
-            await supa.from('debug_logs').insert({
-              url: url,
-              stage: 'equipment_failed',
-              data: { combinedText: combinedText.substring(0, 1000) }
-            });
-          } catch (e) {} // Ignore errors
-        }
-        
-        // Simple, robust extraction for Experience Level
-        let experienceLevel = null;
-        const experienceMatch = combinedText.match(/Experience\s*-\s*Level:\s*([^*]+?)(?:\*|$)/i);
-        if (experienceMatch) {
-          experienceLevel = experienceMatch[1].trim();
-        }
-        
-        // Store enhanced descriptions for products
-        for (let idx = 0; idx < jsonLd.length; idx++) {
-          const item = jsonLd[idx];
-          if (normalizeKind(item, url) === 'product') {
-            const parts = [];
-            if (item.description) parts.push(item.description);
-            if (equipmentNeeded) parts.push(`Equipment Needed: ${equipmentNeeded}`);
-            if (experienceLevel) parts.push(`Experience Level: ${experienceLevel}`);
-            enhancedDescriptions[idx] = parts.join('\n');
-            // Log enhanced description creation directly to database (fire and forget)
-            supa.from('debug_logs').insert({
-              url: url,
-              stage: 'enhanced_description',
-              data: { idx: idx, description: enhancedDescriptions[idx].substring(0, 300) }
-            }).catch(() => {}); // Ignore errors
-          }
-        }
-      } else {
-        // Log no chunks available directly to database
-        try {
-          await supa.from('debug_logs').insert({
+          // Log enhanced description creation directly to database (fire and forget)
+          supa.from('debug_logs').insert({
             url: url,
-            stage: 'no_chunks',
-            data: { chunksLength: chunks ? chunks.length : 0 }
-          });
-        } catch (e) {} // Ignore errors
+            stage: 'enhanced_description',
+            data: { idx: idx, description: enhancedDescription.substring(0, 300) }
+          }).catch(() => {}); // Ignore errors
+        }
       }
       
       // Log enhanced descriptions object directly to database
