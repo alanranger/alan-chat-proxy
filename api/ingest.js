@@ -428,9 +428,9 @@ async function ingestSingleUrl(url, supa, options = {}) {
           });
         } catch (e) {} // Ignore errors
         
-        // Simple, robust extraction for Equipment Needed
-        let equipmentNeeded = null;
-        const equipmentMatch = combinedText.match(/\*\s*EQUIPMENT\s*NEEDED:\s*(.+?)(?=\s*\*[A-Z]|\s*Dates:|$)/i);
+          // Simple, robust extraction for Equipment Needed
+          let equipmentNeeded = null;
+          const equipmentMatch = combinedText.match(/\*\s*EQUIPMENT\s*NEEDED:\s*(.+?)(?=\s*\*[A-Z]|\s*Dates:|Select Dates|Quantity:|$)/is);
         if (equipmentMatch) {
           equipmentNeeded = equipmentMatch[1].trim();
           // Log successful extraction directly to database
