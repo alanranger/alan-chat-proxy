@@ -2242,6 +2242,7 @@
     // Global function to render category stats (updated for metadata-driven system)
     async function updateDebugControlDashboard() {
       console.log('DEBUG: updateDebugControlDashboard called');
+      addResult('🔧 DEBUG: updateDebugControlDashboard called', 'info');
       const el = document.getElementById('categoryStats');
       if (!el) {
         console.warn('DEBUG: categoryStats element not found');
@@ -2254,6 +2255,7 @@
         const baseUrl = 'https://alan-chat-proxy.vercel.app';
         
         console.log('DEBUG: Fetching counts from API...');
+        addResult('🔧 DEBUG: Fetching counts from API...', 'info');
         const response = await fetch(`${baseUrl}/api/tools?action=counts`, {
           method: 'GET',
           headers: {
