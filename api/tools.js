@@ -114,18 +114,76 @@ export default async function handler(req, res) {
       return sendJSON(res, 200, { ok: true, url, chunks: count ?? (rows?.length || 0), total_len });
     }
 
-        // --- counts: mapping totals from v_event_product_final_enhanced (proper lineage view with all fields) ---
+        // --- counts: comprehensive counts including CSV metadata ---
         if (req.method === 'GET' && action === 'counts') {
-          const { count: total, error: e1 } = await supa
-            .from('v_event_product_final_enhanced')
-            .select('*', { head: true, count: 'exact' });
-          if (e1) return sendJSON(res, 500, { error: 'supabase_error', detail: e1.message });
-          const { count: mapped, error: e2 } = await supa
-            .from('v_event_product_final_enhanced')
-            .select('*', { head: true, count: 'exact' })
-            .not('product_url', 'is', null);
-          if (e2) return sendJSON(res, 500, { error: 'supabase_error', detail: e2.message });
-          return sendJSON(res, 200, { ok: true, total: total || 0, mapped: mapped || 0 });
+          const counts = {};
+          
+          // Get CSV metadata counts by type
+          try {
+            const { data: csvMetadata, error: csvError } = await supa
+              .from('csv_metadata')
+              .select('csv_type');
+            
+            if (!csvError && csvMetadata) {
+              const csvCounts = {};
+              csvMetadata.forEach(row => {
+                csvCounts[row.csv_type] = (csvCounts[row.csv_type] || 0) + 1;
+              });
+              counts.csv_metadata = csvCounts;
+            }
+          } catch (e) {
+            console.warn('Failed to get CSV metadata counts:', e.message);
+          }
+          
+          // Get other table counts
+          const tables = ['page_html', 'page_entities', 'page_chunks', 'event_product_links_auto'];
+          for (const table of tables) {
+            try {
+              const { count, error } = await supa
+                .from(table)
+                .select('*', { head: true, count: 'exact' });
+              if (!error) counts[table] = count || 0;
+            } catch (e) {
+              console.warn(`Failed to get ${table} count:`, e.message);
+            }
+          }
+          
+          // Get enrichment views count (sum of all enrichment views)
+          try {
+            const views = ['v_blog_enrichment', 'v_course_event_enrichment', 'v_workshop_event_enrichment', 'v_course_product_enrichment', 'v_workshop_product_enrichment', 'v_metadata_enrichment'];
+            let totalViews = 0;
+            for (const view of views) {
+              try {
+                const { count, error } = await supa
+                  .from(view)
+                  .select('*', { head: true, count: 'exact' });
+                if (!error) totalViews += (count || 0);
+              } catch (e) {
+                // View might not exist yet
+              }
+            }
+            counts.enrichment_views = totalViews;
+          } catch (e) {
+            console.warn('Failed to get enrichment views count:', e.message);
+          }
+          
+          // Legacy mapping counts for backward compatibility
+          try {
+            const { count: total, error: e1 } = await supa
+              .from('v_event_product_final_enhanced')
+              .select('*', { head: true, count: 'exact' });
+            if (!e1) counts.total = total || 0;
+            
+            const { count: mapped, error: e2 } = await supa
+              .from('v_event_product_final_enhanced')
+              .select('*', { head: true, count: 'exact' })
+              .not('product_url', 'is', null);
+            if (!e2) counts.mapped = mapped || 0;
+          } catch (e) {
+            console.warn('Failed to get legacy mapping counts:', e.message);
+          }
+          
+          return sendJSON(res, 200, { ok: true, ...counts });
         }
 
     // --- parity: distinct URL counts by path using service role ---

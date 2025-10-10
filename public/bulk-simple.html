@@ -866,7 +866,55 @@
       }
     }
 
-    // CSV Import functions
+    // CSV Metadata Import functions
+    async function importCsvMetadata(file, csvType) {
+      if (!file) {
+        addResult(`❌ No ${csvType} file selected`, 'error');
+        return false;
+      }
+
+      showToast(`Reading ${file.name} for metadata import...`);
+      addResult(`📥 Importing ${csvType} metadata...`);
+      const csvText = await file.text();
+      
+      // Count CSV rows by actually parsing the CSV (excluding header)
+      const lines = csvText.split('\n').filter(line => line.trim());
+      const actualRowCount = Math.max(0, lines.length - 1); // Subtract header
+      addResult(`📊 CSV has ${actualRowCount} data rows (${lines.length} total lines)`);
+
+      try {
+        const token = getToken();
+        const baseUrl = 'https://alan-chat-proxy.vercel.app';
+        
+        const response = await fetch(`${baseUrl}/api/csv-import`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            csvData: csvText,
+            contentType: 'metadata',
+            csvType: csvType
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          addResult(`✅ ${csvType} metadata import successful: ${result.metadata_imported}/${actualRowCount} records`, 'success');
+          return { success: true, csvRows: actualRowCount, imported: result.metadata_imported };
+        } else {
+          addResult(`❌ ${csvType} metadata import failed: ${result.error || result.detail || 'Unknown error'}`, 'error');
+          return { success: false, csvRows: actualRowCount, imported: 0 };
+        }
+      } catch (error) {
+        addResult(`❌ ${csvType} metadata import error: ${error.message}`, 'error');
+        return { success: false, csvRows: actualRowCount, imported: 0 };
+      }
+    }
+
+    // CSV Import functions (legacy - for backward compatibility)
     async function importCSV(file, contentType) {
       if (!file) {
         addResult(`❌ No ${contentType} file selected`, 'error');
@@ -1107,14 +1155,14 @@
       addResult('🚀 Starting CSV import process...');
 
       const files = [
-        { file: document.getElementById('blogCsv').files[0], type: 'blog', name: 'Blog Articles' },
-        { file: document.getElementById('courseEventsCsv').files[0], type: 'event', name: 'Course Events' },
-        { file: document.getElementById('workshopEventsCsv').files[0], type: 'workshop', name: 'Workshop Events' },
-        { file: document.getElementById('servicePagesCsv').files[0], type: 'service', name: 'Service Pages' },
-        { file: document.getElementById('productsCsv').files[0], type: 'product', name: 'Physical Products' },
-        { file: document.getElementById('siteUrlsCsv').files[0], type: 'site_urls', name: 'Site URLs' },
-        { file: document.getElementById('landingPagesCsv').files[0], type: 'landing_pages', name: 'Landing Pages' },
-        { file: document.getElementById('testQuestionsCsv').files[0], type: 'test_questions', name: 'Test Questions' }
+        { file: document.getElementById('blogCsv').files[0], type: 'blog', csvType: 'blog', name: 'Blog Articles' },
+        { file: document.getElementById('courseEventsCsv').files[0], type: 'event', csvType: 'course_events', name: 'Course Events' },
+        { file: document.getElementById('workshopEventsCsv').files[0], type: 'workshop', csvType: 'workshop_events', name: 'Workshop Events' },
+        { file: document.getElementById('servicePagesCsv').files[0], type: 'service', csvType: 'course_products', name: 'Service Pages' },
+        { file: document.getElementById('productsCsv').files[0], type: 'product', csvType: 'workshop_products', name: 'Physical Products' },
+        { file: document.getElementById('siteUrlsCsv').files[0], type: 'site_urls', csvType: 'site_urls', name: 'Site URLs' },
+        { file: document.getElementById('landingPagesCsv').files[0], type: 'landing_pages', csvType: 'site_urls', name: 'Landing Pages' },
+        { file: document.getElementById('testQuestionsCsv').files[0], type: 'test_questions', csvType: 'site_urls', name: 'Test Questions' }
       ];
 
       let successCount = 0;
@@ -1130,10 +1178,10 @@
       if (totalCount) { showOverlayProgress('Importing selected CSVs…', totalCount); }
 
       for (let i = 0; i < files.length; i++) {
-        const { file, type, name } = files[i];
+        const { file, type, csvType, name } = files[i];
         if (file) {
-          updateProgress((i / totalCount) * 100, `Importing ${name}...`);
-          const result = await importCSV(file, type);
+          updateProgress((i / totalCount) * 100, `Importing ${name} metadata...`);
+          const result = await importCsvMetadata(file, csvType);
           updateOverlayProgress(Math.min((i+1), totalCount), totalCount);
           if (result && result.success) {
             successCount++;
@@ -1143,15 +1191,16 @@
         }
       }
 
-      updateProgress(100, `Import complete: ${successCount}/${totalCount} successful`);
-      addResult(`🎉 CSV import process complete! ${successCount}/${totalCount} files imported successfully.`, 'success');
-      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
+      updateProgress(100, `Metadata import complete: ${successCount}/${totalCount} successful`);
+      addResult(`🎉 CSV metadata import process complete! ${successCount}/${totalCount} files imported successfully.`, 'success');
+      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} metadata records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
       document.getElementById('stepImport').style.background = successCount===totalCount ? '#2a6' : '#a62';
       document.getElementById('stepImport').textContent = `Status: ${successCount}/${totalCount} (${totalImported}/${totalCsvRows} records)`;
       
       hideOverlayProgress();
-      // Update dashboard with CSV counts
+      // Update both dashboards
       renderCategoryStats();
+      await updateCsvMetadataDashboard();
     }
 
     // --- Bulk CSV Upload ---
@@ -1183,7 +1232,7 @@
     }
 
     async function bulkUploadCSVs(){
-      showToast('Preparing selected CSVs…');
+      showToast('Preparing selected CSVs for metadata import…');
       console.log('bulkUploadCSVs called');
       try {
         const input = document.getElementById('bulkCsvs');
@@ -1192,10 +1241,10 @@
         console.log('Files:', files);
         if (!files.length){ addResult('❌ No files selected for bulk upload','error'); return; }
       const previewEl = document.getElementById('bulkPreview');
-      previewEl.textContent = 'Detecting file types...';
+      previewEl.textContent = 'Detecting file types for metadata import...';
 
       const plan = [];
-      addResult(`🔍 Processing ${files.length} files for bulk upload...`);
+      addResult(`🔍 Processing ${files.length} files for metadata import...`);
       for (const f of files){
         const text = await f.text();
         const first = text.split('\n')[0] || '';
@@ -1209,8 +1258,20 @@
           addResult(`❓ Could not detect type for ${f.name}. Skipping.`, 'error');
           continue;
         }
-        addResult(`✅ Detected ${f.name} as ${type}`);
-        plan.push({ file: f, type, first });
+        
+        // Map old types to new CSV metadata types
+        const csvTypeMapping = {
+          'blog': 'blog',
+          'event': 'course_events',
+          'workshop': 'workshop_events', 
+          'service': 'course_products',
+          'product': 'workshop_products',
+          'site_urls': 'site_urls'
+        };
+        
+        const csvType = csvTypeMapping[type] || type;
+        addResult(`✅ Detected ${f.name} as ${type} → ${csvType} metadata`);
+        plan.push({ file: f, type, csvType, first });
       }
 
       if (!plan.length){ addResult('❌ No recognizable CSVs in bulk selection','error'); return; }
@@ -1281,19 +1342,19 @@
           dashboardEl.textContent = `Importing ${i + 1}/${plan.length}...`;
         }
         
-        addResult(`📦 Bulk importing ${p.file.name} as ${p.type}...`);
+        addResult(`📦 Bulk importing ${p.file.name} as ${p.csvType} metadata...`);
         try {
-          const result = await importCSV(p.file, p.type);
+          const result = await importCsvMetadata(p.file, p.csvType);
           if (result && result.success) {
             ok++;
             totalCsvRows += result.csvRows || 0;
             totalImported += result.imported || 0;
-            addResult(`✅ ${p.file.name} completed successfully`, 'success');
+            addResult(`✅ ${p.file.name} metadata import completed successfully`, 'success');
           } else {
-            addResult(`❌ ${p.file.name} failed to import`, 'error');
+            addResult(`❌ ${p.file.name} metadata import failed`, 'error');
           }
         } catch (error) {
-          addResult(`❌ ${p.file.name} threw error: ${error.message}`, 'error');
+          addResult(`❌ ${p.file.name} metadata import threw error: ${error.message}`, 'error');
         }
         updateOverlayProgress(i+1, plan.length);
       }
@@ -1311,11 +1372,12 @@
         finalProgressEl.style.color = '';
       }
       
-      addResult(`✅ Bulk import finished: ${ok}/${plan.length} files imported`, 'success');
-      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
+      addResult(`✅ Bulk metadata import finished: ${ok}/${plan.length} files imported`, 'success');
+      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} metadata records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
 
-      // Update dashboard with CSV counts
+      // Update both dashboards
       renderCategoryStats();
+      await updateCsvMetadataDashboard();
       hideOverlayProgress();
       } catch (error) {
         console.error('Error in bulkUploadCSVs:', error);
@@ -2069,6 +2131,71 @@
       'json_extraction': '07 - alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS'
     };
     
+    // Global function to update CSV metadata dashboard
+    async function updateCsvMetadataDashboard() {
+      try {
+        const token = getToken();
+        const baseUrl = 'https://alan-chat-proxy.vercel.app';
+        
+        // Query csv_metadata table for counts by csv_type
+        const response = await fetch(`${baseUrl}/api/tools?action=counts`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          console.warn('Failed to fetch CSV metadata counts:', response.status);
+          return;
+        }
+        
+        const data = await response.json();
+        const csvMetadataCounts = data.csv_metadata || {};
+        
+        // Update dashboard elements
+        const updates = {
+          'blog-count': csvMetadataCounts.blog || 0,
+          'course-events-count': csvMetadataCounts.course_events || 0,
+          'workshop-events-count': csvMetadataCounts.workshop_events || 0,
+          'course-products-count': csvMetadataCounts.course_products || 0,
+          'workshop-products-count': csvMetadataCounts.workshop_products || 0,
+          'site-urls-count': csvMetadataCounts.site_urls || 0,
+          'product-schema-count': csvMetadataCounts.product_schema || 0
+        };
+        
+        // Update each element
+        Object.entries(updates).forEach(([id, count]) => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.textContent = count;
+            element.style.color = count > 0 ? '#4CAF50' : '#666';
+          }
+        });
+        
+        // Update content processing status
+        const contentUpdates = {
+          'raw-html-count': data.page_html || 0,
+          'entities-count': data.page_entities || 0,
+          'chunks-count': data.page_chunks || 0,
+          'mappings-count': data.event_product_links_auto || 0,
+          'views-count': data.enrichment_views || 0
+        };
+        
+        Object.entries(contentUpdates).forEach(([id, count]) => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.textContent = count;
+            element.style.color = count > 0 ? '#4CAF50' : '#666';
+          }
+        });
+        
+      } catch (error) {
+        console.warn('Error updating CSV metadata dashboard:', error);
+      }
+    }
+
     // Global function to render category stats
     function renderCategoryStats() {
       const el = document.getElementById('categoryStats');
@@ -2155,6 +2282,7 @@
       updateStats();
       updateParityPill();
       updateCronPill();
+      updateCsvMetadataDashboard(); // Load initial CSV metadata dashboard
     };
   </script>
 </body>
