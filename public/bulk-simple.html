@@ -63,8 +63,8 @@
   <div class="container">
     <div class="header">
       <h1>🎯 Alan Ranger Photography - Data Pipeline</h1>
-      <p>Simple CSV Import & Web Scraping Tool</p>
-      <small>v1.0.7 - Light Refresh Logs UI</small>
+      <p>Metadata-Driven Content Pipeline</p>
+      <small>v1.0.8 - Metadata-Driven System</small>
     </div>
 
     <!-- DATA FLOW DIAGRAMS -->
@@ -299,7 +299,7 @@
           <!-- Step 1 -->
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <button class="btn btn-primary step" onclick="importAllCSVs()" id="importAllBtn">
-              <span class="step-num">1️⃣</span> 📥 Import CSVs
+              <span class="step-num">1️⃣</span> 📥 Import Metadata
         </button>
             <span id="stepImport" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
           </div>
@@ -316,7 +316,7 @@
           <!-- Step 2 -->
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <button class="btn step" onclick="scrapeWebsite()" id="scrapeBtn">
-              <span class="step-num">2️⃣</span> 🕷️ Scrape URLs
+              <span class="step-num">2️⃣</span> 🕷️ Ingest Content
         </button>
             <span id="stepScrape" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
             <div style="font-size:11px;color:#888;">
@@ -351,7 +351,7 @@
           <!-- Step 3 -->
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <button class="btn step" onclick="runMapping()" id="mappingBtn">
-              <span class="step-num">3️⃣</span> 🔗 Create Mappings
+              <span class="step-num">3️⃣</span> 🔗 Build Mappings
         </button>
             <span id="stepMap" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
       </div>
@@ -448,19 +448,19 @@
       <h3>🔧 Debug & Control</h3>
       <div class="card">
         <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 10px;">
-              <div class="stat-box" title="Total CSV data imported (blogs, events, workshops, products)">
-                <div class="stat-label">Content Imported</div>
+              <div class="stat-box" title="Total CSV metadata imported (blogs, events, workshops, products)">
+                <div class="stat-label">Metadata Imported</div>
                 <div class="stat-value" id="csvImportedRows">0</div>
               </div>
-              <div class="stat-box" title="Total URLs loaded from site_urls.csv for web scraping">
-                <div class="stat-label">Web Scraping</div>
+              <div class="stat-box" title="Total URLs loaded from site_urls.csv for content ingestion">
+                <div class="stat-label">Content Ingestion</div>
                 <div class="stat-value" id="loadedRows">0</div>
               </div>
-              <div class="stat-box" title="URLs successfully scraped or skipped as duplicates">
+              <div class="stat-box" title="URLs successfully ingested or skipped as duplicates">
                 <div class="stat-label">Success</div>
                 <div class="stat-value success" id="successCount">0</div>
               </div>
-              <div class="stat-box" title="URLs that failed to scrape">
+              <div class="stat-box" title="URLs that failed to ingest">
                 <div class="stat-label">Failed</div>
                 <div class="stat-value error" id="failedCount">0</div>
               </div>
@@ -468,7 +468,7 @@
                 <div class="stat-label">Stopped</div>
                 <div class="stat-value" id="stoppedCount">0</div>
               </div>
-              <div class="stat-box" title="URLs skipped because they were duplicates (already imported from CSVs)">
+              <div class="stat-box" title="URLs skipped because they were duplicates (already ingested)">
                 <div class="stat-label">Skipped</div>
                 <div class="stat-value" id="skippedCount">0</div>
               </div>
@@ -1175,7 +1175,7 @@
         return;
       }
 
-      if (totalCount) { showOverlayProgress('Importing selected CSVs…', totalCount); }
+      if (totalCount) { showOverlayProgress('Importing metadata from selected CSVs…', totalCount); }
 
       for (let i = 0; i < files.length; i++) {
         const { file, type, csvType, name } = files[i];
@@ -1192,8 +1192,8 @@
       }
 
       updateProgress(100, `Metadata import complete: ${successCount}/${totalCount} successful`);
-      addResult(`🎉 CSV metadata import process complete! ${successCount}/${totalCount} files imported successfully.`, 'success');
-      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} metadata records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
+      addResult(`🎉 Metadata import complete! ${successCount}/${totalCount} files imported successfully.`, 'success');
+      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} metadata records imported (${totalCsvRows - totalImported} CSV rows skipped)`, 'info');
       document.getElementById('stepImport').style.background = successCount===totalCount ? '#2a6' : '#a62';
       document.getElementById('stepImport').textContent = `Status: ${successCount}/${totalCount} (${totalImported}/${totalCsvRows} records)`;
       
@@ -1295,7 +1295,7 @@
       document.getElementById('results').appendChild(progressContainer);
       
       // Force initial display and scroll to progress bar
-      addResult('🔄 Starting bulk import with progress tracking...', 'info');
+      addResult('🔄 Starting metadata import with progress tracking...', 'info');
       progressContainer.scrollIntoView({ behavior: 'smooth' });
       
       // Show progress in main dashboard too
@@ -1316,7 +1316,7 @@
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // Import sequentially for clear logs with overlay progress
-      showOverlayProgress('Importing selected CSVs…', plan.length);
+      showOverlayProgress('Importing metadata from selected CSVs…', plan.length);
       let ok = 0;
       let totalCsvRows = 0;
       let totalImported = 0;
@@ -1342,19 +1342,19 @@
           dashboardEl.textContent = `Importing ${i + 1}/${plan.length}...`;
         }
         
-        addResult(`📦 Bulk importing ${p.file.name} as ${p.csvType} metadata...`);
+        addResult(`📦 Importing ${p.file.name} as ${p.csvType} metadata...`);
         try {
           const result = await importCsvMetadata(p.file, p.csvType);
           if (result && result.success) {
             ok++;
             totalCsvRows += result.csvRows || 0;
             totalImported += result.imported || 0;
-            addResult(`✅ ${p.file.name} metadata import completed successfully`, 'success');
+            addResult(`✅ ${p.file.name} metadata imported: ${result.imported}/${result.csvRows} records`, 'success');
           } else {
             addResult(`❌ ${p.file.name} metadata import failed`, 'error');
           }
         } catch (error) {
-          addResult(`❌ ${p.file.name} metadata import threw error: ${error.message}`, 'error');
+          addResult(`❌ ${p.file.name} metadata import error: ${error.message}`, 'error');
         }
         updateOverlayProgress(i+1, plan.length);
       }
@@ -1372,8 +1372,8 @@
         finalProgressEl.style.color = '';
       }
       
-      addResult(`✅ Bulk metadata import finished: ${ok}/${plan.length} files imported`, 'success');
-      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} metadata records imported (${totalCsvRows - totalImported} CSV rows not imported)`, 'info');
+      addResult(`✅ Metadata import complete: ${ok}/${plan.length} files imported`, 'success');
+      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} metadata records imported (${totalCsvRows - totalImported} CSV rows skipped)`, 'info');
 
       // Update both dashboards
       renderCategoryStats();
@@ -1478,11 +1478,11 @@
       window.__stopScrape = () => { stopRequested = true; addResult('⏹️ Stop requested. Finishing current URL...', 'info'); };
       document.getElementById('stopScrapeBtn').style.display = 'inline-block';
 
-      addResult('🕷️ Starting website scraping...');
+      addResult('🕷️ Starting content ingestion...');
       document.getElementById('stepScrape').style.background = '#3a3';
       document.getElementById('stepScrape').textContent = 'Status: running';
       
-      addResult(`📊 Found ${uniqueEntries.length} URLs to scrape (${allEntries.length} total, ${withinSourceDuplicates} within-source duplicates removed)`);
+      addResult(`📊 Found ${uniqueEntries.length} URLs to ingest (${allEntries.length} total, ${withinSourceDuplicates} within-source duplicates removed)`);
       const perSrcMsg = Array.from(dupBySource.entries()).map(([s,c]) => `${s}:${c}`).join(', ');
       if (perSrcMsg) addResult(`📌 Within-source duplicate breakdown — ${perSrcMsg}`);
       addResult(`📋 Sources: ${urlSources.join(', ')}`);
@@ -1568,7 +1568,7 @@
               stats.skippedCount++;
               renderCategoryStats();
             } else {
-              addResult(`✅ Scraped: ${url}`, 'success');
+              addResult(`✅ Ingested: ${url}`, 'success');
               stats.successCount++;
               urlScrapingStats[category].success++;
               addResult(`🔍 DEBUG: Updated ${category}: success=${urlScrapingStats[category].success}`, 'info');
@@ -1602,14 +1602,14 @@
               if (reasonLc.includes(' 404') || /\b404\b/.test(reasonLc)) {
                 try { failed404Set.add(url); } catch {}
               }
-              addResult(`❌ Failed: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
+              addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
               renderCategoryStats();
             }
           }
           completed++;
-          updateProgress((completed / entries.length) * 100, `Scraping (${completed}/${entries.length})`);
+          updateProgress((completed / entries.length) * 100, `Ingesting (${completed}/${entries.length})`);
           updateStats();
         });
         
@@ -1642,13 +1642,13 @@
         updateStats();
       }
 
-      updateProgress(100, 'Website scraping complete');
-      addResult('🎉 Website scraping complete!', 'success');
+      updateProgress(100, 'Content ingestion complete');
+      addResult('🎉 Content ingestion complete!', 'success');
       
       // Debug: Log final urlScrapingStats
       
       document.getElementById('stepScrape').style.background = stats.failedCount === 0 ? '#2a6' : '#a62';
-      document.getElementById('stepScrape').textContent = `Status: ${stats.successCount} ok, ${stats.failedCount} failed, ${stats.stoppedCount} stopped`;
+      document.getElementById('stepScrape').textContent = `Status: ${stats.successCount} ingested, ${stats.failedCount} failed, ${stats.stoppedCount} stopped`;
       document.getElementById('stopScrapeBtn').style.display = 'none';
 
       // Update parity after scraping completes
