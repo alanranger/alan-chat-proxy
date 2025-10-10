@@ -2328,7 +2328,7 @@
           foundationEl.textContent = `Foundation (site_urls): ${foundationCount} • Enhancements (blog/events/workshops/services): ${enhancementsCount}`;
         }
         
-        // Update the detailed table
+        // Update the detailed table with proper HTML structure
         const categories = [
           { key: 'blog', label: 'blog', code: '' },
           { key: 'course_events', label: 'Course Events', code: ' — 02' },
@@ -2339,46 +2339,61 @@
           { key: 'product_schema', label: 'product_schema', code: '' }
         ];
         
-        // Clear existing rows
-        const tbody = el.querySelector('tbody');
-        if (tbody) {
-          tbody.innerHTML = '';
+        // Clear existing content and rebuild table
+        el.innerHTML = '';
+        
+        let totalCsvCount = 0, totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0;
+        
+        // Create table rows
+        const rows = categories.map(cat => {
+          const count = csvMetadataCounts[cat.key] || 0;
+          totalCsvCount += count;
+          totalSuccess += count; // All imported records are considered successful
+          totalFailed += 0; // No failures in metadata system
+          totalSkipped += 0; // No skips in metadata system
+          totalDuplicatesRemoved += 0; // No duplicates in metadata system
           
-          let totalCsvCount = 0, totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0;
-          
-          categories.forEach(cat => {
-            const count = csvMetadataCounts[cat.key] || 0;
-            totalCsvCount += count;
-            totalSuccess += count; // All imported records are considered successful
-            totalFailed += 0; // No failures in metadata system
-            totalSkipped += 0; // No skips in metadata system
-            totalDuplicatesRemoved += 0; // No duplicates in metadata system
-            
-            const row = document.createElement('tr');
-            row.innerHTML = `
+          return `
+            <tr>
               <td>${cat.label}${cat.code}</td>
               <td>${count}</td>
               <td style="color: #4CAF50;">${count}</td>
               <td style="color: #f44336;">0</td>
               <td style="color: #2196F3;">0</td>
               <td style="color: #FF9800;">0</td>
-            `;
-            tbody.appendChild(row);
-          });
-          
-          // Add totals row
-          const totalsRow = document.createElement('tr');
-          totalsRow.style.fontWeight = 'bold';
-          totalsRow.innerHTML = `
+            </tr>
+          `;
+        }).join('');
+        
+        // Add totals row
+        const totalsRow = `
+          <tr style="font-weight: bold;">
             <td>TOTALS</td>
             <td>${totalCsvCount}</td>
             <td style="color: #4CAF50;">${totalSuccess}</td>
             <td style="color: #f44336;">${totalFailed}</td>
             <td style="color: #2196F3;">${totalSkipped}</td>
             <td style="color: #FF9800;">${totalDuplicatesRemoved}</td>
-          `;
-          tbody.appendChild(totalsRow);
-        }
+          </tr>
+        `;
+        
+        // Rebuild the entire table structure
+        el.innerHTML = `
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>CSV Count</th>
+              <th>Success</th>
+              <th>Failed</th>
+              <th>Skipped</th>
+              <th>Duplicates Removed</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+            ${totalsRow}
+          </tbody>
+        `;
         
         console.log('DEBUG: Debug & Control dashboard update complete');
         
