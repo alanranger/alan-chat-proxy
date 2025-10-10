@@ -38,47 +38,63 @@ async function checkForChangedUrls(urls) {
   const changedUrls = [];
   const client = supa();
   
-  for (const url of urls) {
-    try {
-      // Get last processed timestamp for this URL
-      const { data: existing } = await client
-        .from('url_last_processed')
-        .select('last_modified_header, last_processed_at')
-        .eq('url', url)
-        .single();
-      
-      // Make HEAD request to check Last-Modified header
-      const response = await fetch(url, { method: 'HEAD' });
-      const lastModifiedHeader = response.headers.get('last-modified');
-      
-      if (!lastModifiedHeader) {
-        // If no Last-Modified header, assume it changed (first time or no header)
-        changedUrls.push(url);
-        continue;
-      }
-      
-      const lastModified = new Date(lastModifiedHeader);
-      const lastProcessed = existing ? new Date(existing.last_processed_at) : new Date(0);
-      
-      // If Last-Modified is newer than our last processed time, URL has changed
-      if (lastModified > lastProcessed) {
-        changedUrls.push(url);
-      }
-      
-      // Update our tracking record
-      await client
-        .from('url_last_processed')
-        .upsert({
-          url,
-          last_modified_header: lastModified.toISOString(),
-          last_processed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+  // Process URLs in smaller batches to avoid timeout
+  const batchSize = 50; // Smaller batches for HEAD requests
+  for (let i = 0; i < urls.length; i += batchSize) {
+    const batch = urls.slice(i, i + batchSize);
+    
+    // Process batch concurrently with Promise.all
+    const batchPromises = batch.map(async (url) => {
+      try {
+        // Get last processed timestamp for this URL
+        const { data: existing } = await client
+          .from('url_last_processed')
+          .select('last_modified_header, last_processed_at')
+          .eq('url', url)
+          .single();
         
-    } catch (e) {
-      // If we can't check, assume it changed to be safe
-      changedUrls.push(url);
-    }
+        // Make HEAD request to check Last-Modified header
+        const response = await fetch(url, { method: 'HEAD' });
+        const lastModifiedHeader = response.headers.get('last-modified');
+        
+        if (!lastModifiedHeader) {
+          // If no Last-Modified header, assume it changed (first time or no header)
+          return { url, changed: true };
+        }
+        
+        const lastModified = new Date(lastModifiedHeader);
+        const lastProcessed = existing ? new Date(existing.last_processed_at) : new Date(0);
+        
+        // If Last-Modified is newer than our last processed time, URL has changed
+        const changed = lastModified > lastProcessed;
+        
+        // Update our tracking record
+        await client
+          .from('url_last_processed')
+          .upsert({
+            url,
+            last_modified_header: lastModified.toISOString(),
+            last_processed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          
+        return { url, changed };
+        
+      } catch (e) {
+        // If we can't check, assume it changed to be safe
+        return { url, changed: true };
+      }
+    });
+    
+    // Wait for batch to complete
+    const batchResults = await Promise.all(batchPromises);
+    
+    // Add changed URLs to our result
+    batchResults.forEach(result => {
+      if (result.changed) {
+        changedUrls.push(result.url);
+      }
+    });
   }
   
   return changedUrls;
