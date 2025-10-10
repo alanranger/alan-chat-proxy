@@ -81,35 +81,51 @@ export default async function handler(req, res){
     if(action==='run'){
       const startedAt = new Date().toISOString();
       const urls = await readUrlsFromRepo();
-      
-      // For now, just log that we would process these URLs
-      // TODO: Implement direct scraping without internal API calls
+      const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
+      const token = process.env.INGEST_TOKEN || '';
+      const protectionBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN || '';
+      const chunks = [];
+      let ingested = 0;
+      let failed = 0;
+
+      if (protectionBypass) {
+        const batchSize = 40;
+        for(let i=0;i<urls.length;i+=batchSize){
+          const part = urls.slice(i, i+batchSize);
+          const r = await fetch(`${base}/api/ingest`, {
+            method:'POST',
+            headers:{
+              'Content-Type':'application/json',
+              Authorization:`Bearer ${token}`,
+              'x-vercel-protection-bypass': protectionBypass
+            },
+            body: JSON.stringify({ csvUrls: part })
+          });
+          const bodyText = await r.text();
+          let j = null; try { j = JSON.parse(bodyText); } catch {}
+          if (r.ok && j && j.ok){ ingested += (j.ingested || part.length); chunks.push({ idx:i, count: part.length, ok:true }); }
+          else { failed += part.length; chunks.push({ idx:i, count: part.length, ok:false, error: (j && (j.error||j.detail)) || bodyText }); }
+        }
+        try{
+          await fetch(`${base}/api/tools?action=finalize`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'x-vercel-protection-bypass': protectionBypass } });
+        }catch{}
+      } else {
+        chunks.push({ note: 'Bypass token missing; ran in log-only mode' });
+      }
+
       const finishedAt = new Date().toISOString();
-      
-      // Persist a summary row
       try{
         const client = supa();
         await client.from('light_refresh_runs').insert([{
           started_at: startedAt,
           finished_at: finishedAt,
           urls_total: urls.length,
-          ingested_count: 0, // placeholder until we implement direct scraping
-          failed_count: 0,
-          batches_json: [{ note: 'Direct scraping not yet implemented - would process ' + urls.length + ' URLs' }]
+          ingested_count: ingested,
+          failed_count: failed,
+          batches_json: chunks
         }]);
-      }catch(e){
-        // If table doesn't exist, that's ok for now
-      }
-      
-      return send(res, 200, { 
-        ok:true, 
-        started_at: startedAt, 
-        finished_at: finishedAt, 
-        urls: urls.length, 
-        ingested: 0, 
-        failed: 0, 
-        note: 'Light refresh endpoint working - direct scraping implementation pending'
-      });
+      }catch{}
+      return send(res, 200, { ok:true, started_at: startedAt, finished_at: finishedAt, urls: urls.length, ingested, failed, batches: chunks, mode: protectionBypass ? 'ingest' : 'log-only' });
     }
 
     if(action==='status'){
