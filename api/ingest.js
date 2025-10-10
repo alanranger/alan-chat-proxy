@@ -392,24 +392,26 @@ async function ingestSingleUrl(url, supa, options = {}) {
     
     stage = 'store_entities';
     if (jsonLd) {
-      const entities = jsonLd.map((item, idx) => {
-        // Extract structured information from page text for products
-        let enhancedDescription = item.description || null;
-        if (normalizeKind(item, url) === 'product') {
-          // Use the combined text from all chunks for better extraction
-          const combinedText = chunks.map(chunk => chunk.chunk_text).join(' ');
-          
-          const structuredInfo = extractStructuredInfo(combinedText);
-          
-          if (structuredInfo.equipmentNeeded || structuredInfo.experienceLevel) {
-            // Enhance description with structured information
+      // Extract structured information from page text for products
+      let enhancedDescriptions = {};
+      if (chunks && chunks.length > 0) {
+        const combinedText = chunks.map(chunk => chunk.chunk_text).join(' ');
+        const structuredInfo = extractStructuredInfo(combinedText);
+        
+        // Store enhanced descriptions for products
+        jsonLd.forEach((item, idx) => {
+          if (normalizeKind(item, url) === 'product') {
             const parts = [];
-            if (enhancedDescription) parts.push(enhancedDescription);
+            if (item.description) parts.push(item.description);
             if (structuredInfo.equipmentNeeded) parts.push(`Equipment Needed: ${structuredInfo.equipmentNeeded}`);
             if (structuredInfo.experienceLevel) parts.push(`Experience Level: ${structuredInfo.experienceLevel}`);
-            enhancedDescription = parts.join('\n');
+            enhancedDescriptions[idx] = parts.join('\n');
           }
-        }
+        });
+      }
+      
+      const entities = jsonLd.map((item, idx) => {
+        const enhancedDescription = enhancedDescriptions[idx] || item.description || null;
         
         return {
           url: url,
