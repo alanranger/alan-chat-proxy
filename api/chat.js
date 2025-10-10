@@ -1132,6 +1132,8 @@ function extractFromDescription(desc) {
     participants: null,
     fitness: null,
     availability: null,
+    experienceLevel: null,
+    equipmentNeeded: null,
     summary: null,
     sessions: [],
   };
@@ -1221,6 +1223,13 @@ function extractFromDescription(desc) {
     // Course-specific extraction: Equipment Needed
     if (/^equipment\s*needed:/i.test(ln)) {
       const v = ln.replace(/^equipment\s*needed:\s*/i, "").trim() || nextVal(i);
+      if (v) out.equipmentNeeded = v;
+      continue;
+    }
+    
+    // Handle asterisk format: "* EQUIPMENT NEEDED:"
+    if (/^\*\s*equipment\s*needed:/i.test(ln)) {
+      const v = ln.replace(/^\*\s*equipment\s*needed:\s*/i, "").trim() || nextVal(i);
       if (v) out.equipmentNeeded = v;
       continue;
     }
