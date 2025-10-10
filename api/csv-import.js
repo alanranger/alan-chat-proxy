@@ -143,7 +143,7 @@ function normalizeDateDayFirst(input) {
 /* ========== CSV Metadata Import Functions ========== */
 
 // Import CSV metadata for blog articles
-async function importBlogMetadata(rows) {
+async function importBlogMetadata(rows, supa) {
   const metadata = rows.map(row => ({
     csv_type: 'blog',
     url: row['Full Url'] || row['full url'] || row.url,
@@ -163,7 +163,7 @@ async function importBlogMetadata(rows) {
 }
 
 // Import CSV metadata for course events
-async function importCourseEventMetadata(rows) {
+async function importCourseEventMetadata(rows, supa) {
   const metadata = rows.map(row => ({
     csv_type: 'course_events',
     url: row.Event_URL || row['Event URL'] || row.url,
@@ -190,7 +190,7 @@ async function importCourseEventMetadata(rows) {
 }
 
 // Import CSV metadata for workshop events
-async function importWorkshopEventMetadata(rows) {
+async function importWorkshopEventMetadata(rows, supa) {
   const metadata = rows.map(row => ({
     csv_type: 'workshop_events',
     url: row.Event_URL || row['Event URL'] || row.url,
@@ -217,7 +217,7 @@ async function importWorkshopEventMetadata(rows) {
 }
 
 // Import CSV metadata for course products
-async function importCourseProductMetadata(rows) {
+async function importCourseProductMetadata(rows, supa) {
   const metadata = rows.map(row => ({
     csv_type: 'course_products',
     url: row['Full Url'] || row['full url'] || row.url,
@@ -237,7 +237,7 @@ async function importCourseProductMetadata(rows) {
 }
 
 // Import CSV metadata for workshop products
-async function importWorkshopProductMetadata(rows) {
+async function importWorkshopProductMetadata(rows, supa) {
   const metadata = rows.map(row => ({
     csv_type: 'workshop_products',
     url: row['Full Url'] || row['full url'] || row.url,
@@ -257,7 +257,7 @@ async function importWorkshopProductMetadata(rows) {
 }
 
 // Import CSV metadata for site URLs
-async function importSiteUrlMetadata(rows) {
+async function importSiteUrlMetadata(rows, supa) {
   const metadata = rows.map(row => ({
     csv_type: 'site_urls',
     url: row.url,
@@ -277,7 +277,7 @@ async function importSiteUrlMetadata(rows) {
 }
 
 // Import CSV metadata for product schema
-async function importProductSchemaMetadata(rows) {
+async function importProductSchemaMetadata(rows, supa) {
   const metadata = rows.map(row => {
     let jsonLdData = null;
     try {
@@ -739,25 +739,25 @@ export default async function handler(req, res) {
       let metadataCount = 0;
       switch (csvType) {
         case 'blog':
-          metadataCount = await importBlogMetadata(rows);
+          metadataCount = await importBlogMetadata(rows, supa);
           break;
         case 'course_events':
-          metadataCount = await importCourseEventMetadata(rows);
+          metadataCount = await importCourseEventMetadata(rows, supa);
           break;
         case 'workshop_events':
-          metadataCount = await importWorkshopEventMetadata(rows);
+          metadataCount = await importWorkshopEventMetadata(rows, supa);
           break;
         case 'course_products':
-          metadataCount = await importCourseProductMetadata(rows);
+          metadataCount = await importCourseProductMetadata(rows, supa);
           break;
         case 'workshop_products':
-          metadataCount = await importWorkshopProductMetadata(rows);
+          metadataCount = await importWorkshopProductMetadata(rows, supa);
           break;
         case 'site_urls':
-          metadataCount = await importSiteUrlMetadata(rows);
+          metadataCount = await importSiteUrlMetadata(rows, supa);
           break;
         case 'product_schema':
-          metadataCount = await importProductSchemaMetadata(rows);
+          metadataCount = await importProductSchemaMetadata(rows, supa);
           break;
         default:
           return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid csvType for metadata import', stage });
