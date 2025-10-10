@@ -93,26 +93,32 @@ export default async function handler(req, res){
         const protectionBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || process.env.VERCEL_PROTECTION_BYPASS || process.env.PROTECTION_BYPASS_TOKEN || '';
 
         if (protectionBypass && token) {
-          // Try just one small batch first to test
-          const testUrls = urls.slice(0, 5);
-          const r = await fetch(`${base}/api/ingest`, {
-            method:'POST',
-            headers:{
-              'Content-Type':'application/json',
-              Authorization:`Bearer ${token}`,
-              'x-vercel-protection-bypass': protectionBypass
-            },
-            body: JSON.stringify({ csvUrls: testUrls })
-          });
-          const bodyText = await r.text();
-          let j = null; try { j = JSON.parse(bodyText); } catch {}
-          if (r.ok && j && j.ok){ 
-            ingested = j.ingested || testUrls.length; 
-            chunks.push({ count: testUrls.length, ok:true, test: true }); 
-          } else { 
-            failed = testUrls.length; 
-            chunks.push({ count: testUrls.length, ok:false, error: (j && (j.error||j.detail)) || bodyText, test: true }); 
+          const batchSize = 40; // Process all URLs in batches
+          for(let i=0;i<urls.length;i+=batchSize){
+            const part = urls.slice(i, i+batchSize);
+            const r = await fetch(`${base}/api/ingest`, {
+              method:'POST',
+              headers:{
+                'Content-Type':'application/json',
+                Authorization:`Bearer ${token}`,
+                'x-vercel-protection-bypass': protectionBypass
+              },
+              body: JSON.stringify({ csvUrls: part })
+            });
+            const bodyText = await r.text();
+            let j = null; try { j = JSON.parse(bodyText); } catch {}
+            if (r.ok && j && j.ok){ 
+              ingested += (j.ingested || part.length); 
+              chunks.push({ idx:i, count: part.length, ok:true }); 
+            } else { 
+              failed += part.length; 
+              chunks.push({ idx:i, count: part.length, ok:false, error: (j && (j.error||j.detail)) || bodyText }); 
+            }
           }
+          // Finalize mappings after all batches
+          try{
+            await fetch(`${base}/api/tools?action=finalize`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'x-vercel-protection-bypass': protectionBypass } });
+          }catch{}
         } else {
           chunks.push({ note: `Bypass token: ${protectionBypass ? 'present' : 'missing'}, Ingest token: ${token ? 'present' : 'missing'}` });
         }
