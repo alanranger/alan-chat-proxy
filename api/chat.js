@@ -1259,7 +1259,12 @@ async function buildProductPanelMarkdown(products) {
   const priceHead = headBits.length ? ` — ${headBits.join(" • ")}` : "";
 
   // Create a better summary from the full description
-  const fullDescription = primary.description || primary?.raw?.description || "";
+  // Clean Squarespace inline attributes to avoid leaking style/data-* into markdown
+  const scrub = (s)=> String(s||'')
+    .replace(/\s*style="[^"]*"/gi,'')
+    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
+    .replace(/\s*contenteditable="[^"]*"/gi,'');
+  const fullDescription = scrub(primary.description || primary?.raw?.description || "");
   
   // Also try to get chunk data for more detailed information
   let chunkData = "";
@@ -1428,7 +1433,25 @@ function buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl }) {
   add("Book Now", productUrl || firstEventUrl, true);
 
   // Event Listing + More Events both point at listing root (no search page)
-  const listUrl = landingUrl || (firstEventUrl && originOf(firstEventUrl) + "/photography-workshops");
+  let listUrl = landingUrl || (firstEventUrl && originOf(firstEventUrl) + "/photography-workshops");
+  // Special-case: course products (beginners classes) should link to the course listing
+  try {
+    const u = String(productUrl||'');
+    if (/beginners-photography-(classes|course)/i.test(u) || /photography-services-near-me\/beginners-photography-course/i.test(u)) {
+      listUrl = "https://www.alanranger.com/beginners-photography-classes";
+    } else if (/lightroom-courses-for-beginners-coventry/i.test(u) || /photo-editing-course-coventry/i.test(u)) {
+      listUrl = "https://www.alanranger.com/photo-editing-course-coventry";
+    }
+  } catch {}
+  // If events come from the courses section, prefer the section listing root deterministically
+  try {
+    const fe = String(firstEventUrl||'');
+    const m = fe.match(/^https?:\/\/[^/]+\/(beginners-photography-lessons)\//i);
+    if (m && m[1]) {
+      const base = fe.split(m[1])[0] + m[1];
+      listUrl = base.startsWith('http') ? base : `https://www.alanranger.com/${m[1]}`;
+    }
+  } catch {}
   add("Event Listing", listUrl, true);
   add("More Events", listUrl, true);
 
