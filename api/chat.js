@@ -232,15 +232,27 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = [], debug
   // Add debug info to debugInfo array
   debugInfo.push(`🔧 Equipment Advice: Processing ${contentChunks.length} chunks for query "${query}"`);
   
+  // Debug: Show first few chunk URLs to see what content we're getting
+  const chunkUrls = contentChunks.slice(0, 3).map(c => c.url || 'no-url').join(', ');
+  debugInfo.push(`🔧 Chunk URLs: ${chunkUrls}`);
+  
   try {
+    let processedChunks = 0;
+    let filteredChunks = 0;
+    
     for (const chunk of (contentChunks || []).slice(0, 8)) { // Increased from 5 to 8
       const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
       
-      // Skip navigation/service chunks
+      // Skip navigation/service chunks - be more aggressive
       if (text.includes('cart 0') || text.includes('sign in') || text.includes('my account') || 
-          text.includes('search') || text.includes('gallery') || text.length < 100) { // Increased min length
+          text.includes('search') || text.includes('gallery') || text.includes('alan ranger photography') ||
+          text.includes('logo') || text.includes('navigation') || text.includes('header') ||
+          text.length < 150) { // Increased min length to 150
+        filteredChunks++;
         continue;
       }
+      
+      processedChunks++;
       
       // Look for equipment keywords
       const hasEquipmentKeyword = Array.from(equipmentKeywords).some(k => text.includes(k));
@@ -316,6 +328,7 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = [], debug
   
   // If we have good content from your written articles, build a comprehensive response
   // Add debug info to debugInfo array
+  debugInfo.push(`🔧 Chunk Processing: processed=${processedChunks}, filtered=${filteredChunks}`);
   debugInfo.push(`🔧 Equipment Advice Final: productRecommendations=${productRecommendations.length}, brandComparisons=${brandComparisons.length}, specificTips=${specificTips.length}`);
   
   if (productRecommendations.length > 0 || brandComparisons.length > 0 || specificTips.length > 0) {
@@ -2039,8 +2052,13 @@ export default async function handler(req, res) {
       const uniqueArticles = new Map();
       articles.forEach(article => {
         const url = article.page_url || article.source_url || '';
-        if (!uniqueArticles.has(url) || article.kind === 'article') {
-          uniqueArticles.set(url, article);
+        const title = (article.title || '').toLowerCase();
+        
+        // Create a key that combines URL and title for better deduplication
+        const key = `${url}|${title}`;
+        
+        if (!uniqueArticles.has(key) || article.kind === 'article') {
+          uniqueArticles.set(key, article);
         }
       });
       
