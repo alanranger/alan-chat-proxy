@@ -178,7 +178,7 @@ async function importBlogMetadata(rows, supa) {
     
     const item = {
       csv_type: 'blog',
-      url: row['full url'] || row['Full Url'] || row.url,
+      url: row['Full Url'] || row['full url'] || row.url,
       title: row['﻿Title'] || row.Title || row.title ? cleanHTMLText(row['﻿Title'] || row.Title || row.title) : null,
       categories: (row.Categories && row.Categories.trim()) ? row.Categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
       tags: (row.Tags && row.Tags.trim()) ? row.Tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
@@ -368,8 +368,8 @@ async function importCourseProductMetadata(rows, supa) {
   const metadata = rows.map(row => {
     const item = {
       csv_type: 'course_products',
-      url: row['full url'] || row['Full Url'] || row.url,
-      title: row.Title || row.title ? cleanHTMLText(row.Title || row.title) : null,
+      url: row['Full Url'] || row['full url'] || row.url,
+      title: row['﻿Title'] || row.Title || row.title ? cleanHTMLText(row['﻿Title'] || row.Title || row.title) : null,
       categories: row.Categories ? row.Categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
       tags: row.Tags ? row.Tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
       publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
@@ -421,7 +421,7 @@ async function importWorkshopProductMetadata(rows, supa) {
     const item = {
       csv_type: 'workshop_products',
       url: row['Full Url'] || row['full url'] || row.url,
-      title: row.Title || row.title ? cleanHTMLText(row.Title || row.title) : null,
+      title: row['﻿Title'] || row.Title || row.title ? cleanHTMLText(row['﻿Title'] || row.Title || row.title) : null,
       categories: row.Categories ? row.Categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : (row.categories ? row.categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : []),
       tags: row.Tags ? row.Tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : (row.tags ? row.tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : []),
       publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
@@ -501,7 +501,7 @@ async function importProductSchemaMetadata(rows, supa) {
     return {
       csv_type: 'product_schema',
       url: jsonLdData?.url || null,
-      title: row.Title || row.title ? cleanHTMLText(row.Title || row.title) : null,
+      title: row['﻿Title'] || row.Title || row.title ? cleanHTMLText(row['﻿Title'] || row.Title || row.title) : null,
       categories: [],
       tags: [],
       publish_date: null,
