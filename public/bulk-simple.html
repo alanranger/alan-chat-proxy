@@ -2395,8 +2395,9 @@
         }
         
         // Update the detailed table with proper HTML structure
+        // Use the same category keys as the ingestion system to avoid duplicates
         const categories = [
-          { key: 'blog', label: 'Blog Articles', code: ' — 01' },
+          { key: 'blog_articles', label: 'Blog Articles', code: ' — 01' },
           { key: 'course_events', label: 'Course Events', code: ' — 02' },
           { key: 'workshop_events', label: 'Workshop Events', code: ' — 03' },
           { key: 'course_products', label: 'Course/Service Products', code: ' — 04' },
@@ -2412,7 +2413,9 @@
         
         // Create table rows
         const rows = categories.map(cat => {
-          const count = csvMetadataCounts[cat.key] || 0;
+          // Map dashboard category keys to CSV metadata keys
+          const csvKey = cat.key === 'blog_articles' ? 'blog' : cat.key;
+          const count = csvMetadataCounts[csvKey] || 0;
           totalCsvCount += count;
           
           // Get actual ingestion results from the API response
