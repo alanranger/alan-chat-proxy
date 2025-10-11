@@ -99,31 +99,45 @@ const PRIMARY_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 const SECONDARY_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 async function fetchOnce(url, ua, referer, method = 'GET', lang, cookie) {
-  return fetch(url, {
-    method,
-    redirect: 'follow',
-    headers: {
-      'User-Agent': ua,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-      'Accept-Language': lang || 'en-GB,en;q=0.9',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'DNT': '1',
-      'Connection': 'keep-alive',
-      'Upgrade-Insecure-Requests': '1',
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache',
-      'Origin': 'https://www.alanranger.com',
-      // Browser-like fetch hints
-      'Sec-Fetch-Dest': 'document',
-      'Sec-Fetch-Mode': 'navigate',
-      'Sec-Fetch-Site': 'same-origin',
-      'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not=A?Brand";v="99"',
-      'sec-ch-ua-mobile': '?0',
-      'sec-ch-ua-platform': '"Windows"',
-      ...(cookie ? { 'Cookie': cookie } : {}),
-      ...(referer ? { 'Referer': referer } : {})
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+  
+  try {
+    const response = await fetch(url, {
+      method,
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': ua,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': lang || 'en-GB,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Origin': 'https://www.alanranger.com',
+        // Browser-like fetch hints
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+        'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not=A?Brand";v="99"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        ...(cookie ? { 'Cookie': cookie } : {}),
+        ...(referer ? { 'Referer': referer } : {})
+      }
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout');
     }
-  });
+    throw error;
+  }
 }
 
 async function fetchPage(url) {
@@ -358,13 +372,13 @@ async function ingestSingleUrl(url, supa, options = {}) {
       
       if (error) {
         console.error('Failed to store raw HTML:', error);
-        return sendJSON(res, 500, { error: 'Failed to store raw HTML', details: error.message, stage });
+        // Continue processing even if raw HTML storage fails
+      } else {
+        console.log(`✅ Stored raw HTML for ${url} (${html.length} chars, hash: ${contentHash})`);
       }
-      
-      console.log(`✅ Stored raw HTML for ${url} (${html.length} chars, hash: ${contentHash})`);
     } catch (e) {
       console.error('Exception storing raw HTML:', e);
-      return sendJSON(res, 500, { error: 'Exception storing raw HTML', details: e.message, stage });
+      // Continue processing even if raw HTML storage fails
     }
     
     stage = 'extract_jsonld';
@@ -409,21 +423,21 @@ async function ingestSingleUrl(url, supa, options = {}) {
     } catch (e) {} // Ignore errors
     
     stage = 'store_chunks';
-    const chunkInserts = chunks.map(chunk => {
+    const chunkInserts = chunks.map(chunkText => {
       // Clean chunk content to prevent JSON syntax errors
-      const cleanChunk = chunk
+      const cleanChunk = chunkText
         .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove control characters
         .replace(/\u0000/g, '') // Remove null bytes
         .trim();
       
       return {
-      url: url,
-      title: null,
+        url: url,
+        title: null,
         chunk_text: cleanChunk,
         // CSV metadata fields
         csv_type: csvMetadata?.csv_type || null,
         csv_metadata_id: csvMetadata?.id || null,
-      embedding: null,
+        embedding: null,
         chunk_hash: sha1(cleanChunk),
         content: cleanChunk,
         hash: sha1(url + cleanChunk),
@@ -432,15 +446,22 @@ async function ingestSingleUrl(url, supa, options = {}) {
     });
     
     if (!options.dryRun) {
-    // Delete existing chunks for this URL
-    await supa.from('page_chunks').delete().eq('url', url);
-    // Insert new chunks
-    if (chunkInserts.length > 0) {
-      const { error: chunkError } = await supa.from('page_chunks').insert(chunkInserts);
-        if (chunkError) {
-          console.error(`Chunk insert failed for ${url}:`, chunkError);
-          throw new Error(`Chunk insert failed: ${chunkError.message}`);
+      try {
+        // Delete existing chunks for this URL
+        await supa.from('page_chunks').delete().eq('url', url);
+        // Insert new chunks
+        if (chunkInserts.length > 0) {
+          const { error: chunkError } = await supa.from('page_chunks').insert(chunkInserts);
+          if (chunkError) {
+            console.error(`Chunk insert failed for ${url}:`, chunkError);
+            // Continue processing even if chunk insertion fails
+          } else {
+            console.log(`✅ Stored ${chunkInserts.length} chunks for ${url}`);
+          }
         }
+      } catch (e) {
+        console.error(`Exception during chunk processing for ${url}:`, e);
+        // Continue processing even if chunk insertion fails
       }
     }
     
