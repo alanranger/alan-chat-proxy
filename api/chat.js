@@ -216,7 +216,7 @@ function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
 
   return `**${para.substring(0, 300).trim()}**\n\n${url ? `*Source: ${url}*\n\n` : ""}`;
 }
-function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
+function generateEquipmentAdvice(query, contentChunks = [], articles = [], debugInfo = []) {
   const lc = (query || "").toLowerCase();
   const equipmentKeywords = new Set(['tripod','tripods','head','ballhead','levelling','leveling','recommend','recommendation','recommendations','equipment']);
   
@@ -229,10 +229,8 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   const brandComparisons = [];
   const specificTips = [];
   
-  // Add debug info to global debugInfo array
-  if (typeof debugInfo !== 'undefined') {
-    debugInfo.push(`🔧 Equipment Advice: Processing ${contentChunks.length} chunks for query "${query}"`);
-  }
+  // Add debug info to debugInfo array
+  debugInfo.push(`🔧 Equipment Advice: Processing ${contentChunks.length} chunks for query "${query}"`);
   
   try {
     for (const chunk of (contentChunks || []).slice(0, 8)) { // Increased from 5 to 8
@@ -317,10 +315,8 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   }
   
   // If we have good content from your written articles, build a comprehensive response
-  // Add debug info to global debugInfo array
-  if (typeof debugInfo !== 'undefined') {
-    debugInfo.push(`🔧 Equipment Advice Final: productRecommendations=${productRecommendations.length}, brandComparisons=${brandComparisons.length}, specificTips=${specificTips.length}`);
-  }
+  // Add debug info to debugInfo array
+  debugInfo.push(`🔧 Equipment Advice Final: productRecommendations=${productRecommendations.length}, brandComparisons=${brandComparisons.length}, specificTips=${specificTips.length}`);
   
   if (productRecommendations.length > 0 || brandComparisons.length > 0 || specificTips.length > 0) {
     let response = "**Equipment Recommendations:**\n\n";
@@ -1993,6 +1989,7 @@ export default async function handler(req, res) {
 
     // --------- ADVICE -----------
     // return article answers + upgraded pills
+    const debugInfo = []; // Initialize debug info array
     let articles = await findArticles(client, { keywords, limit: 20, pageContext });
     
     // De-duplicate and enrich titles
@@ -2132,7 +2129,7 @@ export default async function handler(req, res) {
       // Equipment advice lane - synthesize evidence-based recommendations
       const mentionsEquipment = Array.from(equipmentKeywords).some(k => qlcRank.includes(k));
       if (mentionsEquipment) {
-        const equipmentAnswer = generateEquipmentAdvice(query, contentChunks, articles);
+        const equipmentAnswer = generateEquipmentAdvice(query, contentChunks, articles, debugInfo);
         debugInfo.push(`🔧 Equipment Advice Debug: contentChunks=${contentChunks.length}, first chunk preview: ${contentChunks[0]?.chunk_text?.substring(0, 200)}`);
         debugInfo.push(`🔧 Equipment Answer Result: ${equipmentAnswer ? 'SUCCESS' : 'NULL'}`);
         if (equipmentAnswer) {
@@ -2253,6 +2250,7 @@ export default async function handler(req, res) {
           articles: articles?.length || 0,
           contentChunks: contentChunks?.length || 0,
         },
+        debugInfo: debugInfo,
       },
       meta: {
         duration_ms: Date.now() - started,
