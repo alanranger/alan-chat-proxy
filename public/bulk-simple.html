@@ -1632,8 +1632,8 @@
 
 
       // Batch processing with throttling
-      const BATCH_SIZE = 2; // drastically reduce to avoid Vercel 5-minute timeout
-      const BATCH_DELAY = 2000; // increase delay to be more conservative
+      const BATCH_SIZE = 4; // optimized: larger batches with 95% fewer API calls
+      const BATCH_DELAY = 2000; // keep conservative delay
       const TIMEOUT_MS = 45000; // allow longer than backend timeout (30s + processing time)
       let completed = 0;
 
@@ -1661,18 +1661,15 @@
               addResult(`⏭️ Skipped (hidden product): ${url}  (source: batch ${batchIndex + 1}) — ${result.reason || 'Product not currently published'}`, 'skipped');
               window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              updateDebugControlDashboard();
             } else if (result.message && result.message.includes('duplicates')) {
               addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
               window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              updateDebugControlDashboard();
             } else {
               addResult(`✅ Ingested: ${url}`, 'success');
               stats.successCount++;
               window.urlScrapingStats[category].success++;
               addResult(`🔍 DEBUG: Updated ${category}: success=${window.urlScrapingStats[category].success}`, 'info');
-              updateDebugControlDashboard();
             }
           } else {
             const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
@@ -1681,12 +1678,10 @@
               addResult(`✅ Skipped duplicate: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'success');
               window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              updateDebugControlDashboard();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
               addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
               stats.failedCount++;
               window.urlScrapingStats[category].failed++;
-              updateDebugControlDashboard();
             } else {
               // Improve diagnostics formatting when backend attaches attempt details
               let extra = '';
@@ -1713,18 +1708,21 @@
                 addResult(`⏭️ Skipped (hidden product): ${url}  (source: batch ${batchIndex + 1}) — Product not currently published`, 'skipped');
                 stats.skippedCount++;
                 window.urlScrapingStats[category].skipped++;
-                updateDebugControlDashboard();
               } else {
                 addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
                 stats.failedCount++;
                 window.urlScrapingStats[category].failed++;
-                updateDebugControlDashboard();
               }
             }
           }
           completed++;
           updateProgress((completed / entries.length) * 100, `Ingesting (${completed}/${entries.length}) - ${entries.length - completed} remaining`);
           updateStats();
+          
+          // Update dashboard every 100 URLs to reduce API load
+          if (completed % 100 === 0 || completed === entries.length) {
+            updateDebugControlDashboard();
+          }
         });
         
         // Wait for all URLs in this batch to complete
