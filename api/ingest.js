@@ -580,6 +580,19 @@ async function ingestSingleUrl(url, supa, options = {}) {
 
           if (existing) {
             const merged = { ...existing };
+            
+            // Always update CSV metadata fields if available
+            if (e.csv_metadata_id) {
+              merged.csv_type = e.csv_type ?? merged.csv_type;
+              merged.csv_metadata_id = e.csv_metadata_id ?? merged.csv_metadata_id;
+              merged.categories = e.categories ?? merged.categories;
+              merged.tags = e.tags ?? merged.tags;
+              merged.publish_date = e.publish_date ?? merged.publish_date;
+              merged.location_name = e.location_name ?? merged.location_name;
+              merged.location_address = e.location_address ?? merged.location_address;
+              merged.excerpt = e.excerpt ?? merged.excerpt;
+            }
+            
             // Event preservation: keep CSV-derived schedule if present; merge RAW to retain CSV hints
             if (e.kind === 'event') {
               merged.title = e.title ?? merged.title;
@@ -641,7 +654,16 @@ async function ingestSingleUrl(url, supa, options = {}) {
                   sku: e.sku,
                   provider: e.provider,
                   raw: e.raw,
-                  last_seen: e.last_seen
+                  last_seen: e.last_seen,
+                  // CSV metadata fields
+                  csv_type: e.csv_type,
+                  csv_metadata_id: e.csv_metadata_id,
+                  categories: e.categories,
+                  tags: e.tags,
+                  publish_date: e.publish_date,
+                  location_name: e.location_name,
+                  location_address: e.location_address,
+                  excerpt: e.excerpt
                 })
                 .eq('url', e.url)
                 .eq('kind', e.kind);
