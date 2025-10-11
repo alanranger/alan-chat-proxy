@@ -1067,8 +1067,8 @@ async function findContentChunks(client, { keywords, limit = 5, articleUrls = []
     q = q.or(urlFilter);
   } else {
     // Fallback to keyword search if no specific URLs
-    const orExpr = anyIlike("chunk_text", keywords) || anyIlike("content", keywords) || null;
-    if (orExpr) q = q.or(orExpr);
+  const orExpr = anyIlike("chunk_text", keywords) || anyIlike("content", keywords) || null;
+  if (orExpr) q = q.or(orExpr);
   }
 
   const { data, error } = await q;
@@ -1167,13 +1167,13 @@ async function getArticleAuxLinks(client, articleUrl) {
                 url.startsWith('http://www.alanranger.com/') ||
                 url.startsWith('http://alanranger.com/')) {
               result.related = url;
-              // crude label guess: look for preceding words like link text
-              const labelMatch =
-                text.match(/\[([^\]]+)\]\([^)]+\)/) ||
+            // crude label guess: look for preceding words like link text
+            const labelMatch =
+              text.match(/\[([^\]]+)\]\([^)]+\)/) ||
                 text.match(/>([^<]{3,60})<\/a>/i) ||
                 text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
-              if (labelMatch && labelMatch[1]) {
-                result.relatedLabel = labelMatch[1].trim();
+            if (labelMatch && labelMatch[1]) {
+              result.relatedLabel = labelMatch[1].trim();
               } else {
                 // Generate a clean label from the URL path
                 try {
@@ -2158,7 +2158,7 @@ export default async function handler(req, res) {
     let confidence = 0.4; // Base confidence for advice questions
     let hasEvidenceBasedAnswer = false;
     
-    if (articles?.length) {
+      if (articles?.length) {
       // Equipment advice lane - synthesize evidence-based recommendations
       const mentionsEquipment = Array.from(equipmentKeywords).some(k => qlcRank.includes(k));
       if (mentionsEquipment) {
@@ -2187,7 +2187,7 @@ export default async function handler(req, res) {
         }
       }
       
-      // Service FAQ deterministic lane
+        // Service FAQ deterministic lane
       if (!hasEvidenceBasedAnswer) {
         const serviceAnswer = generateServiceFAQAnswer(query, contentChunks, articles);
         if (serviceAnswer) {
@@ -2197,7 +2197,7 @@ export default async function handler(req, res) {
         }
       }
       
-      // Try to provide a direct answer based on the question type and content chunks
+        // Try to provide a direct answer based on the question type and content chunks
       if (!hasEvidenceBasedAnswer) {
         const directAnswer = generateDirectAnswer(query, articles, contentChunks);
         if (directAnswer) {
@@ -2273,18 +2273,18 @@ export default async function handler(req, res) {
         pills,
       },
       confidence: confidence,
-      debug: {
+        debug: {
         version: "v1.2.31-equipment-advice",
-        intent: "advice",
-        keywords: keywords,
-        counts: {
-          events: 0,
-          products: 0,
-          articles: articles?.length || 0,
-          contentChunks: contentChunks?.length || 0,
-        },
+          intent: "advice",
+          keywords: keywords,
+      counts: {
+            events: 0,
+            products: 0,
+            articles: articles?.length || 0,
+            contentChunks: contentChunks?.length || 0,
+          },
         debugInfo: debugInfo,
-      },
+        },
       meta: {
         duration_ms: Date.now() - started,
         endpoint: "/api/chat",

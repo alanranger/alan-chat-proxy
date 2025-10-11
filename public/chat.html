@@ -157,6 +157,22 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
   white-space: nowrap;
 }
 
+.article-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.article-category, .article-tags {
+  font-size: 10px;
+  color: #9ca3af;
+  background: rgba(156, 163, 175, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
 /* Event Cards */
 .events-grid {
   display: grid;
@@ -957,6 +973,26 @@ function renderProductCard(prod){
     lines.push(`<div class="product-options"><strong>Equipment Needed:</strong><ul>${eq}</ul></div>`);
   }
   
+  // Show CSV categories and tags if available
+  if(prod.categories && Array.isArray(prod.categories) && prod.categories.length > 0) {
+    const categories = prod.categories.filter(c => c && c.trim()).map(c => escapeHTML(c.trim())).join(', ');
+    if(categories) lines.push(`<p class="kvline"><strong>Categories:</strong> ${categories}</p>`);
+  }
+  
+  if(prod.tags && Array.isArray(prod.tags) && prod.tags.length > 0) {
+    const tags = prod.tags.filter(t => t && t.trim()).map(t => escapeHTML(t.trim())).join(', ');
+    if(tags) lines.push(`<p class="kvline"><strong>Tags:</strong> ${tags}</p>`);
+  }
+  
+  // Show location information from CSV if available
+  if(prod.location_name && !facts.location) {
+    lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(prod.location_name)}</p>`);
+  }
+  
+  if(prod.location_address && !facts.location) {
+    lines.push(`<p class="kvline"><strong>Address:</strong> ${escapeHTML(prod.location_address)}</p>`);
+  }
+  
   // Only show meta description if we don't have specific facts
   const md = getMetaDescription(prod);
   if(md && !facts.participants && !facts.fitness && !facts.location) {
@@ -1159,6 +1195,18 @@ function renderArticlesBlock(structured, query){
       day: 'numeric' 
     }) : null);
     
+    // Show categories and tags from CSV data if available
+    let categoryTags = '';
+    if (a.categories && Array.isArray(a.categories) && a.categories.length > 0) {
+      const categories = a.categories.filter(c => c && c.trim()).slice(0, 2).map(c => escapeHTML(c.trim())).join(', ');
+      if (categories) categoryTags += `<span class="article-category">🏷️ ${categories}</span>`;
+    }
+    
+    if (a.tags && Array.isArray(a.tags) && a.tags.length > 0) {
+      const tags = a.tags.filter(t => t && t.trim()).slice(0, 3).map(t => escapeHTML(t.trim())).join(', ');
+      if (tags) categoryTags += `<span class="article-tags"># ${tags}</span>`;
+    }
+    
     return `
       <div class="article-card">
         <div class="article-content">
@@ -1169,6 +1217,7 @@ function renderArticlesBlock(structured, query){
             <span class="article-source">📖 Photography Guide</span>
             ${displayDate ? `<span class="article-date">📅 ${displayDate}</span>` : ''}
           </div>
+          ${categoryTags ? `<div class="article-categories">${categoryTags}</div>` : ''}
         </div>
       </div>
     `;
