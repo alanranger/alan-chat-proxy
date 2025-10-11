@@ -15,7 +15,7 @@ const hashIP = (ip) => {
 };
 
 // Extract publish date from article content
-const extractPublishDate = (article) => {
+const extractPublishDate = async (article) => {
   try {
     // Check if we have a publish_date field
     if (article.publish_date) {
@@ -42,8 +42,49 @@ const extractPublishDate = (article) => {
       });
     }
     
-    // Try to extract from content chunks (this would require a database query)
-    // For now, return null to fall back to last_seen
+    // Try to extract from content chunks - look for date patterns
+    try {
+      const { data: chunks } = await supa
+        .from('page_chunks')
+        .select('chunk_text')
+        .eq('url', url)
+        .limit(3);
+      
+      if (chunks && chunks.length > 0) {
+        const content = chunks.map(c => c.chunk_text).join(' ');
+        
+        // Look for date patterns like "November 2018", "early 2018", "2018", etc.
+        const datePatterns = [
+          /(early\s+)?(january|february|march|april|may|june|july|august|september|october|november|december)\s+20\d{2}/gi,
+          /20\d{2}/g
+        ];
+        
+        for (const pattern of datePatterns) {
+          const match = content.match(pattern);
+          if (match) {
+            const dateStr = match[0];
+            const year = dateStr.match(/20\d{2}/)?.[0];
+            if (year) {
+              // If we have a month, use it; otherwise just use the year
+              const monthMatch = dateStr.match(/(january|february|march|april|may|june|july|august|september|october|november|december)/i);
+              if (monthMatch) {
+                const month = monthMatch[1];
+                const monthNum = new Date(`${month} 1, ${year}`).getMonth();
+                return new Date(year, monthNum, 1).toLocaleDateString('en-GB', { 
+                  year: 'numeric', 
+                  month: 'short' 
+                });
+              } else {
+                return year;
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Error extracting date from chunks:', error.message);
+    }
+    
     return null;
   } catch (error) {
     return null;
@@ -2030,7 +2071,16 @@ export default async function handler(req, res) {
       return s;
     };
     if (Array.isArray(articles) && articles.length){
-      articles = articles
+      // Remove duplicates by URL, preferring 'article' kind over 'service'
+      const uniqueArticles = new Map();
+      articles.forEach(article => {
+        const url = article.page_url || article.source_url || '';
+        if (!uniqueArticles.has(url) || article.kind === 'article') {
+          uniqueArticles.set(url, article);
+        }
+      });
+      
+      articles = Array.from(uniqueArticles.values())
         .map(a=> ({ a, s: scoreArticle(a) }))
         .sort((x,y)=> {
           // First sort by relevance score
@@ -2205,14 +2255,14 @@ export default async function handler(req, res) {
         topic: keywords.join(", "),
         events: [],
         products: [],
-        articles: (articles || []).map(a => ({
+        articles: await Promise.all((articles || []).map(async a => ({
           ...a,
-          display_date: extractPublishDate(a) || (a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
+          display_date: await extractPublishDate(a) || (a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
             year: 'numeric', 
             month: 'short', 
             day: 'numeric' 
           }) : null)
-        })),
+        }))),
         pills,
       },
       confidence: confidence,
