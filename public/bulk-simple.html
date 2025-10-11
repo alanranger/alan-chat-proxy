@@ -2422,6 +2422,12 @@
           const successCount = liveStats.success || 0;
           const failedCount = liveStats.failed || 0;
           const skippedCount = liveStats.skipped || 0;
+          
+          // Debug logging for live stats
+          if (cat.key === 'blog_articles' && successCount > 0) {
+            console.log(`DEBUG: ${cat.key} live stats:`, liveStats, 'window.urlScrapingStats:', window.urlScrapingStats);
+            addResult(`🔧 DEBUG: ${cat.key} live stats: success=${successCount}, failed=${failedCount}, skipped=${skippedCount}`, 'info');
+          }
           const duplicatesRemoved = 0; // This should always be 0 in the detailed table
           
           totalSuccess += successCount;
