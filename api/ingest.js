@@ -468,11 +468,13 @@ async function ingestSingleUrl(url, supa, options = {}) {
           enhancedDescriptions[idx] = enhancedDescription;
           
           // Log enhanced description creation directly to database (fire and forget)
-          supa.from('debug_logs').insert({
-            url: url,
-            stage: 'enhanced_description',
-            data: { idx: idx, description: enhancedDescription.substring(0, 300) }
-          }).catch(() => {}); // Ignore errors
+          try {
+            await supa.from('debug_logs').insert({
+              url: url,
+              stage: 'enhanced_description',
+              data: { idx: idx, description: enhancedDescription.substring(0, 300) }
+            });
+          } catch (e) {} // Ignore errors
         }
       }
       
@@ -492,7 +494,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
           url: url,
           stage: 'entity_creation',
           data: { idx: idx, kind: normalizeKind(item, url), hasEnhanced: !!enhancedDescriptions[idx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0, hasCsvMetadata: !!csvMetadata }
-        }).catch(() => {}); // Ignore errors
+        }).then(() => {}).catch(() => {}); // Ignore errors
         
         return {
           url: url,
