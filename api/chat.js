@@ -1996,7 +1996,15 @@ export default async function handler(req, res) {
     if (Array.isArray(articles) && articles.length){
       articles = articles
         .map(a=> ({ a, s: scoreArticle(a) }))
-        .sort((x,y)=> y.s - x.s)
+        .sort((x,y)=> {
+          // First sort by relevance score
+          if (y.s !== x.s) return y.s - x.s;
+          
+          // Then sort by date (newest first) - use last_seen as date indicator
+          const xDate = new Date(x.a.last_seen || 0);
+          const yDate = new Date(y.a.last_seen || 0);
+          return yDate - xDate;
+        })
         .map(x=> x.a);
       
       // Filter articles for equipment-related queries to remove irrelevant content
@@ -2159,7 +2167,14 @@ export default async function handler(req, res) {
         topic: keywords.join(", "),
         events: [],
         products: [],
-        articles: articles || [],
+        articles: (articles || []).map(a => ({
+          ...a,
+          display_date: a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          }) : null
+        })),
         pills,
       },
       confidence: confidence,

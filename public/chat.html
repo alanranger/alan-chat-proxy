@@ -142,6 +142,19 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .article-meta {
   font-size: 12px;
   color: #9ca3af;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.article-date {
+  font-size: 11px;
+  color: #6b7280;
+  background: rgba(107, 114, 128, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 
 /* Event Cards */
@@ -1140,6 +1153,12 @@ function renderArticlesBlock(structured, query){
     if (!t || /^alan ranger photography$/i.test(t)) t = 'Read more';
     
     // Create a more visually appealing article card
+    const displayDate = a.display_date || (a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    }) : null);
+    
     return `
       <div class="article-card">
         <div class="article-content">
@@ -1148,6 +1167,7 @@ function renderArticlesBlock(structured, query){
           </h4>
           <div class="article-meta">
             <span class="article-source">📖 Photography Guide</span>
+            ${displayDate ? `<span class="article-date">📅 ${displayDate}</span>` : ''}
           </div>
         </div>
       </div>
