@@ -1422,7 +1422,7 @@
 
     // Website scraping
     async function scrapeWebsite(dryRun=false) {
-      // Collect URLs from ALL CSV files with their source category (foundation → enhancement)
+      // Collect URLs from csv_metadata table (metadata-driven system)
       /** @type {{ url: string, source: string }[]} */
       let allEntries = [];
       let urlSources = [];
@@ -1433,29 +1433,82 @@
       const includeWorkshop = document.getElementById('src_workshop')?.checked === true;
       const includeService = document.getElementById('src_service')?.checked === true;
 
-      // 1. Collect from site_urls CSV (if available) — FOUNDATION
-      const siteUrlsFile = document.getElementById('siteUrlsCsv').files[0];
-      if (includeSite && (siteUrlsFile || window.__cachedSiteUrlsText)) {
-        const csvText = siteUrlsFile ? await siteUrlsFile.text() : String(window.__cachedSiteUrlsText || '');
-        const lines = csvText.split('\n').filter(line => line.trim());
-        const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
-        allEntries = allEntries.concat(urls.map(u => ({ url: u, source: 'site' })));
-        urlSources.push(`site_urls: ${urls.length}`);
-      }
-
-      // 2. Collect from cached CSV data (from bulk import) — ENHANCEMENTS
-      if (window.__cachedCsvData) {
-        for (const [type, data] of Object.entries(window.__cachedCsvData)) {
-          if (data.urls && data.urls.length > 0) {
-            if (type==='blog' && !includeBlog) continue;
-            if (type==='event' && !includeEvent) continue;
-            if (type==='workshop' && !includeWorkshop) continue;
-            if (type==='service' && !includeService) continue;
-            const src = (type==='blog'?'blog': type==='event'?'event': type==='workshop'?'workshop': type==='service'?'service': type);
-            allEntries = allEntries.concat(data.urls.map(u => ({ url: u, source: src })));
-            urlSources.push(`${type}: ${data.urls.length}`);
+      try {
+        // Get URLs from csv_metadata table
+        const token = getToken();
+        const baseUrl = 'https://alan-chat-proxy.vercel.app';
+        
+        addResult('🔍 Fetching URLs from csv_metadata table...', 'info');
+        
+        const response = await fetch(`${baseUrl}/api/tools?action=get_urls`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
+        });
+        
+        if (!response.ok) {
+          addResult(`❌ Failed to fetch URLs: ${response.status}`, 'error');
+          return;
         }
+        
+        const data = await response.json();
+        const csvMetadataUrls = data.urls || [];
+        
+        addResult(`📊 Found ${csvMetadataUrls.length} URLs in csv_metadata table`, 'info');
+        
+        // Filter URLs based on checkboxes and map to source categories
+        csvMetadataUrls.forEach(item => {
+          const { url, csv_type } = item;
+          let include = false;
+          let source = '';
+          
+          switch (csv_type) {
+            case 'site_urls':
+              include = includeSite;
+              source = 'site';
+              break;
+            case 'blog':
+              include = includeBlog;
+              source = 'blog';
+              break;
+            case 'course_events':
+            case 'workshop_events':
+              include = includeEvent || includeWorkshop;
+              source = csv_type === 'course_events' ? 'event' : 'workshop';
+              break;
+            case 'course_products':
+            case 'workshop_products':
+              include = includeService;
+              source = 'service';
+              break;
+            case 'product_schema':
+              include = includeService;
+              source = 'service';
+              break;
+            default:
+              include = false;
+          }
+          
+          if (include && url) {
+            allEntries.push({ url, source });
+          }
+        });
+        
+        // Group by source for reporting
+        const sourceCounts = {};
+        allEntries.forEach(entry => {
+          sourceCounts[entry.source] = (sourceCounts[entry.source] || 0) + 1;
+        });
+        
+        Object.entries(sourceCounts).forEach(([source, count]) => {
+          urlSources.push(`${source}: ${count}`);
+        });
+        
+      } catch (error) {
+        addResult(`❌ Error fetching URLs from csv_metadata: ${error.message}`, 'error');
+        return;
       }
 
       if (allEntries.length === 0) {

@@ -114,6 +114,26 @@ export default async function handler(req, res) {
       return sendJSON(res, 200, { ok: true, url, chunks: count ?? (rows?.length || 0), total_len });
     }
 
+        // --- get_urls: get URLs from csv_metadata table ---
+        if (req.method === 'GET' && action === 'get_urls') {
+          try {
+            const { data: urls, error } = await supa
+              .from('csv_metadata')
+              .select('url, csv_type')
+              .not('url', 'is', null);
+            
+            if (error) throw error;
+            
+            return sendJSON(res, 200, { 
+              ok: true, 
+              urls: urls || [],
+              count: (urls || []).length 
+            });
+          } catch (e) {
+            return sendJSON(res, 500, { error: 'failed_to_get_urls', detail: e.message });
+          }
+        }
+
         // --- counts: comprehensive counts including CSV metadata ---
         if (req.method === 'GET' && action === 'counts') {
           const counts = {};
@@ -588,7 +608,7 @@ export default async function handler(req, res) {
     }
 
     // Unknown/unsupported
-    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify|counts|parity|cron_status|export|export_unmapped|export_reconcile (GET) or action=search|finalize|aggregate_analytics (POST)' });
+    return sendJSON(res, 404, { error: 'not_found', detail: 'Use action=health|verify|get_urls|counts|parity|cron_status|export|export_unmapped|export_reconcile (GET) or action=search|finalize|aggregate_analytics (POST)' });
   } catch (e) {
     return sendJSON(res, 500, { error: 'server_error', detail: String(e?.message || e) });
   }
