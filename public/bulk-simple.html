@@ -1479,13 +1479,16 @@
               source = csv_type === 'course_events' ? 'event' : 'workshop';
               break;
             case 'course_products':
-            case 'workshop_products':
               include = includeService;
               source = 'service';
               break;
+            case 'workshop_products':
+              include = includeService;
+              source = 'workshop_products';
+              break;
             case 'product_schema':
               include = includeService;
-              source = 'service';
+              source = 'product_schema';
               break;
             default:
               include = false;
@@ -1541,6 +1544,7 @@
         'workshop_events': 0,
         'course_products': 0,
         'workshop_products': 0,
+        'product_schema': 0,
         'website_urls': 0,
         'json_extraction': 0
       };
@@ -1548,6 +1552,8 @@
         : src === 'event' ? 'course_events'
         : src === 'workshop' ? 'workshop_events'
         : src === 'service' ? 'course_products'
+        : src === 'workshop_products' ? 'workshop_products'
+        : src === 'product_schema' ? 'product_schema'
         : src === 'site' ? 'website_urls'
         : 'website_urls';
       for (const [src, cnt] of dupBySource.entries()) {
