@@ -159,7 +159,7 @@ function logFieldTrackingStats(csvType, fieldStats, metadataLength, totalRows) {
 
 /* ========== CSV Metadata Import Functions ========== */
 
-// Import CSV metadata for blog articles
+// Import CSV metadata for blog articles (BOM fix applied)
 async function importBlogMetadata(rows, supa) {
   const fieldStats = {
     total_rows: rows.length,
