@@ -2420,8 +2420,19 @@
         const currentSessionByCategory = {};
         addResult(`🔧 DEBUG: Processing current session URLs: ${currentSessionUrls.length}`, 'info');
         currentSessionUrls.forEach(url => {
-          const category = categorize(url.url, null, url.csv_type);
-          addResult(`🔧 DEBUG: URL categorized: ${url.url} csv_type: ${url.csv_type} category: ${category}`, 'info');
+          // Inline categorization logic (same as categorize function)
+          let category;
+          const csvType = url.csv_type;
+          if (csvType === 'blog') category = 'blog_articles';
+          else if (csvType === 'course_events') category = 'course_events';
+          else if (csvType === 'workshop_events') category = 'workshop_events';
+          else if (csvType === 'course_products') category = 'course_products';
+          else if (csvType === 'workshop_products') category = 'workshop_products';
+          else if (csvType === 'site_urls') category = 'site_urls';
+          else if (csvType === 'product_schema') category = 'product_schema';
+          else category = 'site_urls'; // fallback
+          
+          addResult(`🔧 DEBUG: URL categorized: ${url.url} csv_type: ${csvType} category: ${category}`, 'info');
           if (!currentSessionByCategory[category]) {
             currentSessionByCategory[category] = [];
           }
