@@ -2398,12 +2398,12 @@
           // During ingestion, use live stats; otherwise use persistent database counts
           const liveSuccessCount = window.urlScrapingStats ? 
             Object.values(window.urlScrapingStats).reduce((sum, cat) => sum + (cat.success || 0), 0) : 0;
-          const persistentCount = data.page_chunks || 0;
+          const persistentCount = totalData.page_chunks || 0;
           const displayCount = liveSuccessCount > 0 ? liveSuccessCount : persistentCount;
           ingestedEl.textContent = displayCount;
-          console.log('DEBUG: Updated successCount to:', displayCount, '(live:', liveSuccessCount, 'persistent:', persistentCount, ')');
+          addResult(`🔧 DEBUG: Updated successCount to: ${displayCount} (live: ${liveSuccessCount}, persistent: ${persistentCount})`, 'info');
         } else {
-          console.warn('DEBUG: successCount element not found');
+          addResult('🔧 DEBUG: successCount element not found', 'warning');
         }
         
         if (failedEl) {
