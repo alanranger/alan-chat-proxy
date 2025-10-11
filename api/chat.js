@@ -258,19 +258,22 @@ function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
   return `**${para.substring(0, 300).trim()}**\n\n${url ? `*Source: ${url}*\n\n` : ""}`;
 }
 function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
-  console.log('DEBUG: generateEquipmentAdvice called with query:', query, 'chunks:', contentChunks.length, 'articles:', articles.length);
   const lc = (query || "").toLowerCase();
   const equipmentKeywords = new Set(['tripod','tripods','head','ballhead','levelling','leveling','recommend','recommendation','recommendations','equipment']);
   
   // Check if this is an equipment recommendation question
   const isEquipmentQuery = Array.from(equipmentKeywords).some(k => lc.includes(k));
-  console.log('DEBUG: isEquipmentQuery:', isEquipmentQuery, 'keywords found:', Array.from(equipmentKeywords).filter(k => lc.includes(k)));
   if (!isEquipmentQuery) return null;
   
   // Extract recommendations from your written content with improved logic
   const productRecommendations = [];
   const brandComparisons = [];
   const specificTips = [];
+  
+  // Add debug info to global debugInfo array
+  if (typeof debugInfo !== 'undefined') {
+    debugInfo.push(`🔧 Equipment Advice: Processing ${contentChunks.length} chunks for query "${query}"`);
+  }
   
   try {
     for (const chunk of (contentChunks || []).slice(0, 8)) { // Increased from 5 to 8
@@ -355,7 +358,10 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   }
   
   // If we have good content from your written articles, build a comprehensive response
-  console.log('DEBUG: Final counts - productRecommendations:', productRecommendations.length, 'brandComparisons:', brandComparisons.length, 'specificTips:', specificTips.length);
+  // Add debug info to global debugInfo array
+  if (typeof debugInfo !== 'undefined') {
+    debugInfo.push(`🔧 Equipment Advice Final: productRecommendations=${productRecommendations.length}, brandComparisons=${brandComparisons.length}, specificTips=${specificTips.length}`);
+  }
   
   if (productRecommendations.length > 0 || brandComparisons.length > 0 || specificTips.length > 0) {
     let response = "**Equipment Recommendations:**\n\n";
@@ -2071,6 +2077,8 @@ export default async function handler(req, res) {
       return s;
     };
     if (Array.isArray(articles) && articles.length){
+      debugInfo.push(`🔧 Article Processing: Starting with ${articles.length} articles`);
+      
       // Remove duplicates by URL, preferring 'article' kind over 'service'
       const uniqueArticles = new Map();
       articles.forEach(article => {
@@ -2079,6 +2087,8 @@ export default async function handler(req, res) {
           uniqueArticles.set(url, article);
         }
       });
+      
+      debugInfo.push(`🔧 Article Deduplication: ${articles.length} → ${uniqueArticles.size} unique articles`);
       
       articles = Array.from(uniqueArticles.values())
         .map(a=> ({ a, s: scoreArticle(a) }))
@@ -2163,9 +2173,9 @@ export default async function handler(req, res) {
       // Equipment advice lane - synthesize evidence-based recommendations
       const mentionsEquipment = Array.from(equipmentKeywords).some(k => qlcRank.includes(k));
       if (mentionsEquipment) {
-        console.log('DEBUG: contentChunks for equipment advice:', contentChunks.length, 'first chunk preview:', contentChunks[0]?.chunk_text?.substring(0, 200));
         const equipmentAnswer = generateEquipmentAdvice(query, contentChunks, articles);
-        console.log('DEBUG: equipmentAnswer result:', equipmentAnswer ? 'SUCCESS' : 'NULL');
+        debugInfo.push(`🔧 Equipment Advice Debug: contentChunks=${contentChunks.length}, first chunk preview: ${contentChunks[0]?.chunk_text?.substring(0, 200)}`);
+        debugInfo.push(`🔧 Equipment Answer Result: ${equipmentAnswer ? 'SUCCESS' : 'NULL'}`);
         if (equipmentAnswer) {
           lines.push(equipmentAnswer);
           hasEvidenceBasedAnswer = true;
@@ -2255,14 +2265,22 @@ export default async function handler(req, res) {
         topic: keywords.join(", "),
         events: [],
         products: [],
-        articles: await Promise.all((articles || []).map(async a => ({
-          ...a,
-          display_date: await extractPublishDate(a) || (a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
+        articles: await Promise.all((articles || []).map(async a => {
+          const extractedDate = await extractPublishDate(a);
+          const fallbackDate = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
             year: 'numeric', 
             month: 'short', 
             day: 'numeric' 
-          }) : null)
-        }))),
+          }) : null;
+          const finalDate = extractedDate || fallbackDate;
+          
+          debugInfo.push(`🔧 Date Extraction for ${a.title}: extracted="${extractedDate}", fallback="${fallbackDate}", final="${finalDate}"`);
+          
+          return {
+            ...a,
+            display_date: finalDate
+          };
+        })),
         pills,
       },
       confidence: confidence,
