@@ -1656,11 +1656,13 @@
               addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
+              updateDebugControlDashboard();
             } else {
               addResult(`✅ Ingested: ${url}`, 'success');
               stats.successCount++;
               urlScrapingStats[category].success++;
               addResult(`🔍 DEBUG: Updated ${category}: success=${urlScrapingStats[category].success}`, 'info');
+              updateDebugControlDashboard();
             }
           } else {
             const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
@@ -1669,10 +1671,12 @@
               addResult(`✅ Skipped duplicate: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
+              updateDebugControlDashboard();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
               addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
+              updateDebugControlDashboard();
             } else {
               // Improve diagnostics formatting when backend attaches attempt details
               let extra = '';
@@ -1691,6 +1695,7 @@
               addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
+              updateDebugControlDashboard();
             }
           }
           completed++;
