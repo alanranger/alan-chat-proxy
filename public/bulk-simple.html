@@ -914,10 +914,10 @@
         if (result.success) {
           addResult(`✅ ${csvType} metadata import successful: ${result.metadata_imported}/${actualRowCount} records`, 'success');
           
-          // Update csvRowCounts object for dashboard display
+          // Update csvRowCounts object for dashboard display (use imported count, not total CSV count)
           if (csvRowCounts.hasOwnProperty(csvType)) {
-            csvRowCounts[csvType] = actualRowCount;
-            addResult(`🔧 DEBUG: Updated csvRowCounts[${csvType}] = ${actualRowCount}`, 'info');
+            csvRowCounts[csvType] = result.metadata_imported;
+            addResult(`🔧 DEBUG: Updated csvRowCounts[${csvType}] = ${result.metadata_imported} (imported) vs ${actualRowCount} (total CSV)`, 'info');
           }
           
           // Show debug info for course_events and workshop_events
