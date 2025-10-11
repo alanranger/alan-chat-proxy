@@ -14,10 +14,10 @@ const hashIP = (ip) => {
   return crypto.createHash('sha256').update(ip + 'chat-log-salt').digest('hex').substring(0, 16);
 };
 
-// Extract publish date from article content (simplified, non-async version)
+// Extract publish date from CSV data (now properly populated)
 const extractPublishDate = (article) => {
   try {
-    // Check if we have a publish_date field
+    // Use CSV publish_date field (now properly populated from CSV import)
     if (article.publish_date) {
       return new Date(article.publish_date).toLocaleDateString('en-GB', { 
         year: 'numeric', 
@@ -26,24 +26,14 @@ const extractPublishDate = (article) => {
       });
     }
     
-    // Try to extract date from URL (common pattern: /2024/01/15/ or /january-15-2024/)
-    const url = article.page_url || article.source_url || '';
-    const yearMatch = url.match(/\/(20\d{2})\//);
-    const monthMatch = url.match(/\/(\d{1,2})\/(\d{1,2})\//);
-    
-    if (yearMatch && monthMatch) {
-      const year = yearMatch[1];
-      const month = monthMatch[1];
-      const day = monthMatch[2];
-      return new Date(year, month - 1, day).toLocaleDateString('en-GB', { 
+    // Fallback to last_seen if no publish_date
+    if (article.last_seen) {
+      return new Date(article.last_seen).toLocaleDateString('en-GB', { 
         year: 'numeric', 
         month: 'short', 
         day: 'numeric' 
       });
     }
-    
-    // TODO: Implement proper date extraction from database
-    // The publish_date field should be populated during ingestion
     
     return null;
   } catch (error) {
@@ -916,12 +906,10 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
     }
   }
 
-  // Fetch a wider pool then rank deterministically by relevance
-  // Some tripod posts may be stored with varying kinds (e.g., BlogPosting, FAQPage).
-  // Start broad (no kind restriction) and search across title, url and raw JSON fields.
+  // Use the new CSV-driven unified articles view
   let q = client
-    .from("page_entities")
-    .select("id, title, page_url, source_url, raw, last_seen, kind, publish_date")
+    .from("v_articles_unified")
+    .select("id, title, page_url, categories, tags, image_url, publish_date, description, json_ld_data, last_seen, kind, source_type")
     .limit(limit * 5); // Increased from limit * 3 to get more results
 
   const parts = [];
