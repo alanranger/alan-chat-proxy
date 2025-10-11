@@ -152,7 +152,8 @@ async function importBlogMetadata(rows, supa) {
     tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
     publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
     image_url: row.Image || row.image,
-    excerpt: null
+    excerpt: null,
+    import_session: new Date().toISOString() // Track when this was imported
   })).filter(item => item.url);
 
   if (metadata.length > 0) {
@@ -186,7 +187,8 @@ async function importCourseEventMetadata(rows, supa) {
     location_city_state_zip: row.Location_City_State_ZIP || row['Location City State ZIP'],
     excerpt: row.Excerpt || row.excerpt,
     image_url: row.Event_Image || row['Event Image'],
-    workflow_state: row.Workflow_State || row['Workflow State']
+    workflow_state: row.Workflow_State || row['Workflow State'],
+    import_session: new Date().toISOString() // Track when this was imported
   })).filter(item => item.url);
   
   debugInfo.filteredCount = metadata.length;
@@ -223,7 +225,8 @@ async function importWorkshopEventMetadata(rows, supa) {
     location_city_state_zip: row.Location_City_State_ZIP || row['Location City State ZIP'],
     excerpt: row.Excerpt || row.excerpt,
     image_url: row.Event_Image || row['Event Image'],
-    workflow_state: row.Workflow_State || row['Workflow State']
+    workflow_state: row.Workflow_State || row['Workflow State'],
+    import_session: new Date().toISOString() // Track when this was imported
   })).filter(item => item.url);
   
   debugInfo.filteredCount = metadata.length;
@@ -246,7 +249,8 @@ async function importCourseProductMetadata(rows, supa) {
     tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : [],
     publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
     image_url: row.Image || row.image,
-    excerpt: null
+    excerpt: null,
+    import_session: new Date().toISOString() // Track when this was imported
   })).filter(item => item.url);
 
   if (metadata.length > 0) {
@@ -271,7 +275,8 @@ async function importWorkshopProductMetadata(rows, supa) {
     tags: row.Tags ? row.Tags.split(',').map(t => t.trim()) : (row.tags ? row.tags.split(',').map(t => t.trim()) : []),
     publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
     image_url: row.Image || row.image,
-    excerpt: null
+    excerpt: null,
+    import_session: new Date().toISOString() // Track when this was imported
   })).filter(item => item.url);
   
   console.log('DEBUG: importWorkshopProductMetadata - Filtered count:', metadata.length);
@@ -294,7 +299,8 @@ async function importSiteUrlMetadata(rows, supa) {
     tags: [],
     publish_date: null,
     image_url: null,
-    excerpt: null
+    excerpt: null,
+    import_session: new Date().toISOString() // Track when this was imported
   })).filter(item => item.url);
 
   if (metadata.length > 0) {
@@ -331,7 +337,8 @@ async function importProductSchemaMetadata(rows, supa) {
       publish_date: null,
       image_url: jsonLdData?.image || null,
       excerpt: jsonLdData?.description || null,
-      json_ld_data: jsonLdData
+      json_ld_data: jsonLdData,
+      import_session: new Date().toISOString() // Track when this was imported
     };
   }).filter(item => item.url);
 

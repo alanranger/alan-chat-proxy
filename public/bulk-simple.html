@@ -458,13 +458,13 @@
       <h3>🔧 Debug & Control</h3>
       <div class="card">
         <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 10px;">
-              <div class="stat-box" title="Total CSV metadata imported (blogs, events, workshops, products)">
-                <div class="stat-label">CSV Metadata</div>
-                <div class="stat-value" id="csvImportedRows">0</div>
+              <div class="stat-box" title="CSV metadata from current import session (last 5 minutes)">
+                <div class="stat-label">Current Session</div>
+                <div class="stat-value" id="currentSessionRows">0</div>
               </div>
-              <div class="stat-box" title="Total URLs loaded from site_urls.csv for content ingestion">
-                <div class="stat-label">URLs Loaded</div>
-                <div class="stat-value" id="loadedRows">0</div>
+              <div class="stat-box" title="Total URLs in database (all sessions)">
+                <div class="stat-label">Total Database</div>
+                <div class="stat-value" id="totalDatabaseRows">0</div>
               </div>
               <div class="stat-box" title="URLs successfully ingested (new content processed)">
                 <div class="stat-label">Ingested</div>
@@ -1430,13 +1430,14 @@
       const includeService = document.getElementById('src_service')?.checked === true;
 
       try {
-        // Get URLs from csv_metadata table
+        // Get URLs from csv_metadata table - ONLY from current session
         const token = getToken();
         const baseUrl = 'https://alan-chat-proxy.vercel.app';
         
-        addResult('🔍 Fetching URLs from csv_metadata table...', 'info');
+        addResult('🔍 Fetching URLs from current import session...', 'info');
         
-        const response = await fetch(`${baseUrl}/api/tools?action=get_urls`, {
+        // Get URLs from csv_metadata table - ONLY from current import session (last 5 minutes)
+        const response = await fetch(`${baseUrl}/api/tools?action=get_urls&recent=true`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -1452,7 +1453,14 @@
         const data = await response.json();
         const csvMetadataUrls = data.urls || [];
         
-        addResult(`📊 Found ${csvMetadataUrls.length} URLs in csv_metadata table`, 'info');
+        addResult(`📊 Found ${csvMetadataUrls.length} URLs from current import session (imported in last 5 minutes)`, 'info');
+        if (csvMetadataUrls.length === 0) {
+          addResult(`⚠️ No URLs found from recent imports. Make sure you've imported CSVs in the last 5 minutes.`, 'warning');
+          return;
+        }
+        
+        // Store current session URLs for dashboard display
+        window.currentSessionUrls = csvMetadataUrls;
         
         // Filter URLs based on checkboxes and map to source categories
         csvMetadataUrls.forEach(item => {
@@ -1632,7 +1640,7 @@
 
 
       // Batch processing with throttling
-      const BATCH_SIZE = 4; // optimized: larger batches with 95% fewer API calls
+      const BATCH_SIZE = 10; // increased for faster processing with SMALL plan
       const BATCH_DELAY = 2000; // keep conservative delay
       const TIMEOUT_MS = 45000; // allow longer than backend timeout (30s + processing time)
       let completed = 0;
@@ -2358,27 +2366,26 @@
         console.log('DEBUG: Total metadata count:', totalMetadata);
         
         // Update summary boxes with correct element IDs
-        const csvMetadataEl = document.getElementById('csvImportedRows');
-        const urlsLoadedEl = document.getElementById('loadedRows');
+        const currentSessionEl = document.getElementById('currentSessionRows');
+        const totalDatabaseEl = document.getElementById('totalDatabaseRows');
         const ingestedEl = document.getElementById('successCount');
         const failedEl = document.getElementById('failedCount');
         const stoppedEl = document.getElementById('stoppedCount');
         const skippedEl = document.getElementById('skippedCount');
         
-        if (csvMetadataEl) {
-          csvMetadataEl.textContent = totalMetadata;
-          console.log('DEBUG: Updated csvImportedRows to:', totalMetadata);
-        } else {
-          console.warn('DEBUG: csvImportedRows element not found');
+        // Show current session count (from window.currentSessionUrls)
+        const currentSessionCount = window.currentSessionUrls ? window.currentSessionUrls.length : 0;
+        if (currentSessionEl) {
+          currentSessionEl.textContent = currentSessionCount;
+          console.log('DEBUG: Updated currentSessionRows to:', currentSessionCount);
         }
         
-        if (urlsLoadedEl) {
-          // URLs Loaded should show the total number of URLs that will be processed
-          // This comes from the csv_metadata table count
-          urlsLoadedEl.textContent = totalMetadata;
-          console.log('DEBUG: Updated loadedRows to:', totalMetadata);
+        // Show total database count
+        if (totalDatabaseEl) {
+          totalDatabaseEl.textContent = totalMetadata;
+          console.log('DEBUG: Updated totalDatabaseRows to:', totalMetadata);
         } else {
-          console.warn('DEBUG: loadedRows element not found');
+          console.warn('DEBUG: totalDatabaseRows element not found');
         }
         
         if (ingestedEl) {
@@ -2503,8 +2510,15 @@
     // Legacy renderCategoryStats function removed - using updateDebugControlDashboard() instead
     
     function updateStats() {
-      document.getElementById('csvImportedRows').textContent = stats.csvImportedRows;
-      document.getElementById('loadedRows').textContent = stats.loadedRows;
+      // Update current session count if available
+      if (window.currentSessionUrls) {
+        const currentSessionEl = document.getElementById('currentSessionRows');
+        if (currentSessionEl) {
+          currentSessionEl.textContent = window.currentSessionUrls.length;
+        }
+      }
+      
+      // Update ingestion stats
       document.getElementById('successCount').textContent = stats.successCount;
       document.getElementById('failedCount').textContent = stats.failedCount;
       document.getElementById('stoppedCount').textContent = stats.stoppedCount;

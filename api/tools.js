@@ -117,17 +117,28 @@ export default async function handler(req, res) {
         // --- get_urls: get URLs from csv_metadata table ---
         if (req.method === 'GET' && action === 'get_urls') {
           try {
-            const { data: urls, error } = await supa
+            // Check if we should filter by recent imports (last 5 minutes)
+            const recentOnly = req.query.recent === 'true';
+            let query = supa
               .from('csv_metadata')
-              .select('url, csv_type')
+              .select('url, csv_type, import_session')
               .not('url', 'is', null);
+            
+            if (recentOnly) {
+              // Only get URLs imported in the last 5 minutes
+              const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+              query = query.gte('import_session', fiveMinutesAgo);
+            }
+            
+            const { data: urls, error } = await query;
             
             if (error) throw error;
             
             return sendJSON(res, 200, { 
               ok: true, 
               urls: urls || [],
-              count: (urls || []).length 
+              count: (urls || []).length,
+              recent_only: recentOnly
             });
           } catch (e) {
             return sendJSON(res, 500, { error: 'failed_to_get_urls', detail: e.message });
