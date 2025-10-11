@@ -1569,6 +1569,8 @@
       document.getElementById('stopScrapeBtn').style.display = 'inline-block';
 
       addResult('🕷️ Starting content ingestion...');
+      // Update dashboard at start of ingestion
+      await updateDebugControlDashboard();
       document.getElementById('stepScrape').style.background = '#3a3';
       document.getElementById('stepScrape').textContent = 'Status: running';
       
@@ -1656,13 +1658,15 @@
               addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
               window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              updateDebugControlDashboard();
+              // Don't update dashboard after each URL - too slow
+              // updateDebugControlDashboard();
             } else {
               addResult(`✅ Ingested: ${url}`, 'success');
               stats.successCount++;
               window.urlScrapingStats[category].success++;
               addResult(`🔍 DEBUG: Updated ${category}: success=${window.urlScrapingStats[category].success}`, 'info');
-              updateDebugControlDashboard();
+              // Don't update dashboard after each URL - too slow
+              // updateDebugControlDashboard();
             }
           } else {
             const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
@@ -1671,12 +1675,14 @@
               addResult(`✅ Skipped duplicate: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'success');
               window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              updateDebugControlDashboard();
+              // Don't update dashboard after each URL - too slow
+              // updateDebugControlDashboard();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
               addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
               stats.failedCount++;
               window.urlScrapingStats[category].failed++;
-              updateDebugControlDashboard();
+              // Don't update dashboard after each URL - too slow
+              // updateDebugControlDashboard();
             } else {
               // Improve diagnostics formatting when backend attaches attempt details
               let extra = '';
@@ -1695,7 +1701,8 @@
               addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
               stats.failedCount++;
               window.urlScrapingStats[category].failed++;
-              updateDebugControlDashboard();
+              // Don't update dashboard after each URL - too slow
+              // updateDebugControlDashboard();
             }
           }
           completed++;
@@ -1734,8 +1741,7 @@
 
       updateProgress(100, 'Content ingestion complete');
       addResult('🎉 Content ingestion complete!', 'success');
-      
-      // Update dashboards to show actual ingestion results
+      // Update dashboard at end of ingestion
       await updateDebugControlDashboard();
       
       // Debug: Log final urlScrapingStats

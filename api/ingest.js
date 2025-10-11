@@ -347,7 +347,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
     stage = 'store_raw_html';
     const contentHash = generateContentHash(html);
     try {
-      await supa.from('page_html').upsert({
+      const { error } = await supa.from('page_html').upsert({
         url: url,
         html_content: html,
         content_hash: contentHash,
@@ -355,8 +355,16 @@ async function ingestSingleUrl(url, supa, options = {}) {
       }, {
         onConflict: 'url,content_hash'
       });
+      
+      if (error) {
+        console.error('Failed to store raw HTML:', error);
+        return sendJSON(res, 500, { error: 'Failed to store raw HTML', details: error.message, stage });
+      }
+      
+      console.log(`✅ Stored raw HTML for ${url} (${html.length} chars, hash: ${contentHash})`);
     } catch (e) {
-      console.warn('Failed to store raw HTML:', e.message);
+      console.error('Exception storing raw HTML:', e);
+      return sendJSON(res, 500, { error: 'Exception storing raw HTML', details: e.message, stage });
     }
     
     stage = 'extract_jsonld';
