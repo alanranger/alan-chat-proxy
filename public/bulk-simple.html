@@ -1733,6 +1733,9 @@
       updateProgress(100, 'Content ingestion complete');
       addResult('🎉 Content ingestion complete!', 'success');
       
+      // Update dashboards to show actual ingestion results
+      await updateDebugControlDashboard();
+      
       // Debug: Log final urlScrapingStats
       
       document.getElementById('stepScrape').style.background = stats.failedCount === 0 ? '#2a6' : '#a62';
@@ -2347,13 +2350,17 @@
         }
         
         if (urlsLoadedEl) {
-          urlsLoadedEl.textContent = data.page_entities || 0;
-          console.log('DEBUG: Updated loadedRows to:', data.page_entities || 0);
+          // URLs Loaded should show the total number of URLs that will be processed
+          // This comes from the csv_metadata table count
+          urlsLoadedEl.textContent = totalMetadata;
+          console.log('DEBUG: Updated loadedRows to:', totalMetadata);
         } else {
           console.warn('DEBUG: loadedRows element not found');
         }
         
         if (ingestedEl) {
+          // Success should show actual ingestion results (page_chunks count)
+          // This will be 0 until Step 2 is run successfully
           ingestedEl.textContent = data.page_chunks || 0;
           console.log('DEBUG: Updated successCount to:', data.page_chunks || 0);
         } else {
@@ -2401,21 +2408,27 @@
         const rows = categories.map(cat => {
           const count = csvMetadataCounts[cat.key] || 0;
           totalCsvCount += count;
-          // Success should only show after Step 2 (Ingest Content) has been run
-          // For now, show 0 until actual ingestion happens
-          totalSuccess += 0; // Will be updated after Step 2
-          totalFailed += 0; // No failures in metadata system
-          totalSkipped += 0; // No skips in metadata system
-          totalDuplicatesRemoved += 0; // No duplicates in metadata system
+          
+          // For now, show 0 for all ingestion metrics until Step 2 is run
+          // This will be updated after successful ingestion
+          const successCount = 0; // Will be updated after Step 2
+          const failedCount = 0; // No failures in metadata system
+          const skippedCount = 0; // No skips in metadata system
+          const duplicatesRemoved = 0; // No duplicates in metadata system
+          
+          totalSuccess += successCount;
+          totalFailed += failedCount;
+          totalSkipped += skippedCount;
+          totalDuplicatesRemoved += duplicatesRemoved;
           
           return `
             <tr>
               <td style="padding: 4px 8px; text-align: left;">${cat.label}${cat.code}</td>
               <td style="padding: 4px 8px; text-align: left;">${count}</td>
-              <td style="padding: 4px 8px; text-align: left; color: #4CAF50;">0</td>
-              <td style="padding: 4px 8px; text-align: left; color: #f44336;">0</td>
-              <td style="padding: 4px 8px; text-align: left; color: #2196F3;">0</td>
-              <td style="padding: 4px 8px; text-align: left; color: #FF9800;">0</td>
+              <td style="padding: 4px 8px; text-align: left; color: #4CAF50;">${successCount}</td>
+              <td style="padding: 4px 8px; text-align: left; color: #f44336;">${failedCount}</td>
+              <td style="padding: 4px 8px; text-align: left; color: #2196F3;">${skippedCount}</td>
+              <td style="padding: 4px 8px; text-align: left; color: #FF9800;">${duplicatesRemoved}</td>
             </tr>
           `;
         }).join('');
