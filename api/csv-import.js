@@ -170,17 +170,27 @@ async function importBlogMetadata(rows, supa) {
   };
   
   const metadata = rows.map(row => {
+    // Debug logging for first few rows
+    if (rows.indexOf(row) < 3) {
+      console.log(`DEBUG: Row ${rows.indexOf(row)} - Categories: "${row.Categories}", Tags: "${row.Tags}"`);
+    }
+    
     const item = {
       csv_type: 'blog',
       url: row['full url'] || row['Full Url'] || row.url,
       title: row.Title || row.title ? cleanHTMLText(row.Title || row.title) : null,
-      categories: row.Categories ? row.Categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
-      tags: row.Tags ? row.Tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
+      categories: (row.Categories && row.Categories.trim()) ? row.Categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
+      tags: (row.Tags && row.Tags.trim()) ? row.Tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
       publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
       image_url: row.Image || row.image ? cleanHTMLText(row.Image || row.image) : null,
       excerpt: null,
       import_session: new Date().toISOString()
     };
+    
+    // Debug logging for processed item
+    if (rows.indexOf(row) < 3) {
+      console.log(`DEBUG: Processed item - categories:`, item.categories, `tags:`, item.tags);
+    }
     
     // Track field success
     fieldStats.fields_found.url = (fieldStats.fields_found.url || 0) + (item.url ? 1 : 0);
