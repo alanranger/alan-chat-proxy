@@ -170,9 +170,10 @@ async function importBlogMetadata(rows, supa) {
   };
   
   const metadata = rows.map(row => {
-    // Debug logging for first few rows
+    // Debug logging for first few rows - BOM FIX VERSION 2
     if (rows.indexOf(row) < 3) {
-      console.log(`DEBUG: Row ${rows.indexOf(row)} - Categories: "${row.Categories}", Tags: "${row.Tags}"`);
+      console.log(`DEBUG V2: Row ${rows.indexOf(row)} - Categories: "${row.Categories}", Tags: "${row.Tags}"`);
+      console.log(`DEBUG V2: Title field: "${row['﻿Title']}", Regular Title: "${row.Title}"`);
     }
     
     const item = {
