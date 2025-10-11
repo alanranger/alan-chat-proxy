@@ -191,6 +191,9 @@ async function importBlogMetadata(rows, supa) {
     // Debug logging for processed item
     if (rows.indexOf(row) < 3) {
       console.log(`DEBUG: Processed item - categories:`, item.categories, `tags:`, item.tags);
+      console.log(`DEBUG: Raw Categories: "${row.Categories}", Raw Tags: "${row.Tags}"`);
+      console.log(`DEBUG: Categories after split:`, row.Categories ? row.Categories.split(';') : 'null');
+      console.log(`DEBUG: Tags after split:`, row.Tags ? row.Tags.split(',') : 'null');
     }
     
     // Track field success
