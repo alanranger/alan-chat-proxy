@@ -916,8 +916,8 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   const t1 = anyIlike("title", keywords); if (t1) parts.push(t1);
   const t2 = anyIlike("page_url", keywords); if (t2) parts.push(t2);
   // JSON fields (headline/name) where schema types store titles
-  const t3 = anyIlike("raw->>headline", keywords); if (t3) parts.push(t3);
-  const t4 = anyIlike("raw->>name", keywords); if (t4) parts.push(t4);
+  const t3 = anyIlike("json_ld_data->>headline", keywords); if (t3) parts.push(t3);
+  const t4 = anyIlike("json_ld_data->>name", keywords); if (t4) parts.push(t4);
   if (parts.length) q = q.or(parts.join(","));
 
   const { data, error } = await q;
