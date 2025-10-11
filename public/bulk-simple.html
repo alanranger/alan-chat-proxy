@@ -1658,15 +1658,13 @@
               addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
               window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              // Don't update dashboard after each URL - too slow
-              // updateDebugControlDashboard();
+              updateDebugControlDashboard();
             } else {
               addResult(`✅ Ingested: ${url}`, 'success');
               stats.successCount++;
               window.urlScrapingStats[category].success++;
               addResult(`🔍 DEBUG: Updated ${category}: success=${window.urlScrapingStats[category].success}`, 'info');
-              // Don't update dashboard after each URL - too slow
-              // updateDebugControlDashboard();
+              updateDebugControlDashboard();
             }
           } else {
             const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
@@ -1675,14 +1673,12 @@
               addResult(`✅ Skipped duplicate: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'success');
               window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              // Don't update dashboard after each URL - too slow
-              // updateDebugControlDashboard();
+              updateDebugControlDashboard();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
               addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
               stats.failedCount++;
               window.urlScrapingStats[category].failed++;
-              // Don't update dashboard after each URL - too slow
-              // updateDebugControlDashboard();
+              updateDebugControlDashboard();
             } else {
               // Improve diagnostics formatting when backend attaches attempt details
               let extra = '';
@@ -1701,8 +1697,7 @@
               addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
               stats.failedCount++;
               window.urlScrapingStats[category].failed++;
-              // Don't update dashboard after each URL - too slow
-              // updateDebugControlDashboard();
+              updateDebugControlDashboard();
             }
           }
           completed++;
