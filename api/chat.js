@@ -1064,14 +1064,21 @@ function deriveTitleFromUrl(u) {
 }
 
 
-async function findContentChunks(client, { keywords, limit = 5 }) {
+async function findContentChunks(client, { keywords, limit = 5, articleUrls = [] }) {
   let q = client
     .from("page_chunks")
     .select("title, chunk_text, url, content")
     .limit(limit * 2); // Get more results to filter
 
-  const orExpr = anyIlike("chunk_text", keywords) || anyIlike("content", keywords) || null;
-  if (orExpr) q = q.or(orExpr);
+  // If we have specific article URLs, prioritize chunks from those articles
+  if (articleUrls.length > 0) {
+    const urlFilter = articleUrls.map(url => `url.eq.${url}`).join(',');
+    q = q.or(urlFilter);
+  } else {
+    // Fallback to keyword search if no specific URLs
+    const orExpr = anyIlike("chunk_text", keywords) || anyIlike("content", keywords) || null;
+    if (orExpr) q = q.or(orExpr);
+  }
 
   const { data, error } = await q;
   if (error) return [];
@@ -2114,8 +2121,9 @@ export default async function handler(req, res) {
     const topArticle = articles?.[0] || null;
     const articleUrl = pickUrl(topArticle) || null;
     
-    // Try to get content chunks for better RAG responses
-    const contentChunks = await findContentChunks(client, { keywords, limit: 15 });
+    // Try to get content chunks for better RAG responses - prioritize chunks from the relevant articles
+    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+    const contentChunks = await findContentChunks(client, { keywords, limit: 15, articleUrls });
 
     let pdfUrl = null,
       relatedUrl = null,
