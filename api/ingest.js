@@ -549,15 +549,15 @@ async function ingestSingleUrl(url, supa, options = {}) {
         raw: item,
         entity_hash: sha1(url + JSON.stringify(item) + idx),
           last_seen: new Date().toISOString(),
-          // CSV metadata fields
+          // CSV metadata fields - CLEANED
           csv_type: csvMetadata?.csv_type || null,
           csv_metadata_id: csvMetadata?.id || null,
-          categories: csvMetadata?.categories || null,
-          tags: csvMetadata?.tags || null,
+          categories: csvMetadata?.categories ? csvMetadata.categories.map(c => cleanHTMLText(c)) : null,
+          tags: csvMetadata?.tags ? csvMetadata.tags.map(t => cleanHTMLText(t)) : null,
           publish_date: csvMetadata?.publish_date || null,
-          location_name: csvMetadata?.location_name || null,
-          location_address: csvMetadata?.location_address || null,
-          excerpt: csvMetadata?.excerpt || null
+          location_name: csvMetadata?.location_name ? cleanHTMLText(csvMetadata.location_name) : null,
+          location_address: csvMetadata?.location_address ? cleanHTMLText(csvMetadata.location_address) : null,
+          excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null
         };
       });
       
