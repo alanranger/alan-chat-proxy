@@ -71,9 +71,50 @@
     <div class="card">
       <h2>📊 System Architecture & Data Flow</h2>
       
+      <!-- Enhanced Data Flow Pipeline -->
+      <div class="section">
+        <h3>🔄 Enhanced Data Flow Pipeline</h3>
+        <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
+          <div style="color: #4CAF50; font-weight: bold; margin-bottom: 15px;">STEP 1: CSV IMPORT → csv_metadata table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px;">
+            ├── Blog Articles (01) → csv_metadata.csv_type='blog_articles'<br>
+            ├── Course Events (02) → csv_metadata.csv_type='course_events'<br>
+            ├── Workshop Events (03) → csv_metadata.csv_type='workshop_events'<br>
+            ├── Course Products (04) → csv_metadata.csv_type='course_products'<br>
+            ├── Workshop Products (05) → csv_metadata.csv_type='workshop_products'<br>
+            ├── Site URLs (06) → csv_metadata.csv_type='site_urls'<br>
+            └── Product Schema (07) → csv_metadata.csv_type='product_schema'
+          </div>
+          
+          <div style="color: #2196F3; font-weight: bold; margin: 20px 0 15px 0;">STEP 2: ENHANCED INGEST → page_entities table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px;">
+            ├── Fetch HTML for all URLs → page_html table<br>
+            ├── Extract text and JSON-LD<br>
+            ├── Create page_chunks with CSV context<br>
+            └── Enhance page_entities with CSV metadata (categories, tags, publish_date, etc.)
+          </div>
+          
+          <div style="color: #FF9800; font-weight: bold; margin: 20px 0 15px 0;">STEP 3: EXISTING VIEWS (Enhanced with CSV data)</div>
+          <div style="margin-left: 20px; margin-bottom: 10px;">
+            ├── v_blog_content → Uses page_entities WHERE kind='article'<br>
+            ├── v_service_content → Uses page_entities WHERE kind='service'<br>
+            ├── v_product_content → Uses page_entities WHERE kind='product'<br>
+            └── v_events_for_chat → Uses page_entities WHERE kind='event'
+          </div>
+          
+          <div style="color: #9C27B0; font-weight: bold; margin: 20px 0 15px 0;">STEP 4: CHAT SYSTEM (Unchanged)</div>
+          <div style="margin-left: 20px; margin-bottom: 10px;">
+            ├── findArticles() → Queries page_entities (now with CSV metadata)<br>
+            ├── findProducts() → Queries page_entities (now with CSV metadata)<br>
+            ├── findEvents() → Queries page_entities (now with CSV metadata)<br>
+            └── All existing chat logic works unchanged
+          </div>
+        </div>
+      </div>
+      
       <!-- CSV Metadata Status -->
       <div class="section">
-        <h3>CSV Metadata Status</h3>
+        <h3>📈 CSV Metadata Status (csv_metadata table)</h3>
         <div class="file-grid">
           <div class="stat-box">
             <div class="stat-label">Blog Articles</div>
@@ -109,6 +150,47 @@
             <div class="stat-label">Product Schema</div>
             <div class="stat-value" id="product-schema-count">-</div>
             <div class="stat-desc">Product schema and metadata</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced page_entities Status -->
+      <div class="section">
+        <h3>🗄️ Enhanced page_entities Status</h3>
+        <div class="file-grid">
+          <div class="stat-box">
+            <div class="stat-label">Articles (kind='article')</div>
+            <div class="stat-value" id="page-entities-articles">-</div>
+            <div class="stat-desc">Blog articles with CSV metadata</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Events (kind='event')</div>
+            <div class="stat-value" id="page-entities-events">-</div>
+            <div class="stat-desc">Workshop/course events with CSV metadata</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Products (kind='product')</div>
+            <div class="stat-value" id="page-entities-products">-</div>
+            <div class="stat-desc">Products with CSV metadata</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Services (kind='service')</div>
+            <div class="stat-value" id="page-entities-services">-</div>
+            <div class="stat-desc">Services with CSV metadata</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Field-by-Field Import Tracking -->
+      <div class="section">
+        <h3>📊 Field-by-Field Import Tracking</h3>
+        <p style="color: #888; margin-bottom: 20px;">Track exactly which CSV fields are being imported and their success rates</p>
+        <div id="field-tracking-container">
+          <div style="background: #333; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px;">
+            <div style="color: #4CAF50; font-weight: bold; margin-bottom: 10px;">📋 CSV Field Import Status</div>
+            <div id="field-tracking-details" style="color: #ccc;">
+              No import data available yet. Run CSV imports to see field-by-field tracking.
+            </div>
           </div>
         </div>
       </div>
@@ -876,6 +958,58 @@
       }
     }
 
+    // Field tracking display function
+    function displayFieldTracking(csvType, fieldStats, successRate) {
+      const container = document.getElementById('field-tracking-details');
+      if (!container) return;
+      
+      const totalRows = fieldStats.total_rows;
+      const fieldsExpected = fieldStats.fields_expected;
+      const fieldsFound = fieldStats.fields_found;
+      const fieldsSuccess = fieldStats.fields_success;
+      
+      let html = `<div style="margin-bottom: 15px;">
+        <div style="color: #4CAF50; font-weight: bold;">📊 ${csvType.toUpperCase()} Import Results</div>
+        <div style="color: #fff; margin: 5px 0;">Total Rows: ${totalRows} | Success Rate: ${successRate.toFixed(1)}%</div>
+      </div>`;
+      
+      html += `<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+        <div style="color: #2196F3; font-weight: bold;">Field</div>
+        <div style="color: #2196F3; font-weight: bold;">Found</div>
+        <div style="color: #2196F3; font-weight: bold;">Success</div>
+      </div>`;
+      
+      fieldsExpected.forEach(field => {
+        const found = fieldsFound[field] || 0;
+        const success = fieldsSuccess[field] || 0;
+        const foundRate = totalRows > 0 ? (found / totalRows * 100).toFixed(1) : 0;
+        const successRate = found > 0 ? (success / found * 100).toFixed(1) : 0;
+        
+        const foundColor = found === totalRows ? '#4CAF50' : found > 0 ? '#FF9800' : '#f44336';
+        const successColor = success === found ? '#4CAF50' : success > 0 ? '#FF9800' : '#f44336';
+        
+        html += `<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 3px 0; border-bottom: 1px solid #444;">
+          <div style="color: #fff;">${field}</div>
+          <div style="color: ${foundColor};">${found}/${totalRows} (${foundRate}%)</div>
+          <div style="color: ${successColor};">${success}/${found} (${successRate}%)</div>
+        </div>`;
+      });
+      
+      // Add summary
+      const totalFields = fieldsExpected.length;
+      const perfectFields = fieldsExpected.filter(field => (fieldsFound[field] || 0) === totalRows && (fieldsSuccess[field] || 0) === totalRows).length;
+      const partialFields = fieldsExpected.filter(field => (fieldsFound[field] || 0) > 0 && (fieldsFound[field] || 0) < totalRows).length;
+      const missingFields = fieldsExpected.filter(field => (fieldsFound[field] || 0) === 0).length;
+      
+      html += `<div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #666;">
+        <div style="color: #4CAF50;">✅ Perfect: ${perfectFields}/${totalFields} fields</div>
+        <div style="color: #FF9800;">⚠️ Partial: ${partialFields}/${totalFields} fields</div>
+        <div style="color: #f44336;">❌ Missing: ${missingFields}/${totalFields} fields</div>
+      </div>`;
+      
+      container.innerHTML = html;
+    }
+
     // CSV Metadata Import functions
     async function importCsvMetadata(file, csvType) {
       if (!file) {
@@ -918,6 +1052,11 @@
           if (csvRowCounts.hasOwnProperty(csvType)) {
             csvRowCounts[csvType] = result.metadata_imported;
             addResult(`🔧 DEBUG: Updated csvRowCounts[${csvType}] = ${result.metadata_imported} (imported) vs ${actualRowCount} (total CSV)`, 'info');
+          }
+          
+          // Display field-by-field tracking
+          if (result.field_stats) {
+            displayFieldTracking(csvType, result.field_stats, result.success_rate);
           }
           
           // Show debug info for course_events and workshop_events
@@ -1721,7 +1860,7 @@
                 window.urlScrapingStats[category].skipped++;
               } else {
                 addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
-                stats.failedCount++;
+              stats.failedCount++;
                 window.urlScrapingStats[category].failed++;
               }
             }
@@ -2324,6 +2463,22 @@
           }
         });
         
+        // Update enhanced page_entities status
+        const pageEntitiesUpdates = {
+          'page-entities-articles': data.page_entities_articles || 0,
+          'page-entities-events': data.page_entities_events || 0,
+          'page-entities-products': data.page_entities_products || 0,
+          'page-entities-services': data.page_entities_services || 0
+        };
+        
+        Object.entries(pageEntitiesUpdates).forEach(([id, count]) => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.textContent = count;
+            element.style.color = count > 0 ? '#4CAF50' : '#666';
+          }
+        });
+        
       } catch (error) {
         console.warn('Error updating CSV metadata dashboard:', error);
       }
@@ -2464,7 +2619,7 @@
           totalSuccess += successCount;
           totalFailed += failedCount;
           totalSkipped += skippedCount;
-          totalDuplicatesRemoved += duplicatesRemoved;
+        totalDuplicatesRemoved += duplicatesRemoved;
           
           return `
             <tr>
@@ -2476,9 +2631,9 @@
               <td style="padding: 4px 8px; text-align: left; color: #FF9800;">${duplicatesRemoved}</td>
             </tr>
           `;
-        }).join('');
-        
-        // Add totals row
+      }).join('');
+      
+      // Add totals row
         const totalsRow = `
           <tr style="font-weight: bold; border-top: 2px solid #666; background: #2a2a2a;">
             <td style="padding: 4px 8px; text-align: left;">TOTALS</td>

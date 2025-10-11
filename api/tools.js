@@ -179,6 +179,26 @@ export default async function handler(req, res) {
             }
           }
           
+          // Get page_entities counts by kind
+          try {
+            const { data: pageEntities, error: peError } = await supa
+              .from('page_entities')
+              .select('kind');
+            
+            if (!peError && pageEntities) {
+              const peCounts = {};
+              pageEntities.forEach(row => {
+                peCounts[row.kind] = (peCounts[row.kind] || 0) + 1;
+              });
+              counts.page_entities_articles = peCounts.article || 0;
+              counts.page_entities_events = peCounts.event || 0;
+              counts.page_entities_products = peCounts.product || 0;
+              counts.page_entities_services = peCounts.service || 0;
+            }
+          } catch (e) {
+            console.warn('Failed to get page_entities counts by kind:', e.message);
+          }
+          
           // Get enrichment views count (sum of all enrichment views)
           try {
             const views = ['v_blog_enrichment', 'v_course_event_enrichment', 'v_workshop_event_enrichment', 'v_course_product_enrichment', 'v_workshop_product_enrichment', 'v_metadata_enrichment'];
