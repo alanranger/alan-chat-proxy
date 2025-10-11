@@ -914,6 +914,12 @@
         if (result.success) {
           addResult(`✅ ${csvType} metadata import successful: ${result.metadata_imported}/${actualRowCount} records`, 'success');
           
+          // Update csvRowCounts object for dashboard display
+          if (csvRowCounts.hasOwnProperty(csvType)) {
+            csvRowCounts[csvType] = actualRowCount;
+            addResult(`🔧 DEBUG: Updated csvRowCounts[${csvType}] = ${actualRowCount}`, 'info');
+          }
+          
           // Show debug info for course_events and workshop_events
           if (result.debug && (csvType === 'course_events' || csvType === 'workshop_events')) {
             addResult(`🔍 DEBUG ${csvType}:`, 'info');
@@ -2413,7 +2419,7 @@
           skippedEl.textContent = 0;
         }
         
-        // Use original CSV import counts instead of current session URLs
+        // Use csvRowCounts object which is now properly updated by importCsvMetadata
         addResult(`🔧 DEBUG: csvRowCounts object: ${JSON.stringify(csvRowCounts)}`, 'info');
         const currentSessionByCategory = {
           'blog_articles': { length: csvRowCounts.blog || 0 },
