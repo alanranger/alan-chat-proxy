@@ -693,8 +693,6 @@ const EVENT_HINTS = [
   "available",
   "where",
   "workshop",
-  "course",
-  "class",
   "schedule",
 ];
 
@@ -753,25 +751,40 @@ function extractKeywords(q) {
 
 function detectIntent(q) {
   const lc = (q || "").toLowerCase();
-  // First, prefer explicit event-style questions regardless of other words present
+  
+  // Check for course/class queries
+  const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
+  const mentionsWorkshop = lc.includes("workshop");
+  
+  // Check for event-style questions (dates/times/locations)
   const hasEventWord = EVENT_HINTS.some((w) => lc.includes(w));
-  const mentionsWorkshop =
-    lc.includes("workshop") || lc.includes("course") || lc.includes("class");
-  if (hasEventWord && mentionsWorkshop) return "events";
+  
+  // Course queries: prioritize course products (ongoing services) unless they explicitly ask about dates/times
+  if (mentionsCourse && !mentionsWorkshop) {
+    // If asking about course dates/times/locations, treat as events
+    if (hasEventWord) {
+      return "events"; // Looking for scheduled course events
+    }
+    // Otherwise, treat as advice to find course products/services
+    return "advice";
+  }
+  
+  // Workshop queries: prioritize workshop events (scheduled sessions)
+  if (mentionsWorkshop) {
+    return "events"; // Workshops are typically scheduled events
+  }
   
   // ADVICE keywords
   const adviceKeywords = [
     "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
     "need", "require", "recommend", "advise", "help", "wrong", "problem",
     "free", "online", "sort of", "what do i", "do i need", "get a",
-    "what is", "what are", "how does", "explain", "define", "meaning"
+    "what is", "what are", "how does", "explain", "define", "meaning",
+    "course", "class", "lesson", "training", "mentoring", "tutoring"
   ];
   if (adviceKeywords.some(word => lc.includes(word))) {
     return "advice";
   }
-  
-  // Only classify as events if it has both event words AND workshop mentions
-  if (hasEventWord && mentionsWorkshop) return "events";
   
   // heuristic: if question starts with "when/where" + includes 'workshop' → events
   if (/^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop) return "events";
@@ -812,7 +825,7 @@ function anyIlike(col, words) {
   return parts.length ? parts.join(",") : null;
 }
 
-async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
+async function findEvents(client, { keywords, limit = 50, pageContext = null, csvType = null }) {
   // Use page_entities table directly for events with enhanced CSV data
   let q = client
     .from("page_entities")
@@ -820,6 +833,11 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     .eq("kind", "event")
     .order("last_seen", { ascending: false })
     .limit(limit);
+
+  // Filter by CSV type if specified (course_events vs workshop_events)
+  if (csvType) {
+    q = q.eq("csv_type", csvType);
+  }
 
   // If we have page context, try to find related content first
   if (pageContext && pageContext.pathname) {
@@ -854,7 +872,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   return data || [];
 }
 
-async function findProducts(client, { keywords, limit = 20, pageContext = null }) {
+async function findProducts(client, { keywords, limit = 20, pageContext = null, csvType = null }) {
   // If we have page context, try to find related products first
   if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
@@ -871,6 +889,11 @@ async function findProducts(client, { keywords, limit = 20, pageContext = null }
         .eq("kind", "product")
     .order("last_seen", { ascending: false })
     .limit(limit);
+
+  // Filter by CSV type if specified (course_products vs workshop_products)
+  if (csvType) {
+    q = q.eq("csv_type", csvType);
+  }
 
   const orExpr =
     anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
@@ -1651,12 +1674,12 @@ function buildAdvicePills({ articleUrl, query, pdfUrl, relatedUrl, relatedLabel 
 
 /* --------------------------- Generic resolvers --------------------------- */
 
-async function resolveEventsAndProduct(client, { keywords, pageContext = null }) {
+async function resolveEventsAndProduct(client, { keywords, pageContext = null, csvType = null }) {
   // Events filtered by keywords (stronger locality match)
-  const events = await findEvents(client, { keywords, limit: 80, pageContext });
+  const events = await findEvents(client, { keywords, limit: 80, pageContext, csvType });
 
   // Try to pick the best-matching product for these keywords
-  const products = await findProducts(client, { keywords, limit: 10, pageContext });
+  const products = await findProducts(client, { keywords, limit: 10, pageContext, csvType });
   const product = products?.[0] || null;
 
   // Landing page (if any), else the event origin's workshops root
@@ -1829,8 +1852,13 @@ export default async function handler(req, res) {
       : extractKeywords(query || "");
 
     if (intent === "events") {
+      // Determine CSV type based on query content
+      const lc = (query || "").toLowerCase();
+      const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
+      const csvType = mentionsCourse ? "course_events" : "workshop_events";
+      
       // Get events from the enhanced view that includes product mappings
-      const events = await findEvents(client, { keywords, limit: 80, pageContext });
+      const events = await findEvents(client, { keywords, limit: 80, pageContext, csvType });
       // If the new query names a significant topic (e.g., lightroom), prefer events matching that topic
       const GENERIC_EVENT_TERMS = new Set(["workshop","workshops","course","courses","class","classes","event","events","next","when","your"]);
       const significant = (keywords || []).find(k => k && !GENERIC_EVENT_TERMS.has(String(k).toLowerCase()) && String(k).length >= 4);
@@ -1890,7 +1918,7 @@ export default async function handler(req, res) {
       // If product doesn't reflect the core keyword (e.g., bluebell), try a direct product lookup
       const needsKeywordProduct = (!product || !String(product.title||'').toLowerCase().includes('bluebell')) && kwSet.has('bluebell');
       if (needsKeywordProduct) {
-        const bluebellProducts = await findProducts(client, { keywords: ['bluebell','woodlands','woodland'], limit: 5, pageContext });
+        const bluebellProducts = await findProducts(client, { keywords: ['bluebell','woodlands','woodland'], limit: 5, pageContext, csvType: "workshop_products" });
         const bp = bluebellProducts?.find(p => String(p.title||'').toLowerCase().includes('bluebell')) || bluebellProducts?.[0] || null;
         if (bp) {
           product = {
@@ -2038,7 +2066,13 @@ export default async function handler(req, res) {
     // Get all relevant data types for comprehensive responses
     let articles = await findArticles(client, { keywords, limit: 30, pageContext });
     let events = await findEvents(client, { keywords, limit: 20, pageContext });
-    let products = await findProducts(client, { keywords, limit: 20, pageContext });
+    
+    // For advice intent, prioritize course products if query mentions courses
+    const lc = (query || "").toLowerCase();
+    const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
+    const csvType = mentionsCourse ? "course_products" : null; // null means search all product types
+    
+    let products = await findProducts(client, { keywords, limit: 20, pageContext, csvType });
     
     // De-duplicate and enrich titles
     articles = await dedupeAndEnrichArticles(client, articles);
