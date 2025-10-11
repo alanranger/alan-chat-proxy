@@ -2414,13 +2414,14 @@
         }
         
         // Use original CSV import counts instead of current session URLs
+        addResult(`🔧 DEBUG: csvRowCounts object: ${JSON.stringify(csvRowCounts)}`, 'info');
         const currentSessionByCategory = {
           'blog_articles': { length: csvRowCounts.blog || 0 },
-          'course_events': { length: csvRowCounts.event || 0 },
-          'workshop_events': { length: csvRowCounts.workshop || 0 },
-          'course_products': { length: csvRowCounts.service || 0 },
+          'course_events': { length: csvRowCounts.course_events || 0 },
+          'workshop_events': { length: csvRowCounts.workshop_events || 0 },
+          'course_products': { length: csvRowCounts.course_products || 0 },
           'workshop_products': { length: csvRowCounts.workshop_products || 0 },
-          'site_urls': { length: csvRowCounts.site || 0 },
+          'site_urls': { length: csvRowCounts.site_urls || 0 },
           'product_schema': { length: csvRowCounts.product_schema || 0 }
         };
         
