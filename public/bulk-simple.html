@@ -1628,7 +1628,7 @@
 
       // Batch processing with throttling
       const BATCH_SIZE = 8; // reduce concurrency to be polite
-      const BATCH_DELAY = 3500; // slight increase between batches
+      const BATCH_DELAY = 1000; // reduced delay for faster processing
       const TIMEOUT_MS = 25000; // allow a little longer per request
       let completed = 0;
 
@@ -2423,11 +2423,6 @@
           const failedCount = liveStats.failed || 0;
           const skippedCount = liveStats.skipped || 0;
           
-          // Debug logging for live stats
-          if (cat.key === 'blog_articles' && successCount > 0) {
-            console.log(`DEBUG: ${cat.key} live stats:`, liveStats, 'window.urlScrapingStats:', window.urlScrapingStats);
-            addResult(`🔧 DEBUG: ${cat.key} live stats: success=${successCount}, failed=${failedCount}, skipped=${skippedCount}`, 'info');
-          }
           const duplicatesRemoved = 0; // This should always be 0 in the detailed table
           
           totalSuccess += successCount;
