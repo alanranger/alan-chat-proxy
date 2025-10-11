@@ -395,15 +395,38 @@ async function ingestSingleUrl(url, supa, options = {}) {
     stage = 'chunk_text';
     const chunks = chunkText(text);
     
-    // Find CSV metadata for this URL
+    // Find and merge CSV metadata for this URL (handle multiple records intelligently)
     let csvMetadata = null;
     try {
-      const { data: metadata } = await supa
+      const { data: metadataList } = await supa
         .from('csv_metadata')
         .select('*')
-        .eq('url', url)
-        .single();
-      csvMetadata = metadata;
+        .eq('url', url);
+      
+      if (metadataList && metadataList.length > 0) {
+        // Merge all CSV metadata records intelligently
+        csvMetadata = {
+          id: metadataList[0].id, // Use first ID as primary
+          csv_type: metadataList[0].csv_type, // Use first csv_type as primary
+          url: url,
+          // Merge fields: keep non-null values, prefer more specific data
+          title: metadataList.find(m => m.title && m.title.trim())?.title || null,
+          categories: metadataList.find(m => m.categories && m.categories.length > 0)?.categories || null,
+          tags: metadataList.find(m => m.tags && m.tags.length > 0)?.tags || null,
+          publish_date: metadataList.find(m => m.publish_date)?.publish_date || null,
+          start_date: metadataList.find(m => m.start_date)?.start_date || null,
+          end_date: metadataList.find(m => m.end_date)?.end_date || null,
+          start_time: metadataList.find(m => m.start_time)?.start_time || null,
+          end_time: metadataList.find(m => m.end_time)?.end_time || null,
+          location_name: metadataList.find(m => m.location_name && m.location_name.trim())?.location_name || null,
+          location_address: metadataList.find(m => m.location_address && m.location_address.trim())?.location_address || null,
+          location_city_state_zip: metadataList.find(m => m.location_city_state_zip && m.location_city_state_zip.trim())?.location_city_state_zip || null,
+          excerpt: metadataList.find(m => m.excerpt && m.excerpt.trim())?.excerpt || null,
+          image_url: metadataList.find(m => m.image_url && m.image_url.trim())?.image_url || null,
+          json_ld_data: metadataList.find(m => m.json_ld_data)?.json_ld_data || null,
+          workflow_state: metadataList.find(m => m.workflow_state && m.workflow_state.trim())?.workflow_state || null
+        };
+      }
     } catch (e) {
       // No CSV metadata found for this URL - that's okay
     }
