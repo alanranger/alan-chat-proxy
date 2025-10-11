@@ -1042,8 +1042,7 @@
           } else {
             csvRowCounts[csvKey] += actualRowCount; // Add to existing count
           }
-          // Update dashboard immediately
-          renderCategoryStats();
+          // Dashboard will be updated after import completes
         }
         // Cache URLs for scraping from ALL CSV types
         if (!window.__cachedCsvData) {
@@ -1106,8 +1105,7 @@
               csvRowCounts[csvKey] += actualRowCount; // Add to existing count
             }
             console.log(`DEBUG: csvRowCounts[${csvKey}] is now ${csvRowCounts[csvKey]}`);
-            // Update dashboard immediately
-            renderCategoryStats();
+            // Dashboard will be updated after import completes
           } else {
             console.log(`DEBUG: csvRowCounts does not have key: ${csvKey}`);
           }
@@ -1222,7 +1220,6 @@
       
       hideOverlayProgress();
       // Update both dashboards
-      renderCategoryStats();
       await updateCsvMetadataDashboard();
       await updateDebugControlDashboard();
     }
@@ -1410,7 +1407,6 @@
       addResult(`📊 Summary: ${totalImported}/${totalCsvRows} metadata records imported (${totalCsvRows - totalImported} CSV rows skipped)`, 'info');
 
       // Update both dashboards
-      renderCategoryStats();
       await updateCsvMetadataDashboard();
       await updateDebugControlDashboard();
       hideOverlayProgress();
@@ -1660,13 +1656,11 @@
               addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              renderCategoryStats();
             } else {
               addResult(`✅ Ingested: ${url}`, 'success');
               stats.successCount++;
               urlScrapingStats[category].success++;
               addResult(`🔍 DEBUG: Updated ${category}: success=${urlScrapingStats[category].success}`, 'info');
-              renderCategoryStats();
             }
           } else {
             const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
@@ -1675,12 +1669,10 @@
               addResult(`✅ Skipped duplicate: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'success');
               urlScrapingStats[category].skipped++;
               stats.skippedCount++;
-              renderCategoryStats();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
               addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
-              renderCategoryStats();
             } else {
               // Improve diagnostics formatting when backend attaches attempt details
               let extra = '';
@@ -1699,7 +1691,6 @@
               addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
               stats.failedCount++;
               urlScrapingStats[category].failed++;
-              renderCategoryStats();
             }
           }
           completed++;
@@ -2479,96 +2470,7 @@
       }
     }
 
-    // Original synchronous function for backward compatibility
-    function renderCategoryStats() {
-      const el = document.getElementById('categoryStats');
-      if (!el) return;
-      
-      // Format category names for display
-      const formatCategory = (cat) => {
-        const labels = {
-          'blog_articles': 'Blog Articles',
-          'course_events': 'Course Events',
-          'workshop_events': 'Workshop Events',
-          'course_products': 'Course/Service Products',
-          'workshop_products': 'Workshop Products',
-          'website_urls': 'Website URLs',
-          'json_extraction': 'JSON Product Extraction'
-        };
-        const codes = {
-          'blog_articles': '01',
-          'course_events': '02',
-          'workshop_events': '03',
-          'course_products': '04',
-          'workshop_products': '05',
-          'website_urls': '06',
-          'json_extraction': '07'
-        };
-        const name = labels[cat] || cat;
-        const code = codes[cat] ? ` — ${codes[cat]}` : '';
-        return `${name}${code}`;
-      };
-      
-      // Calculate totals
-      let totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0, totalCsvCount = 0;
-      
-      // Create rows from urlScrapingStats
-      const rows = Object.entries(urlScrapingStats || {}).map(([key, stats]) => {
-        const csvCount = csvRowCounts[key] || 0;
-        // Show within-source duplicates removed during Step 2, not cross-CSV
-        const duplicatesRemoved = withinSourceDupByCategory[key] || 0;
-        
-        // Add to totals
-        totalSuccess += stats.success || 0;
-        totalFailed += stats.failed || 0;
-        totalSkipped += stats.skipped || 0;
-        totalDuplicatesRemoved += duplicatesRemoved;
-        totalCsvCount += csvCount;
-        
-        return `
-          <tr>
-            <td>${key}</td>
-            <td>${csvCount}</td>
-            <td style="color: #4CAF50;">${stats.success || 0}</td>
-            <td style="color: #f44336;">${stats.failed || 0}</td>
-            <td style="color: #2196F3;">${stats.skipped || 0}</td>
-            <td style="color: #FF9800;">${duplicatesRemoved}</td>
-          </tr>
-        `;
-      }).join('');
-      
-      // Add totals row
-      const totalsRow = `
-        <tr style="font-weight: bold;">
-          <td>TOTALS</td>
-          <td>${totalCsvCount}</td>
-          <td style="color: #4CAF50;">${totalSuccess}</td>
-          <td style="color: #f44336;">${totalFailed}</td>
-          <td style="color: #2196F3;">${totalSkipped}</td>
-          <td style="color: #FF9800;">${totalDuplicatesRemoved}</td>
-        </tr>
-      `;
-      
-      el.innerHTML = `
-        <thead>
-          <tr>
-            <th>Category</th>
-            <th>CSV Count</th>
-            <th>Success</th>
-            <th>Failed</th>
-            <th>Skipped</th>
-            <th>Duplicates Removed</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-          ${totalsRow}
-        </tbody>
-      `;
-      
-      // Update summary stats
-      updateStats();
-    }
+    // Legacy renderCategoryStats function removed - using updateDebugControlDashboard() instead
     
     function updateStats() {
       document.getElementById('csvImportedRows').textContent = stats.csvImportedRows;
