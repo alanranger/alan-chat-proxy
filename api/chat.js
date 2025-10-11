@@ -14,8 +14,8 @@ const hashIP = (ip) => {
   return crypto.createHash('sha256').update(ip + 'chat-log-salt').digest('hex').substring(0, 16);
 };
 
-// Extract publish date from article content
-const extractPublishDate = async (article) => {
+// Extract publish date from article content (simplified, non-async version)
+const extractPublishDate = (article) => {
   try {
     // Check if we have a publish_date field
     if (article.publish_date) {
@@ -42,49 +42,8 @@ const extractPublishDate = async (article) => {
       });
     }
     
-    // Try to extract from content chunks - look for date patterns
-    try {
-      const { data: chunks } = await supa
-        .from('page_chunks')
-        .select('chunk_text')
-        .eq('url', url)
-        .limit(3);
-      
-      if (chunks && chunks.length > 0) {
-        const content = chunks.map(c => c.chunk_text).join(' ');
-        
-        // Look for date patterns like "November 2018", "early 2018", "2018", etc.
-        const datePatterns = [
-          /(early\s+)?(january|february|march|april|may|june|july|august|september|october|november|december)\s+20\d{2}/gi,
-          /20\d{2}/g
-        ];
-        
-        for (const pattern of datePatterns) {
-          const match = content.match(pattern);
-          if (match) {
-            const dateStr = match[0];
-            const year = dateStr.match(/20\d{2}/)?.[0];
-            if (year) {
-              // If we have a month, use it; otherwise just use the year
-              const monthMatch = dateStr.match(/(january|february|march|april|may|june|july|august|september|october|november|december)/i);
-              if (monthMatch) {
-                const month = monthMatch[1];
-                const monthNum = new Date(`${month} 1, ${year}`).getMonth();
-                return new Date(year, monthNum, 1).toLocaleDateString('en-GB', { 
-                  year: 'numeric', 
-                  month: 'short' 
-                });
-              } else {
-                return year;
-              }
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.log('Error extracting date from chunks:', error.message);
-    }
-    
+    // For now, return null to use fallback date
+    // TODO: Implement async date extraction from content chunks in a separate function
     return null;
   } catch (error) {
     return null;
@@ -2265,8 +2224,8 @@ export default async function handler(req, res) {
         topic: keywords.join(", "),
         events: [],
         products: [],
-        articles: await Promise.all((articles || []).map(async a => {
-          const extractedDate = await extractPublishDate(a);
+        articles: (articles || []).map(a => {
+          const extractedDate = extractPublishDate(a);
           const fallbackDate = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
             year: 'numeric', 
             month: 'short', 
@@ -2280,7 +2239,7 @@ export default async function handler(req, res) {
             ...a,
             display_date: finalDate
           };
-        })),
+        }),
         pills,
       },
       confidence: confidence,
