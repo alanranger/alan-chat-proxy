@@ -189,19 +189,18 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   const isEquipmentQuery = Array.from(equipmentKeywords).some(k => lc.includes(k));
   if (!isEquipmentQuery) return null;
   
-  // Extract recommendations from your written content with simple, robust logic
+  // Extract recommendations from your written content with improved logic
   const productRecommendations = [];
   const brandComparisons = [];
   const specificTips = [];
   
-  // Simple content extraction from chunks - avoid complex processing
   try {
-    for (const chunk of (contentChunks || []).slice(0, 5)) {
+    for (const chunk of (contentChunks || []).slice(0, 8)) { // Increased from 5 to 8
       const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
       
       // Skip navigation/service chunks
       if (text.includes('cart 0') || text.includes('sign in') || text.includes('my account') || 
-          text.includes('search') || text.includes('gallery') || text.length < 50) {
+          text.includes('search') || text.includes('gallery') || text.length < 100) { // Increased min length
         continue;
       }
       
@@ -209,44 +208,65 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
       const hasEquipmentKeyword = Array.from(equipmentKeywords).some(k => text.includes(k));
       if (!hasEquipmentKeyword) continue;
       
-      // Clean up the text
+      // Clean up the text more carefully
       const cleanText = (chunk.chunk_text || chunk.content || "")
-        .replace(/\[.*?\]/g, '') // Remove markdown links
+        .replace(/\[https?:\/\/[^\]]+\]/g, '') // Remove full URLs in brackets
+        .replace(/\[.*?\]/g, '') // Remove other markdown links
         .replace(/jpg\]/g, '') // Remove image artifacts
         .replace(/\*+/g, '') // Remove asterisks
         .replace(/\s+/g, ' ') // Normalize whitespace
         .trim();
       
-      // Split into sentences and find relevant ones
-      const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim().length > 40);
+      // Look for specific recommendation patterns
+      const recommendationPatterns = [
+        /(?:recommend|recommendation|top choice|best|excellent value|around £\d+)/gi,
+        /(?:mefoto|benro|gitzo|manfrotto).*?(?:£\d+|excellent|recommend|top|best)/gi,
+        /(?:been my top recommendation|default setup|excellent value at around)/gi
+      ];
       
-      for (const sentence of sentences.slice(0, 3)) { // Limit to 3 sentences per chunk
-        const sLower = sentence.toLowerCase();
-        let cleanSentence = sentence.trim();
+      // Check if this chunk contains recommendation patterns
+      const hasRecommendationPattern = recommendationPatterns.some(pattern => pattern.test(cleanText));
+      
+      if (hasRecommendationPattern) {
+        // Extract specific recommendations with better sentence handling
+        const sentences = cleanText.split(/(?<=[.!?])\s+(?=[A-Z])/).filter(s => s.trim().length > 50);
         
-        // Skip problematic content
-        if (cleanSentence.includes('jpg]') || cleanSentence.includes('* Tripod/IBIS:') || 
-            cleanSentence.includes('This table represents') || cleanSentence.length < 40) {
-          continue;
-        }
-        
-        if (cleanSentence.length > 250) {
-          cleanSentence = cleanSentence.substring(0, 250) + "...";
-        }
-        
-        // Categorize content
-        if (sLower.includes('benro') || sLower.includes('gitzo') || sLower.includes('manfrotto') ||
-            sLower.includes('£') || sLower.includes('$') || sLower.includes('recommend')) {
-          if (productRecommendations.length < 3) {
-            productRecommendations.push(cleanSentence);
+        for (const sentence of sentences.slice(0, 4)) { // Increased from 3 to 4
+          const sLower = sentence.toLowerCase();
+          let cleanSentence = sentence.trim();
+          
+          // Skip problematic content
+          if (cleanSentence.includes('jpg]') || cleanSentence.includes('* Tripod/IBIS:') || 
+              cleanSentence.includes('This table represents') || cleanSentence.length < 50) {
+            continue;
           }
-        } else if (sLower.includes('vs') || sLower.includes('versus') || sLower.includes('compare')) {
-          if (brandComparisons.length < 2) {
-            brandComparisons.push(cleanSentence);
+          
+          // Truncate very long sentences more intelligently
+          if (cleanSentence.length > 300) {
+            const lastPeriod = cleanSentence.lastIndexOf('.', 300);
+            if (lastPeriod > 200) {
+              cleanSentence = cleanSentence.substring(0, lastPeriod + 1);
+            } else {
+              cleanSentence = cleanSentence.substring(0, 300) + "...";
+            }
           }
-        } else if (sLower.includes('tip') || sLower.includes('setup') || sLower.includes('stability')) {
-          if (specificTips.length < 2) {
-            specificTips.push(cleanSentence);
+          
+          // Categorize content with improved logic
+          if (sLower.includes('benro') || sLower.includes('gitzo') || sLower.includes('manfrotto') ||
+              sLower.includes('mefoto') || (sLower.includes('£') && sLower.includes('recommend'))) {
+            if (productRecommendations.length < 4) { // Increased from 3 to 4
+              productRecommendations.push(cleanSentence);
+            }
+          } else if (sLower.includes('vs') || sLower.includes('versus') || sLower.includes('compare') ||
+                     sLower.includes('head to head') || sLower.includes('alternative')) {
+            if (brandComparisons.length < 3) { // Increased from 2 to 3
+              brandComparisons.push(cleanSentence);
+            }
+          } else if (sLower.includes('tip') || sLower.includes('setup') || sLower.includes('stability') ||
+                     sLower.includes('weight') || sLower.includes('height') || sLower.includes('durability')) {
+            if (specificTips.length < 3) { // Increased from 2 to 3
+              specificTips.push(cleanSentence);
+            }
           }
         }
       }
@@ -1973,8 +1993,33 @@ export default async function handler(req, res) {
       articles = articles
         .map(a=> ({ a, s: scoreArticle(a) }))
         .sort((x,y)=> y.s - x.s)
-        .map(x=> x.a)
-        .slice(0, 6); // Limit to top 6 after deduplication
+        .map(x=> x.a);
+      
+      // Filter articles for equipment-related queries to remove irrelevant content
+      const lc = (query || "").toLowerCase();
+      const isEquipmentQuery = ['tripod', 'tripods', 'equipment', 'recommend', 'camera', 'lens'].some(k => lc.includes(k));
+      
+      if (isEquipmentQuery) {
+        articles = articles.filter(a => {
+          const title = (a.title || '').toLowerCase();
+          const url = (a.page_url || a.source_url || '').toLowerCase();
+          
+          // Include articles that are clearly about equipment
+          const isEquipmentArticle = title.includes('tripod') || title.includes('equipment') || 
+                                   title.includes('camera') || title.includes('lens') ||
+                                   url.includes('tripod') || url.includes('equipment') ||
+                                   url.includes('camera') || url.includes('lens');
+          
+          // Exclude articles that are clearly not about equipment
+          const isNonEquipmentArticle = title.includes('depth of field') || title.includes('iso') ||
+                                       title.includes('exposure') || title.includes('composition') ||
+                                       title.includes('lighting') || title.includes('editing');
+          
+          return isEquipmentArticle && !isNonEquipmentArticle;
+        });
+      }
+      
+      articles = articles.slice(0, 6); // Limit to top 6 after filtering
     }
     // Ensure concept article is first when asking "what is <term>"
     const qlc2 = (query||'').toLowerCase();
