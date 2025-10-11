@@ -575,16 +575,23 @@ async function ingestSingleUrl(url, supa, options = {}) {
         raw: item,
         entity_hash: sha1(url + JSON.stringify(item) + idx),
           last_seen: new Date().toISOString(),
-          // CSV metadata fields - CLEANED - ONLY FIELDS THAT EXIST IN PAGE_ENTITIES
+          // CSV metadata fields - CLEANED - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
           csv_type: csvMetadata?.csv_type || null,
           csv_metadata_id: csvMetadata?.id || null,
           categories: csvMetadata?.categories ? csvMetadata.categories.map(c => cleanHTMLText(c)) : null,
           tags: csvMetadata?.tags ? csvMetadata.tags.map(t => cleanHTMLText(t)) : null,
           publish_date: csvMetadata?.publish_date || null,
           start_date: csvMetadata?.start_date || null,
+          end_date: csvMetadata?.end_date || null,
+          start_time: csvMetadata?.start_time || null,
+          end_time: csvMetadata?.end_time || null,
           location_name: csvMetadata?.location_name ? cleanHTMLText(csvMetadata.location_name) : null,
           location_address: csvMetadata?.location_address ? cleanHTMLText(csvMetadata.location_address) : null,
-          excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null
+          location_city_state_zip: csvMetadata?.location_city_state_zip ? cleanHTMLText(csvMetadata.location_city_state_zip) : null,
+          excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null,
+          image_url: csvMetadata?.image_url ? cleanHTMLText(csvMetadata.image_url) : null,
+          json_ld_data: csvMetadata?.json_ld_data || null,
+          workflow_state: csvMetadata?.workflow_state ? cleanHTMLText(csvMetadata.workflow_state) : null
         };
       });
       
@@ -608,7 +615,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
           if (existing) {
             const merged = { ...existing };
             
-            // Always update CSV metadata fields if available - ONLY FIELDS THAT EXIST IN PAGE_ENTITIES
+            // Always update CSV metadata fields if available - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
             if (e.csv_metadata_id) {
               merged.csv_type = e.csv_type ?? merged.csv_type;
               merged.csv_metadata_id = e.csv_metadata_id ?? merged.csv_metadata_id;
@@ -616,9 +623,16 @@ async function ingestSingleUrl(url, supa, options = {}) {
               merged.tags = e.tags ?? merged.tags;
               merged.publish_date = e.publish_date ?? merged.publish_date;
               merged.start_date = e.start_date ?? merged.start_date;
+              merged.end_date = e.end_date ?? merged.end_date;
+              merged.start_time = e.start_time ?? merged.start_time;
+              merged.end_time = e.end_time ?? merged.end_time;
               merged.location_name = e.location_name ?? merged.location_name;
               merged.location_address = e.location_address ?? merged.location_address;
+              merged.location_city_state_zip = e.location_city_state_zip ?? merged.location_city_state_zip;
               merged.excerpt = e.excerpt ?? merged.excerpt;
+              merged.image_url = e.image_url ?? merged.image_url;
+              merged.json_ld_data = e.json_ld_data ?? merged.json_ld_data;
+              merged.workflow_state = e.workflow_state ?? merged.workflow_state;
             }
             
             // Event preservation: keep CSV-derived schedule if present; merge RAW to retain CSV hints
@@ -683,16 +697,23 @@ async function ingestSingleUrl(url, supa, options = {}) {
                   provider: e.provider,
                   raw: e.raw,
                   last_seen: e.last_seen,
-                  // CSV metadata fields - ONLY FIELDS THAT EXIST IN PAGE_ENTITIES
+                  // CSV metadata fields - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
                   csv_type: e.csv_type,
                   csv_metadata_id: e.csv_metadata_id,
                   categories: e.categories,
                   tags: e.tags,
                   publish_date: e.publish_date,
                   start_date: e.start_date,
+                  end_date: e.end_date,
+                  start_time: e.start_time,
+                  end_time: e.end_time,
                   location_name: e.location_name,
                   location_address: e.location_address,
-                  excerpt: e.excerpt
+                  location_city_state_zip: e.location_city_state_zip,
+                  excerpt: e.excerpt,
+                  image_url: e.image_url,
+                  json_ld_data: e.json_ld_data,
+                  workflow_state: e.workflow_state
                 })
                 .eq('url', e.url)
                 .eq('kind', e.kind);
