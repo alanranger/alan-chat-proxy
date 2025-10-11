@@ -1727,8 +1727,8 @@
           updateProgress((completed / entries.length) * 100, `Ingesting (${completed}/${entries.length}) - ${entries.length - completed} remaining`);
           updateStats();
           
-          // Update dashboard every 100 URLs to reduce API load
-          if (completed % 100 === 0 || completed === entries.length) {
+          // Update dashboard every 2 batches to reduce API load
+          if (completed % (BATCH_SIZE * 2) === 0 || completed === entries.length) {
             updateDebugControlDashboard();
           }
         });
@@ -2418,7 +2418,6 @@
         
         // Group current session URLs by category
         const currentSessionByCategory = {};
-        addResult(`🔧 DEBUG: Processing current session URLs: ${currentSessionUrls.length}`, 'info');
         currentSessionUrls.forEach(url => {
           // Inline categorization logic (same as categorize function)
           let category;
@@ -2432,13 +2431,11 @@
           else if (csvType === 'product_schema') category = 'product_schema';
           else category = 'site_urls'; // fallback
           
-          addResult(`🔧 DEBUG: URL categorized: ${url.url} csv_type: ${csvType} category: ${category}`, 'info');
           if (!currentSessionByCategory[category]) {
             currentSessionByCategory[category] = [];
           }
           currentSessionByCategory[category].push(url);
         });
-        addResult(`🔧 DEBUG: Current session by category: ${JSON.stringify(Object.keys(currentSessionByCategory).map(k => `${k}:${currentSessionByCategory[k].length}`).join(', '))}`, 'info');
         
         // Update the detailed table to show CURRENT SESSION data only
         const categories = [
@@ -2453,7 +2450,6 @@
         
         // Clear existing content and rebuild table
         el.innerHTML = '';
-        addResult(`🔧 DEBUG: Starting table generation with categories: ${categories.length}`, 'info');
         
         let totalCsvCount = 0, totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0;
         
@@ -2461,7 +2457,6 @@
         const rows = categories.map(cat => {
           // Get count from current session only
           const currentSessionCount = currentSessionByCategory[cat.key] ? currentSessionByCategory[cat.key].length : 0;
-          addResult(`🔧 DEBUG: Category: ${cat.key} currentSessionCount: ${currentSessionCount}`, 'info');
           totalCsvCount += currentSessionCount;
           
           // Get actual ingestion results from live stats during ingestion, or 0 if not ingesting
@@ -2519,7 +2514,6 @@
           </tbody>
         `;
         
-        addResult(`🔧 DEBUG: Debug & Control dashboard update complete - totalCsvCount: ${totalCsvCount}`, 'info');
         
       } catch (error) {
         addResult(`🔧 DEBUG: Error updating Debug & Control dashboard: ${error.message}`, 'error');
