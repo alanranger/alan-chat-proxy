@@ -404,12 +404,12 @@ async function ingestSingleUrl(url, supa, options = {}) {
         .eq('url', url);
       
       if (metadataList && metadataList.length > 0) {
-        // Merge all CSV metadata records intelligently
+        // Merge all CSV metadata records intelligently - ALL FIELDS
         csvMetadata = {
           id: metadataList[0].id, // Use first ID as primary
           csv_type: metadataList[0].csv_type, // Use first csv_type as primary
           url: url,
-          // Merge fields: keep non-null values, prefer more specific data
+          // Merge ALL fields: keep non-null values, prefer more specific data
           title: metadataList.find(m => m.title && m.title.trim())?.title || null,
           categories: metadataList.find(m => m.categories && m.categories.length > 0)?.categories || null,
           tags: metadataList.find(m => m.tags && m.tags.length > 0)?.tags || null,
@@ -424,7 +424,10 @@ async function ingestSingleUrl(url, supa, options = {}) {
           excerpt: metadataList.find(m => m.excerpt && m.excerpt.trim())?.excerpt || null,
           image_url: metadataList.find(m => m.image_url && m.image_url.trim())?.image_url || null,
           json_ld_data: metadataList.find(m => m.json_ld_data)?.json_ld_data || null,
-          workflow_state: metadataList.find(m => m.workflow_state && m.workflow_state.trim())?.workflow_state || null
+          workflow_state: metadataList.find(m => m.workflow_state && m.workflow_state.trim())?.workflow_state || null,
+          created_at: metadataList.find(m => m.created_at)?.created_at || null,
+          updated_at: metadataList.find(m => m.updated_at)?.updated_at || null,
+          import_session: metadataList.find(m => m.import_session)?.import_session || null
         };
       }
     } catch (e) {
@@ -572,12 +575,13 @@ async function ingestSingleUrl(url, supa, options = {}) {
         raw: item,
         entity_hash: sha1(url + JSON.stringify(item) + idx),
           last_seen: new Date().toISOString(),
-          // CSV metadata fields - CLEANED
+          // CSV metadata fields - CLEANED - ONLY FIELDS THAT EXIST IN PAGE_ENTITIES
           csv_type: csvMetadata?.csv_type || null,
           csv_metadata_id: csvMetadata?.id || null,
           categories: csvMetadata?.categories ? csvMetadata.categories.map(c => cleanHTMLText(c)) : null,
           tags: csvMetadata?.tags ? csvMetadata.tags.map(t => cleanHTMLText(t)) : null,
           publish_date: csvMetadata?.publish_date || null,
+          start_date: csvMetadata?.start_date || null,
           location_name: csvMetadata?.location_name ? cleanHTMLText(csvMetadata.location_name) : null,
           location_address: csvMetadata?.location_address ? cleanHTMLText(csvMetadata.location_address) : null,
           excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null
@@ -604,13 +608,14 @@ async function ingestSingleUrl(url, supa, options = {}) {
           if (existing) {
             const merged = { ...existing };
             
-            // Always update CSV metadata fields if available
+            // Always update CSV metadata fields if available - ONLY FIELDS THAT EXIST IN PAGE_ENTITIES
             if (e.csv_metadata_id) {
               merged.csv_type = e.csv_type ?? merged.csv_type;
               merged.csv_metadata_id = e.csv_metadata_id ?? merged.csv_metadata_id;
               merged.categories = e.categories ?? merged.categories;
               merged.tags = e.tags ?? merged.tags;
               merged.publish_date = e.publish_date ?? merged.publish_date;
+              merged.start_date = e.start_date ?? merged.start_date;
               merged.location_name = e.location_name ?? merged.location_name;
               merged.location_address = e.location_address ?? merged.location_address;
               merged.excerpt = e.excerpt ?? merged.excerpt;
@@ -678,12 +683,13 @@ async function ingestSingleUrl(url, supa, options = {}) {
                   provider: e.provider,
                   raw: e.raw,
                   last_seen: e.last_seen,
-                  // CSV metadata fields
+                  // CSV metadata fields - ONLY FIELDS THAT EXIST IN PAGE_ENTITIES
                   csv_type: e.csv_type,
                   csv_metadata_id: e.csv_metadata_id,
                   categories: e.categories,
                   tags: e.tags,
                   publish_date: e.publish_date,
+                  start_date: e.start_date,
                   location_name: e.location_name,
                   location_address: e.location_address,
                   excerpt: e.excerpt
