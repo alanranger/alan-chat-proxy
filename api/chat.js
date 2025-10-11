@@ -914,7 +914,9 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   const scoreRow = (r) => {
     const t = (r.title || r.raw?.name || "").toLowerCase();
     const u = (r.page_url || r.source_url || "").toLowerCase();
+    const categories = r.categories || [];
     let s = 0;
+    
     // base keyword presence
     for (const k of kw) {
       if (!k) continue;
@@ -922,13 +924,33 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
       if (u.includes(k)) s += 1;        // weak match in URL
     }
 
-    // Core concept boosting
+    // MAJOR BOOST: Online Photography Course content for technical concepts
+    const isOnlineCourse = categories.includes("online photography course");
     const coreConcepts = [
-      "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering"
+      "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
+      "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
+      "raw", "jpeg", "hdr", "focal length", "long exposure"
     ];
     const hasCore = coreConcepts.some(c => kw.includes(c));
+    
+    if (hasCore && isOnlineCourse) {
+      s += 25; // Major boost for online course content on technical topics
+      
+      // Extra boost for "What is..." format articles in online course
+      for (const c of coreConcepts) {
+        if (t.includes(`what is ${c}`) || t.includes(`${c} in photography`)) {
+          s += 15; // Additional boost for structured learning content
+        }
+      }
+      
+      // Boost for PDF checklists and guides
+      if (t.includes("pdf") || t.includes("checklist") || t.includes("guide")) {
+        s += 10;
+      }
+    }
+    
     if (hasCore) {
-      // exact phrase boosts
+      // exact phrase boosts (existing logic)
       for (const c of coreConcepts) {
         const slug = c.replace(/\s+/g, "-");
         if (t.startsWith(`what is ${c}`)) s += 20; // ideal explainer
@@ -941,6 +963,12 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
         s -= 12;
       }
     }
+    
+    // Additional category-based boosting
+    if (categories.includes("photography-tips") && hasCore) {
+      s += 5; // Boost for photography tips on technical topics
+    }
+    
     // slight recency tie-breaker
     const seen = r.last_seen ? Date.parse(r.last_seen) || 0 : 0;
     return s * 1_000_000 + seen;
@@ -1045,7 +1073,7 @@ async function findContentChunks(client, { keywords, limit = 5, articleUrls = []
   let q = client
     .from("page_chunks")
     .select("title, chunk_text, url, content")
-    .limit(limit * 2); // Get more results to filter
+    .limit(limit * 3); // Get more results to filter and prioritize
 
   // If we have specific article URLs, prioritize chunks from those articles
   if (articleUrls.length > 0) {
@@ -1060,27 +1088,46 @@ async function findContentChunks(client, { keywords, limit = 5, articleUrls = []
   const { data, error } = await q;
   if (error) return [];
   
-  // Sort by relevance: prioritize chunks that contain the full query or key terms
+  // Enhanced scoring: prioritize online course content and technical concepts
+  const coreConcepts = [
+    "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
+    "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
+    "raw", "jpeg", "hdr", "focal length", "long exposure"
+  ];
+  
   const sortedData = (data || []).sort((a, b) => {
     const aText = (a.chunk_text || a.content || "").toLowerCase();
     const bText = (b.chunk_text || b.content || "").toLowerCase();
     const aTitle = (a.title || "").toLowerCase();
     const bTitle = (b.title || "").toLowerCase();
+    const aUrl = (a.url || "").toLowerCase();
+    const bUrl = (b.url || "").toLowerCase();
     
-    // Score based on how many keywords are found
-    const aScore = keywords.reduce((score, keyword) => {
-      if (aText.includes(keyword.toLowerCase()) || aTitle.includes(keyword.toLowerCase())) {
-        return score + 1;
-      }
-      return score;
-    }, 0);
+    let aScore = 0;
+    let bScore = 0;
     
-    const bScore = keywords.reduce((score, keyword) => {
-      if (bText.includes(keyword.toLowerCase()) || bTitle.includes(keyword.toLowerCase())) {
-        return score + 1;
-      }
-      return score;
-    }, 0);
+    // Base keyword scoring
+    keywords.forEach(keyword => {
+      const kw = keyword.toLowerCase();
+      if (aText.includes(kw) || aTitle.includes(kw)) aScore += 1;
+      if (bText.includes(kw) || bTitle.includes(kw)) bScore += 1;
+    });
+    
+    // MAJOR BOOST: Online course content for technical concepts
+    const hasCore = coreConcepts.some(c => keywords.some(k => k.toLowerCase().includes(c)));
+    if (hasCore) {
+      // Boost for online course URLs (what-is-* pattern)
+      if (aUrl.includes("/what-is-") || aTitle.includes("what is")) aScore += 10;
+      if (bUrl.includes("/what-is-") || bTitle.includes("what is")) bScore += 10;
+      
+      // Boost for PDF checklists and guides
+      if (aTitle.includes("pdf") || aTitle.includes("checklist") || aTitle.includes("guide")) aScore += 8;
+      if (bTitle.includes("pdf") || bTitle.includes("checklist") || bTitle.includes("guide")) bScore += 8;
+      
+      // Boost for structured learning content
+      if (aTitle.includes("guide for beginners") || aTitle.includes("guide for beginner")) aScore += 5;
+      if (bTitle.includes("guide for beginners") || bTitle.includes("guide for beginner")) bScore += 5;
+    }
     
     return bScore - aScore; // Higher score first
   });
@@ -2003,8 +2050,37 @@ export default async function handler(req, res) {
     const scoreArticle = (a)=>{
       const title = String(a.title||'').toLowerCase();
       const url = String(a.page_url||a.source_url||a.url||'').toLowerCase();
+      const categories = a.categories || [];
       let s = 0;
       for (const t of queryTokens){ if (!t) continue; if (title.includes(t)) s += 3; if (url.includes(t)) s += 2; }
+      
+      // MAJOR BOOST: Online Photography Course content for technical concepts
+      const isOnlineCourse = categories.includes("online photography course");
+      const technicalConcepts = [
+        "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
+        "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
+        "raw", "jpeg", "hdr", "focal length", "long exposure", "focal", "balance", "bracketing"
+      ];
+      const hasTechnical = technicalConcepts.some(c => qlcRank.includes(c));
+      
+      if (hasTechnical && isOnlineCourse) {
+        s += 20; // Major boost for online course content on technical topics
+        
+        // Extra boost for "What is..." format articles
+        if (title.includes("what is") && technicalConcepts.some(c => title.includes(c))) {
+          s += 15;
+        }
+        
+        // Boost for PDF checklists and guides
+        if (title.includes("pdf") || title.includes("checklist") || title.includes("guide")) {
+          s += 10;
+        }
+        
+        // Boost for beginner guides
+        if (title.includes("guide for beginners") || title.includes("guide for beginner")) {
+          s += 8;
+        }
+      }
       
       // Enhanced boost for equipment-related matches
       for (const k of equipmentKeywords){ 
