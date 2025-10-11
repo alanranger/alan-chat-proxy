@@ -42,20 +42,8 @@ const extractPublishDate = (article) => {
       });
     }
     
-    // Hardcoded dates for known articles (temporary fix)
-    const knownDates = {
-      'tripods-gitzo-vs-benro-review': 'Nov 2018',
-      'recommended-travel-lightweight-tripods': '2020',
-      '5-reasons-to-use-a-tripod': '2019',
-      'best-product-photography-tripod': '2021',
-      'basics-how-to-use-a-tripod': '2020'
-    };
-    
-    for (const [slug, date] of Object.entries(knownDates)) {
-      if (url.includes(slug)) {
-        return date;
-      }
-    }
+    // TODO: Implement proper date extraction from database
+    // The publish_date field should be populated during ingestion
     
     return null;
   } catch (error) {
@@ -933,8 +921,8 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   // Start broad (no kind restriction) and search across title, url and raw JSON fields.
   let q = client
     .from("page_entities")
-    .select("id, title, page_url, source_url, raw, last_seen, kind")
-    .limit(limit * 3);
+    .select("id, title, page_url, source_url, raw, last_seen, kind, publish_date")
+    .limit(limit * 5); // Increased from limit * 3 to get more results
 
   const parts = [];
   const t1 = anyIlike("title", keywords); if (t1) parts.push(t1);
@@ -2025,7 +2013,7 @@ export default async function handler(req, res) {
     // --------- ADVICE -----------
     // return article answers + upgraded pills
     const debugInfo = []; // Initialize debug info array
-    let articles = await findArticles(client, { keywords, limit: 20, pageContext });
+    let articles = await findArticles(client, { keywords, limit: 30, pageContext });
     
     // De-duplicate and enrich titles
     articles = await dedupeAndEnrichArticles(client, articles);
@@ -2057,9 +2045,9 @@ export default async function handler(req, res) {
         if (url.includes('recommended') && url.includes(qlcRank.split(' ')[0])) s += 12;
       }
       
-      // Special boost for the most comprehensive tripod guides
-      if (url.includes('recommended-travel-lightweight-tripods')) s += 20;
-      if (url.includes('tripods-gitzo-vs-benro-review')) s += 18;
+      // Boost for comprehensive guides (based on content quality, not hardcoded URLs)
+      if (title.includes('professional guide') || title.includes('complete guide')) s += 5;
+      if (title.includes('review') && title.includes('comparison')) s += 4;
       
       // Penalize irrelevant articles for tripod queries
       if (qlcRank.includes('tripod') && !title.includes('tripod') && !url.includes('tripod') && 
@@ -2074,14 +2062,29 @@ export default async function handler(req, res) {
     if (Array.isArray(articles) && articles.length){
       debugInfo.push(`🔧 Article Processing: Starting with ${articles.length} articles`);
       
-      // Remove duplicates by URL, preferring 'article' kind over 'service'
+      // Remove duplicates by URL, preferring records with proper titles over "Alan Ranger Photography"
       const uniqueArticles = new Map();
       articles.forEach(article => {
         const url = article.page_url || article.source_url || '';
+        const title = (article.title || '').trim();
         
-        // Use just URL as key since we want to deduplicate by URL, not title
-        if (!uniqueArticles.has(url) || article.kind === 'article') {
+        if (!uniqueArticles.has(url)) {
+          // First time seeing this URL
           uniqueArticles.set(url, article);
+        } else {
+          // We have a duplicate URL - choose the better record
+          const existing = uniqueArticles.get(url);
+          const existingTitle = (existing.title || '').trim();
+          
+          // Prefer records with proper titles over "Alan Ranger Photography"
+          if (title !== 'Alan Ranger Photography' && existingTitle === 'Alan Ranger Photography') {
+            uniqueArticles.set(url, article);
+          }
+          // If both have proper titles, prefer 'article' over 'service'
+          else if (title !== 'Alan Ranger Photography' && existingTitle !== 'Alan Ranger Photography' && 
+                   article.kind === 'article' && existing.kind === 'service') {
+            uniqueArticles.set(url, article);
+          }
         }
       });
       
