@@ -172,18 +172,18 @@ async function importBlogMetadata(rows, supa) {
   const metadata = rows.map(row => {
     // Debug logging for first few rows - BOM FIX VERSION 2
     if (rows.indexOf(row) < 3) {
-      console.log(`DEBUG V2: Row ${rows.indexOf(row)} - Categories: "${row.Categories}", Tags: "${row.Tags}"`);
-      console.log(`DEBUG V2: Title field: "${row['﻿Title']}", Regular Title: "${row.Title}"`);
+      console.log(`DEBUG V2: Row ${rows.indexOf(row)} - Categories: "${row.categories}", Tags: "${row.tags}"`);
+      console.log(`DEBUG V2: Title field: "${row['﻿title']}", Regular Title: "${row.title}"`);
     }
     
     const item = {
       csv_type: 'blog',
-      url: row['Full Url'] || row['full url'] || row.url,
-      title: row['﻿Title'] || row.Title || row.title ? cleanHTMLText(row['﻿Title'] || row.Title || row.title) : null,
-      categories: (row.Categories && row.Categories.trim()) ? row.Categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
-      tags: (row.Tags && row.Tags.trim()) ? row.Tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
-      publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
-      image_url: row.Image || row.image ? cleanHTMLText(row.Image || row.image) : null,
+      url: row['full url'] || row.url,
+      title: row['﻿title'] || row.title ? cleanHTMLText(row['﻿title'] || row.title) : null,
+      categories: (row.categories && row.categories.trim()) ? row.categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
+      tags: (row.tags && row.tags.trim()) ? row.tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
+      publish_date: normalizeDateDayFirst(row['publish on']),
+      image_url: row.image ? cleanHTMLText(row.image) : null,
       excerpt: null,
       import_session: new Date().toISOString()
     };
@@ -191,9 +191,9 @@ async function importBlogMetadata(rows, supa) {
     // Debug logging for processed item
     if (rows.indexOf(row) < 3) {
       console.log(`DEBUG: Processed item - categories:`, item.categories, `tags:`, item.tags);
-      console.log(`DEBUG: Raw Categories: "${row.Categories}", Raw Tags: "${row.Tags}"`);
-      console.log(`DEBUG: Categories after split:`, row.Categories ? row.Categories.split(';') : 'null');
-      console.log(`DEBUG: Tags after split:`, row.Tags ? row.Tags.split(',') : 'null');
+      console.log(`DEBUG: Raw Categories: "${row.categories}", Raw Tags: "${row.tags}"`);
+      console.log(`DEBUG: Categories after split:`, row.categories ? row.categories.split(';') : 'null');
+      console.log(`DEBUG: Tags after split:`, row.tags ? row.tags.split(',') : 'null');
     }
     
     // Track field success
@@ -238,20 +238,20 @@ async function importCourseEventMetadata(rows, supa) {
   const metadata = rows.map(row => {
     const item = {
       csv_type: 'course_events',
-      url: row.event_url || row.Event_URL || row['Event URL'] || row.url,
-      title: row.event_title || row.Event_Title || row['Event Title'] || row.title ? cleanHTMLText(row.event_title || row.Event_Title || row['Event Title'] || row.title) : null,
-      categories: row.Category ? row.Category.split(',').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
-      tags: row.Tags ? row.Tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
-      start_date: normalizeDateDayFirst(row.Start_Date || row['Start Date']),
-      end_date: normalizeDateDayFirst(row.End_Date || row['End Date']),
-      start_time: row.Start_Time || row['Start Time'],
-      end_time: row.End_Time || row['End Time'],
-      location_name: row.Location_Business_Name || row['Location Business Name'] ? cleanHTMLText(row.Location_Business_Name || row['Location Business Name']) : null,
-      location_address: row.Location_Address || row['Location Address'] ? cleanHTMLText(row.Location_Address || row['Location Address']) : null,
-      location_city_state_zip: row.Location_City_State_ZIP || row['Location City State ZIP'] ? cleanHTMLText(row.Location_City_State_ZIP || row['Location City State ZIP']) : null,
-      excerpt: row.Excerpt || row.excerpt ? cleanHTMLText(row.Excerpt || row.excerpt) : null,
-      image_url: row.Event_Image || row['Event Image'] ? cleanHTMLText(row.Event_Image || row['Event Image']) : null,
-      workflow_state: row.Workflow_State || row['Workflow State'] ? cleanHTMLText(row.Workflow_State || row['Workflow State']) : null,
+      url: row.event_url || row.url,
+      title: row.event_title || row.title ? cleanHTMLText(row.event_title || row.title) : null,
+      categories: row.category ? row.category.split(',').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
+      tags: row.tags ? row.tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
+      start_date: normalizeDateDayFirst(row.start_date),
+      end_date: normalizeDateDayFirst(row.end_date),
+      start_time: row.start_time,
+      end_time: row.end_time,
+      location_name: row.location_business_name ? cleanHTMLText(row.location_business_name) : null,
+      location_address: row.location_address ? cleanHTMLText(row.location_address) : null,
+      location_city_state_zip: row.location_city_state_zip ? cleanHTMLText(row.location_city_state_zip) : null,
+      excerpt: row.excerpt ? cleanHTMLText(row.excerpt) : null,
+      image_url: row.event_image ? cleanHTMLText(row.event_image) : null,
+      workflow_state: row.workflow_state ? cleanHTMLText(row.workflow_state) : null,
       import_session: new Date().toISOString()
     };
     
@@ -303,20 +303,20 @@ async function importWorkshopEventMetadata(rows, supa) {
   const metadata = rows.map(row => {
     const item = {
       csv_type: 'workshop_events',
-      url: row.event_url || row.Event_URL || row['Event URL'] || row.url,
-      title: row.event_title || row.Event_Title || row['Event Title'] || row.title ? cleanHTMLText(row.event_title || row.Event_Title || row['Event Title'] || row.title) : null,
-      categories: row.Category ? row.Category.split(',').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
-      tags: row.Tags ? row.Tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
-      start_date: normalizeDateDayFirst(row.Start_Date || row['Start Date']),
-      end_date: normalizeDateDayFirst(row.End_Date || row['End Date']),
-      start_time: row.Start_Time || row['Start Time'],
-      end_time: row.End_Time || row['End Time'],
-      location_name: row.Location_Business_Name || row['Location Business Name'] ? cleanHTMLText(row.Location_Business_Name || row['Location Business Name']) : null,
-      location_address: row.Location_Address || row['Location Address'] ? cleanHTMLText(row.Location_Address || row['Location Address']) : null,
-      location_city_state_zip: row.Location_City_State_ZIP || row['Location City State ZIP'] ? cleanHTMLText(row.Location_City_State_ZIP || row['Location City State ZIP']) : null,
-      excerpt: row.Excerpt || row.excerpt ? cleanHTMLText(row.Excerpt || row.excerpt) : null,
-      image_url: row.Event_Image || row['Event Image'] ? cleanHTMLText(row.Event_Image || row['Event Image']) : null,
-      workflow_state: row.Workflow_State || row['Workflow State'] ? cleanHTMLText(row.Workflow_State || row['Workflow State']) : null,
+      url: row.event_url || row.url,
+      title: row.event_title || row.title ? cleanHTMLText(row.event_title || row.title) : null,
+      categories: row.category ? row.category.split(',').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
+      tags: row.tags ? row.tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
+      start_date: normalizeDateDayFirst(row.start_date),
+      end_date: normalizeDateDayFirst(row.end_date),
+      start_time: row.start_time,
+      end_time: row.end_time,
+      location_name: row.location_business_name ? cleanHTMLText(row.location_business_name) : null,
+      location_address: row.location_address ? cleanHTMLText(row.location_address) : null,
+      location_city_state_zip: row.location_city_state_zip ? cleanHTMLText(row.location_city_state_zip) : null,
+      excerpt: row.excerpt ? cleanHTMLText(row.excerpt) : null,
+      image_url: row.event_image ? cleanHTMLText(row.event_image) : null,
+      workflow_state: row.workflow_state ? cleanHTMLText(row.workflow_state) : null,
       import_session: new Date().toISOString()
     };
     
@@ -368,12 +368,12 @@ async function importCourseProductMetadata(rows, supa) {
   const metadata = rows.map(row => {
     const item = {
       csv_type: 'course_products',
-      url: row['Full Url'] || row['full url'] || row.url,
-      title: row['﻿Title'] || row.Title || row.title ? cleanHTMLText(row['﻿Title'] || row.Title || row.title) : null,
-      categories: row.Categories ? row.Categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
-      tags: row.Tags ? row.Tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
-      publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
-      image_url: row.Image || row.image ? cleanHTMLText(row.Image || row.image) : null,
+      url: row['full url'] || row.url,
+      title: row['﻿title'] || row.title ? cleanHTMLText(row['﻿title'] || row.title) : null,
+      categories: row.categories ? row.categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
+      tags: row.tags ? row.tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
+      publish_date: normalizeDateDayFirst(row['publish on']),
+      image_url: row.image ? cleanHTMLText(row.image) : null,
       excerpt: null,
       import_session: new Date().toISOString()
     };
@@ -420,12 +420,12 @@ async function importWorkshopProductMetadata(rows, supa) {
   const metadata = rows.map(row => {
     const item = {
       csv_type: 'workshop_products',
-      url: row['Full Url'] || row['full url'] || row.url,
-      title: row['﻿Title'] || row.Title || row.title ? cleanHTMLText(row['﻿Title'] || row.Title || row.title) : null,
-      categories: row.Categories ? row.Categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : (row.categories ? row.categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : []),
-      tags: row.Tags ? row.Tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : (row.tags ? row.tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : []),
-      publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
-      image_url: row.Image || row.image ? cleanHTMLText(row.Image || row.image) : null,
+      url: row['full url'] || row.url,
+      title: row['﻿title'] || row.title ? cleanHTMLText(row['﻿title'] || row.title) : null,
+      categories: row.categories ? row.categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
+      tags: row.tags ? row.tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
+      publish_date: normalizeDateDayFirst(row['publish on']),
+      image_url: row.image ? cleanHTMLText(row.image) : null,
       excerpt: null,
       import_session: new Date().toISOString()
     };
@@ -501,7 +501,7 @@ async function importProductSchemaMetadata(rows, supa) {
     return {
       csv_type: 'product_schema',
       url: jsonLdData?.url || null,
-      title: row['﻿Title'] || row.Title || row.title ? cleanHTMLText(row['﻿Title'] || row.Title || row.title) : null,
+      title: row['﻿title'] || row.title ? cleanHTMLText(row['﻿title'] || row.title) : null,
       categories: [],
       tags: [],
       publish_date: null,
