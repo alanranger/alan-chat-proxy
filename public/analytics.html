@@ -1014,9 +1014,9 @@
     }
 
     function renderQuestionsTable() {
-      const tbody = document.getElementById('questions-table');
-      tbody.innerHTML = '';
-      
+        const tbody = document.getElementById('questions-table');
+        tbody.innerHTML = '';
+        
       // Sort the data
       const sortedData = [...currentQuestionsData].sort((a, b) => {
         let aVal, bVal;
@@ -1047,25 +1047,25 @@
       });
       
       sortedData.forEach(q => {
-        const row = document.createElement('tr');
+          const row = document.createElement('tr');
         // Best-effort derive a representative page from recent interactions if available
         const page = (q.page_context && (q.page_context.pathname || q.page_context.url)) || q.last_page || '';
-        row.innerHTML = `
-          <td>${q.question_text.substring(0, 100)}${q.question_text.length > 100 ? '...' : ''}</td>
-          <td><span class="badge badge-info">${q.frequency}</span></td>
-          <td><span class="badge ${q.avg_confidence >= 0.8 ? 'badge-success' : q.avg_confidence >= 0.5 ? 'badge-warning' : 'badge-error'}">${(q.avg_confidence * 100).toFixed(1)}%</span></td>
+          row.innerHTML = `
+            <td>${q.question_text.substring(0, 100)}${q.question_text.length > 100 ? '...' : ''}</td>
+            <td><span class="badge badge-info">${q.frequency}</span></td>
+            <td><span class="badge ${q.avg_confidence >= 0.8 ? 'badge-success' : q.avg_confidence >= 0.5 ? 'badge-warning' : 'badge-error'}">${(q.avg_confidence * 100).toFixed(1)}%</span></td>
           <td>${new Date(q.last_seen).toLocaleString()}</td>
           <td>${page ? `<span class="badge">${page}</span>` : '-'}</td>
           <td><button class="btn btn-secondary" onclick="viewQuestion('${q.question_text.replace(/'/g, "\\'")}')">View</button></td>
-        `;
-        tbody.appendChild(row);
-      });
+          `;
+          tbody.appendChild(row);
+        });
     }
 
     function renderSessionsTable() {
-      const tbody = document.getElementById('sessions-table');
-      tbody.innerHTML = '';
-      
+        const tbody = document.getElementById('sessions-table');
+        tbody.innerHTML = '';
+        
       // Sort the data
       const sortedData = [...currentSessionsData].sort((a, b) => {
         let aVal, bVal;
@@ -1096,21 +1096,21 @@
       });
       
       sortedData.forEach(session => {
-        const row = document.createElement('tr');
-        const duration = session.ended_at ? 
-          Math.round((new Date(session.ended_at) - new Date(session.started_at)) / 1000 / 60) + 'm' : 
-          'Active';
-        
-        row.innerHTML = `
-          <td>${session.session_id.substring(0, 20)}...</td>
-          <td>${new Date(session.started_at).toLocaleString()}</td>
-          <td>${duration}</td>
-          <td>${session.total_questions || 0}</td>
-          <td><span class="badge badge-info">${session.device_type || 'unknown'}</span></td>
-          <td><button class="btn btn-secondary" onclick="viewSession('${session.session_id}')">View</button></td>
-        `;
-        tbody.appendChild(row);
-      });
+          const row = document.createElement('tr');
+          const duration = session.ended_at ? 
+            Math.round((new Date(session.ended_at) - new Date(session.started_at)) / 1000 / 60) + 'm' : 
+            'Active';
+          
+          row.innerHTML = `
+            <td>${session.session_id.substring(0, 20)}...</td>
+            <td>${new Date(session.started_at).toLocaleString()}</td>
+            <td>${duration}</td>
+            <td>${session.total_questions || 0}</td>
+            <td><span class="badge badge-info">${session.device_type || 'unknown'}</span></td>
+            <td><button class="btn btn-secondary" onclick="viewSession('${session.session_id}')">View</button></td>
+          `;
+          tbody.appendChild(row);
+        });
     }
 
     // Load questions data
@@ -1320,14 +1320,14 @@
           insightsList.appendChild(feedbackRecTitle);
           
           analysis.recentFeedback.slice(0, 5).forEach(feedback => {
-            const card = document.createElement('div');
+          const card = document.createElement('div');
             card.className = 'insight-card insight-priority-high';
             
             // Determine priority based on confidence vs user satisfaction
             const confidenceVsSatisfaction = feedback.confidence_score > 70 && feedback.rating === 'thumbs_down' ? 'HIGH' : 'MEDIUM';
             const priorityColor = confidenceVsSatisfaction === 'HIGH' ? '#ef4444' : '#f59e0b';
             
-            card.innerHTML = `
+          card.innerHTML = `
               <h4 style="color: ${priorityColor};">👎 "${feedback.query}"</h4>
               <p><strong>User Rating:</strong> <span style="color: #ef4444; font-weight: bold;">THUMBS DOWN</span> | <strong>Bot Confidence:</strong> ${feedback.confidence_score}%</p>
               <p><strong>Reason:</strong> ${feedback.reason ? feedback.reason.replace('_', ' ') : 'Not specified'}</p>
@@ -1345,9 +1345,9 @@
                   <li>Consider adding more specific content for this topic</li>
                 </ul>
               </div>
-            `;
-            insightsList.appendChild(card);
-          });
+          `;
+          insightsList.appendChild(card);
+        });
         }
 
         // Display top recommendations

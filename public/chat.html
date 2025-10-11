@@ -787,26 +787,48 @@ function getMetaDescription(prod){
   return limit(scrubAttrs(stripTags(raw) || fallback), 220);
 }
 function extractFacts(desc){
-  // Clean Squarespace attributes and HTML tags more thoroughly
+  // Enhanced cleaning to prevent formatting issues and text duplication
   const full = String(desc||'')
-    .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags completely
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags completely
+    .replace(/<[^>]*>/g, ' ') // Remove all HTML tags
     .replace(/\s*style="[^"]*"/gi, '') // Remove style attributes
     .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi, '') // Remove data attributes
     .replace(/\s*contenteditable="[^"]*"/gi, '') // Remove contenteditable
+    .replace(/\s*class="[^"]*"/gi, '') // Remove class attributes
+    .replace(/\s*id="[^"]*"/gi, '') // Remove id attributes
+    .replace(/\s*data-rte-[^=]*="[^"]*"/gi, '') // Remove Squarespace RTE attributes
+    .replace(/\s*data-indent="[^"]*"/gi, '') // Remove indent attributes
+    .replace(/\s*white-space:pre-wrap[^"]*"/gi, '') // Remove white-space styles
+    .replace(/\s*margin-left:[^"]*"/gi, '') // Remove margin styles
     .replace(/\s+/g, ' ') // Normalize whitespace
     .trim();
-  const txt = full.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  
+  // Split into lines and clean each line
+  const txt = full.split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(Boolean)
+    .filter((line, index, arr) => {
+      // Remove duplicate lines (common issue causing text duplication)
+      return arr.indexOf(line) === index;
+    });
+  
   const findAfter = (label)=>{
+    // First try to find label on its own line
     const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
     if(i>=0 && i+1<txt.length) return txt[i+1];
-    // Accept optional space after colon, including none (e.g., "Fitness:2. Easy-Moderate")
+    
+    // Try to find label with value on same line
     const flat = txt.find(l=>new RegExp(`^${label}\\s*:?\\s*(.+)$`,'i').test(l));
-    if(flat) return flat.replace(new RegExp(`^${label}\\s*:?\\s*`,'i'),'');
+    if(flat) return flat.replace(new RegExp(`^${label}\\s*:?\\s*`,'i'),'').trim();
+    
     // Fallback: search the whole text for `Label: value` anywhere
     const re = new RegExp(`${label}\\s*:?\\s*([^\n-]+)`, 'i');
-    const m = full.match(re); if(m && m[1]) return m[1].trim();
+    const m = full.match(re); 
+    if(m && m[1]) return m[1].trim();
     return null;
   };
+  
   const captureBulletBlock = (label)=>{
     const idx = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
     const out = [];
@@ -819,19 +841,9 @@ function extractFacts(desc){
         else if (out.length && line) out.push(line); else if(!/^[-•]/.test(line)) break;
       }
     }
-    // Debug logging - add to UI debug panel
-    if (label === 'Equipment Needed') {
-      window.debugEquipmentExtraction = { 
-        label, 
-        idx, 
-        txt: txt.slice(Math.max(0, idx-2), idx+5), 
-        out,
-        fullTxt: txt, // Show all lines for debugging
-        cleanedFull: full // Show the cleaned full text
-      };
-    }
     return out;
   };
+  
   return {
     location: findAfter('Location'),
     participants: findAfter('Participants'),
@@ -839,22 +851,39 @@ function extractFacts(desc){
     availability: findAfter('Availability'),
     experience: findAfter('Experience - Level') || findAfter('Experience Level'),
     equipmentItems: (() => {
-      // Simple, robust approach: look for "Equipment Needed" anywhere in the text
-      // Find the position of "Equipment Needed:" and capture everything after it
+      // Enhanced Equipment Needed extraction with better text segmentation
       const equipmentIndex = full.toLowerCase().indexOf('equipment needed');
       if (equipmentIndex !== -1) {
-        // Find the colon after "Equipment Needed"
         const colonIndex = full.indexOf(':', equipmentIndex);
         if (colonIndex !== -1) {
-          // Get everything after the colon until the next section (look for next ":" or end)
           let equipmentText = full.substring(colonIndex + 1);
-          // Stop at the next section (look for next ":" that's not part of a URL or time)
-          const nextSectionIndex = equipmentText.search(/[^:]\s*:\s*[A-Z]/);
-          if (nextSectionIndex !== -1) {
-            equipmentText = equipmentText.substring(0, nextSectionIndex);
+          
+          // Better section boundary detection
+          const nextSectionPatterns = [
+            /Experience\s*[-:]?\s*Level/i,
+            /Participants/i,
+            /Location/i,
+            /Time/i,
+            /Duration/i,
+            /Price/i,
+            /Availability/i
+          ];
+          
+          let minIndex = equipmentText.length;
+          for (const pattern of nextSectionPatterns) {
+            const match = equipmentText.search(pattern);
+            if (match !== -1 && match < minIndex) {
+              minIndex = match;
+            }
           }
+          
+          if (minIndex < equipmentText.length) {
+            equipmentText = equipmentText.substring(0, minIndex);
+          }
+          
           equipmentText = equipmentText.trim();
-          // If it contains bullet points, split them; otherwise return as single item
+          
+          // Clean up and split equipment items
           if (equipmentText.includes('*')) {
             return equipmentText.split('*').map(item => item.trim()).filter(Boolean);
           }

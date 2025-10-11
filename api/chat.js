@@ -1139,17 +1139,34 @@ function extractFromDescription(desc) {
   };
   if (!desc) return out;
 
-  // Strip HTML tags but PRESERVE newlines for line-based parsing
+  // Enhanced cleaning to prevent formatting issues and text duplication
   const rawText = String(desc)
-    .replace(/<[^>]*>/g, ' ')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags completely
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags completely
+    .replace(/<[^>]*>/g, ' ') // Remove all HTML tags
+    .replace(/\s*style="[^"]*"/gi, '') // Remove style attributes
+    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi, '') // Remove data attributes
+    .replace(/\s*contenteditable="[^"]*"/gi, '') // Remove contenteditable
+    .replace(/\s*class="[^"]*"/gi, '') // Remove class attributes
+    .replace(/\s*id="[^"]*"/gi, '') // Remove id attributes
+    .replace(/\s*data-rte-[^=]*="[^"]*"/gi, '') // Remove Squarespace RTE attributes
+    .replace(/\s*data-indent="[^"]*"/gi, '') // Remove indent attributes
+    .replace(/\s*white-space:pre-wrap[^"]*"/gi, '') // Remove white-space styles
+    .replace(/\s*margin-left:[^"]*"/gi, '') // Remove margin styles
+    .replace(/\s+/g, ' ') // Normalize whitespace
     .trim();
 
-  // Split by newline first, then normalize whitespace per line
+  // Split by newline first, then normalize whitespace per line and remove duplicates
   const lines = rawText
     .split(/\r?\n/)
-    .map((s) => s.replace(/\s+/g, ' ').trim());
-  const nonEmpty = lines.filter(Boolean);
-  if (nonEmpty.length) out.summary = nonEmpty[0];
+    .map((s) => s.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .filter((line, index, arr) => {
+      // Remove duplicate lines (common issue causing text duplication)
+      return arr.indexOf(line) === index;
+    });
+  
+  if (lines.length) out.summary = lines[0];
 
   const nextVal = (i) => {
     for (let j = i + 1; j < lines.length; j++) {

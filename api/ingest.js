@@ -431,13 +431,13 @@ async function ingestSingleUrl(url, supa, options = {}) {
         .trim();
       
       return {
-        url: url,
-        title: null,
+      url: url,
+      title: null,
         chunk_text: cleanChunk,
         // CSV metadata fields
         csv_type: csvMetadata?.csv_type || null,
         csv_metadata_id: csvMetadata?.id || null,
-        embedding: null,
+      embedding: null,
         chunk_hash: sha1(cleanChunk),
         content: cleanChunk,
         hash: sha1(url + cleanChunk),
@@ -447,11 +447,11 @@ async function ingestSingleUrl(url, supa, options = {}) {
     
     if (!options.dryRun) {
       try {
-        // Delete existing chunks for this URL
-        await supa.from('page_chunks').delete().eq('url', url);
-        // Insert new chunks
-        if (chunkInserts.length > 0) {
-          const { error: chunkError } = await supa.from('page_chunks').insert(chunkInserts);
+    // Delete existing chunks for this URL
+    await supa.from('page_chunks').delete().eq('url', url);
+    // Insert new chunks
+    if (chunkInserts.length > 0) {
+      const { error: chunkError } = await supa.from('page_chunks').insert(chunkInserts);
           if (chunkError) {
             console.error(`Chunk insert failed for ${url}:`, chunkError);
             // Continue processing even if chunk insertion fails
@@ -526,21 +526,21 @@ async function ingestSingleUrl(url, supa, options = {}) {
         }).then(() => {}).catch(() => {}); // Ignore errors
         
         return {
-          url: url,
+        url: url,
           kind: normalizeKind(item, url),
           title: item.headline || item.title || item.name || htmlTitle || h1Title || null,
           description: enhancedDescription,
-          date_start: item.datePublished || item.startDate || null,
-          date_end: item.endDate || null,
-          location: item.location?.name || item.location?.address || null,
-          price: item.offers?.price || null,
-          price_currency: item.offers?.priceCurrency || null,
-          availability: item.offers?.availability || null,
-          sku: item.sku || null,
-          provider: item.provider?.name || item.publisher?.name || 'Alan Ranger Photography',
-          source_url: url,
-          raw: item,
-          entity_hash: sha1(url + JSON.stringify(item) + idx),
+        date_start: item.datePublished || item.startDate || null,
+        date_end: item.endDate || null,
+        location: item.location?.name || item.location?.address || null,
+        price: item.offers?.price || null,
+        price_currency: item.offers?.priceCurrency || null,
+        availability: item.offers?.availability || null,
+        sku: item.sku || null,
+        provider: item.provider?.name || item.publisher?.name || 'Alan Ranger Photography',
+        source_url: url,
+        raw: item,
+        entity_hash: sha1(url + JSON.stringify(item) + idx),
           last_seen: new Date().toISOString(),
           // CSV metadata fields
           csv_type: csvMetadata?.csv_type || null,
@@ -718,7 +718,7 @@ async function processBulkUpload(req, res) {
         if (is404) {
           results.push({ url, success: true, skipped: true, reason: 'Product hidden/unpublished (404)', error: err.message });
         } else {
-          results.push({ url, success: false, error: err.message });
+        results.push({ url, success: false, error: err.message });
         }
       }
     }
@@ -808,7 +808,7 @@ export default async function handler(req, res) {
     } else if (err.message && (err.message.includes('404') || err.message.includes('HEAD 404') || err.message.includes('GET 404'))) {
       return sendJSON(res, 200, { ok: true, skipped: true, reason: 'Product hidden/unpublished (404)', detail: asString(err), stage });
     } else {
-      return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
+    return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
     }
   }
 }
