@@ -2348,7 +2348,9 @@
         const rows = categories.map(cat => {
           const count = csvMetadataCounts[cat.key] || 0;
           totalCsvCount += count;
-          totalSuccess += count; // All imported records are considered successful
+          // Success should only show after Step 2 (Ingest Content) has been run
+          // For now, show 0 until actual ingestion happens
+          totalSuccess += 0; // Will be updated after Step 2
           totalFailed += 0; // No failures in metadata system
           totalSkipped += 0; // No skips in metadata system
           totalDuplicatesRemoved += 0; // No duplicates in metadata system
@@ -2357,7 +2359,7 @@
             <tr>
               <td style="padding: 4px 8px; text-align: left;">${cat.label}${cat.code}</td>
               <td style="padding: 4px 8px; text-align: left;">${count}</td>
-              <td style="padding: 4px 8px; text-align: left; color: #4CAF50;">${count}</td>
+              <td style="padding: 4px 8px; text-align: left; color: #4CAF50;">0</td>
               <td style="padding: 4px 8px; text-align: left; color: #f44336;">0</td>
               <td style="padding: 4px 8px; text-align: left; color: #2196F3;">0</td>
               <td style="padding: 4px 8px; text-align: left; color: #FF9800;">0</td>
