@@ -466,7 +466,7 @@
                 <div class="stat-label">URLs Loaded</div>
                 <div class="stat-value" id="loadedRows">0</div>
               </div>
-              <div class="stat-box" title="URLs successfully ingested or skipped as duplicates">
+              <div class="stat-box" title="URLs successfully ingested (new content processed)">
                 <div class="stat-label">Ingested</div>
                 <div class="stat-value success" id="successCount">0</div>
               </div>
@@ -478,7 +478,7 @@
                 <div class="stat-label">Stopped</div>
                 <div class="stat-value" id="stoppedCount">0</div>
               </div>
-              <div class="stat-box" title="URLs skipped because they were duplicates (already ingested)">
+              <div class="stat-box" title="URLs skipped: duplicates (already ingested) or hidden products (404)">
                 <div class="stat-label">Skipped</div>
                 <div class="stat-value" id="skippedCount">0</div>
               </div>
@@ -1654,7 +1654,12 @@
           }
           
           if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
-            if (result.message && result.message.includes('duplicates')) {
+            if (result.skipped === true) {
+              addResult(`⏭️ Skipped (hidden product): ${url}  (source: batch ${batchIndex + 1}) — ${result.reason || 'Product not currently published'}`, 'skipped');
+              window.urlScrapingStats[category].skipped++;
+              stats.skippedCount++;
+              updateDebugControlDashboard();
+            } else if (result.message && result.message.includes('duplicates')) {
               addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
               window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
@@ -1694,10 +1699,24 @@
               if (reasonLc.includes(' 404') || /\b404\b/.test(reasonLc)) {
                 try { failed404Set.add(url); } catch {}
               }
-              addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
-              stats.failedCount++;
-              window.urlScrapingStats[category].failed++;
-              updateDebugControlDashboard();
+              // Check if this is a 404 (hidden product) vs real failure
+              const is404 = reason && (
+                reason.includes('404') || 
+                reason.includes('HEAD 404') ||
+                reason.includes('GET 404')
+              );
+              
+              if (is404) {
+                addResult(`⏭️ Skipped (hidden product): ${url}  (source: batch ${batchIndex + 1}) — Product not currently published`, 'skipped');
+                stats.skippedCount++;
+                window.urlScrapingStats[category].skipped++;
+                updateDebugControlDashboard();
+              } else {
+                addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
+                stats.failedCount++;
+                window.urlScrapingStats[category].failed++;
+                updateDebugControlDashboard();
+              }
             }
           }
           completed++;

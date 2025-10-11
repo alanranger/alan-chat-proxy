@@ -708,7 +708,18 @@ async function processBulkUpload(req, res) {
           await sleep(1000);
         }
       } catch (err) {
-        results.push({ url, success: false, error: err.message });
+        // Check if this is a 404 error (hidden/unpublished product)
+        const is404 = err.message && (
+          err.message.includes('404') || 
+          err.message.includes('HEAD 404') ||
+          err.message.includes('GET 404')
+        );
+        
+        if (is404) {
+          results.push({ url, success: true, skipped: true, reason: 'Product hidden/unpublished (404)', error: err.message });
+        } else {
+          results.push({ url, success: false, error: err.message });
+        }
       }
     }
     
@@ -794,6 +805,8 @@ export default async function handler(req, res) {
       return sendJSON(res, 408, { error: 'timeout', detail: 'Request timed out after 30 seconds', stage });
     } else if (err.message && err.message.includes('aborted')) {
       return sendJSON(res, 408, { error: 'timeout', detail: 'Request was aborted due to timeout', stage });
+    } else if (err.message && (err.message.includes('404') || err.message.includes('HEAD 404') || err.message.includes('GET 404'))) {
+      return sendJSON(res, 200, { ok: true, skipped: true, reason: 'Product hidden/unpublished (404)', detail: asString(err), stage });
     } else {
       return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
     }
