@@ -236,10 +236,10 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = [], debug
   const chunkUrls = contentChunks.slice(0, 3).map(c => c.url || 'no-url').join(', ');
   debugInfo.push(`🔧 Chunk URLs: ${chunkUrls}`);
   
+  let processedChunks = 0;
+  let filteredChunks = 0;
+  
   try {
-    let processedChunks = 0;
-    let filteredChunks = 0;
-    
     for (const chunk of (contentChunks || []).slice(0, 8)) { // Increased from 5 to 8
       const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
       
