@@ -99,41 +99,41 @@ const PRIMARY_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 const SECONDARY_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 async function fetchOnce(url, ua, referer, method = 'GET', lang, cookie) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-  
+  // Use Promise.race for timeout instead of AbortController for better compatibility
+  const fetchPromise = fetch(url, {
+    method,
+    redirect: 'follow',
+    headers: {
+      'User-Agent': ua,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': lang || 'en-GB,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Origin': 'https://www.alanranger.com',
+      // Browser-like fetch hints
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not=A?Brand";v="99"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      ...(cookie ? { 'Cookie': cookie } : {}),
+      ...(referer ? { 'Referer': referer } : {})
+    }
+  });
+
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000);
+  });
+
   try {
-    const response = await fetch(url, {
-      method,
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: {
-        'User-Agent': ua,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': lang || 'en-GB,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Origin': 'https://www.alanranger.com',
-        // Browser-like fetch hints
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'same-origin',
-        'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not=A?Brand";v="99"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"Windows"',
-        ...(cookie ? { 'Cookie': cookie } : {}),
-        ...(referer ? { 'Referer': referer } : {})
-      }
-    });
-    clearTimeout(timeoutId);
-    return response;
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (error) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
+    if (error.message === 'Request timeout after 30 seconds') {
       throw new Error('Request timeout');
     }
     throw error;
@@ -789,6 +789,13 @@ export default async function handler(req, res) {
     return sendJSON(res, 200, { ok: true, ...result });
     
   } catch (err) {
-    return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
+    // Handle specific error types more gracefully
+    if (err.message && err.message.includes('timeout')) {
+      return sendJSON(res, 408, { error: 'timeout', detail: 'Request timed out after 30 seconds', stage });
+    } else if (err.message && err.message.includes('aborted')) {
+      return sendJSON(res, 408, { error: 'timeout', detail: 'Request was aborted due to timeout', stage });
+    } else {
+      return sendJSON(res, 500, { error: 'server_error', detail: asString(err), stage });
+    }
   }
 }
