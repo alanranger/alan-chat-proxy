@@ -1646,22 +1646,22 @@
           addResult(`🔍 DEBUG: ${url} (source: ${source}) -> Category: ${category}`, 'info');
           
           // Ensure category exists in urlScrapingStats
-          if (!urlScrapingStats[category]) {
-            urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };
+          if (!window.urlScrapingStats[category]) {
+            window.urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };
             addResult(`🔍 DEBUG: Created category: ${category}`, 'info');
           }
           
           if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
             if (result.message && result.message.includes('duplicates')) {
               addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
-              urlScrapingStats[category].skipped++;
+              window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
               updateDebugControlDashboard();
             } else {
               addResult(`✅ Ingested: ${url}`, 'success');
               stats.successCount++;
-              urlScrapingStats[category].success++;
-              addResult(`🔍 DEBUG: Updated ${category}: success=${urlScrapingStats[category].success}`, 'info');
+              window.urlScrapingStats[category].success++;
+              addResult(`🔍 DEBUG: Updated ${category}: success=${window.urlScrapingStats[category].success}`, 'info');
               updateDebugControlDashboard();
             }
           } else {
@@ -1669,13 +1669,13 @@
             const reasonLc = reason.toLowerCase();
             if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
               addResult(`✅ Skipped duplicate: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'success');
-              urlScrapingStats[category].skipped++;
+              window.urlScrapingStats[category].skipped++;
               stats.skippedCount++;
               updateDebugControlDashboard();
             } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
               addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
               stats.failedCount++;
-              urlScrapingStats[category].failed++;
+              window.urlScrapingStats[category].failed++;
               updateDebugControlDashboard();
             } else {
               // Improve diagnostics formatting when backend attaches attempt details
@@ -1694,7 +1694,7 @@
               }
               addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
               stats.failedCount++;
-              urlScrapingStats[category].failed++;
+              window.urlScrapingStats[category].failed++;
               updateDebugControlDashboard();
             }
           }
@@ -2181,8 +2181,8 @@
       'product_schema': 0
     };
     
-    // URL scraping stats for dashboard display
-    let urlScrapingStats = {
+    // URL scraping stats for dashboard display (global for dashboard access)
+    window.urlScrapingStats = {
       'blog': { success: 0, failed: 0, skipped: 0 },
       'course_events': { success: 0, failed: 0, skipped: 0 },
       'workshop_events': { success: 0, failed: 0, skipped: 0 },
@@ -2361,10 +2361,13 @@
         }
         
         if (ingestedEl) {
-          // Success should show actual ingestion results (page_chunks count)
-          // This will be 0 until Step 2 is run successfully
-          ingestedEl.textContent = data.page_chunks || 0;
-          console.log('DEBUG: Updated successCount to:', data.page_chunks || 0);
+          // During ingestion, use live stats; otherwise use persistent database counts
+          const liveSuccessCount = window.urlScrapingStats ? 
+            Object.values(window.urlScrapingStats).reduce((sum, cat) => sum + (cat.success || 0), 0) : 0;
+          const persistentCount = data.page_chunks || 0;
+          const displayCount = liveSuccessCount > 0 ? liveSuccessCount : persistentCount;
+          ingestedEl.textContent = displayCount;
+          console.log('DEBUG: Updated successCount to:', displayCount, '(live:', liveSuccessCount, 'persistent:', persistentCount, ')');
         } else {
           console.warn('DEBUG: successCount element not found');
         }
@@ -2414,11 +2417,11 @@
           const count = csvMetadataCounts[csvKey] || 0;
           totalCsvCount += count;
           
-          // Get actual ingestion results from the API response
-          // The API should return per-category ingestion stats
-          const successCount = 0; // Will be updated after Step 2 with real data
-          const failedCount = 0; // Will be updated after Step 2 with real data
-          const skippedCount = 0; // Will be updated after Step 2 with real data
+          // Get actual ingestion results from live stats during ingestion, or 0 if not ingesting
+          const liveStats = window.urlScrapingStats && window.urlScrapingStats[cat.key] ? window.urlScrapingStats[cat.key] : { success: 0, failed: 0, skipped: 0 };
+          const successCount = liveStats.success || 0;
+          const failedCount = liveStats.failed || 0;
+          const skippedCount = liveStats.skipped || 0;
           const duplicatesRemoved = 0; // This should always be 0 in the detailed table
           
           totalSuccess += successCount;
