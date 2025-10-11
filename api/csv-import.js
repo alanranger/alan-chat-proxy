@@ -178,7 +178,7 @@ async function importBlogMetadata(rows, supa) {
     const item = {
       csv_type: 'blog',
       url: row['full url'] || row['Full Url'] || row.url,
-      title: row.Title || row.title ? cleanHTMLText(row.Title || row.title) : null,
+      title: row['﻿Title'] || row.Title || row.title ? cleanHTMLText(row['﻿Title'] || row.Title || row.title) : null,
       categories: (row.Categories && row.Categories.trim()) ? row.Categories.split(';').map(c => cleanHTMLText(c.trim())).filter(Boolean) : [],
       tags: (row.Tags && row.Tags.trim()) ? row.Tags.split(',').map(t => cleanHTMLText(t.trim())).filter(Boolean) : [],
       publish_date: normalizeDateDayFirst(row['Publish On'] || row['publish on']),
