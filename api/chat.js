@@ -813,12 +813,12 @@ function anyIlike(col, words) {
 }
 
 async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
-  // Use v_event_product_mappings view for events, courses and workshops
+  // Use page_entities table directly for events with enhanced CSV data
   let q = client
-    .from("v_event_product_mappings")
-    .select("event_url, event_title, product_url, product_title, date_start, date_end, event_location, price_gbp, participants, fitness_level, availability, map_method, confidence, subtype")
-    .gte("date_start", new Date().toISOString())
-    .order("date_start", { ascending: true })
+    .from("page_entities")
+    .select("id, url, kind, title, description, price, price_currency, availability, sku, provider, source_url, raw, entity_hash, last_seen, page_url, norm_title, start_date, csv_type, csv_metadata_id, categories, tags, publish_date, location_name, location_address, excerpt, end_date, start_time, end_time, location_city_state_zip, image_url, json_ld_data, workflow_state")
+    .eq("kind", "event")
+    .order("last_seen", { ascending: false })
     .limit(limit);
 
   // If we have page context, try to find related content first
@@ -832,36 +832,22 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   }
 
   if (keywords.length) {
-    // Prioritize specific keywords like "bluebell" over generic ones like "workshop"
-    const specificKeywords = keywords.filter(k => !['workshop', 'when', 'next', 'photography'].includes(k.toLowerCase()));
-    const genericKeywords = keywords.filter(k => ['workshop', 'when', 'next', 'photography'].includes(k.toLowerCase()));
+    // Search in title, description, and location fields using page_entities structure
+    const parts = [];
+    const t1 = anyIlike("title", keywords); if (t1) parts.push(t1);
+    const t2 = anyIlike("page_url", keywords); if (t2) parts.push(t2);
+    const t3 = anyIlike("location_name", keywords); if (t3) parts.push(t3);
+    const t4 = anyIlike("location_address", keywords); if (t4) parts.push(t4);
+    const t5 = anyIlike("description", keywords); if (t5) parts.push(t5);
     
-    const orParts = [];
-    
-    // First, try to match specific keywords (like "bluebell")
-    for (const keyword of specificKeywords) {
-      orParts.push(`event_title.ilike.%${keyword}%`);
-      orParts.push(`product_title.ilike.%${keyword}%`);
-      orParts.push(`event_location.ilike.%${keyword}%`);
-    }
-    
-    // If no specific keywords, fall back to generic ones
-    if (orParts.length === 0) {
-      for (const keyword of genericKeywords) {
-        orParts.push(`event_title.ilike.%${keyword}%`);
-        orParts.push(`product_title.ilike.%${keyword}%`);
-        orParts.push(`event_location.ilike.%${keyword}%`);
-      }
-    }
-    
-    if (orParts.length) {
-      q = q.or(orParts.join(","));
+    if (parts.length) {
+      q = q.or(parts.join(","));
     }
   }
 
   const { data, error } = await q;
   if (error) {
-    console.error('❌ v_event_product_mappings query error:', error);
+    console.error('❌ page_entities events query error:', error);
     return [];
   }
   
@@ -2001,7 +1987,11 @@ export default async function handler(req, res) {
     // --------- ADVICE -----------
     // return article answers + upgraded pills
     const debugInfo = []; // Initialize debug info array
+    
+    // Get all relevant data types for comprehensive responses
     let articles = await findArticles(client, { keywords, limit: 30, pageContext });
+    let events = await findEvents(client, { keywords, limit: 20, pageContext });
+    let products = await findProducts(client, { keywords, limit: 20, pageContext });
     
     // De-duplicate and enrich titles
     articles = await dedupeAndEnrichArticles(client, articles);
@@ -2252,8 +2242,36 @@ export default async function handler(req, res) {
       structured: {
         intent: "advice",
         topic: keywords.join(", "),
-        events: [],
-        products: [],
+        events: (events || []).map(e => ({
+          ...e,
+          // Map database fields to response fields
+          title: e.title,
+          url: e.url || e.page_url,
+          location: e.location_name,
+          location_address: e.location_address,
+          start_date: e.start_date,
+          end_date: e.end_date,
+          start_time: e.start_time,
+          end_time: e.end_time,
+          price: e.price,
+          participants: e.participants,
+          fitness_level: e.fitness_level,
+          availability: e.availability,
+          categories: e.categories,
+          tags: e.tags
+        })),
+        products: (products || []).map(p => ({
+          ...p,
+          // Map database fields to response fields
+          title: p.title,
+          url: p.url || p.page_url,
+          price: p.price,
+          availability: p.availability,
+          location: p.location_name,
+          location_address: p.location_address,
+          categories: p.categories,
+          tags: p.tags
+        })),
         articles: (articles || []).map(a => {
           const extractedDate = extractPublishDate(a);
           const fallbackDate = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
@@ -2278,8 +2296,8 @@ export default async function handler(req, res) {
           intent: "advice",
           keywords: keywords,
       counts: {
-            events: 0,
-            products: 0,
+            events: events?.length || 0,
+            products: products?.length || 0,
             articles: articles?.length || 0,
             contentChunks: contentChunks?.length || 0,
           },
