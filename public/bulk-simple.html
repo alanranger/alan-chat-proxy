@@ -455,7 +455,7 @@
 
     <!-- Debug & Control Section -->
     <div class="section">
-      <h3>🔧 Debug & Control</h3>
+      <h3>🔧 Debug & Control - Current Session vs Total Database</h3>
       <div class="card">
         <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 10px;">
               <div class="stat-box" title="CSV metadata from current import session (last 5 minutes)">
@@ -2329,7 +2329,6 @@
     // Global function to render category stats (updated for metadata-driven system)
     async function updateDebugControlDashboard() {
       console.log('DEBUG: updateDebugControlDashboard called');
-      addResult('🔧 DEBUG: updateDebugControlDashboard called', 'info');
       const el = document.getElementById('categoryStats');
       if (!el) {
         console.warn('DEBUG: categoryStats element not found');
@@ -2337,13 +2336,11 @@
       }
       
       try {
-        // Get current counts from the API
         const token = getToken();
         const baseUrl = 'https://alan-chat-proxy.vercel.app';
         
-        console.log('DEBUG: Fetching counts from API...');
-        addResult('🔧 DEBUG: Fetching counts from API...', 'info');
-        const response = await fetch(`${baseUrl}/api/tools?action=counts`, {
+        // Get current session URLs (recent imports)
+        const currentSessionResponse = await fetch(`${baseUrl}/api/tools?action=get_urls&recent=true`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -2351,19 +2348,28 @@
           }
         });
         
-        if (!response.ok) {
-          console.warn('Failed to fetch counts for Debug & Control dashboard:', response.status);
+        // Get total database counts for comparison
+        const totalResponse = await fetch(`${baseUrl}/api/tools?action=counts`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!currentSessionResponse.ok || !totalResponse.ok) {
+          console.warn('Failed to fetch dashboard data');
           return;
         }
         
-        const data = await response.json();
-        console.log('DEBUG: API response:', data);
-        const csvMetadataCounts = data.csv_metadata || {};
-        console.log('DEBUG: CSV metadata counts:', csvMetadataCounts);
+        const currentSessionData = await currentSessionResponse.json();
+        const totalData = await totalResponse.json();
         
-        // Update the top summary boxes
-        const totalMetadata = Object.values(csvMetadataCounts).reduce((sum, count) => sum + count, 0);
-        console.log('DEBUG: Total metadata count:', totalMetadata);
+        const currentSessionUrls = currentSessionData.urls || [];
+        const totalMetadata = Object.values(totalData.csv_metadata || {}).reduce((sum, count) => sum + count, 0);
+        
+        console.log('DEBUG: Current session URLs:', currentSessionUrls.length);
+        console.log('DEBUG: Total database count:', totalMetadata);
         
         // Update summary boxes with correct element IDs
         const currentSessionEl = document.getElementById('currentSessionRows');
@@ -2410,19 +2416,17 @@
           skippedEl.textContent = 0;
         }
         
-        // Update the foundation/enhancements line
-        const foundationCount = csvMetadataCounts.site_urls || 0;
-        const enhancementsCount = (csvMetadataCounts.blog || 0) + (csvMetadataCounts.course_events || 0) + 
-                                 (csvMetadataCounts.workshop_events || 0) + (csvMetadataCounts.course_products || 0) + 
-                                 (csvMetadataCounts.workshop_products || 0) + (csvMetadataCounts.product_schema || 0);
+        // Group current session URLs by category
+        const currentSessionByCategory = {};
+        currentSessionUrls.forEach(url => {
+          const category = categorize(url.url, null, url.csv_type);
+          if (!currentSessionByCategory[category]) {
+            currentSessionByCategory[category] = [];
+          }
+          currentSessionByCategory[category].push(url);
+        });
         
-        const foundationEl = document.querySelector('.foundation-enhancements');
-        if (foundationEl) {
-          foundationEl.textContent = `Foundation (site_urls): ${foundationCount} • Enhancements (blog/events/workshops/services): ${enhancementsCount}`;
-        }
-        
-        // Update the detailed table with proper HTML structure
-        // Use the same category keys as the ingestion system to avoid duplicates
+        // Update the detailed table to show CURRENT SESSION data only
         const categories = [
           { key: 'blog_articles', label: 'Blog Articles', code: ' — 01' },
           { key: 'course_events', label: 'Course Events', code: ' — 02' },
@@ -2438,12 +2442,11 @@
         
         let totalCsvCount = 0, totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0;
         
-        // Create table rows
+        // Create table rows showing CURRENT SESSION data
         const rows = categories.map(cat => {
-          // Map dashboard category keys to CSV metadata keys
-          const csvKey = cat.key === 'blog_articles' ? 'blog' : cat.key;
-          const count = csvMetadataCounts[csvKey] || 0;
-          totalCsvCount += count;
+          // Get count from current session only
+          const currentSessionCount = currentSessionByCategory[cat.key] ? currentSessionByCategory[cat.key].length : 0;
+          totalCsvCount += currentSessionCount;
           
           // Get actual ingestion results from live stats during ingestion, or 0 if not ingesting
           const liveStats = window.urlScrapingStats && window.urlScrapingStats[cat.key] ? window.urlScrapingStats[cat.key] : { success: 0, failed: 0, skipped: 0 };
@@ -2461,7 +2464,7 @@
           return `
             <tr>
               <td style="padding: 4px 8px; text-align: left;">${cat.label}${cat.code}</td>
-              <td style="padding: 4px 8px; text-align: left;">${count}</td>
+              <td style="padding: 4px 8px; text-align: left;">${currentSessionCount}</td>
               <td style="padding: 4px 8px; text-align: left; color: #4CAF50;">${successCount}</td>
               <td style="padding: 4px 8px; text-align: left; color: #f44336;">${failedCount}</td>
               <td style="padding: 4px 8px; text-align: left; color: #2196F3;">${skippedCount}</td>
@@ -2487,7 +2490,7 @@
           <thead>
             <tr>
               <th style="text-align: left; padding: 4px 8px;">Category</th>
-              <th style="text-align: left; padding: 4px 8px;">CSV Count</th>
+              <th style="text-align: left; padding: 4px 8px;">Current Session</th>
               <th style="text-align: left; padding: 4px 8px;">Success</th>
               <th style="text-align: left; padding: 4px 8px;">Failed</th>
               <th style="text-align: left; padding: 4px 8px;">Skipped</th>
