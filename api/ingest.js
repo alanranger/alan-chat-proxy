@@ -8,7 +8,7 @@ export const config = { runtime: 'nodejs' };
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
-import { extractStructuredDataFromHTML, enhanceDescriptionWithStructuredData, generateContentHash } from '../lib/htmlExtractor.js';
+import { extractStructuredDataFromHTML, enhanceDescriptionWithStructuredData, generateContentHash, cleanHTMLText } from '../lib/htmlExtractor.js';
 
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
@@ -489,22 +489,29 @@ async function ingestSingleUrl(url, supa, options = {}) {
         });
       } catch (e) {} // Ignore errors
 
-      // Store enhanced descriptions for products
+      // Store enhanced descriptions for ALL entity types
       for (let idx = 0; idx < jsonLd.length; idx++) {
         const item = jsonLd[idx];
-        if (normalizeKind(item, url) === 'product') {
+        const entityKind = normalizeKind(item, url);
+        
+        // Clean descriptions for all entity types, but enhance with structured data only for products
+        if (entityKind === 'product') {
           const enhancedDescription = enhanceDescriptionWithStructuredData(item.description || '', structuredData);
           enhancedDescriptions[idx] = enhancedDescription;
-          
-          // Log enhanced description creation directly to database (fire and forget)
-          try {
-            await supa.from('debug_logs').insert({
-              url: url,
-              stage: 'enhanced_description',
-              data: { idx: idx, description: enhancedDescription.substring(0, 300) }
-            });
-          } catch (e) {} // Ignore errors
+        } else {
+          // For non-products, just clean the HTML without adding structured data
+          const cleanedDescription = cleanHTMLText(item.description || '');
+          enhancedDescriptions[idx] = cleanedDescription;
         }
+        
+        // Log enhanced description creation directly to database (fire and forget)
+        try {
+          await supa.from('debug_logs').insert({
+            url: url,
+            stage: 'enhanced_description',
+            data: { idx: idx, kind: entityKind, description: enhancedDescriptions[idx].substring(0, 300) }
+          });
+        } catch (e) {} // Ignore errors
       }
       
       // Log enhanced descriptions object directly to database
