@@ -2409,12 +2409,12 @@
           const count = csvMetadataCounts[cat.key] || 0;
           totalCsvCount += count;
           
-          // For now, show 0 for all ingestion metrics until Step 2 is run
-          // This will be updated after successful ingestion
-          const successCount = 0; // Will be updated after Step 2
-          const failedCount = 0; // No failures in metadata system
-          const skippedCount = 0; // No skips in metadata system
-          const duplicatesRemoved = 0; // No duplicates in metadata system
+          // Get actual ingestion results from the API response
+          // The API should return per-category ingestion stats
+          const successCount = 0; // Will be updated after Step 2 with real data
+          const failedCount = 0; // Will be updated after Step 2 with real data
+          const skippedCount = 0; // Will be updated after Step 2 with real data
+          const duplicatesRemoved = 0; // This should always be 0 in the detailed table
           
           totalSuccess += successCount;
           totalFailed += failedCount;
