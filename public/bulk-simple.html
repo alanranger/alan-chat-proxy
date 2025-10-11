@@ -1656,12 +1656,10 @@
           
           const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
           const category = categorize(url, result, source);
-          addResult(`🔍 DEBUG: ${url} (source: ${source}) -> Category: ${category}`, 'info');
           
           // Ensure category exists in urlScrapingStats
           if (!window.urlScrapingStats[category]) {
             window.urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };
-            addResult(`🔍 DEBUG: Created category: ${category}`, 'info');
           }
           
           if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
@@ -1677,7 +1675,6 @@
               addResult(`✅ Ingested: ${url}`, 'success');
               stats.successCount++;
               window.urlScrapingStats[category].success++;
-              addResult(`🔍 DEBUG: Updated ${category}: success=${window.urlScrapingStats[category].success}`, 'info');
             }
           } else {
             const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
@@ -2416,28 +2413,18 @@
           skippedEl.textContent = 0;
         }
         
-        // Group current session URLs by category
-        const currentSessionByCategory = {};
-        currentSessionUrls.forEach(url => {
-          // Inline categorization logic (same as categorize function)
-          let category;
-          const csvType = url.csv_type;
-          if (csvType === 'blog') category = 'blog_articles';
-          else if (csvType === 'course_events') category = 'course_events';
-          else if (csvType === 'workshop_events') category = 'workshop_events';
-          else if (csvType === 'course_products') category = 'course_products';
-          else if (csvType === 'workshop_products') category = 'workshop_products';
-          else if (csvType === 'site_urls') category = 'site_urls';
-          else if (csvType === 'product_schema') category = 'product_schema';
-          else category = 'site_urls'; // fallback
-          
-          if (!currentSessionByCategory[category]) {
-            currentSessionByCategory[category] = [];
-          }
-          currentSessionByCategory[category].push(url);
-        });
+        // Use original CSV import counts instead of current session URLs
+        const currentSessionByCategory = {
+          'blog_articles': { length: csvRowCounts.blog || 0 },
+          'course_events': { length: csvRowCounts.event || 0 },
+          'workshop_events': { length: csvRowCounts.workshop || 0 },
+          'course_products': { length: csvRowCounts.service || 0 },
+          'workshop_products': { length: csvRowCounts.workshop_products || 0 },
+          'site_urls': { length: csvRowCounts.site || 0 },
+          'product_schema': { length: csvRowCounts.product_schema || 0 }
+        };
         
-        // Update the detailed table to show CURRENT SESSION data only
+        // Update the detailed table to show ORIGINAL CSV IMPORT COUNTS (not current session)
         const categories = [
           { key: 'blog_articles', label: 'Blog Articles', code: ' — 01' },
           { key: 'course_events', label: 'Course Events', code: ' — 02' },
@@ -2453,9 +2440,9 @@
         
         let totalCsvCount = 0, totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0;
         
-        // Create table rows showing CURRENT SESSION data
+        // Create table rows showing ORIGINAL CSV IMPORT COUNTS
         const rows = categories.map(cat => {
-          // Get count from current session only
+          // Get count from original CSV import
           const currentSessionCount = currentSessionByCategory[cat.key] ? currentSessionByCategory[cat.key].length : 0;
           totalCsvCount += currentSessionCount;
           
