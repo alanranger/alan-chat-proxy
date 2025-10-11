@@ -2418,13 +2418,16 @@
         
         // Group current session URLs by category
         const currentSessionByCategory = {};
+        console.log('DEBUG: Processing current session URLs:', currentSessionUrls.length);
         currentSessionUrls.forEach(url => {
           const category = categorize(url.url, null, url.csv_type);
+          console.log('DEBUG: URL categorized:', url.url, 'csv_type:', url.csv_type, 'category:', category);
           if (!currentSessionByCategory[category]) {
             currentSessionByCategory[category] = [];
           }
           currentSessionByCategory[category].push(url);
         });
+        console.log('DEBUG: Current session by category:', currentSessionByCategory);
         
         // Update the detailed table to show CURRENT SESSION data only
         const categories = [
@@ -2439,6 +2442,7 @@
         
         // Clear existing content and rebuild table
         el.innerHTML = '';
+        console.log('DEBUG: Starting table generation with categories:', categories.length);
         
         let totalCsvCount = 0, totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0;
         
@@ -2446,6 +2450,7 @@
         const rows = categories.map(cat => {
           // Get count from current session only
           const currentSessionCount = currentSessionByCategory[cat.key] ? currentSessionByCategory[cat.key].length : 0;
+          console.log('DEBUG: Category:', cat.key, 'currentSessionCount:', currentSessionCount);
           totalCsvCount += currentSessionCount;
           
           // Get actual ingestion results from live stats during ingestion, or 0 if not ingesting
