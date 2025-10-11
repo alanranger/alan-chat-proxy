@@ -14,6 +14,42 @@ const hashIP = (ip) => {
   return crypto.createHash('sha256').update(ip + 'chat-log-salt').digest('hex').substring(0, 16);
 };
 
+// Extract publish date from article content
+const extractPublishDate = (article) => {
+  try {
+    // Check if we have a publish_date field
+    if (article.publish_date) {
+      return new Date(article.publish_date).toLocaleDateString('en-GB', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+    
+    // Try to extract date from URL (common pattern: /2024/01/15/ or /january-15-2024/)
+    const url = article.page_url || article.source_url || '';
+    const yearMatch = url.match(/\/(20\d{2})\//);
+    const monthMatch = url.match(/\/(\d{1,2})\/(\d{1,2})\//);
+    
+    if (yearMatch && monthMatch) {
+      const year = yearMatch[1];
+      const month = monthMatch[1];
+      const day = monthMatch[2];
+      return new Date(year, month - 1, day).toLocaleDateString('en-GB', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+    
+    // Try to extract from content chunks (this would require a database query)
+    // For now, return null to fall back to last_seen
+    return null;
+  } catch (error) {
+    return null;
+  }
+};
+
 // Extract keywords from page path for context
 const extractKeywordsFromPath = (pathname) => {
   if (!pathname) return [];
@@ -2031,7 +2067,7 @@ export default async function handler(req, res) {
         });
       }
       
-      articles = articles.slice(0, 6); // Limit to top 6 after filtering
+      articles = articles.slice(0, 8); // Limit to top 8 after filtering
     }
     // Ensure concept article is first when asking "what is <term>"
     const qlc2 = (query||'').toLowerCase();
@@ -2077,7 +2113,9 @@ export default async function handler(req, res) {
       // Equipment advice lane - synthesize evidence-based recommendations
       const mentionsEquipment = Array.from(equipmentKeywords).some(k => qlcRank.includes(k));
       if (mentionsEquipment) {
+        console.log('DEBUG: contentChunks for equipment advice:', contentChunks.length, 'first chunk preview:', contentChunks[0]?.chunk_text?.substring(0, 200));
         const equipmentAnswer = generateEquipmentAdvice(query, contentChunks, articles);
+        console.log('DEBUG: equipmentAnswer result:', equipmentAnswer ? 'SUCCESS' : 'NULL');
         if (equipmentAnswer) {
           lines.push(equipmentAnswer);
           hasEvidenceBasedAnswer = true;
@@ -2169,11 +2207,11 @@ export default async function handler(req, res) {
         products: [],
         articles: (articles || []).map(a => ({
           ...a,
-          display_date: a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
+          display_date: extractPublishDate(a) || (a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
             year: 'numeric', 
             month: 'short', 
             day: 'numeric' 
-          }) : null
+          }) : null)
         })),
         pills,
       },
