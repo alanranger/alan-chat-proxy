@@ -187,6 +187,7 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   
   // Check if this is an equipment recommendation question
   const isEquipmentQuery = Array.from(equipmentKeywords).some(k => lc.includes(k));
+  console.log('DEBUG: isEquipmentQuery:', isEquipmentQuery, 'keywords found:', Array.from(equipmentKeywords).filter(k => lc.includes(k)));
   if (!isEquipmentQuery) return null;
   
   // Extract recommendations from your written content with improved logic
@@ -226,6 +227,7 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
       
       // Check if this chunk contains recommendation patterns
       const hasRecommendationPattern = recommendationPatterns.some(pattern => pattern.test(cleanText));
+      console.log('DEBUG: Chunk URL:', chunk.url, 'hasRecommendationPattern:', hasRecommendationPattern, 'cleanText length:', cleanText.length);
       
       if (hasRecommendationPattern) {
         // Extract specific recommendations with better sentence handling
@@ -276,6 +278,8 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = []) {
   }
   
   // If we have good content from your written articles, build a comprehensive response
+  console.log('DEBUG: Final counts - productRecommendations:', productRecommendations.length, 'brandComparisons:', brandComparisons.length, 'specificTips:', specificTips.length);
+  
   if (productRecommendations.length > 0 || brandComparisons.length > 0 || specificTips.length > 0) {
     let response = "**Equipment Recommendations:**\n\n";
     
