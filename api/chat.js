@@ -446,6 +446,19 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     const url = String(c.url||"").toLowerCase();
     const title = String(c.title||"").toLowerCase();
     const text = String(c.chunk_text||c.content||"").toLowerCase();
+    
+    // Skip malformed chunks (URL-encoded text, very short text, or navigation elements)
+    if (text.length < 50 || 
+        text.includes('%3A%2F%2F') || 
+        text.includes('] 0 Likes') ||
+        text.includes('Sign In') ||
+        text.includes('My Account') ||
+        text.includes('Back ') ||
+        text.includes('[/') ||
+        text.includes('Cart 0')) {
+      return false;
+    }
+    
     return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm) || url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || text.includes(`what is ${exactTerm}`);
   }) : (contentChunks || []);
   
@@ -535,7 +548,14 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
              !sLower.includes('[article]') && // Skip metadata
              !sLower.includes('published:') && // Skip metadata
              !sLower.includes('url:') && // Skip metadata
-             !sLower.includes('alan ranger photography'); // Skip navigation
+             !sLower.includes('alan ranger photography') && // Skip navigation
+             !sLower.includes('%3a%2f%2f') && // Skip URL-encoded text
+             !sLower.includes('] 0 likes') && // Skip malformed text
+             !sLower.includes('sign in') && // Skip navigation
+             !sLower.includes('my account') && // Skip navigation
+             !sLower.includes('back ') && // Skip navigation
+             !sLower.includes('[/') && // Skip navigation links
+             !sLower.includes('cart 0'); // Skip navigation
     });
     
     if (relevantSentence) {
