@@ -184,3 +184,44 @@ If issues arise:
 5. **Maintainable** - centralized parsing logic
 
 This migration approach fixes the root cause by ensuring structured data is extracted and stored during ingestion, rather than trying to parse it in the frontend every time.
+
+---
+
+## 📋 **HANDOVER NOTES - October 2025**
+
+### **✅ COMPLETED MIGRATIONS**
+1. **JSON-LD Prioritization** - Blog articles now prioritize FAQPage over Organization JSON-LD
+2. **Structured Data Extraction** - All 10 fields extracted during ingestion
+3. **Product Card Integration** - Chat API includes structured data in product objects
+4. **Database View Updates** - `v_events_for_chat` includes product mappings and structured data
+
+### **🔧 CRITICAL FILES TO KNOW**
+- **`api/ingest.js`** - Main ingestion logic with JSON-LD prioritization
+- **`api/chat.js`** - Chat API with product enrichment (lines 2087-2097)
+- **`lib/htmlExtractor.js`** - Structured data extraction patterns
+- **`v_events_for_chat`** - Database view for events with product mappings
+
+### **⚠️ KNOWN ISSUES**
+1. **Equipment/Experience Fields** - Some products show `null` for these fields
+   - **Location**: `lib/htmlExtractor.js` regex patterns
+   - **Fix**: Test patterns against actual page content
+2. **Data Freshness** - Some articles have old descriptions
+   - **Fix**: Run full ingestion to update with new JSON-LD prioritization
+
+### **🧪 QUICK TEST COMMANDS**
+```bash
+# Test live chat
+curl -X POST "https://alan-chat-proxy.vercel.app/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "woodland photography workshop"}'
+
+# Test database
+SELECT url, participants, fitness_level, equipment_needed, experience_level 
+FROM page_entities WHERE kind = 'product' LIMIT 5;
+```
+
+### **🚨 EMERGENCY ROLLBACK**
+If issues arise:
+1. **Revert `api/chat.js`** - Remove structured data fields from product enrichment
+2. **Revert `api/ingest.js`** - Remove JSON-LD prioritization logic
+3. **Keep database schema** - Structured data fields can remain in database

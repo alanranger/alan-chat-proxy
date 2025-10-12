@@ -207,10 +207,11 @@ CSV Upload → Bulk Processing → Entity Mapping → View Refresh → Chat Read
 - **JSON-LD prioritization** - Fixed blog articles getting wrong descriptions from Organization JSON-LD instead of FAQPage
 - **Duplicate entities** - Fixed ingestion creating multiple entities per URL with conflicting descriptions
 - **Structured data extraction** - Enhanced regex patterns for 10 structured data fields (participants, experience_level, equipment_needed, etc.)
+- **Product card bullet points** - Fixed chat API to include all structured data fields in product objects (October 2025)
 
 ### **Remaining Issues**
 - **Data freshness** - Some articles may still have old incorrect descriptions until next ingestion
-- **Frontend parsing** - Product cards still rely on frontend parsing of unstructured content (being addressed)
+- **Equipment/Experience extraction** - Some products still show `null` for `equipment_needed` and `experience_level` (extraction patterns may need refinement)
 
 ### **Architecture Improvements Completed** ✅
 - **Enhanced data ingestion** - Extract structured data during scraping (database schema ready)
@@ -255,3 +256,52 @@ CSV Upload → Bulk Processing → Entity Mapping → View Refresh → Chat Read
 ---
 
 *This architecture document reflects the current state of the system as of the latest analysis. The main focus should be on fixing data ingestion to extract structured data at the source rather than parsing it in the frontend.*
+
+---
+
+## 📋 **HANDOVER NOTES - October 2025**
+
+### **🎯 What Was Accomplished**
+1. **Fixed JSON-LD Prioritization** - Blog articles now get correct descriptions from FAQPage instead of Organization JSON-LD
+2. **Implemented Structured Data Extraction** - All 10 fields now extracted during ingestion (participants, fitness_level, location_address, equipment_needed, experience_level, etc.)
+3. **Fixed Product Card Display** - Chat API now includes all structured data fields in product objects
+4. **Updated Database Views** - `v_events_for_chat` now properly maps events to products with structured data
+
+### **🔧 Key Files Modified**
+- **`api/ingest.js`** - JSON-LD prioritization logic, single entity per URL
+- **`api/chat.js`** - Product enrichment to include structured data fields
+- **`lib/htmlExtractor.js`** - Enhanced regex patterns for structured data extraction
+- **`v_events_for_chat`** - Database view updated to include product mappings and structured data
+
+### **⚠️ Known Issues for Future Development**
+1. **Equipment/Experience Extraction** - Some products still show `null` for `equipment_needed` and `experience_level`
+   - **Root Cause**: Regex patterns may need refinement for specific content formats
+   - **Solution**: Test extraction patterns against actual page content and adjust regex
+2. **Data Freshness** - Some articles may have old incorrect descriptions until next ingestion
+   - **Solution**: Run full ingestion to update all content with new JSON-LD prioritization
+
+### **🧪 Testing Commands**
+```sql
+-- Test structured data extraction
+SELECT url, participants, fitness_level, equipment_needed, experience_level 
+FROM page_entities 
+WHERE kind = 'product' 
+  AND (participants IS NOT NULL OR fitness_level IS NOT NULL)
+LIMIT 10;
+
+-- Test product card data
+SELECT url, title, participants, fitness_level, location_address, equipment_needed, experience_level
+FROM page_entities 
+WHERE url = 'https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop';
+```
+
+### **🚀 Next Steps for New Developer**
+1. **Test live chat** - Verify all 5 bullet points display correctly in product cards
+2. **Refine extraction patterns** - If `equipment_needed`/`experience_level` still show `null`, debug regex patterns
+3. **Run full ingestion** - Update all content with new JSON-LD prioritization
+4. **Monitor performance** - Check if structured data extraction impacts ingestion speed
+
+### **📞 Emergency Contacts**
+- **Database**: Supabase project with all tables and views
+- **Deployment**: Vercel with automatic deployments from GitHub
+- **Documentation**: This file and `MIGRATION_GUIDE.md` contain full system details
