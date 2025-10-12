@@ -225,3 +225,13 @@ If issues arise:
 1. **Revert `api/chat.js`** - Remove structured data fields from product enrichment
 2. **Revert `api/ingest.js`** - Remove JSON-LD prioritization logic
 3. **Keep database schema** - Structured data fields can remain in database
+
+### **📝 DOCUMENTATION MAINTENANCE**
+**⚠️ STANDING ORDER: Update this handover section regularly!**
+- **After every fix** - Document what was changed and the solution
+- **After architecture changes** - Update pipeline documentation
+- **When new issues arise** - Add to known issues with root cause analysis
+- **Keep test commands current** - Update SQL queries and curl commands
+- **Date all updates** - Use "Month YYYY" format for tracking
+
+**Last Updated**: October 2025

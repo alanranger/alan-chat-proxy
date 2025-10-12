@@ -305,3 +305,13 @@ WHERE url = 'https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-p
 - **Database**: Supabase project with all tables and views
 - **Deployment**: Vercel with automatic deployments from GitHub
 - **Documentation**: This file and `MIGRATION_GUIDE.md` contain full system details
+
+### **📝 DOCUMENTATION MAINTENANCE**
+**⚠️ IMPORTANT: Keep this handover section updated!**
+- **Update after every major fix** - Document what was changed and why
+- **Update after architecture changes** - Note any pipeline modifications
+- **Update known issues** - Add new problems, mark resolved ones as ✅
+- **Update testing commands** - Keep SQL queries and test commands current
+- **Date all updates** - Use format "Month YYYY" for tracking changes
+
+**Last Updated**: October 2025
