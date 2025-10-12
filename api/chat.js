@@ -2366,36 +2366,8 @@ export default async function handler(req, res) {
       structured: {
         intent: "advice",
         topic: keywords.join(", "),
-        events: (events || []).map(e => ({
-          ...e,
-          // Map database fields to response fields
-          title: e.title,
-          url: e.url || e.page_url,
-          location: e.location_name,
-          location_address: e.location_address,
-          start_date: e.start_date,
-          end_date: e.end_date,
-          start_time: e.start_time,
-          end_time: e.end_time,
-          price: e.price,
-          participants: e.participants,
-          fitness_level: e.fitness_level,
-          availability: e.availability,
-          categories: e.categories,
-          tags: e.tags
-        })),
-        products: (products || []).map(p => ({
-          ...p,
-          // Map database fields to response fields
-          title: p.title,
-          url: p.url || p.page_url,
-          price: p.price,
-          availability: p.availability,
-          location: p.location_name,
-          location_address: p.location_address,
-          categories: p.categories,
-          tags: p.tags
-        })),
+        events: events || [],
+        products: products || [],
         articles: (articles || []).map(a => {
           const extractedDate = extractPublishDate(a);
           const fallbackDate = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
