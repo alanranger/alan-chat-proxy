@@ -231,32 +231,37 @@ function isEquipmentAdviceQuery(query) {
 
 // Enhanced equipment advice response generator
 function generateEquipmentAdviceResponse(query, articles, contentChunks) {
-  console.log(`🔧 generateEquipmentAdviceResponse: Processing equipment advice query="${query}"`);
-  console.log(`🔧 generateEquipmentAdviceResponse: Articles available=${articles.length}`);
-  
-  // Extract equipment type from query
-  const equipmentType = extractEquipmentType(query);
-  console.log(`🔧 generateEquipmentAdviceResponse: Equipment type="${equipmentType}"`);
-  
-  // Find relevant articles for this equipment type
-  const relevantArticles = findRelevantEquipmentArticles(equipmentType, articles);
-  console.log(`🔧 generateEquipmentAdviceResponse: Found ${relevantArticles.length} relevant articles`);
-  
-  // If no relevant articles found, return a basic response
-  if (relevantArticles.length === 0) {
-    console.log(`🔧 generateEquipmentAdviceResponse: No relevant articles found, returning basic response`);
-    return generateBasicEquipmentAdvice(equipmentType);
+  try {
+    console.log(`🔧 generateEquipmentAdviceResponse: Processing equipment advice query="${query}"`);
+    console.log(`🔧 generateEquipmentAdviceResponse: Articles available=${articles ? articles.length : 0}`);
+    
+    // Extract equipment type from query
+    const equipmentType = extractEquipmentType(query);
+    console.log(`🔧 generateEquipmentAdviceResponse: Equipment type="${equipmentType}"`);
+    
+    // Find relevant articles for this equipment type
+    const relevantArticles = findRelevantEquipmentArticles(equipmentType, articles || []);
+    console.log(`🔧 generateEquipmentAdviceResponse: Found ${relevantArticles.length} relevant articles`);
+    
+    // If no relevant articles found, return a basic response
+    if (relevantArticles.length === 0) {
+      console.log(`🔧 generateEquipmentAdviceResponse: No relevant articles found, returning basic response`);
+      return generateBasicEquipmentAdvice(equipmentType);
+    }
+    
+    // Extract key considerations from articles
+    const keyConsiderations = extractKeyConsiderations(relevantArticles, contentChunks || []);
+    console.log(`🔧 generateEquipmentAdviceResponse: Key considerations=${JSON.stringify(keyConsiderations)}`);
+    
+    // Generate synthesized response
+    const response = synthesizeEquipmentAdvice(equipmentType, keyConsiderations, relevantArticles);
+    console.log(`🔧 generateEquipmentAdviceResponse: Generated response="${response.substring(0, 200)}..."`);
+    
+    return response;
+  } catch (error) {
+    console.error(`🔧 generateEquipmentAdviceResponse: Error - ${error.message}`);
+    return generateBasicEquipmentAdvice('equipment');
   }
-  
-  // Extract key considerations from articles
-  const keyConsiderations = extractKeyConsiderations(relevantArticles, contentChunks);
-  console.log(`🔧 generateEquipmentAdviceResponse: Key considerations=${JSON.stringify(keyConsiderations)}`);
-  
-  // Generate synthesized response
-  const response = synthesizeEquipmentAdvice(equipmentType, keyConsiderations, relevantArticles);
-  console.log(`🔧 generateEquipmentAdviceResponse: Generated response="${response.substring(0, 200)}..."`);
-  
-  return response;
 }
 
 // Extract equipment type from query
@@ -299,6 +304,8 @@ function findRelevantEquipmentArticles(equipmentType, articles) {
   const keywords = equipmentKeywords[equipmentType] || [equipmentType];
   
   return articles.filter(article => {
+    if (!article) return false;
+    
     const title = (article.title || '').toLowerCase();
     const description = (article.description || '').toLowerCase();
     
