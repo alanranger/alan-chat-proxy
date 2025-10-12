@@ -516,7 +516,20 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
              !sLower.includes('[article]') && // Skip metadata
              !sLower.includes('published:') && // Skip metadata
              !sLower.includes('url:') && // Skip metadata
-             !sLower.includes('alan ranger photography'); // Skip navigation
+             !sLower.includes('alan ranger photography') && // Skip navigation
+             !sLower.includes('table of contents') && // Skip table of contents
+             !sLower.includes('show----------------------------------------') && // Skip navigation separators
+             !sLower.includes('demystify what is') && // Skip navigation headings
+             !sLower.includes('sign in') && // Skip navigation
+             !sLower.includes('my account') && // Skip navigation
+             !sLower.includes('cart') && // Skip navigation
+             !sLower.includes('back ') && // Skip navigation
+             !sLower.includes('updated ') && // Skip date stamps
+             !sLower.includes('struggling with') && // Skip marketing headers
+             !sLower.includes('key takeaways') && // Skip summary headers
+             !sLower.includes('introduction') && // Skip section headers
+             !sLower.includes('understanding what is') && // Skip section headers
+             (sLower.includes(' refers to ') || sLower.includes(' means ') || sLower.includes(' is ') || sLower.includes(' controls ') || sLower.includes(' stands for ')); // Prefer definitional sentences
     });
     
     if (relevantSentence) {
@@ -544,7 +557,20 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
              !pLower.includes('[article]') &&
              !pLower.includes('published:') &&
              !pLower.includes('url:') &&
-             !pLower.includes('alan ranger photography');
+             !pLower.includes('alan ranger photography') &&
+             !pLower.includes('table of contents') &&
+             !pLower.includes('show----------------------------------------') &&
+             !pLower.includes('demystify what is') &&
+             !pLower.includes('sign in') &&
+             !pLower.includes('my account') &&
+             !pLower.includes('cart') &&
+             !pLower.includes('back ') &&
+             !pLower.includes('updated ') &&
+             !pLower.includes('struggling with') &&
+             !pLower.includes('key takeaways') &&
+             !pLower.includes('introduction') &&
+             !pLower.includes('understanding what is') &&
+             (pLower.includes(' refers to ') || pLower.includes(' means ') || pLower.includes(' is ') || pLower.includes(' controls ') || pLower.includes(' stands for '));
     });
     
     if (relevantParagraph && relevantParagraph.length < 300) {
