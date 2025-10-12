@@ -887,22 +887,16 @@ function anyIlike(col, words) {
 }
 
 async function findEvents(client, { keywords, limit = 50, pageContext = null, csvType = null }) {
-  // Use page_entities table directly for events with enhanced CSV data
+  // Use v_events_for_chat view which has all the rich data and proper field names
   let q = client
-    .from("page_entities")
-    .select("id, url, kind, title, description, price, price_currency, availability, sku, provider, source_url, raw, entity_hash, last_seen, page_url, norm_title, start_date, csv_type, csv_metadata_id, categories, tags, publish_date, location_name, location_address, excerpt, end_date, start_time, end_time, location_city_state_zip, image_url, json_ld_data, workflow_state")
-    .eq("kind", "event")
-    .order("start_date", { ascending: true }) // Sort by date ascending (earliest first)
+    .from("v_events_for_chat")
+    .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency")
+    .order("date_start", { ascending: true }) // Sort by date ascending (earliest first)
     .limit(limit);
 
-  // Filter by CSV type if specified (course_events vs workshop_events)
-  // For workshop_events, also include site_urls that contain workshop events
+  // Filter by subtype if specified (course_events vs workshop_events)
   if (csvType) {
-    if (csvType === 'workshop_events') {
-      q = q.in("csv_type", ['workshop_events', 'site_urls']);
-    } else {
-      q = q.eq("csv_type", csvType);
-    }
+    q = q.eq("subtype", csvType);
   }
 
   // If we have page context, try to find related content first
@@ -916,13 +910,12 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null, cs
   }
 
   if (keywords.length) {
-    // Search in title, description, and location fields using page_entities structure
+    // Search in event_title, event_location, and product_title fields
     const parts = [];
-    const t1 = anyIlike("title", keywords); if (t1) parts.push(t1);
-    const t2 = anyIlike("page_url", keywords); if (t2) parts.push(t2);
-    const t3 = anyIlike("location_name", keywords); if (t3) parts.push(t3);
-    const t4 = anyIlike("location_address", keywords); if (t4) parts.push(t4);
-    const t5 = anyIlike("description", keywords); if (t5) parts.push(t5);
+    const t1 = anyIlike("event_title", keywords); if (t1) parts.push(t1);
+    const t2 = anyIlike("event_url", keywords); if (t2) parts.push(t2);
+    const t3 = anyIlike("event_location", keywords); if (t3) parts.push(t3);
+    const t4 = anyIlike("product_title", keywords); if (t4) parts.push(t4);
     
     if (parts.length) {
       q = q.or(parts.join(","));
@@ -931,18 +924,20 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null, cs
 
   const { data, error } = await q;
   if (error) {
-    console.error('❌ page_entities events query error:', error);
+    console.error('❌ v_events_for_chat query error:', error);
     return [];
   }
   
-  // Map database fields to frontend expected fields
+  // Map v_events_for_chat fields to frontend expected fields
   const mappedData = (data || []).map(event => ({
     ...event,
-    date_start: event.start_date, // Map start_date to date_start for frontend
-    date_end: event.end_date,     // Map end_date to date_end for frontend
-    event_url: event.page_url,    // Map page_url to event_url for frontend
-    href: event.page_url,         // Add href alias for frontend
-    _csv_start_time: event.start_time, // Preserve CSV times for frontend
+    title: event.event_title,           // Map event_title to title for frontend
+    page_url: event.event_url,          // Map event_url to page_url for frontend
+    href: event.event_url,              // Add href alias for frontend
+    location: event.event_location,     // Map event_location to location for frontend
+    price: event.price_gbp,             // Map price_gbp to price for frontend
+    csv_type: event.subtype,            // Map subtype to csv_type for frontend
+    _csv_start_time: event.start_time,  // Preserve CSV times for frontend
     _csv_end_time: event.end_time
   }));
   
