@@ -204,6 +204,7 @@ This migration approach fixes the root cause by ensuring structured data is extr
 - **`api/chat.js`** - Chat API with product enrichment, malformed text filtering
 - **`lib/htmlExtractor.js`** - Structured data extraction patterns, location/time regex fixes
 - **`public/chat.html`** - Product card styling, meaningless value filtering, bullet point styling
+- **`test-chat-system.js`** - Comprehensive test suite with 100 questions across 5 categories
 - **`v_events_for_chat`** - Database view for events with product mappings
 
 ### **⚠️ KNOWN ISSUES**
@@ -217,6 +218,13 @@ This migration approach fixes the root cause by ensuring structured data is extr
 
 ### **🧪 QUICK TEST COMMANDS**
 ```bash
+# Run comprehensive test suite (100 questions across 5 categories)
+node test-chat-system.js
+
+# Test specific course queries
+node test-course-product.js
+node test-lightroom-course.js
+
 # Test live chat - Beginners course
 curl -X POST "https://alan-chat-proxy.vercel.app/api/chat" \
   -H "Content-Type: application/json" \

@@ -193,6 +193,12 @@ CSV Upload → Bulk Processing → Entity Mapping → View Refresh → Chat Read
 - **API logging** - Request/response tracking
 - **Database queries** - Direct data inspection
 - **Light refresh logs** - Automated system monitoring
+- **Comprehensive test suite** - `test-chat-system.js` with 100 questions across 5 categories:
+  - **Technical Photography Concepts** (20 questions) - "what is iso", "what is aperture", etc.
+  - **Equipment Recommendations** (20 questions) - "what tripod do you recommend", etc.
+  - **Courses & Products** (20 questions) - "beginners photography course", "lightroom course", etc.
+  - **Workshops & Events** (20 questions) - "bluebell workshop", "devon workshop", etc.
+  - **Specific Locations & Dates** (20 questions) - "workshop in coventry", "workshop in peak district", etc.
 
 ### **Performance Metrics**
 - **Response time** - Chat API performance
@@ -276,6 +282,7 @@ CSV Upload → Bulk Processing → Entity Mapping → View Refresh → Chat Read
 - **`api/chat.js`** - Product enrichment to include structured data fields, malformed text filtering
 - **`lib/htmlExtractor.js`** - Enhanced regex patterns for structured data extraction, location/time regex fixes
 - **`public/chat.html`** - Product card styling updates, meaningless value filtering, bullet point styling
+- **`test-chat-system.js`** - Comprehensive test suite with 100 questions across 5 categories
 - **`v_events_for_chat`** - Database view updated to include product mappings and structured data
 
 ### **⚠️ Known Issues for Future Development**
@@ -300,6 +307,15 @@ LIMIT 10;
 SELECT url, title, participants, fitness_level, location_address, equipment_needed, experience_level
 FROM page_entities 
 WHERE url = 'https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop';
+```
+
+```bash
+# Run comprehensive test suite (100 questions across 5 categories)
+node test-chat-system.js
+
+# Test specific course queries
+node test-course-product.js
+node test-lightroom-course.js
 ```
 
 ### **🚀 Next Steps for New Developer**
