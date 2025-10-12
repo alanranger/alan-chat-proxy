@@ -759,19 +759,10 @@ function detectIntent(q) {
   // Check for event-style questions (dates/times/locations)
   const hasEventWord = EVENT_HINTS.some((w) => lc.includes(w));
   
-  // Course queries: prioritize course products (ongoing services) unless they explicitly ask about dates/times
-  if (mentionsCourse && !mentionsWorkshop) {
-    // If asking about course dates/times/locations, treat as events
-    if (hasEventWord) {
-      return "events"; // Looking for scheduled course events
-    }
-    // Otherwise, treat as advice to find course products/services
-    return "advice";
-  }
-  
-  // Workshop queries: prioritize workshop events (scheduled sessions)
-  if (mentionsWorkshop) {
-    return "events"; // Workshops are typically scheduled events
+  // Both courses and workshops have events - they're both scheduled sessions
+  // Course queries should look for course events, workshop queries should look for workshop events
+  if (mentionsCourse || mentionsWorkshop) {
+    return "events"; // Both courses and workshops are events (scheduled sessions)
   }
   
   // ADVICE keywords
@@ -780,7 +771,7 @@ function detectIntent(q) {
     "need", "require", "recommend", "advise", "help", "wrong", "problem",
     "free", "online", "sort of", "what do i", "do i need", "get a",
     "what is", "what are", "how does", "explain", "define", "meaning",
-    "course", "class", "lesson", "training", "mentoring", "tutoring"
+    "training", "mentoring", "tutoring"
   ];
   if (adviceKeywords.some(word => lc.includes(word))) {
     return "advice";
@@ -2067,12 +2058,8 @@ export default async function handler(req, res) {
     let articles = await findArticles(client, { keywords, limit: 30, pageContext });
     let events = await findEvents(client, { keywords, limit: 20, pageContext });
     
-    // For advice intent, prioritize course products if query mentions courses
-    const lc = (query || "").toLowerCase();
-    const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
-    const csvType = mentionsCourse ? "course_products" : null; // null means search all product types
-    
-    let products = await findProducts(client, { keywords, limit: 20, pageContext, csvType });
+    // For advice intent, search all product types (no course filtering since courses are events)
+    let products = await findProducts(client, { keywords, limit: 20, pageContext });
     
     // De-duplicate and enrich titles
     articles = await dedupeAndEnrichArticles(client, articles);
