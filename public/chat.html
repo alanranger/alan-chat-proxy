@@ -319,6 +319,34 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
   margin-bottom: 4px;
 }
 
+.product-details {
+  margin: 12px 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.product-details li {
+  margin-bottom: 8px;
+  padding-left: 20px;
+  position: relative;
+  color: #d1d5db;
+  line-height: 1.4;
+}
+
+.product-details li::before {
+  content: "•";
+  color: #10b981;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.product-details li strong {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
 .product-book-btn {
   display: inline-block;
   background: #3b82f6;
@@ -965,55 +993,93 @@ function renderProductCard(prod){
   const facts = extractFacts(prod.description||'');
   const options = deriveOptions(prod, facts);
   const priceHead = productHeadlinePrice(prod);
-  const lines = [];
-  if (priceHead) lines.push(`<p class="kvline"><strong>Price:</strong> ${escapeHTML(priceHead)}</p>`);
   
-  // Prioritize specific facts over generic meta description
-  if (prod.availability_status){
-    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(String(prod.availability_status).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2'))}</p>`);
-  } else if(facts.availability){
-    const avail = (facts.availability||'').toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
-    lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
-  }
-  if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
-  else if(prod.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(prod.participants)}</p>`);
+  // Build structured data as bullet points
+  const bulletPoints = [];
   
-  if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
-  else if(prod.fitness_level) lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(prod.fitness_level)}</p>`);
-  
-  if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
-  else if(prod.location_name) lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(prod.location_name)}</p>`);
-  if(facts.experience)   lines.push(`<p class="kvline"><strong>Experience Level:</strong> ${escapeHTML(facts.experience)}</p>`);
-  if(Array.isArray(facts.equipmentItems) && facts.equipmentItems.length){
-    const eq = facts.equipmentItems.map(e=>`<li>${escapeHTML(e)}</li>`).join('');
-    lines.push(`<div class="product-options"><strong>Equipment Needed:</strong><ul>${eq}</ul></div>`);
+  // Price (always show if available)
+  if (priceHead) {
+    bulletPoints.push(`<li><strong>Price:</strong> ${escapeHTML(priceHead)}</li>`);
   }
   
-  // Show CSV categories and tags if available
-  if(prod.categories && Array.isArray(prod.categories) && prod.categories.length > 0) {
-    const categories = prod.categories.filter(c => c && c.trim()).map(c => escapeHTML(c.trim())).join(', ');
-    if(categories) lines.push(`<p class="kvline"><strong>Categories:</strong> ${categories}</p>`);
+  // Availability (prioritize database field over extracted facts)
+  if (prod.availability_status) {
+    const avail = String(prod.availability_status).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
+    bulletPoints.push(`<li><strong>Availability:</strong> ${escapeHTML(avail)}</li>`);
+  } else if (facts.availability) {
+    const avail = facts.availability.toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
+    bulletPoints.push(`<li><strong>Availability:</strong> ${escapeHTML(avail)}</li>`);
   }
   
-  if(prod.tags && Array.isArray(prod.tags) && prod.tags.length > 0) {
-    const tags = prod.tags.filter(t => t && t.trim()).map(t => escapeHTML(t.trim())).join(', ');
-    if(tags) lines.push(`<p class="kvline"><strong>Tags:</strong> ${tags}</p>`);
+  // Participants (prioritize database field over extracted facts)
+  if (prod.participants) {
+    bulletPoints.push(`<li><strong>Participants:</strong> ${escapeHTML(prod.participants)}</li>`);
+  } else if (facts.participants) {
+    bulletPoints.push(`<li><strong>Participants:</strong> ${escapeHTML(facts.participants)}</li>`);
   }
   
-  // Show location information from CSV if available
-  if(prod.location_name && !facts.location) {
-    lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(prod.location_name)}</p>`);
+  // Fitness Level (prioritize database field over extracted facts)
+  if (prod.fitness_level) {
+    bulletPoints.push(`<li><strong>Fitness Level:</strong> ${escapeHTML(prod.fitness_level)}</li>`);
+  } else if (facts.fitness) {
+    bulletPoints.push(`<li><strong>Fitness Level:</strong> ${escapeHTML(facts.fitness)}</li>`);
   }
   
-  if(prod.location_address && !facts.location) {
-    lines.push(`<p class="kvline"><strong>Address:</strong> ${escapeHTML(prod.location_address)}</p>`);
+  // Experience Level (prioritize database field over extracted facts)
+  if (prod.experience_level) {
+    bulletPoints.push(`<li><strong>Experience Level:</strong> ${escapeHTML(prod.experience_level)}</li>`);
+  } else if (facts.experience) {
+    bulletPoints.push(`<li><strong>Experience Level:</strong> ${escapeHTML(facts.experience)}</li>`);
   }
   
-  // Only show meta description if we don't have specific facts
+  // Location (prioritize database field, avoid duplicates)
+  if (prod.location_name) {
+    bulletPoints.push(`<li><strong>Location:</strong> ${escapeHTML(prod.location_name)}</li>`);
+  } else if (facts.location) {
+    bulletPoints.push(`<li><strong>Location:</strong> ${escapeHTML(facts.location)}</li>`);
+  }
+  
+  // Location Address (only if different from location_name)
+  if (prod.location_address && prod.location_address !== prod.location_name) {
+    bulletPoints.push(`<li><strong>Address:</strong> ${escapeHTML(prod.location_address)}</li>`);
+  }
+  
+  // Time Schedule
+  if (prod.time_schedule) {
+    bulletPoints.push(`<li><strong>Schedule:</strong> ${escapeHTML(prod.time_schedule)}</li>`);
+  }
+  
+  // What to Bring
+  if (prod.what_to_bring) {
+    bulletPoints.push(`<li><strong>What to Bring:</strong> ${escapeHTML(prod.what_to_bring)}</li>`);
+  }
+  
+  // Course Duration
+  if (prod.course_duration) {
+    bulletPoints.push(`<li><strong>Duration:</strong> ${escapeHTML(prod.course_duration)}</li>`);
+  }
+  
+  // Instructor Info
+  if (prod.instructor_info) {
+    bulletPoints.push(`<li><strong>Instructor:</strong> ${escapeHTML(prod.instructor_info)}</li>`);
+  }
+  
+  // Equipment Needed (prioritize database field over extracted facts)
+  if (prod.equipment_needed) {
+    bulletPoints.push(`<li><strong>Equipment Needed:</strong> ${escapeHTML(prod.equipment_needed)}</li>`);
+  } else if (Array.isArray(facts.equipmentItems) && facts.equipmentItems.length) {
+    const eq = facts.equipmentItems.map(e => escapeHTML(e)).join(', ');
+    bulletPoints.push(`<li><strong>Equipment Needed:</strong> ${eq}</li>`);
+  }
+  
+  // Build the bullet points HTML
+  const bulletPointsHTML = bulletPoints.length > 0 ? 
+    `<ul class="product-details">${bulletPoints.join('')}</ul>` : '';
+  
+  // Show meta description only if we don't have structured data
   const md = getMetaDescription(prod);
-  if(md && !facts.participants && !facts.fitness && !facts.location) {
-    lines.push(`<p class="meta">${escapeHTML(md)}</p>`);
-  }
+  const showDescription = md && bulletPoints.length === 0;
+  
   const li = options.map(o=>`<li>${escapeHTML(o.label||'')}${o.price ? ` — ${o.price}` : ''}</li>`).join('');
   const href = absolutize(prod.page_url || prod.source_url || prod.url || '#');
   
@@ -1029,8 +1095,8 @@ function renderProductCard(prod){
           ${priceHead ? `<div class="product-price">${escapeHTML(priceHead)}</div>` : ''}
         </div>
         <div class="product-content">
-          ${(!facts.participants && !facts.fitness && !facts.location && md) ? `<p class="product-description">${escapeHTML(md)}</p>` : ''}
-          ${lines.join('')}
+          ${showDescription ? `<p class="product-description">${escapeHTML(md)}</p>` : ''}
+          ${bulletPointsHTML}
           ${li ? `<div class="product-options"><ul>${li}</ul></div>` : ''}
         </div>
         ${bookButton}
