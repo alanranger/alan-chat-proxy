@@ -355,6 +355,206 @@ function generateEquipmentAdvice(query, contentChunks = [], articles = [], debug
   return null;
 }
 
+// Helper function to detect equipment advice queries
+function isEquipmentAdviceQuery(query) {
+  const equipmentKeywords = [
+    'tripod', 'camera', 'lens', 'filter', 'flash', 'bag', 'strap', 'memory card',
+    'battery', 'charger', 'cleaning', 'monitor', 'computer', 'laptop', 'software',
+    'lightroom', 'photoshop', 'editing', 'post-processing', 'equipment', 'gear'
+  ];
+  
+  const adviceKeywords = [
+    'recommend', 'best', 'what', 'which', 'should i buy', 'need', 'suggest',
+    'advice', 'opinion', 'prefer', 'choose', 'select'
+  ];
+  
+  const hasEquipment = equipmentKeywords.some(keyword => query.includes(keyword));
+  const hasAdvice = adviceKeywords.some(keyword => query.includes(keyword));
+  
+  return hasEquipment && hasAdvice;
+}
+
+// Enhanced equipment advice response generator
+function generateEquipmentAdviceResponse(query, articles, contentChunks) {
+  console.log(`🔧 generateEquipmentAdviceResponse: Processing equipment advice query="${query}"`);
+  
+  // Extract equipment type from query
+  const equipmentType = extractEquipmentType(query);
+  console.log(`🔧 generateEquipmentAdviceResponse: Equipment type="${equipmentType}"`);
+  
+  // Find relevant articles for this equipment type
+  const relevantArticles = findRelevantEquipmentArticles(equipmentType, articles);
+  console.log(`🔧 generateEquipmentAdviceResponse: Found ${relevantArticles.length} relevant articles`);
+  
+  // Extract key considerations from articles
+  const keyConsiderations = extractKeyConsiderations(relevantArticles, contentChunks);
+  console.log(`🔧 generateEquipmentAdviceResponse: Key considerations=${JSON.stringify(keyConsiderations)}`);
+  
+  // Generate synthesized response
+  const response = synthesizeEquipmentAdvice(equipmentType, keyConsiderations, relevantArticles);
+  console.log(`🔧 generateEquipmentAdviceResponse: Generated response="${response.substring(0, 200)}..."`);
+  
+  return response;
+}
+
+// Extract equipment type from query
+function extractEquipmentType(query) {
+  const equipmentMap = {
+    'tripod': ['tripod', 'tripods'],
+    'camera': ['camera', 'cameras', 'dslr', 'mirrorless'],
+    'lens': ['lens', 'lenses', 'glass'],
+    'filter': ['filter', 'filters', 'nd filter', 'polarizing'],
+    'flash': ['flash', 'speedlight', 'strobe'],
+    'bag': ['bag', 'backpack', 'case'],
+    'memory card': ['memory card', 'sd card', 'storage'],
+    'laptop': ['laptop', 'computer', 'macbook'],
+    'software': ['lightroom', 'photoshop', 'editing software', 'post-processing']
+  };
+  
+  for (const [type, keywords] of Object.entries(equipmentMap)) {
+    if (keywords.some(keyword => query.includes(keyword))) {
+      return type;
+    }
+  }
+  
+  return 'equipment';
+}
+
+// Find relevant articles for equipment type
+function findRelevantEquipmentArticles(equipmentType, articles) {
+  const equipmentKeywords = {
+    'tripod': ['tripod', 'tripods'],
+    'camera': ['camera', 'cameras', 'dslr', 'mirrorless'],
+    'lens': ['lens', 'lenses', 'glass'],
+    'filter': ['filter', 'filters', 'nd', 'polarizing'],
+    'flash': ['flash', 'speedlight', 'strobe'],
+    'bag': ['bag', 'backpack', 'case'],
+    'memory card': ['memory card', 'sd card', 'storage'],
+    'laptop': ['laptop', 'computer', 'macbook'],
+    'software': ['lightroom', 'photoshop', 'editing', 'post-processing']
+  };
+  
+  const keywords = equipmentKeywords[equipmentType] || [equipmentType];
+  
+  return articles.filter(article => {
+    const title = (article.title || '').toLowerCase();
+    const description = (article.description || '').toLowerCase();
+    
+    return keywords.some(keyword => 
+      title.includes(keyword) || description.includes(keyword)
+    );
+  }).slice(0, 5); // Limit to top 5 most relevant
+}
+
+// Extract key considerations from articles and content chunks
+function extractKeyConsiderations(articles, contentChunks) {
+  const considerations = {
+    budget: [],
+    weight: [],
+    usage: [],
+    terrain: [],
+    experience: [],
+    specific: []
+  };
+  
+  // Extract from articles
+  articles.forEach(article => {
+    const text = `${article.title || ''} ${article.description || ''}`.toLowerCase();
+    
+    // Budget considerations
+    if (text.includes('budget') || text.includes('price') || text.includes('cost') || text.includes('affordable')) {
+      considerations.budget.push(article.title || 'Budget considerations');
+    }
+    
+    // Weight considerations
+    if (text.includes('weight') || text.includes('lightweight') || text.includes('heavy') || text.includes('portable')) {
+      considerations.weight.push(article.title || 'Weight considerations');
+    }
+    
+    // Usage considerations
+    if (text.includes('landscape') || text.includes('portrait') || text.includes('travel') || text.includes('studio')) {
+      considerations.usage.push(article.title || 'Usage considerations');
+    }
+    
+    // Terrain considerations
+    if (text.includes('terrain') || text.includes('hiking') || text.includes('outdoor') || text.includes('weather')) {
+      considerations.terrain.push(article.title || 'Terrain considerations');
+    }
+    
+    // Experience level
+    if (text.includes('beginner') || text.includes('advanced') || text.includes('professional') || text.includes('experience')) {
+      considerations.experience.push(article.title || 'Experience level');
+    }
+  });
+  
+  return considerations;
+}
+
+// Synthesize equipment advice response
+function synthesizeEquipmentAdvice(equipmentType, considerations, relevantArticles) {
+  const equipmentNames = {
+    'tripod': 'tripod',
+    'camera': 'camera',
+    'lens': 'lens',
+    'filter': 'filter',
+    'flash': 'flash',
+    'bag': 'camera bag',
+    'memory card': 'memory card',
+    'laptop': 'laptop',
+    'software': 'editing software'
+  };
+  
+  const equipmentName = equipmentNames[equipmentType] || equipmentType;
+  
+  // Build the response framework
+  let response = `**Equipment Recommendations:**\n\n`;
+  response += `Choosing the right ${equipmentName} depends on several factors: `;
+  
+  // Add key considerations
+  const considerationTexts = [];
+  if (considerations.budget.length > 0) considerationTexts.push('budget');
+  if (considerations.weight.length > 0) considerationTexts.push('weight requirements');
+  if (considerations.usage.length > 0) considerationTexts.push('intended usage');
+  if (considerations.terrain.length > 0) considerationTexts.push('terrain conditions');
+  if (considerations.experience.length > 0) considerationTexts.push('experience level');
+  
+  if (considerationTexts.length > 0) {
+    response += considerationTexts.join(', ') + '. ';
+  } else {
+    response += 'your specific needs and photography style. ';
+  }
+  
+  // Add specific advice based on equipment type
+  response += addSpecificAdvice(equipmentType, considerations);
+  
+  // Add article references
+  if (relevantArticles.length > 0) {
+    response += `\n\n**For detailed reviews and specific recommendations, check out these guides:**\n`;
+    relevantArticles.slice(0, 3).forEach(article => {
+      response += `- [${article.title}](${article.page_url || article.url})\n`;
+    });
+  }
+  
+  return response;
+}
+
+// Add specific advice based on equipment type
+function addSpecificAdvice(equipmentType, considerations) {
+  const adviceMap = {
+    'tripod': `For landscape photography, you'll want something sturdy but portable. For travel, weight becomes crucial. For studio work, stability is key. `,
+    'camera': `For beginners, start with what you have and focus on learning technique. For advanced users, consider your primary photography style and budget. `,
+    'lens': `Consider your most common shooting scenarios. Wide-angle for landscapes, telephoto for wildlife, and prime lenses for portraits. `,
+    'filter': `ND filters are essential for long exposures, polarizing filters reduce reflections, and graduated filters balance exposure. `,
+    'flash': `Consider whether you need built-in flash, external speedlight, or studio strobes based on your shooting environment. `,
+    'bag': `Think about how much gear you carry, whether you need weather protection, and if you'll be hiking or traveling. `,
+    'memory card': `Consider speed class for video recording, capacity for your shooting style, and reliability for professional work. `,
+    'laptop': `For photo editing, prioritize color accuracy, processing power, and storage capacity. Consider your workflow and budget. `,
+    'software': `Lightroom is great for organization and basic editing, while Photoshop offers advanced retouching capabilities. `
+  };
+  
+  return adviceMap[equipmentType] || 'Consider your specific photography needs and budget when making your choice. ';
+}
+
 function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
@@ -591,18 +791,9 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     }
   }
   
-  // Tripod recommendations
-  if (lc.includes("tripod") && lc.includes("recommend")) {
-    const tripodArticles = articles.filter(a => 
-      a.title?.toLowerCase().includes("tripod") || 
-      a.raw?.name?.toLowerCase().includes("tripod")
-    );
-    
-    if (tripodArticles.length > 0) {
-      const topTripod = tripodArticles[0];
-      const title = topTripod.title || topTripod.raw?.name || "tripod guide";
-      return `Based on Alan's experience, I'd recommend checking out his **${title}**. He has detailed reviews and recommendations for different types of photography and budgets.\n\n`;
-    }
+  // Enhanced Equipment Advice - Check if this is an equipment recommendation query
+  if (isEquipmentAdviceQuery(lc)) {
+    return generateEquipmentAdviceResponse(lc, articles, contentChunks);
   }
   
   // Camera recommendations
