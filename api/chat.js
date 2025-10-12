@@ -359,6 +359,55 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
   const exactTerm = lc.replace(/^what\s+is\s+/, "").trim();
+  
+  // DEBUG: Log what we're working with
+  console.log(`🔍 generateDirectAnswer: Query="${query}"`);
+  console.log(`🔍 generateDirectAnswer: Articles count=${articles.length}`);
+  console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
+  
+  // PRIORITY 1: Extract from JSON-LD FAQ data in articles
+  if (exactTerm && articles.length > 0) {
+    const relevantArticle = articles.find(article => {
+      const title = (article.title || "").toLowerCase();
+      const url = (article.page_url || article.url || "").toLowerCase();
+      const jsonLd = article.json_ld_data;
+      
+      // Check if this article is about the exact term
+      return title.includes(`what is ${exactTerm}`) || 
+             title.includes(`${exactTerm}`) ||
+             url.includes(`what-is-${exactTerm.replace(/\s+/g, "-")}`) ||
+             (jsonLd && jsonLd.mainEntity && Array.isArray(jsonLd.mainEntity));
+    });
+    
+    if (relevantArticle && relevantArticle.json_ld_data && relevantArticle.json_ld_data.mainEntity) {
+      console.log(`🔍 generateDirectAnswer: Found relevant article with JSON-LD FAQ data`);
+      
+      const faqItems = relevantArticle.json_ld_data.mainEntity;
+      const primaryQuestion = faqItems.find(item => {
+        const question = (item.name || "").toLowerCase();
+        return question.includes(exactTerm) && 
+               (question.includes("what does") || question.includes("what is"));
+      });
+      
+      if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
+        let answerText = primaryQuestion.acceptedAnswer.text;
+        
+        // Clean HTML tags from the answer
+        answerText = answerText.replace(/<[^>]*>/g, '').trim();
+        
+        // Clean up any remaining artifacts
+        answerText = answerText.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, '');
+        answerText = answerText.replace(/\* Next lesson:.*?\*\*/g, '');
+        
+        if (answerText.length > 50) {
+          console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
+          return `**${answerText}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
+        }
+      }
+    }
+  }
+  
+  // PRIORITY 2: Extract from content chunks (existing logic)
   const hasWord = (text, term) => {
     if (!term) return false;
     try {
@@ -370,19 +419,9 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     }
   };
   
-  // DEBUG: Log what we're working with
-  console.log(`🔍 generateDirectAnswer: Query="${query}"`);
-  console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
-  if (contentChunks.length > 0) {
-    console.log(`🔍 generateDirectAnswer: First chunk preview="${(contentChunks[0].chunk_text || contentChunks[0].content || "").substring(0, 200)}..."`);
-  }
-  
-  // No hardcoded fallbacks; rely on chunk/article relevance below
-
-  // Try to find relevant content from chunks first (score by exact-term relevance)
   const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
   const importantWords = queryWords.filter(w => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4));
-  // If exactTerm exists, first narrow candidates to chunks that clearly contain that term
+  
   const slug = exactTerm ? exactTerm.replace(/\s+/g, "-") : null;
   const candidateChunks = exactTerm ? (contentChunks || []).filter(c => {
     const url = String(c.url||"").toLowerCase();
@@ -390,6 +429,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     const text = String(c.chunk_text||c.content||"").toLowerCase();
     return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm) || url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || text.includes(`what is ${exactTerm}`);
   }) : (contentChunks || []);
+  
   const scoredChunks = candidateChunks.map(chunk => {
     const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
     const title = (chunk.title || "").toLowerCase();
@@ -404,6 +444,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     }
     return { chunk, s };
   }).sort((a,b)=>b.s-a.s);
+  
   const relevantChunk = (scoredChunks.length ? scoredChunks[0].chunk : null);
   
   console.log(`🔍 generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
@@ -457,6 +498,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     const hasVerb = coreVerbs.some(v => sLower.includes(v));
     return hasTerm && hasVerb && s.length >= 30 && s.length <= 220;
   });
+    
     if (defSentence) {
       return `**${defSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
     }
@@ -1198,7 +1240,14 @@ async function getArticleAuxLinks(client, articleUrl) {
           const m =
             text.match(/https?:\/\/\S+?\.pdf/gi) ||
             text.match(/href="([^"]+\.pdf)"/i);
-          if (m && m[0]) result.pdf = Array.isArray(m) ? m[0] : m[1];
+          if (m && m[0]) {
+            let pdfUrl = Array.isArray(m) ? m[0] : m[1];
+            // Convert internal Squarespace URLs to public URLs
+            if (pdfUrl.includes('alan-ranger.squarespace.com')) {
+              pdfUrl = pdfUrl.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
+            }
+            result.pdf = pdfUrl;
+          }
         }
         // find first internal related link with hint text
         if (!result.related) {
@@ -1207,23 +1256,31 @@ async function getArticleAuxLinks(client, articleUrl) {
               /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']*)/i
             ) || text.match(/href="([^"]*alanranger\.com[^"]*)"/i);
           if (rel && rel[0]) {
-            const url = Array.isArray(rel) ? rel[0] : rel[1];
+            let url = Array.isArray(rel) ? rel[0] : rel[1];
+            
+            // Convert internal Squarespace URLs to public URLs
+            if (url.includes('alan-ranger.squarespace.com')) {
+              url = url.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
+            }
+            
             // Only accept direct Alan Ranger URLs, not URLs that contain Alan Ranger URLs as parameters
             if (url.startsWith('https://www.alanranger.com/') || 
                 url.startsWith('https://alanranger.com/') ||
                 url.startsWith('http://www.alanranger.com/') ||
                 url.startsWith('http://alanranger.com/')) {
               result.related = url;
-            // crude label guess: look for preceding words like link text
+              
+              // Robust label extraction: prioritize explicit link text, then clean URL path
             const labelMatch =
               text.match(/\[([^\]]+)\]\([^)]+\)/) ||
-                text.match(/>([^<]{3,60})<\/a>/i) ||
-                text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
+                  text.match(/>([^<]{3,60})<\/a>/i) ||
+                  text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
+              
             if (labelMatch && labelMatch[1]) {
-              let cleanLabel = labelMatch[1].trim();
-              // Clean up malformed labels (remove trailing brackets, etc.)
-              cleanLabel = cleanLabel.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
-              result.relatedLabel = cleanLabel;
+                let cleanLabel = labelMatch[1].trim();
+                // Clean up malformed labels (remove trailing brackets, etc.)
+                cleanLabel = cleanLabel.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
+                result.relatedLabel = cleanLabel;
               } else {
                 // Generate a clean label from the URL path
                 try {
@@ -2301,6 +2358,16 @@ export default async function handler(req, res) {
         }
       }
       
+        // PRIORITY: Try to provide a direct answer based on JSON-LD FAQ data first
+      if (!hasEvidenceBasedAnswer) {
+        const directAnswer = generateDirectAnswer(query, articles, contentChunks);
+        if (directAnswer) {
+          lines.push(directAnswer);
+          hasEvidenceBasedAnswer = true;
+          confidence = 0.8; // High confidence for JSON-LD FAQ answers
+        }
+      }
+      
         // Service FAQ deterministic lane
       if (!hasEvidenceBasedAnswer) {
         const serviceAnswer = generateServiceFAQAnswer(query, contentChunks, articles);
@@ -2308,16 +2375,6 @@ export default async function handler(req, res) {
           lines.push(serviceAnswer);
           hasEvidenceBasedAnswer = true;
           confidence = 0.7; // Service FAQ answers
-        }
-      }
-      
-        // Try to provide a direct answer based on the question type and content chunks
-      if (!hasEvidenceBasedAnswer) {
-        const directAnswer = generateDirectAnswer(query, articles, contentChunks);
-        if (directAnswer) {
-          lines.push(directAnswer);
-          hasEvidenceBasedAnswer = true;
-          confidence = 0.6; // RAG-based direct answers
         }
       }
       

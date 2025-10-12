@@ -11,13 +11,13 @@ async function testSingleQuery() {
   console.log("🔍 Testing Single Query Response...\n");
   
   try {
-    const response = await fetch('https://alan-ranger-chat-bot.vercel.app/api/chat', {
+    const response = await fetch('https://alan-chat-proxy.vercel.app/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        query: "bluebell workshop",
+        query: "what is iso",
         sessionId: "test-session"
       })
     });

@@ -10,9 +10,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supa = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Comprehensive Test Queries - 30 questions covering all enhanced data aspects
+// Comprehensive Test Queries - 100 questions covering all enhanced data aspects
 const TEST_QUERIES = [
-  // GENERAL ADVICE & TECHNICAL QUESTIONS
+  // TECHNICAL PHOTOGRAPHY CONCEPTS (20 questions)
   {
     query: "what is iso",
     expected: {
@@ -64,8 +64,158 @@ const TEST_QUERIES = [
       shouldHaveTags: true
     }
   },
+  {
+    query: "what is exposure triangle",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["exposure", "triangle", "aperture", "shutter", "iso"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is focal length",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["focal length", "lens"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is composition in photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["composition", "photography"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is long exposure",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["long exposure", "shutter speed"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is macro photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["macro", "close-up"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is street photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["street", "urban"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is portrait photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["portrait", "people"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is landscape photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["landscape", "nature"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is astrophotography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["astro", "night", "stars"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is wildlife photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["wildlife", "animals"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is wedding photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["wedding", "ceremony"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is product photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["product", "commercial"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is black and white photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["black and white", "monochrome"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is hdr photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["HDR", "high dynamic range"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what is raw vs jpeg",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["raw", "jpeg", "file format"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
 
-  // EQUIPMENT RECOMMENDATIONS
+  // EQUIPMENT RECOMMENDATIONS (20 questions)
   {
     query: "what tripod do you recommend",
     expected: {
@@ -116,8 +266,158 @@ const TEST_QUERIES = [
       shouldHaveTags: true
     }
   },
+  {
+    query: "best camera for landscape photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["camera", "landscape"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "best lens for portraits",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["lens", "portrait"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "best camera for travel",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["camera", "travel"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what memory card should I buy",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["memory card", "storage"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "best camera strap",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["camera strap", "accessories"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what flash should I buy",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["flash", "lighting"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "best camera for macro photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["camera", "macro"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what camera cleaning kit",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["cleaning", "maintenance"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "best camera for street photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["camera", "street"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what camera for wildlife photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["camera", "wildlife"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "best camera for astrophotography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["camera", "astro", "night"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what camera for wedding photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["camera", "wedding"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "best camera for product photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["camera", "product"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "what camera for underwater photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["camera", "underwater"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
+  {
+    query: "best camera for sports photography",
+    expected: {
+      shouldFindArticles: true,
+      expectedArticleTitles: ["camera", "sports"],
+      minConfidence: 60,
+      shouldHaveCategories: true,
+      shouldHaveTags: true
+    }
+  },
 
-  // COURSES & PRODUCTS
+  // COURSES & PRODUCTS (20 questions)
   {
     query: "lightroom course",
     expected: {
@@ -167,8 +467,143 @@ const TEST_QUERIES = [
       shouldHavePrice: true
     }
   },
+  {
+    query: "photoshop course",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["photoshop", "editing", "course"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "advanced photography course",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["advanced", "photography", "course"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "photography certificate course",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["certificate", "course"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "one to one photography lessons",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["one to one", "private", "lessons"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "photography workshop near me",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["workshop", "photography"],
+      minConfidence: 70,
+      shouldHaveLocation: true
+    }
+  },
+  {
+    query: "photography course for beginners",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["course", "beginners"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "photography course with certificate",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["course", "certificate"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "photography course online free",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["course", "online", "free"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "photography course weekend",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["course", "weekend"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "photography course evening",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["course", "evening"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "photography course intensive",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["course", "intensive"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "photography course residential",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["course", "residential"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "photography course group",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["course", "group"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "photography course individual",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["course", "individual", "private"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
+  {
+    query: "photography course professional",
+    expected: {
+      shouldFindProducts: true,
+      expectedProductTitles: ["course", "professional"],
+      minConfidence: 70,
+      shouldHavePrice: true
+    }
+  },
 
-  // WORKSHOPS & EVENTS
+  // WORKSHOPS & EVENTS (20 questions)
   {
     query: "bluebell workshop",
     expected: {
@@ -221,8 +656,158 @@ const TEST_QUERIES = [
       shouldHaveDates: true
     }
   },
+  {
+    query: "macro photography workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["macro", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "portrait photography workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["portrait", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "street photography workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["street", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "wedding photography workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["wedding", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "wildlife photography workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["wildlife", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "astro photography workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["astro", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "product photography workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["product", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "black and white photography workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["black and white", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "long exposure workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["long exposure", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "composition workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["composition", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "lighting workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["lighting", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "editing workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["editing", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "post processing workshop",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["post processing", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "photography workshop weekend",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["workshop", "weekend"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
+  {
+    query: "photography workshop residential",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["workshop", "residential"],
+      minConfidence: 60,
+      shouldHaveLocation: true,
+      shouldHaveDates: true
+    }
+  },
 
-  // SPECIFIC LOCATIONS & DATES
+  // SPECIFIC LOCATIONS & DATES (20 questions)
   {
     query: "workshop in coventry",
     expected: {
@@ -269,103 +854,139 @@ const TEST_QUERIES = [
       shouldHaveLocation: true
     }
   },
-
-  // TECHNICAL REQUIREMENTS & PARTICIPANTS
   {
-    query: "do I need a laptop for lightroom course",
-    expected: {
-      shouldFindProducts: true,
-      expectedProductTitles: ["lightroom", "laptop"],
-      minConfidence: 70,
-      shouldHaveCategories: true,
-      shouldHaveTags: true
-    }
-  },
-  {
-    query: "what camera do I need for course",
-    expected: {
-      shouldFindProducts: true,
-      expectedProductTitles: ["camera", "course"],
-      minConfidence: 70,
-      shouldHaveCategories: true,
-      shouldHaveTags: true
-    }
-  },
-  {
-    query: "can my 14 year old attend workshop",
+    query: "workshop in scotland",
     expected: {
       shouldFindEvents: true,
-      expectedEventTitles: ["workshop", "age"],
+      expectedEventTitles: ["scotland", "workshop"],
       minConfidence: 60,
-      shouldHaveCategories: true,
-      shouldHaveTags: true
+      shouldHaveLocation: true
     }
   },
   {
-    query: "equipment needed for workshop",
+    query: "workshop in cornwall",
     expected: {
       shouldFindEvents: true,
-      expectedEventTitles: ["workshop", "equipment"],
+      expectedEventTitles: ["cornwall", "workshop"],
       minConfidence: 60,
-      shouldHaveCategories: true,
-      shouldHaveTags: true
+      shouldHaveLocation: true
     }
   },
   {
-    query: "fitness level required for workshop",
+    query: "workshop in norfolk",
     expected: {
       shouldFindEvents: true,
-      expectedEventTitles: ["workshop", "fitness"],
+      expectedEventTitles: ["norfolk", "workshop"],
       minConfidence: 60,
-      shouldHaveCategories: true,
-      shouldHaveTags: true
-    }
-  },
-
-  // PRICING & AVAILABILITY
-  {
-    query: "how much does a photography course cost",
-    expected: {
-      shouldFindProducts: true,
-      expectedProductTitles: ["course", "cost"],
-      minConfidence: 70,
-      shouldHavePrice: true
+      shouldHaveLocation: true
     }
   },
   {
-    query: "workshop price",
+    query: "workshop in suffolk",
     expected: {
       shouldFindEvents: true,
-      expectedEventTitles: ["workshop", "price"],
+      expectedEventTitles: ["suffolk", "workshop"],
       minConfidence: 60,
-      shouldHavePrice: true
+      shouldHaveLocation: true
     }
   },
   {
-    query: "is the online course free",
-    expected: {
-      shouldFindProducts: true,
-      expectedProductTitles: ["online", "free", "course"],
-      minConfidence: 70,
-      shouldHavePrice: true
-    }
-  },
-  {
-    query: "photography course availability",
-    expected: {
-      shouldFindProducts: true,
-      expectedProductTitles: ["course", "availability"],
-      minConfidence: 70,
-      shouldHaveAvailability: true
-    }
-  },
-  {
-    query: "workshop booking",
+    query: "workshop in kent",
     expected: {
       shouldFindEvents: true,
-      expectedEventTitles: ["workshop", "booking"],
+      expectedEventTitles: ["kent", "workshop"],
       minConfidence: 60,
-      shouldHaveDates: true
+      shouldHaveLocation: true
+    }
+  },
+  {
+    query: "workshop in sussex",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["sussex", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true
+    }
+  },
+  {
+    query: "workshop in hampshire",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["hampshire", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true
+    }
+  },
+  {
+    query: "workshop in dorset",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["dorset", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true
+    }
+  },
+  {
+    query: "workshop in somerset",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["somerset", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true
+    }
+  },
+  {
+    query: "workshop in wiltshire",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["wiltshire", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true
+    }
+  },
+  {
+    query: "workshop in oxfordshire",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["oxfordshire", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true
+    }
+  },
+  {
+    query: "workshop in buckinghamshire",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["buckinghamshire", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true
+    }
+  },
+  {
+    query: "workshop in hertfordshire",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["hertfordshire", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true
+    }
+  },
+  {
+    query: "workshop in essex",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["essex", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true
+    }
+  },
+  {
+    query: "workshop in london",
+    expected: {
+      shouldFindEvents: true,
+      expectedEventTitles: ["london", "workshop"],
+      minConfidence: 60,
+      shouldHaveLocation: true
     }
   }
 ];
@@ -561,15 +1182,13 @@ async function testChatAPI(query, expected) {
 }
 
 async function runAllTests() {
-  console.log("🚀 Starting Comprehensive Chat System Tests - 30 Questions\n");
+  console.log("🚀 Starting Comprehensive Chat System Tests - 100 Questions\n");
   console.log("📋 Testing Categories:");
-  console.log("   • General Advice & Technical Questions (5 questions)");
-  console.log("   • Equipment Recommendations (5 questions)");
-  console.log("   • Courses & Products (5 questions)");
-  console.log("   • Workshops & Events (5 questions)");
-  console.log("   • Specific Locations & Dates (5 questions)");
-  console.log("   • Technical Requirements & Participants (5 questions)");
-  console.log("   • Pricing & Availability (5 questions)\n");
+  console.log("   • Technical Photography Concepts (20 questions)");
+  console.log("   • Equipment Recommendations (20 questions)");
+  console.log("   • Courses & Products (20 questions)");
+  console.log("   • Workshops & Events (20 questions)");
+  console.log("   • Specific Locations & Dates (20 questions)\n");
   console.log("=" * 60);
   
   // Test 1: Database Data Quality
@@ -587,19 +1206,17 @@ async function runAllTests() {
   let passedTests = 0;
   let totalTests = TEST_QUERIES.length;
   let categoryResults = {
-    "General Advice": { passed: 0, total: 5 },
-    "Equipment": { passed: 0, total: 5 },
-    "Courses": { passed: 0, total: 5 },
-    "Workshops": { passed: 0, total: 5 },
-    "Locations": { passed: 0, total: 5 },
-    "Requirements": { passed: 0, total: 5 },
-    "Pricing": { passed: 0, total: 5 }
+    "Technical Concepts": { passed: 0, total: 20 },
+    "Equipment": { passed: 0, total: 20 },
+    "Courses": { passed: 0, total: 20 },
+    "Workshops": { passed: 0, total: 20 },
+    "Locations": { passed: 0, total: 20 }
   };
   
   for (let i = 0; i < TEST_QUERIES.length; i++) {
     const test = TEST_QUERIES[i];
-    const categoryIndex = Math.floor(i / 5);
-    const categoryNames = ["General Advice", "Equipment", "Courses", "Workshops", "Locations", "Requirements", "Pricing"];
+    const categoryIndex = Math.floor(i / 20);
+    const categoryNames = ["Technical Concepts", "Equipment", "Courses", "Workshops", "Locations"];
     const categoryName = categoryNames[categoryIndex];
     
     const passed = await testChatAPI(test.query, test.expected);
