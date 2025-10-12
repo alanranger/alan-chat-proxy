@@ -2002,61 +2002,58 @@ export default async function handler(req, res) {
       let best = null; for (const [,v] of grouped){ if (!best || v.score>best.score) best = v; }
       const firstEvent = (filteredEvents.length ? filteredEvents : events)?.[0];
       let product = null;
-      // PRIMARY: use the first (most relevant) event as the product with rich data
+      // PRIMARY: use the first (most relevant) event as the product
+      // Fetch the actual page content from page_chunks for the frontend extractFacts function to parse
       if (firstEvent) {
-        // Build rich description with bullet points
-        const location = firstEvent.location || firstEvent.event_location || 'Devon';
-        const startDate = new Date(firstEvent.date_start);
-        const endDate = new Date(firstEvent.date_end);
-        const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
-        const startTime = firstEvent.start_time || firstEvent._csv_start_time;
-        const endTime = firstEvent.end_time || firstEvent._csv_end_time;
+        // Get the product URL to fetch page content
+        const productUrl = firstEvent.product_url || firstEvent.page_url;
         
-        let description = `• 📍 Location: ${location}`;
-        description += `\n• ⏱️ Duration: ${duration} day${duration > 1 ? 's' : ''}`;
-        if (startTime && endTime) {
-          description += `\n• 🕐 Time: ${startTime} - ${endTime}`;
-        }
-        if (firstEvent.participants) {
-          description += `\n• 👥 Participants: ${firstEvent.participants}`;
-        }
-        if (firstEvent.fitness_level) {
-          description += `\n• 💪 Fitness Level: ${firstEvent.fitness_level}`;
+        // Fetch page content from page_chunks
+        let pageContent = '';
+        if (productUrl) {
+          const { data: chunks } = await client
+            .from('page_chunks')
+            .select('chunk_text')
+            .eq('url', productUrl)
+            .limit(3);
+          
+          if (chunks && chunks.length > 0) {
+            // Combine chunks to get the full page content
+            pageContent = chunks.map(chunk => chunk.chunk_text).join(' ');
+          }
         }
         
         product = {
           title: firstEvent.title,
           page_url: firstEvent.page_url,
           price: firstEvent.price,
-          description: description,
+          description: pageContent || `Workshop in ${firstEvent.location || firstEvent.event_location || 'Devon'}`,
           raw: { offers: { lowPrice: firstEvent.price, highPrice: firstEvent.price } }
         };
       } else if (best && best.ev && best.score >= 5) { // fallback: semantic best
-        // Build rich description with bullet points
-        const location = best.ev.location || best.ev.event_location || 'Devon';
-        const startDate = new Date(best.ev.date_start);
-        const endDate = new Date(best.ev.date_end);
-        const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-        const startTime = best.ev.start_time || best.ev._csv_start_time;
-        const endTime = best.ev.end_time || best.ev._csv_end_time;
+        // Get the product URL to fetch page content
+        const productUrl = best.ev.product_url || best.ev.page_url;
         
-        let description = `• 📍 Location: ${location}`;
-        description += `\n• ⏱️ Duration: ${duration} day${duration > 1 ? 's' : ''}`;
-        if (startTime && endTime) {
-          description += `\n• 🕐 Time: ${startTime} - ${endTime}`;
-        }
-        if (best.ev.participants) {
-          description += `\n• 👥 Participants: ${best.ev.participants}`;
-        }
-        if (best.ev.fitness_level) {
-          description += `\n• 💪 Fitness Level: ${best.ev.fitness_level}`;
+        // Fetch page content from page_chunks
+        let pageContent = '';
+        if (productUrl) {
+          const { data: chunks } = await client
+            .from('page_chunks')
+            .select('chunk_text')
+            .eq('url', productUrl)
+            .limit(3);
+          
+          if (chunks && chunks.length > 0) {
+            // Combine chunks to get the full page content
+            pageContent = chunks.map(chunk => chunk.chunk_text).join(' ');
+          }
         }
         
         product = {
           title: best.ev.title,
           page_url: best.ev.page_url,
           price: best.ev.price,
-          description: description,
+          description: pageContent || `Workshop in ${best.ev.location || best.ev.event_location || 'Devon'}`,
           raw: { offers: { lowPrice: best.ev.price, highPrice: best.ev.price } }
         };
       }
