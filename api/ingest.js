@@ -586,7 +586,22 @@ async function ingestSingleUrl(url, supa, options = {}) {
       // Select the best JSON-LD object for this URL (prioritized by the sort above)
       const bestJsonLd = jsonLd[0]; // First item after prioritization
       const bestIdx = 0;
-      const enhancedDescription = enhancedDescriptions[bestIdx] || bestJsonLd.description || null;
+      
+      // Generate description from FAQPage content if no description exists
+      let enhancedDescription = enhancedDescriptions[bestIdx] || bestJsonLd.description || null;
+      
+      if (!enhancedDescription && bestJsonLd['@type'] === 'FAQPage' && bestJsonLd.mainEntity && Array.isArray(bestJsonLd.mainEntity)) {
+        // Generate description from the first FAQ question and answer
+        const firstFAQ = bestJsonLd.mainEntity[0];
+        if (firstFAQ && firstFAQ.acceptedAnswer && firstFAQ.acceptedAnswer.text) {
+          let faqText = firstFAQ.acceptedAnswer.text;
+          // Clean HTML tags
+          faqText = faqText.replace(/<[^>]*>/g, '').trim();
+          // Take first sentence or first 200 characters
+          const firstSentence = faqText.split('.')[0] + '.';
+          enhancedDescription = firstSentence.length > 200 ? faqText.substring(0, 200) + '...' : firstSentence;
+        }
+      }
       
       // Log entity creation directly to database (fire and forget)
       supa.from('debug_logs').insert({
