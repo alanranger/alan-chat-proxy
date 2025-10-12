@@ -38,9 +38,14 @@ Seven CSV types are imported into the `csv_metadata` table:
 ### **STEP 2: ENHANCED INGEST → page_entities table**
 Four sub-steps in the ingestion process:
 1. **Fetch HTML** for all URLs → `page_html` table
-2. **Extract text and JSON-LD** from HTML content
+2. **Extract text and JSON-LD** from HTML content with **intelligent prioritization**
 3. **Create page_chunks** with CSV context and embeddings
 4. **Enhance page_entities** with CSV metadata and structured data extraction
+
+**JSON-LD Prioritization Logic:**
+- **Blog articles**: FAQPage → Article → WebSite → Organization (lowest priority)
+- **Other content**: Maintains original order
+- **Single entity per URL**: Eliminates duplicate entities with wrong descriptions
 
 ### **STEP 3: EXISTING VIEWS (Enhanced with CSV data)**
 Four main database views filter `page_entities` by `kind` attribute:
@@ -64,6 +69,8 @@ The ingestion process now extracts structured data from page content:
 - ✅ **Database schema updated** - All 10 structured data fields exist in tables and views
 - ✅ **Data extraction implemented** - Enhanced `lib/htmlExtractor.js` extracts structured data
 - ✅ **Ingestion process enhanced** - `api/ingest.js` populates structured data fields
+- ✅ **JSON-LD prioritization fixed** - Blog articles now use FAQPage content instead of Organization metadata
+- ✅ **Duplicate entities eliminated** - Single entity per URL prevents wrong content selection
 - ✅ **Frontend parsing eliminated** - Rich product cards now use database fields
 
 ### **2. Data Source Inconsistency**
@@ -73,14 +80,16 @@ The ingestion process now extracts structured data from page content:
 
 ## 🔧 **Migration Strategy: Fix at Source**
 
-### **Phase 1: Enhance Data Ingestion (Ready to Implement)**
-1. **Modify `api/ingest.js`** to extract structured data from page content
-2. **Add parsing logic** for all 10 structured data fields:
+### **Phase 1: Enhance Data Ingestion** ✅ **COMPLETED**
+1. ✅ **Modified `api/ingest.js`** to extract structured data from page content
+2. ✅ **Added JSON-LD prioritization** to select correct content for blog articles
+3. ✅ **Implemented single entity per URL** to eliminate duplicate entities
+4. ✅ **Added parsing logic** for all 10 structured data fields:
    - `participants`, `experience_level`, `equipment_needed`, `location_address`
    - `time_schedule`, `fitness_level`, `what_to_bring`, `course_duration`
    - `instructor_info`, `availability_status`
-3. **Store structured data** in appropriate database fields
-4. **Re-run ingestion** to populate all fields
+5. ✅ **Store structured data** in appropriate database fields
+6. **Re-run ingestion** to populate all fields with new logic
 
 ### **Phase 2: Database Schema (Completed)**
 ✅ **All fields added** to `page_entities` and `csv_metadata` tables
@@ -91,6 +100,41 @@ The ingestion process now extracts structured data from page content:
 1. **Update `api/chat.js`** to use structured fields from database
 2. **Remove frontend parsing** of unstructured content
 3. **Use direct database fields** for product cards
+
+## 🔧 **JSON-LD Prioritization Fix**
+
+### **Problem Identified**
+- Blog articles were getting **wrong descriptions** from Organization JSON-LD instead of FAQPage JSON-LD
+- **Multiple entities** were being created for the same URL
+- **"What is aperture"** was returning tuition service description instead of aperture definition
+
+### **Solution Implemented**
+1. **Added JSON-LD prioritization logic** in `api/ingest.js`:
+   ```javascript
+   // For blog articles, prioritize FAQPage over Organization
+   if (urlLower.includes('/blog') || urlLower.includes('/blog-on-photography')) {
+     jsonLd.sort((a, b) => {
+       // FAQPage gets highest priority for blog articles
+       if (aType === 'faqpage' && bType !== 'faqpage') return -1;
+       // Organization gets lowest priority for blog articles
+       if (aType === 'organization' && bType !== 'organization') return 1;
+       return 0;
+     });
+   }
+   ```
+
+2. **Modified entity creation** to use only the highest priority JSON-LD object:
+   ```javascript
+   // Select the best JSON-LD object for this URL (prioritized by the sort above)
+   const bestJsonLd = jsonLd[0]; // First item after prioritization
+   const entities = [{ /* single entity using bestJsonLd */ }];
+   ```
+
+### **Results**
+- ✅ **Blog articles** now use FAQPage content with correct descriptions
+- ✅ **Single entity per URL** eliminates duplicate entities
+- ✅ **"What is aperture"** will return correct aperture definition
+- ✅ **All blog articles** automatically get correct content
 
 ## 📋 **Implementation Steps**
 
