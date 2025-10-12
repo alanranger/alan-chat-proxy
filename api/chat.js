@@ -2010,6 +2010,9 @@ export default async function handler(req, res) {
           page_url: firstEvent.product_url,
           price: firstEvent.price_gbp,
           description: `Workshop in ${firstEvent.event_location}`,
+          participants: firstEvent.participants,
+          fitness_level: firstEvent.fitness_level,
+          location_name: firstEvent.event_location,
           raw: { offers: { lowPrice: firstEvent.price_gbp, highPrice: firstEvent.price_gbp } }
         };
       } else if (best && best.ev && best.score >= 5) { // fallback: semantic best
@@ -2018,6 +2021,9 @@ export default async function handler(req, res) {
           page_url: best.ev.product_url,
           price: best.ev.price_gbp,
           description: `Workshop in ${best.ev.event_location}`,
+          participants: best.ev.participants,
+          fitness_level: best.ev.fitness_level,
+          location_name: best.ev.event_location,
           raw: { offers: { lowPrice: best.ev.price_gbp, highPrice: best.ev.price_gbp } }
         };
       }

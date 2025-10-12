@@ -976,8 +976,13 @@ function renderProductCard(prod){
     lines.push(`<p class="kvline"><strong>Availability:</strong> ${escapeHTML(avail)}</p>`);
   }
   if(facts.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(facts.participants)}</p>`);
+  else if(prod.participants) lines.push(`<p class="kvline"><strong>Participants:</strong> ${escapeHTML(prod.participants)}</p>`);
+  
   if(facts.fitness)      lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(facts.fitness)}</p>`);
+  else if(prod.fitness_level) lines.push(`<p class="kvline"><strong>Fitness:</strong> ${escapeHTML(prod.fitness_level)}</p>`);
+  
   if(facts.location)     lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(facts.location)}</p>`);
+  else if(prod.location_name) lines.push(`<p class="kvline"><strong>Location:</strong> ${escapeHTML(prod.location_name)}</p>`);
   if(facts.experience)   lines.push(`<p class="kvline"><strong>Experience Level:</strong> ${escapeHTML(facts.experience)}</p>`);
   if(Array.isArray(facts.equipmentItems) && facts.equipmentItems.length){
     const eq = facts.equipmentItems.map(e=>`<li>${escapeHTML(e)}</li>`).join('');
