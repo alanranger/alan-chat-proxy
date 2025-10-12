@@ -894,10 +894,8 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null, cs
     .order("date_start", { ascending: true }) // Sort by date ascending (earliest first)
     .limit(limit);
 
-  // Filter by subtype if specified (course_events vs workshop_events)
-  if (csvType) {
-    q = q.eq("subtype", csvType);
-  }
+  // Note: v_events_for_chat has subtype='event' for all events, so we don't filter by csvType
+  // The csvType filtering is handled by the view itself based on the underlying data
 
   // If we have page context, try to find related content first
   if (pageContext && pageContext.pathname) {
