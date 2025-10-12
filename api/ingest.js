@@ -555,7 +555,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
         supa.from('debug_logs').insert({
           url: url,
           stage: 'entity_creation',
-          data: { idx: idx, kind: normalizeKind(item, url), hasEnhanced: !!enhancedDescriptions[idx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0, hasCsvMetadata: !!csvMetadata }
+          data: { idx: idx, kind: normalizeKind(item, url), hasEnhanced: !!enhancedDescriptions[idx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0, hasCsvMetadata: !!csvMetadata, structuredData: structuredData }
         }).then(() => {}).catch(() => {}); // Ignore errors
         
         return {
@@ -591,7 +591,18 @@ async function ingestSingleUrl(url, supa, options = {}) {
           excerpt: csvMetadata?.excerpt ? cleanHTMLText(csvMetadata.excerpt) : null,
           image_url: csvMetadata?.image_url ? cleanHTMLText(csvMetadata.image_url) : null,
           json_ld_data: csvMetadata?.json_ld_data || null,
-          workflow_state: csvMetadata?.workflow_state ? cleanHTMLText(csvMetadata.workflow_state) : null
+          workflow_state: csvMetadata?.workflow_state ? cleanHTMLText(csvMetadata.workflow_state) : null,
+          // NEW STRUCTURED DATA FIELDS - Extract from page content
+          participants: structuredData?.participants || null,
+          experience_level: structuredData?.experience_level || null,
+          equipment_needed: structuredData?.equipment_needed || null,
+          location_address: structuredData?.location_address || null,
+          time_schedule: structuredData?.time_schedule || null,
+          fitness_level: structuredData?.fitness_level || null,
+          what_to_bring: structuredData?.what_to_bring || null,
+          course_duration: structuredData?.course_duration || null,
+          instructor_info: structuredData?.instructor_info || null,
+          availability_status: structuredData?.availability_status || null
         };
       });
       
@@ -634,6 +645,18 @@ async function ingestSingleUrl(url, supa, options = {}) {
               merged.json_ld_data = e.json_ld_data ?? merged.json_ld_data;
               merged.workflow_state = e.workflow_state ?? merged.workflow_state;
             }
+            
+            // Always update structured data fields if available
+            merged.participants = e.participants ?? merged.participants;
+            merged.experience_level = e.experience_level ?? merged.experience_level;
+            merged.equipment_needed = e.equipment_needed ?? merged.equipment_needed;
+            merged.location_address = e.location_address ?? merged.location_address;
+            merged.time_schedule = e.time_schedule ?? merged.time_schedule;
+            merged.fitness_level = e.fitness_level ?? merged.fitness_level;
+            merged.what_to_bring = e.what_to_bring ?? merged.what_to_bring;
+            merged.course_duration = e.course_duration ?? merged.course_duration;
+            merged.instructor_info = e.instructor_info ?? merged.instructor_info;
+            merged.availability_status = e.availability_status ?? merged.availability_status;
             
             // Event preservation: keep CSV-derived schedule if present; merge RAW to retain CSV hints
             if (e.kind === 'event') {
@@ -713,7 +736,18 @@ async function ingestSingleUrl(url, supa, options = {}) {
                   excerpt: e.excerpt,
                   image_url: e.image_url,
                   json_ld_data: e.json_ld_data,
-                  workflow_state: e.workflow_state
+                  workflow_state: e.workflow_state,
+                  // NEW STRUCTURED DATA FIELDS
+                  participants: e.participants,
+                  experience_level: e.experience_level,
+                  equipment_needed: e.equipment_needed,
+                  location_address: e.location_address,
+                  time_schedule: e.time_schedule,
+                  fitness_level: e.fitness_level,
+                  what_to_bring: e.what_to_bring,
+                  course_duration: e.course_duration,
+                  instructor_info: e.instructor_info,
+                  availability_status: e.availability_status
                 })
                 .eq('url', e.url)
                 .eq('kind', e.kind);
