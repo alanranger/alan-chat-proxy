@@ -989,6 +989,61 @@ function productHeadlinePrice(prod){
   if (typeof prod.price === 'number') return currency(prod.price, prod.price_currency||'GBP');
   return null;
 }
+
+// Check if a value is meaningless and shouldn't be displayed
+function isMeaninglessValue(value) {
+  if (!value || typeof value !== 'string') return true;
+  
+  const val = value.toLowerCase().trim();
+  
+  // Common meaningless values
+  const meaninglessPatterns = [
+    'null',
+    'undefined', 
+    'n/a',
+    'na',
+    'none',
+    'in milliseconds',
+    'out duration in milliseconds',
+    'duration in milliseconds',
+    'out duration',
+    'milliseconds',
+    'ms',
+    '0',
+    '0.0',
+    '0ms',
+    'null ms',
+    'undefined ms',
+    'n/a ms',
+    'none ms',
+    'not specified',
+    'not set',
+    'empty',
+    'blank',
+    'default',
+    'placeholder',
+    'tbd',
+    'to be determined',
+    'coming soon',
+    'tba',
+    'to be announced'
+  ];
+  
+  // Check exact matches
+  if (meaninglessPatterns.includes(val)) return true;
+  
+  // Check if it's just a single character or very short
+  if (val.length <= 2) return true;
+  
+  // Check if it contains only numbers and common meaningless words
+  if (/^[\d\s\.\-_]+$/.test(val)) return true;
+  
+  // Check if it's just punctuation or special characters
+  if (/^[^\w\s]+$/.test(val)) return true;
+  
+  return false;
+}
+
 function deriveOptions(prod, facts){
   const ccy = prod.price_currency || 'GBP';
   const base = prod.price ?? prod?.raw?.offers?.price;
@@ -1019,69 +1074,69 @@ function renderProductCard(prod){
   }
   
   // Availability (prioritize database field over extracted facts)
-  if (prod.availability_status) {
+  if (prod.availability_status && !isMeaninglessValue(prod.availability_status)) {
     const avail = String(prod.availability_status).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
     bulletPoints.push(`<li><strong>Availability:</strong> ${escapeHTML(avail)}</li>`);
-  } else if (facts.availability) {
+  } else if (facts.availability && !isMeaninglessValue(facts.availability)) {
     const avail = facts.availability.toString().replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
     bulletPoints.push(`<li><strong>Availability:</strong> ${escapeHTML(avail)}</li>`);
   }
   
   // Participants (prioritize database field over extracted facts)
-  if (prod.participants) {
+  if (prod.participants && !isMeaninglessValue(prod.participants)) {
     bulletPoints.push(`<li><strong>Participants:</strong> ${escapeHTML(prod.participants)}</li>`);
-  } else if (facts.participants) {
+  } else if (facts.participants && !isMeaninglessValue(facts.participants)) {
     bulletPoints.push(`<li><strong>Participants:</strong> ${escapeHTML(facts.participants)}</li>`);
   }
   
   // Fitness Level (prioritize database field over extracted facts)
-  if (prod.fitness_level) {
+  if (prod.fitness_level && !isMeaninglessValue(prod.fitness_level)) {
     bulletPoints.push(`<li><strong>Fitness Level:</strong> ${escapeHTML(prod.fitness_level)}</li>`);
-  } else if (facts.fitness) {
+  } else if (facts.fitness && !isMeaninglessValue(facts.fitness)) {
     bulletPoints.push(`<li><strong>Fitness Level:</strong> ${escapeHTML(facts.fitness)}</li>`);
   }
   
   // Experience Level (prioritize database field over extracted facts)
-  if (prod.experience_level) {
+  if (prod.experience_level && !isMeaninglessValue(prod.experience_level)) {
     bulletPoints.push(`<li><strong>Experience Level:</strong> ${escapeHTML(prod.experience_level)}</li>`);
-  } else if (facts.experience) {
+  } else if (facts.experience && !isMeaninglessValue(facts.experience)) {
     bulletPoints.push(`<li><strong>Experience Level:</strong> ${escapeHTML(facts.experience)}</li>`);
   }
   
   // Location (prioritize database field, avoid duplicates)
-  if (prod.location_name) {
+  if (prod.location_name && !isMeaninglessValue(prod.location_name)) {
     bulletPoints.push(`<li><strong>Location:</strong> ${escapeHTML(prod.location_name)}</li>`);
-  } else if (facts.location) {
+  } else if (facts.location && !isMeaninglessValue(facts.location)) {
     bulletPoints.push(`<li><strong>Location:</strong> ${escapeHTML(facts.location)}</li>`);
   }
   
-  // Location Address (only if different from location_name)
-  if (prod.location_address && prod.location_address !== prod.location_name) {
+  // Location Address (only if different from location_name and meaningful)
+  if (prod.location_address && prod.location_address !== prod.location_name && !isMeaninglessValue(prod.location_address)) {
     bulletPoints.push(`<li><strong>Address:</strong> ${escapeHTML(prod.location_address)}</li>`);
   }
   
-  // Time Schedule
-  if (prod.time_schedule) {
+  // Time Schedule (only if meaningful)
+  if (prod.time_schedule && !isMeaninglessValue(prod.time_schedule)) {
     bulletPoints.push(`<li><strong>Schedule:</strong> ${escapeHTML(prod.time_schedule)}</li>`);
   }
   
-  // What to Bring
-  if (prod.what_to_bring) {
+  // What to Bring (only if meaningful)
+  if (prod.what_to_bring && !isMeaninglessValue(prod.what_to_bring)) {
     bulletPoints.push(`<li><strong>What to Bring:</strong> ${escapeHTML(prod.what_to_bring)}</li>`);
   }
   
-  // Course Duration
-  if (prod.course_duration) {
+  // Course Duration (only if meaningful)
+  if (prod.course_duration && !isMeaninglessValue(prod.course_duration)) {
     bulletPoints.push(`<li><strong>Duration:</strong> ${escapeHTML(prod.course_duration)}</li>`);
   }
   
-  // Instructor Info
-  if (prod.instructor_info) {
+  // Instructor Info (only if meaningful)
+  if (prod.instructor_info && !isMeaninglessValue(prod.instructor_info)) {
     bulletPoints.push(`<li><strong>Instructor:</strong> ${escapeHTML(prod.instructor_info)}</li>`);
   }
   
   // Equipment Needed (prioritize database field over extracted facts)
-  if (prod.equipment_needed) {
+  if (prod.equipment_needed && !isMeaninglessValue(prod.equipment_needed)) {
     bulletPoints.push(`<li><strong>Equipment Needed:</strong> ${escapeHTML(prod.equipment_needed)}</li>`);
   } else if (Array.isArray(facts.equipmentItems) && facts.equipmentItems.length) {
     const eq = facts.equipmentItems.map(e => escapeHTML(e)).join(', ');

@@ -387,36 +387,70 @@ async function ingestSingleUrl(url, supa, options = {}) {
     stage = 'extract_jsonld';
     const jsonLd = extractJSONLD(html);
     
-    // Prioritize JSON-LD objects for better entity selection
-    if (jsonLd && jsonLd.length > 1) {
-      const urlLower = url.toLowerCase();
-      
-      // For blog articles, prioritize FAQPage over Organization
-      if (urlLower.includes('/blog') || urlLower.includes('/blog-on-photography')) {
-        jsonLd.sort((a, b) => {
-          const aType = (a['@type'] || '').toLowerCase();
-          const bType = (b['@type'] || '').toLowerCase();
-          
-          // FAQPage gets highest priority for blog articles
-          if (aType === 'faqpage' && bType !== 'faqpage') return -1;
-          if (bType === 'faqpage' && aType !== 'faqpage') return 1;
-          
-          // Article gets second priority
-          if (aType === 'article' && bType !== 'article') return -1;
-          if (bType === 'article' && aType !== 'article') return 1;
-          
-          // WebSite gets third priority
-          if (aType === 'website' && bType !== 'website') return -1;
-          if (bType === 'website' && aType !== 'website') return 1;
-          
-          // Organization gets lowest priority for blog articles
-          if (aType === 'organization' && bType !== 'organization') return 1;
-          if (bType === 'organization' && aType !== 'organization') return -1;
-          
-          return 0;
-        });
+      // Prioritize JSON-LD objects for better entity selection
+      if (jsonLd && jsonLd.length > 1) {
+        const urlLower = url.toLowerCase();
+        
+        // For blog articles, prioritize FAQPage over Organization
+        if (urlLower.includes('/blog') || urlLower.includes('/blog-on-photography')) {
+          jsonLd.sort((a, b) => {
+            const aType = (a['@type'] || '').toLowerCase();
+            const bType = (b['@type'] || '').toLowerCase();
+            
+            // FAQPage gets highest priority for blog articles
+            if (aType === 'faqpage' && bType !== 'faqpage') return -1;
+            if (bType === 'faqpage' && aType !== 'faqpage') return 1;
+            
+            // Article gets second priority
+            if (aType === 'article' && bType !== 'article') return -1;
+            if (bType === 'article' && aType !== 'article') return 1;
+            
+            // WebSite gets third priority
+            if (aType === 'website' && bType !== 'website') return -1;
+            if (bType === 'website' && aType !== 'website') return 1;
+            
+            // Organization gets lowest priority for blog articles
+            if (aType === 'organization' && bType !== 'organization') return 1;
+            if (bType === 'organization' && aType !== 'organization') return -1;
+            
+            return 0;
+          });
+        }
+        
+        // For events, prioritize Event over other types
+        if (urlLower.includes('/photographic-workshops-near-me') || 
+            urlLower.includes('/photo-workshops-uk') || 
+            urlLower.includes('/beginners-photography-lessons')) {
+          jsonLd.sort((a, b) => {
+            const aType = (a['@type'] || '').toLowerCase();
+            const bType = (b['@type'] || '').toLowerCase();
+            
+            // Event gets highest priority for event URLs
+            if (aType === 'event' && bType !== 'event') return -1;
+            if (bType === 'event' && aType !== 'event') return 1;
+            
+            // Course/EducationEvent gets second priority
+            if ((aType === 'course' || aType === 'educationevent') && 
+                (bType !== 'course' && bType !== 'educationevent')) return -1;
+            if ((bType === 'course' || bType === 'educationevent') && 
+                (aType !== 'course' && aType !== 'educationevent')) return 1;
+            
+            // LocalBusiness gets third priority
+            if (aType === 'localbusiness' && bType !== 'localbusiness') return -1;
+            if (bType === 'localbusiness' && aType !== 'localbusiness') return 1;
+            
+            // Organization gets fourth priority
+            if (aType === 'organization' && bType !== 'organization') return -1;
+            if (bType === 'organization' && aType !== 'organization') return 1;
+            
+            // WebSite gets lowest priority for events
+            if (aType === 'website' && bType !== 'website') return 1;
+            if (bType === 'website' && aType !== 'website') return -1;
+            
+            return 0;
+          });
+        }
       }
-    }
     
     // Extract HTML title as fallback
     const htmlTitleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
