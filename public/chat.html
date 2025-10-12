@@ -1628,7 +1628,8 @@ function renderAnswer(payload){
   const footer = document.createElement('div');
   footer.className = 'footer-status';
   // Updated confidence thresholds: 80%+ green, 50%+ amber, below 50% red
-  footer.innerHTML = `<span id="conf-pill" class="badge conf small ${__rounded>=80?'green':__rounded>=50?'amber':'red'}">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+  const confId = `conf-pill-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  footer.innerHTML = `<span id="${confId}" class="badge conf small ${__rounded>=80?'green':__rounded>=50?'amber':'red'}">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
   thread.appendChild(footer);
 
   // Add feedback buttons
@@ -1662,7 +1663,7 @@ function renderAnswer(payload){
   });
 
   // Clickable reasoning popover
-  const confEl = document.getElementById('conf-pill');
+  const confEl = document.getElementById(confId);
   if (confEl) {
     confEl.addEventListener('click', ()=>{
       const old = document.getElementById('reason-pop'); if (old) old.remove();
