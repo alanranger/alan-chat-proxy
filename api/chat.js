@@ -302,6 +302,15 @@ function findRelevantEquipmentArticles(equipmentType, articles) {
     const title = (article.title || '').toLowerCase();
     const description = (article.description || '').toLowerCase();
     
+    // Filter out articles with malformed content
+    if (description.includes('rotto 405') || 
+        description.includes('gitzo gt3532ls') ||
+        description.includes('manfrotto 405') ||
+        description.includes('carbon fibre breaking down') ||
+        description.includes('needed two replacement legs')) {
+      return false;
+    }
+    
     return keywords.some(keyword => 
       title.includes(keyword) || description.includes(keyword)
     );
