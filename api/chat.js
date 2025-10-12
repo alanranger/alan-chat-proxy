@@ -2003,116 +2003,21 @@ export default async function handler(req, res) {
       let best = null; for (const [,v] of grouped){ if (!best || v.score>best.score) best = v; }
       const firstEvent = (filteredEvents.length ? filteredEvents : events)?.[0];
       let product = null;
-      // PRIMARY: use the first (most relevant) event as the product
-      // Fetch and clean the structured content from page_chunks for the frontend extractFacts function to parse
-      if (firstEvent) {
-        // Get the product URL to fetch page content
-        const productUrl = firstEvent.product_url || firstEvent.page_url;
-        
-        // Fetch page content from page_chunks and extract clean structured content
-        let pageContent = '';
-        if (productUrl) {
-          const { data: chunks } = await client
-            .from('page_chunks')
-            .select('chunk_text')
-            .eq('url', productUrl)
-            .limit(3);
-          
-          if (chunks && chunks.length > 0) {
-            // Combine chunks and extract the structured summary section
-            const fullContent = chunks.map(chunk => chunk.chunk_text).join(' ');
-            
-            // Look for the structured summary section that contains Location, Participants, Fitness
-            const summaryMatch = fullContent.match(/SUMMARY\s*\*\s*Location:[^*]+\*\s*Dates:[^*]+\*\s*Participants:[^*]+\*\s*Fitness:[^*]+/i);
-            if (summaryMatch) {
-              // Clean up the summary section - extract just the key details
-              const summary = summaryMatch[0];
-              const locationMatch = summary.match(/Location:\s*([^*]+)/i);
-              const participantsMatch = summary.match(/Participants:\s*([^*]+)/i);
-              const fitnessMatch = summary.match(/Fitness:\s*([^*]+)/i);
-              
-              const parts = [];
-              if (locationMatch) parts.push(`• Location: ${locationMatch[1].trim()}`);
-              if (participantsMatch) parts.push(`• Participants: ${participantsMatch[1].trim()}`);
-              if (fitnessMatch) parts.push(`• Fitness: ${fitnessMatch[1].trim()}`);
-              
-              pageContent = parts.join('\n');
-            } else {
-              // Fallback: try to find individual structured content patterns
-              const parts = [];
-              const locationMatch = fullContent.match(/Location:\s*([^•\n]+)/i);
-              const participantsMatch = fullContent.match(/Participants:\s*([^•\n]+)/i);
-              const fitnessMatch = fullContent.match(/Fitness:\s*([^•\n]+)/i);
-              
-              if (locationMatch) parts.push(`• Location: ${locationMatch[1].trim()}`);
-              if (participantsMatch) parts.push(`• Participants: ${participantsMatch[1].trim()}`);
-              if (fitnessMatch) parts.push(`• Fitness: ${fitnessMatch[1].trim()}`);
-              
-              pageContent = parts.join('\n');
-            }
-          }
-        }
-        
+      // PRIMARY: trust Supabase view mapping from the first (most relevant) event
+      if (firstEvent && firstEvent.product_url) {
         product = {
           title: firstEvent.product_title,
           page_url: firstEvent.product_url,
           price: firstEvent.price_gbp,
-          description: pageContent || `Workshop in ${firstEvent.location || firstEvent.event_location || 'Devon'}`,
+          description: `Workshop in ${firstEvent.event_location}`,
           raw: { offers: { lowPrice: firstEvent.price_gbp, highPrice: firstEvent.price_gbp } }
         };
       } else if (best && best.ev && best.score >= 5) { // fallback: semantic best
-        // Get the product URL to fetch page content
-        const productUrl = best.ev.product_url || best.ev.page_url;
-        
-        // Fetch page content from page_chunks and extract clean structured content
-        let pageContent = '';
-        if (productUrl) {
-          const { data: chunks } = await client
-            .from('page_chunks')
-            .select('chunk_text')
-            .eq('url', productUrl)
-            .limit(3);
-          
-          if (chunks && chunks.length > 0) {
-            // Combine chunks and extract the structured summary section
-            const fullContent = chunks.map(chunk => chunk.chunk_text).join(' ');
-            
-            // Look for the structured summary section that contains Location, Participants, Fitness
-            const summaryMatch = fullContent.match(/SUMMARY\s*\*\s*Location:[^*]+\*\s*Dates:[^*]+\*\s*Participants:[^*]+\*\s*Fitness:[^*]+/i);
-            if (summaryMatch) {
-              // Clean up the summary section - extract just the key details
-              const summary = summaryMatch[0];
-              const locationMatch = summary.match(/Location:\s*([^*]+)/i);
-              const participantsMatch = summary.match(/Participants:\s*([^*]+)/i);
-              const fitnessMatch = summary.match(/Fitness:\s*([^*]+)/i);
-              
-              const parts = [];
-              if (locationMatch) parts.push(`• Location: ${locationMatch[1].trim()}`);
-              if (participantsMatch) parts.push(`• Participants: ${participantsMatch[1].trim()}`);
-              if (fitnessMatch) parts.push(`• Fitness: ${fitnessMatch[1].trim()}`);
-              
-              pageContent = parts.join('\n');
-            } else {
-              // Fallback: try to find individual structured content patterns
-              const parts = [];
-              const locationMatch = fullContent.match(/Location:\s*([^•\n]+)/i);
-              const participantsMatch = fullContent.match(/Participants:\s*([^•\n]+)/i);
-              const fitnessMatch = fullContent.match(/Fitness:\s*([^•\n]+)/i);
-              
-              if (locationMatch) parts.push(`• Location: ${locationMatch[1].trim()}`);
-              if (participantsMatch) parts.push(`• Participants: ${participantsMatch[1].trim()}`);
-              if (fitnessMatch) parts.push(`• Fitness: ${fitnessMatch[1].trim()}`);
-              
-              pageContent = parts.join('\n');
-            }
-          }
-        }
-        
         product = {
           title: best.ev.product_title,
           page_url: best.ev.product_url,
           price: best.ev.price_gbp,
-          description: pageContent || `Workshop in ${best.ev.location || best.ev.event_location || 'Devon'}`,
+          description: `Workshop in ${best.ev.event_location}`,
           raw: { offers: { lowPrice: best.ev.price_gbp, highPrice: best.ev.price_gbp } }
         };
       }
