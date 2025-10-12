@@ -980,6 +980,7 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   let q = client
     .from("v_articles_unified")
     .select("id, title, page_url, categories, tags, image_url, publish_date, description, json_ld_data, last_seen, kind, source_type")
+    .order("publish_date", { ascending: false, nullsLast: true }) // Sort newest to oldest
     .limit(limit * 5); // Increased from limit * 3 to get more results
 
   const parts = [];
