@@ -371,12 +371,15 @@ function isEquipmentAdviceQuery(query) {
   const hasEquipment = equipmentKeywords.some(keyword => query.includes(keyword));
   const hasAdvice = adviceKeywords.some(keyword => query.includes(keyword));
   
+  console.log(`🔧 isEquipmentAdviceQuery: query="${query}", hasEquipment=${hasEquipment}, hasAdvice=${hasAdvice}`);
+  
   return hasEquipment && hasAdvice;
 }
 
 // Enhanced equipment advice response generator
 function generateEquipmentAdviceResponse(query, articles, contentChunks) {
   console.log(`🔧 generateEquipmentAdviceResponse: Processing equipment advice query="${query}"`);
+  console.log(`🔧 generateEquipmentAdviceResponse: Articles available=${articles.length}`);
   
   // Extract equipment type from query
   const equipmentType = extractEquipmentType(query);
@@ -385,6 +388,12 @@ function generateEquipmentAdviceResponse(query, articles, contentChunks) {
   // Find relevant articles for this equipment type
   const relevantArticles = findRelevantEquipmentArticles(equipmentType, articles);
   console.log(`🔧 generateEquipmentAdviceResponse: Found ${relevantArticles.length} relevant articles`);
+  
+  // If no relevant articles found, return a basic response
+  if (relevantArticles.length === 0) {
+    console.log(`🔧 generateEquipmentAdviceResponse: No relevant articles found, returning basic response`);
+    return generateBasicEquipmentAdvice(equipmentType);
+  }
   
   // Extract key considerations from articles
   const keyConsiderations = extractKeyConsiderations(relevantArticles, contentChunks);
@@ -553,6 +562,30 @@ function addSpecificAdvice(equipmentType, considerations) {
   };
   
   return adviceMap[equipmentType] || 'Consider your specific photography needs and budget when making your choice. ';
+}
+
+// Generate basic equipment advice when no relevant articles are found
+function generateBasicEquipmentAdvice(equipmentType) {
+  const equipmentNames = {
+    'tripod': 'tripod',
+    'camera': 'camera',
+    'lens': 'lens',
+    'filter': 'filter',
+    'flash': 'flash',
+    'bag': 'camera bag',
+    'memory card': 'memory card',
+    'laptop': 'laptop',
+    'software': 'editing software'
+  };
+  
+  const equipmentName = equipmentNames[equipmentType] || equipmentType;
+  
+  let response = `**Equipment Recommendations:**\n\n`;
+  response += `Choosing the right ${equipmentName} depends on several factors: your budget, intended usage, and photography style. `;
+  response += addSpecificAdvice(equipmentType, {});
+  response += `\n\nFor detailed reviews and specific recommendations, check out Alan's photography guides on his blog.`;
+  
+  return response;
 }
 
 function generateDirectAnswer(query, articles, contentChunks = []) {
