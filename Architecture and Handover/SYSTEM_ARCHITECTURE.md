@@ -293,6 +293,35 @@ CSV Upload → Bulk Processing → Entity Mapping → View Refresh → Chat Read
    - **Solution**: Run full ingestion to update all content with new JSON-LD prioritization
 3. **Vercel Caching** - API responses may be cached, requiring force redeploy to see database updates
    - **Solution**: Use `git commit --allow-empty` to force Vercel redeploy when database changes are made
+4. **Equipment Advice Response Quality** - Equipment advice queries return raw scraped content instead of synthesized advice
+   - **Root Cause**: `generateDirectAnswer` function not properly synthesizing content from multiple articles
+   - **Current Issue**: Responses like "rotto 405 Pro Geared Head..." instead of natural advice framework
+   - **Solution**: Implement enhanced equipment advice synthesis in `api/chat.js`
+
+### **🔧 Equipment Advice Improvement Plan**
+
+#### **Current Problem**
+Equipment advice queries (e.g., "what tripod do you recommend") return:
+- ❌ Raw scraped content: "rotto 405 Pro Geared Head - Gitzo GT3532LS Legs..."
+- ❌ Missing natural advice framework
+- ❌ No synthesis of insights from multiple articles
+
+#### **Target Solution**
+Generate responses that:
+- ✅ Start with advice framework: "Choosing the right [equipment] depends on several factors..."
+- ✅ Synthesize key considerations from multiple articles (budget, weight, usage, terrain)
+- ✅ Provide specific recommendations as supporting details
+- ✅ Reference related articles for detailed information
+
+#### **Implementation Strategy**
+1. **Equipment Query Detection** - Identify equipment advice queries in `generateDirectAnswer`
+2. **Content Synthesis** - Combine insights from multiple articles into coherent advice
+3. **Response Structure** - Framework → Considerations → Recommendations → References
+4. **Testing** - Validate with various equipment queries
+
+#### **Expected Outcome**
+**Instead of:** "rotto 405 Pro Geared Head - Gitzo GT3532LS Legs..."
+**We get:** "Choosing the right tripod depends on several factors: your usage terrain, budget, weight requirements, and height needs. For landscape photography, you'll want something sturdy but portable. For travel, weight becomes crucial. Based on my experience, I recommend considering the Manfrotto 405 Pro Geared Head with Gitzo GT3532LS legs for serious landscape work, though the weight can be a consideration for longer hikes. For more detailed comparisons and specific recommendations, check out my articles on lightweight tripods and the Benro vs Gitzo vs Manfrotto comparison."
 
 ### **🧪 Testing Commands**
 ```sql
@@ -322,6 +351,7 @@ node test-lightroom-course.js
 1. **Test live chat** - Verify all 5 bullet points display correctly in product cards
 2. **Refine extraction patterns** - If `equipment_needed`/`experience_level` still show `null`, debug regex patterns
 3. **Run full ingestion** - Update all content with new JSON-LD prioritization
+4. **Improve equipment advice responses** - Implement enhanced synthesis for equipment advice queries
 4. **Monitor performance** - Check if structured data extraction impacts ingestion speed
 
 ### **📞 Emergency Contacts**

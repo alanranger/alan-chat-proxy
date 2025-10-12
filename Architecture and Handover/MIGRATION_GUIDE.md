@@ -215,6 +215,10 @@ This migration approach fixes the root cause by ensuring structured data is extr
    - **Fix**: Run full ingestion to update with new JSON-LD prioritization
 3. **Vercel Caching** - API responses may be cached, requiring force redeploy to see database updates
    - **Fix**: Use `git commit --allow-empty` to force Vercel redeploy when database changes are made
+4. **Equipment Advice Response Quality** - Equipment advice queries return raw scraped content instead of synthesized advice
+   - **Location**: `api/chat.js` `generateDirectAnswer` function
+   - **Current Issue**: Responses like "rotto 405 Pro Geared Head..." instead of natural advice framework
+   - **Fix**: Implement enhanced equipment advice synthesis
 
 ### **🧪 QUICK TEST COMMANDS**
 ```bash
@@ -244,6 +248,13 @@ FROM page_entities WHERE kind = 'product' LIMIT 5;
 git commit --allow-empty -m "Force Vercel redeploy to clear cache"
 git push
 ```
+
+### **🔧 NEXT DEVELOPMENT PRIORITIES**
+1. **Improve Equipment Advice Responses** - Implement enhanced synthesis for equipment advice queries
+   - **Target**: `api/chat.js` `generateDirectAnswer` function
+   - **Goal**: Natural advice framework instead of raw scraped content
+2. **Refine Equipment/Experience Extraction** - Debug regex patterns for missing fields
+3. **Run Full Ingestion** - Update all content with new JSON-LD prioritization
 
 ### **🚨 EMERGENCY ROLLBACK**
 If issues arise:
