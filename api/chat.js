@@ -446,8 +446,19 @@ function findRelevantEquipmentArticles(equipmentType, articles) {
   const keywords = equipmentKeywords[equipmentType] || [equipmentType];
   
   return articles.filter(article => {
+    if (!article) return false;
+    
     const title = (article.title || '').toLowerCase();
     const description = (article.description || '').toLowerCase();
+    
+    // Filter out articles with malformed content
+    if (description.includes('rotto 405') || 
+        description.includes('gitzo gt3532ls') ||
+        description.includes('manfrotto 405') ||
+        description.includes('carbon fibre breaking down') ||
+        description.includes('needed two replacement legs')) {
+      return false;
+    }
     
     return keywords.some(keyword => 
       title.includes(keyword) || description.includes(keyword)
@@ -587,6 +598,8 @@ function generateBasicEquipmentAdvice(equipmentType) {
   
   return response;
 }
+
+
 
 function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
@@ -903,9 +916,9 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     return `**Privacy and Data Protection**: Alan Ranger Photography has comprehensive privacy and cookie policies. When you subscribe to the newsletter, you'll receive an email to verify and confirm your subscription. Full privacy details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   
-  // Equipment recommendations
-  if (lc.includes("tripod") || lc.includes("equipment") || lc.includes("camera") || lc.includes("lens") || lc.includes("gear")) {
-    return `**Equipment Recommendations**: Alan Ranger Photography provides professional equipment recommendations including lightweight tripods, cameras, and lenses. For detailed equipment guides and Amazon affiliate links, visit the [Equipment Recommendations page](https://www.alanranger.com/photography-equipment-recommendations).\n\n`;
+  // Enhanced Equipment Advice - Check if this is an equipment recommendation query
+  if (isEquipmentAdviceQuery(lc)) {
+    return generateEquipmentAdviceResponse(lc, articles, contentChunks);
   }
   
   // Private lessons and mentoring
