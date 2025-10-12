@@ -194,11 +194,16 @@ This migration approach fixes the root cause by ensuring structured data is extr
 2. **Structured Data Extraction** - All 10 fields extracted during ingestion
 3. **Product Card Integration** - Chat API includes structured data in product objects
 4. **Database View Updates** - `v_events_for_chat` includes product mappings and structured data
+5. **Location Address Over-capture Fix** - Fixed regex patterns to stop at * delimiter (December 2025)
+6. **Time Schedule & Duration Fixes** - Fixed "out duration in milliseconds" issues with proper regex patterns (December 2025)
+7. **Product Card Styling Updates** - Updated bullet points to white while keeping labels green (December 2025)
+8. **Vercel Cache Management** - Implemented force redeploy strategy for database updates (December 2025)
 
 ### **🔧 CRITICAL FILES TO KNOW**
-- **`api/ingest.js`** - Main ingestion logic with JSON-LD prioritization
-- **`api/chat.js`** - Chat API with product enrichment (lines 2087-2097)
-- **`lib/htmlExtractor.js`** - Structured data extraction patterns
+- **`api/ingest.js`** - Main ingestion logic with JSON-LD prioritization, batch processing optimization
+- **`api/chat.js`** - Chat API with product enrichment, malformed text filtering
+- **`lib/htmlExtractor.js`** - Structured data extraction patterns, location/time regex fixes
+- **`public/chat.html`** - Product card styling, meaningless value filtering, bullet point styling
 - **`v_events_for_chat`** - Database view for events with product mappings
 
 ### **⚠️ KNOWN ISSUES**
@@ -207,17 +212,29 @@ This migration approach fixes the root cause by ensuring structured data is extr
    - **Fix**: Test patterns against actual page content
 2. **Data Freshness** - Some articles have old descriptions
    - **Fix**: Run full ingestion to update with new JSON-LD prioritization
+3. **Vercel Caching** - API responses may be cached, requiring force redeploy to see database updates
+   - **Fix**: Use `git commit --allow-empty` to force Vercel redeploy when database changes are made
 
 ### **🧪 QUICK TEST COMMANDS**
 ```bash
-# Test live chat
+# Test live chat - Beginners course
 curl -X POST "https://alan-chat-proxy.vercel.app/api/chat" \
   -H "Content-Type: application/json" \
-  -d '{"query": "woodland photography workshop"}'
+  -d '{"query": "beginners photography course"}'
 
-# Test database
-SELECT url, participants, fitness_level, equipment_needed, experience_level 
+# Test live chat - Lightroom course
+curl -X POST "https://alan-chat-proxy.vercel.app/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "when is the next lightroom course"}'
+
+# Test database - Check structured data
+SELECT url, participants, fitness_level, equipment_needed, experience_level, 
+       time_schedule, course_duration, location_address
 FROM page_entities WHERE kind = 'product' LIMIT 5;
+
+# Force Vercel redeploy (if database changes not reflected)
+git commit --allow-empty -m "Force Vercel redeploy to clear cache"
+git push
 ```
 
 ### **🚨 EMERGENCY ROLLBACK**
@@ -234,4 +251,4 @@ If issues arise:
 - **Keep test commands current** - Update SQL queries and curl commands
 - **Date all updates** - Use "Month YYYY" format for tracking
 
-**Last Updated**: October 2025
+**Last Updated**: December 2025 (Location address over-capture fix, time/duration fixes, product card styling updates, Vercel cache management)

@@ -208,6 +208,10 @@ CSV Upload → Bulk Processing → Entity Mapping → View Refresh → Chat Read
 - **Duplicate entities** - Fixed ingestion creating multiple entities per URL with conflicting descriptions
 - **Structured data extraction** - Enhanced regex patterns for 10 structured data fields (participants, experience_level, equipment_needed, etc.)
 - **Product card bullet points** - Fixed chat API to include all structured data fields in product objects (October 2025)
+- **HTML-based description generation** - Fixed blog articles to generate descriptions from actual HTML content instead of AI-generated JSON-LD (October 2025)
+- **Location address over-capture** - Fixed regex patterns to stop at * delimiter instead of capturing Participants/Time text (December 2025)
+- **Time schedule and duration fixes** - Fixed "out duration in milliseconds" and "in milliseconds" issues with proper regex patterns (December 2025)
+- **Product card styling** - Updated bullet points to white while keeping labels green for better visual hierarchy (December 2025)
 
 ### **Remaining Issues**
 - **Data freshness** - Some articles may still have old incorrect descriptions until next ingestion
@@ -268,9 +272,10 @@ CSV Upload → Bulk Processing → Entity Mapping → View Refresh → Chat Read
 4. **Updated Database Views** - `v_events_for_chat` now properly maps events to products with structured data
 
 ### **🔧 Key Files Modified**
-- **`api/ingest.js`** - JSON-LD prioritization logic, single entity per URL
-- **`api/chat.js`** - Product enrichment to include structured data fields
-- **`lib/htmlExtractor.js`** - Enhanced regex patterns for structured data extraction
+- **`api/ingest.js`** - JSON-LD prioritization logic, single entity per URL, batch processing optimization
+- **`api/chat.js`** - Product enrichment to include structured data fields, malformed text filtering
+- **`lib/htmlExtractor.js`** - Enhanced regex patterns for structured data extraction, location/time regex fixes
+- **`public/chat.html`** - Product card styling updates, meaningless value filtering, bullet point styling
 - **`v_events_for_chat`** - Database view updated to include product mappings and structured data
 
 ### **⚠️ Known Issues for Future Development**
@@ -279,6 +284,8 @@ CSV Upload → Bulk Processing → Entity Mapping → View Refresh → Chat Read
    - **Solution**: Test extraction patterns against actual page content and adjust regex
 2. **Data Freshness** - Some articles may have old incorrect descriptions until next ingestion
    - **Solution**: Run full ingestion to update all content with new JSON-LD prioritization
+3. **Vercel Caching** - API responses may be cached, requiring force redeploy to see database updates
+   - **Solution**: Use `git commit --allow-empty` to force Vercel redeploy when database changes are made
 
 ### **🧪 Testing Commands**
 ```sql
@@ -314,4 +321,4 @@ WHERE url = 'https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-p
 - **Update testing commands** - Keep SQL queries and test commands current
 - **Date all updates** - Use format "Month YYYY" for tracking changes
 
-**Last Updated**: October 2025
+**Last Updated**: December 2025 (Location address over-capture fix, time/duration fixes, product card styling updates)
