@@ -1220,7 +1220,10 @@ async function getArticleAuxLinks(client, articleUrl) {
                 text.match(/>([^<]{3,60})<\/a>/i) ||
                 text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
             if (labelMatch && labelMatch[1]) {
-              result.relatedLabel = labelMatch[1].trim();
+              let cleanLabel = labelMatch[1].trim();
+              // Clean up malformed labels (remove trailing brackets, etc.)
+              cleanLabel = cleanLabel.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
+              result.relatedLabel = cleanLabel;
               } else {
                 // Generate a clean label from the URL path
                 try {
@@ -1590,13 +1593,13 @@ function formatEventsForUi(events) {
   return (events || [])
     .map((e) => ({
       ...e,
-      title: e.event_title,
-      when: fmtDateLondon(e.date_start),
-      location: e.event_location,
-      href: e.event_url,
+      title: e.title || e.event_title,
+      when: fmtDateLondon(e.start_date || e.date_start),
+      location: e.location_name || e.event_location,
+      href: e.page_url || e.event_url,
       // Pass-through commonly used fields for time rendering
-      date_start: e.date_start,
-      date_end: e.date_end,
+      date_start: e.start_date || e.date_start,
+      date_end: e.end_date || e.date_end,
       _csv_start_time: e._csv_start_time || e.start_time || null,
       _csv_end_time: e._csv_end_time || e.end_time || null,
     }))
@@ -1855,7 +1858,7 @@ export default async function handler(req, res) {
       const significant = (keywords || []).find(k => k && !GENERIC_EVENT_TERMS.has(String(k).toLowerCase()) && String(k).length >= 4);
       const matchEvent = (e, term)=>{
         const t = term.toLowerCase();
-        const hay = `${e.event_title||''} ${e.product_title||''} ${e.event_location||''}`.toLowerCase();
+        const hay = `${e.title||e.event_title||''} ${e.product_title||''} ${e.location_name||e.event_location||''}`.toLowerCase();
         return hay.includes(t);
       };
       const filteredEvents = significant ? events.filter(e => matchEvent(e, significant)) : events;
@@ -1867,7 +1870,7 @@ export default async function handler(req, res) {
       const scoreProduct = (ev)=>{
         const pt = String(ev.product_title||'').toLowerCase();
         const pu = String(ev.product_url||'').toLowerCase();
-        const et = String(ev.event_title||'').toLowerCase();
+        const et = String(ev.title||ev.event_title||'').toLowerCase();
         let s = 0;
         // keyword overlap in product title/url
         kwSet.forEach(k=>{ if(!k) return; if(pt.includes(k)) s+=5; if(pu.includes(k)) s+=2; });
@@ -1893,7 +1896,7 @@ export default async function handler(req, res) {
           title: firstEvent.product_title,
           page_url: firstEvent.product_url,
           price: firstEvent.price_gbp,
-          description: `Workshop in ${firstEvent.event_location}`,
+          description: `Workshop in ${firstEvent.location_name || firstEvent.event_location}`,
           raw: { offers: { lowPrice: firstEvent.price_gbp, highPrice: firstEvent.price_gbp } }
         };
       } else if (best && best.ev && best.score >= 5) { // fallback: semantic best
@@ -1901,7 +1904,7 @@ export default async function handler(req, res) {
           title: best.ev.product_title,
           page_url: best.ev.product_url,
           price: best.ev.price_gbp,
-          description: `Workshop in ${best.ev.event_location}`,
+          description: `Workshop in ${best.ev.location_name || best.ev.event_location}`,
           raw: { offers: { lowPrice: best.ev.price_gbp, highPrice: best.ev.price_gbp } }
         };
       }
@@ -2056,10 +2059,20 @@ export default async function handler(req, res) {
     
     // Get all relevant data types for comprehensive responses
     let articles = await findArticles(client, { keywords, limit: 30, pageContext });
-    let events = await findEvents(client, { keywords, limit: 20, pageContext });
     
-    // For advice intent, search all product types (no course filtering since courses are events)
-    let products = await findProducts(client, { keywords, limit: 20, pageContext });
+    // Only search for events/products if the query is about workshops, courses, or equipment recommendations
+    const qlc = (query || "").toLowerCase();
+    const isEventRelatedQuery = qlc.includes("workshop") || qlc.includes("course") || qlc.includes("class") || 
+                               qlc.includes("equipment") || qlc.includes("recommend") || qlc.includes("tripod") ||
+                               qlc.includes("camera") || qlc.includes("lens") || qlc.includes("gear");
+    
+    let events = [];
+    let products = [];
+    
+    if (isEventRelatedQuery) {
+      events = await findEvents(client, { keywords, limit: 20, pageContext });
+      products = await findProducts(client, { keywords, limit: 20, pageContext });
+    }
     
     // De-duplicate and enrich titles
     articles = await dedupeAndEnrichArticles(client, articles);
@@ -2080,26 +2093,33 @@ export default async function handler(req, res) {
       const technicalConcepts = [
         "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
         "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
-        "raw", "jpeg", "hdr", "focal length", "long exposure", "focal", "balance", "bracketing"
+        "raw", "jpeg", "hdr", "focal length", "long exposure", "focal", "balance", "bracketing",
+        "manual", "negative space", "contrast", "framing", "filters", "lens", "camera"
       ];
       const hasTechnical = technicalConcepts.some(c => qlcRank.includes(c));
       
       if (hasTechnical && isOnlineCourse) {
-        s += 20; // Major boost for online course content on technical topics
+        s += 25; // Increased boost for online course content on technical topics
         
         // Extra boost for "What is..." format articles
         if (title.includes("what is") && technicalConcepts.some(c => title.includes(c))) {
-          s += 15;
+          s += 20; // Increased boost
         }
         
         // Boost for PDF checklists and guides
         if (title.includes("pdf") || title.includes("checklist") || title.includes("guide")) {
-          s += 10;
+          s += 15; // Increased boost
         }
         
         // Boost for beginner guides
         if (title.includes("guide for beginners") || title.includes("guide for beginner")) {
-          s += 8;
+          s += 12; // Increased boost
+        }
+        
+        // Extra boost for exact term matches in title
+        const exactTerm = qlcRank.replace(/^what\s+is\s+/, "").trim();
+        if (title.toLowerCase().includes(exactTerm)) {
+          s += 30; // Major boost for exact term matches
         }
       }
       
@@ -2244,6 +2264,13 @@ export default async function handler(req, res) {
     const lines = [];
     let confidence = 0.4; // Base confidence for advice questions
     let hasEvidenceBasedAnswer = false;
+    
+    // Boost confidence for technical questions with good article matches
+    const isTechnicalQuery = qlc.includes("what is") || qlc.includes("what are") || qlc.includes("how does");
+    const hasOnlineCourseArticles = articles.some(a => a.categories?.includes("online photography course"));
+    if (isTechnicalQuery && hasOnlineCourseArticles && articles.length > 0) {
+      confidence = Math.min(0.85, 0.4 + (articles.length * 0.1)); // Boost confidence for technical queries
+    }
     
       if (articles?.length) {
       // Equipment advice lane - synthesize evidence-based recommendations
