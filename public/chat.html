@@ -1250,22 +1250,62 @@ function pickArticles(structured, query, topic){
   const q = String(query||'').toLowerCase();
   const toks = tokenize2(q);
   const KEY_BONUS = new Set(['tripod','tripods','head','ballhead','levelling','recommend','recommendation','recommendations','equipment']);
+  
   const score = (a)=>{
     const title = (articleTitle(a)||'').toLowerCase();
     const url = (articleUrl(a)||'').toLowerCase();
     let s = 0;
-    for (const t of toks){ if (!t) continue; if (title.includes(t)) s += 3; if (url.includes(t)) s += 2; }
-    for (const k of KEY_BONUS){ if (title.includes(k) || url.includes(k)) s += 5; }
-    // Prefer newer content slightly
-    const seen = Date.parse(a.last_seen||''); if (!isNaN(seen)) s += Math.min(5, Math.max(0, (Date.now()-seen)/(1000*60*60*24) < 365 ? 3 : 0));
+    
+    // Major bonus for exact topic match in title
+    for (const t of toks){ 
+      if (!t) continue; 
+      if (title.includes(t)) s += 10; // Increased from 3 to 10
+      if (url.includes(t)) s += 5;   // Increased from 2 to 5
+    }
+    
+    // Bonus for equipment-related keywords
+    for (const k of KEY_BONUS){ 
+      if (title.includes(k) || url.includes(k)) s += 5; 
+    }
+    
+    // Penalty for PDFs - prefer actual blog articles
+    if (title.includes('pdf') || title.includes('checklist') || a.json_ld_data?.['@type'] === 'TextDigitalDocument') {
+      s -= 15; // Heavy penalty for PDFs
+    }
+    
+    // Bonus for main blog articles (those with FAQPage structure)
+    if (a.json_ld_data?.['@type'] === 'FAQPage') {
+      s += 20; // Major bonus for main blog articles
+    }
+    
     return s;
   };
-  return all
+  
+  // First, score and sort by relevance
+  const scored = all
     .filter(a => articleUrl(a) && articleTitle(a))
     .map(a => ({ a, s: score(a) }))
-    .sort((x,y)=> y.s - x.s)
-    .slice(0,6)
-    .map(x=>x.a);
+    .sort((x,y)=> y.s - x.s);
+  
+  // Then, within each score group, sort by date (newest first)
+  const grouped = {};
+  scored.forEach(({a, s}) => {
+    if (!grouped[s]) grouped[s] = [];
+    grouped[s].push(a);
+  });
+  
+  // Sort each group by date (newest first) and flatten
+  const result = [];
+  Object.keys(grouped).sort((a,b) => b - a).forEach(score => {
+    const articles = grouped[score].sort((x, y) => {
+      const dateX = new Date(x.publish_date || x.last_seen || 0);
+      const dateY = new Date(y.publish_date || y.last_seen || 0);
+      return dateY - dateX; // Newest first
+    });
+    result.push(...articles);
+  });
+  
+  return result.slice(0,6);
 }
 function renderArticlesBlock(structured, query){
   // Skip articles block for simple follow-up questions (but not for legitimate technical/advice queries)
