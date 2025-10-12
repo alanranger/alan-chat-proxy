@@ -1268,12 +1268,17 @@ function pickArticles(structured, query, topic){
     .map(x=>x.a);
 }
 function renderArticlesBlock(structured, query){
-  // Skip articles block for simple follow-up questions (but not for legitimate event queries)
+  // Skip articles block for simple follow-up questions (but not for legitimate technical/advice queries)
   const isSimpleFollowUp = query && (
     /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
     !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost') &&
     !query.includes('workshop') && !query.includes('course') && !query.includes('event') && !query.includes('class') &&
-    !query.includes('recommend') && !query.includes('equipment') && !query.includes('tripod')
+    !query.includes('recommend') && !query.includes('equipment') && !query.includes('tripod') &&
+    // Don't skip technical photography questions
+    !query.includes('iso') && !query.includes('aperture') && !query.includes('shutter') && !query.includes('exposure') &&
+    !query.includes('depth') && !query.includes('field') && !query.includes('contrast') && !query.includes('framing') &&
+    !query.includes('negative') && !query.includes('space') && !query.includes('manual') && !query.includes('mirrorless') &&
+    !query.includes('dslr') && !query.includes('camera') && !query.includes('photography') && !query.includes('photo')
   );
   if (isSimpleFollowUp) return '';
   
