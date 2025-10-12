@@ -1035,8 +1035,6 @@ function isMeaninglessValue(value) {
   // Check if it's just a single character or very short, but NOT a valid number
   if (val.length <= 2 && !/^\d+$/.test(val)) return true;
   
-  // Check if it contains only numbers and common meaningless words
-  if (/^[\d\s\.\-_]+$/.test(val)) return true;
   
   // Check if it's just punctuation or special characters
   if (/^[^\w\s]+$/.test(val)) return true;
