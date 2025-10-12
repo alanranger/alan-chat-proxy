@@ -360,6 +360,50 @@ function extractKeyConsiderations(articles, contentChunks) {
     }
   });
   
+  // Extract from content chunks (with malformed content filtering)
+  if (contentChunks && contentChunks.length > 0) {
+    contentChunks.forEach(chunk => {
+      const chunkText = (chunk.chunk_text || chunk.content || '').toLowerCase();
+      
+      // Filter out malformed content
+      if (chunkText.includes('rotto 405') || 
+          chunkText.includes('gitzo gt3532ls') ||
+          chunkText.includes('manfrotto 405') ||
+          chunkText.includes('carbon fibre breaking down') ||
+          chunkText.includes('needed two replacement legs') ||
+          chunkText.includes('specific recommendations') ||
+          chunkText.includes('brand comparisons') ||
+          chunkText.includes('setup tips')) {
+        return; // Skip this chunk
+      }
+      
+      // Budget considerations
+      if (chunkText.includes('budget') || chunkText.includes('price') || chunkText.includes('cost') || chunkText.includes('affordable')) {
+        considerations.budget.push('Budget considerations from content');
+      }
+      
+      // Weight considerations
+      if (chunkText.includes('weight') || chunkText.includes('lightweight') || chunkText.includes('heavy') || chunkText.includes('portable')) {
+        considerations.weight.push('Weight considerations from content');
+      }
+      
+      // Usage considerations
+      if (chunkText.includes('landscape') || chunkText.includes('portrait') || chunkText.includes('travel') || chunkText.includes('studio')) {
+        considerations.usage.push('Usage considerations from content');
+      }
+      
+      // Terrain considerations
+      if (chunkText.includes('terrain') || chunkText.includes('hiking') || chunkText.includes('outdoor') || chunkText.includes('weather')) {
+        considerations.terrain.push('Terrain considerations from content');
+      }
+      
+      // Experience level
+      if (chunkText.includes('beginner') || chunkText.includes('advanced') || chunkText.includes('professional') || chunkText.includes('experience')) {
+        considerations.experience.push('Experience level from content');
+      }
+    });
+  }
+  
   return considerations;
 }
 
