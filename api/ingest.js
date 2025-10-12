@@ -242,7 +242,7 @@ async function fetchPage(url) {
 
 /* ========== JSON-LD extraction ========== */
 function extractJSONLD(html) {
-  const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>(.*?)<\/script>/gis);
+  const jsonLdMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gis);
   if (!jsonLdMatches) return null;
   
   const jsonLdObjects = [];
