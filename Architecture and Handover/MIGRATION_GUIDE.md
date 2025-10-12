@@ -25,29 +25,46 @@ The Alan Ranger Photography Chat Bot uses a **hybrid data approach** combining:
 
 ## 🔄 **Current Data Flow**
 
-### **1. Data Ingestion Pipeline**
-```
-CSV Files → csv_metadata → Enhanced with web scraping → page_entities
-     ↓              ↓              ↓              ↓
-Website URLs → HTML Extraction → JSON-LD Parsing → Structured Data
-     ↓              ↓              ↓              ↓
-Content Pages → Text Chunking → Embeddings → page_chunks
-```
+### **STEP 1: CSV IMPORT → csv_metadata table**
+Seven CSV types are imported into the `csv_metadata` table:
+- **Blog Articles (01)** → `csv_metadata.csv_type='blog'`
+- **Course Events (02)** → `csv_metadata.csv_type='course_events'`
+- **Workshop Events (03)** → `csv_metadata.csv_type='workshop_events'`
+- **Course Products (04)** → `csv_metadata.csv_type='course_products'`
+- **Workshop Products (05)** → `csv_metadata.csv_type='workshop_products'`
+- **Site URLs (06)** → `csv_metadata.csv_type='site_urls'`
+- **Product Schema (07)** → `csv_metadata.csv_type='product_schema'`
 
-### **2. Chat Query Processing**
-```
-User Query → Intent Detection → Data Retrieval → Response Generation
-     ↓              ↓              ↓              ↓
-  Chat API → Topic Analysis → Supabase Views → Markdown Response
-```
+### **STEP 2: ENHANCED INGEST → page_entities table**
+Four sub-steps in the ingestion process:
+1. **Fetch HTML** for all URLs → `page_html` table
+2. **Extract text and JSON-LD** from HTML content
+3. **Create page_chunks** with CSV context and embeddings
+4. **Enhance page_entities** with CSV metadata and structured data extraction
 
-## 🚨 **Current Issues to Address**
+### **STEP 3: EXISTING VIEWS (Enhanced with CSV data)**
+Four main database views filter `page_entities` by `kind` attribute:
+- **`v_blog_content`** → Uses `page_entities` WHERE `kind='article'`
+- **`v_service_content`** → Uses `page_entities` WHERE `kind='service'`
+- **`v_product_content`** → Uses `page_entities` WHERE `kind='product'`
+- **`v_events_for_chat`** → Uses `page_entities` WHERE `kind='event'`
 
-### **1. Missing Structured Data Fields**
-The ingestion process is not extracting structured data from page content:
-- ✅ **Database schema updated** - All 10 structured data fields now exist in tables and views
-- ❌ **Data extraction needed** - Fields exist but are NULL (need ingestion process enhancement)
-- ❌ **Frontend parsing** - Still relying on frontend parsing instead of database fields
+### **STEP 4: CHAT SYSTEM (Unchanged)**
+Three main functions query the enhanced `page_entities` table:
+- **`findArticles()`** → Queries `v_articles_unified` view (now with CSV metadata)
+- **`findProducts()`** → Queries `page_entities` table (now with CSV metadata)
+- **`findEvents()`** → Queries `page_entities` table (now with CSV metadata)
+
+**All existing chat logic works unchanged** - the enhanced data is transparent to the frontend.
+
+## ✅ **Migration Status: COMPLETE**
+
+### **1. Structured Data Fields - RESOLVED**
+The ingestion process now extracts structured data from page content:
+- ✅ **Database schema updated** - All 10 structured data fields exist in tables and views
+- ✅ **Data extraction implemented** - Enhanced `lib/htmlExtractor.js` extracts structured data
+- ✅ **Ingestion process enhanced** - `api/ingest.js` populates structured data fields
+- ✅ **Frontend parsing eliminated** - Rich product cards now use database fields
 
 ### **2. Data Source Inconsistency**
 - **Event data** comes from `v_events_for_chat` (has all structured fields but they're NULL)

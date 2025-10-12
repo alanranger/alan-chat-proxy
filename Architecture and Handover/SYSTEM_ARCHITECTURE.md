@@ -8,46 +8,69 @@ The Alan Ranger Photography Chat Bot is a **RAG (Retrieval-Augmented Generation)
 
 ## 📊 **Current Data Flow Architecture**
 
-### **1. Data Ingestion Pipeline**
-```
-CSV Files → csv_metadata → Enhanced with web scraping → page_entities
-     ↓              ↓              ↓              ↓
-Website URLs → HTML Extraction → JSON-LD Parsing → Structured Data
-     ↓              ↓              ↓              ↓
-Content Pages → Text Chunking → Embeddings → page_chunks
-```
+### **STEP 1: CSV IMPORT → csv_metadata table**
+Seven CSV types are imported into the `csv_metadata` table:
+- **Blog Articles (01)** → `csv_metadata.csv_type='blog'`
+- **Course Events (02)** → `csv_metadata.csv_type='course_events'`
+- **Workshop Events (03)** → `csv_metadata.csv_type='workshop_events'`
+- **Course Products (04)** → `csv_metadata.csv_type='course_products'`
+- **Workshop Products (05)** → `csv_metadata.csv_type='workshop_products'`
+- **Site URLs (06)** → `csv_metadata.csv_type='site_urls'`
+- **Product Schema (07)** → `csv_metadata.csv_type='product_schema'`
 
-### **2. Chat Query Processing**
-```
-User Query → Intent Detection → Data Retrieval → Response Generation → Frontend Rendering
-     ↓              ↓              ↓              ↓              ↓
-  Chat API → Topic Analysis → Supabase Views → Markdown Generation → HTML Display
-```
+### **STEP 2: ENHANCED INGEST → page_entities table**
+Four sub-steps in the ingestion process:
+1. **Fetch HTML** for all URLs → `page_html` table
+2. **Extract text and JSON-LD** from HTML content
+3. **Create page_chunks** with CSV context and embeddings
+4. **Enhance page_entities** with CSV metadata and structured data extraction
+
+### **STEP 3: EXISTING VIEWS (Enhanced with CSV data)**
+Four main database views filter `page_entities` by `kind` attribute:
+- **`v_blog_content`** → Uses `page_entities` WHERE `kind='article'`
+- **`v_service_content`** → Uses `page_entities` WHERE `kind='service'`
+- **`v_product_content`** → Uses `page_entities` WHERE `kind='product'`
+- **`v_events_for_chat`** → Uses `page_entities` WHERE `kind='event'`
+
+### **STEP 4: CHAT SYSTEM (Unchanged)**
+Three main functions query the enhanced `page_entities` table:
+- **`findArticles()`** → Queries `v_articles_unified` view (now with CSV metadata)
+- **`findProducts()`** → Queries `page_entities` table (now with CSV metadata)
+- **`findEvents()`** → Queries `page_entities` table (now with CSV metadata)
+
+**All existing chat logic works unchanged** - the enhanced data is transparent to the frontend.
 
 ---
 
 ## 🗄️ **Current Database Schema (Supabase)**
 
 ### **Core Tables**
-- **`csv_metadata`** - Structured metadata from CSV imports
-  - Fields: `id`, `csv_type`, `url`, `title`, `categories`, `tags`, `publish_date`, `start_date`, `end_date`, `start_time`, `end_time`, `location_name`, `location_address`, `excerpt`, `image_url`, `json_ld_data`
-- **`page_entities`** - Structured data from JSON-LD extraction
-  - Fields: `id`, `url`, `kind`, `title`, `description`, `date_start`, `date_end`, `location`, `price`, `price_currency`, `availability`, `sku`, `provider`, `source_url`, `raw`, `entity_hash`, `last_seen`, `page_url`, `norm_title`, `start_date`, `csv_type`, `csv_metadata_id`, `categories`, `tags`, `publish_date`, `location_name`, `location_address`, `excerpt`, `end_date`, `start_time`, `end_time`, `location_city_state_zip`, `image_url`, `json_ld_data`, `workflow_state`
-  - **New Structured Data Fields**: `participants`, `experience_level`, `equipment_needed`, `location_address`, `time_schedule`, `fitness_level`, `what_to_bring`, `course_duration`, `instructor_info`, `availability_status`
+- **`csv_metadata`** - Structured metadata from all 7 CSV imports
+  - **Fields**: `id`, `csv_type`, `url`, `title`, `categories`, `tags`, `publish_date`, `start_date`, `end_date`, `start_time`, `end_time`, `location_name`, `location_address`, `excerpt`, `image_url`, `json_ld_data`, `workflow_state`
+  - **New Structured Data Fields**: `participants`, `experience_level`, `equipment_needed`, `time_schedule`, `fitness_level`, `what_to_bring`, `course_duration`, `instructor_info`, `availability_status`
+- **`page_entities`** - Enhanced structured data from JSON-LD extraction + CSV metadata
+  - **Fields**: `id`, `url`, `kind`, `title`, `description`, `date_start`, `date_end`, `location`, `price`, `price_currency`, `availability`, `sku`, `provider`, `source_url`, `raw`, `entity_hash`, `last_seen`, `page_url`, `norm_title`, `start_date`, `csv_type`, `csv_metadata_id`, `categories`, `tags`, `publish_date`, `location_name`, `location_address`, `excerpt`, `end_date`, `start_time`, `end_time`, `location_city_state_zip`, `image_url`, `json_ld_data`, `workflow_state`
+  - **New Structured Data Fields**: `participants`, `experience_level`, `equipment_needed`, `time_schedule`, `fitness_level`, `what_to_bring`, `course_duration`, `instructor_info`, `availability_status`
 - **`page_chunks`** - Text chunks with embeddings for RAG
-  - Fields: `id`, `url`, `title`, `chunk_text`, `embedding`, `chunk_hash`, `created_at`, `content`, `hash`, `tokens`, `csv_type`, `csv_metadata_id`
+  - **Fields**: `id`, `url`, `title`, `chunk_text`, `embedding`, `chunk_hash`, `created_at`, `content`, `hash`, `tokens`, `csv_type`, `csv_metadata_id`
+- **`page_html`** - Raw HTML content for structured data extraction
+  - **Fields**: `id`, `url`, `html_content`, `content_hash`, `created_at`, `updated_at`
 - **`light_refresh_runs`** - Logs for automated refresh system
 - **`url_last_processed`** - Change detection for incremental updates
 
 ### **Key Views**
-- **`v_events_for_chat`** - Combined event data with pricing and availability
-  - Fields: `event_url`, `subtype`, `product_url`, `product_title`, `price_gbp`, `availability`, `date_start`, `date_end`, `start_time`, `end_time`, `event_location`, `map_method`, `confidence`, `participants`, `fitness_level`, `event_title`, `json_price`, `json_availability`, `price_currency`
+- **`v_events_for_chat`** - Main events view for chat system
+  - **Source**: `page_entities` WHERE `kind='event'`
+  - **Fields**: `event_url`, `subtype`, `product_url`, `product_title`, `price_gbp`, `availability`, `date_start`, `date_end`, `start_time`, `end_time`, `event_location`, `map_method`, `confidence`, `participants`, `fitness_level`, `event_title`, `json_price`, `json_availability`, `price_currency`
   - **New Structured Data Fields**: `experience_level`, `equipment_needed`, `location_address`, `time_schedule`, `what_to_bring`, `course_duration`, `instructor_info`, `availability_status`
+- **`v_articles_unified`** - Main articles view for chat system
+  - **Source**: `page_entities` WHERE `kind='article'`
+  - **Fields**: `id`, `title`, `page_url`, `categories`, `tags`, `image_url`, `publish_date`, `description`, `json_ld_data`, `last_seen`, `kind`, `source_type`
 - **`v_blog_content`** - Blog posts with categories and tags
-  - Fields: `url`, `title`, `headline`, `publish_date`, `keywords`, `article_section`, `image_url`, `author`, `publisher`, `content_type`, `tags`, `categories`
-- **`v_articles_unified`** - Unified article view with metadata
-  - Fields: `id`, `title`, `page_url`, `categories`, `tags`, `image_url`, `publish_date`, `description`, `json_ld_data`, `last_seen`, `kind`, `source_type`
+  - **Source**: `page_entities` WHERE `kind='article'`
+  - **Fields**: `url`, `title`, `headline`, `publish_date`, `keywords`, `article_section`, `image_url`, `author`, `publisher`, `content_type`, `tags`, `categories`
 - **`v_product_content`** - Product catalog with pricing
+  - **Source**: `page_entities` WHERE `kind='product'`
   - Fields: `url`, `title`, `description`, `sku`, `price`, `price_currency`, `availability`, `tags`, `categories`, `image_urls`, `brand`, `content_type`, `price_tier`
   - **New Structured Data Fields**: `participants`, `experience_level`, `equipment_needed`, `location_address`, `time_schedule`, `fitness_level`, `what_to_bring`, `course_duration`, `instructor_info`, `availability_status`
 - **`v_service_content`** - Service pages with course information
