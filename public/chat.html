@@ -1035,7 +1035,7 @@ function renderProductCard(prod){
 }
 
 /* ===== Events & Guides ===== */
-const STOP = new Set(['the','and','or','what','whats','when','whens','next','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire','district','class','classes','course','courses','long','exposure','sunset','sunrise','landscape','seascape','evening','morning','walk','walks']);
+const STOP = new Set(['the','and','or','what','whats','when','whens','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire','district','class','classes','course','courses','long','exposure','sunset','sunrise','landscape','seascape','evening','morning','walk','walks']);
 function tokenize2(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
 function futureEvents(structured){
   const now = new Date();
