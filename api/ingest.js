@@ -648,7 +648,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
             .filter(line => !line.match(/^(Facebook|Twitter|Instagram|LinkedIn)/i)) // Filter social links
             .filter(line => !line.match(/^(©|Copyright|All rights reserved)/i)) // Filter copyright
             .filter(line => {
-              // Filter out malformed content
+              // Filter out malformed content and navigation elements
               const lowerLine = line.toLowerCase();
               return !lowerLine.includes('alan ranger photography [//images.squarespace-cdn.com') &&
                      !lowerLine.includes('alan+ranger+photography+logo+black') &&
@@ -658,7 +658,14 @@ async function ingestSingleUrl(url, supa, options = {}) {
                      !lowerLine.includes('gitzo gt3532ls') &&
                      !lowerLine.includes('manfrotto 405') &&
                      !lowerLine.includes('carbon fibre breaking down') &&
-                     !lowerLine.includes('needed two replacement legs');
+                     !lowerLine.includes('needed two replacement legs') &&
+                     !lowerLine.includes('back photography courses') &&
+                     !lowerLine.includes('[/photography-courses-coventry]') &&
+                     !lowerLine.includes('course calendar') &&
+                     !lowerLine.includes('which photography courses are best') &&
+                     !lowerLine.includes('[/') && // Filter out markdown links
+                     !lowerLine.includes('](') && // Filter out markdown links
+                     line.length > 30; // Require longer content
             });
           
           if (lines.length > 0) {
