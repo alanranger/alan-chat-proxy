@@ -912,10 +912,26 @@ function extractFacts(desc){
     return out;
   };
   
+  // Debug: log the extracted values
+  const fitnessValue = findAfter('Fitness');
+  const participantsValue = findAfter('Participants');
+  const locationValue = findAfter('Location');
+  
+  // Debug logging
+  if (window.debugExtractFacts || window.location.search.includes('debug=extract')) {
+    console.log('extractFacts debug:', {
+      full: full.substring(0, 500),
+      txt: txt.slice(0, 10),
+      fitnessValue,
+      participantsValue,
+      locationValue
+    });
+  }
+  
   return {
-    location: findAfter('Location'),
-    participants: findAfter('Participants'),
-    fitness: findAfter('Fitness'),
+    location: locationValue,
+    participants: participantsValue,
+    fitness: fitnessValue,
     availability: findAfter('Availability'),
     experience: findAfter('Experience - Level') || findAfter('Experience Level'),
     equipmentItems: (() => {
