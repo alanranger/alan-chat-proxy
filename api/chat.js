@@ -2082,7 +2082,7 @@ export default async function handler(req, res) {
               product = {
                 ...product,
                 title: productDetails.title || product.title,
-                description: productDetails.description || product.description,
+                description: null, // Don't use concatenated description - let frontend build from structured fields
                 raw: { ...product.raw, ...productDetails.raw },
                 // Include structured data fields for product cards
                 participants: productDetails.participants,
