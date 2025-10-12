@@ -385,7 +385,9 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
       const faqItems = relevantArticle.json_ld_data.mainEntity;
       const primaryQuestion = faqItems.find(item => {
         const question = (item.name || "").toLowerCase();
-        return question.includes(exactTerm) && 
+        // Extract the core term from exactTerm (e.g., "iso in photography" -> "iso")
+        const coreTerm = exactTerm.split(" ")[0];
+        return question.includes(coreTerm) && 
                (question.includes("what does") || question.includes("what is"));
       });
       
