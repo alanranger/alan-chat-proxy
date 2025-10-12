@@ -891,6 +891,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null, cs
   let q = client
     .from("v_events_for_chat")
     .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency")
+    .gte("date_start", new Date().toISOString()) // Only future events
     .order("date_start", { ascending: true }) // Sort by date ascending (earliest first)
     .limit(limit);
 
@@ -2053,11 +2054,11 @@ export default async function handler(req, res) {
         }
         
         product = {
-          title: firstEvent.title,
-          page_url: firstEvent.page_url,
-          price: firstEvent.price,
+          title: firstEvent.product_title,
+          page_url: firstEvent.product_url,
+          price: firstEvent.price_gbp,
           description: pageContent || `Workshop in ${firstEvent.location || firstEvent.event_location || 'Devon'}`,
-          raw: { offers: { lowPrice: firstEvent.price, highPrice: firstEvent.price } }
+          raw: { offers: { lowPrice: firstEvent.price_gbp, highPrice: firstEvent.price_gbp } }
         };
       } else if (best && best.ev && best.score >= 5) { // fallback: semantic best
         // Get the product URL to fetch page content
@@ -2108,11 +2109,11 @@ export default async function handler(req, res) {
         }
         
         product = {
-          title: best.ev.title,
-          page_url: best.ev.page_url,
-          price: best.ev.price,
+          title: best.ev.product_title,
+          page_url: best.ev.product_url,
+          price: best.ev.price_gbp,
           description: pageContent || `Workshop in ${best.ev.location || best.ev.event_location || 'Devon'}`,
-          raw: { offers: { lowPrice: best.ev.price, highPrice: best.ev.price } }
+          raw: { offers: { lowPrice: best.ev.price_gbp, highPrice: best.ev.price_gbp } }
         };
       }
 
