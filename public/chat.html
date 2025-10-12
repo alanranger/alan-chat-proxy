@@ -1039,9 +1039,8 @@ const STOP = new Set(['the','and','or','what','whats','when','whens','cost','wor
 function tokenize2(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
 function futureEvents(structured){
   const now = new Date();
-  // Show events from the last 30 days to future events to catch recent workshops
-  const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-  return (structured?.events||[]).filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=thirtyDaysAgo);
+  // Only show future events (from today onwards)
+  return (structured?.events||[]).filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
 }
 function extractKeyPhrases(topic, query){
   const words = (topic + ' ' + (query||'')).toLowerCase().match(/[a-z]+/g)||[];

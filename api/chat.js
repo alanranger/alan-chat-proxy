@@ -1799,7 +1799,8 @@ async function extractRelevantInfo(query, dataContext) {
     console.log(`🔍 RAG: Found ${events.length} events, checking structured data`);
     
     // Find the most relevant event based on the query context
-    let event = events[0]; // Default to first event
+    // Note: events are already filtered to future events before calling this function
+    let event = events[0]; // Default to first event (which is now guaranteed to be future)
     
     // If we have a previous query context, try to find the most relevant event
     if (dataContext.originalQuery) {
@@ -1985,21 +1986,39 @@ export default async function handler(req, res) {
       let best = null; for (const [,v] of grouped){ if (!best || v.score>best.score) best = v; }
       const firstEvent = (filteredEvents.length ? filteredEvents : events)?.[0];
       let product = null;
-      // PRIMARY: use the first (most relevant) event as the product
+      // PRIMARY: use the first (most relevant) event as the product with rich data
       if (firstEvent) {
+        // Build rich description with structured data
+        let description = `Workshop in ${firstEvent.location || firstEvent.event_location || 'Devon'}`;
+        if (firstEvent.participants) {
+          description += `\nParticipants: ${firstEvent.participants}`;
+        }
+        if (firstEvent.fitness_level) {
+          description += `\nFitness: ${firstEvent.fitness_level}`;
+        }
+        
         product = {
           title: firstEvent.title,
           page_url: firstEvent.page_url,
           price: firstEvent.price,
-          description: `Workshop in ${firstEvent.location_name || 'Devon'}`,
+          description: description,
           raw: { offers: { lowPrice: firstEvent.price, highPrice: firstEvent.price } }
         };
       } else if (best && best.ev && best.score >= 5) { // fallback: semantic best
+        // Build rich description with structured data
+        let description = `Workshop in ${best.ev.location || best.ev.event_location || 'Devon'}`;
+        if (best.ev.participants) {
+          description += `\nParticipants: ${best.ev.participants}`;
+        }
+        if (best.ev.fitness_level) {
+          description += `\nFitness: ${best.ev.fitness_level}`;
+        }
+        
         product = {
           title: best.ev.title,
           page_url: best.ev.page_url,
           price: best.ev.price,
-          description: `Workshop in ${best.ev.location_name || 'Devon'}`,
+          description: description,
           raw: { offers: { lowPrice: best.ev.price, highPrice: best.ev.price } }
         };
       }
@@ -2067,8 +2086,16 @@ export default async function handler(req, res) {
       const productPanel = product ? await buildProductPanelMarkdown([product]) : "";
       // Generated product panel
 
+      // Filter events to only include future events for the initial response
+      const now = new Date();
+      const futureEvents = events.filter(e => {
+        if (!e.date_start) return false;
+        const eventDate = new Date(e.date_start);
+        return eventDate >= now;
+      });
+
       // Use extractRelevantInfo to get specific answers for follow-up questions
-      const dataContext = { events, products: product ? [product] : [], articles: [], originalQuery: previousQuery };
+      const dataContext = { events: futureEvents, products: product ? [product] : [], articles: [], originalQuery: previousQuery };
       const specificAnswer = await extractRelevantInfo(query, dataContext);
       
       // If we got a specific answer, use it; otherwise use the product panel
