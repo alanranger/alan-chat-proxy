@@ -892,7 +892,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null, cs
     .from("page_entities")
     .select("id, url, kind, title, description, price, price_currency, availability, sku, provider, source_url, raw, entity_hash, last_seen, page_url, norm_title, start_date, csv_type, csv_metadata_id, categories, tags, publish_date, location_name, location_address, excerpt, end_date, start_time, end_time, location_city_state_zip, image_url, json_ld_data, workflow_state")
     .eq("kind", "event")
-    .order("last_seen", { ascending: false })
+    .order("start_date", { ascending: true }) // Sort by date ascending (earliest first)
     .limit(limit);
 
   // Filter by CSV type if specified (course_events vs workshop_events)
@@ -930,7 +930,18 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null, cs
     return [];
   }
   
-  return data || [];
+  // Map database fields to frontend expected fields
+  const mappedData = (data || []).map(event => ({
+    ...event,
+    date_start: event.start_date, // Map start_date to date_start for frontend
+    date_end: event.end_date,     // Map end_date to date_end for frontend
+    event_url: event.page_url,    // Map page_url to event_url for frontend
+    href: event.page_url,         // Add href alias for frontend
+    _csv_start_time: event.start_time, // Preserve CSV times for frontend
+    _csv_end_time: event.end_time
+  }));
+  
+  return mappedData;
 }
 
 async function findProducts(client, { keywords, limit = 20, pageContext = null, csvType = null }) {
