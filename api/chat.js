@@ -1802,6 +1802,22 @@ async function extractRelevantInfo(query, dataContext) {
     // Note: events are already filtered to future events before calling this function
     let event = events[0]; // Default to first event (which is now guaranteed to be future)
     
+    // If query mentions a specific location, filter events by that location
+    const locationKeywords = ['devon', 'cornwall', 'yorkshire', 'peak district', 'lake district', 'snowdonia', 'anglesey', 'norfolk', 'suffolk', 'dorset', 'somerset'];
+    const mentionedLocation = locationKeywords.find(loc => lowerQuery.includes(loc));
+    
+    if (mentionedLocation) {
+      const locationEvent = events.find(e => {
+        const eventLocation = (e.event_location || '').toLowerCase();
+        return eventLocation.includes(mentionedLocation);
+      });
+      
+      if (locationEvent) {
+        event = locationEvent;
+        console.log(`🔍 RAG: Found location-specific event for ${mentionedLocation}: ${event.event_title}`);
+      }
+    }
+    
     // If we have a previous query context, try to find the most relevant event
     if (dataContext.originalQuery) {
       const originalQueryLower = dataContext.originalQuery.toLowerCase();
@@ -1988,13 +2004,24 @@ export default async function handler(req, res) {
       let product = null;
       // PRIMARY: use the first (most relevant) event as the product with rich data
       if (firstEvent) {
-        // Build rich description with structured data
-        let description = `Workshop in ${firstEvent.location || firstEvent.event_location || 'Devon'}`;
+        // Build rich description with bullet points
+        const location = firstEvent.location || firstEvent.event_location || 'Devon';
+        const startDate = new Date(firstEvent.date_start);
+        const endDate = new Date(firstEvent.date_end);
+        const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
+        const startTime = firstEvent.start_time || firstEvent._csv_start_time;
+        const endTime = firstEvent.end_time || firstEvent._csv_end_time;
+        
+        let description = `• 📍 Location: ${location}`;
+        description += `\n• ⏱️ Duration: ${duration} day${duration > 1 ? 's' : ''}`;
+        if (startTime && endTime) {
+          description += `\n• 🕐 Time: ${startTime} - ${endTime}`;
+        }
         if (firstEvent.participants) {
-          description += `\nParticipants: ${firstEvent.participants}`;
+          description += `\n• 👥 Participants: ${firstEvent.participants}`;
         }
         if (firstEvent.fitness_level) {
-          description += `\nFitness: ${firstEvent.fitness_level}`;
+          description += `\n• 💪 Fitness Level: ${firstEvent.fitness_level}`;
         }
         
         product = {
@@ -2005,13 +2032,24 @@ export default async function handler(req, res) {
           raw: { offers: { lowPrice: firstEvent.price, highPrice: firstEvent.price } }
         };
       } else if (best && best.ev && best.score >= 5) { // fallback: semantic best
-        // Build rich description with structured data
-        let description = `Workshop in ${best.ev.location || best.ev.event_location || 'Devon'}`;
+        // Build rich description with bullet points
+        const location = best.ev.location || best.ev.event_location || 'Devon';
+        const startDate = new Date(best.ev.date_start);
+        const endDate = new Date(best.ev.date_end);
+        const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        const startTime = best.ev.start_time || best.ev._csv_start_time;
+        const endTime = best.ev.end_time || best.ev._csv_end_time;
+        
+        let description = `• 📍 Location: ${location}`;
+        description += `\n• ⏱️ Duration: ${duration} day${duration > 1 ? 's' : ''}`;
+        if (startTime && endTime) {
+          description += `\n• 🕐 Time: ${startTime} - ${endTime}`;
+        }
         if (best.ev.participants) {
-          description += `\nParticipants: ${best.ev.participants}`;
+          description += `\n• 👥 Participants: ${best.ev.participants}`;
         }
         if (best.ev.fitness_level) {
-          description += `\nFitness: ${best.ev.fitness_level}`;
+          description += `\n• 💪 Fitness Level: ${best.ev.fitness_level}`;
         }
         
         product = {
