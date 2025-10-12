@@ -896,8 +896,13 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null, cs
     .limit(limit);
 
   // Filter by CSV type if specified (course_events vs workshop_events)
+  // For workshop_events, also include site_urls that contain workshop events
   if (csvType) {
-    q = q.eq("csv_type", csvType);
+    if (csvType === 'workshop_events') {
+      q = q.in("csv_type", ['workshop_events', 'site_urls']);
+    } else {
+      q = q.eq("csv_type", csvType);
+    }
   }
 
   // If we have page context, try to find related content first
@@ -1965,8 +1970,8 @@ export default async function handler(req, res) {
       // Pick the most relevant product deterministically across filtered events
       const kwSet = new Set((keywords||[]).map(k=>String(k||'').toLowerCase()));
       const scoreProduct = (ev)=>{
-        const pt = String(ev.product_title||'').toLowerCase();
-        const pu = String(ev.product_url||'').toLowerCase();
+        const pt = String(ev.title||ev.product_title||'').toLowerCase();
+        const pu = String(ev.page_url||ev.product_url||'').toLowerCase();
         const et = String(ev.title||ev.event_title||'').toLowerCase();
         let s = 0;
         // keyword overlap in product title/url
@@ -1979,7 +1984,7 @@ export default async function handler(req, res) {
       };
       const grouped = new Map();
       for (const ev of (filteredEvents.length ? filteredEvents : events)){
-        const key = ev.product_url||'';
+        const key = ev.page_url||ev.product_url||'';
         const s = scoreProduct(ev) + 1; // +1 for frequency signal
         const prev = grouped.get(key) || { ev, score:0, count:0 };
         prev.score += s; prev.count += 1; if (!prev.ev) prev.ev = ev; grouped.set(key, prev);
@@ -1987,22 +1992,22 @@ export default async function handler(req, res) {
       let best = null; for (const [,v] of grouped){ if (!best || v.score>best.score) best = v; }
       const firstEvent = (filteredEvents.length ? filteredEvents : events)?.[0];
       let product = null;
-      // PRIMARY: trust Supabase view mapping from the first (most relevant) event
-      if (firstEvent && firstEvent.product_url) {
+      // PRIMARY: use the first (most relevant) event as the product
+      if (firstEvent) {
         product = {
-          title: firstEvent.product_title,
-          page_url: firstEvent.product_url,
-          price: firstEvent.price_gbp,
-          description: `Workshop in ${firstEvent.location_name || firstEvent.event_location}`,
-          raw: { offers: { lowPrice: firstEvent.price_gbp, highPrice: firstEvent.price_gbp } }
+          title: firstEvent.title,
+          page_url: firstEvent.page_url,
+          price: firstEvent.price,
+          description: `Workshop in ${firstEvent.location_name || 'Devon'}`,
+          raw: { offers: { lowPrice: firstEvent.price, highPrice: firstEvent.price } }
         };
       } else if (best && best.ev && best.score >= 5) { // fallback: semantic best
         product = {
-          title: best.ev.product_title,
-          page_url: best.ev.product_url,
-          price: best.ev.price_gbp,
-          description: `Workshop in ${best.ev.location_name || best.ev.event_location}`,
-          raw: { offers: { lowPrice: best.ev.price_gbp, highPrice: best.ev.price_gbp } }
+          title: best.ev.title,
+          page_url: best.ev.page_url,
+          price: best.ev.price,
+          description: `Workshop in ${best.ev.location_name || 'Devon'}`,
+          raw: { offers: { lowPrice: best.ev.price, highPrice: best.ev.price } }
         };
       }
 
