@@ -387,7 +387,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
     stage = 'extract_jsonld';
     const jsonLd = extractJSONLD(html);
     
-      // Prioritize JSON-LD objects for better entity selection
+      // Prioritize JSON-LD objects for better entity selection (v2)
       if (jsonLd && jsonLd.length > 1) {
         const urlLower = url.toLowerCase();
         
