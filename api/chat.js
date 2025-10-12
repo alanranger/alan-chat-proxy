@@ -2061,10 +2061,10 @@ export default async function handler(req, res) {
     let articles = await findArticles(client, { keywords, limit: 30, pageContext });
     
     // Only search for events/products if the query is about workshops, courses, or equipment recommendations
-    const qlc = (query || "").toLowerCase();
-    const isEventRelatedQuery = qlc.includes("workshop") || qlc.includes("course") || qlc.includes("class") || 
-                               qlc.includes("equipment") || qlc.includes("recommend") || qlc.includes("tripod") ||
-                               qlc.includes("camera") || qlc.includes("lens") || qlc.includes("gear");
+    const qlcAdvice = (query || "").toLowerCase();
+    const isEventRelatedQuery = qlcAdvice.includes("workshop") || qlcAdvice.includes("course") || qlcAdvice.includes("class") || 
+                               qlcAdvice.includes("equipment") || qlcAdvice.includes("recommend") || qlcAdvice.includes("tripod") ||
+                               qlcAdvice.includes("camera") || qlcAdvice.includes("lens") || qlcAdvice.includes("gear");
     
     let events = [];
     let products = [];
@@ -2266,7 +2266,7 @@ export default async function handler(req, res) {
     let hasEvidenceBasedAnswer = false;
     
     // Boost confidence for technical questions with good article matches
-    const isTechnicalQuery = qlc.includes("what is") || qlc.includes("what are") || qlc.includes("how does");
+    const isTechnicalQuery = qlcAdvice.includes("what is") || qlcAdvice.includes("what are") || qlcAdvice.includes("how does");
     const hasOnlineCourseArticles = articles.some(a => a.categories?.includes("online photography course"));
     if (isTechnicalQuery && hasOnlineCourseArticles && articles.length > 0) {
       confidence = Math.min(0.85, 0.4 + (articles.length * 0.1)); // Boost confidence for technical queries
