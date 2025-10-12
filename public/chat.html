@@ -1032,8 +1032,8 @@ function isMeaninglessValue(value) {
   // Check exact matches
   if (meaninglessPatterns.includes(val)) return true;
   
-  // Check if it's just a single character or very short
-  if (val.length <= 2) return true;
+  // Check if it's just a single character or very short, but NOT a valid number
+  if (val.length <= 2 && !/^\d+$/.test(val)) return true;
   
   // Check if it contains only numbers and common meaningless words
   if (/^[\d\s\.\-_]+$/.test(val)) return true;
