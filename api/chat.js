@@ -367,41 +367,60 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   
   // PRIORITY 1: Extract from JSON-LD FAQ data in articles
   if (exactTerm && articles.length > 0) {
-    const relevantArticle = articles.find(article => {
+    // First, try to find an exact title match for the specific term
+    let relevantArticle = articles.find(article => {
       const title = (article.title || "").toLowerCase();
-      const url = (article.page_url || article.url || "").toLowerCase();
-      const jsonLd = article.json_ld_data;
-      
-      // Check if this article is about the exact term
       return title.includes(`what is ${exactTerm}`) || 
-             title.includes(`${exactTerm}`) ||
-             url.includes(`what-is-${exactTerm.replace(/\s+/g, "-")}`) ||
-             (jsonLd && jsonLd.mainEntity && Array.isArray(jsonLd.mainEntity));
+             title.includes(`${exactTerm} in photography`);
     });
     
-    if (relevantArticle && relevantArticle.json_ld_data && relevantArticle.json_ld_data.mainEntity) {
-      console.log(`🔍 generateDirectAnswer: Found relevant article with JSON-LD FAQ data`);
-      
-      const faqItems = relevantArticle.json_ld_data.mainEntity;
-      const primaryQuestion = faqItems.find(item => {
-        const question = (item.name || "").toLowerCase();
-        return question.includes(exactTerm) && 
-               (question.includes("what does") || question.includes("what is"));
+    // If no exact title match, fall back to URL match or any article with the term
+    if (!relevantArticle) {
+      relevantArticle = articles.find(article => {
+        const title = (article.title || "").toLowerCase();
+        const url = (article.page_url || article.url || "").toLowerCase();
+        const jsonLd = article.json_ld_data;
+        
+        return title.includes(`${exactTerm}`) ||
+               url.includes(`what-is-${exactTerm.replace(/\s+/g, "-")}`) ||
+               (jsonLd && jsonLd.mainEntity && Array.isArray(jsonLd.mainEntity));
       });
+    }
+    
+    if (relevantArticle) {
+      console.log(`🔍 generateDirectAnswer: Found relevant article="${relevantArticle.title}"`);
       
-      if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
-        let answerText = primaryQuestion.acceptedAnswer.text;
+      // PRIORITY 1: Use article description first (most reliable)
+      if (relevantArticle.description && relevantArticle.description.length > 50) {
+        console.log(`🔍 generateDirectAnswer: Using article description="${relevantArticle.description.substring(0, 200)}..."`);
+        return `**${relevantArticle.description}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
+      }
+      
+      // PRIORITY 2: Fall back to JSON-LD FAQ data if no description
+      if (relevantArticle.json_ld_data && relevantArticle.json_ld_data.mainEntity) {
+        console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
         
-        // Clean HTML tags from the answer
-        answerText = answerText.replace(/<[^>]*>/g, '').trim();
+        const faqItems = relevantArticle.json_ld_data.mainEntity;
+        const primaryQuestion = faqItems.find(item => {
+          const question = (item.name || "").toLowerCase();
+          return question.includes(exactTerm) && 
+                 (question.includes("what does") || question.includes("what is"));
+        });
         
-        // Clean up any remaining artifacts
-        answerText = answerText.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, '');
-        answerText = answerText.replace(/\* Next lesson:.*?\*\*/g, '');
-        
-        if (answerText.length > 50) {
-          console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
-          return `**${answerText}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
+        if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
+          let answerText = primaryQuestion.acceptedAnswer.text;
+          
+          // Clean HTML tags from the answer
+          answerText = answerText.replace(/<[^>]*>/g, '').trim();
+          
+          // Clean up any remaining artifacts
+          answerText = answerText.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, '');
+          answerText = answerText.replace(/\* Next lesson:.*?\*\*/g, '');
+          
+          if (answerText.length > 50) {
+            console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
+            return `**${answerText}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
+          }
         }
       }
     }
