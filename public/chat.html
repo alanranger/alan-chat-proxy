@@ -248,6 +248,17 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
   font-weight: 500;
 }
 
+.event-type-badge {
+  background: #065f46;
+  color: #10b981;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
 /* Product Cards */
 .product-card {
   background: #1a1f2e;
@@ -1045,8 +1056,22 @@ function scoreEventMatch(ev, kp){
 }
 function eventHeaderLabel(structured){
   const q = (__lastQuery||'').toLowerCase();
-  if (/\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(q) || structured?.event_subtype==='course') return 'Upcoming Courses';
-  if (/\b(workshop|workshops)\b/.test(q) || structured?.event_subtype==='workshop') return 'Upcoming Workshops';
+  const events = structured?.events || [];
+  
+  // Check if we have events and determine type from the data
+  if (events.length > 0) {
+    // Check the csv_type of the first event to determine the type
+    const firstEvent = events[0];
+    if (firstEvent.csv_type === 'course_events') {
+      return 'Upcoming Courses';
+    } else if (firstEvent.csv_type === 'workshop_events') {
+      return 'Upcoming Workshops';
+    }
+  }
+  
+  // Fallback to query-based detection
+  if (/\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(q)) return 'Upcoming Courses';
+  if (/\b(workshop|workshops)\b/.test(q)) return 'Upcoming Workshops';
   return 'Upcoming Events';
 }
 function renderEventsBlock(structured, query){
@@ -1095,6 +1120,10 @@ function renderEventsBlock(structured, query){
       }
     }
     
+    // Determine event type for display
+    const eventType = e.csv_type === 'course_events' ? 'Course' : e.csv_type === 'workshop_events' ? 'Workshop' : 'Event';
+    const eventTypeIcon = e.csv_type === 'course_events' ? '🎓' : e.csv_type === 'workshop_events' ? '🔧' : '📅';
+    
     // Create a more visually appealing event card
     return `
       <div class="event-card">
@@ -1103,6 +1132,7 @@ function renderEventsBlock(structured, query){
             <h4 class="event-title">
               <a href="${href}" target="_blank" rel="noopener">${title || 'Photography Event'}</a>
             </h4>
+            <div class="event-type-badge">${eventTypeIcon} ${eventType}</div>
           </div>
           <div class="event-details">
             <div class="event-date">📅 ${when}</div>
@@ -1271,9 +1301,13 @@ function buildActionPillsFromStructured(structured, query){
 function detectIntent(payload, query){
   const s = payload?.structured || {}; const q = String(query||'').toLowerCase();
   const server = s.intent || payload?.intent || payload?.meta?.intent || payload?.debug?.intent || '';
+  
+  // Both courses and workshops are events (scheduled sessions)
   if (/course|courses|class|classes|tuition|lesson|lessons/.test(q)) return 'events';
   if (/workshop|workshops|event|events|when|whens|next/.test(q)) return 'events';
   if (/price|cost|fee|fees|how much|book|booking|buy/i.test(q)) return 'products';
+  
+  // Trust the server intent detection as the primary source
   return server ? server.toLowerCase() : 'unknown';
 }
 function isPriceyQuery(q){ return /\b(price|cost|fee|fees|how much|book|booking|buy)\b/i.test(String(q||'')); }
