@@ -2083,7 +2083,18 @@ export default async function handler(req, res) {
                 ...product,
                 title: productDetails.title || product.title,
                 description: productDetails.description || product.description,
-                raw: { ...product.raw, ...productDetails.raw }
+                raw: { ...product.raw, ...productDetails.raw },
+                // Include structured data fields for product cards
+                participants: productDetails.participants,
+                fitness_level: productDetails.fitness_level,
+                location_address: productDetails.location_address,
+                equipment_needed: productDetails.equipment_needed,
+                experience_level: productDetails.experience_level,
+                time_schedule: productDetails.time_schedule,
+                what_to_bring: productDetails.what_to_bring,
+                course_duration: productDetails.course_duration,
+                instructor_info: productDetails.instructor_info,
+                availability_status: productDetails.availability_status
               };
               // Enriched product with full details
               // Final enriched product description
