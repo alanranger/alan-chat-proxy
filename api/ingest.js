@@ -387,6 +387,37 @@ async function ingestSingleUrl(url, supa, options = {}) {
     stage = 'extract_jsonld';
     const jsonLd = extractJSONLD(html);
     
+    // Prioritize JSON-LD objects for better entity selection
+    if (jsonLd && jsonLd.length > 1) {
+      const urlLower = url.toLowerCase();
+      
+      // For blog articles, prioritize FAQPage over Organization
+      if (urlLower.includes('/blog') || urlLower.includes('/blog-on-photography')) {
+        jsonLd.sort((a, b) => {
+          const aType = (a['@type'] || '').toLowerCase();
+          const bType = (b['@type'] || '').toLowerCase();
+          
+          // FAQPage gets highest priority for blog articles
+          if (aType === 'faqpage' && bType !== 'faqpage') return -1;
+          if (bType === 'faqpage' && aType !== 'faqpage') return 1;
+          
+          // Article gets second priority
+          if (aType === 'article' && bType !== 'article') return -1;
+          if (bType === 'article' && aType !== 'article') return 1;
+          
+          // WebSite gets third priority
+          if (aType === 'website' && bType !== 'website') return -1;
+          if (bType === 'website' && aType !== 'website') return 1;
+          
+          // Organization gets lowest priority for blog articles
+          if (aType === 'organization' && bType !== 'organization') return 1;
+          if (bType === 'organization' && aType !== 'organization') return -1;
+          
+          return 0;
+        });
+      }
+    }
+    
     // Extract HTML title as fallback
     const htmlTitleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
     const htmlTitle = htmlTitleMatch ? htmlTitleMatch[1].trim() : null;
@@ -552,31 +583,34 @@ async function ingestSingleUrl(url, supa, options = {}) {
         });
       } catch (e) {} // Ignore errors
       
-      const entities = jsonLd.map((item, idx) => {
-        const enhancedDescription = enhancedDescriptions[idx] || item.description || null;
-        // Log entity creation directly to database (fire and forget)
-        supa.from('debug_logs').insert({
-          url: url,
-          stage: 'entity_creation',
-          data: { idx: idx, kind: normalizeKind(item, url), hasEnhanced: !!enhancedDescriptions[idx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0, hasCsvMetadata: !!csvMetadata, structuredData: structuredData }
-        }).then(() => {}).catch(() => {}); // Ignore errors
-        
-        return {
+      // Select the best JSON-LD object for this URL (prioritized by the sort above)
+      const bestJsonLd = jsonLd[0]; // First item after prioritization
+      const bestIdx = 0;
+      const enhancedDescription = enhancedDescriptions[bestIdx] || bestJsonLd.description || null;
+      
+      // Log entity creation directly to database (fire and forget)
+      supa.from('debug_logs').insert({
         url: url,
-          kind: normalizeKind(item, url),
-          title: item.headline || item.title || item.name || htmlTitle || h1Title || null,
-          description: enhancedDescription,
-        date_start: item.datePublished || item.startDate || null,
-        date_end: item.endDate || null,
-        location: item.location?.name || item.location?.address || null,
-        price: item.offers?.price || null,
-        price_currency: item.offers?.priceCurrency || null,
-        availability: item.offers?.availability || null,
-        sku: item.sku || null,
-        provider: item.provider?.name || item.publisher?.name || 'Alan Ranger Photography',
+        stage: 'entity_creation',
+        data: { idx: bestIdx, kind: normalizeKind(bestJsonLd, url), hasEnhanced: !!enhancedDescriptions[bestIdx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0, hasCsvMetadata: !!csvMetadata, structuredData: structuredData }
+      }).then(() => {}).catch(() => {}); // Ignore errors
+      
+      const entities = [{
+        url: url,
+        kind: normalizeKind(bestJsonLd, url),
+        title: bestJsonLd.headline || bestJsonLd.title || bestJsonLd.name || htmlTitle || h1Title || null,
+        description: enhancedDescription,
+        date_start: bestJsonLd.datePublished || bestJsonLd.startDate || null,
+        date_end: bestJsonLd.endDate || null,
+        location: bestJsonLd.location?.name || bestJsonLd.location?.address || null,
+        price: bestJsonLd.offers?.price || null,
+        price_currency: bestJsonLd.offers?.priceCurrency || null,
+        availability: bestJsonLd.offers?.availability || null,
+        sku: bestJsonLd.sku || null,
+        provider: bestJsonLd.provider?.name || bestJsonLd.publisher?.name || 'Alan Ranger Photography',
         source_url: url,
-        raw: item,
-        entity_hash: sha1(url + JSON.stringify(item) + idx),
+        raw: bestJsonLd,
+        entity_hash: sha1(url + JSON.stringify(bestJsonLd) + bestIdx),
           last_seen: new Date().toISOString(),
           // CSV metadata fields - CLEANED - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
           csv_type: csvMetadata?.csv_type || null,
@@ -606,8 +640,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
           course_duration: structuredData?.course_duration || null,
           instructor_info: structuredData?.instructor_info || null,
           availability_status: structuredData?.availability_status || null
-        };
-      });
+        }];
       
       if (!options.dryRun) {
         // Merge strategy: always update existing entity for same (url, kind)
