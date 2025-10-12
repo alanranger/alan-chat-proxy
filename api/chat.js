@@ -2003,12 +2003,12 @@ export default async function handler(req, res) {
       const firstEvent = (filteredEvents.length ? filteredEvents : events)?.[0];
       let product = null;
       // PRIMARY: use the first (most relevant) event as the product
-      // Fetch the actual page content from page_chunks for the frontend extractFacts function to parse
+      // Fetch and clean the structured content from page_chunks for the frontend extractFacts function to parse
       if (firstEvent) {
         // Get the product URL to fetch page content
         const productUrl = firstEvent.product_url || firstEvent.page_url;
         
-        // Fetch page content from page_chunks
+        // Fetch page content from page_chunks and extract clean structured content
         let pageContent = '';
         if (productUrl) {
           const { data: chunks } = await client
@@ -2018,8 +2018,24 @@ export default async function handler(req, res) {
             .limit(3);
           
           if (chunks && chunks.length > 0) {
-            // Combine chunks to get the full page content
-            pageContent = chunks.map(chunk => chunk.chunk_text).join(' ');
+            // Combine chunks and extract the structured summary section
+            const fullContent = chunks.map(chunk => chunk.chunk_text).join(' ');
+            
+            // Look for the structured summary section that contains Location, Participants, Fitness
+            const summaryMatch = fullContent.match(/SUMMARY\s*\*([^*]+(?:\*[^*]+)*)/i);
+            if (summaryMatch) {
+              // Clean up the summary section
+              pageContent = summaryMatch[1]
+                .replace(/\s+/g, ' ') // Normalize whitespace
+                .replace(/\*\s*/g, '\n• ') // Convert asterisks to bullet points
+                .trim();
+            } else {
+              // Fallback: try to find structured content patterns
+              const structuredMatch = fullContent.match(/(?:Location|Participants|Fitness)[^•]*/gi);
+              if (structuredMatch) {
+                pageContent = structuredMatch.join('\n• ').replace(/^\s*/, '• ');
+              }
+            }
           }
         }
         
@@ -2034,7 +2050,7 @@ export default async function handler(req, res) {
         // Get the product URL to fetch page content
         const productUrl = best.ev.product_url || best.ev.page_url;
         
-        // Fetch page content from page_chunks
+        // Fetch page content from page_chunks and extract clean structured content
         let pageContent = '';
         if (productUrl) {
           const { data: chunks } = await client
@@ -2044,8 +2060,24 @@ export default async function handler(req, res) {
             .limit(3);
           
           if (chunks && chunks.length > 0) {
-            // Combine chunks to get the full page content
-            pageContent = chunks.map(chunk => chunk.chunk_text).join(' ');
+            // Combine chunks and extract the structured summary section
+            const fullContent = chunks.map(chunk => chunk.chunk_text).join(' ');
+            
+            // Look for the structured summary section that contains Location, Participants, Fitness
+            const summaryMatch = fullContent.match(/SUMMARY\s*\*([^*]+(?:\*[^*]+)*)/i);
+            if (summaryMatch) {
+              // Clean up the summary section
+              pageContent = summaryMatch[1]
+                .replace(/\s+/g, ' ') // Normalize whitespace
+                .replace(/\*\s*/g, '\n• ') // Convert asterisks to bullet points
+                .trim();
+            } else {
+              // Fallback: try to find structured content patterns
+              const structuredMatch = fullContent.match(/(?:Location|Participants|Fitness)[^•]*/gi);
+              if (structuredMatch) {
+                pageContent = structuredMatch.join('\n• ').replace(/^\s*/, '• ');
+              }
+            }
           }
         }
         
