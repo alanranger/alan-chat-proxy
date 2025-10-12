@@ -1,0 +1,2104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Alan Ranger Assistant</title>
+<meta name="description" content="Alan Ranger Assistant — AI chat for workshops, tuition and photography questions."/>
+<meta property="og:title" content="Alan Ranger Assistant"/>
+<meta property="og:description" content="Ask about workshops, tuition and photography techniques. Smart, accurate answers with links."/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://alan-chat-proxy.vercel.app/chat.html"/>
+<meta property="og:image" content="https://alan-chat-proxy.vercel.app/chat%20white.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Alan Ranger Assistant"/>
+<meta name="twitter:description" content="Ask about workshops, tuition and photography techniques."/>
+<meta name="twitter:image" content="https://alan-chat-proxy.vercel.app/chat%20white.png"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
+  --brand:#E57200; --wa:#25D366; --ring:rgba(229,114,0,.35);
+  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
+  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
+  --user-bg:#e6edf7; --user-text:#0b0f16;
+
+  --status-green-bg:#12381e; --status-green-br:#245f3a; --status-green-tx:#b8f3c7;
+  --status-amber-bg:#3a2d0c; --status-amber-br:#6f5616; --status-amber-tx:#ffeab0;
+  --status-red-bg:#3c161b; --status-red-br:#6f2831; --status-red-tx:#ffc3cc;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45;font-size:15px;-webkit-overflow-scrolling:touch}
+.wrap{max-width:980px;margin:28px auto;padding:0 16px;position:relative}
+.badge-wrap{position:relative;height:0}
+.version{position:absolute;top:8px;right:0;background:#0b1422;border:1px solid #1b2540;border-radius:999px;padding:2px 8px;font-size:11px;color:#9eb2d3}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);border-top:6px solid var(--brand);padding:28px;position:relative;height:100%;width:100%;display:flex;flex-direction:column}
+
+/* ============== Sticky header ============== */
+.header-sticky{position:sticky; top:10px; z-index:50; background:linear-gradient(180deg, rgba(18,28,45,.98), rgba(18,28,45,.98)); border-radius:12px; padding:0 0 10px 0; margin:-8px -8px 12px -8px; border-bottom:1px solid rgba(255,255,255,0.08);}
+.header{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:12px}
+
+/* EDITABLE HERO (title row + intro) */
+.head-row{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;margin-top:6px}
+.logo{display:block;height:64px;width:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+.title{margin:0;font-size:36px;font-weight:300;letter-spacing:.2px;text-align:center}
+.sub-wrap{max-width:75%;min-width:280px}
+.sub{margin:0 auto;text-align:center;color:var(--muted);font-size:13px;line-height:1.65}
+.sub .pill-inline{display:inline-flex;gap:10px;vertical-align:baseline;margin-left:.35rem}
+.pill{appearance:none;border:0;border-radius:28px;padding:8px 12px;font-weight:600;font-size:14px;color:#0b0f16;cursor:pointer;line-height:1;text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:0 1px 0 rgba(0,0,0,.2)}
+.pill--brand{background:var(--brand)} .pill--wa{background:var(--wa)}
+.pill:hover{filter:brightness(1.05)}
+.pill:focus{outline:0;box-shadow:0 0 0 3px var(--ring)}
+
+/* Trust strip */
+.trust{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;margin-top:2px}
+.trust .badge{background:#0f1b31;border:1px solid #15223a;color:#cfe3ff;border-radius:9999px;padding:5px 8px;font-size:11px;display:inline-flex;align-items:center;gap:4px}
+.trust a.badge{ text-decoration:none; color:inherit; cursor:default }
+.trust .badge .dot{width:6px;height:6px;border-radius:999px;background:var(--brand)}
+.trust .stars{color:#f5c518}
+
+/* Chat surface */
+.chat{margin-top:12px;border-radius:14px;background:#0f1828;padding:18px;flex:1;overflow-y:auto;overflow-x:hidden}
+.thread{display:flex;flex-direction:column;gap:12px}
+.bubble{background:var(--bubble);padding:14px 16px;border-radius:12px;max-width:780px;font-size:15px}
+.bubble.user{align-self:flex-end;background:var(--user-bg);color:var(--user-text);border:1px solid #d3deee}
+.answer h1,.answer h2,.answer h3{margin:.2em 0}
+.answer h3{font-size:20px}
+.answer p{margin:.5em 0}
+.answer ul{margin:.4em 0 .6em 1.25em}
+.answer li{margin:.2em 0}
+.answer a{color:var(--link);text-decoration:underline}
+.answer a:hover{color:var(--link-hover)}
+.answer code{background:#1a2332;color:#e2e8f0;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:0.9em}
+.answer em{font-style:italic;color:#cbd5e1}
+.answer strong{font-weight:600;color:#f1f5f9}
+.meta{color:var(--muted);font-size:14px}
+.kvline{margin:0}
+.kvline strong{font-weight:600}
+
+/* Status footer row */
+.footer-status{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.badge{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 14px;font-weight:800;letter-spacing:.2px;border:1px solid #1c2a46;background:#0f1b31;color:#cfe3ff}
+.badge.small{padding:6px 10px;font-size:12px}
+.badge.ts{font-size:12px;font-weight:500;opacity:.9;}
+.badge.conf{background:#13233f;border-color:#263d68;cursor:pointer}
+.badge.conf.green{background:var(--status-green-bg);border-color:var(--status-green-br);color:var(--status-green-tx)}
+.badge.conf.amber{background:var(--status-amber-bg);border-color:var(--status-amber-br);color:var(--status-amber-tx)}
+.badge.conf.red{background:var(--status-red-bg);border-color:var(--status-red-br);color:var(--status-red-tx)}
+
+/* Global pill row (ACTION PILLS under answers) */
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.actions .pill{
+  appearance:none; display:inline-flex; align-items:center; gap:8px;
+  background:var(--brand); color:#0b0f16; border:none; border-radius:28px;
+  padding:8px 12px; font-weight:600; font-size:14px; line-height:1;
+  text-decoration:none; cursor:pointer; box-shadow:0 1px 0 rgba(0,0,0,.2);
+  transition:all 0.2s ease;
+}
+.actions .pill:hover{filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 2px 4px rgba(0,0,0,.3)}
+.actions .pill:focus{outline:0; box-shadow:0 0 0 3px var(--ring)}
+.actions .pill.priority{background:var(--wa); color:#fff; font-weight:700}
+.actions .pill.secondary{background:#4a5568; color:#e2e8f0; font-weight:500}
+
+/* Article Cards */
+.articles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.article-card {
+  background: #1a1f2e;
+  border: 1px solid #2a3441;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.article-card:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.article-title {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.article-title a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.article-title a:hover {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
+.article-meta {
+  font-size: 12px;
+  color: #9ca3af;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.article-date {
+  font-size: 11px;
+  color: #6b7280;
+  background: rgba(107, 114, 128, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.article-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.article-category, .article-tags {
+  font-size: 10px;
+  color: #9ca3af;
+  background: rgba(156, 163, 175, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+/* Event Cards */
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.event-card {
+  background: #1a1f2e;
+  border: 1px solid #2a3441;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.event-card:hover {
+  border-color: #10b981;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.event-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.event-title a {
+  color: #10b981;
+  text-decoration: none;
+}
+
+.event-title a:hover {
+  color: #34d399;
+  text-decoration: underline;
+}
+
+.event-price {
+  background: #065f46;
+  color: #10b981;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.event-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.event-date,
+.event-time,
+.event-location,
+.event-availability {
+  font-size: 13px;
+  color: #d1d5db;
+}
+
+.event-availability {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.event-type-badge {
+  background: #065f46;
+  color: #10b981;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+/* Product Cards */
+.product-card {
+  background: #1a1f2e;
+  border: 1px solid #2a3441;
+  border-radius: 8px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.product-card:hover {
+  border-color: #f59e0b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+
+.product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.product-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #f59e0b;
+  flex: 1;
+}
+
+.product-price {
+  background: #064e3b;
+  color: #10b981;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-left: 12px;
+}
+
+.product-content {
+  margin-bottom: 16px;
+}
+
+.product-description {
+  color: #d1d5db;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.product-options ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #9ca3af;
+}
+
+.product-options li {
+  margin-bottom: 4px;
+}
+
+.product-details {
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-details li {
+  margin-bottom: 4px;
+  padding-left: 16px;
+  position: relative;
+  color: #d1d5db;
+  line-height: 1.4;
+  font-size: 14px;
+}
+
+.product-details li::before {
+  content: "•";
+  color: #d1d5db;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.product-details li strong {
+  color: #10b981;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.product-book-btn {
+  display: inline-block;
+  background: #3b82f6;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.product-book-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Composer + utilities */
+.tools{display:flex;justify-content:flex-end;gap:10px;margin:8px 0 6px}
+.tools button{background:#13203e;color:#cfe3ff;border:1px solid #2a3b61;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.tools button:hover{border-color:#3c548b}
+.tools .toggle{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid #2a3b61;border-radius:8px;background:#13203e;color:#cfe3ff;font-size:13px}
+.tools .toggle input{accent-color:var(--brand)}
+
+.composer{display:flex;gap:10px;margin-top:8px;padding:12px;background:var(--panel);border-radius:12px}
+.composer input{flex:1;background:var(--input-bg);color:var(--input-text);border:1px solid #CBD5E1;border-radius:10px;padding:12px 14px;outline:0}
+.composer input::placeholder{color:var(--input-ph)}
+.composer input:focus{border-color:var(--ring);box-shadow:0 0 0 4px var(--ring)}
+.send{background:var(--brand);color:var(--user-text);font-weight:700;border:0;border-radius:10px;padding:0 18px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:all 0.2s ease}
+.send:hover{filter:brightness(1.05);transform:translateY(-1px)}
+.send:active{transform:translateY(0)}
+
+/* Debug panel */
+details.debug{margin-top:14px;background:#0f1828;border:1px solid #15223a;border-radius:10px;padding:10px 12px}
+details.debug summary{cursor:pointer;color:#9eb2d3;font-weight:600;outline:none}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
+.kv label{color:#93A4C1}
+pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;background:#0b1422;border:1px solid #15223a;border-radius:8px;color:#cfe3ff;font-size:12px;line-height:1.4}
+
+/* Typing dots */
+.typing{position:relative;display:inline-block}
+.typing .dot{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#9eb2d3;opacity:.6;animation:bounce 1.2s infinite}
+.typing .dot:nth-child(2){animation-delay:.15s}
+.typing .dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+
+/* Feedback buttons styles */
+.feedback-container { margin-top: 8px; padding: 8px 0; border-top: 1px solid #e9ecef; }
+.feedback-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+.feedback-btn { 
+  background: none; 
+  border: 1px solid #ddd; 
+  border-radius: 4px; 
+  padding: 4px 8px; 
+  cursor: pointer; 
+  font-size: 16px; 
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+.feedback-btn:hover { 
+  opacity: 1; 
+  border-color: #007bff; 
+  background: #f8f9fa; 
+}
+.feedback-btn:disabled { 
+  opacity: 0.5; 
+  cursor: not-allowed; 
+}
+.thumbs-up:hover { border-color: #28a745; }
+.thumbs-down:hover { border-color: #dc3545; }
+
+/* Feedback form styles */
+.feedback-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.feedback-form {
+  background: #2c3e50;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid #34495e;
+}
+.feedback-form h3 {
+  margin: 0 0 16px 0;
+  color: #ecf0f1;
+  font-size: 16px;
+}
+.feedback-form p {
+  margin: 0 0 16px 0;
+  color: #bdc3c7;
+  font-size: 14px;
+}
+.feedback-options {
+  margin-bottom: 16px;
+}
+.feedback-option {
+  display: block;
+  margin-bottom: 8px;
+}
+.feedback-option input[type="radio"] {
+  margin-right: 8px;
+}
+.feedback-option label {
+  font-size: 14px;
+  color: #ecf0f1;
+  cursor: pointer;
+}
+.feedback-text {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px;
+  border: 1px solid #34495e;
+  border-radius: 4px;
+  font-size: 14px;
+  resize: vertical;
+  margin-bottom: 16px;
+  background: #34495e;
+  color: #ecf0f1;
+}
+.feedback-text::placeholder {
+  color: #95a5a6;
+}
+.feedback-buttons-form {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.feedback-buttons-form button {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.feedback-cancel {
+  background: #34495e;
+  color: #bdc3c7;
+  border-color: #34495e;
+}
+.feedback-cancel:hover {
+  background: #2c3e50;
+  color: #ecf0f1;
+}
+.feedback-submit {
+  background: #e74c3c;
+  color: white;
+  border-color: #e74c3c;
+}
+.feedback-submit:hover {
+  background: #c0392b;
+  border-color: #c0392b;
+}
+
+/* Mobile and tablet responsive design */
+@media (max-width:768px){
+  .title{font-size:28px}
+  .logo{height:56px}
+  .kv{grid-template-columns:1fr}
+  .header-sticky{top:6px;margin:-6px -6px 10px -6px}
+  .sub-wrap{max-width:92%}
+  .wrap{max-width:100%;margin:16px auto;padding:0 12px}
+  .card{padding:20px;border-radius:12px}
+  .bubble{font-size:14px;padding:12px 14px;max-width:100%}
+  .composer{padding:10px;gap:8px}
+  .composer input{padding:10px 12px;font-size:16px;border-radius:8px} /* Prevents zoom on iOS */
+  .send{padding:0 16px;font-size:14px}
+  .tools{gap:8px;margin:6px 0 4px}
+  .tools button{padding:8px 12px;font-size:14px;min-height:44px} /* Better touch targets */
+  .actions{gap:8px;margin-top:10px}
+  .actions .pill{padding:10px 14px;font-size:14px;min-height:44px}
+  .trust{gap:4px;margin-top:2px}
+  .trust .badge{padding:4px 6px;font-size:10px}
+  .footer-status{gap:8px;margin-top:10px}
+  .badge{padding:8px 12px;font-size:13px;min-height:40px}
+  .sub{font-size:14px;line-height:1.6}
+}
+
+@media (max-width:480px){
+  .title{font-size:24px}
+  .logo{height:48px}
+  .wrap{margin:12px auto;padding:0 8px}
+  .card{padding:16px;border-radius:10px}
+  .bubble{font-size:13px;padding:10px 12px}
+  .composer{padding:8px;gap:6px}
+  .composer input{padding:8px 10px;font-size:16px;border-radius:6px}
+  .send{padding:0 14px;font-size:13px}
+  .tools button{padding:6px 10px;font-size:13px;min-height:40px}
+  .actions .pill{padding:8px 12px;font-size:13px;min-height:40px}
+  .trust .badge{padding:3px 5px;font-size:9px}
+  .badge{padding:6px 10px;font-size:12px;min-height:36px}
+  .sub{font-size:13px}
+  .sub-wrap{max-width:95%}
+}
+
+/* Reasoning popover */
+.reason-pop{position:fixed;right:16px;bottom:16px;max-width:420px;background:#0b1422;border:1px solid #15223a;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);padding:12px;z-index:100}
+.reason-pop h4{margin:0 0 6px 0;font-size:14px;color:#9eb2d3}
+.reason-pop pre{max-height:260px;overflow:auto}
+.reason-pop .close{position:absolute;top:6px;right:8px;background:transparent;border:0;color:#9eb2d3;cursor:pointer;font-size:18px}
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Alan Ranger Assistant",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "url": "https://alan-chat-proxy.vercel.app/chat.html",
+  "author": { "@type": "Person", "name": "Alan Ranger" },
+  "publisher": { "@type": "Organization", "name": "Alan Ranger Photography", "url": "https://www.alanranger.com" }
+}
+</script>
+<!-- GA4 (optional) -- set GA4_ID via data attribute in embed or inline here -->
+<script>
+  (function(){
+    var GA4_ID = (new URL(location.href)).searchParams.get('ga4') || '';
+    if (!GA4_ID) return;
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    window.gtag = gtag;
+    gtag('js', new Date());
+    gtag('config', GA4_ID, { send_page_view: false });
+    var s=document.createElement('script'); s.async=true; s.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(GA4_ID);
+    document.head.appendChild(s);
+    window.__ga4_id = GA4_ID;
+  })();
+</script>
+</head>
+<body>
+<div class="wrap">
+  <div class="badge-wrap"><span class="version">v1.2.38-header-spacing</span></div>
+
+  <div class="card" id="chatCard">
+    <!-- Sticky header -->
+    <div class="header-sticky">
+      <div class="header">
+
+        <!-- ======== EDITABLE HERO SECTION ======== -->
+        <div class="head-row">
+          <img class="logo" src="./chat%20white.png" alt="AR logo" />
+          <h2 class="title">Alan Ranger Assistant</h2>
+        </div>
+
+        <div class="trust" aria-label="Accreditations and ratings">
+          <a class="badge" href="https://www.alanranger.com/about-alan-ranger" target="_blank" rel="noopener"><span class="dot"></span> BIPP Qualified</a>
+          <a class="badge" href="https://www.alanranger.com/about-alan-ranger" target="_blank" rel="noopener"><span class="dot"></span> 20+ years teaching</a>
+          <a class="badge" href="https://www.alanranger.com/testimonials-customer-reviews/" target="_blank" rel="noopener"><span class="dot"></span> Reviews 4.9 <span class="stars">★★★★<span style="background:linear-gradient(90deg, #f5c518 50%, transparent 50%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">★</span></span></a>
+        </div>
+        <div class="sub-wrap">
+          <p class="sub">
+            Alan's AI assistant. Ask about workshops, tuition, or photography. Can't help? Contact Alan:
+            <span class="pill-inline">
+              <a class="pill pill--brand" target="_blank" rel="noopener" href="https://www.alanranger.com/contact-us-alan-ranger-photography">Email</a>
+              <a class="pill pill--wa" target="_blank" rel="noopener" href="https://wa.me/447817017994">WhatsApp</a>
+            </span>
+          </p>
+        </div>
+        <!-- ======== /EDITABLE HERO SECTION ======== -->
+
+      </div>
+    </div>
+
+    <div class="chat">
+      <div id="thread" class="thread">
+        <div class="bubble">Hi! I can help with workshops, tuition, technical photography questions, equipment recommendations, and course information. Ask me anything about Alan's services or photography techniques!</div>
+      </div>
+
+      <!-- Utility buttons -->
+      <div class="tools">
+        <label class="toggle" title="Play a short chime when an answer arrives">
+          <input type="checkbox" id="sound-toggle"> 🔔 Sound
+        </label>
+        <button id="btn-email">Email transcript</button>
+        <button id="btn-reset">Reset chat</button>
+      </div>
+
+      <details id="debugPanel" class="debug" style="display:none">
+        <summary>🔎 Show debug</summary>
+        <button id="dbg-copy" style="margin:8px 0 12px;padding:6px 10px;border-radius:6px;border:1px solid #334;color:#cfe3ff;background:#13203e;cursor:pointer">Copy all</button>
+        <div class="kv"><label>Endpoint</label><div>/api/chat</div></div>
+        <div class="kv"><label>Status</label><div id="dbg-status">–</div></div>
+        <div class="kv"><label>Server ver</label><div id="dbg-srvver">–</div></div>
+        <div class="kv"><label>Headers</label><pre id="dbg-headers" class="json">–</pre></div>
+        <div class="kv"><label>Request</label><pre id="dbg-req" class="json">–</pre></div>
+        <div class="kv"><label>Response</label><pre id="dbg-res" class="json">–</pre></div>
+        <div class="kv"><label>Structured</label><pre id="dbg-struct" class="json">–</pre></div>
+        <div class="kv"><label>Debug Info</label><pre id="dbg-debug" class="json">–</pre></div>
+        <div class="kv"><label>Provenance</label><pre id="dbg-prov" class="json">–</pre></div>
+        <div class="kv"><label>Note</label><pre id="dbg-note" class="json">–</pre></div>
+      </details>
+
+      <div class="composer">
+        <input id="q" placeholder="Ask a question… (Shift+Enter for newline)" />
+        <button id="send" class="send">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= Config ================= */
+const CHAT_ENDPOINT = '/api/chat';
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
+
+
+/* ================= DOM refs ================= */
+const thread = document.getElementById('thread');
+const input  = document.getElementById('q');
+const sendBtn= document.getElementById('send');
+const btnEmail = document.getElementById('btn-email');
+const btnReset = document.getElementById('btn-reset');
+const soundToggle = document.getElementById('sound-toggle');
+function gaTrack(name, params){ try{ if(window.gtag&&window.__ga4_id){ window.gtag('event', name, params||{}); } }catch{} }
+
+const dbgStatus = document.getElementById('dbg-status');
+const dbgReq    = document.getElementById('dbg-req');
+const dbgRes    = document.getElementById('dbg-res');
+const dbgHeaders= document.getElementById('dbg-headers');
+const dbgStruct = document.getElementById('dbg-struct');
+const dbgDebug  = document.getElementById('dbg-debug');
+const dbgProv   = document.getElementById('dbg-prov');
+const dbgCopy   = document.getElementById('dbg-copy');
+const dbgNote   = document.getElementById('dbg-note');
+const dbgSrvVer = document.getElementById('dbg-srvver');
+
+function setDebugJSON(el, data, opts={maxLen: 1200, maxItems: 20}) {
+  function replacer(key, value){
+    if (typeof value === 'string') {
+      return value.length > opts.maxLen ? value.slice(0, opts.maxLen) + '…(truncated)' : value;
+    }
+    if (Array.isArray(value)) {
+      if (value.length > opts.maxItems) {
+        return [...value.slice(0, opts.maxItems), `…(${value.length - opts.maxItems} more items truncated)`];
+      }
+    }
+    return value;
+  }
+  try { el.textContent = JSON.stringify(data, replacer, 2); }
+  catch { el.textContent = String(data); }
+}
+
+/* ================= Debug copy ================= */
+function collectDebugText(){
+  const get = (el) => (el && el.textContent) ? el.textContent : '–';
+  const blocks = [
+    ['Endpoint','/api/chat'],
+    ['Status', get(dbgStatus)],
+    ['Server ver', get(dbgSrvVer)],
+    ['Headers', get(dbgHeaders)],
+    ['Request', get(dbgReq)],
+    ['Response', get(dbgRes)],
+    ['Structured', get(dbgStruct)],
+    ['Debug Info', get(dbgDebug)],
+    ['Provenance', get(dbgProv)],
+    ['Note', get(dbgNote)],
+  ];
+  return blocks.map(([k,v]) => `${k}:\n${v}`).join('\n\n').trim();
+}
+async function copyAllDebug(){
+  const text = collectDebugText();
+  if(!text){ alert('Nothing to copy yet.'); return; }
+  try{
+    if (navigator.clipboard?.writeText){
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta=document.createElement('textarea');
+      ta.value=text; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    if (dbgCopy){
+      const old = dbgCopy.textContent;
+      dbgCopy.textContent = 'Copied ✓';
+      setTimeout(()=>{ dbgCopy.textContent = old; }, 1500);
+    }
+  }catch(e){
+    console.error('Copy failed', e);
+    alert('Copy failed. Select the debug text and press Ctrl/Cmd+C.');
+  }
+}
+
+/* ================= UI helpers ================= */
+function addBubble(html, opts={}) {
+  const div = document.createElement('div');
+  div.className = 'bubble' + (opts.user ? ' user' : '');
+  div.innerHTML = html;
+  thread.appendChild(div);
+  div.scrollIntoView({behavior:'smooth', block:'end'});
+  return div;
+}
+function addTyping() {
+  const el = addBubble(`<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`);
+  return ()=> el && el.remove();
+}
+function mdToHtml(md){
+  if (!md) return { html:'', liIds:[], items:[] };
+  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  
+  // Enhanced markdown processing for improved API content
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>'); // Bold
+  s = s.replace(/\*(.+?)\*/g,'<em>$1</em>'); // Italic
+  s = s.replace(/`(.+?)`/g,'<code>$1</code>'); // Inline code
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>'); // Links
+  
+  const lines = s.split(/\r?\n/);
+  let out='', inList=false;
+  const flush = ()=>{ if(inList){ out+='</ul>'; inList=false; } };
+  
+  for (const line of lines){
+    const trimmed = line.trim();
+    if (!trimmed) { flush(); continue; }
+    
+    // Handle list items
+    const m = line.match(/^\s*-\s+(.*)$/);
+    if (m){ 
+      if(!inList){ out+='<ul>'; inList=true; } 
+      out += `<li>${m[1].trim()}</li>`; 
+    }
+    // Handle headers
+    else if (trimmed.startsWith('###')) {
+      flush();
+      out += `<h3>${trimmed.substring(3).trim()}</h3>`;
+    }
+    else if (trimmed.startsWith('##')) {
+      flush();
+      out += `<h2>${trimmed.substring(2).trim()}</h2>`;
+    }
+    else if (trimmed.startsWith('#')) {
+      flush();
+      out += `<h1>${trimmed.substring(1).trim()}</h1>`;
+    }
+    // Handle regular paragraphs
+    else { 
+      flush(); 
+      out += `<p>${trimmed}</p>`; 
+    }
+  }
+  flush();
+  return { html:`<div class="answer">${out}</div>` };
+}
+function fmtDateTime(d){
+  try{ return new Date(d||Date.now()).toLocaleString(undefined,{hour12:false}); }catch{ return String(d||''); }
+}
+function fmtDate(iso){
+  try{ return new Date(iso).toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}catch{ return iso; }
+}
+function currency(amount, ccy){
+  if(amount==null || amount==='') return null;
+  const n = Number(amount); if(!isFinite(n)) return null;
+  const hasFraction = Math.abs(n % 1) > 1e-6;
+  try{
+    return new Intl.NumberFormat(undefined,{
+      style:'currency',
+      currency:ccy||'GBP',
+      minimumFractionDigits: hasFraction ? 2 : 0,
+      maximumFractionDigits: hasFraction ? 2 : 0
+    }).format(n);
+  }
+  catch{
+    const s = hasFraction ? Number(n).toFixed(2) : String(Math.round(n));
+    return `£${s}`;
+  }
+}
+function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]) )}
+
+/* ============= Product helpers / card rendering ============= */
+function mergeProducts(list){
+  if(!Array.isArray(list) || !list.length) return [];
+  const map = new Map();
+  for(const p of list){
+    const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
+    if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
+    const m = map.get(key);
+    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
+    for (const k of ['display_price_gbp','display_price','availability_status','availability_raw','price_gbp','product_kind_resolved','price_source']) {
+      if (m[k]==null && p[k]!=null) m[k]=p[k];
+    }
+  }
+  return [...map.values()];
+}
+function getMetaDescription(prod){
+  const stripTags = (t)=> String(t||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+  const scrubAttrs = (t)=> String(t||'')
+    .replace(/\s*style="[^"]*"/gi,'')
+    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
+    .replace(/\s*contenteditable="[^"]*"/gi,'')
+    .replace(/\s*>\s*/g,' ');
+  const pick = (...c)=>{ for(const v of c){ if(typeof v==='string' && v.trim()) return v.trim(); } return ''; };
+  const firstSentence = t=>{ const s=String(t||'').trim(); const m=s.match(/^(.*?\.)\s|^(.+)$/); return m? (m[1]||m[2]||s).trim() : s; };
+  const limit = (t,max=220)=>{ const m=String(t||'').trim().match(new RegExp(`^(.{0,${max}}?[.!?])\\s`)); if(m&&m[1]) return m[1].trim(); return (t||'').length>max ? String(t).slice(0,max).replace(/\s+\S*$/,'')+'…' : t; };
+  const raw = pick(prod?.meta_description, prod?.metaDescription, prod?.meta?.description, prod?.seo?.metaDescription, prod?.seo?.description, prod?.raw?.metaDescription, prod?.raw?.meta?.description);
+  const fallback = firstSentence(scrubAttrs(stripTags(prod?.description||'')));
+  return limit(scrubAttrs(stripTags(raw) || fallback), 220);
+}
+function extractFacts(desc){
+  // Enhanced cleaning to prevent formatting issues and text duplication
+  const full = String(desc||'')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags completely
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags completely
+    .replace(/<[^>]*>/g, ' ') // Remove all HTML tags
+    .replace(/\s*style="[^"]*"/gi, '') // Remove style attributes
+    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi, '') // Remove data attributes
+    .replace(/\s*contenteditable="[^"]*"/gi, '') // Remove contenteditable
+    .replace(/\s*class="[^"]*"/gi, '') // Remove class attributes
+    .replace(/\s*id="[^"]*"/gi, '') // Remove id attributes
+    .replace(/\s*data-rte-[^=]*="[^"]*"/gi, '') // Remove Squarespace RTE attributes
+    .replace(/\s*data-indent="[^"]*"/gi, '') // Remove indent attributes
+    .replace(/\s*white-space:pre-wrap[^"]*"/gi, '') // Remove white-space styles
+    .replace(/\s*margin-left:[^"]*"/gi, '') // Remove margin styles
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+  
+  // Split into lines and clean each line
+  const txt = full.split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(Boolean)
+    .filter((line, index, arr) => {
+      // Remove duplicate lines (common issue causing text duplication)
+      return arr.indexOf(line) === index;
+    });
+  
+  const findAfter = (label)=>{
+    // First try to find label on its own line
+    const i = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
+    if(i>=0 && i+1<txt.length) return txt[i+1];
+    
+    // Try to find label with value on same line
+    const flat = txt.find(l=>new RegExp(`^${label}\\s*:?\\s*(.+)$`,'i').test(l));
+    if(flat) return flat.replace(new RegExp(`^${label}\\s*:?\\s*`,'i'),'').trim();
+    
+    // Fallback: search the whole text for `Label: value` anywhere
+    const re = new RegExp(`${label}\\s*:?\\s*([^\n-]+)`, 'i');
+    const m = full.match(re); 
+    if(m && m[1]) return m[1].trim();
+    return null;
+  };
+  
+  const captureBulletBlock = (label)=>{
+    const idx = txt.findIndex(l=>new RegExp(`^${label}\\s*:?$`,'i').test(l));
+    const out = [];
+    if (idx>=0){
+      for(let j=idx+1;j<txt.length;j++){
+        const line = txt[j];
+        if(!line) break;
+        if (/^[A-Za-z].+:$/.test(line)) break; // next section header
+        if (/^[-•]/.test(line)) out.push(line.replace(/^[-•]\s*/,'').trim());
+        else if (out.length && line) out.push(line); else if(!/^[-•]/.test(line)) break;
+      }
+    }
+    return out;
+  };
+  
+  // Debug: log the extracted values
+  const fitnessValue = findAfter('Fitness');
+  const participantsValue = findAfter('Participants');
+  const locationValue = findAfter('Location');
+  
+  // Debug logging
+  if (window.debugExtractFacts || window.location.search.includes('debug=extract')) {
+    console.log('extractFacts debug:', {
+      full: full.substring(0, 500),
+      txt: txt.slice(0, 10),
+      fitnessValue,
+      participantsValue,
+      locationValue
+    });
+  }
+  
+  return {
+    location: locationValue,
+    participants: participantsValue,
+    fitness: fitnessValue,
+    availability: findAfter('Availability'),
+    experience: findAfter('Experience - Level') || findAfter('Experience Level'),
+    equipmentItems: (() => {
+      // Enhanced Equipment Needed extraction with better text segmentation
+      const equipmentIndex = full.toLowerCase().indexOf('equipment needed');
+      if (equipmentIndex !== -1) {
+        const colonIndex = full.indexOf(':', equipmentIndex);
+        if (colonIndex !== -1) {
+          let equipmentText = full.substring(colonIndex + 1);
+          
+          // Better section boundary detection
+          const nextSectionPatterns = [
+            /Experience\s*[-:]?\s*Level/i,
+            /Participants/i,
+            /Location/i,
+            /Time/i,
+            /Duration/i,
+            /Price/i,
+            /Availability/i
+          ];
+          
+          let minIndex = equipmentText.length;
+          for (const pattern of nextSectionPatterns) {
+            const match = equipmentText.search(pattern);
+            if (match !== -1 && match < minIndex) {
+              minIndex = match;
+            }
+          }
+          
+          if (minIndex < equipmentText.length) {
+            equipmentText = equipmentText.substring(0, minIndex);
+          }
+          
+          equipmentText = equipmentText.trim();
+          
+          // Clean up and split equipment items
+          if (equipmentText.includes('*')) {
+            return equipmentText.split('*').map(item => item.trim()).filter(Boolean);
+          }
+          if (equipmentText.includes('-')) {
+            return equipmentText.split('-').map(item => item.trim()).filter(Boolean);
+          }
+          return [equipmentText];
+        }
+      }
+      return [];
+    })(),
+    optionLines: txt.filter(l => /^\s*(?:4\s*hrs?|4\s*hours?|half\s*day|1\s*day|full\s*day|day)\b/i.test(l) || /^\s*OR\s*1\s*day\b/i.test(l))
+  };
+}
+function productHeadlinePrice(prod){
+  if (prod.display_price) return String(prod.display_price);
+  if (typeof prod.display_price_number === 'number') return currency(prod.display_price_number, 'GBP');
+  if (typeof prod.price_gbp === 'number') return currency(prod.price_gbp, 'GBP');
+  if (typeof prod.price === 'number') return currency(prod.price, prod.price_currency||'GBP');
+  return null;
+}
+
+// Check if a value is meaningless and shouldn't be displayed
+function isMeaninglessValue(value) {
+  if (!value || typeof value !== 'string') return true;
+  
+  const val = value.toLowerCase().trim();
+  
+  // Common meaningless values
+  const meaninglessPatterns = [
+    'null',
+    'undefined', 
+    'n/a',
+    'na',
+    'none',
+    'in milliseconds',
+    'out duration in milliseconds',
+    'duration in milliseconds',
+    'out duration',
+    'milliseconds',
+    'ms',
+    '0',
+    '0.0',
+    '0ms',
+    'null ms',
+    'undefined ms',
+    'n/a ms',
+    'none ms',
+    'not specified',
+    'not set',
+    'empty',
+    'blank',
+    'default',
+    'placeholder',
+    'tbd',
+    'to be determined',
+    'coming soon',
+    'tba',
+    'to be announced'
+  ];
+  
+  // Check exact matches
+  if (meaninglessPatterns.includes(val)) return true;
+  
+  // Check if it's just a single character or very short, but NOT a valid number
+  if (val.length <= 2 && !/^\d+$/.test(val)) return true;
+  
+  
+  // Check if it's just punctuation or special characters
+  if (/^[^\w\s]+$/.test(val)) return true;
+  
+  return false;
+}
+
+function deriveOptions(prod, facts){
+  const ccy = prod.price_currency || 'GBP';
+  const base = prod.price ?? prod?.raw?.offers?.price;
+  const opts = [];
+  // Don't add hardcoded "Standard" option to avoid price duplication
+  // Only add options if there are actual different pricing tiers
+  return opts;
+}
+function renderProductCard(prod){
+  const SITE_ORIGIN = 'https://www.alanranger.com';
+  const absolutize = (u)=>{
+    if (!u) return '#'; const s=String(u);
+    if (/^https?:\/\//i.test(s)) return s;
+    if (s.startsWith('/')) return SITE_ORIGIN + s;
+    // slug only → assume product section path
+    return SITE_ORIGIN + '/photographic-workshops-near-me/' + s.replace(/^\/+/, '');
+  };
+  // Don't extract facts from concatenated description - use structured data fields directly
+  const facts = {}; // Empty facts object since we're using structured data fields
+  const options = deriveOptions(prod, facts);
+  const priceHead = productHeadlinePrice(prod);
+  
+  // Build structured data as bullet points
+  const bulletPoints = [];
+  
+  // Price (always show if available)
+  if (priceHead) {
+    bulletPoints.push(`<li><strong>Price:</strong> ${escapeHTML(priceHead)}</li>`);
+  }
+  
+  // Availability (database field only)
+  if (prod.availability_status && !isMeaninglessValue(prod.availability_status)) {
+    const avail = String(prod.availability_status).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
+    bulletPoints.push(`<li><strong>Availability:</strong> ${escapeHTML(avail)}</li>`);
+  }
+  
+  // Participants (database field only)
+  if (prod.participants && !isMeaninglessValue(prod.participants)) {
+    bulletPoints.push(`<li><strong>Participants:</strong> ${escapeHTML(prod.participants)}</li>`);
+  }
+  
+  // Fitness Level (database field only)
+  if (prod.fitness_level && !isMeaninglessValue(prod.fitness_level)) {
+    bulletPoints.push(`<li><strong>Fitness Level:</strong> ${escapeHTML(prod.fitness_level)}</li>`);
+  }
+  
+  // Experience Level (database field only)
+  if (prod.experience_level && !isMeaninglessValue(prod.experience_level)) {
+    bulletPoints.push(`<li><strong>Experience Level:</strong> ${escapeHTML(prod.experience_level)}</li>`);
+  }
+  
+  // Location (database field only)
+  if (prod.location_name && !isMeaninglessValue(prod.location_name)) {
+    bulletPoints.push(`<li><strong>Location:</strong> ${escapeHTML(prod.location_name)}</li>`);
+  }
+  
+  // Location Address (only if different from location_name and meaningful)
+  if (prod.location_address && prod.location_address !== prod.location_name && !isMeaninglessValue(prod.location_address)) {
+    bulletPoints.push(`<li><strong>Address:</strong> ${escapeHTML(prod.location_address)}</li>`);
+  }
+  
+  // Time Schedule (only if meaningful)
+  if (prod.time_schedule && !isMeaninglessValue(prod.time_schedule)) {
+    bulletPoints.push(`<li><strong>Schedule:</strong> ${escapeHTML(prod.time_schedule)}</li>`);
+  }
+  
+  // What to Bring (only if meaningful)
+  if (prod.what_to_bring && !isMeaninglessValue(prod.what_to_bring)) {
+    bulletPoints.push(`<li><strong>What to Bring:</strong> ${escapeHTML(prod.what_to_bring)}</li>`);
+  }
+  
+  // Course Duration (only if meaningful)
+  if (prod.course_duration && !isMeaninglessValue(prod.course_duration)) {
+    bulletPoints.push(`<li><strong>Duration:</strong> ${escapeHTML(prod.course_duration)}</li>`);
+  }
+  
+  // Instructor Info (only if meaningful)
+  if (prod.instructor_info && !isMeaninglessValue(prod.instructor_info)) {
+    bulletPoints.push(`<li><strong>Instructor:</strong> ${escapeHTML(prod.instructor_info)}</li>`);
+  }
+  
+  // Equipment Needed (database field only)
+  if (prod.equipment_needed && !isMeaninglessValue(prod.equipment_needed)) {
+    bulletPoints.push(`<li><strong>Equipment Needed:</strong> ${escapeHTML(prod.equipment_needed)}</li>`);
+  }
+  
+  // Build the bullet points HTML
+  const bulletPointsHTML = bulletPoints.length > 0 ? 
+    `<ul class="product-details">${bulletPoints.join('')}</ul>` : '';
+  
+  // Show meta description only if we don't have structured data
+  const md = getMetaDescription(prod);
+  const showDescription = md && bulletPoints.length === 0;
+  
+  const li = options.map(o=>`<li>${escapeHTML(o.label||'')}${o.price ? ` — ${o.price}` : ''}</li>`).join('');
+  const href = absolutize(prod.page_url || prod.source_url || prod.url || '#');
+  
+  // Create a more visually appealing product card
+  const bookButton = href && href !== '#' ? 
+    `<a href="${href}" target="_blank" rel="noopener" class="product-book-btn">Book Now →</a>` : '';
+  
+  return `
+    <div class="answer">
+      <div class="product-card">
+        <div class="product-header">
+          <h3 class="product-title">${escapeHTML(prod.title || 'Photography Workshop')}</h3>
+          ${priceHead ? `<div class="product-price">${escapeHTML(priceHead)}</div>` : ''}
+        </div>
+        <div class="product-content">
+          ${showDescription ? `<p class="product-description">${escapeHTML(md)}</p>` : ''}
+          ${bulletPointsHTML}
+          ${li ? `<div class="product-options"><ul>${li}</ul></div>` : ''}
+        </div>
+        ${bookButton}
+      </div>
+    </div>
+  `;
+}
+
+/* ===== Events & Guides ===== */
+const STOP = new Set(['the','and','or','what','whats','when','whens','cost','workshop','workshops','photography','photo','near','me','uk','warks','warwickshire','devonshire','district','class','classes','course','courses','long','exposure','sunset','sunrise','landscape','seascape','evening','morning','walk','walks']);
+function tokenize2(s){ return (s||'').toLowerCase().match(/[a-z0-9]+/g)||[]; }
+function futureEvents(structured){
+  const now = new Date();
+  // Only show future events (from today onwards)
+  return (structured?.events||[]).filter(e=>e?.date_start && !isNaN(Date.parse(e.date_start)) && new Date(e.date_start)>=now);
+}
+function extractKeyPhrases(topic, query){
+  const words = (topic + ' ' + (query||'')).toLowerCase().match(/[a-z]+/g)||[];
+  const kept = words.filter(w => !STOP.has(w) && w.length >= 3);
+  const phrases = []; for (let i=0; i<kept.length-1; i++){ phrases.push(`${kept[i]} ${kept[i+1]}`); }
+  return { words: new Set(kept), phrases: new Set(phrases) };
+}
+function scoreEventMatch(ev, kp){
+  const hay = ((ev.title||'') + ' ' + (ev.location||'')).toLowerCase();
+  let score = 0; for (const ph of kp.phrases) if (ph && hay.includes(ph)) score += 2; for (const w of kp.words) if (w && new RegExp(`\\b${w}\\b`).test(hay)) score += 1;
+  return score;
+}
+function eventHeaderLabel(structured){
+  const q = (__lastQuery||'').toLowerCase();
+  const events = structured?.events || [];
+  
+  // Check if we have events and determine type from the data
+  if (events.length > 0) {
+    // Check the csv_type of the first event to determine the type
+    const firstEvent = events[0];
+    if (firstEvent.csv_type === 'course_events') {
+      return 'Upcoming Courses';
+    } else if (firstEvent.csv_type === 'workshop_events') {
+      return 'Upcoming Workshops';
+    }
+  }
+  
+  // Fallback to query-based detection
+  if (/\b(course|courses|class|classes|tuition|lesson|lessons)\b/.test(q)) return 'Upcoming Courses';
+  if (/\b(workshop|workshops)\b/.test(q)) return 'Upcoming Workshops';
+  return 'Upcoming Events';
+}
+function renderEventsBlock(structured, query){
+  // Skip events block for simple follow-up questions (but not for legitimate event queries)
+  const isSimpleFollowUp = query && (
+    /^(how many|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
+    !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost') &&
+    !query.includes('workshop') && !query.includes('course') && !query.includes('event') && !query.includes('class')
+  );
+  if (isSimpleFollowUp) return '';
+  
+  const all = futureEvents(structured);
+  if(!all.length) return '';
+  const kp = extractKeyPhrases(structured?.topic||'', __lastQuery);
+  const list = all.map(e=>({e, s: scoreEventMatch(e, kp)})).sort((a,b)=> (b.s - a.s) || (new Date(a.e.date_start) - new Date(b.e.date_start))).map(x=>x.e);
+  
+  const eventsHTML = list.map(e=>{
+    const whenStart = fmtDate(e.date_start);
+    let when = whenStart;
+    try{
+      const startDay = new Date(e.date_start);
+      const endDay = e.date_end ? new Date(e.date_end) : null;
+      const sameDay = endDay && startDay.toDateString() === endDay.toDateString();
+      if (endDay && !sameDay) {
+        when = `${whenStart} – ${fmtDate(e.date_end)}`;
+      }
+    }catch{}
+    const href = e.href || e.event_url || e.page_url || e.source_url || e.url || '#';
+    const where = e.location ? `${escapeHTML(e.location)}` : '';
+    const title = e.title ? `${escapeHTML(e.title)}` : '';
+    const price = e.price_gbp ? `£${e.price_gbp}` : '';
+    
+    // Format start and end times - use CSV times directly to avoid DST issues
+    let timeInfo = '';
+    if (e.start_time && e.end_time) {
+      timeInfo = `<div class="event-time">🕐 ${escapeHTML(e.start_time)} - ${escapeHTML(e.end_time)}</div>`;
+    } else if (e._csv_start_time && e._csv_end_time) {
+      // Use CSV times directly from raw data to avoid timezone conversion
+      timeInfo = `<div class="event-time">🕐 ${escapeHTML(e._csv_start_time)} - ${escapeHTML(e._csv_end_time)}</div>`;
+    } else if (e.date_start && e.date_end) {
+      // Fallback: extract time from date strings without timezone conversion
+      const startTime = e.date_start.split('T')[1]?.substring(0, 5) || '';
+      const endTime = e.date_end.split('T')[1]?.substring(0, 5) || '';
+      if (startTime && endTime) {
+        timeInfo = `<div class="event-time">🕐 ${startTime} - ${endTime}</div>`;
+      }
+    }
+    
+    // Determine event type for display
+    const eventType = e.csv_type === 'course_events' ? 'Course' : e.csv_type === 'workshop_events' ? 'Workshop' : 'Event';
+    const eventTypeIcon = e.csv_type === 'course_events' ? '🎓' : e.csv_type === 'workshop_events' ? '🔧' : '📅';
+    
+    // Create a more visually appealing event card
+    return `
+      <div class="event-card">
+        <div class="event-content">
+          <div class="event-header">
+            <h4 class="event-title">
+              <a href="${href}" target="_blank" rel="noopener">${title || 'Photography Event'}</a>
+            </h4>
+            <div class="event-type-badge">${eventTypeIcon} ${eventType}</div>
+          </div>
+          <div class="event-details">
+            <div class="event-date">📅 ${when}</div>
+            ${timeInfo}
+            ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  const header = eventHeaderLabel(structured);
+  const headerIcon = header.includes('Course') ? '🎓' : header.includes('Workshop') ? '🔧' : '📅';
+  
+  return `
+    <div class="answer">
+      <h3>${headerIcon} ${header}</h3>
+      <div class="events-grid">
+        ${eventsHTML}
+      </div>
+    </div>
+  `;
+}
+function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
+function articleTitle(a){ return a?.title || a?.raw?.name || ''; }
+function pickArticles(structured, query, topic){
+  const all = Array.isArray(structured?.articles) ? structured.articles : [];
+  if (!all.length) return [];
+  const q = String(query||'').toLowerCase();
+  const toks = tokenize2(q);
+  const KEY_BONUS = new Set(['tripod','tripods','head','ballhead','levelling','recommend','recommendation','recommendations','equipment']);
+  
+  const score = (a)=>{
+    const title = (articleTitle(a)||'').toLowerCase();
+    const url = (articleUrl(a)||'').toLowerCase();
+    let s = 0;
+    
+    // Major bonus for exact topic match in title
+    for (const t of toks){ 
+      if (!t) continue; 
+      if (title.includes(t)) s += 10; // Increased from 3 to 10
+      if (url.includes(t)) s += 5;   // Increased from 2 to 5
+    }
+    
+    // Bonus for equipment-related keywords
+    for (const k of KEY_BONUS){ 
+      if (title.includes(k) || url.includes(k)) s += 5; 
+    }
+    
+    // Penalty for PDFs - prefer actual blog articles
+    if (title.includes('pdf') || title.includes('checklist') || a.json_ld_data?.['@type'] === 'TextDigitalDocument') {
+      s -= 15; // Heavy penalty for PDFs
+    }
+    
+    // Bonus for main blog articles (those with FAQPage structure)
+    if (a.json_ld_data?.['@type'] === 'FAQPage') {
+      s += 20; // Major bonus for main blog articles
+    }
+    
+    return s;
+  };
+  
+  // First, score and sort by relevance
+  const scored = all
+    .filter(a => articleUrl(a) && articleTitle(a))
+    .map(a => ({ a, s: score(a) }))
+    .sort((x,y)=> y.s - x.s);
+  
+  // Then, within each score group, sort by date (newest first)
+  const grouped = {};
+  scored.forEach(({a, s}) => {
+    if (!grouped[s]) grouped[s] = [];
+    grouped[s].push(a);
+  });
+  
+  // Sort each group by date (newest first) and flatten
+  const result = [];
+  Object.keys(grouped).sort((a,b) => b - a).forEach(score => {
+    const articles = grouped[score].sort((x, y) => {
+      const dateX = new Date(x.publish_date || x.last_seen || 0);
+      const dateY = new Date(y.publish_date || y.last_seen || 0);
+      return dateY - dateX; // Newest first
+    });
+    result.push(...articles);
+  });
+  
+  return result.slice(0,6);
+}
+function renderArticlesBlock(structured, query){
+  // Skip articles block for simple follow-up questions (but not for legitimate technical/advice queries)
+  const isSimpleFollowUp = query && (
+    /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
+    !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost') &&
+    !query.includes('workshop') && !query.includes('course') && !query.includes('event') && !query.includes('class') &&
+    !query.includes('recommend') && !query.includes('equipment') && !query.includes('tripod') &&
+    // Don't skip technical photography questions
+    !query.includes('iso') && !query.includes('aperture') && !query.includes('shutter') && !query.includes('exposure') &&
+    !query.includes('depth') && !query.includes('field') && !query.includes('contrast') && !query.includes('framing') &&
+    !query.includes('negative') && !query.includes('space') && !query.includes('manual') && !query.includes('mirrorless') &&
+    !query.includes('dslr') && !query.includes('camera') && !query.includes('photography') && !query.includes('photo')
+  );
+  if (isSimpleFollowUp) return '';
+  
+  const topic = structured?.topic || '';
+  const list = pickArticles(structured, query, topic);
+  if(!list.length) return '';
+  
+  const articlesHTML = list.map(a=>{
+    const href = articleUrl(a);
+    let t = articleTitle(a);
+    
+    // Better title extraction with multiple fallbacks
+    if (!t || /^alan ranger photography$/i.test(t)) {
+      // Try raw fields first
+      t = a?.raw?.headline || a?.raw?.name || '';
+      
+      // If still generic, extract from URL
+      if (!t || /^alan ranger photography$/i.test(t)) {
+        try {
+          const u = new URL(href);
+          const pathParts = (u.pathname||'').split('/').filter(Boolean);
+          const lastPart = pathParts[pathParts.length - 1] || '';
+          t = lastPart.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim();
+          t = t.split(' ').map(w=> w? w[0].toUpperCase()+w.slice(1):'').join(' ');
+        } catch {}
+      }
+    }
+    
+    if (!t || /^alan ranger photography$/i.test(t)) t = 'Read more';
+    
+    // Create a more visually appealing article card
+    const displayDate = a.display_date || (a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    }) : null);
+    
+    // Show categories and tags from CSV data if available
+    let categoryTags = '';
+    if (a.categories && Array.isArray(a.categories) && a.categories.length > 0) {
+      const categories = a.categories.filter(c => c && c.trim()).slice(0, 2).map(c => escapeHTML(c.trim())).join(', ');
+      if (categories) categoryTags += `<span class="article-category">🏷️ ${categories}</span>`;
+    }
+    
+    if (a.tags && Array.isArray(a.tags) && a.tags.length > 0) {
+      const tags = a.tags.filter(t => t && t.trim()).slice(0, 3).map(t => escapeHTML(t.trim())).join(', ');
+      if (tags) categoryTags += `<span class="article-tags"># ${tags}</span>`;
+    }
+    
+    return `
+      <div class="article-card">
+        <div class="article-content">
+          <h4 class="article-title">
+            <a href="${href}" target="_blank" rel="noopener">${escapeHTML(t)}</a>
+          </h4>
+          <div class="article-meta">
+            <span class="article-source">📖 Photography Guide</span>
+            ${displayDate ? `<span class="article-date">📅 ${displayDate}</span>` : ''}
+          </div>
+          ${categoryTags ? `<div class="article-categories">${categoryTags}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  return `
+    <div class="answer">
+      <h3>📚 Related Photography Guides</h3>
+      <div class="articles-grid">
+        ${articlesHTML}
+      </div>
+    </div>
+  `;
+}
+
+/* ===== Action Pills ===== */
+function buildActionPillsFromStructured(structured, query){
+  const safe = []; const used = new Set();
+  const add = (label, href, priority = false, secondary = false) => { 
+    if(!label || !href) return; 
+    const key = `${label}::${href}`; 
+    if(used.has(key)) return; 
+    used.add(key); 
+    safe.push({label, href, priority, secondary}); 
+  };
+  
+  // Prioritize booking/contact actions
+  for (const p of (structured?.pills || structured?.chips || [])) {
+    const label = p.label || p.text || 'Open';
+    const href = p.url || p.href;
+    const isPriority = /book|contact|whatsapp|call|buy|purchase/i.test(label);
+    const isSecondary = /read|guide|learn|more/i.test(label);
+    add(label, href, isPriority, isSecondary);
+  }
+  
+  // Articles are now shown in the "Guides that match your question" section instead of as pills
+  
+  // Sort by priority: priority first, then regular, then secondary
+  safe.sort((a, b) => {
+    if (a.priority && !b.priority) return -1;
+    if (!a.priority && b.priority) return 1;
+    if (a.secondary && !b.secondary) return 1;
+    if (!a.secondary && b.secondary) return -1;
+    return 0;
+  });
+  
+  return safe.slice(0,6);
+}
+
+/* ===== Intent helpers / gating ===== */
+function detectIntent(payload, query){
+  const s = payload?.structured || {}; const q = String(query||'').toLowerCase();
+  const server = s.intent || payload?.intent || payload?.meta?.intent || payload?.debug?.intent || '';
+  
+  // Both courses and workshops are events (scheduled sessions)
+  if (/course|courses|class|classes|tuition|lesson|lessons/.test(q)) return 'events';
+  if (/workshop|workshops|event|events|when|whens|next/.test(q)) return 'events';
+  if (/price|cost|fee|fees|how much|book|booking|buy/i.test(q)) return 'products';
+  
+  // Trust the server intent detection as the primary source
+  return server ? server.toLowerCase() : 'unknown';
+}
+function isPriceyQuery(q){ return /\b(price|cost|fee|fees|how much|book|booking|buy)\b/i.test(String(q||'')); }
+
+/* === GATE: show product if Book now pill exists or other heuristics === */
+function decideProductRendering(payload, mergedProducts, query){
+  const s = payload?.structured || {};
+  const intent = detectIntent(payload, query);
+  const evs = futureEvents(s);
+  const hasEvs = evs.length > 0;
+  const topEv = hasEvs ? evs[0] : null;
+  const bookNowUrl = (s.pills || []).find(p => /book now/i.test(p.label||''))?.url || null;
+
+  if (!mergedProducts.length)           return {show:false, reason:'no-products'};
+  if (intent === 'products')            return {show:true,  reason:'intent-products'};
+  if (isPriceyQuery(query))             return {show:true,  reason:'pricey-query'};
+  if (bookNowUrl)                       return {show:true,  reason:'book-pill-present'};
+  
+  // Skip product blocks for simple follow-up questions
+  const isSimpleFollowUp = query && (
+    /^(how many|what|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
+    !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost')
+  );
+  if (isSimpleFollowUp)                 return {show:false, reason:'simple-follow-up'};
+  
+  if (!hasEvs)                          return {show:true,  reason:'no-events-fallback'};
+
+  const prod = mergedProducts[0];
+  // very light overlap heuristic
+  const tP = tokenize2((prod.title||'') + ' ' + (prod.location||'')); 
+  const tE = tokenize2((topEv.title||'') + ' ' + (topEv.location||'')); 
+  const overlap = tP.filter(x=>tE.includes(x) && !STOP.has(x));
+  if (overlap.length >= 2) return {show:true, reason:'strong-match'};
+  return {show:false, reason:'prefer-events'};
+}
+
+/* Confidence heuristic (client-side floor) */
+function heuristicConfidence(structured){
+  let score = 0;
+  const articles = Array.isArray(structured?.articles) ? structured.articles : [];
+  if (structured?.products?.length) score += 35;
+  if (structured?.events?.length)   score += 35;
+  if (articles.length)              score += 15;
+  // Penalize generic responses that only point to recommendations/search without relevance
+  const hasTripodArticle = articles.some(a=>/tripod/i.test(articleTitle(a)||'') || /tripod/i.test(articleUrl(a)||''));
+  if (articles.length && !hasTripodArticle && /tripod|head|tripods/i.test(String(__lastQuery||''))) {
+    score = Math.max(20, score - 25);
+  }
+  return Math.min(95, Math.max(15, score || 20));
+}
+
+/* ===================== Chime (with autoplay unlock) ===================== */
+const CHIME_KEY = 'alan_chime_enabled';
+let chime = { enabled: true, unlocked: false, ctx: null };
+
+function loadChimePref(){
+  const s = localStorage.getItem(CHIME_KEY);
+  chime.enabled = s == null ? true : s === '1';
+  if (soundToggle) soundToggle.checked = chime.enabled;
+}
+function saveChimePref(){
+  localStorage.setItem(CHIME_KEY, soundToggle.checked ? '1' : '0');
+  chime.enabled = soundToggle.checked;
+}
+function unlockAudio(){
+  if (chime.unlocked) return;
+  try{
+    chime.ctx = chime.ctx || new (window.AudioContext || window.webkitAudioContext)();
+    // resume on gesture
+    const maybeResume = chime.ctx.resume ? chime.ctx.resume() : Promise.resolve();
+    Promise.resolve(maybeResume).then(()=>{
+      chime.unlocked = true;
+    }).catch(()=>{ /* ignore */ });
+  }catch{ /* ignore */ }
+}
+function playChime(){
+  if (!chime.enabled) return;
+  if (!chime.unlocked) return; // blocked until a gesture
+  try{
+    const ctx = chime.ctx || new (window.AudioContext || window.webkitAudioContext)();
+    chime.ctx = ctx;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    // two quick notes: A5 then E6
+    const now = ctx.currentTime;
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, now);
+    o.frequency.setValueAtTime(880, now);
+    g.gain.exponentialRampToValueAtTime(0.09, now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    // second ping
+    const o2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    o2.type='sine';
+    o2.frequency.setValueAtTime(1318.51, now + 0.18);
+    o2.connect(g2); g2.connect(ctx.destination);
+    g2.gain.setValueAtTime(0.0001, now + 0.18);
+    g2.gain.exponentialRampToValueAtTime(0.08, now + 0.19);
+    g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.36);
+    o.start(now); o.stop(now + 0.20);
+    o2.start(now + 0.18); o2.stop(now + 0.38);
+  }catch{/* no-op */}
+}
+// gesture listeners to unlock
+window.addEventListener('click', unlockAudio, { once:false, passive:true });
+window.addEventListener('keydown', unlockAudio, { once:false });
+window.addEventListener('touchstart', unlockAudio, { once:false, passive:true });
+
+/* Full render */
+let __lastQuery = '';
+function renderAnswer(payload){
+  try { if (dbgSrvVer) dbgSrvVer.textContent = payload?.debug?.version || '–'; } catch {}
+  
+  // Handle both decimal (0-1) and percentage (0-100) confidence values
+  let confidencePct = null;
+  if (typeof payload.confidence === 'number') {
+    // API returns decimal confidence (0-1), convert to percentage
+    confidencePct = Math.round(payload.confidence * 100);
+  } else if (typeof payload.confidence_pct === 'number') {
+    // Legacy percentage format
+    confidencePct = payload.confidence_pct;
+  }
+  
+  const heuristic = heuristicConfidence(payload.structured||{});
+  // Use heuristic only if confidence is very low (< 30%) or missing
+  if (confidencePct == null || confidencePct < 30) confidencePct = heuristic;
+  const __rounded = Math.round(confidencePct);
+
+  // Render the main textual answer first
+  const md = payload.answer_markdown || payload.answer || '';
+  if (md && md.trim()) {
+    const {html} = mdToHtml(md);
+    addBubble(html);
+  }
+
+  const s = payload.structured||{};
+  const merged = mergeProducts(s.products||[]);
+  const gate = decideProductRendering(payload, merged, __lastQuery);
+
+  if (gate.show) {
+    const prod = merged[0] || null;
+    if (prod) addBubble(renderProductCard(prod));
+  }
+
+  const evHTML = renderEventsBlock(s, __lastQuery);
+  if(evHTML) addBubble(evHTML);
+
+  const artHTML = renderArticlesBlock(s, __lastQuery);
+  if(artHTML) addBubble(artHTML);
+
+  const pills = buildActionPillsFromStructured(s, __lastQuery);
+  if(pills.length){
+    const wrap = document.createElement('div'); wrap.className='actions';
+    pills.forEach(p=>{ 
+      const a=document.createElement('a'); 
+      a.className='pill' + (p.priority ? ' priority' : '') + (p.secondary ? ' secondary' : ''); 
+      a.textContent=p.label; 
+      a.href=p.href; 
+      a.target='_blank'; 
+      a.rel='noopener'; 
+      
+      // Add click event logging
+      a.addEventListener('click', () => {
+        fetch('/api/chat-log', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+          },
+          body: JSON.stringify({
+            action: 'event',
+            data: { 
+              sessionId, 
+              eventType: 'pill_click', 
+              eventData: { label: p.label, href: p.href, priority: p.priority } 
+            }
+          })
+        }).catch(err => console.warn('Event logging failed:', err));
+      });
+      
+      wrap.appendChild(a); 
+    });
+    thread.appendChild(wrap);
+  }
+
+  const footer = document.createElement('div');
+  footer.className = 'footer-status';
+  // Updated confidence thresholds: 80%+ green, 50%+ amber, below 50% red
+  const confId = `conf-pill-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  footer.innerHTML = `<span id="${confId}" class="badge conf small ${__rounded>=80?'green':__rounded>=50?'amber':'red'}">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+  thread.appendChild(footer);
+
+  // Add feedback buttons
+  const feedbackContainer = document.createElement('div');
+  feedbackContainer.className = 'feedback-container';
+  feedbackContainer.innerHTML = `
+    <div class="feedback-buttons">
+      <button class="feedback-btn thumbs-up" data-rating="thumbs_up" title="This response was helpful">
+        👍
+      </button>
+      <button class="feedback-btn thumbs-down" data-rating="thumbs_down" title="This response was not helpful">
+        👎
+      </button>
+    </div>
+  `;
+  thread.appendChild(feedbackContainer);
+
+  // Add feedback event listeners
+  const thumbsUpBtn = feedbackContainer.querySelector('.thumbs-up');
+  const thumbsDownBtn = feedbackContainer.querySelector('.thumbs-down');
+  
+  thumbsUpBtn.addEventListener('click', () => {
+    submitFeedback('thumbs_up', null, null, __lastQuery, payload, __rounded, s.intent);
+    thumbsUpBtn.style.opacity = '0.5';
+    thumbsUpBtn.disabled = true;
+    thumbsDownBtn.disabled = true;
+  });
+
+  thumbsDownBtn.addEventListener('click', () => {
+    showFeedbackForm(__lastQuery, payload, __rounded, s.intent, thumbsUpBtn, thumbsDownBtn);
+  });
+
+  // Clickable reasoning popover
+  const confEl = document.getElementById(confId);
+  if (confEl) {
+    confEl.addEventListener('click', ()=>{
+      const old = document.getElementById('reason-pop'); if (old) old.remove();
+      const box = document.createElement('div'); box.id='reason-pop'; box.className='reason-pop';
+      box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Confidence reasoning</h4><pre class="json"></pre><div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button id="reason-copy" class="send" style="padding:6px 10px">Copy log</button></div>`;
+      const pre = box.querySelector('pre');
+      const data = { structured: s, debug: payload.debug||{}, heuristic: heuristic, final: __rounded };
+      setDebugJSON(pre, data, { maxLen: 2000, maxItems: 50 });
+      box.querySelector('#reason-copy').addEventListener('click', async ()=>{
+        try {
+          const text = pre.textContent||'';
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+          } else if (navigator.clipboard && window.ClipboardItem) {
+            const blob = new Blob([text], { type: 'text/plain' });
+            await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]);
+          } else {
+            const ta=document.createElement('textarea');
+            ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+          }
+          confEl.textContent = confEl.textContent.replace('Confidence','Copied');
+          setTimeout(()=>{ confEl.textContent = `Confidence: ${__rounded}%`; }, 1200);
+        } catch(e) {
+          alert('Copy failed. Select the text and press Ctrl/Cmd+C.');
+        }
+      });
+      box.querySelector('.close').addEventListener('click', ()=> box.remove());
+      document.body.appendChild(box);
+    });
+  }
+
+  // Play chime when the answer is rendered.
+  // If the tab is backgrounded, this is particularly useful.
+  playChime();
+
+  
+  // Enhanced fallback messaging based on confidence level
+  if(!gate.show && !(s.events||[]).length && !(s.articles||[]).length && !md?.trim()){
+    let fallbackMessage = "I don't have a specific answer for that yet.";
+    let extraMessage = "";
+    
+    if (__rounded >= 80) {
+      fallbackMessage = "I found some relevant information, but I'd like to provide you with the most accurate details.";
+      extraMessage = `<p>For the most up-to-date and specific information, I'd recommend using the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+    } else if (__rounded >= 50) {
+      fallbackMessage = "I found some relevant information, but I'm not completely confident about the specifics.";
+      extraMessage = `<p>For the most accurate and up-to-date information, I'd recommend using the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+    } else if (__rounded >= 30) {
+      fallbackMessage = "I'm not entirely sure about this question, but I can try to help.";
+      extraMessage = `<p>For the best assistance, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+    } else {
+      fallbackMessage = "I don't have a specific answer for that yet.";
+      extraMessage = `<p>If this doesn't answer your question, please use the Contact or WhatsApp buttons above to reach Alan directly.</p>`;
+    }
+    
+    const {html}=mdToHtml(fallbackMessage);
+    addBubble(html.replace('</div>', `${extraMessage}</div>`));
+  }
+
+  setDebugJSON(dbgStruct, payload.structured||{});
+  setDebugJSON(dbgDebug, payload.debug||{});
+  const note = payload.debug ? {...payload.debug, product_gate: gate} : { product_gate: gate };
+  // Add equipment extraction debug info
+  if (window.debugEquipmentExtraction) {
+    note.equipmentExtraction = window.debugEquipmentExtraction;
+  }
+  if (window.debugEquipmentFallback) {
+    note.equipmentFallback = window.debugEquipmentFallback;
+  }
+  setDebugJSON(dbgNote, note);
+}
+
+/* ================= Networking ================= */
+// Generate session ID if not exists
+let sessionId = sessionStorage.getItem('chat_session_id');
+if (!sessionId) {
+  sessionId = 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  sessionStorage.setItem('chat_session_id', sessionId);
+  
+  // Log session start
+  fetch('/api/chat-log', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+    },
+    body: JSON.stringify({
+      action: 'session_start',
+      data: { sessionId }
+    })
+  }).catch(err => console.warn('Session logging failed:', err));
+}
+
+// Log session end when page is unloaded
+window.addEventListener('beforeunload', () => {
+  if (sessionId) {
+    // Use fetch with keepalive for session end logging
+    fetch('/api/chat-log', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+      },
+      body: JSON.stringify({
+        action: 'session_end',
+        data: { sessionId }
+      }),
+      keepalive: true
+    }).catch(err => console.warn('Session end logging failed:', err));
+  }
+});
+
+// Feedback functions
+async function submitFeedback(rating, reason, userFeedbackText, query, payload, confidence, intent) {
+  try {
+    const feedbackData = {
+      query: query,
+      responseId: payload?.debug?.version || null,
+      rating: rating,
+      reason: reason,
+      userFeedbackText: userFeedbackText,
+      confidenceScore: confidence,
+      intent: intent,
+      sessionId: sessionId,
+      userAgent: navigator.userAgent,
+      pageUrl: window.location.href
+    };
+
+    const response = await fetch('/api/analytics?action=feedback_submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(feedbackData)
+    });
+
+    if (response.ok) {
+      console.log('Feedback submitted successfully');
+    } else {
+      console.error('Failed to submit feedback:', response.statusText);
+    }
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+  }
+}
+
+function showFeedbackForm(query, payload, confidence, intent, thumbsUpBtn, thumbsDownBtn) {
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'feedback-form-overlay';
+  
+  overlay.innerHTML = `
+    <div class="feedback-form">
+      <h3>What was wrong with this response?</h3>
+      <p>Your feedback helps us improve the chatbot's responses.</p>
+      
+      <div class="feedback-options">
+        <label class="feedback-option">
+          <input type="radio" name="reason" value="incorrect_info">
+          <span>Incorrect information</span>
+        </label>
+        <label class="feedback-option">
+          <input type="radio" name="reason" value="not_helpful">
+          <span>Not helpful/irrelevant</span>
+        </label>
+        <label class="feedback-option">
+          <input type="radio" name="reason" value="missing_details">
+          <span>Missing key details</span>
+        </label>
+        <label class="feedback-option">
+          <input type="radio" name="reason" value="wrong_intent">
+          <span>Wrong intent detected</span>
+        </label>
+        <label class="feedback-option">
+          <input type="radio" name="reason" value="other">
+          <span>Other</span>
+        </label>
+      </div>
+      
+      <textarea class="feedback-text" placeholder="Additional details (optional)"></textarea>
+      
+      <div class="feedback-buttons-form">
+        <button class="feedback-cancel">Cancel</button>
+        <button class="feedback-submit">Submit Feedback</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Event listeners
+  const cancelBtn = overlay.querySelector('.feedback-cancel');
+  const submitBtn = overlay.querySelector('.feedback-submit');
+  const reasonInputs = overlay.querySelectorAll('input[name="reason"]');
+  const textArea = overlay.querySelector('.feedback-text');
+
+  cancelBtn.addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+
+  submitBtn.addEventListener('click', () => {
+    const selectedReason = overlay.querySelector('input[name="reason"]:checked')?.value;
+    const additionalText = textArea.value.trim();
+
+    if (!selectedReason) {
+      alert('Please select a reason for your feedback.');
+      return;
+    }
+
+    // Submit feedback
+    submitFeedback('thumbs_down', selectedReason, additionalText, query, payload, confidence, intent);
+    
+    // Disable buttons
+    thumbsUpBtn.style.opacity = '0.5';
+    thumbsUpBtn.disabled = true;
+    thumbsDownBtn.style.opacity = '0.5';
+    thumbsDownBtn.disabled = true;
+    
+    // Close form
+    document.body.removeChild(overlay);
+  });
+
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
+}
+
+async function sendQuery(query){
+  var t0 = performance.now();
+  const prevQuery = __lastQuery; // Store the previous query before updating
+  __lastQuery = String(query||'');
+  
+  // Capture page context for better answers
+  // Prefer parent page context passed by embed (so we don't log /chat.html)
+  const qp = new URLSearchParams(location.search);
+  const parentUrl  = qp.get('parentUrl');
+  const parentTitle= qp.get('parentTitle');
+  const parentHost = qp.get('parentHost');
+  const parentPath = qp.get('parentPath');
+  const pageContext = {
+    url: parentUrl  || window.location.href,
+    title: parentTitle || document.title,
+    hostname: parentHost || window.location.hostname,
+    pathname: parentPath || window.location.pathname
+  };
+  
+  const req = { 
+    query, 
+    topK: 8, 
+    previousQuery: prevQuery, 
+    sessionId,
+    pageContext
+  };
+  setDebugJSON(dbgReq, req);
+  const closeTyping = addTyping();
+  gaTrack('question_sent', { query_length: (query||'').length });
+  try{
+    const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(req) });
+    dbgStatus.textContent = res.status;
+    const headers = {}; res.headers.forEach((v,k)=>headers[k]=v); setDebugJSON(dbgHeaders, headers);
+
+    let data = null; const ct = (res.headers.get('content-type') || '').toLowerCase();
+    if (ct.includes('application/json')) data = await res.json(); else data = { ok: false, error: await res.text() || `HTTP ${res.status}` };
+    setDebugJSON(dbgRes, data); setDebugJSON(dbgProv, { citations: data.citations || [] });
+
+    closeTyping();
+    if (data && data.ok && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
+      renderAnswer(data);
+      gaTrack('answer_rendered', { ms: Math.round(performance.now()-t0), confidence_pct: Math.round((data.confidence||0)*100) });
+    } else if (data && !data.ok) {
+      const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf red">Confidence: 20%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
+      addBubble(`<div class="answer"><p>Server error: ${escapeHTML(String(data.error||'Unknown'))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
+      playChime();
+    } else {
+      const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf amber">Confidence: 40%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
+      const fallback = "I'm not entirely sure about this question, but I can try to help."; const {html}=mdToHtml(fallback);
+      const extra = `<p>For the best assistance, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+      addBubble(html.replace('</div>', `${extra}</div>`));
+      playChime();
+    }
+  } catch (err){
+    closeTyping(); dbgStatus.textContent = 'error';
+    const footer = document.createElement('div'); footer.className = 'footer-status';
+    footer.innerHTML = `<span class="badge conf red">Confidence: 15%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+    thread.appendChild(footer);
+    addBubble(`<div class="answer"><p>Something went wrong: ${escapeHTML(String(err))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
+    playChime();
+  }
+}
+
+/* ================= Transcript & wire-up ================= */
+function nodeToPlain(div){ return div.textContent.replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim(); }
+function buildTranscript(){
+  const rows = [];
+  rows.push(`Alan Ranger Assistant — transcript`);
+  rows.push(new Date().toISOString()); rows.push('');
+  for (const el of thread.children){ if (el.classList.contains('actions')) continue; const role = el.classList.contains('user') ? 'User' : 'Assistant'; rows.push(`${role}:\n${nodeToPlain(el)}`); rows.push(''); }
+  return rows.join('\n');
+}
+function emailTranscript(){
+  const SITE_ORIGIN = 'https://www.alanranger.com';
+  const convertLinks = (html)=>{
+    const temp = document.createElement('div'); temp.innerHTML = html;
+    const as = temp.querySelectorAll('a');
+    as.forEach(a=>{
+      try{
+        const href = a.getAttribute('href')||'';
+        if (!href) return;
+        if (/^https?:\/\//i.test(href)) return; // already absolute
+        if (href.startsWith('//')) { a.href = 'https:' + href; return; }
+        if (href.startsWith('#')) { a.removeAttribute('href'); return; }
+        if (href.startsWith('/')) { a.href = SITE_ORIGIN + href; return; }
+        a.href = SITE_ORIGIN + (href.startsWith('.')? href.slice(1): ('/'+href));
+      }catch{}
+    });
+    return temp.innerHTML;
+  };
+  // Build HTML transcript
+  const parts = [];
+  parts.push('<h2>Alan Ranger Assistant — transcript</h2>');
+  parts.push(`<p><em>${new Date().toLocaleString()}</em></p>`);
+  for (const el of thread.children){
+    if (el.classList.contains('actions')) continue;
+    const role = el.classList.contains('user') ? 'User' : 'Assistant';
+    parts.push(`<h4 style="margin:8px 0 4px">${role}</h4>`);
+    parts.push(`<div>${convertLinks(el.innerHTML)}</div>`);
+  }
+  const htmlBody = parts.join('');
+  const subject = 'Alan Ranger Assistant chat transcript';
+
+  // Copy HTML to clipboard (rich paste where supported)
+  (async () => {
+    try{
+      if (navigator.clipboard && window.ClipboardItem) {
+        const data = new ClipboardItem({
+          'text/html': new Blob([htmlBody], { type: 'text/html' }),
+          'text/plain': new Blob([htmlBody.replace(/<[^>]*>/g,' ')], { type: 'text/plain' })
+        });
+        await navigator.clipboard.write([data]);
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(htmlBody);
+      }
+    }catch{}
+  })();
+
+  // Provide downloadable full HTML
+  const fullDoc = `<!doctype html><html><head><meta charset="utf-8"><title>${subject}</title></head><body>${htmlBody}</body></html>`;
+  const blobHtml = new Blob([fullDoc], {type:'text/html'});
+  const urlHtml = URL.createObjectURL(blobHtml);
+
+  // Also generate .eml draft for Outlook/desktop clients (pre-populated body)
+  const emlHeaders = [
+    'Content-Type: text/html; charset=UTF-8',
+    'MIME-Version: 1.0',
+    `Subject: ${subject}`
+  ].join('\r\n');
+  const emlContent = emlHeaders + '\r\n\r\n' + fullDoc;
+  const emlBlob = new Blob([emlContent], { type: 'message/rfc822' });
+  const emlUrl = URL.createObjectURL(emlBlob);
+
+  addBubble(`<div class="answer"><p>Email draft opened. If the body is empty, either paste (Ctrl+V) — already copied — or <a href="${emlUrl}" download="alan-ranger-assistant-draft.eml">download the email draft (.eml)</a> and open it in your mail client. You can also <a href="${urlHtml}" download="alan-ranger-assistant-transcript.html">download the full HTML transcript</a>.</p></div>`);
+
+  // Open a minimal mailto (subject only) to create a draft; user can paste or open the .eml
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}`;
+  const a = document.createElement('a'); a.href = mailto; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>{ document.body.removeChild(a); }, 0);
+}
+function resetChat(){
+  thread.innerHTML = '';
+  addBubble('Hi! I can help with workshops, tuition, technical photography questions, equipment recommendations, and course information. Ask me anything about Alan\'s services or photography techniques!');
+  [dbgStatus, dbgHeaders, dbgReq, dbgRes, dbgStruct, dbgDebug, dbgProv, dbgNote, dbgSrvVer].forEach(el=>{ if(!el) return; el.textContent = el.id==='dbg-status' ? '–' : '–'; });
+}
+function submit(){
+  const val = input.value.trim(); if(!val) return;
+  addBubble(val, {user:true}); input.value=''; sendQuery(val);
+}
+
+/* Wire up */
+sendBtn.addEventListener('click', submit);
+input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); submit(); }});
+btnEmail.addEventListener('click', emailTranscript);
+btnReset.addEventListener('click', resetChat);
+gaTrack('chat_loaded');
+dbgCopy && dbgCopy.addEventListener('click', copyAllDebug);
+
+/* Sound toggle + initial state */
+loadChimePref();
+soundToggle.addEventListener('change', saveChimePref);
+// unlock as soon as user interacts (any of these will do)
+['click','keydown','touchstart'].forEach(evt => window.addEventListener(evt, unlockAudio, { passive:true }));
+
+</script>
+</body>
+</html>

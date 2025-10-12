@@ -1,0 +1,502 @@
+// HTML structured data extraction functions
+import { JSDOM } from 'jsdom';
+import { createHash } from 'crypto';
+
+/**
+ * Extract structured data from HTML content
+ * @param {string} html - Raw HTML content
+ * @returns {Object} Extracted structured data
+ */
+export function extractStructuredDataFromHTML(html) {
+  if (!html || typeof html !== 'string') {
+    return {
+      participants: null,
+      experience_level: null,
+      equipment_needed: null,
+      location_address: null,
+      time_schedule: null,
+      fitness_level: null,
+      what_to_bring: null,
+      course_duration: null,
+      instructor_info: null,
+      availability_status: null
+    };
+  }
+
+  try {
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
+    
+    const extracted = {
+      participants: null,
+      experience_level: null,
+      equipment_needed: null,
+      location_address: null,
+      time_schedule: null,
+      fitness_level: null,
+      what_to_bring: null,
+      course_duration: null,
+      instructor_info: null,
+      availability_status: null
+    };
+    
+    // Extract from all text content (including nested elements)
+    const allText = document.body ? document.body.textContent : '';
+    
+    // 1. Participants extraction - handle multiple formats
+    // Format 1: "Participants:\nMax 4" (multi-line)
+    const participantsMultiLineMatch = allText.match(/participants?\s*:\s*\n\s*max\s*(\d+)/i);
+    if (participantsMultiLineMatch) {
+      extracted.participants = participantsMultiLineMatch[1].trim();
+    }
+    
+    // Format 2: "* Participants: Max X" pattern (asterisk prefix)
+    if (!extracted.participants) {
+      const participantsMatch = allText.match(/\*\s*participants?\s*:?\s*max\s*(\d+)/i);
+    if (participantsMatch) {
+      extracted.participants = participantsMatch[1].trim();
+      }
+    }
+    
+    // Format 3: "Participants: Max X" (inline)
+    if (!extracted.participants) {
+      const participantsInlineMatch = allText.match(/participants?\s*:\s*max\s*(\d+)/i);
+      if (participantsInlineMatch) {
+        extracted.participants = participantsInlineMatch[1].trim();
+      }
+    }
+    
+    // 2. Experience Level extraction - handle HTML structure
+    // Format 1: "Experience - Level: Beginner and Novice" (from HTML <strong><span>Experience - Level</span></strong><span>: Beginner and Novice</span>)
+    const experienceHtmlMatch = allText.match(/experience\s*-\s*level\s*:\s*([^<]+?)(?=\s*<\/span>|\s*<\/p>|\s*<strong>)/i);
+    if (experienceHtmlMatch) {
+      extracted.experience_level = experienceHtmlMatch[1].trim();
+    }
+    
+    // Format 1b: Handle HTML-encoded version
+    if (!extracted.experience_level) {
+      const experienceHtmlEncodedMatch = allText.match(/experience\s*-\s*level\s*:\s*([^<]+?)(?=\s*&lt;\/span&gt;|\s*&lt;\/p&gt;|\s*&lt;strong&gt;)/i);
+      if (experienceHtmlEncodedMatch) {
+        extracted.experience_level = experienceHtmlEncodedMatch[1].trim();
+      }
+    }
+    
+    // Format 1c: Handle specific HTML structure with </span></p><ul>
+    if (!extracted.experience_level) {
+      const experienceSpecificMatch = allText.match(/experience\s*-\s*level\s*:\s*([^<]+?)(?=\s*<\/span><\/p><ul>)/i);
+      if (experienceSpecificMatch) {
+        extracted.experience_level = experienceSpecificMatch[1].trim();
+      }
+    }
+    
+    // Format 1d: Handle exact HTML structure from database
+    if (!extracted.experience_level) {
+      const experienceExactMatch = allText.match(/experience\s*-\s*level\s*:\s*([^<]+?)(?=\s*<\/span><\/p><ul\s+data-rte-list="true">)/i);
+      if (experienceExactMatch) {
+        extracted.experience_level = experienceExactMatch[1].trim();
+      }
+    }
+    
+    // Format 1e: Handle Lightroom course HTML structure
+    if (!extracted.experience_level) {
+      const experienceLightroomMatch = allText.match(/experience\s*-\s*level\s*:\s*([^<]+?)(?=\s*<\/span><\/h4><ul\s+data-rte-list="true">)/i);
+      if (experienceLightroomMatch) {
+        extracted.experience_level = experienceLightroomMatch[1].trim();
+      }
+    }
+    
+    // Format 2: "Experience - Level:" pattern (fallback) - capture just the level words
+    if (!extracted.experience_level) {
+      const experienceMatch = allText.match(/experience\s*[-–]\s*level\s*:?\s*([A-Za-z\s]+?)(?=\s*This|\s*The|\s*\*)/i);
+      if (experienceMatch) {
+        extracted.experience_level = experienceMatch[1].trim();
+      }
+    }
+    
+    // 3. Equipment Needed extraction - handle HTML structure
+    // Format 1: "Equipment Needed:" (from HTML <span>Equipment Needed:</span></h4><ul><li><p><span>You will need)
+    const equipmentHtmlMatch = allText.match(/equipment\s*needed\s*:\s*<\/span><\/h4><ul[^>]*><li><p[^>]*><span>([^<]+?)(?=\s*<\/span>|\s*<\/p>|\s*<strong>)/i);
+    if (equipmentHtmlMatch) {
+      let equipmentText = equipmentHtmlMatch[1].trim();
+      
+      // Clean up the equipment text
+      equipmentText = equipmentText
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .replace(/\*\s*/g, '• ') // Convert asterisks to bullets
+        .trim();
+      
+      extracted.equipment_needed = equipmentText;
+    }
+    
+    // Format 1b: Handle HTML-encoded version
+    if (!extracted.equipment_needed) {
+      const equipmentHtmlEncodedMatch = allText.match(/equipment\s*needed\s*:\s*&lt;\/span&gt;&lt;\/h4&gt;&lt;ul[^&]*&gt;&lt;li&gt;&lt;p[^&]*&gt;&lt;span&gt;([^&]+?)(?=\s*&lt;\/span&gt;|\s*&lt;\/p&gt;|\s*&lt;strong&gt;)/i);
+      if (equipmentHtmlEncodedMatch) {
+        let equipmentText = equipmentHtmlEncodedMatch[1].trim();
+        
+        // Clean up the equipment text
+        equipmentText = equipmentText
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .replace(/\*\s*/g, '• ') // Convert asterisks to bullets
+          .trim();
+        
+        extracted.equipment_needed = equipmentText;
+      }
+    }
+    
+    // Format 1c: Handle specific HTML structure with </span></p></li>
+    if (!extracted.equipment_needed) {
+      const equipmentSpecificMatch = allText.match(/equipment\s*needed\s*:\s*<\/span><\/h4><ul[^>]*><li><p[^>]*><span>([^<]+?)(?=\s*<\/span><\/p><\/li>)/i);
+      if (equipmentSpecificMatch) {
+        let equipmentText = equipmentSpecificMatch[1].trim();
+        
+        // Clean up the equipment text
+        equipmentText = equipmentText
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .replace(/\*\s*/g, '• ') // Convert asterisks to bullets
+          .trim();
+        
+        extracted.equipment_needed = equipmentText;
+      }
+    }
+    
+    // Format 1d: Handle exact HTML structure from database
+    if (!extracted.equipment_needed) {
+      const equipmentExactMatch = allText.match(/equipment\s*needed\s*:\s*<\/span><\/h4><ul\s+data-rte-list="true"><li><p[^>]*><span>([^<]+?)(?=\s*<\/span><\/p><\/li>)/i);
+      if (equipmentExactMatch) {
+        let equipmentText = equipmentExactMatch[1].trim();
+        
+        // Clean up the equipment text
+        equipmentText = equipmentText
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .replace(/\*\s*/g, '• ') // Convert asterisks to bullets
+          .trim();
+        
+        extracted.equipment_needed = equipmentText;
+      }
+    }
+    
+    // Format 1e: Handle Lightroom course HTML structure
+    if (!extracted.equipment_needed) {
+      const equipmentLightroomMatch = allText.match(/equipment\s*needed\s*:\s*<\/span><\/h4><ul\s+data-rte-list="true"><li><p[^>]*><span>([^<]+?)(?=\s*<\/span><\/p><\/li>)/i);
+      if (equipmentLightroomMatch) {
+        let equipmentText = equipmentLightroomMatch[1].trim();
+        
+        // Clean up the equipment text
+        equipmentText = equipmentText
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .replace(/\*\s*/g, '• ') // Convert asterisks to bullets
+          .trim();
+        
+        extracted.equipment_needed = equipmentText;
+      }
+    }
+    
+    // Format 2: "EQUIPMENT NEEDED:" pattern (fallback) - capture both sentences
+    if (!extracted.equipment_needed) {
+      const equipmentMatch = allText.match(/equipment\s*needed\s*:?\s*([^:]+?)(?=\s*Option|\s*Coventry|\s*Quantity|$)/i);
+      if (equipmentMatch) {
+        let equipmentText = equipmentMatch[1].trim();
+        
+        // Clean up the equipment text
+        equipmentText = equipmentText
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .replace(/\*\s*/g, '• ') // Convert asterisks to bullets
+          .trim();
+        
+        extracted.equipment_needed = equipmentText;
+      }
+    }
+    
+    // 4. Location Address extraction - handle HTML structure
+    // Format 1: "Location: North Devon - Hartland Quay" (from HTML <strong>Location:</strong>)
+    const locationHtmlMatch = allText.match(/location\s*:\s*([^<]+?)(?=\s*<\/p>|\s*<strong>|\s*dates?:)/i);
+    if (locationHtmlMatch) {
+      extracted.location_address = locationHtmlMatch[1].trim();
+    }
+    
+    // Format 2: "Location:North Devon - Hartland QuayDates:" (concatenated, stop at next field)
+    if (!extracted.location_address) {
+      const locationConcatenatedMatch = allText.match(/location\s*:\s*([^:]+?)(?=dates?:)/i);
+      if (locationConcatenatedMatch) {
+        extracted.location_address = locationConcatenatedMatch[1].trim();
+      }
+    }
+    
+    // Format 3: "Location:\nNorth Devon - Hartland Quay" (multi-line)
+    if (!extracted.location_address) {
+      const locationMultiLineMatch = allText.match(/location\s*:\s*\n\s*([^\n]+)/i);
+      if (locationMultiLineMatch) {
+        extracted.location_address = locationMultiLineMatch[1].trim();
+      }
+    }
+    
+    // Format 4: "* Location: North Devon - Hartland Quay *" (asterisk-separated)
+    if (!extracted.location_address) {
+      const locationMatch = allText.match(/\*\s*location\s*:\s*([^*]+?)(?:\s*\*|\s*$)/i);
+      if (locationMatch) {
+        extracted.location_address = locationMatch[1].trim();
+      }
+    }
+    
+    // Format 5: "Location: 45 Hathaway Road, Tile Hill Village, Coventry, CV4 9HW * Participants: Max 4" - stop at *
+    if (!extracted.location_address) {
+      const locationInlineMatch = allText.match(/location\s*:\s*([^*]+?)(?=\s*\*)/i);
+      if (locationInlineMatch) {
+        extracted.location_address = locationInlineMatch[1].trim();
+      }
+    }
+    
+    // Format 6: "Location:\n45 Hathaway Road..." (multi-line format) - stop at next field
+    if (!extracted.location_address) {
+      const locationMultiLineMatch = allText.match(/location\s*:\s*\n\s*([^\n]+?)(?=\s*\n\s*participants:|\s*\n\s*time:|\s*\n\s*experience|\s*\n\s*equipment|\s*$)/i);
+      if (locationMultiLineMatch) {
+        extracted.location_address = locationMultiLineMatch[1].trim();
+      }
+    }
+    
+    // 5. Time Schedule extraction - look for "Time:" pattern, stop at *
+    const timeMatch = allText.match(/time\s*:\s*([^*]+?)(?=\s*\*)/i);
+    if (timeMatch) {
+      extracted.time_schedule = timeMatch[1].trim();
+    }
+    
+    // 6. Fitness Level extraction - handle HTML structure
+    // Format 1: "Fitness: 2. Moderate" (from HTML <strong>Fitness:</strong>)
+    const fitnessHtmlMatch = allText.match(/fitness\s*:\s*([^<]+?)(?=\s*<\/p>|\s*<strong>|\s*photography\s*workshop\s*event\s*details?:)/i);
+    if (fitnessHtmlMatch) {
+      extracted.fitness_level = fitnessHtmlMatch[1].trim();
+    }
+    
+    // Format 2: "Fitness: 2. ModeratePhotography Workshop Event Details:" (concatenated, stop at next field)
+    if (!extracted.fitness_level) {
+      const fitnessConcatenatedMatch = allText.match(/fitness\s*:\s*([^:]+?)(?=photography\s*workshop\s*event\s*details?:)/i);
+      if (fitnessConcatenatedMatch) {
+        extracted.fitness_level = fitnessConcatenatedMatch[1].trim();
+      }
+    }
+    
+    // Format 3: "Fitness:\n2. Moderate" (multi-line)
+    if (!extracted.fitness_level) {
+      const fitnessMultiLineMatch = allText.match(/fitness\s*:\s*\n\s*([^\n]+)/i);
+      if (fitnessMultiLineMatch) {
+        extracted.fitness_level = fitnessMultiLineMatch[1].trim();
+      }
+    }
+    
+    // Format 4: "* Fitness: 2. Moderate *" (asterisk-separated)
+    if (!extracted.fitness_level) {
+      const fitnessMatch = allText.match(/\*\s*fitness\s*:\s*([^*]+?)(?:\s*\*|\s*$)/i);
+      if (fitnessMatch) {
+        extracted.fitness_level = fitnessMatch[1].trim();
+      }
+    }
+    
+    // Format 5: "Fitness: 2. Moderate" (inline)
+    if (!extracted.fitness_level) {
+      const fitnessInlineMatch = allText.match(/fitness\s*:\s*([^\n]+)/i);
+      if (fitnessInlineMatch) {
+        extracted.fitness_level = fitnessInlineMatch[1].trim();
+      }
+    }
+    
+    // 7. What to Bring extraction - look for "What to Bring:" pattern (handles multi-line, avoids JS code)
+    const whatToBringMatch = allText.match(/what\s*to\s*bring\s*:?\s*(?:([a-zA-Z0-9\s\-\.\/,•]{1,200}?)(?:\s*\n|\s*$)|(?:\s*\n\s*([a-zA-Z0-9\s\-\.\/,•]{1,200}?)(?:\s*\n|\s*$)))/i);
+    if (whatToBringMatch) {
+      let whatToBringText = (whatToBringMatch[1] || whatToBringMatch[2] || '').trim();
+      
+      // Clean up the text
+      whatToBringText = whatToBringText
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .replace(/\*\s*/g, '• ') // Convert asterisks to bullets
+        .trim();
+      
+      extracted.what_to_bring = whatToBringText;
+    }
+    
+    // 8. Course Duration extraction - look for "Duration:" pattern (handles multi-line, avoids JS code)
+    const durationMatch = allText.match(/duration\s*:?\s*(?:([a-zA-Z0-9\s\-\.]{1,50}?)(?:\s*\n|\s*$)|(?:\s*\n\s*([a-zA-Z0-9\s\-\.]{1,50}?)(?:\s*\n|\s*$)))/i);
+    if (durationMatch) {
+      extracted.course_duration = (durationMatch[1] || durationMatch[2] || '').trim();
+    }
+    
+    // 9. Instructor Info extraction - look for "Instructor:" pattern (handles multi-line, avoids JS code)
+    const instructorMatch = allText.match(/instructor\s*:?\s*(?:([a-zA-Z0-9\s\-\.]{1,100}?)(?:\s*\n|\s*$)|(?:\s*\n\s*([a-zA-Z0-9\s\-\.]{1,100}?)(?:\s*\n|\s*$)))/i);
+    if (instructorMatch) {
+      extracted.instructor_info = (instructorMatch[1] || instructorMatch[2] || '').trim();
+    }
+    
+    // 10. Availability Status extraction - look for "Availability:" pattern (handles multi-line, avoids JS code)
+    const availabilityMatch = allText.match(/availability\s*:?\s*(?:([a-zA-Z0-9\s\-\.]{1,50}?)(?:\s*\n|\s*$)|(?:\s*\n\s*([a-zA-Z0-9\s\-\.]{1,50}?)(?:\s*\n|\s*$)))/i);
+    if (availabilityMatch) {
+      extracted.availability_status = (availabilityMatch[1] || availabilityMatch[2] || '').trim();
+    }
+    
+    return extracted;
+  } catch (error) {
+    console.warn('HTML parsing error:', error.message);
+    return {
+      participants: null,
+      experience_level: null,
+      equipment_needed: null,
+      location_address: null,
+      time_schedule: null,
+      fitness_level: null,
+      what_to_bring: null,
+      course_duration: null,
+      instructor_info: null,
+      availability_status: null
+    };
+  }
+}
+
+/**
+ * Clean HTML and remove Squarespace artifacts from text
+ * @param {string} text - Text to clean
+ * @returns {string} Cleaned text
+ */
+export function cleanHTMLText(text) {
+  if (!text) return '';
+  
+  let cleaned = String(text)
+    // Remove script tags and their content
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    // Remove style tags and their content
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    // Remove all HTML tags
+    .replace(/<[^>]*>/g, ' ')
+    // Remove HTML attributes that may have leaked through
+    .replace(/\s*style="[^"]*"/gi, '')
+    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi, '')
+    .replace(/\s*contenteditable="[^"]*"/gi, '')
+    .replace(/\s*class="[^"]*"/gi, '')
+    .replace(/\s*id="[^"]*"/gi, '')
+    .replace(/\s*data-rte-[^=]*="[^"]*"/gi, '')
+    .replace(/\s*data-indent="[^"]*"/gi, '')
+    .replace(/\s*white-space:pre-wrap[^"]*"/gi, '')
+    .replace(/\s*margin-left:[^"]*"/gi, '')
+    // Remove HTML entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    // Normalize whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Split into lines and remove duplicates
+  const lines = cleaned.split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(Boolean)
+    .filter((line, index, arr) => {
+      // Remove duplicate consecutive lines
+      return index === 0 || line !== arr[index - 1];
+    });
+  
+  return lines.join('\n');
+}
+
+/**
+ * Enhance page entity description with structured data
+ * @param {string} originalDescription - Original description from JSON-LD
+ * @param {Object} structuredData - Extracted structured data
+ * @returns {string} Enhanced description
+ */
+export function enhanceDescriptionWithStructuredData(originalDescription, structuredData) {
+  const parts = [];
+  
+  // Create a clean, concise summary from the original description
+  if (originalDescription && originalDescription.trim()) {
+    const cleaned = cleanHTMLText(originalDescription);
+    if (cleaned) {
+      // Take only the first paragraph or first 200 characters as summary
+      const firstParagraph = cleaned.split('\n\n')[0] || cleaned.split('\n')[0] || cleaned;
+      const summary = firstParagraph.length > 200 ? firstParagraph.substring(0, 200) + '...' : firstParagraph;
+      parts.push(summary);
+    }
+  }
+  
+  // Add structured data fields in a clean format
+  if (structuredData.equipment_needed) {
+    const equipment = cleanHTMLText(structuredData.equipment_needed);
+    if (equipment && equipment.length < 200) { // Only add if reasonable length
+      parts.push(`Equipment Needed: ${equipment}`);
+    }
+  }
+  
+  if (structuredData.experience_level) {
+    const experience = cleanHTMLText(structuredData.experience_level);
+    if (experience && experience.length < 100) { // Only add if reasonable length
+      parts.push(`Experience Level: ${experience}`);
+    }
+  }
+  
+  if (structuredData.participants) {
+    const participants = cleanHTMLText(structuredData.participants);
+    if (participants && participants.length < 50) { // Only add if reasonable length
+      parts.push(`Participants: ${participants}`);
+    }
+  }
+  
+  if (structuredData.location_address) {
+    const location = cleanHTMLText(structuredData.location_address);
+    if (location && location.length < 100) { // Only add if reasonable length
+      parts.push(`Location: ${location}`);
+    }
+  }
+  
+  if (structuredData.time_schedule) {
+    const time = cleanHTMLText(structuredData.time_schedule);
+    if (time && time.length < 50) { // Only add if reasonable length
+      parts.push(`Time: ${time}`);
+    }
+  }
+  
+  if (structuredData.fitness_level) {
+    const fitness = cleanHTMLText(structuredData.fitness_level);
+    if (fitness && fitness.length < 50) { // Only add if reasonable length
+      parts.push(`Fitness: ${fitness}`);
+    }
+  }
+  
+  if (structuredData.what_to_bring) {
+    const whatToBring = cleanHTMLText(structuredData.what_to_bring);
+    if (whatToBring && whatToBring.length < 200) { // Only add if reasonable length
+      parts.push(`What to Bring: ${whatToBring}`);
+    }
+  }
+  
+  if (structuredData.course_duration) {
+    const duration = cleanHTMLText(structuredData.course_duration);
+    if (duration && duration.length < 50) { // Only add if reasonable length
+      parts.push(`Duration: ${duration}`);
+    }
+  }
+  
+  if (structuredData.instructor_info) {
+    const instructor = cleanHTMLText(structuredData.instructor_info);
+    if (instructor && instructor.length < 100) { // Only add if reasonable length
+      parts.push(`Instructor: ${instructor}`);
+    }
+  }
+  
+  if (structuredData.availability_status) {
+    const availability = cleanHTMLText(structuredData.availability_status);
+    if (availability && availability.length < 50) { // Only add if reasonable length
+      parts.push(`Availability: ${availability}`);
+    }
+  }
+  
+  return parts.join('\n\n');
+}
+
+/**
+ * Generate content hash for HTML content
+ * @param {string} html - HTML content
+ * @returns {string} SHA-1 hash
+ */
+export function generateContentHash(html) {
+  return createHash('sha1').update(html).digest('hex');
+}
