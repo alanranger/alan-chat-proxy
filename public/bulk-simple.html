@@ -181,6 +181,44 @@
         </div>
       </div>
 
+      <!-- Enhanced Database Schema -->
+      <div class="section">
+        <h3>📋 Enhanced Database Schema</h3>
+        <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
+          <div style="color: #4CAF50; font-weight: bold; margin-bottom: 15px;">csv_metadata table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px; color: #fff;">
+            ├── Core fields: id, csv_type, url, title, categories, tags, publish_date<br>
+            ├── Date/Time: start_date, end_date, start_time, end_time<br>
+            ├── Location: location_name, location_address, location_city_state_zip<br>
+            ├── Content: excerpt, image_url, json_ld_data, workflow_state<br>
+            └── <span style="color: #FFD700;">NEW: participants, experience_level, equipment_needed, time_schedule, fitness_level, what_to_bring, course_duration, instructor_info, availability_status</span>
+          </div>
+          
+          <div style="color: #2196F3; font-weight: bold; margin: 20px 0 15px 0;">page_entities table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px; color: #fff;">
+            ├── Core fields: id, url, kind, title, description, date_start, date_end<br>
+            ├── Pricing: price, price_currency, availability, sku, provider<br>
+            ├── CSV Integration: csv_type, csv_metadata_id, categories, tags<br>
+            ├── Location: location, location_name, location_address, location_city_state_zip<br>
+            ├── Content: excerpt, image_url, json_ld_data, workflow_state<br>
+            └── <span style="color: #FFD700;">NEW: participants, experience_level, equipment_needed, time_schedule, fitness_level, what_to_bring, course_duration, instructor_info, availability_status</span>
+          </div>
+          
+          <div style="color: #FF9800; font-weight: bold; margin: 20px 0 15px 0;">page_chunks table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px; color: #fff;">
+            ├── Core fields: id, url, title, chunk_text, embedding, chunk_hash<br>
+            ├── Content: content, hash, tokens, created_at<br>
+            └── CSV Integration: csv_type, csv_metadata_id
+          </div>
+          
+          <div style="color: #9C27B0; font-weight: bold; margin: 20px 0 15px 0;">page_html table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px; color: #fff;">
+            ├── Core fields: id, url, html_content, content_hash<br>
+            └── Timestamps: created_at, updated_at
+          </div>
+        </div>
+      </div>
+
       <!-- Field-by-Field Import Tracking -->
       <div class="section">
         <h3>📊 Field-by-Field Import Tracking</h3>
