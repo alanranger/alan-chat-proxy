@@ -2022,19 +2022,32 @@ export default async function handler(req, res) {
             const fullContent = chunks.map(chunk => chunk.chunk_text).join(' ');
             
             // Look for the structured summary section that contains Location, Participants, Fitness
-            const summaryMatch = fullContent.match(/SUMMARY\s*\*([^*]+(?:\*[^*]+)*)/i);
+            const summaryMatch = fullContent.match(/SUMMARY\s*\*\s*Location:[^*]+\*\s*Dates:[^*]+\*\s*Participants:[^*]+\*\s*Fitness:[^*]+/i);
             if (summaryMatch) {
-              // Clean up the summary section
-              pageContent = summaryMatch[1]
-                .replace(/\s+/g, ' ') // Normalize whitespace
-                .replace(/\*\s*/g, '\n• ') // Convert asterisks to bullet points
-                .trim();
+              // Clean up the summary section - extract just the key details
+              const summary = summaryMatch[0];
+              const locationMatch = summary.match(/Location:\s*([^*]+)/i);
+              const participantsMatch = summary.match(/Participants:\s*([^*]+)/i);
+              const fitnessMatch = summary.match(/Fitness:\s*([^*]+)/i);
+              
+              const parts = [];
+              if (locationMatch) parts.push(`• Location: ${locationMatch[1].trim()}`);
+              if (participantsMatch) parts.push(`• Participants: ${participantsMatch[1].trim()}`);
+              if (fitnessMatch) parts.push(`• Fitness: ${fitnessMatch[1].trim()}`);
+              
+              pageContent = parts.join('\n');
             } else {
-              // Fallback: try to find structured content patterns
-              const structuredMatch = fullContent.match(/(?:Location|Participants|Fitness)[^•]*/gi);
-              if (structuredMatch) {
-                pageContent = structuredMatch.join('\n• ').replace(/^\s*/, '• ');
-              }
+              // Fallback: try to find individual structured content patterns
+              const parts = [];
+              const locationMatch = fullContent.match(/Location:\s*([^•\n]+)/i);
+              const participantsMatch = fullContent.match(/Participants:\s*([^•\n]+)/i);
+              const fitnessMatch = fullContent.match(/Fitness:\s*([^•\n]+)/i);
+              
+              if (locationMatch) parts.push(`• Location: ${locationMatch[1].trim()}`);
+              if (participantsMatch) parts.push(`• Participants: ${participantsMatch[1].trim()}`);
+              if (fitnessMatch) parts.push(`• Fitness: ${fitnessMatch[1].trim()}`);
+              
+              pageContent = parts.join('\n');
             }
           }
         }
@@ -2064,19 +2077,32 @@ export default async function handler(req, res) {
             const fullContent = chunks.map(chunk => chunk.chunk_text).join(' ');
             
             // Look for the structured summary section that contains Location, Participants, Fitness
-            const summaryMatch = fullContent.match(/SUMMARY\s*\*([^*]+(?:\*[^*]+)*)/i);
+            const summaryMatch = fullContent.match(/SUMMARY\s*\*\s*Location:[^*]+\*\s*Dates:[^*]+\*\s*Participants:[^*]+\*\s*Fitness:[^*]+/i);
             if (summaryMatch) {
-              // Clean up the summary section
-              pageContent = summaryMatch[1]
-                .replace(/\s+/g, ' ') // Normalize whitespace
-                .replace(/\*\s*/g, '\n• ') // Convert asterisks to bullet points
-                .trim();
+              // Clean up the summary section - extract just the key details
+              const summary = summaryMatch[0];
+              const locationMatch = summary.match(/Location:\s*([^*]+)/i);
+              const participantsMatch = summary.match(/Participants:\s*([^*]+)/i);
+              const fitnessMatch = summary.match(/Fitness:\s*([^*]+)/i);
+              
+              const parts = [];
+              if (locationMatch) parts.push(`• Location: ${locationMatch[1].trim()}`);
+              if (participantsMatch) parts.push(`• Participants: ${participantsMatch[1].trim()}`);
+              if (fitnessMatch) parts.push(`• Fitness: ${fitnessMatch[1].trim()}`);
+              
+              pageContent = parts.join('\n');
             } else {
-              // Fallback: try to find structured content patterns
-              const structuredMatch = fullContent.match(/(?:Location|Participants|Fitness)[^•]*/gi);
-              if (structuredMatch) {
-                pageContent = structuredMatch.join('\n• ').replace(/^\s*/, '• ');
-              }
+              // Fallback: try to find individual structured content patterns
+              const parts = [];
+              const locationMatch = fullContent.match(/Location:\s*([^•\n]+)/i);
+              const participantsMatch = fullContent.match(/Participants:\s*([^•\n]+)/i);
+              const fitnessMatch = fullContent.match(/Fitness:\s*([^•\n]+)/i);
+              
+              if (locationMatch) parts.push(`• Location: ${locationMatch[1].trim()}`);
+              if (participantsMatch) parts.push(`• Participants: ${participantsMatch[1].trim()}`);
+              if (fitnessMatch) parts.push(`• Fitness: ${fitnessMatch[1].trim()}`);
+              
+              pageContent = parts.join('\n');
             }
           }
         }
