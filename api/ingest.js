@@ -587,19 +587,44 @@ async function ingestSingleUrl(url, supa, options = {}) {
       const bestJsonLd = jsonLd[0]; // First item after prioritization
       const bestIdx = 0;
       
-      // Generate description from FAQPage content if no description exists
+      // Generate description from HTML content if no description exists
       let enhancedDescription = enhancedDescriptions[bestIdx] || bestJsonLd.description || null;
       
-      if (!enhancedDescription && bestJsonLd['@type'] === 'FAQPage' && bestJsonLd.mainEntity && Array.isArray(bestJsonLd.mainEntity)) {
-        // Generate description from the first FAQ question and answer
-        const firstFAQ = bestJsonLd.mainEntity[0];
-        if (firstFAQ && firstFAQ.acceptedAnswer && firstFAQ.acceptedAnswer.text) {
-          let faqText = firstFAQ.acceptedAnswer.text;
-          // Clean HTML tags
-          faqText = faqText.replace(/<[^>]*>/g, '').trim();
-          // Take first sentence or first 200 characters
-          const firstSentence = faqText.split('.')[0] + '.';
-          enhancedDescription = firstSentence.length > 200 ? faqText.substring(0, 200) + '...' : firstSentence;
+      if (!enhancedDescription) {
+        // Extract description from HTML content using htmlToText
+        try {
+          const htmlText = htmlToText(html, {
+            wordwrap: false,
+            selectors: [
+              { selector: 'script', format: 'skip' },
+              { selector: 'style', format: 'skip' },
+              { selector: 'nav', format: 'skip' },
+              { selector: 'header', format: 'skip' },
+              { selector: 'footer', format: 'skip' },
+              { selector: '.navigation', format: 'skip' },
+              { selector: '.menu', format: 'skip' }
+            ]
+          });
+          
+          // Clean and extract first meaningful paragraph
+          const lines = htmlText.split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 20) // Filter out short lines
+            .filter(line => !line.match(/^(Home|About|Contact|Menu|Navigation|Skip to)/i)) // Filter navigation
+            .filter(line => !line.match(/^(Facebook|Twitter|Instagram|LinkedIn)/i)) // Filter social links
+            .filter(line => !line.match(/^(©|Copyright|All rights reserved)/i)); // Filter copyright
+          
+          if (lines.length > 0) {
+            // Take the first meaningful line as description
+            let description = lines[0];
+            // Limit to reasonable length
+            if (description.length > 200) {
+              description = description.substring(0, 200).replace(/\s+\S*$/, '') + '...';
+            }
+            enhancedDescription = description;
+          }
+        } catch (error) {
+          console.warn('Failed to extract description from HTML:', error.message);
         }
       }
       
