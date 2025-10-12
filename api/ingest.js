@@ -646,7 +646,20 @@ async function ingestSingleUrl(url, supa, options = {}) {
             .filter(line => line.length > 20) // Filter out short lines
             .filter(line => !line.match(/^(Home|About|Contact|Menu|Navigation|Skip to)/i)) // Filter navigation
             .filter(line => !line.match(/^(Facebook|Twitter|Instagram|LinkedIn)/i)) // Filter social links
-            .filter(line => !line.match(/^(©|Copyright|All rights reserved)/i)); // Filter copyright
+            .filter(line => !line.match(/^(©|Copyright|All rights reserved)/i)) // Filter copyright
+            .filter(line => {
+              // Filter out malformed content
+              const lowerLine = line.toLowerCase();
+              return !lowerLine.includes('alan ranger photography [//images.squarespace-cdn.com') &&
+                     !lowerLine.includes('alan+ranger+photography+logo+black') &&
+                     !lowerLine.includes('format=1500w') &&
+                     !lowerLine.includes('squarespace-cdn.com') &&
+                     !lowerLine.includes('rotto 405') &&
+                     !lowerLine.includes('gitzo gt3532ls') &&
+                     !lowerLine.includes('manfrotto 405') &&
+                     !lowerLine.includes('carbon fibre breaking down') &&
+                     !lowerLine.includes('needed two replacement legs');
+            });
           
           if (lines.length > 0) {
             // Take the first meaningful line as description
