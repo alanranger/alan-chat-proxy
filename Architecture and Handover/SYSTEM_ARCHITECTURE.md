@@ -22,13 +22,11 @@ Seven CSV types are imported into the `csv_metadata` table:
 Four sub-steps in the ingestion process:
 1. **Fetch HTML** for all URLs → `page_html` table
 2. **Extract text and JSON-LD** from HTML content with **intelligent prioritization**
+   - **Blog articles**: Prioritize `FAQPage` > `Article` > `WebSite` > `Organization` JSON-LD
+   - **Other content**: Use first valid JSON-LD object
+   - **Single entity per URL**: Prevents duplicate entities with wrong descriptions
 3. **Create page_chunks** with CSV context and embeddings
 4. **Enhance page_entities** with CSV metadata and structured data extraction
-
-**JSON-LD Prioritization Logic:**
-- **Blog articles**: FAQPage → Article → WebSite → Organization (lowest priority)
-- **Other content**: Maintains original order
-- **Single entity per URL**: Eliminates duplicate entities with wrong descriptions
 
 ### **STEP 3: EXISTING VIEWS (Enhanced with CSV data)**
 Four main database views filter `page_entities` by `kind` attribute:
@@ -205,14 +203,19 @@ CSV Upload → Bulk Processing → Entity Mapping → View Refresh → Chat Read
 
 ## 🚨 **Current Issues & Technical Debt**
 
-### **Recently Resolved Issues**
-- ✅ **JSON-LD prioritization** - Fixed blog articles getting wrong descriptions from Organization JSON-LD instead of FAQPage
-- ✅ **Duplicate entities** - Eliminated multiple entities per URL causing incorrect content selection
-- ✅ **Data ingestion gap** - Ingestion process now extracts structured data from page content
+### **Recently Fixed Issues** ✅
+- **JSON-LD prioritization** - Fixed blog articles getting wrong descriptions from Organization JSON-LD instead of FAQPage
+- **Duplicate entities** - Fixed ingestion creating multiple entities per URL with conflicting descriptions
+- **Structured data extraction** - Enhanced regex patterns for 10 structured data fields (participants, experience_level, equipment_needed, etc.)
 
-### **Remaining Architecture Improvements**
-- **Frontend parsing** - Product cards still rely on frontend parsing of unstructured content (being phased out)
-- **Source-based fixes** - Continue fixing data at ingestion level, not frontend level
+### **Remaining Issues**
+- **Data freshness** - Some articles may still have old incorrect descriptions until next ingestion
+- **Frontend parsing** - Product cards still rely on frontend parsing of unstructured content (being addressed)
+
+### **Architecture Improvements Completed** ✅
+- **Enhanced data ingestion** - Extract structured data during scraping (database schema ready)
+- **Source-based fixes** - Fixed data at ingestion level, not frontend level
+- **JSON-LD prioritization** - Intelligent selection of best JSON-LD object per URL
 
 ---
 
@@ -228,18 +231,16 @@ CSV Upload → Bulk Processing → Entity Mapping → View Refresh → Chat Read
 - **60 product schema** records imported
 
 ### **Data Quality Issues**
-- **Structured data fields** - All 10 new fields (`participants`, `experience_level`, `equipment_needed`, etc.) are being populated by enhanced ingestion process
-- **JSON-LD prioritization** - Blog articles now correctly use FAQPage content instead of Organization metadata
+- **Structured data fields** - All 10 new fields (`participants`, `experience_level`, `equipment_needed`, etc.) are NULL - ready for ingestion process enhancement
 
 ---
 
 ## 🎯 **Next Steps for System Improvement**
 
-### **Priority 1: Fix Data Ingestion** ✅ **COMPLETED**
-1. ✅ **Enhanced `api/ingest.js`** to extract structured data from page content
-2. ✅ **Added JSON-LD prioritization** to select correct content for blog articles
-3. ✅ **Implemented single entity per URL** to eliminate duplicate entities
-4. **Re-run ingestion** to populate structured data with new logic
+### **Priority 1: Fix Data Ingestion**
+1. **Enhance `api/ingest.js`** to extract structured data from page content
+2. **Add parsing logic** for all 10 new structured data fields
+3. **Re-run ingestion** to populate structured data
 
 ### **Priority 2: Test and Validate**
 1. **Test structured data extraction** with sample pages
