@@ -1410,23 +1410,20 @@ async function findContentChunks(client, { keywords, limit = 5, articleUrls = []
   return sortedData.slice(0, limit);
 }
 
-async function findLanding(client, { keywords }) {
-  // best effort: a canonical "landing" page if marked, else a generic workshops page
+async function findLanding(client, { keywords, limit = 10 }) {
+  // Return landing pages by keywords, newest first
   let q = client
-      .from("page_entities")
+    .from("page_entities")
     .select("*")
-    .in("kind", ["article", "page"])
-    .eq("raw->>canonical", "true")
-    .eq("raw->>role", "landing")
-      .order("last_seen", { ascending: false })
-      .limit(1);
+    .eq("kind", "landing")
+    .order("last_seen", { ascending: false })
+    .limit(limit);
 
-  const orExpr =
-    anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
+  const orExpr = anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
   if (orExpr) q = q.or(orExpr);
 
   const { data } = await q;
-  return data?.[0] || null;
+  return Array.isArray(data) ? data : [];
 }
 
 /* -------- find PDF / related link within article chunks (best effort) ---- */
