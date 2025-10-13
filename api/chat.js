@@ -1128,12 +1128,29 @@ async function findProducts(client, { keywords, limit = 20, pageContext = null, 
 
 async function findServices(client, { keywords, limit = 20, pageContext = null }) {
   // Search for services (free course might be classified as service)
-  const { data } = await client
+  console.log(`🔧 findServices called with keywords: ${keywords.join(', ')}`);
+  
+  const query = keywords.map(k => `title.ilike.%${k}%`).join(",");
+  console.log(`🔧 Generated query: ${query}`);
+  
+  const { data, error } = await client
     .from("page_entities")
     .select("*")
     .eq("kind", "service")
-    .or(keywords.map(k => `title.ilike.%${k}%`).join(","))
+    .or(query)
     .limit(limit);
+
+  if (error) {
+    console.error(`🔧 findServices error:`, error);
+    return [];
+  }
+
+  console.log(`🔧 findServices returned ${data?.length || 0} services`);
+  if (data && data.length > 0) {
+    data.forEach((service, i) => {
+      console.log(`  ${i+1}. "${service.title}" (${service.page_url})`);
+    });
+  }
 
   return data || [];
 }
@@ -2597,31 +2614,62 @@ export default async function handler(req, res) {
     if (isFreeCourseQuery) {
       // For free course queries, search across ALL entity types
       console.log(`🔍 Free course query detected: "${query}" - searching across all entity types`);
+      console.log(`🔍 Keywords: ${keywords.join(', ')}`);
       
       // Search articles (already done above)
+      console.log(`📚 Articles found: ${articles.length}`);
+      
       // Search events
       events = await findEvents(client, { keywords, limit: 20, pageContext });
+      console.log(`📅 Events found: ${events.length}`);
+      
       // Search products  
       products = await findProducts(client, { keywords, limit: 20, pageContext });
+      console.log(`🛍️ Products found: ${products.length}`);
+      
       // Search services (free course might be classified as service)
       services = await findServices(client, { keywords, limit: 20, pageContext });
+      console.log(`🔧 Services found: ${services.length}`);
+      
+      // Debug: Log all service results
+      if (services.length > 0) {
+        console.log(`🔧 Service details:`);
+        services.forEach((service, i) => {
+          console.log(`  ${i+1}. Title: "${service.title}"`);
+          console.log(`     URL: "${service.page_url}"`);
+          console.log(`     Kind: "${service.kind}"`);
+        });
+      }
       
       // Combine all results and prioritize free course content
       const allResults = [...articles, ...events, ...products, ...services];
+      console.log(`🔍 Total results before filtering: ${allResults.length}`);
+      
       const freeCourseResults = allResults.filter(item => {
         const title = (item.title || item.event_title || item.product_title || '').toLowerCase();
         const url = (item.page_url || item.event_url || item.product_url || '').toLowerCase();
         const description = (item.description || '').toLowerCase();
         
-        return title.includes('free') || url.includes('free-online-photography-course') || 
+        const matches = title.includes('free') || url.includes('free-online-photography-course') || 
                description.includes('free') || title.includes('academy');
+        
+        if (matches) {
+          console.log(`✅ Free course match found: "${title}" (${url})`);
+        }
+        
+        return matches;
       });
+      
+      console.log(`🔍 Free course results after filtering: ${freeCourseResults.length}`);
       
       // If we found free course content, prioritize it
       if (freeCourseResults.length > 0) {
-        console.log(`✅ Found ${freeCourseResults.length} free course results`);
+        console.log(`✅ Found ${freeCourseResults.length} free course results - adding to articles`);
         // Add free course results to articles for processing
         articles = [...freeCourseResults, ...articles];
+        console.log(`📚 Final articles count: ${articles.length}`);
+      } else {
+        console.log(`❌ No free course results found after filtering`);
       }
     } else {
       // Only search for events/products if the query is about workshops, courses, or equipment recommendations
