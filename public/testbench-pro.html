@@ -24,6 +24,10 @@
     .list-item:hover{background:#0b1220}
     .answer{background:#0b1220;border:1px solid var(--line);border-radius:8px;padding:12px;white-space:pre-wrap}
     .kpis{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+    .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+    .tile{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+    .tile .num{font-size:28px;font-weight:800}
+    .tile .lbl{color:var(--muted);font-size:12px;margin-top:4px}
   </style>
 </head>
 <body>
@@ -31,21 +35,21 @@
     <div class="col"><h1>Testbench Pro</h1><div class="badge">Chat vs RPC + CSV Assertions</div></div>
   </header>
 
-  <!-- Dashboard KPIs -->
+  <!-- Dashboard KPI Tiles -->
   <section class="row" id="kpiRow">
     <div class="col card">
       <h3>Overview</h3>
-      <div class="kpis" id="kpiWrap">
-        <span class="pill" id="kpiTotal">Total: 0</span>
-        <span class="pill" id="kpiAvg">Avg Confidence: 0.00</span>
-        <span class="pill" id="kpiIntentAdvice">Advice: 0</span>
-        <span class="pill" id="kpiIntentEvents">Events: 0</span>
-        <span class="pill" id="kpiIntentProducts">Products: 0</span>
-        <span class="pill" id="kpiLanding">Landing: 0</span>
-        <span class="pill" id="kpiServices">Services: 0</span>
-        <span class="pill" id="kpiEvents">Events: 0</span>
-        <span class="pill" id="kpiProducts">Products: 0</span>
-        <span class="pill" id="kpiArticles">Articles: 0</span>
+      <div class="tiles" id="tiles">
+        <div class="tile"><div class="num" id="tTotal">0</div><div class="lbl">Total</div></div>
+        <div class="tile"><div class="num" id="tAvg">0.00</div><div class="lbl">Avg Confidence</div></div>
+        <div class="tile"><div class="num" id="tAdvice">0</div><div class="lbl">Intent: Advice</div></div>
+        <div class="tile"><div class="num" id="tEventsI">0</div><div class="lbl">Intent: Events</div></div>
+        <div class="tile"><div class="num" id="tProductsI">0</div><div class="lbl">Intent: Products</div></div>
+        <div class="tile"><div class="num" id="tLanding">0</div><div class="lbl">Landing</div></div>
+        <div class="tile"><div class="num" id="tServices">0</div><div class="lbl">Services</div></div>
+        <div class="tile"><div class="num" id="tEvents">0</div><div class="lbl">Events</div></div>
+        <div class="tile"><div class="num" id="tProducts">0</div><div class="lbl">Products</div></div>
+        <div class="tile"><div class="num" id="tArticles">0</div><div class="lbl">Articles</div></div>
       </div>
     </div>
   </section>
@@ -76,7 +80,7 @@
     <div class="layout">
       <div>
         <h3>Questions</h3>
-        <div class="list" id="questionList"><div class="list-item">Upload CSV to populate</div></div>
+        <div class="list" id="questionList"></div>
       </div>
       <div>
         <h3>Results</h3>
@@ -105,26 +109,20 @@
 
     function confidencePill(conf){ let cls='warn', txt=(conf??0).toFixed(2); if(conf>=0.8) cls='good'; else if(conf<0.6) cls='bad'; return `<span class='pill ${cls}'>Confidence ${txt}</span>`; }
     function countsPill(label, n){ return `<span class='pill'>${label}: ${n}</span>`; }
-    function updateAnswerKpis(data){ const s=data.structured||{}; const pills=[]; pills.push(`<span class='pill'>Intent ${s.intent||'-'}</span>`); pills.push(confidencePill(data.confidence??0)); pills.push(countsPill('landing', (s.landing||[]).length)); pills.push(countsPill('services', (s.services||[]).length)); pills.push(countsPill('events', (s.events||[]).length)); pills.push(countsPill('products', (s.products||[]).length)); pills.push(countsPill('articles', (s.articles||[]).length)); $('#answerKpis').innerHTML=pills.join(' '); }
+    function updateTilesFromTotals(t){ document.getElementById('tTotal').textContent=t.total; document.getElementById('tAvg').textContent=t.avg; document.getElementById('tAdvice').textContent=t.intentAdvice; document.getElementById('tEventsI').textContent=t.intentEvents; document.getElementById('tProductsI').textContent=t.intentProducts; document.getElementById('tLanding').textContent=t.landing; document.getElementById('tServices').textContent=t.services; document.getElementById('tEvents').textContent=t.events; document.getElementById('tProducts').textContent=t.products; document.getElementById('tArticles').textContent=t.articles; }
 
     function dominantKind(structured){ if((structured?.landing||[]).length) return 'landing'; if((structured?.services||[]).length) return 'service'; if((structured?.events||[]).length) return 'event'; if((structured?.products||[]).length) return 'product'; if((structured?.articles||[]).length) return 'article'; return '-'; }
     function firstUrl(structured){ const list = urlsOf(structured||{}); return list[0]||''; }
     function addResultRow(idx, query, data){ const tb=document.querySelector('#tblResults tbody'); const tr=document.createElement('tr'); const s=data.structured||{}; const url=firstUrl(s); const kind=dominantKind(s); const ans=(data.answer_markdown||'').slice(0,200); tr.innerHTML=`<td>${idx}</td><td>${escapeHtml(query)}</td><td>${escapeHtml(ans)}</td><td>${s.intent||'-'}</td><td>${kind}</td><td>${url? `<a href='${url}' target='_blank'>${escapeHtml(url)}</a>`:''}</td><td>${confidencePill(data.confidence??0)}</td>`; tb.appendChild(tr); }
     function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
-    $('#btnRunBoth').addEventListener('click', async ()=>{ const q=$('#q').value.trim(); if(!q) return; $('#statusChat').textContent='Chat: …'; $('#statusRpc').textContent='RPC: …'; const [chat] = await Promise.allSettled([callChat(q)]); if(chat.status==='fulfilled'){ $('#statusChat').textContent='Chat: OK'; addResultRow(document.querySelectorAll('#tblResults tbody tr').length+1, q, chat.value);} else { $('#statusChat').textContent='Chat: FAIL'; alert(chat.reason?.message||'error'); } const rpc = await Promise.allSettled([callRpc(q)]); $('#statusRpc').textContent = rpc[0].status==='fulfilled' ? 'RPC: OK' : 'RPC: FAIL'; });
+    let totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 };
+    function applyAggregateFromStructured(s, conf){ totals.total+=1; if(typeof conf==='number'){ totals.sumConf+=conf; totals.avg=(totals.sumConf/totals.total).toFixed(2);} const it=s.intent||'-'; if(it==='advice') totals.intentAdvice++; if(it==='events') totals.intentEvents++; if(it==='products') totals.intentProducts++; totals.landing+=(s.landing||[]).length; totals.services+=(s.services||[]).length; totals.events+=(s.events||[]).length; totals.products+=(s.products||[]).length; totals.articles+=(s.articles||[]).length; updateTilesFromTotals(totals); }
+
+    $('#btnRunBoth').addEventListener('click', async ()=>{ const q=$('#q').value.trim(); if(!q) return; $('#statusChat').textContent='Chat: …'; $('#statusRpc').textContent='RPC: …'; const [chat] = await Promise.allSettled([callChat(q)]); if(chat.status==='fulfilled'){ $('#statusChat').textContent='Chat: OK'; const data=chat.value; addResultRow(document.querySelectorAll('#tblResults tbody tr').length+1, q, data); applyAggregateFromStructured(data.structured||{}, data.confidence); } else { $('#statusChat').textContent='Chat: FAIL'; alert(chat.reason?.message||'error'); } const rpc = await Promise.allSettled([callRpc(q)]); $('#statusRpc').textContent = rpc[0].status==='fulfilled' ? 'RPC: OK' : 'RPC: FAIL'; });
 
     $('#btnRunCsv').addEventListener('click', async ()=>{ const f=$('#csv').files[0]; if(!f){ alert('Select CSV'); return; } const text=await f.text(); const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean); const tb=$('#tblCsv tbody'); tb.innerHTML=''; $('#questionList').innerHTML=''; document.querySelector('#tblResults tbody').innerHTML=''; let i=0; let total=0, count=0, intents={}; let sumLanding=0,sumServices=0,sumEvents=0,sumProducts=0,sumArticles=0; for(const line of lines){ i++; const q=line.split(',')[0].replace(/^\"|\"$/g,''); const li=document.createElement('div'); li.className='list-item'; li.textContent=`${i}. ${q}`; li.addEventListener('click',()=>{ $('#q').value=q; document.getElementById('btnRunBoth').click(); }); document.getElementById('questionList').appendChild(li); try{ const data=await callChat(q); const urls=urlsOf(data.structured||{}); const checks=checksFor(q,data); const s=data.structured||{}; sumLanding += (s.landing||[]).length; sumServices += (s.services||[]).length; sumEvents += (s.events||[]).length; sumProducts += (s.products||[]).length; sumArticles += (s.articles||[]).length; const tr=document.createElement('tr'); tr.innerHTML=`<td>${i}</td><td>${q}</td><td>${s.intent||'-'}</td><td>${data.confidence??'-'}</td><td>${(s.landing||[]).length}/${(s.services||[]).length}/${(s.events||[]).length}/${(s.products||[]).length}</td><td style=\"max-width:340px;word-break:break-all\">${urls.slice(0,4).map(u=>`<div>${u}</div>`).join('')}</td><td>${checks.length? `<span class='bad'>${checks.join('; ')}</span>`: `<span class='good'>ok</span>`}</td>`; tb.appendChild(tr); addResultRow(i, q, data); if(typeof data.confidence==='number'){ total+=data.confidence; count++; } const it=s.intent||'-'; intents[it]=(intents[it]||0)+1; } catch(e){ const tr=document.createElement('tr'); tr.innerHTML=`<td>${i}</td><td>${q}</td><td colspan=\"5\" class='bad'>${e.message}</td>`; tb.appendChild(tr);} } const avg = count? (total/count).toFixed(2):'-'; const kpiEl=document.getElementById('csvKpis'); kpiEl.innerHTML=`<span class='pill'>Total ${i}</span><span class='pill'>Avg confidence ${avg}</span>` + Object.entries(intents).map(([k,v])=>`<span class='pill'>${k}: ${v}</span>`).join(' '); // Top dashboard
-      document.getElementById('kpiTotal').textContent = `Total: ${i}`;
-      document.getElementById('kpiAvg').innerHTML = `Avg Confidence: <b>${avg}</b>`;
-      document.getElementById('kpiIntentAdvice').textContent = `Advice: ${intents['advice']||0}`;
-      document.getElementById('kpiIntentEvents').textContent = `Events: ${intents['events']||0}`;
-      document.getElementById('kpiIntentProducts').textContent = `Products: ${intents['products']||0}`;
-      document.getElementById('kpiLanding').textContent = `Landing: ${sumLanding}`;
-      document.getElementById('kpiServices').textContent = `Services: ${sumServices}`;
-      document.getElementById('kpiEvents').textContent = `Events: ${sumEvents}`;
-      document.getElementById('kpiProducts').textContent = `Products: ${sumProducts}`;
-      document.getElementById('kpiArticles').textContent = `Articles: ${sumArticles}`;
+      updateTilesFromTotals({ total:i, avg, intentAdvice:intents['advice']||0, intentEvents:intents['events']||0, intentProducts:intents['products']||0, landing:sumLanding, services:sumServices, events:sumEvents, products:sumProducts, articles:sumArticles });
     });
   </script>
 </body>
