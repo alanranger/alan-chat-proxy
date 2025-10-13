@@ -3144,6 +3144,39 @@ export default async function handler(req, res) {
     }
 
 
+    // Post-processing: suppress flooding and mismatches for advice queries
+    {
+      const q = String(query || '').toLowerCase();
+      const wantsFree = /\bfree\b/.test(q);
+      const wantsOnline = /\bonline\b/.test(q);
+
+      const isPaid = (item) => {
+        const v = Number(item?.price_gbp ?? item?.price);
+        return Number.isFinite(v) && v > 0;
+      };
+      const isOffline = (item) => {
+        const loc = String(item?.event_location || item?.location || item?.location_address || '');
+        return /(coventry|kenilworth|batsford|peak district|in-person|warwickshire|gloucestershire|derbyshire|norfolk|somerset)/i.test(loc);
+      };
+
+      if (wantsFree) {
+        events = (events || []).filter(e => !isPaid(e));
+        products = (products || []).filter(p => !isPaid(p));
+        services = (services || []).filter(s => !isPaid(s));
+      }
+      if (wantsOnline) {
+        events = (events || []).filter(e => !isOffline(e));
+        products = (products || []).filter(p => !isOffline(p));
+        services = (services || []).filter(s => !isOffline(s));
+      }
+
+      // Cap list sizes to avoid flooding in advice mode
+      const cap = 3;
+      events = (events || []).slice(0, cap);
+      products = (products || []).slice(0, cap);
+    }
+
+
     // Log the answer (async, don't wait for it)
     if (sessionId && query) {
       const responseTimeMs = Date.now() - started;

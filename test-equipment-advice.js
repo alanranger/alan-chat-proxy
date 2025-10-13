@@ -64,3 +64,4 @@ async function testEquipmentAdvice() {
 
 // Run the tests
 testEquipmentAdvice().catch(console.error);
+

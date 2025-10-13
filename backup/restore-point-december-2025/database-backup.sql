@@ -63,3 +63,4 @@ WHERE kind = 'product'
 -- Query 3: Should show clean values for both courses
 -- Query 4: Should return 0 rows (no milliseconds issues)
 -- Query 5: Should return 0 rows (no over-captured addresses)
+
