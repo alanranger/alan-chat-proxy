@@ -1138,6 +1138,7 @@ async function findServices(client, { keywords, limit = 20, pageContext = null }
     .select("*")
     .eq("kind", "service")
     .or(query)
+    .order("last_seen", { ascending: false })  // Prioritize recently seen/updated entities
     .limit(limit);
 
   if (error) {
