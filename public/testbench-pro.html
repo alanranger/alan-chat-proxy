@@ -10,7 +10,7 @@
     .row{display:flex;gap:16px;flex-wrap:wrap}.col{flex:1;min-width:320px}.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
     input,button,select,textarea{background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px}
     a{color:#ffd18a;text-decoration:underline} a:hover{color:#ffb24d}
-    table{width:100%;border-collapse:collapse;font-size:13px} th,td{border-top:1px solid var(--line);padding:6px 8px;vertical-align:top} th{color:var(--muted)}
+    table{width:100%;border-collapse:collapse;font-size:13px} th,td{border-top:1px solid var(--line);padding:6px 8px;vertical-align:top} th{color:var(--muted);cursor:pointer;user-select:none}
     .badge{display:inline-block;padding:2px 6px;border-radius:6px;background:#0b1220;border:1px solid var(--line);font-size:12px}
     .good{border-color:#1e3a2a;color:#86efac}.bad{border-color:#3a1e1e;color:#fecaca}
     .table-wrap{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:8px}
@@ -18,7 +18,7 @@
     .pill.good{background:#122417;color:#86efac;border-color:#1e3a2a}
     .pill.warn{background:#241f12;color:#fde68a;border-color:#3a2f1e}
     .pill.bad{background:#3a1e1e;color:#fecaca;border-color:#4c1f1f}
-    .layout{display:grid;grid-template-columns:320px 1fr;gap:16px}
+    .layout{display:grid;grid-template-columns:380px 1fr;gap:16px}
     .list{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:8px}
     .list-item{padding:8px;border-top:1px solid var(--line);cursor:pointer}
     .list-item:hover{background:#0b1220}
@@ -28,6 +28,13 @@
     .tile{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
     .tile .num{font-size:28px;font-weight:800}
     .tile .lbl{color:var(--muted);font-size:12px;margin-top:4px}
+    .section-title{margin:0 0 8px 0;padding-bottom:6px;border-bottom:1px solid var(--line)}
+    .controls{display:flex;gap:8px;align-items:center;margin-top:8px}
+    .btn-primary{background:#166534;border-color:#14532d;color:#d1fae5;font-weight:700;padding:10px 16px}
+    .btn-primary:hover{background:#15803d;border-color:#166534}
+    .progress{position:relative;height:18px;border:1px solid var(--line);border-radius:8px;background:#0b1220;overflow:hidden}
+    .progress .bar{position:absolute;left:0;top:0;height:100%;background:#1d4ed8}
+    .progress .txt{position:absolute;width:100%;text-align:center;line-height:18px;font-size:12px;color:#c7d2fe}
   </style>
 </head>
 <body>
@@ -40,38 +47,47 @@
     <div class="col card">
       <h3>Overview</h3>
       <div class="tiles" id="tiles">
-        <div class="tile"><div class="num" id="tTotal">0</div><div class="lbl">Total</div></div>
-        <div class="tile"><div class="num" id="tAvg">0.00</div><div class="lbl">Avg Confidence</div></div>
-        <div class="tile"><div class="num" id="tAdvice">0</div><div class="lbl">Intent: Advice</div></div>
-        <div class="tile"><div class="num" id="tEventsI">0</div><div class="lbl">Intent: Events</div></div>
-        <div class="tile"><div class="num" id="tProductsI">0</div><div class="lbl">Intent: Products</div></div>
-        <div class="tile"><div class="num" id="tLanding">0</div><div class="lbl">Landing</div></div>
-        <div class="tile"><div class="num" id="tServices">0</div><div class="lbl">Services</div></div>
-        <div class="tile"><div class="num" id="tEvents">0</div><div class="lbl">Events</div></div>
-        <div class="tile"><div class="num" id="tProducts">0</div><div class="lbl">Products</div></div>
-        <div class="tile"><div class="num" id="tArticles">0</div><div class="lbl">Articles</div></div>
+        <div class="tile" title="Count of queries executed in this session"><div class="num" id="tTotal">0</div><div class="lbl">Total</div></div>
+        <div class="tile" title="Average confidence score across all queries"><div class="num" id="tAvg">0.00</div><div class="lbl">Avg Confidence</div></div>
+        <div class="tile" title="How many answers were classified as advice intent"><div class="num" id="tAdvice">0</div><div class="lbl">Intent: Advice</div></div>
+        <div class="tile" title="How many answers were classified as events intent"><div class="num" id="tEventsI">0</div><div class="lbl">Intent: Events</div></div>
+        <div class="tile" title="How many answers were classified as products intent"><div class="num" id="tProductsI">0</div><div class="lbl">Intent: Products</div></div>
+        <div class="tile" title="Total landing page hits returned across answers"><div class="num" id="tLanding">0</div><div class="lbl">Landing</div></div>
+        <div class="tile" title="Total services returned across answers"><div class="num" id="tServices">0</div><div class="lbl">Services</div></div>
+        <div class="tile" title="Total events returned across answers"><div class="num" id="tEvents">0</div><div class="lbl">Events</div></div>
+        <div class="tile" title="Total products returned across answers"><div class="num" id="tProducts">0</div><div class="lbl">Products</div></div>
+        <div class="tile" title="Total articles returned across answers"><div class="num" id="tArticles">0</div><div class="lbl">Articles</div></div>
       </div>
     </div>
   </section>
 
   <section class="row">
     <div class="col card">
-      <h3>Query</h3>
+      <h3 class="section-title" title="Enter a single question and run it against the chat API">Query</h3>
       <input id="q" class="w100" placeholder="Ask a question..." />
-      <div style="margin-top:8px">
-        <button id="btnRunBoth">Run Both</button>
-        <span id="statusChat" class="badge">Chat: —</span>
-        <span id="statusRpc" class="badge">RPC: —</span>
+      <div class="controls">
+        <button id="btnRunBoth" class="btn-primary" style="font-weight:700" title="Run the single query and append to results">Run</button>
+        <button id="btnClear" title="Clear all results and reset dashboard">Clear Results</button>
+        <button id="btnDebug" title="Toggle extra console logging for debugging">Debug</button>
+        <button id="btnCopy" title="Copy current results as JSON to clipboard">Copy Log</button>
+        <button id="btnExport" title="Download current results as CSV">Export Log</button>
+        <span id="statusChat" class="badge" title="Connection status for chat API">Chat: —</span>
+        <span id="statusRpc" class="badge" title="Connection status for direct RPC">RPC: —</span>
       </div>
     </div>
     <div class="col card">
-      <h3>CSV Runner</h3>
-      <label>API URL <input id="api" style="width:360px" value="https://alan-chat-proxy.vercel.app/api/chat"/></label>
-      <input type="file" id="csv" accept=".csv" />
-      <button id="btnRunCsv">Run CSV</button>
+      <h3 class="section-title" title="Batch test: run a CSV of questions and aggregate metrics">CSV Runner</h3>
+      <label title="Endpoint used for chat API calls">API URL <input id="api" style="width:360px" value="https://alan-chat-proxy.vercel.app/api/chat"/></label>
+      <input type="file" id="csv" accept=".csv" title="Upload a CSV with one question per line" />
+      <button id="btnRunCsv" class="btn-primary" title="Execute all CSV questions and populate both panes">Run CSV</button>
+      <button id="btnStopCsv" title="Abort the current CSV run" style="background:#7f1d1d;border-color:#7f1d1d;color:#fecaca">Stop</button>
+      <div id="csvProgressWrap" class="progress" title="CSV run progress" style="margin-top:8px">
+        <div id="csvProgressBar" class="bar" style="width:0%"></div>
+        <div id="csvProgressText" class="txt">0 / 0</div>
+      </div>
       <div class="kpis" id="csvKpis"></div>
       <div class="table-wrap" style="margin-top:8px">
-        <table id="tblCsv"><thead><tr><th>#</th><th>Query</th><th>Intent</th><th>Conf</th><th>L/S/E/P</th><th>URLs</th><th>Checks</th></tr></thead><tbody></tbody></table>
+        <table id="tblCsv"><thead><tr><th title="Row number">#</th><th title="Question text">Query</th><th title="Detected intent">Intent</th><th title="Confidence as percentage">Conf</th><th title="Counts: Landing/Services/Events/Products">L/S/E/P</th><th title="Top URLs returned">URLs</th><th title="Rule-based checks result">Checks</th></tr></thead><tbody></tbody></table>
       </div>
     </div>
   </section>
@@ -79,15 +95,15 @@
   <section class="card">
     <div class="layout">
       <div>
-        <h3>Questions</h3>
+        <h3 class="section-title" title="List of asked questions in this session">Questions</h3>
         <div class="list" id="questionList"></div>
       </div>
       <div>
-        <h3>Results</h3>
+        <h3 class="section-title" title="One row per question showing key output fields">Results</h3>
         <div class="table-wrap">
           <table id="tblResults">
             <thead>
-              <tr><th>#</th><th>Query</th><th>Initial response</th><th>Intent</th><th>Kind</th><th>URL</th><th>Confidence</th></tr>
+              <tr><th title="Row number">#</th><th title="Question text">Query</th><th title="First 200 chars of the model answer">Initial response</th><th title="Detected intent">Intent</th><th title="Dominant kind among structured results">Kind</th><th title="First URL returned">URL</th><th title="Confidence as percentage; click header to sort">Confidence</th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -107,13 +123,15 @@
 
     function renderEvents(tb, arr){ const b=$(tb+' tbody'); b.innerHTML=''; (arr||[]).forEach(e=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td><a href="${e.page_url||e.url||''}" target="_blank">${(e.title||'')}</a></td><td>${e.date_start||e.when||''}</td><td>${e.location||''}</td>`; b.appendChild(tr); }); }
 
-    function confidencePill(conf){ let cls='warn', txt=(conf??0).toFixed(2); if(conf>=0.8) cls='good'; else if(conf<0.6) cls='bad'; return `<span class='pill ${cls}'>Confidence ${txt}</span>`; }
+    function asPct(x){ if(typeof x!=='number') return '-'; return `${Math.round(x*100)}%`; }
+    function confidencePill(conf){ let cls='warn', txt=asPct(conf??0); if(conf>=0.8) cls='good'; else if(conf<0.6) cls='bad'; return `<span class='pill ${cls}'>Confidence ${txt}</span>`; }
     function countsPill(label, n){ return `<span class='pill'>${label}: ${n}</span>`; }
-    function updateTilesFromTotals(t){ document.getElementById('tTotal').textContent=t.total; document.getElementById('tAvg').textContent=t.avg; document.getElementById('tAdvice').textContent=t.intentAdvice; document.getElementById('tEventsI').textContent=t.intentEvents; document.getElementById('tProductsI').textContent=t.intentProducts; document.getElementById('tLanding').textContent=t.landing; document.getElementById('tServices').textContent=t.services; document.getElementById('tEvents').textContent=t.events; document.getElementById('tProducts').textContent=t.products; document.getElementById('tArticles').textContent=t.articles; }
+    function updateTilesFromTotals(t){ document.getElementById('tTotal').textContent=t.total; document.getElementById('tAvg').textContent=asPct(Number(t.avg)); document.getElementById('tAdvice').textContent=t.intentAdvice; document.getElementById('tEventsI').textContent=t.intentEvents; document.getElementById('tProductsI').textContent=t.intentProducts; document.getElementById('tLanding').textContent=t.landing; document.getElementById('tServices').textContent=t.services; document.getElementById('tEvents').textContent=t.events; document.getElementById('tProducts').textContent=t.products; document.getElementById('tArticles').textContent=t.articles; }
 
     function dominantKind(structured){ if((structured?.landing||[]).length) return 'landing'; if((structured?.services||[]).length) return 'service'; if((structured?.events||[]).length) return 'event'; if((structured?.products||[]).length) return 'product'; if((structured?.articles||[]).length) return 'article'; return '-'; }
     function firstUrl(structured){ const list = urlsOf(structured||{}); return list[0]||''; }
-    function addResultRow(idx, query, data){ const tb=document.querySelector('#tblResults tbody'); const tr=document.createElement('tr'); const s=data.structured||{}; const url=firstUrl(s); const kind=dominantKind(s); const ans=(data.answer_markdown||'').slice(0,200); tr.innerHTML=`<td>${idx}</td><td>${escapeHtml(query)}</td><td>${escapeHtml(ans)}</td><td>${s.intent||'-'}</td><td>${kind}</td><td>${url? `<a href='${url}' target='_blank'>${escapeHtml(url)}</a>`:''}</td><td>${confidencePill(data.confidence??0)}</td>`; tb.appendChild(tr); }
+    const resultsLog=[];
+    function addResultRow(idx, query, data){ const tb=document.querySelector('#tblResults tbody'); const tr=document.createElement('tr'); const s=data.structured||{}; const url=firstUrl(s); const kind=dominantKind(s); const ans=(data.answer_markdown||'').slice(0,200); tr.innerHTML=`<td>${idx}</td><td>${escapeHtml(query)}</td><td>${escapeHtml(ans)}</td><td>${s.intent||'-'}</td><td>${kind}</td><td>${url? `<a href='${url}' target='_blank'>${escapeHtml(url)}</a>`:''}</td><td data-conf='${data.confidence??0}'>${confidencePill(data.confidence??0)}</td>`; tb.appendChild(tr); resultsLog.push({index:idx,query,answer:ans,intent:s.intent||'-',kind,url,confidence:data.confidence||0}); }
     function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
     let totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 };
@@ -121,9 +139,39 @@
 
     $('#btnRunBoth').addEventListener('click', async ()=>{ const q=$('#q').value.trim(); if(!q) return; $('#statusChat').textContent='Chat: …'; $('#statusRpc').textContent='RPC: …'; const [chat] = await Promise.allSettled([callChat(q)]); if(chat.status==='fulfilled'){ $('#statusChat').textContent='Chat: OK'; const data=chat.value; addResultRow(document.querySelectorAll('#tblResults tbody tr').length+1, q, data); applyAggregateFromStructured(data.structured||{}, data.confidence); } else { $('#statusChat').textContent='Chat: FAIL'; alert(chat.reason?.message||'error'); } const rpc = await Promise.allSettled([callRpc(q)]); $('#statusRpc').textContent = rpc[0].status==='fulfilled' ? 'RPC: OK' : 'RPC: FAIL'; });
 
-    $('#btnRunCsv').addEventListener('click', async ()=>{ const f=$('#csv').files[0]; if(!f){ alert('Select CSV'); return; } const text=await f.text(); const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean); const tb=$('#tblCsv tbody'); tb.innerHTML=''; $('#questionList').innerHTML=''; document.querySelector('#tblResults tbody').innerHTML=''; let i=0; let total=0, count=0, intents={}; let sumLanding=0,sumServices=0,sumEvents=0,sumProducts=0,sumArticles=0; for(const line of lines){ i++; const q=line.split(',')[0].replace(/^\"|\"$/g,''); const li=document.createElement('div'); li.className='list-item'; li.textContent=`${i}. ${q}`; li.addEventListener('click',()=>{ $('#q').value=q; document.getElementById('btnRunBoth').click(); }); document.getElementById('questionList').appendChild(li); try{ const data=await callChat(q); const urls=urlsOf(data.structured||{}); const checks=checksFor(q,data); const s=data.structured||{}; sumLanding += (s.landing||[]).length; sumServices += (s.services||[]).length; sumEvents += (s.events||[]).length; sumProducts += (s.products||[]).length; sumArticles += (s.articles||[]).length; const tr=document.createElement('tr'); tr.innerHTML=`<td>${i}</td><td>${q}</td><td>${s.intent||'-'}</td><td>${data.confidence??'-'}</td><td>${(s.landing||[]).length}/${(s.services||[]).length}/${(s.events||[]).length}/${(s.products||[]).length}</td><td style=\"max-width:340px;word-break:break-all\">${urls.slice(0,4).map(u=>`<div>${u}</div>`).join('')}</td><td>${checks.length? `<span class='bad'>${checks.join('; ')}</span>`: `<span class='good'>ok</span>`}</td>`; tb.appendChild(tr); addResultRow(i, q, data); if(typeof data.confidence==='number'){ total+=data.confidence; count++; } const it=s.intent||'-'; intents[it]=(intents[it]||0)+1; } catch(e){ const tr=document.createElement('tr'); tr.innerHTML=`<td>${i}</td><td>${q}</td><td colspan=\"5\" class='bad'>${e.message}</td>`; tb.appendChild(tr);} } const avg = count? (total/count).toFixed(2):'-'; const kpiEl=document.getElementById('csvKpis'); kpiEl.innerHTML=`<span class='pill'>Total ${i}</span><span class='pill'>Avg confidence ${avg}</span>` + Object.entries(intents).map(([k,v])=>`<span class='pill'>${k}: ${v}</span>`).join(' '); // Top dashboard
+    let csvAbort=false; document.getElementById('btnStopCsv').addEventListener('click',()=>{ csvAbort=true; });
+
+    $('#btnRunCsv').addEventListener('click', async ()=>{ const f=$('#csv').files[0]; if(!f){ alert('Select CSV'); return; } const text=await f.text(); const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean); const totalRows=lines.length; const tb=$('#tblCsv tbody'); tb.innerHTML=''; $('#questionList').innerHTML=''; document.querySelector('#tblResults tbody').innerHTML=''; resultsLog.length=0; totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 }; csvAbort=false; // reset
+      // init progress
+      const bar=$('#csvProgressBar'), txtEl=$('#csvProgressText'); bar.style.width='0%'; txtEl.textContent=`0 / ${totalRows}`;
+      let i=0; let total=0, count=0, intents={}; let sumLanding=0,sumServices=0,sumEvents=0,sumProducts=0,sumArticles=0; 
+      for(const line of lines){ if(csvAbort){ break; } i++; const q=line.split(',')[0].replace(/^\"|\"$/g,''); const li=document.createElement('div'); li.className='list-item'; li.textContent=`${i}. ${q}`; li.addEventListener('click',()=>{ $('#q').value=q; document.getElementById('btnRunBoth').click(); }); document.getElementById('questionList').appendChild(li); try{ const data=await callChat(q); const urls=urlsOf(data.structured||{}); const checks=checksFor(q,data); const s=data.structured||{}; sumLanding += (s.landing||[]).length; sumServices += (s.services||[]).length; sumEvents += (s.events||[]).length; sumProducts += (s.products||[]).length; sumArticles += (s.articles||[]).length; const tr=document.createElement('tr'); tr.innerHTML=`<td>${i}</td><td>${q}</td><td>${s.intent||'-'}</td><td>${asPct(data.confidence??0)}</td><td>${(s.landing||[]).length}/${(s.services||[]).length}/${(s.events||[]).length}/${(s.products||[]).length}</td><td style=\"max-width:340px;word-break:break-all\">${urls.slice(0,4).map(u=>`<div>${u}</div>`).join('')}</td><td>${checks.length? `<span class='bad'>${checks.join('; ')}</span>`: `<span class='good'>ok</span>`}</td>`; tb.appendChild(tr); addResultRow(i, q, data); if(typeof data.confidence==='number'){ total+=data.confidence; count++; } const it=s.intent||'-'; intents[it]=(intents[it]||0)+1; // live dashboard
+          applyAggregateFromStructured(s, data.confidence);
+        } catch(e){ const tr=document.createElement('tr'); tr.innerHTML=`<td>${i}</td><td>${q}</td><td colspan=\"5\" class='bad'>${e.message}</td>`; tb.appendChild(tr);} 
+        // progress update
+        const pct = Math.round((i/totalRows)*100); bar.style.width=pct+'%'; txtEl.textContent=`${i} / ${totalRows}`;
+      }
+      const avg = count? (total/count).toFixed(2):'-'; const kpiEl=document.getElementById('csvKpis'); kpiEl.innerHTML=`<span class='pill'>Total ${i}</span><span class='pill'>Avg confidence ${asPct(Number(avg))}</span>` + Object.entries(intents).map(([k,v])=>`<span class='pill'>${k}: ${v}</span>`).join(' '); // Top dashboard
       updateTilesFromTotals({ total:i, avg, intentAdvice:intents['advice']||0, intentEvents:intents['events']||0, intentProducts:intents['products']||0, landing:sumLanding, services:sumServices, events:sumEvents, products:sumProducts, articles:sumArticles });
     });
+
+    // Table sorting for results and CSV tables
+    function makeSortable(tableId){ const ths=document.querySelectorAll(`${tableId} thead th`); ths.forEach((th,idx)=>{ th.addEventListener('click',()=>{ const tb=document.querySelector(`${tableId} tbody`); const rows=Array.from(tb.querySelectorAll('tr')); const asc = th.dataset.sort!=='asc'; ths.forEach(h=>delete h.dataset.sort); th.dataset.sort= asc? 'asc':'desc'; rows.sort((a,b)=>{ const ta=a.children[idx]?.innerText||''; const tbv=b.children[idx]?.innerText||''; if(idx===6){ // confidence column
+            const ca=parseFloat(a.children[idx]?.querySelector('[data-conf]')?.dataset.conf || a.children[idx]?.dataset.conf || '0');
+            const cb=parseFloat(b.children[idx]?.querySelector('[data-conf]')?.dataset.conf || b.children[idx]?.dataset.conf || '0');
+            return asc? ca-cb : cb-ca;
+          }
+          return asc? ta.localeCompare(tbv): tbv.localeCompare(ta);
+        });
+        tb.innerHTML=''; rows.forEach(r=>tb.appendChild(r));
+      });}); }
+    makeSortable('#tblResults'); makeSortable('#tblCsv');
+
+    // Controls: clear, debug, copy, export
+    $('#btnClear').addEventListener('click', ()=>{ document.querySelector('#tblResults tbody').innerHTML=''; document.querySelector('#tblCsv tbody').innerHTML=''; $('#questionList').innerHTML=''; resultsLog.length=0; totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 }; updateTilesFromTotals(totals); });
+    let debugOn=false; $('#btnDebug').addEventListener('click', ()=>{ debugOn=!debugOn; alert(debugOn? 'Debug ON: extra console logs enabled' : 'Debug OFF'); });
+    $('#btnCopy').addEventListener('click', async ()=>{ const text=JSON.stringify(resultsLog,null,2); await navigator.clipboard.writeText(text); alert('Results copied to clipboard'); });
+    $('#btnExport').addEventListener('click', ()=>{ const csv=[['#','Query','Answer','Intent','Kind','URL','Confidence']].concat(resultsLog.map(r=>[r.index,r.query,`"${r.answer.replace(/"/g,'""')}"`,r.intent,r.kind,r.url,r.confidence])); const blob=new Blob([csv.map(r=>r.join(',')).join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='testbench-results.csv'; a.click(); URL.revokeObjectURL(a.href); });
   </script>
 </body>
 </html>
