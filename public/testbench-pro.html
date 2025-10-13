@@ -28,6 +28,8 @@
     .tile{background:#0b1220;border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
     .tile .num{font-size:28px;font-weight:800}
     .tile .lbl{color:var(--muted);font-size:12px;margin-top:4px}
+    .tile.queries{background:#1e3a8a;border-color:#3b82f6}
+    .tile.kinds{background:#1e40af;border-color:#2563eb}
     .section-title{margin:0 0 8px 0;padding-bottom:6px;border-bottom:1px solid var(--line)}
     .controls{display:flex;gap:8px;align-items:center;margin-top:8px}
     .btn-primary{background:#166534;border-color:#14532d;color:#d1fae5;font-weight:700;padding:10px 16px}
@@ -63,14 +65,14 @@
       <div class="tiles" id="tiles">
         <div class="tile" title="Count of queries executed in this session"><div class="num" id="tTotal">0</div><div class="lbl">Total</div></div>
         <div class="tile" title="Average confidence score across all queries"><div class="num" id="tAvg">0.00</div><div class="lbl">Avg Confidence</div></div>
-        <div class="tile" title="How many queries were asking for advice/help"><div class="num" id="tAdvice">0</div><div class="lbl">Advice Queries</div></div>
-        <div class="tile" title="How many queries were asking about events/workshops"><div class="num" id="tEventsI">0</div><div class="lbl">Event Queries</div></div>
-        <div class="tile" title="How many queries were asking about products"><div class="num" id="tProductsI">0</div><div class="lbl">Product Queries</div></div>
-        <div class="tile" title="Total landing pages returned in answers"><div class="num" id="tLanding">0</div><div class="lbl">Landing Pages</div></div>
-        <div class="tile" title="Total services returned in answers"><div class="num" id="tServices">0</div><div class="lbl">Services</div></div>
-        <div class="tile" title="Total events returned in answers"><div class="num" id="tEvents">0</div><div class="lbl">Events</div></div>
-        <div class="tile" title="Total products returned in answers"><div class="num" id="tProducts">0</div><div class="lbl">Products</div></div>
-        <div class="tile" title="Total articles returned in answers"><div class="num" id="tArticles">0</div><div class="lbl">Articles</div></div>
+        <div class="tile queries" title="How many queries were asking for advice/help"><div class="num" id="tAdvice">0</div><div class="lbl">Advice Queries</div></div>
+        <div class="tile queries" title="How many queries were asking about events/workshops"><div class="num" id="tEventsI">0</div><div class="lbl">Event Queries</div></div>
+        <div class="tile queries" title="How many queries were asking about products"><div class="num" id="tProductsI">0</div><div class="lbl">Product Queries</div></div>
+        <div class="tile kinds" title="Total landing pages returned in answers"><div class="num" id="tLanding">0</div><div class="lbl">Landing Pages</div></div>
+        <div class="tile kinds" title="Total services returned in answers"><div class="num" id="tServices">0</div><div class="lbl">Services</div></div>
+        <div class="tile kinds" title="Total events returned in answers"><div class="num" id="tEvents">0</div><div class="lbl">Events</div></div>
+        <div class="tile kinds" title="Total products returned in answers"><div class="num" id="tProducts">0</div><div class="lbl">Products</div></div>
+        <div class="tile kinds" title="Total articles returned in answers"><div class="num" id="tArticles">0</div><div class="lbl">Articles</div></div>
       </div>
     </div>
         <div class="col card">
