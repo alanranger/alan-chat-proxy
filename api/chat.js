@@ -2719,6 +2719,12 @@ export default async function handler(req, res) {
       const freeLanding = [...landing, ...services].find(e => (e.page_url||e.url||'').includes('free-online-photography-course'));
       if (freeLanding) {
         recommendedFreeCourseUrl = freeLanding.page_url || freeLanding.url;
+        // Coerce into landing results and de-duplicate
+        if (!landing.some(e => (e.page_url||e.url||'') === recommendedFreeCourseUrl)) {
+          landing = [freeLanding, ...landing];
+        }
+        // Remove duplicate from services if present
+        services = services.filter(e => (e.page_url||e.url||'') !== recommendedFreeCourseUrl);
       }
     } else {
       // Only search for events/products if the query is about workshops, courses, or equipment recommendations
