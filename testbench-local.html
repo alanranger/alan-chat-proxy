@@ -15,6 +15,9 @@
         .success { border-left-color: #28a745; }
         .error { border-left-color: #dc3545; }
         .version { float: right; color: #ccc; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
+        th { background: #f0f0f0; position: sticky; top: 0; }
     </style>
 </head>
 <body>
@@ -41,11 +44,133 @@
                 <p>Click the buttons above to test the follow-up context functionality.</p>
             </div>
         </div>
+
+        <div class="test-area">
+            <h3>Comprehensive Test Runner (Rule-based)</h3>
+            <p>Upload a CSV of questions (first column). The runner will call the live API for each question and show intent, confidence, key URLs, and rule checks for free-course, terms, and about pages.</p>
+            <div>
+                <label>API URL: <input id="apiUrl" style="width:420px" value="https://alan-chat-proxy.vercel.app/api/chat"></label>
+                <input type="file" id="csvFile" accept=".csv" />
+                <button class="button" onclick="runCsvTests()">Run CSV Tests</button>
+                <button class="button" onclick="clearTable()">Clear Table</button>
+            </div>
+            <div style="max-height:420px; overflow:auto; margin-top:10px;">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Query</th>
+                            <th>Intent</th>
+                            <th>Confidence</th>
+                            <th>Landing/Services/Events/Products</th>
+                            <th>Found URLs</th>
+                            <th>Checks</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
         let previousQuery = null;
         let testResults = [];
+
+        function getRulesForQuery(q) {
+            const s = String(q || '').toLowerCase();
+            const rules = [];
+            if (s.includes('free') && s.includes('online') && s.includes('course')) {
+                rules.push({ req: ['free-online-photography-course'], forbidKinds: ['event','product'], cap: 3 });
+            }
+            if (/(terms|refund|cancellation|policy)/.test(s)) {
+                rules.push({ req: ['terms-and-conditions'], forbidKinds: [], cap: 0 });
+            }
+            if (/(who is alan ranger|about alan)/.test(s)) {
+                rules.push({ req: ['about-alan-ranger'], forbidKinds: ['event','product'], cap: 0 });
+            }
+            return rules;
+        }
+
+        async function runCsvTests() {
+            const file = document.getElementById('csvFile').files[0];
+            if (!file) { alert('Select a CSV first'); return; }
+            const api = document.getElementById('apiUrl').value.trim();
+            const text = await file.text();
+            const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            let idx = 0;
+            for (const line of lines) {
+                idx++;
+                const query = line.split(',')[0].replace(/^"|"$/g,'');
+                try {
+                    const res = await fetch(api, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ query, pageContext: null }) });
+                    const data = await res.json();
+                    addRow(idx, query, data);
+                } catch (e) {
+                    addRow(idx, query, { error: e.message });
+                }
+            }
+        }
+
+        function clearTable() {
+            document.querySelector('#resultsTable tbody').innerHTML='';
+        }
+
+        function pickUrls(structured) {
+            const out = [];
+            const pushArr = arr => (arr||[]).forEach(e => out.push(e.page_url || e.url || e.href || ''));
+            pushArr(structured?.landing);
+            pushArr(structured?.services);
+            pushArr(structured?.products);
+            pushArr(structured?.events);
+            pushArr(structured?.articles);
+            return out.filter(Boolean);
+        }
+
+        function addRow(i, query, data) {
+            const tb = document.querySelector('#resultsTable tbody');
+            const tr = document.createElement('tr');
+            const intent = data?.structured?.intent || '-';
+            const conf = data?.confidence ?? '-';
+            const l = (data?.structured?.landing||[]).length;
+            const s = (data?.structured?.services||[]).length;
+            const e = (data?.structured?.events||[]).length;
+            const p = (data?.structured?.products||[]).length;
+            const urls = pickUrls(data?.structured || {});
+
+            const checks = [];
+            const rules = getRulesForQuery(query);
+            for (const r of rules) {
+                const hasReq = r.req.some(substr => urls.some(u => (u||'').includes(substr)) || String(data?.answer_markdown||'').includes(substr));
+                if (!hasReq) checks.push(`missing ${r.req.join(' OR ')}`);
+                for (const k of (r.forbidKinds||[])) {
+                    const arr = data?.structured?.[k+'s'] || data?.structured?.[k] || [];
+                    if (Array.isArray(arr) && arr.length>0) checks.push(`forbidden ${k}`);
+                }
+                if (r.cap===0) {
+                    if (e) checks.push('events>0');
+                    if (p) checks.push('products>0');
+                } else if (typeof r.cap==='number') {
+                    if (e>r.cap) checks.push(`events>${r.cap}`);
+                    if (p>r.cap) checks.push(`products>${r.cap}`);
+                }
+            }
+
+            tr.innerHTML = `
+                <td>${i}</td>
+                <td>${escapeHtml(query)}</td>
+                <td>${intent}</td>
+                <td>${conf}</td>
+                <td>landing:${l} • services:${s} • events:${e} • products:${p}</td>
+                <td style="max-width:360px; word-break:break-all;">${urls.slice(0,6).map(u=>`<div>${escapeHtml(u)}</div>`).join('')}</td>
+                <td>${checks.length? `<span style='color:#dc3545'>${checks.join('; ')}</span>`: '<span style="color:#28a745">ok</span>'}</td>
+            `;
+            tb.appendChild(tr);
+        }
+
+        function escapeHtml(s){
+            return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+        }
 
         function testStep1() {
             const query = "when is the next bluebell workshop";
