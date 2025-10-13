@@ -2045,6 +2045,103 @@ async function extractRelevantInfo(query, dataContext) {
   return `I don't have a confident answer to that yet. I'm trained on Alan's site, so I may miss things. If you'd like to follow up, please reach out:`;
 }
 
+// Calculate nuanced confidence for events
+function calculateEventConfidence(query, events, product) {
+  let baseConfidence = 0.3;
+  let confidenceFactors = [];
+  
+  const queryLower = query.toLowerCase();
+  
+  // Factor 1: Query specificity for events
+  const isEventQuery = queryLower.includes("when") || queryLower.includes("next") || queryLower.includes("date") || queryLower.includes("workshop") || queryLower.includes("course");
+  const isLocationQuery = queryLower.includes("where") || queryLower.includes("location") || queryLower.includes("coventry") || queryLower.includes("devon");
+  const isPriceQuery = queryLower.includes("cost") || queryLower.includes("price") || queryLower.includes("much");
+  
+  if (isEventQuery) {
+    baseConfidence += 0.2;
+    confidenceFactors.push("Event query (+0.2)");
+  }
+  if (isLocationQuery) {
+    baseConfidence += 0.15;
+    confidenceFactors.push("Location query (+0.15)");
+  }
+  if (isPriceQuery) {
+    baseConfidence += 0.15;
+    confidenceFactors.push("Price query (+0.15)");
+  }
+  
+  // Factor 2: Event availability and quality
+  if (events && events.length > 0) {
+    baseConfidence += Math.min(0.3, events.length * 0.1);
+    confidenceFactors.push(`Events found: ${events.length} (+${(Math.min(0.3, events.length * 0.1)).toFixed(2)})`);
+    
+    // Check for future events
+    const futureEvents = events.filter(e => e.date_start && new Date(e.date_start) > new Date());
+    if (futureEvents.length > 0) {
+      baseConfidence += 0.15;
+      confidenceFactors.push(`Future events: ${futureEvents.length} (+0.15)`);
+    }
+    
+    // Check for specific event types
+    const hasWorkshops = events.some(e => e.subtype && e.subtype.toLowerCase().includes('workshop'));
+    const hasCourses = events.some(e => e.subtype && e.subtype.toLowerCase().includes('course'));
+    if (hasWorkshops || hasCourses) {
+      baseConfidence += 0.1;
+      confidenceFactors.push("Specific event types (+0.1)");
+    }
+  }
+  
+  // Factor 3: Product availability
+  if (product) {
+    baseConfidence += 0.2;
+    confidenceFactors.push("Product found (+0.2)");
+    
+    // Check product quality
+    if (product.price_gbp && product.price_gbp > 0) {
+      baseConfidence += 0.1;
+      confidenceFactors.push("Product with price (+0.1)");
+    }
+    if (product.location_address && product.location_address.trim().length > 0) {
+      baseConfidence += 0.1;
+      confidenceFactors.push("Product with location (+0.1)");
+    }
+  }
+  
+  // Factor 4: Query-event relevance
+  if (events && events.length > 0) {
+    const queryWords = queryLower.split(/\s+/).filter(word => word.length > 2);
+    let relevanceScore = 0;
+    
+    events.forEach(event => {
+      const eventTitle = (event.event_title || '').toLowerCase();
+      const eventLocation = (event.event_location || '').toLowerCase();
+      const eventSubtype = (event.subtype || '').toLowerCase();
+      
+      queryWords.forEach(word => {
+        if (eventTitle.includes(word) || eventLocation.includes(word) || eventSubtype.includes(word)) {
+          relevanceScore += 1;
+        }
+      });
+    });
+    
+    if (relevanceScore > 0) {
+      const relevanceBonus = Math.min(0.2, relevanceScore * 0.05);
+      baseConfidence += relevanceBonus;
+      confidenceFactors.push(`Query relevance: ${relevanceScore} (+${relevanceBonus.toFixed(2)})`);
+    }
+  }
+  
+  // Cap confidence between 0.1 and 0.95
+  const finalConfidence = Math.max(0.1, Math.min(0.95, baseConfidence));
+  
+  // Log confidence factors for debugging
+  if (confidenceFactors.length > 0) {
+    console.log(`🎯 Event confidence factors for "${query}": ${confidenceFactors.join(', ')} = ${(finalConfidence * 100).toFixed(1)}%`);
+  }
+  
+  return finalConfidence;
+}
+
 /* -------------------------------- Handler -------------------------------- */
 export default async function handler(req, res) {
   // Chat API handler called
@@ -2312,7 +2409,7 @@ export default async function handler(req, res) {
           products: product ? [product] : [],
           pills,
         },
-        confidence: events.length > 0 ? 0.8 : 0.2,
+        confidence: calculateEventConfidence(query, events, product),
         debug: {
           version: "v1.2.36-debug-response",
           intent: "events",
@@ -2547,33 +2644,165 @@ export default async function handler(req, res) {
     let confidence = 0.4; // Base confidence for advice questions
     let hasEvidenceBasedAnswer = false;
     
-    // Boost confidence for technical questions with good article matches
-    const isTechnicalQuery = qlcAdvice.includes("what is") || qlcAdvice.includes("what are") || qlcAdvice.includes("how does");
-    const hasOnlineCourseArticles = articles.some(a => a.categories?.includes("online photography course"));
-    if (isTechnicalQuery && hasOnlineCourseArticles && articles.length > 0) {
-      confidence = Math.min(0.85, 0.4 + (articles.length * 0.1)); // Boost confidence for technical queries
+    // Enhanced confidence scoring function
+    function calculateNuancedConfidence(query, articles, contentChunks, hasDirectAnswer, hasServiceAnswer) {
+      let baseConfidence = 0.3; // Lower base to allow for more nuanced scoring
+      let confidenceFactors = [];
+      
+      // Factor 1: Query type and specificity
+      const queryLower = query.toLowerCase();
+      const isTechnicalQuery = queryLower.includes("what is") || queryLower.includes("what are") || queryLower.includes("how does") || queryLower.includes("how do");
+      const isEquipmentQuery = queryLower.includes("tripod") || queryLower.includes("camera") || queryLower.includes("lens") || queryLower.includes("filter") || queryLower.includes("bag") || queryLower.includes("flash");
+      const isCourseQuery = queryLower.includes("course") || queryLower.includes("workshop") || queryLower.includes("lesson") || queryLower.includes("class");
+      const isEventQuery = queryLower.includes("when") || queryLower.includes("next") || queryLower.includes("date") || queryLower.includes("workshop");
+      
+      if (isTechnicalQuery) {
+        baseConfidence += 0.2;
+        confidenceFactors.push("Technical query (+0.2)");
+      }
+      if (isEquipmentQuery) {
+        baseConfidence += 0.15;
+        confidenceFactors.push("Equipment query (+0.15)");
+      }
+      if (isCourseQuery) {
+        baseConfidence += 0.15;
+        confidenceFactors.push("Course query (+0.15)");
+      }
+      if (isEventQuery) {
+        baseConfidence += 0.15;
+        confidenceFactors.push("Event query (+0.15)");
+      }
+      
+      // Factor 2: Article relevance and quality
+      if (articles && articles.length > 0) {
+        const totalArticles = articles.length;
+        const articleRelevanceScore = calculateArticleRelevance(query, articles);
+        
+        // Base score for having articles
+        baseConfidence += Math.min(0.3, totalArticles * 0.05);
+        confidenceFactors.push(`Articles found: ${totalArticles} (+${(Math.min(0.3, totalArticles * 0.05)).toFixed(2)})`);
+        
+        // Relevance bonus
+        baseConfidence += articleRelevanceScore * 0.2;
+        confidenceFactors.push(`Relevance score: ${articleRelevanceScore.toFixed(2)} (+${(articleRelevanceScore * 0.2).toFixed(2)})`);
+        
+        // Category and tag quality
+        const hasHighQualityCategories = articles.some(a => 
+          a.categories?.includes("photography-basics") || 
+          a.categories?.includes("photography-tips") || 
+          a.categories?.includes("recommended-products")
+        );
+        if (hasHighQualityCategories) {
+          baseConfidence += 0.1;
+          confidenceFactors.push("High-quality categories (+0.1)");
+        }
+      }
+      
+      // Factor 3: Answer type quality
+      if (hasDirectAnswer) {
+        baseConfidence += 0.25;
+        confidenceFactors.push("Direct FAQ answer (+0.25)");
+      } else if (hasServiceAnswer) {
+        baseConfidence += 0.15;
+        confidenceFactors.push("Service FAQ answer (+0.15)");
+      }
+      
+      // Factor 4: Content quality indicators
+      if (contentChunks && contentChunks.length > 0) {
+        const hasRichContent = contentChunks.some(chunk => 
+          chunk.chunk_text && chunk.chunk_text.length > 100
+        );
+        if (hasRichContent) {
+          baseConfidence += 0.1;
+          confidenceFactors.push("Rich content chunks (+0.1)");
+        }
+      }
+      
+      // Factor 5: Penalties for poor matches
+      if (articles && articles.length > 0) {
+        const hasMalformedContent = articles.some(a => 
+          a.description && (
+            a.description.includes("ALAN+RANGER+photography+LOGO+BLACK") ||
+            a.description.includes("rotto 405") ||
+            a.description.length < 20
+          )
+        );
+        if (hasMalformedContent) {
+          baseConfidence -= 0.2;
+          confidenceFactors.push("Malformed content (-0.2)");
+        }
+      }
+      
+      // Cap confidence between 0.1 and 0.95
+      const finalConfidence = Math.max(0.1, Math.min(0.95, baseConfidence));
+      
+      return {
+        confidence: finalConfidence,
+        factors: confidenceFactors
+      };
     }
     
-      if (articles?.length) {
+    // Calculate article relevance score
+    function calculateArticleRelevance(query, articles) {
+      const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+      let totalRelevance = 0;
+      
+      articles.forEach(article => {
+        let articleRelevance = 0;
+        const title = (article.title || '').toLowerCase();
+        const description = (article.description || '').toLowerCase();
+        const url = (article.page_url || article.source_url || '').toLowerCase();
+        const tags = (article.tags || []).join(' ').toLowerCase();
+        const categories = (article.categories || []).join(' ').toLowerCase();
+        
+        const allText = `${title} ${description} ${url} ${tags} ${categories}`;
+        
+        // Check for exact word matches
+        queryWords.forEach(word => {
+          if (allText.includes(word)) {
+            articleRelevance += 1;
+          }
+        });
+        
+        // Bonus for title matches (most important)
+        queryWords.forEach(word => {
+          if (title.includes(word)) {
+            articleRelevance += 2;
+          }
+        });
+        
+        // Bonus for URL matches
+        queryWords.forEach(word => {
+          if (url.includes(word)) {
+            articleRelevance += 1.5;
+          }
+        });
+        
+        totalRelevance += articleRelevance;
+      });
+      
+      // Normalize to 0-1 scale
+      return Math.min(1, totalRelevance / (articles.length * 5));
+    }
+    
+    if (articles?.length) {
       // Equipment advice lane - synthesize evidence-based recommendations
       
-        // PRIORITY: Try to provide a direct answer based on JSON-LD FAQ data first
+      // PRIORITY: Try to provide a direct answer based on JSON-LD FAQ data first
       if (!hasEvidenceBasedAnswer) {
         const directAnswer = generateDirectAnswer(query, articles, contentChunks);
         if (directAnswer) {
           lines.push(directAnswer);
           hasEvidenceBasedAnswer = true;
-          confidence = 0.8; // High confidence for JSON-LD FAQ answers
         }
       }
       
-        // Service FAQ deterministic lane
+      // Service FAQ deterministic lane
       if (!hasEvidenceBasedAnswer) {
         const serviceAnswer = generateServiceFAQAnswer(query, contentChunks, articles);
         if (serviceAnswer) {
           lines.push(serviceAnswer);
           hasEvidenceBasedAnswer = true;
-          confidence = 0.7; // Service FAQ answers
         }
       }
       
@@ -2584,22 +2813,17 @@ export default async function handler(req, res) {
         } else {
           lines.push("Here are Alan's guides that match your question:\n");
         }
-        // Dynamic confidence for links-only based on article relevance
-        const relevantArticles = articles.filter(a => {
-          const title = (a.title || '').toLowerCase();
-          const url = (a.page_url || a.source_url || '').toLowerCase();
-          return title.includes('tripod') || url.includes('tripod') || 
-                 title.includes('equipment') || url.includes('equipment');
-        });
-        
-        if (relevantArticles.length >= 5) {
-          confidence = 0.6; // Good confidence for many relevant articles
-        } else if (relevantArticles.length >= 3) {
-          confidence = 0.5; // Moderate confidence for some relevant articles
-        } else {
-          confidence = 0.4; // Lower confidence for few relevant articles
-        }
       }
+      
+      // Calculate nuanced confidence
+      const confidenceResult = calculateNuancedConfidence(query, articles, contentChunks, hasEvidenceBasedAnswer, false);
+      confidence = confidenceResult.confidence;
+      
+      // Log confidence factors for debugging
+      if (confidenceResult.factors.length > 0) {
+        console.log(`🎯 Confidence factors for "${query}": ${confidenceResult.factors.join(', ')} = ${(confidence * 100).toFixed(1)}%`);
+      }
+      
     } else {
       lines.push("I couldn't find a specific guide for that yet.");
       confidence = 0.1; // Low confidence when no articles found
