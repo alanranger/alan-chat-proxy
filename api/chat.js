@@ -3095,6 +3095,27 @@ export default async function handler(req, res) {
     }
     
     if (articles?.length) {
+      // If we have a detected free-course landing, synthesize a direct summary from it
+      if (recommendedFreeCourseUrl && !hasEvidenceBasedAnswer) {
+        // Pull chunks specifically from the landing page to ground the summary
+        const landingChunks = await findContentChunks(client, { keywords, limit: 6, articleUrls: [recommendedFreeCourseUrl] });
+        const pickSummaryFromChunks = (chunks) => {
+          const texts = (chunks || []).map(c => String(c.chunk_text || '').trim()).filter(t => t.length > 40);
+          if (texts.length === 0) return null;
+          const joined = texts.join(' ').replace(/\s+/g, ' ');
+          // Keep it concise (~320 chars)
+          return joined.slice(0, 320).replace(/[^\w)]$/, '');
+        };
+        const summary = pickSummaryFromChunks(landingChunks);
+        if (summary) {
+          lines.push(summary);
+        } else {
+          lines.push("This is Alan’s free, online photography course. It’s self-paced and designed to build fundamentals with practical tips and assignments you can follow from home.");
+        }
+        lines.push(`\nMore details: ${recommendedFreeCourseUrl}`);
+        hasEvidenceBasedAnswer = true;
+      }
+
       // Equipment advice lane - synthesize evidence-based recommendations
       
       // PRIORITY: Try to provide a direct answer based on JSON-LD FAQ data first
