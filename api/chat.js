@@ -1120,6 +1120,18 @@ async function findProducts(client, { keywords, limit = 20, pageContext = null, 
   return data || [];
 }
 
+async function findServices(client, { keywords, limit = 20, pageContext = null }) {
+  // Search for services (free course might be classified as service)
+  const { data } = await client
+    .from("page_entities")
+    .select("*")
+    .eq("kind", "service")
+    .or(keywords.map(k => `title.ilike.%${k}%`).join(","))
+    .limit(limit);
+
+  return data || [];
+}
+
 async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
   // If we have page context, try to find related articles first
   if (pageContext && pageContext.pathname) {
@@ -2567,18 +2579,54 @@ export default async function handler(req, res) {
     // Get all relevant data types for comprehensive responses
     let articles = await findArticles(client, { keywords, limit: 30, pageContext });
     
-    // Only search for events/products if the query is about workshops, courses, or equipment recommendations
+    // CROSS-ENTITY SEARCH FOR FREE COURSE QUERIES
+    // Detect free course queries and search across all entity types
     const qlcAdvice = (query || "").toLowerCase();
-    const isEventRelatedQuery = qlcAdvice.includes("workshop") || qlcAdvice.includes("course") || qlcAdvice.includes("class") || 
-                               qlcAdvice.includes("equipment") || qlcAdvice.includes("recommend") || qlcAdvice.includes("tripod") ||
-                               qlcAdvice.includes("camera") || qlcAdvice.includes("lens") || qlcAdvice.includes("gear");
+    const isFreeCourseQuery = qlcAdvice.includes("free") && (qlcAdvice.includes("course") || qlcAdvice.includes("online"));
     
     let events = [];
     let products = [];
+    let services = [];
     
-    if (isEventRelatedQuery) {
+    if (isFreeCourseQuery) {
+      // For free course queries, search across ALL entity types
+      console.log(`🔍 Free course query detected: "${query}" - searching across all entity types`);
+      
+      // Search articles (already done above)
+      // Search events
       events = await findEvents(client, { keywords, limit: 20, pageContext });
+      // Search products  
       products = await findProducts(client, { keywords, limit: 20, pageContext });
+      // Search services (free course might be classified as service)
+      services = await findServices(client, { keywords, limit: 20, pageContext });
+      
+      // Combine all results and prioritize free course content
+      const allResults = [...articles, ...events, ...products, ...services];
+      const freeCourseResults = allResults.filter(item => {
+        const title = (item.title || item.event_title || item.product_title || '').toLowerCase();
+        const url = (item.page_url || item.event_url || item.product_url || '').toLowerCase();
+        const description = (item.description || '').toLowerCase();
+        
+        return title.includes('free') || url.includes('free-online-photography-course') || 
+               description.includes('free') || title.includes('academy');
+      });
+      
+      // If we found free course content, prioritize it
+      if (freeCourseResults.length > 0) {
+        console.log(`✅ Found ${freeCourseResults.length} free course results`);
+        // Add free course results to articles for processing
+        articles = [...freeCourseResults, ...articles];
+      }
+    } else {
+      // Only search for events/products if the query is about workshops, courses, or equipment recommendations
+      const isEventRelatedQuery = qlcAdvice.includes("workshop") || qlcAdvice.includes("course") || qlcAdvice.includes("class") || 
+                                 qlcAdvice.includes("equipment") || qlcAdvice.includes("recommend") || qlcAdvice.includes("tripod") ||
+                                 qlcAdvice.includes("camera") || qlcAdvice.includes("lens") || qlcAdvice.includes("gear");
+      
+      if (isEventRelatedQuery) {
+        events = await findEvents(client, { keywords, limit: 20, pageContext });
+        products = await findProducts(client, { keywords, limit: 20, pageContext });
+      }
     }
     
     // De-duplicate and enrich titles
