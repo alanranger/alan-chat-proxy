@@ -2609,6 +2609,7 @@ export default async function handler(req, res) {
     let products = [];
     let services = [];
     let landing = [];
+    let recommendedFreeCourseUrl = null;
     
     if (isFreeCourseQuery) {
       // For free course queries, search across ALL entity types
@@ -2717,7 +2718,7 @@ export default async function handler(req, res) {
       // Ensure the answer explicitly includes the free course link
       const freeLanding = [...landing, ...services].find(e => (e.page_url||e.url||'').includes('free-online-photography-course'));
       if (freeLanding) {
-        lines.push(`\nRecommended: Free Online Photography Course — ${freeLanding.page_url || freeLanding.url}`);
+        recommendedFreeCourseUrl = freeLanding.page_url || freeLanding.url;
       }
     } else {
       // Only search for events/products if the query is about workshops, courses, or equipment recommendations
@@ -3128,6 +3129,9 @@ export default async function handler(req, res) {
         console.log(`🎯 Confidence factors for "${query}": ${confidenceResult.factors.join(', ')} = ${(confidence * 100).toFixed(1)}%`);
       }
       
+      if (recommendedFreeCourseUrl) {
+        lines.push(`\nRecommended: Free Online Photography Course — ${recommendedFreeCourseUrl}`);
+      }
     } else {
       lines.push("I couldn't find a specific guide for that yet.");
       confidence = 0.1; // Low confidence when no articles found
