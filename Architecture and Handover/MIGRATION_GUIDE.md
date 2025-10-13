@@ -270,4 +270,112 @@ If issues arise:
 - **Keep test commands current** - Update SQL queries and curl commands
 - **Date all updates** - Use "Month YYYY" format for tracking
 
-**Last Updated**: December 2025 (Location address over-capture fix, time/duration fixes, product card styling updates, Vercel cache management)
+**Last Updated**: January 2025 (Systematic chatbot analysis - restore point before major fixes)
+
+---
+
+## 🚨 **CRITICAL SYSTEM ANALYSIS - January 2025**
+
+### **Current System Status: PARTIALLY BROKEN**
+
+The chatbot system has become **over-specialized** for events and articles while **under-specialized** for other content types, leading to systematic failures in intent detection, content routing, and confidence scoring.
+
+### **What's Working Well** ✅
+- **Events**: 595 returned, high quality responses with proper event cards
+- **Articles**: 823 returned, good quality responses with proper formatting  
+- **Event Queries**: 52 queries handled well
+- **Advice Queries**: 120 queries (though quality varies significantly)
+
+### **What's Broken** ❌
+- **Landing Pages**: Only 2 returned (should be much higher for general queries)
+- **Services**: 32 returned (likely mismatched content)
+- **Products**: 75 returned (likely mismatched content)
+- **Product Queries**: 0 detected (critical failure - no product-specific queries identified)
+- **Intent Detection**: Systematic misclassification of query types
+- **Confidence Scoring**: High confidence (90%+) for completely wrong answers
+- **Content Routing**: Wrong content types returned for queries
+- **Malformed Responses**: Navigation text, wrong URLs, truncated answers
+
+### **Root Cause Analysis Required**
+
+#### **Phase 1: Current State Documentation**
+1. **Map existing logic flow** in `chat.js`:
+   - Document `detectIntent` function logic
+   - Map each intent path (advice, events, products)
+   - Document search functions (`findArticles`, `findEvents`, `findServices`, `findLanding`)
+   - Document confidence scoring logic
+
+2. **Database content audit**:
+   - Count entities by kind (article, event, product, service, landing)
+   - Sample content quality for each kind
+   - Identify malformed content patterns
+
+#### **Phase 2: Intent Detection Analysis**
+1. **Test intent classification** with known good/bad examples:
+   - Equipment questions → should be advice
+   - Workshop questions → should be events  
+   - Service inquiries → should be advice
+   - About questions → should be advice
+
+2. **Identify misclassification patterns**:
+   - What types of queries are being misclassified?
+   - Are there keyword conflicts in the logic?
+
+#### **Phase 3: Search Function Analysis**
+1. **Test each search function independently**:
+   - `findArticles` - does it return relevant articles?
+   - `findEvents` - does it return relevant events?
+   - `findServices` - does it return relevant services?
+   - `findLanding` - does it return relevant landing pages?
+
+2. **Cross-entity search analysis**:
+   - When does it trigger?
+   - What does it return?
+   - Why is it returning wrong content types?
+
+#### **Phase 4: Confidence Scoring Analysis**
+1. **Test confidence calculation**:
+   - Why are wrong answers getting high confidence?
+   - What factors are inflating scores?
+   - Where should penalties be applied?
+
+#### **Phase 5: Content Quality Analysis**
+1. **Sample malformed responses**:
+   - Navigation text in answers
+   - Wrong article titles
+   - Missing URLs
+   - Truncated responses
+
+### **Strategic Approach: Intelligent Salvage with Safeguards**
+
+#### **Core Principles**
+1. **Preserve the Good**: Keep all event/article logic exactly as is
+2. **Fix Intent Detection**: Properly identify product/service/landing queries
+3. **Improve Routing**: Each intent calls the right search function
+4. **Add Fallbacks**: If confidence is low, fall back to "I don't have specific information"
+
+#### **Success Criteria**
+- **Preserve**: Event and article responses remain high quality
+- **Fix**: Intent detection accuracy >90%
+- **Fix**: Search function relevance >80%
+- **Fix**: Confidence scoring reflects actual relevance
+- **Fix**: Malformed content eliminated
+
+#### **Risk Mitigation**
+1. **Backup current `chat.js`** before any changes ✅ (Restore point created)
+2. **Create isolated test environment** 
+3. **Test each fix in isolation** before integration
+4. **Rollback plan** if anything breaks
+
+### **Investigation Tools Needed**
+1. **Isolated test functions** for each component
+2. **Query classification test suite** 
+3. **Search function test suite**
+4. **Confidence scoring test suite**
+5. **Content quality audit tools**
+
+### **Emergency Status**
+- **System**: Partially functional (events/articles work, everything else broken)
+- **User Impact**: High (wrong answers damage trust)
+- **Priority**: Critical (systematic failure across multiple components)
+- **Timeline**: Systematic analysis required before any fixes
