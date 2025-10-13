@@ -2611,6 +2611,7 @@ export default async function handler(req, res) {
     let events = [];
     let products = [];
     let services = [];
+    let landing = [];
     
     if (isFreeCourseQuery) {
       // For free course queries, search across ALL entity types
@@ -2631,6 +2632,18 @@ export default async function handler(req, res) {
       // Search services (free course might be classified as service)
       services = await findServices(client, { keywords, limit: 20, pageContext });
       console.log(`🔧 Services found: ${services.length}`);
+      
+      // Search landing pages
+      if (client && client.from) {
+        const { data: landingData } = await client
+          .from("page_entities")
+          .select("*")
+          .eq("kind", "landing")
+          .or(keywords.map(k => `title.ilike.%${k}%`).join(","))
+          .limit(20);
+        landing = landingData || [];
+        console.log(`🧭 Landing pages found: ${landing.length}`);
+      }
       
       // CRITICAL: Also search specifically for the free course URL across all entity types
       console.log(`🔍 Searching specifically for free course URL...`);
@@ -2667,7 +2680,7 @@ export default async function handler(req, res) {
       }
       
       // Combine all results and prioritize free course content
-      const allResults = [...services, ...products, ...events, ...articles];
+      const allResults = [...services, ...landing, ...products, ...events, ...articles];
       console.log(`🔍 Total results before filtering: ${allResults.length}`);
       
       const freeCourseResults = allResults.filter(item => {
@@ -2690,7 +2703,7 @@ export default async function handler(req, res) {
       // If we found free course content, prioritize it into services (not articles)
       if (freeCourseResults.length > 0) {
         console.log(`✅ Found ${freeCourseResults.length} free course results - prioritizing services`);
-        const serviceHits = freeCourseResults.filter(r => r.kind === 'service');
+        const serviceHits = freeCourseResults.filter(r => r.kind === 'service' || r.kind === 'landing');
         if (serviceHits.length) {
           services = [...serviceHits, ...services];
           console.log(`🔧 Final services count (after prioritization): ${services.length}`);
@@ -3107,6 +3120,8 @@ export default async function handler(req, res) {
         topic: keywords.join(", "),
         events: events || [],
         products: products || [],
+        services: services || [],
+        landing: landing || [],
         articles: (articles || []).map(a => {
           const extractedDate = extractPublishDate(a);
           const fallbackDate = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 

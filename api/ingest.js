@@ -331,15 +331,21 @@ function normalizeKind(item, url) {
   if (u.includes('/blog') || u.includes('/blog-on-photography') || u.includes('/news')) return 'article';
   if (u.includes('/photography-services-near-me') || u.includes('/service') || u.includes('/mentoring')) return 'service';
   
+  // Treat remaining top-level informational/marketing pages as landing
+  // Examples: /free-online-photography-course, /about-alan-ranger, /photography-tuition-services
+  if (!u.includes('/photography-shop') && !u.includes('/photography-classes') && !u.includes('/photographic-workshops') && !u.includes('/photo-workshops-uk')) {
+    return 'landing';
+  }
+  
   // Map common schema.org types to our compact set (only if URL doesn't override)
   if (t.includes('event') || t === 'course' || t === 'educationevent') return 'event';
   if (t === 'product' || t === 'offer' || t === 'aggregateoffer') return 'product';
   if (t === 'article' || t === 'blogposting' || t === 'newsarticle' || t === 'creativework') return 'article';
   if (t === 'service' || t === 'organization' || t === 'localbusiness' || t === 'person') return 'service';
-  if (t === 'website' || t === 'webpage') return 'article';
+  if (t === 'website' || t === 'webpage') return 'landing';
   
-  // Safe default to 'article' to satisfy DB constraint
-  return 'article';
+  // Safe default to 'landing' (generic page)
+  return 'landing';
 }
 
 /* ========== single URL ingestion ========== */
