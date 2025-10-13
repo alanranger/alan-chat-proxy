@@ -41,7 +41,7 @@
     .light.high .dot{background:#16a34a}
     .light.mid .dot{background:#f59e0b}
     .light.low .dot{background:#ef4444}
-    .light .label{flex:1;color:var(--muted)}
+    .light .label{color:var(--muted)}
     .light .count{font-weight:800;margin-left:8px}
     .filters{display:flex;gap:8px;align-items:center;margin:8px 0}
     .filters input, .filters select{padding:6px}
@@ -118,12 +118,7 @@
   </section>
 
   <section class="card">
-    <div class="layout">
-      <div>
-        <h3 class="section-title" title="List of asked questions in this session">Questions</h3>
-        <div class="list" id="questionList"></div>
-      </div>
-      <div>
+    <div>
         <h3 class="section-title" title="One row per question showing key output fields">Results</h3>
         <div class="filters" style="margin-bottom:8px">
           <select id="fIntent" title="Filter by intent"><option value="">Intent: Any</option><option value="advice">advice</option><option value="events">events</option><option value="products">products</option></select>
@@ -142,7 +137,6 @@
             <tbody></tbody>
           </table>
         </div>
-      </div>
     </div>
   </section>
 
@@ -190,11 +184,11 @@
 
     let csvAbort=false; document.getElementById('btnStopCsv').addEventListener('click',()=>{ csvAbort=true; });
 
-    $('#btnRunCsv').addEventListener('click', async ()=>{ const f=$('#csv').files[0]; if(!f){ alert('Select CSV'); return; } const text=await f.text(); const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean); const totalRows=lines.length; const tb=$('#tblCsv tbody'); tb.innerHTML=''; $('#questionList').innerHTML=''; document.querySelector('#tblResults tbody').innerHTML=''; resultsLog.length=0; totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 }; csvAbort=false; // reset
+    $('#btnRunCsv').addEventListener('click', async ()=>{ const f=$('#csv').files[0]; if(!f){ alert('Select CSV'); return; } const text=await f.text(); const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean); const totalRows=lines.length; const tb=$('#tblCsv tbody'); tb.innerHTML=''; document.querySelector('#tblResults tbody').innerHTML=''; resultsLog.length=0; totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 }; csvAbort=false; // reset
       // init progress
       const bar=$('#csvProgressBar'), txtEl=$('#csvProgressText'); bar.style.width='0%'; txtEl.textContent=`0 / ${totalRows}`;
       let i=0; let total=0, count=0, intents={}; let sumLanding=0,sumServices=0,sumEvents=0,sumProducts=0,sumArticles=0; 
-      for(const line of lines){ if(csvAbort){ break; } i++; const q=line.split(',')[0].replace(/^\"|\"$/g,''); const li=document.createElement('div'); li.className='list-item'; li.textContent=`${i}. ${q}`; li.addEventListener('click',()=>{ $('#q').value=q; document.getElementById('btnRunBoth').click(); }); document.getElementById('questionList').appendChild(li); try{ const data=await callChat(q); const urls=urlsOf(data.structured||{}); const checks=checksFor(q,data); const s=data.structured||{}; sumLanding += (s.landing||[]).length; sumServices += (s.services||[]).length; sumEvents += (s.events||[]).length; sumProducts += (s.products||[]).length; sumArticles += (s.articles||[]).length; const tr=document.createElement('tr'); tr.innerHTML=`<td>${i}</td><td>${q}</td><td>${s.intent||'-'}</td><td>${asPct(data.confidence??0)}</td><td>${(s.landing||[]).length}/${(s.services||[]).length}/${(s.events||[]).length}/${(s.products||[]).length}</td><td style=\"max-width:340px;word-break:break-all\">${urls.slice(0,4).map(u=>`<div>${u}</div>`).join('')}</td><td>${checks.length? `<span class='bad'>${checks.join('; ')}</span>`: `<span class='good'>ok</span>`}</td>`; tb.appendChild(tr); addResultRow(i, q, data); if(typeof data.confidence==='number'){ total+=data.confidence; count++; } const it=s.intent||'-'; intents[it]=(intents[it]||0)+1; // live dashboard
+      for(const line of lines){ if(csvAbort){ break; } i++; const q=line.split(',')[0].replace(/^\"|\"$/g,''); try{ const data=await callChat(q); const urls=urlsOf(data.structured||{}); const checks=checksFor(q,data); const s=data.structured||{}; sumLanding += (s.landing||[]).length; sumServices += (s.services||[]).length; sumEvents += (s.events||[]).length; sumProducts += (s.products||[]).length; sumArticles += (s.articles||[]).length; const tr=document.createElement('tr'); tr.innerHTML=`<td>${i}</td><td>${q}</td><td>${s.intent||'-'}</td><td>${asPct(data.confidence??0)}</td><td>${(s.landing||[]).length}/${(s.services||[]).length}/${(s.events||[]).length}/${(s.products||[]).length}</td><td style=\"max-width:340px;word-break:break-all\">${urls.slice(0,4).map(u=>`<div>${u}</div>`).join('')}</td><td>${checks.length? `<span class='bad'>${checks.join('; ')}</span>`: `<span class='good'>ok</span>`}</td>`; tb.appendChild(tr); addResultRow(i, q, data); if(typeof data.confidence==='number'){ total+=data.confidence; count++; } const it=s.intent||'-'; intents[it]=(intents[it]||0)+1; // live dashboard
           applyAggregateFromStructured(s, data.confidence);
         } catch(e){ const tr=document.createElement('tr'); tr.innerHTML=`<td>${i}</td><td>${q}</td><td colspan=\"5\" class='bad'>${e.message}</td>`; tb.appendChild(tr);} 
         // progress update
@@ -217,7 +211,7 @@
     makeSortable('#tblResults'); makeSortable('#tblCsv');
 
     // Controls: clear, debug, copy, export
-    $('#btnClear').addEventListener('click', ()=>{ document.querySelector('#tblResults tbody').innerHTML=''; document.querySelector('#tblCsv tbody').innerHTML=''; $('#questionList').innerHTML=''; resultsLog.length=0; totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 }; updateTilesFromTotals(totals); updateConfBuckets(); });
+    $('#btnClear').addEventListener('click', ()=>{ document.querySelector('#tblResults tbody').innerHTML=''; document.querySelector('#tblCsv tbody').innerHTML=''; resultsLog.length=0; totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 }; updateTilesFromTotals(totals); updateConfBuckets(); });
 
     // Filtering logic for results table
     function applyFilters(){ const fi=$('#fIntent')?.value||''; const fk=$('#fKind')?.value||''; const fu=($('#fUrl')?.value||'').toLowerCase(); const fc=$('#fConf')?.value||''; const tb=document.querySelector('#tblResults tbody'); tb.innerHTML=''; let idx=0; resultsLog.forEach(r=>{ if(fi && r.intent!==fi) return; if(fk && r.kind!==fk) return; if(fu && !(r.url||'').toLowerCase().includes(fu)) return; if(fc==='high' && !(r.confidence>=0.8)) return; if(fc==='mid' && !(r.confidence>=0.6 && r.confidence<0.8)) return; if(fc==='low' && !(r.confidence<0.6)) return; idx++; const tr=document.createElement('tr'); tr.innerHTML=`<td><input type="checkbox" class="rowCheckbox"/></td><td>${idx}</td><td>${escapeHtml(r.query)}</td><td>${escapeHtml(r.answer)}</td><td>${r.intent}</td><td>${r.kind}</td><td>${r.url? `<a href='${r.url}' target='_blank'>${escapeHtml(r.url)}</a>`:''}</td><td data-conf='${r.confidence}'>${confidencePill(r.confidence)}</td>`; tb.appendChild(tr); }); }
