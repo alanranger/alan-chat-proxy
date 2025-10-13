@@ -3099,15 +3099,30 @@ export default async function handler(req, res) {
       if (recommendedFreeCourseUrl && !hasEvidenceBasedAnswer) {
         // Pull chunks specifically from the landing page to ground the summary
         const landingChunks = await findContentChunks(client, { keywords, limit: 6, articleUrls: [recommendedFreeCourseUrl] });
-        const pickSummaryFromChunks = (chunks) => {
-          const texts = (chunks || []).map(c => String(c.chunk_text || '').trim()).filter(t => t.length > 40);
-          if (texts.length === 0) return null;
-          const joined = texts.join(' ').replace(/\s+/g, ' ');
-          // Keep it concise (~320 chars)
-          return joined.slice(0, 320).replace(/[^\w)]$/, '');
+        const normalize = (t) => {
+          const s = String(t || '').replace(/\s+/g, ' ').trim();
+          if (!s) return '';
+          const noise = /(\b(cart|sign in|my account|search|back|menu|newsletter|subscribe|cookie|accept|decline)\b|\[\/.*?\]|\{.*?\}|^\W+$)/ig;
+          return s.replace(noise, '').trim();
         };
+        const pickSummaryFromChunks = (chunks) => {
+          const raw = (chunks || []).map(c => normalize(c.chunk_text)).filter(t => t && t.length > 40);
+          if (raw.length === 0) return null;
+          // Rank by keyword density for free/online/course
+          const kw = ['free','online','course','academy','certificate'];
+          const scored = raw.map(t => ({ t, score: kw.reduce((a,k)=> a + (t.toLowerCase().includes(k)?1:0), 0) })).sort((a,b)=> b.score - a.score);
+          const top = scored.filter(x => x.score > 0).map(x=>x.t);
+          const pool = top.length ? top : raw;
+          const joined = pool.join(' ').split(/(?<=[.!?])\s+/).filter(s=> s.length>40).slice(0,3).join(' ');
+          return joined.slice(0, 320).trim();
+        };
+        // Prefer stored page description if present
+        const landingEntity = ([...landing, ...services]).find(e => (e.page_url||e.url||'').includes('free-online-photography-course')) || null;
+        const preface = normalize(landingEntity?.description || '');
         const summary = pickSummaryFromChunks(landingChunks);
-        if (summary) {
+        if (preface && preface.length > 40) {
+          lines.push(preface.slice(0, 320));
+        } else if (summary) {
           lines.push(summary);
         } else {
           lines.push("This is Alan’s free, online photography course. It’s self-paced and designed to build fundamentals with practical tips and assignments you can follow from home.");
