@@ -967,6 +967,12 @@ function extractKeywords(q) {
 function detectIntent(q) {
   const lc = (q || "").toLowerCase();
   
+  // PRIORITY: Free course queries should be treated as advice, not events
+  const isFreeCourseQuery = lc.includes("free") && (lc.includes("course") || lc.includes("online"));
+  if (isFreeCourseQuery) {
+    return "advice"; // Free course queries need cross-entity search
+  }
+  
   // Check for course/class queries
   const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
   const mentionsWorkshop = lc.includes("workshop");
