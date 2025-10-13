@@ -2045,12 +2045,140 @@ async function extractRelevantInfo(query, dataContext) {
   return `I don't have a confident answer to that yet. I'm trained on Alan's site, so I may miss things. If you'd like to follow up, please reach out:`;
 }
 
-// Calculate nuanced confidence for events
+// Calculate nuanced confidence for events with intent-based scoring
 function calculateEventConfidence(query, events, product) {
   let baseConfidence = 0.3;
   let confidenceFactors = [];
   
   const queryLower = query.toLowerCase();
+  
+  // INTENT-BASED CONFIDENCE SCORING
+  // Detect query requirements and check for mismatches
+  const queryRequirements = {
+    free: queryLower.includes('free'),
+    online: queryLower.includes('online'),
+    certificate: queryLower.includes('certificate') || queryLower.includes('cert'),
+    inPerson: queryLower.includes('in person') || queryLower.includes('in-person') || queryLower.includes('coventry') || queryLower.includes('location'),
+    price: queryLower.includes('price') || queryLower.includes('cost') || queryLower.includes('much')
+  };
+  
+  // Check response attributes
+  const responseAttributes = {
+    hasFreeContent: false,
+    hasOnlineContent: false,
+    hasCertificateInfo: false,
+    hasInPersonContent: false,
+    hasPriceInfo: false,
+    averagePrice: 0,
+    onlineCount: 0,
+    inPersonCount: 0
+  };
+  
+  // Analyze events for response attributes
+  if (events && events.length > 0) {
+    events.forEach(event => {
+      const eventTitle = (event.event_title || '').toLowerCase();
+      const eventLocation = (event.event_location || '').toLowerCase();
+      const eventPrice = event.price_gbp || 0;
+      
+      // Check for free content
+      if (eventPrice === 0 || eventTitle.includes('free')) {
+        responseAttributes.hasFreeContent = true;
+      }
+      
+      // Check for online content
+      if (eventLocation.includes('online') || eventLocation.includes('zoom') || eventLocation.includes('virtual')) {
+        responseAttributes.hasOnlineContent = true;
+        responseAttributes.onlineCount++;
+      }
+      
+      // Check for in-person content
+      if (eventLocation.includes('coventry') || eventLocation.includes('peak district') || eventLocation.includes('batsford')) {
+        responseAttributes.hasInPersonContent = true;
+        responseAttributes.inPersonCount++;
+      }
+      
+      // Check for certificate info
+      if (eventTitle.includes('certificate') || eventTitle.includes('cert') || eventTitle.includes('rps')) {
+        responseAttributes.hasCertificateInfo = true;
+      }
+      
+      // Track pricing
+      if (eventPrice > 0) {
+        responseAttributes.hasPriceInfo = true;
+        responseAttributes.averagePrice += eventPrice;
+      }
+    });
+    
+    responseAttributes.averagePrice = responseAttributes.averagePrice / events.length;
+  }
+  
+  // Check product attributes
+  if (product) {
+    const productTitle = (product.title || '').toLowerCase();
+    const productLocation = (product.location_name || '').toLowerCase();
+    const productPrice = product.price || 0;
+    
+    if (productPrice === 0 || productTitle.includes('free')) {
+      responseAttributes.hasFreeContent = true;
+    }
+    
+    if (productLocation.includes('online') || productLocation.includes('zoom') || productLocation.includes('virtual')) {
+      responseAttributes.hasOnlineContent = true;
+      responseAttributes.onlineCount++;
+    }
+    
+    if (productLocation.includes('coventry') || productLocation.includes('peak district') || productLocation.includes('batsford')) {
+      responseAttributes.hasInPersonContent = true;
+      responseAttributes.inPersonCount++;
+    }
+    
+    if (productTitle.includes('certificate') || productTitle.includes('cert') || productTitle.includes('rps')) {
+      responseAttributes.hasCertificateInfo = true;
+    }
+    
+    if (productPrice > 0) {
+      responseAttributes.hasPriceInfo = true;
+      responseAttributes.averagePrice += productPrice;
+    }
+  }
+  
+  // Apply intent-based penalties for mismatches
+  if (queryRequirements.free && !responseAttributes.hasFreeContent) {
+    baseConfidence -= 0.5;
+    confidenceFactors.push("Free query but no free content (-0.5)");
+  }
+  
+  if (queryRequirements.online && !responseAttributes.hasOnlineContent) {
+    baseConfidence -= 0.3;
+    confidenceFactors.push("Online query but no online content (-0.3)");
+  }
+  
+  if (queryRequirements.certificate && !responseAttributes.hasCertificateInfo) {
+    baseConfidence -= 0.4;
+    confidenceFactors.push("Certificate query but no certificate info (-0.4)");
+  }
+  
+  if (queryRequirements.inPerson && !responseAttributes.hasInPersonContent) {
+    baseConfidence -= 0.2;
+    confidenceFactors.push("In-person query but no in-person content (-0.2)");
+  }
+  
+  // Apply bonuses for good matches
+  if (queryRequirements.free && responseAttributes.hasFreeContent) {
+    baseConfidence += 0.3;
+    confidenceFactors.push("Free query matched with free content (+0.3)");
+  }
+  
+  if (queryRequirements.online && responseAttributes.hasOnlineContent) {
+    baseConfidence += 0.2;
+    confidenceFactors.push("Online query matched with online content (+0.2)");
+  }
+  
+  if (queryRequirements.certificate && responseAttributes.hasCertificateInfo) {
+    baseConfidence += 0.3;
+    confidenceFactors.push("Certificate query matched with certificate info (+0.3)");
+  }
   
   // Factor 1: Query specificity for events
   const isEventQuery = queryLower.includes("when") || queryLower.includes("next") || queryLower.includes("date") || queryLower.includes("workshop") || queryLower.includes("course");
