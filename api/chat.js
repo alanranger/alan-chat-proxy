@@ -2676,8 +2676,8 @@ export default async function handler(req, res) {
         });
       }
       
-      // Combine all results and prioritize free course content
-      const allResults = [...services, ...landing, ...products, ...events, ...articles];
+      // Combine all results and prioritize landing first, then services
+      const allResults = [...landing, ...services, ...products, ...events, ...articles];
       console.log(`🔍 Total results before filtering: ${allResults.length}`);
       
       const freeCourseResults = allResults.filter(item => {
@@ -2697,16 +2697,27 @@ export default async function handler(req, res) {
       
       console.log(`🔍 Free course results after filtering: ${freeCourseResults.length}`);
       
-      // If we found free course content, prioritize it into services (not articles)
+      // If we found free course content, prioritize it into landing/services
       if (freeCourseResults.length > 0) {
         console.log(`✅ Found ${freeCourseResults.length} free course results - prioritizing services`);
-        const serviceHits = freeCourseResults.filter(r => r.kind === 'service' || r.kind === 'landing');
+        const landingHits = freeCourseResults.filter(r => r.kind === 'landing');
+        const serviceHits = freeCourseResults.filter(r => r.kind === 'service');
+        if (landingHits.length) {
+          landing = [...landingHits, ...landing];
+          console.log(`🔧 Final landing count (after prioritization): ${landing.length}`);
+        }
         if (serviceHits.length) {
           services = [...serviceHits, ...services];
           console.log(`🔧 Final services count (after prioritization): ${services.length}`);
         }
       } else {
         console.log(`❌ No free course results found after filtering`);
+      }
+
+      // Ensure the answer explicitly includes the free course link
+      const freeLanding = [...landing, ...services].find(e => (e.page_url||e.url||'').includes('free-online-photography-course'));
+      if (freeLanding) {
+        lines.push(`\nRecommended: Free Online Photography Course — ${freeLanding.page_url || freeLanding.url}`);
       }
     } else {
       // Only search for events/products if the query is about workshops, courses, or equipment recommendations
@@ -3000,8 +3011,32 @@ export default async function handler(req, res) {
         }
       }
       
-      // Cap confidence between 0.1 and 0.95
-      const finalConfidence = Math.max(0.1, Math.min(0.95, baseConfidence));
+      // Intent-aware penalties/bonuses
+      const q = (query||'').toLowerCase();
+      const mentionsFree = /\bfree\b/.test(q);
+      const mentionsOnline = /\bonline\b/.test(q);
+      const mentionsCertificate = /\b(cert|certificate)\b/.test(q);
+      const hasLandingFree = Array.isArray(landing) && landing.some(l => (l.page_url||'').includes('free-online-photography-course'));
+      const topService = Array.isArray(services) ? services[0] : null;
+      const topServiceIsPaid = topService ? /£|\b\d{1,4}\b/.test(String(topService.price||topService.price_gbp||'')) : false;
+      const topServiceIsOffline = topService ? /(coventry|kenilworth|batsford|peak district|in-person)/i.test(String(topService.location||topService.location_address||topService.event_location||'')) : false;
+
+      if (mentionsFree && topServiceIsPaid) {
+        baseConfidence -= 0.35; confidenceFactors.push('Free query but top result is paid (-0.35)');
+      }
+      if (mentionsOnline && topServiceIsOffline) {
+        baseConfidence -= 0.25; confidenceFactors.push('Online query but top result offline (-0.25)');
+      }
+      if (mentionsCertificate) {
+        const hasCert = false; // no certificate detection yet
+        if (!hasCert) { baseConfidence -= 0.2; confidenceFactors.push('Certificate requested but not found (-0.2)'); }
+      }
+      if (hasLandingFree && (mentionsFree || mentionsOnline)) {
+        baseConfidence += 0.25; confidenceFactors.push('Landing free/online page present (+0.25)');
+      }
+
+      // Cap confidence between 0.05 and 0.9 in advice mode
+      const finalConfidence = Math.max(0.05, Math.min(0.9, baseConfidence));
       
       return {
         confidence: finalConfidence,
