@@ -42,7 +42,7 @@
     .light.mid .dot{background:#f59e0b}
     .light.low .dot{background:#ef4444}
     .light .label{flex:1;color:var(--muted)}
-    .light .count{font-weight:800}
+    .light .count{font-weight:800;margin-left:8px}
     .filters{display:flex;gap:8px;align-items:center;margin:8px 0}
     .filters input, .filters select{padding:6px}
     .collapse{position:relative}
@@ -73,22 +73,14 @@
         <div class="tile" title="Total articles returned across answers"><div class="num" id="tArticles">0</div><div class="lbl">Articles</div></div>
       </div>
     </div>
-    <div class="col card">
-      <h3 title="Distribution of answer confidences">Confidence Distribution</h3>
-      <div class="traffic">
-        <div class="light high" title="High confidence ≥ 80%"><span class="dot"></span><span class="label">High ≥80%</span><span class="count" id="cHigh">0</span></div>
-        <div class="light mid" title="Medium confidence 60–79%"><span class="dot"></span><span class="label">Medium 60–79%</span><span class="count" id="cMid">0</span></div>
-        <div class="light low" title="Low confidence < 60%"><span class="dot"></span><span class="label">Low <60%</span><span class="count" id="cLow">0</span></div>
-      </div>
-      <div class="filters">
-        <select id="fIntent" title="Filter by intent"><option value="">Intent: Any</option><option value="advice">advice</option><option value="events">events</option><option value="products">products</option></select>
-        <select id="fKind" title="Filter by dominant kind"><option value="">Kind: Any</option><option value="landing">landing</option><option value="service">service</option><option value="event">event</option><option value="product">product</option><option value="article">article</option></select>
-        <input id="fUrl" placeholder="URL contains" title="Filter by URL substring"/>
-        <select id="fConf" title="Filter by confidence bucket"><option value="">Conf: Any</option><option value="high">High ≥80%</option><option value="mid">Medium 60–79%</option><option value="low">Low <60%</option></select>
-        <button id="btnApplyFilters">Apply</button>
-        <button id="btnClearFilters">Clear</button>
-      </div>
-    </div>
+        <div class="col card">
+          <h3 title="Distribution of answer confidences">Confidence Distribution</h3>
+          <div class="traffic">
+            <div class="light high" title="High confidence ≥ 80%"><span class="dot"></span><span class="label">High ≥80%</span><span class="count" id="cHigh">0</span></div>
+            <div class="light mid" title="Medium confidence 60–79%"><span class="dot"></span><span class="label">Medium 60–79%</span><span class="count" id="cMid">0</span></div>
+            <div class="light low" title="Low confidence < 60%"><span class="dot"></span><span class="label">Low <60%</span><span class="count" id="cLow">0</span></div>
+          </div>
+        </div>
   </section>
 
   <section class="row">
@@ -133,16 +125,22 @@
       </div>
       <div>
         <h3 class="section-title" title="One row per question showing key output fields">Results</h3>
-        <div class="collapse" id="resultsWrap" data-collapsed="true">
-          <div class="table-wrap content">
-            <table id="tblResults">
-              <thead>
-                <tr><th title="Row number">#</th><th title="Question text">Query</th><th title="First 200 chars of the model answer">Initial response</th><th title="Detected intent">Intent</th><th title="Dominant kind among structured results">Kind</th><th title="First URL returned">URL</th><th title="Confidence as percentage; click header to sort">Confidence</th></tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <button class="toggle" id="resultsToggleBtn" title="Expand or collapse the results">Expand</button>
+        <div class="filters" style="margin-bottom:8px">
+          <select id="fIntent" title="Filter by intent"><option value="">Intent: Any</option><option value="advice">advice</option><option value="events">events</option><option value="products">products</option></select>
+          <select id="fKind" title="Filter by dominant kind"><option value="">Kind: Any</option><option value="landing">landing</option><option value="service">service</option><option value="event">event</option><option value="product">product</option><option value="article">article</option></select>
+          <input id="fUrl" placeholder="URL contains" title="Filter by URL substring"/>
+          <select id="fConf" title="Filter by confidence bucket"><option value="">Conf: Any</option><option value="high">High ≥80%</option><option value="mid">Medium 60–79%</option><option value="low">Low <60%</option></select>
+          <button id="btnApplyFilters">Apply</button>
+          <button id="btnClearFilters">Clear</button>
+          <button id="btnExportSelected" title="Export selected rows to CSV">Export Selected</button>
+        </div>
+        <div class="table-wrap">
+          <table id="tblResults">
+            <thead>
+              <tr><th title="Select all"><input type="checkbox" id="selectAll"/></th><th title="Row number">#</th><th title="Question text">Query</th><th title="First 200 chars of the model answer">Initial response</th><th title="Detected intent">Intent</th><th title="Dominant kind among structured results">Kind</th><th title="First URL returned">URL</th><th title="Confidence as percentage; click header to sort">Confidence</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -168,7 +166,7 @@
     function dominantKind(structured){ if((structured?.landing||[]).length) return 'landing'; if((structured?.services||[]).length) return 'service'; if((structured?.events||[]).length) return 'event'; if((structured?.products||[]).length) return 'product'; if((structured?.articles||[]).length) return 'article'; return '-'; }
     function firstUrl(structured){ const list = urlsOf(structured||{}); return list[0]||''; }
     const resultsLog=[];
-    function addResultRow(idx, query, data){ const tb=document.querySelector('#tblResults tbody'); const tr=document.createElement('tr'); const s=data.structured||{}; const url=firstUrl(s); const kind=dominantKind(s); const ans=(data.answer_markdown||'').slice(0,200); tr.innerHTML=`<td>${idx}</td><td>${escapeHtml(query)}</td><td>${escapeHtml(ans)}</td><td>${s.intent||'-'}</td><td>${kind}</td><td>${url? `<a href='${url}' target='_blank'>${escapeHtml(url)}</a>`:''}</td><td data-conf='${data.confidence??0}'>${confidencePill(data.confidence??0)}</td>`; tb.appendChild(tr); resultsLog.push({index:idx,query,answer:ans,intent:s.intent||'-',kind,url,confidence:data.confidence||0}); updateConfBuckets(); }
+    function addResultRow(idx, query, data){ const tb=document.querySelector('#tblResults tbody'); const tr=document.createElement('tr'); const s=data.structured||{}; const url=firstUrl(s); const kind=dominantKind(s); const ans=(data.answer_markdown||'').slice(0,200); tr.innerHTML=`<td><input type="checkbox" class="rowCheckbox"/></td><td>${idx}</td><td>${escapeHtml(query)}</td><td>${escapeHtml(ans)}</td><td>${s.intent||'-'}</td><td>${kind}</td><td>${url? `<a href='${url}' target='_blank'>${escapeHtml(url)}</a>`:''}</td><td data-conf='${data.confidence??0}'>${confidencePill(data.confidence??0)}</td>`; tb.appendChild(tr); resultsLog.push({index:idx,query,answer:ans,intent:s.intent||'-',kind,url,confidence:data.confidence||0}); updateConfBuckets(); }
     function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
     let totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 };
@@ -222,15 +220,18 @@
     $('#btnClear').addEventListener('click', ()=>{ document.querySelector('#tblResults tbody').innerHTML=''; document.querySelector('#tblCsv tbody').innerHTML=''; $('#questionList').innerHTML=''; resultsLog.length=0; totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 }; updateTilesFromTotals(totals); updateConfBuckets(); });
 
     // Filtering logic for results table
-    function applyFilters(){ const fi=$('#fIntent')?.value||''; const fk=$('#fKind')?.value||''; const fu=($('#fUrl')?.value||'').toLowerCase(); const fc=$('#fConf')?.value||''; const tb=document.querySelector('#tblResults tbody'); tb.innerHTML=''; let idx=0; resultsLog.forEach(r=>{ if(fi && r.intent!==fi) return; if(fk && r.kind!==fk) return; if(fu && !(r.url||'').toLowerCase().includes(fu)) return; if(fc==='high' && !(r.confidence>=0.8)) return; if(fc==='mid' && !(r.confidence>=0.6 && r.confidence<0.8)) return; if(fc==='low' && !(r.confidence<0.6)) return; idx++; const tr=document.createElement('tr'); tr.innerHTML=`<td>${idx}</td><td>${escapeHtml(r.query)}</td><td>${escapeHtml(r.answer)}</td><td>${r.intent}</td><td>${r.kind}</td><td>${r.url? `<a href='${r.url}' target='_blank'>${escapeHtml(r.url)}</a>`:''}</td><td data-conf='${r.confidence}'>${confidencePill(r.confidence)}</td>`; tb.appendChild(tr); }); }
+    function applyFilters(){ const fi=$('#fIntent')?.value||''; const fk=$('#fKind')?.value||''; const fu=($('#fUrl')?.value||'').toLowerCase(); const fc=$('#fConf')?.value||''; const tb=document.querySelector('#tblResults tbody'); tb.innerHTML=''; let idx=0; resultsLog.forEach(r=>{ if(fi && r.intent!==fi) return; if(fk && r.kind!==fk) return; if(fu && !(r.url||'').toLowerCase().includes(fu)) return; if(fc==='high' && !(r.confidence>=0.8)) return; if(fc==='mid' && !(r.confidence>=0.6 && r.confidence<0.8)) return; if(fc==='low' && !(r.confidence<0.6)) return; idx++; const tr=document.createElement('tr'); tr.innerHTML=`<td><input type="checkbox" class="rowCheckbox"/></td><td>${idx}</td><td>${escapeHtml(r.query)}</td><td>${escapeHtml(r.answer)}</td><td>${r.intent}</td><td>${r.kind}</td><td>${r.url? `<a href='${r.url}' target='_blank'>${escapeHtml(r.url)}</a>`:''}</td><td data-conf='${r.confidence}'>${confidencePill(r.confidence)}</td>`; tb.appendChild(tr); }); }
     $('#btnApplyFilters')?.addEventListener('click', applyFilters); $('#btnClearFilters')?.addEventListener('click', ()=>{ if($('#fIntent')) $('#fIntent').value=''; if($('#fKind')) $('#fKind').value=''; if($('#fUrl')) $('#fUrl').value=''; if($('#fConf')) $('#fConf').value=''; applyFilters(); });
+
+    // Checkbox functionality
+    $('#selectAll')?.addEventListener('change', (e)=>{ const checked=e.target.checked; document.querySelectorAll('.rowCheckbox').forEach(cb=>cb.checked=checked); });
+    $('#btnExportSelected')?.addEventListener('click', ()=>{ const selected=[]; document.querySelectorAll('.rowCheckbox:checked').forEach(cb=>{ const row=cb.closest('tr'); const cells=row.querySelectorAll('td'); if(cells.length>=8){ selected.push({query:cells[2].textContent,answer:cells[3].textContent,intent:cells[4].textContent,kind:cells[5].textContent,url:cells[6].textContent,confidence:cells[7].textContent}); } }); if(selected.length===0){ alert('No rows selected'); return; } const csv=[['Query','Answer','Intent','Kind','URL','Confidence']].concat(selected.map(r=>[`"${r.query.replace(/"/g,'""')}"`,`"${r.answer.replace(/"/g,'""')}"`,r.intent,r.kind,`"${r.url.replace(/"/g,'""')}"`,r.confidence])); const blob=new Blob([csv.map(r=>r.join(',')).join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='selected-results.csv'; a.click(); URL.revokeObjectURL(a.href); });
     let debugOn=false; $('#btnDebug').addEventListener('click', ()=>{ debugOn=!debugOn; alert(debugOn? 'Debug ON: extra console logs enabled' : 'Debug OFF'); });
     $('#btnCopy').addEventListener('click', async ()=>{ const text=JSON.stringify(resultsLog,null,2); await navigator.clipboard.writeText(text); alert('Results copied to clipboard'); });
     $('#btnExport').addEventListener('click', ()=>{ const csv=[['#','Query','Answer','Intent','Kind','URL','Confidence']].concat(resultsLog.map(r=>[r.index,r.query,`"${r.answer.replace(/"/g,'""')}"`,r.intent,r.kind,r.url,r.confidence])); const blob=new Blob([csv.map(r=>r.join(',')).join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='testbench-results.csv'; a.click(); URL.revokeObjectURL(a.href); });
 
-    // Collapsible toggles
-    const resWrap=$('#resultsWrap'); const csvWrap=$('#csvTableWrap');
-    $('#resultsToggleBtn')?.addEventListener('click',()=>{ const c=resWrap.getAttribute('data-collapsed')!=='false'; resWrap.setAttribute('data-collapsed', String(!c)); $('#resultsToggleBtn').textContent = c? 'Collapse' : 'Expand'; });
+    // Collapsible toggles (CSV only)
+    const csvWrap=$('#csvTableWrap');
     $('#csvToggleBtn')?.addEventListener('click',()=>{ const c=csvWrap.getAttribute('data-collapsed')!=='false'; csvWrap.setAttribute('data-collapsed', String(!c)); $('#csvToggleBtn').textContent = c? 'Collapse' : 'Expand'; });
   </script>
 </body>
