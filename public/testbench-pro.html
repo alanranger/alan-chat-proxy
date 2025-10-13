@@ -35,6 +35,20 @@
     .progress{position:relative;height:18px;border:1px solid var(--line);border-radius:8px;background:#0b1220;overflow:hidden}
     .progress .bar{position:absolute;left:0;top:0;height:100%;background:#1d4ed8}
     .progress .txt{position:absolute;width:100%;text-align:center;line-height:18px;font-size:12px;color:#c7d2fe}
+    .traffic{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+    .light{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px}
+    .light .dot{width:10px;height:10px;border-radius:50%}
+    .light.high .dot{background:#16a34a}
+    .light.mid .dot{background:#f59e0b}
+    .light.low .dot{background:#ef4444}
+    .light .label{flex:1;color:var(--muted)}
+    .light .count{font-weight:800}
+    .filters{display:flex;gap:8px;align-items:center;margin:8px 0}
+    .filters input, .filters select{padding:6px}
+    .collapse{position:relative}
+    .collapse .content{max-height:24px;overflow:hidden}
+    .collapse[data-collapsed="false"] .content{max-height:none}
+    .collapse .toggle{margin-top:6px;padding:2px 6px;font-size:12px}
   </style>
 </head>
 <body>
@@ -59,12 +73,28 @@
         <div class="tile" title="Total articles returned across answers"><div class="num" id="tArticles">0</div><div class="lbl">Articles</div></div>
       </div>
     </div>
+    <div class="col card">
+      <h3 title="Distribution of answer confidences">Confidence Distribution</h3>
+      <div class="traffic">
+        <div class="light high" title="High confidence ≥ 80%"><span class="dot"></span><span class="label">High ≥80%</span><span class="count" id="cHigh">0</span></div>
+        <div class="light mid" title="Medium confidence 60–79%"><span class="dot"></span><span class="label">Medium 60–79%</span><span class="count" id="cMid">0</span></div>
+        <div class="light low" title="Low confidence < 60%"><span class="dot"></span><span class="label">Low <60%</span><span class="count" id="cLow">0</span></div>
+      </div>
+      <div class="filters">
+        <select id="fIntent" title="Filter by intent"><option value="">Intent: Any</option><option value="advice">advice</option><option value="events">events</option><option value="products">products</option></select>
+        <select id="fKind" title="Filter by dominant kind"><option value="">Kind: Any</option><option value="landing">landing</option><option value="service">service</option><option value="event">event</option><option value="product">product</option><option value="article">article</option></select>
+        <input id="fUrl" placeholder="URL contains" title="Filter by URL substring"/>
+        <select id="fConf" title="Filter by confidence bucket"><option value="">Conf: Any</option><option value="high">High ≥80%</option><option value="mid">Medium 60–79%</option><option value="low">Low <60%</option></select>
+        <button id="btnApplyFilters">Apply</button>
+        <button id="btnClearFilters">Clear</button>
+      </div>
+    </div>
   </section>
 
   <section class="row">
     <div class="col card">
-      <h3 class="section-title" title="Enter a single question and run it against the chat API">Query</h3>
-      <input id="q" class="w100" placeholder="Ask a question..." />
+      <h3 class="section-title" title="Enter a single question and run it against the chat API">Single Query</h3>
+      <textarea id="q" class="w100" placeholder="Ask a question..." rows="3" style="width:100%;min-height:72px"></textarea>
       <div class="controls">
         <button id="btnRunBoth" class="btn-primary" style="font-weight:700" title="Run the single query and append to results">Run</button>
         <button id="btnClear" title="Clear all results and reset dashboard">Clear Results</button>
@@ -86,8 +116,11 @@
         <div id="csvProgressText" class="txt">0 / 0</div>
       </div>
       <div class="kpis" id="csvKpis"></div>
-      <div class="table-wrap" style="margin-top:8px">
-        <table id="tblCsv"><thead><tr><th title="Row number">#</th><th title="Question text">Query</th><th title="Detected intent">Intent</th><th title="Confidence as percentage">Conf</th><th title="Counts: Landing/Services/Events/Products">L/S/E/P</th><th title="Top URLs returned">URLs</th><th title="Rule-based checks result">Checks</th></tr></thead><tbody></tbody></table>
+      <div class="collapse" id="csvTableWrap" data-collapsed="true">
+        <div class="table-wrap content" style="margin-top:8px">
+          <table id="tblCsv"><thead><tr><th title="Row number">#</th><th title="Question text">Query</th><th title="Detected intent">Intent</th><th title="Confidence as percentage">Conf</th><th title="Counts: Landing/Services/Events/Products">L/S/E/P</th><th title="Top URLs returned">URLs</th><th title="Rule-based checks result">Checks</th></tr></thead><tbody></tbody></table>
+        </div>
+        <button class="toggle" id="csvToggleBtn" title="Expand or collapse the CSV results">Expand</button>
       </div>
     </div>
   </section>
@@ -100,13 +133,16 @@
       </div>
       <div>
         <h3 class="section-title" title="One row per question showing key output fields">Results</h3>
-        <div class="table-wrap">
-          <table id="tblResults">
-            <thead>
-              <tr><th title="Row number">#</th><th title="Question text">Query</th><th title="First 200 chars of the model answer">Initial response</th><th title="Detected intent">Intent</th><th title="Dominant kind among structured results">Kind</th><th title="First URL returned">URL</th><th title="Confidence as percentage; click header to sort">Confidence</th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+        <div class="collapse" id="resultsWrap" data-collapsed="true">
+          <div class="table-wrap content">
+            <table id="tblResults">
+              <thead>
+                <tr><th title="Row number">#</th><th title="Question text">Query</th><th title="First 200 chars of the model answer">Initial response</th><th title="Detected intent">Intent</th><th title="Dominant kind among structured results">Kind</th><th title="First URL returned">URL</th><th title="Confidence as percentage; click header to sort">Confidence</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <button class="toggle" id="resultsToggleBtn" title="Expand or collapse the results">Expand</button>
         </div>
       </div>
     </div>
@@ -127,15 +163,30 @@
     function confidencePill(conf){ let cls='warn', txt=asPct(conf??0); if(conf>=0.8) cls='good'; else if(conf<0.6) cls='bad'; return `<span class='pill ${cls}'>Confidence ${txt}</span>`; }
     function countsPill(label, n){ return `<span class='pill'>${label}: ${n}</span>`; }
     function updateTilesFromTotals(t){ document.getElementById('tTotal').textContent=t.total; document.getElementById('tAvg').textContent=asPct(Number(t.avg)); document.getElementById('tAdvice').textContent=t.intentAdvice; document.getElementById('tEventsI').textContent=t.intentEvents; document.getElementById('tProductsI').textContent=t.intentProducts; document.getElementById('tLanding').textContent=t.landing; document.getElementById('tServices').textContent=t.services; document.getElementById('tEvents').textContent=t.events; document.getElementById('tProducts').textContent=t.products; document.getElementById('tArticles').textContent=t.articles; }
+    function updateConfBuckets(){ const hi=resultsLog.filter(r=>r.confidence>=0.8).length; const mid=resultsLog.filter(r=>r.confidence>=0.6 && r.confidence<0.8).length; const low=resultsLog.filter(r=>r.confidence<0.6).length; const s=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; }; s('cHigh',hi); s('cMid',mid); s('cLow',low); }
 
     function dominantKind(structured){ if((structured?.landing||[]).length) return 'landing'; if((structured?.services||[]).length) return 'service'; if((structured?.events||[]).length) return 'event'; if((structured?.products||[]).length) return 'product'; if((structured?.articles||[]).length) return 'article'; return '-'; }
     function firstUrl(structured){ const list = urlsOf(structured||{}); return list[0]||''; }
     const resultsLog=[];
-    function addResultRow(idx, query, data){ const tb=document.querySelector('#tblResults tbody'); const tr=document.createElement('tr'); const s=data.structured||{}; const url=firstUrl(s); const kind=dominantKind(s); const ans=(data.answer_markdown||'').slice(0,200); tr.innerHTML=`<td>${idx}</td><td>${escapeHtml(query)}</td><td>${escapeHtml(ans)}</td><td>${s.intent||'-'}</td><td>${kind}</td><td>${url? `<a href='${url}' target='_blank'>${escapeHtml(url)}</a>`:''}</td><td data-conf='${data.confidence??0}'>${confidencePill(data.confidence??0)}</td>`; tb.appendChild(tr); resultsLog.push({index:idx,query,answer:ans,intent:s.intent||'-',kind,url,confidence:data.confidence||0}); }
+    function addResultRow(idx, query, data){ const tb=document.querySelector('#tblResults tbody'); const tr=document.createElement('tr'); const s=data.structured||{}; const url=firstUrl(s); const kind=dominantKind(s); const ans=(data.answer_markdown||'').slice(0,200); tr.innerHTML=`<td>${idx}</td><td>${escapeHtml(query)}</td><td>${escapeHtml(ans)}</td><td>${s.intent||'-'}</td><td>${kind}</td><td>${url? `<a href='${url}' target='_blank'>${escapeHtml(url)}</a>`:''}</td><td data-conf='${data.confidence??0}'>${confidencePill(data.confidence??0)}</td>`; tb.appendChild(tr); resultsLog.push({index:idx,query,answer:ans,intent:s.intent||'-',kind,url,confidence:data.confidence||0}); updateConfBuckets(); }
     function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
     let totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 };
-    function applyAggregateFromStructured(s, conf){ totals.total+=1; if(typeof conf==='number'){ totals.sumConf+=conf; totals.avg=(totals.sumConf/totals.total).toFixed(2);} const it=s.intent||'-'; if(it==='advice') totals.intentAdvice++; if(it==='events') totals.intentEvents++; if(it==='products') totals.intentProducts++; totals.landing+=(s.landing||[]).length; totals.services+=(s.services||[]).length; totals.events+=(s.events||[]).length; totals.products+=(s.products||[]).length; totals.articles+=(s.articles||[]).length; updateTilesFromTotals(totals); }
+    function applyAggregateFromStructured(s, conf){
+      // session totals
+      totals.total+=1;
+      if(typeof conf==='number'){ totals.sumConf+=conf; totals.avg=(totals.sumConf/totals.total).toFixed(2); }
+      const it=s.intent||'-';
+      if(it==='advice') totals.intentAdvice++; if(it==='events') totals.intentEvents++; if(it==='products') totals.intentProducts++;
+      // count dominant kind only (initial response test)
+      const kind = dominantKind(s);
+      if(kind==='landing') totals.landing+=1;
+      else if(kind==='service') totals.services+=1;
+      else if(kind==='event') totals.events+=1;
+      else if(kind==='product') totals.products+=1;
+      else if(kind==='article') totals.articles+=1;
+      updateTilesFromTotals(totals);
+    }
 
     $('#btnRunBoth').addEventListener('click', async ()=>{ const q=$('#q').value.trim(); if(!q) return; $('#statusChat').textContent='Chat: …'; $('#statusRpc').textContent='RPC: …'; const [chat] = await Promise.allSettled([callChat(q)]); if(chat.status==='fulfilled'){ $('#statusChat').textContent='Chat: OK'; const data=chat.value; addResultRow(document.querySelectorAll('#tblResults tbody tr').length+1, q, data); applyAggregateFromStructured(data.structured||{}, data.confidence); } else { $('#statusChat').textContent='Chat: FAIL'; alert(chat.reason?.message||'error'); } const rpc = await Promise.allSettled([callRpc(q)]); $('#statusRpc').textContent = rpc[0].status==='fulfilled' ? 'RPC: OK' : 'RPC: FAIL'; });
 
@@ -168,10 +219,19 @@
     makeSortable('#tblResults'); makeSortable('#tblCsv');
 
     // Controls: clear, debug, copy, export
-    $('#btnClear').addEventListener('click', ()=>{ document.querySelector('#tblResults tbody').innerHTML=''; document.querySelector('#tblCsv tbody').innerHTML=''; $('#questionList').innerHTML=''; resultsLog.length=0; totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 }; updateTilesFromTotals(totals); });
+    $('#btnClear').addEventListener('click', ()=>{ document.querySelector('#tblResults tbody').innerHTML=''; document.querySelector('#tblCsv tbody').innerHTML=''; $('#questionList').innerHTML=''; resultsLog.length=0; totals={ total:0, sumConf:0, avg:'0.00', intentAdvice:0, intentEvents:0, intentProducts:0, landing:0, services:0, events:0, products:0, articles:0 }; updateTilesFromTotals(totals); updateConfBuckets(); });
+
+    // Filtering logic for results table
+    function applyFilters(){ const fi=$('#fIntent')?.value||''; const fk=$('#fKind')?.value||''; const fu=($('#fUrl')?.value||'').toLowerCase(); const fc=$('#fConf')?.value||''; const tb=document.querySelector('#tblResults tbody'); tb.innerHTML=''; let idx=0; resultsLog.forEach(r=>{ if(fi && r.intent!==fi) return; if(fk && r.kind!==fk) return; if(fu && !(r.url||'').toLowerCase().includes(fu)) return; if(fc==='high' && !(r.confidence>=0.8)) return; if(fc==='mid' && !(r.confidence>=0.6 && r.confidence<0.8)) return; if(fc==='low' && !(r.confidence<0.6)) return; idx++; const tr=document.createElement('tr'); tr.innerHTML=`<td>${idx}</td><td>${escapeHtml(r.query)}</td><td>${escapeHtml(r.answer)}</td><td>${r.intent}</td><td>${r.kind}</td><td>${r.url? `<a href='${r.url}' target='_blank'>${escapeHtml(r.url)}</a>`:''}</td><td data-conf='${r.confidence}'>${confidencePill(r.confidence)}</td>`; tb.appendChild(tr); }); }
+    $('#btnApplyFilters')?.addEventListener('click', applyFilters); $('#btnClearFilters')?.addEventListener('click', ()=>{ if($('#fIntent')) $('#fIntent').value=''; if($('#fKind')) $('#fKind').value=''; if($('#fUrl')) $('#fUrl').value=''; if($('#fConf')) $('#fConf').value=''; applyFilters(); });
     let debugOn=false; $('#btnDebug').addEventListener('click', ()=>{ debugOn=!debugOn; alert(debugOn? 'Debug ON: extra console logs enabled' : 'Debug OFF'); });
     $('#btnCopy').addEventListener('click', async ()=>{ const text=JSON.stringify(resultsLog,null,2); await navigator.clipboard.writeText(text); alert('Results copied to clipboard'); });
     $('#btnExport').addEventListener('click', ()=>{ const csv=[['#','Query','Answer','Intent','Kind','URL','Confidence']].concat(resultsLog.map(r=>[r.index,r.query,`"${r.answer.replace(/"/g,'""')}"`,r.intent,r.kind,r.url,r.confidence])); const blob=new Blob([csv.map(r=>r.join(',')).join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='testbench-results.csv'; a.click(); URL.revokeObjectURL(a.href); });
+
+    // Collapsible toggles
+    const resWrap=$('#resultsWrap'); const csvWrap=$('#csvTableWrap');
+    $('#resultsToggleBtn')?.addEventListener('click',()=>{ const c=resWrap.getAttribute('data-collapsed')!=='false'; resWrap.setAttribute('data-collapsed', String(!c)); $('#resultsToggleBtn').textContent = c? 'Collapse' : 'Expand'; });
+    $('#csvToggleBtn')?.addEventListener('click',()=>{ const c=csvWrap.getAttribute('data-collapsed')!=='false'; csvWrap.setAttribute('data-collapsed', String(!c)); $('#csvToggleBtn').textContent = c? 'Collapse' : 'Expand'; });
   </script>
 </body>
 </html>
