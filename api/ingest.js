@@ -709,9 +709,17 @@ async function ingestSingleUrl(url, supa, options = {}) {
         data: { idx: bestIdx, kind: normalizeKind(bestJsonLd, url), hasEnhanced: !!enhancedDescriptions[bestIdx], descriptionLength: enhancedDescription ? enhancedDescription.length : 0, hasCsvMetadata: !!csvMetadata, structuredData: structuredData }
       }).then(() => {}).catch(() => {}); // Ignore errors
       
+      // Prefer CSV-provided kind when present and valid
+      const allowedKinds = new Set(['article','event','product','service','landing']);
+      let csvKindRaw = csvMetadata?.kind || csvMetadata?.kind_override || null;
+      let csvKind = csvKindRaw ? String(csvKindRaw).trim().toLowerCase() : null;
+      if (csvKind && !allowedKinds.has(csvKind)) csvKind = null;
+      const derivedKind = normalizeKind(bestJsonLd, url);
+      const finalKind = csvKind || derivedKind;
+
       const entities = [{
         url: url,
-        kind: normalizeKind(bestJsonLd, url),
+        kind: finalKind,
         title: bestJsonLd.headline || bestJsonLd.title || bestJsonLd.name || htmlTitle || h1Title || null,
         description: enhancedDescription,
         date_start: bestJsonLd.datePublished || bestJsonLd.startDate || null,
