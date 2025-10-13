@@ -2632,6 +2632,33 @@ export default async function handler(req, res) {
       services = await findServices(client, { keywords, limit: 20, pageContext });
       console.log(`🔧 Services found: ${services.length}`);
       
+      // CRITICAL: Also search specifically for the free course URL across all entity types
+      console.log(`🔍 Searching specifically for free course URL...`);
+      const freeCourseUrl = 'https://www.alanranger.com/free-online-photography-course';
+      const { data: freeCourseEntities } = await client
+        .from("page_entities")
+        .select("*")
+        .eq("page_url", freeCourseUrl);
+      
+      if (freeCourseEntities && freeCourseEntities.length > 0) {
+        console.log(`✅ Found ${freeCourseEntities.length} entities with free course URL`);
+        // Add these entities to the appropriate arrays based on their kind
+        freeCourseEntities.forEach(entity => {
+          if (entity.kind === 'article') {
+            articles.push(entity);
+            console.log(`  Added to articles: "${entity.title}"`);
+          } else if (entity.kind === 'service') {
+            services.push(entity);
+            console.log(`  Added to services: "${entity.title}"`);
+          } else if (entity.kind === 'product') {
+            products.push(entity);
+            console.log(`  Added to products: "${entity.title}"`);
+          }
+        });
+      } else {
+        console.log(`❌ No entities found for free course URL`);
+      }
+      
       // Debug: Log all service results
       if (services.length > 0) {
         console.log(`🔧 Service details:`);
