@@ -2644,10 +2644,7 @@ export default async function handler(req, res) {
         console.log(`✅ Found ${freeCourseEntities.length} entities with free course URL`);
         // Add these entities to the appropriate arrays based on their kind
         freeCourseEntities.forEach(entity => {
-          if (entity.kind === 'article') {
-            articles.push(entity);
-            console.log(`  Added to articles: "${entity.title}"`);
-          } else if (entity.kind === 'service') {
+          if (entity.kind === 'service') {
             services.push(entity);
             console.log(`  Added to services: "${entity.title}"`);
           } else if (entity.kind === 'product') {
@@ -2670,7 +2667,7 @@ export default async function handler(req, res) {
       }
       
       // Combine all results and prioritize free course content
-      const allResults = [...articles, ...events, ...products, ...services];
+      const allResults = [...services, ...products, ...events, ...articles];
       console.log(`🔍 Total results before filtering: ${allResults.length}`);
       
       const freeCourseResults = allResults.filter(item => {
@@ -2690,12 +2687,14 @@ export default async function handler(req, res) {
       
       console.log(`🔍 Free course results after filtering: ${freeCourseResults.length}`);
       
-      // If we found free course content, prioritize it
+      // If we found free course content, prioritize it into services (not articles)
       if (freeCourseResults.length > 0) {
-        console.log(`✅ Found ${freeCourseResults.length} free course results - adding to articles`);
-        // Add free course results to articles for processing
-        articles = [...freeCourseResults, ...articles];
-        console.log(`📚 Final articles count: ${articles.length}`);
+        console.log(`✅ Found ${freeCourseResults.length} free course results - prioritizing services`);
+        const serviceHits = freeCourseResults.filter(r => r.kind === 'service');
+        if (serviceHits.length) {
+          services = [...serviceHits, ...services];
+          console.log(`🔧 Final services count (after prioritization): ${services.length}`);
+        }
       } else {
         console.log(`❌ No free course results found after filtering`);
       }
@@ -3066,6 +3065,8 @@ export default async function handler(req, res) {
       
       // If no evidence-based answer, provide contextual introduction
       if (!hasEvidenceBasedAnswer) {
+        // Defensive: detect equipment-related queries locally
+        const mentionsEquipment = /\b(tripod|camera|lens|filter|bag|flash|equipment|gear)\b/i.test(String(query || ''));
         if (mentionsEquipment) {
           lines.push("Based on Alan's experience with photography equipment, here are his recommended guides:\n");
         } else {
