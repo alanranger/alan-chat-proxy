@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Chat Bot Testing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .question {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #2196f3;
+        }
+        .response-area {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 2px dashed #dee2e6;
+        }
+        textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+            resize: vertical;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #218838;
+        }
+        .log-area {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #dee2e6;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            background: white;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .current-question {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        .completed-question {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.active {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .status.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Interactive Chat Bot Testing</h1>
+        <p><strong>Purpose:</strong> Test user responses to understand what intent, kind, and routing should happen for different queries.</p>
+        
+        <div id="status" class="status active">
+            Ready to start testing
+        </div>
+
+        <div id="question-container">
+            <!-- Questions will be dynamically inserted here -->
+        </div>
+
+        <div class="response-area">
+            <h3>Your Response:</h3>
+            <textarea id="user-response" placeholder="Type your response as if you're a user asking the chatbot..."></textarea>
+            <br>
+            <button onclick="submitResponse()">Submit Response</button>
+            <button onclick="skipQuestion()">Skip Question</button>
+        </div>
+
+        <div class="log-area">
+            <h3>📊 Testing Log</h3>
+            <div id="log-container">
+                <div class="log-entry">Testing session started...</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <button onclick="exportLog()">Export Test Results</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <script>
+        // Test questions array
+        const testQuestions = [
+            {
+                id: 1,
+                question: "What would you like to know about photography courses?",
+                category: "Generic Course Query",
+                expectedIntent: "advice",
+                expectedKind: "mixed"
+            },
+            {
+                id: 2,
+                question: "What would you like to know about the beginners photography course?",
+                category: "Specific Course Query",
+                expectedIntent: "advice", 
+                expectedKind: "product"
+            },
+            {
+                id: 3,
+                question: "What would you like to know about photography workshops?",
+                category: "Generic Workshop Query",
+                expectedIntent: "events",
+                expectedKind: "event"
+            },
+            {
+                id: 4,
+                question: "What camera equipment advice do you need?",
+                category: "Equipment Query",
+                expectedIntent: "advice",
+                expectedKind: "article"
+            },
+            {
+                id: 5,
+                question: "What would you like to know about Alan Ranger Photography?",
+                category: "About Query",
+                expectedIntent: "advice",
+                expectedKind: "landing"
+            },
+            {
+                id: 6,
+                question: "What photography services do you offer?",
+                category: "Service Query",
+                expectedIntent: "advice",
+                expectedKind: "service"
+            },
+            {
+                id: 7,
+                question: "Is there a free online photography course?",
+                category: "Free Course Query",
+                expectedIntent: "advice",
+                expectedKind: "landing"
+            },
+            {
+                id: 8,
+                question: "When is the next bluebell photography workshop?",
+                category: "Specific Workshop Query",
+                expectedIntent: "events",
+                expectedKind: "event"
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let testResults = [];
+
+        function displayCurrentQuestion() {
+            const question = testQuestions[currentQuestionIndex];
+            const container = document.getElementById('question-container');
+            
+            container.innerHTML = `
+                <div class="question current-question">
+                    <h3>Question ${question.id}: ${question.category}</h3>
+                    <p><strong>Chatbot asks:</strong> "${question.question}"</p>
+                    <p><strong>Expected Intent:</strong> ${question.expectedIntent} | <strong>Expected Kind:</strong> ${question.expectedKind}</p>
+                </div>
+            `;
+            
+            document.getElementById('user-response').value = '';
+            document.getElementById('user-response').focus();
+            
+            updateStatus(`Question ${currentQuestionIndex + 1} of ${testQuestions.length} - ${question.category}`);
+        }
+
+        function submitResponse() {
+            const response = document.getElementById('user-response').value.trim();
+            if (!response) {
+                alert('Please enter a response');
+                return;
+            }
+
+            const question = testQuestions[currentQuestionIndex];
+            const result = {
+                questionId: question.id,
+                category: question.category,
+                chatbotQuestion: question.question,
+                userResponse: response,
+                expectedIntent: question.expectedIntent,
+                expectedKind: question.expectedKind,
+                timestamp: new Date().toISOString()
+            };
+
+            testResults.push(result);
+            logEntry(`Q${question.id}: "${response}"`, 'response');
+            
+            // Mark question as completed
+            const container = document.getElementById('question-container');
+            container.innerHTML = `
+                <div class="question completed-question">
+                    <h3>✅ Question ${question.id}: ${question.category} - COMPLETED</h3>
+                    <p><strong>Chatbot asked:</strong> "${question.question}"</p>
+                    <p><strong>You responded:</strong> "${response}"</p>
+                    <p><strong>Expected Intent:</strong> ${question.expectedIntent} | <strong>Expected Kind:</strong> ${question.expectedKind}</p>
+                </div>
+            `;
+
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex < testQuestions.length) {
+                setTimeout(() => {
+                    displayCurrentQuestion();
+                }, 2000);
+            } else {
+                updateStatus('All questions completed!');
+                logEntry('🎉 All testing completed!', 'success');
+            }
+        }
+
+        function skipQuestion() {
+            const question = testQuestions[currentQuestionIndex];
+            logEntry(`Q${question.id}: SKIPPED`, 'skip');
+            
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex < testQuestions.length) {
+                displayCurrentQuestion();
+            } else {
+                updateStatus('All questions completed!');
+                logEntry('🎉 All testing completed!', 'success');
+            }
+        }
+
+        function logEntry(message, type = 'info') {
+            const logContainer = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            if (type === 'response') {
+                entry.style.background = '#e7f3ff';
+            } else if (type === 'success') {
+                entry.style.background = '#d4edda';
+            } else if (type === 'skip') {
+                entry.style.background = '#fff3cd';
+            }
+            
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function updateStatus(message) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            
+            if (currentQuestionIndex >= testQuestions.length) {
+                status.className = 'status completed';
+            } else {
+                status.className = 'status active';
+            }
+        }
+
+        function exportLog() {
+            const data = {
+                testResults: testResults,
+                timestamp: new Date().toISOString(),
+                totalQuestions: testQuestions.length,
+                completedQuestions: testResults.length
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chatbot-test-results-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function clearLog() {
+            if (confirm('Are you sure you want to clear the log?')) {
+                document.getElementById('log-container').innerHTML = '<div class="log-entry">Log cleared...</div>';
+                testResults = [];
+                currentQuestionIndex = 0;
+                displayCurrentQuestion();
+            }
+        }
+
+        // Initialize
+        displayCurrentQuestion();
+    </script>
+</body>
+</html>
