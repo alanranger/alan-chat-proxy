@@ -32,6 +32,37 @@
             margin: 10px 0;
             border: 2px dashed #dee2e6;
         }
+
+        .business-response-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .response-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .response-field label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .response-field input,
+        .response-field select,
+        .response-field textarea {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .response-field.full-width {
+            grid-column: 1 / -1;
+        }
         textarea {
             width: 100%;
             min-height: 80px;
@@ -108,11 +139,47 @@
         </div>
 
         <div class="response-area">
-            <h3>Your Response:</h3>
+            <h3>Your Response (as User):</h3>
             <textarea id="user-response" placeholder="Type your response as if you're a user asking the chatbot..."></textarea>
             <br>
-            <button onclick="submitResponse()">Submit Response</button>
+            <button onclick="submitResponse()">Submit User Response</button>
             <button onclick="skipQuestion()">Skip Question</button>
+        </div>
+
+        <div class="response-area" id="business-response-section" style="display: none;">
+            <h3>Business Owner Response (What Should Happen):</h3>
+            <p><strong>As the business owner, what should the chatbot do with the user's follow-up response?</strong></p>
+            <div class="business-response-grid">
+                <div class="response-field">
+                    <label for="expected-intent">Expected Intent:</label>
+                    <select id="expected-intent">
+                        <option value="advice">advice</option>
+                        <option value="events">events</option>
+                        <option value="booking">booking</option>
+                        <option value="contact">contact</option>
+                    </select>
+                </div>
+                <div class="response-field">
+                    <label for="expected-kind">Expected Kind:</label>
+                    <select id="expected-kind">
+                        <option value="article">article</option>
+                        <option value="product">product</option>
+                        <option value="event">event</option>
+                        <option value="service">service</option>
+                        <option value="landing">landing</option>
+                        <option value="mixed">mixed</option>
+                    </select>
+                </div>
+                <div class="response-field">
+                    <label for="expected-url">Expected URL/Page:</label>
+                    <input type="text" id="expected-url" placeholder="e.g., /courses/landscape-photography or /workshops/bluebell-2024">
+                </div>
+                <div class="response-field">
+                    <label for="expected-response">Expected Response Type:</label>
+                    <textarea id="expected-response" placeholder="Describe what the chatbot should respond with..." rows="3"></textarea>
+                </div>
+            </div>
+            <button onclick="submitBusinessResponse()">Submit Business Response</button>
         </div>
 
         <div class="log-area">
@@ -129,7 +196,7 @@
     </div>
 
     <script>
-        // Test questions array
+        // Test questions array - 20 questions covering all content types
         const testQuestions = [
             {
                 id: 1,
@@ -194,6 +261,102 @@
                 category: "Specific Workshop Query",
                 expectedIntent: "events",
                 expectedKind: "event"
+            },
+            {
+                id: 9,
+                userQuestion: "how do I use manual mode on my camera?",
+                chatbotResponse: "Great question! Manual mode gives you full control. What specific aspect of manual mode would you like to learn about?",
+                category: "Technical Photography Query",
+                expectedIntent: "advice",
+                expectedKind: "article"
+            },
+            {
+                id: 10,
+                userQuestion: "what's the best lens for portrait photography?",
+                chatbotResponse: "Portrait photography has several great lens options. What's your budget range and camera system?",
+                category: "Equipment Advice Query",
+                expectedIntent: "advice",
+                expectedKind: "article"
+            },
+            {
+                id: 11,
+                userQuestion: "do you offer one-to-one photography lessons?",
+                chatbotResponse: "Yes, we offer private photography lessons! What type of photography would you like to focus on?",
+                category: "Private Lesson Query",
+                expectedIntent: "advice",
+                expectedKind: "service"
+            },
+            {
+                id: 12,
+                userQuestion: "what's included in your landscape photography course?",
+                chatbotResponse: "Our landscape photography course covers many aspects. What specific areas are you most interested in?",
+                category: "Course Content Query",
+                expectedIntent: "advice",
+                expectedKind: "product"
+            },
+            {
+                id: 13,
+                userQuestion: "are your photography courses suitable for complete beginners?",
+                chatbotResponse: "Absolutely! We have courses designed specifically for beginners. What type of photography interests you most?",
+                category: "Beginner Suitability Query",
+                expectedIntent: "advice",
+                expectedKind: "landing"
+            },
+            {
+                id: 14,
+                userQuestion: "how much does the macro photography workshop cost?",
+                chatbotResponse: "Our macro photography workshop has different pricing options. What would you like to know about the costs?",
+                category: "Workshop Pricing Query",
+                expectedIntent: "events",
+                expectedKind: "event"
+            },
+            {
+                id: 15,
+                userQuestion: "what camera settings should I use for night photography?",
+                chatbotResponse: "Night photography requires specific settings. What type of night photography are you planning?",
+                category: "Technical Settings Query",
+                expectedIntent: "advice",
+                expectedKind: "article"
+            },
+            {
+                id: 16,
+                userQuestion: "do you have any photography courses in Birmingham?",
+                chatbotResponse: "We run courses in various locations. What type of photography course are you looking for?",
+                category: "Location-Specific Query",
+                expectedIntent: "advice",
+                expectedKind: "mixed"
+            },
+            {
+                id: 17,
+                userQuestion: "what's the difference between your online and in-person courses?",
+                chatbotResponse: "Great question! We offer both formats with different benefits. What would you like to know about each?",
+                category: "Course Format Comparison Query",
+                expectedIntent: "advice",
+                expectedKind: "mixed"
+            },
+            {
+                id: 18,
+                userQuestion: "can you help me choose between a DSLR and mirrorless camera?",
+                chatbotResponse: "Both have their advantages! What's your main photography interest and experience level?",
+                category: "Camera Type Advice Query",
+                expectedIntent: "advice",
+                expectedKind: "article"
+            },
+            {
+                id: 19,
+                userQuestion: "what photography workshops do you have coming up this month?",
+                chatbotResponse: "We have several workshops scheduled this month. What type of photography workshop interests you?",
+                category: "Upcoming Events Query",
+                expectedIntent: "events",
+                expectedKind: "event"
+            },
+            {
+                id: 20,
+                userQuestion: "how long have you been teaching photography?",
+                chatbotResponse: "I've been teaching photography for many years. What would you like to know about my teaching experience?",
+                category: "About/Experience Query",
+                expectedIntent: "advice",
+                expectedKind: "landing"
             }
         ];
 
@@ -227,20 +390,49 @@
                 return;
             }
 
+            // Store the user response temporarily
+            window.currentUserResponse = response;
+            
+            // Show the business response section
+            document.getElementById('business-response-section').style.display = 'block';
+            document.getElementById('user-response').disabled = true;
+            document.querySelector('button[onclick="submitResponse()"]').disabled = true;
+            
+            logEntry(`Q${testQuestions[currentQuestionIndex].id}: User response submitted - "${response}"`, 'response');
+            updateStatus(`Question ${currentQuestionIndex + 1} of ${testQuestions.length} - Now provide business owner response`);
+        }
+
+        function submitBusinessResponse() {
+            const expectedIntent = document.getElementById('expected-intent').value;
+            const expectedKind = document.getElementById('expected-kind').value;
+            const expectedUrl = document.getElementById('expected-url').value.trim();
+            const expectedResponse = document.getElementById('expected-response').value.trim();
+
+            if (!expectedUrl || !expectedResponse) {
+                alert('Please fill in the Expected URL and Expected Response fields');
+                return;
+            }
+
             const question = testQuestions[currentQuestionIndex];
             const result = {
                 questionId: question.id,
                 category: question.category,
                 userQuestion: question.userQuestion,
                 chatbotResponse: question.chatbotResponse,
-                userFollowUpResponse: response,
-                expectedIntent: question.expectedIntent,
-                expectedKind: question.expectedKind,
+                userFollowUpResponse: window.currentUserResponse,
+                businessOwnerResponse: {
+                    expectedIntent: expectedIntent,
+                    expectedKind: expectedKind,
+                    expectedUrl: expectedUrl,
+                    expectedResponse: expectedResponse
+                },
+                originalExpectedIntent: question.expectedIntent,
+                originalExpectedKind: question.expectedKind,
                 timestamp: new Date().toISOString()
             };
 
             testResults.push(result);
-            logEntry(`Q${question.id}: "${response}"`, 'response');
+            logEntry(`Q${question.id}: Business response submitted - Intent: ${expectedIntent}, Kind: ${expectedKind}`, 'business');
             
             // Mark question as completed
             const container = document.getElementById('question-container');
@@ -249,10 +441,21 @@
                     <h3>✅ Question ${question.id}: ${question.category} - COMPLETED</h3>
                     <p><strong>User asked:</strong> "${question.userQuestion}"</p>
                     <p><strong>Chatbot responded:</strong> "${question.chatbotResponse}"</p>
-                    <p><strong>You responded as user:</strong> "${response}"</p>
-                    <p><strong>Expected Intent:</strong> ${question.expectedIntent} | <strong>Expected Kind:</strong> ${question.expectedKind}</p>
+                    <p><strong>User follow-up:</strong> "${window.currentUserResponse}"</p>
+                    <p><strong>Business expects:</strong> Intent: ${expectedIntent}, Kind: ${expectedKind}, URL: ${expectedUrl}</p>
+                    <p><strong>Expected response:</strong> ${expectedResponse}</p>
                 </div>
             `;
+
+            // Reset for next question
+            document.getElementById('business-response-section').style.display = 'none';
+            document.getElementById('user-response').disabled = false;
+            document.getElementById('user-response').value = '';
+            document.querySelector('button[onclick="submitResponse()"]').disabled = false;
+            document.getElementById('expected-intent').value = 'advice';
+            document.getElementById('expected-kind').value = 'article';
+            document.getElementById('expected-url').value = '';
+            document.getElementById('expected-response').value = '';
 
             currentQuestionIndex++;
             
