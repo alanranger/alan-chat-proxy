@@ -357,7 +357,11 @@ async function ingestSingleUrl(url, supa, options = {}) {
         { selector: 'style', format: 'skip' },
         { selector: 'nav', format: 'skip' },
         { selector: 'footer', format: 'skip' },
-        { selector: 'header', format: 'skip' }
+        { selector: 'header', format: 'skip' },
+        { selector: 'img', format: 'skip' },
+        { selector: '.navigation', format: 'skip' },
+        { selector: '.menu', format: 'skip' },
+        { selector: '.social', format: 'skip' }
       ]
     });
     
@@ -636,14 +640,16 @@ async function ingestSingleUrl(url, supa, options = {}) {
               { selector: 'header', format: 'skip' },
               { selector: 'footer', format: 'skip' },
               { selector: '.navigation', format: 'skip' },
-              { selector: '.menu', format: 'skip' }
+              { selector: '.menu', format: 'skip' },
+              { selector: 'img', format: 'skip' },
+              { selector: '.social', format: 'skip' }
             ]
           });
           
           // Clean and extract first meaningful paragraph
           const lines = htmlText.split('\n')
             .map(line => line.trim())
-            .filter(line => line.length > 20) // Filter out short lines
+            .filter(line => line.length > 30) // Filter out short lines more aggressively
             .filter(line => !line.match(/^(Home|About|Contact|Menu|Navigation|Skip to)/i)) // Filter navigation
             .filter(line => !line.match(/^(Facebook|Twitter|Instagram|LinkedIn)/i)) // Filter social links
             .filter(line => !line.match(/^(©|Copyright|All rights reserved)/i)) // Filter copyright
@@ -659,13 +665,21 @@ async function ingestSingleUrl(url, supa, options = {}) {
                      !lowerLine.includes('manfrotto 405') &&
                      !lowerLine.includes('carbon fibre breaking down') &&
                      !lowerLine.includes('needed two replacement legs') &&
+                     !lowerLine.includes('help - site map') &&
+                     !lowerLine.includes('schedule an appointment') &&
+                     !lowerLine.includes('join today') &&
+                     !lowerLine.includes('we respect your privacy') &&
+                     !lowerLine.includes('thank you! you will receive an email') &&
+                     !lowerLine.includes('lazy-summaries-admin') &&
+                     !lowerLine.includes('collections-index-sync') &&
+                     !lowerLine.includes('sqs-admin-hooks') &&
                      !lowerLine.includes('back photography courses') &&
                      !lowerLine.includes('[/photography-courses-coventry]') &&
                      !lowerLine.includes('course calendar') &&
                      !lowerLine.includes('which photography courses are best') &&
                      !lowerLine.includes('[/') && // Filter out markdown links
                      !lowerLine.includes('](') && // Filter out markdown links
-                     line.length > 30; // Require longer content
+                     line.length > 40; // Require longer content
             });
           
           if (lines.length > 0) {
