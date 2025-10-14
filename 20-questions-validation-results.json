@@ -1,0 +1,704 @@
+{
+  "timestamp": "2025-10-14T17:22:33.976Z",
+  "testType": "20_questions_validation",
+  "totalQuestions": 20,
+  "questionsWithFollowUp": 20,
+  "questionsNeedingClarification": 0,
+  "clarificationMatches": 0,
+  "matchRate": 0,
+  "categoryAnalysis": {
+    "Generic Course Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Specific Course Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Generic Workshop Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Equipment Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "About Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Service Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Free Course Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Specific Workshop Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Technical Photography Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Equipment Advice Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Private Lesson Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Course Content Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Beginner Suitability Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Workshop Pricing Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Technical Settings Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Location-Specific Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Course Format Comparison Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Camera Type Advice Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "Upcoming Events Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    },
+    "About/Experience Query": {
+      "total": 1,
+      "needsClarification": 0,
+      "hasFollowUp": 1,
+      "matches": 0
+    }
+  },
+  "expansionNeeded": [
+    {
+      "questionId": 1,
+      "category": "Generic Course Query",
+      "userQuestion": "do you do photography courses?"
+    },
+    {
+      "questionId": 2,
+      "category": "Specific Course Query",
+      "userQuestion": "what beginners photography courses do you have?"
+    },
+    {
+      "questionId": 3,
+      "category": "Generic Workshop Query",
+      "userQuestion": "do you run photography workshops?"
+    },
+    {
+      "questionId": 4,
+      "category": "Equipment Query",
+      "userQuestion": "what camera should I buy?"
+    },
+    {
+      "questionId": 5,
+      "category": "About Query",
+      "userQuestion": "who is Alan Ranger?"
+    },
+    {
+      "questionId": 6,
+      "category": "Service Query",
+      "userQuestion": "what photography services do you offer?"
+    },
+    {
+      "questionId": 7,
+      "category": "Free Course Query",
+      "userQuestion": "is there a free online photography course?"
+    },
+    {
+      "questionId": 8,
+      "category": "Specific Workshop Query",
+      "userQuestion": "when is the next bluebell photography workshop?"
+    },
+    {
+      "questionId": 9,
+      "category": "Technical Photography Query",
+      "userQuestion": "how do I use manual mode on my camera?"
+    },
+    {
+      "questionId": 10,
+      "category": "Equipment Advice Query",
+      "userQuestion": "what's the best lens for portrait photography?"
+    },
+    {
+      "questionId": 11,
+      "category": "Private Lesson Query",
+      "userQuestion": "do you offer one-to-one photography lessons?"
+    },
+    {
+      "questionId": 12,
+      "category": "Course Content Query",
+      "userQuestion": "what's included in your landscape photography course?"
+    },
+    {
+      "questionId": 13,
+      "category": "Beginner Suitability Query",
+      "userQuestion": "are your photography courses suitable for complete beginners?"
+    },
+    {
+      "questionId": 14,
+      "category": "Workshop Pricing Query",
+      "userQuestion": "how much does the macro photography workshop cost?"
+    },
+    {
+      "questionId": 15,
+      "category": "Technical Settings Query",
+      "userQuestion": "what camera settings should I use for night photography?"
+    },
+    {
+      "questionId": 16,
+      "category": "Location-Specific Query",
+      "userQuestion": "do you have any photography courses in Birmingham?"
+    },
+    {
+      "questionId": 17,
+      "category": "Course Format Comparison Query",
+      "userQuestion": "what's the difference between your online and in-person courses?"
+    },
+    {
+      "questionId": 18,
+      "category": "Camera Type Advice Query",
+      "userQuestion": "can you help me choose between a DSLR and mirrorless camera?"
+    },
+    {
+      "questionId": 19,
+      "category": "Upcoming Events Query",
+      "userQuestion": "what photography workshops do you have coming up this month?"
+    },
+    {
+      "questionId": 20,
+      "category": "About/Experience Query",
+      "userQuestion": "how long have you been teaching photography?"
+    }
+  ],
+  "falsePositives": [],
+  "results": [
+    {
+      "questionId": 1,
+      "category": "Generic Course Query",
+      "userQuestion": "do you do photography courses?",
+      "userFollowUpResponse": "I am in interested in the online courses as cant get to coventry",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "service",
+        "expectedUrls": [
+          "https://www.alanranger.com/free-online-photography-course"
+        ],
+        "expectedResponse": "Perfect, the free online photography course would suit you.\n\nPerfect Start for beginners and those who want to use a professional resource to clarify concepts or principles.\n\nDIY learning!\n\n✓ Self-Learning\n\n✓ Online Photography Course\n\n✓ Free Lifetime Access\n\n✓ Access to 60 Foundation Modules\n\n✓ Theory and Practical Exercises\n\nEnrol Now"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "service",
+      "expectedUrls": [
+        "https://www.alanranger.com/free-online-photography-course"
+      ]
+    },
+    {
+      "questionId": 2,
+      "category": "Specific Course Query",
+      "userQuestion": "what beginners photography courses do you have?",
+      "userFollowUpResponse": "the one that says camera course",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "product",
+        "expectedUrls": [
+          "https://www.alanranger.com/beginners-photography-classes"
+        ],
+        "expectedResponse": "Heres the the camera course details and booking information.  do you need any more information?"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "product",
+      "expectedUrls": [
+        "https://www.alanranger.com/beginners-photography-classes"
+      ]
+    },
+    {
+      "questionId": 3,
+      "category": "Generic Workshop Query",
+      "userQuestion": "do you run photography workshops?",
+      "userFollowUpResponse": "the bluebells ones",
+      "businessOwnerResponse": {
+        "expectedIntent": "events",
+        "expectedKind": "event",
+        "expectedUrls": [
+          "https://www.alanranger.com/bluebell-woods-near-me/",
+          "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+          "https://www.alanranger.com/photographic-workshops-near-me (bluebells)"
+        ],
+        "expectedResponse": "we have multiple dates for this event, below is the list of those event dates and various options"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "events",
+      "expectedKind": "event",
+      "expectedUrls": [
+        "https://www.alanranger.com/bluebell-woods-near-me/",
+        "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "https://www.alanranger.com/photographic-workshops-near-me (bluebells)"
+      ]
+    },
+    {
+      "questionId": 4,
+      "category": "Equipment Query",
+      "userQuestion": "what camera should I buy?",
+      "userFollowUpResponse": "i like to shoot all sorts so any entry level beginners camera - i heard that sony was good",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "article",
+        "expectedUrls": [
+          "https://www.alanranger.com/blog-on-photography/choosing-a-camera/"
+        ],
+        "expectedResponse": "Its difficult to answer this specifically without more context but i have useful guide you look at that will help you"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "article",
+      "expectedUrls": [
+        "https://www.alanranger.com/blog-on-photography/choosing-a-camera/"
+      ]
+    },
+    {
+      "questionId": 5,
+      "category": "About Query",
+      "userQuestion": "who is Alan Ranger?",
+      "userFollowUpResponse": "how long has he been teaching and where is he based?",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "landing",
+        "expectedUrls": [
+          "https://www.alanranger.com/about-alan-ranger"
+        ],
+        "expectedResponse": "Alan has over 20 years of experience and is based in Coventry"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "landing",
+      "expectedUrls": [
+        "https://www.alanranger.com/about-alan-ranger"
+      ]
+    },
+    {
+      "questionId": 6,
+      "category": "Service Query",
+      "userQuestion": "what photography services do you offer?",
+      "userFollowUpResponse": "i am interested in private lessons as my work rota and shifts mean i cant do regular evening classes",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "service",
+        "expectedUrls": [
+          "https://www.alanranger.com/private-photography-lessons",
+          "https://www.alanranger.com/photography-lessons-online-121"
+        ],
+        "expectedResponse": "there are a couple of options that may suit you.\n1, face to face private lessons or\n2. online lessons \n\nboth options are flexible to suit your schedule"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "service",
+      "expectedUrls": [
+        "https://www.alanranger.com/private-photography-lessons",
+        "https://www.alanranger.com/photography-lessons-online-121"
+      ]
+    },
+    {
+      "questionId": 7,
+      "category": "Free Course Query",
+      "userQuestion": "is there a free online photography course?",
+      "userFollowUpResponse": "yes , is it really free and how do i join?",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "landing",
+        "expectedUrls": [
+          "https://www.alanranger.com/free-online-photography-course",
+          "https://www.alanranger.com/online-photography-course"
+        ],
+        "expectedResponse": "Yes, its absolutely Free and you can find more details on these two links\nhttps://www.alanranger.com/free-online-photography-course\nhttps://www.alanranger.com/online-photography-course"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "landing",
+      "expectedUrls": [
+        "https://www.alanranger.com/free-online-photography-course",
+        "https://www.alanranger.com/online-photography-course"
+      ]
+    },
+    {
+      "questionId": 8,
+      "category": "Specific Workshop Query",
+      "userQuestion": "when is the next bluebell photography workshop?",
+      "userFollowUpResponse": "what are the dates and cost and is it suitable for beginners?  where are they?",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "mixed",
+        "expectedUrls": [
+          "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+          "https://www.alanranger.com/photographic-workshops-near-me/"
+        ],
+        "expectedResponse": "The dates are provided below and the cost and location"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "mixed",
+      "expectedUrls": [
+        "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "https://www.alanranger.com/photographic-workshops-near-me/"
+      ]
+    },
+    {
+      "questionId": 9,
+      "category": "Technical Photography Query",
+      "userQuestion": "how do I use manual mode on my camera?",
+      "userFollowUpResponse": "the exposure settings",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "article",
+        "expectedUrls": [
+          "https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography",
+          "https://www.alanranger.com/blog-on-photography/what-is-exposure-in-photography",
+          "https://www.alanranger.com/blog-on-photography/free-outdoor-photography-exposure-calculator"
+        ],
+        "expectedResponse": "Great, i have several guides that should be able to help you. \n\nhttps://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography\nhttps://www.alanranger.com/blog-on-photography/what-is-exposure-in-photography\nhttps://www.alanranger.com/blog-on-photography/free-outdoor-photography-exposure-calculator"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "article",
+      "expectedUrls": [
+        "https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography",
+        "https://www.alanranger.com/blog-on-photography/what-is-exposure-in-photography",
+        "https://www.alanranger.com/blog-on-photography/free-outdoor-photography-exposure-calculator"
+      ]
+    },
+    {
+      "questionId": 10,
+      "category": "Equipment Advice Query",
+      "userQuestion": "what's the best lens for portrait photography?",
+      "userFollowUpResponse": "i use a sony and can spend about £100",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "article",
+        "expectedUrls": [
+          "https://www.alanranger.com/photography-equipment-recommendations",
+          "https://www.alanranger.com/blog-on-photography/choosing-a-camera",
+          "https://prf.hn/click/camref:1011lrfGr/creativeref:1101l88284"
+        ],
+        "expectedResponse": "I dont provide specific buying advice in an ever changing market and changes in technical advancements but heres a few links that may guide you"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "article",
+      "expectedUrls": [
+        "https://www.alanranger.com/photography-equipment-recommendations",
+        "https://www.alanranger.com/blog-on-photography/choosing-a-camera",
+        "https://prf.hn/click/camref:1011lrfGr/creativeref:1101l88284"
+      ]
+    },
+    {
+      "questionId": 11,
+      "category": "Private Lesson Query",
+      "userQuestion": "do you offer one-to-one photography lessons?",
+      "userFollowUpResponse": "just basic camera settings, composition and general editing",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "service",
+        "expectedUrls": [
+          "https://www.alanranger.com/private-photography-lessons",
+          "https://www.alanranger.com/photography-lessons-online-121"
+        ],
+        "expectedResponse": "there are a couple of options for you.  \n\n1.  face to face private lessons in coventry\nor\n2. online private lessons\n\nthere are package discounts for both options or you can book ad-hoc as needed."
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "service",
+      "expectedUrls": [
+        "https://www.alanranger.com/private-photography-lessons",
+        "https://www.alanranger.com/photography-lessons-online-121"
+      ]
+    },
+    {
+      "questionId": 12,
+      "category": "Course Content Query",
+      "userQuestion": "what's included in your landscape photography course?",
+      "userFollowUpResponse": "i m a beginner, is that ok?  what sort of camera do i need?",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "mixed",
+        "expectedUrls": [
+          "https://www.alanranger.com/photography-workshops"
+        ],
+        "expectedResponse": "All workshops are open to all levels as Alan teaches each person on the workshop on a 1-2-1 basis.\nthere are FAqs  sections on each page to answer this question and more"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "mixed",
+      "expectedUrls": [
+        "https://www.alanranger.com/photography-workshops"
+      ]
+    },
+    {
+      "questionId": 13,
+      "category": "Beginner Suitability Query",
+      "userQuestion": "are your photography courses suitable for complete beginners?",
+      "userFollowUpResponse": "the beginners editing course",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "event",
+        "expectedUrls": [
+          "https://www.alanranger.com/photo-editing-course-coventry"
+        ],
+        "expectedResponse": "Great, we run Lightroom editing courses in Coventry as a 3 week evening classes. the details of dates and costs are below"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "event",
+      "expectedUrls": [
+        "https://www.alanranger.com/photo-editing-course-coventry"
+      ]
+    },
+    {
+      "questionId": 14,
+      "category": "Workshop Pricing Query",
+      "userQuestion": "how much does the macro photography workshop cost?",
+      "userFollowUpResponse": "the one for Sunday 17 May 2026",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "article",
+        "expectedUrls": [
+          "https://www.alanranger.com/photographic-workshops-near-me/abstract-and-macro-photography-workshop-coventry"
+        ],
+        "expectedResponse": "Perfect the the event product and event details are listed below.. \n\nhttps://www.alanranger.com/photographic-workshops-near-me/abstract-and-macro-photography-workshop-coventry\n\n\n\nhttps://www.alanranger.com/photo-workshops-uk/abstract-and-macro-photography-workshops"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "article",
+      "expectedUrls": [
+        "https://www.alanranger.com/photographic-workshops-near-me/abstract-and-macro-photography-workshop-coventry"
+      ]
+    },
+    {
+      "questionId": 15,
+      "category": "Technical Settings Query",
+      "userQuestion": "what camera settings should I use for night photography?",
+      "userFollowUpResponse": "astrophotography",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "event",
+        "expectedUrls": [
+          "https://www.alanranger.com/"
+        ],
+        "expectedResponse": "I don't offer anything on astrophotography at this time"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "event",
+      "expectedUrls": [
+        "https://www.alanranger.com/"
+      ]
+    },
+    {
+      "questionId": 16,
+      "category": "Location-Specific Query",
+      "userQuestion": "do you have any photography courses in Birmingham?",
+      "userFollowUpResponse": "no i want something close to Birmingham",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "service",
+        "expectedUrls": [
+          "https://www.alanranger.com/photography-lessons-online-121"
+        ],
+        "expectedResponse": "I don't run courses in Birmingham.  All classes are based in Coventry, but I do provide online courses if you can't make it to Coventry.\n\nhttps://www.alanranger.com/photography-lessons-online-121"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "service",
+      "expectedUrls": [
+        "https://www.alanranger.com/photography-lessons-online-121"
+      ]
+    },
+    {
+      "questionId": 17,
+      "category": "Course Format Comparison Query",
+      "userQuestion": "what's the difference between your online and in-person courses?",
+      "userFollowUpResponse": "give me the differences",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "mixed",
+        "expectedUrls": [
+          "https://www.alanranger.com/online-photography-course",
+          "https://www.alanranger.com/free-online-photography-course",
+          "https://www.alanranger.com/photography-courses-coventry"
+        ],
+        "expectedResponse": "they key differences are:\n\nthe in-person courses provide face to face interaction between student and tutor so deal with their specific needs and questions.\n\nthe online course is for self-learning and no tutor input unless you purchase the add-ons and clinics to have 1-2-1s with Alan"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "mixed",
+      "expectedUrls": [
+        "https://www.alanranger.com/online-photography-course",
+        "https://www.alanranger.com/free-online-photography-course",
+        "https://www.alanranger.com/photography-courses-coventry"
+      ]
+    },
+    {
+      "questionId": 18,
+      "category": "Camera Type Advice Query",
+      "userQuestion": "can you help me choose between a DSLR and mirrorless camera?",
+      "userFollowUpResponse": "I am intermediate.  have had a camera for years but want  to upgrade as my camera is over 10yrs old now",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "mixed",
+        "expectedUrls": [
+          "https://www.alanranger.com/blog-on-photography/are-mirrorless-cameras-better-than-dslrs",
+          "https://www.alanranger.com/blog-on-photography/choosing-a-camera"
+        ],
+        "expectedResponse": "Check out my guides on the differences between mirrorless and DSLRs"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "mixed",
+      "expectedUrls": [
+        "https://www.alanranger.com/blog-on-photography/are-mirrorless-cameras-better-than-dslrs",
+        "https://www.alanranger.com/blog-on-photography/choosing-a-camera"
+      ]
+    },
+    {
+      "questionId": 19,
+      "category": "Upcoming Events Query",
+      "userQuestion": "what photography workshops do you have coming up this month?",
+      "userFollowUpResponse": "any outdoor photography",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "event",
+        "expectedUrls": [
+          "https://www.alanranger.com/photography-workshops"
+        ],
+        "expectedResponse": "Here's a list of all the upcoming workshops"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "event",
+      "expectedUrls": [
+        "https://www.alanranger.com/photography-workshops"
+      ]
+    },
+    {
+      "questionId": 20,
+      "category": "About/Experience Query",
+      "userQuestion": "how long have you been teaching photography?",
+      "userFollowUpResponse": "are you qualified?",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "landing",
+        "expectedUrls": [
+          "https://www.alanranger.com/about-alan-ranger",
+          "https://www.alanranger.com/awards-and-qualifications"
+        ],
+        "expectedResponse": "Yes you can check out my about me page and qualifications page"
+      },
+      "shouldClarify": false,
+      "needsClarificationBasedOnData": true,
+      "clarificationMatch": false,
+      "expectedIntent": "advice",
+      "expectedKind": "landing",
+      "expectedUrls": [
+        "https://www.alanranger.com/about-alan-ranger",
+        "https://www.alanranger.com/awards-and-qualifications"
+      ]
+    }
+  ]
+}

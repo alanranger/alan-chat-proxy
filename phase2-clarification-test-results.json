@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-10-14T17:07:18.266Z",
+  "testType": "phase2_clarification_questions",
+  "totalTests": 3,
+  "passedTests": 0,
+  "failedTests": 3,
+  "successRate": 0,
+  "results": [
+    {
+      "scenario": "Equipment Clarification Flow",
+      "test": "clarification_question",
+      "passed": false,
+      "failureReason": "API call failed"
+    },
+    {
+      "scenario": "Events Clarification Flow",
+      "test": "clarification_question",
+      "passed": false,
+      "failureReason": "API call failed"
+    },
+    {
+      "scenario": "Training Clarification Flow",
+      "test": "clarification_question",
+      "passed": false,
+      "failureReason": "API call failed"
+    }
+  ]
+}

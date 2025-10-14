@@ -175,6 +175,14 @@ git push origin main
 - ✅ Response time within 10% of current performance
 - ✅ Confidence scoring consistency maintained
 
+### **BASELINE ESTABLISHED (2025-01-14):**
+- **Event Intent Detection:** 87% accuracy (20/23 tests passed)
+- **Working Queries:** All course/workshop queries, follow-up questions
+- **Known Issues:** 3 edge cases that need clarification system:
+  - "what equipment do I need" → advice (should be events)
+  - "photography events" → advice (should be events) 
+  - "photography training" → advice (should be events)
+
 ### **Clarification System Goals:**
 - 🎯 100% content routing accuracy (vs current 37.5%)
 - 🎯 Reduced "I don't know" responses
@@ -182,9 +190,10 @@ git push origin main
 
 ## 🔒 PROTECTION CHECKLIST
 
-- [ ] Create full system backup with git tag
-- [ ] Document all working event system components
-- [ ] Create event system regression tests
+- [x] Create full system backup with git tag
+- [x] Document all working event system components
+- [x] Create event system regression tests
+- [x] Establish baseline performance (87% event intent accuracy)
 - [ ] Implement clarification system as additive-only
 - [ ] Add fallback protection for clarification failures
 - [ ] Test event system protection before deployment

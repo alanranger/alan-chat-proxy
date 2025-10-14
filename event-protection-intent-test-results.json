@@ -1,0 +1,148 @@
+{
+  "timestamp": "2025-10-14T17:03:50.349Z",
+  "testType": "intent_detection",
+  "totalTests": 23,
+  "passed": 20,
+  "failed": 3,
+  "successRate": 86.95652173913044,
+  "results": [
+    {
+      "query": "photography courses in Coventry",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "workshop schedule",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "when are the next photography classes",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "how much does the beginners course cost",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "where are the photography workshops held",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "do you do photography courses",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "photography course for beginners",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "camera course near me",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "photography lessons Coventry",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "photography workshop",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "lightroom workshop",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "photoshop workshop",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "workshop dates",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "how much does it cost",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "where is it held",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "when is the next one",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "how many people attend",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "what equipment do I need",
+      "intent": "advice",
+      "passed": false,
+      "failureReason": "Wrong intent: advice (expected: events)"
+    },
+    {
+      "query": "how do I book",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "photography events",
+      "intent": "advice",
+      "passed": false,
+      "failureReason": "Wrong intent: advice (expected: events)"
+    },
+    {
+      "query": "camera classes",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "photography training",
+      "intent": "advice",
+      "passed": false,
+      "failureReason": "Wrong intent: advice (expected: events)"
+    },
+    {
+      "query": "photography lessons",
+      "intent": "events",
+      "passed": true,
+      "failureReason": null
+    }
+  ]
+}

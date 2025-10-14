@@ -1026,6 +1026,136 @@ function detectIntent(q) {
   return "advice";
 }
 
+/* --------------------------- Interactive Clarification System --------------------------- */
+
+/**
+ * PHASE 1: Edge Case Detection
+ * Detects queries that need clarification based on our edge case analysis
+ */
+function needsClarification(query) {
+  if (!query) return false;
+  
+  const lc = query.toLowerCase();
+  
+  // Edge case patterns that need clarification (from our analysis)
+  const ambiguousPatterns = [
+    // Edge Case 1: Equipment queries without context
+    lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop"),
+    
+    // Edge Case 2: Generic event queries
+    lc.includes("events") && !lc.includes("course") && !lc.includes("workshop"),
+    
+    // Edge Case 3: Training queries without context
+    lc.includes("training") && !lc.includes("course") && !lc.includes("workshop")
+  ];
+  
+  return ambiguousPatterns.some(pattern => pattern);
+}
+
+/**
+ * PHASE 2: Clarification Generation
+ * Generates appropriate clarification questions based on query type
+ */
+function generateClarificationQuestion(query) {
+  const lc = query.toLowerCase();
+  
+  // Edge Case 1: Equipment queries
+  if (lc.includes("equipment")) {
+    return {
+      type: "equipment_clarification",
+      question: "What type of photography activity are you planning? This will help me recommend the right equipment.",
+      options: [
+        { text: "Photography course/workshop", query: "equipment for photography course" },
+        { text: "General photography advice", query: "photography equipment advice" },
+        { text: "Specific camera/lens advice", query: "camera lens recommendations" }
+      ]
+    };
+  }
+  
+  // Edge Case 2: Generic event queries
+  if (lc.includes("events")) {
+    return {
+      type: "events_clarification",
+      question: "What type of photography events are you interested in?",
+      options: [
+        { text: "Photography courses", query: "photography courses" },
+        { text: "Photography workshops", query: "photography workshops" },
+        { text: "Photography exhibitions", query: "photography exhibitions" }
+      ]
+    };
+  }
+  
+  // Edge Case 3: Training queries
+  if (lc.includes("training")) {
+    return {
+      type: "training_clarification",
+      question: "What type of photography training are you looking for?",
+      options: [
+        { text: "Photography courses", query: "photography courses" },
+        { text: "Photography workshops", query: "photography workshops" },
+        { text: "Photography mentoring", query: "photography mentoring" }
+      ]
+    };
+  }
+  
+  return null;
+}
+
+/**
+ * PHASE 3: Follow-up Handling
+ * Handles user's clarification response and routes to correct content
+ */
+function handleClarificationFollowUp(query, originalQuery, originalIntent) {
+  const lc = query.toLowerCase();
+  
+  // Route based on user's clarification choice
+  if (lc.includes("equipment for photography course")) {
+    return {
+      type: "route_to_events",
+      newQuery: "equipment for photography course",
+      newIntent: "events"
+    };
+  } else if (lc.includes("photography courses")) {
+    return {
+      type: "route_to_events", 
+      newQuery: "photography courses",
+      newIntent: "events"
+    };
+  } else if (lc.includes("photography workshops")) {
+    return {
+      type: "route_to_events",
+      newQuery: "photography workshops", 
+      newIntent: "events"
+    };
+  } else if (lc.includes("photography equipment advice")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "photography equipment advice",
+      newIntent: "advice"
+    };
+  } else if (lc.includes("camera lens recommendations")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "camera lens recommendations",
+      newIntent: "advice"
+    };
+  } else if (lc.includes("photography exhibitions")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "photography exhibitions",
+      newIntent: "advice"
+    };
+  } else if (lc.includes("photography mentoring")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "photography mentoring",
+      newIntent: "advice"
+    };
+  }
+  
+  return null;
+}
+
 /* ----------------------- DB helpers (robust fallbacks) ------------------- */
 
 function anyIlike(col, words) {
@@ -2344,6 +2474,30 @@ export default async function handler(req, res) {
     
     const intent = detectIntent(query || ""); // Use current query only for intent detection
     
+    // NEW: Interactive Clarification System (runs first, before existing logic)
+    if (needsClarification(query)) {
+      const clarification = generateClarificationQuestion(query);
+      if (clarification) {
+        console.log(`🤔 Clarification needed for query: "${query}"`);
+        
+        // Return clarification response
+        res.status(200).json({
+          ok: true,
+          type: "clarification",
+          question: clarification.question,
+          options: clarification.options,
+          original_query: query,
+          original_intent: intent,
+          meta: {
+            duration_ms: Date.now() - started,
+            endpoint: "/api/chat",
+            clarification_type: clarification.type
+          }
+        });
+        return;
+      }
+    }
+    
     // For events, only use previous context for follow-up style questions.
     const qlc = (query || "").toLowerCase();
     const isFollowUp = [
@@ -2359,6 +2513,34 @@ export default async function handler(req, res) {
     const keywords = intent === "events"
       ? extractKeywords((isFollowUp && !hasSignificantTopic ? contextualQuery : query) || "")
       : extractKeywords(query || "");
+
+    // NEW: Handle clarification follow-up responses
+    if (previousQuery && handleClarificationFollowUp(query, previousQuery, intent)) {
+      const followUpResult = handleClarificationFollowUp(query, previousQuery, intent);
+      if (followUpResult) {
+        console.log(`🔄 Clarification follow-up: "${query}" → ${followUpResult.newIntent}`);
+        
+        // Update query and intent based on user's clarification choice
+        const newQuery = followUpResult.newQuery;
+        const newIntent = followUpResult.newIntent;
+        const newKeywords = extractKeywords(newQuery);
+        
+        // Continue with the new query and intent
+        if (newIntent === "events") {
+          // Route to events logic with new query
+          const lc = newQuery.toLowerCase();
+          const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
+          const csvType = mentionsCourse ? "course_events" : "workshop_events";
+          
+          const events = await findEvents(client, { keywords: newKeywords, limit: 80, pageContext, csvType });
+          // ... continue with events logic (will be handled by existing code below)
+        } else if (newIntent === "advice") {
+          // Route to advice logic with new query
+          const articles = await findArticles(client, { keywords: newKeywords, limit: 30, pageContext });
+          // ... continue with advice logic (will be handled by existing code below)
+        }
+      }
+    }
 
     if (intent === "events") {
       // Determine CSV type based on query content

@@ -1,0 +1,309 @@
+{
+  "timestamp": "2025-10-14T17:32:48.494Z",
+  "totalFollowUps": 20,
+  "patternGroups": {
+    "online_courses": [
+      {
+        "questionId": 1,
+        "category": "Generic Course Query",
+        "userQuestion": "do you do photography courses?",
+        "userFollowUpResponse": "I am in interested in the online courses as cant get to coventry",
+        "expectedIntent": "advice",
+        "expectedKind": "service"
+      }
+    ],
+    "specific_course_types": [
+      {
+        "questionId": 2,
+        "category": "Specific Course Query",
+        "userQuestion": "what beginners photography courses do you have?",
+        "userFollowUpResponse": "the one that says camera course",
+        "expectedIntent": "advice",
+        "expectedKind": "product"
+      },
+      {
+        "questionId": 13,
+        "category": "Beginner Suitability Query",
+        "userQuestion": "are your photography courses suitable for complete beginners?",
+        "userFollowUpResponse": "the beginners editing course",
+        "expectedIntent": "advice",
+        "expectedKind": "event"
+      }
+    ],
+    "workshop_types": [
+      {
+        "questionId": 3,
+        "category": "Generic Workshop Query",
+        "userQuestion": "do you run photography workshops?",
+        "userFollowUpResponse": "the bluebells ones",
+        "expectedIntent": "events",
+        "expectedKind": "event"
+      },
+      {
+        "questionId": 19,
+        "category": "Upcoming Events Query",
+        "userQuestion": "what photography workshops do you have coming up this month?",
+        "userFollowUpResponse": "any outdoor photography",
+        "expectedIntent": "advice",
+        "expectedKind": "event"
+      }
+    ],
+    "equipment_advice": [
+      {
+        "questionId": 4,
+        "category": "Equipment Query",
+        "userQuestion": "what camera should I buy?",
+        "userFollowUpResponse": "i like to shoot all sorts so any entry level beginners camera - i heard that sony was good",
+        "expectedIntent": "advice",
+        "expectedKind": "article"
+      },
+      {
+        "questionId": 10,
+        "category": "Equipment Advice Query",
+        "userQuestion": "what's the best lens for portrait photography?",
+        "userFollowUpResponse": "i use a sony and can spend about £100",
+        "expectedIntent": "advice",
+        "expectedKind": "article"
+      },
+      {
+        "questionId": 11,
+        "category": "Private Lesson Query",
+        "userQuestion": "do you offer one-to-one photography lessons?",
+        "userFollowUpResponse": "just basic camera settings, composition and general editing",
+        "expectedIntent": "advice",
+        "expectedKind": "service"
+      },
+      {
+        "questionId": 12,
+        "category": "Course Content Query",
+        "userQuestion": "what's included in your landscape photography course?",
+        "userFollowUpResponse": "i m a beginner, is that ok?  what sort of camera do i need?",
+        "expectedIntent": "advice",
+        "expectedKind": "mixed"
+      },
+      {
+        "questionId": 18,
+        "category": "Camera Type Advice Query",
+        "userQuestion": "can you help me choose between a DSLR and mirrorless camera?",
+        "userFollowUpResponse": "I am intermediate.  have had a camera for years but want  to upgrade as my camera is over 10yrs old now",
+        "expectedIntent": "advice",
+        "expectedKind": "mixed"
+      }
+    ],
+    "about_information": [
+      {
+        "questionId": 5,
+        "category": "About Query",
+        "userQuestion": "who is Alan Ranger?",
+        "userFollowUpResponse": "how long has he been teaching and where is he based?",
+        "expectedIntent": "advice",
+        "expectedKind": "landing"
+      },
+      {
+        "questionId": 20,
+        "category": "About/Experience Query",
+        "userQuestion": "how long have you been teaching photography?",
+        "userFollowUpResponse": "are you qualified?",
+        "expectedIntent": "advice",
+        "expectedKind": "landing"
+      }
+    ],
+    "service_types": [
+      {
+        "questionId": 6,
+        "category": "Service Query",
+        "userQuestion": "what photography services do you offer?",
+        "userFollowUpResponse": "i am interested in private lessons as my work rota and shifts mean i cant do regular evening classes",
+        "expectedIntent": "advice",
+        "expectedKind": "service"
+      }
+    ],
+    "technical_help": [
+      {
+        "questionId": 9,
+        "category": "Technical Photography Query",
+        "userQuestion": "how do I use manual mode on my camera?",
+        "userFollowUpResponse": "the exposure settings",
+        "expectedIntent": "advice",
+        "expectedKind": "article"
+      }
+    ],
+    "location_preferences": [
+      {
+        "questionId": 16,
+        "category": "Location-Specific Query",
+        "userQuestion": "do you have any photography courses in Birmingham?",
+        "userFollowUpResponse": "no i want something close to Birmingham",
+        "expectedIntent": "advice",
+        "expectedKind": "service"
+      }
+    ],
+    "beginner_focus": [
+      {
+        "questionId": 8,
+        "category": "Specific Workshop Query",
+        "userQuestion": "when is the next bluebell photography workshop?",
+        "userFollowUpResponse": "what are the dates and cost and is it suitable for beginners?  where are they?",
+        "expectedIntent": "advice",
+        "expectedKind": "mixed"
+      }
+    ],
+    "pricing_information": [],
+    "other": [
+      {
+        "questionId": 7,
+        "category": "Free Course Query",
+        "userQuestion": "is there a free online photography course?",
+        "userFollowUpResponse": "yes , is it really free and how do i join?",
+        "expectedIntent": "advice",
+        "expectedKind": "landing"
+      },
+      {
+        "questionId": 14,
+        "category": "Workshop Pricing Query",
+        "userQuestion": "how much does the macro photography workshop cost?",
+        "userFollowUpResponse": "the one for Sunday 17 May 2026",
+        "expectedIntent": "advice",
+        "expectedKind": "article"
+      },
+      {
+        "questionId": 15,
+        "category": "Technical Settings Query",
+        "userQuestion": "what camera settings should I use for night photography?",
+        "userFollowUpResponse": "astrophotography",
+        "expectedIntent": "advice",
+        "expectedKind": "event"
+      },
+      {
+        "questionId": 17,
+        "category": "Course Format Comparison Query",
+        "userQuestion": "what's the difference between your online and in-person courses?",
+        "userFollowUpResponse": "give me the differences",
+        "expectedIntent": "advice",
+        "expectedKind": "mixed"
+      }
+    ]
+  },
+  "handlerPatterns": [
+    {
+      "pattern": "lc.includes(\"online\")",
+      "response": "i am in interested in the online courses as cant get to coventry",
+      "intent": "advice",
+      "kind": "service"
+    },
+    {
+      "pattern": "lc.includes(\"camera course\")",
+      "response": "the one that says camera course",
+      "intent": "advice",
+      "kind": "product"
+    },
+    {
+      "pattern": "lc.includes(\"beginner\")",
+      "response": "the beginners editing course",
+      "intent": "advice",
+      "kind": "event"
+    },
+    {
+      "pattern": "lc.includes(\"bluebell\")",
+      "response": "the bluebells ones",
+      "intent": "events",
+      "kind": "event"
+    },
+    {
+      "pattern": "lc.includes(\"outdoor\") && lc.includes(\"photography\")",
+      "response": "any outdoor photography",
+      "intent": "advice",
+      "kind": "event"
+    },
+    {
+      "pattern": "lc.includes(\"sony\")",
+      "response": "i like to shoot all sorts so any entry level beginners camera - i heard that sony was good",
+      "intent": "advice",
+      "kind": "article"
+    },
+    {
+      "pattern": "lc.includes(\"sony\")",
+      "response": "i use a sony and can spend about £100",
+      "intent": "advice",
+      "kind": "article"
+    },
+    {
+      "pattern": "lc.includes(\"just\") && lc.includes(\"basic\")",
+      "response": "just basic camera settings, composition and general editing",
+      "intent": "advice",
+      "kind": "service"
+    },
+    {
+      "pattern": "lc.includes(\"beginner\")",
+      "response": "i m a beginner, is that ok?  what sort of camera do i need?",
+      "intent": "advice",
+      "kind": "mixed"
+    },
+    {
+      "pattern": "lc.includes(\"intermediate.\") && lc.includes(\"have\")",
+      "response": "i am intermediate.  have had a camera for years but want  to upgrade as my camera is over 10yrs old now",
+      "intent": "advice",
+      "kind": "mixed"
+    },
+    {
+      "pattern": "lc.includes(\"teaching\")",
+      "response": "how long has he been teaching and where is he based?",
+      "intent": "advice",
+      "kind": "landing"
+    },
+    {
+      "pattern": "lc.includes(\"qualified?\")",
+      "response": "are you qualified?",
+      "intent": "advice",
+      "kind": "landing"
+    },
+    {
+      "pattern": "lc.includes(\"private\")",
+      "response": "i am interested in private lessons as my work rota and shifts mean i cant do regular evening classes",
+      "intent": "advice",
+      "kind": "service"
+    },
+    {
+      "pattern": "lc.includes(\"exposure\")",
+      "response": "the exposure settings",
+      "intent": "advice",
+      "kind": "article"
+    },
+    {
+      "pattern": "lc.includes(\"birmingham\")",
+      "response": "no i want something close to birmingham",
+      "intent": "advice",
+      "kind": "service"
+    },
+    {
+      "pattern": "lc.includes(\"beginner\")",
+      "response": "what are the dates and cost and is it suitable for beginners?  where are they?",
+      "intent": "advice",
+      "kind": "mixed"
+    },
+    {
+      "pattern": "lc.includes(\"really\") && lc.includes(\"free\")",
+      "response": "yes , is it really free and how do i join?",
+      "intent": "advice",
+      "kind": "landing"
+    },
+    {
+      "pattern": "lc.includes(\"sunday\") && lc.includes(\"2026\")",
+      "response": "the one for sunday 17 may 2026",
+      "intent": "advice",
+      "kind": "article"
+    },
+    {
+      "pattern": "lc.includes(\"astrophotography\")",
+      "response": "astrophotography",
+      "intent": "advice",
+      "kind": "event"
+    },
+    {
+      "pattern": "lc.includes(\"give\") && lc.includes(\"differences\")",
+      "response": "give me the differences",
+      "intent": "advice",
+      "kind": "mixed"
+    }
+  ]
+}
