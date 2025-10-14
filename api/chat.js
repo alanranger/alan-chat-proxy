@@ -1354,7 +1354,7 @@ function generateClarificationQuestion(query) {
       type: "course_clarification",
       question: "Yes, we offer several photography courses! What type of course are you interested in?",
       options: [
-        { text: "Online courses (free and paid)", query: "online photography courses" },
+        { text: "Online courses (free and paid)", query: "Online courses (free and paid)" },
         { text: "In-person courses in Coventry", query: "photography courses Coventry" },
         { text: "Specific topic courses", query: "specialized photography courses" },
         { text: "Beginner courses", query: "beginner photography courses" }
