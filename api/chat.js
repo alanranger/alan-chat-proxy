@@ -1610,7 +1610,7 @@ function generateClarificationQuestion(query) {
   if (lc.includes("online photography courses") || lc.includes("evening photography classes")) {
     return {
       type: "course_type_clarification",
-      question: "Perfect! We have several course options available. Which type of course interests you most?",
+      question: "I see you're interested in online courses. Are you looking for free online content or paid beginner courses?",
       options: [
         { text: "Beginners camera course", query: "beginners camera course" },
         { text: "Beginners Lightroom course", query: "beginners lightroom course" },
