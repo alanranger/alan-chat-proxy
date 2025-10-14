@@ -4438,7 +4438,16 @@ export default async function handler(req, res) {
             duration_ms: Date.now() - started,
             endpoint: "/api/chat",
             clarification_type: clarification.type,
-            logical_confidence: false
+            logical_confidence: false,
+            debug: {
+              eventCount: events?.length || 0,
+              productCount: products?.length || 0,
+              articleCount: contentChunks?.length || 0,
+              serviceCount: services?.length || 0,
+              landingCount: landing?.length || 0,
+              hasConfidence: false,
+              sampleContent: contentChunks?.slice(0, 2)?.map(c => c.chunk_text?.substring(0, 50)) || []
+            }
           }
         });
         return;
