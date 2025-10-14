@@ -3459,6 +3459,13 @@ export default async function handler(req, res) {
           
           // Check if we have logical confidence for this clarified query
           const hasConfidence = hasContentBasedConfidence(newQuery, "advice", { articles, contentChunks });
+          console.log(`🔍 DEBUG: Clarified advice confidence check for "${newQuery}":`, {
+            articleCount: articles?.length || 0,
+            contentChunkCount: contentChunks?.length || 0,
+            hasConfidence,
+            articles: articles?.slice(0, 2)?.map(a => a.title || a.page_url) || [],
+            contentChunks: contentChunks?.slice(0, 2)?.map(c => c.chunk_text?.substring(0, 50)) || []
+          });
           if (!hasConfidence) {
             console.log(`🤔 Low logical confidence for clarified advice query: "${newQuery}" - triggering clarification`);
             const clarification = generateClarificationQuestion(newQuery);
