@@ -1607,11 +1607,12 @@ function renderClarification(data) {
   const confidence = data.confidence || 10;
   const confidenceColor = confidence >= 80 ? 'green' : confidence >= 60 ? 'blue' : confidence >= 30 ? 'amber' : 'red';
   
+  const confId = `conf-pill-clarification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const clarificationHtml = `
     <div class="answer">
       <div class="clarification-header">
         <p><strong>${escapeHTML(data.question)}</strong></p>
-        <span class="badge conf ${confidenceColor}" onclick="showDebugLog()" style="cursor: pointer;" title="Click to view debug log">Confidence: ${confidence}%</span>
+        <span id="${confId}" class="badge conf ${confidenceColor}" title="Click to view debug log">Confidence: ${confidence}%</span>
       </div>
       <div class="clarification-options">
         ${data.options.map(option => `
@@ -1624,6 +1625,25 @@ function renderClarification(data) {
   `;
   
   addBubble(clarificationHtml);
+  
+  // Add click handler for confidence pill
+  setTimeout(() => {
+    const confEl = document.getElementById(confId);
+    if (confEl) {
+      confEl.addEventListener('click', ()=>{
+        const old = document.getElementById('reason-pop'); if (old) old.remove();
+        const box = document.createElement('div'); box.id='reason-pop'; box.className='reason-pop';
+        box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Clarification Debug Info</h4><pre class="json"></pre><div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button id="reason-copy" class="send" style="padding:6px 10px">Copy log</button></div>`;
+        const pre = box.querySelector('pre.json');
+        pre.textContent = JSON.stringify(data, null, 2);
+        document.body.appendChild(box);
+        const closeBtn = box.querySelector('.close');
+        const copyBtn = box.querySelector('#reason-copy');
+        closeBtn.addEventListener('click', ()=>box.remove());
+        copyBtn.addEventListener('click', ()=>navigator.clipboard.writeText(pre.textContent).then(()=>copyBtn.textContent='Copied!'));
+      });
+    }
+  }, 100);
   
   // Add event listeners to clarification options with a small delay to ensure DOM is ready
   setTimeout(() => {

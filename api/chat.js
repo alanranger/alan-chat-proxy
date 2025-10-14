@@ -3234,7 +3234,8 @@ export default async function handler(req, res) {
               type: "clarification",
               question: clarification.question,
               options: clarification.options,
-              debug: { version: "v1.2.36-debug-response", followUp: true }
+              confidence: clarification.confidence,
+              debug: { version: "v1.2.37-logical-confidence", followUp: true }
             });
             return;
           }
