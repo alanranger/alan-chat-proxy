@@ -3816,7 +3816,7 @@ export default async function handler(req, res) {
           products: product ? [product] : [],
           pills,
         },
-        confidence: calculateEventConfidence(query, events, product),
+        confidence: calculateEventConfidence(query, eventList, product),
         debug: {
           version: "v1.2.37-logical-confidence",
           intent: "events",
