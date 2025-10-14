@@ -3502,6 +3502,7 @@ export default async function handler(req, res) {
             type: "events",
             answer: answerMarkdown,
             events: eventList,
+            confidence: calculateEventConfidence(newQuery, eventList, null),
             debug: { version: "v1.2.37-logical-confidence", clarified: true, logicalConfidence: true }
           });
           return;
