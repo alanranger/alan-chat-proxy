@@ -1037,6 +1037,50 @@ function detectIntent(q) {
  * LOGICAL CONFIDENCE SYSTEM - Check if we have enough context to provide a confident answer
  * Uses logical rules instead of broken numerical confidence scores
  */
+// Calculate RAG-based confidence for clarification questions
+async function calculateRAGConfidence(query, client, pageContext) {
+  try {
+    const keywords = extractKeywords(query);
+    const articles = await findArticles(client, { keywords, limit: 10, pageContext });
+    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+    const contentChunks = await findContentChunks(client, { keywords, limit: 5, articleUrls });
+    
+    // Calculate confidence based on content found
+    let confidence = 0.1; // Base confidence
+    
+    if (articles.length > 0) {
+      confidence += Math.min(0.3, articles.length * 0.05); // Up to 30% for articles
+    }
+    
+    if (contentChunks.length > 0) {
+      confidence += Math.min(0.4, contentChunks.length * 0.08); // Up to 40% for content chunks
+    }
+    
+    // Check if content is highly relevant
+    const queryWords = query.toLowerCase().split(' ').filter(w => w.length > 2);
+    let relevanceScore = 0;
+    
+    if (articles.length > 0) {
+      articles.forEach(article => {
+        const title = (article.title || '').toLowerCase();
+        const description = (article.description || '').toLowerCase();
+        const text = `${title} ${description}`;
+        
+        queryWords.forEach(word => {
+          if (text.includes(word)) relevanceScore += 0.1;
+        });
+      });
+    }
+    
+    confidence += Math.min(0.2, relevanceScore); // Up to 20% for relevance
+    
+    return Math.min(0.95, Math.max(0.1, confidence)); // Cap between 10% and 95%
+  } catch (error) {
+    console.warn('Error calculating RAG confidence:', error);
+    return 0.3; // Default confidence if calculation fails
+  }
+}
+
 function hasLogicalConfidence(query, intent, content) {
   if (!query) return false;
   
@@ -1202,6 +1246,23 @@ function needsClarification(query) {
 function generateClarificationQuestion(query) {
   const lc = query.toLowerCase();
   console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
+  
+  // General photography equipment advice clarification - MUST come before other patterns
+  if (lc.includes("general photography equipment advice clarification")) {
+    console.log(`✅ Found general equipment advice clarification pattern`);
+    return {
+      type: "general_equipment_clarification",
+      question: "What type of equipment are you looking for advice on?",
+      options: [
+        { text: "Camera recommendations", query: "camera recommendations" },
+        { text: "Lens recommendations", query: "lens recommendations" },
+        { text: "Tripod recommendations", query: "tripod recommendations" },
+        { text: "Camera bag recommendations", query: "camera bag recommendations" },
+        { text: "Memory card recommendations", query: "memory card recommendations" }
+      ],
+      confidence: 30 // Will be calculated based on RAG results
+    };
+  }
   
   // Equipment for course type clarification - MUST come before general equipment pattern
   if (lc.includes("equipment for photography course type clarification")) {
@@ -1583,8 +1644,16 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     };
   } else if (lc.includes("photography equipment advice")) {
     return {
+      type: "route_to_clarification",
+      newQuery: "general photography equipment advice clarification",
+      newIntent: "clarification"
+    };
+  } else if (lc.includes("camera recommendations") || lc.includes("lens recommendations") || 
+             lc.includes("tripod recommendations") || lc.includes("camera bag recommendations") ||
+             lc.includes("memory card recommendations")) {
+    return {
       type: "route_to_advice",
-      newQuery: "photography equipment advice",
+      newQuery: query,
       newIntent: "advice"
     };
   } else if (lc.includes("camera lens recommendations")) {
@@ -3273,14 +3342,18 @@ export default async function handler(req, res) {
           console.log(`🔍 DEBUG: Looking for clarification for query: "${newQuery}"`);
           const clarification = generateClarificationQuestion(newQuery);
           if (clarification) {
-            console.log(`🤔 Follow-up clarification: "${newQuery}" → ${clarification.type} (${clarification.confidence}%)`);
+            // Calculate RAG-based confidence for the clarification
+            const ragConfidence = await calculateRAGConfidence(newQuery, client, pageContext);
+            const confidencePercent = Math.round(ragConfidence * 100);
+            
+            console.log(`🤔 Follow-up clarification: "${newQuery}" → ${clarification.type} (${confidencePercent}%)`);
             res.status(200).json({
               ok: true,
               type: "clarification",
               question: clarification.question,
               options: clarification.options,
-              confidence: clarification.confidence,
-              debug: { version: "v1.2.37-logical-confidence", followUp: true }
+              confidence: confidencePercent,
+              debug: { version: "v1.2.37-logical-confidence", followUp: true, ragConfidence: ragConfidence }
             });
             return;
           }
@@ -3514,18 +3587,24 @@ export default async function handler(req, res) {
         console.log(`🤔 Low logical confidence for events query: "${query}" - triggering clarification`);
         const clarification = generateClarificationQuestion(query);
         if (clarification) {
+          // Calculate RAG-based confidence for the clarification
+          const ragConfidence = await calculateRAGConfidence(query, client, pageContext);
+          const confidencePercent = Math.round(ragConfidence * 100);
+          
           res.status(200).json({
             ok: true,
             type: "clarification",
             question: clarification.question,
             options: clarification.options,
+            confidence: confidencePercent,
             original_query: query,
             original_intent: "events",
             meta: {
               duration_ms: Date.now() - started,
               endpoint: "/api/chat",
               clarification_type: clarification.type,
-              logical_confidence: false
+              logical_confidence: false,
+              ragConfidence: ragConfidence
             }
           });
           return;
@@ -4209,18 +4288,24 @@ export default async function handler(req, res) {
       console.log(`🤔 Low logical confidence for advice query: "${query}" - triggering clarification`);
       const clarification = generateClarificationQuestion(query);
       if (clarification) {
+        // Calculate RAG-based confidence for the clarification
+        const ragConfidence = await calculateRAGConfidence(query, client, pageContext);
+        const confidencePercent = Math.round(ragConfidence * 100);
+        
         res.status(200).json({
           ok: true,
           type: "clarification",
           question: clarification.question,
           options: clarification.options,
+          confidence: confidencePercent,
           original_query: query,
           original_intent: "advice",
           meta: {
             duration_ms: Date.now() - started,
             endpoint: "/api/chat",
             clarification_type: clarification.type,
-            logical_confidence: false
+            logical_confidence: false,
+            ragConfidence: ragConfidence
           }
         });
         return;
