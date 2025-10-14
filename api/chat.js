@@ -1052,10 +1052,14 @@ function hasLogicalConfidence(query, intent, content) {
       return true; // Has specific context
     }
     
-    // Special case: General equipment advice queries should be confident
+    // Special case: General equipment advice queries should be confident ONLY if they have specific context
     if (lc.includes("equipment") && (lc.includes("advice") || lc.includes("recommendations") || 
         lc.includes("guide") || lc.includes("help"))) {
-      return true; // General equipment advice is specific enough
+      // But NOT if it's just "photography equipment advice" - that's too vague
+      if (lc === "photography equipment advice" || lc === "equipment advice") {
+        return false; // Too vague - needs clarification
+      }
+      return true; // General equipment advice with more context is specific enough
     }
     
     return false; // Too vague - needs clarification
