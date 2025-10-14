@@ -3105,13 +3105,13 @@ export default async function handler(req, res) {
     const followUpResult = previousQuery ? handleClarificationFollowUp(query, previousQuery, intent) : null;
     console.log(`🔍 Follow-up result:`, followUpResult);
     
-    // Add debugging info to response
-    const debugInfo = {
+    // Add debugging info to response (always define this)
+    const followUpDebugInfo = {
       followUpCheck: {
-        query: query,
-        previousQuery: previousQuery,
-        intent: intent,
-        followUpResult: followUpResult
+        query: query || "",
+        previousQuery: previousQuery || "",
+        intent: intent || "",
+        followUpResult: followUpResult || null
       }
     };
     
@@ -3374,7 +3374,7 @@ export default async function handler(req, res) {
             products: product ? 1 : 0,
             articles: 0
           },
-          followUpCheck: debugInfo.followUpCheck,
+          followUpCheck: followUpDebugInfo.followUpCheck,
           productPanel: productPanel,
           productDescription: product ? product.description : null
         },
