@@ -1084,7 +1084,7 @@ async function calculateRAGConfidence(query, client, pageContext) {
   }
 }
 
-function hasLogicalConfidence(query, intent, content) {
+function hasContentBasedConfidence(query, intent, content) {
   if (!query) return false;
   
   const lc = query.toLowerCase();
@@ -1094,85 +1094,53 @@ function hasLogicalConfidence(query, intent, content) {
     return false; // This is a clarification question, not a confident query
   }
   
-  // Equipment queries need specific activity type
-  if (intent === "equipment" || lc.includes("equipment")) {
-    // Must have specific activity context (not just "course" or "workshop")
-    if (lc.includes("landscape") || lc.includes("portrait") || lc.includes("macro") || 
-        lc.includes("street") || lc.includes("beginner") || lc.includes("advanced") || 
-        lc.includes("rps") || lc.includes("lightroom") || lc.includes("online") || 
-        lc.includes("private") || lc.includes("camera course") || lc.includes("editing course")) {
-      return true; // Has specific context
-    }
-    
+  // Extract content metrics
+  const articleCount = content.articles?.length || 0;
+  const relevanceScore = content.relevanceScore || 0;
+  const queryLength = query.length;
+  
+  // Very short, vague queries = clarify (10% confidence)
+  if (queryLength <= 10 && !hasSpecificKeywords(query)) {
     return false; // Too vague - needs clarification
   }
   
-  // Advice intent equipment queries
-  if (intent === "advice" && lc.includes("equipment")) {
-    // Special case: General equipment advice queries should be confident ONLY if they have specific context
-    if (lc.includes("advice") || lc.includes("recommendations") || 
-        lc.includes("guide") || lc.includes("help")) {
-      // But NOT if it's just "photography equipment advice" - that's too vague
-      if (lc === "photography equipment advice" || lc === "equipment advice") {
-        return false; // Too vague - needs clarification
-      }
-      return true; // General equipment advice with more context is specific enough
-    }
-    
-    // Camera/lens recommendation queries should be confident
-    if ((lc.includes("camera") || lc.includes("lens")) && 
-        (lc.includes("recommendations") || lc.includes("recommend") || lc.includes("best") || 
-         lc.includes("should i buy") || lc.includes("which"))) {
-      return true; // Camera/lens recommendations are specific enough
-    }
-    
-    return false; // Too vague - needs clarification
+  // Very little content = clarify (10% confidence)
+  if (articleCount <= 1 && relevanceScore < 0.3) {
+    return false; // Too little content - needs clarification
   }
   
-  // Course queries need specific course type
-  if (intent === "events" && (lc.includes("course") || lc.includes("workshop"))) {
-    // Must have specific course/workshop type
-    if (lc.includes("beginner") || lc.includes("advanced") || lc.includes("rps") || 
-        lc.includes("lightroom") || lc.includes("online") || lc.includes("private")) {
-      return true; // Has specific context
-    }
-    return false; // Too vague - needs clarification
+  // Rich, relevant content = confident (90% confidence)
+  if (articleCount >= 3 && relevanceScore > 0.6) {
+    return true; // Good content - be confident
   }
   
-  // Service queries need specific service type
-  if (intent === "advice" && (lc.includes("service") || lc.includes("offer") || lc.includes("provide"))) {
-    // Must have specific service context
-    if (lc.includes("private") || lc.includes("lesson") || lc.includes("mentoring") || 
-        lc.includes("online") || lc.includes("1-2-1")) {
-      return true; // Has specific context
-    }
-    return false; // Too vague - needs clarification
+  // Medium content with specific keywords = confident
+  if (articleCount >= 2 && relevanceScore > 0.5 && hasSpecificKeywords(query)) {
+    return true; // Decent content with specific keywords - be confident
   }
   
-  // About queries are usually specific enough
-  if (intent === "advice" && (lc.includes("who") || lc.includes("about"))) {
-    return true; // About queries are usually clear
-  }
+  // Default to clarification for safety
+  return false; // When in doubt, clarify
+}
+
+// Helper function to detect specific keywords
+function hasSpecificKeywords(query) {
+  const lc = query.toLowerCase();
+  const specificKeywords = [
+    // Equipment
+    "camera", "lens", "tripod", "filter", "bag", "memory card",
+    // Courses/Workshops
+    "beginner", "advanced", "rps", "lightroom", "online", "private", "course", "workshop",
+    // Services
+    "mentoring", "feedback", "critique", "lessons", "training", "service",
+    // Technical
+    "iso", "aperture", "shutter", "exposure", "composition", "lighting", "white balance",
+    "depth of field", "framing", "macro", "portrait", "landscape", "street",
+    // About
+    "alan", "ranger", "about", "who is", "where is", "contact"
+  ];
   
-  // Technical advice queries need specific topic
-  if (intent === "advice" && (lc.includes("how") || lc.includes("what") || lc.includes("why"))) {
-    // Must have specific technical context
-    if (lc.includes("camera") || lc.includes("lens") || lc.includes("settings") || 
-        lc.includes("exposure") || lc.includes("focus") || lc.includes("composition")) {
-      return true; // Has specific context
-    }
-    return false; // Too vague - needs clarification
-  }
-  
-  // Camera/lens recommendation queries should be confident
-  if (intent === "advice" && (lc.includes("camera") || lc.includes("lens")) && 
-      (lc.includes("recommendations") || lc.includes("recommend") || lc.includes("best") || 
-       lc.includes("should i buy") || lc.includes("which"))) {
-    return true; // Camera/lens recommendations are specific enough
-  }
-  
-  // Default: if we have content, assume we're confident
-  return content && (content.length > 0 || content.events?.length > 0 || content.articles?.length > 0);
+  return specificKeywords.some(keyword => lc.includes(keyword));
 }
 
 /**
@@ -1633,7 +1601,20 @@ function generateClarificationQuestion(query) {
     };
   }
   
-  return null;
+  // CONTENT-BASED FALLBACK: If no specific pattern matches, use generic clarification
+  console.log(`✅ No specific pattern matched for: "${query}" - using generic clarification`);
+  return {
+    type: "generic_clarification",
+    question: "I'd be happy to help! Could you be more specific about what you're looking for?",
+    options: [
+      { text: "Photography equipment advice", query: "photography equipment advice" },
+      { text: "Photography courses and workshops", query: "photography courses" },
+      { text: "Photography services and mentoring", query: "photography services" },
+      { text: "General photography advice", query: "photography advice" },
+      { text: "About Alan Ranger", query: "about alan ranger" }
+    ],
+    confidence: 10
+  };
 }
 
 /**
@@ -2028,7 +2009,13 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     };
   }
   
-  return null;
+  // CONTENT-BASED FALLBACK: If no specific pattern matches, route to advice intent
+  console.log(`✅ No specific follow-up pattern matched for: "${query}" - routing to advice`);
+  return {
+    type: "route_to_advice",
+    newQuery: query,
+    newIntent: "advice"
+  };
 }
 
 /* ----------------------- DB helpers (robust fallbacks) ------------------- */
@@ -3621,7 +3608,7 @@ export default async function handler(req, res) {
       ]).filter(Boolean);
 
       // LOGICAL CONFIDENCE CHECK: Do we have enough context to provide a confident answer?
-      const hasConfidence = hasLogicalConfidence(query, "events", { events: eventList, products: product ? [product] : [] });
+      const hasConfidence = hasContentBasedConfidence(query, "events", { events: eventList, products: product ? [product] : [] });
       if (!hasConfidence) {
         console.log(`🤔 Low logical confidence for events query: "${query}" - triggering clarification`);
         const clarification = generateClarificationQuestion(query);
@@ -4320,7 +4307,7 @@ export default async function handler(req, res) {
 
 
     // LOGICAL CONFIDENCE CHECK: Do we have enough context to provide a confident answer?
-    const hasConfidence = hasLogicalConfidence(query, "advice", { events, products, articles: contentChunks, services, landing });
+    const hasConfidence = hasContentBasedConfidence(query, "advice", { events, products, articles: contentChunks, services, landing });
     if (!hasConfidence) {
       console.log(`🤔 Low logical confidence for advice query: "${query}" - triggering clarification`);
       const clarification = generateClarificationQuestion(query);
