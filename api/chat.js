@@ -988,6 +988,18 @@ function detectIntent(q) {
   // Check for event-style questions (dates/times/locations)
   const hasEventWord = EVENT_HINTS.some((w) => lc.includes(w));
   
+  // PRIORITY: Flexible services should be treated as advice, not events
+  const isFlexibleService = (
+    lc.includes("private") && (lc.includes("lesson") || lc.includes("class")) ||
+    lc.includes("online") && (lc.includes("course") || lc.includes("lesson")) ||
+    lc.includes("mentoring") ||
+    lc.includes("1-2-1") || lc.includes("1-to-1") || lc.includes("one-to-one")
+  );
+  
+  if (isFlexibleService) {
+    return "advice"; // Flexible services need cross-entity search (products + services + articles)
+  }
+  
   // Both courses and workshops have events - they're both scheduled sessions
   // Course queries should look for course events, workshop queries should look for workshop events
   if (mentionsCourse || mentionsWorkshop) {
