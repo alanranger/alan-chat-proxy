@@ -4408,14 +4408,34 @@ export default async function handler(req, res) {
     }
 
 
+    // Calculate relevance score for confidence check
+    let relevanceScore = 0;
+    const queryWords = query.toLowerCase().split(/\s+/);
+    if (contentChunks && contentChunks.length > 0) {
+      for (const chunk of contentChunks) {
+        const text = (chunk.chunk_text || '').toLowerCase();
+        for (const word of queryWords) {
+          if (text.includes(word)) relevanceScore += 0.1;
+        }
+      }
+    }
+    
     // LOGICAL CONFIDENCE CHECK: Do we have enough context to provide a confident answer?
-    const hasConfidence = hasContentBasedConfidence(query, "advice", { events, products, articles: contentChunks, services, landing });
+    const hasConfidence = hasContentBasedConfidence(query, "advice", { 
+      events, 
+      products, 
+      articles: contentChunks, 
+      services, 
+      landing,
+      relevanceScore: Math.min(1.0, relevanceScore) // Cap at 1.0
+    });
     console.log(`🔍 DEBUG: Main advice confidence check for "${query}":`, {
       eventCount: events?.length || 0,
       productCount: products?.length || 0,
       articleCount: contentChunks?.length || 0,
       serviceCount: services?.length || 0,
       landingCount: landing?.length || 0,
+      relevanceScore: Math.min(1.0, relevanceScore),
       hasConfidence,
       sampleContent: contentChunks?.slice(0, 2)?.map(c => c.chunk_text?.substring(0, 50)) || []
     });
@@ -4445,6 +4465,7 @@ export default async function handler(req, res) {
               articleCount: contentChunks?.length || 0,
               serviceCount: services?.length || 0,
               landingCount: landing?.length || 0,
+              relevanceScore: Math.min(1.0, relevanceScore),
               hasConfidence: false,
               sampleContent: contentChunks?.slice(0, 2)?.map(c => c.chunk_text?.substring(0, 50)) || []
             }
