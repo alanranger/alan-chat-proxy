@@ -1109,6 +1109,16 @@ function hasContentBasedConfidence(query, intent, content) {
     return false; // Too vague - needs clarification
   }
   
+  // Vague queries that should always trigger clarification
+  const vaguePatterns = [
+    "photography help", "photography advice", "help with photography", 
+    "what can you help me with", "photography tips", "photography guidance",
+    "photography support", "photography assistance", "photography questions"
+  ];
+  if (vaguePatterns.some(pattern => lc.includes(pattern))) {
+    return false; // Too vague - needs clarification
+  }
+  
   // Very little content = clarify (10% confidence)
   if (totalContent <= 1 && relevanceScore < 0.3) {
     return false; // Too little content - needs clarification
@@ -4486,6 +4496,7 @@ export default async function handler(req, res) {
 
     res.status(200).json({
       ok: true,
+      type: "advice",
       answer_markdown: lines.join("\n"),
       citations,
       structured: {
