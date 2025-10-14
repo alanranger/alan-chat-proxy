@@ -2049,7 +2049,7 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   }
   
   if (lc.includes("online courses") || lc.includes("free and paid") || lc.includes("online photography courses") || 
-      lc.includes("online courses (free and paid)")) {
+      lc.includes("online courses (free and paid)") || lc.includes("online courses (free") || lc.includes("free and paid)")) {
     console.log(`✅ Matched online courses pattern for: "${query}"`);
     return {
       type: "route_to_events",
@@ -2062,6 +2062,16 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     return {
       type: "route_to_events",
       newQuery: "specialized photography courses",
+      newIntent: "events"
+    };
+  }
+  
+  // Catch-all for any course-related follow-up that wasn't caught above
+  if (lc.includes("courses") && (lc.includes("online") || lc.includes("in-person") || lc.includes("beginner") || lc.includes("specific") || lc.includes("free") || lc.includes("paid"))) {
+    console.log(`✅ Matched catch-all courses pattern for: "${query}"`);
+    return {
+      type: "route_to_events",
+      newQuery: query, // Use the original query
       newIntent: "events"
     };
   }
