@@ -1662,8 +1662,8 @@ function renderClarification(data) {
         if (query) {
           // Add user's choice as a message
           addBubble(option.textContent, {user: true});
-          // Send the clarified query
-          sendQuery(query);
+          // Send the clarified query with the original query as context
+          sendQueryWithContext(query, __lastQuery);
         }
       });
     });
@@ -1685,8 +1685,8 @@ document.addEventListener('click', (e) => {
     if (query) {
       // Add user's choice as a message
       addBubble(option.textContent, {user: true});
-      // Send the clarified query
-      sendQuery(query);
+      // Send the clarified query with the original query as context
+      sendQueryWithContext(query, __lastQuery);
     }
   }
 });
@@ -2033,6 +2033,72 @@ function showFeedbackForm(query, payload, confidence, intent, thumbsUpBtn, thumb
       document.body.removeChild(overlay);
     }
   });
+}
+
+async function sendQueryWithContext(query, originalQuery) {
+  var t0 = performance.now();
+  const prevQuery = originalQuery; // Use the original query as context
+  __lastQuery = String(query||'');
+  
+  // Capture page context for better answers
+  const qp = new URLSearchParams(location.search);
+  const parentUrl  = qp.get('parentUrl');
+  const parentTitle= qp.get('parentTitle');
+  const parentHost = qp.get('parentHost');
+  const parentPath = qp.get('parentPath');
+  const pageContext = {
+    url: parentUrl  || window.location.href,
+    title: parentTitle || document.title,
+    hostname: parentHost || window.location.hostname,
+    pathname: parentPath || window.location.pathname
+  };
+  
+  const req = { 
+    query, 
+    topK: 8, 
+    previousQuery: prevQuery, 
+    sessionId,
+    pageContext
+  };
+  setDebugJSON(dbgReq, req);
+  const closeTyping = addTyping();
+  gaTrack('question_sent', { query_length: (query||'').length });
+  try{
+    const res = await fetch(CHAT_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(req) });
+    dbgStatus.textContent = res.status;
+    const headers = {}; res.headers.forEach((v,k)=>headers[k]=v); setDebugJSON(dbgHeaders, headers);
+
+    let data = null; const ct = (res.headers.get('content-type') || '').toLowerCase();
+    if (ct.includes('application/json')) data = await res.json(); else data = { ok: false, error: await res.text() || `HTTP ${res.status}` };
+    setDebugJSON(dbgRes, data); setDebugJSON(dbgProv, { citations: data.citations || [] });
+
+    closeTyping();
+    
+    // Handle clarification responses
+    if (data && data.ok && data.type === "clarification") {
+      console.log('Received clarification response:', data);
+      renderClarification(data);
+      gaTrack('clarification_rendered', { ms: Math.round(performance.now()-t0) });
+    } else if (data && data.ok && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
+      renderAnswer(data);
+      gaTrack('answer_rendered', { ms: Math.round(performance.now()-t0), confidence_pct: Math.round((data.confidence||0)*100) });
+    } else if (data && !data.ok) {
+      const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf red">Confidence: 20%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
+      addBubble(`<div class="answer"><p>Server error: ${escapeHTML(String(data.error||'Unknown'))}</p><p>If it continues, please use the Contact form or WhatsApp buttons above.</p></div>`);
+      playChime();
+    } else {
+      const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf amber">Confidence: 40%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
+      const fallback = "I'm not entirely sure about this question, but I can try to help."; const {html}=mdToHtml(fallback);
+      const extra = `<p>For the best assistance, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+      addBubble(html.replace('</div>', `${extra}</div>`));
+      playChime();
+    }
+  } catch(err){
+    closeTyping();
+    const footer = document.createElement('div'); footer.className = 'footer-status'; footer.innerHTML = `<span class="badge conf red">Confidence: 20%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`; thread.appendChild(footer);
+    addBubble(`<div class="answer"><p>Network error: ${escapeHTML(String(err.message||err))}</p><p>Please check your connection and try again, or use the Contact form or WhatsApp buttons above.</p></div>`);
+    playChime();
+  }
 }
 
 async function sendQuery(query){
