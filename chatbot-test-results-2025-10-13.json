@@ -1,0 +1,87 @@
+{
+  "testResults": [
+    {
+      "questionId": 1,
+      "category": "Generic Course Query",
+      "userQuestion": "do you do photography courses?",
+      "chatbotResponse": "Yes, we provide photography courses! Can you be more specific as we do photography courses in Coventry and also have an online photography course.",
+      "userFollowUpResponse": "give me details of both please",
+      "expectedIntent": "advice",
+      "expectedKind": "mixed",
+      "timestamp": "2025-10-13T23:41:08.129Z"
+    },
+    {
+      "questionId": 2,
+      "category": "Specific Course Query",
+      "userQuestion": "what beginners photography courses do you have?",
+      "chatbotResponse": "We have a comprehensive beginners photography course. What would you like to know about it?",
+      "userFollowUpResponse": "where are your courses",
+      "expectedIntent": "advice",
+      "expectedKind": "product",
+      "timestamp": "2025-10-13T23:41:36.121Z"
+    },
+    {
+      "questionId": 3,
+      "category": "Generic Workshop Query",
+      "userQuestion": "do you run photography workshops?",
+      "chatbotResponse": "Yes, we run photography workshops! Can you be more specific about what type of workshop you're interested in?",
+      "userFollowUpResponse": "yes i was looking at your autumn workshops at batsford",
+      "expectedIntent": "events",
+      "expectedKind": "event",
+      "timestamp": "2025-10-13T23:42:11.562Z"
+    },
+    {
+      "questionId": 4,
+      "category": "Equipment Query",
+      "userQuestion": "what camera should I buy?",
+      "chatbotResponse": "I can help with camera recommendations! What type of photography are you interested in?",
+      "userFollowUpResponse": "i am interested in all genres, a bit of everything, but dont own a camera but want to get into it.  can you advise on a good camera for a beginner",
+      "expectedIntent": "advice",
+      "expectedKind": "article",
+      "timestamp": "2025-10-13T23:43:27.047Z"
+    },
+    {
+      "questionId": 5,
+      "category": "About Query",
+      "userQuestion": "who is Alan Ranger?",
+      "chatbotResponse": "Alan Ranger is a professional photographer and tutor. What would you like to know about him?",
+      "userFollowUpResponse": "how long has been teaching>?",
+      "expectedIntent": "advice",
+      "expectedKind": "landing",
+      "timestamp": "2025-10-13T23:43:46.501Z"
+    },
+    {
+      "questionId": 6,
+      "category": "Service Query",
+      "userQuestion": "what photography services do you offer?",
+      "chatbotResponse": "We offer various photography services. What type of service are you looking for?",
+      "userFollowUpResponse": "i am want private lessons, do you offer them?",
+      "expectedIntent": "advice",
+      "expectedKind": "service",
+      "timestamp": "2025-10-13T23:44:10.163Z"
+    },
+    {
+      "questionId": 7,
+      "category": "Free Course Query",
+      "userQuestion": "is there a free online photography course?",
+      "chatbotResponse": "Yes! We have a free online photography course. Would you like to know more about it?",
+      "userFollowUpResponse": "yes, tell me more about it and do i get a certificate at the end of it",
+      "expectedIntent": "advice",
+      "expectedKind": "landing",
+      "timestamp": "2025-10-13T23:44:41.520Z"
+    },
+    {
+      "questionId": 8,
+      "category": "Specific Workshop Query",
+      "userQuestion": "when is the next bluebell photography workshop?",
+      "chatbotResponse": "We have bluebell photography workshops coming up. What would you like to know about them?",
+      "userFollowUpResponse": "what are the dates and costs",
+      "expectedIntent": "events",
+      "expectedKind": "event",
+      "timestamp": "2025-10-13T23:44:59.273Z"
+    }
+  ],
+  "timestamp": "2025-10-13T23:45:04.586Z",
+  "totalQuestions": 8,
+  "completedQuestions": 8
+}

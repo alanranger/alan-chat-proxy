@@ -129,9 +129,87 @@
       "originalExpectedIntent": "advice",
       "originalExpectedKind": "landing",
       "timestamp": "2025-10-14T00:49:24.986Z"
+    },
+    {
+      "questionId": 8,
+      "category": "Specific Workshop Query",
+      "userQuestion": "when is the next bluebell photography workshop?",
+      "chatbotResponse": "We have bluebell photography workshops coming up. What would you like to know about them?",
+      "userFollowUpResponse": "what are the dates and cost and is it suitable for beginners?  where are they?",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "mixed",
+        "expectedUrls": [
+          "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+          "https://www.alanranger.com/photographic-workshops-near-me/"
+        ],
+        "expectedResponse": "The dates are provided below and the cost and location"
+      },
+      "originalExpectedIntent": "events",
+      "originalExpectedKind": "event",
+      "timestamp": "2025-10-14T01:01:26.631Z"
+    },
+    {
+      "questionId": 9,
+      "category": "Technical Photography Query",
+      "userQuestion": "how do I use manual mode on my camera?",
+      "chatbotResponse": "Great question! Manual mode gives you full control. What specific aspect of manual mode would you like to learn about?",
+      "userFollowUpResponse": "the exposure settings",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "article",
+        "expectedUrls": [
+          "https://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography",
+          "https://www.alanranger.com/blog-on-photography/what-is-exposure-in-photography",
+          "https://www.alanranger.com/blog-on-photography/free-outdoor-photography-exposure-calculator"
+        ],
+        "expectedResponse": "Great, i have several guides that should be able to help you. \n\nhttps://www.alanranger.com/blog-on-photography/what-is-manual-exposure-in-photography\nhttps://www.alanranger.com/blog-on-photography/what-is-exposure-in-photography\nhttps://www.alanranger.com/blog-on-photography/free-outdoor-photography-exposure-calculator"
+      },
+      "originalExpectedIntent": "advice",
+      "originalExpectedKind": "article",
+      "timestamp": "2025-10-14T01:05:34.514Z"
+    },
+    {
+      "questionId": 10,
+      "category": "Equipment Advice Query",
+      "userQuestion": "what's the best lens for portrait photography?",
+      "chatbotResponse": "Portrait photography has several great lens options. What's your budget range and camera system?",
+      "userFollowUpResponse": "i use a sony and can spend about £100",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "article",
+        "expectedUrls": [
+          "https://www.alanranger.com/photography-equipment-recommendations",
+          "https://www.alanranger.com/blog-on-photography/choosing-a-camera",
+          "https://prf.hn/click/camref:1011lrfGr/creativeref:1101l88284"
+        ],
+        "expectedResponse": "I dont provide specific buying advice in an ever changing market and changes in technical advancements but heres a few links that may guide you"
+      },
+      "originalExpectedIntent": "advice",
+      "originalExpectedKind": "article",
+      "timestamp": "2025-10-14T01:13:17.638Z"
+    },
+    {
+      "questionId": 11,
+      "category": "Private Lesson Query",
+      "userQuestion": "do you offer one-to-one photography lessons?",
+      "chatbotResponse": "Yes, we offer private photography lessons! What type of photography would you like to focus on?",
+      "userFollowUpResponse": "just basic camera settings, composition and general editing",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "service",
+        "expectedUrls": [
+          "https://www.alanranger.com/private-photography-lessons",
+          "https://www.alanranger.com/photography-lessons-online-121"
+        ],
+        "expectedResponse": "there are a couple of options for you.  \n\n1.  face to face private lessons in coventry\nor\n2. online private lessons\n\nthere are package discounts for both options or you can book ad-hoc as needed."
+      },
+      "originalExpectedIntent": "advice",
+      "originalExpectedKind": "service",
+      "timestamp": "2025-10-14T01:16:40.092Z"
     }
   ],
-  "timestamp": "2025-10-14T00:49:40.227Z",
+  "timestamp": "2025-10-14T01:16:44.084Z",
   "totalQuestions": 20,
-  "completedQuestions": 7
+  "completedQuestions": 11
 }
