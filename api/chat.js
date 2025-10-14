@@ -3758,6 +3758,7 @@ export default async function handler(req, res) {
 
       res.status(200).json({
         ok: true,
+        type: "events",
         answer_markdown: answerMarkdown,
         citations,
         structured: {
