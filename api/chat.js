@@ -1384,6 +1384,35 @@ function generateClarificationQuestion(query) {
     };
   }
   
+  // Course/workshop type clarification (for equipment queries)
+  if (lc.includes("photography course workshop type clarification")) {
+    return {
+      type: "course_workshop_type_clarification",
+      question: "Great! We offer both practical workshops outdoors and courses as evening classes or online. What would you prefer?",
+      options: [
+        { text: "Practical outdoor workshops", query: "outdoor photography workshops" },
+        { text: "Evening classes", query: "evening photography classes" },
+        { text: "Online courses", query: "online photography courses" },
+        { text: "Tell me about all options", query: "all photography course options" }
+      ]
+    };
+  }
+  
+  // Course type clarification (after selecting courses)
+  if (lc.includes("online photography courses") || lc.includes("evening photography classes")) {
+    return {
+      type: "course_type_clarification",
+      question: "Perfect! We have several course options available. Which type of course interests you most?",
+      options: [
+        { text: "Beginners camera course", query: "beginners camera course" },
+        { text: "Beginners Lightroom course", query: "beginners lightroom course" },
+        { text: "RPS mentoring course", query: "rps mentoring course" },
+        { text: "Free online photography course", query: "free online photography course" },
+        { text: "Online private lessons", query: "online private photography lessons" }
+      ]
+    };
+  }
+  
   return null;
 }
 
@@ -1448,6 +1477,15 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
       type: "route_to_advice",
       newQuery: "online photography courses",
       newIntent: "advice"
+    };
+  }
+  
+  // FIXED: Photography course/workshop should trigger follow-up clarification
+  if (lc.includes("photography course/workshop") || lc.includes("equipment for photography course")) {
+    return {
+      type: "route_to_clarification",
+      newQuery: "photography course workshop type clarification",
+      newIntent: "clarification"
     };
   }
   
@@ -3073,7 +3111,21 @@ export default async function handler(req, res) {
         const newKeywords = extractKeywords(newQuery);
         
         // Continue with the new query and intent
-        if (newIntent === "events") {
+        if (newIntent === "clarification") {
+          // Route to another clarification question
+          const clarification = generateClarificationQuestion(newQuery);
+          if (clarification) {
+            console.log(`🤔 Follow-up clarification: "${newQuery}"`);
+            res.status(200).json({
+              ok: true,
+              type: "clarification",
+              question: clarification.question,
+              options: clarification.options,
+              debug: { version: "v1.2.36-debug-response", followUp: true }
+            });
+            return;
+          }
+        } else if (newIntent === "events") {
           // Route to events logic with new query
           const lc = newQuery.toLowerCase();
           const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
