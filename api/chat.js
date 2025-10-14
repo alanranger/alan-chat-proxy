@@ -3383,7 +3383,15 @@ export default async function handler(req, res) {
           productDescription: product ? product.description : null,
           clarificationCheck: clarificationCheck,
           clarificationTriggered: false,
-          clarificationReason: clarificationCheck ? "Query matched clarification patterns but no clarification was generated" : "Query did not match clarification patterns"
+          clarificationReason: clarificationCheck ? "Query matched clarification patterns but no clarification was generated" : "Query did not match clarification patterns",
+          clarificationDebug: {
+            query: query,
+            queryLowercase: query ? query.toLowerCase() : null,
+            hasEquipment: query ? query.toLowerCase().includes("equipment") : false,
+            hasCourse: query ? query.toLowerCase().includes("course") : false,
+            hasWorkshop: query ? query.toLowerCase().includes("workshop") : false,
+            equipmentPattern: query ? (query.toLowerCase().includes("equipment") && !query.toLowerCase().includes("course") && !query.toLowerCase().includes("workshop")) : false
+          }
         },
         meta: {
           duration_ms: Date.now() - started,
