@@ -1423,7 +1423,6 @@ function generateClarificationQuestion(query) {
  */
 function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   const lc = query.toLowerCase();
-  console.log(`🔍 handleClarificationFollowUp: query="${query}", originalQuery="${originalQuery}", originalIntent="${originalIntent}"`);
   
   // Current patterns (keep existing for backward compatibility)
   if (lc.includes("equipment for photography course")) {
@@ -3101,19 +3100,7 @@ export default async function handler(req, res) {
       : extractKeywords(query || "");
 
     // NEW: Handle clarification follow-up responses
-    console.log(`🔍 Checking follow-up: query="${query}", previousQuery="${previousQuery}", intent="${intent}"`);
     const followUpResult = previousQuery ? handleClarificationFollowUp(query, previousQuery, intent) : null;
-    console.log(`🔍 Follow-up result:`, followUpResult);
-    
-    // Add debugging info to response (always define this)
-    const followUpDebugInfo = {
-      followUpCheck: {
-        query: query || "",
-        previousQuery: previousQuery || "",
-        intent: intent || "",
-        followUpResult: followUpResult || null
-      }
-    };
     
     if (followUpResult) {
         console.log(`🔄 Clarification follow-up: "${query}" → ${followUpResult.newIntent}`);
@@ -3374,7 +3361,6 @@ export default async function handler(req, res) {
             products: product ? 1 : 0,
             articles: 0
           },
-          followUpCheck: followUpDebugInfo.followUpCheck,
           productPanel: productPanel,
           productDescription: product ? product.description : null
         },
