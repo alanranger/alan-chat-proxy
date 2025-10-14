@@ -1094,10 +1094,15 @@ function hasContentBasedConfidence(query, intent, content) {
     return false; // This is a clarification question, not a confident query
   }
   
-  // Extract content metrics
+  // Extract content metrics (handle different content types)
   const articleCount = content.articles?.length || 0;
+  const eventCount = content.events?.length || 0;
+  const productCount = content.products?.length || 0;
   const relevanceScore = content.relevanceScore || 0;
   const queryLength = query.length;
+  
+  // Calculate total content richness
+  const totalContent = articleCount + eventCount + productCount;
   
   // Very short, vague queries = clarify (10% confidence)
   if (queryLength <= 10 && !hasSpecificKeywords(query)) {
@@ -1105,18 +1110,23 @@ function hasContentBasedConfidence(query, intent, content) {
   }
   
   // Very little content = clarify (10% confidence)
-  if (articleCount <= 1 && relevanceScore < 0.3) {
+  if (totalContent <= 1 && relevanceScore < 0.3) {
     return false; // Too little content - needs clarification
   }
   
   // Rich, relevant content = confident (90% confidence)
-  if (articleCount >= 3 && relevanceScore > 0.6) {
+  if (totalContent >= 3 && relevanceScore > 0.6) {
     return true; // Good content - be confident
   }
   
   // Medium content with specific keywords = confident
-  if (articleCount >= 2 && relevanceScore > 0.5 && hasSpecificKeywords(query)) {
+  if (totalContent >= 2 && relevanceScore > 0.5 && hasSpecificKeywords(query)) {
     return true; // Decent content with specific keywords - be confident
+  }
+  
+  // Special case: Events queries with specific location/time should be confident
+  if (intent === "events" && hasSpecificKeywords(query) && (eventCount > 0 || totalContent > 0)) {
+    return true; // Events with specific keywords should be confident
   }
   
   // Default to clarification for safety
@@ -3677,7 +3687,14 @@ export default async function handler(req, res) {
       ]).filter(Boolean);
 
       // LOGICAL CONFIDENCE CHECK: Do we have enough context to provide a confident answer?
-      const hasConfidence = hasContentBasedConfidence(query, "events", { events: eventList, products: product ? [product] : [] });
+      const contentForConfidence = { events: eventList, products: product ? [product] : [] };
+      const hasConfidence = hasContentBasedConfidence(query, "events", contentForConfidence);
+      console.log(`🔍 DEBUG: Events confidence check for "${query}":`, {
+        eventCount: eventList?.length || 0,
+        productCount: product ? 1 : 0,
+        hasConfidence,
+        contentForConfidence
+      });
       if (!hasConfidence) {
         console.log(`🤔 Low logical confidence for events query: "${query}" - triggering clarification`);
         const clarification = generateClarificationQuestion(query);
