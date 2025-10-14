@@ -3441,6 +3441,14 @@ export default async function handler(req, res) {
       query.toLowerCase().includes("mentoring") ||
       query.toLowerCase().includes("about")
     );
+    console.log(`🔍 isClarificationResponse check:`, {
+      query: query,
+      previousQuery: previousQuery,
+      hasPreviousQuery: !!previousQuery,
+      queryLower: query.toLowerCase(),
+      containsCourse: query.toLowerCase().includes("course"),
+      isClarificationResponse: isClarificationResponse
+    });
     const followUpResult = isClarificationResponse ? handleClarificationFollowUp(query, previousQuery, intent) : null;
     console.log(`🔍 isClarificationResponse: ${isClarificationResponse} for query: "${query}"`);
     console.log(`🔍 followUpResult:`, followUpResult);
