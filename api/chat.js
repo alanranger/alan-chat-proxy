@@ -1765,6 +1765,52 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     };
   }
   
+  // Route specific course requests to advice intent
+  if (lc.includes("free online photography course") || lc === "free online photography course") {
+    console.log(`✅ Matched free online course pattern for: "${query}"`);
+    return {
+      type: "route_to_advice",
+      newQuery: "free online photography course",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("online private photography lessons") || lc === "online private photography lessons") {
+    console.log(`✅ Matched online private lessons pattern for: "${query}"`);
+    return {
+      type: "route_to_advice",
+      newQuery: "online private photography lessons",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("beginners camera course") || lc === "beginners camera course") {
+    console.log(`✅ Matched beginners camera course pattern for: "${query}"`);
+    return {
+      type: "route_to_advice",
+      newQuery: "beginners camera course",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("beginners lightroom course") || lc === "beginners lightroom course") {
+    console.log(`✅ Matched beginners lightroom course pattern for: "${query}"`);
+    return {
+      type: "route_to_advice",
+      newQuery: "beginners lightroom course",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("rps mentoring course") || lc === "rps mentoring course") {
+    console.log(`✅ Matched rps mentoring course pattern for: "${query}"`);
+    return {
+      type: "route_to_advice",
+      newQuery: "rps mentoring course",
+      newIntent: "advice"
+    };
+  }
+  
   if (lc.includes("in-person courses in coventry") || lc === "in-person courses in coventry") {
     console.log(`✅ Matched in-person courses pattern for: "${query}"`);
     return {
