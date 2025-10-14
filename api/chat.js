@@ -3391,11 +3391,80 @@ export default async function handler(req, res) {
           const csvType = mentionsCourse ? "course_events" : "workshop_events";
           
           const events = await findEvents(client, { keywords: newKeywords, limit: 80, pageContext, csvType });
-          // ... continue with events logic (will be handled by existing code below)
+          const eventList = formatEventsForUi(events);
+          
+          // Generate specific answer for the clarified query
+          const specificAnswer = generateDirectAnswer(newQuery, [], []);
+          
+          // Check if we have logical confidence for this clarified query
+          const hasConfidence = hasContentBasedConfidence(newQuery, "events", { events: eventList });
+          if (!hasConfidence) {
+            console.log(`🤔 Low logical confidence for clarified events query: "${newQuery}" - triggering clarification`);
+            const clarification = generateClarificationQuestion(newQuery);
+            if (clarification) {
+              const confidencePercent = 10;
+              res.status(200).json({
+                ok: true,
+                type: "clarification",
+                question: clarification.question,
+                options: clarification.options,
+                confidence: confidencePercent,
+                debug: { version: "v1.2.37-logical-confidence", clarified: true }
+              });
+              return;
+            }
+          }
+          
+          // Return confident events response
+          const answerMarkdown = specificAnswer !== `I don't have a confident answer to that yet. I'm trained on Alan's site, so I may miss things. If you'd like to follow up, please reach out:` 
+            ? specificAnswer 
+            : eventList;
+          
+          res.status(200).json({
+            ok: true,
+            type: "events",
+            answer: answerMarkdown,
+            events: eventList,
+            debug: { version: "v1.2.37-logical-confidence", clarified: true, logicalConfidence: true }
+          });
+          return;
+          
         } else if (newIntent === "advice") {
           // Route to advice logic with new query
           const articles = await findArticles(client, { keywords: newKeywords, limit: 30, pageContext });
-          // ... continue with advice logic (will be handled by existing code below)
+          const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+          const contentChunks = await findContentChunks(client, { keywords: newKeywords, limit: 15, articleUrls });
+          
+          // Generate specific answer for the clarified query
+          const specificAnswer = generateDirectAnswer(newQuery, articles, contentChunks);
+          
+          // Check if we have logical confidence for this clarified query
+          const hasConfidence = hasContentBasedConfidence(newQuery, "advice", { articles, contentChunks });
+          if (!hasConfidence) {
+            console.log(`🤔 Low logical confidence for clarified advice query: "${newQuery}" - triggering clarification`);
+            const clarification = generateClarificationQuestion(newQuery);
+            if (clarification) {
+              const confidencePercent = 10;
+              res.status(200).json({
+                ok: true,
+                type: "clarification",
+                question: clarification.question,
+                options: clarification.options,
+                confidence: confidencePercent,
+                debug: { version: "v1.2.37-logical-confidence", clarified: true }
+              });
+              return;
+            }
+          }
+          
+          // Return confident advice response
+          res.status(200).json({
+            ok: true,
+            type: "advice",
+            answer: specificAnswer,
+            debug: { version: "v1.2.37-logical-confidence", clarified: true, logicalConfidence: true }
+          });
+          return;
         }
       }
 
