@@ -1161,6 +1161,7 @@ function needsClarification(query) {
  */
 function generateClarificationQuestion(query) {
   const lc = query.toLowerCase();
+  console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
   
   // Current patterns (keep existing for backward compatibility)
   if (lc.includes("equipment")) {
@@ -1464,6 +1465,7 @@ function generateClarificationQuestion(query) {
   
   // Equipment for course type clarification
   if (lc.includes("equipment for photography course type clarification")) {
+    console.log(`✅ Found equipment course type clarification pattern`);
     return {
       type: "equipment_course_type_clarification",
       question: "Perfect! For equipment recommendations, I need to know what type of photography course you're planning. What interests you most?",
@@ -3226,9 +3228,10 @@ export default async function handler(req, res) {
         // Continue with the new query and intent
         if (newIntent === "clarification") {
           // Route to another clarification question
+          console.log(`🔍 DEBUG: Looking for clarification for query: "${newQuery}"`);
           const clarification = generateClarificationQuestion(newQuery);
           if (clarification) {
-            console.log(`🤔 Follow-up clarification: "${newQuery}"`);
+            console.log(`🤔 Follow-up clarification: "${newQuery}" → ${clarification.type} (${clarification.confidence}%)`);
             res.status(200).json({
               ok: true,
               type: "clarification",
