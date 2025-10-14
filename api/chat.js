@@ -1052,14 +1052,26 @@ function hasLogicalConfidence(query, intent, content) {
       return true; // Has specific context
     }
     
+    return false; // Too vague - needs clarification
+  }
+  
+  // Advice intent equipment queries
+  if (intent === "advice" && lc.includes("equipment")) {
     // Special case: General equipment advice queries should be confident ONLY if they have specific context
-    if (lc.includes("equipment") && (lc.includes("advice") || lc.includes("recommendations") || 
-        lc.includes("guide") || lc.includes("help"))) {
+    if (lc.includes("advice") || lc.includes("recommendations") || 
+        lc.includes("guide") || lc.includes("help")) {
       // But NOT if it's just "photography equipment advice" - that's too vague
       if (lc === "photography equipment advice" || lc === "equipment advice") {
         return false; // Too vague - needs clarification
       }
       return true; // General equipment advice with more context is specific enough
+    }
+    
+    // Camera/lens recommendation queries should be confident
+    if ((lc.includes("camera") || lc.includes("lens")) && 
+        (lc.includes("recommendations") || lc.includes("recommend") || lc.includes("best") || 
+         lc.includes("should i buy") || lc.includes("which"))) {
+      return true; // Camera/lens recommendations are specific enough
     }
     
     return false; // Too vague - needs clarification
@@ -3439,10 +3451,28 @@ export default async function handler(req, res) {
       const dataContext = { events: futureEvents, products: product ? [product] : [], articles: [], originalQuery: previousQuery };
       const specificAnswer = await extractRelevantInfo(query, dataContext);
       
-      // If we got a specific answer, use it; otherwise use the product panel
-      const answerMarkdown = specificAnswer !== `I don't have a confident answer to that yet. I'm trained on Alan's site, so I may miss things. If you'd like to follow up, please reach out:` 
+      // For equipment-related event queries, also generate equipment advice content
+      let equipmentAdvice = "";
+      if (lc.includes("equipment") || lc.includes("camera") || lc.includes("lens") || lc.includes("gear")) {
+        console.log(`🔧 Equipment event query detected, generating advice content for: "${query}"`);
+        const articles = await findArticles(client, { keywords, limit: 30, pageContext });
+        const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+        const contentChunks = await findContentChunks(client, { keywords, limit: 15, articleUrls });
+        equipmentAdvice = generateDirectAnswer(query, articles, contentChunks);
+        console.log(`🔧 Generated equipment advice: "${equipmentAdvice.substring(0, 100)}..."`);
+      }
+      
+      // Combine specific answer with equipment advice if available
+      let combinedAnswer = specificAnswer !== `I don't have a confident answer to that yet. I'm trained on Alan's site, so I may miss things. If you'd like to follow up, please reach out:` 
         ? specificAnswer 
         : productPanel;
+      
+      // Prepend equipment advice if available
+      if (equipmentAdvice) {
+        combinedAnswer = equipmentAdvice + "\n\n" + combinedAnswer;
+      }
+      
+      const answerMarkdown = combinedAnswer;
 
       const firstEventUrl = firstEvent?.event_url || null;
       // Prefer event-mapped product URL (from Supabase view) first; then selected product; ensure absolute URL
