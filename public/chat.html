@@ -1633,7 +1633,7 @@ function renderClarification(data) {
         
         if (query) {
           // Add user's choice as a message
-          addUserBubble(option.textContent);
+          addBubble(option.textContent, {user: true});
           // Send the clarified query
           sendQuery(query);
         }
@@ -1656,7 +1656,7 @@ document.addEventListener('click', (e) => {
     
     if (query) {
       // Add user's choice as a message
-      addUserBubble(option.textContent);
+      addBubble(option.textContent, {user: true});
       // Send the clarified query
       sendQuery(query);
     }
