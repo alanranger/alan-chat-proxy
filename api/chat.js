@@ -1037,6 +1037,11 @@ function hasLogicalConfidence(query, intent, content) {
   
   const lc = query.toLowerCase();
   
+  // Detect clarification questions - these should never be confident
+  if (lc.includes("what type of") && lc.includes("are you planning") && lc.includes("this will help")) {
+    return false; // This is a clarification question, not a confident query
+  }
+  
   // Equipment queries need specific activity type
   if (intent === "equipment" || lc.includes("equipment")) {
     // Must have specific activity context (not just "course" or "workshop")
