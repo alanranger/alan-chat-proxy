@@ -1045,6 +1045,15 @@ function needsClarification(query) {
     lc.includes("training") && !lc.includes("course") && !lc.includes("workshop")
   ];
   
+  // DEBUG: Log pattern matching for equipment queries
+  if (lc.includes("equipment")) {
+    console.log(`🔍 Equipment query detected: "${query}"`);
+    console.log(`   lc.includes("equipment"): ${lc.includes("equipment")}`);
+    console.log(`   lc.includes("course"): ${lc.includes("course")}`);
+    console.log(`   lc.includes("workshop"): ${lc.includes("workshop")}`);
+    console.log(`   Pattern result: ${lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop")}`);
+  }
+  
   // EXPANDED PATTERNS FOR ALL 20 QUESTION TYPES
   const expandedPatterns = [
     // Generic questions (8 patterns)
@@ -1074,7 +1083,14 @@ function needsClarification(query) {
     lc.includes("what photography services do you offer")
   ];
   
-  return [...currentPatterns, ...expandedPatterns].some(pattern => pattern);
+  const result = [...currentPatterns, ...expandedPatterns].some(pattern => pattern);
+  
+  // DEBUG: Log final result for equipment queries
+  if (lc.includes("equipment")) {
+    console.log(`   Final needsClarification result: ${result}`);
+  }
+  
+  return result;
 }
 
 /**
