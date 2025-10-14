@@ -508,6 +508,13 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   console.log(`🔍 generateDirectAnswer: Articles count=${articles.length}`);
   console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
   
+  // PRIORITY 0: Course-specific equipment advice - MUST come first before any article searching
+  if ((lc.includes("equipment") && (lc.includes("course") || lc.includes("class") || lc.includes("lesson"))) ||
+      (lc.includes("beginners") && lc.includes("camera") && lc.includes("course"))) {
+    console.log(`🔧 Course-specific equipment advice triggered for: "${query}"`);
+    return `For Alan's photography courses, you'll need a digital camera with manual exposure modes (DSLR or mirrorless). Don't worry if you don't have expensive gear - even a smartphone can work for learning the fundamentals! The course focuses on understanding composition, lighting, and technique rather than having the latest equipment. Alan will provide a course book covering all topics.\n\n`;
+  }
+  
   // PRIORITY 1: Extract from JSON-LD FAQ data in articles
   if (exactTerm && articles.length > 0) {
     // First, try to find an exact title match for the specific term
@@ -734,10 +741,6 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     }
   }
   
-  // Course-specific equipment advice - PRIORITY for course equipment queries
-  if (lc.includes("equipment") && (lc.includes("course") || lc.includes("class") || lc.includes("lesson"))) {
-    return `For Alan's photography courses, you'll need a digital camera with manual exposure modes (DSLR or mirrorless). Don't worry if you don't have expensive gear - even a smartphone can work for learning the fundamentals! The course focuses on understanding composition, lighting, and technique rather than having the latest equipment. Alan will provide a course book covering all topics.\n\n`;
-  }
   
   // Enhanced Equipment Advice - Check if this is an equipment recommendation query
   if (isEquipmentAdviceQuery(lc)) {
@@ -3326,10 +3329,9 @@ export default async function handler(req, res) {
       : extractKeywords(query || "");
 
     // NEW: Handle clarification follow-up responses
-    if (previousQuery && handleClarificationFollowUp(query, previousQuery, intent)) {
-      const followUpResult = handleClarificationFollowUp(query, previousQuery, intent);
-      if (followUpResult) {
-        console.log(`🔄 Clarification follow-up: "${query}" → ${followUpResult.newIntent}`);
+    const followUpResult = previousQuery ? handleClarificationFollowUp(query, previousQuery, intent) : null;
+    if (followUpResult) {
+      console.log(`🔄 Clarification follow-up: "${query}" → ${followUpResult.newIntent}`);
         
         // Update query and intent based on user's clarification choice
         const newQuery = followUpResult.newQuery;
@@ -3342,9 +3344,8 @@ export default async function handler(req, res) {
           console.log(`🔍 DEBUG: Looking for clarification for query: "${newQuery}"`);
           const clarification = generateClarificationQuestion(newQuery);
           if (clarification) {
-            // Calculate RAG-based confidence for the clarification
-            const ragConfidence = await calculateRAGConfidence(newQuery, client, pageContext);
-            const confidencePercent = Math.round(ragConfidence * 100);
+        // For clarifications, use fixed low confidence since we're asking for more info
+        const confidencePercent = 30; // Fixed low confidence for second-level clarifications
             
             console.log(`🤔 Follow-up clarification: "${newQuery}" → ${clarification.type} (${confidencePercent}%)`);
             res.status(200).json({
@@ -3353,7 +3354,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.37-logical-confidence", followUp: true, ragConfidence: ragConfidence }
+              debug: { version: "v1.2.37-logical-confidence", followUp: true }
             });
             return;
           }
@@ -3371,7 +3372,6 @@ export default async function handler(req, res) {
           // ... continue with advice logic (will be handled by existing code below)
         }
       }
-    }
 
     if (intent === "events") {
       // Determine CSV type based on query content
@@ -3587,9 +3587,8 @@ export default async function handler(req, res) {
         console.log(`🤔 Low logical confidence for events query: "${query}" - triggering clarification`);
         const clarification = generateClarificationQuestion(query);
         if (clarification) {
-          // Calculate RAG-based confidence for the clarification
-          const ragConfidence = await calculateRAGConfidence(query, client, pageContext);
-          const confidencePercent = Math.round(ragConfidence * 100);
+          // For initial clarifications, use fixed low confidence since we're asking for more info
+          const confidencePercent = 10; // Fixed low confidence for initial clarifications
           
           res.status(200).json({
             ok: true,
@@ -3604,7 +3603,6 @@ export default async function handler(req, res) {
               endpoint: "/api/chat",
               clarification_type: clarification.type,
               logical_confidence: false,
-              ragConfidence: ragConfidence
             }
           });
           return;
@@ -4288,9 +4286,8 @@ export default async function handler(req, res) {
       console.log(`🤔 Low logical confidence for advice query: "${query}" - triggering clarification`);
       const clarification = generateClarificationQuestion(query);
       if (clarification) {
-        // Calculate RAG-based confidence for the clarification
-        const ragConfidence = await calculateRAGConfidence(query, client, pageContext);
-        const confidencePercent = Math.round(ragConfidence * 100);
+        // For initial clarifications, use fixed low confidence since we're asking for more info
+        const confidencePercent = 10; // Fixed low confidence for initial clarifications
         
         res.status(200).json({
           ok: true,
@@ -4304,8 +4301,7 @@ export default async function handler(req, res) {
             duration_ms: Date.now() - started,
             endpoint: "/api/chat",
             clarification_type: clarification.type,
-            logical_confidence: false,
-            ragConfidence: ragConfidence
+            logical_confidence: false
           }
         });
         return;
