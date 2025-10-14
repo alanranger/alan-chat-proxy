@@ -2032,6 +2032,7 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   
   // Course-specific follow-up patterns
   if (lc.includes("beginner courses") || lc.includes("beginner photography courses")) {
+    console.log(`✅ Matched beginner courses pattern for: "${query}"`);
     return {
       type: "route_to_events",
       newQuery: "beginner photography courses",
@@ -2047,7 +2048,9 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     };
   }
   
-  if (lc.includes("online courses") || lc.includes("free and paid") || lc.includes("online photography courses")) {
+  if (lc.includes("online courses") || lc.includes("free and paid") || lc.includes("online photography courses") || 
+      lc.includes("online courses (free and paid)")) {
+    console.log(`✅ Matched online courses pattern for: "${query}"`);
     return {
       type: "route_to_events",
       newQuery: "online photography courses", 
