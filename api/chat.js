@@ -2158,7 +2158,9 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   // }
   
   // Catch-all for any course-related follow-up that wasn't caught above
-  if (lc.includes("courses") && (lc.includes("online") || lc.includes("in-person") || lc.includes("beginner") || lc.includes("specific") || lc.includes("free") || lc.includes("paid"))) {
+  // BUT exclude queries that should go to clarification (like "online courses (free and paid)")
+  if (lc.includes("courses") && (lc.includes("in-person") || lc.includes("beginner") || lc.includes("specific")) && 
+      !lc.includes("online courses (free and paid)") && !lc.includes("free and paid")) {
     console.log(`✅ Matched catch-all courses pattern for: "${query}"`);
     return {
       type: "route_to_events",
