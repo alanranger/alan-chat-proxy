@@ -1171,7 +1171,8 @@ function generateClarificationQuestion(query) {
         { text: "Equipment for photography courses/workshops", query: "equipment for photography course" },
         { text: "General photography equipment advice", query: "photography equipment advice" },
         { text: "Specific camera/lens recommendations", query: "camera lens recommendations" }
-      ]
+      ],
+      confidence: 10
     };
   }
   
@@ -1472,7 +1473,8 @@ function generateClarificationQuestion(query) {
         { text: "RPS mentoring course", query: "equipment for rps course" },
         { text: "Online photography course", query: "equipment for online course" },
         { text: "General course equipment advice", query: "general photography course equipment" }
-      ]
+      ],
+      confidence: 30
     };
   }
 

@@ -75,6 +75,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer strong{font-weight:600;color:#f1f5f9}
 
 /* Clarification options */
+.clarification-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:12px}
+.clarification-header p{margin:0;flex:1}
 .clarification-options{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .clarification-option{background:var(--brand);color:#0b0f16;border:none;border-radius:8px;padding:12px 16px;font-size:14px;font-weight:600;cursor:pointer;text-align:left;transition:all 0.2s ease;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
 .clarification-option:hover{background:#f57c00;transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,0.15)}
@@ -1601,10 +1603,16 @@ window.addEventListener('touchstart', unlockAudio, { once:false, passive:true })
 let __lastQuery = '';
 
 function renderClarification(data) {
-  // Create clarification bubble with question and options
+  // Create clarification bubble with question, confidence pill, and options
+  const confidence = data.confidence || 10;
+  const confidenceColor = confidence >= 80 ? 'green' : confidence >= 60 ? 'blue' : confidence >= 30 ? 'amber' : 'red';
+  
   const clarificationHtml = `
     <div class="answer">
-      <p><strong>${escapeHTML(data.question)}</strong></p>
+      <div class="clarification-header">
+        <p><strong>${escapeHTML(data.question)}</strong></p>
+        <span class="badge conf ${confidenceColor}">Confidence: ${confidence}%</span>
+      </div>
       <div class="clarification-options">
         ${data.options.map(option => `
           <button class="clarification-option" data-query="${escapeHTML(option.query)}">
