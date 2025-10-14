@@ -1644,6 +1644,7 @@ function generateClarificationQuestion(query) {
  */
 function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   const lc = query.toLowerCase();
+  console.log(`🔍 handleClarificationFollowUp called with:`, { query, originalQuery, originalIntent, lc });
   
   // Current patterns (keep existing for backward compatibility)
   if (lc.includes("equipment for photography course")) {
@@ -3387,6 +3388,7 @@ export default async function handler(req, res) {
     const followUpResult = isClarificationResponse ? handleClarificationFollowUp(query, previousQuery, intent) : null;
     if (followUpResult) {
       console.log(`🔄 Clarification follow-up: "${query}" → ${followUpResult.newIntent}`);
+      console.log(`🔍 Follow-up result:`, followUpResult);
         
         // Update query and intent based on user's clarification choice
         const newQuery = followUpResult.newQuery;
