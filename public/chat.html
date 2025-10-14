@@ -1770,8 +1770,27 @@ function renderAnswer(payload){
   footer.className = 'footer-status';
   // Updated confidence thresholds: 80%+ green, 50%+ amber, below 50% red
   const confId = `conf-pill-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  footer.innerHTML = `<span id="${confId}" class="badge conf small ${__rounded>=80?'green':__rounded>=50?'amber':'red'}">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
+  footer.innerHTML = `<span id="${confId}" class="badge conf small ${__rounded>=80?'green':__rounded>=50?'amber':'red'}" title="Click to view debug log">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
   thread.appendChild(footer);
+
+  // Add click handler for confidence pill
+  setTimeout(() => {
+    const confEl = document.getElementById(confId);
+    if (confEl) {
+      confEl.addEventListener('click', ()=>{
+        const old = document.getElementById('reason-pop'); if (old) old.remove();
+        const box = document.createElement('div'); box.id='reason-pop'; box.className='reason-pop';
+        box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Answer Debug Info</h4><pre class="json"></pre><div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button id="reason-copy" class="send" style="padding:6px 10px">Copy log</button></div>`;
+        const pre = box.querySelector('pre.json');
+        pre.textContent = JSON.stringify(payload, null, 2);
+        document.body.appendChild(box);
+        const closeBtn = box.querySelector('.close');
+        const copyBtn = box.querySelector('#reason-copy');
+        closeBtn.addEventListener('click', ()=>box.remove());
+        copyBtn.addEventListener('click', ()=>navigator.clipboard.writeText(pre.textContent).then(()=>copyBtn.textContent='Copied!'));
+      });
+    }
+  }, 100);
 
   // Add feedback buttons
   const feedbackContainer = document.createElement('div');

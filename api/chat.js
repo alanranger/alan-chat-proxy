@@ -1727,7 +1727,44 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   
   // COMPREHENSIVE FOLLOW-UP PATTERNS FROM 20-QUESTION DATASET
   
-  // Online courses patterns
+  // Course-specific follow-up patterns (NEW - for the specific clarification options)
+  if (lc.includes("online courses (free and paid)") || lc === "online courses (free and paid)") {
+    console.log(`✅ Matched exact online courses pattern for: "${query}"`);
+    return {
+      type: "route_to_events",
+      newQuery: "online photography courses",
+      newIntent: "events"
+    };
+  }
+  
+  if (lc.includes("in-person courses in coventry") || lc === "in-person courses in coventry") {
+    console.log(`✅ Matched in-person courses pattern for: "${query}"`);
+    return {
+      type: "route_to_events",
+      newQuery: "photography courses Coventry",
+      newIntent: "events"
+    };
+  }
+  
+  if (lc.includes("specific topic courses") || lc === "specific topic courses") {
+    console.log(`✅ Matched specific topic courses pattern for: "${query}"`);
+    return {
+      type: "route_to_events",
+      newQuery: "specialized photography courses",
+      newIntent: "events"
+    };
+  }
+  
+  if (lc.includes("beginner courses") || lc === "beginner courses") {
+    console.log(`✅ Matched beginner courses pattern for: "${query}"`);
+    return {
+      type: "route_to_events",
+      newQuery: "beginner photography courses",
+      newIntent: "events"
+    };
+  }
+
+  // Online courses patterns (legacy)
   if (lc.includes("online") || lc.includes("can't get to coventry")) {
     return {
       type: "route_to_advice",
