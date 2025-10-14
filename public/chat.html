@@ -73,6 +73,13 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .answer code{background:#1a2332;color:#e2e8f0;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:0.9em}
 .answer em{font-style:italic;color:#cbd5e1}
 .answer strong{font-weight:600;color:#f1f5f9}
+
+/* Clarification options */
+.clarification-options{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.clarification-option{background:var(--brand);color:#0b0f16;border:none;border-radius:8px;padding:12px 16px;font-size:14px;font-weight:600;cursor:pointer;text-align:left;transition:all 0.2s ease;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+.clarification-option:hover{background:#f57c00;transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,0.15)}
+.clarification-option:active{transform:translateY(0);box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+
 .meta{color:var(--muted);font-size:14px}
 .kvline{margin:0}
 .kvline strong{font-weight:600}
@@ -1592,6 +1599,41 @@ window.addEventListener('touchstart', unlockAudio, { once:false, passive:true })
 
 /* Full render */
 let __lastQuery = '';
+
+function renderClarification(data) {
+  // Create clarification bubble with question and options
+  const clarificationHtml = `
+    <div class="answer">
+      <p><strong>${escapeHTML(data.question)}</strong></p>
+      <div class="clarification-options">
+        ${data.options.map(option => `
+          <button class="clarification-option" data-query="${escapeHTML(option.query)}">
+            ${escapeHTML(option.text)}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  
+  addBubble(clarificationHtml);
+  
+  // Add event listeners to clarification options
+  const options = document.querySelectorAll('.clarification-option');
+  options.forEach(option => {
+    option.addEventListener('click', () => {
+      const query = option.getAttribute('data-query');
+      if (query) {
+        // Add user's choice as a message
+        addUserBubble(option.textContent);
+        // Send the clarified query
+        sendQuery(query);
+      }
+    });
+  });
+  
+  playChime();
+}
+
 function renderAnswer(payload){
   try { if (dbgSrvVer) dbgSrvVer.textContent = payload?.debug?.version || '–'; } catch {}
   
@@ -1975,7 +2017,12 @@ async function sendQuery(query){
     setDebugJSON(dbgRes, data); setDebugJSON(dbgProv, { citations: data.citations || [] });
 
     closeTyping();
-    if (data && data.ok && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
+    
+    // Handle clarification responses
+    if (data && data.ok && data.type === "clarification") {
+      renderClarification(data);
+      gaTrack('clarification_rendered', { ms: Math.round(performance.now()-t0) });
+    } else if (data && data.ok && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
       renderAnswer(data);
       gaTrack('answer_rendered', { ms: Math.round(performance.now()-t0), confidence_pct: Math.round((data.confidence||0)*100) });
     } else if (data && !data.ok) {
