@@ -3374,7 +3374,7 @@ export default async function handler(req, res) {
             products: product ? 1 : 0,
             articles: 0
           },
-          ...debugInfo,
+          followUpCheck: debugInfo.followUpCheck,
           productPanel: productPanel,
           productDescription: product ? product.description : null
         },
