@@ -2146,15 +2146,16 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     };
   }
   
+  // REMOVED: This catch-all pattern was overriding clarification routing
   // Simple test pattern - any query containing "online" should route to events
-  if (lc.includes("online")) {
-    console.log(`✅ Matched simple online pattern for: "${query}"`);
-    return {
-      type: "route_to_events",
-      newQuery: "online photography courses",
-      newIntent: "events"
-    };
-  }
+  // if (lc.includes("online")) {
+  //   console.log(`✅ Matched simple online pattern for: "${query}"`);
+  //   return {
+  //     type: "route_to_events",
+  //     newQuery: "online photography courses",
+  //     newIntent: "events"
+  //   };
+  // }
   
   // Catch-all for any course-related follow-up that wasn't caught above
   if (lc.includes("courses") && (lc.includes("online") || lc.includes("in-person") || lc.includes("beginner") || lc.includes("specific") || lc.includes("free") || lc.includes("paid"))) {
