@@ -2076,6 +2076,16 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     };
   }
   
+  // Simple test pattern - any query containing "online" should route to events
+  if (lc.includes("online")) {
+    console.log(`✅ Matched simple online pattern for: "${query}"`);
+    return {
+      type: "route_to_events",
+      newQuery: "online photography courses",
+      newIntent: "events"
+    };
+  }
+  
   // Catch-all for any course-related follow-up that wasn't caught above
   if (lc.includes("courses") && (lc.includes("online") || lc.includes("in-person") || lc.includes("beginner") || lc.includes("specific") || lc.includes("free") || lc.includes("paid"))) {
     console.log(`✅ Matched catch-all courses pattern for: "${query}"`);
@@ -3441,14 +3451,15 @@ export default async function handler(req, res) {
       query.toLowerCase().includes("mentoring") ||
       query.toLowerCase().includes("about")
     );
-    console.log(`🔍 isClarificationResponse check:`, {
+    const debugInfo = {
       query: query,
       previousQuery: previousQuery,
       hasPreviousQuery: !!previousQuery,
       queryLower: query.toLowerCase(),
       containsCourse: query.toLowerCase().includes("course"),
       isClarificationResponse: isClarificationResponse
-    });
+    };
+    console.log(`🔍 isClarificationResponse check:`, debugInfo);
     const followUpResult = isClarificationResponse ? handleClarificationFollowUp(query, previousQuery, intent) : null;
     console.log(`🔍 isClarificationResponse: ${isClarificationResponse} for query: "${query}"`);
     console.log(`🔍 followUpResult:`, followUpResult);
