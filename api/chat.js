@@ -1423,6 +1423,7 @@ function generateClarificationQuestion(query) {
  */
 function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   const lc = query.toLowerCase();
+  console.log(`🔍 handleClarificationFollowUp: query="${query}", originalQuery="${originalQuery}", originalIntent="${originalIntent}"`);
   
   // Current patterns (keep existing for backward compatibility)
   if (lc.includes("equipment for photography course")) {
@@ -3100,9 +3101,10 @@ export default async function handler(req, res) {
       : extractKeywords(query || "");
 
     // NEW: Handle clarification follow-up responses
-    if (previousQuery && handleClarificationFollowUp(query, previousQuery, intent)) {
-      const followUpResult = handleClarificationFollowUp(query, previousQuery, intent);
-      if (followUpResult) {
+    console.log(`🔍 Checking follow-up: query="${query}", previousQuery="${previousQuery}", intent="${intent}"`);
+    const followUpResult = previousQuery ? handleClarificationFollowUp(query, previousQuery, intent) : null;
+    console.log(`🔍 Follow-up result:`, followUpResult);
+    if (followUpResult) {
         console.log(`🔄 Clarification follow-up: "${query}" → ${followUpResult.newIntent}`);
         
         // Update query and intent based on user's clarification choice
