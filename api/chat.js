@@ -1043,7 +1043,7 @@ function hasLogicalConfidence(query, intent, content) {
     if (lc.includes("landscape") || lc.includes("portrait") || lc.includes("macro") || 
         lc.includes("street") || lc.includes("beginner") || lc.includes("advanced") || 
         lc.includes("rps") || lc.includes("lightroom") || lc.includes("online") || 
-        lc.includes("private")) {
+        lc.includes("private") || lc.includes("camera course") || lc.includes("editing course")) {
       return true; // Has specific context
     }
     return false; // Too vague - needs clarification
@@ -1461,6 +1461,21 @@ function generateClarificationQuestion(query) {
     };
   }
   
+  // Equipment for course type clarification
+  if (lc.includes("equipment for photography course type clarification")) {
+    return {
+      type: "equipment_course_type_clarification",
+      question: "Perfect! For equipment recommendations, I need to know what type of photography course you're planning. What interests you most?",
+      options: [
+        { text: "Beginners camera course", query: "equipment for beginners camera course" },
+        { text: "Lightroom editing course", query: "equipment for lightroom course" },
+        { text: "RPS mentoring course", query: "equipment for rps course" },
+        { text: "Online photography course", query: "equipment for online course" },
+        { text: "General course equipment advice", query: "general photography course equipment" }
+      ]
+    };
+  }
+
   // Course/workshop type clarification (for equipment queries)
   if (lc.includes("photography course workshop type clarification")) {
     return {
@@ -1504,9 +1519,9 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   // Current patterns (keep existing for backward compatibility)
   if (lc.includes("equipment for photography course")) {
     return {
-      type: "route_to_events",
-      newQuery: "equipment for photography course",
-      newIntent: "events"
+      type: "route_to_clarification",
+      newQuery: "equipment for photography course type clarification",
+      newIntent: "clarification"
     };
   } else if (lc.includes("photography courses")) {
     return {
@@ -1563,6 +1578,47 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
       type: "route_to_clarification",
       newQuery: "photography course workshop type clarification",
       newIntent: "clarification"
+    };
+  }
+
+  // Equipment for specific course types - these should be confident enough
+  if (lc.includes("equipment for beginners camera course")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "equipment for beginners camera course",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("equipment for lightroom course")) {
+    return {
+      type: "route_to_advice", 
+      newQuery: "equipment for lightroom course",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("equipment for rps course")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "equipment for rps course", 
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("equipment for online course")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "equipment for online course",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("general photography course equipment")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "general photography course equipment",
+      newIntent: "advice"
     };
   }
   
