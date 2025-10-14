@@ -3364,8 +3364,17 @@ export default async function handler(req, res) {
       ? extractKeywords((isFollowUp && !hasSignificantTopic ? contextualQuery : query) || "")
       : extractKeywords(query || "");
 
-    // NEW: Handle clarification follow-up responses
-    const followUpResult = previousQuery ? handleClarificationFollowUp(query, previousQuery, intent) : null;
+    // NEW: Handle clarification follow-up responses (only if query looks like a clarification response)
+    const isClarificationResponse = previousQuery && (
+      query.toLowerCase().includes("photography") || 
+      query.toLowerCase().includes("equipment") ||
+      query.toLowerCase().includes("course") ||
+      query.toLowerCase().includes("service") ||
+      query.toLowerCase().includes("advice") ||
+      query.toLowerCase().includes("mentoring") ||
+      query.toLowerCase().includes("about")
+    );
+    const followUpResult = isClarificationResponse ? handleClarificationFollowUp(query, previousQuery, intent) : null;
     if (followUpResult) {
       console.log(`🔄 Clarification follow-up: "${query}" → ${followUpResult.newIntent}`);
         
