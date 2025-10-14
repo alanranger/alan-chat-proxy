@@ -1034,6 +1034,7 @@ function detectIntent(q) {
  * 100% detection rate for all ambiguous query types
  */
 function needsClarification(query) {
+  console.log(`🔍 needsClarification called with: "${query}"`);
   if (!query) return false;
   
   const lc = query.toLowerCase();
