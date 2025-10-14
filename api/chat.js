@@ -2030,6 +2030,39 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     };
   }
   
+  // Course-specific follow-up patterns
+  if (lc.includes("beginner courses") || lc.includes("beginner photography courses")) {
+    return {
+      type: "route_to_events",
+      newQuery: "beginner photography courses",
+      newIntent: "events"
+    };
+  }
+  
+  if (lc.includes("in-person courses") || lc.includes("coventry") || lc.includes("photography courses coventry")) {
+    return {
+      type: "route_to_events", 
+      newQuery: "photography courses Coventry",
+      newIntent: "events"
+    };
+  }
+  
+  if (lc.includes("online courses") || lc.includes("free and paid") || lc.includes("online photography courses")) {
+    return {
+      type: "route_to_events",
+      newQuery: "online photography courses", 
+      newIntent: "events"
+    };
+  }
+  
+  if (lc.includes("specific topic courses") || lc.includes("specialized photography courses")) {
+    return {
+      type: "route_to_events",
+      newQuery: "specialized photography courses",
+      newIntent: "events"
+    };
+  }
+  
   // CONTENT-BASED FALLBACK: If no specific pattern matches, route to advice intent
   console.log(`✅ No specific follow-up pattern matched for: "${query}" - routing to advice`);
   return {
