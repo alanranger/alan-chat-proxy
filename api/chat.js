@@ -1323,6 +1323,24 @@ function generateClarificationQuestion(query) {
     };
   }
   
+  // Service-related queries (feedback, mentoring, private lessons, etc.)
+  if (lc.includes("feedback") || lc.includes("personalised") || lc.includes("mentoring") || 
+      lc.includes("private") || lc.includes("lessons") || lc.includes("services")) {
+    console.log(`✅ Found service-related pattern - returning clarification question`);
+    return {
+      type: "service_clarification",
+      question: "I'd be happy to help with photography services! What type of service are you looking for?",
+      options: [
+        { text: "Private photography lessons", query: "private photography lessons" },
+        { text: "Photography mentoring", query: "photography mentoring" },
+        { text: "RPS mentoring course", query: "RPS mentoring course" },
+        { text: "Image feedback and critique", query: "photography image feedback" },
+        { text: "General photography services", query: "photography services" }
+      ],
+      confidence: 10
+    };
+  }
+  
   // EXPANDED PATTERNS FOR ALL 20 QUESTION TYPES
   
   // Generic course/workshop questions
@@ -1675,6 +1693,27 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     return {
       type: "route_to_advice",
       newQuery: "photography mentoring",
+      newIntent: "advice"
+    };
+  }
+  
+  // Service-related follow-up patterns
+  else if (lc.includes("private photography lessons")) {
+    return {
+      type: "route_to_events",
+      newQuery: "private photography lessons",
+      newIntent: "events"
+    };
+  } else if (lc.includes("photography image feedback") || lc.includes("image feedback")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "photography image feedback",
+      newIntent: "advice"
+    };
+  } else if (lc.includes("photography services")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "photography services",
       newIntent: "advice"
     };
   }
