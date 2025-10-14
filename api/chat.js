@@ -2096,12 +2096,12 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     };
   }
   
-  // CONTENT-BASED FALLBACK: If no specific pattern matches, route to advice intent
-  console.log(`✅ No specific follow-up pattern matched for: "${query}" - routing to advice`);
+  // ULTIMATE FALLBACK - if we get here, something is wrong
+  console.log(`❌ NO PATTERN MATCHED for: "${query}" (${lc})`);
   return {
-    type: "route_to_advice",
+    type: "route_to_events",
     newQuery: query,
-    newIntent: "advice"
+    newIntent: "events"
   };
 }
 
