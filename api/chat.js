@@ -1046,6 +1046,13 @@ function hasLogicalConfidence(query, intent, content) {
         lc.includes("private") || lc.includes("camera course") || lc.includes("editing course")) {
       return true; // Has specific context
     }
+    
+    // Special case: General equipment advice queries should be confident
+    if (lc.includes("equipment") && (lc.includes("advice") || lc.includes("recommendations") || 
+        lc.includes("guide") || lc.includes("help"))) {
+      return true; // General equipment advice is specific enough
+    }
+    
     return false; // Too vague - needs clarification
   }
   
@@ -1082,6 +1089,13 @@ function hasLogicalConfidence(query, intent, content) {
       return true; // Has specific context
     }
     return false; // Too vague - needs clarification
+  }
+  
+  // Camera/lens recommendation queries should be confident
+  if (intent === "advice" && (lc.includes("camera") || lc.includes("lens")) && 
+      (lc.includes("recommendations") || lc.includes("recommend") || lc.includes("best") || 
+       lc.includes("should i buy") || lc.includes("which"))) {
+    return true; // Camera/lens recommendations are specific enough
   }
   
   // Default: if we have content, assume we're confident
