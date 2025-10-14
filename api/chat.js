@@ -1163,8 +1163,26 @@ function generateClarificationQuestion(query) {
   const lc = query.toLowerCase();
   console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
   
+  // Equipment for course type clarification - MUST come before general equipment pattern
+  if (lc.includes("equipment for photography course type clarification")) {
+    console.log(`✅ Found equipment course type clarification pattern`);
+    return {
+      type: "equipment_course_type_clarification",
+      question: "Perfect! For equipment recommendations, I need to know what type of photography course you're planning. What interests you most?",
+      options: [
+        { text: "Beginners camera course", query: "equipment for beginners camera course" },
+        { text: "Lightroom editing course", query: "equipment for lightroom course" },
+        { text: "RPS mentoring course", query: "equipment for rps course" },
+        { text: "Online photography course", query: "equipment for online course" },
+        { text: "General course equipment advice", query: "general photography course equipment" }
+      ],
+      confidence: 30
+    };
+  }
+  
   // Current patterns (keep existing for backward compatibility)
   if (lc.includes("equipment")) {
+    console.log(`✅ Found general equipment pattern - returning 10% confidence question`);
     return {
       type: "equipment_clarification",
       question: "I'd be happy to help with equipment recommendations! Could you be more specific about what type of photography you're interested in?",
@@ -1463,22 +1481,6 @@ function generateClarificationQuestion(query) {
     };
   }
   
-  // Equipment for course type clarification
-  if (lc.includes("equipment for photography course type clarification")) {
-    console.log(`✅ Found equipment course type clarification pattern`);
-    return {
-      type: "equipment_course_type_clarification",
-      question: "Perfect! For equipment recommendations, I need to know what type of photography course you're planning. What interests you most?",
-      options: [
-        { text: "Beginners camera course", query: "equipment for beginners camera course" },
-        { text: "Lightroom editing course", query: "equipment for lightroom course" },
-        { text: "RPS mentoring course", query: "equipment for rps course" },
-        { text: "Online photography course", query: "equipment for online course" },
-        { text: "General course equipment advice", query: "general photography course equipment" }
-      ],
-      confidence: 30
-    };
-  }
 
   // Course/workshop type clarification (for equipment queries)
   if (lc.includes("photography course workshop type clarification")) {
