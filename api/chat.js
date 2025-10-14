@@ -3060,7 +3060,8 @@ export default async function handler(req, res) {
     const intent = detectIntent(query || ""); // Use current query only for intent detection
     
     // NEW: Interactive Clarification System (runs first, before existing logic)
-    if (needsClarification(query)) {
+    const clarificationCheck = needsClarification(query);
+    if (clarificationCheck) {
       const clarification = generateClarificationQuestion(query);
       if (clarification) {
         console.log(`🤔 Clarification needed for query: "${query}"`);
@@ -3362,7 +3363,10 @@ export default async function handler(req, res) {
             articles: 0
           },
           productPanel: productPanel,
-          productDescription: product ? product.description : null
+          productDescription: product ? product.description : null,
+          clarificationCheck: clarificationCheck,
+          clarificationTriggered: false,
+          clarificationReason: clarificationCheck ? "Query matched clarification patterns but no clarification was generated" : "Query did not match clarification patterns"
         },
         meta: {
           duration_ms: Date.now() - started,
@@ -4043,6 +4047,9 @@ export default async function handler(req, res) {
             articles: articles?.length || 0,
             contentChunks: contentChunks?.length || 0,
           },
+          clarificationCheck: clarificationCheck,
+          clarificationTriggered: false,
+          clarificationReason: clarificationCheck ? "Query matched clarification patterns but no clarification was generated" : "Query did not match clarification patterns",
         debugInfo: debugInfo,
         },
       meta: {
