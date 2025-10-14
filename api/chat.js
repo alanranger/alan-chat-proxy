@@ -1094,6 +1094,11 @@ function hasContentBasedConfidence(query, intent, content) {
     return false; // This is a clarification question, not a confident query
   }
   
+  // Force clarification for overly broad course queries
+  if (lc === "do you do courses" || lc === "do you offer courses" || lc === "what courses do you offer") {
+    return false; // Too broad - needs clarification to narrow down course type
+  }
+  
   // Extract content metrics (handle different content types)
   const articleCount = content.articles?.length || 0;
   const eventCount = content.events?.length || 0;
