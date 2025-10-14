@@ -1058,7 +1058,7 @@ function hasLogicalConfidence(query, intent, content) {
   }
   
   // Service queries need specific service type
-  if (intent === "advice" && lc.includes("service")) {
+  if (intent === "advice" && (lc.includes("service") || lc.includes("offer") || lc.includes("provide"))) {
     // Must have specific service context
     if (lc.includes("private") || lc.includes("lesson") || lc.includes("mentoring") || 
         lc.includes("online") || lc.includes("1-2-1")) {
