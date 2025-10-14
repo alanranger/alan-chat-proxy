@@ -1638,6 +1638,22 @@ function generateClarificationQuestion(query) {
     };
   }
   
+  // Specific clarification for "online courses (free and paid)" follow-up
+  if (lc.includes("online photography courses (free and paid) clarification")) {
+    return {
+      type: "free_vs_paid_clarification",
+      question: "I see you're interested in online courses. Are you looking for free online content or paid beginner courses?",
+      options: [
+        { text: "Free online photography course", query: "free online photography course" },
+        { text: "Online private lessons", query: "online private photography lessons" },
+        { text: "Beginners camera course", query: "beginners camera course" },
+        { text: "Beginners Lightroom course", query: "beginners lightroom course" },
+        { text: "RPS mentoring course", query: "rps mentoring course" }
+      ],
+      confidence: 30
+    };
+  }
+  
   // CONTENT-BASED FALLBACK: If no specific pattern matches, use generic clarification
   console.log(`✅ No specific pattern matched for: "${query}" - using generic clarification`);
   return {
@@ -1743,9 +1759,9 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   if (lc.includes("online courses (free and paid)") || lc === "online courses (free and paid)") {
     console.log(`✅ Matched exact online courses pattern for: "${query}"`);
     return {
-      type: "route_to_events",
-      newQuery: "online photography courses",
-      newIntent: "events"
+      type: "route_to_clarification",
+      newQuery: "online photography courses (free and paid) clarification",
+      newIntent: "clarification"
     };
   }
   
@@ -2103,12 +2119,12 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   }
   
   if (lc.includes("online courses") || lc.includes("free and paid") || lc.includes("online photography courses") || 
-      lc.includes("online courses (free and paid)") || lc.includes("online courses (free") || lc.includes("free and paid)")) {
+      lc.includes("online courses (free") || lc.includes("free and paid)")) {
     console.log(`✅ Matched online courses pattern for: "${query}"`);
     return {
-      type: "route_to_events",
-      newQuery: "online photography courses", 
-      newIntent: "events"
+      type: "route_to_clarification",
+      newQuery: "online photography courses (free and paid) clarification", 
+      newIntent: "clarification"
     };
   }
   
@@ -2124,9 +2140,9 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   if (lc.includes("online courses (free and paid)") || lc === "online courses (free and paid)") {
     console.log(`✅ Matched exact online courses pattern for: "${query}"`);
     return {
-      type: "route_to_events",
-      newQuery: "online photography courses",
-      newIntent: "events"
+      type: "route_to_clarification",
+      newQuery: "online photography courses (free and paid) clarification",
+      newIntent: "clarification"
     };
   }
   
