@@ -1039,9 +1039,11 @@ function hasLogicalConfidence(query, intent, content) {
   
   // Equipment queries need specific activity type
   if (intent === "equipment" || lc.includes("equipment")) {
-    // Must have specific activity context
-    if (lc.includes("course") || lc.includes("workshop") || lc.includes("landscape") || 
-        lc.includes("portrait") || lc.includes("macro") || lc.includes("street")) {
+    // Must have specific activity context (not just "course" or "workshop")
+    if (lc.includes("landscape") || lc.includes("portrait") || lc.includes("macro") || 
+        lc.includes("street") || lc.includes("beginner") || lc.includes("advanced") || 
+        lc.includes("rps") || lc.includes("lightroom") || lc.includes("online") || 
+        lc.includes("private")) {
       return true; // Has specific context
     }
     return false; // Too vague - needs clarification
