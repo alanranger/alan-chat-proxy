@@ -734,6 +734,11 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     }
   }
   
+  // Course-specific equipment advice - PRIORITY for course equipment queries
+  if (lc.includes("equipment") && (lc.includes("course") || lc.includes("class") || lc.includes("lesson"))) {
+    return `For Alan's photography courses, you'll need a digital camera with manual exposure modes (DSLR or mirrorless). Don't worry if you don't have expensive gear - even a smartphone can work for learning the fundamentals! The course focuses on understanding composition, lighting, and technique rather than having the latest equipment. Alan will provide a course book covering all topics.\n\n`;
+  }
+  
   // Enhanced Equipment Advice - Check if this is an equipment recommendation query
   if (isEquipmentAdviceQuery(lc)) {
     return generateEquipmentAdviceResponse(lc, articles, contentChunks);
