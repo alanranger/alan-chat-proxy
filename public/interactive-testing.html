@@ -63,6 +63,13 @@
         .response-field.full-width {
             grid-column: 1 / -1;
         }
+
+        .response-field small {
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+            font-style: italic;
+        }
         textarea {
             width: 100%;
             min-height: 80px;
@@ -170,9 +177,10 @@
                         <option value="mixed">mixed</option>
                     </select>
                 </div>
-                <div class="response-field">
-                    <label for="expected-url">Expected URL/Page:</label>
-                    <input type="text" id="expected-url" placeholder="e.g., /courses/landscape-photography or /workshops/bluebell-2024">
+                <div class="response-field full-width">
+                    <label for="expected-urls">Expected URLs/Pages (one per line):</label>
+                    <textarea id="expected-urls" placeholder="e.g., /courses/landscape-photography&#10;/workshops/bluebell-2024&#10;/private-lessons" rows="4"></textarea>
+                    <small>Enter each URL on a separate line. These will become the links/pills in the chatbot response.</small>
                 </div>
                 <div class="response-field">
                     <label for="expected-response">Expected Response Type:</label>
@@ -405,13 +413,18 @@
         function submitBusinessResponse() {
             const expectedIntent = document.getElementById('expected-intent').value;
             const expectedKind = document.getElementById('expected-kind').value;
-            const expectedUrl = document.getElementById('expected-url').value.trim();
+            const expectedUrlsText = document.getElementById('expected-urls').value.trim();
             const expectedResponse = document.getElementById('expected-response').value.trim();
 
-            if (!expectedUrl || !expectedResponse) {
-                alert('Please fill in the Expected URL and Expected Response fields');
+            if (!expectedUrlsText || !expectedResponse) {
+                alert('Please fill in the Expected URLs and Expected Response fields');
                 return;
             }
+
+            // Parse URLs from textarea (one per line)
+            const expectedUrls = expectedUrlsText.split('\n')
+                .map(url => url.trim())
+                .filter(url => url.length > 0);
 
             const question = testQuestions[currentQuestionIndex];
             const result = {
@@ -423,7 +436,7 @@
                 businessOwnerResponse: {
                     expectedIntent: expectedIntent,
                     expectedKind: expectedKind,
-                    expectedUrl: expectedUrl,
+                    expectedUrls: expectedUrls,
                     expectedResponse: expectedResponse
                 },
                 originalExpectedIntent: question.expectedIntent,
@@ -436,13 +449,16 @@
             
             // Mark question as completed
             const container = document.getElementById('question-container');
+            const urlsList = expectedUrls.map(url => `<li>${url}</li>`).join('');
             container.innerHTML = `
                 <div class="question completed-question">
                     <h3>✅ Question ${question.id}: ${question.category} - COMPLETED</h3>
                     <p><strong>User asked:</strong> "${question.userQuestion}"</p>
                     <p><strong>Chatbot responded:</strong> "${question.chatbotResponse}"</p>
                     <p><strong>User follow-up:</strong> "${window.currentUserResponse}"</p>
-                    <p><strong>Business expects:</strong> Intent: ${expectedIntent}, Kind: ${expectedKind}, URL: ${expectedUrl}</p>
+                    <p><strong>Business expects:</strong> Intent: ${expectedIntent}, Kind: ${expectedKind}</p>
+                    <p><strong>Expected URLs (${expectedUrls.length}):</strong></p>
+                    <ul>${urlsList}</ul>
                     <p><strong>Expected response:</strong> ${expectedResponse}</p>
                 </div>
             `;
@@ -454,7 +470,7 @@
             document.querySelector('button[onclick="submitResponse()"]').disabled = false;
             document.getElementById('expected-intent').value = 'advice';
             document.getElementById('expected-kind').value = 'article';
-            document.getElementById('expected-url').value = '';
+            document.getElementById('expected-urls').value = '';
             document.getElementById('expected-response').value = '';
 
             currentQuestionIndex++;
