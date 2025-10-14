@@ -9,7 +9,7 @@
   "scripts": {
     "build": "echo \"no build step\"",
     "start": "vercel dev",
-    "dev": "vercel dev --yes --listen 3000",
+    "dev": "vercel dev --port 3000",
     "call:fn": "node call-fn.cjs"
   },
   "dependencies": {
