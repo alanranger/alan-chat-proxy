@@ -1617,22 +1617,51 @@ function renderClarification(data) {
   
   addBubble(clarificationHtml);
   
-  // Add event listeners to clarification options
-  const options = document.querySelectorAll('.clarification-option');
-  options.forEach(option => {
-    option.addEventListener('click', () => {
-      const query = option.getAttribute('data-query');
-      if (query) {
-        // Add user's choice as a message
-        addUserBubble(option.textContent);
-        // Send the clarified query
-        sendQuery(query);
-      }
+  // Add event listeners to clarification options with a small delay to ensure DOM is ready
+  setTimeout(() => {
+    const options = document.querySelectorAll('.clarification-option');
+    console.log('Found clarification options:', options.length);
+    
+    options.forEach((option, index) => {
+      console.log(`Adding listener to option ${index}:`, option.textContent);
+      option.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const query = option.getAttribute('data-query');
+        console.log('Clarification option clicked:', option.textContent, 'Query:', query);
+        
+        if (query) {
+          // Add user's choice as a message
+          addUserBubble(option.textContent);
+          // Send the clarified query
+          sendQuery(query);
+        }
+      });
     });
-  });
+  }, 100);
   
   playChime();
 }
+
+// Add event delegation for clarification options as a fallback
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('clarification-option')) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const option = e.target;
+    const query = option.getAttribute('data-query');
+    console.log('Clarification option clicked (delegation):', option.textContent, 'Query:', query);
+    
+    if (query) {
+      // Add user's choice as a message
+      addUserBubble(option.textContent);
+      // Send the clarified query
+      sendQuery(query);
+    }
+  }
+});
 
 function renderAnswer(payload){
   try { if (dbgSrvVer) dbgSrvVer.textContent = payload?.debug?.version || '–'; } catch {}
@@ -2020,6 +2049,7 @@ async function sendQuery(query){
     
     // Handle clarification responses
     if (data && data.ok && data.type === "clarification") {
+      console.log('Received clarification response:', data);
       renderClarification(data);
       gaTrack('clarification_rendered', { ms: Math.round(performance.now()-t0) });
     } else if (data && data.ok && (data.answer_markdown || data.answer || (data.structured && (data.structured.products?.length || data.structured.events?.length || data.structured.articles?.length)))) {
