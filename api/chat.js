@@ -3575,6 +3575,13 @@ export default async function handler(req, res) {
             type: "events",
             answer: answerMarkdown,
             events: eventList,
+            structured: {
+              intent: "events",
+              topic: newKeywords.join(", "),
+              events: eventList,
+              products: [],
+              pills: []
+            },
             confidence: calculateEventConfidence(newQuery, eventList, null),
             debug: { version: "v1.2.37-logical-confidence", clarified: true, logicalConfidence: true }
           });
