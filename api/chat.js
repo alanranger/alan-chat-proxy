@@ -4410,6 +4410,15 @@ export default async function handler(req, res) {
 
     // LOGICAL CONFIDENCE CHECK: Do we have enough context to provide a confident answer?
     const hasConfidence = hasContentBasedConfidence(query, "advice", { events, products, articles: contentChunks, services, landing });
+    console.log(`🔍 DEBUG: Main advice confidence check for "${query}":`, {
+      eventCount: events?.length || 0,
+      productCount: products?.length || 0,
+      articleCount: contentChunks?.length || 0,
+      serviceCount: services?.length || 0,
+      landingCount: landing?.length || 0,
+      hasConfidence,
+      sampleContent: contentChunks?.slice(0, 2)?.map(c => c.chunk_text?.substring(0, 50)) || []
+    });
     if (!hasConfidence) {
       console.log(`🤔 Low logical confidence for advice query: "${query}" - triggering clarification`);
       const clarification = generateClarificationQuestion(query);
