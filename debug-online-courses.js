@@ -27,7 +27,9 @@ async function debugOnlineCourses() {
       })
     });
     
-    const data = await response.json();
+    const rawResponse = await response.text();
+    console.log(`Raw Response: ${rawResponse}`);
+    const data = JSON.parse(rawResponse);
     
     console.log(`Response Status: ${response.status}`);
     console.log(`Response Type: ${data.type}`);

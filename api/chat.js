@@ -3881,7 +3881,7 @@ export default async function handler(req, res) {
 
     // --------- ADVICE -----------
     // return article answers + upgraded pills
-    const debugInfo = []; // Initialize debug info array
+    const adviceDebugInfo = []; // Initialize debug info array
     
     // Get all relevant data types for comprehensive responses
     let articles = await findArticles(client, { keywords, limit: 30, pageContext });
@@ -4105,7 +4105,7 @@ export default async function handler(req, res) {
       return s;
     };
     if (Array.isArray(articles) && articles.length){
-      debugInfo.push(`🔧 Article Processing: Starting with ${articles.length} articles`);
+      adviceDebugInfo.push(`🔧 Article Processing: Starting with ${articles.length} articles`);
       
       // Remove duplicates by URL, preferring records with proper titles over "Alan Ranger Photography"
       const uniqueArticles = new Map();
@@ -4133,7 +4133,7 @@ export default async function handler(req, res) {
         }
       });
       
-      debugInfo.push(`🔧 Article Deduplication: ${articles.length} → ${uniqueArticles.size} unique articles`);
+      adviceDebugInfo.push(`🔧 Article Deduplication: ${articles.length} → ${uniqueArticles.size} unique articles`);
       
       articles = Array.from(uniqueArticles.values())
         .map(a=> ({ a, s: scoreArticle(a) }))
@@ -4596,7 +4596,7 @@ export default async function handler(req, res) {
           }) : null;
           const finalDate = extractedDate || fallbackDate;
           
-          debugInfo.push(`🔧 Date Extraction for ${a.title}: extracted="${extractedDate}", fallback="${fallbackDate}", final="${finalDate}"`);
+          adviceDebugInfo.push(`🔧 Date Extraction for ${a.title}: extracted="${extractedDate}", fallback="${fallbackDate}", final="${finalDate}"`);
           
           return {
             ...a,
@@ -4625,7 +4625,7 @@ export default async function handler(req, res) {
             hasSpecificTechnical: query ? (query.toLowerCase().includes("camera") || query.toLowerCase().includes("lens") || query.toLowerCase().includes("settings") || query.toLowerCase().includes("exposure") || query.toLowerCase().includes("focus") || query.toLowerCase().includes("composition")) : false,
             isAboutQuery: query ? (query.toLowerCase().includes("who") || query.toLowerCase().includes("about")) : false
           },
-        debugInfo: debugInfo,
+        debugInfo: adviceDebugInfo,
         },
       meta: {
         duration_ms: Date.now() - started,
