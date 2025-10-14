@@ -1574,8 +1574,8 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     };
   }
   
-  // FIXED: Photography course/workshop should trigger follow-up clarification
-  if (lc.includes("photography course/workshop") || lc.includes("equipment for photography course")) {
+  // FIXED: Photography course/workshop should trigger follow-up clarification (but not equipment queries)
+  if (lc.includes("photography course/workshop") && !lc.includes("equipment")) {
     return {
       type: "route_to_clarification",
       newQuery: "photography course workshop type clarification",

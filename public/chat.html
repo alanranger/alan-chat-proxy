@@ -1611,7 +1611,7 @@ function renderClarification(data) {
     <div class="answer">
       <div class="clarification-header">
         <p><strong>${escapeHTML(data.question)}</strong></p>
-        <span class="badge conf ${confidenceColor}">Confidence: ${confidence}%</span>
+        <span class="badge conf ${confidenceColor}" onclick="showDebugLog()" style="cursor: pointer;" title="Click to view debug log">Confidence: ${confidence}%</span>
       </div>
       <div class="clarification-options">
         ${data.options.map(option => `
