@@ -1029,6 +1029,64 @@ function detectIntent(q) {
 /* --------------------------- Interactive Clarification System --------------------------- */
 
 /**
+ * LOGICAL CONFIDENCE SYSTEM - Check if we have enough context to provide a confident answer
+ * Uses logical rules instead of broken numerical confidence scores
+ */
+function hasLogicalConfidence(query, intent, content) {
+  if (!query) return false;
+  
+  const lc = query.toLowerCase();
+  
+  // Equipment queries need specific activity type
+  if (intent === "equipment" || lc.includes("equipment")) {
+    // Must have specific activity context
+    if (lc.includes("course") || lc.includes("workshop") || lc.includes("landscape") || 
+        lc.includes("portrait") || lc.includes("macro") || lc.includes("street")) {
+      return true; // Has specific context
+    }
+    return false; // Too vague - needs clarification
+  }
+  
+  // Course queries need specific course type
+  if (intent === "events" && (lc.includes("course") || lc.includes("workshop"))) {
+    // Must have specific course/workshop type
+    if (lc.includes("beginner") || lc.includes("advanced") || lc.includes("rps") || 
+        lc.includes("lightroom") || lc.includes("online") || lc.includes("private")) {
+      return true; // Has specific context
+    }
+    return false; // Too vague - needs clarification
+  }
+  
+  // Service queries need specific service type
+  if (intent === "advice" && lc.includes("service")) {
+    // Must have specific service context
+    if (lc.includes("private") || lc.includes("lesson") || lc.includes("mentoring") || 
+        lc.includes("online") || lc.includes("1-2-1")) {
+      return true; // Has specific context
+    }
+    return false; // Too vague - needs clarification
+  }
+  
+  // About queries are usually specific enough
+  if (intent === "advice" && (lc.includes("who") || lc.includes("about"))) {
+    return true; // About queries are usually clear
+  }
+  
+  // Technical advice queries need specific topic
+  if (intent === "advice" && (lc.includes("how") || lc.includes("what") || lc.includes("why"))) {
+    // Must have specific technical context
+    if (lc.includes("camera") || lc.includes("lens") || lc.includes("settings") || 
+        lc.includes("exposure") || lc.includes("focus") || lc.includes("composition")) {
+      return true; // Has specific context
+    }
+    return false; // Too vague - needs clarification
+  }
+  
+  // Default: if we have content, assume we're confident
+  return content && (content.length > 0 || content.events?.length > 0 || content.articles?.length > 0);
+}
+
+/**
  * COMPLETE CLARIFICATION SYSTEM - PHASE 1: Detection
  * Detects queries that need clarification based on comprehensive 20-question analysis
  * 100% detection rate for all ambiguous query types
@@ -1106,11 +1164,11 @@ function generateClarificationQuestion(query) {
   if (lc.includes("equipment")) {
     return {
       type: "equipment_clarification",
-      question: "What type of photography activity are you planning? This will help me recommend the right equipment.",
+      question: "I'd be happy to help with equipment recommendations! Could you be more specific about what type of photography you're interested in?",
       options: [
-        { text: "Photography course/workshop", query: "equipment for photography course" },
-        { text: "General photography advice", query: "photography equipment advice" },
-        { text: "Specific camera/lens advice", query: "camera lens recommendations" }
+        { text: "Equipment for photography courses/workshops", query: "equipment for photography course" },
+        { text: "General photography equipment advice", query: "photography equipment advice" },
+        { text: "Specific camera/lens recommendations", query: "camera lens recommendations" }
       ]
     };
   }
@@ -3076,30 +3134,7 @@ export default async function handler(req, res) {
     
     const intent = detectIntent(query || ""); // Use current query only for intent detection
     
-    // NEW: Interactive Clarification System (runs first, before existing logic)
-    const clarificationCheck = needsClarification(query);
-    if (clarificationCheck) {
-      const clarification = generateClarificationQuestion(query);
-      if (clarification) {
-        console.log(`🤔 Clarification needed for query: "${query}"`);
-        
-        // Return clarification response
-        res.status(200).json({
-          ok: true,
-          type: "clarification",
-          question: clarification.question,
-          options: clarification.options,
-          original_query: query,
-          original_intent: intent,
-          meta: {
-            duration_ms: Date.now() - started,
-            endpoint: "/api/chat",
-            clarification_type: clarification.type
-          }
-        });
-        return;
-      }
-    }
+    // NOTE: Clarification check moved to after content retrieval for logical confidence
     
     // For events, only use previous context for follow-up style questions.
     const qlc = (query || "").toLowerCase();
@@ -3349,6 +3384,30 @@ export default async function handler(req, res) {
         ...((events || []).map(e => e.event_url)),
       ]).filter(Boolean);
 
+      // LOGICAL CONFIDENCE CHECK: Do we have enough context to provide a confident answer?
+      const hasConfidence = hasLogicalConfidence(query, "events", { events: eventList, products: product ? [product] : [] });
+      if (!hasConfidence) {
+        console.log(`🤔 Low logical confidence for events query: "${query}" - triggering clarification`);
+        const clarification = generateClarificationQuestion(query);
+        if (clarification) {
+          res.status(200).json({
+            ok: true,
+            type: "clarification",
+            question: clarification.question,
+            options: clarification.options,
+            original_query: query,
+            original_intent: "events",
+            meta: {
+              duration_ms: Date.now() - started,
+              endpoint: "/api/chat",
+              clarification_type: clarification.type,
+              logical_confidence: false
+            }
+          });
+          return;
+        }
+      }
+
       // Log the answer (async, don't wait for it)
       if (sessionId && query) {
         const responseTimeMs = Date.now() - started;
@@ -3371,7 +3430,7 @@ export default async function handler(req, res) {
         },
         confidence: calculateEventConfidence(query, events, product),
         debug: {
-          version: "v1.2.36-debug-response",
+          version: "v1.2.37-logical-confidence",
           intent: "events",
           keywords: keywords,
           counts: {
@@ -3381,16 +3440,13 @@ export default async function handler(req, res) {
           },
           productPanel: productPanel,
           productDescription: product ? product.description : null,
-          clarificationCheck: clarificationCheck,
-          clarificationTriggered: false,
-          clarificationReason: clarificationCheck ? "Query matched clarification patterns but no clarification was generated" : "Query did not match clarification patterns",
-          clarificationDebug: {
+          logicalConfidence: hasConfidence,
+          logicalConfidenceReason: hasConfidence ? "Query has enough specific context for confident response" : "Query lacks specific context - would trigger clarification",
+          logicalConfidenceDebug: {
             query: query,
             queryLowercase: query ? query.toLowerCase() : null,
-            hasEquipment: query ? query.toLowerCase().includes("equipment") : false,
-            hasCourse: query ? query.toLowerCase().includes("course") : false,
-            hasWorkshop: query ? query.toLowerCase().includes("workshop") : false,
-            equipmentPattern: query ? (query.toLowerCase().includes("equipment") && !query.toLowerCase().includes("course") && !query.toLowerCase().includes("workshop")) : false
+            hasSpecificActivity: query ? (query.toLowerCase().includes("course") || query.toLowerCase().includes("workshop") || query.toLowerCase().includes("landscape") || query.toLowerCase().includes("portrait") || query.toLowerCase().includes("macro") || query.toLowerCase().includes("street")) : false,
+            hasSpecificCourseType: query ? (query.toLowerCase().includes("beginner") || query.toLowerCase().includes("advanced") || query.toLowerCase().includes("rps") || query.toLowerCase().includes("lightroom") || query.toLowerCase().includes("online") || query.toLowerCase().includes("private")) : false
           }
         },
         meta: {
@@ -4023,6 +4079,30 @@ export default async function handler(req, res) {
     }
 
 
+    // LOGICAL CONFIDENCE CHECK: Do we have enough context to provide a confident answer?
+    const hasConfidence = hasLogicalConfidence(query, "advice", { events, products, articles: contentChunks, services, landing });
+    if (!hasConfidence) {
+      console.log(`🤔 Low logical confidence for advice query: "${query}" - triggering clarification`);
+      const clarification = generateClarificationQuestion(query);
+      if (clarification) {
+        res.status(200).json({
+          ok: true,
+          type: "clarification",
+          question: clarification.question,
+          options: clarification.options,
+          original_query: query,
+          original_intent: "advice",
+          meta: {
+            duration_ms: Date.now() - started,
+            endpoint: "/api/chat",
+            clarification_type: clarification.type,
+            logical_confidence: false
+          }
+        });
+        return;
+      }
+    }
+
     // Log the answer (async, don't wait for it)
     if (sessionId && query) {
       const responseTimeMs = Date.now() - started;
@@ -4063,7 +4143,7 @@ export default async function handler(req, res) {
       },
       confidence: confidence,
         debug: {
-        version: "v1.2.31-equipment-advice",
+        version: "v1.2.37-logical-confidence",
           intent: "advice",
           keywords: keywords,
       counts: {
@@ -4072,9 +4152,15 @@ export default async function handler(req, res) {
             articles: articles?.length || 0,
             contentChunks: contentChunks?.length || 0,
           },
-          clarificationCheck: clarificationCheck,
-          clarificationTriggered: false,
-          clarificationReason: clarificationCheck ? "Query matched clarification patterns but no clarification was generated" : "Query did not match clarification patterns",
+          logicalConfidence: hasConfidence,
+          logicalConfidenceReason: hasConfidence ? "Query has enough specific context for confident response" : "Query lacks specific context - would trigger clarification",
+          logicalConfidenceDebug: {
+            query: query,
+            queryLowercase: query ? query.toLowerCase() : null,
+            hasSpecificService: query ? (query.toLowerCase().includes("private") || query.toLowerCase().includes("lesson") || query.toLowerCase().includes("mentoring") || query.toLowerCase().includes("online") || query.toLowerCase().includes("1-2-1")) : false,
+            hasSpecificTechnical: query ? (query.toLowerCase().includes("camera") || query.toLowerCase().includes("lens") || query.toLowerCase().includes("settings") || query.toLowerCase().includes("exposure") || query.toLowerCase().includes("focus") || query.toLowerCase().includes("composition")) : false,
+            isAboutQuery: query ? (query.toLowerCase().includes("who") || query.toLowerCase().includes("about")) : false
+          },
         debugInfo: debugInfo,
         },
       meta: {
