@@ -3432,6 +3432,8 @@ export default async function handler(req, res) {
       query.toLowerCase().includes("about")
     );
     const followUpResult = isClarificationResponse ? handleClarificationFollowUp(query, previousQuery, intent) : null;
+    console.log(`🔍 isClarificationResponse: ${isClarificationResponse} for query: "${query}"`);
+    console.log(`🔍 followUpResult:`, followUpResult);
     if (followUpResult) {
       console.log(`🔄 Clarification follow-up: "${query}" → ${followUpResult.newIntent}`);
       console.log(`🔍 Follow-up result:`, followUpResult);
