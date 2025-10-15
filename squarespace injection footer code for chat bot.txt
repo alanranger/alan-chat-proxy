@@ -1,0 +1,7 @@
+<!-- Alan Ranger Assistant: embed launcher -->
+<script async src="https://alan-chat-proxy.vercel.app/embed.js"
+        data-chat-src="https://alan-chat-proxy.vercel.app/chat.html"
+        data-position="br"
+        data-color="#4CAF50"
+        data-size="680x860"
+        data-offset="24"></script>

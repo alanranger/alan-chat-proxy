@@ -487,12 +487,12 @@ function synthesizeEquipmentAdvice(equipmentType, considerations, relevantArticl
     response += `\n\n**For detailed reviews and specific recommendations, check out these guides:**\n`;
     relevantArticles.slice(0, 3).forEach(article => {
       response += `- [${article.title}](${article.page_url || article.url})\n`;
-    });
+      });
+    }
+    
+    return response;
   }
   
-  return response;
-}
-
 // Add specific advice based on equipment type
 function addSpecificAdvice(equipmentType, considerations) {
   const adviceMap = {
@@ -565,14 +565,14 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     // If no exact title match, fall back to URL match or any article with the term
     if (!relevantArticle) {
       relevantArticle = articles.find(article => {
-        const title = (article.title || "").toLowerCase();
-        const url = (article.page_url || article.url || "").toLowerCase();
-        const jsonLd = article.json_ld_data;
-        
+      const title = (article.title || "").toLowerCase();
+      const url = (article.page_url || article.url || "").toLowerCase();
+      const jsonLd = article.json_ld_data;
+      
         return title.includes(`${exactTerm}`) ||
-               url.includes(`what-is-${exactTerm.replace(/\s+/g, "-")}`) ||
-               (jsonLd && jsonLd.mainEntity && Array.isArray(jsonLd.mainEntity));
-      });
+             url.includes(`what-is-${exactTerm.replace(/\s+/g, "-")}`) ||
+             (jsonLd && jsonLd.mainEntity && Array.isArray(jsonLd.mainEntity));
+    });
     }
     
     if (relevantArticle) {
@@ -587,27 +587,27 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
       // PRIORITY 2: Fall back to JSON-LD FAQ data if no description
       if (relevantArticle.json_ld_data && relevantArticle.json_ld_data.mainEntity) {
         console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
+      
+      const faqItems = relevantArticle.json_ld_data.mainEntity;
+      const primaryQuestion = faqItems.find(item => {
+        const question = (item.name || "").toLowerCase();
+        return question.includes(exactTerm) && 
+               (question.includes("what does") || question.includes("what is"));
+      });
+      
+      if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
+        let answerText = primaryQuestion.acceptedAnswer.text;
         
-        const faqItems = relevantArticle.json_ld_data.mainEntity;
-        const primaryQuestion = faqItems.find(item => {
-          const question = (item.name || "").toLowerCase();
-          return question.includes(exactTerm) && 
-                 (question.includes("what does") || question.includes("what is"));
-        });
+        // Clean HTML tags from the answer
+        answerText = answerText.replace(/<[^>]*>/g, '').trim();
         
-        if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
-          let answerText = primaryQuestion.acceptedAnswer.text;
-          
-          // Clean HTML tags from the answer
-          answerText = answerText.replace(/<[^>]*>/g, '').trim();
-          
-          // Clean up any remaining artifacts
-          answerText = answerText.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, '');
-          answerText = answerText.replace(/\* Next lesson:.*?\*\*/g, '');
-          
-          if (answerText.length > 50) {
-            console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
-            return `**${answerText}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
+        // Clean up any remaining artifacts
+        answerText = answerText.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, '');
+        answerText = answerText.replace(/\* Next lesson:.*?\*\*/g, '');
+        
+        if (answerText.length > 50) {
+          console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
+          return `**${answerText}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
           }
         }
       }
@@ -2752,10 +2752,10 @@ async function findContentChunks(client, { keywords, limit = 5, articleUrls = []
 async function findLanding(client, { keywords, limit = 10 }) {
   // Return landing pages by keywords, newest first
   let q = client
-    .from("page_entities")
+      .from("page_entities")
     .select("*")
     .eq("kind", "landing")
-    .order("last_seen", { ascending: false })
+      .order("last_seen", { ascending: false })
     .limit(limit);
 
   const orExpr = anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
@@ -4871,10 +4871,10 @@ export default async function handler(req, res) {
       const isEventRelatedQuery = qlcAdvice.includes("workshop") || qlcAdvice.includes("course") || qlcAdvice.includes("class") || 
                                  qlcAdvice.includes("equipment") || qlcAdvice.includes("recommend") || qlcAdvice.includes("tripod") ||
                                  qlcAdvice.includes("camera") || qlcAdvice.includes("lens") || qlcAdvice.includes("gear");
-      
-      if (isEventRelatedQuery) {
-        events = await findEvents(client, { keywords, limit: 20, pageContext });
-        products = await findProducts(client, { keywords, limit: 20, pageContext });
+    
+    if (isEventRelatedQuery) {
+      events = await findEvents(client, { keywords, limit: 20, pageContext });
+      products = await findProducts(client, { keywords, limit: 20, pageContext });
       }
     }
     
@@ -5273,7 +5273,7 @@ export default async function handler(req, res) {
 
       // Equipment advice lane - synthesize evidence-based recommendations
       
-      // PRIORITY: Try to provide a direct answer based on JSON-LD FAQ data first
+        // PRIORITY: Try to provide a direct answer based on JSON-LD FAQ data first
       if (!hasEvidenceBasedAnswer) {
         const directAnswer = generateDirectAnswer(query, articles, contentChunks);
         if (directAnswer) {
@@ -5282,7 +5282,7 @@ export default async function handler(req, res) {
         }
       }
       
-      // Service FAQ deterministic lane
+        // Service FAQ deterministic lane
       if (!hasEvidenceBasedAnswer) {
         const serviceAnswer = generateServiceFAQAnswer(query, contentChunks, articles);
         if (serviceAnswer) {
