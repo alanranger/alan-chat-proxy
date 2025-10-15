@@ -1248,7 +1248,11 @@ function needsClarification(query) {
     lc.includes("what photography services do you offer")
   ];
   
-  const result = [...currentPatterns, ...expandedPatterns].some(pattern => pattern);
+  // Evaluate retrieval-first short-circuit: if query contains item-specific equipment
+  // keywords and not broad terms, avoid clarification here and let content decide.
+  const itemSpecific = ["tripod","lens","bag","memory card"].some(k => lc.includes(k));
+  const broadOnly = lc.includes("equipment") && !itemSpecific;
+  const result = broadOnly || [...currentPatterns, ...expandedPatterns].some(pattern => pattern);
   
   // DEBUG: Log final result for equipment queries
   if (lc.includes("equipment")) {
