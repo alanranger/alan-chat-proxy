@@ -3904,6 +3904,40 @@ export default async function handler(req, res) {
             });
             return;
           }
+          // Final fallback: search services and return helpful sources
+          const services = await findServices(client, { keywords: Array.from(new Set(["residential","workshop","bnb","accommodation",...directKeywords])), limit: 50, pageContext });
+          const serviceLinks = (services || [])
+            .map(s => s.page_url || s.source_url)
+            .filter(Boolean)
+            .slice(0, 5);
+          if (serviceLinks.length) {
+            const body = `Residential workshop pricing and whether B&B is included can vary by event. Please check the current details here:\n\n` + serviceLinks.map(u=>`- ${u}`).join("\n");
+            res.status(200).json({
+              ok: true,
+              type: "advice",
+              answer_markdown: `**Residential Workshop Pricing & B&B**\n\n${body}`,
+              structured: {
+                intent: "advice",
+                topic: enrichedKeywords.join(", "),
+                events: [],
+                products: [],
+                services: services,
+                landing: [],
+                articles: (articles || []).map(a => ({
+                  ...a,
+                  display_date: (function(){
+                    const extracted = extractPublishDate(a);
+                    const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+                    return extracted || fallback;
+                  })()
+                })),
+                pills: []
+              },
+              confidence: 60,
+              debug: { version: "v1.2.44-residential-service-fallback", earlyReturn: true }
+            });
+            return;
+          }
         }
       }
     }
