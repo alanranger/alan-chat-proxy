@@ -2325,7 +2325,7 @@ async function findProducts(client, { keywords, limit = 20, pageContext = null, 
 
 async function findServices(client, { keywords, limit = 20, pageContext = null }) {
   // Search for services (free course might be classified as service)
-  console.log(`🔧 findServices called with keywords: ${keywords.join(', ')}`);
+  console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
   
   const query = keywords.map(k => `title.ilike.%${k}%`).join(",");
   console.log(`🔧 Generated query: ${query}`);
