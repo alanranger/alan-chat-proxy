@@ -3705,6 +3705,79 @@ export default async function handler(req, res) {
           return;
         }
       }
+
+      // Fallback early-return for equipment advice even if confidence was false
+      if (intent === "advice") {
+        const qlc = (query || "").toLowerCase();
+        if (isEquipmentAdviceQuery(qlc)) {
+          const directKeywords = extractKeywords(query || "");
+          const articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
+          const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+          const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 20, articleUrls });
+          const synthesized = generateEquipmentAdviceResponse(qlc, articles || [], contentChunks || []);
+          if (synthesized) {
+            res.status(200).json({
+              ok: true,
+              type: "advice",
+              answer_markdown: synthesized,
+              structured: {
+                intent: "advice",
+                topic: directKeywords.join(", "),
+                events: [],
+                products: [],
+                services: [],
+                landing: [],
+                articles: (articles || []).map(a => ({
+                  ...a,
+                  display_date: (function(){
+                    const extracted = extractPublishDate(a);
+                    const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+                    return extracted || fallback;
+                  })()
+                })),
+                pills: []
+              },
+              confidence: 75,
+              debug: { version: "v1.2.41-equip-fallback", earlyReturn: true }
+            });
+            return;
+          }
+        }
+      }
+
+      // Fallback early-return for residential workshop pricing/B&B queries
+      if (intent === "events") {
+        const qlc = (query || "").toLowerCase();
+        const asksResidentialPricing = (
+          qlc.includes("residential") && qlc.includes("workshop") && (
+            qlc.includes("price") || qlc.includes("cost") || qlc.includes("b&b") || qlc.includes("bed and breakfast")
+          )
+        );
+        if (asksResidentialPricing) {
+          const directKeywords = extractKeywords(query || "");
+          const events = await findEvents(client, { keywords: directKeywords, limit: 80, pageContext });
+          const eventList = formatEventsForUi(events);
+          if (Array.isArray(eventList) && eventList.length > 0) {
+            const confidence = calculateEventConfidence(query || "", eventList, null);
+            res.status(200).json({
+              ok: true,
+              type: "events",
+              answer: eventList,
+              events: eventList,
+              structured: {
+                intent: "events",
+                topic: directKeywords.join(", "),
+                events: eventList,
+                products: [],
+                pills: []
+              },
+              confidence,
+              debug: { version: "v1.2.41-residential-fallback", earlyReturn: true }
+            });
+            return;
+          }
+        }
+      }
     }
     
     // For events, only use previous context for follow-up style questions.
