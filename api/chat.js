@@ -259,6 +259,44 @@ function generateEquipmentAdviceResponse(query, articles, contentChunks) {
   return response;
 }
 
+// Generic pricing/accommodation synthesizer (topic-agnostic)
+function generatePricingAccommodationAnswer(query, articles = [], contentChunks = []) {
+  const lcq = (query || "").toLowerCase();
+  const hints = ["price", "cost", "fees", "pricing", "bnb", "bed and breakfast", "accommodation", "include b&b", "includes b&b", "stay"];
+  if (!hints.some(h => lcq.includes(h))) return null;
+
+  const pickParas = (text) => {
+    const t = (text || "").replace(/\s+/g, " ").trim();
+    const paras = t.split(/\n\s*\n|\.\s+(?=[A-Z])/).map(p => p.trim()).filter(p => p.length > 40);
+    const scored = paras.map(p => ({
+      p,
+      s: hints.reduce((acc, h) => acc + (p.toLowerCase().includes(h) ? 1 : 0), 0)
+    })).sort((a,b)=>b.s-a.s || b.p.length - a.p.length);
+    return scored.slice(0, 2).map(x=>x.p);
+  };
+
+  // Prefer chunks (usually denser) then fall back to article descriptions
+  const candidates = [];
+  for (const c of (contentChunks || [])) {
+    const text = c.chunk_text || c.content || "";
+    const paras = pickParas(text);
+    if (paras.length) candidates.push({ paras, url: c.url || c.source_url });
+  }
+  if (!candidates.length) {
+    for (const a of (articles || [])) {
+      const text = `${a.title || ''}. ${a.description || ''}`;
+      const paras = pickParas(text);
+      if (paras.length) candidates.push({ paras, url: a.page_url || a.source_url });
+    }
+  }
+  if (!candidates.length) return null;
+
+  const best = candidates[0];
+  const body = best.paras.join("\n\n");
+  const src = best.url ? `\n\n*Source: ${best.url}*` : "";
+  return `**Pricing & Accommodation**\n\n${body}${src}`;
+}
+
 // Extract equipment type from query
 function extractEquipmentType(query) {
   const equipmentMap = {
@@ -3697,7 +3735,9 @@ export default async function handler(req, res) {
           const articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
           const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
           const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 15, articleUrls });
-          const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks);
+          // If pricing/accommodation hinted, prefer pricing synthesizer
+          const pricingAnswer = generatePricingAccommodationAnswer(query || "", articles, contentChunks);
+          const answerMarkdown = pricingAnswer || generateDirectAnswer(query || "", articles, contentChunks);
           res.status(200).json({
             ok: true,
             type: "advice",
@@ -3759,6 +3799,41 @@ export default async function handler(req, res) {
               },
               confidence: 75,
               debug: { version: "v1.2.41-equip-fallback", earlyReturn: true }
+            });
+            return;
+          }
+        }
+        // Pricing/accommodation fallback synthesis
+        {
+          const directKeywords = extractKeywords(query || "");
+          const articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
+          const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+          const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 20, articleUrls });
+          const synthesized = generatePricingAccommodationAnswer(qlc, articles || [], contentChunks || []);
+          if (synthesized) {
+            res.status(200).json({
+              ok: true,
+              type: "advice",
+              answer_markdown: synthesized,
+              structured: {
+                intent: "advice",
+                topic: directKeywords.join(", "),
+                events: [],
+                products: [],
+                services: [],
+                landing: [],
+                articles: (articles || []).map(a => ({
+                  ...a,
+                  display_date: (function(){
+                    const extracted = extractPublishDate(a);
+                    const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+                    return extracted || fallback;
+                  })()
+                })),
+                pills: []
+              },
+              confidence: 70,
+              debug: { version: "v1.2.43-pricing-synth", earlyReturn: true }
             });
             return;
           }
