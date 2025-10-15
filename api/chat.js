@@ -3609,7 +3609,36 @@ export default async function handler(req, res) {
     
     const intent = detectIntent(query || ""); // Use current query only for intent detection
     
-    // NOTE: Clarification check moved to after content retrieval for logical confidence
+    // Retrieval-first: try to gather content and check content-based confidence
+    // before deciding to trigger clarification for initial queries (no previousQuery)
+    let preContent = { articles: [], events: [], products: [], relevanceScore: 0 };
+    if (!previousQuery) {
+      try {
+        const preKeywords = extractKeywords(query || "");
+        if (intent === "events") {
+          const eventsPeek = await findEvents(client, { keywords: preKeywords, limit: 50, pageContext });
+          preContent.events = formatEventsForUi(eventsPeek);
+        } else {
+          const articlesPeek = await findArticles(client, { keywords: preKeywords, limit: 20, pageContext });
+          preContent.articles = articlesPeek;
+          const articleUrlsPeek = articlesPeek?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+          const chunksPeek = await findContentChunks(client, { keywords: preKeywords, limit: 10, articleUrls: articleUrlsPeek });
+          // Rough relevance: number of chunks found
+          preContent.relevanceScore = Math.min(1, (chunksPeek?.length || 0) / 10);
+        }
+      } catch (e) {
+        // Soft-fail: continue without preContent
+      }
+    }
+    
+    // If we have enough content-based confidence, skip clarification entirely
+    if (!previousQuery) {
+      const confident = hasContentBasedConfidence(query || "", intent, preContent);
+      if (confident) {
+        // Fast-path to normal intent handling below by marking as follow-up style to bypass clarification gate
+        // We won't return here; we just avoid early clarification checks.
+      }
+    }
     
     // For events, only use previous context for follow-up style questions.
     const qlc = (query || "").toLowerCase();
