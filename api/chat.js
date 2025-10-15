@@ -3732,7 +3732,19 @@ export default async function handler(req, res) {
           return;
         } else {
           // advice/default path
-          const articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
+          let articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
+          // Ensure article cards can render on the client by providing title and page_url fallbacks
+          articles = (articles || []).map(a => {
+            const out = { ...a };
+            if (!out.title) {
+              out.title = out?.raw?.headline || out?.raw?.name || '';
+              if (!out.title) {
+                try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
+              }
+            }
+            if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
+            return out;
+          });
           const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
           const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 15, articleUrls });
           // If pricing/accommodation hinted, prefer pricing synthesizer
@@ -3771,7 +3783,18 @@ export default async function handler(req, res) {
         const qlc = (query || "").toLowerCase();
         if (isEquipmentAdviceQuery(qlc)) {
           const directKeywords = extractKeywords(query || "");
-          const articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
+          let articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
+          articles = (articles || []).map(a => {
+            const out = { ...a };
+            if (!out.title) {
+              out.title = out?.raw?.headline || out?.raw?.name || '';
+              if (!out.title) {
+                try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
+              }
+            }
+            if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
+            return out;
+          });
           const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
           const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 20, articleUrls });
           const synthesized = generateEquipmentAdviceResponse(qlc, articles || [], contentChunks || []);
@@ -3806,7 +3829,18 @@ export default async function handler(req, res) {
         // Pricing/accommodation fallback synthesis
         {
           const directKeywords = extractKeywords(query || "");
-          const articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
+          let articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
+          articles = (articles || []).map(a => {
+            const out = { ...a };
+            if (!out.title) {
+              out.title = out?.raw?.headline || out?.raw?.name || '';
+              if (!out.title) {
+                try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
+              }
+            }
+            if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
+            return out;
+          });
           const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
           const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 20, articleUrls });
           const synthesized = generatePricingAccommodationAnswer(qlc, articles || [], contentChunks || []);
@@ -3852,8 +3886,15 @@ export default async function handler(req, res) {
         );
         if (asksResidentialPricing) {
           const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
-          const events = await findEvents(client, { keywords: directKeywords, limit: 80, pageContext, csvType: "workshop_events" });
-          const eventList = formatEventsForUi(events);
+          const events = await findEvents(client, { keywords: directKeywords, limit: 120, pageContext, csvType: "workshop_events" });
+          // Filter to multi-day (residential) by presence of date_end strictly after start
+          const all = formatEventsForUi(events) || [];
+          const eventList = all.filter(e => {
+            try{
+              if (!e.date_start || !e.date_end) return false;
+              return new Date(e.date_end) > new Date(e.date_start);
+            }catch{ return false; }
+          });
           if (Array.isArray(eventList) && eventList.length > 0) {
             const confidence = calculateEventConfidence(query || "", eventList, null);
             res.status(200).json({
@@ -3875,7 +3916,18 @@ export default async function handler(req, res) {
           }
           // If no events found, attempt to synthesize a direct answer from articles/content
           const enrichedKeywords = Array.from(new Set([...directKeywords, "b&b", "bed", "breakfast", "price", "cost"]));
-          const articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
+          let articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
+          articles = (articles || []).map(a => {
+            const out = { ...a };
+            if (!out.title) {
+              out.title = out?.raw?.headline || out?.raw?.name || '';
+              if (!out.title) {
+                try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
+              }
+            }
+            if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
+            return out;
+          });
           const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
           const contentChunks = await findContentChunks(client, { keywords: enrichedKeywords, limit: 20, articleUrls });
           const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks);
@@ -3964,7 +4016,18 @@ export default async function handler(req, res) {
     if (previousQuery && intent === "advice") {
       // Equipment advice synthesis
       if (isEquipmentAdviceQuery(qlc)) {
-        const articles = await findArticles(client, { keywords, limit: 30, pageContext });
+        let articles = await findArticles(client, { keywords, limit: 30, pageContext });
+        articles = (articles || []).map(a => {
+          const out = { ...a };
+          if (!out.title) {
+            out.title = out?.raw?.headline || out?.raw?.name || '';
+            if (!out.title) {
+              try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
+            }
+          }
+          if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
+          return out;
+        });
         const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
         const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
         const synthesized = generateEquipmentAdviceResponse(qlc, articles || [], contentChunks || []);
@@ -3999,7 +4062,18 @@ export default async function handler(req, res) {
       // Pricing/accommodation synthesis
       const pricingSynth = generatePricingAccommodationAnswer(qlc);
       if (pricingSynth) {
-        const articles = await findArticles(client, { keywords, limit: 30, pageContext });
+        let articles = await findArticles(client, { keywords, limit: 30, pageContext });
+        articles = (articles || []).map(a => {
+          const out = { ...a };
+          if (!out.title) {
+            out.title = out?.raw?.headline || out?.raw?.name || '';
+            if (!out.title) {
+              try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
+            }
+          }
+          if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
+          return out;
+        });
         const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
         const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
         const answer = generatePricingAccommodationAnswer(qlc, articles || [], contentChunks || []);
