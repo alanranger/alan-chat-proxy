@@ -3693,20 +3693,29 @@ export default async function handler(req, res) {
           // Generate specific answer for the clarified query
           // For free course queries, prioritize services over articles
           let specificAnswer;
+          console.log(`🔍 DEBUG: isFreeCourseQuery=${isFreeCourseQuery}, services.length=${services?.length || 0}`);
+          if (services && services.length > 0) {
+            console.log(`🔍 DEBUG: Available services:`, services.map(s => s.title));
+          }
+          
           if (isFreeCourseQuery && services && services.length > 0) {
             // Find the specific free course service
-            const freeCourseService = services.find(s => 
-              s.title && s.title.toLowerCase().includes('free') && 
-              s.title.toLowerCase().includes('course')
-            );
+            const freeCourseService = services.find(s => {
+              const hasFree = s.title && s.title.toLowerCase().includes('free');
+              const hasCourse = s.title && s.title.toLowerCase().includes('course');
+              console.log(`🔍 DEBUG: Service "${s.title}" - hasFree: ${hasFree}, hasCourse: ${hasCourse}`);
+              return hasFree && hasCourse;
+            });
             
             if (freeCourseService) {
               specificAnswer = `**${freeCourseService.title}**\n\n*From: ${freeCourseService.page_url}*\n\nThis is Alan's free online photography course offering.`;
               console.log(`🎯 Found specific free course service: ${freeCourseService.title}`);
             } else {
+              console.log(`❌ No free course service found, falling back to generateDirectAnswer`);
               specificAnswer = generateDirectAnswer(newQuery, articles, contentChunks);
             }
           } else {
+            console.log(`❌ Not a free course query or no services, using generateDirectAnswer`);
             specificAnswer = generateDirectAnswer(newQuery, articles, contentChunks);
           }
           
