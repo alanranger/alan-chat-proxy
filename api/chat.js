@@ -1788,11 +1788,18 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   }
   
   // Service-related follow-up patterns
-  else if (lc.includes("private photography lessons")) {
+  // Private lessons and pricing should be handled as advice/services, not events
+  else if (
+    lc.includes("private photography lessons") ||
+    lc.includes("1-2-1 private lessons") ||
+    lc.includes("1-2-1 lessons") ||
+    lc.includes("one-to-one private lessons") ||
+    ((lc.includes("private") || lc.includes("lesson")) && (lc.includes("price") || lc.includes("cost")))
+  ) {
     return {
-      type: "route_to_events",
-      newQuery: "private photography lessons",
-      newIntent: "events"
+      type: "route_to_advice",
+      newQuery: lc.includes("price") || lc.includes("cost") ? "private photography lessons price" : "private photography lessons",
+      newIntent: "advice"
     };
   } else if (lc.includes("photography image feedback") || lc.includes("image feedback")) {
     return {
