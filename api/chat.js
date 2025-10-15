@@ -2348,7 +2348,7 @@ function anyIlike(col, words) {
   return parts.length ? parts.join(",") : null;
 }
 
-async function findEvents(client, { keywords, limit = 50, pageContext = null, csvType = null }) {
+async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
   // Use v_events_for_chat view which has all the rich data and proper field names
   let q = client
     .from("v_events_for_chat")
@@ -2357,8 +2357,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null, cs
     .order("date_start", { ascending: true }) // Sort by date ascending (earliest first)
     .limit(limit);
 
-  // Note: v_events_for_chat has subtype='event' for all events, so we don't filter by csvType
-  // The csvType filtering is handled by the view itself based on the underlying data
+  // v_events_for_chat is our unified, populated source of truth; do not gate by csvType
 
   // If we have page context, try to find related content first
   if (pageContext && pageContext.pathname) {
@@ -2405,7 +2404,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null, cs
   return mappedData;
 }
 
-async function findProducts(client, { keywords, limit = 20, pageContext = null, csvType = null }) {
+async function findProducts(client, { keywords, limit = 20, pageContext = null }) {
   // If we have page context, try to find related products first
   if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
@@ -2423,10 +2422,7 @@ async function findProducts(client, { keywords, limit = 20, pageContext = null, 
     .order("last_seen", { ascending: false })
     .limit(limit);
 
-  // Filter by CSV type if specified (course_products vs workshop_products)
-  if (csvType) {
-    q = q.eq("csv_type", csvType);
-  }
+  // Products are unified; do not gate by csvType
 
   const orExpr =
     anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
@@ -3264,12 +3260,12 @@ function buildAdvicePills({ articleUrl, query, pdfUrl, relatedUrl, relatedLabel 
 
 /* --------------------------- Generic resolvers --------------------------- */
 
-async function resolveEventsAndProduct(client, { keywords, pageContext = null, csvType = null }) {
+async function resolveEventsAndProduct(client, { keywords, pageContext = null }) {
   // Events filtered by keywords (stronger locality match)
-  const events = await findEvents(client, { keywords, limit: 80, pageContext, csvType });
+  const events = await findEvents(client, { keywords, limit: 80, pageContext });
 
   // Try to pick the best-matching product for these keywords
-  const products = await findProducts(client, { keywords, limit: 10, pageContext, csvType });
+  const products = await findProducts(client, { keywords, limit: 10, pageContext });
   const product = products?.[0] || null;
 
   // Landing page (if any), else the event origin's workshops root
@@ -3674,7 +3670,7 @@ export default async function handler(req, res) {
       const hasPriceCue = qlc0.includes("how much") || qlc0.includes("price") || qlc0.includes("cost") || qlc0.includes("b&b") || qlc0.includes("bed and breakfast") || qlc0.includes("bnb");
       if (!previousQuery && isResi && hasPriceCue) {
         const directKeywords0 = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
-        const ev0 = await findEvents(client, { keywords: directKeywords0, limit: 140, pageContext, csvType: "workshop_events" });
+        const ev0 = await findEvents(client, { keywords: directKeywords0, limit: 140, pageContext });
         const all0 = formatEventsForUi(ev0) || [];
         const resi = all0.filter(e => { try{ return e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start); }catch{ return false; } });
         if (resi.length) {
@@ -3914,7 +3910,7 @@ export default async function handler(req, res) {
         );
         if (asksResidentialPricing) {
           const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
-          const events = await findEvents(client, { keywords: directKeywords, limit: 120, pageContext, csvType: "workshop_events" });
+          const events = await findEvents(client, { keywords: directKeywords, limit: 120, pageContext });
           // Filter to multi-day (residential) by presence of date_end strictly after start
           const all = formatEventsForUi(events) || [];
           const eventList = all.filter(e => {
@@ -4050,7 +4046,7 @@ export default async function handler(req, res) {
     );
     if (isResidentialPricing) {
       const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
-      const events = await findEvents(client, { keywords: directKeywords, limit: 120, pageContext, csvType: "workshop_events" });
+          const events = await findEvents(client, { keywords: directKeywords, limit: 120, pageContext });
       const all = formatEventsForUi(events) || [];
       const eventList = all.filter(e => {
         try{ return e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start); }catch{ return false; }
@@ -4270,7 +4266,7 @@ export default async function handler(req, res) {
           // Route to events logic with new query
           const lc = newQuery.toLowerCase();
           const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
-          const csvType = mentionsCourse ? "course_events" : "workshop_events";
+          const csvType = null; // unified events; csvType unused
           
           const events = await findEvents(client, { keywords: newKeywords, limit: 80, pageContext, csvType });
           const eventList = formatEventsForUi(events);
@@ -4457,7 +4453,7 @@ export default async function handler(req, res) {
       // Determine CSV type based on query content
       const lc = (query || "").toLowerCase();
       const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
-      const csvType = mentionsCourse ? "course_events" : "workshop_events";
+      const csvType = null; // unified events; csvType unused
       
       // Get events from the enhanced view that includes product mappings
       const events = await findEvents(client, { keywords, limit: 80, pageContext, csvType });
