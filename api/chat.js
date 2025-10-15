@@ -3845,7 +3845,9 @@ export default async function handler(req, res) {
         const qlc = (query || "").toLowerCase();
         const asksResidentialPricing = (
           qlc.includes("residential") && qlc.includes("workshop") && (
-            qlc.includes("price") || qlc.includes("cost") || qlc.includes("b&b") || qlc.includes("bed and breakfast")
+            qlc.includes("price") || qlc.includes("cost") || qlc.includes("how much") ||
+            qlc.includes("b&b") || qlc.includes("bed and breakfast") || qlc.includes("bnb") ||
+            qlc.includes("include b&b") || qlc.includes("includes b&b") || qlc.includes("include bnb")
           )
         );
         if (asksResidentialPricing) {
