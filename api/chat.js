@@ -1191,6 +1191,16 @@ function needsClarification(query) {
   if (!query) return false;
   
   const lc = query.toLowerCase();
+
+  // Avoid generic clarification for clearly-specific queries
+  // 1) Tripod recommendations should get a direct equipment answer
+  if (lc.includes("tripod") || lc.includes("which tripod") || lc.includes("what tripod")) {
+    return false;
+  }
+  // 2) Residential workshop pricing/B&B should go straight to events/services answer
+  if ((lc.includes("residential") && lc.includes("workshop")) || lc.includes("b&b") || lc.includes("bed and breakfast")) {
+    return false;
+  }
   
   // Current patterns (keep existing for backward compatibility)
   const currentPatterns = [
