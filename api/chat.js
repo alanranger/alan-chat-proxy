@@ -2327,18 +2327,28 @@ async function findServices(client, { keywords, limit = 20, pageContext = null }
   // Search for services (free course might be classified as service)
   console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
   
-  const titleQuery = anyIlike("title", keywords);
-  const urlQuery = anyIlike("page_url", keywords);
-  const query = [titleQuery, urlQuery].filter(Boolean).join(",");
-  console.log(`🔧 Generated query: ${query}`);
-  
-  const { data, error } = await client
+  let q = client
     .from("page_entities")
     .select("*")
     .eq("kind", "service")
-    .or(query)
     .order("last_seen", { ascending: false })  // Prioritize recently seen/updated entities
     .limit(limit);
+
+  if (keywords && keywords.length > 0) {
+    // Build OR conditions for each keyword across title and page_url
+    const orConditions = [];
+    keywords.forEach(keyword => {
+      orConditions.push(`title.ilike.%${keyword}%`);
+      orConditions.push(`page_url.ilike.%${keyword}%`);
+    });
+    
+    if (orConditions.length > 0) {
+      q = q.or(orConditions.join(','));
+      console.log(`🔧 Using OR conditions: ${orConditions.join(',')}`);
+    }
+  }
+
+  const { data, error } = await q;
 
   if (error) {
     console.error(`🔧 findServices error:`, error);
