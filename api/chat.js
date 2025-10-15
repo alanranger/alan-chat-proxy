@@ -1390,59 +1390,23 @@ function generateClarificationQuestion(query) {
   
   // Current patterns (keep existing for backward compatibility)
   if (lc.includes("equipment")) {
-    console.log(`✅ Found general equipment pattern - returning 10% confidence question`);
-    return {
-      type: "equipment_clarification",
-      question: "I'd be happy to help with equipment recommendations! Could you be more specific about what type of photography you're interested in?",
-      options: [
-        { text: "Equipment for photography courses/workshops", query: "equipment for photography course" },
-        { text: "General photography equipment advice", query: "photography equipment advice" },
-        { text: "Specific camera/lens recommendations", query: "camera lens recommendations" }
-      ],
-      confidence: 10
-    };
+    // Suppress generic equipment clarification; evidence-first flow will answer or narrow
+    return null;
   }
   
   if (lc.includes("events")) {
-    return {
-      type: "events_clarification",
-      question: "What type of photography events are you interested in?",
-      options: [
-        { text: "Photography courses", query: "photography courses" },
-        { text: "Photography workshops", query: "photography workshops" },
-        { text: "Photography exhibitions", query: "photography exhibitions" }
-      ]
-    };
+    // Suppress generic events clarification
+    return null;
   }
   
   if (lc.includes("training")) {
-    return {
-      type: "training_clarification",
-      question: "What type of photography training are you looking for?",
-      options: [
-        { text: "Photography courses", query: "photography courses" },
-        { text: "Photography workshops", query: "photography workshops" },
-        { text: "Photography mentoring", query: "photography mentoring" }
-      ]
-    };
+    return null;
   }
   
   // Service-related queries (feedback, mentoring, private lessons, etc.)
   if (lc.includes("feedback") || lc.includes("personalised") || lc.includes("mentoring") || 
       lc.includes("private") || lc.includes("lessons") || lc.includes("services")) {
-    console.log(`✅ Found service-related pattern - returning clarification question`);
-    return {
-      type: "service_clarification",
-      question: "I'd be happy to help with photography services! What type of service are you looking for?",
-      options: [
-        { text: "Private photography lessons", query: "private photography lessons" },
-        { text: "Photography mentoring", query: "photography mentoring" },
-        { text: "RPS mentoring course", query: "RPS mentoring course" },
-        { text: "Image feedback and critique", query: "photography image feedback" },
-        { text: "General photography services", query: "photography services" }
-      ],
-      confidence: 10
-    };
+    return null;
   }
   
   // EXPANDED PATTERNS FOR ALL 20 QUESTION TYPES
@@ -2346,6 +2310,62 @@ function anyIlike(col, words) {
     .filter(Boolean)
     .map((w) => `${col}.ilike.'%${w}%'`);
   return parts.length ? parts.join(",") : null;
+}
+
+// Lightweight evidence snapshot to decide if clarification should be suppressed
+async function getEvidenceSnapshot(client, query, pageContext) {
+  try {
+    const keywords = extractKeywords(query || "");
+    const [events, articles, services] = await Promise.all([
+      findEvents(client, { keywords, limit: 30, pageContext }),
+      (async () => {
+        const arts = await findArticles(client, { keywords, limit: 15, pageContext });
+        return arts || [];
+      })(),
+      findServices(client, { keywords, limit: 10, pageContext })
+    ]);
+    return { events: events || [], articles: articles || [], services: services || [] };
+  } catch (e) {
+    return { events: [], articles: [], services: [] };
+  }
+}
+
+// If we already have evidence, bypass generic clarification and show results
+async function maybeBypassClarification(client, query, pageContext, res) {
+  const snap = await getEvidenceSnapshot(client, query, pageContext);
+  const events = formatEventsForUi(snap.events || []);
+  if (Array.isArray(events) && events.length > 0) {
+    const confidence = calculateEventConfidence(query || "", events, null);
+    res.status(200).json({
+      ok: true,
+      type: "events",
+      answer: events,
+      events,
+      structured: { intent: "events", topic: (extractKeywords(query||"")||[]).join(", "), events, products: [], pills: [] },
+      confidence,
+      debug: { version: "v1.3.0-evidence-first", bypassClarification: true }
+    });
+    return true;
+  }
+
+  if ((snap.articles || []).length > 0) {
+    const articleUrls = (snap.articles || []).map(a => a.page_url || a.source_url).filter(Boolean);
+    const chunks = await findContentChunks(client, { keywords: extractKeywords(query||""), limit: 12, articleUrls });
+    const md = generateDirectAnswer(query || "", snap.articles || [], chunks || []);
+    if (md) {
+      res.status(200).json({
+        ok: true,
+        type: "advice",
+        answer_markdown: md,
+        structured: { intent: "advice", topic: (extractKeywords(query||"")||[]).join(", "), events: [], products: [], services: [], landing: [], articles: snap.articles },
+        confidence: 60,
+        debug: { version: "v1.3.0-evidence-first", bypassClarification: true }
+      });
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
@@ -4277,20 +4297,9 @@ export default async function handler(req, res) {
           // Check if we have logical confidence for this clarified query
           const hasConfidence = hasContentBasedConfidence(newQuery, "events", { events: eventList });
           if (!hasConfidence) {
-            console.log(`🤔 Low logical confidence for clarified events query: "${newQuery}" - triggering clarification`);
-            const clarification = generateClarificationQuestion(newQuery);
-            if (clarification) {
-              const confidencePercent = 10;
-              res.status(200).json({
-                ok: true,
-                type: "clarification",
-                question: clarification.question,
-                options: clarification.options,
-                confidence: confidencePercent,
-                debug: { version: "v1.2.37-logical-confidence", clarified: true }
-              });
-              return;
-            }
+            // Evidence-first bypass instead of generic clarification
+            const bypassed = await maybeBypassClarification(client, newQuery, pageContext, res);
+            if (bypassed) return;
           }
           
           // Return confident events response
@@ -4667,29 +4676,9 @@ export default async function handler(req, res) {
         contentForConfidence
       });
       if (!hasConfidence) {
-        console.log(`🤔 Low logical confidence for events query: "${query}" - triggering clarification`);
-        const clarification = generateClarificationQuestion(query);
-        if (clarification) {
-          // For initial clarifications, use fixed low confidence since we're asking for more info
-          const confidencePercent = 10; // Fixed low confidence for initial clarifications
-          
-          res.status(200).json({
-            ok: true,
-            type: "clarification",
-            question: clarification.question,
-            options: clarification.options,
-            confidence: confidencePercent,
-            original_query: query,
-            original_intent: "events",
-            meta: {
-              duration_ms: Date.now() - started,
-              endpoint: "/api/chat",
-              clarification_type: clarification.type,
-              logical_confidence: false,
-            }
-          });
-          return;
-        }
+        // Evidence-first bypass instead of generic clarification
+        const bypassed = await maybeBypassClarification(client, query, pageContext, res);
+        if (bypassed) return;
       }
 
       // Log the answer (async, don't wait for it)

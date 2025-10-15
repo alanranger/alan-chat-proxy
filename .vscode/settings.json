@@ -1,3 +1,16 @@
 ﻿{
-    "python.defaultInterpreterPath":  "${workspaceFolder}/.venv/Scripts/python.exe"
+    "python.defaultInterpreterPath":  "${workspaceFolder}/.venv/Scripts/python.exe",
+    "search.exclude":  {
+                           "**/dist":  true,
+                           "**/.next":  true,
+                           "**/build":  true,
+                           "**/coverage":  true,
+                           "**/node_modules":  true
+                       },
+    "files.watcherExclude":  {
+                                 "**/dist/**":  true,
+                                 "**/.git/**":  true,
+                                 "**/node_modules/**":  true,
+                                 "**/build/**":  true
+                             }
 }

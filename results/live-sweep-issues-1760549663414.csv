@@ -1,0 +1,172 @@
+idx,question,status,depth0_option,depth1_option,depth2_option,suspected_loop
+1,"How much is a residential photographyworkshop and does it include B&B",ok,"","","",0
+2,"What tripod do you recommend",ok,"","","",0
+3,"How do I get personalised feedback on my images",ok,"","","",0
+4,"Is the online photography course really free",ok,"","","",0
+5,"What is long exposure and how can I find out more about it",ok,"","","",0
+6,"My pictures never seem sharp. Can you advise on what I am doing wrong",ok,"","","",0
+7,"Who is Alan Ranger and what is his photographic background?",ok,"","","",0
+8,"Where is Alan Ranger based?",ok,"","","",0
+9,"What types of photography services do you offer?",ok,"","","",0
+10,"How can I contact you or book a discovery call?",ok,"","","",0
+11,"What is your cancellation or refund policy for courses/workshops?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+12,"How do I subscribe to the free online photography course?",ok,"","","",0
+13,"Where is your gallery and can I submit my images for feedback?",ok,"","","",0
+14,"What ethical guidelines do you follow as a photography tutor?",ok,"","","",0
+15,"What topics are covered in the 5-week beginner course?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+16,"What if I miss one of the weekly classes can I make it up?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+17,"Do you offer online or Zoom lessons / mentoring?",ok,"","","",0
+18,"How much do 1-2-1 private lessons cost?",ok,"","","",0
+19,"Can I sign up to monthly mentoring assignments?",ok,"","","",0
+20,"Are there any prerequisites for advanced courses?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+21,"Do you do property photography / real estate photography?",ok,"","","",0
+22,"Can you do product photography for my e-commerce store?",ok,"","","",0
+23,"What is your pricing structure for portrait / headshot work?",ok,"","","",0
+24,"Do you train staff in corporate photography for businesses?",ok,"","","",0
+25,"How far will you travel for a shoot (within UK / internationally)?",ok,"","","",0
+26,"Do you provide retouching / editing services?",ok,"","","",0
+27,"What is your turnaround time for delivering images?",ok,"","","",0
+28,"Do you provide usage rights or licensing for your photos?",ok,"","","",0
+29,"Can I commission you for a commercial photography project?",ok,"","","",0
+30,"What payment options are available?",ok,"","","",0
+31,"Do you offer payment plans or spreading the cost?",ok,"","","",0
+32,"What happens if a course is canceled due to low enrolment or weather?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+33,"What are the location details for your courses (venues, parking etc.)?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+34,"If a workshop is outdoors, what happens in bad weather?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+35,"Can I change the date of my booking?",ok,"","","",0
+36,"How early should I arrive before a class or workshop begins?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+37,"Do you require a deposit, and when is full payment due?",ok,"","","",0
+38,"How do I choose between shooting JPEG vs RAW?",ok,"","","",0
+39,"What is the exposure triangle (aperture, shutter, ISO)?",ok,"","","",0
+40,"How do I improve my composition and storytelling in photos?",ok,"","","",0
+41,"When should I use ND filters or graduated filters?",ok,"","","",0
+42,"What is depth of field, and how do I control it?",ok,"","","",0
+43,"What is white balance and how do I use it?",ok,"","","",0
+44,"How do I focus manually vs autofocus?",ok,"","","",0
+45,"What is the difference between prime and zoom lenses?",ok,"","","",0
+46,"How do I use flash photography?",ok,"","","",0
+47,"What is HDR photography?",ok,"","","",0
+48,"How do I shoot in low light?",ok,"","","",0
+49,"What memory card should I buy?",ok,"","","",0
+50,"Do I need a camera bag?",ok,"","","",0
+51,"What is the best lens for portraits?",ok,"","","",0
+52,"Should I buy a full-frame or crop sensor camera?",ok,"","","",0
+53,"What accessories do I need for landscape photography?",ok,"","","",0
+54,"What is Lightroom vs Photoshop?",ok,"","","",0
+55,"How do I edit RAW files?",ok,"","","",0
+56,"What is color grading?",ok,"","","",0
+57,"How do I remove unwanted objects from photos?",ok,"","","",0
+58,"What are presets and how do I use them?",ok,"","","",0
+59,"How much do you charge for headshots?",ok,"","","",0
+60,"Do you travel for photography sessions?",ok,"","","",0
+61,"What is your turnaround time?",ok,"","","",0
+62,"Do you offer group discounts?",ok,"","","",0
+63,"Can you teach my staff photography?",ok,"","","",0
+64,"What is included in the beginner course?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+65,"How long are your workshops?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+66,"Do you provide course materials?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+67,"Can I get a refund if I can't attend?",ok,"","","",0
+68,"What happens if it rains during outdoor workshops?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+69,"How do I improve my photography skills?",ok,"","","",0
+70,"What makes a good photograph?",ok,"","","",0
+71,"How do I find my photography style?",ok,"","","",0
+72,"What are common photography mistakes?",ok,"","","",0
+73,"How do I build a photography portfolio?",ok,"","","",0
+74,"What landscape photography workshops do you run near me?",ok,"Bluebell photography workshops","Bluebell photography workshops","Bluebell photography workshops",1
+75,"How do I book a one-day workshop?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+76,"Do you run workshops in the Lake District or Wales?",ok,"Bluebell photography workshops","Bluebell photography workshops","Bluebell photography workshops",1
+77,"What's included in your photography workshops?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+78,"Are your workshops suitable for beginners?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+79,"How many people are in each workshop group?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+80,"Do I need my own camera and tripod?",ok,"","","",0
+81,"What happens if it rains during a workshop?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+82,"Can I get a private workshop for my photography club?",ok,"Private photography lessons","Private photography lessons","Private photography lessons",1
+83,"Do you offer weekend or evening workshops?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+84,"How do I join the beginners' photography lessons in Coventry?",ok,"Private photography lessons","Private photography lessons","Private photography lessons",1
+85,"What will I learn in the \"\"Get Off Auto\"\" course?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+86,"Are the beginners' classes suitable for DSLR and mirrorless users?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+87,"Can I attend online instead of in person?",ok,"","","",0
+88,"How long does the beginners' course last?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+89,"What happens if I cancel after paying with a plan?",ok,"","","",0
+90,"What's included in your photography mentoring program?",ok,"","","",0
+91,"How do monthly assignments work in mentoring?",ok,"","","",0
+92,"Can I book one-to-one photography tuition near Coventry?",ok,"","","",0
+93,"Is mentoring done via Zoom or in person?",ok,"","","",0
+94,"Can I book an ongoing coaching package?",ok,"","","",0
+95,"What's the difference between mentoring and private tuition?",ok,"","","",0
+96,"Do you give portfolio feedback or image critiques?",ok,"","","",0
+97,"Can I pause or resume mentoring later?",ok,"","","",0
+98,"Where can I find your terms and conditions?",ok,"","","",0
+99,"Do you have a privacy policy about newsletter sign-ups?",ok,"","","",0
+100,"How do I subscribe to your newsletter?",ok,"","","",0
+101,"How do I contact Alan directly?",ok,"","","",0
+102,"Where are your photography sessions held?",ok,"","","",0
+103,"Do you offer corporate training or team photography days?",ok,"","","",0
+104,"Can I see your awards and qualifications?",ok,"","","",0
+105,"Where can I read your photography blog and tips?",ok,"","","",0
+106,"What is exposure and how do I control it?",ok,"","","",0
+107,"How does aperture affect exposure and depth of field?",ok,"","","",0
+108,"What does shutter speed do in photography?",ok,"","","",0
+109,"How does ISO sensitivity influence image brightness?",ok,"","","",0
+110,"What are the relationships between aperture",ok,"","","",0
+111,"How do I use manual mode effectively?",ok,"","","",0
+112,"What is the exposure triangle?",ok,"","","",0
+113,"How do camera metering modes work?",ok,"","","",0
+114,"When should I use spot vs evaluative metering?",ok,"","","",0
+115,"How does sensor size affect field of view and image quality?",ok,"","","",0
+116,"Are UV filters necessary for lens protection?",ok,"","","",0
+117,"How do I choose the right tripod?",ok,"","","",0
+118,"How do I stabilise my tripod on uneven ground?",ok,"","","",0
+119,"What are mirrorless cameras and are they better than DSLRs?",ok,"","","",0
+120,"How do I select the best editing software in 2025?",ok,"","","",0
+121,"What's the difference between Lightroom and Photoshop?",ok,"","","",0
+122,"How do I import and organise photos for editing?",ok,"","","",0
+123,"What's the best workflow for editing RAW images?",ok,"","","",0
+124,"What is framing and how do I use it in composition?",ok,"","","",0
+125,"How do I develop my own photography style?",ok,"","","",0
+126,"What makes a photo tell a story?",ok,"","","",0
+127,"What is visual storytelling in photography?",ok,"","","",0
+128,"How do I find compositional balance in an image?",ok,"","","",0
+129,"What is contrast and how does it affect composition?",ok,"","","",0
+130,"What's the best lens for street photography?",ok,"","","",0
+131,"What defines abstract photography and how do I approach it?",ok,"","","",0
+132,"How do I photograph shadows effectively?",ok,"","","",0
+133,"What's the difference between DSLR and point-and-shoot cameras?",ok,"","","",0
+134,"How can I improve my technical control while keeping creativity?",ok,"","","",0
+135,"How can I combine all modules to build a strong photography portfolio?",ok,"","","",0
+136,"What does the Blog on Photography page cover?",ok,"","","",0
+137,"What can I use a gift voucher for?",ok,"","","",0
+138,"Are your gift vouchers digital or physical?",ok,"","","",0
+139,"when is the next devon workshop",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+140,"what is your next workshop date and where is it",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+141,"when are your next Autumn workshops and where are they?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+142,"Do you I get a certificate with the photography course",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+143,"What sort of camera do I need for your camera course",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+144,"Do I need a laptop for the lightroom course",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+145,"Do you do astrophotography workshops",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+146,"Can my 14yr old attend your workshop",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+147,"What courses do you offer for complete beginners?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+148,"Do you run evening classes in Coventry?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+149,"How many weeks is the beginners photography course?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+150,"Can I just take the Get Off Auto class as a standalone?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+151,"Do you offer residential workshops or multi-day field trips?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+152,"How many students per workshop / class?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+153,"What gear or equipment do I need to bring to a workshop?",ok,"Equipment for photography courses/workshops","Equipment for photography courses/workshops","Equipment for photography courses/workshops",1
+154,"Do you offer Lightroom / post-processing courses?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+155,"What is RPS Mentoring, and can you help me with that?",ok,"","","",0
+156,"How do I book a course or workshop?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+157,"Do you mentor RPS distinction candidates?",ok,"","","",0
+158,"How often do private lessons run?",ok,"","","",0
+159,"What's your refund policy for workshops or lessons?",ok,"Private photography lessons","Private photography lessons","Private photography lessons",1
+160,"How do I know which course or workshop is best for me?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+161,"When are Bluebell woodlands photography workshops held?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+162,"Do you offer Batsford Arboretum photography workshops?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+163,"What woodland photography walks do you run in Warwickshire?",ok,"","","",0
+164,"What is your Secrets of Woodland Photography workshop?",ok,"Photography equipment advice","Photography equipment advice","Photography equipment advice",1
+165,"What is Pick N Mix payment plans?",ok,"","","",0
+166,"Do you offer gift vouchers?",ok,"","","",0
+167,"Can I order fine art prints from you?",ok,"","","",0
+168,"Are there discounts for multiple bookings (e.g. bundle deals)?",ok,"","","",0
+169,"Can I transfer a booking paid via Pick N Mix to someone else?",ok,"","","",0
+170,"Do vouchers cover private lessons too?",ok,"","","",0
+171,"How do I purchase photography gift vouchers?",ok,"","","",0
