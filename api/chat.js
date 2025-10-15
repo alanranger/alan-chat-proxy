@@ -1254,6 +1254,17 @@ function needsClarification(query) {
 function generateClarificationQuestion(query) {
   const lc = query.toLowerCase();
   console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
+  // Loop guard: if we have previously shown the same global set, offer skip
+  if (lc.includes("general photography advice") || lc.includes("photography courses and workshops") || lc.includes("photography equipment advice")) {
+    return {
+      type: "fallback_general",
+      question: "Do you want me to show the most relevant results now?",
+      options: [
+        { text: "Show me results", query: "show me results" }
+      ],
+      confidence: 10
+    };
+  }
   
   // General photography equipment advice clarification - MUST come before other patterns
   if (lc.includes("general photography equipment advice clarification")) {
@@ -1678,6 +1689,14 @@ function generateClarificationQuestion(query) {
 function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   const lc = query.toLowerCase();
   console.log(`🔍 handleClarificationFollowUp called with:`, { query, originalQuery, originalIntent, lc });
+  // Allow user to bypass clarification entirely
+  if (lc.includes("show me results") || lc === "show me results") {
+    return {
+      type: "route_to_advice",
+      newQuery: originalQuery || query,
+      newIntent: "advice"
+    };
+  }
   
   // SPECIFIC COURSE PATTERNS FIRST (more specific patterns must come before generic patterns)
   if (lc.includes("free online photography course") || lc === "free online photography course") {
