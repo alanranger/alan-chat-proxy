@@ -3777,16 +3777,20 @@ export default async function handler(req, res) {
             },
             confidence: 90, // High confidence for clarified queries
             debug: { 
-              version: "v1.2.38-debug-free-course", 
+              version: "v1.2.39-debug-service-prioritization", 
               clarified: true, 
               logicalConfidence: true,
               crossEntitySearch: isFreeCourseQuery,
+              newQuery: newQuery,
+              qlcClarified: qlcClarified,
+              isFreeCourseQuery: isFreeCourseQuery,
               counts: {
                 events: events?.length || 0,
                 products: products?.length || 0,
                 services: services?.length || 0,
                 articles: articles?.length || 0
-              }
+              },
+              servicesFound: services?.map(s => ({ title: s.title, url: s.page_url })) || []
             }
           });
           return;
