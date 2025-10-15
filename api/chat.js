@@ -1157,6 +1157,20 @@ function hasContentBasedConfidence(query, intent, content) {
     return true; // Events with specific keywords should be confident
   }
   
+  // Special case: Direct answer for specific equipment queries like tripod when content exists
+  if (lc.includes("tripod") && (articleCount > 0 || productCount > 0)) {
+    return true;
+  }
+  
+  // Special case: Residential workshop pricing/B&B queries should answer directly when events exist
+  if (
+    lc.includes("residential") && lc.includes("workshop") &&
+    (lc.includes("price") || lc.includes("cost") || lc.includes("b&b") || lc.includes("bed and breakfast")) &&
+    eventCount > 0
+  ) {
+    return true;
+  }
+  
   // Default to clarification for safety
   return false; // When in doubt, clarify
 }
