@@ -1171,6 +1171,14 @@ function hasContentBasedConfidence(query, intent, content) {
     if (eventCount > 0) return true;
     if (articleCount > 0 || relevanceScore >= 0.3) return true;
   }
+
+  // Generic: pricing/accommodation queries with sufficient evidence (applies to any relevant topic)
+  const pricingAccommodationHints = ["price", "cost", "fees", "pricing", "b&b", "bed and breakfast", "accommodation", "stay", "include b&b", "includes b&b"];
+  if (pricingAccommodationHints.some(h => lc.includes(h))) {
+    if (eventCount > 0) return true;
+    if (articleCount >= 1 && relevanceScore >= 0.3) return true;
+    if (relevanceScore >= 0.5) return true;
+  }
   
   // Default to clarification for safety
   return false; // When in doubt, clarify
