@@ -3776,7 +3776,7 @@ export default async function handler(req, res) {
             },
             confidence: 90, // High confidence for clarified queries
             debug: { 
-              version: "v1.2.37-logical-confidence", 
+              version: "v1.2.38-debug-free-course", 
               clarified: true, 
               logicalConfidence: true,
               crossEntitySearch: isFreeCourseQuery,
