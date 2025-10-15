@@ -952,10 +952,21 @@ const TOPIC_KEYWORDS = [
   "lens",
   "camera",
   "equipment",
+  // accommodation/pricing
+  "bnb",
+  "accommodation",
+  "bed",
+  "breakfast",
+  "pricing",
+  "price",
+  "cost",
 ];
 
 function extractKeywords(q) {
-  const lc = (q || "").toLowerCase();
+  let lc = (q || "").toLowerCase();
+  // Normalize common variants to improve matching
+  lc = lc.replace(/\bb\s*&\s*b\b/g, "bnb"); // b&b -> bnb
+  lc = lc.replace(/\bbed\s*and\s*breakfast\b/g, "bnb");
   const kws = new Set();
   for (const t of TOPIC_KEYWORDS) {
     if (lc.includes(t)) kws.add(t);
