@@ -3754,8 +3754,8 @@ export default async function handler(req, res) {
           )
         );
         if (asksResidentialPricing) {
-          const directKeywords = extractKeywords(query || "");
-          const events = await findEvents(client, { keywords: directKeywords, limit: 80, pageContext });
+          const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
+          const events = await findEvents(client, { keywords: directKeywords, limit: 80, pageContext, csvType: "workshop_events" });
           const eventList = formatEventsForUi(events);
           if (Array.isArray(eventList) && eventList.length > 0) {
             const confidence = calculateEventConfidence(query || "", eventList, null);
@@ -3773,6 +3773,39 @@ export default async function handler(req, res) {
               },
               confidence,
               debug: { version: "v1.2.41-residential-fallback", earlyReturn: true }
+            });
+            return;
+          }
+          // If no events found, attempt to synthesize a direct answer from articles/content
+          const enrichedKeywords = Array.from(new Set([...directKeywords, "b&b", "bed", "breakfast", "price", "cost"]));
+          const articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
+          const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+          const contentChunks = await findContentChunks(client, { keywords: enrichedKeywords, limit: 20, articleUrls });
+          const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks);
+          if (answerMarkdown) {
+            res.status(200).json({
+              ok: true,
+              type: "advice",
+              answer_markdown: answerMarkdown,
+              structured: {
+                intent: "advice",
+                topic: enrichedKeywords.join(", "),
+                events: [],
+                products: [],
+                services: [],
+                landing: [],
+                articles: (articles || []).map(a => ({
+                  ...a,
+                  display_date: (function(){
+                    const extracted = extractPublishDate(a);
+                    const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+                    return extracted || fallback;
+                  })()
+                })),
+                pills: []
+              },
+              confidence: 70,
+              debug: { version: "v1.2.42-residential-advice-synthesis", earlyReturn: true }
             });
             return;
           }
