@@ -3673,6 +3673,7 @@ export default async function handler(req, res) {
           // Check if this is a free course query and search across all entity types
           const qlcClarified = (newQuery || "").toLowerCase();
           const isFreeCourseQuery = qlcClarified.includes("free") && (qlcClarified.includes("course") || qlcClarified.includes("online"));
+          console.log(`🔍 CLARIFIED PATH DEBUG: newQuery="${newQuery}", qlcClarified="${qlcClarified}", isFreeCourseQuery=${isFreeCourseQuery}`);
           
           let events = [];
           let products = [];
