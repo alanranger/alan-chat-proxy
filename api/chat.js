@@ -3691,7 +3691,24 @@ export default async function handler(req, res) {
           }
           
           // Generate specific answer for the clarified query
-          const specificAnswer = generateDirectAnswer(newQuery, articles, contentChunks);
+          // For free course queries, prioritize services over articles
+          let specificAnswer;
+          if (isFreeCourseQuery && services && services.length > 0) {
+            // Find the specific free course service
+            const freeCourseService = services.find(s => 
+              s.title && s.title.toLowerCase().includes('free') && 
+              s.title.toLowerCase().includes('course')
+            );
+            
+            if (freeCourseService) {
+              specificAnswer = `**${freeCourseService.title}**\n\n*From: ${freeCourseService.page_url}*\n\nThis is Alan's free online photography course offering.`;
+              console.log(`🎯 Found specific free course service: ${freeCourseService.title}`);
+            } else {
+              specificAnswer = generateDirectAnswer(newQuery, articles, contentChunks);
+            }
+          } else {
+            specificAnswer = generateDirectAnswer(newQuery, articles, contentChunks);
+          }
           
           // DON'T check confidence for clarified queries - if the user has already clarified, return the best answer we have
           // Checking confidence here creates infinite clarification loops
