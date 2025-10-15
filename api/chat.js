@@ -2323,7 +2323,7 @@ async function findProducts(client, { keywords, limit = 20, pageContext = null, 
   return data || [];
 }
 
-async function findServices(client, { keywords, limit = 20, pageContext = null }) {
+async function findServices(client, { keywords, limit = 50, pageContext = null }) {
   // Search for services (free course might be classified as service)
   console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
   
