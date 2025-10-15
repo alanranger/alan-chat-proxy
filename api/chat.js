@@ -1100,6 +1100,7 @@ function hasContentBasedConfidence(query, intent, content) {
   if (!query) return false;
   
   const lc = query.toLowerCase();
+
   
   // Detect clarification questions - these should never be confident
   if (lc.includes("what type of") && lc.includes("are you planning") && lc.includes("this will help")) {
