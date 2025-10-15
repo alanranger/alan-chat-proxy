@@ -1233,7 +1233,8 @@ function needsClarification(query) {
     // Specific but ambiguous questions (7 patterns)
     lc.includes("what") && (lc.includes("courses") || lc.includes("workshops")) && !lc.includes("included"),
     lc.includes("when is") && lc.includes("workshop"),
-    lc.includes("how much") && lc.includes("workshop"),
+    // Price questions for workshops are often specific (e.g., residential/B&B) → don't flag those
+    (lc.includes("how much") && lc.includes("workshop") && !lc.includes("residential") && !lc.includes("b&b") && !lc.includes("bed and breakfast")),
     lc.includes("what's the difference"),
     lc.includes("what photography workshops") && lc.includes("coming up"),
     lc.includes("what's included in") && lc.includes("course"),
