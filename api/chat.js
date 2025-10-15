@@ -3669,6 +3669,27 @@ export default async function handler(req, res) {
           const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
           const contentChunks = await findContentChunks(client, { keywords: newKeywords, limit: 15, articleUrls });
           
+          // CROSS-ENTITY SEARCH FOR CLARIFIED QUERIES
+          // Check if this is a free course query and search across all entity types
+          const qlcClarified = (newQuery || "").toLowerCase();
+          const isFreeCourseQuery = qlcClarified.includes("free") && (qlcClarified.includes("course") || qlcClarified.includes("online"));
+          
+          let events = [];
+          let products = [];
+          let services = [];
+          let landing = [];
+          
+          if (isFreeCourseQuery) {
+            console.log(`🔍 Clarified free course query detected: "${newQuery}" - searching across all entity types`);
+            
+            // Search all entity types for comprehensive results
+            events = await findEvents(client, { keywords: newKeywords, limit: 20, pageContext });
+            products = await findProducts(client, { keywords: newKeywords, limit: 20, pageContext });
+            services = await findServices(client, { keywords: newKeywords, limit: 20, pageContext });
+            
+            console.log(`📚 Articles: ${articles.length}, 📅 Events: ${events.length}, 🛍️ Products: ${products.length}, 🔧 Services: ${services.length}`);
+          }
+          
           // Generate specific answer for the clarified query
           const specificAnswer = generateDirectAnswer(newQuery, articles, contentChunks);
           
@@ -3699,12 +3720,47 @@ export default async function handler(req, res) {
             }
           }
           
-          // Return confident advice response
+          // Return confident advice response with all found content
           res.status(200).json({
             ok: true,
             type: "advice",
-            answer: specificAnswer,
-            debug: { version: "v1.2.37-logical-confidence", clarified: true, logicalConfidence: true }
+            answer_markdown: specificAnswer,
+            structured: {
+              intent: "advice",
+              topic: newKeywords.join(", "),
+              events: events || [],
+              products: products || [],
+              services: services || [],
+              landing: landing || [],
+              articles: (articles || []).map(a => {
+                const extractedDate = extractPublishDate(a);
+                const fallbackDate = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric' 
+                }) : null;
+                const finalDate = extractedDate || fallbackDate;
+                
+                return {
+                  ...a,
+                  display_date: finalDate
+                };
+              }),
+              pills: []
+            },
+            confidence: 90, // High confidence for clarified queries
+            debug: { 
+              version: "v1.2.37-logical-confidence", 
+              clarified: true, 
+              logicalConfidence: true,
+              crossEntitySearch: isFreeCourseQuery,
+              counts: {
+                events: events?.length || 0,
+                products: products?.length || 0,
+                services: services?.length || 0,
+                articles: articles?.length || 0
+              }
+            }
           });
           return;
         }
