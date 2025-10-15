@@ -3698,7 +3698,7 @@ export default async function handler(req, res) {
             // Search all entity types for comprehensive results
             events = await findEvents(client, { keywords: newKeywords, limit: 20, pageContext });
             products = await findProducts(client, { keywords: newKeywords, limit: 20, pageContext });
-            services = await findServices(client, { keywords: newKeywords, limit: 50, pageContext });
+            services = await findServices(client, { keywords: newKeywords, limit: 100, pageContext });
             
             console.log(`📚 Articles: ${articles.length}, 📅 Events: ${events.length}, 🛍️ Products: ${products.length}, 🔧 Services: ${services.length}`);
           }
