@@ -1162,13 +1162,14 @@ function hasContentBasedConfidence(query, intent, content) {
     return true;
   }
   
-  // Special case: Residential workshop pricing/B&B queries should answer directly when events exist
+  // Special case: Residential workshop pricing/B&B queries
+  // Be confident if we have events OR decent article/chunk signal
   if (
     lc.includes("residential") && lc.includes("workshop") &&
-    (lc.includes("price") || lc.includes("cost") || lc.includes("b&b") || lc.includes("bed and breakfast")) &&
-    eventCount > 0
+    (lc.includes("price") || lc.includes("cost") || lc.includes("b&b") || lc.includes("bed and breakfast"))
   ) {
-    return true;
+    if (eventCount > 0) return true;
+    if (articleCount > 0 || relevanceScore >= 0.3) return true;
   }
   
   // Default to clarification for safety
