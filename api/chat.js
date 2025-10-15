@@ -3631,12 +3631,63 @@ export default async function handler(req, res) {
       }
     }
     
-    // If we have enough content-based confidence, skip clarification entirely
+    // If we have enough content-based confidence, answer directly now (skip clarification entirely)
     if (!previousQuery) {
       const confident = hasContentBasedConfidence(query || "", intent, preContent);
       if (confident) {
-        // Fast-path to normal intent handling below by marking as follow-up style to bypass clarification gate
-        // We won't return here; we just avoid early clarification checks.
+        const directKeywords = extractKeywords(query || "");
+        if (intent === "events") {
+          const events = await findEvents(client, { keywords: directKeywords, limit: 80, pageContext });
+          const eventList = formatEventsForUi(events);
+          const confidence = calculateEventConfidence(query || "", eventList, null);
+          res.status(200).json({
+            ok: true,
+            type: "events",
+            answer: eventList,
+            events: eventList,
+            structured: {
+              intent: "events",
+              topic: directKeywords.join(", "),
+              events: eventList,
+              products: [],
+              pills: []
+            },
+            confidence,
+            debug: { version: "v1.2.40-retrieval-first", earlyReturn: true }
+          });
+          return;
+        } else {
+          // advice/default path
+          const articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
+          const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+          const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 15, articleUrls });
+          const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks);
+          res.status(200).json({
+            ok: true,
+            type: "advice",
+            answer_markdown: answerMarkdown,
+            structured: {
+              intent: "advice",
+              topic: directKeywords.join(", "),
+              events: [],
+              products: [],
+              services: [],
+              landing: [],
+              articles: (articles || []).map(a => ({
+                ...a,
+                display_date: (function(){
+                  const extracted = extractPublishDate(a);
+                  const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+                  return extracted || fallback;
+                })()
+              })),
+              pills: []
+            },
+            confidence: 90,
+            debug: { version: "v1.2.40-retrieval-first", earlyReturn: true }
+          });
+          return;
+        }
       }
     }
     
