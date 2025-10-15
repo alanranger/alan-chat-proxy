@@ -4775,6 +4775,7 @@ export default async function handler(req, res) {
     }
     
     // LOGICAL CONFIDENCE CHECK: Do we have enough context to provide a confident answer?
+    // IMPORTANT: Evaluate confidence BEFORE clarification
     const hasConfidence = hasContentBasedConfidence(query, "advice", { 
       events, 
       products, 
