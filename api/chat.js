@@ -2225,6 +2225,40 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
 
 /* ----------------------- DB helpers (robust fallbacks) ------------------- */
 
+async function findServices(client, { keywords, limit = 20, pageContext = null }) {
+  try {
+    let q = client
+      .from("page_entities")
+      .select("page_url, title, kind, description")
+      .eq("kind", "service")
+      .limit(limit);
+
+    if (keywords && keywords.length > 0) {
+      // Build OR conditions for each keyword
+      const orConditions = keywords.map(keyword => 
+        `title.ilike.%${keyword}%,page_url.ilike.%${keyword}%`
+      ).join(',');
+      q = q.or(orConditions);
+    }
+
+    const { data, error } = await q;
+    
+    if (error) {
+      console.error('Error finding services:', error);
+      return [];
+    }
+    
+    console.log(`🔧 findServices: Found ${data?.length || 0} services for keywords: ${keywords?.join(', ') || 'none'}`);
+    if (data && data.length > 0) {
+      console.log(`🔧 Sample services:`, data.slice(0, 3).map(s => s.title));
+    }
+    return data || [];
+  } catch (error) {
+    console.error('Error in findServices:', error);
+    return [];
+  }
+}
+
 function anyIlike(col, words) {
   // Builds PostgREST OR ILIKE expression for (col) against multiple words
   const parts = (words || [])
