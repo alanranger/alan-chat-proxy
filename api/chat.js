@@ -3633,7 +3633,23 @@ export default async function handler(req, res) {
     
     // If we have enough content-based confidence, answer directly now (skip clarification entirely)
     if (!previousQuery) {
-      const confident = hasContentBasedConfidence(query || "", intent, preContent);
+      let confident = hasContentBasedConfidence(query || "", intent, preContent);
+      // Secondary check: if initial confidence is low, attempt a light retrieval probe
+      // to see if we have enough content to answer directly.
+      if (!confident) {
+        const probeKeywords = extractKeywords(query || "");
+        if (probeKeywords.length) {
+          if (intent === "events") {
+            const probeEvents = await findEvents(client, { keywords: probeKeywords, limit: 25, pageContext });
+            confident = Array.isArray(probeEvents) && probeEvents.length > 0;
+          } else {
+            const probeArticles = await findArticles(client, { keywords: probeKeywords, limit: 12, pageContext });
+            const probeUrls = probeArticles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+            const probeChunks = await findContentChunks(client, { keywords: probeKeywords, limit: 8, articleUrls: probeUrls });
+            confident = (Array.isArray(probeArticles) && probeArticles.length > 0) || (Array.isArray(probeChunks) && probeChunks.length > 0);
+          }
+        }
+      }
       if (confident) {
         const directKeywords = extractKeywords(query || "");
         if (intent === "events") {
