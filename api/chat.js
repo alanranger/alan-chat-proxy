@@ -2230,7 +2230,7 @@ function anyIlike(col, words) {
   const parts = (words || [])
     .map((w) => w.trim())
     .filter(Boolean)
-    .map((w) => `${col}.ilike.%${w}%`);
+    .map((w) => `${col}.ilike.'%${w}%'`);
   return parts.length ? parts.join(",") : null;
 }
 
