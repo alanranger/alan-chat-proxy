@@ -2547,6 +2547,12 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     const t3 = anyIlike("event_location", keywords); if (t3) parts.push(t3);
     const t4 = anyIlike("product_title", keywords); if (t4) parts.push(t4);
     
+    console.log('🔍 findEvents debug:', {
+      keywords,
+      parts,
+      query: parts.join(",")
+    });
+    
     if (parts.length) {
       q = q.or(parts.join(","));
     }
@@ -2557,6 +2563,11 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     console.error('❌ v_events_for_chat query error:', error);
     return [];
   }
+  
+  console.log('🔍 findEvents query results:', {
+    dataCount: data?.length || 0,
+    sampleData: data?.slice(0, 2) || []
+  });
   
   // Map v_events_for_chat fields to frontend expected fields
   const mappedData = (data || []).map(event => ({
