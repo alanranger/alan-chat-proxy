@@ -1,3 +1,30 @@
+---
+title: "AI TODO (Working List)"
+project: "Alan Ranger – Chat AI Bot"
+maintainer: "Alan Ranger"
+category: "Scratchpad / Working Memory"
+last_updated: "2025-10-16 21:00"
+purpose: >
+  Repo-scoped, writable scratchpad used by Cursor AI to persist short-term memory,
+  tasks, and next actions between chats. Read at session start and update after each change.
+tags:
+  - Cursor AI
+  - MCP Notes
+  - TODO
+  - Handover
+memory_policy:
+  read_on_session_start: true
+  file_id: "AI_TODO"
+  promote_to_docs:
+    map: "notes/promotion-map.json"
+    target_root: "Architecture and Handover"
+  rotate_when_lines_exceed: 200
+  rotation_naming: "AI_TODO_2.md"
+  update_log_section: "## Updates"
+  update_last_updated_on_append: true
+  last_updated_format: "YYYY-MM-DD HH:mm"
+---
+
 # AI TODO (Working List)
 
 This is the AI’s running TODO list. Keep it short and actionable.
@@ -14,6 +41,9 @@ This is the AI’s running TODO list. Keep it short and actionable.
 
 ## Updates
 - 2025-10-16 21:00 — Scratchpad created
+- 2025-10-16 — Fixed S2681 at chat.js:L4893. Baseline vs after: no regressions; 100% success rate. Merged.
+- 2025-10-16 — Fixed S1871 at chat.js:L4984. Baseline vs after: no regressions; 100% success rate. Merged.
+- 2025-10-16 — Fixed S2486 at chat.js:L4775. Added error handling for 2 unhandled database exceptions. Baseline vs after: no regressions; 100% success rate. Merged.
 
 - [ ] add JSON-LD for the new workshop page
 
@@ -79,5 +109,3 @@ This is the AI’s running TODO list. Keep it short and actionable.
 
 ### Immediate Actions
 - [ ] Commit all changes and deploy to save current work
-
-- 2025-10-16 — Fixed S2681 at chat.js:L4893. Baseline vs after: no regressions; 100% success rate. Merged.
