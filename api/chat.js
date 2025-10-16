@@ -4890,7 +4890,7 @@ export default async function handler(req, res) {
       const url = String(a.page_url||a.source_url||a.url||'').toLowerCase();
       const categories = a.categories || [];
       let s = 0;
-      for (const t of queryTokens){ if (!t) continue; if (title.includes(t)) s += 3; if (url.includes(t)) s += 2; }
+      for (const t of queryTokens){ if (title.includes(t)) s += 3; if (url.includes(t)) s += 2; }
       
       // MAJOR BOOST: Online Photography Course content for technical concepts
       const isOnlineCourse = categories.includes("online photography course");
