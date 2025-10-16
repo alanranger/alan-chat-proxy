@@ -1,23 +1,24 @@
 @echo off
 setlocal enableextensions
 
-rem === Resolve Node and the MCP filesystem server entrypoint ===
+rem ---- locate node ----
 set "NODE=%ProgramFiles%\nodejs\node.exe"
 if not exist "%NODE%" (
-  echo Node.exe not found at "%ProgramFiles%\nodejs\node.exe"
+  echo [fs-ro] Node.exe not found at "%ProgramFiles%\nodejs\node.exe"
   exit /b 1
 )
 
+rem ---- locate the filesystem MCP entry point ----
 set "MAIN=%APPDATA%\npm\node_modules\@modelcontextprotocol\server-filesystem\dist\index.js"
 if not exist "%MAIN%" (
-  echo MCP server-filesystem entry not found: "%MAIN%"
-  echo Try:  npm i -g @modelcontextprotocol/server-filesystem
+  echo [fs-ro] MCP server-filesystem not found: "%MAIN%"
+  echo [fs-ro] Try:  npm i -g @modelcontextprotocol/server-filesystem
   exit /b 1
 )
 
-rem === Root: argument 1, or default to current dir ===
-set "ROOT=%~1"
-if "%ROOT%"=="" set "ROOT=%CD%"
+rem ---- your workspace root (use the real G:\ path, or C:\mcp_root junction you created) ----
+set "ROOT=G:\Dropbox\alan ranger photography\Website Code\Chat AI Bot"
 
-rem === Mode: read-only ===
+echo [fs-ro.cmd] Running:
+echo   "%NODE%" "%MAIN%" --root "%ROOT%" --mode readonly
 "%NODE%" "%MAIN%" --root "%ROOT%" --mode readonly

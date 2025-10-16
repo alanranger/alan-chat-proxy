@@ -1,38 +1,3 @@
 {
-  "mcpServers": {
-    "GitKraken": {
-      "command": "c:\\Users\\alan\\AppData\\Roaming\\Cursor\\User\\globalStorage\\eamodio.gitlens\\gk.exe",
-      "type": "stdio",
-      "name": "GitKraken",
-      "args": [
-        "mcp",
-        "--host=cursor",
-        "--source=gitlens",
-        "--scheme=cursor"
-      ],
-      "env": {}
-    },
-    "code-search": {
-      "command": "mcp-ripgrep",
-      "type": "stdio",
-      "name": "code-search",
-      "args": [
-        "--root",
-        "G:\\Dropbox\\alan ranger photography\\Website Code\\Chat AI Bot",
-        "--hidden",
-        "--glob",
-        "!node_modules",
-        "--glob",
-        "!.git",
-        "--glob",
-        "!dist",
-        "--glob",
-        "!build",
-        "--line-number",
-        "--color",
-        "never"
-      ],
-      "env": {}
-    }
-  }
+  "mcpServers": {}
 }
