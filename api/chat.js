@@ -4641,7 +4641,7 @@ export default async function handler(req, res) {
       const significant = (keywords || []).find(k => k && !GENERIC_EVENT_TERMS.has(String(k).toLowerCase()) && String(k).length >= 4);
       const matchEvent = (e, term)=>{
         const t = term.toLowerCase();
-        const hay = `${e.title||e.event_title||''} ${e.product_title||''} ${e.location_name||e.event_location||''}`.toLowerCase();
+        const hay = `${e.event_title||e.title||''} ${e.product_title||''} ${e.event_location||e.location_name||e.location||''}`.toLowerCase();
         return hay.includes(t);
       };
       const filteredEvents = significant ? events.filter(e => matchEvent(e, significant)) : events;
