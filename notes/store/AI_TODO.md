@@ -79,3 +79,5 @@ This is the AI’s running TODO list. Keep it short and actionable.
 
 ### Immediate Actions
 - [ ] Commit all changes and deploy to save current work
+
+- 2025-10-16 — Fixed S2681 at chat.js:L4893. Baseline vs after: no regressions; 100% success rate. Merged.

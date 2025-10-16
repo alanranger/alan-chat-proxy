@@ -162,3 +162,43 @@ The critical issue has been resolved, but the project is far from complete. The 
 
 The next immediate priority is to start the ingestion system analysis to understand and fix the root cause of the duplication issue.
 
+---
+
+## Current Risks
+
+- **Ingestion reliability** — current extraction approach is failing on content; JSON-LD extraction patterns (regex) are brittle and miss cases.
+- **Data gaps** — `workshop_events` and `course_events` are empty; risk of stale/incorrect event responses.
+- **Architecture complexity** — RAG pipeline and clarification branching are too complex; creates loops and self-corrections.
+- **Performance & scale** — fixes have been "band-aids"; risk that system fails under hundreds/thousands of queries.
+- **Operational drift** — Supabase cron "light refresh" status unknown; admin analytics/QA flows may be out of sync.
+
+## Next Actions (2–3 day horizon)
+
+1. **Events rendering & content correctness**
+   - Render **multi-day residential workshop tiles** correctly in event responses.
+   - Ensure **tripod article tiles** render with solid title/URL fallbacks.
+   - Source **clarification options only from evidence buckets**; suppress generic fallbacks.
+
+2. **Testing & validation**
+   - Run **10-key-query live verification** and capture outputs.
+   - Validate `v_events_for_chat` / `v_events_real_data` are populated; remove empty tables.
+   - Add **regression tests** for tripod + residential pricing/B&B flows.
+
+3. **Data & ingestion**
+   - Fix **JSON-LD extraction** (review selectors/regex; validate with `npm run validate:all` on generated payloads).
+   - Investigate/resolve **empty `workshop_events` and `course_events`**; prefer **`page_entities`/views** if that's the new contract.
+   - Remove the empty legacy tables once views are confirmed as source of truth.
+
+4. **System architecture & reliability**
+   - Simplify the **clarification logic** to be more deterministic; add **content-based confidence scoring**.
+   - Convert prior "band-aid" fixes into **principled changes** documented in Architecture.
+
+5. **Ops & dashboards**
+   - Verify **Supabase light refresh cron** and fix if broken.
+   - Revisit **testbench-pro.html**; ensure **admin panel** and **analytics dashboard** reflect current flows.
+   - Confirm **cron jobs** run daily at 01:00 and that admin actions (QA Check / Refresh Mappings / Finalize Data) complete end-to-end.
+
+---
+
+_Changelog:_ 2025-10-16 — Added **Current Risks** and **Next Actions** sections synced from AI_TODO.md (scratchpad).
+
