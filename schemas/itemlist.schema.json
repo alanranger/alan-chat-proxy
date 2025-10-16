@@ -1,0 +1,32 @@
+{
+  "$id": "https://alanranger.com/schemas/itemlist.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["@context", "@type", "itemListElement"],
+  "properties": {
+    "@context": { "$ref": "jsonld-shared.defs.json#/definitions/Context" },
+    "@type": { "const": "ItemList" },
+    "name": { "type": "string" },
+    "itemListElement": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["@type", "position"],
+        "properties": {
+          "@type": { "const": "ListItem" },
+          "position": { "type": "integer", "minimum": 1 },
+          "url": { "$ref": "jsonld-shared.defs.json#/definitions/URL" },
+          "item": {
+            "oneOf": [
+              { "type": "object" },
+              { "type": "string" }
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

@@ -11,7 +11,11 @@
     "start": "vercel dev",
     "dev": "node local-dev-server.js",
     "call:fn": "node call-fn.cjs",
-    "live-sweep": "node scripts/live-sweep.js"
+    "live-sweep": "node scripts/live-sweep.js",
+
+    "validate:event": "ajv validate --spec=draft2020 -c ajv-formats -s schemas/event.schema.json -r schemas/jsonld-shared.defs.json -d \"generated/*.event.json\"",
+    "validate:itemlist": "ajv validate --spec=draft2020 -c ajv-formats -s schemas/itemlist.schema.json -r schemas/jsonld-shared.defs.json -d \"generated/*.itemlist.json\"",
+    "validate:all": "npm run validate:event && npm run validate:itemlist"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
@@ -22,6 +26,9 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",
+    "ajv": "^8.17.1",
+    "ajv-cli": "^5.0.0",
+    "ajv-formats": "^3.0.1",
     "eslint": "^9.37.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
