@@ -1,0 +1,10 @@
+{
+  "policy": [
+    "This repository includes a Notes MCP scratchpad under /notes/store.",
+    "Cursor AI should use this space to remember tasks, pending changes, and context it might otherwise forget.",
+    "When a task, fix, or refactor is identified, Cursor should append it to a note named AI_TODO.md.",
+    "When a task is completed and verified, Cursor should mark it as done in AI_TODO.md.",
+    "If a note exceeds 200 lines, Cursor should create a new note with the same title plus a numeric suffix (e.g. AI_TODO_2.md).",
+    "Architecture and Handover markdowns remain the long-term record of truth, but notes are for live working memory and interim tracking."
+  ]
+}

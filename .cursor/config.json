@@ -1,0 +1,13 @@
+{
+  "$schema": "https://cursor.sh/schema/config.v1.json",
+  "instructions": [
+    {
+      "id": "jsonld-validation-gate",
+      "content": "After generating or editing any JSON-LD file (schema.org Product, Event, or ItemList):\n1) Save the output to /generated/*.event.json or /generated/*.itemlist.json.\n2) Run `npm run validate:all` via the Shell MCP (`npm_validate_all`).\n3) If validation fails, propose a single unified git patch that fixes the JSON so it passes, then re-run validation.\n4) Only apply any code or content changes once `npm run validate:all` reports valid for all files.\n5) Always use `code-search` to locate files before editing, read them with `fs-ro`, and write updates using `fs-rw`.\n6) Treat this validation workflow as mandatory before committing or merging any schema edits."
+    },
+    {
+      "id": "notes-scratchpad-policy",
+      "content": "Use the Notes MCP as a writable scratchpad under /notes/store to persist short-term memory.\n\nCore rules:\n• The primary scratchpad file is AI_TODO.md. If it does not exist, create it with `notes_create`.\n• At the start of a session, restore context by reading AI_TODO.md with `notes_get`.\n• When a new task/fix/refactor is identified, append a concise checklist item to AI_TODO.md using `notes_append` (use '- [ ] ...').\n• When a task is completed and verified, update the same line to '- [x] ...'.\n• If AI_TODO.md grows beyond ~200 lines, create a new file with a numeric suffix (e.g., AI_TODO_2.md) and continue there.\n• Use `notes_search` to find existing notes before creating new ones.\n\nRelationship to long-term docs:\n• The authoritative long-term project documents are in /Architecture and Handover/.\n• When scratchpad items are finalized (decisions, designs, procedures), propose a minimal, section-targeted patch to the relevant Markdown file(s).\n• Always preview diffs in chat; apply with fs-rw only after approval. Avoid wholesale rewrites—edit specific sections/headings only.\n• Add a brief dated 'Changes' bullet to the end of the edited doc."
+    }
+  ]
+}

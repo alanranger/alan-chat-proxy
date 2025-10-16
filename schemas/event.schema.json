@@ -2,11 +2,11 @@
   "$id": "https://alanranger.com/schemas/event.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": ["@context", "@type", "name", "startDate", "location", "offers"],
+  "required": ["@context", "@type", "name", "startDate", "organizer", "location", "offers"],
   "properties": {
     "@context": { "$ref": "jsonld-shared.defs.json#/definitions/Context" },
     "@type": { "const": "Event" },
-    "name": { "$ref": "jsonld-shared.defs.json#/definitions/Text" },
+    "name": { "type": "string", "minLength": 3 },
     "url": { "$ref": "jsonld-shared.defs.json#/definitions/URL" },
     "image": {
       "oneOf": [
@@ -14,7 +14,8 @@
         {
           "type": "array",
           "items": { "$ref": "jsonld-shared.defs.json#/definitions/URL" },
-          "minItems": 1
+          "minItems": 1,
+          "uniqueItems": true
         }
       ]
     },
@@ -26,32 +27,49 @@
       "required": ["@type", "name"],
       "properties": {
         "@type": { "const": "Organization" },
-        "name": { "$ref": "jsonld-shared.defs.json#/definitions/Text" },
+        "name": { "type": "string" },
         "url": { "$ref": "jsonld-shared.defs.json#/definitions/URL" },
         "logo": { "$ref": "jsonld-shared.defs.json#/definitions/URL" },
-        "address": { "type": "string" }
-      },
-      "additionalProperties": true
-    },
-    "location": {
-      "type": "object",
-      "required": ["@type", "name"],
-      "properties": {
-        "@type": { "enum": ["Place", "VirtualLocation"] },
-        "name": { "$ref": "jsonld-shared.defs.json#/definitions/Text" },
-        "url": { "$ref": "jsonld-shared.defs.json#/definitions/URL" },
         "address": {
           "oneOf": [
-            { "type": "string", "minLength": 1 },
+            { "type": "string" },
             {
               "type": "object",
+              "required": ["@type"],
               "properties": {
                 "@type": { "const": "PostalAddress" },
                 "streetAddress": { "type": "string" },
                 "addressLocality": { "type": "string" },
                 "addressRegion": { "type": "string" },
                 "postalCode": { "type": "string" },
-                "addressCountry": { "type": "string" }
+                "addressCountry": { "type": ["string", "object"] }
+              },
+              "additionalProperties": true
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "location": {
+      "type": "object",
+      "required": ["@type", "name", "address"],
+      "properties": {
+        "@type": { "const": "Place" },
+        "name": { "type": "string" },
+        "address": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "object",
+              "required": ["@type"],
+              "properties": {
+                "@type": { "const": "PostalAddress" },
+                "streetAddress": { "type": "string" },
+                "addressLocality": { "type": "string" },
+                "addressRegion": { "type": "string" },
+                "postalCode": { "type": "string" },
+                "addressCountry": { "type": ["string", "object"] }
               },
               "additionalProperties": true
             }
@@ -65,17 +83,11 @@
       "required": ["@type", "price", "priceCurrency", "availability", "url", "validFrom"],
       "properties": {
         "@type": { "const": "Offer" },
-        "price": {
-          "oneOf": [
-            { "type": "number" },
-            { "type": "string", "pattern": "^[0-9]+(\\.[0-9]{1,2})?$" }
-          ]
-        },
+        "price": { "type": ["string", "number"] },
         "priceCurrency": { "type": "string", "minLength": 3, "maxLength": 3 },
         "availability": { "type": "string" },
         "url": { "$ref": "jsonld-shared.defs.json#/definitions/URL" },
         "validFrom": {
-          "description": "MUST equal or precede startDate",
           "oneOf": [
             { "$ref": "jsonld-shared.defs.json#/definitions/DateTime" },
             { "$ref": "jsonld-shared.defs.json#/definitions/Date" }
