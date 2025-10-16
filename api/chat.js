@@ -1335,11 +1335,148 @@ function needsClarification(query) {
 }
 
 /**
+ * Generate clarification options from evidence buckets
+ * Sources options from actual data instead of hardcoded patterns
+ */
+async function generateClarificationOptionsFromEvidence(client, query, pageContext) {
+  try {
+    const keywords = extractKeywords(query || "");
+    const evidence = await getEvidenceSnapshot(client, query, pageContext);
+    
+    const options = [];
+    
+    // Generate options from events evidence
+    if (evidence.events && evidence.events.length > 0) {
+      const eventTypes = new Set();
+      const eventCategories = new Set();
+      
+      evidence.events.forEach(event => {
+        // Extract event types from categories or CSV type
+        if (event.csv_type) {
+          eventTypes.add(event.csv_type.replace('_events', '').replace('_', ' '));
+        }
+        if (event.categories && Array.isArray(event.categories)) {
+          event.categories.forEach(cat => {
+            if (cat && cat.trim()) {
+              eventCategories.add(cat.trim());
+            }
+          });
+        }
+      });
+      
+      // Add event-based options
+      eventTypes.forEach(type => {
+        const displayType = type.charAt(0).toUpperCase() + type.slice(1);
+        options.push({
+          text: `${displayType} events`,
+          query: `${type} events`
+        });
+      });
+      
+      eventCategories.forEach(category => {
+        if (category && category.length > 3) { // Avoid very short categories
+          options.push({
+            text: `${category} events`,
+            query: `${category} events`
+          });
+        }
+      });
+    }
+    
+    // Generate options from articles evidence
+    if (evidence.articles && evidence.articles.length > 0) {
+      const articleCategories = new Set();
+      const articleTags = new Set();
+      
+      evidence.articles.forEach(article => {
+        if (article.categories && Array.isArray(article.categories)) {
+          article.categories.forEach(cat => {
+            if (cat && cat.trim()) {
+              articleCategories.add(cat.trim());
+            }
+          });
+        }
+        if (article.tags && Array.isArray(article.tags)) {
+          article.tags.forEach(tag => {
+            if (tag && tag.trim()) {
+              articleTags.add(tag.trim());
+            }
+          });
+        }
+      });
+      
+      // Add article-based options
+      articleCategories.forEach(category => {
+        if (category && category.length > 3) {
+          options.push({
+            text: `${category} advice`,
+            query: `${category} advice`
+          });
+        }
+      });
+      
+      // Add top tags as options
+      const topTags = Array.from(articleTags).slice(0, 3);
+      topTags.forEach(tag => {
+        if (tag && tag.length > 3) {
+          options.push({
+            text: `${tag} guidance`,
+            query: `${tag} guidance`
+          });
+        }
+      });
+    }
+    
+    // Generate options from services evidence
+    if (evidence.services && evidence.services.length > 0) {
+      const serviceTypes = new Set();
+      
+      evidence.services.forEach(service => {
+        if (service.categories && Array.isArray(service.categories)) {
+          service.categories.forEach(cat => {
+            if (cat && cat.trim()) {
+              serviceTypes.add(cat.trim());
+            }
+          });
+        }
+      });
+      
+      // Add service-based options
+      serviceTypes.forEach(type => {
+        if (type && type.length > 3) {
+          options.push({
+            text: `${type} services`,
+            query: `${type} services`
+          });
+        }
+      });
+    }
+    
+    // Remove duplicates and limit to 5 options
+    const uniqueOptions = [];
+    const seen = new Set();
+    
+    options.forEach(option => {
+      const key = option.text.toLowerCase();
+      if (!seen.has(key) && uniqueOptions.length < 5) {
+        seen.add(key);
+        uniqueOptions.push(option);
+      }
+    });
+    
+    return uniqueOptions;
+  } catch (error) {
+    console.error('Error generating clarification options from evidence:', error);
+    return [];
+  }
+}
+
+/**
  * COMPLETE CLARIFICATION SYSTEM - PHASE 2: Question Generation
  * Generates appropriate clarification questions for all 20 question types
  * 95% generation rate with natural, helpful questions
  */
-function generateClarificationQuestion(query) {
+async function generateClarificationQuestion(query, client = null, pageContext = null) {
   const lc = query.toLowerCase();
   console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
   // Loop guard: if we have previously shown the same global set, offer skip
@@ -1386,6 +1523,19 @@ function generateClarificationQuestion(query) {
       ],
       confidence: 30
     };
+  }
+  
+  // Try evidence-based clarification first
+  if (client && pageContext) {
+    const evidenceOptions = await generateClarificationOptionsFromEvidence(client, query, pageContext);
+    if (evidenceOptions.length > 0) {
+      return {
+        type: "evidence_based_clarification",
+        question: "I found several options that might help. What are you most interested in?",
+        options: evidenceOptions,
+        confidence: 30
+      };
+    }
   }
   
   // Current patterns (keep existing for backward compatibility)
@@ -3214,6 +3364,26 @@ function formatEventsForUi(events) {
       date_end: e.end_date || e.date_end,
       _csv_start_time: e._csv_start_time || e.start_time || null,
       _csv_end_time: e._csv_end_time || e.end_time || null,
+      // Additional fields for multi-day residential workshop tiles
+      csv_type: e.csv_type || null,
+      price_gbp: e.price_gbp || e.price || null,
+      start_time: e.start_time || null,
+      end_time: e.end_time || null,
+      location_name: e.location_name || null,
+      location_address: e.location_address || null,
+      categories: e.categories || null,
+      tags: e.tags || null,
+      raw: e.raw || null,
+      // Structured data fields for enhanced display
+      participants: e.participants || null,
+      experience_level: e.experience_level || null,
+      equipment_needed: e.equipment_needed || null,
+      time_schedule: e.time_schedule || null,
+      fitness_level: e.fitness_level || null,
+      what_to_bring: e.what_to_bring || null,
+      course_duration: e.course_duration || null,
+      instructor_info: e.instructor_info || null,
+      availability_status: e.availability_status || null,
     }))
     .slice(0, 12);
 }
@@ -4266,7 +4436,7 @@ export default async function handler(req, res) {
         if (newIntent === "clarification") {
           // Route to another clarification question
           console.log(`🔍 DEBUG: Looking for clarification for query: "${newQuery}"`);
-          const clarification = generateClarificationQuestion(newQuery);
+          const clarification = await generateClarificationQuestion(newQuery, client, pageContext);
           if (clarification) {
         // For clarifications, use fixed low confidence since we're asking for more info
         const confidencePercent = 30; // Fixed low confidence for second-level clarifications
@@ -4393,7 +4563,7 @@ export default async function handler(req, res) {
           });
           if (!hasConfidence) {
             console.log(`🤔 Low logical confidence for clarified advice query: "${newQuery}" - triggering clarification`);
-            const clarification = generateClarificationQuestion(newQuery);
+            const clarification = await generateClarificationQuestion(newQuery, client, pageContext);
             if (clarification) {
               const confidencePercent = 10;
               res.status(200).json({
@@ -5399,7 +5569,7 @@ export default async function handler(req, res) {
     });
     if (!hasConfidence) {
       console.log(`🤔 Low logical confidence for advice query: "${query}" - triggering clarification`);
-      const clarification = generateClarificationQuestion(query);
+      const clarification = await generateClarificationQuestion(query, client, pageContext);
       if (clarification) {
         // For initial clarifications, use fixed low confidence since we're asking for more info
         const confidencePercent = 10; // Fixed low confidence for initial clarifications

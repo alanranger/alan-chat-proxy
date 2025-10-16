@@ -1261,6 +1261,11 @@ function renderEventsBlock(structured, query){
     const eventType = e.csv_type === 'course_events' ? 'Course' : e.csv_type === 'workshop_events' ? 'Workshop' : 'Event';
     const eventTypeIcon = e.csv_type === 'course_events' ? '🎓' : e.csv_type === 'workshop_events' ? '🔧' : '📅';
     
+    // Check if this is a residential workshop (multi-day)
+    const isResidential = e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start);
+    const isWeekendWorkshop = e.categories && e.categories.includes('weekend residential photo workshops');
+    const residentialIndicator = (isResidential || isWeekendWorkshop) ? '🏠 Residential' : '';
+    
     // Create a more visually appealing event card
     return `
       <div class="event-card">
@@ -1269,12 +1274,15 @@ function renderEventsBlock(structured, query){
             <h4 class="event-title">
               <a href="${href}" target="_blank" rel="noopener">${title || 'Photography Event'}</a>
             </h4>
-            <div class="event-type-badge">${eventTypeIcon} ${eventType}</div>
+            <div class="event-type-badge">${eventTypeIcon} ${eventType} ${residentialIndicator}</div>
           </div>
           <div class="event-details">
             <div class="event-date">📅 ${when}</div>
             ${timeInfo}
             ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
+            ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
+            ${e.participants ? `<div class="event-participants">👥 ${e.participants} participants</div>` : ''}
+            ${e.experience_level ? `<div class="event-experience">🎯 ${e.experience_level}</div>` : ''}
           </div>
         </div>
       </div>
@@ -1293,8 +1301,56 @@ function renderEventsBlock(structured, query){
     </div>
   `;
 }
-function articleUrl(a){ return a?.page_url || a?.source_url || a?.url || ''; }
-function articleTitle(a){ return a?.title || a?.raw?.name || ''; }
+function articleUrl(a){ 
+  // Try multiple fallback sources for URL
+  let url = a?.page_url || a?.source_url || a?.url || '';
+  
+  // If no URL found, try to construct from title or other fields
+  if (!url) {
+    // Try to construct URL from title if available
+    const title = a?.title || a?.raw?.name || a?.raw?.headline || '';
+    if (title && title !== 'Photography Guide' && !/^alan ranger photography$/i.test(title)) {
+      // Convert title to URL-friendly format
+      const urlTitle = title.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      if (urlTitle) {
+        url = `https://www.alanranger.com/${urlTitle}`;
+      }
+    }
+  }
+  
+  // Final fallback - return empty string if no URL can be determined
+  return url || '';
+}
+
+function articleTitle(a){ 
+  // Try multiple fallback sources for title
+  let title = a?.title || a?.raw?.name || a?.raw?.headline || '';
+  
+  // If still generic or empty, try to extract from URL
+  if (!title || /^alan ranger photography$/i.test(title)) {
+    const url = a?.page_url || a?.source_url || a?.url || '';
+    if (url) {
+      try {
+        const u = new URL(url);
+        const pathParts = (u.pathname || '').split('/').filter(Boolean);
+        const lastPart = pathParts[pathParts.length - 1] || '';
+        title = lastPart.replace(/[-_]+/g, ' ').replace(/\.(html?)$/i, ' ').trim();
+        title = title.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
+      } catch {}
+    }
+  }
+  
+  // Final fallback
+  if (!title || /^alan ranger photography$/i.test(title)) {
+    title = 'Photography Guide';
+  }
+  
+  return title;
+}
 function pickArticles(structured, query, topic){
   const all = Array.isArray(structured?.articles) ? structured.articles : [];
   if (!all.length) return [];
@@ -1379,26 +1435,13 @@ function renderArticlesBlock(structured, query){
   
   const articlesHTML = list.map(a=>{
     const href = articleUrl(a);
-    let t = articleTitle(a);
+    const t = articleTitle(a);
     
-    // Better title extraction with multiple fallbacks
-    if (!t || /^alan ranger photography$/i.test(t)) {
-      // Try raw fields first
-      t = a?.raw?.headline || a?.raw?.name || '';
-      
-      // If still generic, extract from URL
-      if (!t || /^alan ranger photography$/i.test(t)) {
-        try {
-          const u = new URL(href);
-          const pathParts = (u.pathname||'').split('/').filter(Boolean);
-          const lastPart = pathParts[pathParts.length - 1] || '';
-          t = lastPart.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim();
-          t = t.split(' ').map(w=> w? w[0].toUpperCase()+w.slice(1):'').join(' ');
-        } catch {}
-      }
-    }
+    // Ensure we have a valid URL and title
+    if (!href || !t) return '';
     
-    if (!t || /^alan ranger photography$/i.test(t)) t = 'Read more';
+    // Ensure href is a valid URL
+    const validHref = href.startsWith('http') ? href : `https://www.alanranger.com${href.startsWith('/') ? '' : '/'}${href}`;
     
     // Create a more visually appealing article card
     const displayDate = a.display_date || (a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { 
@@ -1423,7 +1466,7 @@ function renderArticlesBlock(structured, query){
       <div class="article-card">
         <div class="article-content">
           <h4 class="article-title">
-            <a href="${href}" target="_blank" rel="noopener">${escapeHTML(t)}</a>
+            <a href="${validHref}" target="_blank" rel="noopener">${escapeHTML(t)}</a>
           </h4>
           <div class="article-meta">
             <span class="article-source">📖 Photography Guide</span>
