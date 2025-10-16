@@ -4773,23 +4773,35 @@ export default async function handler(req, res) {
       
       // Search landing pages
       if (client && client.from) {
-        const { data: landingData } = await client
-          .from("page_entities")
-          .select("*")
-          .eq("kind", "landing")
-          .or(keywords.map(k => `title.ilike.%${k}%`).join(","))
-          .limit(20);
-        landing = landingData || [];
-        console.log(`🧭 Landing pages found: ${landing.length}`);
+        try {
+          const { data: landingData } = await client
+            .from("page_entities")
+            .select("*")
+            .eq("kind", "landing")
+            .or(keywords.map(k => `title.ilike.%${k}%`).join(","))
+            .limit(20);
+          landing = landingData || [];
+          console.log(`🧭 Landing pages found: ${landing.length}`);
+        } catch (error) {
+          console.error('❌ Error fetching landing pages:', error);
+          landing = [];
+        }
       }
       
       // CRITICAL: Also search specifically for the free course URL across all entity types
       console.log(`🔍 Searching specifically for free course URL...`);
       const freeCourseUrl = 'https://www.alanranger.com/free-online-photography-course';
-      const { data: freeCourseEntities } = await client
-        .from("page_entities")
-        .select("*")
-        .eq("page_url", freeCourseUrl);
+      let freeCourseEntities = [];
+      try {
+        const { data } = await client
+          .from("page_entities")
+          .select("*")
+          .eq("page_url", freeCourseUrl);
+        freeCourseEntities = data || [];
+      } catch (error) {
+        console.error('❌ Error fetching free course entities:', error);
+        freeCourseEntities = [];
+      }
       
       if (freeCourseEntities && freeCourseEntities.length > 0) {
         console.log(`✅ Found ${freeCourseEntities.length} entities with free course URL`);
