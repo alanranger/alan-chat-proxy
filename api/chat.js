@@ -4980,7 +4980,7 @@ export default async function handler(req, res) {
             uniqueArticles.set(url, article);
           }
           // If both have proper titles, prefer 'article' over 'service'
-          else if (title !== 'Alan Ranger Photography' && existingTitle !== 'Alan Ranger Photography' && 
+          else if (existingTitle !== 'Alan Ranger Photography' && 
                    article.kind === 'article' && existing.kind === 'service') {
             uniqueArticles.set(url, article);
           }
