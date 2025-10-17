@@ -4693,18 +4693,6 @@ export default async function handler(req, res) {
       const csvType = null; // unified events; csvType unused
       
       // Get events from the enhanced view that includes product mappings
-      // TEMPORARY DEBUG: Query database directly to see what's there
-      const { data: directDbEvents, error: directDbError } = await client
-        .from('v_events_for_chat')
-        .select('*')
-        .gte('date_start', new Date().toISOString())
-        .limit(5);
-      console.log('🔍 DIRECT DB QUERY:', {
-        count: directDbEvents?.length || 0,
-        error: directDbError,
-        sample: directDbEvents?.slice(0, 2) || []
-      });
-      
       const events = await findEvents(client, { keywords, limit: 80, pageContext, csvType });
       
       // TEMPORARY DEBUG: Check if events are being retrieved
