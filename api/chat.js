@@ -3868,6 +3868,33 @@ function calculateEventConfidence(query, events, product) {
 /* -------------------------------- Extracted Functions -------------------------------- */
 
 /**
+ * Determine keywords for content retrieval based on intent and query context
+ */
+function determineKeywords(query, previousQuery, intent) {
+  const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
+  const qlc = (query || "").toLowerCase();
+  
+  // For events, only use previous context for follow-up style questions
+  const isFollowUp = [
+    "how much","cost","price","where","location","when","date",
+    "how many","people","attend","fitness","level","duration","long",
+    "how do i book","book","booking","required","needed","suitable"
+  ].some(w=>qlc.includes(w));
+  
+  // If the new query names a concrete topic (e.g., lightroom, ISO, bluebell), don't merge context
+  const GENERIC_EVENT_TERMS = new Set(["workshop","workshops","course","courses","class","classes","event","events"]);
+  const hasSignificantTopic = TOPIC_KEYWORDS
+    .filter(t => !GENERIC_EVENT_TERMS.has(t))
+    .some(t => qlc.includes(t));
+  
+  const keywords = intent === "events"
+    ? extractKeywords((isFollowUp && !hasSignificantTopic ? contextualQuery : query) || "")
+    : extractKeywords(query || "");
+    
+  return keywords;
+}
+
+/**
  * Handle residential pricing guard - bypasses clarification for residential workshop pricing queries
  */
 async function handleResidentialPricingGuard(client, query, previousQuery, pageContext, res) {
@@ -4356,21 +4383,9 @@ export default async function handler(req, res) {
         }
       }
     
-    // For events, only use previous context for follow-up style questions.
+    // Determine keywords for content retrieval
+    const keywords = determineKeywords(query, previousQuery, intent);
     const qlc = (query || "").toLowerCase();
-    const isFollowUp = [
-      "how much","cost","price","where","location","when","date",
-      "how many","people","attend","fitness","level","duration","long",
-      "how do i book","book","booking","required","needed","suitable"
-    ].some(w=>qlc.includes(w));
-    // If the new query names a concrete topic (e.g., lightroom, ISO, bluebell), don't merge context
-    const GENERIC_EVENT_TERMS = new Set(["workshop","workshops","course","courses","class","classes","event","events"]);
-    const hasSignificantTopic = TOPIC_KEYWORDS
-      .filter(t => !GENERIC_EVENT_TERMS.has(t))
-      .some(t => qlc.includes(t));
-    const keywords = intent === "events"
-      ? extractKeywords((isFollowUp && !hasSignificantTopic ? contextualQuery : query) || "")
-      : extractKeywords(query || "");
 
     // Residential pricing/B&B shortcut (works on both first-turn and follow-ups)
     const isResidentialPricing = (
