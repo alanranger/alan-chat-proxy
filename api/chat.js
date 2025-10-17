@@ -3895,6 +3895,99 @@ function determineKeywords(query, previousQuery, intent) {
 }
 
 /**
+ * Handle residential pricing shortcut - direct answer for residential workshop pricing queries
+ */
+async function handleResidentialPricingShortcut(client, query, keywords, pageContext, res) {
+  const qlc = (query || "").toLowerCase();
+  const isResidentialPricing = (
+    qlc.includes("residential") && qlc.includes("workshop") && (
+      qlc.includes("price") || qlc.includes("cost") || qlc.includes("how much") ||
+      qlc.includes("b&b") || qlc.includes("bed and breakfast") || qlc.includes("bnb") ||
+      qlc.includes("include b&b") || qlc.includes("includes b&b") || qlc.includes("include bnb")
+    )
+  );
+  
+  if (!isResidentialPricing) {
+    return false; // No response sent, continue with normal flow
+  }
+  
+  const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
+  const events = await findEvents(client, { keywords: directKeywords, limit: 120, pageContext });
+  const all = formatEventsForUi(events) || [];
+  const eventList = all.filter(e => {
+    try{ return e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start); }catch{ return false; }
+  });
+  
+  if (eventList.length) {
+    const confidence = calculateEventConfidence(query || "", eventList, null);
+    res.status(200).json({
+      ok: true,
+      type: "events",
+      answer: eventList,
+      events: eventList,
+      structured: {
+        intent: "events",
+        topic: directKeywords.join(", "),
+        events: eventList,
+        products: [],
+        pills: []
+      },
+      confidence,
+      debug: { version: "v1.2.47-residential-shortcut", shortcut: true }
+    });
+    return true; // Response sent
+  }
+  
+  // Fallback: synthesize concise pricing/B&B answer with links
+  const enrichedKeywords = Array.from(new Set([...directKeywords, "b&b", "bed", "breakfast", "price", "cost"]));
+  let articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
+  articles = (articles || []).map(a => {
+    const out = { ...a };
+    if (!out.title) {
+      out.title = out?.raw?.headline || out?.raw?.name || '';
+      if (!out.title) {
+        try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
+      }
+    }
+    if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
+    return out;
+  });
+  const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+  const contentChunks = await findContentChunks(client, { keywords: enrichedKeywords, limit: 20, articleUrls });
+  const answerMarkdown = generatePricingAccommodationAnswer(query || "", articles, contentChunks);
+  
+  if (answerMarkdown) {
+    res.status(200).json({
+      ok: true,
+      type: "advice",
+      answer_markdown: answerMarkdown,
+      structured: {
+        intent: "advice",
+        topic: enrichedKeywords.join(", "),
+        events: [],
+        products: [],
+        services: [],
+        landing: [],
+        articles: (articles || []).map(a => ({
+          ...a,
+          display_date: (function(){
+            const extracted = extractPublishDate(a);
+            const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+            return extracted || fallback;
+          })()
+        })),
+        pills: []
+      },
+      confidence: 60,
+      debug: { version: "v1.2.47-residential-shortcut", shortcut: true }
+    });
+    return true; // Response sent
+  }
+  
+  return false; // No response sent, continue with normal flow
+}
+
+/**
  * Handle residential pricing guard - bypasses clarification for residential workshop pricing queries
  */
 async function handleResidentialPricingGuard(client, query, previousQuery, pageContext, res) {
@@ -4388,14 +4481,12 @@ export default async function handler(req, res) {
     const qlc = (query || "").toLowerCase();
 
     // Residential pricing/B&B shortcut (works on both first-turn and follow-ups)
-    const isResidentialPricing = (
-      qlc.includes("residential") && qlc.includes("workshop") && (
-        qlc.includes("price") || qlc.includes("cost") || qlc.includes("how much") ||
-        qlc.includes("b&b") || qlc.includes("bed and breakfast") || qlc.includes("bnb") ||
-        qlc.includes("include b&b") || qlc.includes("includes b&b") || qlc.includes("include bnb")
-      )
-    );
-    if (isResidentialPricing) {
+    if (await handleResidentialPricingShortcut(client, query, keywords, pageContext, res)) {
+      return; // Response already sent
+    }
+    
+    // Legacy code below - should never execute due to shortcut above
+    if (false) {
       const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
           const events = await findEvents(client, { keywords: directKeywords, limit: 120, pageContext });
       const all = formatEventsForUi(events) || [];
