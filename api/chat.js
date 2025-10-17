@@ -1146,88 +1146,117 @@ function hasContentBasedConfidence(query, intent, content) {
   if (!query) return false;
   
   const lc = query.toLowerCase();
-
   
-  // Detect clarification questions - these should never be confident
-  if (lc.includes("what type of") && lc.includes("are you planning") && lc.includes("this will help")) {
-    return false; // This is a clarification question, not a confident query
-  }
+  // Helper functions for confidence checks
+  const isClarificationQuestion = () => {
+    return lc.includes("what type of") && lc.includes("are you planning") && lc.includes("this will help");
+  };
   
-  // Force clarification for overly broad course queries
-  if (lc === "do you do courses" || lc === "do you offer courses" || lc === "what courses do you offer") {
-    return false; // Too broad - needs clarification to narrow down course type
-  }
+  const isOverlyBroadCourseQuery = () => {
+    return lc === "do you do courses" || lc === "do you offer courses" || lc === "what courses do you offer";
+  };
   
-  // Extract content metrics (handle different content types)
-  const articleCount = content.articles?.length || 0;
-  const eventCount = content.events?.length || 0;
-  const productCount = content.products?.length || 0;
-  const relevanceScore = content.relevanceScore || 0;
-  const queryLength = query.length;
+  const isVagueQuery = () => {
+    const queryLength = query.length;
+    if (queryLength <= 10 && !hasSpecificKeywords(query)) return true;
+    
+    const vaguePatterns = [
+      "photography help", "photography advice", "help with photography", 
+      "what can you help me with", "photography tips", "photography guidance",
+      "photography support", "photography assistance", "photography questions"
+    ];
+    return vaguePatterns.some(pattern => lc.includes(pattern));
+  };
   
-  // Calculate total content richness
-  const totalContent = articleCount + eventCount + productCount;
+  const hasInsufficientContent = () => {
+    const articleCount = content.articles?.length || 0;
+    const eventCount = content.events?.length || 0;
+    const productCount = content.products?.length || 0;
+    const relevanceScore = content.relevanceScore || 0;
+    const totalContent = articleCount + eventCount + productCount;
+    
+    return totalContent <= 1 && relevanceScore < 0.3;
+  };
   
-  // Very short, vague queries = clarify (10% confidence)
-  if (queryLength <= 10 && !hasSpecificKeywords(query)) {
-    return false; // Too vague - needs clarification
-  }
+  const hasRichContent = () => {
+    const articleCount = content.articles?.length || 0;
+    const eventCount = content.events?.length || 0;
+    const productCount = content.products?.length || 0;
+    const relevanceScore = content.relevanceScore || 0;
+    const totalContent = articleCount + eventCount + productCount;
+    
+    return totalContent >= 3 && relevanceScore > 0.6;
+  };
   
-  // Vague queries that should always trigger clarification
-  const vaguePatterns = [
-    "photography help", "photography advice", "help with photography", 
-    "what can you help me with", "photography tips", "photography guidance",
-    "photography support", "photography assistance", "photography questions"
-  ];
-  if (vaguePatterns.some(pattern => lc.includes(pattern))) {
-    return false; // Too vague - needs clarification
-  }
+  const hasMediumContentWithKeywords = () => {
+    const articleCount = content.articles?.length || 0;
+    const eventCount = content.events?.length || 0;
+    const productCount = content.products?.length || 0;
+    const relevanceScore = content.relevanceScore || 0;
+    const totalContent = articleCount + eventCount + productCount;
+    
+    return totalContent >= 2 && relevanceScore > 0.5 && hasSpecificKeywords(query);
+  };
   
-  // Very little content = clarify (10% confidence)
-  if (totalContent <= 1 && relevanceScore < 0.3) {
-    return false; // Too little content - needs clarification
-  }
+  const isEventsQueryWithContent = () => {
+    const eventCount = content.events?.length || 0;
+    const articleCount = content.articles?.length || 0;
+    const productCount = content.products?.length || 0;
+    const totalContent = articleCount + eventCount + productCount;
+    
+    return intent === "events" && hasSpecificKeywords(query) && (eventCount > 0 || totalContent > 0);
+  };
   
-  // Rich, relevant content = confident (90% confidence)
-  if (totalContent >= 3 && relevanceScore > 0.6) {
-    return true; // Good content - be confident
-  }
+  const isEquipmentQueryWithContent = () => {
+    const articleCount = content.articles?.length || 0;
+    const productCount = content.products?.length || 0;
+    
+    return lc.includes("tripod") && (articleCount > 0 || productCount > 0);
+  };
   
-  // Medium content with specific keywords = confident
-  if (totalContent >= 2 && relevanceScore > 0.5 && hasSpecificKeywords(query)) {
-    return true; // Decent content with specific keywords - be confident
-  }
+  const isResidentialWorkshopPricingQuery = () => {
+    const eventCount = content.events?.length || 0;
+    const articleCount = content.articles?.length || 0;
+    const relevanceScore = content.relevanceScore || 0;
+    
+    if (lc.includes("residential") && lc.includes("workshop") &&
+        (lc.includes("price") || lc.includes("cost") || lc.includes("b&b") || lc.includes("bed and breakfast"))) {
+      if (eventCount > 0) return true;
+      if (articleCount > 0 || relevanceScore >= 0.3) return true;
+    }
+    return false;
+  };
   
-  // Special case: Events queries with specific location/time should be confident
-  if (intent === "events" && hasSpecificKeywords(query) && (eventCount > 0 || totalContent > 0)) {
-    return true; // Events with specific keywords should be confident
-  }
+  const isPricingAccommodationQuery = () => {
+    const eventCount = content.events?.length || 0;
+    const articleCount = content.articles?.length || 0;
+    const relevanceScore = content.relevanceScore || 0;
+    
+    const pricingAccommodationHints = ["price", "cost", "fees", "pricing", "b&b", "bed and breakfast", "accommodation", "stay", "include b&b", "includes b&b"];
+    if (pricingAccommodationHints.some(h => lc.includes(h))) {
+      if (eventCount > 0) return true;
+      if (articleCount >= 1 && relevanceScore >= 0.3) return true;
+      if (relevanceScore >= 0.5) return true;
+    }
+    return false;
+  };
   
-  // Special case: Direct answer for specific equipment queries like tripod when content exists
-  if (lc.includes("tripod") && (articleCount > 0 || productCount > 0)) {
-    return true;
-  }
+  // Early returns for clarification cases
+  if (isClarificationQuestion()) return false;
+  if (isOverlyBroadCourseQuery()) return false;
+  if (isVagueQuery()) return false;
+  if (hasInsufficientContent()) return false;
   
-  // Special case: Residential workshop pricing/B&B queries
-  // Be confident if we have events OR decent article/chunk signal
-  if (
-    lc.includes("residential") && lc.includes("workshop") &&
-    (lc.includes("price") || lc.includes("cost") || lc.includes("b&b") || lc.includes("bed and breakfast"))
-  ) {
-    if (eventCount > 0) return true;
-    if (articleCount > 0 || relevanceScore >= 0.3) return true;
-  }
-
-  // Generic: pricing/accommodation queries with sufficient evidence (applies to any relevant topic)
-  const pricingAccommodationHints = ["price", "cost", "fees", "pricing", "b&b", "bed and breakfast", "accommodation", "stay", "include b&b", "includes b&b"];
-  if (pricingAccommodationHints.some(h => lc.includes(h))) {
-    if (eventCount > 0) return true;
-    if (articleCount >= 1 && relevanceScore >= 0.3) return true;
-    if (relevanceScore >= 0.5) return true;
-  }
+  // Confidence cases
+  if (hasRichContent()) return true;
+  if (hasMediumContentWithKeywords()) return true;
+  if (isEventsQueryWithContent()) return true;
+  if (isEquipmentQueryWithContent()) return true;
+  if (isResidentialWorkshopPricingQuery()) return true;
+  if (isPricingAccommodationQuery()) return true;
   
   // Default to clarification for safety
-  return false; // When in doubt, clarify
+  return false;
 }
 
 // Helper function to detect specific keywords
