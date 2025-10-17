@@ -2768,61 +2768,77 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
     const add = (n)=>{ s += n; };
     const has = (str, needle)=> str.includes(needle);
     
-    // base keyword presence
-    for (const k of kw) {
-      if (!k) continue;
-      if (has(t, k)) add(3);        // strong match in title
-      if (has(u, k)) add(1);        // weak match in URL
-    }
-
-    // MAJOR BOOST: Online Photography Course content for technical concepts
-    const isOnlineCourse = categories.includes("online photography course");
-    const coreConcepts = [
-      "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
-      "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
-      "raw", "jpeg", "hdr", "focal length", "long exposure"
-    ];
-    const hasCore = coreConcepts.some(c => kw.includes(c));
+    const addBaseKeywordScore = () => {
+      for (const k of kw) {
+        if (!k) continue;
+        if (has(t, k)) add(3);        // strong match in title
+        if (has(u, k)) add(1);        // weak match in URL
+      }
+    };
     
-    if (hasCore && isOnlineCourse) {
-      add(25); // Major boost for online course content on technical topics
+    const addOnlineCourseBoost = () => {
+      const isOnlineCourse = categories.includes("online photography course");
+      const coreConcepts = [
+        "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
+        "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
+        "raw", "jpeg", "hdr", "focal length", "long exposure"
+      ];
+      const hasCore = coreConcepts.some(c => kw.includes(c));
       
-      // Extra boost for "What is..." format articles in online course
-      for (const c of coreConcepts) {
-        if (has(t, `what is ${c}`) || has(t, `${c} in photography`)) {
-          add(15); // Additional boost for structured learning content
+      if (hasCore && isOnlineCourse) {
+        add(25); // Major boost for online course content on technical topics
+        
+        // Extra boost for "What is..." format articles in online course
+        for (const c of coreConcepts) {
+          if (has(t, `what is ${c}`) || has(t, `${c} in photography`)) {
+            add(15); // Additional boost for structured learning content
+          }
+        }
+        
+        // Boost for PDF checklists and guides
+        if (has(t, "pdf") || has(t, "checklist") || has(t, "guide")) {
+          add(10);
         }
       }
       
-      // Boost for PDF checklists and guides
-      if (has(t, "pdf") || has(t, "checklist") || has(t, "guide")) {
-        add(10);
-      }
-    }
+      return { hasCore, coreConcepts };
+    };
     
-    if (hasCore) {
-      // exact phrase boosts (existing logic)
-      for (const c of coreConcepts) {
-        const slug = c.replace(/\s+/g, "-");
-        if (t.startsWith(`what is ${c}`)) add(20); // ideal explainer
-        if (has(t, `what is ${c}`)) add(10);
-        if (has(u, `/what-is-${slug}`)) add(12);
-        if (has(u, `${slug}`)) add(3);
+    const addCoreConceptScore = (hasCore, coreConcepts) => {
+      if (hasCore) {
+        // exact phrase boosts (existing logic)
+        for (const c of coreConcepts) {
+          const slug = c.replace(/\s+/g, "-");
+          if (t.startsWith(`what is ${c}`)) add(20); // ideal explainer
+          if (has(t, `what is ${c}`)) add(10);
+          if (has(u, `/what-is-${slug}`)) add(12);
+          if (has(u, `${slug}`)) add(3);
+        }
+        // penalize generic Lightroom news posts for concept questions
+        if (/(lightroom|what's new|whats new)/i.test(t) || /(lightroom|whats-new)/.test(u)) {
+          add(-12);
+        }
       }
-      // penalize generic Lightroom news posts for concept questions
-      if (/(lightroom|what's new|whats new)/i.test(t) || /(lightroom|whats-new)/.test(u)) {
-        add(-12);
+    };
+    
+    const addCategoryBoost = (hasCore) => {
+      if (categories.includes("photography-tips") && hasCore) {
+        add(5); // Boost for photography tips on technical topics
       }
-    }
+    };
     
-    // Additional category-based boosting
-    if (categories.includes("photography-tips") && hasCore) {
-      add(5); // Boost for photography tips on technical topics
-    }
+    const addRecencyTieBreaker = () => {
+      const seen = r.last_seen ? Date.parse(r.last_seen) || 0 : 0;
+      return s * 1_000_000 + seen;
+    };
     
-    // slight recency tie-breaker
-    const seen = r.last_seen ? Date.parse(r.last_seen) || 0 : 0;
-    return s * 1_000_000 + seen;
+    // Apply all scoring factors
+    addBaseKeywordScore();
+    const { hasCore, coreConcepts } = addOnlineCourseBoost();
+    addCoreConceptScore(hasCore, coreConcepts);
+    addCategoryBoost(hasCore);
+    
+    return addRecencyTieBreaker();
   };
 
   return rows
