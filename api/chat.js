@@ -3934,17 +3934,7 @@ async function handleResidentialPricingShortcut(client, query, keywords, pageCon
   // Fallback: synthesize concise pricing/B&B answer with links
   const enrichedKeywords = Array.from(new Set([...directKeywords, "b&b", "bed", "breakfast", "price", "cost"]));
   let articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
-  articles = (articles || []).map(a => {
-    const out = { ...a };
-    if (!out.title) {
-      out.title = out?.raw?.headline || out?.raw?.name || '';
-      if (!out.title) {
-        try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-      }
-    }
-    if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-    return out;
-  });
+  articles = (articles || []).map(normalizeArticle);
   const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
   const contentChunks = await findContentChunks(client, { keywords: enrichedKeywords, limit: 20, articleUrls });
   const answerMarkdown = generatePricingAccommodationAnswer(query || "", articles, contentChunks);
@@ -3981,6 +3971,25 @@ async function handleResidentialPricingShortcut(client, query, keywords, pageCon
 }
 
 /**
+ * Normalize article object to ensure title and page_url are present.
+ */
+function normalizeArticle(a) {
+  const out = { ...a };
+  if (!out.title) {
+    out.title = out?.raw?.headline || out?.raw?.name || '';
+    if (!out.title) {
+      try {
+        const u = new URL(out.page_url || out.source_url || out.url || '');
+        const last = (u.pathname || '').split('/').filter(Boolean).pop() || '';
+        out.title = last.replace(/[-_]+/g, ' ').replace(/\.(html?)$/i, ' ').trim();
+      } catch {}
+    }
+  }
+  if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
+  return out;
+}
+
+/**
  * Handle follow-up direct synthesis for advice queries (equipment/pricing)
  * Returns true if a response was sent.
  */
@@ -3988,17 +3997,7 @@ async function handleAdviceFollowupSynthesis(client, qlc, keywords, pageContext,
   // Equipment advice synthesis
   if (isEquipmentAdviceQuery(qlc)) {
     let articles = await findArticles(client, { keywords, limit: 30, pageContext });
-    articles = (articles || []).map(a => {
-      const out = { ...a };
-      if (!out.title) {
-        out.title = out?.raw?.headline || out?.raw?.name || '';
-        if (!out.title) {
-          try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-        }
-      }
-      if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-      return out;
-    });
+    articles = (articles || []).map(normalizeArticle);
     const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
     const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
     const synthesized = generateEquipmentAdviceResponse(qlc, articles || [], contentChunks || []);
@@ -4035,17 +4034,7 @@ async function handleAdviceFollowupSynthesis(client, qlc, keywords, pageContext,
   const pricingSynth = generatePricingAccommodationAnswer(qlc);
   if (pricingSynth) {
     let articles = await findArticles(client, { keywords, limit: 30, pageContext });
-    articles = (articles || []).map(a => {
-      const out = { ...a };
-      if (!out.title) {
-        out.title = out?.raw?.headline || out?.raw?.name || '';
-        if (!out.title) {
-          try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-        }
-      }
-      if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-      return out;
-    });
+    articles = (articles || []).map(normalizeArticle);
     const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
     const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
     const answer = generatePricingAccommodationAnswer(qlc, articles || [], contentChunks || []);
