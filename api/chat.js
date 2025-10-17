@@ -3650,6 +3650,8 @@ function calculateEventConfidence(query, events, product) {
   let confidenceFactors = [];
   
   const queryLower = query.toLowerCase();
+  // Small helpers to reduce repetition (no behavior change)
+  const addFactor = (message, delta) => { baseConfidence += delta; confidenceFactors.push(`${message} (${delta >= 0 ? '+' : ''}${delta})`); };
   
   // INTENT-BASED CONFIDENCE SCORING
   // Detect query requirements and check for mismatches
@@ -3743,95 +3745,54 @@ function calculateEventConfidence(query, events, product) {
   }
   
   // Apply intent-based penalties for mismatches
-  if (queryRequirements.free && !responseAttributes.hasFreeContent) {
-    baseConfidence -= 0.5;
-    confidenceFactors.push("Free query but no free content (-0.5)");
-  }
+  if (queryRequirements.free && !responseAttributes.hasFreeContent) { addFactor("Free query but no free content", -0.5); }
   
-  if (queryRequirements.online && !responseAttributes.hasOnlineContent) {
-    baseConfidence -= 0.3;
-    confidenceFactors.push("Online query but no online content (-0.3)");
-  }
+  if (queryRequirements.online && !responseAttributes.hasOnlineContent) { addFactor("Online query but no online content", -0.3); }
   
-  if (queryRequirements.certificate && !responseAttributes.hasCertificateInfo) {
-    baseConfidence -= 0.4;
-    confidenceFactors.push("Certificate query but no certificate info (-0.4)");
-  }
+  if (queryRequirements.certificate && !responseAttributes.hasCertificateInfo) { addFactor("Certificate query but no certificate info", -0.4); }
   
-  if (queryRequirements.inPerson && !responseAttributes.hasInPersonContent) {
-    baseConfidence -= 0.2;
-    confidenceFactors.push("In-person query but no in-person content (-0.2)");
-  }
+  if (queryRequirements.inPerson && !responseAttributes.hasInPersonContent) { addFactor("In-person query but no in-person content", -0.2); }
   
   // Apply bonuses for good matches
-  if (queryRequirements.free && responseAttributes.hasFreeContent) {
-    baseConfidence += 0.3;
-    confidenceFactors.push("Free query matched with free content (+0.3)");
-  }
+  if (queryRequirements.free && responseAttributes.hasFreeContent) { addFactor("Free query matched with free content", 0.3); }
   
-  if (queryRequirements.online && responseAttributes.hasOnlineContent) {
-    baseConfidence += 0.2;
-    confidenceFactors.push("Online query matched with online content (+0.2)");
-  }
+  if (queryRequirements.online && responseAttributes.hasOnlineContent) { addFactor("Online query matched with online content", 0.2); }
   
-  if (queryRequirements.certificate && responseAttributes.hasCertificateInfo) {
-    baseConfidence += 0.3;
-    confidenceFactors.push("Certificate query matched with certificate info (+0.3)");
-  }
+  if (queryRequirements.certificate && responseAttributes.hasCertificateInfo) { addFactor("Certificate query matched with certificate info", 0.3); }
   
   // Factor 1: Query specificity for events
   const isEventQuery = queryLower.includes("when") || queryLower.includes("next") || queryLower.includes("date") || queryLower.includes("workshop") || queryLower.includes("course");
   const isLocationQuery = queryLower.includes("where") || queryLower.includes("location") || queryLower.includes("coventry") || queryLower.includes("devon");
   const isPriceQuery = queryLower.includes("cost") || queryLower.includes("price") || queryLower.includes("much");
   
-  if (isEventQuery) {
-    baseConfidence += 0.2;
-    confidenceFactors.push("Event query (+0.2)");
-  }
-  if (isLocationQuery) {
-    baseConfidence += 0.15;
-    confidenceFactors.push("Location query (+0.15)");
-  }
-  if (isPriceQuery) {
-    baseConfidence += 0.15;
-    confidenceFactors.push("Price query (+0.15)");
-  }
+  if (isEventQuery) { addFactor("Event query", 0.2); }
+  if (isLocationQuery) { addFactor("Location query", 0.15); }
+  if (isPriceQuery) { addFactor("Price query", 0.15); }
   
   // Factor 2: Event availability and quality
   if (events && events.length > 0) {
-    baseConfidence += Math.min(0.3, events.length * 0.1);
-    confidenceFactors.push(`Events found: ${events.length} (+${(Math.min(0.3, events.length * 0.1)).toFixed(2)})`);
+    const delta = Math.min(0.3, events.length * 0.1);
+    addFactor(`Events found: ${events.length}`, delta);
     
     // Check for future events
     const futureEvents = events.filter(e => e.date_start && new Date(e.date_start) > new Date());
     if (futureEvents.length > 0) {
-      baseConfidence += 0.15;
-      confidenceFactors.push(`Future events: ${futureEvents.length} (+0.15)`);
+      addFactor(`Future events: ${futureEvents.length}`, 0.15);
     }
     
     // Check for specific event types
     const hasWorkshops = events.some(e => e.subtype && e.subtype.toLowerCase().includes('workshop'));
     const hasCourses = events.some(e => e.subtype && e.subtype.toLowerCase().includes('course'));
-    if (hasWorkshops || hasCourses) {
-      baseConfidence += 0.1;
-      confidenceFactors.push("Specific event types (+0.1)");
-    }
+    if (hasWorkshops || hasCourses) { addFactor("Specific event types", 0.1); }
   }
   
   // Factor 3: Product availability
   if (product) {
-    baseConfidence += 0.2;
-    confidenceFactors.push("Product found (+0.2)");
+    addFactor("Product found", 0.2);
     
     // Check product quality
-    if (product.price_gbp && product.price_gbp > 0) {
-      baseConfidence += 0.1;
-      confidenceFactors.push("Product with price (+0.1)");
-    }
-    if (product.location_address && product.location_address.trim().length > 0) {
-      baseConfidence += 0.1;
-      confidenceFactors.push("Product with location (+0.1)");
-    }
+    if (product.price_gbp && product.price_gbp > 0) { addFactor("Product with price", 0.1); }
+    if (product.location_address && product.location_address.trim().length > 0) { addFactor("Product with location", 0.1); }
   }
   
   // Factor 4: Query-event relevance
@@ -3851,11 +3812,7 @@ function calculateEventConfidence(query, events, product) {
       });
     });
     
-    if (relevanceScore > 0) {
-      const relevanceBonus = Math.min(0.2, relevanceScore * 0.05);
-      baseConfidence += relevanceBonus;
-      confidenceFactors.push(`Query relevance: ${relevanceScore} (+${relevanceBonus.toFixed(2)})`);
-    }
+    if (relevanceScore > 0) { const relevanceBonus = Math.min(0.2, relevanceScore * 0.05); addFactor(`Query relevance: ${relevanceScore}`, relevanceBonus); }
   }
   
   // Cap confidence between 0.1 and 0.95
