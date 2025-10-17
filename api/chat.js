@@ -3726,38 +3726,62 @@ function formatEventsForUi(events) {
   return result;
 }
 /* ----------------------------- Pills builders ---------------------------- */
-function buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl }) {
-  const pills = [];
-  const used = new Set();
-  const add = (label, url, brand = true) => {
+// Helper functions for event pills building
+function createPillAdder(pills, used) {
+  return (label, url, brand = true) => {
     if (!label || !url) return;
     if (used.has(url)) return;
     used.add(url);
     pills.push({ label, url, brand });
   };
+}
+
+function determineCourseListingUrl(productUrl) {
+  try {
+    const u = String(productUrl || '');
+    if (/beginners-photography-(classes|course)/i.test(u) || /photography-services-near-me\/beginners-photography-course/i.test(u)) {
+      return "https://www.alanranger.com/beginners-photography-classes";
+    } else if (/lightroom-courses-for-beginners-coventry/i.test(u) || /photo-editing-course-coventry/i.test(u)) {
+      return "https://www.alanranger.com/photo-editing-course-coventry";
+    }
+  } catch {}
+  return null;
+}
+
+function determineEventSectionUrl(firstEventUrl) {
+  try {
+    const fe = String(firstEventUrl || '');
+    const m = fe.match(/^https?:\/\/[^/]+\/(beginners-photography-lessons)\//i);
+    if (m && m[1]) {
+      const base = fe.split(m[1])[0] + m[1];
+      return base.startsWith('http') ? base : `https://www.alanranger.com/${m[1]}`;
+    }
+  } catch {}
+  return null;
+}
+
+function buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl }) {
+  const pills = [];
+  const used = new Set();
+  const add = createPillAdder(pills, used);
 
   add("Book Now", productUrl || firstEventUrl, true);
 
   // Event Listing + More Events both point at listing root (no search page)
   let listUrl = landingUrl || (firstEventUrl && originOf(firstEventUrl) + "/photography-workshops");
+  
   // Special-case: course products (beginners classes) should link to the course listing
-  try {
-    const u = String(productUrl||'');
-    if (/beginners-photography-(classes|course)/i.test(u) || /photography-services-near-me\/beginners-photography-course/i.test(u)) {
-      listUrl = "https://www.alanranger.com/beginners-photography-classes";
-    } else if (/lightroom-courses-for-beginners-coventry/i.test(u) || /photo-editing-course-coventry/i.test(u)) {
-      listUrl = "https://www.alanranger.com/photo-editing-course-coventry";
-    }
-  } catch {}
+  const courseUrl = determineCourseListingUrl(productUrl);
+  if (courseUrl) {
+    listUrl = courseUrl;
+  }
+  
   // If events come from the courses section, prefer the section listing root deterministically
-  try {
-    const fe = String(firstEventUrl||'');
-    const m = fe.match(/^https?:\/\/[^/]+\/(beginners-photography-lessons)\//i);
-    if (m && m[1]) {
-      const base = fe.split(m[1])[0] + m[1];
-      listUrl = base.startsWith('http') ? base : `https://www.alanranger.com/${m[1]}`;
-    }
-  } catch {}
+  const eventSectionUrl = determineEventSectionUrl(firstEventUrl);
+  if (eventSectionUrl) {
+    listUrl = eventSectionUrl;
+  }
+  
   add("Event Listing", listUrl, true);
   add("More Events", listUrl, true);
 
