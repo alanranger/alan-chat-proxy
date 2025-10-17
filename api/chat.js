@@ -2711,11 +2711,15 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
     const categories = r.categories || [];
     let s = 0;
     
+    // helpers (no behavior change)
+    const add = (n)=>{ s += n; };
+    const has = (str, needle)=> str.includes(needle);
+    
     // base keyword presence
     for (const k of kw) {
       if (!k) continue;
-      if (t.includes(k)) s += 3;        // strong match in title
-      if (u.includes(k)) s += 1;        // weak match in URL
+      if (has(t, k)) add(3);        // strong match in title
+      if (has(u, k)) add(1);        // weak match in URL
     }
 
     // MAJOR BOOST: Online Photography Course content for technical concepts
@@ -2728,18 +2732,18 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
     const hasCore = coreConcepts.some(c => kw.includes(c));
     
     if (hasCore && isOnlineCourse) {
-      s += 25; // Major boost for online course content on technical topics
+      add(25); // Major boost for online course content on technical topics
       
       // Extra boost for "What is..." format articles in online course
       for (const c of coreConcepts) {
-        if (t.includes(`what is ${c}`) || t.includes(`${c} in photography`)) {
-          s += 15; // Additional boost for structured learning content
+        if (has(t, `what is ${c}`) || has(t, `${c} in photography`)) {
+          add(15); // Additional boost for structured learning content
         }
       }
       
       // Boost for PDF checklists and guides
-      if (t.includes("pdf") || t.includes("checklist") || t.includes("guide")) {
-        s += 10;
+      if (has(t, "pdf") || has(t, "checklist") || has(t, "guide")) {
+        add(10);
       }
     }
     
@@ -2747,20 +2751,20 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
       // exact phrase boosts (existing logic)
       for (const c of coreConcepts) {
         const slug = c.replace(/\s+/g, "-");
-        if (t.startsWith(`what is ${c}`)) s += 20; // ideal explainer
-        if (t.includes(`what is ${c}`)) s += 10;
-        if (u.includes(`/what-is-${slug}`)) s += 12;
-        if (u.includes(`${slug}`)) s += 3;
+        if (t.startsWith(`what is ${c}`)) add(20); // ideal explainer
+        if (has(t, `what is ${c}`)) add(10);
+        if (has(u, `/what-is-${slug}`)) add(12);
+        if (has(u, `${slug}`)) add(3);
       }
       // penalize generic Lightroom news posts for concept questions
       if (/(lightroom|what's new|whats new)/i.test(t) || /(lightroom|whats-new)/.test(u)) {
-        s -= 12;
+        add(-12);
       }
     }
     
     // Additional category-based boosting
     if (categories.includes("photography-tips") && hasCore) {
-      s += 5; // Boost for photography tips on technical topics
+      add(5); // Boost for photography tips on technical topics
     }
     
     // slight recency tie-breaker
