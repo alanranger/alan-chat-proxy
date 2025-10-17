@@ -3988,107 +3988,6 @@ async function handleResidentialPricingShortcut(client, query, keywords, pageCon
 }
 
 /**
- * Handle follow-up direct synthesis for advice queries (equipment/pricing)
- * Returns true if a response was sent.
- */
-async function handleAdviceFollowupSynthesis(client, qlc, keywords, pageContext, res) {
-  // Equipment advice synthesis
-  if (isEquipmentAdviceQuery(qlc)) {
-    let articles = await findArticles(client, { keywords, limit: 30, pageContext });
-    articles = (articles || []).map(a => {
-      const out = { ...a };
-      if (!out.title) {
-        out.title = out?.raw?.headline || out?.raw?.name || '';
-        if (!out.title) {
-          try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-        }
-      }
-      if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-      return out;
-    });
-    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-    const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
-    const synthesized = generateEquipmentAdviceResponse(qlc, articles || [], contentChunks || []);
-    if (synthesized) {
-      res.status(200).json({
-        ok: true,
-        type: "advice",
-        answer_markdown: synthesized,
-        structured: {
-          intent: "advice",
-          topic: keywords.join(", "),
-          events: [],
-          products: [],
-          services: [],
-          landing: [],
-          articles: (articles || []).map(a => ({
-            ...a,
-            display_date: (function(){
-              const extracted = extractPublishDate(a);
-              const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-              return extracted || fallback;
-            })()
-          })),
-          pills: []
-        },
-        confidence: 75,
-        debug: { version: "v1.2.46-followup-equip-extracted", previousQuery: true }
-      });
-      return true;
-    }
-  }
-
-  // Pricing/accommodation synthesis
-  const pricingSynth = generatePricingAccommodationAnswer(qlc);
-  if (pricingSynth) {
-    let articles = await findArticles(client, { keywords, limit: 30, pageContext });
-    articles = (articles || []).map(a => {
-      const out = { ...a };
-      if (!out.title) {
-        out.title = out?.raw?.headline || out?.raw?.name || '';
-        if (!out.title) {
-          try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-        }
-      }
-      if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-      return out;
-    });
-    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-    const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
-    const answer = generatePricingAccommodationAnswer(qlc, articles || [], contentChunks || []);
-    if (answer) {
-      res.status(200).json({
-        ok: true,
-        type: "advice",
-        answer_markdown: answer,
-        structured: {
-          intent: "advice",
-          topic: keywords.join(", "),
-          events: [],
-          products: [],
-          services: [],
-          landing: [],
-          articles: (articles || []).map(a => ({
-            ...a,
-            display_date: (function(){
-              const extracted = extractPublishDate(a);
-              const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-              return extracted || fallback;
-            })()
-          })),
-          pills: []
-        },
-        confidence: 70,
-        debug: { version: "v1.2.46-followup-pricing-extracted", previousQuery: true }
-      });
-      return true;
-    }
-  }
-
-  return false;
-}
-
-/**
  * Handle residential pricing guard - bypasses clarification for residential workshop pricing queries
  */
 async function handleResidentialPricingGuard(client, query, previousQuery, pageContext, res) {
@@ -4661,8 +4560,97 @@ export default async function handler(req, res) {
 
     // NEW: Follow-up direct synthesis for advice queries (equipment/pricing) even when previousQuery exists
     if (previousQuery && intent === "advice") {
-      const handled = await handleAdviceFollowupSynthesis(client, qlc, keywords, pageContext, res);
-      if (handled) return;
+      // Equipment advice synthesis
+      if (isEquipmentAdviceQuery(qlc)) {
+        let articles = await findArticles(client, { keywords, limit: 30, pageContext });
+        articles = (articles || []).map(a => {
+          const out = { ...a };
+          if (!out.title) {
+            out.title = out?.raw?.headline || out?.raw?.name || '';
+            if (!out.title) {
+              try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
+            }
+          }
+          if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
+          return out;
+        });
+        const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+        const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
+        const synthesized = generateEquipmentAdviceResponse(qlc, articles || [], contentChunks || []);
+        if (synthesized) {
+          res.status(200).json({
+            ok: true,
+            type: "advice",
+            answer_markdown: synthesized,
+            structured: {
+              intent: "advice",
+              topic: keywords.join(", "),
+              events: [],
+              products: [],
+              services: [],
+              landing: [],
+              articles: (articles || []).map(a => ({
+                ...a,
+                display_date: (function(){
+                  const extracted = extractPublishDate(a);
+                  const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+                  return extracted || fallback;
+                })()
+              })),
+              pills: []
+            },
+            confidence: 75,
+            debug: { version: "v1.2.45-followup-equip", previousQuery: true }
+          });
+          return;
+        }
+      }
+      // Pricing/accommodation synthesis
+      const pricingSynth = generatePricingAccommodationAnswer(qlc);
+      if (pricingSynth) {
+        let articles = await findArticles(client, { keywords, limit: 30, pageContext });
+        articles = (articles || []).map(a => {
+          const out = { ...a };
+          if (!out.title) {
+            out.title = out?.raw?.headline || out?.raw?.name || '';
+            if (!out.title) {
+              try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
+            }
+          }
+          if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
+          return out;
+        });
+        const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+        const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
+        const answer = generatePricingAccommodationAnswer(qlc, articles || [], contentChunks || []);
+        if (answer) {
+          res.status(200).json({
+            ok: true,
+            type: "advice",
+            answer_markdown: answer,
+            structured: {
+              intent: "advice",
+              topic: keywords.join(", "),
+              events: [],
+              products: [],
+              services: [],
+              landing: [],
+              articles: (articles || []).map(a => ({
+                ...a,
+                display_date: (function(){
+                  const extracted = extractPublishDate(a);
+                  const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+                  return extracted || fallback;
+                })()
+              })),
+              pills: []
+            },
+            confidence: 70,
+            debug: { version: "v1.2.45-followup-pricing", previousQuery: true }
+          });
+          return;
+        }
+      }
     }
 
     // NEW: Handle clarification follow-up responses (only if query looks like a clarification response)
