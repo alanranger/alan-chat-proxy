@@ -5685,19 +5685,25 @@ export default async function handler(req, res) {
       if (articles && articles.length > 0) {
         const totalArticles = articles.length;
         const articleRelevanceScore = calculateArticleRelevance(query, articles);
-        
+
         // Base score for having articles
-        baseConfidence += Math.min(0.3, totalArticles * 0.05);
-        confidenceFactors.push(`Articles found: ${totalArticles} (+${(Math.min(0.3, totalArticles * 0.05)).toFixed(2)})`);
-        
+        const articlePresenceBoost = Math.min(0.3, totalArticles * 0.05);
+        if (articlePresenceBoost > 0) {
+          baseConfidence += articlePresenceBoost;
+          confidenceFactors.push(`Articles found: ${totalArticles} (+${articlePresenceBoost.toFixed(2)})`);
+        }
+
         // Relevance bonus
-        baseConfidence += articleRelevanceScore * 0.2;
-        confidenceFactors.push(`Relevance score: ${articleRelevanceScore.toFixed(2)} (+${(articleRelevanceScore * 0.2).toFixed(2)})`);
-        
+        const relevanceBoost = articleRelevanceScore * 0.2;
+        if (relevanceBoost) {
+          baseConfidence += relevanceBoost;
+          confidenceFactors.push(`Relevance score: ${articleRelevanceScore.toFixed(2)} (+${relevanceBoost.toFixed(2)})`);
+        }
+
         // Category and tag quality
-        const hasHighQualityCategories = articles.some(a => 
-          a.categories?.includes("photography-basics") || 
-          a.categories?.includes("photography-tips") || 
+        const hasHighQualityCategories = articles.some(a =>
+          a.categories?.includes("photography-basics") ||
+          a.categories?.includes("photography-tips") ||
           a.categories?.includes("recommended-products")
         );
         if (hasHighQualityCategories) {
