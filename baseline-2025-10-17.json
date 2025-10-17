@@ -1,386 +1,81 @@
 {
-  "timestamp": "2025-10-17T01:16:45.506Z",
+  "timestamp": "2025-10-17T07:33:35.767Z",
   "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
   "tests": [
     {
       "query": "What is your refund and cancellation policy?",
-      "timestamp": "2025-10-17T01:16:49.461Z",
-      "response": {
-        "type": "clarification",
-        "confidence": 10,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "hasClarification": true,
-        "answer": null,
-        "debug": null
-      }
+      "timestamp": "2025-10-17T07:33:37.593Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "When is the next Lightroom course in Coventry?",
-      "timestamp": "2025-10-17T01:16:51.617Z",
-      "response": {
-        "type": "events",
-        "confidence": 0.44999999999999996,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "answer": null,
-        "debug": {
-          "version": "v1.2.37-logical-confidence",
-          "intent": "events",
-          "keywords": [
-            "coventry",
-            "lightroom",
-            "when",
-            "next",
-            "course"
-          ],
-          "eventsHandlerExecuted": true,
-          "counts": {
-            "events": 0,
-            "products": 0,
-            "articles": 0
-          },
-          "productPanel": "",
-          "productDescription": null,
-          "logicalConfidence": false,
-          "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
-          "logicalConfidenceDebug": {
-            "query": "When is the next Lightroom course in Coventry?",
-            "queryLowercase": "when is the next lightroom course in coventry?",
-            "hasSpecificActivity": true,
-            "hasSpecificCourseType": true
-          },
-          "eventsFiltering": {
-            "totalEvents": 0,
-            "filteredEventsCount": 0,
-            "findEventsDebug": {
-              "eventsCount": 0
-            }
-          }
-        }
-      }
+      "timestamp": "2025-10-17T07:33:39.015Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "Do you still run Lake District photography workshops?",
-      "timestamp": "2025-10-17T01:16:53.733Z",
-      "response": {
-        "type": "events",
-        "confidence": 0.5,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "answer": null,
-        "debug": {
-          "version": "v1.2.37-logical-confidence",
-          "intent": "events",
-          "keywords": [
-            "lake district",
-            "still",
-            "lake",
-            "district",
-            "photography",
-            "workshops"
-          ],
-          "eventsHandlerExecuted": true,
-          "counts": {
-            "events": 0,
-            "products": 0,
-            "articles": 0
-          },
-          "productPanel": "",
-          "productDescription": null,
-          "logicalConfidence": false,
-          "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
-          "logicalConfidenceDebug": {
-            "query": "Do you still run Lake District photography workshops?",
-            "queryLowercase": "do you still run lake district photography workshops?",
-            "hasSpecificActivity": true,
-            "hasSpecificCourseType": false
-          },
-          "eventsFiltering": {
-            "totalEvents": 0,
-            "filteredEventsCount": 0,
-            "findEventsDebug": {
-              "eventsCount": 0
-            }
-          }
-        }
-      }
+      "timestamp": "2025-10-17T07:33:40.604Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "How much is the Lightroom beginners course?",
-      "timestamp": "2025-10-17T01:16:55.593Z",
-      "response": {
-        "type": "events",
-        "confidence": 0.65,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "answer": null,
-        "debug": {
-          "version": "v1.2.37-logical-confidence",
-          "intent": "events",
-          "keywords": [
-            "beginners",
-            "lightroom",
-            "much",
-            "course"
-          ],
-          "eventsHandlerExecuted": true,
-          "counts": {
-            "events": 0,
-            "products": 0,
-            "articles": 0
-          },
-          "productPanel": "",
-          "productDescription": null,
-          "logicalConfidence": false,
-          "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
-          "logicalConfidenceDebug": {
-            "query": "How much is the Lightroom beginners course?",
-            "queryLowercase": "how much is the lightroom beginners course?",
-            "hasSpecificActivity": true,
-            "hasSpecificCourseType": true
-          },
-          "eventsFiltering": {
-            "totalEvents": 0,
-            "filteredEventsCount": 0,
-            "findEventsDebug": {
-              "eventsCount": 0
-            }
-          }
-        }
-      }
+      "timestamp": "2025-10-17T07:33:42.031Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "Can I book a 1-to-1 mentoring session with Alan?",
-      "timestamp": "2025-10-17T01:17:00.059Z",
-      "response": {
-        "type": "advice",
-        "confidence": 0.1,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "answer": null,
-        "debug": {
-          "version": "v1.2.37-logical-confidence",
-          "intent": "advice",
-          "keywords": [
-            "book",
-            "1-to-1",
-            "mentoring",
-            "session",
-            "with",
-            "alan"
-          ],
-          "counts": {
-            "events": 0,
-            "products": 0,
-            "articles": 0,
-            "contentChunks": 0
-          },
-          "logicalConfidence": false,
-          "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
-          "logicalConfidenceDebug": {
-            "query": "Can I book a 1-to-1 mentoring session with Alan?",
-            "queryLowercase": "can i book a 1-to-1 mentoring session with alan?",
-            "hasSpecificService": true,
-            "hasSpecificTechnical": false,
-            "isAboutQuery": false
-          },
-          "debugInfo": []
-        }
-      }
+      "timestamp": "2025-10-17T07:33:44.161Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "Do you have tips for composition or leading lines?",
-      "timestamp": "2025-10-17T01:17:04.236Z",
-      "response": {
-        "type": "clarification",
-        "confidence": 10,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "hasClarification": true,
-        "answer": null,
-        "debug": null
-      }
+      "timestamp": "2025-10-17T07:33:46.013Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "Show me an article about the exposure triangle.",
-      "timestamp": "2025-10-17T01:17:08.465Z",
-      "response": {
-        "type": "clarification",
-        "confidence": 10,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "hasClarification": true,
-        "answer": null,
-        "debug": null
-      }
+      "timestamp": "2025-10-17T07:33:48.050Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "How do I set ISO manually on my camera?",
-      "timestamp": "2025-10-17T01:17:12.425Z",
-      "response": {
-        "type": "clarification",
-        "confidence": 10,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "hasClarification": true,
-        "answer": null,
-        "debug": null
-      }
+      "timestamp": "2025-10-17T07:33:49.814Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "What's the difference between aperture and shutter speed?",
-      "timestamp": "2025-10-17T01:17:16.905Z",
-      "response": {
-        "type": "clarification",
-        "confidence": 10,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "hasClarification": true,
-        "answer": null,
-        "debug": null
-      }
+      "timestamp": "2025-10-17T07:33:51.885Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "When is the best time of day for landscape photography?",
-      "timestamp": "2025-10-17T01:17:20.821Z",
-      "response": {
-        "type": "clarification",
-        "confidence": 10,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "hasClarification": true,
-        "answer": null,
-        "debug": null
-      }
+      "timestamp": "2025-10-17T07:33:53.746Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "Where do your workshops meet and start from?",
-      "timestamp": "2025-10-17T01:17:22.885Z",
-      "response": {
-        "type": "events",
-        "confidence": 0.65,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "answer": null,
-        "debug": {
-          "version": "v1.2.37-logical-confidence",
-          "intent": "events",
-          "keywords": [
-            "where",
-            "your",
-            "workshops",
-            "meet",
-            "start",
-            "from"
-          ],
-          "eventsHandlerExecuted": true,
-          "counts": {
-            "events": 0,
-            "products": 0,
-            "articles": 0
-          },
-          "productPanel": "",
-          "productDescription": null,
-          "logicalConfidence": false,
-          "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
-          "logicalConfidenceDebug": {
-            "query": "Where do your workshops meet and start from?",
-            "queryLowercase": "where do your workshops meet and start from?",
-            "hasSpecificActivity": true,
-            "hasSpecificCourseType": false
-          },
-          "eventsFiltering": {
-            "totalEvents": 0,
-            "filteredEventsCount": 0,
-            "findEventsDebug": {
-              "eventsCount": 0
-            }
-          }
-        }
-      }
+      "timestamp": "2025-10-17T07:33:55.035Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "Do you provide transport or accommodation?",
-      "timestamp": "2025-10-17T01:17:26.075Z",
-      "response": {
-        "type": "clarification",
-        "confidence": 10,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "hasClarification": true,
-        "answer": null,
-        "debug": null
-      }
+      "timestamp": "2025-10-17T07:33:56.717Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "How do I join the Photography Academy?",
-      "timestamp": "2025-10-17T01:17:29.365Z",
-      "response": {
-        "type": "clarification",
-        "confidence": 10,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "hasClarification": true,
-        "answer": null,
-        "debug": null
-      }
+      "timestamp": "2025-10-17T07:33:58.391Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "How do module exams and certificates work?",
-      "timestamp": "2025-10-17T01:17:33.041Z",
-      "response": {
-        "type": "clarification",
-        "confidence": 10,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "hasClarification": true,
-        "answer": null,
-        "debug": null
-      }
+      "timestamp": "2025-10-17T07:34:00.255Z",
+      "error": "HTTP 500: Internal Server Error"
     },
     {
       "query": "Who is Alan Ranger?",
-      "timestamp": "2025-10-17T01:17:35.937Z",
-      "response": {
-        "type": "clarification",
-        "confidence": 10,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "hasClarification": true,
-        "answer": null,
-        "debug": null
-      }
+      "timestamp": "2025-10-17T07:34:01.849Z",
+      "error": "HTTP 500: Internal Server Error"
     }
   ]
 }

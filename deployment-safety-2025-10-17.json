@@ -1,26 +1,26 @@
 {
-  "timestamp": "2025-10-17T01:09:35.828Z",
+  "timestamp": "2025-10-17T07:37:41.958Z",
   "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
   "checks": [
     {
       "name": "API Health Check",
-      "status": "PASS",
-      "details": "API responding correctly (200)"
+      "status": "FAIL",
+      "details": "HTTP 500: Internal Server Error"
     },
     {
       "name": "Critical Query Tests",
-      "status": "PASS",
-      "details": "3/3 queries passed"
+      "status": "FAIL",
+      "details": "0/3 queries passed"
     },
     {
       "name": "Response Structure Validation",
-      "status": "PASS",
-      "details": "All required fields present with correct types"
+      "status": "FAIL",
+      "details": "Missing required fields: type, confidence"
     },
     {
       "name": "Performance Check",
       "status": "PASS",
-      "details": "Response time: 2018ms"
+      "details": "Response time: 754ms"
     },
     {
       "name": "Error Handling",

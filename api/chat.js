@@ -4052,7 +4052,9 @@ export default async function handler(req, res) {
     const preContent = await gatherPreContent(client, query, previousQuery, intent, pageContext);
     
     // If we have enough content-based confidence, answer directly now (skip clarification entirely)
-    const earlyReturnResponse = await handleEarlyReturnLogic(client, query, previousQuery, intent, preContent, pageContext, res);
+    const earlyReturnResponse = (typeof handleEarlyReturnLogic === 'function')
+      ? await handleEarlyReturnLogic(client, query, previousQuery, intent, preContent, pageContext, res)
+      : false;
     if (earlyReturnResponse) {
       return; // Response already sent
     }
