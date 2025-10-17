@@ -4667,9 +4667,8 @@ export default async function handler(req, res) {
 
       const eventList = formatEventsForUi(filteredEvents.length ? filteredEvents : events);
       
-      // Add debug info to response for troubleshooting
-      if (!response.debug) response.debug = {};
-      response.debug.eventsFiltering = debugInfo;
+      // Store debug info for later inclusion in response
+      const eventsFilteringDebug = debugInfo;
       
       // Pick the most relevant product deterministically across filtered events
       const kwSet = new Set((keywords||[]).map(k=>String(k||'').toLowerCase()));
@@ -4914,7 +4913,8 @@ export default async function handler(req, res) {
             queryLowercase: query ? query.toLowerCase() : null,
             hasSpecificActivity: query ? (query.toLowerCase().includes("course") || query.toLowerCase().includes("workshop") || query.toLowerCase().includes("landscape") || query.toLowerCase().includes("portrait") || query.toLowerCase().includes("macro") || query.toLowerCase().includes("street")) : false,
             hasSpecificCourseType: query ? (query.toLowerCase().includes("beginner") || query.toLowerCase().includes("advanced") || query.toLowerCase().includes("rps") || query.toLowerCase().includes("lightroom") || query.toLowerCase().includes("online") || query.toLowerCase().includes("private")) : false
-          }
+          },
+          eventsFiltering: eventsFilteringDebug
         },
         meta: {
           duration_ms: Date.now() - started,
