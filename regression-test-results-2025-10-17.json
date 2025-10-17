@@ -1,0 +1,194 @@
+{
+  "timestamp": "2025-10-17T01:07:27.499Z",
+  "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
+  "summary": {
+    "total": 11,
+    "passed": 0,
+    "failed": 11,
+    "successRate": 0
+  },
+  "results": [
+    {
+      "testId": "lightroom-coventry",
+      "query": "When is the next Lightroom course in Coventry?",
+      "expected": {
+        "id": "lightroom-coventry",
+        "query": "When is the next Lightroom course in Coventry?",
+        "expectedType": "events",
+        "expectedConfidence": 0.7,
+        "expectedEvents": true,
+        "description": "Lightroom course query - should return high confidence with events"
+      },
+      "actual": null,
+      "passed": false,
+      "error": "HTTP 500: Internal Server Error",
+      "timestamp": "2025-10-17T01:07:13.858Z"
+    },
+    {
+      "testId": "photography-workshop",
+      "query": "What photography workshops do you have?",
+      "expected": {
+        "id": "photography-workshop",
+        "query": "What photography workshops do you have?",
+        "expectedType": "events",
+        "expectedConfidence": 0.6,
+        "expectedEvents": true,
+        "description": "General workshop query - should return events"
+      },
+      "actual": null,
+      "passed": false,
+      "error": "HTTP 500: Internal Server Error",
+      "timestamp": "2025-10-17T01:07:15.130Z"
+    },
+    {
+      "testId": "residential-pricing",
+      "query": "How much is a residential photography workshop and does it include B&B?",
+      "expected": {
+        "id": "residential-pricing",
+        "query": "How much is a residential photography workshop and does it include B&B?",
+        "expectedType": "events",
+        "expectedConfidence": 0.8,
+        "expectedEvents": true,
+        "description": "Residential pricing query - should return high confidence with pricing info"
+      },
+      "actual": null,
+      "passed": false,
+      "error": "HTTP 500: Internal Server Error",
+      "timestamp": "2025-10-17T01:07:16.445Z"
+    },
+    {
+      "testId": "tripod-recommendation",
+      "query": "What tripod do you recommend?",
+      "expected": {
+        "id": "tripod-recommendation",
+        "query": "What tripod do you recommend?",
+        "expectedType": "advice",
+        "expectedConfidence": 0.7,
+        "expectedEvents": false,
+        "expectedArticles": true,
+        "description": "Tripod recommendation - should return articles/advice"
+      },
+      "actual": null,
+      "passed": false,
+      "error": "HTTP 500: Internal Server Error",
+      "timestamp": "2025-10-17T01:07:17.719Z"
+    },
+    {
+      "testId": "camera-advice",
+      "query": "What camera should I buy for landscape photography?",
+      "expected": {
+        "id": "camera-advice",
+        "query": "What camera should I buy for landscape photography?",
+        "expectedType": "advice",
+        "expectedConfidence": 0.6,
+        "expectedEvents": false,
+        "expectedArticles": true,
+        "description": "Camera advice - should return articles"
+      },
+      "actual": null,
+      "passed": false,
+      "error": "HTTP 500: Internal Server Error",
+      "timestamp": "2025-10-17T01:07:18.979Z"
+    },
+    {
+      "testId": "ambiguous-workshop",
+      "query": "I want to learn photography",
+      "expected": {
+        "id": "ambiguous-workshop",
+        "query": "I want to learn photography",
+        "expectedType": "clarification",
+        "expectedConfidence": 0.3,
+        "expectedEvents": false,
+        "expectedClarification": true,
+        "description": "Ambiguous query - should trigger clarification"
+      },
+      "actual": null,
+      "passed": false,
+      "error": "HTTP 500: Internal Server Error",
+      "timestamp": "2025-10-17T01:07:20.228Z"
+    },
+    {
+      "testId": "vague-equipment",
+      "query": "I need help with my camera",
+      "expected": {
+        "id": "vague-equipment",
+        "query": "I need help with my camera",
+        "expectedType": "clarification",
+        "expectedConfidence": 0.3,
+        "expectedEvents": false,
+        "expectedClarification": true,
+        "description": "Vague equipment query - should trigger clarification"
+      },
+      "actual": null,
+      "passed": false,
+      "error": "HTTP 500: Internal Server Error",
+      "timestamp": "2025-10-17T01:07:21.477Z"
+    },
+    {
+      "testId": "beginner-course",
+      "query": "Do you have beginner photography courses?",
+      "expected": {
+        "id": "beginner-course",
+        "query": "Do you have beginner photography courses?",
+        "expectedType": "events",
+        "expectedConfidence": 0.7,
+        "expectedEvents": true,
+        "description": "Beginner course query - should return events"
+      },
+      "actual": null,
+      "passed": false,
+      "error": "HTTP 500: Internal Server Error",
+      "timestamp": "2025-10-17T01:07:22.733Z"
+    },
+    {
+      "testId": "online-course",
+      "query": "Do you offer online photography courses?",
+      "expected": {
+        "id": "online-course",
+        "query": "Do you offer online photography courses?",
+        "expectedType": "events",
+        "expectedConfidence": 0.6,
+        "expectedEvents": true,
+        "description": "Online course query - should return events"
+      },
+      "actual": null,
+      "passed": false,
+      "error": "HTTP 500: Internal Server Error",
+      "timestamp": "2025-10-17T01:07:23.986Z"
+    },
+    {
+      "testId": "nonsensical-query",
+      "query": "asdfghjkl qwerty",
+      "expected": {
+        "id": "nonsensical-query",
+        "query": "asdfghjkl qwerty",
+        "expectedType": "clarification",
+        "expectedConfidence": 0.1,
+        "expectedEvents": false,
+        "expectedClarification": true,
+        "description": "Nonsensical query - should trigger clarification"
+      },
+      "actual": null,
+      "passed": false,
+      "error": "HTTP 500: Internal Server Error",
+      "timestamp": "2025-10-17T01:07:25.231Z"
+    },
+    {
+      "testId": "empty-query",
+      "query": "",
+      "expected": {
+        "id": "empty-query",
+        "query": "",
+        "expectedType": "clarification",
+        "expectedConfidence": 0.1,
+        "expectedEvents": false,
+        "expectedClarification": true,
+        "description": "Empty query - should trigger clarification"
+      },
+      "actual": null,
+      "passed": false,
+      "error": "HTTP 500: Internal Server Error",
+      "timestamp": "2025-10-17T01:07:26.483Z"
+    }
+  ]
+}
