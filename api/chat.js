@@ -4058,7 +4058,7 @@ export default async function handler(req, res) {
     if (earlyReturnResponse) {
       return; // Response already sent
     }
-      if (confident) {
+      if (typeof confident !== 'undefined' && confident) {
         const directKeywords = extractKeywords(query || "");
         if (intent === "events") {
           const events = await findEvents(client, { keywords: directKeywords, limit: 80, pageContext });
