@@ -1196,12 +1196,30 @@ function isGeneralQuery(lc) {
   return lc.includes("general") || lc.includes("help");
 }
 
+// Helper functions for detectIntent
+function isFreeCourseQuery(lc) {
+  return lc.includes("free") && (lc.includes("course") || lc.includes("online"));
+}
+
+function isWhenWhereWorkshopQuery(q, mentionsWorkshop) {
+  return /^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop;
+}
+
+function handleFollowUpLogic(isFollowUp, mentionsWorkshop) {
+  if (isFollowUp && mentionsWorkshop) {
+    return "events";
+  }
+  if (isFollowUp && !mentionsWorkshop) {
+    return "advice";
+  }
+  return null;
+}
+
 function detectIntent(q) {
   const lc = (q || "").toLowerCase();
   
   // PRIORITY: Free course queries should be treated as advice, not events
-  const isFreeCourseQuery = lc.includes("free") && (lc.includes("course") || lc.includes("online"));
-  if (isFreeCourseQuery) {
+  if (isFreeCourseQuery(lc)) {
     return "advice"; // Free course queries need cross-entity search
   }
   
@@ -1209,16 +1227,12 @@ function detectIntent(q) {
   const mentionsCourse = isSpecificCourseQuery(lc);
   const mentionsWorkshop = hasWorkshopMention(lc);
   
-  // Check for event-style questions (dates/times/locations)
-  const hasEventWord = EVENT_HINTS.some((w) => lc.includes(w));
-  
   // PRIORITY: Flexible services should be treated as advice, not events
   if (isServiceQuery(lc)) {
     return "advice"; // Flexible services need cross-entity search (products + services + articles)
   }
   
   // Both courses and workshops have events - they're both scheduled sessions
-  // Course queries should look for course events, workshop queries should look for workshop events
   if (mentionsCourse || mentionsWorkshop) {
     return "events"; // Both courses and workshops are events (scheduled sessions)
   }
@@ -1229,20 +1243,15 @@ function detectIntent(q) {
   }
   
   // heuristic: if question starts with "when/where" + includes 'workshop' → events
-  if (/^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop) return "events";
+  if (isWhenWhereWorkshopQuery(q, mentionsWorkshop)) return "events";
   
   // Check if this is a follow-up question about event details
   const isFollowUp = isFollowUpQuestion(lc);
   
-  // SIMPLIFIED: If it's a follow-up question AND the context mentions workshops/courses, it's events
-  // This takes precedence over everything else
-  if (isFollowUp && mentionsWorkshop) {
-    return "events";
-  }
-  
-  // If it's a follow-up question but no workshop context, it's advice
-  if (isFollowUp && !mentionsWorkshop) {
-    return "advice";
+  // Handle follow-up logic
+  const followUpResult = handleFollowUpLogic(isFollowUp, mentionsWorkshop);
+  if (followUpResult) {
+    return followUpResult;
   }
   
   // default
@@ -2168,29 +2177,8 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   console.log(`✅ No specific pattern matched for: "${query}" - using generic clarification`);
   return generateGenericClarification();
 }
-/**
- * COMPLETE CLARIFICATION SYSTEM - PHASE 3: Follow-up Handling
- * Handles user's clarification response and routes to correct content
- * 100% follow-up handling with perfect intent routing
- */
-function handleClarificationFollowUp(query, originalQuery, originalIntent) {
-  const lc = query.toLowerCase();
-  console.log(`🔍 handleClarificationFollowUp called with:`, { query, originalQuery, originalIntent, lc });
-  
-  // Small helpers to reduce repetition while preserving behavior
-  function createRoute(type, newQuery, newIntent) {
-    return { type, newQuery, newIntent };
-  }
-  function matches(needle) {
-    return lc.includes(needle) || lc === needle;
-  }
-  
-  // Allow user to bypass clarification entirely
-  if (matches("show me results")) {
-    return createRoute("route_to_advice", originalQuery || query, "advice");
-  }
-  
-  // SPECIFIC COURSE PATTERNS FIRST (more specific patterns must come before generic patterns)
+// Helper function for handleClarificationFollowUp
+function handleSpecificCoursePatterns(query, lc, matches, createRoute) {
   const specificCoursePatterns = [
     {
       key: "free online photography course",
@@ -2224,6 +2212,37 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
       entry.log(query);
       return entry.route;
     }
+  }
+  
+  return null;
+}
+
+/**
+ * COMPLETE CLARIFICATION SYSTEM - PHASE 3: Follow-up Handling
+ * Handles user's clarification response and routes to correct content
+ * 100% follow-up handling with perfect intent routing
+ */
+function handleClarificationFollowUp(query, originalQuery, originalIntent) {
+  const lc = query.toLowerCase();
+  console.log(`🔍 handleClarificationFollowUp called with:`, { query, originalQuery, originalIntent, lc });
+  
+  // Small helpers to reduce repetition while preserving behavior
+  function createRoute(type, newQuery, newIntent) {
+    return { type, newQuery, newIntent };
+  }
+  function matches(needle) {
+    return lc.includes(needle) || lc === needle;
+  }
+  
+  // Allow user to bypass clarification entirely
+  if (matches("show me results")) {
+    return createRoute("route_to_advice", originalQuery || query, "advice");
+  }
+  
+  // Check specific course patterns first
+  const specificCourseResult = handleSpecificCoursePatterns(query, lc, matches, createRoute);
+  if (specificCourseResult) {
+    return specificCourseResult;
   }
   
   if (lc.includes("online courses (free and paid)") || lc === "online courses (free and paid)") {
@@ -2965,6 +2984,71 @@ async function findServices(client, { keywords, limit = 50, pageContext = null }
   return data || [];
 }
 
+// Helper functions for findArticles scoring
+function addBaseKeywordScore(kw, t, u, add, has) {
+  for (const k of kw) {
+    if (!k) continue;
+    if (has(t, k)) add(3);        // strong match in title
+    if (has(u, k)) add(1);        // weak match in URL
+  }
+}
+
+function addOnlineCourseBoost(categories, kw, t, add, has) {
+  const isOnlineCourse = categories.includes("online photography course");
+  const coreConcepts = [
+    "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
+    "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
+    "raw", "jpeg", "hdr", "focal length", "long exposure"
+  ];
+  const hasCore = coreConcepts.some(c => kw.includes(c));
+  
+  if (hasCore && isOnlineCourse) {
+    add(25); // Major boost for online course content on technical topics
+    
+    // Extra boost for "What is..." format articles in online course
+    for (const c of coreConcepts) {
+      if (has(t, `what is ${c}`) || has(t, `${c} in photography`)) {
+        add(15); // Additional boost for structured learning content
+      }
+    }
+    
+    // Boost for PDF checklists and guides
+    if (has(t, "pdf") || has(t, "checklist") || has(t, "guide")) {
+      add(10);
+    }
+  }
+  
+  return { hasCore, coreConcepts };
+}
+
+function addCoreConceptScore(hasCore, coreConcepts, t, u, add, has) {
+  if (hasCore) {
+    // exact phrase boosts (existing logic)
+    for (const c of coreConcepts) {
+      const slug = c.replace(/\s+/g, "-");
+      if (t.startsWith(`what is ${c}`)) add(20); // ideal explainer
+      if (has(t, `what is ${c}`)) add(10);
+      if (has(u, `/what-is-${slug}`)) add(12);
+      if (has(u, `${slug}`)) add(3);
+    }
+    // penalize generic Lightroom news posts for concept questions
+    if (/(lightroom|what's new|whats new)/i.test(t) || /(lightroom|whats-new)/.test(u)) {
+      add(-12);
+    }
+  }
+}
+
+function addCategoryBoost(categories, hasCore, add) {
+  if (categories.includes("photography-tips") && hasCore) {
+    add(5); // Boost for photography tips on technical topics
+  }
+}
+
+function addRecencyTieBreaker(s, r) {
+  const seen = r.last_seen ? Date.parse(r.last_seen) || 0 : 0;
+  return s * 1_000_000 + seen;
+}
+
 async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
   // If we have page context, try to find related articles first
   if (pageContext && pageContext.pathname) {
@@ -3005,77 +3089,13 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
     const add = (n)=>{ s += n; };
     const has = (str, needle)=> str.includes(needle);
     
-    const addBaseKeywordScore = () => {
-      for (const k of kw) {
-        if (!k) continue;
-        if (has(t, k)) add(3);        // strong match in title
-        if (has(u, k)) add(1);        // weak match in URL
-      }
-    };
-    
-    const addOnlineCourseBoost = () => {
-      const isOnlineCourse = categories.includes("online photography course");
-      const coreConcepts = [
-        "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
-        "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
-        "raw", "jpeg", "hdr", "focal length", "long exposure"
-      ];
-      const hasCore = coreConcepts.some(c => kw.includes(c));
-      
-      if (hasCore && isOnlineCourse) {
-        add(25); // Major boost for online course content on technical topics
-        
-        // Extra boost for "What is..." format articles in online course
-        for (const c of coreConcepts) {
-          if (has(t, `what is ${c}`) || has(t, `${c} in photography`)) {
-            add(15); // Additional boost for structured learning content
-          }
-        }
-        
-        // Boost for PDF checklists and guides
-        if (has(t, "pdf") || has(t, "checklist") || has(t, "guide")) {
-          add(10);
-        }
-      }
-      
-      return { hasCore, coreConcepts };
-    };
-    
-    const addCoreConceptScore = (hasCore, coreConcepts) => {
-      if (hasCore) {
-        // exact phrase boosts (existing logic)
-        for (const c of coreConcepts) {
-          const slug = c.replace(/\s+/g, "-");
-          if (t.startsWith(`what is ${c}`)) add(20); // ideal explainer
-          if (has(t, `what is ${c}`)) add(10);
-          if (has(u, `/what-is-${slug}`)) add(12);
-          if (has(u, `${slug}`)) add(3);
-        }
-        // penalize generic Lightroom news posts for concept questions
-        if (/(lightroom|what's new|whats new)/i.test(t) || /(lightroom|whats-new)/.test(u)) {
-          add(-12);
-        }
-      }
-    };
-    
-    const addCategoryBoost = (hasCore) => {
-      if (categories.includes("photography-tips") && hasCore) {
-        add(5); // Boost for photography tips on technical topics
-      }
-    };
-    
-    const addRecencyTieBreaker = () => {
-      const seen = r.last_seen ? Date.parse(r.last_seen) || 0 : 0;
-      return s * 1_000_000 + seen;
-    };
-    
     // Apply all scoring factors
-    addBaseKeywordScore();
-    const { hasCore, coreConcepts } = addOnlineCourseBoost();
-    addCoreConceptScore(hasCore, coreConcepts);
-    addCategoryBoost(hasCore);
+    addBaseKeywordScore(kw, t, u, add, has);
+    const { hasCore, coreConcepts } = addOnlineCourseBoost(categories, kw, t, add, has);
+    addCoreConceptScore(hasCore, coreConcepts, t, u, add, has);
+    addCategoryBoost(categories, hasCore, add);
     
-    return addRecencyTieBreaker();
+    return addRecencyTieBreaker(s, r);
   };
 
   return rows
