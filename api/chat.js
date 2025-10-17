@@ -5502,14 +5502,12 @@ export default async function handler(req, res) {
     const qlcRank = (query||'').toLowerCase();
     const queryTokens = (qlcRank.match(/[a-z0-9]+/g) || []).filter(t=>t.length>2);
     const equipmentKeywords = new Set(['tripod','tripods','head','ballhead','levelling','leveling','recommend','recommendation','recommendations','equipment']);
-    const scoreArticle = (a)=>{
+    function scoreArticle(a){
       const title = String(a.title||'').toLowerCase();
       const url = String(a.page_url||a.source_url||a.url||'').toLowerCase();
       const categories = a.categories || [];
       let s = 0;
       for (const t of queryTokens){ if (title.includes(t)) s += 3; if (url.includes(t)) s += 2; }
-      
-      // MAJOR BOOST: Online Photography Course content for technical concepts
       const isOnlineCourse = categories.includes("online photography course");
       const technicalConcepts = [
         "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
@@ -5518,63 +5516,31 @@ export default async function handler(req, res) {
         "manual", "negative space", "contrast", "framing", "filters", "lens", "camera"
       ];
       const hasTechnical = technicalConcepts.some(c => qlcRank.includes(c));
-      
       if (hasTechnical && isOnlineCourse) {
-        s += 25; // Increased boost for online course content on technical topics
-        
-        // Extra boost for "What is..." format articles
-        if (title.includes("what is") && technicalConcepts.some(c => title.includes(c))) {
-          s += 20; // Increased boost
-        }
-        
-        // Boost for PDF checklists and guides
-        if (title.includes("pdf") || title.includes("checklist") || title.includes("guide")) {
-          s += 15; // Increased boost
-        }
-        
-        // Boost for beginner guides
-        if (title.includes("guide for beginners") || title.includes("guide for beginner")) {
-          s += 12; // Increased boost
-        }
-        
-        // Extra boost for exact term matches in title
+        s += 25;
+        if (title.includes("what is") && technicalConcepts.some(c => title.includes(c))) s += 20;
+        if (title.includes("pdf") || title.includes("checklist") || title.includes("guide")) s += 15;
+        if (title.includes("guide for beginners") || title.includes("guide for beginner")) s += 12;
         const exactTerm = qlcRank.replace(/^what\s+is\s+/, "").trim();
-        if (title.toLowerCase().includes(exactTerm)) {
-          s += 30; // Major boost for exact term matches
-        }
+        if (title.toLowerCase().includes(exactTerm)) s += 30;
       }
-      
-      // Enhanced boost for equipment-related matches
       for (const k of equipmentKeywords){ 
         if (qlcRank.includes(k) && (title.includes(k) || url.includes(k))) {
-          s += 6; // Increased from 4
-          // Extra boost for specific tripod brands/models
-          if (k === 'tripod' && (title.includes('gitzo') || title.includes('benro') || url.includes('gitzo') || url.includes('benro'))) {
-            s += 8;
-          }
+          s += 6;
+          if (k === 'tripod' && (title.includes('gitzo') || title.includes('benro') || url.includes('gitzo') || url.includes('benro'))) s += 8;
         }
       }
-      
-      // Boost for recommendation articles that match the query topic
       if (qlcRank.includes('recommend')) {
         if (title.includes('recommended') && title.includes(qlcRank.split(' ')[0])) s += 15;
         if (url.includes('recommended') && url.includes(qlcRank.split(' ')[0])) s += 12;
       }
-      
-      // Boost for comprehensive guides (based on content quality, not hardcoded URLs)
       if (title.includes('professional guide') || title.includes('complete guide')) s += 5;
       if (title.includes('review') && title.includes('comparison')) s += 4;
-      
-      // Penalize irrelevant articles for tripod queries
       if (qlcRank.includes('tripod') && !title.includes('tripod') && !url.includes('tripod') && 
-          !title.includes('equipment') && !url.includes('equipment') && !title.includes('gitzo') && !title.includes('benro')) {
-        s -= 3;
-      }
-      
-      // Slight freshness bonus if we have last_seen
+          !title.includes('equipment') && !url.includes('equipment') && !title.includes('gitzo') && !title.includes('benro')) s -= 3;
       try{ const seen = Date.parse(a.last_seen||''); if (!isNaN(seen)) { const ageDays = (Date.now()-seen)/(1000*60*60*24); if (ageDays < 365) s += 2; } }catch{}
       return s;
-    };
+    }
     if (Array.isArray(articles) && articles.length){
       adviceDebugInfo.push(`🔧 Article Processing: Starting with ${articles.length} articles`);
       
