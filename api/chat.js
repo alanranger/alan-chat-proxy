@@ -3363,8 +3363,13 @@ async function buildProductPanelMarkdown(products) {
 
 /* ----------------------------- Event list UI ----------------------------- */
 function formatEventsForUi(events) {
+  console.log('🔍 formatEventsForUi input:', {
+    inputLength: events?.length || 0,
+    inputSample: events?.slice(0, 2) || []
+  });
+  
   // Preserve original fields so the frontend can format times and ranges
-  return (events || [])
+  const result = (events || [])
     .map((e) => ({
       ...e,
       title: e.title || e.event_title,
@@ -3398,6 +3403,13 @@ function formatEventsForUi(events) {
       availability_status: e.availability_status || null,
     }))
     .slice(0, 12);
+    
+  console.log('🔍 formatEventsForUi output:', {
+    outputLength: result.length,
+    outputSample: result.slice(0, 2)
+  });
+  
+  return result;
 }
 
 /* ----------------------------- Pills builders ---------------------------- */
