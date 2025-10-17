@@ -4264,6 +4264,35 @@ async function handleResidentialPricingGuard(client, query, previousQuery, pageC
 }
 
 /**
+ * Handle the core events retrieval and response pipeline.
+ * Returns true if it sent a response.
+ */
+async function handleEventsPipeline(client, query, keywords, pageContext, res) {
+  const events = await findEvents(client, { keywords, limit: 80, pageContext });
+  const eventList = formatEventsForUi(events);
+  if (!Array.isArray(eventList)) {
+    return false;
+  }
+  const confidence = calculateEventConfidence(query || "", eventList, null);
+  res.status(200).json({
+    ok: true,
+    type: "events",
+    answer: eventList,
+    events: eventList,
+    structured: {
+      intent: "events",
+      topic: (keywords || []).join(", "),
+      events: eventList,
+      products: [],
+      pills: []
+    },
+    confidence,
+    debug: { version: "v1.2.48-events-pipeline" }
+  });
+  return true;
+}
+
+/**
  * Handle session creation and logging
  */
 function handleSessionAndLogging(sessionId, query, req) {
@@ -4661,6 +4690,12 @@ export default async function handler(req, res) {
     // Residential pricing/B&B shortcut (works on both first-turn and follow-ups)
     if (await handleResidentialPricingShortcut(client, query, keywords, pageContext, res)) {
       return; // Response already sent
+    }
+
+    // Core events pipeline (when intent is events)
+    if (intent === "events") {
+      const handled = await handleEventsPipeline(client, query, keywords, pageContext, res);
+      if (handled) return;
     }
     
     // Legacy code below - should never execute due to shortcut above
