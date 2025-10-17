@@ -4656,6 +4656,13 @@ export default async function handler(req, res) {
         return hay.includes(t);
       };
       const filteredEvents = significant ? events.filter(e => matchEvent(e, significant)) : events;
+      
+      console.log('🔍 Events filtering debug:', {
+        totalEvents: events.length,
+        significantKeyword: significant,
+        filteredEventsCount: filteredEvents.length,
+        sampleEvent: events[0] || null
+      });
 
       const eventList = formatEventsForUi(filteredEvents.length ? filteredEvents : events);
       
