@@ -533,6 +533,9 @@ function generateBasicEquipmentAdvice(equipmentType) {
   
   return response;
 }
+
+
+
 function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
@@ -1330,6 +1333,7 @@ function needsClarification(query) {
   
   return result;
 }
+
 /**
  * Generate clarification options from evidence buckets
  * Sources options from actual data instead of hardcoded patterns
@@ -1878,6 +1882,7 @@ async function generateClarificationQuestion(query, client = null, pageContext =
     confidence: 10
   };
 }
+
 /**
  * COMPLETE CLARIFICATION SYSTEM - PHASE 3: Follow-up Handling
  * Handles user's clarification response and routes to correct content
@@ -2638,6 +2643,7 @@ async function findProducts(client, { keywords, limit = 20, pageContext = null }
   if (error) return [];
   return data || [];
 }
+
 async function findServices(client, { keywords, limit = 50, pageContext = null }) {
   // Search for services (free course might be classified as service)
   console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
@@ -3434,6 +3440,7 @@ function formatEventsForUi(events) {
   
   return result;
 }
+
 /* ----------------------------- Pills builders ---------------------------- */
 function buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl }) {
   const pills = [];
@@ -4082,90 +4089,6 @@ async function handleAdviceFollowupSynthesis(client, qlc, keywords, pageContext,
 }
 
 /**
- * Handle clarification follow-up responses based on previous query context
- * Returns true if a response was sent, otherwise false.
- */
-async function handleClarificationFollowup(client, previousQuery, query, intent, keywords, pageContext, res) {
-  const isClarificationResponse = previousQuery && (
-    query.toLowerCase().includes("photography") ||
-    query.toLowerCase().includes("equipment") ||
-    query.toLowerCase().includes("course") ||
-    query.toLowerCase().includes("service") ||
-    query.toLowerCase().includes("advice") ||
-    query.toLowerCase().includes("mentoring") ||
-    query.toLowerCase().includes("about")
-  );
-
-  if (!isClarificationResponse) return false;
-
-  // Route by chosen clarification intent if present in text
-  if (query.toLowerCase().includes("events") || query.toLowerCase().includes("courses") || intent === "events") {
-    const events = await findEvents(client, { keywords, limit: 80, pageContext });
-    const eventList = formatEventsForUi(events);
-    const confidence = calculateEventConfidence(query || "", eventList, null);
-    res.status(200).json({
-      ok: true,
-      type: "events",
-      answer: eventList,
-      events: eventList,
-      structured: {
-        intent: "events",
-        topic: (keywords || []).join(", "),
-        events: eventList,
-        products: [],
-        pills: []
-      },
-      confidence,
-      debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
-    });
-    return true;
-  }
-
-  // Advice-oriented clarification
-  {
-    let articles = await findArticles(client, { keywords, limit: 30, pageContext });
-    articles = (articles || []).map(a => {
-      const out = { ...a };
-      if (!out.title) {
-        out.title = out?.raw?.headline || out?.raw?.name || '';
-        if (!out.title) {
-          try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-        }
-      }
-      if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-      return out;
-    });
-    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-    const contentChunks = await findContentChunks(client, { keywords, limit: 15, articleUrls });
-    const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks);
-    res.status(200).json({
-      ok: true,
-      type: "advice",
-      answer_markdown: answerMarkdown,
-      structured: {
-        intent: "advice",
-        topic: (keywords || []).join(", "),
-        events: [],
-        products: [],
-        services: [],
-        landing: [],
-        articles: (articles || []).map(a => ({
-          ...a,
-          display_date: (function(){
-            const extracted = extractPublishDate(a);
-            const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-            return extracted || fallback;
-          })()
-        })),
-        pills: []
-      },
-      confidence: 65,
-      debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
-    });
-    return true;
-  }
-}
-/**
  * Handle residential pricing guard - bypasses clarification for residential workshop pricing queries
  */
 async function handleResidentialPricingGuard(client, query, previousQuery, pageContext, res) {
@@ -4739,12 +4662,6 @@ export default async function handler(req, res) {
     // NEW: Follow-up direct synthesis for advice queries (equipment/pricing) even when previousQuery exists
     if (previousQuery && intent === "advice") {
       const handled = await handleAdviceFollowupSynthesis(client, qlc, keywords, pageContext, res);
-      if (handled) return;
-    }
-
-    // NEW: Handle clarification follow-up responses (only if query looks like a clarification response)
-    {
-      const handled = await handleClarificationFollowup(client, previousQuery, query, intent, keywords, pageContext, res);
       if (handled) return;
     }
 
@@ -5851,7 +5768,7 @@ export default async function handler(req, res) {
         } else if (summary) {
           lines.push(summary);
         } else {
-          lines.push("This is Alan's free, online photography course. It's self-paced and designed to build fundamentals with practical tips and assignments you can follow from home.");
+          lines.push("This is Alan’s free, online photography course. It’s self-paced and designed to build fundamentals with practical tips and assignments you can follow from home.");
         }
         lines.push(`\nMore details: ${recommendedFreeCourseUrl}`);
         hasEvidenceBasedAnswer = true;
