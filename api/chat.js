@@ -4927,6 +4927,7 @@ export default async function handler(req, res) {
           version: "v1.2.37-logical-confidence",
           intent: "events",
           keywords: keywords,
+          eventsHandlerExecuted: true,
           counts: {
             events: events.length,
             products: product ? 1 : 0,
