@@ -1753,7 +1753,7 @@ function renderAnswer(payload){
   const __rounded = Math.round(confidencePct);
 
   // Render the main textual answer first
-  const md = payload.answer_markdown || payload.answer || '';
+  const md = String(payload.answer_markdown || payload.answer || '');
   if (md && md.trim()) {
     const {html} = mdToHtml(md);
     addBubble(html);
@@ -1904,7 +1904,7 @@ function renderAnswer(payload){
 
   
   // Enhanced fallback messaging based on confidence level
-  if(!gate.show && !(s.events||[]).length && !(s.articles||[]).length && !md?.trim()){
+  if(!gate.show && !(s.events||[]).length && !(s.articles||[]).length && !md.trim()){
     let fallbackMessage = "I don't have a specific answer for that yet.";
     let extraMessage = "";
     
