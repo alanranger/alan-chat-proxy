@@ -3939,6 +3939,14 @@ export default async function handler(req, res) {
           const events = await findEvents(client, { keywords: directKeywords, limit: 80, pageContext });
           const eventList = formatEventsForUi(events);
           const confidence = calculateEventConfidence(query || "", eventList, null);
+          
+          console.log('🔍 EARLY RETURN EVENTS: Found events via early return path:', {
+            totalEvents: events.length,
+            formattedEvents: eventList.length,
+            confidence,
+            query
+          });
+          
           res.status(200).json({
             ok: true,
             type: "events",
@@ -3952,7 +3960,12 @@ export default async function handler(req, res) {
               pills: []
             },
             confidence,
-            debug: { version: "v1.2.40-retrieval-first", earlyReturn: true }
+            debug: { 
+              version: "v1.2.40-retrieval-first", 
+              earlyReturn: true,
+              eventsFound: events.length,
+              formattedEvents: eventList.length
+            }
           });
           return;
         } else {
