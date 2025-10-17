@@ -1556,9 +1556,110 @@ async function generateClarificationOptionsFromEvidence(client, query, pageConte
  * Generates appropriate clarification questions for all 20 question types
  * 95% generation rate with natural, helpful questions
  */
+// Helper functions for clarification question generation
+function generateGeneralEquipmentClarification() {
+  return {
+    type: "general_equipment_clarification",
+    question: "What type of equipment are you looking for advice on?",
+    options: [
+      { text: "Camera recommendations", query: "camera recommendations" },
+      { text: "Lens recommendations", query: "lens recommendations" },
+      { text: "Tripod recommendations", query: "tripod recommendations" },
+      { text: "Camera bag recommendations", query: "camera bag recommendations" },
+      { text: "Memory card recommendations", query: "memory card recommendations" }
+    ],
+    confidence: 30
+  };
+}
+
+function generateEquipmentCourseTypeClarification() {
+  return {
+    type: "equipment_course_type_clarification",
+    question: "Perfect! For equipment recommendations, I need to know what type of photography course you're planning. What interests you most?",
+    options: [
+      { text: "Beginners camera course", query: "equipment for beginners camera course" },
+      { text: "Lightroom editing course", query: "equipment for lightroom course" },
+      { text: "RPS mentoring course", query: "equipment for rps course" },
+      { text: "Online photography course", query: "equipment for online course" },
+      { text: "General course equipment advice", query: "general photography course equipment" }
+    ],
+    confidence: 30
+  };
+}
+
+function generateCourseClarification() {
+  return {
+    type: "course_clarification",
+    question: "Yes, we offer several photography courses! What type of course are you interested in?",
+    options: [
+      { text: "Online courses (free and paid)", query: "Online courses (free and paid)" },
+      { text: "In-person courses in Coventry", query: "photography courses Coventry" },
+      { text: "Specific topic courses", query: "specialized photography courses" },
+      { text: "Beginner courses", query: "beginner photography courses" }
+    ]
+  };
+}
+
+function generateWorkshopClarification() {
+  return {
+    type: "workshop_clarification",
+    question: "Yes, we run photography workshops! What type of workshop are you interested in?",
+    options: [
+      { text: "Bluebell photography workshops", query: "bluebell photography workshops" },
+      { text: "Landscape photography workshops", query: "landscape photography workshops" },
+      { text: "Macro photography workshops", query: "macro photography workshops" },
+      { text: "General outdoor workshops", query: "outdoor photography workshops" }
+    ]
+  };
+}
+
+function generateLocationClarification() {
+  return {
+    type: "location_clarification",
+    question: "We run courses in various locations. What type of photography course are you looking for?",
+    options: [
+      { text: "Courses near Birmingham", query: "courses near Birmingham" },
+      { text: "Online courses instead", query: "online courses alternative" },
+      { text: "Travel to Coventry", query: "courses in Coventry" },
+      { text: "Private lessons", query: "private lessons flexible" }
+    ]
+  };
+}
+
+function generateTopicClarification() {
+  return {
+    type: "topic_clarification",
+    question: "I'd be happy to help! Could you be more specific about what you're looking for?",
+    options: [
+      { text: "Photography equipment advice", query: "photography equipment advice" },
+      { text: "Photography courses and workshops", query: "photography courses" },
+      { text: "Photography services and mentoring", query: "photography services" },
+      { text: "General photography advice", query: "photography advice" },
+      { text: "About Alan Ranger", query: "about alan ranger" }
+    ],
+    confidence: 10
+  };
+}
+
+function generateGenericClarification() {
+  return {
+    type: "generic_clarification",
+    question: "I'd be happy to help! Could you be more specific about what you're looking for?",
+    options: [
+      { text: "Photography equipment advice", query: "photography equipment advice" },
+      { text: "Photography courses and workshops", query: "photography courses" },
+      { text: "Photography services and mentoring", query: "photography services" },
+      { text: "General photography advice", query: "photography advice" },
+      { text: "About Alan Ranger", query: "about alan ranger" }
+    ],
+    confidence: 10
+  };
+}
+
 async function generateClarificationQuestion(query, client = null, pageContext = null) {
   const lc = query.toLowerCase();
   console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
+  
   // Loop guard: if we have previously shown the same global set, offer skip
   if (lc.includes("general photography advice") || lc.includes("photography courses and workshops") || lc.includes("photography equipment advice")) {
     return {
@@ -1574,35 +1675,13 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   // General photography equipment advice clarification - MUST come before other patterns
   if (lc.includes("general photography equipment advice clarification")) {
     console.log(`✅ Found general equipment advice clarification pattern`);
-    return {
-      type: "general_equipment_clarification",
-      question: "What type of equipment are you looking for advice on?",
-      options: [
-        { text: "Camera recommendations", query: "camera recommendations" },
-        { text: "Lens recommendations", query: "lens recommendations" },
-        { text: "Tripod recommendations", query: "tripod recommendations" },
-        { text: "Camera bag recommendations", query: "camera bag recommendations" },
-        { text: "Memory card recommendations", query: "memory card recommendations" }
-      ],
-      confidence: 30 // Will be calculated based on RAG results
-    };
+    return generateGeneralEquipmentClarification();
   }
   
   // Equipment for course type clarification - MUST come before general equipment pattern
   if (lc.includes("equipment for photography course type clarification")) {
     console.log(`✅ Found equipment course type clarification pattern`);
-    return {
-      type: "equipment_course_type_clarification",
-      question: "Perfect! For equipment recommendations, I need to know what type of photography course you're planning. What interests you most?",
-      options: [
-        { text: "Beginners camera course", query: "equipment for beginners camera course" },
-        { text: "Lightroom editing course", query: "equipment for lightroom course" },
-        { text: "RPS mentoring course", query: "equipment for rps course" },
-        { text: "Online photography course", query: "equipment for online course" },
-        { text: "General course equipment advice", query: "general photography course equipment" }
-      ],
-      confidence: 30
-    };
+    return generateEquipmentCourseTypeClarification();
   }
   
   // Try evidence-based clarification first
@@ -1643,29 +1722,11 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   
   // Generic course/workshop questions
   if (lc.includes("do you do") && lc.includes("courses")) {
-    return {
-      type: "course_clarification",
-      question: "Yes, we offer several photography courses! What type of course are you interested in?",
-      options: [
-        { text: "Online courses (free and paid)", query: "Online courses (free and paid)" },
-        { text: "In-person courses in Coventry", query: "photography courses Coventry" },
-        { text: "Specific topic courses", query: "specialized photography courses" },
-        { text: "Beginner courses", query: "beginner photography courses" }
-      ]
-    };
+    return generateCourseClarification();
   }
   
   if (lc.includes("do you run") && lc.includes("workshops")) {
-    return {
-      type: "workshop_clarification",
-      question: "Yes, we run photography workshops! What type of workshop are you interested in?",
-      options: [
-        { text: "Bluebell photography workshops", query: "bluebell photography workshops" },
-        { text: "Landscape photography workshops", query: "landscape photography workshops" },
-        { text: "Macro photography workshops", query: "macro photography workshops" },
-        { text: "General outdoor workshops", query: "outdoor photography workshops" }
-      ]
-    };
+    return generateWorkshopClarification();
   }
   
   if (lc.includes("do you offer") && lc.includes("lessons")) {
@@ -1949,18 +2010,7 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   
   // CONTENT-BASED FALLBACK: If no specific pattern matches, use generic clarification
   console.log(`✅ No specific pattern matched for: "${query}" - using generic clarification`);
-  return {
-    type: "generic_clarification",
-    question: "I'd be happy to help! Could you be more specific about what you're looking for?",
-    options: [
-      { text: "Photography equipment advice", query: "photography equipment advice" },
-      { text: "Photography courses and workshops", query: "photography courses" },
-      { text: "Photography services and mentoring", query: "photography services" },
-      { text: "General photography advice", query: "photography advice" },
-      { text: "About Alan Ranger", query: "about alan ranger" }
-    ],
-    confidence: 10
-  };
+  return generateGenericClarification();
 }
 /**
  * COMPLETE CLARIFICATION SYSTEM - PHASE 3: Follow-up Handling
