@@ -4657,14 +4657,19 @@ export default async function handler(req, res) {
       };
       const filteredEvents = significant ? events.filter(e => matchEvent(e, significant)) : events;
       
-      console.log('🔍 Events filtering debug:', {
+      const debugInfo = {
         totalEvents: events.length,
         significantKeyword: significant,
         filteredEventsCount: filteredEvents.length,
         sampleEvent: events[0] || null
-      });
+      };
+      console.log('🔍 Events filtering debug:', debugInfo);
 
       const eventList = formatEventsForUi(filteredEvents.length ? filteredEvents : events);
+      
+      // Add debug info to response for troubleshooting
+      if (!response.debug) response.debug = {};
+      response.debug.eventsFiltering = debugInfo;
       
       // Pick the most relevant product deterministically across filtered events
       const kwSet = new Set((keywords||[]).map(k=>String(k||'').toLowerCase()));
