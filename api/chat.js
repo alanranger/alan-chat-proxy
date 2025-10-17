@@ -4761,8 +4761,7 @@ export default async function handler(req, res) {
         eventListSample: eventList.slice(0, 2)
       });
       
-      // Store debug info for later inclusion in response
-      var eventsFilteringDebug = debugInfo;
+      // Debug info logged above
       
       // Pick the most relevant product deterministically across filtered events
       const kwSet = new Set((keywords||[]).map(k=>String(k||'').toLowerCase()));
