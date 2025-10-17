@@ -3859,6 +3859,89 @@ function calculateEventConfidence(query, events, product) {
 }
 
 /* -------------------------------- Extracted Functions -------------------------------- */
+/**
+ * Early-return fallback processing extracted from handler to reduce complexity.
+ * Preserves existing behavior exactly.
+ */
+async function maybeProcessEarlyReturnFallback(client, query, intent, pageContext, res) {
+  // This mirrors the original inline logic guarded by `confident`
+  const directKeywords = extractKeywords(query || "");
+  if (intent === "events") {
+    const events = await findEvents(client, { keywords: directKeywords, limit: 80, pageContext });
+    const eventList = formatEventsForUi(events);
+    const confidence = calculateEventConfidence(query || "", eventList, null);
+    console.log('🔍 EARLY RETURN EVENTS: Found events via early return path:', {
+      totalEvents: events.length,
+      formattedEvents: eventList.length,
+      confidence,
+      query
+    });
+    res.status(200).json({
+      ok: true,
+      type: "events",
+      answer: eventList,
+      events: eventList,
+      structured: {
+        intent: "events",
+        topic: directKeywords.join(", "),
+        events: eventList,
+        products: [],
+        pills: []
+      },
+      confidence,
+      debug: {
+        version: "v1.2.40-retrieval-first",
+        earlyReturn: true,
+        eventsFound: events.length,
+        formattedEvents: eventList.length
+      }
+    });
+    return true;
+  } else {
+    let articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
+    articles = (articles || []).map(a => {
+      const out = { ...a };
+      if (!out.title) {
+        out.title = out?.raw?.headline || out?.raw?.name || '';
+        if (!out.title) {
+          try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
+        }
+      }
+      if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
+      return out;
+    });
+    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+    const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 15, articleUrls });
+    const pricingAnswer = generatePricingAccommodationAnswer(query || "", articles, contentChunks);
+    const answerMarkdown = pricingAnswer || generateDirectAnswer(query || "", articles, contentChunks);
+    res.status(200).json({
+      ok: true,
+      type: "advice",
+      answer_markdown: answerMarkdown,
+      structured: {
+        intent: "advice",
+        topic: directKeywords.join(", "),
+        events: [],
+        products: [],
+        services: [],
+        landing: [],
+        articles: (articles || []).map(a => ({
+          ...a,
+          display_date: (function(){
+            const extracted = extractPublishDate(a);
+            const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+            return extracted || fallback;
+          })()
+        })),
+        pills: []
+      },
+      confidence: 90,
+      debug: { version: "v1.2.40-retrieval-first", earlyReturn: true }
+    });
+    return true;
+  }
+}
+
 
 /**
  * Determine keywords for content retrieval based on intent and query context
@@ -4375,86 +4458,8 @@ export default async function handler(req, res) {
       return; // Response already sent
     }
       if (typeof confident !== 'undefined' && confident) {
-        const directKeywords = extractKeywords(query || "");
-        if (intent === "events") {
-          const events = await findEvents(client, { keywords: directKeywords, limit: 80, pageContext });
-          const eventList = formatEventsForUi(events);
-          const confidence = calculateEventConfidence(query || "", eventList, null);
-          
-          console.log('🔍 EARLY RETURN EVENTS: Found events via early return path:', {
-            totalEvents: events.length,
-            formattedEvents: eventList.length,
-            confidence,
-            query
-          });
-          
-          res.status(200).json({
-            ok: true,
-            type: "events",
-            answer: eventList,
-            events: eventList,
-            structured: {
-              intent: "events",
-              topic: directKeywords.join(", "),
-              events: eventList,
-              products: [],
-              pills: []
-            },
-            confidence,
-            debug: { 
-              version: "v1.2.40-retrieval-first", 
-              earlyReturn: true,
-              eventsFound: events.length,
-              formattedEvents: eventList.length
-            }
-          });
-          return;
-        } else {
-          // advice/default path
-          let articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
-          // Ensure article cards can render on the client by providing title and page_url fallbacks
-          articles = (articles || []).map(a => {
-            const out = { ...a };
-            if (!out.title) {
-              out.title = out?.raw?.headline || out?.raw?.name || '';
-              if (!out.title) {
-                try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-              }
-            }
-            if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-            return out;
-          });
-          const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-          const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 15, articleUrls });
-          // If pricing/accommodation hinted, prefer pricing synthesizer
-          const pricingAnswer = generatePricingAccommodationAnswer(query || "", articles, contentChunks);
-          const answerMarkdown = pricingAnswer || generateDirectAnswer(query || "", articles, contentChunks);
-          res.status(200).json({
-            ok: true,
-            type: "advice",
-            answer_markdown: answerMarkdown,
-            structured: {
-              intent: "advice",
-              topic: directKeywords.join(", "),
-              events: [],
-              products: [],
-              services: [],
-              landing: [],
-              articles: (articles || []).map(a => ({
-                ...a,
-                display_date: (function(){
-                  const extracted = extractPublishDate(a);
-                  const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-                  return extracted || fallback;
-                })()
-              })),
-              pills: []
-            },
-            confidence: 90,
-            debug: { version: "v1.2.40-retrieval-first", earlyReturn: true }
-          });
-          return;
-        }
+        const handledEarly = await maybeProcessEarlyReturnFallback(client, query, intent, pageContext, res);
+        if (handledEarly) return;
       }
 
       // Fallback early-return for equipment advice even if confidence was false

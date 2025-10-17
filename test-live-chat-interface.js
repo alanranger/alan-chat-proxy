@@ -57,21 +57,18 @@ async function testLiveChatInterface() {
       });
       
       // Type the query in the input field
-      const inputSelector = 'input[placeholder*="Ask a question"], textarea[placeholder*="Ask a question"]';
+      const inputSelector = '.composer input';
       await page.waitForSelector(inputSelector, { timeout: 10000 });
+      await page.click(inputSelector, { clickCount: 3 });
       await page.type(inputSelector, query);
       
       // Click send button
-      const sendButton = await page.$('button:has-text("Send"), button[type="submit"]');
-      if (sendButton) {
-        await sendButton.click();
-      } else {
-        // Try pressing Enter
-        await page.keyboard.press('Enter');
-      }
+      const sendSelector = '.composer .send, .send';
+      await page.waitForSelector(sendSelector, { timeout: 10000 });
+      await page.click(sendSelector);
       
       // Wait for response
-      await page.waitForTimeout(3000);
+      await new Promise(r => setTimeout(r, 4000));
       
       // Extract the response
       const response = await page.evaluate(() => {
@@ -183,7 +180,7 @@ async function testLiveChatInterface() {
       }
       
       // Wait between tests
-      await page.waitForTimeout(2000);
+      await new Promise(r => setTimeout(r, 2000));
       
     } catch (error) {
       console.log(`❌ Error: ${error.message}`);
