@@ -3986,6 +3986,34 @@ function handleSessionAndLogging(sessionId, query, req) {
   }
 }
 
+/**
+ * Gather pre-content for confidence checking
+ */
+async function gatherPreContent(client, query, previousQuery, intent, pageContext) {
+  let preContent = { articles: [], events: [], products: [], relevanceScore: 0 };
+  
+  if (!previousQuery) {
+    try {
+      const preKeywords = extractKeywords(query || "");
+      if (intent === "events") {
+        const eventsPeek = await findEvents(client, { keywords: preKeywords, limit: 50, pageContext });
+        preContent.events = formatEventsForUi(eventsPeek);
+      } else {
+        const articlesPeek = await findArticles(client, { keywords: preKeywords, limit: 20, pageContext });
+        preContent.articles = articlesPeek;
+        const articleUrlsPeek = articlesPeek?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+        const chunksPeek = await findContentChunks(client, { keywords: preKeywords, limit: 10, articleUrls: articleUrlsPeek });
+        // Rough relevance: number of chunks found
+        preContent.relevanceScore = Math.min(1, (chunksPeek?.length || 0) / 10);
+      }
+    } catch (e) {
+      // Soft-fail: continue without preContent
+    }
+  }
+  
+  return preContent;
+}
+
 /* -------------------------------- Handler -------------------------------- */
 export default async function handler(req, res) {
   // Chat API handler called
@@ -4021,46 +4049,13 @@ export default async function handler(req, res) {
     }
     
     // Retrieval-first: try to gather content and check content-based confidence
-    // before deciding to trigger clarification for initial queries (no previousQuery)
-    let preContent = { articles: [], events: [], products: [], relevanceScore: 0 };
-    if (!previousQuery) {
-      try {
-        const preKeywords = extractKeywords(query || "");
-        if (intent === "events") {
-          const eventsPeek = await findEvents(client, { keywords: preKeywords, limit: 50, pageContext });
-          preContent.events = formatEventsForUi(eventsPeek);
-        } else {
-          const articlesPeek = await findArticles(client, { keywords: preKeywords, limit: 20, pageContext });
-          preContent.articles = articlesPeek;
-          const articleUrlsPeek = articlesPeek?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-          const chunksPeek = await findContentChunks(client, { keywords: preKeywords, limit: 10, articleUrls: articleUrlsPeek });
-          // Rough relevance: number of chunks found
-          preContent.relevanceScore = Math.min(1, (chunksPeek?.length || 0) / 10);
-        }
-      } catch (e) {
-        // Soft-fail: continue without preContent
-      }
-    }
+    const preContent = await gatherPreContent(client, query, previousQuery, intent, pageContext);
     
     // If we have enough content-based confidence, answer directly now (skip clarification entirely)
-    if (!previousQuery) {
-      let confident = hasContentBasedConfidence(query || "", intent, preContent);
-      // Secondary check: if initial confidence is low, attempt a light retrieval probe
-      // to see if we have enough content to answer directly.
-      if (!confident) {
-        const probeKeywords = extractKeywords(query || "");
-        if (probeKeywords.length) {
-          if (intent === "events") {
-            const probeEvents = await findEvents(client, { keywords: probeKeywords, limit: 25, pageContext });
-            confident = Array.isArray(probeEvents) && probeEvents.length > 0;
-          } else {
-            const probeArticles = await findArticles(client, { keywords: probeKeywords, limit: 12, pageContext });
-            const probeUrls = probeArticles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-            const probeChunks = await findContentChunks(client, { keywords: probeKeywords, limit: 8, articleUrls: probeUrls });
-            confident = (Array.isArray(probeArticles) && probeArticles.length > 0) || (Array.isArray(probeChunks) && probeChunks.length > 0);
-          }
-        }
-      }
+    const earlyReturnResponse = await handleEarlyReturnLogic(client, query, previousQuery, intent, preContent, pageContext, res);
+    if (earlyReturnResponse) {
+      return; // Response already sent
+    }
       if (confident) {
         const directKeywords = extractKeywords(query || "");
         if (intent === "events") {
