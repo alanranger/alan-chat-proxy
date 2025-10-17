@@ -1,0 +1,107 @@
+[
+  {
+    "id": 1,
+    "query": "What is your refund and cancellation policy?",
+    "category": "General Policy",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:08.356Z"
+  },
+  {
+    "id": 2,
+    "query": "When is the next Lightroom course in Coventry?",
+    "category": "Course Event",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:09.356Z"
+  },
+  {
+    "id": 3,
+    "query": "Do you still run Lake District photography workshops?",
+    "category": "Workshop Event",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:10.360Z"
+  },
+  {
+    "id": 4,
+    "query": "How much is the Lightroom beginners course?",
+    "category": "Product (Course)",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:11.364Z"
+  },
+  {
+    "id": 5,
+    "query": "Can I book a 1-to-1 mentoring session with Alan?",
+    "category": "Service (1-to-1)",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:12.366Z"
+  },
+  {
+    "id": 6,
+    "query": "Do you have tips for composition or leading lines?",
+    "category": "Article",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:13.379Z"
+  },
+  {
+    "id": 7,
+    "query": "Show me an article about the exposure triangle.",
+    "category": "Article",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:14.382Z"
+  },
+  {
+    "id": 8,
+    "query": "How do I set ISO manually on my camera?",
+    "category": "Technical",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:15.386Z"
+  },
+  {
+    "id": 9,
+    "query": "What's the difference between aperture and shutter speed?",
+    "category": "Technical",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:16.398Z"
+  },
+  {
+    "id": 10,
+    "query": "When is the best time of day for landscape photography?",
+    "category": "Advice",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:17.412Z"
+  },
+  {
+    "id": 11,
+    "query": "Where do your workshops meet and start from?",
+    "category": "Logistics",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:18.414Z"
+  },
+  {
+    "id": 12,
+    "query": "Do you provide transport or accommodation?",
+    "category": "Logistics",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:19.418Z"
+  },
+  {
+    "id": 13,
+    "query": "How do I join the Photography Academy?",
+    "category": "Photography Academy",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:20.421Z"
+  },
+  {
+    "id": 14,
+    "query": "How do module exams and certificates work?",
+    "category": "Photography Academy",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:21.422Z"
+  },
+  {
+    "id": 15,
+    "query": "Who is Alan Ranger?",
+    "category": "About/General",
+    "error": "Failed to parse URL from /api/chat",
+    "timestamp": "2025-10-16T23:28:22.436Z"
+  }
+]

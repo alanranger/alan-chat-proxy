@@ -1,0 +1,458 @@
+[
+  {
+    "originalQuery": "What is your refund and cancellation policy?",
+    "currentQuery": "What is your refund and cancellation policy?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "What is your refund and cancellation policy?",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 2337,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:42:49.733Z"
+  },
+  {
+    "originalQuery": "What is your refund and cancellation policy?",
+    "currentQuery": "photography equipment advice",
+    "depth": 1,
+    "pathHistory": [
+      "Initial Query",
+      "1. Photography equipment advice"
+    ],
+    "response": {
+      "ok": true,
+      "type": "advice",
+      "answer_markdown": "**Equipment Recommendations:**\n\nChoosing the right equipment depends on several factors: your budget, intended usage, and photography style. Consider your specific photography needs and budget when making your choice. \n\nFor detailed reviews and specific recommendations, check out Alan's photography guides on his blog.",
+      "structured": {
+        "intent": "advice",
+        "topic": "equipment, photography, advice",
+        "events": [],
+        "products": [],
+        "services": [],
+        "landing": [],
+        "articles": [],
+        "pills": []
+      },
+      "confidence": 75,
+      "debug": {
+        "version": "v1.2.41-equip-fallback",
+        "earlyReturn": true
+      }
+    },
+    "timestamp": "2025-10-16T23:42:52.742Z"
+  },
+  {
+    "originalQuery": "What is your refund and cancellation policy?",
+    "currentQuery": "photography courses",
+    "depth": 1,
+    "pathHistory": [
+      "Initial Query",
+      "2. Photography courses and workshops"
+    ],
+    "response": {
+      "ok": true,
+      "type": "events",
+      "answer_markdown": "",
+      "citations": [],
+      "structured": {
+        "intent": "events",
+        "topic": "photography, courses",
+        "events": [],
+        "products": [],
+        "pills": [
+          {
+            "label": "Photos",
+            "url": "https://www.alanranger.com/gallery-image-portfolios",
+            "brand": false
+          }
+        ]
+      },
+      "confidence": 0.5,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "events",
+        "keywords": [
+          "photography",
+          "courses"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0
+        },
+        "productPanel": "",
+        "productDescription": null,
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "photography courses",
+          "queryLowercase": "photography courses",
+          "hasSpecificActivity": true,
+          "hasSpecificCourseType": false
+        }
+      },
+      "meta": {
+        "duration_ms": 853,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "events"
+      }
+    },
+    "timestamp": "2025-10-16T23:42:55.240Z"
+  },
+  {
+    "originalQuery": "What is your refund and cancellation policy?",
+    "currentQuery": "photography services",
+    "depth": 1,
+    "pathHistory": [
+      "Initial Query",
+      "3. Photography services and mentoring"
+    ],
+    "response": {
+      "ok": true,
+      "type": "advice",
+      "answer_markdown": "I couldn't find a specific guide for that yet.",
+      "citations": [],
+      "structured": {
+        "intent": "advice",
+        "topic": "photography, services",
+        "events": [],
+        "products": [],
+        "services": [],
+        "landing": [],
+        "articles": [],
+        "pills": [
+          {
+            "label": "More Articles",
+            "url": "https://www.alanranger.com/search?query=photography%20services",
+            "brand": true
+          }
+        ]
+      },
+      "confidence": 0.1,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "advice",
+        "keywords": [
+          "photography",
+          "services"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0,
+          "contentChunks": 0
+        },
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "photography services",
+          "queryLowercase": "photography services",
+          "hasSpecificService": false,
+          "hasSpecificTechnical": false,
+          "isAboutQuery": false
+        },
+        "debugInfo": []
+      },
+      "meta": {
+        "duration_ms": 1530,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "advice"
+      }
+    },
+    "timestamp": "2025-10-16T23:42:58.412Z"
+  },
+  {
+    "originalQuery": "When is the next Lightroom course in Coventry?",
+    "currentQuery": "When is the next Lightroom course in Coventry?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "events",
+      "answer_markdown": "",
+      "citations": [],
+      "structured": {
+        "intent": "events",
+        "topic": "coventry, lightroom, when, next, course",
+        "events": [],
+        "products": [],
+        "pills": [
+          {
+            "label": "Photos",
+            "url": "https://www.alanranger.com/gallery-image-portfolios",
+            "brand": false
+          }
+        ]
+      },
+      "confidence": 0.44999999999999996,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "events",
+        "keywords": [
+          "coventry",
+          "lightroom",
+          "when",
+          "next",
+          "course"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0
+        },
+        "productPanel": "",
+        "productDescription": null,
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "When is the next Lightroom course in Coventry?",
+          "queryLowercase": "when is the next lightroom course in coventry?",
+          "hasSpecificActivity": true,
+          "hasSpecificCourseType": true
+        }
+      },
+      "meta": {
+        "duration_ms": 867,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "events"
+      }
+    },
+    "timestamp": "2025-10-16T23:43:01.016Z"
+  },
+  {
+    "originalQuery": "Do you still run Lake District photography workshops?",
+    "currentQuery": "Do you still run Lake District photography workshops?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "events",
+      "answer_markdown": "",
+      "citations": [],
+      "structured": {
+        "intent": "events",
+        "topic": "lake district, still, lake, district, photography, workshops",
+        "events": [],
+        "products": [],
+        "pills": [
+          {
+            "label": "Photos",
+            "url": "https://www.alanranger.com/gallery-image-portfolios",
+            "brand": false
+          }
+        ]
+      },
+      "confidence": 0.5,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "events",
+        "keywords": [
+          "lake district",
+          "still",
+          "lake",
+          "district",
+          "photography",
+          "workshops"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0
+        },
+        "productPanel": "",
+        "productDescription": null,
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "Do you still run Lake District photography workshops?",
+          "queryLowercase": "do you still run lake district photography workshops?",
+          "hasSpecificActivity": true,
+          "hasSpecificCourseType": false
+        }
+      },
+      "meta": {
+        "duration_ms": 893,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "events"
+      }
+    },
+    "timestamp": "2025-10-16T23:43:03.556Z"
+  },
+  {
+    "originalQuery": "How much is the Lightroom beginners course?",
+    "currentQuery": "How much is the Lightroom beginners course?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "events",
+      "answer_markdown": "",
+      "citations": [],
+      "structured": {
+        "intent": "events",
+        "topic": "beginners, lightroom, much, course",
+        "events": [],
+        "products": [],
+        "pills": [
+          {
+            "label": "Photos",
+            "url": "https://www.alanranger.com/gallery-image-portfolios",
+            "brand": false
+          }
+        ]
+      },
+      "confidence": 0.65,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "events",
+        "keywords": [
+          "beginners",
+          "lightroom",
+          "much",
+          "course"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0
+        },
+        "productPanel": "",
+        "productDescription": null,
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "How much is the Lightroom beginners course?",
+          "queryLowercase": "how much is the lightroom beginners course?",
+          "hasSpecificActivity": true,
+          "hasSpecificCourseType": true
+        }
+      },
+      "meta": {
+        "duration_ms": 861,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "events"
+      }
+    },
+    "timestamp": "2025-10-16T23:43:06.077Z"
+  },
+  {
+    "originalQuery": "Can I book a 1-to-1 mentoring session with Alan?",
+    "currentQuery": "Can I book a 1-to-1 mentoring session with Alan?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "advice",
+      "answer_markdown": "I couldn't find a specific guide for that yet.",
+      "citations": [],
+      "structured": {
+        "intent": "advice",
+        "topic": "book, 1-to-1, mentoring, session, with, alan",
+        "events": [],
+        "products": [],
+        "services": [],
+        "landing": [],
+        "articles": [],
+        "pills": [
+          {
+            "label": "More Articles",
+            "url": "https://www.alanranger.com/search?query=Can%20I%20book%20a%201-to-1%20mentoring%20session%20with%20Alan%3F",
+            "brand": true
+          }
+        ]
+      },
+      "confidence": 0.1,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "advice",
+        "keywords": [
+          "book",
+          "1-to-1",
+          "mentoring",
+          "session",
+          "with",
+          "alan"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0,
+          "contentChunks": 0
+        },
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "Can I book a 1-to-1 mentoring session with Alan?",
+          "queryLowercase": "can i book a 1-to-1 mentoring session with alan?",
+          "hasSpecificService": true,
+          "hasSpecificTechnical": false,
+          "isAboutQuery": false
+        },
+        "debugInfo": []
+      },
+      "meta": {
+        "duration_ms": 2631,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "advice"
+      }
+    },
+    "timestamp": "2025-10-16T23:43:10.348Z"
+  }
+]

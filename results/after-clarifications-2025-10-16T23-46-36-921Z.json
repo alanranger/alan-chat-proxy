@@ -1,0 +1,1334 @@
+[
+  {
+    "originalQuery": "What is your refund and cancellation policy?",
+    "currentQuery": "What is your refund and cancellation policy?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "What is your refund and cancellation policy?",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 2690,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:44:35.840Z"
+  },
+  {
+    "originalQuery": "What is your refund and cancellation policy?",
+    "currentQuery": "photography equipment advice",
+    "depth": 1,
+    "pathHistory": [
+      "Initial Query",
+      "1. Photography equipment advice"
+    ],
+    "response": {
+      "ok": true,
+      "type": "advice",
+      "answer_markdown": "**Equipment Recommendations:**\n\nChoosing the right equipment depends on several factors: your budget, intended usage, and photography style. Consider your specific photography needs and budget when making your choice. \n\nFor detailed reviews and specific recommendations, check out Alan's photography guides on his blog.",
+      "structured": {
+        "intent": "advice",
+        "topic": "equipment, photography, advice",
+        "events": [],
+        "products": [],
+        "services": [],
+        "landing": [],
+        "articles": [],
+        "pills": []
+      },
+      "confidence": 75,
+      "debug": {
+        "version": "v1.2.41-equip-fallback",
+        "earlyReturn": true
+      }
+    },
+    "timestamp": "2025-10-16T23:44:38.932Z"
+  },
+  {
+    "originalQuery": "What is your refund and cancellation policy?",
+    "currentQuery": "photography courses",
+    "depth": 1,
+    "pathHistory": [
+      "Initial Query",
+      "2. Photography courses and workshops"
+    ],
+    "response": {
+      "ok": true,
+      "type": "events",
+      "answer_markdown": "",
+      "citations": [],
+      "structured": {
+        "intent": "events",
+        "topic": "photography, courses",
+        "events": [],
+        "products": [],
+        "pills": [
+          {
+            "label": "Photos",
+            "url": "https://www.alanranger.com/gallery-image-portfolios",
+            "brand": false
+          }
+        ]
+      },
+      "confidence": 0.5,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "events",
+        "keywords": [
+          "photography",
+          "courses"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0
+        },
+        "productPanel": "",
+        "productDescription": null,
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "photography courses",
+          "queryLowercase": "photography courses",
+          "hasSpecificActivity": true,
+          "hasSpecificCourseType": false
+        }
+      },
+      "meta": {
+        "duration_ms": 935,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "events"
+      }
+    },
+    "timestamp": "2025-10-16T23:44:41.487Z"
+  },
+  {
+    "originalQuery": "What is your refund and cancellation policy?",
+    "currentQuery": "photography services",
+    "depth": 1,
+    "pathHistory": [
+      "Initial Query",
+      "3. Photography services and mentoring"
+    ],
+    "response": {
+      "ok": true,
+      "type": "advice",
+      "answer_markdown": "I couldn't find a specific guide for that yet.",
+      "citations": [],
+      "structured": {
+        "intent": "advice",
+        "topic": "photography, services",
+        "events": [],
+        "products": [],
+        "services": [],
+        "landing": [],
+        "articles": [],
+        "pills": [
+          {
+            "label": "More Articles",
+            "url": "https://www.alanranger.com/search?query=photography%20services",
+            "brand": true
+          }
+        ]
+      },
+      "confidence": 0.1,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "advice",
+        "keywords": [
+          "photography",
+          "services"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0,
+          "contentChunks": 0
+        },
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "photography services",
+          "queryLowercase": "photography services",
+          "hasSpecificService": false,
+          "hasSpecificTechnical": false,
+          "isAboutQuery": false
+        },
+        "debugInfo": []
+      },
+      "meta": {
+        "duration_ms": 1534,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "advice"
+      }
+    },
+    "timestamp": "2025-10-16T23:44:44.651Z"
+  },
+  {
+    "originalQuery": "When is the next Lightroom course in Coventry?",
+    "currentQuery": "When is the next Lightroom course in Coventry?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "events",
+      "answer_markdown": "",
+      "citations": [],
+      "structured": {
+        "intent": "events",
+        "topic": "coventry, lightroom, when, next, course",
+        "events": [],
+        "products": [],
+        "pills": [
+          {
+            "label": "Photos",
+            "url": "https://www.alanranger.com/gallery-image-portfolios",
+            "brand": false
+          }
+        ]
+      },
+      "confidence": 0.44999999999999996,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "events",
+        "keywords": [
+          "coventry",
+          "lightroom",
+          "when",
+          "next",
+          "course"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0
+        },
+        "productPanel": "",
+        "productDescription": null,
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "When is the next Lightroom course in Coventry?",
+          "queryLowercase": "when is the next lightroom course in coventry?",
+          "hasSpecificActivity": true,
+          "hasSpecificCourseType": true
+        }
+      },
+      "meta": {
+        "duration_ms": 687,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "events"
+      }
+    },
+    "timestamp": "2025-10-16T23:44:46.977Z"
+  },
+  {
+    "originalQuery": "Do you still run Lake District photography workshops?",
+    "currentQuery": "Do you still run Lake District photography workshops?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "events",
+      "answer_markdown": "",
+      "citations": [],
+      "structured": {
+        "intent": "events",
+        "topic": "lake district, still, lake, district, photography, workshops",
+        "events": [],
+        "products": [],
+        "pills": [
+          {
+            "label": "Photos",
+            "url": "https://www.alanranger.com/gallery-image-portfolios",
+            "brand": false
+          }
+        ]
+      },
+      "confidence": 0.5,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "events",
+        "keywords": [
+          "lake district",
+          "still",
+          "lake",
+          "district",
+          "photography",
+          "workshops"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0
+        },
+        "productPanel": "",
+        "productDescription": null,
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "Do you still run Lake District photography workshops?",
+          "queryLowercase": "do you still run lake district photography workshops?",
+          "hasSpecificActivity": true,
+          "hasSpecificCourseType": false
+        }
+      },
+      "meta": {
+        "duration_ms": 711,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "events"
+      }
+    },
+    "timestamp": "2025-10-16T23:44:49.313Z"
+  },
+  {
+    "originalQuery": "How much is the Lightroom beginners course?",
+    "currentQuery": "How much is the Lightroom beginners course?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "events",
+      "answer_markdown": "",
+      "citations": [],
+      "structured": {
+        "intent": "events",
+        "topic": "beginners, lightroom, much, course",
+        "events": [],
+        "products": [],
+        "pills": [
+          {
+            "label": "Photos",
+            "url": "https://www.alanranger.com/gallery-image-portfolios",
+            "brand": false
+          }
+        ]
+      },
+      "confidence": 0.65,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "events",
+        "keywords": [
+          "beginners",
+          "lightroom",
+          "much",
+          "course"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0
+        },
+        "productPanel": "",
+        "productDescription": null,
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "How much is the Lightroom beginners course?",
+          "queryLowercase": "how much is the lightroom beginners course?",
+          "hasSpecificActivity": true,
+          "hasSpecificCourseType": true
+        }
+      },
+      "meta": {
+        "duration_ms": 691,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "events"
+      }
+    },
+    "timestamp": "2025-10-16T23:44:51.640Z"
+  },
+  {
+    "originalQuery": "Can I book a 1-to-1 mentoring session with Alan?",
+    "currentQuery": "Can I book a 1-to-1 mentoring session with Alan?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "advice",
+      "answer_markdown": "I couldn't find a specific guide for that yet.",
+      "citations": [],
+      "structured": {
+        "intent": "advice",
+        "topic": "book, 1-to-1, mentoring, session, with, alan",
+        "events": [],
+        "products": [],
+        "services": [],
+        "landing": [],
+        "articles": [],
+        "pills": [
+          {
+            "label": "More Articles",
+            "url": "https://www.alanranger.com/search?query=Can%20I%20book%20a%201-to-1%20mentoring%20session%20with%20Alan%3F",
+            "brand": true
+          }
+        ]
+      },
+      "confidence": 0.1,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "advice",
+        "keywords": [
+          "book",
+          "1-to-1",
+          "mentoring",
+          "session",
+          "with",
+          "alan"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0,
+          "contentChunks": 0
+        },
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "Can I book a 1-to-1 mentoring session with Alan?",
+          "queryLowercase": "can i book a 1-to-1 mentoring session with alan?",
+          "hasSpecificService": true,
+          "hasSpecificTechnical": false,
+          "isAboutQuery": false
+        },
+        "debugInfo": []
+      },
+      "meta": {
+        "duration_ms": 2665,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "advice"
+      }
+    },
+    "timestamp": "2025-10-16T23:44:55.959Z"
+  },
+  {
+    "originalQuery": "Do you have tips for composition or leading lines?",
+    "currentQuery": "Do you have tips for composition or leading lines?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "Do you have tips for composition or leading lines?",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 2154,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:44:59.746Z"
+  },
+  {
+    "originalQuery": "Show me an article about the exposure triangle.",
+    "currentQuery": "Show me an article about the exposure triangle.",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "Show me an article about the exposure triangle.",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 2221,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:45:08.189Z"
+  },
+  {
+    "originalQuery": "How do I set ISO manually on my camera?",
+    "currentQuery": "How do I set ISO manually on my camera?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "How do I set ISO manually on my camera?",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 3002,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:45:17.401Z"
+  },
+  {
+    "originalQuery": "What's the difference between aperture and shutter speed?",
+    "currentQuery": "What's the difference between aperture and shutter speed?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "What's the difference between aperture and shutter speed?",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 2350,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:45:25.973Z"
+  },
+  {
+    "originalQuery": "When is the best time of day for landscape photography?",
+    "currentQuery": "When is the best time of day for landscape photography?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "When is the best time of day for landscape photography?",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 2294,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:45:34.469Z"
+  },
+  {
+    "originalQuery": "Where do your workshops meet and start from?",
+    "currentQuery": "Where do your workshops meet and start from?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "events",
+      "answer_markdown": "",
+      "citations": [],
+      "structured": {
+        "intent": "events",
+        "topic": "where, your, workshops, meet, start, from",
+        "events": [],
+        "products": [],
+        "pills": [
+          {
+            "label": "Photos",
+            "url": "https://www.alanranger.com/gallery-image-portfolios",
+            "brand": false
+          }
+        ]
+      },
+      "confidence": 0.65,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "events",
+        "keywords": [
+          "where",
+          "your",
+          "workshops",
+          "meet",
+          "start",
+          "from"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0
+        },
+        "productPanel": "",
+        "productDescription": null,
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "Where do your workshops meet and start from?",
+          "queryLowercase": "where do your workshops meet and start from?",
+          "hasSpecificActivity": true,
+          "hasSpecificCourseType": false
+        }
+      },
+      "meta": {
+        "duration_ms": 1055,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "events"
+      }
+    },
+    "timestamp": "2025-10-16T23:45:41.746Z"
+  },
+  {
+    "originalQuery": "Do you provide transport or accommodation?",
+    "currentQuery": "Do you provide transport or accommodation?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "Do you provide transport or accommodation?",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 1374,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:45:44.758Z"
+  },
+  {
+    "originalQuery": "How do I join the Photography Academy?",
+    "currentQuery": "How do I join the Photography Academy?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "How do I join the Photography Academy?",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 2000,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:45:52.986Z"
+  },
+  {
+    "originalQuery": "How do module exams and certificates work?",
+    "currentQuery": "How do module exams and certificates work?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "How do module exams and certificates work?",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 2044,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:46:01.229Z"
+  },
+  {
+    "originalQuery": "Who is Alan Ranger?",
+    "currentQuery": "Who is Alan Ranger?",
+    "depth": 0,
+    "pathHistory": [
+      "Initial Query"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "Alan is a professional photographer and tutor. What would you like to know about him?",
+      "options": [
+        {
+          "text": "His photography experience",
+          "query": "Alan Ranger photography experience"
+        },
+        {
+          "text": "Teaching qualifications",
+          "query": "Alan Ranger qualifications"
+        },
+        {
+          "text": "Location and availability",
+          "query": "Alan Ranger location"
+        },
+        {
+          "text": "Specializations",
+          "query": "Alan Ranger specializations"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "Who is Alan Ranger?",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 1487,
+        "endpoint": "/api/chat",
+        "clarification_type": "about_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:46:08.897Z"
+  },
+  {
+    "originalQuery": "Who is Alan Ranger?",
+    "currentQuery": "Alan Ranger photography experience",
+    "depth": 1,
+    "pathHistory": [
+      "Initial Query",
+      "1. His photography experience"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "Alan Ranger photography experience",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 2096,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:46:12.623Z"
+  },
+  {
+    "originalQuery": "Who is Alan Ranger?",
+    "currentQuery": "photography equipment advice",
+    "depth": 2,
+    "pathHistory": [
+      "Initial Query",
+      "1. His photography experience",
+      "1. Photography equipment advice"
+    ],
+    "response": {
+      "ok": true,
+      "type": "advice",
+      "answer_markdown": "**Equipment Recommendations:**\n\nChoosing the right equipment depends on several factors: your budget, intended usage, and photography style. Consider your specific photography needs and budget when making your choice. \n\nFor detailed reviews and specific recommendations, check out Alan's photography guides on his blog.",
+      "structured": {
+        "intent": "advice",
+        "topic": "equipment, photography, advice",
+        "events": [],
+        "products": [],
+        "services": [],
+        "landing": [],
+        "articles": [],
+        "pills": []
+      },
+      "confidence": 75,
+      "debug": {
+        "version": "v1.2.41-equip-fallback",
+        "earlyReturn": true
+      }
+    },
+    "timestamp": "2025-10-16T23:46:15.590Z"
+  },
+  {
+    "originalQuery": "Who is Alan Ranger?",
+    "currentQuery": "photography courses",
+    "depth": 2,
+    "pathHistory": [
+      "Initial Query",
+      "1. His photography experience",
+      "2. Photography courses and workshops"
+    ],
+    "response": {
+      "ok": true,
+      "type": "events",
+      "answer_markdown": "",
+      "citations": [],
+      "structured": {
+        "intent": "events",
+        "topic": "photography, courses",
+        "events": [],
+        "products": [],
+        "pills": [
+          {
+            "label": "Photos",
+            "url": "https://www.alanranger.com/gallery-image-portfolios",
+            "brand": false
+          }
+        ]
+      },
+      "confidence": 0.5,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "events",
+        "keywords": [
+          "photography",
+          "courses"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0
+        },
+        "productPanel": "",
+        "productDescription": null,
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "photography courses",
+          "queryLowercase": "photography courses",
+          "hasSpecificActivity": true,
+          "hasSpecificCourseType": false
+        }
+      },
+      "meta": {
+        "duration_ms": 753,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "events"
+      }
+    },
+    "timestamp": "2025-10-16T23:46:17.968Z"
+  },
+  {
+    "originalQuery": "Who is Alan Ranger?",
+    "currentQuery": "photography services",
+    "depth": 2,
+    "pathHistory": [
+      "Initial Query",
+      "1. His photography experience",
+      "3. Photography services and mentoring"
+    ],
+    "response": {
+      "ok": true,
+      "type": "advice",
+      "answer_markdown": "I couldn't find a specific guide for that yet.",
+      "citations": [],
+      "structured": {
+        "intent": "advice",
+        "topic": "photography, services",
+        "events": [],
+        "products": [],
+        "services": [],
+        "landing": [],
+        "articles": [],
+        "pills": [
+          {
+            "label": "More Articles",
+            "url": "https://www.alanranger.com/search?query=photography%20services",
+            "brand": true
+          }
+        ]
+      },
+      "confidence": 0.1,
+      "debug": {
+        "version": "v1.2.37-logical-confidence",
+        "intent": "advice",
+        "keywords": [
+          "photography",
+          "services"
+        ],
+        "counts": {
+          "events": 0,
+          "products": 0,
+          "articles": 0,
+          "contentChunks": 0
+        },
+        "logicalConfidence": false,
+        "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+        "logicalConfidenceDebug": {
+          "query": "photography services",
+          "queryLowercase": "photography services",
+          "hasSpecificService": false,
+          "hasSpecificTechnical": false,
+          "isAboutQuery": false
+        },
+        "debugInfo": []
+      },
+      "meta": {
+        "duration_ms": 1511,
+        "endpoint": "/api/chat",
+        "topK": null,
+        "intent": "advice"
+      }
+    },
+    "timestamp": "2025-10-16T23:46:21.113Z"
+  },
+  {
+    "originalQuery": "Who is Alan Ranger?",
+    "currentQuery": "Alan Ranger qualifications",
+    "depth": 1,
+    "pathHistory": [
+      "Initial Query",
+      "2. Teaching qualifications"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "Alan Ranger qualifications",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 1630,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:46:24.372Z"
+  },
+  {
+    "originalQuery": "Who is Alan Ranger?",
+    "currentQuery": "Alan Ranger location",
+    "depth": 1,
+    "pathHistory": [
+      "Initial Query",
+      "3. Location and availability"
+    ],
+    "response": {
+      "ok": true,
+      "type": "clarification",
+      "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+      "options": [
+        {
+          "text": "Photography equipment advice",
+          "query": "photography equipment advice"
+        },
+        {
+          "text": "Photography courses and workshops",
+          "query": "photography courses"
+        },
+        {
+          "text": "Photography services and mentoring",
+          "query": "photography services"
+        },
+        {
+          "text": "General photography advice",
+          "query": "photography advice"
+        },
+        {
+          "text": "About Alan Ranger",
+          "query": "about alan ranger"
+        }
+      ],
+      "confidence": 10,
+      "original_query": "Alan Ranger location",
+      "original_intent": "advice",
+      "meta": {
+        "duration_ms": 1779,
+        "endpoint": "/api/chat",
+        "clarification_type": "generic_clarification",
+        "logical_confidence": false,
+        "debug": {
+          "eventCount": 0,
+          "productCount": 0,
+          "articleCount": 0,
+          "serviceCount": 0,
+          "landingCount": 0,
+          "relevanceScore": 0,
+          "hasConfidence": false,
+          "sampleContent": []
+        }
+      }
+    },
+    "timestamp": "2025-10-16T23:46:32.394Z"
+  }
+]

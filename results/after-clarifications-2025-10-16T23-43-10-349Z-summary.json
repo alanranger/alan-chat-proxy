@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-10-16T23:43:10.350Z",
+  "totalPaths": 8,
+  "clarificationPaths": 1,
+  "finalPaths": 7,
+  "errorPaths": 0,
+  "maxDepthReached": 1,
+  "responseTypes": {
+    "clarification": 1,
+    "advice": 3,
+    "events": 4
+  },
+  "uniqueOriginalQueries": 5,
+  "averageDepth": 0.375
+}

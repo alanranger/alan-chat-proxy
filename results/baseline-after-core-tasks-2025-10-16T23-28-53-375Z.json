@@ -1,0 +1,167 @@
+[
+  {
+    "id": 1,
+    "query": "What is your refund and cancellation policy?",
+    "category": "General Policy",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:38.217Z"
+  },
+  {
+    "id": 2,
+    "query": "When is the next Lightroom course in Coventry?",
+    "category": "Course Event",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:39.221Z"
+  },
+  {
+    "id": 3,
+    "query": "Do you still run Lake District photography workshops?",
+    "category": "Workshop Event",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:40.227Z"
+  },
+  {
+    "id": 4,
+    "query": "How much is the Lightroom beginners course?",
+    "category": "Product (Course)",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:41.234Z"
+  },
+  {
+    "id": 5,
+    "query": "Can I book a 1-to-1 mentoring session with Alan?",
+    "category": "Service (1-to-1)",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:42.243Z"
+  },
+  {
+    "id": 6,
+    "query": "Do you have tips for composition or leading lines?",
+    "category": "Article",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:43.250Z"
+  },
+  {
+    "id": 7,
+    "query": "Show me an article about the exposure triangle.",
+    "category": "Article",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:44.265Z"
+  },
+  {
+    "id": 8,
+    "query": "How do I set ISO manually on my camera?",
+    "category": "Technical",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:45.267Z"
+  },
+  {
+    "id": 9,
+    "query": "What's the difference between aperture and shutter speed?",
+    "category": "Technical",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:46.280Z"
+  },
+  {
+    "id": 10,
+    "query": "When is the best time of day for landscape photography?",
+    "category": "Advice",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:47.298Z"
+  },
+  {
+    "id": 11,
+    "query": "Where do your workshops meet and start from?",
+    "category": "Logistics",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:48.314Z"
+  },
+  {
+    "id": 12,
+    "query": "Do you provide transport or accommodation?",
+    "category": "Logistics",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:49.324Z"
+  },
+  {
+    "id": 13,
+    "query": "How do I join the Photography Academy?",
+    "category": "Photography Academy",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:50.341Z"
+  },
+  {
+    "id": 14,
+    "query": "How do module exams and certificates work?",
+    "category": "Photography Academy",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:51.355Z"
+  },
+  {
+    "id": 15,
+    "query": "Who is Alan Ranger?",
+    "category": "About/General",
+    "response": {
+      "ok": false,
+      "error": "method_not_allowed",
+      "where": "http"
+    },
+    "timestamp": "2025-10-16T23:28:52.372Z"
+  }
+]
