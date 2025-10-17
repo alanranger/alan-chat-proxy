@@ -3865,6 +3865,106 @@ function calculateEventConfidence(query, events, product) {
   return finalConfidence;
 }
 
+/* -------------------------------- Extracted Functions -------------------------------- */
+
+/**
+ * Handle residential pricing guard - bypasses clarification for residential workshop pricing queries
+ */
+async function handleResidentialPricingGuard(client, query, previousQuery, pageContext, res) {
+  try {
+    const qlc0 = (query || "").toLowerCase();
+    const isResi = qlc0.includes("residential") && qlc0.includes("workshop");
+    const hasPriceCue = qlc0.includes("how much") || qlc0.includes("price") || qlc0.includes("cost") || qlc0.includes("b&b") || qlc0.includes("bed and breakfast") || qlc0.includes("bnb");
+    
+    if (!previousQuery && isResi && hasPriceCue) {
+      const directKeywords0 = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
+      const ev0 = await findEvents(client, { keywords: directKeywords0, limit: 140, pageContext });
+      const all0 = formatEventsForUi(ev0) || [];
+      const resi = all0.filter(e => { 
+        try { 
+          return e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start); 
+        } catch { 
+          return false; 
+        } 
+      });
+      
+      if (resi.length) {
+        const conf0 = calculateEventConfidence(query || "", resi, null);
+        res.status(200).json({ 
+          ok: true, 
+          type: "events", 
+          answer: resi, 
+          events: resi, 
+          structured: { 
+            intent: "events", 
+            topic: directKeywords0.join(", "), 
+            events: resi, 
+            products: [], 
+            pills: [] 
+          }, 
+          confidence: conf0, 
+          debug: { version: "v1.2.48-guard-residential", guard: true } 
+        });
+        return true; // Response sent
+      }
+      
+      const enriched0 = Array.from(new Set([...directKeywords0, "b&b", "bed", "breakfast", "price", "cost"]));
+      let arts0 = await findArticles(client, { keywords: enriched0, limit: 30, pageContext });
+      arts0 = (arts0 || []).map(a => { 
+        const out = {...a}; 
+        if (!out.title) { 
+          out.title = out?.raw?.headline || out?.raw?.name || ''; 
+          if (!out.title) { 
+            try { 
+              const u = new URL(out.page_url || out.source_url || out.url || ''); 
+              const last = (u.pathname || '').split('/').filter(Boolean).pop() || ''; 
+              out.title = last.replace(/[-_]+/g, ' ').replace(/\.(html?)$/i, ' ').trim(); 
+            } catch {} 
+          } 
+        } 
+        if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null; 
+        return out; 
+      });
+      
+      const aurls0 = arts0?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+      const chunks0 = await findContentChunks(client, { keywords: enriched0, limit: 20, articleUrls: aurls0 });
+      const md0 = generateDirectAnswer(query || "", arts0, chunks0) || generatePricingAccommodationAnswer(query || "", arts0, chunks0);
+      
+      if (md0) {
+        res.status(200).json({ 
+          ok: true, 
+          type: "advice", 
+          answer_markdown: md0, 
+          structured: { 
+            intent: "advice", 
+            topic: enriched0.join(", "), 
+            events: [], 
+            products: [], 
+            services: [], 
+            landing: [], 
+            articles: (arts0 || []).map(a => ({ 
+              ...a, 
+              display_date: (function() { 
+                const ex = extractPublishDate(a); 
+                const fb = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null; 
+                return ex || fb; 
+              })() 
+            })), 
+            pills: [] 
+          }, 
+          confidence: 70, 
+          debug: { version: "v1.2.48-guard-residential", guard: true } 
+        });
+        return true; // Response sent
+      }
+    }
+  } catch (error) {
+    console.warn('Residential pricing guard error:', error.message);
+  }
+  
+  return false; // No response sent, continue with normal flow
+}
+
 /* -------------------------------- Handler -------------------------------- */
 export default async function handler(req, res) {
   // Chat API handler called
@@ -3907,32 +4007,10 @@ export default async function handler(req, res) {
     const intent = detectIntent(query || ""); // Use current query only for intent detection
 
     // HARD GUARD: Residential pricing/B&B must bypass clarification entirely
-    try {
-      const qlc0 = (query || "").toLowerCase();
-      const isResi = qlc0.includes("residential") && qlc0.includes("workshop");
-      const hasPriceCue = qlc0.includes("how much") || qlc0.includes("price") || qlc0.includes("cost") || qlc0.includes("b&b") || qlc0.includes("bed and breakfast") || qlc0.includes("bnb");
-      if (!previousQuery && isResi && hasPriceCue) {
-        const directKeywords0 = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
-        const ev0 = await findEvents(client, { keywords: directKeywords0, limit: 140, pageContext });
-        const all0 = formatEventsForUi(ev0) || [];
-        const resi = all0.filter(e => { try{ return e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start); }catch{ return false; } });
-        if (resi.length) {
-          const conf0 = calculateEventConfidence(query || "", resi, null);
-          res.status(200).json({ ok: true, type: "events", answer: resi, events: resi, structured: { intent: "events", topic: directKeywords0.join(", "), events: resi, products: [], pills: [] }, confidence: conf0, debug: { version: "v1.2.48-guard-residential", guard: true } });
-          return;
-        }
-        const enriched0 = Array.from(new Set([...directKeywords0, "b&b", "bed", "breakfast", "price", "cost"]));
-        let arts0 = await findArticles(client, { keywords: enriched0, limit: 30, pageContext });
-        arts0 = (arts0 || []).map(a => { const out={...a}; if(!out.title){ out.title = out?.raw?.headline || out?.raw?.name || ''; if(!out.title){ try{ const u=new URL(out.page_url||out.source_url||out.url||''); const last=(u.pathname||'').split('/').filter(Boolean).pop()||''; out.title=last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); }catch{} } } if(!out.page_url) out.page_url = out.source_url || out.url || out.href || null; return out; });
-        const aurls0 = arts0?.map(a=>a.page_url||a.source_url).filter(Boolean)||[];
-        const chunks0 = await findContentChunks(client, { keywords: enriched0, limit: 20, articleUrls: aurls0 });
-        const md0 = generateDirectAnswer(query || "", arts0, chunks0) || generatePricingAccommodationAnswer(query || "", arts0, chunks0);
-        if (md0) {
-          res.status(200).json({ ok: true, type: "advice", answer_markdown: md0, structured: { intent: "advice", topic: enriched0.join(", "), events: [], products: [], services: [], landing: [], articles: (arts0||[]).map(a=>({ ...a, display_date:(function(){ const ex=extractPublishDate(a); const fb=a.last_seen? new Date(a.last_seen).toLocaleDateString('en-GB',{year:'numeric',month:'short',day:'numeric'}) : null; return ex||fb; })() })), pills: [] }, confidence: 70, debug: { version: "v1.2.48-guard-residential", guard: true } });
-          return;
-        }
-      }
-    } catch {}
+    const residentialResponse = await handleResidentialPricingGuard(client, query, previousQuery, pageContext, res);
+    if (residentialResponse) {
+      return; // Response already sent
+    }
     
     // Retrieval-first: try to gather content and check content-based confidence
     // before deciding to trigger clarification for initial queries (no previousQuery)
