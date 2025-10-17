@@ -2190,6 +2190,45 @@ function handleOnlineCoursesPatterns(query, lc) {
   return null;
 }
 
+function handleWorkshopAndEquipmentPatterns(query, lc) {
+  // Workshop types
+  if (lc.includes("bluebell") || lc.includes("bluebells")) {
+    return {
+      type: "route_to_events",
+      newQuery: "bluebell photography workshops",
+      newIntent: "events"
+    };
+  }
+  
+  // FIXED: Q19 - "any outdoor photography" should route to advice, not events
+  if (lc.includes("outdoor photography") || lc.includes("outdoor")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "outdoor photography workshops information",
+      newIntent: "advice"
+    };
+  }
+  
+  // Equipment advice patterns
+  if (lc.includes("sony")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "sony camera recommendations",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("entry level") || lc.includes("beginners camera")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "beginner camera recommendations",
+      newIntent: "advice"
+    };
+  }
+  
+  return null;
+}
+
 function handleEquipmentAndCoursePatterns(query, lc) {
   // FIXED: Photography course/workshop should trigger follow-up clarification (but not equipment queries)
   if (lc.includes("photography course/workshop") && !lc.includes("equipment")) {
@@ -2503,34 +2542,11 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     return equipmentCourseResult;
   }
   
-  // Workshop types
-  if (lc.includes("bluebell") || lc.includes("bluebells")) {
-    return {
-      type: "route_to_events",
-      newQuery: "bluebell photography workshops",
-      newIntent: "events"
-    };
+  // Check workshop and equipment patterns
+  const workshopEquipmentResult = handleWorkshopAndEquipmentPatterns(query, lc);
+  if (workshopEquipmentResult) {
+    return workshopEquipmentResult;
   }
-  
-  // FIXED: Q19 - "any outdoor photography" should route to advice, not events
-  if (lc.includes("outdoor photography") || lc.includes("outdoor")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "outdoor photography workshops information",
-      newIntent: "advice"
-    };
-  }
-  
-  // Equipment advice patterns
-  if (lc.includes("sony")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "sony camera recommendations",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("entry level") || lc.includes("beginners camera")) {
     return {
       type: "route_to_advice",
       newQuery: "beginner camera recommendations",
