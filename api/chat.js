@@ -2047,6 +2047,16 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     };
   }
   
+  // Lightroom course patterns
+  if (lc.includes("lightroom course") || lc.includes("lightroom courses")) {
+    console.log(`✅ Matched Lightroom course pattern for: "${query}"`);
+    return {
+      type: "route_to_events",
+      newQuery: "Lightroom photography courses",
+      newIntent: "events"
+    };
+  }
+  
   if (lc.includes("specific topic courses") || lc === "specific topic courses") {
     console.log(`✅ Matched specific topic courses pattern for: "${query}"`);
     return {
