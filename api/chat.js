@@ -2852,25 +2852,25 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
 async function dedupeAndEnrichArticles(client, articles) {
   if (!Array.isArray(articles) || !articles.length) return [];
   
-  // Group by canonical URL
-  const byUrl = new Map();
-  for (const a of articles) {
-    const url = a.page_url || a.source_url || a.url || '';
-    if (!url) continue;
-    
-    const existing = byUrl.get(url);
-    if (!existing) {
-      byUrl.set(url, [a]);
-    } else {
-      existing.push(a);
+  // Helper functions
+  const groupArticlesByUrl = () => {
+    const byUrl = new Map();
+    for (const a of articles) {
+      const url = a.page_url || a.source_url || a.url || '';
+      if (!url) continue;
+      
+      const existing = byUrl.get(url);
+      if (!existing) {
+        byUrl.set(url, [a]);
+      } else {
+        existing.push(a);
+      }
     }
-  }
+    return byUrl;
+  };
   
-  // For each URL, pick the best variant and enrich title
-  const enriched = [];
-  for (const [url, variants] of byUrl) {
-    // Prefer variant with real title, then by kind preference
-    const best = variants.reduce((prev, curr) => {
+  const selectBestVariant = (variants) => {
+    return variants.reduce((prev, curr) => {
       const prevTitle = prev.title || prev.raw?.name || '';
       const currTitle = curr.title || curr.raw?.name || '';
       
@@ -2887,37 +2887,53 @@ async function dedupeAndEnrichArticles(client, articles) {
       
       return prev;
     });
-    
-    // Enrich title
+  };
+  
+  const extractTitleFromChunks = async (url) => {
+    try {
+      const { data: chunks } = await client
+        .from('page_chunks')
+        .select('chunk_text')
+        .eq('url', url)
+        .not('chunk_text', 'is', null)
+        .limit(3);
+      
+      // Extract title from content - look for patterns like "TITLE - SUBTITLE" or "TITLE\n\nSUBTITLE"
+      for (const chunk of chunks || []) {
+        const text = chunk.chunk_text || '';
+        // Look for title patterns in the content
+        const titleMatch = text.match(/^([A-Z][A-Z\s\-&]+(?:REVIEW|GUIDE|TIPS|REASONS|TRIPOD|PHOTOGRAPHY)[A-Z\s\-&]*)/m);
+        if (titleMatch) {
+          return titleMatch[1].trim().replace(/\s+/g, ' ');
+        }
+      }
+    } catch {}
+    return null;
+  };
+  
+  const enrichTitle = async (best, url) => {
     let title = best.title || best.raw?.name || '';
     if (!title || /^alan ranger photography$/i.test(title)) {
       // Try to get real title from page_chunks content
-      try {
-        const { data: chunks } = await client
-          .from('page_chunks')
-          .select('chunk_text')
-          .eq('url', url)
-          .not('chunk_text', 'is', null)
-          .limit(3);
-        
-        // Extract title from content - look for patterns like "TITLE - SUBTITLE" or "TITLE\n\nSUBTITLE"
-        for (const chunk of chunks || []) {
-          const text = chunk.chunk_text || '';
-          // Look for title patterns in the content
-          const titleMatch = text.match(/^([A-Z][A-Z\s\-&]+(?:REVIEW|GUIDE|TIPS|REASONS|TRIPOD|PHOTOGRAPHY)[A-Z\s\-&]*)/m);
-          if (titleMatch) {
-            title = titleMatch[1].trim().replace(/\s+/g, ' ');
-            break;
-          }
-        }
-      } catch {}
-      
-      // Fallback to slug-derived title
-      if (!title || /^alan ranger photography$/i.test(title)) {
+      const extractedTitle = await extractTitleFromChunks(url);
+      if (extractedTitle) {
+        title = extractedTitle;
+      } else {
+        // Fallback to slug-derived title
         title = deriveTitleFromUrl(url);
       }
     }
-    
+    return title;
+  };
+  
+  // Group by canonical URL
+  const byUrl = groupArticlesByUrl();
+  
+  // For each URL, pick the best variant and enrich title
+  const enriched = [];
+  for (const [url, variants] of byUrl) {
+    const best = selectBestVariant(variants);
+    const title = await enrichTitle(best, url);
     enriched.push({ ...best, title });
   }
   
