@@ -1018,6 +1018,58 @@ function extractKeywords(q) {
   return Array.from(kws);
 }
 
+// Helper functions for intent detection
+function isFollowUpQuestion(lc) {
+  const followUpQuestions = [
+    "how much", "cost", "price", "where", "location", "when", "date",
+    "how many", "people", "attend", "fitness", "level", "duration", "long",
+    "how do i book", "book", "booking", "required", "needed", "suitable"
+  ];
+  return followUpQuestions.some(word => lc.includes(word));
+}
+
+function hasWorkshopMention(lc) {
+  return lc.includes("workshop");
+}
+
+function isSpecificCourseQuery(lc) {
+  return lc.includes("course") || lc.includes("class") || lc.includes("lesson");
+}
+
+function isEquipmentQuery(lc) {
+  const equipmentKeywords = [
+    "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
+    "need", "require", "recommend", "advise", "help", "wrong", "problem"
+  ];
+  return equipmentKeywords.some(word => lc.includes(word));
+}
+
+function isServiceQuery(lc) {
+  return (
+    lc.includes("private") && (lc.includes("lesson") || lc.includes("class")) ||
+    lc.includes("online") && (lc.includes("course") || lc.includes("lesson")) ||
+    lc.includes("mentoring") ||
+    lc.includes("1-2-1") || lc.includes("1-to-1") || lc.includes("one-to-one")
+  );
+}
+
+function isTechnicalQuery(lc) {
+  const technicalKeywords = [
+    "free", "online", "sort of", "what do i", "do i need", "get a",
+    "what is", "what are", "how does", "explain", "define", "meaning",
+    "training", "mentoring", "tutoring"
+  ];
+  return technicalKeywords.some(word => lc.includes(word));
+}
+
+function isAboutQuery(lc) {
+  return lc.includes("about");
+}
+
+function isGeneralQuery(lc) {
+  return lc.includes("general") || lc.includes("help");
+}
+
 function detectIntent(q) {
   const lc = (q || "").toLowerCase();
   
@@ -1028,21 +1080,14 @@ function detectIntent(q) {
   }
   
   // Check for course/class queries
-  const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
-  const mentionsWorkshop = lc.includes("workshop");
+  const mentionsCourse = isSpecificCourseQuery(lc);
+  const mentionsWorkshop = hasWorkshopMention(lc);
   
   // Check for event-style questions (dates/times/locations)
   const hasEventWord = EVENT_HINTS.some((w) => lc.includes(w));
   
   // PRIORITY: Flexible services should be treated as advice, not events
-  const isFlexibleService = (
-    lc.includes("private") && (lc.includes("lesson") || lc.includes("class")) ||
-    lc.includes("online") && (lc.includes("course") || lc.includes("lesson")) ||
-    lc.includes("mentoring") ||
-    lc.includes("1-2-1") || lc.includes("1-to-1") || lc.includes("one-to-one")
-  );
-  
-  if (isFlexibleService) {
+  if (isServiceQuery(lc)) {
     return "advice"; // Flexible services need cross-entity search (products + services + articles)
   }
   
@@ -1053,38 +1098,24 @@ function detectIntent(q) {
   }
   
   // ADVICE keywords
-  const adviceKeywords = [
-    "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
-    "need", "require", "recommend", "advise", "help", "wrong", "problem",
-    "free", "online", "sort of", "what do i", "do i need", "get a",
-    "what is", "what are", "how does", "explain", "define", "meaning",
-    "training", "mentoring", "tutoring"
-  ];
-  if (adviceKeywords.some(word => lc.includes(word))) {
+  if (isEquipmentQuery(lc) || isTechnicalQuery(lc)) {
     return "advice";
   }
   
   // heuristic: if question starts with "when/where" + includes 'workshop' → events
   if (/^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop) return "events";
   
-  // Handle follow-up questions for events (price, location, etc.) - ENHANCED LOGIC
-  const followUpQuestions = [
-    "how much", "cost", "price", "where", "location", "when", "date",
-    "how many", "people", "attend", "fitness", "level", "duration", "long",
-    "how do i book", "book", "booking", "required", "needed", "suitable"
-  ];
-  
   // Check if this is a follow-up question about event details
-  const isFollowUpQuestion = followUpQuestions.some(word => lc.includes(word));
+  const isFollowUp = isFollowUpQuestion(lc);
   
   // SIMPLIFIED: If it's a follow-up question AND the context mentions workshops/courses, it's events
   // This takes precedence over everything else
-  if (isFollowUpQuestion && mentionsWorkshop) {
+  if (isFollowUp && mentionsWorkshop) {
     return "events";
   }
   
   // If it's a follow-up question but no workshop context, it's advice
-  if (isFollowUpQuestion && !mentionsWorkshop) {
+  if (isFollowUp && !mentionsWorkshop) {
     return "advice";
   }
   
