@@ -5009,10 +5009,8 @@ export default async function handler(req, res) {
             hasSpecificCourseType: query ? (query.toLowerCase().includes("beginner") || query.toLowerCase().includes("advanced") || query.toLowerCase().includes("rps") || query.toLowerCase().includes("lightroom") || query.toLowerCase().includes("online") || query.toLowerCase().includes("private")) : false
           },
           eventsFiltering: {
-            totalEvents: events.length,
-            significantKeyword: significant,
-            filteredEventsCount: filteredEvents.length,
-            sampleEvent: events[0] || null,
+            totalEvents: events?.length || 0,
+            filteredEventsCount: filteredEvents?.length || 0,
             beforeFormatEvents: {
               filteredEventsLength: filteredEvents.length,
               eventsLength: events.length,
