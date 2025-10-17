@@ -13,18 +13,23 @@ import path from 'path';
 
 const API_ENDPOINT = 'https://alan-chat-proxy.vercel.app/api/chat';
 
-// Critical test cases that must not regress
+// 15 questions from BASELINE_REGRESSION_SUITE.md
 const BASELINE_TESTS = [
+  'What is your refund and cancellation policy?',
   'When is the next Lightroom course in Coventry?',
-  'What tripod do you recommend?',
-  'How much is a residential photography workshop and does it include B&B?',
-  'What photography workshops do you have?',
-  'Do you have beginner photography courses?',
-  'I want to learn photography',
-  'What camera should I buy for landscape photography?',
-  'Do you offer online photography courses?',
-  'I need help with my camera',
-  'asdfghjkl qwerty'
+  'Do you still run Lake District photography workshops?',
+  'How much is the Lightroom beginners course?',
+  'Can I book a 1-to-1 mentoring session with Alan?',
+  'Do you have tips for composition or leading lines?',
+  'Show me an article about the exposure triangle.',
+  'How do I set ISO manually on my camera?',
+  'What\'s the difference between aperture and shutter speed?',
+  'When is the best time of day for landscape photography?',
+  'Where do your workshops meet and start from?',
+  'Do you provide transport or accommodation?',
+  'How do I join the Photography Academy?',
+  'How do module exams and certificates work?',
+  'Who is Alan Ranger?'
 ];
 
 async function captureBaseline() {

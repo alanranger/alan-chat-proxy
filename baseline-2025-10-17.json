@@ -1,10 +1,25 @@
 {
-  "timestamp": "2025-10-17T01:13:22.786Z",
+  "timestamp": "2025-10-17T01:16:45.506Z",
   "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
   "tests": [
     {
+      "query": "What is your refund and cancellation policy?",
+      "timestamp": "2025-10-17T01:16:49.461Z",
+      "response": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      }
+    },
+    {
       "query": "When is the next Lightroom course in Coventry?",
-      "timestamp": "2025-10-17T01:13:23.998Z",
+      "timestamp": "2025-10-17T01:16:51.617Z",
       "response": {
         "type": "events",
         "confidence": 0.44999999999999996,
@@ -50,42 +65,8 @@
       }
     },
     {
-      "query": "What tripod do you recommend?",
-      "timestamp": "2025-10-17T01:13:26.806Z",
-      "response": {
-        "type": "advice",
-        "confidence": 75,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "answer": null,
-        "debug": {
-          "version": "v1.2.41-equip-fallback",
-          "earlyReturn": true
-        }
-      }
-    },
-    {
-      "query": "How much is a residential photography workshop and does it include B&B?",
-      "timestamp": "2025-10-17T01:13:31.893Z",
-      "response": {
-        "type": "advice",
-        "confidence": 60,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "answer": null,
-        "debug": {
-          "version": "v1.2.44-residential-service-fallback",
-          "earlyReturn": true
-        }
-      }
-    },
-    {
-      "query": "What photography workshops do you have?",
-      "timestamp": "2025-10-17T01:13:33.835Z",
+      "query": "Do you still run Lake District photography workshops?",
+      "timestamp": "2025-10-17T01:16:53.733Z",
       "response": {
         "type": "events",
         "confidence": 0.5,
@@ -98,10 +79,12 @@
           "version": "v1.2.37-logical-confidence",
           "intent": "events",
           "keywords": [
-            "what",
+            "lake district",
+            "still",
+            "lake",
+            "district",
             "photography",
-            "workshops",
-            "have"
+            "workshops"
           ],
           "eventsHandlerExecuted": true,
           "counts": {
@@ -114,8 +97,8 @@
           "logicalConfidence": false,
           "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
           "logicalConfidenceDebug": {
-            "query": "What photography workshops do you have?",
-            "queryLowercase": "what photography workshops do you have?",
+            "query": "Do you still run Lake District photography workshops?",
+            "queryLowercase": "do you still run lake district photography workshops?",
             "hasSpecificActivity": true,
             "hasSpecificCourseType": false
           },
@@ -130,11 +113,11 @@
       }
     },
     {
-      "query": "Do you have beginner photography courses?",
-      "timestamp": "2025-10-17T01:13:35.732Z",
+      "query": "How much is the Lightroom beginners course?",
+      "timestamp": "2025-10-17T01:16:55.593Z",
       "response": {
         "type": "events",
-        "confidence": 0.5,
+        "confidence": 0.65,
         "hasEvents": false,
         "eventsCount": 0,
         "hasArticles": false,
@@ -144,10 +127,10 @@
           "version": "v1.2.37-logical-confidence",
           "intent": "events",
           "keywords": [
-            "have",
-            "beginner",
-            "photography",
-            "courses"
+            "beginners",
+            "lightroom",
+            "much",
+            "course"
           ],
           "eventsHandlerExecuted": true,
           "counts": {
@@ -160,8 +143,8 @@
           "logicalConfidence": false,
           "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
           "logicalConfidenceDebug": {
-            "query": "Do you have beginner photography courses?",
-            "queryLowercase": "do you have beginner photography courses?",
+            "query": "How much is the Lightroom beginners course?",
+            "queryLowercase": "how much is the lightroom beginners course?",
             "hasSpecificActivity": true,
             "hasSpecificCourseType": true
           },
@@ -176,8 +159,49 @@
       }
     },
     {
-      "query": "I want to learn photography",
-      "timestamp": "2025-10-17T01:13:39.064Z",
+      "query": "Can I book a 1-to-1 mentoring session with Alan?",
+      "timestamp": "2025-10-17T01:17:00.059Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.1,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": null,
+        "debug": {
+          "version": "v1.2.37-logical-confidence",
+          "intent": "advice",
+          "keywords": [
+            "book",
+            "1-to-1",
+            "mentoring",
+            "session",
+            "with",
+            "alan"
+          ],
+          "counts": {
+            "events": 0,
+            "products": 0,
+            "articles": 0,
+            "contentChunks": 0
+          },
+          "logicalConfidence": false,
+          "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+          "logicalConfidenceDebug": {
+            "query": "Can I book a 1-to-1 mentoring session with Alan?",
+            "queryLowercase": "can i book a 1-to-1 mentoring session with alan?",
+            "hasSpecificService": true,
+            "hasSpecificTechnical": false,
+            "isAboutQuery": false
+          },
+          "debugInfo": []
+        }
+      }
+    },
+    {
+      "query": "Do you have tips for composition or leading lines?",
+      "timestamp": "2025-10-17T01:17:04.236Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
@@ -191,25 +215,8 @@
       }
     },
     {
-      "query": "What camera should I buy for landscape photography?",
-      "timestamp": "2025-10-17T01:13:42.283Z",
-      "response": {
-        "type": "advice",
-        "confidence": 75,
-        "hasEvents": false,
-        "eventsCount": 0,
-        "hasArticles": false,
-        "articlesCount": 0,
-        "answer": null,
-        "debug": {
-          "version": "v1.2.41-equip-fallback",
-          "earlyReturn": true
-        }
-      }
-    },
-    {
-      "query": "Do you offer online photography courses?",
-      "timestamp": "2025-10-17T01:13:46.164Z",
+      "query": "Show me an article about the exposure triangle.",
+      "timestamp": "2025-10-17T01:17:08.465Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
@@ -223,25 +230,146 @@
       }
     },
     {
-      "query": "I need help with my camera",
-      "timestamp": "2025-10-17T01:13:49.132Z",
+      "query": "How do I set ISO manually on my camera?",
+      "timestamp": "2025-10-17T01:17:12.425Z",
       "response": {
-        "type": "advice",
-        "confidence": 75,
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      }
+    },
+    {
+      "query": "What's the difference between aperture and shutter speed?",
+      "timestamp": "2025-10-17T01:17:16.905Z",
+      "response": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      }
+    },
+    {
+      "query": "When is the best time of day for landscape photography?",
+      "timestamp": "2025-10-17T01:17:20.821Z",
+      "response": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      }
+    },
+    {
+      "query": "Where do your workshops meet and start from?",
+      "timestamp": "2025-10-17T01:17:22.885Z",
+      "response": {
+        "type": "events",
+        "confidence": 0.65,
         "hasEvents": false,
         "eventsCount": 0,
         "hasArticles": false,
         "articlesCount": 0,
         "answer": null,
         "debug": {
-          "version": "v1.2.41-equip-fallback",
-          "earlyReturn": true
+          "version": "v1.2.37-logical-confidence",
+          "intent": "events",
+          "keywords": [
+            "where",
+            "your",
+            "workshops",
+            "meet",
+            "start",
+            "from"
+          ],
+          "eventsHandlerExecuted": true,
+          "counts": {
+            "events": 0,
+            "products": 0,
+            "articles": 0
+          },
+          "productPanel": "",
+          "productDescription": null,
+          "logicalConfidence": false,
+          "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+          "logicalConfidenceDebug": {
+            "query": "Where do your workshops meet and start from?",
+            "queryLowercase": "where do your workshops meet and start from?",
+            "hasSpecificActivity": true,
+            "hasSpecificCourseType": false
+          },
+          "eventsFiltering": {
+            "totalEvents": 0,
+            "filteredEventsCount": 0,
+            "findEventsDebug": {
+              "eventsCount": 0
+            }
+          }
         }
       }
     },
     {
-      "query": "asdfghjkl qwerty",
-      "timestamp": "2025-10-17T01:13:51.951Z",
+      "query": "Do you provide transport or accommodation?",
+      "timestamp": "2025-10-17T01:17:26.075Z",
+      "response": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      }
+    },
+    {
+      "query": "How do I join the Photography Academy?",
+      "timestamp": "2025-10-17T01:17:29.365Z",
+      "response": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      }
+    },
+    {
+      "query": "How do module exams and certificates work?",
+      "timestamp": "2025-10-17T01:17:33.041Z",
+      "response": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      }
+    },
+    {
+      "query": "Who is Alan Ranger?",
+      "timestamp": "2025-10-17T01:17:35.937Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
