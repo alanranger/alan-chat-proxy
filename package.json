@@ -14,7 +14,12 @@
     "live-sweep": "node scripts/live-sweep.js",
     "validate:event": "ajv validate --spec=draft2020 -c ajv-formats --allow-union-types -s schemas/event.schema.json -r schemas/jsonld-shared.defs.json -d \"generated/*.event.json\"",
     "validate:itemlist": "ajv validate --spec=draft2020 -c ajv-formats --allow-union-types -s schemas/itemlist.schema.json -r schemas/jsonld-shared.defs.json -d \"generated/*.itemlist.json\"",
-    "validate:all": "npm run validate:event && npm run validate:itemlist"
+    "validate:all": "npm run validate:event && npm run validate:itemlist",
+    "test:regression": "node regression-test-suite.js",
+    "test:baseline": "node capture-baseline.js",
+    "test:compare": "node compare-against-baseline.js",
+    "test:safety": "node deployment-safety-check.js",
+    "test:all": "npm run test:safety && npm run test:regression"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

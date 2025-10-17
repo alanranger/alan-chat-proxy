@@ -1,4 +1,4 @@
-// /api/chat.js
+i agree// /api/chat.js
 // FIX: 2025-10-06 04:15 - Fixed fitness level extraction from description field
 // This extracts fitness level information from product chunks description field
 // Now parses patterns like "Fitness: 1. Easy" and "Experience - Level: Beginner"
