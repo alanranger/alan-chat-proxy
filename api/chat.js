@@ -1290,72 +1290,96 @@ function needsClarification(query) {
   
   const lc = query.toLowerCase();
 
-  // Avoid generic clarification for clearly-specific queries
-  // 1) Tripod recommendations should get a direct equipment answer
-  if (lc.includes("tripod") || lc.includes("which tripod") || lc.includes("what tripod")) {
-    return false;
-  }
-  // 2) Residential workshop pricing/B&B should go straight to events/services answer
-  if ((lc.includes("residential") && lc.includes("workshop")) || lc.includes("b&b") || lc.includes("bed and breakfast")) {
-    return false;
-  }
+  // Helper functions for specific query detection
+  const isSpecificTripodQuery = () => {
+    return lc.includes("tripod") || lc.includes("which tripod") || lc.includes("what tripod");
+  };
   
-  // Current patterns (keep existing for backward compatibility)
-  const currentPatterns = [
-    lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop"),
-    lc.includes("events") && !lc.includes("course") && !lc.includes("workshop"),
-    lc.includes("training") && !lc.includes("course") && !lc.includes("workshop")
-  ];
+  const isResidentialWorkshopPricingQuery = () => {
+    return (lc.includes("residential") && lc.includes("workshop")) || lc.includes("b&b") || lc.includes("bed and breakfast");
+  };
   
-  // DEBUG: Log pattern matching for equipment queries
-  if (lc.includes("equipment")) {
-    console.log(`🔍 Equipment query detected: "${query}"`);
-    console.log(`   lc.includes("equipment"): ${lc.includes("equipment")}`);
-    console.log(`   lc.includes("course"): ${lc.includes("course")}`);
-    console.log(`   lc.includes("workshop"): ${lc.includes("workshop")}`);
-    console.log(`   Pattern result: ${lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop")}`);
-  }
+  const getCurrentPatterns = () => {
+    return [
+      lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop"),
+      lc.includes("events") && !lc.includes("course") && !lc.includes("workshop"),
+      lc.includes("training") && !lc.includes("course") && !lc.includes("workshop")
+    ];
+  };
   
-  // EXPANDED PATTERNS FOR ALL 20 QUESTION TYPES
-  const expandedPatterns = [
-    // Generic questions (8 patterns)
-    lc.includes("do you do") && (lc.includes("courses") || lc.includes("workshops")),
-    lc.includes("do you run") && lc.includes("workshops"),
-    lc.includes("do you offer") && (lc.includes("lessons") || lc.includes("services")),
-    lc.includes("are your") && lc.includes("suitable"),
-    lc.includes("do you have") && lc.includes("courses"),
-    lc.includes("is there a free") && lc.includes("course"),
-    lc.includes("how long have you been teaching"),
-    lc.includes("who is") && lc.includes("alan"),
-    
-    // Specific but ambiguous questions (7 patterns)
-    lc.includes("what") && (lc.includes("courses") || lc.includes("workshops")) && !lc.includes("included"),
-    lc.includes("when is") && lc.includes("workshop"),
-    // Price questions for workshops are often specific (e.g., residential/B&B) → don't flag those
-    (lc.includes("how much") && lc.includes("workshop") && !lc.includes("residential") && !lc.includes("b&b") && !lc.includes("bed and breakfast")),
-    lc.includes("what's the difference"),
-    lc.includes("what photography workshops") && lc.includes("coming up"),
-    lc.includes("what's included in") && lc.includes("course"),
-    lc.includes("what camera should i buy"),
-    
-    // Technical/advice questions (5 patterns)
-    lc.includes("how do i") && lc.includes("camera"),
-    lc.includes("what's the best") && lc.includes("lens"),
-    lc.includes("what camera settings"),
-    lc.includes("can you help me choose"),
-    lc.includes("what photography services do you offer")
-  ];
+  const getGenericQuestionPatterns = () => {
+    return [
+      lc.includes("do you do") && (lc.includes("courses") || lc.includes("workshops")),
+      lc.includes("do you run") && lc.includes("workshops"),
+      lc.includes("do you offer") && (lc.includes("lessons") || lc.includes("services")),
+      lc.includes("are your") && lc.includes("suitable"),
+      lc.includes("do you have") && lc.includes("courses"),
+      lc.includes("is there a free") && lc.includes("course"),
+      lc.includes("how long have you been teaching"),
+      lc.includes("who is") && lc.includes("alan")
+    ];
+  };
+  
+  const getSpecificAmbiguousPatterns = () => {
+    return [
+      lc.includes("what") && (lc.includes("courses") || lc.includes("workshops")) && !lc.includes("included"),
+      lc.includes("when is") && lc.includes("workshop"),
+      (lc.includes("how much") && lc.includes("workshop") && !lc.includes("residential") && !lc.includes("b&b") && !lc.includes("bed and breakfast")),
+      lc.includes("what's the difference"),
+      lc.includes("what photography workshops") && lc.includes("coming up"),
+      lc.includes("what's included in") && lc.includes("course"),
+      lc.includes("what camera should i buy")
+    ];
+  };
+  
+  const getTechnicalAdvicePatterns = () => {
+    return [
+      lc.includes("how do i") && lc.includes("camera"),
+      lc.includes("what's the best") && lc.includes("lens"),
+      lc.includes("what camera settings"),
+      lc.includes("can you help me choose"),
+      lc.includes("what photography services do you offer")
+    ];
+  };
+  
+  const logEquipmentQueryDebug = () => {
+    if (lc.includes("equipment")) {
+      console.log(`🔍 Equipment query detected: "${query}"`);
+      console.log(`   lc.includes("equipment"): ${lc.includes("equipment")}`);
+      console.log(`   lc.includes("course"): ${lc.includes("course")}`);
+      console.log(`   lc.includes("workshop"): ${lc.includes("workshop")}`);
+      console.log(`   Pattern result: ${lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop")}`);
+    }
+  };
+  
+  const logFinalResult = () => {
+    if (lc.includes("equipment")) {
+      console.log(`   Final needsClarification result: ${result}`);
+    }
+  };
+  
+  // Early returns for specific queries that should not trigger clarification
+  if (isSpecificTripodQuery()) return false;
+  if (isResidentialWorkshopPricingQuery()) return false;
+  
+  // Log debug information for equipment queries
+  logEquipmentQueryDebug();
+  
+  // Get all pattern arrays
+  const currentPatterns = getCurrentPatterns();
+  const genericPatterns = getGenericQuestionPatterns();
+  const specificPatterns = getSpecificAmbiguousPatterns();
+  const technicalPatterns = getTechnicalAdvicePatterns();
   
   // Evaluate retrieval-first short-circuit: if query contains item-specific equipment
   // keywords and not broad terms, avoid clarification here and let content decide.
   const itemSpecific = ["tripod","lens","bag","memory card"].some(k => lc.includes(k));
   const broadOnly = lc.includes("equipment") && !itemSpecific;
-  const result = broadOnly || [...currentPatterns, ...expandedPatterns].some(pattern => pattern);
+  const allPatterns = [...currentPatterns, ...genericPatterns, ...specificPatterns, ...technicalPatterns];
+  const result = broadOnly || allPatterns.some(pattern => pattern);
   
-  // DEBUG: Log final result for equipment queries
-  if (lc.includes("equipment")) {
-    console.log(`   Final needsClarification result: ${result}`);
-  }
+  // Log final result for equipment queries
+  logFinalResult();
   
   return result;
 }
