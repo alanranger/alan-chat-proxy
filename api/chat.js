@@ -4674,6 +4674,13 @@ export default async function handler(req, res) {
       
       // Get events from the enhanced view that includes product mappings
       const events = await findEvents(client, { keywords, limit: 80, pageContext, csvType });
+      
+      // TEMPORARY DEBUG: Force events to be non-empty to test if that's the issue
+      if (events.length === 0) {
+        console.log('🔍 DEBUG: events array is empty, this is the problem!');
+      } else {
+        console.log('🔍 DEBUG: events array has', events.length, 'events');
+      }
       // If the new query names a significant topic (e.g., lightroom), prefer events matching that topic
       const GENERIC_EVENT_TERMS = new Set(["workshop","workshops","course","courses","class","classes","event","events","next","when","your"]);
       const significant = (keywords || []).find(k => k && !GENERIC_EVENT_TERMS.has(String(k).toLowerCase()) && String(k).length >= 4);
