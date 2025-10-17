@@ -4969,6 +4969,12 @@ export default async function handler(req, res) {
             afterFormatEvents: {
               eventListLength: eventList.length,
               eventListSample: eventList.slice(0, 2)
+            },
+            formatEventsForUiDebug: {
+              inputLength: (filteredEvents.length ? filteredEvents : events)?.length || 0,
+              inputSample: (filteredEvents.length ? filteredEvents : events)?.slice(0, 2) || [],
+              outputLength: eventList.length,
+              outputSample: eventList.slice(0, 2)
             }
           }
         },
