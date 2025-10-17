@@ -3166,28 +3166,38 @@ function extractRelatedLink(text) {
   return null;
 }
 
+// Helper functions for related label extraction
+function findLabelMatch(text) {
+  return text.match(/\[([^\]]+)\]\([^)]+\)/) ||
+         text.match(/>([^<]{3,60})<\/a>/i) ||
+         text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
+}
+
+function cleanExtractedLabel(label) {
+  return label.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
+}
+
+function generateLabelFromUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/').filter(Boolean);
+    const lastPart = pathParts[pathParts.length - 1] || 'Related Content';
+    return lastPart.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  } catch {
+    return 'Related Content';
+  }
+}
+
 function extractRelatedLabel(text, url) {
   // Robust label extraction: prioritize explicit link text, then clean URL path
-  const labelMatch =
-    text.match(/\[([^\]]+)\]\([^)]+\)/) ||
-    text.match(/>([^<]{3,60})<\/a>/i) ||
-    text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
+  const labelMatch = findLabelMatch(text);
   
   if (labelMatch && labelMatch[1]) {
-    let cleanLabel = labelMatch[1].trim();
-    // Clean up malformed labels (remove trailing brackets, etc.)
-    cleanLabel = cleanLabel.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
+    const cleanLabel = cleanExtractedLabel(labelMatch[1].trim());
     return cleanLabel;
   } else {
     // Generate a clean label from the URL path
-    try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/').filter(Boolean);
-      const lastPart = pathParts[pathParts.length - 1] || 'Related Content';
-      return lastPart.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    } catch {
-      return 'Related Content';
-    }
+    return generateLabelFromUrl(url);
   }
 }
 
