@@ -2190,6 +2190,78 @@ function handleOnlineCoursesPatterns(query, lc) {
   return null;
 }
 
+function handleEquipmentAndCoursePatterns(query, lc) {
+  // FIXED: Photography course/workshop should trigger follow-up clarification (but not equipment queries)
+  if (lc.includes("photography course/workshop") && !lc.includes("equipment")) {
+    return {
+      type: "route_to_clarification",
+      newQuery: "photography course workshop type clarification",
+      newIntent: "clarification"
+    };
+  }
+
+  // Equipment for specific course types - these should be confident enough
+  if (lc.includes("equipment for beginners camera course")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "equipment for beginners camera course",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("equipment for lightroom course")) {
+    return {
+      type: "route_to_advice", 
+      newQuery: "equipment for lightroom course",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("equipment for rps course")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "equipment for rps course", 
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("equipment for online course")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "equipment for online course",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("general photography course equipment")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "general photography course equipment",
+      newIntent: "advice"
+    };
+  }
+  
+  // Specific course types
+  if (lc.includes("camera course")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "camera course for beginners",
+      newIntent: "advice"
+    };
+  }
+  
+  // FIXED: Q13 - "the beginners editing course" should route to advice, not events
+  if (lc.includes("editing course") || lc.includes("beginners editing")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "beginner editing course information",
+      newIntent: "advice"
+    };
+  }
+  
+  return null;
+}
+
 function handleAllRemainingPatterns(query, lc) {
   if (lc.includes("specific topic courses") || lc === "specific topic courses") {
     console.log(`✅ Matched specific topic courses pattern for: "${query}"`);
@@ -2425,72 +2497,10 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     return remainingPatternsResult;
   }
   
-  // FIXED: Photography course/workshop should trigger follow-up clarification (but not equipment queries)
-  if (lc.includes("photography course/workshop") && !lc.includes("equipment")) {
-    return {
-      type: "route_to_clarification",
-      newQuery: "photography course workshop type clarification",
-      newIntent: "clarification"
-    };
-  }
-
-  // Equipment for specific course types - these should be confident enough
-  if (lc.includes("equipment for beginners camera course")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "equipment for beginners camera course",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("equipment for lightroom course")) {
-    return {
-      type: "route_to_advice", 
-      newQuery: "equipment for lightroom course",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("equipment for rps course")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "equipment for rps course", 
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("equipment for online course")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "equipment for online course",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("general photography course equipment")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "general photography course equipment",
-      newIntent: "advice"
-    };
-  }
-  
-  // Specific course types
-  if (lc.includes("camera course")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "camera course for beginners",
-      newIntent: "advice"
-    };
-  }
-  
-  // FIXED: Q13 - "the beginners editing course" should route to advice, not events
-  if (lc.includes("editing course") || lc.includes("beginners editing")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "beginner editing course information",
-      newIntent: "advice"
-    };
+  // Check equipment and course patterns
+  const equipmentCourseResult = handleEquipmentAndCoursePatterns(query, lc);
+  if (equipmentCourseResult) {
+    return equipmentCourseResult;
   }
   
   // Workshop types
