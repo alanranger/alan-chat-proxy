@@ -4704,6 +4704,13 @@ export default async function handler(req, res) {
       // Get events from the enhanced view that includes product mappings
       const events = await findEvents(client, { keywords, limit: 80, pageContext, csvType });
       
+      // TEMPORARY DEBUG: Add events info to response for troubleshooting
+      console.log('🔍 EVENTS HANDLER: findEvents returned:', {
+        eventsCount: events?.length || 0,
+        eventsSample: events?.slice(0, 3) || [],
+        keywords: keywords
+      });
+      
       // TEMPORARY DEBUG: Check if events are being retrieved
       if (events && events.length > 0) {
         console.log('🔍 SUCCESS: findEvents returned', events.length, 'events');
@@ -5027,7 +5034,12 @@ export default async function handler(req, res) {
               outputLength: eventList.length,
               outputSample: eventList.slice(0, 2)
             },
-            eventsProcessingPipeline: eventsDebugInfo
+            eventsProcessingPipeline: eventsDebugInfo,
+            findEventsDebug: {
+              eventsCount: events?.length || 0,
+              eventsSample: events?.slice(0, 3) || [],
+              keywords: keywords
+            }
           }
         },
         meta: {
