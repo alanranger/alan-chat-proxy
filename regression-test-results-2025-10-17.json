@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-10-17T01:14:31.014Z",
+  "timestamp": "2025-10-17T15:43:49.376Z",
   "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
   "summary": {
     "total": 11,
@@ -25,11 +25,11 @@
         "hasEvents": false,
         "hasArticles": false,
         "eventsCount": 0,
-        "answer": null
+        "answer": []
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-17T01:13:59.100Z"
+      "timestamp": "2025-10-17T15:43:21.521Z"
     },
     {
       "testId": "photography-workshop",
@@ -48,11 +48,11 @@
         "hasEvents": false,
         "hasArticles": false,
         "eventsCount": 0,
-        "answer": null
+        "answer": []
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-17T01:14:00.912Z"
+      "timestamp": "2025-10-17T15:43:23.002Z"
     },
     {
       "testId": "residential-pricing",
@@ -75,7 +75,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-17T01:14:05.810Z"
+      "timestamp": "2025-10-17T15:43:28.059Z"
     },
     {
       "testId": "tripod-recommendation",
@@ -99,7 +99,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-17T01:14:08.518Z"
+      "timestamp": "2025-10-17T15:43:30.337Z"
     },
     {
       "testId": "camera-advice",
@@ -123,7 +123,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-17T01:14:11.743Z"
+      "timestamp": "2025-10-17T15:43:33.179Z"
     },
     {
       "testId": "ambiguous-workshop",
@@ -148,7 +148,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-17T01:14:15.046Z"
+      "timestamp": "2025-10-17T15:43:36.006Z"
     },
     {
       "testId": "vague-equipment",
@@ -172,7 +172,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-17T01:14:18.034Z"
+      "timestamp": "2025-10-17T15:43:38.491Z"
     },
     {
       "testId": "beginner-course",
@@ -191,11 +191,11 @@
         "hasEvents": false,
         "hasArticles": false,
         "eventsCount": 0,
-        "answer": null
+        "answer": []
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-17T01:14:19.890Z"
+      "timestamp": "2025-10-17T15:43:39.936Z"
     },
     {
       "testId": "online-course",
@@ -219,7 +219,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-17T01:14:23.915Z"
+      "timestamp": "2025-10-17T15:43:43.210Z"
     },
     {
       "testId": "nonsensical-query",
@@ -244,7 +244,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-17T01:14:26.847Z"
+      "timestamp": "2025-10-17T15:43:45.675Z"
     },
     {
       "testId": "empty-query",
@@ -269,7 +269,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-17T01:14:30.004Z"
+      "timestamp": "2025-10-17T15:43:48.372Z"
     }
   ]
 }

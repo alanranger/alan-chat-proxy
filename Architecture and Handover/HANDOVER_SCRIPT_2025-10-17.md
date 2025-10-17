@@ -40,22 +40,41 @@ tags:
 - Each change deployed to main with a 30s wait and full live UI baseline re-run; exhaustive BEFORE runs captured.
 - L1886 refactor complete: introduced helpers (`matches`, `createRoute`) in `handleClarificationFollowUp` to reduce repetition; BEFORE/AFTER live baseline parity (15/15; 2 expected fallbacks), exhaustive runs saved under `results/sonar-fixes/L1886/`.
 
-# Next Targets (largest first)
+# Next Targets (largest first) - Updated from SonarQube Analysis
 
-Proceed one-at-a-time, each in its own branch, with BEFORE/AFTER captures:
+## COMPLETED (12 functions):
+✅ L1886, L3049, L3210, L3514, L3637, L2713, L5505, L5656, L1145, L1258, L2784, L2521
 
-1) chat.js L1886  (from 74 → 15, +73) — DONE (behavior preserved)
-2) chat.js L3049  (from 78 → 15, +35)
-3) chat.js L3210  (from 65 → 15, +40)
-4) chat.js L3514  (from 60 → 15, +27)
-5) chat.js L3637  (from 48 → 15, +38)
-6) chat.js L2713  (from 36 → 15, +19)
-7) chat.js L2955  (from 70 → 15, +23)
-8) chat.js L2784  (from 23 → 15, +11)
-9) chat.js L1475  (from 42 → 15, +41)
-10) chat.js L1258 (from 26 → 15, +26)
-11) chat.js L1145 (from 31 → 15, +26)
-12) chat.js L536  (from 82 → 15, +55)
+## REMAINING TARGETS (12 functions):
+
+### Batch A - Critical/High Priority (4 functions):
+1) chat.js L4474  (from 273 → 15, +258) — **CRITICAL** - handleChatRequest
+2) chat.js L536   (from 82 → 15, +67) — **HIGH** - detectIntent  
+3) chat.js L1939  (from 72 → 15, +57) — **HIGH** - generateClarificationQuestion
+4) chat.js L3039  (from 70 → 15, +55) — **HIGH** - getArticleAuxLinks
+
+### Batch B - Medium Priority (5 functions):
+5) chat.js L3303  (from 65 → 15, +50) — **MEDIUM**
+6) chat.js L3611  (from 59 → 15, +44) — **MEDIUM** 
+7) chat.js L3133  (from 54 → 15, +39) — **MEDIUM**
+8) chat.js L3737  (from 48 → 15, +33) — **MEDIUM**
+9) chat.js L1528  (from 42 → 15, +27) — **MEDIUM**
+
+### Batch C - Low Priority + Bug Fix (3 functions):
+10) chat.js L2807  (from 17 → 15, +2) — **LOW**
+11) chat.js L2574  (from 16 → 15, +1) — **LOW**
+12) chat.js L3923  — **BUG FIX** - Function return consistency
+
+### Frontend Targets (9 functions):
+13) chat.html L1064 (from 30 → 15, +15) — **MEDIUM**
+14) chat.html L1228 (from 30 → 15, +15) — **MEDIUM**
+15) chat.html L1737 (from 27 → 15, +12) — **MEDIUM**
+16) chat.html L948  (from 20 → 15, +5) — **MEDIUM**
+17) chat.html L840  (from 16 → 15, +1) — **LOW**
+18) chat.html L1686 — **STYLE** - Function nesting
+19) chat.html L1833 — **STYLE** - Function nesting  
+20) chat.html L1702 — **STYLE** - Prefer .dataset
+21) chat.html L1725 — **STYLE** - Prefer .dataset
 
 # Workflow (repeat per target)
 

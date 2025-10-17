@@ -47,6 +47,21 @@ This is the AI’s running TODO list. Keep it short and actionable.
 - 2025-10-17 — Refactor (L5500): extracted `scoreArticle`; baseline parity, merged.
 - 2025-10-17 — Refactor (L5685): simplified Factor 2 accumulation; baseline parity, merged.
 - 2025-10-17 — Refactor (L1886): introduced `matches`/`createRoute` helpers in `handleClarificationFollowUp`; BEFORE/AFTER live baseline 15/15 with 2 expected fallbacks; exhaustive clarifications run saved to `results/sonar-fixes/L1886/`.
+- 2025-10-17 16:00 — Reduced L5505 to ≤15. Baseline parity. Merged 7e77127.
+- 2025-10-17 16:08 — Reduced L5656 to ≤15. Baseline parity. Merged 0167d12.
+- 2025-10-17 16:16 — Reduced L1145 to ≤15. Baseline parity. Merged 65e2325.
+- 2025-10-17 16:22 — Reduced L1258 to ≤15. Baseline parity. Merged 33563c5.
+- 2025-10-17 16:28 — Reduced L2784 to ≤15. Baseline parity. Merged 0d3c6e2.
+- 2025-10-17 16:38 — Reduced L2521 to ≤15. Baseline parity. Merged e3a6e35.
+
+## SonarQube Analysis Update (2025-10-17)
+- **COMPLETED**: 12/21 functions (57% complete)
+- **REMAINING**: 9 functions in chat.js + 9 functions in chat.html
+- **NEXT BATCHES**: 
+  - Batch A: L4474 (273), L536 (82), L1939 (72), L3039 (70) - Critical/High priority
+  - Batch B: L3303 (65), L3611 (59), L3133 (54), L3737 (48), L1528 (42) - Medium priority  
+  - Batch C: L2807 (17), L2574 (16), L3923 (bug fix) - Low priority
+  - Frontend: 9 functions in chat.html (complexity 16-30)
 
 ## Core Chatbot Tasks (from before tangent)
 
