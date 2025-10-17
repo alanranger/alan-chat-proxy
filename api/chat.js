@@ -5029,8 +5029,7 @@ export default async function handler(req, res) {
               outputSample: eventList.slice(0, 2)
             },
             findEventsDebug: {
-              eventsCount: events?.length || 0,
-              keywords: keywords
+              eventsCount: events?.length || 0
             }
           }
         },
