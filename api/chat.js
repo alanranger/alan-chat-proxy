@@ -4668,7 +4668,9 @@ export default async function handler(req, res) {
       const matchEvent = (e, term)=>{
         const t = term.toLowerCase();
         const hay = `${e.event_title||e.title||''} ${e.product_title||''} ${e.event_location||e.location_name||e.location||''}`.toLowerCase();
-        return hay.includes(t);
+        const matches = hay.includes(t);
+        console.log(`🔍 matchEvent: term="${t}", hay="${hay}", matches=${matches}`);
+        return matches;
       };
       const filteredEvents = significant ? events.filter(e => matchEvent(e, significant)) : events;
       
