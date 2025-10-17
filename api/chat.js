@@ -4672,7 +4672,8 @@ export default async function handler(req, res) {
         console.log(`🔍 matchEvent: term="${t}", hay="${hay}", matches=${matches}`);
         return matches;
       };
-      const filteredEvents = significant ? events.filter(e => matchEvent(e, significant)) : events;
+      // TEMPORARY FIX: Skip filtering to see if that's the issue
+      const filteredEvents = events; // significant ? events.filter(e => matchEvent(e, significant)) : events;
       
       const debugInfo = {
         totalEvents: events.length,
