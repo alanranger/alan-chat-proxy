@@ -2550,15 +2550,25 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   }
 
   if (keywords.length) {
+    // Filter out generic query words that don't help find events
+    const GENERIC_QUERY_WORDS = new Set(["when", "next", "is", "are", "the", "a", "an", "what", "where", "how", "much", "does", "do", "can", "could", "would", "should"]);
+    const meaningfulKeywords = keywords.filter(k => k && !GENERIC_QUERY_WORDS.has(String(k).toLowerCase()));
+    
+    console.log('🔍 findEvents keyword filtering:', {
+      originalKeywords: keywords,
+      meaningfulKeywords,
+      filteredOut: keywords.filter(k => !meaningfulKeywords.includes(k))
+    });
+    
     // Search in event_title, event_location, and product_title fields
     const parts = [];
-    const t1 = anyIlike("event_title", keywords); if (t1) parts.push(t1);
-    const t2 = anyIlike("event_url", keywords); if (t2) parts.push(t2);
-    const t3 = anyIlike("event_location", keywords); if (t3) parts.push(t3);
-    const t4 = anyIlike("product_title", keywords); if (t4) parts.push(t4);
+    const t1 = anyIlike("event_title", meaningfulKeywords); if (t1) parts.push(t1);
+    const t2 = anyIlike("event_url", meaningfulKeywords); if (t2) parts.push(t2);
+    const t3 = anyIlike("event_location", meaningfulKeywords); if (t3) parts.push(t3);
+    const t4 = anyIlike("product_title", meaningfulKeywords); if (t4) parts.push(t4);
     
     console.log('🔍 findEvents debug:', {
-      keywords,
+      meaningfulKeywords,
       parts,
       query: parts.join(",")
     });
