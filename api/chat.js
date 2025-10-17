@@ -4946,7 +4946,16 @@ export default async function handler(req, res) {
             totalEvents: events.length,
             significantKeyword: significant,
             filteredEventsCount: filteredEvents.length,
-            sampleEvent: events[0] || null
+            sampleEvent: events[0] || null,
+            beforeFormatEvents: {
+              filteredEventsLength: filteredEvents.length,
+              eventsLength: events.length,
+              usingFiltered: filteredEvents.length > 0
+            },
+            afterFormatEvents: {
+              eventListLength: eventList.length,
+              eventListSample: eventList.slice(0, 2)
+            }
           }
         },
         meta: {
