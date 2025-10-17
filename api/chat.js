@@ -2587,7 +2587,10 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   console.log('🔍 findEvents query results:', {
     dataCount: data?.length || 0,
     sampleData: data?.slice(0, 2) || [],
-    query: q.toString()
+    query: q.toString(),
+    rawData: data, // Show the raw data structure
+    dataType: typeof data,
+    isArray: Array.isArray(data)
   });
   
   // Map v_events_for_chat fields to frontend expected fields
@@ -2602,6 +2605,12 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     _csv_start_time: event.start_time,  // Preserve CSV times for frontend
     _csv_end_time: event.end_time
   }));
+  
+  console.log('🔍 findEvents mapped data:', {
+    mappedDataCount: mappedData?.length || 0,
+    mappedDataSample: mappedData?.slice(0, 2) || [],
+    originalDataCount: data?.length || 0
+  });
   
   return mappedData;
 }
