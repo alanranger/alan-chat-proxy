@@ -4718,11 +4718,8 @@ export default async function handler(req, res) {
         console.log('🔍 PROBLEM: findEvents returned empty array or null');
       }
       
-      // Store events count for debug response
-      var eventsDebugInfo = {
-        findEventsResult: events?.length || 0,
-        findEventsSample: events?.slice(0, 2) || []
-      };
+      // Debug: Log events count
+      console.log('🔍 Events from findEvents:', events?.length || 0);
       
       // If the new query names a significant topic (e.g., lightroom), prefer events matching that topic
       const GENERIC_EVENT_TERMS = new Set(["workshop","workshops","course","courses","class","classes","event","events","next","when","your"]);
@@ -4737,9 +4734,8 @@ export default async function handler(req, res) {
       // TEMPORARY FIX: Skip filtering to see if that's the issue
       const filteredEvents = events; // significant ? events.filter(e => matchEvent(e, significant)) : events;
       
-      // Store filtering debug info
-      eventsDebugInfo.filteringResult = filteredEvents?.length || 0;
-      eventsDebugInfo.filteringSample = filteredEvents?.slice(0, 2) || [];
+      // Debug: Log filtering results
+      console.log('🔍 Filtered events:', filteredEvents?.length || 0);
       
       const debugInfo = {
         totalEvents: events.length,
@@ -4757,9 +4753,8 @@ export default async function handler(req, res) {
       
       const eventList = formatEventsForUi(filteredEvents.length ? filteredEvents : events);
       
-      // Store formatEventsForUi debug info
-      eventsDebugInfo.formatEventsResult = eventList?.length || 0;
-      eventsDebugInfo.formatEventsSample = eventList?.slice(0, 2) || [];
+      // Debug: Log formatEventsForUi results
+      console.log('🔍 EventList after formatEventsForUi:', eventList?.length || 0);
       
       console.log('🔍 After formatEventsForUi:', {
         eventListLength: eventList.length,
