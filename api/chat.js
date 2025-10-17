@@ -2566,7 +2566,8 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   
   console.log('🔍 findEvents query results:', {
     dataCount: data?.length || 0,
-    sampleData: data?.slice(0, 2) || []
+    sampleData: data?.slice(0, 2) || [],
+    query: q.toString()
   });
   
   // Map v_events_for_chat fields to frontend expected fields
