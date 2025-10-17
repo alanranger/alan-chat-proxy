@@ -1886,59 +1886,54 @@ async function generateClarificationQuestion(query, client = null, pageContext =
 function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   const lc = query.toLowerCase();
   console.log(`🔍 handleClarificationFollowUp called with:`, { query, originalQuery, originalIntent, lc });
+  
+  // Small helpers to reduce repetition while preserving behavior
+  function createRoute(type, newQuery, newIntent) {
+    return { type, newQuery, newIntent };
+  }
+  function matches(needle) {
+    return lc.includes(needle) || lc === needle;
+  }
+  
   // Allow user to bypass clarification entirely
-  if (lc.includes("show me results") || lc === "show me results") {
-    return {
-      type: "route_to_advice",
-      newQuery: originalQuery || query,
-      newIntent: "advice"
-    };
+  if (matches("show me results")) {
+    return createRoute("route_to_advice", originalQuery || query, "advice");
   }
   
   // SPECIFIC COURSE PATTERNS FIRST (more specific patterns must come before generic patterns)
-  if (lc.includes("free online photography course") || lc === "free online photography course") {
-    console.log(`✅ Matched free online course pattern for: "${query}"`);
-    return {
-      type: "route_to_advice",
-      newQuery: "free online photography course",
-      newIntent: "advice"
-    };
-  }
+  const specificCoursePatterns = [
+    {
+      key: "free online photography course",
+      log: (q) => console.log(`✅ Matched free online course pattern for: "${q}"`),
+      route: createRoute("route_to_advice", "free online photography course", "advice")
+    },
+    {
+      key: "online private photography lessons",
+      log: (q) => console.log(`✅ Matched online private lessons pattern for: "${q}"`),
+      route: createRoute("route_to_advice", "online private photography lessons", "advice")
+    },
+    {
+      key: "beginners camera course",
+      log: (q) => console.log(`✅ Matched beginners camera course pattern for: "${q}"`),
+      route: createRoute("route_to_advice", "beginners camera course", "advice")
+    },
+    {
+      key: "beginners lightroom course",
+      log: (q) => console.log(`✅ Matched beginners lightroom course pattern for: "${q}"`),
+      route: createRoute("route_to_advice", "beginners lightroom course", "advice")
+    },
+    {
+      key: "rps mentoring course",
+      log: (q) => console.log(`✅ Matched rps mentoring course pattern for: "${q}"`),
+      route: createRoute("route_to_advice", "rps mentoring course", "advice")
+    }
+  ];
   
-  if (lc.includes("online private photography lessons") || lc === "online private photography lessons") {
-    console.log(`✅ Matched online private lessons pattern for: "${query}"`);
-    return {
-      type: "route_to_advice",
-      newQuery: "online private photography lessons",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("beginners camera course") || lc === "beginners camera course") {
-    console.log(`✅ Matched beginners camera course pattern for: "${query}"`);
-    return {
-      type: "route_to_advice",
-      newQuery: "beginners camera course",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("beginners lightroom course") || lc === "beginners lightroom course") {
-    console.log(`✅ Matched beginners lightroom course pattern for: "${query}"`);
-    return {
-      type: "route_to_advice",
-      newQuery: "beginners lightroom course",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("rps mentoring course") || lc === "rps mentoring course") {
-    console.log(`✅ Matched rps mentoring course pattern for: "${query}"`);
-    return {
-      type: "route_to_advice",
-      newQuery: "rps mentoring course",
-      newIntent: "advice"
-    };
+  for (const entry of specificCoursePatterns) {
+    if (matches(entry.key)) {
+      entry.log(query);
+      return entry.route;
+    }
   }
   
   if (lc.includes("online courses (free and paid)") || lc === "online courses (free and paid)") {
@@ -3088,6 +3083,7 @@ function extractFromDescription(desc) {
   
   if (lines.length) out.summary = lines[0];
 
+  // Small helpers to reduce repetition (behavior preserved)
   const nextVal = (i) => {
     for (let j = i + 1; j < lines.length; j++) {
       const t = lines[j].trim();
@@ -3097,70 +3093,78 @@ function extractFromDescription(desc) {
   return null;
   };
 
+  const matches = (ln, re) => re.test(ln);
+  const valueAfter = (ln, re) => ln.replace(re, "").trim();
+  const matchGroup = (ln, re) => {
+    const m = ln.match(re);
+    return m ? m[1].trim() : null;
+  };
+  const setIf = (prop, val) => { if (val) out[prop] = val; };
+
   for (let i = 0; i < lines.length; i++) {
     const ln = lines[i];
 
-    if (/^location:/i.test(ln)) {
-      const v = ln.replace(/^location:\s*/i, "").trim() || nextVal(i);
-      if (v) out.location = v;
+    if (matches(ln, /^location:/i)) {
+      const v = valueAfter(ln, /^location:\s*/i) || nextVal(i);
+      setIf("location", v);
       continue;
     }
-    if (/^participants:/i.test(ln)) {
-      const v = ln.replace(/^participants:\s*/i, "").trim() || nextVal(i);
-      if (v) out.participants = v;
+    if (matches(ln, /^participants:/i)) {
+      const v = valueAfter(ln, /^participants:\s*/i) || nextVal(i);
+      setIf("participants", v);
       continue;
     }
     
     // Handle chunk format: "* Participants: Max 6 *"
-    if (/\*\s*participants:\s*([^*]+)\s*\*/i.test(ln)) {
-      const match = ln.match(/\*\s*participants:\s*([^*]+)\s*\*/i);
-      if (match) out.participants = match[1].trim();
+    if (matches(ln, /\*\s*participants:\s*([^*]+)\s*\*/i)) {
+      const v = matchGroup(ln, /\*\s*participants:\s*([^*]+)\s*\*/i);
+      setIf("participants", v);
       continue;
     }
-    if (/^fitness:/i.test(ln)) {
-      const v = ln.replace(/^fitness:\s*/i, "").trim() || nextVal(i);
-      if (v) out.fitness = v;
+    if (matches(ln, /^fitness:/i)) {
+      const v = valueAfter(ln, /^fitness:\s*/i) || nextVal(i);
+      setIf("fitness", v);
       continue;
     }
     
     // Handle chunk format: "* Fitness:2. Easy-Moderate *"
-    if (/\*\s*fitness:\s*([^*]+)\s*\*/i.test(ln)) {
-      const match = ln.match(/\*\s*fitness:\s*([^*]+)\s*\*/i);
-      if (match) out.fitness = match[1].trim();
+    if (matches(ln, /\*\s*fitness:\s*([^*]+)\s*\*/i)) {
+      const v = matchGroup(ln, /\*\s*fitness:\s*([^*]+)\s*\*/i);
+      setIf("fitness", v);
       continue;
     }
     // Also look for fitness information in other formats
-    if (/fitness level|fitness requirement|physical requirement|walking/i.test(ln)) {
-      if (!out.fitness) out.fitness = ln.trim();
+    if (matches(ln, /fitness level|fitness requirement|physical requirement|walking/i)) {
+      if (!out.fitness) setIf("fitness", ln.trim());
       continue;
     }
-    if (/^availability:/i.test(ln)) {
-      const v = ln.replace(/^availability:\s*/i, "").trim() || nextVal(i);
-      if (v) out.availability = v;
+    if (matches(ln, /^availability:/i)) {
+      const v = valueAfter(ln, /^availability:\s*/i) || nextVal(i);
+      setIf("availability", v);
       continue;
     }
     
     // Handle multi-line format: "Participants:\nMax 6"
-    if (/^participants:\s*$/i.test(ln)) {
+    if (matches(ln, /^participants:\s*$/i)) {
       const nextLine = nextVal(i);
-      if (nextLine && /^max\s*\d+$/i.test(nextLine)) {
-        out.participants = nextLine.trim();
+      if (nextLine && /^(max\s*\d+|\d+\s*max)$/i.test(nextLine)) {
+        setIf("participants", nextLine.trim());
         i++; // Skip the next line since we processed it
         continue;
       }
     }
     
     // Course-specific extraction: Experience Level
-    if (/^experience\s*-\s*level:/i.test(ln)) {
-      const v = ln.replace(/^experience\s*-\s*level:\s*/i, "").trim() || nextVal(i);
-      if (v) out.experienceLevel = v;
+    if (matches(ln, /^experience\s*-\s*level:/i)) {
+      const v = valueAfter(ln, /^experience\s*-\s*level:\s*/i) || nextVal(i);
+      setIf("experienceLevel", v);
       continue;
     }
     
     // Course-specific extraction: Equipment Needed
-    if (/^equipment\s*needed:/i.test(ln)) {
-      const v = ln.replace(/^equipment\s*needed:\s*/i, "").trim() || nextVal(i);
-      if (v) out.equipmentNeeded = v;
+    if (matches(ln, /^equipment\s*needed:/i)) {
+      const v = valueAfter(ln, /^equipment\s*needed:\s*/i) || nextVal(i);
+      setIf("equipmentNeeded", v);
       continue;
     }
     
