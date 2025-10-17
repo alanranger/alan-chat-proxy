@@ -3239,21 +3239,10 @@ async function getArticleAuxLinks(client, articleUrl) {
 }
 
 /* ----------------------- Product description parsing -------------------- */
-function extractFromDescription(desc) {
-  const out = {
-    location: null,
-    participants: null,
-    fitness: null,
-    availability: null,
-    experienceLevel: null,
-    equipmentNeeded: null,
-    summary: null,
-    sessions: [],
-  };
-  if (!desc) return out;
 
-  // Enhanced cleaning to prevent formatting issues and text duplication
-  const rawText = String(desc)
+// Helper functions for description parsing
+function cleanDescriptionText(desc) {
+  return String(desc)
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags completely
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags completely
     .replace(/<[^>]*>/g, ' ') // Remove all HTML tags
@@ -3268,9 +3257,10 @@ function extractFromDescription(desc) {
     .replace(/\s*margin-left:[^"]*"/gi, '') // Remove margin styles
     .replace(/\s+/g, ' ') // Normalize whitespace
     .trim();
+}
 
-  // Split by newline first, then normalize whitespace per line and remove duplicates
-  const lines = rawText
+function normalizeLines(rawText) {
+  return rawText
     .split(/\r?\n/)
     .map((s) => s.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
@@ -3278,17 +3268,16 @@ function extractFromDescription(desc) {
       // Remove duplicate lines (common issue causing text duplication)
       return arr.indexOf(line) === index;
     });
-  
-  if (lines.length) out.summary = lines[0];
+}
 
-  // Small helpers to reduce repetition (behavior preserved)
+function createParsingHelpers(lines, out) {
   const nextVal = (i) => {
     for (let j = i + 1; j < lines.length; j++) {
       const t = lines[j].trim();
       if (!t) continue;
       return t;
     }
-  return null;
+    return null;
   };
 
   const matches = (ln, re) => re.test(ln);
@@ -3299,102 +3288,173 @@ function extractFromDescription(desc) {
   };
   const setIf = (prop, val) => { if (val) out[prop] = val; };
 
+  return { nextVal, matches, valueAfter, matchGroup, setIf };
+}
+
+function parseLocationField(ln, helpers) {
+  const { matches, valueAfter, nextVal, setIf } = helpers;
+  if (matches(ln, /^location:/i)) {
+    const v = valueAfter(ln, /^location:\s*/i) || nextVal(0);
+    setIf("location", v);
+    return true;
+  }
+  return false;
+}
+
+function parseParticipantsField(ln, helpers, i) {
+  const { matches, valueAfter, nextVal, setIf, matchGroup } = helpers;
+  
+  if (matches(ln, /^participants:/i)) {
+    const v = valueAfter(ln, /^participants:\s*/i) || nextVal(i);
+    setIf("participants", v);
+    return true;
+  }
+  
+  // Handle chunk format: "* Participants: Max 6 *"
+  if (matches(ln, /\*\s*participants:\s*([^*]+)\s*\*/i)) {
+    const v = matchGroup(ln, /\*\s*participants:\s*([^*]+)\s*\*/i);
+    setIf("participants", v);
+    return true;
+  }
+  
+  // Handle multi-line format: "Participants:\nMax 6"
+  if (matches(ln, /^participants:\s*$/i)) {
+    const nextLine = nextVal(i);
+    if (nextLine && /^(max\s*\d+|\d+\s*max)$/i.test(nextLine)) {
+      setIf("participants", nextLine.trim());
+      return { skipNext: true };
+    }
+  }
+  
+  return false;
+}
+
+function parseFitnessField(ln, helpers) {
+  const { matches, valueAfter, nextVal, setIf, matchGroup } = helpers;
+  
+  if (matches(ln, /^fitness:/i)) {
+    const v = valueAfter(ln, /^fitness:\s*/i) || nextVal(0);
+    setIf("fitness", v);
+    return true;
+  }
+  
+  // Handle chunk format: "* Fitness:2. Easy-Moderate *"
+  if (matches(ln, /\*\s*fitness:\s*([^*]+)\s*\*/i)) {
+    const v = matchGroup(ln, /\*\s*fitness:\s*([^*]+)\s*\*/i);
+    setIf("fitness", v);
+    return true;
+  }
+  
+  // Also look for fitness information in other formats
+  if (matches(ln, /fitness level|fitness requirement|physical requirement|walking/i)) {
+    setIf("fitness", ln.trim());
+    return true;
+  }
+  
+  return false;
+}
+
+function parseAvailabilityField(ln, helpers) {
+  const { matches, valueAfter, nextVal, setIf } = helpers;
+  if (matches(ln, /^availability:/i)) {
+    const v = valueAfter(ln, /^availability:\s*/i) || nextVal(0);
+    setIf("availability", v);
+    return true;
+  }
+  return false;
+}
+
+function parseExperienceLevelField(ln, helpers) {
+  const { matches, valueAfter, nextVal, setIf } = helpers;
+  if (matches(ln, /^experience\s*-\s*level:/i)) {
+    const v = valueAfter(ln, /^experience\s*-\s*level:\s*/i) || nextVal(0);
+    setIf("experienceLevel", v);
+    return true;
+  }
+  return false;
+}
+
+function parseEquipmentNeededField(ln, helpers) {
+  const { matches, valueAfter, nextVal, setIf } = helpers;
+  
+  if (matches(ln, /^equipment\s*needed:/i)) {
+    const v = valueAfter(ln, /^equipment\s*needed:\s*/i) || nextVal(0);
+    setIf("equipmentNeeded", v);
+    return true;
+  }
+  
+  // Handle asterisk format: "* EQUIPMENT NEEDED:"
+  if (/^\*\s*equipment\s*needed:/i.test(ln)) {
+    const v = ln.replace(/^\*\s*equipment\s*needed:\s*/i, "").trim() || nextVal(0);
+    if (v) setIf("equipmentNeeded", v);
+    return true;
+  }
+  
+  // Also look for equipment information in other formats
+  if (/equipment needed|equipment required|what you need|you will need/i.test(ln)) {
+    // Extract the equipment requirement from the line
+    const equipmentMatch = ln.match(/(?:equipment needed|equipment required|what you need|you will need)[:\s]*([^\\n]+)/i);
+    if (equipmentMatch) {
+      setIf("equipmentNeeded", equipmentMatch[1].trim());
+    } else {
+      setIf("equipmentNeeded", ln.trim());
+    }
+    return true;
+  }
+  
+  return false;
+}
+
+function parseSessionField(ln, out) {
+  const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
+  if (m1) {
+    const rawLabel = m1[1].replace(/\s+/g, " ").trim();
+    const time = m1[2].trim();
+    out.sessions.push({ label: rawLabel, time, price: null });
+    return true;
+  }
+  return false;
+}
+
+function extractFromDescription(desc) {
+  const out = {
+    location: null,
+    participants: null,
+    fitness: null,
+    availability: null,
+    experienceLevel: null,
+    equipmentNeeded: null,
+    summary: null,
+    sessions: [],
+  };
+  if (!desc) return out;
+
+  // Enhanced cleaning to prevent formatting issues and text duplication
+  const rawText = cleanDescriptionText(desc);
+  const lines = normalizeLines(rawText);
+  
+  if (lines.length) out.summary = lines[0];
+
+  const helpers = createParsingHelpers(lines, out);
+
   for (let i = 0; i < lines.length; i++) {
     const ln = lines[i];
 
-    if (matches(ln, /^location:/i)) {
-      const v = valueAfter(ln, /^location:\s*/i) || nextVal(i);
-      setIf("location", v);
-      continue;
-    }
-    if (matches(ln, /^participants:/i)) {
-      const v = valueAfter(ln, /^participants:\s*/i) || nextVal(i);
-      setIf("participants", v);
+    // Parse each field type
+    if (parseLocationField(ln, helpers)) continue;
+    
+    const participantsResult = parseParticipantsField(ln, helpers, i);
+    if (participantsResult === true) continue;
+    if (participantsResult?.skipNext) {
+      i++; // Skip the next line since we processed it
       continue;
     }
     
-    // Handle chunk format: "* Participants: Max 6 *"
-    if (matches(ln, /\*\s*participants:\s*([^*]+)\s*\*/i)) {
-      const v = matchGroup(ln, /\*\s*participants:\s*([^*]+)\s*\*/i);
-      setIf("participants", v);
-      continue;
-    }
-    if (matches(ln, /^fitness:/i)) {
-      const v = valueAfter(ln, /^fitness:\s*/i) || nextVal(i);
-      setIf("fitness", v);
-      continue;
-    }
-    
-    // Handle chunk format: "* Fitness:2. Easy-Moderate *"
-    if (matches(ln, /\*\s*fitness:\s*([^*]+)\s*\*/i)) {
-      const v = matchGroup(ln, /\*\s*fitness:\s*([^*]+)\s*\*/i);
-      setIf("fitness", v);
-      continue;
-    }
-    // Also look for fitness information in other formats
-    if (matches(ln, /fitness level|fitness requirement|physical requirement|walking/i)) {
-      if (!out.fitness) setIf("fitness", ln.trim());
-      continue;
-    }
-    if (matches(ln, /^availability:/i)) {
-      const v = valueAfter(ln, /^availability:\s*/i) || nextVal(i);
-      setIf("availability", v);
-      continue;
-    }
-    
-    // Handle multi-line format: "Participants:\nMax 6"
-    if (matches(ln, /^participants:\s*$/i)) {
-      const nextLine = nextVal(i);
-      if (nextLine && /^(max\s*\d+|\d+\s*max)$/i.test(nextLine)) {
-        setIf("participants", nextLine.trim());
-        i++; // Skip the next line since we processed it
-        continue;
-      }
-    }
-    
-    // Course-specific extraction: Experience Level
-    if (matches(ln, /^experience\s*-\s*level:/i)) {
-      const v = valueAfter(ln, /^experience\s*-\s*level:\s*/i) || nextVal(i);
-      setIf("experienceLevel", v);
-      continue;
-    }
-    
-    // Course-specific extraction: Equipment Needed
-    if (matches(ln, /^equipment\s*needed:/i)) {
-      const v = valueAfter(ln, /^equipment\s*needed:\s*/i) || nextVal(i);
-      setIf("equipmentNeeded", v);
-      continue;
-    }
-    
-    // Handle asterisk format: "* EQUIPMENT NEEDED:"
-    if (/^\*\s*equipment\s*needed:/i.test(ln)) {
-      const v = ln.replace(/^\*\s*equipment\s*needed:\s*/i, "").trim() || nextVal(i);
-      if (v) out.equipmentNeeded = v;
-      continue;
-    }
-    
-    // Also look for equipment information in other formats
-    if (/equipment needed|equipment required|what you need|you will need/i.test(ln)) {
-      if (!out.equipmentNeeded) {
-        // Extract the equipment requirement from the line
-        const equipmentMatch = ln.match(/(?:equipment needed|equipment required|what you need|you will need)[:\s]*([^\\n]+)/i);
-        if (equipmentMatch) {
-          out.equipmentNeeded = equipmentMatch[1].trim();
-        } else {
-          out.equipmentNeeded = ln.trim();
-        }
-      }
-      continue;
-    }
-    
-
-    const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
-    if (m1) {
-      const rawLabel = m1[1].replace(/\s+/g, " ").trim();
-      const time = m1[2].trim();
-      out.sessions.push({ label: rawLabel, time, price: null });
-      continue;
-    }
+    if (parseFitnessField(ln, helpers)) continue;
+    if (parseAvailabilityField(ln, helpers)) continue;
+    if (parseExperienceLevelField(ln, helpers)) continue;
+    if (parseEquipmentNeededField(ln, helpers)) continue;
+    if (parseSessionField(ln, out)) continue;
   }
 
   if (out.summary && /^summary$/i.test(out.summary.trim())) {
