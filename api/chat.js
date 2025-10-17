@@ -4080,26 +4080,19 @@ async function extractRelevantInfo(query, dataContext) {
 }
 
 // Calculate nuanced confidence for events with intent-based scoring
-function calculateEventConfidence(query, events, product) {
-  let baseConfidence = 0.3;
-  let confidenceFactors = [];
-  
-  const queryLower = query.toLowerCase();
-  // Small helpers to reduce repetition (no behavior change)
-  const addFactor = (message, delta) => { baseConfidence += delta; confidenceFactors.push(`${message} (${delta >= 0 ? '+' : ''}${delta})`); };
-  
-  // INTENT-BASED CONFIDENCE SCORING
-  // Detect query requirements and check for mismatches
-  const queryRequirements = {
+// Helper functions for calculateEventConfidence
+function extractQueryRequirements(queryLower) {
+  return {
     free: queryLower.includes('free'),
     online: queryLower.includes('online'),
     certificate: queryLower.includes('certificate') || queryLower.includes('cert'),
     inPerson: queryLower.includes('in person') || queryLower.includes('in-person') || queryLower.includes('coventry') || queryLower.includes('location'),
     price: queryLower.includes('price') || queryLower.includes('cost') || queryLower.includes('much')
   };
-  
-  // Check response attributes
-  const responseAttributes = {
+}
+
+function initializeResponseAttributes() {
+  return {
     hasFreeContent: false,
     hasOnlineContent: false,
     hasCertificateInfo: false,
@@ -4109,93 +4102,85 @@ function calculateEventConfidence(query, events, product) {
     onlineCount: 0,
     inPersonCount: 0
   };
+}
+
+function analyzeEventAttributes(event, responseAttributes) {
+  const eventTitle = (event.event_title || '').toLowerCase();
+  const eventLocation = (event.event_location || '').toLowerCase();
+  const eventPrice = event.price_gbp || 0;
   
-  // Analyze events for response attributes
-  if (events && events.length > 0) {
-    events.forEach(event => {
-      const eventTitle = (event.event_title || '').toLowerCase();
-      const eventLocation = (event.event_location || '').toLowerCase();
-      const eventPrice = event.price_gbp || 0;
-      
-      // Check for free content
-      if (eventPrice === 0 || eventTitle.includes('free')) {
-        responseAttributes.hasFreeContent = true;
-      }
-      
-      // Check for online content
-      if (eventLocation.includes('online') || eventLocation.includes('zoom') || eventLocation.includes('virtual')) {
-        responseAttributes.hasOnlineContent = true;
-        responseAttributes.onlineCount++;
-      }
-      
-      // Check for in-person content
-      if (eventLocation.includes('coventry') || eventLocation.includes('peak district') || eventLocation.includes('batsford')) {
-        responseAttributes.hasInPersonContent = true;
-        responseAttributes.inPersonCount++;
-      }
-      
-      // Check for certificate info
-      if (eventTitle.includes('certificate') || eventTitle.includes('cert') || eventTitle.includes('rps')) {
-        responseAttributes.hasCertificateInfo = true;
-      }
-      
-      // Track pricing
-      if (eventPrice > 0) {
-        responseAttributes.hasPriceInfo = true;
-        responseAttributes.averagePrice += eventPrice;
-      }
-    });
-    
-    responseAttributes.averagePrice = responseAttributes.averagePrice / events.length;
+  // Check for free content
+  if (eventPrice === 0 || eventTitle.includes('free')) {
+    responseAttributes.hasFreeContent = true;
   }
   
-  // Check product attributes
-  if (product) {
-    const productTitle = (product.title || '').toLowerCase();
-    const productLocation = (product.location_name || '').toLowerCase();
-    const productPrice = product.price || 0;
-    
-    if (productPrice === 0 || productTitle.includes('free')) {
-      responseAttributes.hasFreeContent = true;
-    }
-    
-    if (productLocation.includes('online') || productLocation.includes('zoom') || productLocation.includes('virtual')) {
-      responseAttributes.hasOnlineContent = true;
-      responseAttributes.onlineCount++;
-    }
-    
-    if (productLocation.includes('coventry') || productLocation.includes('peak district') || productLocation.includes('batsford')) {
-      responseAttributes.hasInPersonContent = true;
-      responseAttributes.inPersonCount++;
-    }
-    
-    if (productTitle.includes('certificate') || productTitle.includes('cert') || productTitle.includes('rps')) {
-      responseAttributes.hasCertificateInfo = true;
-    }
-    
-    if (productPrice > 0) {
-      responseAttributes.hasPriceInfo = true;
-      responseAttributes.averagePrice += productPrice;
-    }
+  // Check for online content
+  if (eventLocation.includes('online') || eventLocation.includes('zoom') || eventLocation.includes('virtual')) {
+    responseAttributes.hasOnlineContent = true;
+    responseAttributes.onlineCount++;
   }
   
+  // Check for in-person content
+  if (eventLocation.includes('coventry') || eventLocation.includes('peak district') || eventLocation.includes('batsford')) {
+    responseAttributes.hasInPersonContent = true;
+    responseAttributes.inPersonCount++;
+  }
+  
+  // Check for certificate info
+  if (eventTitle.includes('certificate') || eventTitle.includes('cert') || eventTitle.includes('rps')) {
+    responseAttributes.hasCertificateInfo = true;
+  }
+  
+  // Track pricing
+  if (eventPrice > 0) {
+    responseAttributes.hasPriceInfo = true;
+    responseAttributes.averagePrice += eventPrice;
+  }
+}
+
+function analyzeProductAttributes(product, responseAttributes) {
+  const productTitle = (product.title || '').toLowerCase();
+  const productLocation = (product.location_name || '').toLowerCase();
+  const productPrice = product.price || 0;
+  
+  if (productPrice === 0 || productTitle.includes('free')) {
+    responseAttributes.hasFreeContent = true;
+  }
+  
+  if (productLocation.includes('online') || productLocation.includes('zoom') || productLocation.includes('virtual')) {
+    responseAttributes.hasOnlineContent = true;
+    responseAttributes.onlineCount++;
+  }
+  
+  if (productLocation.includes('coventry') || productLocation.includes('peak district') || productLocation.includes('batsford')) {
+    responseAttributes.hasInPersonContent = true;
+    responseAttributes.inPersonCount++;
+  }
+  
+  if (productTitle.includes('certificate') || productTitle.includes('cert') || productTitle.includes('rps')) {
+    responseAttributes.hasCertificateInfo = true;
+  }
+  
+  if (productPrice > 0) {
+    responseAttributes.hasPriceInfo = true;
+    responseAttributes.averagePrice += productPrice;
+  }
+}
+
+function applyIntentBasedScoring(queryRequirements, responseAttributes, addFactor) {
   // Apply intent-based penalties for mismatches
   if (queryRequirements.free && !responseAttributes.hasFreeContent) { addFactor("Free query but no free content", -0.5); }
-  
   if (queryRequirements.online && !responseAttributes.hasOnlineContent) { addFactor("Online query but no online content", -0.3); }
-  
   if (queryRequirements.certificate && !responseAttributes.hasCertificateInfo) { addFactor("Certificate query but no certificate info", -0.4); }
-  
   if (queryRequirements.inPerson && !responseAttributes.hasInPersonContent) { addFactor("In-person query but no in-person content", -0.2); }
   
   // Apply bonuses for good matches
   if (queryRequirements.free && responseAttributes.hasFreeContent) { addFactor("Free query matched with free content", 0.3); }
-  
   if (queryRequirements.online && responseAttributes.hasOnlineContent) { addFactor("Online query matched with online content", 0.2); }
-  
   if (queryRequirements.certificate && responseAttributes.hasCertificateInfo) { addFactor("Certificate query matched with certificate info", 0.3); }
-  
-  // Factor 1: Query specificity for events
+}
+
+function applyQuerySpecificityScoring(queryLower, addFactor) {
   const isEventQuery = queryLower.includes("when") || queryLower.includes("next") || queryLower.includes("date") || queryLower.includes("workshop") || queryLower.includes("course");
   const isLocationQuery = queryLower.includes("where") || queryLower.includes("location") || queryLower.includes("coventry") || queryLower.includes("devon");
   const isPriceQuery = queryLower.includes("cost") || queryLower.includes("price") || queryLower.includes("much");
@@ -4203,8 +4188,9 @@ function calculateEventConfidence(query, events, product) {
   if (isEventQuery) { addFactor("Event query", 0.2); }
   if (isLocationQuery) { addFactor("Location query", 0.15); }
   if (isPriceQuery) { addFactor("Price query", 0.15); }
-  
-  // Factor 2: Event availability and quality
+}
+
+function applyEventQualityScoring(events, addFactor) {
   if (events && events.length > 0) {
     const delta = Math.min(0.3, events.length * 0.1);
     addFactor(`Events found: ${events.length}`, delta);
@@ -4220,8 +4206,9 @@ function calculateEventConfidence(query, events, product) {
     const hasCourses = events.some(e => e.subtype && e.subtype.toLowerCase().includes('course'));
     if (hasWorkshops || hasCourses) { addFactor("Specific event types", 0.1); }
   }
-  
-  // Factor 3: Product availability
+}
+
+function applyProductScoring(product, addFactor) {
   if (product) {
     addFactor("Product found", 0.2);
     
@@ -4229,8 +4216,9 @@ function calculateEventConfidence(query, events, product) {
     if (product.price_gbp && product.price_gbp > 0) { addFactor("Product with price", 0.1); }
     if (product.location_address && product.location_address.trim().length > 0) { addFactor("Product with location", 0.1); }
   }
-  
-  // Factor 4: Query-event relevance
+}
+
+function applyRelevanceScoring(queryLower, events, addFactor) {
   if (events && events.length > 0) {
     const queryWords = queryLower.split(/\s+/).filter(word => word.length > 2);
     let relevanceScore = 0;
@@ -4249,6 +4237,39 @@ function calculateEventConfidence(query, events, product) {
     
     if (relevanceScore > 0) { const relevanceBonus = Math.min(0.2, relevanceScore * 0.05); addFactor(`Query relevance: ${relevanceScore}`, relevanceBonus); }
   }
+}
+
+function calculateEventConfidence(query, events, product) {
+  let baseConfidence = 0.3;
+  let confidenceFactors = [];
+  
+  const queryLower = query.toLowerCase();
+  // Small helpers to reduce repetition (no behavior change)
+  const addFactor = (message, delta) => { baseConfidence += delta; confidenceFactors.push(`${message} (${delta >= 0 ? '+' : ''}${delta})`); };
+  
+  // Extract query requirements
+  const queryRequirements = extractQueryRequirements(queryLower);
+  
+  // Initialize response attributes
+  const responseAttributes = initializeResponseAttributes();
+  
+  // Analyze events for response attributes
+  if (events && events.length > 0) {
+    events.forEach(event => analyzeEventAttributes(event, responseAttributes));
+    responseAttributes.averagePrice = responseAttributes.averagePrice / events.length;
+  }
+  
+  // Check product attributes
+  if (product) {
+    analyzeProductAttributes(product, responseAttributes);
+  }
+  
+  // Apply all scoring factors
+  applyIntentBasedScoring(queryRequirements, responseAttributes, addFactor);
+  applyQuerySpecificityScoring(queryLower, addFactor);
+  applyEventQualityScoring(events, addFactor);
+  applyProductScoring(product, addFactor);
+  applyRelevanceScoring(queryLower, events, addFactor);
   
   // Cap confidence between 0.1 and 0.95
   const finalConfidence = Math.max(0.1, Math.min(0.95, baseConfidence));
