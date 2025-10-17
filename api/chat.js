@@ -533,101 +533,97 @@ function generateBasicEquipmentAdvice(equipmentType) {
   
   return response;
 }
-function generateDirectAnswer(query, articles, contentChunks = []) {
-  const lc = (query || "").toLowerCase();
-  const queryWords = lc.split(" ").filter(w => w.length > 2);
-  const exactTerm = lc.replace(/^what\s+is\s+/, "").trim();
+// Helper functions for generateDirectAnswer
+function isCourseEquipmentQuery(lc) {
+  return (lc.includes("equipment") && (lc.includes("course") || lc.includes("class") || lc.includes("lesson"))) ||
+         (lc.includes("beginners") && lc.includes("camera") && lc.includes("course"));
+}
+
+function generateCourseEquipmentAnswer() {
+  return `For Alan's photography courses, you'll need a digital camera with manual exposure modes (DSLR or mirrorless). Don't worry if you don't have expensive gear - even a smartphone can work for learning the fundamentals! The course focuses on understanding composition, lighting, and technique rather than having the latest equipment. Alan will provide a course book covering all topics.\n\n`;
+}
+
+function findRelevantArticleForTerm(exactTerm, articles) {
+  // First, try to find an exact title match for the specific term
+  let relevantArticle = articles.find(article => {
+    const title = (article.title || "").toLowerCase();
+    return title.includes(`what is ${exactTerm}`) || 
+           title.includes(`${exactTerm} in photography`);
+  });
   
-  // DEBUG: Log what we're working with
-  console.log(`🔍 generateDirectAnswer: Query="${query}"`);
-  console.log(`🔍 generateDirectAnswer: Articles count=${articles.length}`);
-  console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
-  
-  // PRIORITY 0: Course-specific equipment advice - MUST come first before any article searching
-  if ((lc.includes("equipment") && (lc.includes("course") || lc.includes("class") || lc.includes("lesson"))) ||
-      (lc.includes("beginners") && lc.includes("camera") && lc.includes("course"))) {
-    console.log(`🔧 Course-specific equipment advice triggered for: "${query}"`);
-    return `For Alan's photography courses, you'll need a digital camera with manual exposure modes (DSLR or mirrorless). Don't worry if you don't have expensive gear - even a smartphone can work for learning the fundamentals! The course focuses on understanding composition, lighting, and technique rather than having the latest equipment. Alan will provide a course book covering all topics.\n\n`;
-  }
-  
-  // PRIORITY 1: Extract from JSON-LD FAQ data in articles
-  if (exactTerm && articles.length > 0) {
-    // First, try to find an exact title match for the specific term
-    let relevantArticle = articles.find(article => {
-      const title = (article.title || "").toLowerCase();
-      return title.includes(`what is ${exactTerm}`) || 
-             title.includes(`${exactTerm} in photography`);
-    });
-    
-    // If no exact title match, fall back to URL match or any article with the term
-    if (!relevantArticle) {
-      relevantArticle = articles.find(article => {
+  // If no exact title match, fall back to URL match or any article with the term
+  if (!relevantArticle) {
+    relevantArticle = articles.find(article => {
       const title = (article.title || "").toLowerCase();
       const url = (article.page_url || article.url || "").toLowerCase();
       const jsonLd = article.json_ld_data;
       
-        return title.includes(`${exactTerm}`) ||
+      return title.includes(`${exactTerm}`) ||
              url.includes(`what-is-${exactTerm.replace(/\s+/g, "-")}`) ||
              (jsonLd && jsonLd.mainEntity && Array.isArray(jsonLd.mainEntity));
     });
-    }
+  }
+  
+  return relevantArticle;
+}
+
+function extractAnswerFromArticleDescription(relevantArticle) {
+  if (relevantArticle.description && relevantArticle.description.length > 50) {
+    console.log(`🔍 generateDirectAnswer: Using article description="${relevantArticle.description.substring(0, 200)}..."`);
+    return `**${relevantArticle.description}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
+  }
+  return null;
+}
+
+function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
+  if (!relevantArticle.json_ld_data || !relevantArticle.json_ld_data.mainEntity) {
+    return null;
+  }
+  
+  console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
+  
+  const faqItems = relevantArticle.json_ld_data.mainEntity;
+  const primaryQuestion = faqItems.find(item => {
+    const question = (item.name || "").toLowerCase();
+    return question.includes(exactTerm) && 
+           (question.includes("what does") || question.includes("what is"));
+  });
+  
+  if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
+    let answerText = primaryQuestion.acceptedAnswer.text;
     
-    if (relevantArticle) {
-      console.log(`🔍 generateDirectAnswer: Found relevant article="${relevantArticle.title}"`);
-      
-      // PRIORITY 1: Use article description first (most reliable)
-      if (relevantArticle.description && relevantArticle.description.length > 50) {
-        console.log(`🔍 generateDirectAnswer: Using article description="${relevantArticle.description.substring(0, 200)}..."`);
-        return `**${relevantArticle.description}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
-      }
-      
-      // PRIORITY 2: Fall back to JSON-LD FAQ data if no description
-      if (relevantArticle.json_ld_data && relevantArticle.json_ld_data.mainEntity) {
-        console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
-      
-      const faqItems = relevantArticle.json_ld_data.mainEntity;
-      const primaryQuestion = faqItems.find(item => {
-        const question = (item.name || "").toLowerCase();
-        return question.includes(exactTerm) && 
-               (question.includes("what does") || question.includes("what is"));
-      });
-      
-      if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
-        let answerText = primaryQuestion.acceptedAnswer.text;
-        
-        // Clean HTML tags from the answer
-        answerText = answerText.replace(/<[^>]*>/g, '').trim();
-        
-        // Clean up any remaining artifacts
-        answerText = answerText.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, '');
-        answerText = answerText.replace(/\* Next lesson:.*?\*\*/g, '');
-        
-        if (answerText.length > 50) {
-          console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
-          return `**${answerText}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
-          }
-        }
-      }
+    // Clean HTML tags from the answer
+    answerText = answerText.replace(/<[^>]*>/g, '').trim();
+    
+    // Clean up any remaining artifacts
+    answerText = answerText.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, '');
+    answerText = answerText.replace(/\* Next lesson:.*?\*\*/g, '');
+    
+    if (answerText.length > 50) {
+      console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
+      return `**${answerText}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
     }
   }
   
-  // PRIORITY 2: Extract from content chunks (existing logic)
-  const hasWord = (text, term) => {
-    if (!term) return false;
-    try {
-      const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const re = new RegExp(`\\b${esc}\\b`, "i");
-      return re.test(text || "");
+  return null;
+}
+
+function hasWord(text, term) {
+  if (!term) return false;
+  try {
+    const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`\\b${esc}\\b`, "i");
+    return re.test(text || "");
   } catch {
-      return (text || "").toLowerCase().includes((term || "").toLowerCase());
-    }
-  };
+    return (text || "").toLowerCase().includes((term || "").toLowerCase());
+  }
+}
+
+function filterCandidateChunks(exactTerm, contentChunks) {
+  if (!exactTerm) return contentChunks || [];
   
-  const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
-  const importantWords = queryWords.filter(w => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4));
-  
-  const slug = exactTerm ? exactTerm.replace(/\s+/g, "-") : null;
-  const candidateChunks = exactTerm ? (contentChunks || []).filter(c => {
+  const slug = exactTerm.replace(/\s+/g, "-");
+  return (contentChunks || []).filter(c => {
     const url = String(c.url||"").toLowerCase();
     const title = String(c.title||"").toLowerCase();
     const text = String(c.chunk_text||c.content||"").toLowerCase();
@@ -644,68 +640,111 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
       return false;
     }
     
-    return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm) || url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || text.includes(`what is ${exactTerm}`);
-  }) : (contentChunks || []);
+    return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm) || 
+           url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || 
+           text.includes(`what is ${exactTerm}`);
+  });
+}
+
+function scoreChunks(candidateChunks, queryWords, exactTerm) {
+  const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+  const importantWords = queryWords.filter(w => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4));
   
-  const scoredChunks = candidateChunks.map(chunk => {
+  return candidateChunks.map(chunk => {
     const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
     const title = (chunk.title || "").toLowerCase();
     const url = String(chunk.url || "").toLowerCase();
     let s = 0;
-    for (const w of importantWords) { if (hasWord(text,w)) s += 2; if (hasWord(title,w)) s += 3; if (hasWord(url,w)) s += 2; }
+    
+    for (const w of importantWords) { 
+      if (hasWord(text,w)) s += 2; 
+      if (hasWord(title,w)) s += 3; 
+      if (hasWord(url,w)) s += 2; 
+    }
+    
     if (exactTerm) {
       if (hasWord(text, exactTerm)) s += 6;
       if (hasWord(title, exactTerm)) s += 8;
       const slug = exactTerm.replace(/\s+/g, "-");
       if (url.includes(`/what-is-${slug}`)) s += 10;
     }
+    
     return { chunk, s };
   }).sort((a,b)=>b.s-a.s);
-  
+}
+
+function extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChunks) {
+  const candidateChunks = filterCandidateChunks(exactTerm, contentChunks);
+  const scoredChunks = scoreChunks(candidateChunks, queryWords, exactTerm);
   const relevantChunk = (scoredChunks.length ? scoredChunks[0].chunk : null);
   
   console.log(`🔍 generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
   
-  if (relevantChunk) {
-    let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
-    
-    // Remove metadata headers that start with [ARTICLE] or similar
-    chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
-    chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
-    
-    // SPECIAL CASE: Look for fitness level information first
-    if (lc.includes('fitness') || lc.includes('level')) {
-      console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
-      
-      const fitnessPatterns = [
-        /Fitness:\s*(\d+\.?\s*[^\\n]+)/i,           // "Fitness: 2. Easy-Moderate"
-        /Fitness\s*Level:\s*([^\\n]+)/i,            // "Fitness Level: Easy"
-        /Experience\s*-\s*Level:\s*([^\\n]+)/i,     // "Experience - Level: Beginner and Novice"
-        /Level:\s*([^\\n]+)/i,                      // "Level: Beginners"
-        /Fitness\s*Required:\s*([^\\n]+)/i,         // "Fitness Required: Easy"
-        /Physical\s*Level:\s*([^\\n]+)/i            // "Physical Level: Easy"
-      ];
-      
-      for (const pattern of fitnessPatterns) {
-        const match = chunkText.match(pattern);
-        console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
-        if (match && match[1]) {
-          const fitnessLevel = match[1].trim();
-          console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
-          return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
-        }
-      }
-      
-      // Fallback: look for common fitness level words in the chunk
-      const fitnessWords = ['easy', 'moderate', 'hard', 'beginner', 'intermediate', 'advanced', 'low', 'medium', 'high'];
-      const chunkTextLower = chunkText.toLowerCase();
-      const foundFitnessWord = fitnessWords.find(word => chunkTextLower.includes(word));
-      
-      if (foundFitnessWord) {
-        return `**The fitness level required is ${foundFitnessWord}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
-      }
+  if (!relevantChunk) return null;
+  
+  let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
+  
+  // Remove metadata headers that start with [ARTICLE] or similar
+  chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
+  chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
+  
+  // Check for fitness level information first
+  const fitnessAnswer = extractFitnessLevelAnswer(query, chunkText, relevantChunk);
+  if (fitnessAnswer) return fitnessAnswer;
+  
+  // Look for definitional sentences
+  const definitionAnswer = extractDefinitionSentence(chunkText, exactTerm, relevantChunk);
+  if (definitionAnswer) return definitionAnswer;
+  
+  // Look for relevant sentences
+  const sentenceAnswer = extractRelevantSentence(chunkText, queryWords, relevantChunk);
+  if (sentenceAnswer) return sentenceAnswer;
+  
+  // Look for relevant paragraphs
+  const paragraphAnswer = extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChunk);
+  if (paragraphAnswer) return paragraphAnswer;
+  
+  return null;
+}
+
+function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
+  const lc = query.toLowerCase();
+  if (!lc.includes('fitness') && !lc.includes('level')) return null;
+  
+  console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
+  
+  const fitnessPatterns = [
+    /Fitness:\s*(\d+\.?\s*[^\n]+)/i,           // "Fitness: 2. Easy-Moderate"
+    /Fitness\s*Level:\s*([^\n]+)/i,            // "Fitness Level: Easy"
+    /Experience\s*-\s*Level:\s*([^\n]+)/i,     // "Experience - Level: Beginner and Novice"
+    /Level:\s*([^\n]+)/i,                      // "Level: Beginners"
+    /Fitness\s*Required:\s*([^\n]+)/i,         // "Fitness Required: Easy"
+    /Physical\s*Level:\s*([^\n]+)/i            // "Physical Level: Easy"
+  ];
+  
+  for (const pattern of fitnessPatterns) {
+    const match = chunkText.match(pattern);
+    console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
+    if (match && match[1]) {
+      const fitnessLevel = match[1].trim();
+      console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
+      return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
     }
-    
+  }
+  
+  // Fallback: look for common fitness level words in the chunk
+  const fitnessWords = ['easy', 'moderate', 'hard', 'beginner', 'intermediate', 'advanced', 'low', 'medium', 'high'];
+  const chunkTextLower = chunkText.toLowerCase();
+  const foundFitnessWord = fitnessWords.find(word => chunkTextLower.includes(word));
+  
+  if (foundFitnessWord) {
+    return `**The fitness level required is ${foundFitnessWord}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+  }
+  
+  return null;
+}
+
+function extractDefinitionSentence(chunkText, exactTerm, relevantChunk) {
   // Prefer definitional sentences for core concepts
   const coreVerbs = [" is ", " means ", " stands for ", " controls ", " refers to "];
   const sentencesAll = chunkText.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
@@ -716,88 +755,90 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     return hasTerm && hasVerb && s.length >= 30 && s.length <= 220;
   });
     
-    if (defSentence) {
-      return `**${defSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
-    }
+  if (defSentence) {
+    return `**${defSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+  }
+  
+  return null;
+}
 
-    // Look for sentences that contain key terms from the query
-    const sentences = chunkText.split(/[.!?]+/).filter(s => s.trim().length > 20);
-    const relevantSentence = sentences.find(s => {
-      const sLower = s.toLowerCase();
-      const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
-      const importantWords = queryWords.filter(w => 
-        w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
-      );
-      return importantWords.some(word => sLower.includes(word)) && 
-             sLower.length > 30 && sLower.length < 200 && // Good length for a direct answer
-             !sLower.includes('[article]') && // Skip metadata
-             !sLower.includes('published:') && // Skip metadata
-             !sLower.includes('url:') && // Skip metadata
-             !sLower.includes('alan ranger photography') && // Skip navigation
-             !sLower.includes('%3a%2f%2f') && // Skip URL-encoded text
-             !sLower.includes('] 0 likes') && // Skip malformed text
-             !sLower.includes('sign in') && // Skip navigation
-             !sLower.includes('my account') && // Skip navigation
-             !sLower.includes('back ') && // Skip navigation
-             !sLower.includes('[/') && // Skip navigation links
-             !sLower.includes('cart 0'); // Skip navigation
-    });
-    
-    if (relevantSentence) {
-      return `**${relevantSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
-    }
-    
-    // Fallback: if no good sentence found, try to extract the first paragraph containing "what is <term>"
-    if (exactTerm) {
-      const byPara = chunkText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 50);
-      const para = byPara.find(p => p.toLowerCase().includes(`what is ${exactTerm}`) && p.length <= 300);
-      if (para) {
-        return `**${para.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
-      }
-    }
+function extractRelevantSentence(chunkText, queryWords, relevantChunk) {
+  // Look for sentences that contain key terms from the query
+  const sentences = chunkText.split(/[.!?]+/).filter(s => s.trim().length > 20);
+  const relevantSentence = sentences.find(s => {
+    const sLower = s.toLowerCase();
+    const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+    const importantWords = queryWords.filter(w => 
+      w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
+    );
+    return importantWords.some(word => sLower.includes(word)) && 
+           sLower.length > 30 && sLower.length < 200 && // Good length for a direct answer
+           !sLower.includes('[article]') && // Skip metadata
+           !sLower.includes('published:') && // Skip metadata
+           !sLower.includes('url:') && // Skip metadata
+           !sLower.includes('alan ranger photography') && // Skip navigation
+           !sLower.includes('%3a%2f%2f') && // Skip URL-encoded text
+           !sLower.includes('] 0 likes') && // Skip malformed text
+           !sLower.includes('sign in') && // Skip navigation
+           !sLower.includes('my account') && // Skip navigation
+           !sLower.includes('back ') && // Skip navigation
+           !sLower.includes('[/') && // Skip navigation links
+           !sLower.includes('cart 0'); // Skip navigation
+  });
+  
+  if (relevantSentence) {
+    return `**${relevantSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+  }
+  
+  return null;
+}
 
-    // Fallback: if no good sentence found, try to extract a relevant paragraph
-    const paragraphs = chunkText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
-    const relevantParagraph = paragraphs.find(p => {
-      const pLower = p.toLowerCase();
-      const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
-      const importantWords = queryWords.filter(w => 
-        w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
-      );
-      return importantWords.some(word => pLower.includes(word)) &&
-             !pLower.includes('[article]') &&
-             !pLower.includes('published:') &&
-             !pLower.includes('url:') &&
-             !pLower.includes('alan ranger photography');
-    });
-    
-    if (relevantParagraph && relevantParagraph.length < 300) {
-      return `**${relevantParagraph.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+function extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChunk) {
+  // Fallback: if no good sentence found, try to extract the first paragraph containing "what is <term>"
+  if (exactTerm) {
+    const byPara = chunkText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 50);
+    const para = byPara.find(p => p.toLowerCase().includes(`what is ${exactTerm}`) && p.length <= 300);
+    if (para) {
+      return `**${para.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
     }
   }
+
+  // Fallback: if no good sentence found, try to extract a relevant paragraph
+  const paragraphs = chunkText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
+  const relevantParagraph = paragraphs.find(p => {
+    const pLower = p.toLowerCase();
+    const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+    const importantWords = queryWords.filter(w => 
+      w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
+    );
+    return importantWords.some(word => pLower.includes(word)) &&
+           !pLower.includes('[article]') &&
+           !pLower.includes('published:') &&
+           !pLower.includes('url:') &&
+           !pLower.includes('alan ranger photography');
+  });
   
-  
-  // Enhanced Equipment Advice - Check if this is an equipment recommendation query
-  if (isEquipmentAdviceQuery(lc)) {
-    return generateEquipmentAdviceResponse(lc, articles, contentChunks);
+  if (relevantParagraph && relevantParagraph.length < 300) {
+    return `**${relevantParagraph.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
   }
   
-  // Camera recommendations
-  if (lc.includes("camera") && (lc.includes("need") || lc.includes("recommend"))) {
-    return `For photography courses, Alan recommends bringing any camera you have - even a smartphone can work for learning the fundamentals! The key is understanding composition, lighting, and technique rather than having expensive gear.\n\n`;
-  }
-  
-  // Certificate questions
-  if (lc.includes("certificate")) {
-    return `Alan's photography courses focus on practical learning and skill development. While formal certificates aren't typically provided, you'll gain valuable hands-on experience and knowledge that's much more valuable than a piece of paper.\n\n`;
-  }
-  
-  // Equipment questions
-  if (lc.includes("equipment") || lc.includes("gear") || lc.includes("laptop")) {
-    return `For most of Alan's courses, you don't need expensive equipment. A basic camera (even a smartphone) and enthusiasm to learn are the most important things. Alan will guide you on what works best for your specific needs.\n\n`;
-  }
-  
-  // Technical questions (JPEG vs RAW, exposure triangle, etc.)
+  return null;
+}
+
+// Helper functions for getHardcodedAnswer
+function getCameraAnswer() {
+  return `For photography courses, Alan recommends bringing any camera you have - even a smartphone can work for learning the fundamentals! The key is understanding composition, lighting, and technique rather than having expensive gear.\n\n`;
+}
+
+function getCertificateAnswer() {
+  return `Alan's photography courses focus on practical learning and skill development. While formal certificates aren't typically provided, you'll gain valuable hands-on experience and knowledge that's much more valuable than a piece of paper.\n\n`;
+}
+
+function getEquipmentAnswer() {
+  return `For most of Alan's courses, you don't need expensive equipment. A basic camera (even a smartphone) and enthusiasm to learn are the most important things. Alan will guide you on what works best for your specific needs.\n\n`;
+}
+
+function getTechnicalAnswers(lc) {
   if (lc.includes("jpeg") && lc.includes("raw")) {
     return `**JPEG vs RAW**: JPEG files are smaller and ready to use, while RAW files give you more editing flexibility but require post-processing. For beginners, JPEG is fine to start with, but RAW becomes valuable as you develop your editing skills.\n\n`;
   }
@@ -806,84 +847,169 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     return `**The Exposure Triangle** consists of three key settings:\n- **Aperture** (f-stop): Controls depth of field and light\n- **Shutter Speed**: Controls motion blur and light\n- **ISO**: Controls sensor sensitivity and light\n\nBalancing these three creates proper exposure.\n\n`;
   }
   
-  // Composition questions
   if (lc.includes("composition") || lc.includes("storytelling")) {
     return `Great composition is about leading the viewer's eye through your image. Key techniques include the rule of thirds, leading lines, framing, and creating visual balance. The goal is to tell a story or convey emotion through your arrangement of elements.\n\n`;
   }
   
-  // Filter questions
   if (lc.includes("filter") || lc.includes("nd filter")) {
     return `**ND (Neutral Density) filters** reduce light entering your camera, allowing for longer exposures. They're great for blurring water, creating motion effects, or shooting in bright conditions. **Graduated filters** help balance exposure between bright skies and darker foregrounds.\n\n`;
   }
   
-  // Depth of field questions
   if (lc.includes("depth of field")) {
     return `**Depth of field** is the area of your image that appears sharp. You control it with aperture: wider apertures (lower f-numbers) create shallow depth of field, while smaller apertures (higher f-numbers) keep more of the image in focus.\n\n`;
   }
   
-  // Sharpness questions
   if (lc.includes("sharp") || lc.includes("blurry")) {
     return `Sharp images come from proper technique: use a fast enough shutter speed to avoid camera shake, focus accurately, and use appropriate aperture settings. Tripods help with stability, and good lighting makes focusing easier.\n\n`;
   }
   
-  // Policy and Terms questions
+  return null;
+}
+
+function getPolicyAnswers(lc) {
   if (lc.includes("terms") || lc.includes("conditions") || lc.includes("policy")) {
     return `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated. For full details, visit the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   
-  // Contact information
   if (lc.includes("contact") || lc.includes("phone") || lc.includes("address") || lc.includes("email")) {
     return `**Contact Information**:\n- **Address**: 45 Hathaway Road, Coventry, CV4 9HW, United Kingdom\n- **Phone**: +44 781 701 7994\n- **Email**: info@alanranger.com\n- **Hours**: Monday-Sunday, 9am-5pm\n\n`;
   }
   
-  // Refund and cancellation policies
   if (lc.includes("refund") || lc.includes("cancel") || lc.includes("booking")) {
     return `**Booking and Cancellation**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions, public liability insurance, and CRB disclosure. Full details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   
-  // Insurance and qualifications
   if (lc.includes("insurance") || lc.includes("qualified") || lc.includes("professional")) {
     return `**Professional Qualifications**: Alan Ranger Photography has public liability insurance, professional indemnity insurance, CRB disclosure, and professional qualifications/accreditations. Full certificates and documentation are available on the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   
-  // Payment plans
   if (lc.includes("payment") && !lc.includes("voucher") && !lc.includes("gift")) {
     return `**Payment Plans**: Alan Ranger Photography offers "Pick N Mix" payment plans to help spread the cost of courses and workshops. Full terms and conditions for payment options are detailed in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   
-  // Privacy and data protection
   if (lc.includes("privacy") || lc.includes("data") || lc.includes("newsletter")) {
     return `**Privacy and Data Protection**: Alan Ranger Photography has comprehensive privacy and cookie policies. When you subscribe to the newsletter, you'll receive an email to verify and confirm your subscription. Full privacy details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
+  
+  return null;
+}
+
+function getServiceAnswers(lc) {
+  if (lc.includes("private") || lc.includes("mentoring") || lc.includes("1-2-1") || lc.includes("tuition")) {
+    return `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n`;
+  }
+  
+  if (lc.includes("voucher") || lc.includes("gift") || lc.includes("present")) {
+    return `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`;
+  }
+  
+  if (lc.includes("service") || lc.includes("what do you offer") || lc.includes("what services")) {
+    return `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations. [View All Services](https://www.alanranger.com/photography-tuition-services)\n\n`;
+  }
+  
+  return null;
+}
+
+function getAboutAnswers(lc) {
+  if (lc.includes("alan ranger") && (lc.includes("who") || lc.includes("background") || lc.includes("about"))) {
+    return `**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)\n\n`;
+  }
+  
+  if (lc.includes("ethical") || lc.includes("guidelines") || lc.includes("environmental") || lc.includes("carbon")) {
+    return `**Ethical Guidelines**: Alan Ranger Photography follows strict ethical policies focused on environmental consciousness and responsible education. The business maintains a carbon-neutral footprint through annual carbon impact assessments and offsetting projects. A tree is planted for every workshop place sold to help offset travel carbon footprint. Alan practices the Nature First code of ethics to ensure responsible custodianship of nature. Workshops are limited to 6 or fewer participants for personalised 1-2-1 time, with detailed itineraries including weather backups and health and safety prioritised. [View Ethical Policy](https://www.alanranger.com/my-ethical-policy)\n\n`;
+  }
+  
+  return null;
+}
+
+function getHardcodedAnswer(lc) {
+  // Camera recommendations
+  if (lc.includes("camera") && (lc.includes("need") || lc.includes("recommend"))) {
+    return getCameraAnswer();
+  }
+  
+  // Certificate questions
+  if (lc.includes("certificate")) {
+    return getCertificateAnswer();
+  }
+  
+  // Equipment questions
+  if (lc.includes("equipment") || lc.includes("gear") || lc.includes("laptop")) {
+    return getEquipmentAnswer();
+  }
+  
+  // Technical questions
+  const technicalAnswer = getTechnicalAnswers(lc);
+  if (technicalAnswer) return technicalAnswer;
+  
+  // Policy questions
+  const policyAnswer = getPolicyAnswers(lc);
+  if (policyAnswer) return policyAnswer;
+  
+  // Service questions
+  const serviceAnswer = getServiceAnswers(lc);
+  if (serviceAnswer) return serviceAnswer;
+  
+  // About questions
+  const aboutAnswer = getAboutAnswers(lc);
+  if (aboutAnswer) return aboutAnswer;
+  
+  return null;
+}
+
+function generateDirectAnswer(query, articles, contentChunks = []) {
+  const lc = (query || "").toLowerCase();
+  const queryWords = lc.split(" ").filter(w => w.length > 2);
+  const exactTerm = lc.replace(/^what\s+is\s+/, "").trim();
+  
+  // DEBUG: Log what we're working with
+  console.log(`🔍 generateDirectAnswer: Query="${query}"`);
+  console.log(`🔍 generateDirectAnswer: Articles count=${articles.length}`);
+  console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
+  
+  // PRIORITY 0: Course-specific equipment advice - MUST come first before any article searching
+  if (isCourseEquipmentQuery(lc)) {
+    console.log(`🔧 Course-specific equipment advice triggered for: "${query}"`);
+    return generateCourseEquipmentAnswer();
+  }
+  
+  // PRIORITY 1: Extract from JSON-LD FAQ data in articles
+  if (exactTerm && articles.length > 0) {
+    const relevantArticle = findRelevantArticleForTerm(exactTerm, articles);
+    
+    if (relevantArticle) {
+      console.log(`🔍 generateDirectAnswer: Found relevant article="${relevantArticle.title}"`);
+      
+      // PRIORITY 1: Use article description first (most reliable)
+      const descriptionAnswer = extractAnswerFromArticleDescription(relevantArticle);
+      if (descriptionAnswer) {
+        return descriptionAnswer;
+      }
+      
+      // PRIORITY 2: Fall back to JSON-LD FAQ data if no description
+      const jsonLdAnswer = extractAnswerFromJsonLd(relevantArticle, exactTerm);
+      if (jsonLdAnswer) {
+        return jsonLdAnswer;
+      }
+    }
+  }
+  
+  // PRIORITY 2: Extract from content chunks (existing logic)
+  const chunkAnswer = extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChunks);
+  if (chunkAnswer) {
+    return chunkAnswer;
+  }
+  
   
   // Enhanced Equipment Advice - Check if this is an equipment recommendation query
   if (isEquipmentAdviceQuery(lc)) {
     return generateEquipmentAdviceResponse(lc, articles, contentChunks);
   }
   
-  // Private lessons and mentoring
-  if (lc.includes("private") || lc.includes("mentoring") || lc.includes("1-2-1") || lc.includes("tuition")) {
-    return `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n`;
-  }
-  
-  // Gift vouchers (more detailed)
-  if (lc.includes("voucher") || lc.includes("gift") || lc.includes("present")) {
-    return `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`;
-  }
-  
-  // Services summary
-  if (lc.includes("service") || lc.includes("what do you offer") || lc.includes("what services")) {
-    return `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations. [View All Services](https://www.alanranger.com/photography-tuition-services)\n\n`;
-  }
-  
-  // About Alan and his background
-  if (lc.includes("alan ranger") && (lc.includes("who") || lc.includes("background") || lc.includes("about"))) {
-    return `**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)\n\n`;
-  }
-  
-  // Ethical guidelines and policies
-  if (lc.includes("ethical") || lc.includes("guidelines") || lc.includes("environmental") || lc.includes("carbon")) {
-    return `**Ethical Guidelines**: Alan Ranger Photography follows strict ethical policies focused on environmental consciousness and responsible education. The business maintains a carbon-neutral footprint through annual carbon impact assessments and offsetting projects. A tree is planted for every workshop place sold to help offset travel carbon footprint. Alan practices the Nature First code of ethics to ensure responsible custodianship of nature. Workshops are limited to 6 or fewer participants for personalised 1-2-1 time, with detailed itineraries including weather backups and health and safety prioritised. [View Ethical Policy](https://www.alanranger.com/my-ethical-policy)\n\n`;
+  // Check for hardcoded answers
+  const hardcodedAnswer = getHardcodedAnswer(lc);
+  if (hardcodedAnswer) {
+    return hardcodedAnswer;
   }
   
   // Return null if no specific answer can be generated
