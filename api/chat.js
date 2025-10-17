@@ -4678,6 +4678,14 @@ export default async function handler(req, res) {
       // TEMPORARY DEBUG: Force events to be non-empty to test if that's the issue
       if (events.length === 0) {
         console.log('🔍 DEBUG: events array is empty, this is the problem!');
+        // TEMPORARY FIX: Force events to have some data to test if that's the issue
+        events.push({
+          event_title: "Test Lightroom Course",
+          event_url: "https://www.alanranger.com/test-lightroom-course",
+          event_location: "Coventry",
+          date_start: "2025-11-01T10:00:00Z",
+          price_gbp: "£150"
+        });
       } else {
         console.log('🔍 DEBUG: events array has', events.length, 'events');
       }
