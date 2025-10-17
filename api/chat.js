@@ -1418,6 +1418,137 @@ function needsClarification(query) {
  * Generate clarification options from evidence buckets
  * Sources options from actual data instead of hardcoded patterns
  */
+// Helper functions for clarification options generation
+function extractEventTypesAndCategories(events) {
+  const eventTypes = new Set();
+  const eventCategories = new Set();
+  
+  events.forEach(event => {
+    // Extract event types from categories or CSV type
+    if (event.csv_type) {
+      eventTypes.add(event.csv_type.replace('_events', '').replace('_', ' '));
+    }
+    if (event.categories && Array.isArray(event.categories)) {
+      event.categories.forEach(cat => {
+        if (cat && cat.trim()) {
+          eventCategories.add(cat.trim());
+        }
+      });
+    }
+  });
+  
+  return { eventTypes, eventCategories };
+}
+
+function addEventOptions(options, eventTypes, eventCategories) {
+  // Add event-based options
+  eventTypes.forEach(type => {
+    const displayType = type.charAt(0).toUpperCase() + type.slice(1);
+    options.push({
+      text: `${displayType} events`,
+      query: `${type} events`
+    });
+  });
+  
+  eventCategories.forEach(category => {
+    if (category && category.length > 3) { // Avoid very short categories
+      options.push({
+        text: `${category} events`,
+        query: `${category} events`
+      });
+    }
+  });
+}
+
+function extractArticleCategoriesAndTags(articles) {
+  const articleCategories = new Set();
+  const articleTags = new Set();
+  
+  articles.forEach(article => {
+    if (article.categories && Array.isArray(article.categories)) {
+      article.categories.forEach(cat => {
+        if (cat && cat.trim()) {
+          articleCategories.add(cat.trim());
+        }
+      });
+    }
+    if (article.tags && Array.isArray(article.tags)) {
+      article.tags.forEach(tag => {
+        if (tag && tag.trim()) {
+          articleTags.add(tag.trim());
+        }
+      });
+    }
+  });
+  
+  return { articleCategories, articleTags };
+}
+
+function addArticleOptions(options, articleCategories, articleTags) {
+  // Add article-based options
+  articleCategories.forEach(category => {
+    if (category && category.length > 3) {
+      options.push({
+        text: `${category} advice`,
+        query: `${category} advice`
+      });
+    }
+  });
+  
+  // Add top tags as options
+  const topTags = Array.from(articleTags).slice(0, 3);
+  topTags.forEach(tag => {
+    if (tag && tag.length > 3) {
+      options.push({
+        text: `${tag} guidance`,
+        query: `${tag} guidance`
+      });
+    }
+  });
+}
+
+function extractServiceTypes(services) {
+  const serviceTypes = new Set();
+  
+  services.forEach(service => {
+    if (service.categories && Array.isArray(service.categories)) {
+      service.categories.forEach(cat => {
+        if (cat && cat.trim()) {
+          serviceTypes.add(cat.trim());
+        }
+      });
+    }
+  });
+  
+  return serviceTypes;
+}
+
+function addServiceOptions(options, serviceTypes) {
+  serviceTypes.forEach(type => {
+    if (type && type.length > 3) {
+      options.push({
+        text: `${type} services`,
+        query: `${type} services`
+      });
+    }
+  });
+}
+
+function deduplicateAndLimitOptions(options) {
+  const uniqueOptions = [];
+  const seen = new Set();
+  
+  options.forEach(option => {
+    const key = option.text.toLowerCase();
+    if (!seen.has(key) && uniqueOptions.length < 5) {
+      seen.add(key);
+      uniqueOptions.push(option);
+    }
+  });
+  
+  return uniqueOptions;
+}
+
 async function generateClarificationOptionsFromEvidence(client, query, pageContext) {
   try {
     const keywords = extractKeywords(query || "");
@@ -1427,124 +1558,23 @@ async function generateClarificationOptionsFromEvidence(client, query, pageConte
     
     // Generate options from events evidence
     if (evidence.events && evidence.events.length > 0) {
-      const eventTypes = new Set();
-      const eventCategories = new Set();
-      
-      evidence.events.forEach(event => {
-        // Extract event types from categories or CSV type
-        if (event.csv_type) {
-          eventTypes.add(event.csv_type.replace('_events', '').replace('_', ' '));
-        }
-        if (event.categories && Array.isArray(event.categories)) {
-          event.categories.forEach(cat => {
-            if (cat && cat.trim()) {
-              eventCategories.add(cat.trim());
-            }
-          });
-        }
-      });
-      
-      // Add event-based options
-      eventTypes.forEach(type => {
-        const displayType = type.charAt(0).toUpperCase() + type.slice(1);
-        options.push({
-          text: `${displayType} events`,
-          query: `${type} events`
-        });
-      });
-      
-      eventCategories.forEach(category => {
-        if (category && category.length > 3) { // Avoid very short categories
-          options.push({
-            text: `${category} events`,
-            query: `${category} events`
-          });
-        }
-      });
+      const { eventTypes, eventCategories } = extractEventTypesAndCategories(evidence.events);
+      addEventOptions(options, eventTypes, eventCategories);
     }
     
     // Generate options from articles evidence
     if (evidence.articles && evidence.articles.length > 0) {
-      const articleCategories = new Set();
-      const articleTags = new Set();
-      
-      evidence.articles.forEach(article => {
-        if (article.categories && Array.isArray(article.categories)) {
-          article.categories.forEach(cat => {
-            if (cat && cat.trim()) {
-              articleCategories.add(cat.trim());
-            }
-          });
-        }
-        if (article.tags && Array.isArray(article.tags)) {
-          article.tags.forEach(tag => {
-            if (tag && tag.trim()) {
-              articleTags.add(tag.trim());
-            }
-          });
-        }
-      });
-      
-      // Add article-based options
-      articleCategories.forEach(category => {
-        if (category && category.length > 3) {
-          options.push({
-            text: `${category} advice`,
-            query: `${category} advice`
-          });
-        }
-      });
-      
-      // Add top tags as options
-      const topTags = Array.from(articleTags).slice(0, 3);
-      topTags.forEach(tag => {
-        if (tag && tag.length > 3) {
-          options.push({
-            text: `${tag} guidance`,
-            query: `${tag} guidance`
-          });
-        }
-      });
+      const { articleCategories, articleTags } = extractArticleCategoriesAndTags(evidence.articles);
+      addArticleOptions(options, articleCategories, articleTags);
     }
     
     // Generate options from services evidence
     if (evidence.services && evidence.services.length > 0) {
-      const serviceTypes = new Set();
-      
-      evidence.services.forEach(service => {
-        if (service.categories && Array.isArray(service.categories)) {
-          service.categories.forEach(cat => {
-            if (cat && cat.trim()) {
-              serviceTypes.add(cat.trim());
-            }
-          });
-        }
-      });
-      
-      // Add service-based options
-      serviceTypes.forEach(type => {
-        if (type && type.length > 3) {
-          options.push({
-            text: `${type} services`,
-            query: `${type} services`
-          });
-        }
-      });
+      const serviceTypes = extractServiceTypes(evidence.services);
+      addServiceOptions(options, serviceTypes);
     }
     
-    // Remove duplicates and limit to 5 options
-    const uniqueOptions = [];
-    const seen = new Set();
-    
-    options.forEach(option => {
-      const key = option.text.toLowerCase();
-      if (!seen.has(key) && uniqueOptions.length < 5) {
-        seen.add(key);
-        uniqueOptions.push(option);
-      }
-    });
-    
-    return uniqueOptions;
+    return deduplicateAndLimitOptions(options);
   } catch (error) {
     console.error('Error generating clarification options from evidence:', error);
     return [];
