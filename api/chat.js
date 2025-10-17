@@ -533,97 +533,101 @@ function generateBasicEquipmentAdvice(equipmentType) {
   
   return response;
 }
-// Helper functions for generateDirectAnswer
-function isCourseEquipmentQuery(lc) {
-  return (lc.includes("equipment") && (lc.includes("course") || lc.includes("class") || lc.includes("lesson"))) ||
-         (lc.includes("beginners") && lc.includes("camera") && lc.includes("course"));
-}
-
-function generateCourseEquipmentAnswer() {
-  return `For Alan's photography courses, you'll need a digital camera with manual exposure modes (DSLR or mirrorless). Don't worry if you don't have expensive gear - even a smartphone can work for learning the fundamentals! The course focuses on understanding composition, lighting, and technique rather than having the latest equipment. Alan will provide a course book covering all topics.\n\n`;
-}
-
-function findRelevantArticleForTerm(exactTerm, articles) {
-  // First, try to find an exact title match for the specific term
-  let relevantArticle = articles.find(article => {
-    const title = (article.title || "").toLowerCase();
-    return title.includes(`what is ${exactTerm}`) || 
-           title.includes(`${exactTerm} in photography`);
-  });
+function generateDirectAnswer(query, articles, contentChunks = []) {
+  const lc = (query || "").toLowerCase();
+  const queryWords = lc.split(" ").filter(w => w.length > 2);
+  const exactTerm = lc.replace(/^what\s+is\s+/, "").trim();
   
-  // If no exact title match, fall back to URL match or any article with the term
-  if (!relevantArticle) {
-    relevantArticle = articles.find(article => {
+  // DEBUG: Log what we're working with
+  console.log(`🔍 generateDirectAnswer: Query="${query}"`);
+  console.log(`🔍 generateDirectAnswer: Articles count=${articles.length}`);
+  console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
+  
+  // PRIORITY 0: Course-specific equipment advice - MUST come first before any article searching
+  if ((lc.includes("equipment") && (lc.includes("course") || lc.includes("class") || lc.includes("lesson"))) ||
+      (lc.includes("beginners") && lc.includes("camera") && lc.includes("course"))) {
+    console.log(`🔧 Course-specific equipment advice triggered for: "${query}"`);
+    return `For Alan's photography courses, you'll need a digital camera with manual exposure modes (DSLR or mirrorless). Don't worry if you don't have expensive gear - even a smartphone can work for learning the fundamentals! The course focuses on understanding composition, lighting, and technique rather than having the latest equipment. Alan will provide a course book covering all topics.\n\n`;
+  }
+  
+  // PRIORITY 1: Extract from JSON-LD FAQ data in articles
+  if (exactTerm && articles.length > 0) {
+    // First, try to find an exact title match for the specific term
+    let relevantArticle = articles.find(article => {
+      const title = (article.title || "").toLowerCase();
+      return title.includes(`what is ${exactTerm}`) || 
+             title.includes(`${exactTerm} in photography`);
+    });
+    
+    // If no exact title match, fall back to URL match or any article with the term
+    if (!relevantArticle) {
+      relevantArticle = articles.find(article => {
       const title = (article.title || "").toLowerCase();
       const url = (article.page_url || article.url || "").toLowerCase();
       const jsonLd = article.json_ld_data;
       
-      return title.includes(`${exactTerm}`) ||
+        return title.includes(`${exactTerm}`) ||
              url.includes(`what-is-${exactTerm.replace(/\s+/g, "-")}`) ||
              (jsonLd && jsonLd.mainEntity && Array.isArray(jsonLd.mainEntity));
     });
-  }
-  
-  return relevantArticle;
-}
-
-function extractAnswerFromArticleDescription(relevantArticle) {
-  if (relevantArticle.description && relevantArticle.description.length > 50) {
-    console.log(`🔍 generateDirectAnswer: Using article description="${relevantArticle.description.substring(0, 200)}..."`);
-    return `**${relevantArticle.description}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
-  }
-  return null;
-}
-
-function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
-  if (!relevantArticle.json_ld_data || !relevantArticle.json_ld_data.mainEntity) {
-    return null;
-  }
-  
-  console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
-  
-  const faqItems = relevantArticle.json_ld_data.mainEntity;
-  const primaryQuestion = faqItems.find(item => {
-    const question = (item.name || "").toLowerCase();
-    return question.includes(exactTerm) && 
-           (question.includes("what does") || question.includes("what is"));
-  });
-  
-  if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
-    let answerText = primaryQuestion.acceptedAnswer.text;
+    }
     
-    // Clean HTML tags from the answer
-    answerText = answerText.replace(/<[^>]*>/g, '').trim();
-    
-    // Clean up any remaining artifacts
-    answerText = answerText.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, '');
-    answerText = answerText.replace(/\* Next lesson:.*?\*\*/g, '');
-    
-    if (answerText.length > 50) {
-      console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
-      return `**${answerText}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
+    if (relevantArticle) {
+      console.log(`🔍 generateDirectAnswer: Found relevant article="${relevantArticle.title}"`);
+      
+      // PRIORITY 1: Use article description first (most reliable)
+      if (relevantArticle.description && relevantArticle.description.length > 50) {
+        console.log(`🔍 generateDirectAnswer: Using article description="${relevantArticle.description.substring(0, 200)}..."`);
+        return `**${relevantArticle.description}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
+      }
+      
+      // PRIORITY 2: Fall back to JSON-LD FAQ data if no description
+      if (relevantArticle.json_ld_data && relevantArticle.json_ld_data.mainEntity) {
+        console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
+      
+      const faqItems = relevantArticle.json_ld_data.mainEntity;
+      const primaryQuestion = faqItems.find(item => {
+        const question = (item.name || "").toLowerCase();
+        return question.includes(exactTerm) && 
+               (question.includes("what does") || question.includes("what is"));
+      });
+      
+      if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
+        let answerText = primaryQuestion.acceptedAnswer.text;
+        
+        // Clean HTML tags from the answer
+        answerText = answerText.replace(/<[^>]*>/g, '').trim();
+        
+        // Clean up any remaining artifacts
+        answerText = answerText.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, '');
+        answerText = answerText.replace(/\* Next lesson:.*?\*\*/g, '');
+        
+        if (answerText.length > 50) {
+          console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
+          return `**${answerText}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
+          }
+        }
+      }
     }
   }
   
-  return null;
-}
-
-function hasWord(text, term) {
-  if (!term) return false;
-  try {
-    const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(`\\b${esc}\\b`, "i");
-    return re.test(text || "");
+  // PRIORITY 2: Extract from content chunks (existing logic)
+  const hasWord = (text, term) => {
+    if (!term) return false;
+    try {
+      const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\b${esc}\\b`, "i");
+      return re.test(text || "");
   } catch {
-    return (text || "").toLowerCase().includes((term || "").toLowerCase());
-  }
-}
-
-function filterCandidateChunks(exactTerm, contentChunks) {
-  if (!exactTerm) return contentChunks || [];
+      return (text || "").toLowerCase().includes((term || "").toLowerCase());
+    }
+  };
   
-  const slug = exactTerm.replace(/\s+/g, "-");
-  return (contentChunks || []).filter(c => {
+  const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+  const importantWords = queryWords.filter(w => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4));
+  
+  const slug = exactTerm ? exactTerm.replace(/\s+/g, "-") : null;
+  const candidateChunks = exactTerm ? (contentChunks || []).filter(c => {
     const url = String(c.url||"").toLowerCase();
     const title = String(c.title||"").toLowerCase();
     const text = String(c.chunk_text||c.content||"").toLowerCase();
@@ -640,111 +644,68 @@ function filterCandidateChunks(exactTerm, contentChunks) {
       return false;
     }
     
-    return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm) || 
-           url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || 
-           text.includes(`what is ${exactTerm}`);
-  });
-}
-
-function scoreChunks(candidateChunks, queryWords, exactTerm) {
-  const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
-  const importantWords = queryWords.filter(w => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4));
+    return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm) || url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || text.includes(`what is ${exactTerm}`);
+  }) : (contentChunks || []);
   
-  return candidateChunks.map(chunk => {
+  const scoredChunks = candidateChunks.map(chunk => {
     const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
     const title = (chunk.title || "").toLowerCase();
     const url = String(chunk.url || "").toLowerCase();
     let s = 0;
-    
-    for (const w of importantWords) { 
-      if (hasWord(text,w)) s += 2; 
-      if (hasWord(title,w)) s += 3; 
-      if (hasWord(url,w)) s += 2; 
-    }
-    
+    for (const w of importantWords) { if (hasWord(text,w)) s += 2; if (hasWord(title,w)) s += 3; if (hasWord(url,w)) s += 2; }
     if (exactTerm) {
       if (hasWord(text, exactTerm)) s += 6;
       if (hasWord(title, exactTerm)) s += 8;
       const slug = exactTerm.replace(/\s+/g, "-");
       if (url.includes(`/what-is-${slug}`)) s += 10;
     }
-    
     return { chunk, s };
   }).sort((a,b)=>b.s-a.s);
-}
-
-function extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChunks) {
-  const candidateChunks = filterCandidateChunks(exactTerm, contentChunks);
-  const scoredChunks = scoreChunks(candidateChunks, queryWords, exactTerm);
+  
   const relevantChunk = (scoredChunks.length ? scoredChunks[0].chunk : null);
   
   console.log(`🔍 generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
   
-  if (!relevantChunk) return null;
-  
-  let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
-  
-  // Remove metadata headers that start with [ARTICLE] or similar
-  chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
-  chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
-  
-  // Check for fitness level information first
-  const fitnessAnswer = extractFitnessLevelAnswer(query, chunkText, relevantChunk);
-  if (fitnessAnswer) return fitnessAnswer;
-  
-  // Look for definitional sentences
-  const definitionAnswer = extractDefinitionSentence(chunkText, exactTerm, relevantChunk);
-  if (definitionAnswer) return definitionAnswer;
-  
-  // Look for relevant sentences
-  const sentenceAnswer = extractRelevantSentence(chunkText, queryWords, relevantChunk);
-  if (sentenceAnswer) return sentenceAnswer;
-  
-  // Look for relevant paragraphs
-  const paragraphAnswer = extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChunk);
-  if (paragraphAnswer) return paragraphAnswer;
-  
-  return null;
-}
-
-function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
-  const lc = query.toLowerCase();
-  if (!lc.includes('fitness') && !lc.includes('level')) return null;
-  
-  console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
-  
-  const fitnessPatterns = [
-    /Fitness:\s*(\d+\.?\s*[^\n]+)/i,           // "Fitness: 2. Easy-Moderate"
-    /Fitness\s*Level:\s*([^\n]+)/i,            // "Fitness Level: Easy"
-    /Experience\s*-\s*Level:\s*([^\n]+)/i,     // "Experience - Level: Beginner and Novice"
-    /Level:\s*([^\n]+)/i,                      // "Level: Beginners"
-    /Fitness\s*Required:\s*([^\n]+)/i,         // "Fitness Required: Easy"
-    /Physical\s*Level:\s*([^\n]+)/i            // "Physical Level: Easy"
-  ];
-  
-  for (const pattern of fitnessPatterns) {
-    const match = chunkText.match(pattern);
-    console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
-    if (match && match[1]) {
-      const fitnessLevel = match[1].trim();
-      console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
-      return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+  if (relevantChunk) {
+    let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
+    
+    // Remove metadata headers that start with [ARTICLE] or similar
+    chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
+    chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
+    
+    // SPECIAL CASE: Look for fitness level information first
+    if (lc.includes('fitness') || lc.includes('level')) {
+      console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
+      
+      const fitnessPatterns = [
+        /Fitness:\s*(\d+\.?\s*[^\\n]+)/i,           // "Fitness: 2. Easy-Moderate"
+        /Fitness\s*Level:\s*([^\\n]+)/i,            // "Fitness Level: Easy"
+        /Experience\s*-\s*Level:\s*([^\\n]+)/i,     // "Experience - Level: Beginner and Novice"
+        /Level:\s*([^\\n]+)/i,                      // "Level: Beginners"
+        /Fitness\s*Required:\s*([^\\n]+)/i,         // "Fitness Required: Easy"
+        /Physical\s*Level:\s*([^\\n]+)/i            // "Physical Level: Easy"
+      ];
+      
+      for (const pattern of fitnessPatterns) {
+        const match = chunkText.match(pattern);
+        console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
+        if (match && match[1]) {
+          const fitnessLevel = match[1].trim();
+          console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
+          return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+        }
+      }
+      
+      // Fallback: look for common fitness level words in the chunk
+      const fitnessWords = ['easy', 'moderate', 'hard', 'beginner', 'intermediate', 'advanced', 'low', 'medium', 'high'];
+      const chunkTextLower = chunkText.toLowerCase();
+      const foundFitnessWord = fitnessWords.find(word => chunkTextLower.includes(word));
+      
+      if (foundFitnessWord) {
+        return `**The fitness level required is ${foundFitnessWord}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+      }
     }
-  }
-  
-  // Fallback: look for common fitness level words in the chunk
-  const fitnessWords = ['easy', 'moderate', 'hard', 'beginner', 'intermediate', 'advanced', 'low', 'medium', 'high'];
-  const chunkTextLower = chunkText.toLowerCase();
-  const foundFitnessWord = fitnessWords.find(word => chunkTextLower.includes(word));
-  
-  if (foundFitnessWord) {
-    return `**The fitness level required is ${foundFitnessWord}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
-  }
-  
-  return null;
-}
-
-function extractDefinitionSentence(chunkText, exactTerm, relevantChunk) {
+    
   // Prefer definitional sentences for core concepts
   const coreVerbs = [" is ", " means ", " stands for ", " controls ", " refers to "];
   const sentencesAll = chunkText.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
@@ -755,249 +716,64 @@ function extractDefinitionSentence(chunkText, exactTerm, relevantChunk) {
     return hasTerm && hasVerb && s.length >= 30 && s.length <= 220;
   });
     
-  if (defSentence) {
-    return `**${defSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
-  }
-  
-  return null;
-}
-
-function extractRelevantSentence(chunkText, queryWords, relevantChunk) {
-  // Look for sentences that contain key terms from the query
-  const sentences = chunkText.split(/[.!?]+/).filter(s => s.trim().length > 20);
-  const relevantSentence = sentences.find(s => {
-    const sLower = s.toLowerCase();
-    const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
-    const importantWords = queryWords.filter(w => 
-      w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
-    );
-    return importantWords.some(word => sLower.includes(word)) && 
-           sLower.length > 30 && sLower.length < 200 && // Good length for a direct answer
-           !sLower.includes('[article]') && // Skip metadata
-           !sLower.includes('published:') && // Skip metadata
-           !sLower.includes('url:') && // Skip metadata
-           !sLower.includes('alan ranger photography') && // Skip navigation
-           !sLower.includes('%3a%2f%2f') && // Skip URL-encoded text
-           !sLower.includes('] 0 likes') && // Skip malformed text
-           !sLower.includes('sign in') && // Skip navigation
-           !sLower.includes('my account') && // Skip navigation
-           !sLower.includes('back ') && // Skip navigation
-           !sLower.includes('[/') && // Skip navigation links
-           !sLower.includes('cart 0'); // Skip navigation
-  });
-  
-  if (relevantSentence) {
-    return `**${relevantSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
-  }
-  
-  return null;
-}
-
-function extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChunk) {
-  // Fallback: if no good sentence found, try to extract the first paragraph containing "what is <term>"
-  if (exactTerm) {
-    const byPara = chunkText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 50);
-    const para = byPara.find(p => p.toLowerCase().includes(`what is ${exactTerm}`) && p.length <= 300);
-    if (para) {
-      return `**${para.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+    if (defSentence) {
+      return `**${defSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
     }
-  }
 
-  // Fallback: if no good sentence found, try to extract a relevant paragraph
-  const paragraphs = chunkText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
-  const relevantParagraph = paragraphs.find(p => {
-    const pLower = p.toLowerCase();
-    const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
-    const importantWords = queryWords.filter(w => 
-      w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
-    );
-    return importantWords.some(word => pLower.includes(word)) &&
-           !pLower.includes('[article]') &&
-           !pLower.includes('published:') &&
-           !pLower.includes('url:') &&
-           !pLower.includes('alan ranger photography');
-  });
-  
-  if (relevantParagraph && relevantParagraph.length < 300) {
-    return `**${relevantParagraph.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
-  }
-  
-  return null;
-}
-
-// Helper functions for getHardcodedAnswer
-function getCameraAnswer() {
-  return `For photography courses, Alan recommends bringing any camera you have - even a smartphone can work for learning the fundamentals! The key is understanding composition, lighting, and technique rather than having expensive gear.\n\n`;
-}
-
-function getCertificateAnswer() {
-  return `Alan's photography courses focus on practical learning and skill development. While formal certificates aren't typically provided, you'll gain valuable hands-on experience and knowledge that's much more valuable than a piece of paper.\n\n`;
-}
-
-function getEquipmentAnswer() {
-  return `For most of Alan's courses, you don't need expensive equipment. A basic camera (even a smartphone) and enthusiasm to learn are the most important things. Alan will guide you on what works best for your specific needs.\n\n`;
-}
-
-function getTechnicalAnswers(lc) {
-  if (lc.includes("jpeg") && lc.includes("raw")) {
-    return `**JPEG vs RAW**: JPEG files are smaller and ready to use, while RAW files give you more editing flexibility but require post-processing. For beginners, JPEG is fine to start with, but RAW becomes valuable as you develop your editing skills.\n\n`;
-  }
-  
-  if (lc.includes("exposure triangle")) {
-    return `**The Exposure Triangle** consists of three key settings:\n- **Aperture** (f-stop): Controls depth of field and light\n- **Shutter Speed**: Controls motion blur and light\n- **ISO**: Controls sensor sensitivity and light\n\nBalancing these three creates proper exposure.\n\n`;
-  }
-  
-  if (lc.includes("composition") || lc.includes("storytelling")) {
-    return `Great composition is about leading the viewer's eye through your image. Key techniques include the rule of thirds, leading lines, framing, and creating visual balance. The goal is to tell a story or convey emotion through your arrangement of elements.\n\n`;
-  }
-  
-  if (lc.includes("filter") || lc.includes("nd filter")) {
-    return `**ND (Neutral Density) filters** reduce light entering your camera, allowing for longer exposures. They're great for blurring water, creating motion effects, or shooting in bright conditions. **Graduated filters** help balance exposure between bright skies and darker foregrounds.\n\n`;
-  }
-  
-  if (lc.includes("depth of field")) {
-    return `**Depth of field** is the area of your image that appears sharp. You control it with aperture: wider apertures (lower f-numbers) create shallow depth of field, while smaller apertures (higher f-numbers) keep more of the image in focus.\n\n`;
-  }
-  
-  if (lc.includes("sharp") || lc.includes("blurry")) {
-    return `Sharp images come from proper technique: use a fast enough shutter speed to avoid camera shake, focus accurately, and use appropriate aperture settings. Tripods help with stability, and good lighting makes focusing easier.\n\n`;
-  }
-  
-  return null;
-}
-
-function getPolicyAnswers(lc) {
-  if (lc.includes("terms") || lc.includes("conditions") || lc.includes("policy")) {
-    return `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated. For full details, visit the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
-  }
-  
-  if (lc.includes("contact") || lc.includes("phone") || lc.includes("address") || lc.includes("email")) {
-    return `**Contact Information**:\n- **Address**: 45 Hathaway Road, Coventry, CV4 9HW, United Kingdom\n- **Phone**: +44 781 701 7994\n- **Email**: info@alanranger.com\n- **Hours**: Monday-Sunday, 9am-5pm\n\n`;
-  }
-  
-  if (lc.includes("refund") || lc.includes("cancel") || lc.includes("booking")) {
-    return `**Booking and Cancellation**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions, public liability insurance, and CRB disclosure. Full details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
-  }
-  
-  if (lc.includes("insurance") || lc.includes("qualified") || lc.includes("professional")) {
-    return `**Professional Qualifications**: Alan Ranger Photography has public liability insurance, professional indemnity insurance, CRB disclosure, and professional qualifications/accreditations. Full certificates and documentation are available on the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
-  }
-  
-  if (lc.includes("payment") && !lc.includes("voucher") && !lc.includes("gift")) {
-    return `**Payment Plans**: Alan Ranger Photography offers "Pick N Mix" payment plans to help spread the cost of courses and workshops. Full terms and conditions for payment options are detailed in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
-  }
-  
-  if (lc.includes("privacy") || lc.includes("data") || lc.includes("newsletter")) {
-    return `**Privacy and Data Protection**: Alan Ranger Photography has comprehensive privacy and cookie policies. When you subscribe to the newsletter, you'll receive an email to verify and confirm your subscription. Full privacy details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
-  }
-  
-  return null;
-}
-
-function getServiceAnswers(lc) {
-  if (lc.includes("private") || lc.includes("mentoring") || lc.includes("1-2-1") || lc.includes("tuition")) {
-    return `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n`;
-  }
-  
-  if (lc.includes("voucher") || lc.includes("gift") || lc.includes("present")) {
-    return `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`;
-  }
-  
-  if (lc.includes("service") || lc.includes("what do you offer") || lc.includes("what services")) {
-    return `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations. [View All Services](https://www.alanranger.com/photography-tuition-services)\n\n`;
-  }
-  
-  return null;
-}
-
-function getAboutAnswers(lc) {
-  if (lc.includes("alan ranger") && (lc.includes("who") || lc.includes("background") || lc.includes("about"))) {
-    return `**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)\n\n`;
-  }
-  
-  if (lc.includes("ethical") || lc.includes("guidelines") || lc.includes("environmental") || lc.includes("carbon")) {
-    return `**Ethical Guidelines**: Alan Ranger Photography follows strict ethical policies focused on environmental consciousness and responsible education. The business maintains a carbon-neutral footprint through annual carbon impact assessments and offsetting projects. A tree is planted for every workshop place sold to help offset travel carbon footprint. Alan practices the Nature First code of ethics to ensure responsible custodianship of nature. Workshops are limited to 6 or fewer participants for personalised 1-2-1 time, with detailed itineraries including weather backups and health and safety prioritised. [View Ethical Policy](https://www.alanranger.com/my-ethical-policy)\n\n`;
-  }
-  
-  return null;
-}
-
-function getHardcodedAnswer(lc) {
-  // Camera recommendations
-  if (lc.includes("camera") && (lc.includes("need") || lc.includes("recommend"))) {
-    return getCameraAnswer();
-  }
-  
-  // Certificate questions
-  if (lc.includes("certificate")) {
-    return getCertificateAnswer();
-  }
-  
-  // Equipment questions
-  if (lc.includes("equipment") || lc.includes("gear") || lc.includes("laptop")) {
-    return getEquipmentAnswer();
-  }
-  
-  // Technical questions
-  const technicalAnswer = getTechnicalAnswers(lc);
-  if (technicalAnswer) return technicalAnswer;
-  
-  // Policy questions
-  const policyAnswer = getPolicyAnswers(lc);
-  if (policyAnswer) return policyAnswer;
-  
-  // Service questions
-  const serviceAnswer = getServiceAnswers(lc);
-  if (serviceAnswer) return serviceAnswer;
-  
-  // About questions
-  const aboutAnswer = getAboutAnswers(lc);
-  if (aboutAnswer) return aboutAnswer;
-  
-  return null;
-}
-
-function generateDirectAnswer(query, articles, contentChunks = []) {
-  const lc = (query || "").toLowerCase();
-  const queryWords = lc.split(" ").filter(w => w.length > 2);
-  const exactTerm = lc.replace(/^what\s+is\s+/, "").trim();
-  
-  // DEBUG: Log what we're working with
-  console.log(`🔍 generateDirectAnswer: Query="${query}"`);
-  console.log(`🔍 generateDirectAnswer: Articles count=${articles.length}`);
-  console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
-  
-  // PRIORITY 0: Course-specific equipment advice - MUST come first before any article searching
-  if (isCourseEquipmentQuery(lc)) {
-    console.log(`🔧 Course-specific equipment advice triggered for: "${query}"`);
-    return generateCourseEquipmentAnswer();
-  }
-  
-  // PRIORITY 1: Extract from JSON-LD FAQ data in articles
-  if (exactTerm && articles.length > 0) {
-    const relevantArticle = findRelevantArticleForTerm(exactTerm, articles);
+    // Look for sentences that contain key terms from the query
+    const sentences = chunkText.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    const relevantSentence = sentences.find(s => {
+      const sLower = s.toLowerCase();
+      const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+      const importantWords = queryWords.filter(w => 
+        w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
+      );
+      return importantWords.some(word => sLower.includes(word)) && 
+             sLower.length > 30 && sLower.length < 200 && // Good length for a direct answer
+             !sLower.includes('[article]') && // Skip metadata
+             !sLower.includes('published:') && // Skip metadata
+             !sLower.includes('url:') && // Skip metadata
+             !sLower.includes('alan ranger photography') && // Skip navigation
+             !sLower.includes('%3a%2f%2f') && // Skip URL-encoded text
+             !sLower.includes('] 0 likes') && // Skip malformed text
+             !sLower.includes('sign in') && // Skip navigation
+             !sLower.includes('my account') && // Skip navigation
+             !sLower.includes('back ') && // Skip navigation
+             !sLower.includes('[/') && // Skip navigation links
+             !sLower.includes('cart 0'); // Skip navigation
+    });
     
-    if (relevantArticle) {
-      console.log(`🔍 generateDirectAnswer: Found relevant article="${relevantArticle.title}"`);
-      
-      // PRIORITY 1: Use article description first (most reliable)
-      const descriptionAnswer = extractAnswerFromArticleDescription(relevantArticle);
-      if (descriptionAnswer) {
-        return descriptionAnswer;
-      }
-      
-      // PRIORITY 2: Fall back to JSON-LD FAQ data if no description
-      const jsonLdAnswer = extractAnswerFromJsonLd(relevantArticle, exactTerm);
-      if (jsonLdAnswer) {
-        return jsonLdAnswer;
+    if (relevantSentence) {
+      return `**${relevantSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+    }
+    
+    // Fallback: if no good sentence found, try to extract the first paragraph containing "what is <term>"
+    if (exactTerm) {
+      const byPara = chunkText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 50);
+      const para = byPara.find(p => p.toLowerCase().includes(`what is ${exactTerm}`) && p.length <= 300);
+      if (para) {
+        return `**${para.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
       }
     }
-  }
-  
-  // PRIORITY 2: Extract from content chunks (existing logic)
-  const chunkAnswer = extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChunks);
-  if (chunkAnswer) {
-    return chunkAnswer;
+
+    // Fallback: if no good sentence found, try to extract a relevant paragraph
+    const paragraphs = chunkText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
+    const relevantParagraph = paragraphs.find(p => {
+      const pLower = p.toLowerCase();
+      const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+      const importantWords = queryWords.filter(w => 
+        w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
+      );
+      return importantWords.some(word => pLower.includes(word)) &&
+             !pLower.includes('[article]') &&
+             !pLower.includes('published:') &&
+             !pLower.includes('url:') &&
+             !pLower.includes('alan ranger photography');
+    });
+    
+    if (relevantParagraph && relevantParagraph.length < 300) {
+      return `**${relevantParagraph.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+    }
   }
   
   
@@ -1006,10 +782,108 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
     return generateEquipmentAdviceResponse(lc, articles, contentChunks);
   }
   
-  // Check for hardcoded answers
-  const hardcodedAnswer = getHardcodedAnswer(lc);
-  if (hardcodedAnswer) {
-    return hardcodedAnswer;
+  // Camera recommendations
+  if (lc.includes("camera") && (lc.includes("need") || lc.includes("recommend"))) {
+    return `For photography courses, Alan recommends bringing any camera you have - even a smartphone can work for learning the fundamentals! The key is understanding composition, lighting, and technique rather than having expensive gear.\n\n`;
+  }
+  
+  // Certificate questions
+  if (lc.includes("certificate")) {
+    return `Alan's photography courses focus on practical learning and skill development. While formal certificates aren't typically provided, you'll gain valuable hands-on experience and knowledge that's much more valuable than a piece of paper.\n\n`;
+  }
+  
+  // Equipment questions
+  if (lc.includes("equipment") || lc.includes("gear") || lc.includes("laptop")) {
+    return `For most of Alan's courses, you don't need expensive equipment. A basic camera (even a smartphone) and enthusiasm to learn are the most important things. Alan will guide you on what works best for your specific needs.\n\n`;
+  }
+  
+  // Technical questions (JPEG vs RAW, exposure triangle, etc.)
+  if (lc.includes("jpeg") && lc.includes("raw")) {
+    return `**JPEG vs RAW**: JPEG files are smaller and ready to use, while RAW files give you more editing flexibility but require post-processing. For beginners, JPEG is fine to start with, but RAW becomes valuable as you develop your editing skills.\n\n`;
+  }
+  
+  if (lc.includes("exposure triangle")) {
+    return `**The Exposure Triangle** consists of three key settings:\n- **Aperture** (f-stop): Controls depth of field and light\n- **Shutter Speed**: Controls motion blur and light\n- **ISO**: Controls sensor sensitivity and light\n\nBalancing these three creates proper exposure.\n\n`;
+  }
+  
+  // Composition questions
+  if (lc.includes("composition") || lc.includes("storytelling")) {
+    return `Great composition is about leading the viewer's eye through your image. Key techniques include the rule of thirds, leading lines, framing, and creating visual balance. The goal is to tell a story or convey emotion through your arrangement of elements.\n\n`;
+  }
+  
+  // Filter questions
+  if (lc.includes("filter") || lc.includes("nd filter")) {
+    return `**ND (Neutral Density) filters** reduce light entering your camera, allowing for longer exposures. They're great for blurring water, creating motion effects, or shooting in bright conditions. **Graduated filters** help balance exposure between bright skies and darker foregrounds.\n\n`;
+  }
+  
+  // Depth of field questions
+  if (lc.includes("depth of field")) {
+    return `**Depth of field** is the area of your image that appears sharp. You control it with aperture: wider apertures (lower f-numbers) create shallow depth of field, while smaller apertures (higher f-numbers) keep more of the image in focus.\n\n`;
+  }
+  
+  // Sharpness questions
+  if (lc.includes("sharp") || lc.includes("blurry")) {
+    return `Sharp images come from proper technique: use a fast enough shutter speed to avoid camera shake, focus accurately, and use appropriate aperture settings. Tripods help with stability, and good lighting makes focusing easier.\n\n`;
+  }
+  
+  // Policy and Terms questions
+  if (lc.includes("terms") || lc.includes("conditions") || lc.includes("policy")) {
+    return `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated. For full details, visit the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  }
+  
+  // Contact information
+  if (lc.includes("contact") || lc.includes("phone") || lc.includes("address") || lc.includes("email")) {
+    return `**Contact Information**:\n- **Address**: 45 Hathaway Road, Coventry, CV4 9HW, United Kingdom\n- **Phone**: +44 781 701 7994\n- **Email**: info@alanranger.com\n- **Hours**: Monday-Sunday, 9am-5pm\n\n`;
+  }
+  
+  // Refund and cancellation policies
+  if (lc.includes("refund") || lc.includes("cancel") || lc.includes("booking")) {
+    return `**Booking and Cancellation**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions, public liability insurance, and CRB disclosure. Full details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  }
+  
+  // Insurance and qualifications
+  if (lc.includes("insurance") || lc.includes("qualified") || lc.includes("professional")) {
+    return `**Professional Qualifications**: Alan Ranger Photography has public liability insurance, professional indemnity insurance, CRB disclosure, and professional qualifications/accreditations. Full certificates and documentation are available on the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  }
+  
+  // Payment plans
+  if (lc.includes("payment") && !lc.includes("voucher") && !lc.includes("gift")) {
+    return `**Payment Plans**: Alan Ranger Photography offers "Pick N Mix" payment plans to help spread the cost of courses and workshops. Full terms and conditions for payment options are detailed in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  }
+  
+  // Privacy and data protection
+  if (lc.includes("privacy") || lc.includes("data") || lc.includes("newsletter")) {
+    return `**Privacy and Data Protection**: Alan Ranger Photography has comprehensive privacy and cookie policies. When you subscribe to the newsletter, you'll receive an email to verify and confirm your subscription. Full privacy details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
+  }
+  
+  // Enhanced Equipment Advice - Check if this is an equipment recommendation query
+  if (isEquipmentAdviceQuery(lc)) {
+    return generateEquipmentAdviceResponse(lc, articles, contentChunks);
+  }
+  
+  // Private lessons and mentoring
+  if (lc.includes("private") || lc.includes("mentoring") || lc.includes("1-2-1") || lc.includes("tuition")) {
+    return `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n`;
+  }
+  
+  // Gift vouchers (more detailed)
+  if (lc.includes("voucher") || lc.includes("gift") || lc.includes("present")) {
+    return `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`;
+  }
+  
+  // Services summary
+  if (lc.includes("service") || lc.includes("what do you offer") || lc.includes("what services")) {
+    return `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations. [View All Services](https://www.alanranger.com/photography-tuition-services)\n\n`;
+  }
+  
+  // About Alan and his background
+  if (lc.includes("alan ranger") && (lc.includes("who") || lc.includes("background") || lc.includes("about"))) {
+    return `**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)\n\n`;
+  }
+  
+  // Ethical guidelines and policies
+  if (lc.includes("ethical") || lc.includes("guidelines") || lc.includes("environmental") || lc.includes("carbon")) {
+    return `**Ethical Guidelines**: Alan Ranger Photography follows strict ethical policies focused on environmental consciousness and responsible education. The business maintains a carbon-neutral footprint through annual carbon impact assessments and offsetting projects. A tree is planted for every workshop place sold to help offset travel carbon footprint. Alan practices the Nature First code of ethics to ensure responsible custodianship of nature. Workshops are limited to 6 or fewer participants for personalised 1-2-1 time, with detailed itineraries including weather backups and health and safety prioritised. [View Ethical Policy](https://www.alanranger.com/my-ethical-policy)\n\n`;
   }
   
   // Return null if no specific answer can be generated
@@ -1144,58 +1018,6 @@ function extractKeywords(q) {
   return Array.from(kws);
 }
 
-// Helper functions for intent detection
-function isFollowUpQuestion(lc) {
-  const followUpQuestions = [
-    "how much", "cost", "price", "where", "location", "when", "date",
-    "how many", "people", "attend", "fitness", "level", "duration", "long",
-    "how do i book", "book", "booking", "required", "needed", "suitable"
-  ];
-  return followUpQuestions.some(word => lc.includes(word));
-}
-
-function hasWorkshopMention(lc) {
-  return lc.includes("workshop");
-}
-
-function isSpecificCourseQuery(lc) {
-  return lc.includes("course") || lc.includes("class") || lc.includes("lesson");
-}
-
-function isEquipmentQuery(lc) {
-  const equipmentKeywords = [
-    "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
-    "need", "require", "recommend", "advise", "help", "wrong", "problem"
-  ];
-  return equipmentKeywords.some(word => lc.includes(word));
-}
-
-function isServiceQuery(lc) {
-  return (
-    lc.includes("private") && (lc.includes("lesson") || lc.includes("class")) ||
-    lc.includes("online") && (lc.includes("course") || lc.includes("lesson")) ||
-    lc.includes("mentoring") ||
-    lc.includes("1-2-1") || lc.includes("1-to-1") || lc.includes("one-to-one")
-  );
-}
-
-function isTechnicalQuery(lc) {
-  const technicalKeywords = [
-    "free", "online", "sort of", "what do i", "do i need", "get a",
-    "what is", "what are", "how does", "explain", "define", "meaning",
-    "training", "mentoring", "tutoring"
-  ];
-  return technicalKeywords.some(word => lc.includes(word));
-}
-
-function isAboutQuery(lc) {
-  return lc.includes("about");
-}
-
-function isGeneralQuery(lc) {
-  return lc.includes("general") || lc.includes("help");
-}
-
 function detectIntent(q) {
   const lc = (q || "").toLowerCase();
   
@@ -1206,14 +1028,21 @@ function detectIntent(q) {
   }
   
   // Check for course/class queries
-  const mentionsCourse = isSpecificCourseQuery(lc);
-  const mentionsWorkshop = hasWorkshopMention(lc);
+  const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
+  const mentionsWorkshop = lc.includes("workshop");
   
   // Check for event-style questions (dates/times/locations)
   const hasEventWord = EVENT_HINTS.some((w) => lc.includes(w));
   
   // PRIORITY: Flexible services should be treated as advice, not events
-  if (isServiceQuery(lc)) {
+  const isFlexibleService = (
+    lc.includes("private") && (lc.includes("lesson") || lc.includes("class")) ||
+    lc.includes("online") && (lc.includes("course") || lc.includes("lesson")) ||
+    lc.includes("mentoring") ||
+    lc.includes("1-2-1") || lc.includes("1-to-1") || lc.includes("one-to-one")
+  );
+  
+  if (isFlexibleService) {
     return "advice"; // Flexible services need cross-entity search (products + services + articles)
   }
   
@@ -1224,24 +1053,38 @@ function detectIntent(q) {
   }
   
   // ADVICE keywords
-  if (isEquipmentQuery(lc) || isTechnicalQuery(lc)) {
+  const adviceKeywords = [
+    "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
+    "need", "require", "recommend", "advise", "help", "wrong", "problem",
+    "free", "online", "sort of", "what do i", "do i need", "get a",
+    "what is", "what are", "how does", "explain", "define", "meaning",
+    "training", "mentoring", "tutoring"
+  ];
+  if (adviceKeywords.some(word => lc.includes(word))) {
     return "advice";
   }
   
   // heuristic: if question starts with "when/where" + includes 'workshop' → events
   if (/^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop) return "events";
   
+  // Handle follow-up questions for events (price, location, etc.) - ENHANCED LOGIC
+  const followUpQuestions = [
+    "how much", "cost", "price", "where", "location", "when", "date",
+    "how many", "people", "attend", "fitness", "level", "duration", "long",
+    "how do i book", "book", "booking", "required", "needed", "suitable"
+  ];
+  
   // Check if this is a follow-up question about event details
-  const isFollowUp = isFollowUpQuestion(lc);
+  const isFollowUpQuestion = followUpQuestions.some(word => lc.includes(word));
   
   // SIMPLIFIED: If it's a follow-up question AND the context mentions workshops/courses, it's events
   // This takes precedence over everything else
-  if (isFollowUp && mentionsWorkshop) {
+  if (isFollowUpQuestion && mentionsWorkshop) {
     return "events";
   }
   
   // If it's a follow-up question but no workshop context, it's advice
-  if (isFollowUp && !mentionsWorkshop) {
+  if (isFollowUpQuestion && !mentionsWorkshop) {
     return "advice";
   }
   
@@ -1544,137 +1387,6 @@ function needsClarification(query) {
  * Generate clarification options from evidence buckets
  * Sources options from actual data instead of hardcoded patterns
  */
-// Helper functions for clarification options generation
-function extractEventTypesAndCategories(events) {
-  const eventTypes = new Set();
-  const eventCategories = new Set();
-  
-  events.forEach(event => {
-    // Extract event types from categories or CSV type
-    if (event.csv_type) {
-      eventTypes.add(event.csv_type.replace('_events', '').replace('_', ' '));
-    }
-    if (event.categories && Array.isArray(event.categories)) {
-      event.categories.forEach(cat => {
-        if (cat && cat.trim()) {
-          eventCategories.add(cat.trim());
-        }
-      });
-    }
-  });
-  
-  return { eventTypes, eventCategories };
-}
-
-function addEventOptions(options, eventTypes, eventCategories) {
-  // Add event-based options
-  eventTypes.forEach(type => {
-    const displayType = type.charAt(0).toUpperCase() + type.slice(1);
-    options.push({
-      text: `${displayType} events`,
-      query: `${type} events`
-    });
-  });
-  
-  eventCategories.forEach(category => {
-    if (category && category.length > 3) { // Avoid very short categories
-      options.push({
-        text: `${category} events`,
-        query: `${category} events`
-      });
-    }
-  });
-}
-
-function extractArticleCategoriesAndTags(articles) {
-  const articleCategories = new Set();
-  const articleTags = new Set();
-  
-  articles.forEach(article => {
-    if (article.categories && Array.isArray(article.categories)) {
-      article.categories.forEach(cat => {
-        if (cat && cat.trim()) {
-          articleCategories.add(cat.trim());
-        }
-      });
-    }
-    if (article.tags && Array.isArray(article.tags)) {
-      article.tags.forEach(tag => {
-        if (tag && tag.trim()) {
-          articleTags.add(tag.trim());
-        }
-      });
-    }
-  });
-  
-  return { articleCategories, articleTags };
-}
-
-function addArticleOptions(options, articleCategories, articleTags) {
-  // Add article-based options
-  articleCategories.forEach(category => {
-    if (category && category.length > 3) {
-      options.push({
-        text: `${category} advice`,
-        query: `${category} advice`
-      });
-    }
-  });
-  
-  // Add top tags as options
-  const topTags = Array.from(articleTags).slice(0, 3);
-  topTags.forEach(tag => {
-    if (tag && tag.length > 3) {
-      options.push({
-        text: `${tag} guidance`,
-        query: `${tag} guidance`
-      });
-    }
-  });
-}
-
-function extractServiceTypes(services) {
-  const serviceTypes = new Set();
-  
-  services.forEach(service => {
-    if (service.categories && Array.isArray(service.categories)) {
-      service.categories.forEach(cat => {
-        if (cat && cat.trim()) {
-          serviceTypes.add(cat.trim());
-        }
-      });
-    }
-  });
-  
-  return serviceTypes;
-}
-
-function addServiceOptions(options, serviceTypes) {
-  serviceTypes.forEach(type => {
-    if (type && type.length > 3) {
-      options.push({
-        text: `${type} services`,
-        query: `${type} services`
-      });
-    }
-  });
-}
-
-function deduplicateAndLimitOptions(options) {
-  const uniqueOptions = [];
-  const seen = new Set();
-  
-  options.forEach(option => {
-    const key = option.text.toLowerCase();
-    if (!seen.has(key) && uniqueOptions.length < 5) {
-      seen.add(key);
-      uniqueOptions.push(option);
-    }
-  });
-  
-  return uniqueOptions;
-}
-
 async function generateClarificationOptionsFromEvidence(client, query, pageContext) {
   try {
     const keywords = extractKeywords(query || "");
@@ -1684,23 +1396,124 @@ async function generateClarificationOptionsFromEvidence(client, query, pageConte
     
     // Generate options from events evidence
     if (evidence.events && evidence.events.length > 0) {
-      const { eventTypes, eventCategories } = extractEventTypesAndCategories(evidence.events);
-      addEventOptions(options, eventTypes, eventCategories);
+      const eventTypes = new Set();
+      const eventCategories = new Set();
+      
+      evidence.events.forEach(event => {
+        // Extract event types from categories or CSV type
+        if (event.csv_type) {
+          eventTypes.add(event.csv_type.replace('_events', '').replace('_', ' '));
+        }
+        if (event.categories && Array.isArray(event.categories)) {
+          event.categories.forEach(cat => {
+            if (cat && cat.trim()) {
+              eventCategories.add(cat.trim());
+            }
+          });
+        }
+      });
+      
+      // Add event-based options
+      eventTypes.forEach(type => {
+        const displayType = type.charAt(0).toUpperCase() + type.slice(1);
+        options.push({
+          text: `${displayType} events`,
+          query: `${type} events`
+        });
+      });
+      
+      eventCategories.forEach(category => {
+        if (category && category.length > 3) { // Avoid very short categories
+          options.push({
+            text: `${category} events`,
+            query: `${category} events`
+          });
+        }
+      });
     }
     
     // Generate options from articles evidence
     if (evidence.articles && evidence.articles.length > 0) {
-      const { articleCategories, articleTags } = extractArticleCategoriesAndTags(evidence.articles);
-      addArticleOptions(options, articleCategories, articleTags);
+      const articleCategories = new Set();
+      const articleTags = new Set();
+      
+      evidence.articles.forEach(article => {
+        if (article.categories && Array.isArray(article.categories)) {
+          article.categories.forEach(cat => {
+            if (cat && cat.trim()) {
+              articleCategories.add(cat.trim());
+            }
+          });
+        }
+        if (article.tags && Array.isArray(article.tags)) {
+          article.tags.forEach(tag => {
+            if (tag && tag.trim()) {
+              articleTags.add(tag.trim());
+            }
+          });
+        }
+      });
+      
+      // Add article-based options
+      articleCategories.forEach(category => {
+        if (category && category.length > 3) {
+          options.push({
+            text: `${category} advice`,
+            query: `${category} advice`
+          });
+        }
+      });
+      
+      // Add top tags as options
+      const topTags = Array.from(articleTags).slice(0, 3);
+      topTags.forEach(tag => {
+        if (tag && tag.length > 3) {
+          options.push({
+            text: `${tag} guidance`,
+            query: `${tag} guidance`
+          });
+        }
+      });
     }
     
     // Generate options from services evidence
     if (evidence.services && evidence.services.length > 0) {
-      const serviceTypes = extractServiceTypes(evidence.services);
-      addServiceOptions(options, serviceTypes);
+      const serviceTypes = new Set();
+      
+      evidence.services.forEach(service => {
+        if (service.categories && Array.isArray(service.categories)) {
+          service.categories.forEach(cat => {
+            if (cat && cat.trim()) {
+              serviceTypes.add(cat.trim());
+            }
+          });
+        }
+      });
+      
+      // Add service-based options
+      serviceTypes.forEach(type => {
+        if (type && type.length > 3) {
+          options.push({
+            text: `${type} services`,
+            query: `${type} services`
+          });
+        }
+      });
     }
     
-    return deduplicateAndLimitOptions(options);
+    // Remove duplicates and limit to 5 options
+    const uniqueOptions = [];
+    const seen = new Set();
+    
+    options.forEach(option => {
+      const key = option.text.toLowerCase();
+      if (!seen.has(key) && uniqueOptions.length < 5) {
+        seen.add(key);
+        uniqueOptions.push(option);
+      }
+    });
+    
+    return uniqueOptions;
   } catch (error) {
     console.error('Error generating clarification options from evidence:', error);
     return [];
@@ -1712,110 +1525,9 @@ async function generateClarificationOptionsFromEvidence(client, query, pageConte
  * Generates appropriate clarification questions for all 20 question types
  * 95% generation rate with natural, helpful questions
  */
-// Helper functions for clarification question generation
-function generateGeneralEquipmentClarification() {
-  return {
-    type: "general_equipment_clarification",
-    question: "What type of equipment are you looking for advice on?",
-    options: [
-      { text: "Camera recommendations", query: "camera recommendations" },
-      { text: "Lens recommendations", query: "lens recommendations" },
-      { text: "Tripod recommendations", query: "tripod recommendations" },
-      { text: "Camera bag recommendations", query: "camera bag recommendations" },
-      { text: "Memory card recommendations", query: "memory card recommendations" }
-    ],
-    confidence: 30
-  };
-}
-
-function generateEquipmentCourseTypeClarification() {
-  return {
-    type: "equipment_course_type_clarification",
-    question: "Perfect! For equipment recommendations, I need to know what type of photography course you're planning. What interests you most?",
-    options: [
-      { text: "Beginners camera course", query: "equipment for beginners camera course" },
-      { text: "Lightroom editing course", query: "equipment for lightroom course" },
-      { text: "RPS mentoring course", query: "equipment for rps course" },
-      { text: "Online photography course", query: "equipment for online course" },
-      { text: "General course equipment advice", query: "general photography course equipment" }
-    ],
-    confidence: 30
-  };
-}
-
-function generateCourseClarification() {
-  return {
-    type: "course_clarification",
-    question: "Yes, we offer several photography courses! What type of course are you interested in?",
-    options: [
-      { text: "Online courses (free and paid)", query: "Online courses (free and paid)" },
-      { text: "In-person courses in Coventry", query: "photography courses Coventry" },
-      { text: "Specific topic courses", query: "specialized photography courses" },
-      { text: "Beginner courses", query: "beginner photography courses" }
-    ]
-  };
-}
-
-function generateWorkshopClarification() {
-  return {
-    type: "workshop_clarification",
-    question: "Yes, we run photography workshops! What type of workshop are you interested in?",
-    options: [
-      { text: "Bluebell photography workshops", query: "bluebell photography workshops" },
-      { text: "Landscape photography workshops", query: "landscape photography workshops" },
-      { text: "Macro photography workshops", query: "macro photography workshops" },
-      { text: "General outdoor workshops", query: "outdoor photography workshops" }
-    ]
-  };
-}
-
-function generateLocationClarification() {
-  return {
-    type: "location_clarification",
-    question: "We run courses in various locations. What type of photography course are you looking for?",
-    options: [
-      { text: "Courses near Birmingham", query: "courses near Birmingham" },
-      { text: "Online courses instead", query: "online courses alternative" },
-      { text: "Travel to Coventry", query: "courses in Coventry" },
-      { text: "Private lessons", query: "private lessons flexible" }
-    ]
-  };
-}
-
-function generateTopicClarification() {
-  return {
-    type: "topic_clarification",
-    question: "I'd be happy to help! Could you be more specific about what you're looking for?",
-    options: [
-      { text: "Photography equipment advice", query: "photography equipment advice" },
-      { text: "Photography courses and workshops", query: "photography courses" },
-      { text: "Photography services and mentoring", query: "photography services" },
-      { text: "General photography advice", query: "photography advice" },
-      { text: "About Alan Ranger", query: "about alan ranger" }
-    ],
-    confidence: 10
-  };
-}
-
-function generateGenericClarification() {
-  return {
-    type: "generic_clarification",
-    question: "I'd be happy to help! Could you be more specific about what you're looking for?",
-    options: [
-      { text: "Photography equipment advice", query: "photography equipment advice" },
-      { text: "Photography courses and workshops", query: "photography courses" },
-      { text: "Photography services and mentoring", query: "photography services" },
-      { text: "General photography advice", query: "photography advice" },
-      { text: "About Alan Ranger", query: "about alan ranger" }
-    ],
-    confidence: 10
-  };
-}
-
 async function generateClarificationQuestion(query, client = null, pageContext = null) {
   const lc = query.toLowerCase();
   console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
-  
   // Loop guard: if we have previously shown the same global set, offer skip
   if (lc.includes("general photography advice") || lc.includes("photography courses and workshops") || lc.includes("photography equipment advice")) {
     return {
@@ -1831,13 +1543,35 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   // General photography equipment advice clarification - MUST come before other patterns
   if (lc.includes("general photography equipment advice clarification")) {
     console.log(`✅ Found general equipment advice clarification pattern`);
-    return generateGeneralEquipmentClarification();
+    return {
+      type: "general_equipment_clarification",
+      question: "What type of equipment are you looking for advice on?",
+      options: [
+        { text: "Camera recommendations", query: "camera recommendations" },
+        { text: "Lens recommendations", query: "lens recommendations" },
+        { text: "Tripod recommendations", query: "tripod recommendations" },
+        { text: "Camera bag recommendations", query: "camera bag recommendations" },
+        { text: "Memory card recommendations", query: "memory card recommendations" }
+      ],
+      confidence: 30 // Will be calculated based on RAG results
+    };
   }
   
   // Equipment for course type clarification - MUST come before general equipment pattern
   if (lc.includes("equipment for photography course type clarification")) {
     console.log(`✅ Found equipment course type clarification pattern`);
-    return generateEquipmentCourseTypeClarification();
+    return {
+      type: "equipment_course_type_clarification",
+      question: "Perfect! For equipment recommendations, I need to know what type of photography course you're planning. What interests you most?",
+      options: [
+        { text: "Beginners camera course", query: "equipment for beginners camera course" },
+        { text: "Lightroom editing course", query: "equipment for lightroom course" },
+        { text: "RPS mentoring course", query: "equipment for rps course" },
+        { text: "Online photography course", query: "equipment for online course" },
+        { text: "General course equipment advice", query: "general photography course equipment" }
+      ],
+      confidence: 30
+    };
   }
   
   // Try evidence-based clarification first
@@ -1878,11 +1612,29 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   
   // Generic course/workshop questions
   if (lc.includes("do you do") && lc.includes("courses")) {
-    return generateCourseClarification();
+    return {
+      type: "course_clarification",
+      question: "Yes, we offer several photography courses! What type of course are you interested in?",
+      options: [
+        { text: "Online courses (free and paid)", query: "Online courses (free and paid)" },
+        { text: "In-person courses in Coventry", query: "photography courses Coventry" },
+        { text: "Specific topic courses", query: "specialized photography courses" },
+        { text: "Beginner courses", query: "beginner photography courses" }
+      ]
+    };
   }
   
   if (lc.includes("do you run") && lc.includes("workshops")) {
-    return generateWorkshopClarification();
+    return {
+      type: "workshop_clarification",
+      question: "Yes, we run photography workshops! What type of workshop are you interested in?",
+      options: [
+        { text: "Bluebell photography workshops", query: "bluebell photography workshops" },
+        { text: "Landscape photography workshops", query: "landscape photography workshops" },
+        { text: "Macro photography workshops", query: "macro photography workshops" },
+        { text: "General outdoor workshops", query: "outdoor photography workshops" }
+      ]
+    };
   }
   
   if (lc.includes("do you offer") && lc.includes("lessons")) {
@@ -2166,7 +1918,18 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   
   // CONTENT-BASED FALLBACK: If no specific pattern matches, use generic clarification
   console.log(`✅ No specific pattern matched for: "${query}" - using generic clarification`);
-  return generateGenericClarification();
+  return {
+    type: "generic_clarification",
+    question: "I'd be happy to help! Could you be more specific about what you're looking for?",
+    options: [
+      { text: "Photography equipment advice", query: "photography equipment advice" },
+      { text: "Photography courses and workshops", query: "photography courses" },
+      { text: "Photography services and mentoring", query: "photography services" },
+      { text: "General photography advice", query: "photography advice" },
+      { text: "About Alan Ranger", query: "about alan ranger" }
+    ],
+    confidence: 10
+  };
 }
 /**
  * COMPLETE CLARIFICATION SYSTEM - PHASE 3: Follow-up Handling
@@ -2184,6 +1947,43 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   function matches(needle) {
     return lc.includes(needle) || lc === needle;
   }
+  // Helper: route highly specific course patterns first
+  function routeSpecificCoursePatterns() {
+    const patterns = [
+      {
+        key: "free online photography course",
+        log: (q) => console.log(`✅ Matched free online course pattern for: "${q}"`),
+        route: createRoute("route_to_advice", "free online photography course", "advice")
+      },
+      {
+        key: "online private photography lessons",
+        log: (q) => console.log(`✅ Matched online private lessons pattern for: "${q}"`),
+        route: createRoute("route_to_advice", "online private photography lessons", "advice")
+      },
+      {
+        key: "beginners camera course",
+        log: (q) => console.log(`✅ Matched beginners camera course pattern for: "${q}"`),
+        route: createRoute("route_to_advice", "beginners camera course", "advice")
+      },
+      {
+        key: "beginners lightroom course",
+        log: (q) => console.log(`✅ Matched beginners lightroom course pattern for: "${q}"`),
+        route: createRoute("route_to_advice", "beginners lightroom course", "advice")
+      },
+      {
+        key: "rps mentoring course",
+        log: (q) => console.log(`✅ Matched rps mentoring course pattern for: "${q}"`),
+        route: createRoute("route_to_advice", "rps mentoring course", "advice")
+      }
+    ];
+    for (const entry of patterns) {
+      if (matches(entry.key)) {
+        entry.log(query);
+        return entry.route;
+      }
+    }
+    return null;
+  }
   
   // Allow user to bypass clarification entirely
   if (matches("show me results")) {
@@ -2191,40 +1991,8 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   }
   
   // SPECIFIC COURSE PATTERNS FIRST (more specific patterns must come before generic patterns)
-  const specificCoursePatterns = [
-    {
-      key: "free online photography course",
-      log: (q) => console.log(`✅ Matched free online course pattern for: "${q}"`),
-      route: createRoute("route_to_advice", "free online photography course", "advice")
-    },
-    {
-      key: "online private photography lessons",
-      log: (q) => console.log(`✅ Matched online private lessons pattern for: "${q}"`),
-      route: createRoute("route_to_advice", "online private photography lessons", "advice")
-    },
-    {
-      key: "beginners camera course",
-      log: (q) => console.log(`✅ Matched beginners camera course pattern for: "${q}"`),
-      route: createRoute("route_to_advice", "beginners camera course", "advice")
-    },
-    {
-      key: "beginners lightroom course",
-      log: (q) => console.log(`✅ Matched beginners lightroom course pattern for: "${q}"`),
-      route: createRoute("route_to_advice", "beginners lightroom course", "advice")
-    },
-    {
-      key: "rps mentoring course",
-      log: (q) => console.log(`✅ Matched rps mentoring course pattern for: "${q}"`),
-      route: createRoute("route_to_advice", "rps mentoring course", "advice")
-    }
-  ];
-  
-  for (const entry of specificCoursePatterns) {
-    if (matches(entry.key)) {
-      entry.log(query);
-      return entry.route;
-    }
-  }
+  const courseRoute = routeSpecificCoursePatterns();
+  if (courseRoute) return courseRoute;
   
   if (lc.includes("online courses (free and paid)") || lc === "online courses (free and paid)") {
     console.log(`✅ Matched exact online courses pattern for: "${query}"`);
@@ -3273,102 +3041,19 @@ async function findLanding(client, { keywords, limit = 10 }) {
 
 /* -------- find PDF / related link within article chunks (best effort) ---- */
 
-// Helper functions for article auxiliary links extraction
-function tryTables() {
-  return [
-    { table: "page_chunks", urlCol: "source_url", textCol: "chunk_text" },
-    { table: "page_chunks", urlCol: "page_url", textCol: "chunk_text" },
-    { table: "chunks", urlCol: "source_url", textCol: "chunk_text" },
-    { table: "chunks", urlCol: "page_url", textCol: "chunk_text" },
-  ];
-}
-
-function extractPdfUrl(text) {
-  const m =
-    text.match(/https?:\/\/\S+?\.pdf/gi) ||
-    text.match(/href="([^"]+\.pdf)"/i);
-  if (m && m[0]) {
-    let pdfUrl = Array.isArray(m) ? m[0] : m[1];
-    // Convert internal Squarespace URLs to public URLs
-    if (pdfUrl.includes('alan-ranger.squarespace.com')) {
-      pdfUrl = pdfUrl.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
-    }
-    return pdfUrl;
-  }
-  return null;
-}
-
-function extractRelatedLink(text) {
-  const rel =
-    text.match(
-      /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']*)/i
-    ) || text.match(/href="([^"]*alanranger\.com[^"]*)"/i);
-  if (rel && rel[0]) {
-    let url = Array.isArray(rel) ? rel[0] : rel[1];
-    
-    // Convert internal Squarespace URLs to public URLs
-    if (url.includes('alan-ranger.squarespace.com')) {
-      url = url.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
-    }
-    
-    // Only accept direct Alan Ranger URLs, not URLs that contain Alan Ranger URLs as parameters
-    if (url.startsWith('https://www.alanranger.com/') || 
-        url.startsWith('https://alanranger.com/') ||
-        url.startsWith('http://www.alanranger.com/') ||
-        url.startsWith('http://alanranger.com/')) {
-      return url;
-    }
-  }
-  return null;
-}
-
-// Helper functions for related label extraction
-function findLabelMatch(text) {
-  return text.match(/\[([^\]]+)\]\([^)]+\)/) ||
-         text.match(/>([^<]{3,60})<\/a>/i) ||
-         text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
-}
-
-function cleanExtractedLabel(label) {
-  return label.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
-}
-
-function generateLabelFromUrl(url) {
-  try {
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/').filter(Boolean);
-    const lastPart = pathParts[pathParts.length - 1] || 'Related Content';
-    return lastPart.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  } catch {
-    return 'Related Content';
-  }
-}
-
-function extractRelatedLabel(text, url) {
-  // Robust label extraction: prioritize explicit link text, then clean URL path
-  const labelMatch = findLabelMatch(text);
-  
-  if (labelMatch && labelMatch[1]) {
-    const cleanLabel = cleanExtractedLabel(labelMatch[1].trim());
-    return cleanLabel;
-  } else {
-    // Generate a clean label from the URL path
-    return generateLabelFromUrl(url);
-  }
-}
-
-function cleanUrlLabel(label) {
-  return label.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
-}
-
 async function getArticleAuxLinks(client, articleUrl) {
   const result = { pdf: null, related: null, relatedLabel: null };
   if (!articleUrl) return result;
 
   // try different chunk tables/columns safely
-  const tables = tryTables();
+  const tryTables = [
+    { table: "page_chunks", urlCol: "source_url", textCol: "chunk_text" },
+    { table: "page_chunks", urlCol: "page_url", textCol: "chunk_text" },
+    { table: "chunks", urlCol: "source_url", textCol: "chunk_text" },
+    { table: "chunks", urlCol: "page_url", textCol: "chunk_text" },
+  ];
 
-  for (const t of tables) {
+  for (const t of tryTables) {
     try {
       const { data } = await client
         .from(t.table)
@@ -3379,25 +3064,70 @@ async function getArticleAuxLinks(client, articleUrl) {
 
       for (const row of data) {
         const text = row?.[t.textCol] || "";
-        
         // find pdf
         if (!result.pdf) {
-          result.pdf = extractPdfUrl(text);
-        }
-        
-        // find first internal related link with hint text
-        if (!result.related) {
-          const url = extractRelatedLink(text);
-          if (url) {
-            result.related = url;
-            result.relatedLabel = extractRelatedLabel(text, url);
+          const m =
+            text.match(/https?:\/\/\S+?\.pdf/gi) ||
+            text.match(/href="([^"]+\.pdf)"/i);
+          if (m && m[0]) {
+            let pdfUrl = Array.isArray(m) ? m[0] : m[1];
+            // Convert internal Squarespace URLs to public URLs
+            if (pdfUrl.includes('alan-ranger.squarespace.com')) {
+              pdfUrl = pdfUrl.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
+            }
+            result.pdf = pdfUrl;
           }
         }
-        
+        // find first internal related link with hint text
+        if (!result.related) {
+          const rel =
+            text.match(
+              /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']*)/i
+            ) || text.match(/href="([^"]*alanranger\.com[^"]*)"/i);
+          if (rel && rel[0]) {
+            let url = Array.isArray(rel) ? rel[0] : rel[1];
+            
+            // Convert internal Squarespace URLs to public URLs
+            if (url.includes('alan-ranger.squarespace.com')) {
+              url = url.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
+            }
+            
+            // Only accept direct Alan Ranger URLs, not URLs that contain Alan Ranger URLs as parameters
+            if (url.startsWith('https://www.alanranger.com/') || 
+                url.startsWith('https://alanranger.com/') ||
+                url.startsWith('http://www.alanranger.com/') ||
+                url.startsWith('http://alanranger.com/')) {
+              result.related = url;
+              
+              // Robust label extraction: prioritize explicit link text, then clean URL path
+            const labelMatch =
+              text.match(/\[([^\]]+)\]\([^)]+\)/) ||
+                  text.match(/>([^<]{3,60})<\/a>/i) ||
+                  text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
+              
+            if (labelMatch && labelMatch[1]) {
+                let cleanLabel = labelMatch[1].trim();
+                // Clean up malformed labels (remove trailing brackets, etc.)
+                cleanLabel = cleanLabel.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
+                result.relatedLabel = cleanLabel;
+              } else {
+                // Generate a clean label from the URL path
+                try {
+                  const urlObj = new URL(url);
+                  const pathParts = urlObj.pathname.split('/').filter(Boolean);
+                  const lastPart = pathParts[pathParts.length - 1] || 'Related Content';
+                  result.relatedLabel = lastPart.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                } catch {
+                  result.relatedLabel = 'Related Content';
+                }
+              }
+            }
+          }
+        }
         if (result.pdf && result.related) break;
       }
       if (result.pdf || result.related) break;
-    } catch {
+  } catch {
       // ignore and try next table
     }
   }
@@ -3405,183 +3135,6 @@ async function getArticleAuxLinks(client, articleUrl) {
 }
 
 /* ----------------------- Product description parsing -------------------- */
-
-// Helper functions for description parsing
-function cleanDescriptionText(desc) {
-  return String(desc)
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags completely
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags completely
-    .replace(/<[^>]*>/g, ' ') // Remove all HTML tags
-    .replace(/\s*style="[^"]*"/gi, '') // Remove style attributes
-    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi, '') // Remove data attributes
-    .replace(/\s*contenteditable="[^"]*"/gi, '') // Remove contenteditable
-    .replace(/\s*class="[^"]*"/gi, '') // Remove class attributes
-    .replace(/\s*id="[^"]*"/gi, '') // Remove id attributes
-    .replace(/\s*data-rte-[^=]*="[^"]*"/gi, '') // Remove Squarespace RTE attributes
-    .replace(/\s*data-indent="[^"]*"/gi, '') // Remove indent attributes
-    .replace(/\s*white-space:pre-wrap[^"]*"/gi, '') // Remove white-space styles
-    .replace(/\s*margin-left:[^"]*"/gi, '') // Remove margin styles
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .trim();
-}
-
-function normalizeLines(rawText) {
-  return rawText
-    .split(/\r?\n/)
-    .map((s) => s.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-    .filter((line, index, arr) => {
-      // Remove duplicate lines (common issue causing text duplication)
-      return arr.indexOf(line) === index;
-    });
-}
-
-function createParsingHelpers(lines, out) {
-  const nextVal = (i) => {
-    for (let j = i + 1; j < lines.length; j++) {
-      const t = lines[j].trim();
-      if (!t) continue;
-      return t;
-    }
-    return null;
-  };
-
-  const matches = (ln, re) => re.test(ln);
-  const valueAfter = (ln, re) => ln.replace(re, "").trim();
-  const matchGroup = (ln, re) => {
-    const m = ln.match(re);
-    return m ? m[1].trim() : null;
-  };
-  const setIf = (prop, val) => { if (val) out[prop] = val; };
-
-  return { nextVal, matches, valueAfter, matchGroup, setIf };
-}
-
-function parseLocationField(ln, helpers) {
-  const { matches, valueAfter, nextVal, setIf } = helpers;
-  if (matches(ln, /^location:/i)) {
-    const v = valueAfter(ln, /^location:\s*/i) || nextVal(0);
-    setIf("location", v);
-    return true;
-  }
-  return false;
-}
-
-function parseParticipantsField(ln, helpers, i) {
-  const { matches, valueAfter, nextVal, setIf, matchGroup } = helpers;
-  
-  if (matches(ln, /^participants:/i)) {
-    const v = valueAfter(ln, /^participants:\s*/i) || nextVal(i);
-    setIf("participants", v);
-    return true;
-  }
-  
-  // Handle chunk format: "* Participants: Max 6 *"
-  if (matches(ln, /\*\s*participants:\s*([^*]+)\s*\*/i)) {
-    const v = matchGroup(ln, /\*\s*participants:\s*([^*]+)\s*\*/i);
-    setIf("participants", v);
-    return true;
-  }
-  
-  // Handle multi-line format: "Participants:\nMax 6"
-  if (matches(ln, /^participants:\s*$/i)) {
-    const nextLine = nextVal(i);
-    if (nextLine && /^(max\s*\d+|\d+\s*max)$/i.test(nextLine)) {
-      setIf("participants", nextLine.trim());
-      return { skipNext: true };
-    }
-  }
-  
-  return false;
-}
-
-function parseFitnessField(ln, helpers) {
-  const { matches, valueAfter, nextVal, setIf, matchGroup } = helpers;
-  
-  if (matches(ln, /^fitness:/i)) {
-    const v = valueAfter(ln, /^fitness:\s*/i) || nextVal(0);
-    setIf("fitness", v);
-    return true;
-  }
-  
-  // Handle chunk format: "* Fitness:2. Easy-Moderate *"
-  if (matches(ln, /\*\s*fitness:\s*([^*]+)\s*\*/i)) {
-    const v = matchGroup(ln, /\*\s*fitness:\s*([^*]+)\s*\*/i);
-    setIf("fitness", v);
-    return true;
-  }
-  
-  // Also look for fitness information in other formats
-  if (matches(ln, /fitness level|fitness requirement|physical requirement|walking/i)) {
-    setIf("fitness", ln.trim());
-    return true;
-  }
-  
-  return false;
-}
-
-function parseAvailabilityField(ln, helpers) {
-  const { matches, valueAfter, nextVal, setIf } = helpers;
-  if (matches(ln, /^availability:/i)) {
-    const v = valueAfter(ln, /^availability:\s*/i) || nextVal(0);
-    setIf("availability", v);
-    return true;
-  }
-  return false;
-}
-
-function parseExperienceLevelField(ln, helpers) {
-  const { matches, valueAfter, nextVal, setIf } = helpers;
-  if (matches(ln, /^experience\s*-\s*level:/i)) {
-    const v = valueAfter(ln, /^experience\s*-\s*level:\s*/i) || nextVal(0);
-    setIf("experienceLevel", v);
-    return true;
-  }
-  return false;
-}
-
-function parseEquipmentNeededField(ln, helpers) {
-  const { matches, valueAfter, nextVal, setIf } = helpers;
-  
-  if (matches(ln, /^equipment\s*needed:/i)) {
-    const v = valueAfter(ln, /^equipment\s*needed:\s*/i) || nextVal(0);
-    setIf("equipmentNeeded", v);
-    return true;
-  }
-  
-  // Handle asterisk format: "* EQUIPMENT NEEDED:"
-  if (/^\*\s*equipment\s*needed:/i.test(ln)) {
-    const v = ln.replace(/^\*\s*equipment\s*needed:\s*/i, "").trim() || nextVal(0);
-    if (v) setIf("equipmentNeeded", v);
-    return true;
-  }
-  
-  // Also look for equipment information in other formats
-  if (/equipment needed|equipment required|what you need|you will need/i.test(ln)) {
-    // Extract the equipment requirement from the line
-    const equipmentMatch = ln.match(/(?:equipment needed|equipment required|what you need|you will need)[:\s]*([^\\n]+)/i);
-    if (equipmentMatch) {
-      setIf("equipmentNeeded", equipmentMatch[1].trim());
-    } else {
-      setIf("equipmentNeeded", ln.trim());
-    }
-    return true;
-  }
-  
-  return false;
-}
-
-function parseSessionField(ln, out) {
-  const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
-  if (m1) {
-    const rawLabel = m1[1].replace(/\s+/g, " ").trim();
-    const time = m1[2].trim();
-    out.sessions.push({ label: rawLabel, time, price: null });
-    return true;
-  }
-  return false;
-}
-
 function extractFromDescription(desc) {
   const out = {
     location: null,
@@ -3596,31 +3149,148 @@ function extractFromDescription(desc) {
   if (!desc) return out;
 
   // Enhanced cleaning to prevent formatting issues and text duplication
-  const rawText = cleanDescriptionText(desc);
-  const lines = normalizeLines(rawText);
+  const rawText = String(desc)
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags completely
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags completely
+    .replace(/<[^>]*>/g, ' ') // Remove all HTML tags
+    .replace(/\s*style="[^"]*"/gi, '') // Remove style attributes
+    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi, '') // Remove data attributes
+    .replace(/\s*contenteditable="[^"]*"/gi, '') // Remove contenteditable
+    .replace(/\s*class="[^"]*"/gi, '') // Remove class attributes
+    .replace(/\s*id="[^"]*"/gi, '') // Remove id attributes
+    .replace(/\s*data-rte-[^=]*="[^"]*"/gi, '') // Remove Squarespace RTE attributes
+    .replace(/\s*data-indent="[^"]*"/gi, '') // Remove indent attributes
+    .replace(/\s*white-space:pre-wrap[^"]*"/gi, '') // Remove white-space styles
+    .replace(/\s*margin-left:[^"]*"/gi, '') // Remove margin styles
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+
+  // Split by newline first, then normalize whitespace per line and remove duplicates
+  const lines = rawText
+    .split(/\r?\n/)
+    .map((s) => s.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .filter((line, index, arr) => {
+      // Remove duplicate lines (common issue causing text duplication)
+      return arr.indexOf(line) === index;
+    });
   
   if (lines.length) out.summary = lines[0];
 
-  const helpers = createParsingHelpers(lines, out);
+  // Small helpers to reduce repetition (behavior preserved)
+  const nextVal = (i) => {
+    for (let j = i + 1; j < lines.length; j++) {
+      const t = lines[j].trim();
+      if (!t) continue;
+      return t;
+    }
+  return null;
+  };
+
+  const matches = (ln, re) => re.test(ln);
+  const valueAfter = (ln, re) => ln.replace(re, "").trim();
+  const matchGroup = (ln, re) => {
+    const m = ln.match(re);
+    return m ? m[1].trim() : null;
+  };
+  const setIf = (prop, val) => { if (val) out[prop] = val; };
 
   for (let i = 0; i < lines.length; i++) {
     const ln = lines[i];
 
-    // Parse each field type
-    if (parseLocationField(ln, helpers)) continue;
-    
-    const participantsResult = parseParticipantsField(ln, helpers, i);
-    if (participantsResult === true) continue;
-    if (participantsResult?.skipNext) {
-      i++; // Skip the next line since we processed it
+    if (matches(ln, /^location:/i)) {
+      const v = valueAfter(ln, /^location:\s*/i) || nextVal(i);
+      setIf("location", v);
+      continue;
+    }
+    if (matches(ln, /^participants:/i)) {
+      const v = valueAfter(ln, /^participants:\s*/i) || nextVal(i);
+      setIf("participants", v);
       continue;
     }
     
-    if (parseFitnessField(ln, helpers)) continue;
-    if (parseAvailabilityField(ln, helpers)) continue;
-    if (parseExperienceLevelField(ln, helpers)) continue;
-    if (parseEquipmentNeededField(ln, helpers)) continue;
-    if (parseSessionField(ln, out)) continue;
+    // Handle chunk format: "* Participants: Max 6 *"
+    if (matches(ln, /\*\s*participants:\s*([^*]+)\s*\*/i)) {
+      const v = matchGroup(ln, /\*\s*participants:\s*([^*]+)\s*\*/i);
+      setIf("participants", v);
+      continue;
+    }
+    if (matches(ln, /^fitness:/i)) {
+      const v = valueAfter(ln, /^fitness:\s*/i) || nextVal(i);
+      setIf("fitness", v);
+      continue;
+    }
+    
+    // Handle chunk format: "* Fitness:2. Easy-Moderate *"
+    if (matches(ln, /\*\s*fitness:\s*([^*]+)\s*\*/i)) {
+      const v = matchGroup(ln, /\*\s*fitness:\s*([^*]+)\s*\*/i);
+      setIf("fitness", v);
+      continue;
+    }
+    // Also look for fitness information in other formats
+    if (matches(ln, /fitness level|fitness requirement|physical requirement|walking/i)) {
+      if (!out.fitness) setIf("fitness", ln.trim());
+      continue;
+    }
+    if (matches(ln, /^availability:/i)) {
+      const v = valueAfter(ln, /^availability:\s*/i) || nextVal(i);
+      setIf("availability", v);
+      continue;
+    }
+    
+    // Handle multi-line format: "Participants:\nMax 6"
+    if (matches(ln, /^participants:\s*$/i)) {
+      const nextLine = nextVal(i);
+      if (nextLine && /^(max\s*\d+|\d+\s*max)$/i.test(nextLine)) {
+        setIf("participants", nextLine.trim());
+        i++; // Skip the next line since we processed it
+        continue;
+      }
+    }
+    
+    // Course-specific extraction: Experience Level
+    if (matches(ln, /^experience\s*-\s*level:/i)) {
+      const v = valueAfter(ln, /^experience\s*-\s*level:\s*/i) || nextVal(i);
+      setIf("experienceLevel", v);
+      continue;
+    }
+    
+    // Course-specific extraction: Equipment Needed
+    if (matches(ln, /^equipment\s*needed:/i)) {
+      const v = valueAfter(ln, /^equipment\s*needed:\s*/i) || nextVal(i);
+      setIf("equipmentNeeded", v);
+      continue;
+    }
+    
+    // Handle asterisk format: "* EQUIPMENT NEEDED:"
+    if (/^\*\s*equipment\s*needed:/i.test(ln)) {
+      const v = ln.replace(/^\*\s*equipment\s*needed:\s*/i, "").trim() || nextVal(i);
+      if (v) out.equipmentNeeded = v;
+      continue;
+    }
+    
+    // Also look for equipment information in other formats
+    if (/equipment needed|equipment required|what you need|you will need/i.test(ln)) {
+      if (!out.equipmentNeeded) {
+        // Extract the equipment requirement from the line
+        const equipmentMatch = ln.match(/(?:equipment needed|equipment required|what you need|you will need)[:\s]*([^\\n]+)/i);
+        if (equipmentMatch) {
+          out.equipmentNeeded = equipmentMatch[1].trim();
+        } else {
+          out.equipmentNeeded = ln.trim();
+        }
+      }
+      continue;
+    }
+    
+
+    const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
+    if (m1) {
+      const rawLabel = m1[1].replace(/\s+/g, " ").trim();
+      const time = m1[2].trim();
+      out.sessions.push({ label: rawLabel, time, price: null });
+      continue;
+    }
   }
 
   if (out.summary && /^summary$/i.test(out.summary.trim())) {
@@ -3635,10 +3305,14 @@ function extractFromDescription(desc) {
 }
 
 /* --------------------- Build product panel (markdown) -------------------- */
+async function buildProductPanelMarkdown(products) {
+  if (!products?.length) return "";
 
-// Helper functions for product panel markdown generation
-function extractPriceRange(products) {
-  let lowPrice = null, highPrice = null;
+  const primary = products.find((p) => p.price != null) || products[0];
+
+  // Headline price(s)
+  let lowPrice = null,
+    highPrice = null;
   for (const p of products) {
     const ro = p?.raw?.offers || {};
     const lp = ro.lowPrice ?? ro.lowprice ?? null;
@@ -3646,22 +3320,19 @@ function extractPriceRange(products) {
     if (lp != null) lowPrice = lp;
     if (hp != null) highPrice = hp;
   }
-  return { lowPrice, highPrice };
-}
-
-function buildPriceHeader(primary, lowPrice, highPrice) {
   const headlineSingle = primary?.price != null ? toGBP(primary.price) : null;
   const lowTx = lowPrice != null ? toGBP(lowPrice) : null;
   const highTx = highPrice != null ? toGBP(highPrice) : null;
 
+  const title = primary.title || primary?.raw?.name || "Workshop";
   const headBits = [];
   if (headlineSingle) headBits.push(headlineSingle);
   if (lowTx && highTx) headBits.push(`${lowTx}–${highTx}`);
-  return headBits.length ? ` — ${headBits.join(" • ")}` : "";
-}
+  const priceHead = headBits.length ? ` — ${headBits.join(" • ")}` : "";
 
-function scrubDescription(description) {
-  return String(description || '')
+  // Create a better summary from the full description
+  // Clean Squarespace inline attributes to avoid leaking style/data-* into markdown
+  const scrub = (s)=> String(s||'')
     .replace(/\s*style="[^"]*"/gi,'')
     .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
     .replace(/\s*contenteditable="[^"]*"/gi,'')
@@ -3669,9 +3340,10 @@ function scrubDescription(description) {
     .replace(/Standard\s*[—\-]\s*£\d+/gi,'') // Remove "Standard — £150" lines
     .replace(/\s*•\s*Standard\s*[—\-]\s*£\d+/gi,'') // Remove " • Standard — £150" lines
     .replace(/\s*Standard\s*[—\-]\s*£\d+/gi,''); // Remove " Standard — £150" lines
-}
-
-async function fetchChunkData(primary) {
+  const fullDescription = scrub(primary.description || primary?.raw?.description || "");
+  
+  // Also try to get chunk data for more detailed information
+  let chunkData = "";
   try {
     const chunkResponse = await supabase
       .from('page_chunks')
@@ -3681,89 +3353,107 @@ async function fetchChunkData(primary) {
       .single();
     
     if (chunkResponse.data) {
-      return chunkResponse.data.chunk_text || "";
+      chunkData = chunkResponse.data.chunk_text || "";
     }
   } catch (e) {
     // Ignore chunk fetch errors
   }
-  return "";
-}
+  
+  // Use chunk data if available, otherwise fall back to description
+  const sourceText = chunkData || fullDescription;
+  const info = extractFromDescription(sourceText) || {};
+  
+  // Consolidated debug logging to reduce repetition (behavior preserved)
+  const logExtractionDebug = (desc, chunk, src, extracted) => {
+    console.log("Full description:", desc);
+    console.log("Chunk data:", chunk);
+    console.log("Source text for extraction:", src);
+    console.log("Extracted info:", JSON.stringify(extracted, null, 2));
+    console.log("Experience Level extracted:", extracted.experienceLevel);
+    console.log("Equipment Needed extracted:", extracted.equipmentNeeded);
+  };
+  logExtractionDebug(fullDescription, chunkData, sourceText, info);
+  
+  let summary = null; // Don't use info.summary, generate our own
+  
+  if (fullDescription) {
+    // Summary generation started
 
-function logExtractionDebug(desc, chunk, src, extracted) {
-  console.log("Full description:", desc);
-  console.log("Chunk data:", chunk);
-  console.log("Source text for extraction:", src);
-  console.log("Extracted info:", JSON.stringify(extracted, null, 2));
-  console.log("Experience Level extracted:", extracted.experienceLevel);
-  console.log("Equipment Needed extracted:", extracted.equipmentNeeded);
-}
+    let summaryText = '';
+    const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
+    // lastDescriptionIndex found
 
-function extractSummaryFromDescription(fullDescription) {
-  if (!fullDescription) return null;
+    if (lastDescriptionIndex !== -1) {
+      // Get text after the last "Description:"
+      let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
+      // potentialSummaryText extracted
 
-  let summaryText = '';
-  const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
+      // Further refine to stop at other section headers if they exist after the description
+      const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
+      let stopIndex = potentialSummaryText.length;
+      for (const word of stopWords) {
+        const idx = potentialSummaryText.toLowerCase().indexOf(word);
+        if (idx !== -1 && idx < stopIndex) {
+          stopIndex = idx;
+        }
+      }
+      summaryText = potentialSummaryText.substring(0, stopIndex).trim();
+      // summaryText refined
+    }
 
-  if (lastDescriptionIndex !== -1) {
-    // Get text after the last "Description:"
-    let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
+    if (summaryText) {
+      const sentences = summaryText
+        .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .split(/[.!?]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 30) // Filter out very short fragments
+        .slice(0, 2); // Take first 2 sentences for a concise summary
+      
+      // Sentences extracted
 
-    // Further refine to stop at other section headers if they exist after the description
-    const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
-    let stopIndex = potentialSummaryText.length;
-    for (const word of stopWords) {
-      const idx = potentialSummaryText.toLowerCase().indexOf(word);
-      if (idx !== -1 && idx < stopIndex) {
-        stopIndex = idx;
+      if (sentences.length > 0) {
+        summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
+        // Final summary generated
       }
     }
-    summaryText = potentialSummaryText.substring(0, stopIndex).trim();
-  }
-
-  if (summaryText) {
-    const sentences = summaryText
-      .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .split(/[.!?]+/)
-      .map(s => s.trim())
-      .filter(s => s.length > 30) // Filter out very short fragments
-      .slice(0, 2); // Take first 2 sentences for a concise summary
     
-    if (sentences.length > 0) {
-      return sentences.join('. ') + (sentences.length > 1 ? '.' : '');
+    // Fallback: if no specific description section found or summary is still empty
+    if (!summary) {
+      // Falling back to general summary
+      const sentences = fullDescription
+        .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .split(/[.!?]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 30) // Filter out very short fragments
+        .slice(0, 2); // Take first 2 sentences
+      
+      // Sentences from fallback
+
+      if (sentences.length > 0) {
+        summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
+        // Final summary from fallback
+      }
     }
   }
-  
-  // Fallback: if no specific description section found or summary is still empty
-  const sentences = fullDescription
-    .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .split(/[.!?]+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 30) // Filter out very short fragments
-    .slice(0, 2); // Take first 2 sentences
-  
-  if (sentences.length > 0) {
-    return sentences.join('. ') + (sentences.length > 1 ? '.' : '');
-  }
-  
-  return null;
-}
 
-function attachPricesToSessions(sessions, lowPrice, highPrice, primary) {
-  if (!sessions.length) return sessions;
-  
-  if (lowPrice != null && highPrice != null && sessions.length >= 2) {
-    sessions[0].price = lowPrice;
-    sessions[1].price = highPrice;
-  } else if (primary?.price != null) {
-    sessions.forEach((s) => (s.price = primary.price));
+  // Attach prices to sessions: two sessions → low/high; else fallback single
+  const sessions = [...(info.sessions || [])];
+  if (sessions.length) {
+    if (lowPrice != null && highPrice != null && sessions.length >= 2) {
+      sessions[0].price = lowPrice;
+      sessions[1].price = highPrice;
+    } else if (primary?.price != null) {
+      sessions.forEach((s) => (s.price = primary.price));
+    }
   }
-  
-  return sessions;
-}
 
-function buildFactsList(info) {
+  const lines = [];
+  lines.push(`**${title}**${priceHead}`);
+
+  if (summary) lines.push(`\n${summary}`);
+
   const facts = [];
   if (info.location) facts.push(`**Location:** ${info.location}`);
   if (info.participants) facts.push(`**Participants:** ${info.participants}`);
@@ -3771,44 +3461,6 @@ function buildFactsList(info) {
   if (info.availability) facts.push(`**Availability:** ${info.availability}`);
   if (info.experienceLevel) facts.push(`**Experience Level:** ${info.experienceLevel}`);
   if (info.equipmentNeeded) facts.push(`**Equipment Needed:** ${info.equipmentNeeded}`);
-  return facts;
-}
-
-function buildSessionsList(sessions) {
-  const sessionLines = [];
-  for (const s of sessions) {
-    const pretty = s.label.replace(/\bhrs\b/i, "hours");
-    const ptxt = s.price != null ? ` — ${toGBP(s.price)}` : "";
-    sessionLines.push(`- **${pretty}** — ${s.time}${ptxt}`);
-  }
-  return sessionLines;
-}
-
-async function buildProductPanelMarkdown(products) {
-  if (!products?.length) return "";
-
-  const primary = products.find((p) => p.price != null) || products[0];
-  const { lowPrice, highPrice } = extractPriceRange(products);
-  const priceHead = buildPriceHeader(primary, lowPrice, highPrice);
-  const title = primary.title || primary?.raw?.name || "Workshop";
-
-  // Create a better summary from the full description
-  const fullDescription = scrubDescription(primary.description || primary?.raw?.description || "");
-  const chunkData = await fetchChunkData(primary);
-  const sourceText = chunkData || fullDescription;
-  const info = extractFromDescription(sourceText) || {};
-  
-  logExtractionDebug(fullDescription, chunkData, sourceText, info);
-  
-  const summary = extractSummaryFromDescription(fullDescription);
-  const sessions = attachPricesToSessions([...(info.sessions || [])], lowPrice, highPrice, primary);
-
-  const lines = [];
-  lines.push(`**${title}**${priceHead}`);
-
-  if (summary) lines.push(`\n${summary}`);
-
-  const facts = buildFactsList(info);
   
   console.log("Facts to add:", facts);
   console.log("Info participants:", info.participants);
@@ -3824,8 +3476,11 @@ async function buildProductPanelMarkdown(products) {
 
   if (sessions.length) {
     lines.push("");
-    const sessionLines = buildSessionsList(sessions);
-    for (const line of sessionLines) lines.push(line);
+    for (const s of sessions) {
+      const pretty = s.label.replace(/\bhrs\b/i, "hours");
+      const ptxt = s.price != null ? ` — ${toGBP(s.price)}` : "";
+      lines.push(`- **${pretty}** — ${s.time}${ptxt}`);
+    }
   }
 
   return lines.join("\n");
@@ -3882,62 +3537,38 @@ function formatEventsForUi(events) {
   return result;
 }
 /* ----------------------------- Pills builders ---------------------------- */
-// Helper functions for event pills building
-function createPillAdder(pills, used) {
-  return (label, url, brand = true) => {
+function buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl }) {
+  const pills = [];
+  const used = new Set();
+  const add = (label, url, brand = true) => {
     if (!label || !url) return;
     if (used.has(url)) return;
     used.add(url);
     pills.push({ label, url, brand });
   };
-}
-
-function determineCourseListingUrl(productUrl) {
-  try {
-    const u = String(productUrl || '');
-    if (/beginners-photography-(classes|course)/i.test(u) || /photography-services-near-me\/beginners-photography-course/i.test(u)) {
-      return "https://www.alanranger.com/beginners-photography-classes";
-    } else if (/lightroom-courses-for-beginners-coventry/i.test(u) || /photo-editing-course-coventry/i.test(u)) {
-      return "https://www.alanranger.com/photo-editing-course-coventry";
-    }
-  } catch {}
-  return null;
-}
-
-function determineEventSectionUrl(firstEventUrl) {
-  try {
-    const fe = String(firstEventUrl || '');
-    const m = fe.match(/^https?:\/\/[^/]+\/(beginners-photography-lessons)\//i);
-    if (m && m[1]) {
-      const base = fe.split(m[1])[0] + m[1];
-      return base.startsWith('http') ? base : `https://www.alanranger.com/${m[1]}`;
-    }
-  } catch {}
-  return null;
-}
-
-function buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl }) {
-  const pills = [];
-  const used = new Set();
-  const add = createPillAdder(pills, used);
 
   add("Book Now", productUrl || firstEventUrl, true);
 
   // Event Listing + More Events both point at listing root (no search page)
   let listUrl = landingUrl || (firstEventUrl && originOf(firstEventUrl) + "/photography-workshops");
-  
   // Special-case: course products (beginners classes) should link to the course listing
-  const courseUrl = determineCourseListingUrl(productUrl);
-  if (courseUrl) {
-    listUrl = courseUrl;
-  }
-  
+  try {
+    const u = String(productUrl||'');
+    if (/beginners-photography-(classes|course)/i.test(u) || /photography-services-near-me\/beginners-photography-course/i.test(u)) {
+      listUrl = "https://www.alanranger.com/beginners-photography-classes";
+    } else if (/lightroom-courses-for-beginners-coventry/i.test(u) || /photo-editing-course-coventry/i.test(u)) {
+      listUrl = "https://www.alanranger.com/photo-editing-course-coventry";
+    }
+  } catch {}
   // If events come from the courses section, prefer the section listing root deterministically
-  const eventSectionUrl = determineEventSectionUrl(firstEventUrl);
-  if (eventSectionUrl) {
-    listUrl = eventSectionUrl;
-  }
-  
+  try {
+    const fe = String(firstEventUrl||'');
+    const m = fe.match(/^https?:\/\/[^/]+\/(beginners-photography-lessons)\//i);
+    if (m && m[1]) {
+      const base = fe.split(m[1])[0] + m[1];
+      listUrl = base.startsWith('http') ? base : `https://www.alanranger.com/${m[1]}`;
+    }
+  } catch {}
   add("Event Listing", listUrl, true);
   add("More Events", listUrl, true);
 
