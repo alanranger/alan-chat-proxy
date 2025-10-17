@@ -4019,7 +4019,7 @@ export default async function handler(req, res) {
   // Chat API handler called
   const started = Date.now();
   try {
-  if (req.method !== "POST") {
+    if (req.method !== "POST") {
       res
         .status(405)
         .json({ ok: false, error: "method_not_allowed", where: "http" });
@@ -4355,7 +4355,6 @@ export default async function handler(req, res) {
           }
         }
       }
-    }
     
     // For events, only use previous context for follow-up style questions.
     const qlc = (query || "").toLowerCase();
