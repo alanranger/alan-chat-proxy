@@ -3469,14 +3469,10 @@ function extractFromDescription(desc) {
 }
 
 /* --------------------- Build product panel (markdown) -------------------- */
-async function buildProductPanelMarkdown(products) {
-  if (!products?.length) return "";
 
-  const primary = products.find((p) => p.price != null) || products[0];
-
-  // Headline price(s)
-  let lowPrice = null,
-    highPrice = null;
+// Helper functions for product panel markdown generation
+function extractPriceRange(products) {
+  let lowPrice = null, highPrice = null;
   for (const p of products) {
     const ro = p?.raw?.offers || {};
     const lp = ro.lowPrice ?? ro.lowprice ?? null;
@@ -3484,19 +3480,22 @@ async function buildProductPanelMarkdown(products) {
     if (lp != null) lowPrice = lp;
     if (hp != null) highPrice = hp;
   }
+  return { lowPrice, highPrice };
+}
+
+function buildPriceHeader(primary, lowPrice, highPrice) {
   const headlineSingle = primary?.price != null ? toGBP(primary.price) : null;
   const lowTx = lowPrice != null ? toGBP(lowPrice) : null;
   const highTx = highPrice != null ? toGBP(highPrice) : null;
 
-  const title = primary.title || primary?.raw?.name || "Workshop";
   const headBits = [];
   if (headlineSingle) headBits.push(headlineSingle);
   if (lowTx && highTx) headBits.push(`${lowTx}–${highTx}`);
-  const priceHead = headBits.length ? ` — ${headBits.join(" • ")}` : "";
+  return headBits.length ? ` — ${headBits.join(" • ")}` : "";
+}
 
-  // Create a better summary from the full description
-  // Clean Squarespace inline attributes to avoid leaking style/data-* into markdown
-  const scrub = (s)=> String(s||'')
+function scrubDescription(description) {
+  return String(description || '')
     .replace(/\s*style="[^"]*"/gi,'')
     .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
     .replace(/\s*contenteditable="[^"]*"/gi,'')
@@ -3504,10 +3503,9 @@ async function buildProductPanelMarkdown(products) {
     .replace(/Standard\s*[—\-]\s*£\d+/gi,'') // Remove "Standard — £150" lines
     .replace(/\s*•\s*Standard\s*[—\-]\s*£\d+/gi,'') // Remove " • Standard — £150" lines
     .replace(/\s*Standard\s*[—\-]\s*£\d+/gi,''); // Remove " Standard — £150" lines
-  const fullDescription = scrub(primary.description || primary?.raw?.description || "");
-  
-  // Also try to get chunk data for more detailed information
-  let chunkData = "";
+}
+
+async function fetchChunkData(primary) {
   try {
     const chunkResponse = await supabase
       .from('page_chunks')
@@ -3517,107 +3515,89 @@ async function buildProductPanelMarkdown(products) {
       .single();
     
     if (chunkResponse.data) {
-      chunkData = chunkResponse.data.chunk_text || "";
+      return chunkResponse.data.chunk_text || "";
     }
   } catch (e) {
     // Ignore chunk fetch errors
   }
-  
-  // Use chunk data if available, otherwise fall back to description
-  const sourceText = chunkData || fullDescription;
-  const info = extractFromDescription(sourceText) || {};
-  
-  // Consolidated debug logging to reduce repetition (behavior preserved)
-  const logExtractionDebug = (desc, chunk, src, extracted) => {
-    console.log("Full description:", desc);
-    console.log("Chunk data:", chunk);
-    console.log("Source text for extraction:", src);
-    console.log("Extracted info:", JSON.stringify(extracted, null, 2));
-    console.log("Experience Level extracted:", extracted.experienceLevel);
-    console.log("Equipment Needed extracted:", extracted.equipmentNeeded);
-  };
-  logExtractionDebug(fullDescription, chunkData, sourceText, info);
-  
-  let summary = null; // Don't use info.summary, generate our own
-  
-  if (fullDescription) {
-    // Summary generation started
+  return "";
+}
 
-    let summaryText = '';
-    const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
-    // lastDescriptionIndex found
+function logExtractionDebug(desc, chunk, src, extracted) {
+  console.log("Full description:", desc);
+  console.log("Chunk data:", chunk);
+  console.log("Source text for extraction:", src);
+  console.log("Extracted info:", JSON.stringify(extracted, null, 2));
+  console.log("Experience Level extracted:", extracted.experienceLevel);
+  console.log("Equipment Needed extracted:", extracted.equipmentNeeded);
+}
 
-    if (lastDescriptionIndex !== -1) {
-      // Get text after the last "Description:"
-      let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
-      // potentialSummaryText extracted
+function extractSummaryFromDescription(fullDescription) {
+  if (!fullDescription) return null;
 
-      // Further refine to stop at other section headers if they exist after the description
-      const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
-      let stopIndex = potentialSummaryText.length;
-      for (const word of stopWords) {
-        const idx = potentialSummaryText.toLowerCase().indexOf(word);
-        if (idx !== -1 && idx < stopIndex) {
-          stopIndex = idx;
-        }
-      }
-      summaryText = potentialSummaryText.substring(0, stopIndex).trim();
-      // summaryText refined
-    }
+  let summaryText = '';
+  const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
 
-    if (summaryText) {
-      const sentences = summaryText
-        .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .split(/[.!?]+/)
-        .map(s => s.trim())
-        .filter(s => s.length > 30) // Filter out very short fragments
-        .slice(0, 2); // Take first 2 sentences for a concise summary
-      
-      // Sentences extracted
+  if (lastDescriptionIndex !== -1) {
+    // Get text after the last "Description:"
+    let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
 
-      if (sentences.length > 0) {
-        summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
-        // Final summary generated
+    // Further refine to stop at other section headers if they exist after the description
+    const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
+    let stopIndex = potentialSummaryText.length;
+    for (const word of stopWords) {
+      const idx = potentialSummaryText.toLowerCase().indexOf(word);
+      if (idx !== -1 && idx < stopIndex) {
+        stopIndex = idx;
       }
     }
+    summaryText = potentialSummaryText.substring(0, stopIndex).trim();
+  }
+
+  if (summaryText) {
+    const sentences = summaryText
+      .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .split(/[.!?]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 30) // Filter out very short fragments
+      .slice(0, 2); // Take first 2 sentences for a concise summary
     
-    // Fallback: if no specific description section found or summary is still empty
-    if (!summary) {
-      // Falling back to general summary
-      const sentences = fullDescription
-        .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .split(/[.!?]+/)
-        .map(s => s.trim())
-        .filter(s => s.length > 30) // Filter out very short fragments
-        .slice(0, 2); // Take first 2 sentences
-      
-      // Sentences from fallback
-
-      if (sentences.length > 0) {
-        summary = sentences.join('. ') + (sentences.length > 1 ? '.' : '');
-        // Final summary from fallback
-      }
+    if (sentences.length > 0) {
+      return sentences.join('. ') + (sentences.length > 1 ? '.' : '');
     }
   }
-
-  // Attach prices to sessions: two sessions → low/high; else fallback single
-  const sessions = [...(info.sessions || [])];
-  if (sessions.length) {
-    if (lowPrice != null && highPrice != null && sessions.length >= 2) {
-      sessions[0].price = lowPrice;
-      sessions[1].price = highPrice;
-    } else if (primary?.price != null) {
-      sessions.forEach((s) => (s.price = primary.price));
-    }
+  
+  // Fallback: if no specific description section found or summary is still empty
+  const sentences = fullDescription
+    .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .split(/[.!?]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 30) // Filter out very short fragments
+    .slice(0, 2); // Take first 2 sentences
+  
+  if (sentences.length > 0) {
+    return sentences.join('. ') + (sentences.length > 1 ? '.' : '');
   }
+  
+  return null;
+}
 
-  const lines = [];
-  lines.push(`**${title}**${priceHead}`);
+function attachPricesToSessions(sessions, lowPrice, highPrice, primary) {
+  if (!sessions.length) return sessions;
+  
+  if (lowPrice != null && highPrice != null && sessions.length >= 2) {
+    sessions[0].price = lowPrice;
+    sessions[1].price = highPrice;
+  } else if (primary?.price != null) {
+    sessions.forEach((s) => (s.price = primary.price));
+  }
+  
+  return sessions;
+}
 
-  if (summary) lines.push(`\n${summary}`);
-
+function buildFactsList(info) {
   const facts = [];
   if (info.location) facts.push(`**Location:** ${info.location}`);
   if (info.participants) facts.push(`**Participants:** ${info.participants}`);
@@ -3625,6 +3605,44 @@ async function buildProductPanelMarkdown(products) {
   if (info.availability) facts.push(`**Availability:** ${info.availability}`);
   if (info.experienceLevel) facts.push(`**Experience Level:** ${info.experienceLevel}`);
   if (info.equipmentNeeded) facts.push(`**Equipment Needed:** ${info.equipmentNeeded}`);
+  return facts;
+}
+
+function buildSessionsList(sessions) {
+  const sessionLines = [];
+  for (const s of sessions) {
+    const pretty = s.label.replace(/\bhrs\b/i, "hours");
+    const ptxt = s.price != null ? ` — ${toGBP(s.price)}` : "";
+    sessionLines.push(`- **${pretty}** — ${s.time}${ptxt}`);
+  }
+  return sessionLines;
+}
+
+async function buildProductPanelMarkdown(products) {
+  if (!products?.length) return "";
+
+  const primary = products.find((p) => p.price != null) || products[0];
+  const { lowPrice, highPrice } = extractPriceRange(products);
+  const priceHead = buildPriceHeader(primary, lowPrice, highPrice);
+  const title = primary.title || primary?.raw?.name || "Workshop";
+
+  // Create a better summary from the full description
+  const fullDescription = scrubDescription(primary.description || primary?.raw?.description || "");
+  const chunkData = await fetchChunkData(primary);
+  const sourceText = chunkData || fullDescription;
+  const info = extractFromDescription(sourceText) || {};
+  
+  logExtractionDebug(fullDescription, chunkData, sourceText, info);
+  
+  const summary = extractSummaryFromDescription(fullDescription);
+  const sessions = attachPricesToSessions([...(info.sessions || [])], lowPrice, highPrice, primary);
+
+  const lines = [];
+  lines.push(`**${title}**${priceHead}`);
+
+  if (summary) lines.push(`\n${summary}`);
+
+  const facts = buildFactsList(info);
   
   console.log("Facts to add:", facts);
   console.log("Info participants:", info.participants);
@@ -3640,11 +3658,8 @@ async function buildProductPanelMarkdown(products) {
 
   if (sessions.length) {
     lines.push("");
-    for (const s of sessions) {
-      const pretty = s.label.replace(/\bhrs\b/i, "hours");
-      const ptxt = s.price != null ? ` — ${toGBP(s.price)}` : "";
-      lines.push(`- **${pretty}** — ${s.time}${ptxt}`);
-    }
+    const sessionLines = buildSessionsList(sessions);
+    for (const line of sessionLines) lines.push(line);
   }
 
   return lines.join("\n");
