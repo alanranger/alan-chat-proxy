@@ -2190,6 +2190,60 @@ function handleOnlineCoursesPatterns(query, lc) {
   return null;
 }
 
+function handleFinalPatterns(query, lc) {
+  if (lc.includes("basic camera settings") || lc.includes("composition") || lc.includes("editing")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "camera settings and composition lessons",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("intermediate") && lc.includes("upgrade")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "camera upgrade for intermediate photographers",
+      newIntent: "advice"
+    };
+  }
+  
+  // About information patterns
+  if (lc.includes("teaching") || lc.includes("how long")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "Alan Ranger teaching experience",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("qualified") || lc.includes("qualifications")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "Alan Ranger qualifications",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("where is he based") || lc.includes("location")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "Alan Ranger location",
+      newIntent: "advice"
+    };
+  }
+  
+  // Service types
+  if (lc.includes("private lessons") || lc.includes("private")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "private photography lessons",
+      newIntent: "advice"
+    };
+  }
+  
+  return null;
+}
+
 function handleWorkshopAndEquipmentPatterns(query, lc) {
   // Workshop types
   if (lc.includes("bluebell") || lc.includes("bluebells")) {
@@ -2547,181 +2601,11 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   if (workshopEquipmentResult) {
     return workshopEquipmentResult;
   }
-    return {
-      type: "route_to_advice",
-      newQuery: "beginner camera recommendations",
-      newIntent: "advice"
-    };
-  }
   
-  if (lc.includes("basic camera settings") || lc.includes("composition") || lc.includes("editing")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "camera settings and composition lessons",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("intermediate") && lc.includes("upgrade")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "camera upgrade for intermediate photographers",
-      newIntent: "advice"
-    };
-  }
-  
-  // About information patterns
-  if (lc.includes("teaching") || lc.includes("how long")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "Alan Ranger teaching experience",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("qualified") || lc.includes("qualifications")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "Alan Ranger qualifications",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("where is he based") || lc.includes("location")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "Alan Ranger location",
-      newIntent: "advice"
-    };
-  }
-  
-  // Service types
-  if (lc.includes("private lessons") || lc.includes("private")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "private photography lessons",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("work rota") || lc.includes("shifts") || lc.includes("flexible")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "flexible photography lessons",
-      newIntent: "advice"
-    };
-  }
-  
-  // Technical help
-  if (lc.includes("exposure settings") || lc.includes("exposure")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "manual exposure settings",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("manual mode")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "manual mode tutorial",
-      newIntent: "advice"
-    };
-  }
-  
-  // Location preferences
-  if (lc.includes("birmingham") || lc.includes("close to birmingham")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "photography courses near Birmingham",
-      newIntent: "advice"
-    };
-  }
-  
-  // Beginner focus
-  if (lc.includes("suitable for beginners") || lc.includes("complete beginners")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "beginner photography courses",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("dates and cost") || lc.includes("where are they")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "workshop dates and locations information",
-      newIntent: "advice"
-    };
-  }
-  
-  // Free course patterns
-  if (lc.includes("really free") || lc.includes("is it really free")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "free online photography course confirmation",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("how do i join") || lc.includes("how to join")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "how to join free course",
-      newIntent: "advice"
-    };
-  }
-  
-  // FIXED: Q14 - "the one for Sunday 17 May 2026" should route to advice, not events
-  if (lc.includes("sunday") && lc.includes("2026")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "macro workshop information Sunday 17 May 2026",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("may 2026") || lc.includes("17 may")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "macro workshop information May 2026",
-      newIntent: "advice"
-    };
-  }
-  
-  // Technical photography types
-  if (lc.includes("astrophotography")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "astrophotography settings",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("night photography")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "night photography settings",
-      newIntent: "advice"
-    };
-  }
-  
-  // Course format comparison
-  if (lc.includes("give me the differences") || lc.includes("differences")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "online vs in-person course differences",
-      newIntent: "advice"
-    };
-  }
-  
-  // Camera type advice
-  if (lc.includes("dslr") || lc.includes("mirrorless")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "DSLR vs mirrorless camera comparison",
-      newIntent: "advice"
-    };
+  // Check final patterns
+  const finalPatternsResult = handleFinalPatterns(query, lc);
+  if (finalPatternsResult) {
+    return finalPatternsResult;
   }
   
   // Upcoming events
