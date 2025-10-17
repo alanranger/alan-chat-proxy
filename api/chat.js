@@ -3269,12 +3269,16 @@ async function buildProductPanelMarkdown(products) {
   const sourceText = chunkData || fullDescription;
   const info = extractFromDescription(sourceText) || {};
   
-  console.log("Full description:", fullDescription);
-  console.log("Chunk data:", chunkData);
-  console.log("Source text for extraction:", sourceText);
-  console.log("Extracted info:", JSON.stringify(info, null, 2));
-  console.log("Experience Level extracted:", info.experienceLevel);
-  console.log("Equipment Needed extracted:", info.equipmentNeeded);
+  // Consolidated debug logging to reduce repetition (behavior preserved)
+  const logExtractionDebug = (desc, chunk, src, extracted) => {
+    console.log("Full description:", desc);
+    console.log("Chunk data:", chunk);
+    console.log("Source text for extraction:", src);
+    console.log("Extracted info:", JSON.stringify(extracted, null, 2));
+    console.log("Experience Level extracted:", extracted.experienceLevel);
+    console.log("Equipment Needed extracted:", extracted.equipmentNeeded);
+  };
+  logExtractionDebug(fullDescription, chunkData, sourceText, info);
   
   let summary = null; // Don't use info.summary, generate our own
   
