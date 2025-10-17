@@ -3522,6 +3522,14 @@ async function resolveEventsAndProduct(client, { keywords, pageContext = null })
 async function extractRelevantInfo(query, dataContext) {
   const { products, events, articles } = dataContext;
   const lowerQuery = query.toLowerCase();
+  // Small local helpers to reduce repetition (no behavior change)
+  const hasText = (s)=> typeof s === 'string' && s.trim().length > 0;
+  const formatDateGB = (iso)=> {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch(_) { return null; }
+  };
   const scrubAttrs = (s)=> String(s||'')
     .replace(/\s*style="[^"]*"/gi,'')
     .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
@@ -3591,7 +3599,7 @@ async function extractRelevantInfo(query, dataContext) {
     
     // Check for location information
     if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
-      if (event.event_location && event.event_location.trim().length > 0) {
+      if (hasText(event.event_location)) {
         console.log(`✅ RAG: Found location="${event.event_location}" in structured event data`);
         return `The workshop is held at **${event.event_location}**. Full location details and meeting instructions will be provided when you book.`;
       }
@@ -3608,12 +3616,7 @@ async function extractRelevantInfo(query, dataContext) {
     // Check for date information
     if (lowerQuery.includes('when') || lowerQuery.includes('date')) {
       if (event.date_start) {
-        const date = new Date(event.date_start);
-        const formattedDate = date.toLocaleDateString('en-GB', { 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric' 
-        });
+        const formattedDate = formatDateGB(event.date_start);
         console.log(`✅ RAG: Found date="${formattedDate}" in structured event data`);
         const label = (event.subtype && String(event.subtype).toLowerCase()==='course') ? 'course' : 'workshop';
         let brief = '';
