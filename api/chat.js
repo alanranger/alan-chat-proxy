@@ -4682,7 +4682,18 @@ export default async function handler(req, res) {
       };
       console.log('🔍 Events filtering debug:', debugInfo);
 
+      console.log('🔍 Before formatEventsForUi:', {
+        filteredEventsLength: filteredEvents.length,
+        eventsLength: events.length,
+        usingFiltered: filteredEvents.length > 0
+      });
+      
       const eventList = formatEventsForUi(filteredEvents.length ? filteredEvents : events);
+      
+      console.log('🔍 After formatEventsForUi:', {
+        eventListLength: eventList.length,
+        eventListSample: eventList.slice(0, 2)
+      });
       
       // Store debug info for later inclusion in response
       var eventsFilteringDebug = debugInfo;
