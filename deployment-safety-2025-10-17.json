@@ -1,31 +1,31 @@
 {
-  "timestamp": "2025-10-17T01:06:59.964Z",
+  "timestamp": "2025-10-17T01:09:35.828Z",
   "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
   "checks": [
     {
       "name": "API Health Check",
-      "status": "FAIL",
-      "details": "HTTP 500: Internal Server Error"
+      "status": "PASS",
+      "details": "API responding correctly (200)"
     },
     {
       "name": "Critical Query Tests",
-      "status": "FAIL",
-      "details": "0/3 queries passed"
+      "status": "PASS",
+      "details": "3/3 queries passed"
     },
     {
       "name": "Response Structure Validation",
-      "status": "FAIL",
-      "details": "Unexpected token 'A', \"A server e\"... is not valid JSON"
+      "status": "PASS",
+      "details": "All required fields present with correct types"
     },
     {
       "name": "Performance Check",
       "status": "PASS",
-      "details": "Response time: 351ms"
+      "details": "Response time: 2018ms"
     },
     {
       "name": "Error Handling",
-      "status": "FAIL",
-      "details": "Unexpected token 'A', \"A server e\"... is not valid JSON"
+      "status": "PASS",
+      "details": "Error handling working correctly"
     }
   ]
 }

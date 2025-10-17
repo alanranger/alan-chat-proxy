@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-10-17T01:07:27.499Z",
+  "timestamp": "2025-10-17T01:14:31.014Z",
   "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
   "summary": {
     "total": 11,
@@ -19,10 +19,17 @@
         "expectedEvents": true,
         "description": "Lightroom course query - should return high confidence with events"
       },
-      "actual": null,
+      "actual": {
+        "type": "events",
+        "confidence": 0.44999999999999996,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": null
+      },
       "passed": false,
-      "error": "HTTP 500: Internal Server Error",
-      "timestamp": "2025-10-17T01:07:13.858Z"
+      "error": null,
+      "timestamp": "2025-10-17T01:13:59.100Z"
     },
     {
       "testId": "photography-workshop",
@@ -35,10 +42,17 @@
         "expectedEvents": true,
         "description": "General workshop query - should return events"
       },
-      "actual": null,
+      "actual": {
+        "type": "events",
+        "confidence": 0.5,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": null
+      },
       "passed": false,
-      "error": "HTTP 500: Internal Server Error",
-      "timestamp": "2025-10-17T01:07:15.130Z"
+      "error": null,
+      "timestamp": "2025-10-17T01:14:00.912Z"
     },
     {
       "testId": "residential-pricing",
@@ -51,10 +65,17 @@
         "expectedEvents": true,
         "description": "Residential pricing query - should return high confidence with pricing info"
       },
-      "actual": null,
+      "actual": {
+        "type": "advice",
+        "confidence": 60,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": null
+      },
       "passed": false,
-      "error": "HTTP 500: Internal Server Error",
-      "timestamp": "2025-10-17T01:07:16.445Z"
+      "error": null,
+      "timestamp": "2025-10-17T01:14:05.810Z"
     },
     {
       "testId": "tripod-recommendation",
@@ -68,10 +89,17 @@
         "expectedArticles": true,
         "description": "Tripod recommendation - should return articles/advice"
       },
-      "actual": null,
+      "actual": {
+        "type": "advice",
+        "confidence": 75,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": null
+      },
       "passed": false,
-      "error": "HTTP 500: Internal Server Error",
-      "timestamp": "2025-10-17T01:07:17.719Z"
+      "error": null,
+      "timestamp": "2025-10-17T01:14:08.518Z"
     },
     {
       "testId": "camera-advice",
@@ -85,10 +113,17 @@
         "expectedArticles": true,
         "description": "Camera advice - should return articles"
       },
-      "actual": null,
+      "actual": {
+        "type": "advice",
+        "confidence": 75,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": null
+      },
       "passed": false,
-      "error": "HTTP 500: Internal Server Error",
-      "timestamp": "2025-10-17T01:07:18.979Z"
+      "error": null,
+      "timestamp": "2025-10-17T01:14:11.743Z"
     },
     {
       "testId": "ambiguous-workshop",
@@ -102,10 +137,18 @@
         "expectedClarification": true,
         "description": "Ambiguous query - should trigger clarification"
       },
-      "actual": null,
+      "actual": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "hasArticles": false,
+        "hasClarification": true,
+        "eventsCount": 0,
+        "answer": null
+      },
       "passed": false,
-      "error": "HTTP 500: Internal Server Error",
-      "timestamp": "2025-10-17T01:07:20.228Z"
+      "error": null,
+      "timestamp": "2025-10-17T01:14:15.046Z"
     },
     {
       "testId": "vague-equipment",
@@ -119,10 +162,17 @@
         "expectedClarification": true,
         "description": "Vague equipment query - should trigger clarification"
       },
-      "actual": null,
+      "actual": {
+        "type": "advice",
+        "confidence": 75,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": null
+      },
       "passed": false,
-      "error": "HTTP 500: Internal Server Error",
-      "timestamp": "2025-10-17T01:07:21.477Z"
+      "error": null,
+      "timestamp": "2025-10-17T01:14:18.034Z"
     },
     {
       "testId": "beginner-course",
@@ -135,10 +185,17 @@
         "expectedEvents": true,
         "description": "Beginner course query - should return events"
       },
-      "actual": null,
+      "actual": {
+        "type": "events",
+        "confidence": 0.5,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": null
+      },
       "passed": false,
-      "error": "HTTP 500: Internal Server Error",
-      "timestamp": "2025-10-17T01:07:22.733Z"
+      "error": null,
+      "timestamp": "2025-10-17T01:14:19.890Z"
     },
     {
       "testId": "online-course",
@@ -151,10 +208,18 @@
         "expectedEvents": true,
         "description": "Online course query - should return events"
       },
-      "actual": null,
+      "actual": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "hasArticles": false,
+        "hasClarification": true,
+        "eventsCount": 0,
+        "answer": null
+      },
       "passed": false,
-      "error": "HTTP 500: Internal Server Error",
-      "timestamp": "2025-10-17T01:07:23.986Z"
+      "error": null,
+      "timestamp": "2025-10-17T01:14:23.915Z"
     },
     {
       "testId": "nonsensical-query",
@@ -168,10 +233,18 @@
         "expectedClarification": true,
         "description": "Nonsensical query - should trigger clarification"
       },
-      "actual": null,
+      "actual": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "hasArticles": false,
+        "hasClarification": true,
+        "eventsCount": 0,
+        "answer": null
+      },
       "passed": false,
-      "error": "HTTP 500: Internal Server Error",
-      "timestamp": "2025-10-17T01:07:25.231Z"
+      "error": null,
+      "timestamp": "2025-10-17T01:14:26.847Z"
     },
     {
       "testId": "empty-query",
@@ -185,10 +258,18 @@
         "expectedClarification": true,
         "description": "Empty query - should trigger clarification"
       },
-      "actual": null,
+      "actual": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "hasArticles": false,
+        "hasClarification": true,
+        "eventsCount": 0,
+        "answer": null
+      },
       "passed": false,
-      "error": "HTTP 500: Internal Server Error",
-      "timestamp": "2025-10-17T01:07:26.483Z"
+      "error": null,
+      "timestamp": "2025-10-17T01:14:30.004Z"
     }
   ]
 }
