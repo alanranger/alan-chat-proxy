@@ -4640,6 +4640,7 @@ export default async function handler(req, res) {
       }
 
     if (intent === "events") {
+      console.log('🔍 EVENTS HANDLER: Starting events handler for query:', query);
       // Determine CSV type based on query content
       const lc = (query || "").toLowerCase();
       const mentionsCourse = lc.includes("course") || lc.includes("class") || lc.includes("lesson");
