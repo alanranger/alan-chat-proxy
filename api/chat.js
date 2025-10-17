@@ -5671,119 +5671,148 @@ export default async function handler(req, res) {
       let baseConfidence = 0.3; // Lower base to allow for more nuanced scoring
       let confidenceFactors = [];
       
+      // Helper functions for query type detection
+      const detectQueryTypes = (queryLower) => {
+        const isTechnicalQuery = queryLower.includes("what is") || queryLower.includes("what are") || queryLower.includes("how does") || queryLower.includes("how do");
+        const isEquipmentQuery = queryLower.includes("tripod") || queryLower.includes("camera") || queryLower.includes("lens") || queryLower.includes("filter") || queryLower.includes("bag") || queryLower.includes("flash");
+        const isCourseQuery = queryLower.includes("course") || queryLower.includes("workshop") || queryLower.includes("lesson") || queryLower.includes("class");
+        const isEventQuery = queryLower.includes("when") || queryLower.includes("next") || queryLower.includes("date") || queryLower.includes("workshop");
+        return { isTechnicalQuery, isEquipmentQuery, isCourseQuery, isEventQuery };
+      };
+      
+      const addQueryTypeScore = (queryTypes) => {
+        if (queryTypes.isTechnicalQuery) {
+          baseConfidence += 0.2;
+          confidenceFactors.push("Technical query (+0.2)");
+        }
+        if (queryTypes.isEquipmentQuery) {
+          baseConfidence += 0.15;
+          confidenceFactors.push("Equipment query (+0.15)");
+        }
+        if (queryTypes.isCourseQuery) {
+          baseConfidence += 0.15;
+          confidenceFactors.push("Course query (+0.15)");
+        }
+        if (queryTypes.isEventQuery) {
+          baseConfidence += 0.15;
+          confidenceFactors.push("Event query (+0.15)");
+        }
+      };
+      
       // Factor 1: Query type and specificity
       const queryLower = query.toLowerCase();
-      const isTechnicalQuery = queryLower.includes("what is") || queryLower.includes("what are") || queryLower.includes("how does") || queryLower.includes("how do");
-      const isEquipmentQuery = queryLower.includes("tripod") || queryLower.includes("camera") || queryLower.includes("lens") || queryLower.includes("filter") || queryLower.includes("bag") || queryLower.includes("flash");
-      const isCourseQuery = queryLower.includes("course") || queryLower.includes("workshop") || queryLower.includes("lesson") || queryLower.includes("class");
-      const isEventQuery = queryLower.includes("when") || queryLower.includes("next") || queryLower.includes("date") || queryLower.includes("workshop");
+      const queryTypes = detectQueryTypes(queryLower);
+      addQueryTypeScore(queryTypes);
       
-      if (isTechnicalQuery) {
-        baseConfidence += 0.2;
-        confidenceFactors.push("Technical query (+0.2)");
-      }
-      if (isEquipmentQuery) {
-        baseConfidence += 0.15;
-        confidenceFactors.push("Equipment query (+0.15)");
-      }
-      if (isCourseQuery) {
-        baseConfidence += 0.15;
-        confidenceFactors.push("Course query (+0.15)");
-      }
-      if (isEventQuery) {
-        baseConfidence += 0.15;
-        confidenceFactors.push("Event query (+0.15)");
-      }
+      const addArticleScore = () => {
+        if (articles && articles.length > 0) {
+          const totalArticles = articles.length;
+          const articleRelevanceScore = calculateArticleRelevance(query, articles);
+
+          // Base score for having articles
+          const articlePresenceBoost = Math.min(0.3, totalArticles * 0.05);
+          if (articlePresenceBoost > 0) {
+            baseConfidence += articlePresenceBoost;
+            confidenceFactors.push(`Articles found: ${totalArticles} (+${articlePresenceBoost.toFixed(2)})`);
+          }
+
+          // Relevance bonus
+          const relevanceBoost = articleRelevanceScore * 0.2;
+          if (relevanceBoost) {
+            baseConfidence += relevanceBoost;
+            confidenceFactors.push(`Relevance score: ${articleRelevanceScore.toFixed(2)} (+${relevanceBoost.toFixed(2)})`);
+          }
+
+          // Category and tag quality
+          const hasHighQualityCategories = articles.some(a =>
+            a.categories?.includes("photography-basics") ||
+            a.categories?.includes("photography-tips") ||
+            a.categories?.includes("recommended-products")
+          );
+          if (hasHighQualityCategories) {
+            baseConfidence += 0.1;
+            confidenceFactors.push("High-quality categories (+0.1)");
+          }
+        }
+      };
       
       // Factor 2: Article relevance and quality
-      if (articles && articles.length > 0) {
-        const totalArticles = articles.length;
-        const articleRelevanceScore = calculateArticleRelevance(query, articles);
-
-        // Base score for having articles
-        const articlePresenceBoost = Math.min(0.3, totalArticles * 0.05);
-        if (articlePresenceBoost > 0) {
-          baseConfidence += articlePresenceBoost;
-          confidenceFactors.push(`Articles found: ${totalArticles} (+${articlePresenceBoost.toFixed(2)})`);
+      addArticleScore();
+      
+      const addAnswerTypeScore = () => {
+        if (hasDirectAnswer) {
+          baseConfidence += 0.25;
+          confidenceFactors.push("Direct FAQ answer (+0.25)");
+        } else if (hasServiceAnswer) {
+          baseConfidence += 0.15;
+          confidenceFactors.push("Service FAQ answer (+0.15)");
         }
-
-        // Relevance bonus
-        const relevanceBoost = articleRelevanceScore * 0.2;
-        if (relevanceBoost) {
-          baseConfidence += relevanceBoost;
-          confidenceFactors.push(`Relevance score: ${articleRelevanceScore.toFixed(2)} (+${relevanceBoost.toFixed(2)})`);
+      };
+      
+      const addContentQualityScore = () => {
+        if (contentChunks && contentChunks.length > 0) {
+          const hasRichContent = contentChunks.some(chunk => 
+            chunk.chunk_text && chunk.chunk_text.length > 100
+          );
+          if (hasRichContent) {
+            baseConfidence += 0.1;
+            confidenceFactors.push("Rich content chunks (+0.1)");
+          }
         }
-
-        // Category and tag quality
-        const hasHighQualityCategories = articles.some(a =>
-          a.categories?.includes("photography-basics") ||
-          a.categories?.includes("photography-tips") ||
-          a.categories?.includes("recommended-products")
-        );
-        if (hasHighQualityCategories) {
-          baseConfidence += 0.1;
-          confidenceFactors.push("High-quality categories (+0.1)");
+      };
+      
+      const addMalformedContentPenalty = () => {
+        if (articles && articles.length > 0) {
+          const hasMalformedContent = articles.some(a => 
+            a.description && (
+              a.description.includes("ALAN+RANGER+photography+LOGO+BLACK") ||
+              a.description.includes("rotto 405") ||
+              a.description.length < 20
+            )
+          );
+          if (hasMalformedContent) {
+            baseConfidence -= 0.2;
+            confidenceFactors.push("Malformed content (-0.2)");
+          }
         }
-      }
+      };
       
       // Factor 3: Answer type quality
-      if (hasDirectAnswer) {
-        baseConfidence += 0.25;
-        confidenceFactors.push("Direct FAQ answer (+0.25)");
-      } else if (hasServiceAnswer) {
-        baseConfidence += 0.15;
-        confidenceFactors.push("Service FAQ answer (+0.15)");
-      }
+      addAnswerTypeScore();
       
       // Factor 4: Content quality indicators
-      if (contentChunks && contentChunks.length > 0) {
-        const hasRichContent = contentChunks.some(chunk => 
-          chunk.chunk_text && chunk.chunk_text.length > 100
-        );
-        if (hasRichContent) {
-          baseConfidence += 0.1;
-          confidenceFactors.push("Rich content chunks (+0.1)");
-        }
-      }
+      addContentQualityScore();
       
       // Factor 5: Penalties for poor matches
-      if (articles && articles.length > 0) {
-        const hasMalformedContent = articles.some(a => 
-          a.description && (
-            a.description.includes("ALAN+RANGER+photography+LOGO+BLACK") ||
-            a.description.includes("rotto 405") ||
-            a.description.length < 20
-          )
-        );
-        if (hasMalformedContent) {
-          baseConfidence -= 0.2;
-          confidenceFactors.push("Malformed content (-0.2)");
+      addMalformedContentPenalty();
+      
+      const addIntentAwareScore = () => {
+        const q = (query||'').toLowerCase();
+        const mentionsFree = /\bfree\b/.test(q);
+        const mentionsOnline = /\bonline\b/.test(q);
+        const mentionsCertificate = /\b(cert|certificate)\b/.test(q);
+        const hasLandingFree = Array.isArray(landing) && landing.some(l => (l.page_url||'').includes('free-online-photography-course'));
+        const topService = Array.isArray(services) ? services[0] : null;
+        const topServiceIsPaid = topService ? /£|\b\d{1,4}\b/.test(String(topService.price||topService.price_gbp||'')) : false;
+        const topServiceIsOffline = topService ? /(coventry|kenilworth|batsford|peak district|in-person)/i.test(String(topService.location||topService.location_address||topService.event_location||'')) : false;
+
+        if (mentionsFree && topServiceIsPaid) {
+          baseConfidence -= 0.35; confidenceFactors.push('Free query but top result is paid (-0.35)');
         }
-      }
+        if (mentionsOnline && topServiceIsOffline) {
+          baseConfidence -= 0.25; confidenceFactors.push('Online query but top result offline (-0.25)');
+        }
+        if (mentionsCertificate) {
+          const hasCert = false; // no certificate detection yet
+          if (!hasCert) { baseConfidence -= 0.2; confidenceFactors.push('Certificate requested but not found (-0.2)'); }
+        }
+        if (hasLandingFree && (mentionsFree || mentionsOnline)) {
+          baseConfidence += 0.25; confidenceFactors.push('Landing free/online page present (+0.25)');
+        }
+      };
       
       // Intent-aware penalties/bonuses
-      const q = (query||'').toLowerCase();
-      const mentionsFree = /\bfree\b/.test(q);
-      const mentionsOnline = /\bonline\b/.test(q);
-      const mentionsCertificate = /\b(cert|certificate)\b/.test(q);
-      const hasLandingFree = Array.isArray(landing) && landing.some(l => (l.page_url||'').includes('free-online-photography-course'));
-      const topService = Array.isArray(services) ? services[0] : null;
-      const topServiceIsPaid = topService ? /£|\b\d{1,4}\b/.test(String(topService.price||topService.price_gbp||'')) : false;
-      const topServiceIsOffline = topService ? /(coventry|kenilworth|batsford|peak district|in-person)/i.test(String(topService.location||topService.location_address||topService.event_location||'')) : false;
-
-      if (mentionsFree && topServiceIsPaid) {
-        baseConfidence -= 0.35; confidenceFactors.push('Free query but top result is paid (-0.35)');
-      }
-      if (mentionsOnline && topServiceIsOffline) {
-        baseConfidence -= 0.25; confidenceFactors.push('Online query but top result offline (-0.25)');
-      }
-      if (mentionsCertificate) {
-        const hasCert = false; // no certificate detection yet
-        if (!hasCert) { baseConfidence -= 0.2; confidenceFactors.push('Certificate requested but not found (-0.2)'); }
-      }
-      if (hasLandingFree && (mentionsFree || mentionsOnline)) {
-        baseConfidence += 0.25; confidenceFactors.push('Landing free/online page present (+0.25)');
-      }
+      addIntentAwareScore();
 
       // Cap confidence between 0.05 and 0.9 in advice mode
       const finalConfidence = Math.max(0.05, Math.min(0.9, baseConfidence));
