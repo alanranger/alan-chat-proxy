@@ -3965,6 +3965,27 @@ async function handleResidentialPricingGuard(client, query, previousQuery, pageC
   return false; // No response sent, continue with normal flow
 }
 
+/**
+ * Handle session creation and logging
+ */
+function handleSessionAndLogging(sessionId, query, req) {
+  // Create session if it doesn't exist (async, don't wait for it)
+  if (sessionId) {
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+    createSession(sessionId, userAgent, ip).catch(err => 
+      console.warn('Failed to create session:', err.message)
+    );
+  }
+
+  // Log the question (async, don't wait for it)
+  if (sessionId && query) {
+    logQuestion(sessionId, query).catch(err => 
+      console.warn('Failed to log question:', err.message)
+    );
+  }
+}
+
 /* -------------------------------- Handler -------------------------------- */
 export default async function handler(req, res) {
   // Chat API handler called
@@ -3985,21 +4006,8 @@ export default async function handler(req, res) {
       // Page context received
     }
 
-    // Create session if it doesn't exist (async, don't wait for it)
-    if (sessionId) {
-      const userAgent = req.headers['user-agent'] || 'unknown';
-      const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
-      createSession(sessionId, userAgent, ip).catch(err => 
-        console.warn('Failed to create session:', err.message)
-      );
-    }
-
-    // Log the question (async, don't wait for it)
-    if (sessionId && query) {
-      logQuestion(sessionId, query).catch(err => 
-        console.warn('Failed to log question:', err.message)
-      );
-    }
+    // Handle session creation and logging
+    handleSessionAndLogging(sessionId, query, req);
 
     // Build contextual query for keyword extraction (merge with previous query)
     const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
