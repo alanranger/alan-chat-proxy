@@ -5011,11 +5011,6 @@ export default async function handler(req, res) {
           eventsFiltering: {
             totalEvents: events?.length || 0,
             filteredEventsCount: filteredEvents?.length || 0,
-            beforeFormatEvents: {
-              filteredEventsLength: filteredEvents.length,
-              eventsLength: events.length,
-              usingFiltered: filteredEvents.length > 0
-            },
             afterFormatEvents: {
               eventListLength: eventList?.length || 0
             },
