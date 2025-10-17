@@ -1,0 +1,56 @@
+{
+  "timestamp": "2025-10-17T01:05:47.942Z",
+  "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
+  "tests": [
+    {
+      "query": "When is the next Lightroom course in Coventry?",
+      "timestamp": "2025-10-17T01:05:48.595Z",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "query": "What tripod do you recommend?",
+      "timestamp": "2025-10-17T01:05:49.956Z",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "query": "How much is a residential photography workshop and does it include B&B?",
+      "timestamp": "2025-10-17T01:05:51.623Z",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "query": "What photography workshops do you have?",
+      "timestamp": "2025-10-17T01:05:52.979Z",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "query": "Do you have beginner photography courses?",
+      "timestamp": "2025-10-17T01:05:54.222Z",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "query": "I want to learn photography",
+      "timestamp": "2025-10-17T01:05:55.471Z",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "query": "What camera should I buy for landscape photography?",
+      "timestamp": "2025-10-17T01:05:56.841Z",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "query": "Do you offer online photography courses?",
+      "timestamp": "2025-10-17T01:05:58.089Z",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "query": "I need help with my camera",
+      "timestamp": "2025-10-17T01:05:59.341Z",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "query": "asdfghjkl qwerty",
+      "timestamp": "2025-10-17T01:06:00.588Z",
+      "error": "HTTP 500: Internal Server Error"
+    }
+  ]
+}
