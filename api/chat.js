@@ -3117,19 +3117,92 @@ async function findLanding(client, { keywords, limit = 10 }) {
 
 /* -------- find PDF / related link within article chunks (best effort) ---- */
 
-async function getArticleAuxLinks(client, articleUrl) {
-  const result = { pdf: null, related: null, relatedLabel: null };
-  if (!articleUrl) return result;
-
-  // try different chunk tables/columns safely
-  const tryTables = [
+// Helper functions for article auxiliary links extraction
+function tryTables() {
+  return [
     { table: "page_chunks", urlCol: "source_url", textCol: "chunk_text" },
     { table: "page_chunks", urlCol: "page_url", textCol: "chunk_text" },
     { table: "chunks", urlCol: "source_url", textCol: "chunk_text" },
     { table: "chunks", urlCol: "page_url", textCol: "chunk_text" },
   ];
+}
 
-  for (const t of tryTables) {
+function extractPdfUrl(text) {
+  const m =
+    text.match(/https?:\/\/\S+?\.pdf/gi) ||
+    text.match(/href="([^"]+\.pdf)"/i);
+  if (m && m[0]) {
+    let pdfUrl = Array.isArray(m) ? m[0] : m[1];
+    // Convert internal Squarespace URLs to public URLs
+    if (pdfUrl.includes('alan-ranger.squarespace.com')) {
+      pdfUrl = pdfUrl.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
+    }
+    return pdfUrl;
+  }
+  return null;
+}
+
+function extractRelatedLink(text) {
+  const rel =
+    text.match(
+      /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']*)/i
+    ) || text.match(/href="([^"]*alanranger\.com[^"]*)"/i);
+  if (rel && rel[0]) {
+    let url = Array.isArray(rel) ? rel[0] : rel[1];
+    
+    // Convert internal Squarespace URLs to public URLs
+    if (url.includes('alan-ranger.squarespace.com')) {
+      url = url.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
+    }
+    
+    // Only accept direct Alan Ranger URLs, not URLs that contain Alan Ranger URLs as parameters
+    if (url.startsWith('https://www.alanranger.com/') || 
+        url.startsWith('https://alanranger.com/') ||
+        url.startsWith('http://www.alanranger.com/') ||
+        url.startsWith('http://alanranger.com/')) {
+      return url;
+    }
+  }
+  return null;
+}
+
+function extractRelatedLabel(text, url) {
+  // Robust label extraction: prioritize explicit link text, then clean URL path
+  const labelMatch =
+    text.match(/\[([^\]]+)\]\([^)]+\)/) ||
+    text.match(/>([^<]{3,60})<\/a>/i) ||
+    text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
+  
+  if (labelMatch && labelMatch[1]) {
+    let cleanLabel = labelMatch[1].trim();
+    // Clean up malformed labels (remove trailing brackets, etc.)
+    cleanLabel = cleanLabel.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
+    return cleanLabel;
+  } else {
+    // Generate a clean label from the URL path
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/').filter(Boolean);
+      const lastPart = pathParts[pathParts.length - 1] || 'Related Content';
+      return lastPart.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    } catch {
+      return 'Related Content';
+    }
+  }
+}
+
+function cleanUrlLabel(label) {
+  return label.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
+}
+
+async function getArticleAuxLinks(client, articleUrl) {
+  const result = { pdf: null, related: null, relatedLabel: null };
+  if (!articleUrl) return result;
+
+  // try different chunk tables/columns safely
+  const tables = tryTables();
+
+  for (const t of tables) {
     try {
       const { data } = await client
         .from(t.table)
@@ -3140,70 +3213,25 @@ async function getArticleAuxLinks(client, articleUrl) {
 
       for (const row of data) {
         const text = row?.[t.textCol] || "";
+        
         // find pdf
         if (!result.pdf) {
-          const m =
-            text.match(/https?:\/\/\S+?\.pdf/gi) ||
-            text.match(/href="([^"]+\.pdf)"/i);
-          if (m && m[0]) {
-            let pdfUrl = Array.isArray(m) ? m[0] : m[1];
-            // Convert internal Squarespace URLs to public URLs
-            if (pdfUrl.includes('alan-ranger.squarespace.com')) {
-              pdfUrl = pdfUrl.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
-            }
-            result.pdf = pdfUrl;
-          }
+          result.pdf = extractPdfUrl(text);
         }
+        
         // find first internal related link with hint text
         if (!result.related) {
-          const rel =
-            text.match(
-              /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']*)/i
-            ) || text.match(/href="([^"]*alanranger\.com[^"]*)"/i);
-          if (rel && rel[0]) {
-            let url = Array.isArray(rel) ? rel[0] : rel[1];
-            
-            // Convert internal Squarespace URLs to public URLs
-            if (url.includes('alan-ranger.squarespace.com')) {
-              url = url.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
-            }
-            
-            // Only accept direct Alan Ranger URLs, not URLs that contain Alan Ranger URLs as parameters
-            if (url.startsWith('https://www.alanranger.com/') || 
-                url.startsWith('https://alanranger.com/') ||
-                url.startsWith('http://www.alanranger.com/') ||
-                url.startsWith('http://alanranger.com/')) {
-              result.related = url;
-              
-              // Robust label extraction: prioritize explicit link text, then clean URL path
-            const labelMatch =
-              text.match(/\[([^\]]+)\]\([^)]+\)/) ||
-                  text.match(/>([^<]{3,60})<\/a>/i) ||
-                  text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
-              
-            if (labelMatch && labelMatch[1]) {
-                let cleanLabel = labelMatch[1].trim();
-                // Clean up malformed labels (remove trailing brackets, etc.)
-                cleanLabel = cleanLabel.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
-                result.relatedLabel = cleanLabel;
-              } else {
-                // Generate a clean label from the URL path
-                try {
-                  const urlObj = new URL(url);
-                  const pathParts = urlObj.pathname.split('/').filter(Boolean);
-                  const lastPart = pathParts[pathParts.length - 1] || 'Related Content';
-                  result.relatedLabel = lastPart.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                } catch {
-                  result.relatedLabel = 'Related Content';
-                }
-              }
-            }
+          const url = extractRelatedLink(text);
+          if (url) {
+            result.related = url;
+            result.relatedLabel = extractRelatedLabel(text, url);
           }
         }
+        
         if (result.pdf && result.related) break;
       }
       if (result.pdf || result.related) break;
-  } catch {
+    } catch {
       // ignore and try next table
     }
   }
