@@ -259,42 +259,66 @@ function generateEquipmentAdviceResponse(query, articles, contentChunks) {
   return response;
 }
 
+// Helper function to extract and score paragraphs from text
+function pickPricingParas(text, hints) {
+  const t = (text || "").replace(/\s+/g, " ").trim();
+  const paras = t.split(/\n\s*\n|\.\s+(?=[A-Z])/).map(p => p.trim()).filter(p => p.length > 40);
+  const scored = paras.map(p => ({
+    p,
+    s: hints.reduce((acc, h) => acc + (p.toLowerCase().includes(h) ? 1 : 0), 0)
+  })).sort((a,b)=>b.s-a.s || b.p.length - a.p.length);
+  return scored.slice(0, 2).map(x=>x.p);
+}
+
+// Helper function to extract candidates from content chunks
+function extractCandidatesFromChunks(contentChunks, hints) {
+  const candidates = [];
+  for (const c of (contentChunks || [])) {
+    const text = c.chunk_text || c.content || "";
+    const paras = pickPricingParas(text, hints);
+    if (paras.length) candidates.push({ paras, url: c.url || c.source_url });
+  }
+  return candidates;
+}
+
+// Helper function to extract candidates from articles
+function extractCandidatesFromArticles(articles, hints) {
+  const candidates = [];
+  for (const a of (articles || [])) {
+    const text = `${a.title || ''}. ${a.description || ''}`;
+    const paras = pickPricingParas(text, hints);
+    if (paras.length) candidates.push({ paras, url: a.page_url || a.source_url });
+  }
+  return candidates;
+}
+
+// Helper function to extract pricing candidates from all sources
+function extractPricingCandidates(contentChunks, articles, hints) {
+  // Prefer chunks (usually denser) then fall back to article descriptions
+  let candidates = extractCandidatesFromChunks(contentChunks, hints);
+  if (!candidates.length) {
+    candidates = extractCandidatesFromArticles(articles, hints);
+  }
+  return candidates;
+}
+
+// Helper function to format the pricing response
+function formatPricingResponse(bestCandidate) {
+  const body = bestCandidate.paras.join("\n\n");
+  const src = bestCandidate.url ? `\n\n*Source: ${bestCandidate.url}*` : "";
+  return `**Pricing & Accommodation**\n\n${body}${src}`;
+}
+
 // Generic pricing/accommodation synthesizer (topic-agnostic)
 function generatePricingAccommodationAnswer(query, articles = [], contentChunks = []) {
   const lcq = (query || "").toLowerCase();
   const hints = ["price", "cost", "fees", "pricing", "bnb", "bed and breakfast", "accommodation", "include b&b", "includes b&b", "stay"];
   if (!hints.some(h => lcq.includes(h))) return null;
 
-  const pickParas = (text) => {
-    const t = (text || "").replace(/\s+/g, " ").trim();
-    const paras = t.split(/\n\s*\n|\.\s+(?=[A-Z])/).map(p => p.trim()).filter(p => p.length > 40);
-    const scored = paras.map(p => ({
-      p,
-      s: hints.reduce((acc, h) => acc + (p.toLowerCase().includes(h) ? 1 : 0), 0)
-    })).sort((a,b)=>b.s-a.s || b.p.length - a.p.length);
-    return scored.slice(0, 2).map(x=>x.p);
-  };
-
-  // Prefer chunks (usually denser) then fall back to article descriptions
-  const candidates = [];
-  for (const c of (contentChunks || [])) {
-    const text = c.chunk_text || c.content || "";
-    const paras = pickParas(text);
-    if (paras.length) candidates.push({ paras, url: c.url || c.source_url });
-  }
-  if (!candidates.length) {
-    for (const a of (articles || [])) {
-      const text = `${a.title || ''}. ${a.description || ''}`;
-      const paras = pickParas(text);
-      if (paras.length) candidates.push({ paras, url: a.page_url || a.source_url });
-    }
-  }
+  const candidates = extractPricingCandidates(contentChunks, articles, hints);
   if (!candidates.length) return null;
 
-  const best = candidates[0];
-  const body = best.paras.join("\n\n");
-  const src = best.url ? `\n\n*Source: ${best.url}*` : "";
-  return `**Pricing & Accommodation**\n\n${body}${src}`;
+  return formatPricingResponse(candidates[0]);
 }
 
 // Extract equipment type from query
