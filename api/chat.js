@@ -325,7 +325,7 @@ function extractPricingCandidates(contentChunks, articles, hints) {
 
 // Helper function to format the pricing response
 function formatPricingResponse(bestCandidate) {
-  const body = bestCandidate.paras.join("\n\n");
+  const body = bestCandidate.paras.map(para => cleanResponseText(para)).join("\n\n");
   const src = bestCandidate.url ? `\n\n*Source: ${bestCandidate.url}*` : "";
   return `**Pricing & Accommodation**\n\n${body}${src}`;
 }
@@ -404,7 +404,13 @@ function findRelevantEquipmentArticles(equipmentType, articles) {
 
 // Helper function to process individual content chunks
 function processContentChunk(chunk, considerations) {
-  const chunkText = (chunk.chunk_text || chunk.content || '').toLowerCase();
+  let chunkText = (chunk.chunk_text || chunk.content || '');
+  
+  // Clean the text first
+  chunkText = cleanResponseText(chunkText);
+  
+  // Convert to lowercase for processing
+  chunkText = chunkText.toLowerCase();
   
   // Filter out malformed content
   if (isMalformedContent(chunkText)) {
@@ -615,6 +621,55 @@ function generateBasicEquipmentAdvice(equipmentType) {
   
   return response;
 }
+// Helper function to clean response text and remove junk characters
+function cleanResponseText(text) {
+  if (!text || typeof text !== 'string') return text;
+  
+  // Remove debug artifacts and junk characters
+  text = text.replace(/\/\s*\d+\s*\/[^]*$/g, ''); // Remove "/ 0 /" patterns
+  text = text.replace(/searchBack[^]*$/g, ''); // Remove "searchBack" artifacts
+  text = text.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, ''); // Remove UTM parameters
+  text = text.replace(/\* Next lesson:.*?\*\*/g, ''); // Remove "Next lesson" artifacts
+  text = text.replace(/\[ARTICLE\]\s*/g, ''); // Remove [ARTICLE] headers
+  text = text.replace(/\[CONTENT\]\s*/g, ''); // Remove [CONTENT] headers
+  text = text.replace(/\s+/g, ' ').trim(); // Normalize whitespace
+  
+  return text;
+}
+
+// Helper function to improve markdown formatting
+function formatResponseMarkdown(title, url, description, relatedContent = []) {
+  let markdown = '';
+  
+  // Add title as header
+  if (title) {
+    markdown += `# ${title}\n\n`;
+  }
+  
+  // Add source URL as clickable link
+  if (url) {
+    markdown += `**Source**: [${url}](${url})\n\n`;
+  }
+  
+  // Add description
+  if (description) {
+    markdown += `${description}\n\n`;
+  }
+  
+  // Add related content section if available
+  if (relatedContent && relatedContent.length > 0) {
+    markdown += `## Related Content\n\n`;
+    relatedContent.forEach(item => {
+      if (item.title && item.url) {
+        markdown += `- [${item.title}](${item.url})\n`;
+      }
+    });
+    markdown += '\n';
+  }
+  
+  return markdown;
+}
+
 // Helper functions for generateDirectAnswer
 function isCourseEquipmentQuery(lc) {
   return (lc.includes("equipment") && (lc.includes("course") || lc.includes("class") || lc.includes("lesson"))) ||
@@ -651,8 +706,13 @@ function findRelevantArticleForTerm(exactTerm, articles) {
       
 function extractAnswerFromArticleDescription(relevantArticle) {
       if (relevantArticle.description && relevantArticle.description.length > 50) {
-        console.log(`🔍 generateDirectAnswer: Using article description="${relevantArticle.description.substring(0, 200)}..."`);
-        return `**${relevantArticle.description}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
+        const cleanDescription = cleanResponseText(relevantArticle.description);
+        console.log(`🔍 generateDirectAnswer: Using article description="${cleanDescription.substring(0, 200)}..."`);
+        return formatResponseMarkdown(
+          relevantArticle.title || 'Article Information',
+          relevantArticle.page_url || relevantArticle.url,
+          cleanDescription
+        );
   }
   return null;
 }
@@ -677,13 +737,16 @@ function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
         // Clean HTML tags from the answer
         answerText = answerText.replace(/<[^>]*>/g, '').trim();
         
-        // Clean up any remaining artifacts
-        answerText = answerText.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, '');
-        answerText = answerText.replace(/\* Next lesson:.*?\*\*/g, '');
+        // Use the comprehensive cleaning function
+        answerText = cleanResponseText(answerText);
         
         if (answerText.length > 50) {
           console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
-          return `**${answerText}**\n\n*From Alan's blog: ${relevantArticle.page_url || relevantArticle.url}*\n\n`;
+          return formatResponseMarkdown(
+            relevantArticle.title || 'FAQ Information',
+            relevantArticle.page_url || relevantArticle.url,
+            answerText
+          );
           }
         }
   
@@ -778,6 +841,9 @@ function extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChu
   
     let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
     
+    // Use the comprehensive cleaning function
+    chunkText = cleanResponseText(chunkText);
+    
     // Remove metadata headers that start with [ARTICLE] or similar
     chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
     chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
@@ -832,7 +898,11 @@ function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
       const foundFitnessWord = fitnessWords.find(word => chunkTextLower.includes(word));
       
       if (foundFitnessWord) {
-        return `**The fitness level required is ${foundFitnessWord}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+        return formatResponseMarkdown(
+          'Fitness Level Information',
+          relevantChunk.url,
+          `The fitness level required is ${foundFitnessWord}. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`
+        );
       }
   
   return null;
@@ -850,7 +920,11 @@ function extractDefinitionSentence(chunkText, exactTerm, relevantChunk) {
   });
     
     if (defSentence) {
-      return `**${defSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+      return formatResponseMarkdown(
+        'Definition',
+        relevantChunk.url,
+        defSentence.trim()
+      );
     }
 
   return null;
@@ -881,7 +955,11 @@ function extractRelevantSentence(chunkText, queryWords, relevantChunk) {
     });
     
     if (relevantSentence) {
-      return `**${relevantSentence.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+      return formatResponseMarkdown(
+        'Information',
+        relevantChunk.url,
+        relevantSentence.trim()
+      );
     }
     
   return null;
@@ -893,7 +971,11 @@ function extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChun
       const byPara = chunkText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 50);
       const para = byPara.find(p => p.toLowerCase().includes(`what is ${exactTerm}`) && p.length <= 300);
       if (para) {
-        return `**${para.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+        return formatResponseMarkdown(
+          'Definition',
+          relevantChunk.url,
+          para.trim()
+        );
       }
     }
 
@@ -913,7 +995,11 @@ function extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChun
     });
     
     if (relevantParagraph && relevantParagraph.length < 300) {
-      return `**${relevantParagraph.trim()}**\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+      return formatResponseMarkdown(
+        'Information',
+        relevantChunk.url,
+        relevantParagraph.trim()
+      );
   }
   
   return null;
