@@ -417,6 +417,49 @@ function extractExperienceConsiderations(chunkText, considerations) {
   }
 }
 
+// Helper function to process individual articles for considerations
+function processArticleForConsiderations(article, considerations) {
+  const text = `${article.title || ''} ${article.description || ''}`.toLowerCase();
+  
+  // Extract different types of considerations from articles
+  extractArticleBudgetConsiderations(text, article, considerations);
+  extractArticleWeightConsiderations(text, article, considerations);
+  extractArticleUsageConsiderations(text, article, considerations);
+  extractArticleTerrainConsiderations(text, article, considerations);
+  extractArticleExperienceConsiderations(text, article, considerations);
+}
+
+// Helper functions to extract different types of considerations from articles
+function extractArticleBudgetConsiderations(text, article, considerations) {
+  if (text.includes('budget') || text.includes('price') || text.includes('cost') || text.includes('affordable')) {
+    considerations.budget.push(article.title || 'Budget considerations');
+  }
+}
+
+function extractArticleWeightConsiderations(text, article, considerations) {
+  if (text.includes('weight') || text.includes('lightweight') || text.includes('heavy') || text.includes('portable')) {
+    considerations.weight.push(article.title || 'Weight considerations');
+  }
+}
+
+function extractArticleUsageConsiderations(text, article, considerations) {
+  if (text.includes('landscape') || text.includes('portrait') || text.includes('travel') || text.includes('studio')) {
+    considerations.usage.push(article.title || 'Usage considerations');
+  }
+}
+
+function extractArticleTerrainConsiderations(text, article, considerations) {
+  if (text.includes('terrain') || text.includes('hiking') || text.includes('outdoor') || text.includes('weather')) {
+    considerations.terrain.push(article.title || 'Terrain considerations');
+  }
+}
+
+function extractArticleExperienceConsiderations(text, article, considerations) {
+  if (text.includes('beginner') || text.includes('advanced') || text.includes('professional') || text.includes('experience')) {
+    considerations.experience.push(article.title || 'Experience level');
+  }
+}
+
 // Extract key considerations from articles and content chunks
 function extractKeyConsiderations(articles, contentChunks) {
   const considerations = {
@@ -429,34 +472,7 @@ function extractKeyConsiderations(articles, contentChunks) {
   };
   
   // Extract from articles
-  articles.forEach(article => {
-    const text = `${article.title || ''} ${article.description || ''}`.toLowerCase();
-    
-    // Budget considerations
-    if (text.includes('budget') || text.includes('price') || text.includes('cost') || text.includes('affordable')) {
-      considerations.budget.push(article.title || 'Budget considerations');
-    }
-    
-    // Weight considerations
-    if (text.includes('weight') || text.includes('lightweight') || text.includes('heavy') || text.includes('portable')) {
-      considerations.weight.push(article.title || 'Weight considerations');
-    }
-    
-    // Usage considerations
-    if (text.includes('landscape') || text.includes('portrait') || text.includes('travel') || text.includes('studio')) {
-      considerations.usage.push(article.title || 'Usage considerations');
-    }
-    
-    // Terrain considerations
-    if (text.includes('terrain') || text.includes('hiking') || text.includes('outdoor') || text.includes('weather')) {
-      considerations.terrain.push(article.title || 'Terrain considerations');
-    }
-    
-    // Experience level
-    if (text.includes('beginner') || text.includes('advanced') || text.includes('professional') || text.includes('experience')) {
-      considerations.experience.push(article.title || 'Experience level');
-    }
-  });
+  articles.forEach(article => processArticleForConsiderations(article, considerations));
   
   // Extract from content chunks (with malformed content filtering)
   if (contentChunks && contentChunks.length > 0) {
