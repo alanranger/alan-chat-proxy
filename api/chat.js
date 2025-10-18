@@ -191,7 +191,7 @@ function findMatchingTopic(query) {
 // Helper function to find prioritized chunk
 function findPrioritizedChunk(contentChunks, match) {
   const prefer = (u) => (match.prefer || []).some(p => (u || "").includes(p));
-  
+
   return (contentChunks || []).find(c => prefer(c.url)) || contentChunks.find(c => {
     const text = (c.chunk_text || c.content || "").toLowerCase();
     return match.hints.some(h => text.includes(h));
@@ -200,11 +200,11 @@ function findPrioritizedChunk(contentChunks, match) {
 
 // Helper function to pick URL from chunk or articles
 function pickServiceFAQUrl(prioritizedChunk, articles, match) {
-  if (prioritizedChunk?.url) return prioritizedChunk.url;
+    if (prioritizedChunk?.url) return prioritizedChunk.url;
   
   const prefer = (u) => (match.prefer || []).some(p => (u || "").includes(p));
-  const art = (articles || []).find(a => prefer(a.page_url || a.source_url || ""));
-  return art ? (art.page_url || art.source_url) : null;
+    const art = (articles || []).find(a => prefer(a.page_url || a.source_url || ""));
+    return art ? (art.page_url || art.source_url) : null;
 }
 
 // Helper function to extract relevant paragraph for service FAQ
@@ -766,12 +766,12 @@ function hasWord(text, term) {
   
 function isMalformedChunk(text) {
   return text.length < 50 || 
-         text.includes('%3A%2F%2F') || 
-         text.includes('] 0 Likes') ||
-         text.includes('Sign In') ||
-         text.includes('My Account') ||
-         text.includes('Back ') ||
-         text.includes('[/') ||
+        text.includes('%3A%2F%2F') || 
+        text.includes('] 0 Likes') ||
+        text.includes('Sign In') ||
+        text.includes('My Account') ||
+        text.includes('Back ') ||
+        text.includes('[/') ||
          text.includes('Cart 0');
 }
 
@@ -790,9 +790,9 @@ function filterContentChunk(chunk, exactTerm, slug) {
   
   // Skip malformed chunks (URL-encoded text, very short text, or navigation elements)
   if (isMalformedChunk(text)) {
-    return false;
-  }
-  
+      return false;
+    }
+    
   return hasRelevantContent(chunk, exactTerm, slug);
 }
 
@@ -1063,42 +1063,42 @@ function getTermsAndConditionsAnswer(lc) {
     return `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated. For full details, visit the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   return null;
-}
-
+  }
+  
 function getContactInformationAnswer(lc) {
   if (lc.includes("contact") || lc.includes("phone") || lc.includes("address") || lc.includes("email")) {
     return `**Contact Information**:\n- **Address**: 45 Hathaway Road, Coventry, CV4 9HW, United Kingdom\n- **Phone**: +44 781 701 7994\n- **Email**: info@alanranger.com\n- **Hours**: Monday-Sunday, 9am-5pm\n\n`;
   }
   return null;
-}
-
+  }
+  
 function getBookingCancellationAnswer(lc) {
   if (lc.includes("refund") || lc.includes("cancel") || lc.includes("booking")) {
     return `**Booking and Cancellation**: For course changes, please notify at least four weeks in advance. Alan Ranger Photography has comprehensive booking terms and conditions, public liability insurance, and CRB disclosure. Full details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   return null;
-}
-
+  }
+  
 function getProfessionalQualificationsAnswer(lc) {
   if (lc.includes("insurance") || lc.includes("qualified") || lc.includes("professional")) {
     return `**Professional Qualifications**: Alan Ranger Photography has public liability insurance, professional indemnity insurance, CRB disclosure, and professional qualifications/accreditations. Full certificates and documentation are available on the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   return null;
-}
-
+  }
+  
 function getPaymentPlansAnswer(lc) {
   if (lc.includes("payment") && !lc.includes("voucher") && !lc.includes("gift")) {
     return `**Payment Plans**: Alan Ranger Photography offers "Pick N Mix" payment plans to help spread the cost of courses and workshops. Full terms and conditions for payment options are detailed in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   return null;
-}
-
+  }
+  
 function getPrivacyDataProtectionAnswer(lc) {
   if (lc.includes("privacy") || lc.includes("data") || lc.includes("newsletter")) {
     return `**Privacy and Data Protection**: Alan Ranger Photography has comprehensive privacy and cookie policies. When you subscribe to the newsletter, you'll receive an email to verify and confirm your subscription. Full privacy details are available in the [Terms and Conditions](https://www.alanranger.com/terms-and-conditions).\n\n`;
   }
   return null;
-}
+  }
   
 function getServiceAnswers(lc) {
   if (lc.includes("private") || lc.includes("mentoring") || lc.includes("1-2-1") || lc.includes("tuition")) {
@@ -1795,46 +1795,126 @@ function needsClarification(query) {
  * Sources options from actual data instead of hardcoded patterns
  */
 // Helper functions for clarification options generation
+// Helper function to calculate event duration in hours
+function calculateEventDuration(event) {
+  if (!event.date_start || !event.date_end) return null;
+  
+  const start = new Date(event.date_start);
+  const end = new Date(event.date_end);
+  const diffMs = end - start;
+  const diffHours = diffMs / (1000 * 60 * 60);
+  
+  return Math.round(diffHours * 10) / 10; // Round to 1 decimal place
+}
+
+// Helper function to extract workshop type from duration
+function getWorkshopTypeFromDuration(duration) {
+  if (!duration) return null;
+  
+  if (duration <= 4) return '2.5hr - 4hr workshops';
+  if (duration <= 8) return '1 day workshops';
+  return 'Multi day residential workshops';
+}
+
+// Helper function to extract location-based types
+function getLocationBasedTypes(events) {
+  const locations = new Set();
+  for (const event of events) {
+    if (event.event_location && event.event_location.trim()) {
+      locations.add(event.event_location.trim());
+    }
+  }
+  
+  return locations.size > 0 ? ['Workshops by location'] : [];
+}
+
+// Helper function to extract month-based types
+function getMonthBasedTypes(events) {
+  const months = new Set();
+  for (const event of events) {
+    if (event.date_start) {
+      const month = new Date(event.date_start).getMonth();
+      months.add(month);
+    }
+  }
+  
+  return months.size > 0 ? ['Workshops by month'] : [];
+}
+
 function extractEventTypesAndCategories(events) {
-      const eventTypes = new Set();
-      const eventCategories = new Set();
-      
-  events.forEach(event => {
-        // Extract event types from categories or CSV type
-        if (event.csv_type) {
-          eventTypes.add(event.csv_type.replace('_events', '').replace('_', ' '));
-        }
-        if (event.categories && Array.isArray(event.categories)) {
-          event.categories.forEach(cat => {
-            if (cat && cat.trim()) {
-              eventCategories.add(cat.trim());
-            }
-          });
-        }
-      });
+  const eventTypes = new Set();
+  const eventCategories = new Set();
+  
+  // Extract duration-based workshop types
+  extractDurationBasedTypes(events, eventTypes);
+  
+  // Add location-based types
+  const locationTypes = getLocationBasedTypes(events);
+  locationTypes.forEach(type => eventTypes.add(type));
+  
+  // Add month-based types
+  const monthTypes = getMonthBasedTypes(events);
+  monthTypes.forEach(type => eventTypes.add(type));
+  
+  // Extract categories from event titles
+  extractTitleBasedCategories(events, eventCategories);
       
   return { eventTypes, eventCategories };
 }
 
+// Helper function to extract duration-based types
+function extractDurationBasedTypes(events, eventTypes) {
+  for (const event of events) {
+    const duration = calculateEventDuration(event);
+    if (duration) {
+      const type = getWorkshopTypeFromDuration(duration);
+      if (type) eventTypes.add(type);
+    }
+  }
+}
+
+// Helper function to extract categories from titles
+function extractTitleBasedCategories(events, eventCategories) {
+  const categoryMappings = {
+    'bluebell': 'Bluebell workshops',
+    'woodland': 'Woodland workshops', 
+    'autumn': 'Autumn workshops',
+    'macro': 'Macro workshops',
+    'abstract': 'Abstract workshops'
+  };
+  
+  for (const event of events) {
+    if (!event.event_title) continue;
+    
+    const title = event.event_title.toLowerCase();
+    for (const [keyword, category] of Object.entries(categoryMappings)) {
+      if (title.includes(keyword)) {
+        eventCategories.add(category);
+      }
+    }
+  }
+}
+
 function addEventOptions(options, eventTypes, eventCategories) {
-      // Add event-based options
-      eventTypes.forEach(type => {
-        const displayType = type.charAt(0).toUpperCase() + type.slice(1);
-        options.push({
-          text: `${displayType} events`,
-          query: `${type} events`
-        });
-      });
-      
-      eventCategories.forEach(category => {
-        if (category && category.length > 3) { // Avoid very short categories
-          options.push({
-            text: `${category} events`,
-            query: `${category} events`
-          });
-        }
+  // Add event-based options
+  for (const type of eventTypes) {
+    const displayType = type.charAt(0).toUpperCase() + type.slice(1);
+    options.push({
+      text: `${displayType} events`,
+      query: `${type} events`
+    });
+  }
+  
+  // Add category-based options
+  for (const category of eventCategories) {
+    if (category && category.length > 3) { // Avoid very short categories
+      options.push({
+        text: `${category} events`,
+        query: `${category} events`
       });
     }
+  }
+}
     
 function extractArticleCategoriesAndTags(articles) {
       const articleCategories = new Set();
@@ -1991,8 +2071,8 @@ function generateEquipmentCourseTypeClarification() {
       ],
       confidence: 30
     };
-}
-
+  }
+  
 function generateCourseClarification() {
   return {
     type: "course_clarification",
@@ -2104,9 +2184,9 @@ async function tryEvidenceBasedClarification(client, query, pageContext) {
       };
     }
   }
-  return null;
-}
-
+    return null;
+  }
+  
 function checkSuppressedPatterns(lc) {
   if (lc.includes("equipment") || lc.includes("events") || lc.includes("training")) {
     return null;
@@ -2119,7 +2199,7 @@ function checkSuppressedPatterns(lc) {
   
   return "continue";
 }
-
+  
 function checkCourseWorkshopPatterns(lc) {
   if (lc.includes("do you do") && lc.includes("courses")) {
     return generateCourseClarification();
@@ -2420,25 +2500,65 @@ function checkRemainingPatterns(lc) {
   return null;
 }
 
+// Helper function to determine clarification level and confidence
+function getClarificationLevelAndConfidence(query, pageContext) {
+  // Check if this is a follow-up clarification (has clarification context)
+  const isFollowUp = pageContext?.clarificationLevel > 0;
+  const currentLevel = pageContext?.clarificationLevel || 0;
+  
+  // Confidence progression: 20% → 50% → 80%
+  const confidenceLevels = [20, 50, 80];
+  const nextLevel = Math.min(currentLevel + 1, confidenceLevels.length - 1);
+  const confidence = confidenceLevels[nextLevel];
+  
+  return {
+    level: nextLevel,
+    confidence,
+    isFollowUp,
+    shouldShowResults: nextLevel >= 2 // Show results after 2nd clarification
+  };
+}
+
 async function generateClarificationQuestion(query, client = null, pageContext = null) {
   const lc = query.toLowerCase();
   console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
   
+  // Get clarification level and confidence
+  const { level, confidence, shouldShowResults } = getClarificationLevelAndConfidence(query, pageContext);
+  
+  // If we've reached max clarifications, show results instead
+  if (shouldShowResults) {
+    console.log(`🎯 Max clarifications reached (level ${level}), showing results instead`);
+    return null; // Let the system show results
+  }
+  
   // Check loop guard patterns
   const loopGuardResult = checkLoopGuardPatterns(lc);
-  if (loopGuardResult) return loopGuardResult;
+  if (loopGuardResult) {
+    loopGuardResult.confidence = confidence;
+    return loopGuardResult;
+  }
   
   // Check special equipment patterns
   const specialEquipmentResult = checkSpecialEquipmentPatterns(lc);
-  if (specialEquipmentResult) return specialEquipmentResult;
+  if (specialEquipmentResult) {
+    specialEquipmentResult.confidence = confidence;
+    return specialEquipmentResult;
+  }
   
   // PRIORITY: Check course/workshop patterns FIRST (before evidence-based)
   const courseWorkshopResult = checkCourseWorkshopPatterns(lc);
-  if (courseWorkshopResult) return courseWorkshopResult;
+  if (courseWorkshopResult) {
+    courseWorkshopResult.confidence = confidence;
+    return courseWorkshopResult;
+  }
   
   // Try evidence-based clarification (only if no workshop patterns matched)
   const evidenceResult = await tryEvidenceBasedClarification(client, query, pageContext);
-  if (evidenceResult) return evidenceResult;
+  if (evidenceResult) {
+    evidenceResult.confidence = confidence;
+    return evidenceResult;
+  }
   
   // Check suppressed patterns
   const suppressedResult = checkSuppressedPatterns(lc);
@@ -2446,31 +2566,53 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   
   // Check equipment patterns
   const equipmentResult = checkEquipmentPatterns(lc);
-  if (equipmentResult) return equipmentResult;
+  if (equipmentResult) {
+    equipmentResult.confidence = confidence;
+    return equipmentResult;
+  }
   
   // Check service patterns
   const serviceResult = checkServicePatterns(lc);
-  if (serviceResult) return serviceResult;
+  if (serviceResult) {
+    serviceResult.confidence = confidence;
+    return serviceResult;
+  }
   
   // Check technical patterns
   const technicalResult = checkTechnicalPatterns(lc);
-  if (technicalResult) return technicalResult;
+  if (technicalResult) {
+    technicalResult.confidence = confidence;
+    return technicalResult;
+  }
   
   // Check about patterns
   const aboutResult = checkAboutPatterns(lc);
-  if (aboutResult) return aboutResult;
+  if (aboutResult) {
+    aboutResult.confidence = confidence;
+    return aboutResult;
+  }
   
   // Check free course and workshop patterns
   const freeCourseWorkshopResult = checkFreeCourseWorkshopPatterns(lc);
-  if (freeCourseWorkshopResult) return freeCourseWorkshopResult;
+  if (freeCourseWorkshopResult) {
+    freeCourseWorkshopResult.confidence = confidence;
+    return freeCourseWorkshopResult;
+  }
   
   // Check remaining patterns
   const remainingResult = checkRemainingPatterns(lc);
-  if (remainingResult) return remainingResult;
+  if (remainingResult) {
+    remainingResult.confidence = confidence;
+    return remainingResult;
+  }
   
   // CONTENT-BASED FALLBACK: If no specific pattern matches, use generic clarification
   console.log(`✅ No specific pattern matched for: "${query}" - using generic clarification`);
-  return generateGenericClarification();
+  const genericResult = generateGenericClarification();
+  if (genericResult) {
+    genericResult.confidence = confidence;
+  }
+  return genericResult;
 }
 // Helper functions for handleClarificationFollowUp
 function handleOnlineCoursesPatterns(query, lc) {
@@ -2671,8 +2813,8 @@ function handleUpcomingEventsPatterns(query, lc) {
     };
   }
   return null;
-}
-
+  }
+  
 function handleGenericFallbackPatterns(query, lc) {
   if (lc.includes("yes") && lc.includes("free")) {
     return {
@@ -2690,8 +2832,8 @@ function handleGenericFallbackPatterns(query, lc) {
     };
   }
   return null;
-}
-
+  }
+  
 function handleCourseSpecificPatterns(query, lc) {
   if (lc.includes("beginner courses") || lc.includes("beginner photography courses")) {
     console.log(`✅ Matched beginner courses pattern for: "${query}"`);
@@ -3087,7 +3229,7 @@ function handleEventsBypass(query, events, res) {
     return true;
   }
   return false;
-}
+  }
 
 async function handleArticlesBypass(client, query, articles, res) {
   if ((articles || []).length > 0) {
@@ -3171,33 +3313,33 @@ function enhanceKeywordsWithPageContext(keywords, pageContext) {
     }
   }
   return keywords;
-}
+  }
 
 function applyKeywordFiltering(q, keywords) {
-  // Filter out generic query words that don't help find events
-  const GENERIC_QUERY_WORDS = new Set(["when", "next", "is", "are", "the", "a", "an", "what", "where", "how", "much", "does", "do", "can", "could", "would", "should"]);
-  const meaningfulKeywords = keywords.filter(k => k && !GENERIC_QUERY_WORDS.has(String(k).toLowerCase()));
-  
-  console.log('🔍 findEvents keyword filtering:', {
-    originalKeywords: keywords,
-    meaningfulKeywords,
-    filteredOut: keywords.filter(k => !meaningfulKeywords.includes(k))
-  });
-  
-  // Search in event_title, event_location, and product_title fields
-  const parts = [];
-  const t1 = anyIlike("event_title", meaningfulKeywords); if (t1) parts.push(t1);
-  const t2 = anyIlike("event_url", meaningfulKeywords); if (t2) parts.push(t2);
-  const t3 = anyIlike("event_location", meaningfulKeywords); if (t3) parts.push(t3);
-  const t4 = anyIlike("product_title", meaningfulKeywords); if (t4) parts.push(t4);
-  
-  console.log('🔍 findEvents debug:', {
-    meaningfulKeywords,
-    parts,
-    query: parts.join(",")
-  });
-  
-  if (parts.length) {
+    // Filter out generic query words that don't help find events
+    const GENERIC_QUERY_WORDS = new Set(["when", "next", "is", "are", "the", "a", "an", "what", "where", "how", "much", "does", "do", "can", "could", "would", "should"]);
+    const meaningfulKeywords = keywords.filter(k => k && !GENERIC_QUERY_WORDS.has(String(k).toLowerCase()));
+    
+    console.log('🔍 findEvents keyword filtering:', {
+      originalKeywords: keywords,
+      meaningfulKeywords,
+      filteredOut: keywords.filter(k => !meaningfulKeywords.includes(k))
+    });
+    
+    // Search in event_title, event_location, and product_title fields
+    const parts = [];
+    const t1 = anyIlike("event_title", meaningfulKeywords); if (t1) parts.push(t1);
+    const t2 = anyIlike("event_url", meaningfulKeywords); if (t2) parts.push(t2);
+    const t3 = anyIlike("event_location", meaningfulKeywords); if (t3) parts.push(t3);
+    const t4 = anyIlike("product_title", meaningfulKeywords); if (t4) parts.push(t4);
+    
+    console.log('🔍 findEvents debug:', {
+      meaningfulKeywords,
+      parts,
+      query: parts.join(",")
+    });
+    
+    if (parts.length) {
     return q.or(parts.join(","));
   }
   return q;
@@ -3213,7 +3355,7 @@ function logEventsQueryResults(data, q) {
     isArray: Array.isArray(data)
   });
 }
-
+  
 function mapEventsData(data) {
   // Map v_events_for_chat fields to frontend expected fields
   const mappedData = (data || []).map(event => ({
@@ -3748,8 +3890,8 @@ async function getArticleAuxLinks(client, articleUrl) {
     const tableResult = await processTableForAuxLinks(client, t, articleUrl);
     if (tableResult) {
       Object.assign(result, tableResult);
-      if (result.pdf && result.related) break;
-    }
+        if (result.pdf && result.related) break;
+      }
   }
   return result;
 }
@@ -3767,7 +3909,7 @@ async function processTableForAuxLinks(client, table, articleUrl) {
 
     return processTableData(data, table);
   } catch {
-    // ignore and try next table
+      // ignore and try next table
     return null;
   }
 }
@@ -3959,7 +4101,7 @@ function parseStandardEquipmentFormat(ln, helpers) {
 function parseAsteriskEquipmentFormat(ln, helpers) {
   const { nextVal, setIf } = helpers;
   
-  if (/^\*\s*equipment\s*needed:/i.test(ln)) {
+    if (/^\*\s*equipment\s*needed:/i.test(ln)) {
     const v = ln.replace(/^\*\s*equipment\s*needed:\s*/i, "").trim() || nextVal(0);
     if (v) setIf("equipmentNeeded", v);
     return true;
@@ -3970,18 +4112,18 @@ function parseAsteriskEquipmentFormat(ln, helpers) {
 function parseGenericEquipmentFormat(ln, helpers) {
   const { setIf } = helpers;
   
-  if (/equipment needed|equipment required|what you need|you will need/i.test(ln)) {
-    // Extract the equipment requirement from the line
-    const equipmentMatch = ln.match(/(?:equipment needed|equipment required|what you need|you will need)[:\s]*([^\\n]+)/i);
-    if (equipmentMatch) {
+    if (/equipment needed|equipment required|what you need|you will need/i.test(ln)) {
+        // Extract the equipment requirement from the line
+        const equipmentMatch = ln.match(/(?:equipment needed|equipment required|what you need|you will need)[:\s]*([^\\n]+)/i);
+        if (equipmentMatch) {
       setIf("equipmentNeeded", equipmentMatch[1].trim());
-    } else {
+        } else {
       setIf("equipmentNeeded", ln.trim());
-    }
+        }
     return true;
-  }
+      }
   return false;
-}
+    }
     
 function parseSessionField(ln, out) {
     const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
@@ -4145,14 +4287,14 @@ function extractSummaryFromDescription(fullDescription) {
 
 // Helper functions for summary extraction
 function extractFromDescriptionSection(fullDescription) {
-  const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
+    const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
   if (lastDescriptionIndex === -1) return null;
 
-  // Get text after the last "Description:"
-  let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
+      // Get text after the last "Description:"
+      let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
 
   // Further refine to stop at other section headers
-  const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
+      const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
   const stopIndex = findEarliestStopWord(potentialSummaryText, stopWords);
   const summaryText = potentialSummaryText.substring(0, stopIndex).trim();
 
@@ -4161,12 +4303,12 @@ function extractFromDescriptionSection(fullDescription) {
 
 function findEarliestStopWord(text, stopWords) {
   let stopIndex = text.length;
-  for (const word of stopWords) {
+      for (const word of stopWords) {
     const idx = text.toLowerCase().indexOf(word);
-    if (idx !== -1 && idx < stopIndex) {
-      stopIndex = idx;
-    }
-  }
+        if (idx !== -1 && idx < stopIndex) {
+          stopIndex = idx;
+        }
+      }
   return stopIndex;
 }
 
@@ -4178,14 +4320,14 @@ function processSummaryText(text) {
   if (!text) return null;
   
   const sentences = text
-    .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .split(/[.!?]+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 30) // Filter out very short fragments
-    .slice(0, 2); // Take first 2 sentences
+        .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .split(/[.!?]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 30) // Filter out very short fragments
+        .slice(0, 2); // Take first 2 sentences
 
-  if (sentences.length > 0) {
+      if (sentences.length > 0) {
     return sentences.join('. ') + (sentences.length > 1 ? '.' : '');
   }
   
@@ -4251,7 +4393,7 @@ function buildProductContentLines(title, priceHead, summary, facts, sessions) {
   lines.push(`**${title}**${priceHead}`);
 
   if (summary) lines.push(`\n${summary}`);
-
+  
   if (facts.length) {
     lines.push("");
     for (const f of facts) lines.push(f);
@@ -4290,7 +4432,7 @@ async function buildProductPanelMarkdown(products) {
 /* ----------------------------- Event list UI ----------------------------- */
 function transformEventForUI(e) {
   return {
-    ...e,
+      ...e,
     ...getEventBasicFields(e),
     ...getEventTimeFields(e),
     ...getEventLocationFields(e),
@@ -4300,8 +4442,8 @@ function transformEventForUI(e) {
 
 function getEventBasicFields(e) {
   return {
-    title: e.title || e.event_title,
-    href: e.page_url || e.event_url,
+      title: e.title || e.event_title,
+      href: e.page_url || e.event_url,
     csv_type: e.csv_type || null,
     price_gbp: e.price_gbp || e.price || null,
     categories: e.categories || null,
@@ -4313,34 +4455,34 @@ function getEventBasicFields(e) {
 function getEventTimeFields(e) {
   return {
     when: fmtDateLondon(e.start_date || e.date_start),
-    date_start: e.start_date || e.date_start,
-    date_end: e.end_date || e.date_end,
-    _csv_start_time: e._csv_start_time || e.start_time || null,
-    _csv_end_time: e._csv_end_time || e.end_time || null,
-    start_time: e.start_time || null,
-    end_time: e.end_time || null,
+      date_start: e.start_date || e.date_start,
+      date_end: e.end_date || e.date_end,
+      _csv_start_time: e._csv_start_time || e.start_time || null,
+      _csv_end_time: e._csv_end_time || e.end_time || null,
+      start_time: e.start_time || null,
+      end_time: e.end_time || null,
   };
 }
 
 function getEventLocationFields(e) {
   return {
     location: e.location_name || e.event_location,
-    location_name: e.location_name || null,
-    location_address: e.location_address || null,
+      location_name: e.location_name || null,
+      location_address: e.location_address || null,
   };
 }
 
 function getEventStructuredFields(e) {
   return {
-    participants: e.participants || null,
-    experience_level: e.experience_level || null,
-    equipment_needed: e.equipment_needed || null,
-    time_schedule: e.time_schedule || null,
-    fitness_level: e.fitness_level || null,
-    what_to_bring: e.what_to_bring || null,
-    course_duration: e.course_duration || null,
-    instructor_info: e.instructor_info || null,
-    availability_status: e.availability_status || null,
+      participants: e.participants || null,
+      experience_level: e.experience_level || null,
+      equipment_needed: e.equipment_needed || null,
+      time_schedule: e.time_schedule || null,
+      fitness_level: e.fitness_level || null,
+      what_to_bring: e.what_to_bring || null,
+      course_duration: e.course_duration || null,
+      instructor_info: e.instructor_info || null,
+      availability_status: e.availability_status || null,
   };
 }
 
@@ -4491,70 +4633,70 @@ function findRelevantEvent(events, lowerQuery, dataContext) {
   let event = events[0]; // Default to first event
   
   // Check for location-specific events
-  const locationKeywords = ['devon', 'cornwall', 'yorkshire', 'peak district', 'lake district', 'snowdonia', 'anglesey', 'norfolk', 'suffolk', 'dorset', 'somerset'];
-  const mentionedLocation = locationKeywords.find(loc => lowerQuery.includes(loc));
-  
-  if (mentionedLocation) {
-    const locationEvent = events.find(e => {
-      const eventLocation = (e.event_location || '').toLowerCase();
-      return eventLocation.includes(mentionedLocation);
-    });
+    const locationKeywords = ['devon', 'cornwall', 'yorkshire', 'peak district', 'lake district', 'snowdonia', 'anglesey', 'norfolk', 'suffolk', 'dorset', 'somerset'];
+    const mentionedLocation = locationKeywords.find(loc => lowerQuery.includes(loc));
     
-    if (locationEvent) {
-      event = locationEvent;
-      console.log(`🔍 RAG: Found location-specific event for ${mentionedLocation}: ${event.event_title}`);
+    if (mentionedLocation) {
+      const locationEvent = events.find(e => {
+        const eventLocation = (e.event_location || '').toLowerCase();
+        return eventLocation.includes(mentionedLocation);
+      });
+      
+      if (locationEvent) {
+        event = locationEvent;
+        console.log(`🔍 RAG: Found location-specific event for ${mentionedLocation}: ${event.event_title}`);
+      }
     }
-  }
-  
+    
   // Check for contextually relevant events
-  if (dataContext.originalQuery) {
-    const originalQueryLower = dataContext.originalQuery.toLowerCase();
-    console.log(`🔍 RAG: Looking for event matching original query: "${dataContext.originalQuery}"`);
-    
-    const keyTerms = dataContext.originalQuery.toLowerCase()
-      .split(/\s+/)
-      .filter(term => term.length > 3 && !['when', 'where', 'how', 'what', 'next', 'workshop', 'photography'].includes(term));
-    
-    const matchingEvent = events.find(e => {
-      const eventText = `${e.event_title || ''} ${e.event_location || ''}`.toLowerCase();
-      return keyTerms.some(term => eventText.includes(term));
-    });
-    
-    if (matchingEvent) {
-      event = matchingEvent;
-      console.log(`🔍 RAG: Found contextually relevant event: ${event.event_title}`);
+    if (dataContext.originalQuery) {
+      const originalQueryLower = dataContext.originalQuery.toLowerCase();
+      console.log(`🔍 RAG: Looking for event matching original query: "${dataContext.originalQuery}"`);
+      
+      const keyTerms = dataContext.originalQuery.toLowerCase()
+        .split(/\s+/)
+        .filter(term => term.length > 3 && !['when', 'where', 'how', 'what', 'next', 'workshop', 'photography'].includes(term));
+      
+      const matchingEvent = events.find(e => {
+        const eventText = `${e.event_title || ''} ${e.event_location || ''}`.toLowerCase();
+        return keyTerms.some(term => eventText.includes(term));
+      });
+      
+      if (matchingEvent) {
+        event = matchingEvent;
+        console.log(`🔍 RAG: Found contextually relevant event: ${event.event_title}`);
+      }
     }
-  }
-  
+    
   return event;
 }
 
 function checkEventParticipants(event, lowerQuery) {
-  if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
-    if (event.participants && String(event.participants).trim().length > 0) {
-      console.log(`✅ RAG: Found participants="${event.participants}" in structured event data`);
-      return `**${event.participants}** people can attend this workshop. This ensures everyone gets personalized attention and guidance from Alan.`;
-    }
+    if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
+      if (event.participants && String(event.participants).trim().length > 0) {
+        console.log(`✅ RAG: Found participants="${event.participants}" in structured event data`);
+        return `**${event.participants}** people can attend this workshop. This ensures everyone gets personalized attention and guidance from Alan.`;
+      }
   }
   return null;
-}
-
+    }
+    
 function checkEventLocation(event, lowerQuery, hasText) {
-  if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
+    if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
     if (hasText(event.event_location)) {
-      console.log(`✅ RAG: Found location="${event.event_location}" in structured event data`);
-      return `The workshop is held at **${event.event_location}**. Full location details and meeting instructions will be provided when you book.`;
-    }
+        console.log(`✅ RAG: Found location="${event.event_location}" in structured event data`);
+        return `The workshop is held at **${event.event_location}**. Full location details and meeting instructions will be provided when you book.`;
+      }
   }
   return null;
-}
-
-function checkEventPrice(event, lowerQuery) {
-  if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
-    if (event.price_gbp && event.price_gbp > 0) {
-      console.log(`✅ RAG: Found price="${event.price_gbp}" in structured event data`);
-      return `The workshop costs **£${event.price_gbp}**. This includes all tuition, guidance, and any materials provided during the session.`;
     }
+    
+function checkEventPrice(event, lowerQuery) {
+    if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
+      if (event.price_gbp && event.price_gbp > 0) {
+        console.log(`✅ RAG: Found price="${event.price_gbp}" in structured event data`);
+        return `The workshop costs **£${event.price_gbp}**. This includes all tuition, guidance, and any materials provided during the session.`;
+      }
   }
   return null;
 }
@@ -4568,7 +4710,7 @@ function getEventLabel(event) {
 function extractEventBrief(products, summarize) {
   if (products && products.length && (products[0].description || products[0]?.raw?.description)) {
     let brief = summarize(products[0].description || products[0]?.raw?.description);
-    if (brief.length > 220) brief = brief.slice(0, 220).replace(/\s+\S*$/, '') + '…';
+        if (brief.length > 220) brief = brief.slice(0, 220).replace(/\s+\S*$/, '') + '…';
     return brief;
   }
   return '';
@@ -4576,9 +4718,9 @@ function extractEventBrief(products, summarize) {
 
 // Helper function to format date response
 function formatDateResponse(formattedDate, label, brief) {
-  const lead = `The next ${label} is scheduled for **${formattedDate}**.`;
-  return brief ? `${lead} ${brief}` : `${lead}`;
-}
+        const lead = `The next ${label} is scheduled for **${formattedDate}**.`;
+        return brief ? `${lead} ${brief}` : `${lead}`;
+      }
 
 function checkEventDate(event, lowerQuery, products, formatDateGB, summarize) {
   if (lowerQuery.includes('when') || lowerQuery.includes('date')) {
@@ -4594,12 +4736,12 @@ function checkEventDate(event, lowerQuery, products, formatDateGB, summarize) {
 }
 
 function checkEventFitnessLevel(event, lowerQuery) {
-  if (lowerQuery.includes('fitness') || lowerQuery.includes('level') || lowerQuery.includes('experience')) {
-    if (event.fitness_level && event.fitness_level.trim().length > 0) {
-      console.log(`✅ RAG: Found fitness level="${event.fitness_level}" in structured event data`);
-      return `The fitness level required is **${event.fitness_level}**. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`;
+    if (lowerQuery.includes('fitness') || lowerQuery.includes('level') || lowerQuery.includes('experience')) {
+      if (event.fitness_level && event.fitness_level.trim().length > 0) {
+        console.log(`✅ RAG: Found fitness level="${event.fitness_level}" in structured event data`);
+        return `The fitness level required is **${event.fitness_level}**. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`;
+      }
     }
-  }
   return null;
 }
 
@@ -4661,36 +4803,36 @@ function initializeResponseAttributes() {
 }
   
 function checkFreeContent(eventTitle, eventPrice, responseAttributes) {
-  if (eventPrice === 0 || eventTitle.includes('free')) {
-    responseAttributes.hasFreeContent = true;
+      if (eventPrice === 0 || eventTitle.includes('free')) {
+        responseAttributes.hasFreeContent = true;
   }
-}
-
+      }
+      
 function checkOnlineContent(eventLocation, responseAttributes) {
-  if (eventLocation.includes('online') || eventLocation.includes('zoom') || eventLocation.includes('virtual')) {
-    responseAttributes.hasOnlineContent = true;
-    responseAttributes.onlineCount++;
+      if (eventLocation.includes('online') || eventLocation.includes('zoom') || eventLocation.includes('virtual')) {
+        responseAttributes.hasOnlineContent = true;
+        responseAttributes.onlineCount++;
   }
-}
-
+      }
+      
 function checkInPersonContent(eventLocation, responseAttributes) {
-  if (eventLocation.includes('coventry') || eventLocation.includes('peak district') || eventLocation.includes('batsford')) {
-    responseAttributes.hasInPersonContent = true;
-    responseAttributes.inPersonCount++;
+      if (eventLocation.includes('coventry') || eventLocation.includes('peak district') || eventLocation.includes('batsford')) {
+        responseAttributes.hasInPersonContent = true;
+        responseAttributes.inPersonCount++;
   }
-}
-
+      }
+      
 function checkCertificateInfo(eventTitle, responseAttributes) {
-  if (eventTitle.includes('certificate') || eventTitle.includes('cert') || eventTitle.includes('rps')) {
-    responseAttributes.hasCertificateInfo = true;
+      if (eventTitle.includes('certificate') || eventTitle.includes('cert') || eventTitle.includes('rps')) {
+        responseAttributes.hasCertificateInfo = true;
   }
-}
-
+      }
+      
 function trackPricing(eventPrice, responseAttributes) {
-  if (eventPrice > 0) {
-    responseAttributes.hasPriceInfo = true;
-    responseAttributes.averagePrice += eventPrice;
-  }
+      if (eventPrice > 0) {
+        responseAttributes.hasPriceInfo = true;
+        responseAttributes.averagePrice += eventPrice;
+      }
 }
 
 function analyzeEventAttributes(event, responseAttributes) {
@@ -4706,38 +4848,38 @@ function analyzeEventAttributes(event, responseAttributes) {
 }
   
 function checkProductFreeContent(productTitle, productPrice, responseAttributes) {
-  if (productPrice === 0 || productTitle.includes('free')) {
-    responseAttributes.hasFreeContent = true;
+    if (productPrice === 0 || productTitle.includes('free')) {
+      responseAttributes.hasFreeContent = true;
   }
-}
-
+    }
+    
 function checkProductOnlineContent(productLocation, responseAttributes) {
-  if (productLocation.includes('online') || productLocation.includes('zoom') || productLocation.includes('virtual')) {
-    responseAttributes.hasOnlineContent = true;
-    responseAttributes.onlineCount++;
+    if (productLocation.includes('online') || productLocation.includes('zoom') || productLocation.includes('virtual')) {
+      responseAttributes.hasOnlineContent = true;
+      responseAttributes.onlineCount++;
   }
-}
-
+    }
+    
 function checkProductInPersonContent(productLocation, responseAttributes) {
-  if (productLocation.includes('coventry') || productLocation.includes('peak district') || productLocation.includes('batsford')) {
-    responseAttributes.hasInPersonContent = true;
-    responseAttributes.inPersonCount++;
+    if (productLocation.includes('coventry') || productLocation.includes('peak district') || productLocation.includes('batsford')) {
+      responseAttributes.hasInPersonContent = true;
+      responseAttributes.inPersonCount++;
   }
-}
-
+    }
+    
 function checkProductCertificateInfo(productTitle, responseAttributes) {
-  if (productTitle.includes('certificate') || productTitle.includes('cert') || productTitle.includes('rps')) {
-    responseAttributes.hasCertificateInfo = true;
+    if (productTitle.includes('certificate') || productTitle.includes('cert') || productTitle.includes('rps')) {
+      responseAttributes.hasCertificateInfo = true;
   }
-}
-
+    }
+    
 function trackProductPricing(productPrice, responseAttributes) {
-  if (productPrice > 0) {
-    responseAttributes.hasPriceInfo = true;
-    responseAttributes.averagePrice += productPrice;
+    if (productPrice > 0) {
+      responseAttributes.hasPriceInfo = true;
+      responseAttributes.averagePrice += productPrice;
+    }
   }
-}
-
+  
 function analyzeProductAttributes(product, responseAttributes) {
   const productTitle = (product.title || '').toLowerCase();
   const productLocation = (product.location_name || '').toLowerCase();
@@ -4973,9 +5115,9 @@ function determineKeywords(query, previousQuery, intent) {
 function isResidentialPricingQueryShortcut(query) {
   const qlc = (query || "").toLowerCase();
   return qlc.includes("residential") && qlc.includes("workshop") && (
-    qlc.includes("price") || qlc.includes("cost") || qlc.includes("how much") ||
-    qlc.includes("b&b") || qlc.includes("bed and breakfast") || qlc.includes("bnb") ||
-    qlc.includes("include b&b") || qlc.includes("includes b&b") || qlc.includes("include bnb")
+      qlc.includes("price") || qlc.includes("cost") || qlc.includes("how much") ||
+      qlc.includes("b&b") || qlc.includes("bed and breakfast") || qlc.includes("bnb") ||
+      qlc.includes("include b&b") || qlc.includes("includes b&b") || qlc.includes("include bnb")
   );
 }
 
@@ -5068,7 +5210,7 @@ async function handleResidentialPricingShortcut(client, query, keywords, pageCon
 function extractTitleFromUrl(url) {
   try {
     const u = new URL(url);
-    const last = (u.pathname || '').split('/').filter(Boolean).pop() || '';
+        const last = (u.pathname || '').split('/').filter(Boolean).pop() || '';
     return last.replace(/[-_]+/g, ' ').replace(/\.(html?)$/i, ' ').trim();
   } catch {
     return '';
@@ -5108,36 +5250,36 @@ async function handleEquipmentAdviceSynthesis(client, qlc, keywords, pageContext
   const articles = await findArticles(client, { keywords, limit: 30, pageContext });
   const normalizedArticles = (articles || []).map(normalizeArticle);
   const articleUrls = normalizedArticles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-  const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
+    const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
   const synthesized = generateEquipmentAdviceResponse(qlc, normalizedArticles || [], contentChunks || []);
   
-  if (synthesized) {
-    res.status(200).json({
-      ok: true,
-      type: "advice",
-      answer_markdown: synthesized,
-      structured: {
-        intent: "advice",
-        topic: keywords.join(", "),
-        events: [],
-        products: [],
-        services: [],
-        landing: [],
+    if (synthesized) {
+      res.status(200).json({
+        ok: true,
+        type: "advice",
+        answer_markdown: synthesized,
+        structured: {
+          intent: "advice",
+          topic: keywords.join(", "),
+          events: [],
+          products: [],
+          services: [],
+          landing: [],
         articles: (normalizedArticles || []).map(a => ({
-          ...a,
-          display_date: (function(){
-            const extracted = extractPublishDate(a);
-            const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-            return extracted || fallback;
-          })()
-        })),
-        pills: []
-      },
-      confidence: 75,
-      debug: { version: "v1.2.46-followup-equip-extracted", previousQuery: true }
-    });
-    return true;
-  }
+            ...a,
+            display_date: (function(){
+              const extracted = extractPublishDate(a);
+              const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+              return extracted || fallback;
+            })()
+          })),
+          pills: []
+        },
+        confidence: 75,
+        debug: { version: "v1.2.46-followup-equip-extracted", previousQuery: true }
+      });
+      return true;
+    }
   return false;
 }
 
@@ -5207,25 +5349,25 @@ async function handleEventsClarification(client, query, intent, keywords, pageCo
   if (!(query.toLowerCase().includes("events") || query.toLowerCase().includes("courses") || intent === "events")) {
     return false;
   }
-  
-  const events = await findEvents(client, { keywords, limit: 80, pageContext });
-  const eventList = formatEventsForUi(events);
-  const confidence = calculateEventConfidence(query || "", eventList, null);
-  res.status(200).json({
-    ok: true,
-    type: "events",
-    answer: eventList,
-    events: eventList,
-    structured: {
-      intent: "events",
-      topic: (keywords || []).join(", "),
+
+    const events = await findEvents(client, { keywords, limit: 80, pageContext });
+    const eventList = formatEventsForUi(events);
+    const confidence = calculateEventConfidence(query || "", eventList, null);
+    res.status(200).json({
+      ok: true,
+      type: "events",
+      answer: eventList,
       events: eventList,
-      products: [],
-      pills: []
-    },
-    confidence,
-    debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
-  });
+      structured: {
+        intent: "events",
+        topic: (keywords || []).join(", "),
+        events: eventList,
+        products: [],
+        pills: []
+      },
+      confidence,
+      debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
+    });
   return true;
 }
 
@@ -5244,34 +5386,34 @@ async function handleClarificationFollowup(client, previousQuery, query, intent,
 async function handleAdviceClarification(client, query, keywords, pageContext, res) {
   let articles = await findArticles(client, { keywords, limit: 30, pageContext });
   articles = (articles || []).map(normalizeArticle);
-  const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-  const contentChunks = await findContentChunks(client, { keywords, limit: 15, articleUrls });
-  const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks);
-  res.status(200).json({
-    ok: true,
-    type: "advice",
-    answer_markdown: answerMarkdown,
-    structured: {
-      intent: "advice",
-      topic: (keywords || []).join(", "),
-      events: [],
-      products: [],
-      services: [],
-      landing: [],
-      articles: (articles || []).map(a => ({
-        ...a,
-        display_date: (function(){
-          const extracted = extractPublishDate(a);
-          const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-          return extracted || fallback;
-        })()
-      })),
-      pills: []
-    },
-    confidence: 65,
-    debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
-  });
-  return true;
+    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+    const contentChunks = await findContentChunks(client, { keywords, limit: 15, articleUrls });
+    const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks);
+    res.status(200).json({
+      ok: true,
+      type: "advice",
+      answer_markdown: answerMarkdown,
+      structured: {
+        intent: "advice",
+        topic: (keywords || []).join(", "),
+        events: [],
+        products: [],
+        services: [],
+        landing: [],
+        articles: (articles || []).map(a => ({
+          ...a,
+          display_date: (function(){
+            const extracted = extractPublishDate(a);
+            const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+            return extracted || fallback;
+          })()
+        })),
+        pills: []
+      },
+      confidence: 65,
+      debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
+    });
+    return true;
 }
 /**
  * Handle residential pricing guard - bypasses clarification for residential workshop pricing queries
@@ -5285,12 +5427,12 @@ function isResidentialPricingQuery(query) {
 
 function filterResidentialEvents(events) {
   return events.filter(e => { 
-    try { 
-      return e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start); 
-    } catch { 
-      return false; 
-    } 
-  });
+        try { 
+          return e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start); 
+        } catch { 
+          return false; 
+        } 
+      });
 }
 
 function processArticlesForDisplay(articles) {
@@ -5305,22 +5447,22 @@ async function handleResidentialEventsResponse(client, query, pageContext, res) 
   
   if (residentialEvents.length) {
     const confidence = calculateEventConfidence(query || "", residentialEvents, null);
-    res.status(200).json({ 
-      ok: true, 
-      type: "events", 
+        res.status(200).json({ 
+          ok: true, 
+          type: "events", 
       answer: residentialEvents, 
       events: residentialEvents, 
-      structured: { 
-        intent: "events", 
+          structured: { 
+            intent: "events", 
         topic: directKeywords.join(", "), 
         events: residentialEvents, 
-        products: [], 
-        pills: [] 
-      }, 
+            products: [], 
+            pills: [] 
+          }, 
       confidence, 
-      debug: { version: "v1.2.48-guard-residential", guard: true } 
-    });
-    return true; // Response sent
+          debug: { version: "v1.2.48-guard-residential", guard: true } 
+        });
+        return true; // Response sent
   }
   return false;
 }
@@ -6836,14 +6978,14 @@ export default async function handler(req, res) {
       addMalformedContentPenalty();
       
       const addIntentAwareScore = () => {
-        const q = (query||'').toLowerCase();
-        const mentionsFree = /\bfree\b/.test(q);
-        const mentionsOnline = /\bonline\b/.test(q);
-        const mentionsCertificate = /\b(cert|certificate)\b/.test(q);
-        const hasLandingFree = Array.isArray(landing) && landing.some(l => (l.page_url||'').includes('free-online-photography-course'));
-        const topService = Array.isArray(services) ? services[0] : null;
-        const topServiceIsPaid = topService ? /£|\b\d{1,4}\b/.test(String(topService.price||topService.price_gbp||'')) : false;
-        const topServiceIsOffline = topService ? /(coventry|kenilworth|batsford|peak district|in-person)/i.test(String(topService.location||topService.location_address||topService.event_location||'')) : false;
+      const q = (query||'').toLowerCase();
+      const mentionsFree = /\bfree\b/.test(q);
+      const mentionsOnline = /\bonline\b/.test(q);
+      const mentionsCertificate = /\b(cert|certificate)\b/.test(q);
+      const hasLandingFree = Array.isArray(landing) && landing.some(l => (l.page_url||'').includes('free-online-photography-course'));
+      const topService = Array.isArray(services) ? services[0] : null;
+      const topServiceIsPaid = topService ? /£|\b\d{1,4}\b/.test(String(topService.price||topService.price_gbp||'')) : false;
+      const topServiceIsOffline = topService ? /(coventry|kenilworth|batsford|peak district|in-person)/i.test(String(topService.location||topService.location_address||topService.event_location||'')) : false;
 
         baseConfidence = applyFreeQueryPenalty(mentionsFree, topServiceIsPaid, baseConfidence, confidenceFactors);
         baseConfidence = applyOnlineQueryPenalty(mentionsOnline, topServiceIsOffline, baseConfidence, confidenceFactors);
