@@ -5195,7 +5195,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
       },
       confidence,
       debug: {
-        version: "v1.2.71-debug-pagecontext-raw",
+        version: "v1.2.72-debug-request-body",
         earlyReturn: true,
         eventsFound: events.length,
         formattedEvents: eventList.length
@@ -5231,7 +5231,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
         pills: []
       },
       confidence: 90,
-      debug: { version: "v1.2.71-debug-pagecontext-raw", earlyReturn: true }
+      debug: { version: "v1.2.72-debug-request-body", earlyReturn: true }
     });
     return articles.length > 0 || contentChunks.length > 0; // Return true only if content was found
   }
@@ -5716,7 +5716,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
       pills: []
     },
     confidence,
-    debug: { version: "v1.2.71-debug-pagecontext-raw" }
+    debug: { version: "v1.2.72-debug-request-body" }
   });
   return true;
 }
@@ -5784,6 +5784,11 @@ export default async function handler(req, res) {
 
     const { query, topK, previousQuery, sessionId, pageContext } = req.body || {};
     const client = supabaseAdmin();
+    
+    // DEBUG: Log the entire request body
+    console.log(`🔍 DEBUG: Full request body:`, JSON.stringify(req.body, null, 2));
+    console.log(`🔍 DEBUG: pageContext extracted:`, pageContext);
+    console.log(`🔍 DEBUG: pageContext type:`, typeof pageContext);
     
     // Log page context for debugging
     if (pageContext) {
