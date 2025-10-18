@@ -2886,61 +2886,84 @@ async function maybeBypassClarification(client, query, pageContext, res) {
 }
 
 async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
-  // Use v_events_for_chat view which has all the rich data and proper field names
-  let q = client
-    .from("v_events_for_chat")
-    .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency")
-    .gte("date_start", new Date().toISOString()) // Only future events
-    .order("date_start", { ascending: true }) // Sort by date ascending (earliest first)
-    .limit(limit);
-
-  // v_events_for_chat is our unified, populated source of truth; do not gate by csvType
-
-  // If we have page context, try to find related content first
-  if (pageContext && pageContext.pathname) {
-    const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
-    if (pathKeywords.length > 0) {
-      console.log('Page context keywords:', pathKeywords);
-      // Add page context to search terms
-      keywords = [...pathKeywords, ...keywords];
-    }
+  // Build base query
+  let q = buildEventsBaseQuery(client, limit);
+  
+  // Enhance keywords with page context
+  const enhancedKeywords = enhanceKeywordsWithPageContext(keywords, pageContext);
+  
+  // Apply keyword filtering if we have keywords
+  if (enhancedKeywords.length) {
+    q = applyKeywordFiltering(q, enhancedKeywords);
   }
 
-  if (keywords.length) {
-    // Filter out generic query words that don't help find events
-    const GENERIC_QUERY_WORDS = new Set(["when", "next", "is", "are", "the", "a", "an", "what", "where", "how", "much", "does", "do", "can", "could", "would", "should"]);
-    const meaningfulKeywords = keywords.filter(k => k && !GENERIC_QUERY_WORDS.has(String(k).toLowerCase()));
-    
-    console.log('🔍 findEvents keyword filtering:', {
-      originalKeywords: keywords,
-      meaningfulKeywords,
-      filteredOut: keywords.filter(k => !meaningfulKeywords.includes(k))
-    });
-    
-    // Search in event_title, event_location, and product_title fields
-    const parts = [];
-    const t1 = anyIlike("event_title", meaningfulKeywords); if (t1) parts.push(t1);
-    const t2 = anyIlike("event_url", meaningfulKeywords); if (t2) parts.push(t2);
-    const t3 = anyIlike("event_location", meaningfulKeywords); if (t3) parts.push(t3);
-    const t4 = anyIlike("product_title", meaningfulKeywords); if (t4) parts.push(t4);
-    
-    console.log('🔍 findEvents debug:', {
-      meaningfulKeywords,
-      parts,
-      query: parts.join(",")
-    });
-    
-    if (parts.length) {
-      q = q.or(parts.join(","));
-    }
-  }
-
+  // Execute query and handle results
   const { data, error } = await q;
   if (error) {
     console.error('❌ v_events_for_chat query error:', error);
     return [];
   }
   
+  // Log query results for debugging
+  logEventsQueryResults(data, q);
+  
+  // Map and return results
+  return mapEventsData(data);
+}
+
+// Helper functions for findEvents
+function buildEventsBaseQuery(client, limit) {
+  return client
+    .from("v_events_for_chat")
+    .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency")
+    .gte("date_start", new Date().toISOString()) // Only future events
+    .order("date_start", { ascending: true }) // Sort by date ascending (earliest first)
+    .limit(limit);
+}
+
+function enhanceKeywordsWithPageContext(keywords, pageContext) {
+  if (pageContext && pageContext.pathname) {
+    const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
+    if (pathKeywords.length > 0) {
+      console.log('Page context keywords:', pathKeywords);
+      // Add page context to search terms
+      return [...pathKeywords, ...keywords];
+    }
+  }
+  return keywords;
+}
+
+function applyKeywordFiltering(q, keywords) {
+  // Filter out generic query words that don't help find events
+  const GENERIC_QUERY_WORDS = new Set(["when", "next", "is", "are", "the", "a", "an", "what", "where", "how", "much", "does", "do", "can", "could", "would", "should"]);
+  const meaningfulKeywords = keywords.filter(k => k && !GENERIC_QUERY_WORDS.has(String(k).toLowerCase()));
+  
+  console.log('🔍 findEvents keyword filtering:', {
+    originalKeywords: keywords,
+    meaningfulKeywords,
+    filteredOut: keywords.filter(k => !meaningfulKeywords.includes(k))
+  });
+  
+  // Search in event_title, event_location, and product_title fields
+  const parts = [];
+  const t1 = anyIlike("event_title", meaningfulKeywords); if (t1) parts.push(t1);
+  const t2 = anyIlike("event_url", meaningfulKeywords); if (t2) parts.push(t2);
+  const t3 = anyIlike("event_location", meaningfulKeywords); if (t3) parts.push(t3);
+  const t4 = anyIlike("product_title", meaningfulKeywords); if (t4) parts.push(t4);
+  
+  console.log('🔍 findEvents debug:', {
+    meaningfulKeywords,
+    parts,
+    query: parts.join(",")
+  });
+  
+  if (parts.length) {
+    return q.or(parts.join(","));
+  }
+  return q;
+}
+
+function logEventsQueryResults(data, q) {
   console.log('🔍 findEvents query results:', {
     dataCount: data?.length || 0,
     sampleData: data?.slice(0, 2) || [],
@@ -2949,7 +2972,9 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     dataType: typeof data,
     isArray: Array.isArray(data)
   });
-  
+}
+
+function mapEventsData(data) {
   // Map v_events_for_chat fields to frontend expected fields
   const mappedData = (data || []).map(event => ({
     ...event,
