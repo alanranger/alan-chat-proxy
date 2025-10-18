@@ -5717,7 +5717,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: { 
-          version: "v1.2.83-fix-routing",
+          version: "v1.2.84-fix-const",
           debugInfo: debugInfo
         }
   });
@@ -5785,7 +5785,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    const { query, topK, previousQuery, sessionId, pageContext } = req.body || {};
+    let { query, topK, previousQuery, sessionId, pageContext } = req.body || {};
     const client = supabaseAdmin();
     
     // DEBUG: Log the entire request body
@@ -5882,7 +5882,7 @@ export default async function handler(req, res) {
       }
     }
     
-    const intent = detectIntent(query || ""); // Use current query only for intent detection
+    let intent = detectIntent(query || ""); // Use current query only for intent detection
 
     // HARD GUARD: Residential pricing/B&B must bypass clarification entirely
     const residentialResponse = await handleResidentialPricingGuard(client, query, previousQuery, pageContext, res);
