@@ -1,10 +1,10 @@
 {
-  "timestamp": "2025-10-18T18:22:45.366Z",
+  "timestamp": "2025-10-18T18:34:56.050Z",
   "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
   "tests": [
     {
       "query": "What is your refund and cancellation policy?",
-      "timestamp": "2025-10-18T18:22:47.469Z",
+      "timestamp": "2025-10-18T18:34:58.219Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
@@ -19,7 +19,7 @@
     },
     {
       "query": "When is the next Lightroom course in Coventry?",
-      "timestamp": "2025-10-18T18:22:48.950Z",
+      "timestamp": "2025-10-18T18:34:59.697Z",
       "response": {
         "type": "events",
         "confidence": 0.44999999999999996,
@@ -35,7 +35,7 @@
     },
     {
       "query": "Do you still run Lake District photography workshops?",
-      "timestamp": "2025-10-18T18:22:50.395Z",
+      "timestamp": "2025-10-18T18:35:01.151Z",
       "response": {
         "type": "events",
         "confidence": 0.5,
@@ -51,7 +51,7 @@
     },
     {
       "query": "How much is the Lightroom beginners course?",
-      "timestamp": "2025-10-18T18:22:51.823Z",
+      "timestamp": "2025-10-18T18:35:02.569Z",
       "response": {
         "type": "events",
         "confidence": 0.65,
@@ -67,7 +67,7 @@
     },
     {
       "query": "Can I book a 1-to-1 mentoring session with Alan?",
-      "timestamp": "2025-10-18T18:22:55.293Z",
+      "timestamp": "2025-10-18T18:35:06.130Z",
       "response": {
         "type": "advice",
         "confidence": 0.1,
@@ -108,7 +108,7 @@
     },
     {
       "query": "Do you have tips for composition or leading lines?",
-      "timestamp": "2025-10-18T18:22:57.915Z",
+      "timestamp": "2025-10-18T18:35:08.759Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
@@ -123,7 +123,7 @@
     },
     {
       "query": "Show me an article about the exposure triangle.",
-      "timestamp": "2025-10-18T18:23:00.579Z",
+      "timestamp": "2025-10-18T18:35:11.404Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
@@ -138,7 +138,7 @@
     },
     {
       "query": "How do I set ISO manually on my camera?",
-      "timestamp": "2025-10-18T18:23:03.241Z",
+      "timestamp": "2025-10-18T18:35:14.005Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
@@ -153,7 +153,7 @@
     },
     {
       "query": "What's the difference between aperture and shutter speed?",
-      "timestamp": "2025-10-18T18:23:06.737Z",
+      "timestamp": "2025-10-18T18:35:17.410Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
@@ -168,7 +168,7 @@
     },
     {
       "query": "When is the best time of day for landscape photography?",
-      "timestamp": "2025-10-18T18:23:09.496Z",
+      "timestamp": "2025-10-18T18:35:20.174Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
@@ -183,7 +183,7 @@
     },
     {
       "query": "Where do your workshops meet and start from?",
-      "timestamp": "2025-10-18T18:23:11.389Z",
+      "timestamp": "2025-10-18T18:35:21.974Z",
       "response": {
         "type": "events",
         "confidence": 0.65,
@@ -199,7 +199,7 @@
     },
     {
       "query": "Do you provide transport or accommodation?",
-      "timestamp": "2025-10-18T18:23:13.587Z",
+      "timestamp": "2025-10-18T18:35:24.203Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
@@ -214,7 +214,7 @@
     },
     {
       "query": "How do I join the Photography Academy?",
-      "timestamp": "2025-10-18T18:23:16.114Z",
+      "timestamp": "2025-10-18T18:35:26.744Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
@@ -229,7 +229,7 @@
     },
     {
       "query": "How do module exams and certificates work?",
-      "timestamp": "2025-10-18T18:23:18.859Z",
+      "timestamp": "2025-10-18T18:35:29.268Z",
       "response": {
         "type": "clarification",
         "confidence": 10,
@@ -244,7 +244,7 @@
     },
     {
       "query": "Who is Alan Ranger?",
-      "timestamp": "2025-10-18T18:23:20.956Z",
+      "timestamp": "2025-10-18T18:35:31.360Z",
       "response": {
         "type": "clarification",
         "confidence": 10,

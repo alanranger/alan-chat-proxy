@@ -4066,15 +4066,16 @@ function buildSessionsList(sessions) {
   return sessionLines;
 }
 
-async function buildProductPanelMarkdown(products) {
-  if (!products?.length) return "";
-
+async function prepareProductData(products) {
   const primary = products.find((p) => p.price != null) || products[0];
   const { lowPrice, highPrice } = extractPriceRange(products);
   const priceHead = buildPriceHeader(primary, lowPrice, highPrice);
   const title = primary.title || primary?.raw?.name || "Workshop";
+  
+  return { primary, lowPrice, highPrice, priceHead, title };
+}
 
-  // Create a better summary from the full description
+async function extractProductInfo(primary) {
   const fullDescription = scrubDescription(primary.description || primary?.raw?.description || "");
   const chunkData = await fetchChunkData(primary);
   const sourceText = chunkData || fullDescription;
@@ -4082,23 +4083,15 @@ async function buildProductPanelMarkdown(products) {
   
   logExtractionDebug(fullDescription, chunkData, sourceText, info);
   
-  const summary = extractSummaryFromDescription(fullDescription);
-  const sessions = attachPricesToSessions([...(info.sessions || [])], lowPrice, highPrice, primary);
+  return { fullDescription, info };
+}
 
+function buildProductContentLines(title, priceHead, summary, facts, sessions) {
   const lines = [];
   lines.push(`**${title}**${priceHead}`);
 
   if (summary) lines.push(`\n${summary}`);
 
-  const facts = buildFactsList(info);
-  
-  console.log("Facts to add:", facts);
-  console.log("Info participants:", info.participants);
-  console.log("Info fitness:", info.fitness);
-  console.log("Info location:", info.location);
-  console.log("Info experienceLevel:", info.experienceLevel);
-  console.log("Info equipmentNeeded:", info.equipmentNeeded);
-  
   if (facts.length) {
     lines.push("");
     for (const f of facts) lines.push(f);
@@ -4110,6 +4103,27 @@ async function buildProductPanelMarkdown(products) {
     for (const line of sessionLines) lines.push(line);
   }
 
+  return lines;
+}
+
+async function buildProductPanelMarkdown(products) {
+  if (!products?.length) return "";
+
+  const { primary, lowPrice, highPrice, priceHead, title } = await prepareProductData(products);
+  const { fullDescription, info } = await extractProductInfo(primary);
+  
+  const summary = extractSummaryFromDescription(fullDescription);
+  const sessions = attachPricesToSessions([...(info.sessions || [])], lowPrice, highPrice, primary);
+  const facts = buildFactsList(info);
+  
+  console.log("Facts to add:", facts);
+  console.log("Info participants:", info.participants);
+  console.log("Info fitness:", info.fitness);
+  console.log("Info location:", info.location);
+  console.log("Info experienceLevel:", info.experienceLevel);
+  console.log("Info equipmentNeeded:", info.equipmentNeeded);
+
+  const lines = buildProductContentLines(title, priceHead, summary, facts, sessions);
   return lines.join("\n");
 }
 
@@ -4486,39 +4500,50 @@ function initializeResponseAttributes() {
   };
 }
   
-function analyzeEventAttributes(event, responseAttributes) {
-      const eventTitle = (event.event_title || '').toLowerCase();
-      const eventLocation = (event.event_location || '').toLowerCase();
-      const eventPrice = event.price_gbp || 0;
-      
-      // Check for free content
-      if (eventPrice === 0 || eventTitle.includes('free')) {
-        responseAttributes.hasFreeContent = true;
-      }
-      
-      // Check for online content
-      if (eventLocation.includes('online') || eventLocation.includes('zoom') || eventLocation.includes('virtual')) {
-        responseAttributes.hasOnlineContent = true;
-        responseAttributes.onlineCount++;
-      }
-      
-      // Check for in-person content
-      if (eventLocation.includes('coventry') || eventLocation.includes('peak district') || eventLocation.includes('batsford')) {
-        responseAttributes.hasInPersonContent = true;
-        responseAttributes.inPersonCount++;
-      }
-      
-      // Check for certificate info
-      if (eventTitle.includes('certificate') || eventTitle.includes('cert') || eventTitle.includes('rps')) {
-        responseAttributes.hasCertificateInfo = true;
-      }
-      
-      // Track pricing
-      if (eventPrice > 0) {
-        responseAttributes.hasPriceInfo = true;
-        responseAttributes.averagePrice += eventPrice;
-      }
+function checkFreeContent(eventTitle, eventPrice, responseAttributes) {
+  if (eventPrice === 0 || eventTitle.includes('free')) {
+    responseAttributes.hasFreeContent = true;
   }
+}
+
+function checkOnlineContent(eventLocation, responseAttributes) {
+  if (eventLocation.includes('online') || eventLocation.includes('zoom') || eventLocation.includes('virtual')) {
+    responseAttributes.hasOnlineContent = true;
+    responseAttributes.onlineCount++;
+  }
+}
+
+function checkInPersonContent(eventLocation, responseAttributes) {
+  if (eventLocation.includes('coventry') || eventLocation.includes('peak district') || eventLocation.includes('batsford')) {
+    responseAttributes.hasInPersonContent = true;
+    responseAttributes.inPersonCount++;
+  }
+}
+
+function checkCertificateInfo(eventTitle, responseAttributes) {
+  if (eventTitle.includes('certificate') || eventTitle.includes('cert') || eventTitle.includes('rps')) {
+    responseAttributes.hasCertificateInfo = true;
+  }
+}
+
+function trackPricing(eventPrice, responseAttributes) {
+  if (eventPrice > 0) {
+    responseAttributes.hasPriceInfo = true;
+    responseAttributes.averagePrice += eventPrice;
+  }
+}
+
+function analyzeEventAttributes(event, responseAttributes) {
+  const eventTitle = (event.event_title || '').toLowerCase();
+  const eventLocation = (event.event_location || '').toLowerCase();
+  const eventPrice = event.price_gbp || 0;
+  
+  checkFreeContent(eventTitle, eventPrice, responseAttributes);
+  checkOnlineContent(eventLocation, responseAttributes);
+  checkInPersonContent(eventLocation, responseAttributes);
+  checkCertificateInfo(eventTitle, responseAttributes);
+  trackPricing(eventPrice, responseAttributes);
+}
   
 function analyzeProductAttributes(product, responseAttributes) {
     const productTitle = (product.title || '').toLowerCase();
