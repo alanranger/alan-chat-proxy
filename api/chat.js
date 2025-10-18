@@ -3105,21 +3105,36 @@ function addOnlineCourseBoost(categories, kw, t, add, has) {
 }
 
 function addCoreConceptScore(hasCore, coreConcepts, t, u, add, has) {
-    if (hasCore) {
-      // exact phrase boosts (existing logic)
-      for (const c of coreConcepts) {
-        const slug = c.replace(/\s+/g, "-");
-      if (t.startsWith(`what is ${c}`)) add(20); // ideal explainer
-      if (has(t, `what is ${c}`)) add(10);
-      if (has(u, `/what-is-${slug}`)) add(12);
-      if (has(u, `${slug}`)) add(3);
-      }
-      // penalize generic Lightroom news posts for concept questions
-      if (/(lightroom|what's new|whats new)/i.test(t) || /(lightroom|whats-new)/.test(u)) {
-      add(-12);
-    }
-      }
-    }
+  if (!hasCore) return;
+  
+  // Process core concept scoring
+  processCoreConceptBoosts(coreConcepts, t, u, add, has);
+  
+  // Apply penalties for generic content
+  applyGenericContentPenalties(t, u, add);
+}
+
+// Helper functions for core concept scoring
+function processCoreConceptBoosts(coreConcepts, t, u, add, has) {
+  for (const c of coreConcepts) {
+    const slug = c.replace(/\s+/g, "-");
+    applyConceptBoosts(c, slug, t, u, add, has);
+  }
+}
+
+function applyConceptBoosts(concept, slug, t, u, add, has) {
+  if (t.startsWith(`what is ${concept}`)) add(20); // ideal explainer
+  if (has(t, `what is ${concept}`)) add(10);
+  if (has(u, `/what-is-${slug}`)) add(12);
+  if (has(u, `${slug}`)) add(3);
+}
+
+function applyGenericContentPenalties(t, u, add) {
+  // penalize generic Lightroom news posts for concept questions
+  if (/(lightroom|what's new|whats new)/i.test(t) || /(lightroom|whats-new)/.test(u)) {
+    add(-12);
+  }
+}
     
 function addCategoryBoost(categories, hasCore, add) {
     if (categories.includes("photography-tips") && hasCore) {
