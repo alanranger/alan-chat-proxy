@@ -5717,7 +5717,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: { 
-          version: "v1.2.86-fix-debuginfo",
+          version: "v1.2.87-fix-clarification-routing",
           debugInfo: debugInfo
         }
   });
@@ -5871,10 +5871,10 @@ export default async function handler(req, res) {
             res.json(clarification);
             return;
           } else {
-            console.log(`🔍 generateClarificationQuestion returned null, continuing with normal flow`);
-            // Update the query and intent for the rest of the pipeline
+            console.log(`🔍 generateClarificationQuestion returned null, routing to events for final results`);
+            // When clarification is complete, route to events to show results
             query = updatedQuery;
-            intent = updatedIntent;
+            intent = "events"; // Route to events to show the final results
             pageContext = updatedPageContext;
           }
         } else {
