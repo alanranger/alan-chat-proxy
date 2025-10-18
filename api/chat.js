@@ -2442,6 +2442,95 @@ function handleEquipmentAndCoursePatterns(query, lc) {
   return null;
 }
 
+// Helper function to handle remaining inline follow-up patterns
+function handleInlineFollowUpPatterns(query, lc) {
+  // Upcoming events
+  if (lc.includes("coming up this month") || lc.includes("upcoming")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "upcoming photography workshops information",
+      newIntent: "advice"
+    };
+  }
+  
+  // Generic fallbacks
+  if (lc.includes("yes") && lc.includes("free")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "free course details",
+      newIntent: "advice"
+    };
+  }
+  
+  if (lc.includes("beginner") && lc.includes("ok")) {
+    return {
+      type: "route_to_advice",
+      newQuery: "beginner photography courses",
+      newIntent: "advice"
+    };
+  }
+  
+  // Course-specific follow-up patterns
+  if (lc.includes("beginner courses") || lc.includes("beginner photography courses")) {
+    console.log(`✅ Matched beginner courses pattern for: "${query}"`);
+    return {
+      type: "route_to_events",
+      newQuery: "beginner photography courses",
+      newIntent: "events"
+    };
+  }
+  
+  if (lc.includes("in-person courses") || lc.includes("coventry") || lc.includes("photography courses coventry")) {
+    return {
+      type: "route_to_events", 
+      newQuery: "photography courses Coventry",
+      newIntent: "events"
+    };
+  }
+  
+  if (lc.includes("online courses") || lc.includes("free and paid") || lc.includes("online photography courses") || 
+      lc.includes("online courses (free") || lc.includes("free and paid)")) {
+    console.log(`✅ Matched online courses pattern for: "${query}"`);
+    return {
+      type: "route_to_clarification",
+      newQuery: "online photography courses (free and paid) clarification", 
+      newIntent: "clarification"
+    };
+  }
+  
+  if (lc.includes("specific topic courses") || lc.includes("specialized photography courses")) {
+    return {
+      type: "route_to_events",
+      newQuery: "specialized photography courses",
+      newIntent: "events"
+    };
+  }
+  
+  // Specific pattern for the exact failing query
+  if (lc.includes("online courses (free and paid)") || lc === "online courses (free and paid)") {
+    console.log(`✅ Matched exact online courses pattern for: "${query}"`);
+    return {
+      type: "route_to_clarification",
+      newQuery: "online photography courses (free and paid) clarification",
+      newIntent: "clarification"
+    };
+  }
+  
+  // Catch-all for any course-related follow-up that wasn't caught above
+  // BUT exclude queries that should go to clarification (like "online courses (free and paid)")
+  if (lc.includes("courses") && (lc.includes("in-person") || lc.includes("beginner") || lc.includes("specific")) && 
+      !lc.includes("online courses (free and paid)") && !lc.includes("free and paid")) {
+    console.log(`✅ Matched catch-all courses pattern for: "${query}"`);
+    return {
+      type: "route_to_events",
+      newQuery: query, // Use the original query
+      newIntent: "events"
+    };
+  }
+  
+  return null;
+}
+
 function handleAllRemainingPatterns(query, lc) {
   if (lc.includes("specific topic courses") || lc === "specific topic courses") {
     console.log(`✅ Matched specific topic courses pattern for: "${query}"`);
@@ -2695,99 +2784,10 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     return finalPatternsResult;
   }
   
-  // Upcoming events
-  if (lc.includes("coming up this month") || lc.includes("upcoming")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "upcoming photography workshops information",
-      newIntent: "advice"
-    };
-  }
-  
-  // Generic fallbacks
-  if (lc.includes("yes") && lc.includes("free")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "free course details",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("beginner") && lc.includes("ok")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "beginner photography courses",
-      newIntent: "advice"
-    };
-  }
-  
-  // Course-specific follow-up patterns
-  if (lc.includes("beginner courses") || lc.includes("beginner photography courses")) {
-    console.log(`✅ Matched beginner courses pattern for: "${query}"`);
-    return {
-      type: "route_to_events",
-      newQuery: "beginner photography courses",
-      newIntent: "events"
-    };
-  }
-  
-  if (lc.includes("in-person courses") || lc.includes("coventry") || lc.includes("photography courses coventry")) {
-    return {
-      type: "route_to_events", 
-      newQuery: "photography courses Coventry",
-      newIntent: "events"
-    };
-  }
-  
-  if (lc.includes("online courses") || lc.includes("free and paid") || lc.includes("online photography courses") || 
-      lc.includes("online courses (free") || lc.includes("free and paid)")) {
-    console.log(`✅ Matched online courses pattern for: "${query}"`);
-    return {
-      type: "route_to_clarification",
-      newQuery: "online photography courses (free and paid) clarification", 
-      newIntent: "clarification"
-    };
-  }
-  
-  if (lc.includes("specific topic courses") || lc.includes("specialized photography courses")) {
-    return {
-      type: "route_to_events",
-      newQuery: "specialized photography courses",
-      newIntent: "events"
-    };
-  }
-  
-  // Specific pattern for the exact failing query
-  if (lc.includes("online courses (free and paid)") || lc === "online courses (free and paid)") {
-    console.log(`✅ Matched exact online courses pattern for: "${query}"`);
-    return {
-      type: "route_to_clarification",
-      newQuery: "online photography courses (free and paid) clarification",
-      newIntent: "clarification"
-    };
-  }
-  
-  // REMOVED: This catch-all pattern was overriding clarification routing
-  // Simple test pattern - any query containing "online" should route to events
-  // if (lc.includes("online")) {
-  //   console.log(`✅ Matched simple online pattern for: "${query}"`);
-  //   return {
-  //     type: "route_to_events",
-  //     newQuery: "online photography courses",
-  //     newIntent: "events"
-  //   };
-  // }
-  
-  // Catch-all for any course-related follow-up that wasn't caught above
-  // BUT exclude queries that should go to clarification (like "online courses (free and paid)")
-  if (lc.includes("courses") && (lc.includes("in-person") || lc.includes("beginner") || lc.includes("specific")) && 
-      !lc.includes("online courses (free and paid)") && !lc.includes("free and paid")) {
-    console.log(`✅ Matched catch-all courses pattern for: "${query}"`);
-    return {
-      type: "route_to_events",
-      newQuery: query, // Use the original query
-      newIntent: "events"
-    };
+  // Check remaining inline patterns
+  const inlinePatternsResult = handleInlineFollowUpPatterns(query, lc);
+  if (inlinePatternsResult) {
+    return inlinePatternsResult;
   }
   
   // ULTIMATE FALLBACK - if we get here, something is wrong
