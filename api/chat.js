@@ -2126,7 +2126,7 @@ function checkCourseWorkshopPatterns(lc) {
   }
   
   // Enhanced workshop pattern matching to catch more variations
-  if ((lc.includes("do you run") || lc.includes("do you have") || lc.includes("what") || lc.includes("which")) && lc.includes("workshops")) {
+  if ((lc.includes("do you run") || lc.includes("do you have") || lc.includes("what") || lc.includes("which") || lc.includes("when") || lc.includes("next")) && (lc.includes("workshops") || lc.includes("workshop"))) {
     return generateWorkshopClarification();
   }
   
@@ -2956,6 +2956,23 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   // Allow user to bypass clarification entirely
   if (matches("show me results")) {
     return createRoute("route_to_advice", originalQuery || query, "advice");
+  }
+  
+  // Handle workshop clarification follow-ups
+  if (matches("2.5hr") || matches("4hr") || matches("short photography workshops")) {
+    return createRoute("route_to_events", "short photography workshops 2-4 hours", "events");
+  }
+  if (matches("1 day") || matches("one day photography workshops")) {
+    return createRoute("route_to_events", "one day photography workshops", "events");
+  }
+  if (matches("multi day") || matches("residential") || matches("multi day residential photography workshops")) {
+    return createRoute("route_to_events", "multi day residential photography workshops", "events");
+  }
+  if (matches("by location") || matches("photography workshops by location")) {
+    return createRoute("route_to_events", "photography workshops by location", "events");
+  }
+  if (matches("by month") || matches("photography workshops by month")) {
+    return createRoute("route_to_events", "photography workshops by month", "events");
   }
   
   // Check specific course patterns first
