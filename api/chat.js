@@ -5195,7 +5195,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
       },
       confidence,
       debug: {
-        version: "v1.2.40-retrieval-first",
+        version: "v1.2.65-deployment-fix",
         earlyReturn: true,
         eventsFound: events.length,
         formattedEvents: eventList.length
@@ -5231,7 +5231,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
         pills: []
       },
       confidence: 90,
-      debug: { version: "v1.2.40-retrieval-first", earlyReturn: true }
+      debug: { version: "v1.2.65-deployment-fix", earlyReturn: true }
     });
     return articles.length > 0 || contentChunks.length > 0; // Return true only if content was found
   }
