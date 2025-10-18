@@ -5717,7 +5717,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: { 
-          version: "v1.2.76-debug-condition",
+          version: "v1.2.77-force-condition",
           debugInfo: debugInfo
         }
   });
@@ -5823,7 +5823,12 @@ export default async function handler(req, res) {
     console.log(`🔍 pageContext exists:`, !!pageContext);
     console.log(`🔍 pageContext.clarificationLevel > 0:`, pageContext?.clarificationLevel > 0);
     console.log(`🔍 Full condition result:`, pageContext && pageContext.clarificationLevel > 0);
-    if (pageContext && pageContext.clarificationLevel > 0) {
+    
+    // Force the condition to be true for testing
+    const shouldTriggerClarification = pageContext && pageContext.clarificationLevel > 0;
+    console.log(`🔍 shouldTriggerClarification:`, shouldTriggerClarification);
+    
+    if (shouldTriggerClarification) {
       console.log(`🔍 Detected clarification follow-up with level ${pageContext.clarificationLevel}`);
       console.log(`🔍 pageContext:`, JSON.stringify(pageContext, null, 2));
       const clarificationResponse = await handleClarificationFollowUp(query, previousQuery, "events");
