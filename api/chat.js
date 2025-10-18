@@ -5195,7 +5195,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
       },
       confidence,
       debug: {
-        version: "v1.2.67-routing-fix",
+        version: "v1.2.68-debug-audit",
         earlyReturn: true,
         eventsFound: events.length,
         formattedEvents: eventList.length
@@ -5231,7 +5231,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
         pills: []
       },
       confidence: 90,
-      debug: { version: "v1.2.67-routing-fix", earlyReturn: true }
+      debug: { version: "v1.2.68-debug-audit", earlyReturn: true }
     });
     return articles.length > 0 || contentChunks.length > 0; // Return true only if content was found
   }
@@ -5797,9 +5797,12 @@ export default async function handler(req, res) {
     const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
     
     // PRIORITY: Check for clarification follow-ups BEFORE intent detection
+    console.log(`🔍 Checking clarification follow-up logic. pageContext:`, pageContext);
     if (pageContext && pageContext.clarificationLevel > 0) {
       console.log(`🔍 Detected clarification follow-up with level ${pageContext.clarificationLevel}`);
+      console.log(`🔍 pageContext:`, JSON.stringify(pageContext, null, 2));
       const clarificationResponse = await handleClarificationFollowUp(query, previousQuery, "events");
+      console.log(`🔍 clarificationResponse:`, JSON.stringify(clarificationResponse, null, 2));
       if (clarificationResponse) {
         // Handle routing objects from handleClarificationFollowUp
         if (clarificationResponse.type && clarificationResponse.type.startsWith("route_to_")) {
@@ -5808,14 +5811,16 @@ export default async function handler(req, res) {
           const newIntent = clarificationResponse.newIntent;
           console.log(`🔍 Routing to ${newIntent} with query: "${newQuery}"`);
           
-          // Recursively call the handler with the new query and updated context
+          // Update the query and intent for the rest of the pipeline
+          const updatedQuery = newQuery;
+          const updatedIntent = newIntent;
           const updatedPageContext = {
             ...pageContext,
             clarificationLevel: pageContext.clarificationLevel + 1
           };
           
           // Generate clarification question for the new intent
-          const clarification = await generateClarificationQuestion(newQuery, client, updatedPageContext);
+          const clarification = await generateClarificationQuestion(updatedQuery, client, updatedPageContext);
           if (clarification) {
             res.json(clarification);
             return;
