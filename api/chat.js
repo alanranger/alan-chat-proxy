@@ -2011,10 +2011,11 @@ function generateWorkshopClarification() {
     type: "workshop_clarification",
     question: "Yes, we run photography workshops! What type of workshop are you interested in?",
     options: [
-      { text: "Bluebell photography workshops", query: "bluebell photography workshops" },
-      { text: "Landscape photography workshops", query: "landscape photography workshops" },
-      { text: "Macro photography workshops", query: "macro photography workshops" },
-      { text: "General outdoor workshops", query: "outdoor photography workshops" }
+      { text: "2.5hr - 4hr workshops", query: "short photography workshops 2-4 hours" },
+      { text: "1 day workshops", query: "one day photography workshops" },
+      { text: "Multi day residential workshops", query: "multi day residential photography workshops" },
+      { text: "Workshops by location", query: "photography workshops by location" },
+      { text: "Workshops by month", query: "photography workshops by month" }
     ]
   };
 }
@@ -2124,7 +2125,8 @@ function checkCourseWorkshopPatterns(lc) {
     return generateCourseClarification();
   }
   
-  if (lc.includes("do you run") && lc.includes("workshops")) {
+  // Enhanced workshop pattern matching to catch more variations
+  if ((lc.includes("do you run") || lc.includes("do you have") || lc.includes("what") || lc.includes("which")) && lc.includes("workshops")) {
     return generateWorkshopClarification();
   }
   
