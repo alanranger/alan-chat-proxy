@@ -2148,6 +2148,143 @@ function checkFreeCourseWorkshopPatterns(lc) {
   return null;
 }
 
+function checkRemainingPatterns(lc) {
+  if (lc.includes("how much") && lc.includes("macro photography workshop")) {
+    return {
+      type: "macro_workshop_clarification",
+      question: "Our macro photography workshop has different pricing options. What would you like to know about the costs?",
+      options: [
+        { text: "General pricing", query: "macro workshop pricing" },
+        { text: "Specific date pricing", query: "specific date macro workshop" },
+        { text: "Package deals", query: "macro workshop packages" },
+        { text: "What's included", query: "macro workshop includes" }
+      ]
+    };
+  }
+  
+  if (lc.includes("what's included in") && lc.includes("landscape photography course")) {
+    return {
+      type: "course_content_clarification",
+      question: "Our landscape photography course covers many aspects. What specific areas are you most interested in?",
+      options: [
+        { text: "Course curriculum", query: "landscape course curriculum" },
+        { text: "Beginner suitability", query: "landscape course beginners" },
+        { text: "Equipment needed", query: "landscape course equipment" },
+        { text: "Practical sessions", query: "landscape course practical" }
+      ]
+    };
+  }
+  
+  if (lc.includes("are your photography courses suitable for complete beginners")) {
+    return {
+      type: "beginner_suitability_clarification",
+      question: "Absolutely! We have courses designed specifically for beginners. What type of photography interests you most?",
+      options: [
+        { text: "General beginner courses", query: "beginner photography courses" },
+        { text: "Beginner editing course", query: "beginner editing course" },
+        { text: "Camera basics", query: "camera basics course" },
+        { text: "Composition fundamentals", query: "composition fundamentals" }
+      ]
+    };
+  }
+  
+  if (lc.includes("do you have any photography courses in birmingham")) {
+    return {
+      type: "location_clarification",
+      question: "We run courses in various locations. What type of photography course are you looking for?",
+      options: [
+        { text: "Courses near Birmingham", query: "courses near Birmingham" },
+        { text: "Online courses instead", query: "online courses alternative" },
+        { text: "Travel to Coventry", query: "courses in Coventry" },
+        { text: "Private lessons", query: "private lessons flexible" }
+      ]
+    };
+  }
+  
+  if (lc.includes("what's the difference between your online and in-person courses")) {
+    return {
+      type: "format_comparison_clarification",
+      question: "Great question! We offer both formats with different benefits. What would you like to know about each?",
+      options: [
+        { text: "Key differences", query: "online vs in-person differences" },
+        { text: "Online course benefits", query: "online course benefits" },
+        { text: "In-person course benefits", query: "in-person course benefits" },
+        { text: "Which is right for me", query: "course format recommendation" }
+      ]
+    };
+  }
+  
+  if (lc.includes("can you help me choose between a dslr and mirrorless camera")) {
+    return {
+      type: "camera_type_clarification",
+      question: "Both have their advantages! What's your main photography interest and experience level?",
+      options: [
+        { text: "DSLR advantages", query: "DSLR camera advantages" },
+        { text: "Mirrorless advantages", query: "mirrorless camera advantages" },
+        { text: "For intermediate photographers", query: "camera upgrade intermediate" },
+        { text: "Budget considerations", query: "DSLR vs mirrorless budget" }
+      ]
+    };
+  }
+  
+  if (lc.includes("what photography workshops do you have coming up this month")) {
+    return {
+      type: "upcoming_workshops_clarification",
+      question: "We have several workshops scheduled this month. What type of photography workshop interests you?",
+      options: [
+        { text: "Outdoor photography workshops", query: "outdoor photography workshops" },
+        { text: "All upcoming workshops", query: "all upcoming workshops" },
+        { text: "Beginner workshops", query: "beginner workshops this month" },
+        { text: "Specific topics", query: "specific topic workshops" }
+      ]
+    };
+  }
+  
+  if (lc.includes("photography course workshop type clarification")) {
+    return {
+      type: "course_workshop_type_clarification",
+      question: "Great! We offer both practical workshops outdoors and courses as evening classes or online. What would you prefer?",
+      options: [
+        { text: "Practical outdoor workshops", query: "outdoor photography workshops" },
+        { text: "Evening classes", query: "evening photography classes" },
+        { text: "Online courses", query: "online photography courses" },
+        { text: "Tell me about all options", query: "all photography course options" }
+      ]
+    };
+  }
+  
+  if (lc.includes("online photography courses") || lc.includes("evening photography classes")) {
+    return {
+      type: "course_type_clarification",
+      question: "I see you're interested in online courses. Are you looking for free online content or paid beginner courses?",
+      options: [
+        { text: "Beginners camera course", query: "beginners camera course" },
+        { text: "Beginners Lightroom course", query: "beginners lightroom course" },
+        { text: "RPS mentoring course", query: "rps mentoring course" },
+        { text: "Free online photography course", query: "free online photography course" },
+        { text: "Online private lessons", query: "online private photography lessons" }
+      ]
+    };
+  }
+  
+  if (lc.includes("online photography courses (free and paid) clarification")) {
+    return {
+      type: "free_vs_paid_clarification",
+      question: "I see you're interested in online courses. Are you looking for free online content or paid beginner courses?",
+      options: [
+        { text: "Free online photography course", query: "free online photography course" },
+        { text: "Online private lessons", query: "online private photography lessons" },
+        { text: "Beginners camera course", query: "beginners camera course" },
+        { text: "Beginners Lightroom course", query: "beginners lightroom course" },
+        { text: "RPS mentoring course", query: "rps mentoring course" }
+      ],
+      confidence: 30
+    };
+  }
+  
+  return null;
+}
+
 async function generateClarificationQuestion(query, client = null, pageContext = null) {
   const lc = query.toLowerCase();
   console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
@@ -2192,148 +2329,9 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   const freeCourseWorkshopResult = checkFreeCourseWorkshopPatterns(lc);
   if (freeCourseWorkshopResult) return freeCourseWorkshopResult;
   
-  if (lc.includes("how much") && lc.includes("macro photography workshop")) {
-    return {
-      type: "macro_workshop_clarification",
-      question: "Our macro photography workshop has different pricing options. What would you like to know about the costs?",
-      options: [
-        { text: "General pricing", query: "macro workshop pricing" },
-        { text: "Specific date pricing", query: "specific date macro workshop" },
-        { text: "Package deals", query: "macro workshop packages" },
-        { text: "What's included", query: "macro workshop includes" }
-      ]
-    };
-  }
-  
-  // Course content questions
-  if (lc.includes("what's included in") && lc.includes("landscape photography course")) {
-    return {
-      type: "course_content_clarification",
-      question: "Our landscape photography course covers many aspects. What specific areas are you most interested in?",
-      options: [
-        { text: "Course curriculum", query: "landscape course curriculum" },
-        { text: "Beginner suitability", query: "landscape course beginners" },
-        { text: "Equipment needed", query: "landscape course equipment" },
-        { text: "Practical sessions", query: "landscape course practical" }
-      ]
-    };
-  }
-  
-  // Beginner suitability questions
-  if (lc.includes("are your photography courses suitable for complete beginners")) {
-    return {
-      type: "beginner_suitability_clarification",
-      question: "Absolutely! We have courses designed specifically for beginners. What type of photography interests you most?",
-      options: [
-        { text: "General beginner courses", query: "beginner photography courses" },
-        { text: "Beginner editing course", query: "beginner editing course" },
-        { text: "Camera basics", query: "camera basics course" },
-        { text: "Composition fundamentals", query: "composition fundamentals" }
-      ]
-    };
-  }
-  
-  // Location-specific questions
-  if (lc.includes("do you have any photography courses in birmingham")) {
-    return {
-      type: "location_clarification",
-      question: "We run courses in various locations. What type of photography course are you looking for?",
-      options: [
-        { text: "Courses near Birmingham", query: "courses near Birmingham" },
-        { text: "Online courses instead", query: "online courses alternative" },
-        { text: "Travel to Coventry", query: "courses in Coventry" },
-        { text: "Private lessons", query: "private lessons flexible" }
-      ]
-    };
-  }
-  
-  // Course format comparison questions
-  if (lc.includes("what's the difference between your online and in-person courses")) {
-    return {
-      type: "format_comparison_clarification",
-      question: "Great question! We offer both formats with different benefits. What would you like to know about each?",
-      options: [
-        { text: "Key differences", query: "online vs in-person differences" },
-        { text: "Online course benefits", query: "online course benefits" },
-        { text: "In-person course benefits", query: "in-person course benefits" },
-        { text: "Which is right for me", query: "course format recommendation" }
-      ]
-    };
-  }
-  
-  // Camera type advice questions
-  if (lc.includes("can you help me choose between a dslr and mirrorless camera")) {
-    return {
-      type: "camera_type_clarification",
-      question: "Both have their advantages! What's your main photography interest and experience level?",
-      options: [
-        { text: "DSLR advantages", query: "DSLR camera advantages" },
-        { text: "Mirrorless advantages", query: "mirrorless camera advantages" },
-        { text: "For intermediate photographers", query: "camera upgrade intermediate" },
-        { text: "Budget considerations", query: "DSLR vs mirrorless budget" }
-      ]
-    };
-  }
-  
-  // Upcoming events questions
-  if (lc.includes("what photography workshops do you have coming up this month")) {
-    return {
-      type: "upcoming_workshops_clarification",
-      question: "We have several workshops scheduled this month. What type of photography workshop interests you?",
-      options: [
-        { text: "Outdoor photography workshops", query: "outdoor photography workshops" },
-        { text: "All upcoming workshops", query: "all upcoming workshops" },
-        { text: "Beginner workshops", query: "beginner workshops this month" },
-        { text: "Specific topics", query: "specific topic workshops" }
-      ]
-    };
-  }
-  
-
-  // Course/workshop type clarification (for equipment queries)
-  if (lc.includes("photography course workshop type clarification")) {
-    return {
-      type: "course_workshop_type_clarification",
-      question: "Great! We offer both practical workshops outdoors and courses as evening classes or online. What would you prefer?",
-      options: [
-        { text: "Practical outdoor workshops", query: "outdoor photography workshops" },
-        { text: "Evening classes", query: "evening photography classes" },
-        { text: "Online courses", query: "online photography courses" },
-        { text: "Tell me about all options", query: "all photography course options" }
-      ]
-    };
-  }
-  
-  // Course type clarification (after selecting courses)
-  if (lc.includes("online photography courses") || lc.includes("evening photography classes")) {
-    return {
-      type: "course_type_clarification",
-      question: "I see you're interested in online courses. Are you looking for free online content or paid beginner courses?",
-      options: [
-        { text: "Beginners camera course", query: "beginners camera course" },
-        { text: "Beginners Lightroom course", query: "beginners lightroom course" },
-        { text: "RPS mentoring course", query: "rps mentoring course" },
-        { text: "Free online photography course", query: "free online photography course" },
-        { text: "Online private lessons", query: "online private photography lessons" }
-      ]
-    };
-  }
-  
-  // Specific clarification for "online courses (free and paid)" follow-up
-  if (lc.includes("online photography courses (free and paid) clarification")) {
-    return {
-      type: "free_vs_paid_clarification",
-      question: "I see you're interested in online courses. Are you looking for free online content or paid beginner courses?",
-      options: [
-        { text: "Free online photography course", query: "free online photography course" },
-        { text: "Online private lessons", query: "online private photography lessons" },
-        { text: "Beginners camera course", query: "beginners camera course" },
-        { text: "Beginners Lightroom course", query: "beginners lightroom course" },
-        { text: "RPS mentoring course", query: "rps mentoring course" }
-      ],
-      confidence: 30
-    };
-  }
+  // Check remaining patterns
+  const remainingResult = checkRemainingPatterns(lc);
+  if (remainingResult) return remainingResult;
   
   // CONTENT-BASED FALLBACK: If no specific pattern matches, use generic clarification
   console.log(`✅ No specific pattern matched for: "${query}" - using generic clarification`);
