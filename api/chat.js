@@ -5195,7 +5195,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
       },
       confidence,
       debug: {
-        version: "v1.2.74-fix-debug-vars",
+        version: "v1.2.75-fix-debug-scope",
         earlyReturn: true,
         eventsFound: events.length,
         formattedEvents: eventList.length
@@ -5231,7 +5231,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
         pills: []
       },
       confidence: 90,
-      debug: { version: "v1.2.74-fix-debug-vars", earlyReturn: true }
+      debug: { version: "v1.2.75-fix-debug-scope", earlyReturn: true }
     });
     return articles.length > 0 || contentChunks.length > 0; // Return true only if content was found
   }
@@ -5677,7 +5677,7 @@ async function handleResidentialPricingGuard(client, query, previousQuery, pageC
  * Handle the core events retrieval and response pipeline.
  * Returns true if it sent a response.
  */
-async function handleEventsPipeline(client, query, keywords, pageContext, res) {
+async function handleEventsPipeline(client, query, keywords, pageContext, res, debugInfo = null) {
   const events = await findEvents(client, { keywords, limit: 80, pageContext });
   const eventList = formatEventsForUi(events);
   if (!Array.isArray(eventList)) {
@@ -5717,8 +5717,8 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
     },
     confidence,
     debug: { 
-      version: "v1.2.74-fix-debug-vars",
-      debugInfo: requestDebugInfo
+      version: "v1.2.75-fix-debug-scope",
+      debugInfo: debugInfo
     }
   });
   return true;
@@ -6075,7 +6075,7 @@ export default async function handler(req, res) {
 
     // Core events pipeline (when intent is events)
     if (intent === "events") {
-      const handled = await handleEventsPipeline(client, query, keywords, pageContext, res);
+      const handled = await handleEventsPipeline(client, query, keywords, pageContext, res, requestDebugInfo);
       if (handled) return;
     }
     
