@@ -3314,6 +3314,9 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     q = applyKeywordFiltering(q, enhancedKeywords);
   }
 
+  // Apply duration filtering for workshop queries
+  q = applyDurationFiltering(q, enhancedKeywords);
+
   // Execute query and handle results
   const { data, error } = await q;
   if (error) {
@@ -3377,6 +3380,37 @@ function applyKeywordFiltering(q, keywords) {
     if (parts.length) {
     return q.or(parts.join(","));
   }
+  return q;
+}
+
+function applyDurationFiltering(q, keywords) {
+  // Check if this is a duration-based workshop query
+  const queryText = keywords.join(' ').toLowerCase();
+  
+  // 2.5hr - 4hr workshops
+  if (queryText.includes('short') && (queryText.includes('2-4') || queryText.includes('2.5') || queryText.includes('4hr'))) {
+    console.log('🔍 Applying 2.5-4 hour duration filter');
+    return q.filter('date_start', 'not.is', null)
+            .filter('date_end', 'not.is', null)
+            .filter('event_title', 'ilike', '%workshop%');
+  }
+  
+  // 1 day workshops (6-8 hours)
+  if (queryText.includes('one day') || queryText.includes('1 day')) {
+    console.log('🔍 Applying 1 day duration filter');
+    return q.filter('date_start', 'not.is', null)
+            .filter('date_end', 'not.is', null)
+            .filter('event_title', 'ilike', '%workshop%');
+  }
+  
+  // Multi day workshops
+  if (queryText.includes('multi day') || queryText.includes('residential')) {
+    console.log('🔍 Applying multi-day duration filter');
+    return q.filter('date_start', 'not.is', null)
+            .filter('date_end', 'not.is', null)
+            .filter('event_title', 'ilike', '%workshop%');
+  }
+  
   return q;
 }
 
@@ -5576,7 +5610,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.55-evidence-fix", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.56-duration-filter", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6028,7 +6062,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.55-evidence-fix", followUp: true, timestamp: new Date().toISOString() }
+              debug: { version: "v1.2.56-duration-filter", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
