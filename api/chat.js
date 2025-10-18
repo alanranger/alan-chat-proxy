@@ -5717,7 +5717,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: { 
-          version: "v1.2.79-fix-routing",
+          version: "v1.2.80-remove-forced-trigger",
           debugInfo: debugInfo
         }
   });
@@ -5828,49 +5828,6 @@ export default async function handler(req, res) {
     const shouldTriggerClarification = pageContext && pageContext.clarificationLevel > 0;
     console.log(`🔍 shouldTriggerClarification:`, shouldTriggerClarification);
     
-    // FORCE TRIGGER FOR TESTING - REMOVE AFTER DEBUGGING
-    if (true) {
-      console.log(`🔍 FORCED TRIGGER - Testing clarification follow-up logic`);
-      console.log(`🔍 pageContext.clarificationLevel:`, pageContext?.clarificationLevel);
-      console.log(`🔍 query:`, query);
-      console.log(`🔍 previousQuery:`, previousQuery);
-      
-      const clarificationResponse = await handleClarificationFollowUp(query, previousQuery, "events");
-      console.log(`🔍 clarificationResponse:`, JSON.stringify(clarificationResponse, null, 2));
-      
-      if (clarificationResponse) {
-        // Handle routing objects from handleClarificationFollowUp
-        if (clarificationResponse.type && clarificationResponse.type.startsWith("route_to_")) {
-          // This is a routing object, process it as a new query
-          const newQuery = clarificationResponse.newQuery;
-          const newIntent = clarificationResponse.newIntent;
-          console.log(`🔍 FORCED TRIGGER - Routing to ${newIntent} with query: "${newQuery}"`);
-          
-          // Update the query and intent for the rest of the pipeline
-          const updatedQuery = newQuery;
-          const updatedIntent = newIntent;
-          const updatedPageContext = {
-            ...pageContext,
-            clarificationLevel: pageContext.clarificationLevel + 1
-          };
-          
-          // Generate clarification question for the new intent
-          const clarification = await generateClarificationQuestion(updatedQuery, client, updatedPageContext);
-          if (clarification) {
-            console.log(`🔍 FORCED TRIGGER - Returning clarification response`);
-            res.json(clarification);
-            return;
-          }
-        } else {
-          // This is a full response object
-          console.log(`🔍 FORCED TRIGGER - Returning full response object`);
-          res.json(clarificationResponse);
-          return;
-        }
-      } else {
-        console.log(`🔍 FORCED TRIGGER - No clarification response, continuing with normal flow`);
-      }
-    }
     
     if (shouldTriggerClarification) {
       console.log(`🔍 Detected clarification follow-up with level ${pageContext.clarificationLevel}`);
