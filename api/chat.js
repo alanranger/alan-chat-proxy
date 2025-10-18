@@ -5716,10 +5716,10 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
       pills: []
     },
     confidence,
-    debug: { 
-      version: "v1.2.75-fix-debug-scope",
-      debugInfo: debugInfo
-    }
+        debug: { 
+          version: "v1.2.76-debug-condition",
+          debugInfo: debugInfo
+        }
   });
   return true;
 }
@@ -5819,6 +5819,10 @@ export default async function handler(req, res) {
     console.log(`🔍 pageContext.clarificationLevel > 0:`, pageContext?.clarificationLevel > 0);
     console.log(`🔍 Raw pageContext from request:`, req.body.pageContext);
     console.log(`🔍 pageContext parsed:`, JSON.stringify(pageContext, null, 2));
+    console.log(`🔍 Condition check: pageContext && pageContext.clarificationLevel > 0`);
+    console.log(`🔍 pageContext exists:`, !!pageContext);
+    console.log(`🔍 pageContext.clarificationLevel > 0:`, pageContext?.clarificationLevel > 0);
+    console.log(`🔍 Full condition result:`, pageContext && pageContext.clarificationLevel > 0);
     if (pageContext && pageContext.clarificationLevel > 0) {
       console.log(`🔍 Detected clarification follow-up with level ${pageContext.clarificationLevel}`);
       console.log(`🔍 pageContext:`, JSON.stringify(pageContext, null, 2));

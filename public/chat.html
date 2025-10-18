@@ -600,7 +600,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-        <div class="badge-wrap"><span class="version">v1.2.75-fix-debug-scope</span></div>
+        <div class="badge-wrap"><span class="version">v1.2.76-debug-condition</span></div>
 
   <div class="card" id="chatCard">
     <!-- Sticky header -->
@@ -868,7 +868,7 @@ function mergeProducts(list){
     }
     const m = map.get(key);
     mergeProductProperties(m, p);
-  }
+    }
   
   return [...map.values()];
 }
@@ -1238,16 +1238,16 @@ function isSimpleFollowUpQuery(query) {
 
 // Helper function to format event date range
 function formatEventDateRange(e) {
-  const whenStart = fmtDate(e.date_start);
-  let when = whenStart;
+    const whenStart = fmtDate(e.date_start);
+    let when = whenStart;
   
   try {
-    const startDay = new Date(e.date_start);
-    const endDay = e.date_end ? new Date(e.date_end) : null;
-    const sameDay = endDay && startDay.toDateString() === endDay.toDateString();
-    if (endDay && !sameDay) {
-      when = `${whenStart} – ${fmtDate(e.date_end)}`;
-    }
+      const startDay = new Date(e.date_start);
+      const endDay = e.date_end ? new Date(e.date_end) : null;
+      const sameDay = endDay && startDay.toDateString() === endDay.toDateString();
+      if (endDay && !sameDay) {
+        when = `${whenStart} – ${fmtDate(e.date_end)}`;
+      }
   } catch {}
   
   return when;
@@ -1255,7 +1255,7 @@ function formatEventDateRange(e) {
 
 // Helper function to format event time info
 function formatEventTimeInfo(e) {
-  if (e.start_time && e.end_time) {
+    if (e.start_time && e.end_time) {
     return `<div class="event-time">🕐 ${escapeHTML(e.start_time)} - ${escapeHTML(e.end_time)}</div>`;
   }
   
@@ -1264,9 +1264,9 @@ function formatEventTimeInfo(e) {
   }
   
   if (e.date_start && e.date_end) {
-    const startTime = e.date_start.split('T')[1]?.substring(0, 5) || '';
-    const endTime = e.date_end.split('T')[1]?.substring(0, 5) || '';
-    if (startTime && endTime) {
+      const startTime = e.date_start.split('T')[1]?.substring(0, 5) || '';
+      const endTime = e.date_end.split('T')[1]?.substring(0, 5) || '';
+      if (startTime && endTime) {
       return `<div class="event-time">🕐 ${startTime} - ${endTime}</div>`;
     }
   }
@@ -1281,10 +1281,10 @@ function getEventTypeInfo(e) {
   const eventTypeIcon = e.csv_type === 'course_events' ? '🎓' : 
                        e.csv_type === 'workshop_events' ? '🔧' : '📅';
   
-  const isResidential = e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start);
-  const isWeekendWorkshop = e.categories && e.categories.includes('weekend residential photo workshops');
-  const residentialIndicator = (isResidential || isWeekendWorkshop) ? '🏠 Residential' : '';
-  
+    const isResidential = e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start);
+    const isWeekendWorkshop = e.categories && e.categories.includes('weekend residential photo workshops');
+    const residentialIndicator = (isResidential || isWeekendWorkshop) ? '🏠 Residential' : '';
+    
   return { eventType, eventTypeIcon, residentialIndicator };
 }
 
@@ -1298,26 +1298,26 @@ function renderEventCard(e) {
   const timeInfo = formatEventTimeInfo(e);
   const { eventType, eventTypeIcon, residentialIndicator } = getEventTypeInfo(e);
   
-  return `
-    <div class="event-card">
-      <div class="event-content">
-        <div class="event-header">
-          <h4 class="event-title">
-            <a href="${href}" target="_blank" rel="noopener">${title || 'Photography Event'}</a>
-          </h4>
-          <div class="event-type-badge">${eventTypeIcon} ${eventType} ${residentialIndicator}</div>
-        </div>
-        <div class="event-details">
-          <div class="event-date">📅 ${when}</div>
-          ${timeInfo}
-          ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
-          ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
-          ${e.participants ? `<div class="event-participants">👥 ${e.participants} participants</div>` : ''}
-          ${e.experience_level ? `<div class="event-experience">🎯 ${e.experience_level}</div>` : ''}
+    return `
+      <div class="event-card">
+        <div class="event-content">
+          <div class="event-header">
+            <h4 class="event-title">
+              <a href="${href}" target="_blank" rel="noopener">${title || 'Photography Event'}</a>
+            </h4>
+            <div class="event-type-badge">${eventTypeIcon} ${eventType} ${residentialIndicator}</div>
+          </div>
+          <div class="event-details">
+            <div class="event-date">📅 ${when}</div>
+            ${timeInfo}
+            ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
+            ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
+            ${e.participants ? `<div class="event-participants">👥 ${e.participants} participants</div>` : ''}
+            ${e.experience_level ? `<div class="event-experience">🎯 ${e.experience_level}</div>` : ''}
+          </div>
         </div>
       </div>
-    </div>
-  `;
+    `;
 }
 
 function renderEventsBlock(structured, query){
@@ -1808,31 +1808,31 @@ function renderActionPills(pills) {
     a.href = p.href; 
     a.target = '_blank'; 
     a.rel = 'noopener'; 
-    
-    // Add click event logging
-    a.addEventListener('click', () => {
-      fetch('/api/chat-log', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
-        },
-        body: JSON.stringify({
-          action: 'event',
-          data: { 
-            sessionId, 
-            eventType: 'pill_click', 
-            eventData: { label: p.label, href: p.href, priority: p.priority } 
-          }
-        })
-      }).catch(err => console.warn('Event logging failed:', err));
+      
+      // Add click event logging
+      a.addEventListener('click', () => {
+        fetch('/api/chat-log', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+          },
+          body: JSON.stringify({
+            action: 'event',
+            data: { 
+              sessionId, 
+              eventType: 'pill_click', 
+              eventData: { label: p.label, href: p.href, priority: p.priority } 
+            }
+          })
+        }).catch(err => console.warn('Event logging failed:', err));
+      });
+      
+      wrap.appendChild(a); 
     });
-    
-    wrap.appendChild(a); 
-  });
   
-  thread.appendChild(wrap);
-}
+    thread.appendChild(wrap);
+  }
 
 // Helper function to create confidence footer
 function createConfidenceFooter(__rounded) {
@@ -1954,26 +1954,26 @@ function renderFallbackMessage(gate, s, md, __rounded) {
     return;
   }
   
-  let fallbackMessage = "I don't have a specific answer for that yet.";
-  let extraMessage = "";
-  
-  if (__rounded >= 80) {
-    fallbackMessage = "I found some relevant information, but I'd like to provide you with the most accurate details.";
-    extraMessage = `<p>For the most up-to-date and specific information, I'd recommend using the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
-  } else if (__rounded >= 50) {
-    fallbackMessage = "I found some relevant information, but I'm not completely confident about the specifics.";
-    extraMessage = `<p>For the most accurate and up-to-date information, I'd recommend using the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
-  } else if (__rounded >= 30) {
-    fallbackMessage = "I'm not entirely sure about this question, but I can try to help.";
-    extraMessage = `<p>For the best assistance, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
-  } else {
-    fallbackMessage = "I don't have a specific answer for that yet.";
-    extraMessage = `<p>If this doesn't answer your question, please use the Contact or WhatsApp buttons above to reach Alan directly.</p>`;
-  }
-  
+    let fallbackMessage = "I don't have a specific answer for that yet.";
+    let extraMessage = "";
+    
+    if (__rounded >= 80) {
+      fallbackMessage = "I found some relevant information, but I'd like to provide you with the most accurate details.";
+      extraMessage = `<p>For the most up-to-date and specific information, I'd recommend using the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+    } else if (__rounded >= 50) {
+      fallbackMessage = "I found some relevant information, but I'm not completely confident about the specifics.";
+      extraMessage = `<p>For the most accurate and up-to-date information, I'd recommend using the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+    } else if (__rounded >= 30) {
+      fallbackMessage = "I'm not entirely sure about this question, but I can try to help.";
+      extraMessage = `<p>For the best assistance, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+    } else {
+      fallbackMessage = "I don't have a specific answer for that yet.";
+      extraMessage = `<p>If this doesn't answer your question, please use the Contact or WhatsApp buttons above to reach Alan directly.</p>`;
+    }
+    
   const {html} = mdToHtml(fallbackMessage);
-  addBubble(html.replace('</div>', `${extraMessage}</div>`));
-}
+    addBubble(html.replace('</div>', `${extraMessage}</div>`));
+  }
 
 // Helper function to setup debug information
 function setupDebugInfo(payload, gate) {
