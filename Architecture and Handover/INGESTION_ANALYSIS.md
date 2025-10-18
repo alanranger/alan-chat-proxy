@@ -3,6 +3,8 @@
 ## Problem Summary
 The ingestion system is creating multiple entries for the same URL with different `kind` values and titles, causing content matching issues in the chatbot.
 
+**UPDATE (2025-10-18)**: While the critical "free course" query issue has been resolved through database cleanup, the underlying ingestion duplication problem remains and should be addressed to prevent future issues. Additionally, a major refactoring effort has been completed, improving code maintainability across 37 functions.
+
 ## Evidence of Duplication
 
 ### Database Analysis Results

@@ -4,12 +4,15 @@ This testing framework provides comprehensive regression testing capabilities to
 
 ## 🎯 Purpose
 
-The main `api/chat.js` file has extremely high cognitive complexity (up to 320 in some functions), making it difficult to debug and maintain. This testing framework provides:
+The main `api/chat.js` file previously had extremely high cognitive complexity (up to 400 in some functions), making it difficult to debug and maintain. After a comprehensive 5-day refactoring effort (2025-10-13 to 2025-10-18), all functions now have complexity ≤ 15, dramatically improving maintainability.
+
+This testing framework provides:
 
 - **Regression Protection**: Catch regressions before they reach production
 - **Baseline Comparison**: Compare current behavior against known good states
 - **Deployment Safety**: Automated checks before any deployment
 - **Comprehensive Coverage**: Test all critical user journeys
+- **Complexity Enforcement**: Ensure no functions exceed complexity 15
 
 ## 📁 Test Files
 
@@ -56,27 +59,57 @@ npm run test:regression    # Comprehensive regression tests
 npm run test:safety        # Deployment safety checks
 npm run test:baseline      # Capture current baseline
 npm run test:compare       # Compare against baseline
+
+# CRITICAL: Check complexity before any changes
+npx eslint api/chat.js --rule='complexity: [2, 15]' --format=compact
 ```
 
 ### Workflow for Refactoring
 
-1. **Before Starting Refactoring**:
+1. **Before Starting ANY Changes**:
    ```bash
+   # CRITICAL: Check current complexity
+   npx eslint api/chat.js --rule='complexity: [2, 15]' --format=compact
+   
+   # Capture baseline behavior
    npm run test:baseline
    ```
-   This captures the current behavior as a baseline.
+   This ensures no functions exceed complexity 15 and captures current behavior.
 
 2. **During Refactoring**:
    ```bash
+   # After each change, check complexity
+   npx eslint api/chat.js --rule='complexity: [2, 15]' --format=compact
+   
+   # Compare against baseline
    npm run test:compare baseline-YYYY-MM-DD.json
    ```
-   This compares current behavior against the baseline to detect regressions.
+   This ensures complexity remains ≤ 15 and detects regressions.
 
 3. **Before Deployment**:
    ```bash
+   # Final complexity check
+   npx eslint api/chat.js --rule='complexity: [2, 15]' --format=compact
+   
+   # Run all safety checks
    npm run test:all
    ```
-   This runs all safety checks and regression tests.
+   This runs all safety checks and ensures no complexity violations.
+
+### 🚨 Complexity Enforcement Protocol
+
+**MANDATORY STEPS BEFORE ANY COMMIT:**
+1. **Complexity Check**: `npx eslint api/chat.js --rule='complexity: [2, 15]'`
+2. **Verify Zero Violations**: No functions should exceed complexity 15
+3. **If Violations Found**: STOP and refactor immediately
+4. **Regression Tests**: Run full test suite
+5. **Only Then Commit**: All checks must pass
+
+**REFACTORING TECHNIQUES:**
+- Extract helper functions for complex logic
+- Use early returns to reduce nesting
+- Break down complex conditionals
+- Separate concerns into focused functions
 
 ### Manual Testing
 

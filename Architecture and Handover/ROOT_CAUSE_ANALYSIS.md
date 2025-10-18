@@ -3,6 +3,8 @@
 ## Problem Statement
 The query "Free online photography course" returns irrelevant content ("WHAT IS FRAMING IN PHOTOGRAPHY: A GUIDE FOR BEGINNERS") instead of the actual free course content.
 
+**UPDATE (2025-10-18)**: This issue has been **RESOLVED** through database cleanup and service prioritization fixes. Additionally, a major refactoring effort has been completed, reducing cognitive complexity across 37 functions from >15 to ≤15.
+
 ## Root Cause Identified
 **CRITICAL INGESTION BUG**: The same URL has duplicate entries in the `page_entities` table with different titles:
 

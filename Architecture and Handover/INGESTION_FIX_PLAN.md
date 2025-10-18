@@ -6,6 +6,8 @@ The ingestion process is creating multiple entries for the same URL with differe
 - Up to 7 duplicate entries per URL
 - Incorrect content matching in the chatbot
 
+**UPDATE (2025-10-18)**: The critical "free course" query issue has been resolved through database cleanup, but the underlying ingestion duplication problem remains. Additionally, a major refactoring effort has been completed, improving code maintainability across 37 functions.
+
 ## Phase 1: Immediate Database Cleanup
 1. **Identify all duplicate URLs**
    ```sql
