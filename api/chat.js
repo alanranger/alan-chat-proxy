@@ -5717,7 +5717,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: { 
-          version: "v1.2.80-remove-forced-trigger",
+          version: "v1.2.81-debug-condition",
           debugInfo: debugInfo
         }
   });
@@ -5824,7 +5824,17 @@ export default async function handler(req, res) {
     console.log(`🔍 pageContext.clarificationLevel > 0:`, pageContext?.clarificationLevel > 0);
     console.log(`🔍 Full condition result:`, pageContext && pageContext.clarificationLevel > 0);
     
-    // Force the condition to be true for testing
+    // DEBUG: Check each part of the condition separately
+    const pageContextExists = !!pageContext;
+    const clarificationLevelExists = pageContext?.clarificationLevel !== undefined;
+    const clarificationLevelGreaterThanZero = pageContext?.clarificationLevel > 0;
+    
+    console.log(`🔍 DEBUG: pageContextExists:`, pageContextExists);
+    console.log(`🔍 DEBUG: clarificationLevelExists:`, clarificationLevelExists);
+    console.log(`🔍 DEBUG: clarificationLevelGreaterThanZero:`, clarificationLevelGreaterThanZero);
+    console.log(`🔍 DEBUG: pageContext.clarificationLevel value:`, pageContext?.clarificationLevel);
+    console.log(`🔍 DEBUG: typeof pageContext.clarificationLevel:`, typeof pageContext?.clarificationLevel);
+    
     const shouldTriggerClarification = pageContext && pageContext.clarificationLevel > 0;
     console.log(`🔍 shouldTriggerClarification:`, shouldTriggerClarification);
     
