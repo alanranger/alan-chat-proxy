@@ -348,31 +348,6 @@ function normalizeKind(item, url) {
   return 'landing';
 }
 
-// Check if a JSON-LD object should be skipped to prevent duplicates
-function shouldSkipJsonLdObject(item, url, isPrimary = false) {
-  const rawType = (item && (item['@type'] || item['@type[]'])) || '';
-  const t = Array.isArray(rawType) ? String(rawType[0] || '').toLowerCase() : String(rawType || '').toLowerCase();
-  const u = String(url || '').toLowerCase();
-  
-  // Skip generic Organization JSON-LD objects that create duplicates
-  if (t === 'organization' && !isPrimary) {
-    return true;
-  }
-  
-  // Skip generic Website/WebPage objects that don't add value
-  if ((t === 'website' || t === 'webpage') && !isPrimary) {
-    return true;
-  }
-  
-  // Skip objects with generic titles that override actual page content
-  const title = item.name || item.headline || item.title || '';
-  if (title.toLowerCase().includes('alan ranger photography') && !isPrimary) {
-    return true;
-  }
-  
-  return false;
-}
-
 /* ========== single URL ingestion ========== */
 async function ingestSingleUrl(url, supa, options = {}) {
   let stage = 'fetch';
@@ -618,17 +593,9 @@ async function ingestSingleUrl(url, supa, options = {}) {
         });
       } catch (e) {} // Ignore errors
 
-      // Store enhanced descriptions for ALL entity types (filter out duplicates)
+      // Store enhanced descriptions for ALL entity types
       for (let idx = 0; idx < jsonLd.length; idx++) {
         const item = jsonLd[idx];
-        const isPrimary = idx === 0; // First item is primary after prioritization
-        
-        // Skip objects that would create duplicates
-        if (shouldSkipJsonLdObject(item, url, isPrimary)) {
-          console.log(`Skipping duplicate JSON-LD object at index ${idx}: ${item['@type']} - ${item.name || item.headline || item.title || 'No title'}`);
-          continue;
-        }
-        
         const entityKind = normalizeKind(item, url);
         
         // Clean descriptions for all entity types, but enhance with structured data only for products
@@ -753,7 +720,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
       const entities = [{
         url: url,
         kind: finalKind,
-        title: htmlTitle || h1Title || bestJsonLd.headline || bestJsonLd.title || bestJsonLd.name || null,
+        title: bestJsonLd.headline || bestJsonLd.title || bestJsonLd.name || htmlTitle || h1Title || null,
         description: enhancedDescription,
         date_start: bestJsonLd.datePublished || bestJsonLd.startDate || null,
         date_end: bestJsonLd.endDate || null,
