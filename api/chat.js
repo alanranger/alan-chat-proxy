@@ -5717,7 +5717,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: { 
-          version: "v1.2.77-force-condition",
+          version: "v1.2.78-force-trigger",
           debugInfo: debugInfo
         }
   });
@@ -5827,6 +5827,25 @@ export default async function handler(req, res) {
     // Force the condition to be true for testing
     const shouldTriggerClarification = pageContext && pageContext.clarificationLevel > 0;
     console.log(`🔍 shouldTriggerClarification:`, shouldTriggerClarification);
+    
+    // FORCE TRIGGER FOR TESTING - REMOVE AFTER DEBUGGING
+    if (true) {
+      console.log(`🔍 FORCED TRIGGER - Testing clarification follow-up logic`);
+      console.log(`🔍 pageContext.clarificationLevel:`, pageContext?.clarificationLevel);
+      console.log(`🔍 query:`, query);
+      console.log(`🔍 previousQuery:`, previousQuery);
+      
+      const clarificationResponse = await handleClarificationFollowUp(query, previousQuery, "events");
+      console.log(`🔍 clarificationResponse:`, JSON.stringify(clarificationResponse, null, 2));
+      
+      if (clarificationResponse) {
+        console.log(`🔍 Returning clarification response`);
+        res.json(clarificationResponse);
+        return;
+      } else {
+        console.log(`🔍 No clarification response, continuing with normal flow`);
+      }
+    }
     
     if (shouldTriggerClarification) {
       console.log(`🔍 Detected clarification follow-up with level ${pageContext.clarificationLevel}`);
