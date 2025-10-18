@@ -3819,49 +3819,59 @@ function logExtractionDebug(desc, chunk, src, extracted) {
 function extractSummaryFromDescription(fullDescription) {
   if (!fullDescription) return null;
 
-    let summaryText = '';
-    const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
+  // Try to extract from description section first
+  const descriptionSummary = extractFromDescriptionSection(fullDescription);
+  if (descriptionSummary) {
+    return descriptionSummary;
+  }
+  
+  // Fallback to full description processing
+  return extractFromFullDescription(fullDescription);
+}
 
-    if (lastDescriptionIndex !== -1) {
-      // Get text after the last "Description:"
-      let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
+// Helper functions for summary extraction
+function extractFromDescriptionSection(fullDescription) {
+  const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
+  if (lastDescriptionIndex === -1) return null;
 
-      // Further refine to stop at other section headers if they exist after the description
-      const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
-      let stopIndex = potentialSummaryText.length;
-      for (const word of stopWords) {
-        const idx = potentialSummaryText.toLowerCase().indexOf(word);
-        if (idx !== -1 && idx < stopIndex) {
-          stopIndex = idx;
-        }
-      }
-      summaryText = potentialSummaryText.substring(0, stopIndex).trim();
+  // Get text after the last "Description:"
+  let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
+
+  // Further refine to stop at other section headers
+  const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
+  const stopIndex = findEarliestStopWord(potentialSummaryText, stopWords);
+  const summaryText = potentialSummaryText.substring(0, stopIndex).trim();
+
+  return processSummaryText(summaryText);
+}
+
+function findEarliestStopWord(text, stopWords) {
+  let stopIndex = text.length;
+  for (const word of stopWords) {
+    const idx = text.toLowerCase().indexOf(word);
+    if (idx !== -1 && idx < stopIndex) {
+      stopIndex = idx;
     }
+  }
+  return stopIndex;
+}
 
-    if (summaryText) {
-      const sentences = summaryText
-        .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .split(/[.!?]+/)
-        .map(s => s.trim())
-        .filter(s => s.length > 30) // Filter out very short fragments
-        .slice(0, 2); // Take first 2 sentences for a concise summary
+function extractFromFullDescription(fullDescription) {
+  return processSummaryText(fullDescription);
+}
 
-      if (sentences.length > 0) {
-      return sentences.join('. ') + (sentences.length > 1 ? '.' : '');
-      }
-    }
-    
-    // Fallback: if no specific description section found or summary is still empty
-      const sentences = fullDescription
-        .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .split(/[.!?]+/)
-        .map(s => s.trim())
-        .filter(s => s.length > 30) // Filter out very short fragments
-        .slice(0, 2); // Take first 2 sentences
+function processSummaryText(text) {
+  if (!text) return null;
+  
+  const sentences = text
+    .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .split(/[.!?]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 30) // Filter out very short fragments
+    .slice(0, 2); // Take first 2 sentences
 
-      if (sentences.length > 0) {
+  if (sentences.length > 0) {
     return sentences.join('. ') + (sentences.length > 1 ? '.' : '');
   }
   
