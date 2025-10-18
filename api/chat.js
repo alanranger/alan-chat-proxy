@@ -2234,10 +2234,8 @@ function checkCourseWorkshopPatterns(lc) {
     return generateWorkshopClarification();
   }
   
-  // Handle follow-up workshop queries from clarification selections
-  if (lc.includes("short photography workshops") || lc.includes("one day photography workshops") || lc.includes("multi day residential photography workshops") || lc.includes("photography workshops by location") || lc.includes("photography workshops by month")) {
-    return generateWorkshopClarification();
-  }
+  // Note: Follow-up workshop queries (like "short photography workshops 2-4 hours") 
+  // should NOT match here - they should go to evidence-based clarification instead
   
   if (lc.includes("do you offer") && lc.includes("lessons")) {
     return {
@@ -5578,7 +5576,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.54-followup-fix", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.55-evidence-fix", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6030,7 +6028,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.54-followup-fix", followUp: true, timestamp: new Date().toISOString() }
+              debug: { version: "v1.2.55-evidence-fix", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
