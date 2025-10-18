@@ -5565,7 +5565,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.48-events-pipeline-clarification", intent: "events" }
+        debug: { version: "v1.2.49-deployment-fix", intent: "events" }
       });
       return true;
     }
@@ -6017,7 +6017,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.48-events-pipeline-clarification", followUp: true }
+              debug: { version: "v1.2.49-deployment-fix", followUp: true }
             });
             return;
           }
