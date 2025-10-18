@@ -5195,7 +5195,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
       },
       confidence,
       debug: {
-        version: "v1.2.68-debug-audit",
+        version: "v1.2.69-events-pipeline-debug",
         earlyReturn: true,
         eventsFound: events.length,
         formattedEvents: eventList.length
@@ -5231,7 +5231,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
         pills: []
       },
       confidence: 90,
-      debug: { version: "v1.2.68-debug-audit", earlyReturn: true }
+      debug: { version: "v1.2.69-events-pipeline-debug", earlyReturn: true }
     });
     return articles.length > 0 || contentChunks.length > 0; // Return true only if content was found
   }
@@ -5716,7 +5716,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
       pills: []
     },
     confidence,
-    debug: { version: "v1.2.48-events-pipeline" }
+    debug: { version: "v1.2.69-events-pipeline-debug" }
   });
   return true;
 }
