@@ -2573,15 +2573,21 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   // PRIORITY: Check course/workshop patterns FIRST (before evidence-based)
   const courseWorkshopResult = checkCourseWorkshopPatterns(lc);
   if (courseWorkshopResult) {
+    console.log(`🎯 Workshop pattern matched, returning:`, courseWorkshopResult);
     courseWorkshopResult.confidence = confidence;
     return courseWorkshopResult;
+  } else {
+    console.log(`❌ No workshop pattern matched for: "${lc}"`);
   }
   
   // Try evidence-based clarification (only if no workshop patterns matched)
   const evidenceResult = await tryEvidenceBasedClarification(client, query, pageContext);
   if (evidenceResult) {
+    console.log(`🔍 Evidence-based clarification returned:`, evidenceResult);
     evidenceResult.confidence = confidence;
     return evidenceResult;
+  } else {
+    console.log(`❌ No evidence-based clarification for: "${lc}"`);
   }
   
   // Check suppressed patterns
