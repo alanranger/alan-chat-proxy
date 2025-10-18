@@ -3339,6 +3339,9 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     return await findEventsByDuration(client, 2.5, 4, limit);
   }
   
+  // Debug: Check if we're missing the condition
+  console.log('🔍 No duration condition matched, using regular query');
+  
   // Build base query for regular keyword-based search
   let q = buildEventsBaseQuery(client, limit);
   
@@ -5688,7 +5691,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.62-robust-condition", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.63-debug-condition", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6140,7 +6143,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.62-robust-condition", followUp: true, timestamp: new Date().toISOString() }
+              debug: { version: "v1.2.63-debug-condition", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
