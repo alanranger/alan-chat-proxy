@@ -2537,14 +2537,16 @@ function getClarificationLevelAndConfidence(query, pageContext) {
   
   // Confidence progression: 20% → 50% → 80%
   const confidenceLevels = [20, 50, 80];
-  const nextLevel = Math.min(currentLevel + 1, confidenceLevels.length - 1);
-  const confidence = confidenceLevels[nextLevel];
+  // For initial query (level 0), use confidenceLevels[0] = 20%
+  // For follow-up 1 (level 1), use confidenceLevels[1] = 50%
+  // For follow-up 2 (level 2), use confidenceLevels[2] = 80%
+  const confidence = confidenceLevels[currentLevel] || confidenceLevels[0];
   
   return {
-    level: nextLevel,
+    level: currentLevel,
     confidence,
     isFollowUp,
-    shouldShowResults: nextLevel >= 2 // Show results after 2nd clarification
+    shouldShowResults: currentLevel >= 2 // Show results after 2nd clarification
   };
 }
 
@@ -3135,21 +3137,21 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
     return createRoute("route_to_advice", originalQuery || query, "advice");
   }
   
-  // Handle workshop clarification follow-ups
+  // Handle workshop clarification follow-ups - route to clarification for cascading logic
   if (matches("2.5hr") || matches("4hr") || matches("short photography workshops")) {
-    return createRoute("route_to_events", "short photography workshops 2-4 hours", "events");
+    return createRoute("route_to_clarification", "short photography workshops 2-4 hours", "clarification");
   }
   if (matches("1 day") || matches("one day photography workshops")) {
-    return createRoute("route_to_events", "one day photography workshops", "events");
+    return createRoute("route_to_clarification", "one day photography workshops", "clarification");
   }
   if (matches("multi day") || matches("residential") || matches("multi day residential photography workshops")) {
-    return createRoute("route_to_events", "multi day residential photography workshops", "events");
+    return createRoute("route_to_clarification", "multi day residential photography workshops", "clarification");
   }
   if (matches("by location") || matches("photography workshops by location")) {
-    return createRoute("route_to_events", "photography workshops by location", "events");
+    return createRoute("route_to_clarification", "photography workshops by location", "clarification");
   }
   if (matches("by month") || matches("photography workshops by month")) {
-    return createRoute("route_to_events", "photography workshops by month", "events");
+    return createRoute("route_to_clarification", "photography workshops by month", "clarification");
   }
   
   // Check specific course patterns first
@@ -5576,7 +5578,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.53-deployment-debug", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.54-followup-fix", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6028,7 +6030,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.53-deployment-debug", followUp: true, timestamp: new Date().toISOString() }
+              debug: { version: "v1.2.54-followup-fix", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
