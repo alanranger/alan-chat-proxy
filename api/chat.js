@@ -1842,9 +1842,9 @@ function getMonthBasedTypes(events) {
 }
 
 function extractEventTypesAndCategories(events) {
-  const eventTypes = new Set();
-  const eventCategories = new Set();
-  
+      const eventTypes = new Set();
+      const eventCategories = new Set();
+      
   // Extract duration-based workshop types
   extractDurationBasedTypes(events, eventTypes);
   
@@ -1896,25 +1896,25 @@ function extractTitleBasedCategories(events, eventCategories) {
 }
 
 function addEventOptions(options, eventTypes, eventCategories) {
-  // Add event-based options
+      // Add event-based options
   for (const type of eventTypes) {
-    const displayType = type.charAt(0).toUpperCase() + type.slice(1);
-    options.push({
-      text: `${displayType} events`,
-      query: `${type} events`
-    });
+        const displayType = type.charAt(0).toUpperCase() + type.slice(1);
+        options.push({
+          text: `${displayType} events`,
+          query: `${type} events`
+        });
   }
-  
+      
   // Add category-based options
   for (const category of eventCategories) {
-    if (category && category.length > 3) { // Avoid very short categories
-      options.push({
-        text: `${category} events`,
-        query: `${category} events`
-      });
-    }
+        if (category && category.length > 3) { // Avoid very short categories
+          options.push({
+            text: `${category} events`,
+            query: `${category} events`
+          });
+        }
   }
-}
+    }
     
 function extractArticleCategoriesAndTags(articles) {
       const articleCategories = new Set();
@@ -2004,12 +2004,12 @@ function addServiceOptions(options, serviceTypes) {
   
   // Add meaningful service options
   for (const type of meaningfulTypes) {
-    options.push({
+          options.push({
       text: type,
       query: type.toLowerCase()
-    });
-  }
-}
+          });
+        }
+    }
     
 function deduplicateAndLimitOptions(options) {
     const uniqueOptions = [];
@@ -2034,8 +2034,16 @@ async function generateClarificationOptionsFromEvidence(client, query, pageConte
     const options = [];
     
     // Generate options from events evidence
+    console.log('🔍 Evidence debug:', {
+      eventsCount: evidence.events?.length || 0,
+      articlesCount: evidence.articles?.length || 0,
+      servicesCount: evidence.services?.length || 0,
+      sampleEvents: evidence.events?.slice(0, 2) || []
+    });
+    
     if (evidence.events && evidence.events.length > 0) {
       const { eventTypes, eventCategories } = extractEventTypesAndCategories(evidence.events);
+      console.log('🔍 Event types and categories:', { eventTypes: Array.from(eventTypes), eventCategories: Array.from(eventCategories) });
       addEventOptions(options, eventTypes, eventCategories);
     }
     
@@ -2208,8 +2216,8 @@ async function tryEvidenceBasedClarification(client, query, pageContext) {
       };
     }
   }
-  return null;
-}
+    return null;
+  }
   
 function checkSuppressedPatterns(lc) {
   if (lc.includes("equipment") || lc.includes("events") || lc.includes("training")) {
@@ -5610,7 +5618,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.56-duration-filter", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.57-debug-evidence", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6062,7 +6070,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.56-duration-filter", followUp: true, timestamp: new Date().toISOString() }
+              debug: { version: "v1.2.57-debug-evidence", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
