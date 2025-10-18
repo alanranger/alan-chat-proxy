@@ -5369,6 +5369,25 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
     return false;
   }
   const confidence = calculateEventConfidence(query || "", eventList, null);
+  
+  // Check if we need clarification for events queries with low confidence
+  if (confidence < 0.6) { // Low confidence threshold
+    console.log(`🤔 Low confidence (${confidence}) for events query: "${query}" - triggering clarification`);
+    const clarification = await generateClarificationQuestion(query, client, pageContext);
+    if (clarification) {
+      const confidencePercent = 10;
+      res.status(200).json({
+        ok: true,
+        type: "clarification",
+        question: clarification.question,
+        options: clarification.options,
+        confidence: confidencePercent,
+        debug: { version: "v1.2.48-events-pipeline-clarification", intent: "events" }
+      });
+      return true;
+    }
+  }
+  
   res.status(200).json({
     ok: true,
     type: "events",
