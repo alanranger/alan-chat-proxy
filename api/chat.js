@@ -2432,17 +2432,17 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   const specialEquipmentResult = checkSpecialEquipmentPatterns(lc);
   if (specialEquipmentResult) return specialEquipmentResult;
   
-  // Try evidence-based clarification
+  // PRIORITY: Check course/workshop patterns FIRST (before evidence-based)
+  const courseWorkshopResult = checkCourseWorkshopPatterns(lc);
+  if (courseWorkshopResult) return courseWorkshopResult;
+  
+  // Try evidence-based clarification (only if no workshop patterns matched)
   const evidenceResult = await tryEvidenceBasedClarification(client, query, pageContext);
   if (evidenceResult) return evidenceResult;
   
   // Check suppressed patterns
   const suppressedResult = checkSuppressedPatterns(lc);
   if (suppressedResult === null) return null;
-  
-  // Check course/workshop patterns
-  const courseWorkshopResult = checkCourseWorkshopPatterns(lc);
-  if (courseWorkshopResult) return courseWorkshopResult;
   
   // Check equipment patterns
   const equipmentResult = checkEquipmentPatterns(lc);
