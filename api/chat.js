@@ -4283,19 +4283,35 @@ function checkEventPrice(event, lowerQuery) {
   return null;
 }
 
+// Helper function to get event label
+function getEventLabel(event) {
+  return (event.subtype && String(event.subtype).toLowerCase()==='course') ? 'course' : 'workshop';
+}
+
+// Helper function to extract and format brief description
+function extractEventBrief(products, summarize) {
+  if (products && products.length && (products[0].description || products[0]?.raw?.description)) {
+    let brief = summarize(products[0].description || products[0]?.raw?.description);
+    if (brief.length > 220) brief = brief.slice(0, 220).replace(/\s+\S*$/, '') + '…';
+    return brief;
+  }
+  return '';
+}
+
+// Helper function to format date response
+function formatDateResponse(formattedDate, label, brief) {
+  const lead = `The next ${label} is scheduled for **${formattedDate}**.`;
+  return brief ? `${lead} ${brief}` : `${lead}`;
+}
+
 function checkEventDate(event, lowerQuery, products, formatDateGB, summarize) {
   if (lowerQuery.includes('when') || lowerQuery.includes('date')) {
     if (event.date_start) {
       const formattedDate = formatDateGB(event.date_start);
       console.log(`✅ RAG: Found date="${formattedDate}" in structured event data`);
-      const label = (event.subtype && String(event.subtype).toLowerCase()==='course') ? 'course' : 'workshop';
-      let brief = '';
-      if (products && products.length && (products[0].description || products[0]?.raw?.description)) {
-        brief = summarize(products[0].description || products[0]?.raw?.description);
-      }
-      if (brief.length > 220) brief = brief.slice(0, 220).replace(/\s+\S*$/, '') + '…';
-      const lead = `The next ${label} is scheduled for **${formattedDate}**.`;
-      return brief ? `${lead} ${brief}` : `${lead}`;
+      const label = getEventLabel(event);
+      const brief = extractEventBrief(products, summarize);
+      return formatDateResponse(formattedDate, label, brief);
     }
   }
   return null;
