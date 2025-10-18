@@ -701,31 +701,43 @@ function hasWord(text, term) {
     }
 }
   
+function isMalformedChunk(text) {
+  return text.length < 50 || 
+         text.includes('%3A%2F%2F') || 
+         text.includes('] 0 Likes') ||
+         text.includes('Sign In') ||
+         text.includes('My Account') ||
+         text.includes('Back ') ||
+         text.includes('[/') ||
+         text.includes('Cart 0');
+}
+
+function hasRelevantContent(chunk, exactTerm, slug) {
+  const url = String(chunk.url||"").toLowerCase();
+  const title = String(chunk.title||"").toLowerCase();
+  const text = String(chunk.chunk_text||chunk.content||"").toLowerCase();
+  
+  return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm) || 
+         url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || 
+         text.includes(`what is ${exactTerm}`);
+}
+
+function filterContentChunk(chunk, exactTerm, slug) {
+  const text = String(chunk.chunk_text||chunk.content||"").toLowerCase();
+  
+  // Skip malformed chunks (URL-encoded text, very short text, or navigation elements)
+  if (isMalformedChunk(text)) {
+    return false;
+  }
+  
+  return hasRelevantContent(chunk, exactTerm, slug);
+}
+
 function filterCandidateChunks(exactTerm, contentChunks) {
   if (!exactTerm) return contentChunks || [];
   
   const slug = exactTerm.replace(/\s+/g, "-");
-  return (contentChunks || []).filter(c => {
-    const url = String(c.url||"").toLowerCase();
-    const title = String(c.title||"").toLowerCase();
-    const text = String(c.chunk_text||c.content||"").toLowerCase();
-    
-    // Skip malformed chunks (URL-encoded text, very short text, or navigation elements)
-    if (text.length < 50 || 
-        text.includes('%3A%2F%2F') || 
-        text.includes('] 0 Likes') ||
-        text.includes('Sign In') ||
-        text.includes('My Account') ||
-        text.includes('Back ') ||
-        text.includes('[/') ||
-        text.includes('Cart 0')) {
-      return false;
-    }
-    
-    return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm) || 
-           url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || 
-           text.includes(`what is ${exactTerm}`);
-  });
+  return (contentChunks || []).filter(c => filterContentChunk(c, exactTerm, slug));
 }
 
 function scoreChunks(candidateChunks, queryWords, exactTerm) {
@@ -2920,10 +2932,7 @@ async function getEvidenceSnapshot(client, query, pageContext) {
   }
 }
 
-// If we already have evidence, bypass generic clarification and show results
-async function maybeBypassClarification(client, query, pageContext, res) {
-  const snap = await getEvidenceSnapshot(client, query, pageContext);
-  const events = formatEventsForUi(snap.events || []);
+function handleEventsBypass(query, events, res) {
   if (Array.isArray(events) && events.length > 0) {
     const confidence = calculateEventConfidence(query || "", events, null);
     res.status(200).json({
@@ -2937,22 +2946,40 @@ async function maybeBypassClarification(client, query, pageContext, res) {
     });
     return true;
   }
+  return false;
+}
 
-  if ((snap.articles || []).length > 0) {
-    const articleUrls = (snap.articles || []).map(a => a.page_url || a.source_url).filter(Boolean);
+async function handleArticlesBypass(client, query, articles, res) {
+  if ((articles || []).length > 0) {
+    const articleUrls = (articles || []).map(a => a.page_url || a.source_url).filter(Boolean);
     const chunks = await findContentChunks(client, { keywords: extractKeywords(query||""), limit: 12, articleUrls });
-    const md = generateDirectAnswer(query || "", snap.articles || [], chunks || []);
+    const md = generateDirectAnswer(query || "", articles || [], chunks || []);
     if (md) {
       res.status(200).json({
         ok: true,
         type: "advice",
         answer_markdown: md,
-        structured: { intent: "advice", topic: (extractKeywords(query||"")||[]).join(", "), events: [], products: [], services: [], landing: [], articles: snap.articles },
+        structured: { intent: "advice", topic: (extractKeywords(query||"")||[]).join(", "), events: [], products: [], services: [], landing: [], articles },
         confidence: 60,
         debug: { version: "v1.3.0-evidence-first", bypassClarification: true }
       });
       return true;
     }
+  }
+  return false;
+}
+
+// If we already have evidence, bypass generic clarification and show results
+async function maybeBypassClarification(client, query, pageContext, res) {
+  const snap = await getEvidenceSnapshot(client, query, pageContext);
+  const events = formatEventsForUi(snap.events || []);
+  
+  if (handleEventsBypass(query, events, res)) {
+    return true;
+  }
+  
+  if (await handleArticlesBypass(client, query, snap.articles, res)) {
+    return true;
   }
 
   return false;
