@@ -3380,6 +3380,35 @@ function deriveTitleFromUrl(u) {
 }
 
 
+function calculateContentScore(item, keywords, coreConcepts) {
+  const text = (item.chunk_text || item.content || "").toLowerCase();
+  const title = (item.title || "").toLowerCase();
+  const url = (item.url || "").toLowerCase();
+  
+  let score = 0;
+  
+  // Base keyword scoring
+  keywords.forEach(keyword => {
+    const kw = keyword.toLowerCase();
+    if (text.includes(kw) || title.includes(kw)) score += 1;
+  });
+  
+  // MAJOR BOOST: Online course content for technical concepts
+  const hasCore = coreConcepts.some(c => keywords.some(k => k.toLowerCase().includes(c)));
+  if (hasCore) {
+    // Boost for online course URLs (what-is-* pattern)
+    if (url.includes("/what-is-") || title.includes("what is")) score += 10;
+    
+    // Boost for PDF checklists and guides
+    if (title.includes("pdf") || title.includes("checklist") || title.includes("guide")) score += 8;
+    
+    // Boost for structured learning content
+    if (title.includes("guide for beginners") || title.includes("guide for beginner")) score += 5;
+  }
+  
+  return score;
+}
+
 async function findContentChunks(client, { keywords, limit = 5, articleUrls = [] }) {
   let q = client
     .from("page_chunks")
@@ -3407,39 +3436,8 @@ async function findContentChunks(client, { keywords, limit = 5, articleUrls = []
   ];
   
   const sortedData = (data || []).sort((a, b) => {
-    const aText = (a.chunk_text || a.content || "").toLowerCase();
-    const bText = (b.chunk_text || b.content || "").toLowerCase();
-    const aTitle = (a.title || "").toLowerCase();
-    const bTitle = (b.title || "").toLowerCase();
-    const aUrl = (a.url || "").toLowerCase();
-    const bUrl = (b.url || "").toLowerCase();
-    
-    let aScore = 0;
-    let bScore = 0;
-    
-    // Base keyword scoring
-    keywords.forEach(keyword => {
-      const kw = keyword.toLowerCase();
-      if (aText.includes(kw) || aTitle.includes(kw)) aScore += 1;
-      if (bText.includes(kw) || bTitle.includes(kw)) bScore += 1;
-    });
-    
-    // MAJOR BOOST: Online course content for technical concepts
-    const hasCore = coreConcepts.some(c => keywords.some(k => k.toLowerCase().includes(c)));
-    if (hasCore) {
-      // Boost for online course URLs (what-is-* pattern)
-      if (aUrl.includes("/what-is-") || aTitle.includes("what is")) aScore += 10;
-      if (bUrl.includes("/what-is-") || bTitle.includes("what is")) bScore += 10;
-      
-      // Boost for PDF checklists and guides
-      if (aTitle.includes("pdf") || aTitle.includes("checklist") || aTitle.includes("guide")) aScore += 8;
-      if (bTitle.includes("pdf") || bTitle.includes("checklist") || bTitle.includes("guide")) bScore += 8;
-      
-      // Boost for structured learning content
-      if (aTitle.includes("guide for beginners") || aTitle.includes("guide for beginner")) aScore += 5;
-      if (bTitle.includes("guide for beginners") || bTitle.includes("guide for beginner")) bScore += 5;
-    }
-    
+    const aScore = calculateContentScore(a, keywords, coreConcepts);
+    const bScore = calculateContentScore(b, keywords, coreConcepts);
     return bScore - aScore; // Higher score first
   });
   
@@ -4089,6 +4087,62 @@ async function buildProductPanelMarkdown(products) {
 }
 
 /* ----------------------------- Event list UI ----------------------------- */
+function transformEventForUI(e) {
+  return {
+    ...e,
+    ...getEventBasicFields(e),
+    ...getEventTimeFields(e),
+    ...getEventLocationFields(e),
+    ...getEventStructuredFields(e),
+  };
+}
+
+function getEventBasicFields(e) {
+  return {
+    title: e.title || e.event_title,
+    href: e.page_url || e.event_url,
+    csv_type: e.csv_type || null,
+    price_gbp: e.price_gbp || e.price || null,
+    categories: e.categories || null,
+    tags: e.tags || null,
+    raw: e.raw || null,
+  };
+}
+
+function getEventTimeFields(e) {
+  return {
+    when: fmtDateLondon(e.start_date || e.date_start),
+    date_start: e.start_date || e.date_start,
+    date_end: e.end_date || e.date_end,
+    _csv_start_time: e._csv_start_time || e.start_time || null,
+    _csv_end_time: e._csv_end_time || e.end_time || null,
+    start_time: e.start_time || null,
+    end_time: e.end_time || null,
+  };
+}
+
+function getEventLocationFields(e) {
+  return {
+    location: e.location_name || e.event_location,
+    location_name: e.location_name || null,
+    location_address: e.location_address || null,
+  };
+}
+
+function getEventStructuredFields(e) {
+  return {
+    participants: e.participants || null,
+    experience_level: e.experience_level || null,
+    equipment_needed: e.equipment_needed || null,
+    time_schedule: e.time_schedule || null,
+    fitness_level: e.fitness_level || null,
+    what_to_bring: e.what_to_bring || null,
+    course_duration: e.course_duration || null,
+    instructor_info: e.instructor_info || null,
+    availability_status: e.availability_status || null,
+  };
+}
+
 function formatEventsForUi(events) {
   console.log('🔍 formatEventsForUi input:', {
     inputLength: events?.length || 0,
@@ -4097,38 +4151,7 @@ function formatEventsForUi(events) {
   
   // Preserve original fields so the frontend can format times and ranges
   const result = (events || [])
-    .map((e) => ({
-      ...e,
-      title: e.title || e.event_title,
-      when: fmtDateLondon(e.start_date || e.date_start),
-      location: e.location_name || e.event_location,
-      href: e.page_url || e.event_url,
-      // Pass-through commonly used fields for time rendering
-      date_start: e.start_date || e.date_start,
-      date_end: e.end_date || e.date_end,
-      _csv_start_time: e._csv_start_time || e.start_time || null,
-      _csv_end_time: e._csv_end_time || e.end_time || null,
-      // Additional fields for multi-day residential workshop tiles
-      csv_type: e.csv_type || null,
-      price_gbp: e.price_gbp || e.price || null,
-      start_time: e.start_time || null,
-      end_time: e.end_time || null,
-      location_name: e.location_name || null,
-      location_address: e.location_address || null,
-      categories: e.categories || null,
-      tags: e.tags || null,
-      raw: e.raw || null,
-      // Structured data fields for enhanced display
-      participants: e.participants || null,
-      experience_level: e.experience_level || null,
-      equipment_needed: e.equipment_needed || null,
-      time_schedule: e.time_schedule || null,
-      fitness_level: e.fitness_level || null,
-      what_to_bring: e.what_to_bring || null,
-      course_duration: e.course_duration || null,
-      instructor_info: e.instructor_info || null,
-      availability_status: e.availability_status || null,
-    }))
+    .map(transformEventForUI)
     .slice(0, 12);
     
   console.log('🔍 formatEventsForUi output:', {
@@ -4729,38 +4752,38 @@ function determineKeywords(query, previousQuery, intent) {
 /**
  * Handle residential pricing shortcut - direct answer for residential workshop pricing queries
  */
-async function handleResidentialPricingShortcut(client, query, keywords, pageContext, res) {
+function isResidentialPricingQueryShortcut(query) {
   const qlc = (query || "").toLowerCase();
-  const isResidentialPricing = (
-    qlc.includes("residential") && qlc.includes("workshop") && (
-      qlc.includes("price") || qlc.includes("cost") || qlc.includes("how much") ||
-      qlc.includes("b&b") || qlc.includes("bed and breakfast") || qlc.includes("bnb") ||
-      qlc.includes("include b&b") || qlc.includes("includes b&b") || qlc.includes("include bnb")
-    )
+  return qlc.includes("residential") && qlc.includes("workshop") && (
+    qlc.includes("price") || qlc.includes("cost") || qlc.includes("how much") ||
+    qlc.includes("b&b") || qlc.includes("bed and breakfast") || qlc.includes("bnb") ||
+    qlc.includes("include b&b") || qlc.includes("includes b&b") || qlc.includes("include bnb")
   );
-  
-  if (!isResidentialPricing) {
-    return false; // No response sent, continue with normal flow
-  }
-  
-  const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
-  const events = await findEvents(client, { keywords: directKeywords, limit: 120, pageContext });
-  const all = formatEventsForUi(events) || [];
-  const eventList = all.filter(e => {
+}
+
+function filterMultiDayEvents(events) {
+  return events.filter(e => {
     try{ return e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start); }catch{ return false; }
   });
+}
+
+async function handleResidentialEventsShortcut(client, query, pageContext, res) {
+  const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
+  const events = await findEvents(client, { keywords: directKeywords, limit: 120, pageContext });
+  const formattedEvents = formatEventsForUi(events) || [];
+  const multiDayEvents = filterMultiDayEvents(formattedEvents);
   
-  if (eventList.length) {
-    const confidence = calculateEventConfidence(query || "", eventList, null);
+  if (multiDayEvents.length) {
+    const confidence = calculateEventConfidence(query || "", multiDayEvents, null);
     res.status(200).json({
       ok: true,
       type: "events",
-      answer: eventList,
-      events: eventList,
+      answer: multiDayEvents,
+      events: multiDayEvents,
       structured: {
         intent: "events",
         topic: directKeywords.join(", "),
-        events: eventList,
+        events: multiDayEvents,
         products: [],
         pills: []
       },
@@ -4769,14 +4792,26 @@ async function handleResidentialPricingShortcut(client, query, keywords, pageCon
     });
     return true; // Response sent
   }
+  return false;
+}
+
+async function handleResidentialPricingShortcut(client, query, keywords, pageContext, res) {
+  if (!isResidentialPricingQueryShortcut(query)) {
+    return false; // No response sent, continue with normal flow
+  }
+  
+  if (await handleResidentialEventsShortcut(client, query, pageContext, res)) {
+    return true;
+  }
   
   // Fallback: synthesize concise pricing/B&B answer with links
+  const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
   const enrichedKeywords = Array.from(new Set([...directKeywords, "b&b", "bed", "breakfast", "price", "cost"]));
-  let articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
-  articles = (articles || []).map(normalizeArticle);
-  const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+  const articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
+  const normalizedArticles = (articles || []).map(normalizeArticle);
+  const articleUrls = normalizedArticles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
   const contentChunks = await findContentChunks(client, { keywords: enrichedKeywords, limit: 20, articleUrls });
-  const answerMarkdown = generatePricingAccommodationAnswer(query || "", articles, contentChunks);
+  const answerMarkdown = generatePricingAccommodationAnswer(query || "", normalizedArticles, contentChunks);
   
   if (answerMarkdown) {
     res.status(200).json({
@@ -4790,7 +4825,7 @@ async function handleResidentialPricingShortcut(client, query, keywords, pageCon
         products: [],
         services: [],
         landing: [],
-        articles: (articles || []).map(a => ({
+        articles: (normalizedArticles || []).map(a => ({
           ...a,
           display_date: (function(){
             const extracted = extractPublishDate(a);
@@ -4996,79 +5031,97 @@ async function handleClarificationFollowup(client, previousQuery, query, intent,
 /**
  * Handle residential pricing guard - bypasses clarification for residential workshop pricing queries
  */
+function isResidentialPricingQuery(query) {
+  const qlc = (query || "").toLowerCase();
+  const isResi = qlc.includes("residential") && qlc.includes("workshop");
+  const hasPriceCue = qlc.includes("how much") || qlc.includes("price") || qlc.includes("cost") || qlc.includes("b&b") || qlc.includes("bed and breakfast") || qlc.includes("bnb");
+  return isResi && hasPriceCue;
+}
+
+function filterResidentialEvents(events) {
+  return events.filter(e => { 
+    try { 
+      return e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start); 
+    } catch { 
+      return false; 
+    } 
+  });
+}
+
+function processArticlesForDisplay(articles) {
+  return (articles || []).map(a => { 
+    const out = {...a}; 
+    if (!out.title) { 
+      out.title = out?.raw?.headline || out?.raw?.name || ''; 
+      if (!out.title) { 
+        try { 
+          const u = new URL(out.page_url || out.source_url || out.url || ''); 
+          const last = (u.pathname || '').split('/').filter(Boolean).pop() || ''; 
+          out.title = last.replace(/[-_]+/g, ' ').replace(/\.(html?)$/i, ' ').trim(); 
+        } catch {} 
+      } 
+    } 
+    if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null; 
+    return out; 
+  });
+}
+
+async function handleResidentialEventsResponse(client, query, pageContext, res) {
+  const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
+  const events = await findEvents(client, { keywords: directKeywords, limit: 140, pageContext });
+  const formattedEvents = formatEventsForUi(events) || [];
+  const residentialEvents = filterResidentialEvents(formattedEvents);
+  
+  if (residentialEvents.length) {
+    const confidence = calculateEventConfidence(query || "", residentialEvents, null);
+    res.status(200).json({ 
+      ok: true, 
+      type: "events", 
+      answer: residentialEvents, 
+      events: residentialEvents, 
+      structured: { 
+        intent: "events", 
+        topic: directKeywords.join(", "), 
+        events: residentialEvents, 
+        products: [], 
+        pills: [] 
+      }, 
+      confidence, 
+      debug: { version: "v1.2.48-guard-residential", guard: true } 
+    });
+    return true; // Response sent
+  }
+  return false;
+}
+
 async function handleResidentialPricingGuard(client, query, previousQuery, pageContext, res) {
   try {
-    const qlc0 = (query || "").toLowerCase();
-    const isResi = qlc0.includes("residential") && qlc0.includes("workshop");
-    const hasPriceCue = qlc0.includes("how much") || qlc0.includes("price") || qlc0.includes("cost") || qlc0.includes("b&b") || qlc0.includes("bed and breakfast") || qlc0.includes("bnb");
-    
-    if (!previousQuery && isResi && hasPriceCue) {
-      const directKeywords0 = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
-      const ev0 = await findEvents(client, { keywords: directKeywords0, limit: 140, pageContext });
-      const all0 = formatEventsForUi(ev0) || [];
-      const resi = all0.filter(e => { 
-        try { 
-          return e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start); 
-        } catch { 
-          return false; 
-        } 
-      });
-      
-      if (resi.length) {
-        const conf0 = calculateEventConfidence(query || "", resi, null);
-        res.status(200).json({ 
-          ok: true, 
-          type: "events", 
-          answer: resi, 
-          events: resi, 
-          structured: { 
-            intent: "events", 
-            topic: directKeywords0.join(", "), 
-            events: resi, 
-            products: [], 
-            pills: [] 
-          }, 
-          confidence: conf0, 
-          debug: { version: "v1.2.48-guard-residential", guard: true } 
-        });
-        return true; // Response sent
+    if (!previousQuery && isResidentialPricingQuery(query)) {
+      if (await handleResidentialEventsResponse(client, query, pageContext, res)) {
+        return true;
       }
       
-      const enriched0 = Array.from(new Set([...directKeywords0, "b&b", "bed", "breakfast", "price", "cost"]));
-      let arts0 = await findArticles(client, { keywords: enriched0, limit: 30, pageContext });
-      arts0 = (arts0 || []).map(a => { 
-        const out = {...a}; 
-        if (!out.title) { 
-          out.title = out?.raw?.headline || out?.raw?.name || ''; 
-          if (!out.title) { 
-            try { 
-              const u = new URL(out.page_url || out.source_url || out.url || ''); 
-              const last = (u.pathname || '').split('/').filter(Boolean).pop() || ''; 
-              out.title = last.replace(/[-_]+/g, ' ').replace(/\.(html?)$/i, ' ').trim(); 
-            } catch {} 
-          } 
-        } 
-        if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null; 
-        return out; 
-      });
+      const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
+      const enrichedKeywords = Array.from(new Set([...directKeywords, "b&b", "bed", "breakfast", "price", "cost"]));
+      const articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
+      const processedArticles = processArticlesForDisplay(articles);
+      const articleUrls = processedArticles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+      const chunks = await findContentChunks(client, { keywords: enrichedKeywords, limit: 20, articleUrls });
+      const markdown = generateDirectAnswer(query || "", processedArticles, chunks) || generatePricingAccommodationAnswer(query || "", processedArticles, chunks);
       
-      const aurls0 = arts0?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-      const chunks0 = await findContentChunks(client, { keywords: enriched0, limit: 20, articleUrls: aurls0 });
-      const md0 = generateDirectAnswer(query || "", arts0, chunks0) || generatePricingAccommodationAnswer(query || "", arts0, chunks0);
-      
-      if (md0) {
+      if (markdown) {
         res.status(200).json({ 
           ok: true, 
           type: "advice", 
-          answer_markdown: md0, 
+          answer_markdown: markdown, 
           structured: { 
             intent: "advice", 
-            topic: enriched0.join(", "), 
+            topic: enrichedKeywords.join(", "), 
             events: [], 
             products: [], 
             services: [], 
             landing: [], 
-            articles: (arts0 || []).map(a => ({ 
+            articles: (processedArticles || []).map(a => ({ 
               ...a, 
               display_date: (function() { 
                 const ex = extractPublishDate(a); 

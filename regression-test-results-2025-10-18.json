@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-10-18T06:02:15.953Z",
+  "timestamp": "2025-10-18T17:27:21.925Z",
   "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
   "summary": {
     "total": 11,
@@ -29,7 +29,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-18T06:01:51.658Z"
+      "timestamp": "2025-10-18T17:26:56.462Z"
     },
     {
       "testId": "photography-workshop",
@@ -52,7 +52,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-18T06:01:53.083Z"
+      "timestamp": "2025-10-18T17:26:58.273Z"
     },
     {
       "testId": "residential-pricing",
@@ -75,7 +75,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-18T06:01:57.713Z"
+      "timestamp": "2025-10-18T17:27:03.106Z"
     },
     {
       "testId": "tripod-recommendation",
@@ -99,7 +99,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-18T06:01:59.546Z"
+      "timestamp": "2025-10-18T17:27:05.149Z"
     },
     {
       "testId": "camera-advice",
@@ -123,7 +123,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-18T06:02:02.026Z"
+      "timestamp": "2025-10-18T17:27:07.532Z"
     },
     {
       "testId": "ambiguous-workshop",
@@ -148,7 +148,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-18T06:02:04.337Z"
+      "timestamp": "2025-10-18T17:27:09.997Z"
     },
     {
       "testId": "vague-equipment",
@@ -172,7 +172,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-18T06:02:06.354Z"
+      "timestamp": "2025-10-18T17:27:12.082Z"
     },
     {
       "testId": "beginner-course",
@@ -195,7 +195,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-18T06:02:07.764Z"
+      "timestamp": "2025-10-18T17:27:13.507Z"
     },
     {
       "testId": "online-course",
@@ -219,7 +219,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-18T06:02:10.533Z"
+      "timestamp": "2025-10-18T17:27:16.369Z"
     },
     {
       "testId": "nonsensical-query",
@@ -244,7 +244,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-18T06:02:12.339Z"
+      "timestamp": "2025-10-18T17:27:18.264Z"
     },
     {
       "testId": "empty-query",
@@ -269,7 +269,7 @@
       },
       "passed": false,
       "error": null,
-      "timestamp": "2025-10-18T06:02:14.938Z"
+      "timestamp": "2025-10-18T17:27:20.919Z"
     }
   ]
 }

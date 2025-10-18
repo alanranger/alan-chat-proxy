@@ -60,6 +60,7 @@ This is the AI’s running TODO list. Keep it short and actionable.
 - 2025-10-17 17:30 — Reduced L3737 buildEventPills to ≤15. Baseline parity. Merged 84dc3b2.
 - 2025-10-17 17:32 — Reduced L1528 generateClarificationOptionsFromEvidence to ≤15. Baseline parity. Merged 5889ac1.
 - 2025-10-17 17:48 — Reduced L536 generateDirectAnswer from 100 to ≤15. Baseline parity. Merged fd52fb4.
+- 2025-10-18 17:29 — Refactored L3739 extractFromDescription from 26 to ≤15. Baseline/Regression/Compare: PASS. Merged 2e7f18d.
 
 ## SonarQube Analysis Update (2025-10-17)
 - **COMPLETED**: 19/21 functions (90% complete)
