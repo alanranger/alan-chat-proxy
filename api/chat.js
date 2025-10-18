@@ -2034,16 +2034,18 @@ async function generateClarificationOptionsFromEvidence(client, query, pageConte
     const options = [];
     
     // Generate options from events evidence (PRIORITY)
-    console.log('🔍 Evidence debug:', {
+    const evidenceDebug = {
       eventsCount: evidence.events?.length || 0,
       articlesCount: evidence.articles?.length || 0,
       servicesCount: evidence.services?.length || 0,
       sampleEvents: evidence.events?.slice(0, 2) || []
-    });
+    };
+    console.log('🔍 Evidence debug:', evidenceDebug);
     
     if (evidence.events && evidence.events.length > 0) {
       const { eventTypes, eventCategories } = extractEventTypesAndCategories(evidence.events);
-      console.log('🔍 Event types and categories:', { eventTypes: Array.from(eventTypes), eventCategories: Array.from(eventCategories) });
+      const eventDebug = { eventTypes: Array.from(eventTypes), eventCategories: Array.from(eventCategories) };
+      console.log('🔍 Event types and categories:', eventDebug);
       addEventOptions(options, eventTypes, eventCategories);
       
       // If we have good event options, skip services to avoid generic options
@@ -2223,8 +2225,8 @@ async function tryEvidenceBasedClarification(client, query, pageContext) {
       };
     }
   }
-    return null;
-  }
+  return null;
+}
   
 function checkSuppressedPatterns(lc) {
   if (lc.includes("equipment") || lc.includes("events") || lc.includes("training")) {
@@ -5628,7 +5630,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.58-prioritize-events", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.59-debug-events", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6080,7 +6082,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.58-prioritize-events", followUp: true, timestamp: new Date().toISOString() }
+              debug: { version: "v1.2.59-debug-events", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
