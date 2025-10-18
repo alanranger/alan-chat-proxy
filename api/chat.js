@@ -3325,6 +3325,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   
   // Check if this is a duration-based query that needs special handling
   const queryText = enhancedKeywords.join(' ').toLowerCase();
+  console.log('🔍 findEvents debug:', { enhancedKeywords, queryText });
   if (queryText.includes('short') && (queryText.includes('2-4') || queryText.includes('2.5') || queryText.includes('4hr'))) {
     console.log('🔍 Using custom duration-based query for 2.5-4 hour workshops');
     return await findEventsByDuration(client, 2.5, 4, limit);
@@ -5679,7 +5680,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.60-duration-filter", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.61-debug-keywords", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6131,7 +6132,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.60-duration-filter", followUp: true, timestamp: new Date().toISOString() }
+              debug: { version: "v1.2.61-debug-keywords", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
