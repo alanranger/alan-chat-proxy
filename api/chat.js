@@ -2234,6 +2234,11 @@ function checkCourseWorkshopPatterns(lc) {
     return generateWorkshopClarification();
   }
   
+  // Handle follow-up workshop queries from clarification selections
+  if (lc.includes("short photography workshops") || lc.includes("one day photography workshops") || lc.includes("multi day residential photography workshops") || lc.includes("photography workshops by location") || lc.includes("photography workshops by month")) {
+    return generateWorkshopClarification();
+  }
+  
   if (lc.includes("do you offer") && lc.includes("lessons")) {
     return {
       type: "lessons_clarification",
