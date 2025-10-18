@@ -1980,15 +1980,36 @@ function extractServiceTypes(services) {
 }
 
 function addServiceOptions(options, serviceTypes) {
-      serviceTypes.forEach(type => {
-        if (type && type.length > 3) {
-          options.push({
-            text: `${type} services`,
-            query: `${type} services`
-          });
-        }
-      });
-    }
+  // Filter and format meaningful service types
+  const meaningfulTypes = new Set();
+  
+  for (const type of serviceTypes) {
+    if (!type || type.length <= 3) continue;
+    
+    // Skip generic categories
+    if (type.includes('All Photography Workshops') || type.includes('services')) continue;
+    
+    // Format meaningful categories
+    let formattedType = type;
+    if (type.includes('2.5hrs-4hrs')) formattedType = '2.5hr - 4hr workshops';
+    else if (type.includes('1-day')) formattedType = '1 day workshops';
+    else if (type.includes('2-5-days') || type.includes('weekend residential')) formattedType = 'Multi day residential workshops';
+    else if (type.includes('coastal')) formattedType = 'Coastal workshops';
+    else if (type.includes('landscape')) formattedType = 'Landscape workshops';
+    else if (type.includes('bluebell')) formattedType = 'Bluebell workshops';
+    else if (type.includes('macro') || type.includes('abstract')) formattedType = 'Macro & Abstract workshops';
+    
+    meaningfulTypes.add(formattedType);
+  }
+  
+  // Add meaningful service options
+  for (const type of meaningfulTypes) {
+    options.push({
+      text: type,
+      query: type.toLowerCase()
+    });
+  }
+}
     
 function deduplicateAndLimitOptions(options) {
     const uniqueOptions = [];
@@ -2176,16 +2197,19 @@ async function tryEvidenceBasedClarification(client, query, pageContext) {
   if (client && pageContext) {
     const evidenceOptions = await generateClarificationOptionsFromEvidence(client, query, pageContext);
     if (evidenceOptions.length > 0) {
+      // Get the current confidence level from the progression system
+      const { confidence } = getClarificationLevelAndConfidence(query, pageContext);
+      
       return {
         type: "evidence_based_clarification",
         question: "I found several options that might help. What are you most interested in?",
         options: evidenceOptions,
-        confidence: 30
+        confidence
       };
     }
   }
-    return null;
-  }
+  return null;
+}
   
 function checkSuppressedPatterns(lc) {
   if (lc.includes("equipment") || lc.includes("events") || lc.includes("training")) {
@@ -5534,7 +5558,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
     console.log(`🤔 Low confidence (${confidence}) for events query: "${query}" - triggering clarification`);
     const clarification = await generateClarificationQuestion(query, client, pageContext);
     if (clarification) {
-      const confidencePercent = 10;
+      const confidencePercent = clarification.confidence || 20;
       res.status(200).json({
         ok: true,
         type: "clarification",
@@ -5975,10 +5999,16 @@ export default async function handler(req, res) {
         if (newIntent === "clarification") {
           // Route to another clarification question
           console.log(`🔍 DEBUG: Looking for clarification for query: "${newQuery}"`);
-          const clarification = await generateClarificationQuestion(newQuery, client, pageContext);
+          // Update pageContext with clarification level for confidence progression
+          const updatedPageContext = {
+            ...pageContext,
+            clarificationLevel: (pageContext?.clarificationLevel || 0) + 1
+          };
+          
+          const clarification = await generateClarificationQuestion(newQuery, client, updatedPageContext);
           if (clarification) {
-        // For clarifications, use fixed low confidence since we're asking for more info
-        const confidencePercent = 30; // Fixed low confidence for second-level clarifications
+            // Use dynamic confidence from the clarification system
+            const confidencePercent = clarification.confidence || 20;
             
             console.log(`🤔 Follow-up clarification: "${newQuery}" → ${clarification.type} (${confidencePercent}%)`);
             res.status(200).json({
@@ -5987,7 +6017,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.37-logical-confidence", followUp: true }
+              debug: { version: "v1.2.48-events-pipeline-clarification", followUp: true }
             });
             return;
           }
@@ -6104,14 +6134,14 @@ export default async function handler(req, res) {
             console.log(`🤔 Low logical confidence for clarified advice query: "${newQuery}" - triggering clarification`);
             const clarification = await generateClarificationQuestion(newQuery, client, pageContext);
             if (clarification) {
-              const confidencePercent = 10;
+              const confidencePercent = clarification.confidence || 20;
               res.status(200).json({
                 ok: true,
                 type: "clarification",
                 question: clarification.question,
                 options: clarification.options,
                 confidence: confidencePercent,
-                debug: { version: "v1.2.37-logical-confidence", clarified: true }
+                debug: { version: "v1.2.48-events-pipeline-clarification", clarified: true }
               });
               return;
             }
@@ -6453,7 +6483,7 @@ export default async function handler(req, res) {
         console.log(`🤔 Low logical confidence for events query: "${query}" - triggering clarification`);
         const clarification = await generateClarificationQuestion(query, client, pageContext);
         if (clarification) {
-          const confidencePercent = 10;
+          const confidencePercent = clarification.confidence || 20;
           res.status(200).json({
             ok: true,
             type: "clarification",
@@ -7203,8 +7233,8 @@ export default async function handler(req, res) {
       console.log(`🤔 Low logical confidence for advice query: "${query}" - triggering clarification`);
       const clarification = await generateClarificationQuestion(query, client, pageContext);
       if (clarification) {
-        // For initial clarifications, use fixed low confidence since we're asking for more info
-        const confidencePercent = 10; // Fixed low confidence for initial clarifications
+        // Use dynamic confidence from the clarification system
+        const confidencePercent = clarification.confidence || 20;
         
         res.status(200).json({
           ok: true,
