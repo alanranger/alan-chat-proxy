@@ -3487,38 +3487,56 @@ async function getArticleAuxLinks(client, articleUrl) {
   const tables = tryTables();
 
   for (const t of tables) {
-    try {
-      const { data } = await client
-        .from(t.table)
-        .select(`${t.urlCol}, ${t.textCol}`)
-        .eq(t.urlCol, articleUrl)
-        .limit(20);
-      if (!data?.length) continue;
-
-      for (const row of data) {
-        const text = row?.[t.textCol] || "";
-        
-        // find pdf
-        if (!result.pdf) {
-          result.pdf = extractPdfUrl(text);
-        }
-        
-        // find first internal related link with hint text
-        if (!result.related) {
-          const url = extractRelatedLink(text);
-          if (url) {
-            result.related = url;
-            result.relatedLabel = extractRelatedLabel(text, url);
-          }
-        }
-        
-        if (result.pdf && result.related) break;
-      }
-      if (result.pdf || result.related) break;
-  } catch {
-      // ignore and try next table
+    const tableResult = await processTableForAuxLinks(client, t, articleUrl);
+    if (tableResult) {
+      Object.assign(result, tableResult);
+      if (result.pdf && result.related) break;
     }
   }
+  return result;
+}
+
+// Helper functions for getArticleAuxLinks
+async function processTableForAuxLinks(client, table, articleUrl) {
+  try {
+    const { data } = await client
+      .from(table.table)
+      .select(`${table.urlCol}, ${table.textCol}`)
+      .eq(table.urlCol, articleUrl)
+      .limit(20);
+    
+    if (!data?.length) return null;
+
+    return processTableData(data, table);
+  } catch {
+    // ignore and try next table
+    return null;
+  }
+}
+
+function processTableData(data, table) {
+  const result = { pdf: null, related: null, relatedLabel: null };
+  
+  for (const row of data) {
+    const text = row?.[table.textCol] || "";
+    
+    // find pdf
+    if (!result.pdf) {
+      result.pdf = extractPdfUrl(text);
+    }
+    
+    // find first internal related link with hint text
+    if (!result.related) {
+      const url = extractRelatedLink(text);
+      if (url) {
+        result.related = url;
+        result.relatedLabel = extractRelatedLabel(text, url);
+      }
+    }
+    
+    if (result.pdf && result.related) break;
+  }
+  
   return result;
 }
 
