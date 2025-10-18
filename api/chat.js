@@ -5195,7 +5195,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
       },
       confidence,
       debug: {
-        version: "v1.2.73-debug-response",
+        version: "v1.2.74-fix-debug-vars",
         earlyReturn: true,
         eventsFound: events.length,
         formattedEvents: eventList.length
@@ -5231,7 +5231,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
         pills: []
       },
       confidence: 90,
-      debug: { version: "v1.2.73-debug-response", earlyReturn: true }
+      debug: { version: "v1.2.74-fix-debug-vars", earlyReturn: true }
     });
     return articles.length > 0 || contentChunks.length > 0; // Return true only if content was found
   }
@@ -5717,8 +5717,8 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
     },
     confidence,
     debug: { 
-      version: "v1.2.73-debug-response",
-      debugInfo: debugInfo
+      version: "v1.2.74-fix-debug-vars",
+      debugInfo: requestDebugInfo
     }
   });
   return true;
@@ -5794,7 +5794,7 @@ export default async function handler(req, res) {
     console.log(`🔍 DEBUG: pageContext type:`, typeof pageContext);
     
     // DEBUG: Store debug info for response
-    const debugInfo = {
+    const requestDebugInfo = {
       requestBody: req.body,
       pageContext: pageContext,
       pageContextType: typeof pageContext,
@@ -6164,7 +6164,7 @@ export default async function handler(req, res) {
       query.toLowerCase().includes("mentoring") ||
       query.toLowerCase().includes("about")
     );
-    const debugInfo = {
+    const followUpDebugInfo = {
       query: query,
       previousQuery: previousQuery,
       hasPreviousQuery: !!previousQuery,
@@ -6430,13 +6430,13 @@ export default async function handler(req, res) {
       // Debug: Log filtering results
       console.log('🔍 Filtered events:', filteredEvents?.length || 0);
       
-      const debugInfo = {
+      const eventsDebugInfo = {
         totalEvents: events.length,
         significantKeyword: significant,
         filteredEventsCount: filteredEvents.length,
         sampleEvent: events[0] || null
       };
-      console.log('🔍 Events filtering debug:', debugInfo);
+      console.log('🔍 Events filtering debug:', eventsDebugInfo);
 
       console.log('🔍 Before formatEventsForUi:', {
         filteredEventsLength: filteredEvents.length,
