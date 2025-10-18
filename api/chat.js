@@ -5717,7 +5717,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: { 
-          version: "v1.2.78-force-trigger",
+          version: "v1.2.79-fix-routing",
           debugInfo: debugInfo
         }
   });
@@ -5839,11 +5839,36 @@ export default async function handler(req, res) {
       console.log(`🔍 clarificationResponse:`, JSON.stringify(clarificationResponse, null, 2));
       
       if (clarificationResponse) {
-        console.log(`🔍 Returning clarification response`);
-        res.json(clarificationResponse);
-        return;
+        // Handle routing objects from handleClarificationFollowUp
+        if (clarificationResponse.type && clarificationResponse.type.startsWith("route_to_")) {
+          // This is a routing object, process it as a new query
+          const newQuery = clarificationResponse.newQuery;
+          const newIntent = clarificationResponse.newIntent;
+          console.log(`🔍 FORCED TRIGGER - Routing to ${newIntent} with query: "${newQuery}"`);
+          
+          // Update the query and intent for the rest of the pipeline
+          const updatedQuery = newQuery;
+          const updatedIntent = newIntent;
+          const updatedPageContext = {
+            ...pageContext,
+            clarificationLevel: pageContext.clarificationLevel + 1
+          };
+          
+          // Generate clarification question for the new intent
+          const clarification = await generateClarificationQuestion(updatedQuery, client, updatedPageContext);
+          if (clarification) {
+            console.log(`🔍 FORCED TRIGGER - Returning clarification response`);
+            res.json(clarification);
+            return;
+          }
+        } else {
+          // This is a full response object
+          console.log(`🔍 FORCED TRIGGER - Returning full response object`);
+          res.json(clarificationResponse);
+          return;
+        }
       } else {
-        console.log(`🔍 No clarification response, continuing with normal flow`);
+        console.log(`🔍 FORCED TRIGGER - No clarification response, continuing with normal flow`);
       }
     }
     
