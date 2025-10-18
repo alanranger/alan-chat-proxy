@@ -6270,6 +6270,24 @@ export default async function handler(req, res) {
         );
       }
 
+      // Check if we need clarification for events queries
+      if (!hasConfidence) {
+        console.log(`🤔 Low logical confidence for events query: "${query}" - triggering clarification`);
+        const clarification = await generateClarificationQuestion(query, client, pageContext);
+        if (clarification) {
+          const confidencePercent = 10;
+          res.status(200).json({
+            ok: true,
+            type: "clarification",
+            question: clarification.question,
+            options: clarification.options,
+            confidence: confidencePercent,
+            debug: { version: "v1.2.48-events-clarification", intent: "events" }
+          });
+          return;
+        }
+      }
+
       res.status(200).json({
         ok: true,
         type: "events",
@@ -6284,7 +6302,7 @@ export default async function handler(req, res) {
         },
         confidence: calculateEventConfidence(query, eventList, product),
         debug: {
-          version: "v1.2.37-logical-confidence",
+          version: "v1.2.48-events-clarification",
           intent: "events",
           keywords: keywords,
           eventsHandlerExecuted: true,
