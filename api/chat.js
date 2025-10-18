@@ -5195,7 +5195,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
       },
       confidence,
       debug: {
-        version: "v1.2.72-debug-request-body",
+        version: "v1.2.73-debug-response",
         earlyReturn: true,
         eventsFound: events.length,
         formattedEvents: eventList.length
@@ -5231,7 +5231,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
         pills: []
       },
       confidence: 90,
-      debug: { version: "v1.2.72-debug-request-body", earlyReturn: true }
+      debug: { version: "v1.2.73-debug-response", earlyReturn: true }
     });
     return articles.length > 0 || contentChunks.length > 0; // Return true only if content was found
   }
@@ -5716,7 +5716,10 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
       pills: []
     },
     confidence,
-    debug: { version: "v1.2.72-debug-request-body" }
+    debug: { 
+      version: "v1.2.73-debug-response",
+      debugInfo: debugInfo
+    }
   });
   return true;
 }
@@ -5789,6 +5792,14 @@ export default async function handler(req, res) {
     console.log(`🔍 DEBUG: Full request body:`, JSON.stringify(req.body, null, 2));
     console.log(`🔍 DEBUG: pageContext extracted:`, pageContext);
     console.log(`🔍 DEBUG: pageContext type:`, typeof pageContext);
+    
+    // DEBUG: Store debug info for response
+    const debugInfo = {
+      requestBody: req.body,
+      pageContext: pageContext,
+      pageContextType: typeof pageContext,
+      clarificationLevel: pageContext?.clarificationLevel
+    };
     
     // Log page context for debugging
     if (pageContext) {
