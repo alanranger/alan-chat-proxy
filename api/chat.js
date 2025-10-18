@@ -4584,7 +4584,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
         formattedEvents: eventList.length
       }
     });
-    return true;
+    return events.length > 0; // Return true only if events were found
   } else {
     let articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
     articles = (articles || []).map(a => {
@@ -4626,7 +4626,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
       confidence: 90,
       debug: { version: "v1.2.40-retrieval-first", earlyReturn: true }
     });
-    return true;
+    return articles.length > 0 || contentChunks.length > 0; // Return true only if content was found
   }
 }
 
