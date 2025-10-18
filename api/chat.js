@@ -3153,7 +3153,13 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   }
   
   // Handle workshop clarification follow-ups - route to clarification for cascading logic
+  console.log(`🔍 Checking workshop patterns for: "${lc}"`);
+  console.log(`🔍 matches("2.5hr"): ${matches("2.5hr")}`);
+  console.log(`🔍 matches("4hr"): ${matches("4hr")}`);
+  console.log(`🔍 matches("short photography workshops"): ${matches("short photography workshops")}`);
+  
   if (matches("2.5hr") || matches("4hr") || matches("short photography workshops")) {
+    console.log(`✅ Matched workshop pattern, routing to clarification`);
     return createRoute("route_to_clarification", "short photography workshops 2-4 hours", "clarification");
   }
   if (matches("1 day") || matches("one day photography workshops")) {
@@ -5691,7 +5697,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.63-debug-condition", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.64-pattern-debug", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6143,7 +6149,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.63-debug-condition", followUp: true, timestamp: new Date().toISOString() }
+              debug: { version: "v1.2.64-pattern-debug", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
