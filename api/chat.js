@@ -5717,7 +5717,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: { 
-          version: "v1.2.82-force-trigger",
+          version: "v1.2.83-fix-routing",
           debugInfo: debugInfo
         }
   });
@@ -5864,8 +5864,15 @@ export default async function handler(req, res) {
           // Generate clarification question for the new intent
           const clarification = await generateClarificationQuestion(updatedQuery, client, updatedPageContext);
           if (clarification) {
+            console.log(`🔍 Returning clarification response from routing`);
             res.json(clarification);
             return;
+          } else {
+            console.log(`🔍 generateClarificationQuestion returned null, continuing with normal flow`);
+            // Update the query and intent for the rest of the pipeline
+            query = updatedQuery;
+            intent = updatedIntent;
+            pageContext = updatedPageContext;
           }
         } else {
           // This is a full response object
