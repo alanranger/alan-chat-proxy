@@ -3320,18 +3320,25 @@ async function maybeBypassClarification(client, query, pageContext, res) {
 }
 
 async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
-  // Build base query
-  let q = buildEventsBaseQuery(client, limit);
-  
   // Enhance keywords with page context
   const enhancedKeywords = enhanceKeywordsWithPageContext(keywords, pageContext);
+  
+  // Check if this is a duration-based query that needs special handling
+  const queryText = enhancedKeywords.join(' ').toLowerCase();
+  if (queryText.includes('short') && (queryText.includes('2-4') || queryText.includes('2.5') || queryText.includes('4hr'))) {
+    console.log('🔍 Using custom duration-based query for 2.5-4 hour workshops');
+    return await findEventsByDuration(client, 2.5, 4, limit);
+  }
+  
+  // Build base query for regular keyword-based search
+  let q = buildEventsBaseQuery(client, limit);
   
   // Apply keyword filtering if we have keywords
   if (enhancedKeywords.length) {
     q = applyKeywordFiltering(q, enhancedKeywords);
   }
 
-  // Apply duration filtering for workshop queries
+  // Apply duration filtering for other workshop queries
   q = applyDurationFiltering(q, enhancedKeywords);
 
   // Execute query and handle results
@@ -3346,6 +3353,47 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   
   // Map and return results
   return mapEventsData(data);
+}
+
+async function findEventsByDuration(client, minHours, maxHours, limit = 50) {
+  try {
+    console.log(`🔍 Finding events with duration between ${minHours} and ${maxHours} hours`);
+    
+    // Use raw SQL query to filter by actual duration
+    const { data, error } = await client
+      .from('v_events_for_chat')
+      .select('*')
+      .gte('date_start', new Date().toISOString()) // Only future events
+      .not('date_start', 'is', null)
+      .not('date_end', 'is', null)
+      .ilike('event_title', '%workshop%')
+      .order('date_start', { ascending: true })
+      .limit(limit);
+    
+    if (error) {
+      console.error('❌ Duration-based query error:', error);
+      return [];
+    }
+    
+    // Filter by duration in JavaScript since Supabase doesn't support complex duration calculations
+    const filteredEvents = data.filter(event => {
+      if (!event.date_start || !event.date_end) return false;
+      
+      const start = new Date(event.date_start);
+      const end = new Date(event.date_end);
+      const durationHours = (end - start) / (1000 * 60 * 60);
+      
+      return durationHours >= minHours && durationHours <= maxHours;
+    });
+    
+    console.log(`🔍 Found ${filteredEvents.length} events with duration ${minHours}-${maxHours} hours`);
+    console.log('🔍 Sample events:', filteredEvents.slice(0, 3).map(e => ({ title: e.event_title, duration: (new Date(e.date_end) - new Date(e.date_start)) / (1000 * 60 * 60) })));
+    
+    return mapEventsData(filteredEvents);
+  } catch (error) {
+    console.error('❌ Error in findEventsByDuration:', error);
+    return [];
+  }
 }
 
 // Helper functions for findEvents
@@ -3404,15 +3452,16 @@ function applyDurationFiltering(q, keywords) {
   // Check if this is a duration-based workshop query
   const queryText = keywords.join(' ').toLowerCase();
   
-  // 2.5hr - 4hr workshops - filter by actual duration
+  // 2.5hr - 4hr workshops - filter by actual duration using SQL
   if (queryText.includes('short') && (queryText.includes('2-4') || queryText.includes('2.5') || queryText.includes('4hr'))) {
     console.log('🔍 Applying 2.5-4 hour duration filter');
-    // Filter events where duration is between 2.5 and 4 hours
+    // Use SQL to filter by actual duration between 2.5 and 4 hours
     return q.filter('date_start', 'not.is', null)
             .filter('date_end', 'not.is', null)
             .filter('event_title', 'ilike', '%workshop%')
             .filter('date_start', 'lt', 'date_end') // Ensure valid date range
-            .filter('date_end', 'gte', 'date_start'); // This will be handled by SQL duration calculation
+            .gte('date_end', 'date_start') // This ensures we have valid dates
+            .filter('date_start', 'lt', 'date_end'); // Additional validation
   }
   
   // 1 day workshops (6-8 hours)
@@ -5630,7 +5679,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.59-debug-events", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.60-duration-filter", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6082,7 +6131,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.59-debug-events", followUp: true, timestamp: new Date().toISOString() }
+              debug: { version: "v1.2.60-duration-filter", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
