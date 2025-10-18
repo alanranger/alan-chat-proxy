@@ -5195,7 +5195,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
       },
       confidence,
       debug: {
-        version: "v1.2.65-deployment-fix",
+        version: "v1.2.66-clarification-fix",
         earlyReturn: true,
         eventsFound: events.length,
         formattedEvents: eventList.length
@@ -5231,7 +5231,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
         pills: []
       },
       confidence: 90,
-      debug: { version: "v1.2.65-deployment-fix", earlyReturn: true }
+      debug: { version: "v1.2.66-clarification-fix", earlyReturn: true }
     });
     return articles.length > 0 || contentChunks.length > 0; // Return true only if content was found
   }
@@ -5795,6 +5795,16 @@ export default async function handler(req, res) {
 
     // Build contextual query for keyword extraction (merge with previous query)
     const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
+    
+    // PRIORITY: Check for clarification follow-ups BEFORE intent detection
+    if (pageContext && pageContext.clarificationLevel > 0) {
+      console.log(`🔍 Detected clarification follow-up with level ${pageContext.clarificationLevel}`);
+      const clarificationResponse = await handleClarificationFollowUp(query, previousQuery, "events");
+      if (clarificationResponse) {
+        res.json(clarificationResponse);
+        return;
+      }
+    }
     
     const intent = detectIntent(query || ""); // Use current query only for intent detection
 
