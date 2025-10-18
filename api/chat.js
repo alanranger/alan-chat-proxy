@@ -5716,8 +5716,8 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
       pills: []
     },
     confidence,
-        debug: { 
-          version: "v1.2.87-fix-clarification-routing",
+        debug: {
+          version: "v1.2.88-fix-pagecontext-null",
           debugInfo: debugInfo
         }
   });
@@ -5838,13 +5838,13 @@ export default async function handler(req, res) {
     console.log(`🔍 DEBUG: pageContext.clarificationLevel value:`, pageContext?.clarificationLevel);
     console.log(`🔍 DEBUG: typeof pageContext.clarificationLevel:`, typeof pageContext?.clarificationLevel);
     
-    // FORCE TRIGGER FOR TESTING - REMOVE AFTER DEBUGGING
-    const shouldTriggerClarification = true; // pageContext && pageContext.clarificationLevel > 0;
-    console.log(`🔍 shouldTriggerClarification (FORCED):`, shouldTriggerClarification);
+    // Check if this is a clarification follow-up
+    const shouldTriggerClarification = pageContext && pageContext.clarificationLevel > 0;
+    console.log(`🔍 shouldTriggerClarification:`, shouldTriggerClarification);
     
     
     if (shouldTriggerClarification) {
-      console.log(`🔍 Detected clarification follow-up with level ${pageContext.clarificationLevel}`);
+      console.log(`🔍 Detected clarification follow-up with level ${pageContext?.clarificationLevel || 0}`);
       console.log(`🔍 pageContext:`, JSON.stringify(pageContext, null, 2));
       const clarificationResponse = await handleClarificationFollowUp(query, previousQuery, "events");
       console.log(`🔍 clarificationResponse:`, JSON.stringify(clarificationResponse, null, 2));
@@ -5861,7 +5861,7 @@ export default async function handler(req, res) {
           const updatedIntent = newIntent;
           const updatedPageContext = {
             ...pageContext,
-            clarificationLevel: pageContext.clarificationLevel + 1
+            clarificationLevel: (pageContext?.clarificationLevel || 0) + 1
           };
           
           // Generate clarification question for the new intent
