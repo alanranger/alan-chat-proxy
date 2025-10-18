@@ -838,18 +838,38 @@ function currency(amount, ccy){
 function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]) )}
 
 /* ============= Product helpers / card rendering ============= */
+// Helper function to get product key
+function getProductKey(p) {
+  return (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
+}
+
+// Helper function to merge product properties
+function mergeProductProperties(m, p) {
+  const basicProps = ['price','price_currency','availability','provider','description','title'];
+  const extendedProps = ['display_price_gbp','display_price','availability_status','availability_raw','price_gbp','product_kind_resolved','price_source'];
+  
+  for(const k of basicProps) {
+    if(m[k]==null && p[k]!=null) m[k]=p[k];
+  }
+  for (const k of extendedProps) {
+    if (m[k]==null && p[k]!=null) m[k]=p[k];
+  }
+}
+
 function mergeProducts(list){
   if(!Array.isArray(list) || !list.length) return [];
   const map = new Map();
+  
   for(const p of list){
-    const key = (p.url || p.page_url || p.source_url || p.title || '').toLowerCase();
-    if(!map.has(key)) { map.set(key, JSON.parse(JSON.stringify(p))); continue; }
-    const m = map.get(key);
-    for(const k of ['price','price_currency','availability','provider','description','title']) if(m[k]==null && p[k]!=null) m[k]=p[k];
-    for (const k of ['display_price_gbp','display_price','availability_status','availability_raw','price_gbp','product_kind_resolved','price_source']) {
-      if (m[k]==null && p[k]!=null) m[k]=p[k];
+    const key = getProductKey(p);
+    if(!map.has(key)) { 
+      map.set(key, JSON.parse(JSON.stringify(p))); 
+      continue; 
     }
+    const m = map.get(key);
+    mergeProductProperties(m, p);
   }
+  
   return [...map.values()];
 }
 function getMetaDescription(prod){
@@ -1062,21 +1082,25 @@ function deriveOptions(prod, facts){
   // Only add options if there are actual different pricing tiers
   return opts;
 }
-function renderProductCard(prod){
-  const SITE_ORIGIN = 'https://www.alanranger.com';
-  const absolutize = (u)=>{
-    if (!u) return '#'; const s=String(u);
-    if (/^https?:\/\//i.test(s)) return s;
-    if (s.startsWith('/')) return SITE_ORIGIN + s;
-    // slug only → assume product section path
-    return SITE_ORIGIN + '/photographic-workshops-near-me/' + s.replace(/^\/+/, '');
-  };
-  // Don't extract facts from concatenated description - use structured data fields directly
-  const facts = {}; // Empty facts object since we're using structured data fields
-  const options = deriveOptions(prod, facts);
-  const priceHead = productHeadlinePrice(prod);
+// Helper function to add bullet point if value is meaningful
+function addBulletPointIfValid(bulletPoints, label, value, prod = null) {
+  if (!value || isMeaninglessValue(value)) return;
   
-  // Build structured data as bullet points
+  // Special handling for availability status
+  if (label === 'Availability' && typeof value === 'string') {
+    const avail = value.replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
+    bulletPoints.push(`<li><strong>${label}:</strong> ${escapeHTML(avail)}</li>`);
+    return;
+  }
+  
+  // Special handling for location address (only if different from location_name)
+  if (label === 'Address' && prod && prod.location_address === prod.location_name) return;
+  
+  bulletPoints.push(`<li><strong>${label}:</strong> ${escapeHTML(value)}</li>`);
+}
+
+// Helper function to build product bullet points
+function buildProductBulletPoints(prod, priceHead) {
   const bulletPoints = [];
   
   // Price (always show if available)
@@ -1084,77 +1108,31 @@ function renderProductCard(prod){
     bulletPoints.push(`<li><strong>Price:</strong> ${escapeHTML(priceHead)}</li>`);
   }
   
-  // Availability (database field only)
-  if (prod.availability_status && !isMeaninglessValue(prod.availability_status)) {
-    const avail = String(prod.availability_status).replace(/^https?:\/\/schema\.org\//i,'').replace(/([a-z])([A-Z])/g,'$1 $2');
-    bulletPoints.push(`<li><strong>Availability:</strong> ${escapeHTML(avail)}</li>`);
+  // Define field mappings for bullet points
+  const fieldMappings = [
+    { field: 'availability_status', label: 'Availability' },
+    { field: 'participants', label: 'Participants' },
+    { field: 'fitness_level', label: 'Fitness Level' },
+    { field: 'experience_level', label: 'Experience Level' },
+    { field: 'location_name', label: 'Location' },
+    { field: 'location_address', label: 'Address' },
+    { field: 'time_schedule', label: 'Schedule' },
+    { field: 'what_to_bring', label: 'What to Bring' },
+    { field: 'course_duration', label: 'Duration' },
+    { field: 'instructor_info', label: 'Instructor' },
+    { field: 'equipment_needed', label: 'Equipment Needed' }
+  ];
+  
+  // Process each field mapping
+  for (const mapping of fieldMappings) {
+    addBulletPointIfValid(bulletPoints, mapping.label, prod[mapping.field], prod);
   }
   
-  // Participants (database field only)
-  if (prod.participants && !isMeaninglessValue(prod.participants)) {
-    bulletPoints.push(`<li><strong>Participants:</strong> ${escapeHTML(prod.participants)}</li>`);
-  }
-  
-  // Fitness Level (database field only)
-  if (prod.fitness_level && !isMeaninglessValue(prod.fitness_level)) {
-    bulletPoints.push(`<li><strong>Fitness Level:</strong> ${escapeHTML(prod.fitness_level)}</li>`);
-  }
-  
-  // Experience Level (database field only)
-  if (prod.experience_level && !isMeaninglessValue(prod.experience_level)) {
-    bulletPoints.push(`<li><strong>Experience Level:</strong> ${escapeHTML(prod.experience_level)}</li>`);
-  }
-  
-  // Location (database field only)
-  if (prod.location_name && !isMeaninglessValue(prod.location_name)) {
-    bulletPoints.push(`<li><strong>Location:</strong> ${escapeHTML(prod.location_name)}</li>`);
-  }
-  
-  // Location Address (only if different from location_name and meaningful)
-  if (prod.location_address && prod.location_address !== prod.location_name && !isMeaninglessValue(prod.location_address)) {
-    bulletPoints.push(`<li><strong>Address:</strong> ${escapeHTML(prod.location_address)}</li>`);
-  }
-  
-  // Time Schedule (only if meaningful)
-  if (prod.time_schedule && !isMeaninglessValue(prod.time_schedule)) {
-    bulletPoints.push(`<li><strong>Schedule:</strong> ${escapeHTML(prod.time_schedule)}</li>`);
-  }
-  
-  // What to Bring (only if meaningful)
-  if (prod.what_to_bring && !isMeaninglessValue(prod.what_to_bring)) {
-    bulletPoints.push(`<li><strong>What to Bring:</strong> ${escapeHTML(prod.what_to_bring)}</li>`);
-  }
-  
-  // Course Duration (only if meaningful)
-  if (prod.course_duration && !isMeaninglessValue(prod.course_duration)) {
-    bulletPoints.push(`<li><strong>Duration:</strong> ${escapeHTML(prod.course_duration)}</li>`);
-  }
-  
-  // Instructor Info (only if meaningful)
-  if (prod.instructor_info && !isMeaninglessValue(prod.instructor_info)) {
-    bulletPoints.push(`<li><strong>Instructor:</strong> ${escapeHTML(prod.instructor_info)}</li>`);
-  }
-  
-  // Equipment Needed (database field only)
-  if (prod.equipment_needed && !isMeaninglessValue(prod.equipment_needed)) {
-    bulletPoints.push(`<li><strong>Equipment Needed:</strong> ${escapeHTML(prod.equipment_needed)}</li>`);
-  }
-  
-  // Build the bullet points HTML
-  const bulletPointsHTML = bulletPoints.length > 0 ? 
-    `<ul class="product-details">${bulletPoints.join('')}</ul>` : '';
-  
-  // Show meta description only if we don't have structured data
-  const md = getMetaDescription(prod);
-  const showDescription = md && bulletPoints.length === 0;
-  
-  const li = options.map(o=>`<li>${escapeHTML(o.label||'')}${o.price ? ` — ${o.price}` : ''}</li>`).join('');
-  const href = absolutize(prod.page_url || prod.source_url || prod.url || '#');
-  
-  // Create a more visually appealing product card
-  const bookButton = href && href !== '#' ? 
-    `<a href="${href}" target="_blank" rel="noopener" class="product-book-btn">Book Now →</a>` : '';
-  
+  return bulletPoints;
+}
+
+// Helper function to build product card HTML
+function buildProductCardHTML(prod, priceHead, bulletPointsHTML, showDescription, md, li, bookButton) {
   return `
     <div class="answer">
       <div class="product-card">
@@ -1171,6 +1149,40 @@ function renderProductCard(prod){
       </div>
     </div>
   `;
+}
+
+function renderProductCard(prod){
+  const SITE_ORIGIN = 'https://www.alanranger.com';
+  const absolutize = (u)=>{
+    if (!u) return '#'; const s=String(u);
+    if (/^https?:\/\//i.test(s)) return s;
+    if (s.startsWith('/')) return SITE_ORIGIN + s;
+    // slug only → assume product section path
+    return SITE_ORIGIN + '/photographic-workshops-near-me/' + s.replace(/^\/+/, '');
+  };
+  
+  // Don't extract facts from concatenated description - use structured data fields directly
+  const facts = {}; // Empty facts object since we're using structured data fields
+  const options = deriveOptions(prod, facts);
+  const priceHead = productHeadlinePrice(prod);
+  
+  // Build structured data as bullet points
+  const bulletPoints = buildProductBulletPoints(prod, priceHead);
+  const bulletPointsHTML = bulletPoints.length > 0 ? 
+    `<ul class="product-details">${bulletPoints.join('')}</ul>` : '';
+  
+  // Show meta description only if we don't have structured data
+  const md = getMetaDescription(prod);
+  const showDescription = md && bulletPoints.length === 0;
+  
+  const li = options.map(o=>`<li>${escapeHTML(o.label||'')}${o.price ? ` — ${o.price}` : ''}</li>`).join('');
+  const href = absolutize(prod.page_url || prod.source_url || prod.url || '#');
+  
+  // Create a more visually appealing product card
+  const bookButton = href && href !== '#' ? 
+    `<a href="${href}" target="_blank" rel="noopener" class="product-book-btn">Book Now →</a>` : '';
+  
+  return buildProductCardHTML(prod, priceHead, bulletPointsHTML, showDescription, md, li, bookButton);
 }
 
 /* ===== Events & Guides ===== */
@@ -1212,83 +1224,113 @@ function eventHeaderLabel(structured){
   if (/\b(workshop|workshops)\b/.test(q)) return 'Upcoming Workshops';
   return 'Upcoming Events';
 }
+// Helper function to check if query is a simple follow-up
+function isSimpleFollowUpQuery(query) {
+  if (!query) return false;
+  
+  const isFollowUpPattern = /^(how many|when|where|how much|how long|can i|do you|is there)/i.test(query);
+  const hasEventKeywords = query.includes('book') || query.includes('buy') || query.includes('price') || 
+                          query.includes('cost') || query.includes('workshop') || query.includes('course') || 
+                          query.includes('event') || query.includes('class');
+  
+  return isFollowUpPattern && !hasEventKeywords;
+}
+
+// Helper function to format event date range
+function formatEventDateRange(e) {
+  const whenStart = fmtDate(e.date_start);
+  let when = whenStart;
+  
+  try {
+    const startDay = new Date(e.date_start);
+    const endDay = e.date_end ? new Date(e.date_end) : null;
+    const sameDay = endDay && startDay.toDateString() === endDay.toDateString();
+    if (endDay && !sameDay) {
+      when = `${whenStart} – ${fmtDate(e.date_end)}`;
+    }
+  } catch {}
+  
+  return when;
+}
+
+// Helper function to format event time info
+function formatEventTimeInfo(e) {
+  if (e.start_time && e.end_time) {
+    return `<div class="event-time">🕐 ${escapeHTML(e.start_time)} - ${escapeHTML(e.end_time)}</div>`;
+  }
+  
+  if (e._csv_start_time && e._csv_end_time) {
+    return `<div class="event-time">🕐 ${escapeHTML(e._csv_start_time)} - ${escapeHTML(e._csv_end_time)}</div>`;
+  }
+  
+  if (e.date_start && e.date_end) {
+    const startTime = e.date_start.split('T')[1]?.substring(0, 5) || '';
+    const endTime = e.date_end.split('T')[1]?.substring(0, 5) || '';
+    if (startTime && endTime) {
+      return `<div class="event-time">🕐 ${startTime} - ${endTime}</div>`;
+    }
+  }
+  
+  return '';
+}
+
+// Helper function to get event type info
+function getEventTypeInfo(e) {
+  const eventType = e.csv_type === 'course_events' ? 'Course' : 
+                   e.csv_type === 'workshop_events' ? 'Workshop' : 'Event';
+  const eventTypeIcon = e.csv_type === 'course_events' ? '🎓' : 
+                       e.csv_type === 'workshop_events' ? '🔧' : '📅';
+  
+  const isResidential = e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start);
+  const isWeekendWorkshop = e.categories && e.categories.includes('weekend residential photo workshops');
+  const residentialIndicator = (isResidential || isWeekendWorkshop) ? '🏠 Residential' : '';
+  
+  return { eventType, eventTypeIcon, residentialIndicator };
+}
+
+// Helper function to render single event card
+function renderEventCard(e) {
+  const when = formatEventDateRange(e);
+  const href = e.href || e.event_url || e.page_url || e.source_url || e.url || '#';
+  const where = e.location ? `${escapeHTML(e.location)}` : '';
+  const title = e.title ? `${escapeHTML(e.title)}` : '';
+  const price = e.price_gbp ? `£${e.price_gbp}` : '';
+  const timeInfo = formatEventTimeInfo(e);
+  const { eventType, eventTypeIcon, residentialIndicator } = getEventTypeInfo(e);
+  
+  return `
+    <div class="event-card">
+      <div class="event-content">
+        <div class="event-header">
+          <h4 class="event-title">
+            <a href="${href}" target="_blank" rel="noopener">${title || 'Photography Event'}</a>
+          </h4>
+          <div class="event-type-badge">${eventTypeIcon} ${eventType} ${residentialIndicator}</div>
+        </div>
+        <div class="event-details">
+          <div class="event-date">📅 ${when}</div>
+          ${timeInfo}
+          ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
+          ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
+          ${e.participants ? `<div class="event-participants">👥 ${e.participants} participants</div>` : ''}
+          ${e.experience_level ? `<div class="event-experience">🎯 ${e.experience_level}</div>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderEventsBlock(structured, query){
   // Skip events block for simple follow-up questions (but not for legitimate event queries)
-  const isSimpleFollowUp = query && (
-    /^(how many|when|where|how much|how long|can i|do you|is there)/i.test(query) &&
-    !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost') &&
-    !query.includes('workshop') && !query.includes('course') && !query.includes('event') && !query.includes('class')
-  );
-  if (isSimpleFollowUp) return '';
+  if (isSimpleFollowUpQuery(query)) return '';
   
   const all = futureEvents(structured);
   if(!all.length) return '';
+  
   const kp = extractKeyPhrases(structured?.topic||'', __lastQuery);
   const list = all.map(e=>({e, s: scoreEventMatch(e, kp)})).sort((a,b)=> (b.s - a.s) || (new Date(a.e.date_start) - new Date(b.e.date_start))).map(x=>x.e);
   
-  const eventsHTML = list.map(e=>{
-    const whenStart = fmtDate(e.date_start);
-    let when = whenStart;
-    try{
-      const startDay = new Date(e.date_start);
-      const endDay = e.date_end ? new Date(e.date_end) : null;
-      const sameDay = endDay && startDay.toDateString() === endDay.toDateString();
-      if (endDay && !sameDay) {
-        when = `${whenStart} – ${fmtDate(e.date_end)}`;
-      }
-    }catch{}
-    const href = e.href || e.event_url || e.page_url || e.source_url || e.url || '#';
-    const where = e.location ? `${escapeHTML(e.location)}` : '';
-    const title = e.title ? `${escapeHTML(e.title)}` : '';
-    const price = e.price_gbp ? `£${e.price_gbp}` : '';
-    
-    // Format start and end times - use CSV times directly to avoid DST issues
-    let timeInfo = '';
-    if (e.start_time && e.end_time) {
-      timeInfo = `<div class="event-time">🕐 ${escapeHTML(e.start_time)} - ${escapeHTML(e.end_time)}</div>`;
-    } else if (e._csv_start_time && e._csv_end_time) {
-      // Use CSV times directly from raw data to avoid timezone conversion
-      timeInfo = `<div class="event-time">🕐 ${escapeHTML(e._csv_start_time)} - ${escapeHTML(e._csv_end_time)}</div>`;
-    } else if (e.date_start && e.date_end) {
-      // Fallback: extract time from date strings without timezone conversion
-      const startTime = e.date_start.split('T')[1]?.substring(0, 5) || '';
-      const endTime = e.date_end.split('T')[1]?.substring(0, 5) || '';
-      if (startTime && endTime) {
-        timeInfo = `<div class="event-time">🕐 ${startTime} - ${endTime}</div>`;
-      }
-    }
-    
-    // Determine event type for display
-    const eventType = e.csv_type === 'course_events' ? 'Course' : e.csv_type === 'workshop_events' ? 'Workshop' : 'Event';
-    const eventTypeIcon = e.csv_type === 'course_events' ? '🎓' : e.csv_type === 'workshop_events' ? '🔧' : '📅';
-    
-    // Check if this is a residential workshop (multi-day)
-    const isResidential = e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start);
-    const isWeekendWorkshop = e.categories && e.categories.includes('weekend residential photo workshops');
-    const residentialIndicator = (isResidential || isWeekendWorkshop) ? '🏠 Residential' : '';
-    
-    // Create a more visually appealing event card
-    return `
-      <div class="event-card">
-        <div class="event-content">
-          <div class="event-header">
-            <h4 class="event-title">
-              <a href="${href}" target="_blank" rel="noopener">${title || 'Photography Event'}</a>
-            </h4>
-            <div class="event-type-badge">${eventTypeIcon} ${eventType} ${residentialIndicator}</div>
-          </div>
-          <div class="event-details">
-            <div class="event-date">📅 ${when}</div>
-            ${timeInfo}
-            ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
-            ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
-            ${e.participants ? `<div class="event-participants">👥 ${e.participants} participants</div>` : ''}
-            ${e.experience_level ? `<div class="event-experience">🎯 ${e.experience_level}</div>` : ''}
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+  const eventsHTML = list.map(renderEventCard).join('');
   
   const header = eventHeaderLabel(structured);
   const headerIcon = header.includes('Course') ? '🎓' : header.includes('Workshop') ? '🔧' : '📅';
@@ -1735,10 +1777,8 @@ document.addEventListener('click', (e) => {
   }
 });
 
-function renderAnswer(payload){
-  try { if (dbgSrvVer) dbgSrvVer.textContent = payload?.debug?.version || '–'; } catch {}
-  
-  // Handle both decimal (0-1) and percentage (0-100) confidence values
+// Helper function to calculate confidence percentage
+function calculateConfidencePct(payload) {
   let confidencePct = null;
   if (typeof payload.confidence === 'number') {
     // API returns decimal confidence (0-1), convert to percentage
@@ -1751,83 +1791,78 @@ function renderAnswer(payload){
   const heuristic = heuristicConfidence(payload.structured||{});
   // Use heuristic only if confidence is very low (< 30%) or missing
   if (confidencePct == null || confidencePct < 30) confidencePct = heuristic;
-  const __rounded = Math.round(confidencePct);
+  return Math.round(confidencePct);
+}
 
-  // Render the main textual answer first
-  const md = String(payload.answer_markdown || payload.answer || '');
-  if (md && md.trim()) {
-    const {html} = mdToHtml(md);
-    addBubble(html);
-  }
-
-  const s = payload.structured||{};
-  const merged = mergeProducts(s.products||[]);
-  const gate = decideProductRendering(payload, merged, __lastQuery);
-
-  if (gate.show) {
-    const prod = merged[0] || null;
-    if (prod) addBubble(renderProductCard(prod));
-  }
-
-  const evHTML = renderEventsBlock(s, __lastQuery);
-  if(evHTML) addBubble(evHTML);
-
-  const artHTML = renderArticlesBlock(s, __lastQuery);
-  if(artHTML) addBubble(artHTML);
-
-  const pills = buildActionPillsFromStructured(s, __lastQuery);
-  if(pills.length){
-    const wrap = document.createElement('div'); wrap.className='actions';
-    pills.forEach(p=>{ 
-      const a=document.createElement('a'); 
-      a.className='pill' + (p.priority ? ' priority' : '') + (p.secondary ? ' secondary' : ''); 
-      a.textContent=p.label; 
-      a.href=p.href; 
-      a.target='_blank'; 
-      a.rel='noopener'; 
-      
-      // Add click event logging
-      a.addEventListener('click', () => {
-        fetch('/api/chat-log', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
-          },
-          body: JSON.stringify({
-            action: 'event',
-            data: { 
-              sessionId, 
-              eventType: 'pill_click', 
-              eventData: { label: p.label, href: p.href, priority: p.priority } 
-            }
-          })
-        }).catch(err => console.warn('Event logging failed:', err));
-      });
-      
-      wrap.appendChild(a); 
+// Helper function to render action pills
+function renderActionPills(pills) {
+  if (!pills.length) return;
+  
+  const wrap = document.createElement('div'); 
+  wrap.className = 'actions';
+  
+  pills.forEach(p => { 
+    const a = document.createElement('a'); 
+    a.className = 'pill' + (p.priority ? ' priority' : '') + (p.secondary ? ' secondary' : ''); 
+    a.textContent = p.label; 
+    a.href = p.href; 
+    a.target = '_blank'; 
+    a.rel = 'noopener'; 
+    
+    // Add click event logging
+    a.addEventListener('click', () => {
+      fetch('/api/chat-log', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+        },
+        body: JSON.stringify({
+          action: 'event',
+          data: { 
+            sessionId, 
+            eventType: 'pill_click', 
+            eventData: { label: p.label, href: p.href, priority: p.priority } 
+          }
+        })
+      }).catch(err => console.warn('Event logging failed:', err));
     });
-    thread.appendChild(wrap);
-  }
+    
+    wrap.appendChild(a); 
+  });
+  
+  thread.appendChild(wrap);
+}
 
+// Helper function to create confidence footer
+function createConfidenceFooter(__rounded) {
   const footer = document.createElement('div');
   footer.className = 'footer-status';
   // Updated confidence thresholds: 80%+ green, 50%+ amber, below 50% red
   const confId = `conf-pill-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   footer.innerHTML = `<span id="${confId}" class="badge conf small ${__rounded>=80?'green':__rounded>=50?'amber':'red'}" title="Click to view debug log">Confidence: ${__rounded}%</span> <span class="badge ts">Answered: ${fmtDateTime(Date.now())}</span>`;
   thread.appendChild(footer);
+  return confId;
+}
 
-  // Add click handler for confidence pill
+// Helper function to setup confidence pill click handlers
+function setupConfidencePillHandlers(confId, payload, s, heuristic, __rounded) {
   setTimeout(() => {
     const confEl = document.getElementById(confId);
     if (confEl) {
       confEl.addEventListener('click', ()=>{
-        const old = document.getElementById('reason-pop'); if (old) old.remove();
-        const box = document.createElement('div'); box.id='reason-pop'; box.className='reason-pop';
+        const old = document.getElementById('reason-pop'); 
+        if (old) old.remove();
+        
+        const box = document.createElement('div'); 
+        box.id = 'reason-pop'; 
+        box.className = 'reason-pop';
         box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Answer Debug Info</h4><pre class="json"></pre><div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button id="reason-copy" class="send" style="padding:6px 10px">Copy log</button></div>`;
+        
         const pre = box.querySelector('pre.json');
         pre.textContent = JSON.stringify(payload, null, 2);
         document.body.appendChild(box);
+        
         const closeBtn = box.querySelector('.close');
         const copyBtn = box.querySelector('#reason-copy');
         closeBtn.addEventListener('click', ()=>box.remove());
@@ -1836,7 +1871,53 @@ function renderAnswer(payload){
     }
   }, 100);
 
-  // Add feedback buttons
+  // Clickable reasoning popover
+  const confEl = document.getElementById(confId);
+  if (confEl) {
+    confEl.addEventListener('click', ()=>{
+      const old = document.getElementById('reason-pop'); 
+      if (old) old.remove();
+      
+      const box = document.createElement('div'); 
+      box.id = 'reason-pop'; 
+      box.className = 'reason-pop';
+      box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Confidence reasoning</h4><pre class="json"></pre><div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button id="reason-copy" class="send" style="padding:6px 10px">Copy log</button></div>`;
+      
+      const pre = box.querySelector('pre');
+      const data = { structured: s, debug: payload.debug||{}, heuristic: heuristic, final: __rounded };
+      setDebugJSON(pre, data, { maxLen: 2000, maxItems: 50 });
+      
+      box.querySelector('#reason-copy').addEventListener('click', async ()=>{
+        try {
+          const text = pre.textContent||'';
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+          } else if (navigator.clipboard && window.ClipboardItem) {
+            const blob = new Blob([text], { type: 'text/plain' });
+            await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]);
+          } else {
+            const ta = document.createElement('textarea');
+            ta.value = text; 
+            document.body.appendChild(ta); 
+            ta.select(); 
+            document.execCommand('copy'); 
+            document.body.removeChild(ta);
+          }
+          confEl.textContent = confEl.textContent.replace('Confidence','Copied');
+          setTimeout(()=>{ confEl.textContent = `Confidence: ${__rounded}%`; }, 1200);
+        } catch(e) {
+          alert('Copy failed. Select the text and press Ctrl/Cmd+C.');
+        }
+      });
+      
+      box.querySelector('.close').addEventListener('click', ()=> box.remove());
+      document.body.appendChild(box);
+    });
+  }
+}
+
+// Helper function to setup feedback buttons
+function setupFeedbackButtons(payload, __rounded, s) {
   const feedbackContainer = document.createElement('div');
   feedbackContainer.className = 'feedback-container';
   feedbackContainer.innerHTML = `
@@ -1865,71 +1946,41 @@ function renderAnswer(payload){
   thumbsDownBtn.addEventListener('click', () => {
     showFeedbackForm(__lastQuery, payload, __rounded, s.intent, thumbsUpBtn, thumbsDownBtn);
   });
+}
 
-  // Clickable reasoning popover
-  const confEl = document.getElementById(confId);
-  if (confEl) {
-    confEl.addEventListener('click', ()=>{
-      const old = document.getElementById('reason-pop'); if (old) old.remove();
-      const box = document.createElement('div'); box.id='reason-pop'; box.className='reason-pop';
-      box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Confidence reasoning</h4><pre class="json"></pre><div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button id="reason-copy" class="send" style="padding:6px 10px">Copy log</button></div>`;
-      const pre = box.querySelector('pre');
-      const data = { structured: s, debug: payload.debug||{}, heuristic: heuristic, final: __rounded };
-      setDebugJSON(pre, data, { maxLen: 2000, maxItems: 50 });
-      box.querySelector('#reason-copy').addEventListener('click', async ()=>{
-        try {
-          const text = pre.textContent||'';
-          if (navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(text);
-          } else if (navigator.clipboard && window.ClipboardItem) {
-            const blob = new Blob([text], { type: 'text/plain' });
-            await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]);
-          } else {
-            const ta=document.createElement('textarea');
-            ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-          }
-          confEl.textContent = confEl.textContent.replace('Confidence','Copied');
-          setTimeout(()=>{ confEl.textContent = `Confidence: ${__rounded}%`; }, 1200);
-        } catch(e) {
-          alert('Copy failed. Select the text and press Ctrl/Cmd+C.');
-        }
-      });
-      box.querySelector('.close').addEventListener('click', ()=> box.remove());
-      document.body.appendChild(box);
-    });
+// Helper function to render fallback message
+function renderFallbackMessage(gate, s, md, __rounded) {
+  if (gate.show || (s.events||[]).length || (s.articles||[]).length || md.trim()) {
+    return;
   }
-
-  // Play chime when the answer is rendered.
-  // If the tab is backgrounded, this is particularly useful.
-  playChime();
-
   
-  // Enhanced fallback messaging based on confidence level
-  if(!gate.show && !(s.events||[]).length && !(s.articles||[]).length && !md.trim()){
-    let fallbackMessage = "I don't have a specific answer for that yet.";
-    let extraMessage = "";
-    
-    if (__rounded >= 80) {
-      fallbackMessage = "I found some relevant information, but I'd like to provide you with the most accurate details.";
-      extraMessage = `<p>For the most up-to-date and specific information, I'd recommend using the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
-    } else if (__rounded >= 50) {
-      fallbackMessage = "I found some relevant information, but I'm not completely confident about the specifics.";
-      extraMessage = `<p>For the most accurate and up-to-date information, I'd recommend using the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
-    } else if (__rounded >= 30) {
-      fallbackMessage = "I'm not entirely sure about this question, but I can try to help.";
-      extraMessage = `<p>For the best assistance, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
-    } else {
-      fallbackMessage = "I don't have a specific answer for that yet.";
-      extraMessage = `<p>If this doesn't answer your question, please use the Contact or WhatsApp buttons above to reach Alan directly.</p>`;
-    }
-    
-    const {html}=mdToHtml(fallbackMessage);
-    addBubble(html.replace('</div>', `${extraMessage}</div>`));
+  let fallbackMessage = "I don't have a specific answer for that yet.";
+  let extraMessage = "";
+  
+  if (__rounded >= 80) {
+    fallbackMessage = "I found some relevant information, but I'd like to provide you with the most accurate details.";
+    extraMessage = `<p>For the most up-to-date and specific information, I'd recommend using the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+  } else if (__rounded >= 50) {
+    fallbackMessage = "I found some relevant information, but I'm not completely confident about the specifics.";
+    extraMessage = `<p>For the most accurate and up-to-date information, I'd recommend using the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+  } else if (__rounded >= 30) {
+    fallbackMessage = "I'm not entirely sure about this question, but I can try to help.";
+    extraMessage = `<p>For the best assistance, please use the Contact form or WhatsApp buttons above to reach Alan directly.</p>`;
+  } else {
+    fallbackMessage = "I don't have a specific answer for that yet.";
+    extraMessage = `<p>If this doesn't answer your question, please use the Contact or WhatsApp buttons above to reach Alan directly.</p>`;
   }
+  
+  const {html} = mdToHtml(fallbackMessage);
+  addBubble(html.replace('</div>', `${extraMessage}</div>`));
+}
 
+// Helper function to setup debug information
+function setupDebugInfo(payload, gate) {
   setDebugJSON(dbgStruct, payload.structured||{});
   setDebugJSON(dbgDebug, payload.debug||{});
   const note = payload.debug ? {...payload.debug, product_gate: gate} : { product_gate: gate };
+  
   // Add equipment extraction debug info
   if (window.debugEquipmentExtraction) {
     note.equipmentExtraction = window.debugEquipmentExtraction;
@@ -1938,6 +1989,49 @@ function renderAnswer(payload){
     note.equipmentFallback = window.debugEquipmentFallback;
   }
   setDebugJSON(dbgNote, note);
+}
+
+function renderAnswer(payload){
+  try { if (dbgSrvVer) dbgSrvVer.textContent = payload?.debug?.version || '–'; } catch {}
+  
+  const __rounded = calculateConfidencePct(payload);
+  const heuristic = heuristicConfidence(payload.structured||{});
+
+  // Render the main textual answer first
+  const md = String(payload.answer_markdown || payload.answer || '');
+  if (md && md.trim()) {
+    const {html} = mdToHtml(md);
+    addBubble(html);
+  }
+
+  const s = payload.structured||{};
+  const merged = mergeProducts(s.products||[]);
+  const gate = decideProductRendering(payload, merged, __lastQuery);
+
+  if (gate.show) {
+    const prod = merged[0] || null;
+    if (prod) addBubble(renderProductCard(prod));
+  }
+
+  const evHTML = renderEventsBlock(s, __lastQuery);
+  if(evHTML) addBubble(evHTML);
+
+  const artHTML = renderArticlesBlock(s, __lastQuery);
+  if(artHTML) addBubble(artHTML);
+
+  const pills = buildActionPillsFromStructured(s, __lastQuery);
+  renderActionPills(pills);
+
+  const confId = createConfidenceFooter(__rounded);
+  setupConfidencePillHandlers(confId, payload, s, heuristic, __rounded);
+  setupFeedbackButtons(payload, __rounded, s);
+
+  // Play chime when the answer is rendered.
+  // If the tab is backgrounded, this is particularly useful.
+  playChime();
+
+  renderFallbackMessage(gate, s, md, __rounded);
+  setupDebugInfo(payload, gate);
 }
 
 /* ================= Networking ================= */
@@ -2014,12 +2108,9 @@ async function submitFeedback(rating, reason, userFeedbackText, query, payload, 
   }
 }
 
-function showFeedbackForm(query, payload, confidence, intent, thumbsUpBtn, thumbsDownBtn) {
-  // Create overlay
-  const overlay = document.createElement('div');
-  overlay.className = 'feedback-form-overlay';
-  
-  overlay.innerHTML = `
+// Helper function to create feedback form HTML
+function createFeedbackFormHTML() {
+  return `
     <div class="feedback-form">
       <h3>What was wrong with this response?</h3>
       <p>Your feedback helps us improve the chatbot's responses.</p>
@@ -2055,13 +2146,12 @@ function showFeedbackForm(query, payload, confidence, intent, thumbsUpBtn, thumb
       </div>
     </div>
   `;
+}
 
-  document.body.appendChild(overlay);
-
-  // Event listeners
+// Helper function to setup feedback form event listeners
+function setupFeedbackFormEvents(overlay, query, payload, confidence, intent, thumbsUpBtn, thumbsDownBtn) {
   const cancelBtn = overlay.querySelector('.feedback-cancel');
   const submitBtn = overlay.querySelector('.feedback-submit');
-  const reasonInputs = overlay.querySelectorAll('input[name="reason"]');
   const textArea = overlay.querySelector('.feedback-text');
 
   cancelBtn.addEventListener('click', () => {
@@ -2096,6 +2186,16 @@ function showFeedbackForm(query, payload, confidence, intent, thumbsUpBtn, thumb
       document.body.removeChild(overlay);
     }
   });
+}
+
+function showFeedbackForm(query, payload, confidence, intent, thumbsUpBtn, thumbsDownBtn) {
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'feedback-form-overlay';
+  overlay.innerHTML = createFeedbackFormHTML();
+
+  document.body.appendChild(overlay);
+  setupFeedbackFormEvents(overlay, query, payload, confidence, intent, thumbsUpBtn, thumbsDownBtn);
 }
 
 async function sendQueryWithContext(query, originalQuery) {
