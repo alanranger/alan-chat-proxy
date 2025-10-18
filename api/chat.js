@@ -169,9 +169,9 @@ const logAnswer = async (sessionId, question, answer, intent, confidence, respon
 };
 
 /* ----------------------- Direct Answer Generation ----------------------- */
-function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
-  const q = (query || "").toLowerCase();
-  const topics = [
+// Helper function to get service FAQ topics
+function getServiceFAQTopics() {
+  return [
     { key: "payment", hints: ["payment", "pick n mix", "plan", "instalment", "installment"], prefer: ["/photography-payment-plan", "/terms-and-conditions"] },
     { key: "contact", hints: ["contact", "discovery", "call", "phone", "email"], prefer: ["/contact-us", "/contact-us-alan-ranger-photography"] },
     { key: "certificate", hints: ["certificate"], prefer: ["/beginners-photography-classes", "/photography-courses"] },
@@ -179,30 +179,51 @@ function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
     { key: "standalone", hints: ["standalone", "get off auto"], prefer: ["/get-off-auto", "/beginners-photography-classes"] },
     { key: "refund", hints: ["refund", "cancel", "cancellation"], prefer: ["/terms-and-conditions"] }
   ];
+}
 
-  const match = topics.find(t => t.hints.some(h => q.includes(h)));
-  if (!match) return null;
+// Helper function to find matching topic
+function findMatchingTopic(query) {
+  const q = (query || "").toLowerCase();
+  const topics = getServiceFAQTopics();
+  return topics.find(t => t.hints.some(h => q.includes(h)));
+}
 
+// Helper function to find prioritized chunk
+function findPrioritizedChunk(contentChunks, match) {
   const prefer = (u) => (match.prefer || []).some(p => (u || "").includes(p));
-
-  // Choose a chunk from preferred URLs first
-  const prioritizedChunk = (contentChunks || []).find(c => prefer(c.url)) || contentChunks.find(c => {
+  
+  return (contentChunks || []).find(c => prefer(c.url)) || contentChunks.find(c => {
     const text = (c.chunk_text || c.content || "").toLowerCase();
     return match.hints.some(h => text.includes(h));
   });
+}
 
-  const pickUrl = () => {
-    if (prioritizedChunk?.url) return prioritizedChunk.url;
-    const art = (articles || []).find(a => prefer(a.page_url || a.source_url || ""));
-    return art ? (art.page_url || art.source_url) : null;
-  };
+// Helper function to pick URL from chunk or articles
+function pickServiceFAQUrl(prioritizedChunk, articles, match) {
+  if (prioritizedChunk?.url) return prioritizedChunk.url;
+  
+  const prefer = (u) => (match.prefer || []).some(p => (u || "").includes(p));
+  const art = (articles || []).find(a => prefer(a.page_url || a.source_url || ""));
+  return art ? (art.page_url || art.source_url) : null;
+}
 
-  const url = pickUrl();
-  if (!prioritizedChunk && !url) return null;
-
+// Helper function to extract relevant paragraph for service FAQ
+function extractServiceFAQParagraph(prioritizedChunk, match) {
   const text = (prioritizedChunk?.chunk_text || prioritizedChunk?.content || "");
   const paras = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 40);
-  const para = paras.find(p => match.hints.some(h => p.toLowerCase().includes(h))) || paras[0];
+  return paras.find(p => match.hints.some(h => p.toLowerCase().includes(h))) || paras[0];
+}
+
+function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
+  const match = findMatchingTopic(query);
+  if (!match) return null;
+
+  const prioritizedChunk = findPrioritizedChunk(contentChunks, match);
+  const url = pickServiceFAQUrl(prioritizedChunk, articles, match);
+  
+  if (!prioritizedChunk && !url) return null;
+
+  const para = extractServiceFAQParagraph(prioritizedChunk, match);
   if (!para) return null;
 
   return `**${para.substring(0, 300).trim()}**\n\n${url ? `*Source: ${url}*\n\n` : ""}`;
