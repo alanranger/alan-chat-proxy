@@ -3679,33 +3679,51 @@ function parseExperienceLevelField(ln, helpers) {
 function parseEquipmentNeededField(ln, helpers) {
   const { matches, valueAfter, nextVal, setIf } = helpers;
   
+  // Check different equipment parsing patterns
+  return parseStandardEquipmentFormat(ln, helpers) ||
+         parseAsteriskEquipmentFormat(ln, helpers) ||
+         parseGenericEquipmentFormat(ln, helpers) ||
+         false;
+}
+
+// Helper functions for equipment parsing
+function parseStandardEquipmentFormat(ln, helpers) {
+  const { matches, valueAfter, nextVal, setIf } = helpers;
+  
   if (matches(ln, /^equipment\s*needed:/i)) {
     const v = valueAfter(ln, /^equipment\s*needed:\s*/i) || nextVal(0);
     setIf("equipmentNeeded", v);
     return true;
-    }
-    
-    // Handle asterisk format: "* EQUIPMENT NEEDED:"
-    if (/^\*\s*equipment\s*needed:/i.test(ln)) {
+  }
+  return false;
+}
+
+function parseAsteriskEquipmentFormat(ln, helpers) {
+  const { nextVal, setIf } = helpers;
+  
+  if (/^\*\s*equipment\s*needed:/i.test(ln)) {
     const v = ln.replace(/^\*\s*equipment\s*needed:\s*/i, "").trim() || nextVal(0);
     if (v) setIf("equipmentNeeded", v);
     return true;
-    }
-    
-    // Also look for equipment information in other formats
-    if (/equipment needed|equipment required|what you need|you will need/i.test(ln)) {
-        // Extract the equipment requirement from the line
-        const equipmentMatch = ln.match(/(?:equipment needed|equipment required|what you need|you will need)[:\s]*([^\\n]+)/i);
-        if (equipmentMatch) {
-      setIf("equipmentNeeded", equipmentMatch[1].trim());
-        } else {
-      setIf("equipmentNeeded", ln.trim());
-        }
-    return true;
-      }
-  
+  }
   return false;
+}
+
+function parseGenericEquipmentFormat(ln, helpers) {
+  const { setIf } = helpers;
+  
+  if (/equipment needed|equipment required|what you need|you will need/i.test(ln)) {
+    // Extract the equipment requirement from the line
+    const equipmentMatch = ln.match(/(?:equipment needed|equipment required|what you need|you will need)[:\s]*([^\\n]+)/i);
+    if (equipmentMatch) {
+      setIf("equipmentNeeded", equipmentMatch[1].trim());
+    } else {
+      setIf("equipmentNeeded", ln.trim());
     }
+    return true;
+  }
+  return false;
+}
     
 function parseSessionField(ln, out) {
     const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
