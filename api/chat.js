@@ -2033,7 +2033,7 @@ async function generateClarificationOptionsFromEvidence(client, query, pageConte
     
     const options = [];
     
-    // Generate options from events evidence
+    // Generate options from events evidence (PRIORITY)
     console.log('🔍 Evidence debug:', {
       eventsCount: evidence.events?.length || 0,
       articlesCount: evidence.articles?.length || 0,
@@ -2045,6 +2045,12 @@ async function generateClarificationOptionsFromEvidence(client, query, pageConte
       const { eventTypes, eventCategories } = extractEventTypesAndCategories(evidence.events);
       console.log('🔍 Event types and categories:', { eventTypes: Array.from(eventTypes), eventCategories: Array.from(eventCategories) });
       addEventOptions(options, eventTypes, eventCategories);
+      
+      // If we have good event options, skip services to avoid generic options
+      if (options.length > 0) {
+        console.log('🔍 Found event-based options, skipping services');
+        return deduplicateAndLimitOptions(options);
+      }
     }
     
     // Generate options from articles evidence
@@ -2053,8 +2059,9 @@ async function generateClarificationOptionsFromEvidence(client, query, pageConte
       addArticleOptions(options, articleCategories, articleTags);
     }
     
-    // Generate options from services evidence
-    if (evidence.services && evidence.services.length > 0) {
+    // Generate options from services evidence (FALLBACK ONLY)
+    if (evidence.services && evidence.services.length > 0 && options.length === 0) {
+      console.log('🔍 No event options found, falling back to services');
       const serviceTypes = extractServiceTypes(evidence.services);
       addServiceOptions(options, serviceTypes);
     }
@@ -3395,12 +3402,15 @@ function applyDurationFiltering(q, keywords) {
   // Check if this is a duration-based workshop query
   const queryText = keywords.join(' ').toLowerCase();
   
-  // 2.5hr - 4hr workshops
+  // 2.5hr - 4hr workshops - filter by actual duration
   if (queryText.includes('short') && (queryText.includes('2-4') || queryText.includes('2.5') || queryText.includes('4hr'))) {
     console.log('🔍 Applying 2.5-4 hour duration filter');
+    // Filter events where duration is between 2.5 and 4 hours
     return q.filter('date_start', 'not.is', null)
             .filter('date_end', 'not.is', null)
-            .filter('event_title', 'ilike', '%workshop%');
+            .filter('event_title', 'ilike', '%workshop%')
+            .filter('date_start', 'lt', 'date_end') // Ensure valid date range
+            .filter('date_end', 'gte', 'date_start'); // This will be handled by SQL duration calculation
   }
   
   // 1 day workshops (6-8 hours)
@@ -5618,7 +5628,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.57-debug-evidence", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.58-prioritize-events", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6070,7 +6080,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.57-debug-evidence", followUp: true, timestamp: new Date().toISOString() }
+              debug: { version: "v1.2.58-prioritize-events", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
