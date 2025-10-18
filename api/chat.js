@@ -4187,10 +4187,8 @@ async function resolveEventsAndProduct(client, { keywords, pageContext = null })
 }
 
 /* ---------------------------- Extract Relevant Info ---------------------------- */
-async function extractRelevantInfo(query, dataContext) {
-  const { products, events, articles } = dataContext;
-  const lowerQuery = query.toLowerCase();
-  // Small local helpers to reduce repetition (no behavior change)
+// Helper functions for extractRelevantInfo
+function createTextHelpers() {
   const hasText = (s)=> typeof s === 'string' && s.trim().length > 0;
   const formatDateGB = (iso)=> {
     try {
@@ -4210,102 +4208,135 @@ async function extractRelevantInfo(query, dataContext) {
     const parts = clean.split(/[.!?]+/).map(s=>s.trim()).filter(s=>s.length>30);
     return parts.slice(0,2).join('. ') + (parts.length?'.':'');
   };
+  return { hasText, formatDateGB, scrubAttrs, summarize };
+}
+
+function findRelevantEvent(events, lowerQuery, dataContext) {
+  let event = events[0]; // Default to first event
+  
+  // Check for location-specific events
+  const locationKeywords = ['devon', 'cornwall', 'yorkshire', 'peak district', 'lake district', 'snowdonia', 'anglesey', 'norfolk', 'suffolk', 'dorset', 'somerset'];
+  const mentionedLocation = locationKeywords.find(loc => lowerQuery.includes(loc));
+  
+  if (mentionedLocation) {
+    const locationEvent = events.find(e => {
+      const eventLocation = (e.event_location || '').toLowerCase();
+      return eventLocation.includes(mentionedLocation);
+    });
+    
+    if (locationEvent) {
+      event = locationEvent;
+      console.log(`🔍 RAG: Found location-specific event for ${mentionedLocation}: ${event.event_title}`);
+    }
+  }
+  
+  // Check for contextually relevant events
+  if (dataContext.originalQuery) {
+    const originalQueryLower = dataContext.originalQuery.toLowerCase();
+    console.log(`🔍 RAG: Looking for event matching original query: "${dataContext.originalQuery}"`);
+    
+    const keyTerms = dataContext.originalQuery.toLowerCase()
+      .split(/\s+/)
+      .filter(term => term.length > 3 && !['when', 'where', 'how', 'what', 'next', 'workshop', 'photography'].includes(term));
+    
+    const matchingEvent = events.find(e => {
+      const eventText = `${e.event_title || ''} ${e.event_location || ''}`.toLowerCase();
+      return keyTerms.some(term => eventText.includes(term));
+    });
+    
+    if (matchingEvent) {
+      event = matchingEvent;
+      console.log(`🔍 RAG: Found contextually relevant event: ${event.event_title}`);
+    }
+  }
+  
+  return event;
+}
+
+function checkEventParticipants(event, lowerQuery) {
+  if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
+    if (event.participants && String(event.participants).trim().length > 0) {
+      console.log(`✅ RAG: Found participants="${event.participants}" in structured event data`);
+      return `**${event.participants}** people can attend this workshop. This ensures everyone gets personalized attention and guidance from Alan.`;
+    }
+  }
+  return null;
+}
+
+function checkEventLocation(event, lowerQuery, hasText) {
+  if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
+    if (hasText(event.event_location)) {
+      console.log(`✅ RAG: Found location="${event.event_location}" in structured event data`);
+      return `The workshop is held at **${event.event_location}**. Full location details and meeting instructions will be provided when you book.`;
+    }
+  }
+  return null;
+}
+
+function checkEventPrice(event, lowerQuery) {
+  if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
+    if (event.price_gbp && event.price_gbp > 0) {
+      console.log(`✅ RAG: Found price="${event.price_gbp}" in structured event data`);
+      return `The workshop costs **£${event.price_gbp}**. This includes all tuition, guidance, and any materials provided during the session.`;
+    }
+  }
+  return null;
+}
+
+function checkEventDate(event, lowerQuery, products, formatDateGB, summarize) {
+  if (lowerQuery.includes('when') || lowerQuery.includes('date')) {
+    if (event.date_start) {
+      const formattedDate = formatDateGB(event.date_start);
+      console.log(`✅ RAG: Found date="${formattedDate}" in structured event data`);
+      const label = (event.subtype && String(event.subtype).toLowerCase()==='course') ? 'course' : 'workshop';
+      let brief = '';
+      if (products && products.length && (products[0].description || products[0]?.raw?.description)) {
+        brief = summarize(products[0].description || products[0]?.raw?.description);
+      }
+      if (brief.length > 220) brief = brief.slice(0, 220).replace(/\s+\S*$/, '') + '…';
+      const lead = `The next ${label} is scheduled for **${formattedDate}**.`;
+      return brief ? `${lead} ${brief}` : `${lead}`;
+    }
+  }
+  return null;
+}
+
+function checkEventFitnessLevel(event, lowerQuery) {
+  if (lowerQuery.includes('fitness') || lowerQuery.includes('level') || lowerQuery.includes('experience')) {
+    if (event.fitness_level && event.fitness_level.trim().length > 0) {
+      console.log(`✅ RAG: Found fitness level="${event.fitness_level}" in structured event data`);
+      return `The fitness level required is **${event.fitness_level}**. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`;
+    }
+  }
+  return null;
+}
+
+async function extractRelevantInfo(query, dataContext) {
+  const { products, events, articles } = dataContext;
+  const lowerQuery = query.toLowerCase();
+  const { hasText, formatDateGB, scrubAttrs, summarize } = createTextHelpers();
   
   // For event-based questions, prioritize the structured event data
   if (events && events.length > 0) {
     console.log(`🔍 RAG: Found ${events.length} events, checking structured data`);
     
-    // Find the most relevant event based on the query context
-    // Note: events are already filtered to future events before calling this function
-    let event = events[0]; // Default to first event (which is now guaranteed to be future)
+    const event = findRelevantEvent(events, lowerQuery, dataContext);
     
-    // If query mentions a specific location, filter events by that location
-    const locationKeywords = ['devon', 'cornwall', 'yorkshire', 'peak district', 'lake district', 'snowdonia', 'anglesey', 'norfolk', 'suffolk', 'dorset', 'somerset'];
-    const mentionedLocation = locationKeywords.find(loc => lowerQuery.includes(loc));
+    // Check for specific information types
+    const participantsResult = checkEventParticipants(event, lowerQuery);
+    if (participantsResult) return participantsResult;
     
-    if (mentionedLocation) {
-      const locationEvent = events.find(e => {
-        const eventLocation = (e.event_location || '').toLowerCase();
-        return eventLocation.includes(mentionedLocation);
-      });
-      
-      if (locationEvent) {
-        event = locationEvent;
-        console.log(`🔍 RAG: Found location-specific event for ${mentionedLocation}: ${event.event_title}`);
-      }
-    }
+    const locationResult = checkEventLocation(event, lowerQuery, hasText);
+    if (locationResult) return locationResult;
     
-    // If we have a previous query context, try to find the most relevant event
-    if (dataContext.originalQuery) {
-      const originalQueryLower = dataContext.originalQuery.toLowerCase();
-      console.log(`🔍 RAG: Looking for event matching original query: "${dataContext.originalQuery}"`);
-      
-      // Extract key terms from the original query to match against events
-      const keyTerms = dataContext.originalQuery.toLowerCase()
-        .split(/\s+/)
-        .filter(term => term.length > 3 && !['when', 'where', 'how', 'what', 'next', 'workshop', 'photography'].includes(term));
-      
-      // Find event that best matches the original query terms
-      const matchingEvent = events.find(e => {
-        const eventText = `${e.event_title || ''} ${e.event_location || ''}`.toLowerCase();
-        return keyTerms.some(term => eventText.includes(term));
-      });
-      
-      if (matchingEvent) {
-        event = matchingEvent;
-        console.log(`🔍 RAG: Found contextually relevant event: ${event.event_title}`);
-      }
-    }
+    const priceResult = checkEventPrice(event, lowerQuery);
+    if (priceResult) return priceResult;
     
-    // Check for participant information
-    if (lowerQuery.includes('how many') && (lowerQuery.includes('people') || lowerQuery.includes('attend'))) {
-      if (event.participants && String(event.participants).trim().length > 0) {
-        console.log(`✅ RAG: Found participants="${event.participants}" in structured event data`);
-        return `**${event.participants}** people can attend this workshop. This ensures everyone gets personalized attention and guidance from Alan.`;
-      }
-    }
+    const dateResult = checkEventDate(event, lowerQuery, products, formatDateGB, summarize);
+    if (dateResult) return dateResult;
     
-    // Check for location information
-    if (lowerQuery.includes('where') || lowerQuery.includes('location')) {
-      if (hasText(event.event_location)) {
-        console.log(`✅ RAG: Found location="${event.event_location}" in structured event data`);
-        return `The workshop is held at **${event.event_location}**. Full location details and meeting instructions will be provided when you book.`;
-      }
-    }
-    
-    // Check for price information
-    if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('much')) {
-      if (event.price_gbp && event.price_gbp > 0) {
-        console.log(`✅ RAG: Found price="${event.price_gbp}" in structured event data`);
-        return `The workshop costs **£${event.price_gbp}**. This includes all tuition, guidance, and any materials provided during the session.`;
-      }
-    }
-    
-    // Check for date information
-    if (lowerQuery.includes('when') || lowerQuery.includes('date')) {
-      if (event.date_start) {
-        const formattedDate = formatDateGB(event.date_start);
-        console.log(`✅ RAG: Found date="${formattedDate}" in structured event data`);
-        const label = (event.subtype && String(event.subtype).toLowerCase()==='course') ? 'course' : 'workshop';
-        let brief = '';
-        if (products && products.length && (products[0].description || products[0]?.raw?.description)) {
-          brief = summarize(products[0].description || products[0]?.raw?.description);
-        }
-        // Keep the intro concise (max ~220 chars)
-        if (brief.length > 220) brief = brief.slice(0, 220).replace(/\s+\S*$/, '') + '…';
-        const lead = `The next ${label} is scheduled for **${formattedDate}**.`;
-        return brief ? `${lead} ${brief}` : `${lead}`;
-      }
-    }
-    
-    // Check for fitness level information
-    if (lowerQuery.includes('fitness') || lowerQuery.includes('level') || lowerQuery.includes('experience')) {
-      // Check structured fitness_level field
-      if (event.fitness_level && event.fitness_level.trim().length > 0) {
-        console.log(`✅ RAG: Found fitness level="${event.fitness_level}" in structured event data`);
-        return `The fitness level required is **${event.fitness_level}**. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`;
-      }
-    }
+    const fitnessResult = checkEventFitnessLevel(event, lowerQuery);
+    if (fitnessResult) return fitnessResult;
   }
   
   // If no specific information found, provide a helpful response
