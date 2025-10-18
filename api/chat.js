@@ -5576,7 +5576,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.52-emergency-fix", intent: "events" }
+        debug: { version: "v1.2.53-deployment-debug", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6028,7 +6028,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.52-emergency-fix", followUp: true }
+              debug: { version: "v1.2.53-deployment-debug", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
