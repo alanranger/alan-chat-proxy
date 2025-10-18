@@ -5717,7 +5717,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: { 
-          version: "v1.2.84-fix-const",
+          version: "v1.2.85-fix-intent-order",
           debugInfo: debugInfo
         }
   });
@@ -5812,6 +5812,9 @@ export default async function handler(req, res) {
     // Build contextual query for keyword extraction (merge with previous query)
     const contextualQuery = previousQuery ? `${previousQuery} ${query}` : query;
     
+    // Declare intent early so it can be reassigned in clarification follow-up logic
+    let intent = detectIntent(query || "");
+    
     // PRIORITY: Check for clarification follow-ups BEFORE intent detection
     console.log(`🔍 Checking clarification follow-up logic. pageContext:`, pageContext);
     console.log(`🔍 pageContext type:`, typeof pageContext);
@@ -5881,8 +5884,6 @@ export default async function handler(req, res) {
         }
       }
     }
-    
-    let intent = detectIntent(query || ""); // Use current query only for intent detection
 
     // HARD GUARD: Residential pricing/B&B must bypass clarification entirely
     const residentialResponse = await handleResidentialPricingGuard(client, query, previousQuery, pageContext, res);
