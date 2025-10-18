@@ -1428,6 +1428,41 @@ async function calculateRAGConfidence(query, client, pageContext) {
   }
 }
 
+function applyFreeQueryPenalty(mentionsFree, topServiceIsPaid, baseConfidence, confidenceFactors) {
+  if (mentionsFree && topServiceIsPaid) {
+    baseConfidence -= 0.35; 
+    confidenceFactors.push('Free query but top result is paid (-0.35)');
+  }
+  return baseConfidence;
+}
+
+function applyOnlineQueryPenalty(mentionsOnline, topServiceIsOffline, baseConfidence, confidenceFactors) {
+  if (mentionsOnline && topServiceIsOffline) {
+    baseConfidence -= 0.25; 
+    confidenceFactors.push('Online query but top result offline (-0.25)');
+  }
+  return baseConfidence;
+}
+
+function applyCertificatePenalty(mentionsCertificate, baseConfidence, confidenceFactors) {
+  if (mentionsCertificate) {
+    const hasCert = false; // no certificate detection yet
+    if (!hasCert) { 
+      baseConfidence -= 0.2; 
+      confidenceFactors.push('Certificate requested but not found (-0.2)'); 
+    }
+  }
+  return baseConfidence;
+}
+
+function applyLandingBonus(hasLandingFree, mentionsFree, mentionsOnline, baseConfidence, confidenceFactors) {
+  if (hasLandingFree && (mentionsFree || mentionsOnline)) {
+    baseConfidence += 0.25; 
+    confidenceFactors.push('Landing free/online page present (+0.25)');
+  }
+  return baseConfidence;
+}
+
 function hasContentBasedConfidence(query, intent, content) {
   if (!query) return false;
   
@@ -3247,6 +3282,26 @@ function addRecencyTieBreaker(s, r) {
     return s * 1_000_000 + seen;
 }
 
+function isEquipmentArticle(article) {
+  const title = (article.title || '').toLowerCase();
+  const url = (article.page_url || article.source_url || '').toLowerCase();
+  
+  return hasEquipmentKeywords(title, url) && !hasNonEquipmentKeywords(title);
+}
+
+function hasEquipmentKeywords(title, url) {
+  return title.includes('tripod') || title.includes('equipment') || 
+         title.includes('camera') || title.includes('lens') ||
+         url.includes('tripod') || url.includes('equipment') ||
+         url.includes('camera') || url.includes('lens');
+}
+
+function hasNonEquipmentKeywords(title) {
+  return title.includes('depth of field') || title.includes('iso') ||
+         title.includes('exposure') || title.includes('composition') ||
+         title.includes('lighting') || title.includes('editing');
+}
+
 async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
   // If we have page context, try to find related articles first
   if (pageContext && pageContext.pathname) {
@@ -5031,8 +5086,8 @@ async function handleAdviceFollowupSynthesis(client, qlc, keywords, pageContext,
  * Handle clarification follow-up responses based on previous query context
  * Returns true if a response was sent, otherwise false.
  */
-async function handleClarificationFollowup(client, previousQuery, query, intent, keywords, pageContext, res) {
-  const isClarificationResponse = previousQuery && (
+function isClarificationResponse(previousQuery, query) {
+  return previousQuery && (
     query.toLowerCase().includes("photography") ||
     query.toLowerCase().includes("equipment") ||
     query.toLowerCase().includes("course") ||
@@ -5041,75 +5096,77 @@ async function handleClarificationFollowup(client, previousQuery, query, intent,
     query.toLowerCase().includes("mentoring") ||
     query.toLowerCase().includes("about")
   );
+}
 
-  if (!isClarificationResponse) return false;
+async function handleEventsClarification(client, query, intent, keywords, pageContext, res) {
+  if (!(query.toLowerCase().includes("events") || query.toLowerCase().includes("courses") || intent === "events")) {
+    return false;
+  }
+  
+  const events = await findEvents(client, { keywords, limit: 80, pageContext });
+  const eventList = formatEventsForUi(events);
+  const confidence = calculateEventConfidence(query || "", eventList, null);
+  res.status(200).json({
+    ok: true,
+    type: "events",
+    answer: eventList,
+    events: eventList,
+    structured: {
+      intent: "events",
+      topic: (keywords || []).join(", "),
+      events: eventList,
+      products: [],
+      pills: []
+    },
+    confidence,
+    debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
+  });
+  return true;
+}
+
+async function handleClarificationFollowup(client, previousQuery, query, intent, keywords, pageContext, res) {
+  if (!isClarificationResponse(previousQuery, query)) return false;
 
   // Route by chosen clarification intent if present in text
-  if (query.toLowerCase().includes("events") || query.toLowerCase().includes("courses") || intent === "events") {
-    const events = await findEvents(client, { keywords, limit: 80, pageContext });
-    const eventList = formatEventsForUi(events);
-    const confidence = calculateEventConfidence(query || "", eventList, null);
-    res.status(200).json({
-      ok: true,
-      type: "events",
-      answer: eventList,
-      events: eventList,
-      structured: {
-        intent: "events",
-        topic: (keywords || []).join(", "),
-        events: eventList,
-        products: [],
-        pills: []
-      },
-      confidence,
-      debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
-    });
+  if (await handleEventsClarification(client, query, intent, keywords, pageContext, res)) {
     return true;
   }
 
   // Advice-oriented clarification
-  {
-    let articles = await findArticles(client, { keywords, limit: 30, pageContext });
-    articles = (articles || []).map(a => {
-      const out = { ...a };
-      if (!out.title) {
-        out.title = out?.raw?.headline || out?.raw?.name || '';
-        if (!out.title) {
-          try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-        }
-      }
-      if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-      return out;
-    });
-    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-    const contentChunks = await findContentChunks(client, { keywords, limit: 15, articleUrls });
-    const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks);
-    res.status(200).json({
-      ok: true,
-      type: "advice",
-      answer_markdown: answerMarkdown,
-      structured: {
-        intent: "advice",
-        topic: (keywords || []).join(", "),
-        events: [],
-        products: [],
-        services: [],
-        landing: [],
-        articles: (articles || []).map(a => ({
-          ...a,
-          display_date: (function(){
-            const extracted = extractPublishDate(a);
-            const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-            return extracted || fallback;
-          })()
-        })),
-        pills: []
-      },
-      confidence: 65,
-      debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
-    });
-    return true;
-  }
+  return await handleAdviceClarification(client, query, keywords, pageContext, res);
+}
+
+async function handleAdviceClarification(client, query, keywords, pageContext, res) {
+  let articles = await findArticles(client, { keywords, limit: 30, pageContext });
+  articles = (articles || []).map(normalizeArticle);
+  const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+  const contentChunks = await findContentChunks(client, { keywords, limit: 15, articleUrls });
+  const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks);
+  res.status(200).json({
+    ok: true,
+    type: "advice",
+    answer_markdown: answerMarkdown,
+    structured: {
+      intent: "advice",
+      topic: (keywords || []).join(", "),
+      events: [],
+      products: [],
+      services: [],
+      landing: [],
+      articles: (articles || []).map(a => ({
+        ...a,
+        display_date: (function(){
+          const extracted = extractPublishDate(a);
+          const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+          return extracted || fallback;
+        })()
+      })),
+      pills: []
+    },
+    confidence: 65,
+    debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
+  });
+  return true;
 }
 /**
  * Handle residential pricing guard - bypasses clarification for residential workshop pricing queries
@@ -5132,21 +5189,7 @@ function filterResidentialEvents(events) {
 }
 
 function processArticlesForDisplay(articles) {
-  return (articles || []).map(a => { 
-    const out = {...a}; 
-    if (!out.title) { 
-      out.title = out?.raw?.headline || out?.raw?.name || ''; 
-      if (!out.title) { 
-        try { 
-          const u = new URL(out.page_url || out.source_url || out.url || ''); 
-          const last = (u.pathname || '').split('/').filter(Boolean).pop() || ''; 
-          out.title = last.replace(/[-_]+/g, ' ').replace(/\.(html?)$/i, ' ').trim(); 
-        } catch {} 
-      } 
-    } 
-    if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null; 
-    return out; 
-  });
+  return (articles || []).map(normalizeArticle);
 }
 
 async function handleResidentialEventsResponse(client, query, pageContext, res) {
@@ -5360,17 +5403,7 @@ export default async function handler(req, res) {
         if (isEquipmentAdviceQuery(qlc)) {
           const directKeywords = extractKeywords(query || "");
           let articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
-          articles = (articles || []).map(a => {
-            const out = { ...a };
-            if (!out.title) {
-              out.title = out?.raw?.headline || out?.raw?.name || '';
-              if (!out.title) {
-                try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-              }
-            }
-            if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-            return out;
-          });
+          articles = (articles || []).map(normalizeArticle);
           const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
           const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 20, articleUrls });
           const synthesized = generateEquipmentAdviceResponse(qlc, articles || [], contentChunks || []);
@@ -5406,17 +5439,7 @@ export default async function handler(req, res) {
         {
           const directKeywords = extractKeywords(query || "");
           let articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
-          articles = (articles || []).map(a => {
-            const out = { ...a };
-            if (!out.title) {
-              out.title = out?.raw?.headline || out?.raw?.name || '';
-              if (!out.title) {
-                try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-              }
-            }
-            if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-            return out;
-          });
+          articles = (articles || []).map(normalizeArticle);
           const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
           const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 20, articleUrls });
           const synthesized = generatePricingAccommodationAnswer(qlc, articles || [], contentChunks || []);
@@ -5493,17 +5516,7 @@ export default async function handler(req, res) {
           // If no events found, attempt to synthesize a direct answer from articles/content
           const enrichedKeywords = Array.from(new Set([...directKeywords, "b&b", "bed", "breakfast", "price", "cost"]));
           let articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
-          articles = (articles || []).map(a => {
-            const out = { ...a };
-            if (!out.title) {
-              out.title = out?.raw?.headline || out?.raw?.name || '';
-              if (!out.title) {
-                try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-              }
-            }
-            if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-            return out;
-          });
+          articles = (articles || []).map(normalizeArticle);
           const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
           const contentChunks = await findContentChunks(client, { keywords: enrichedKeywords, limit: 20, articleUrls });
           const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks);
@@ -5616,17 +5629,7 @@ export default async function handler(req, res) {
       // Fallback: synthesize concise pricing/B&B answer with links
       const enrichedKeywords = Array.from(new Set([...directKeywords, "b&b", "bed", "breakfast", "price", "cost"]));
       let articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
-      articles = (articles || []).map(a => {
-        const out = { ...a };
-        if (!out.title) {
-          out.title = out?.raw?.headline || out?.raw?.name || '';
-          if (!out.title) {
-            try { const u = new URL(out.page_url || out.source_url || out.url || ''); const last = (u.pathname||'').split('/').filter(Boolean).pop()||''; out.title = last.replace(/[-_]+/g,' ').replace(/\.(html?)$/i,' ').trim(); } catch {}
-          }
-        }
-        if (!out.page_url) out.page_url = out.source_url || out.url || out.href || null;
-        return out;
-      });
+      articles = (articles || []).map(normalizeArticle);
       const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
       const contentChunks = await findContentChunks(client, { keywords: enrichedKeywords, limit: 20, articleUrls });
       const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks) || generatePricingAccommodationAnswer(query || "", articles, contentChunks);
@@ -6524,23 +6527,7 @@ export default async function handler(req, res) {
       const isEquipmentQuery = ['tripod', 'tripods', 'equipment', 'recommend', 'camera', 'lens'].some(k => lc.includes(k));
       
       if (isEquipmentQuery) {
-        articles = articles.filter(a => {
-          const title = (a.title || '').toLowerCase();
-          const url = (a.page_url || a.source_url || '').toLowerCase();
-          
-          // Include articles that are clearly about equipment
-          const isEquipmentArticle = title.includes('tripod') || title.includes('equipment') || 
-                                   title.includes('camera') || title.includes('lens') ||
-                                   url.includes('tripod') || url.includes('equipment') ||
-                                   url.includes('camera') || url.includes('lens');
-          
-          // Exclude articles that are clearly not about equipment
-          const isNonEquipmentArticle = title.includes('depth of field') || title.includes('iso') ||
-                                       title.includes('exposure') || title.includes('composition') ||
-                                       title.includes('lighting') || title.includes('editing');
-          
-          return isEquipmentArticle && !isNonEquipmentArticle;
-        });
+        articles = articles.filter(a => isEquipmentArticle(a));
       }
       
       articles = articles.slice(0, 8); // Limit to top 8 after filtering
@@ -6707,28 +6694,19 @@ export default async function handler(req, res) {
       addMalformedContentPenalty();
       
       const addIntentAwareScore = () => {
-      const q = (query||'').toLowerCase();
-      const mentionsFree = /\bfree\b/.test(q);
-      const mentionsOnline = /\bonline\b/.test(q);
-      const mentionsCertificate = /\b(cert|certificate)\b/.test(q);
-      const hasLandingFree = Array.isArray(landing) && landing.some(l => (l.page_url||'').includes('free-online-photography-course'));
-      const topService = Array.isArray(services) ? services[0] : null;
-      const topServiceIsPaid = topService ? /£|\b\d{1,4}\b/.test(String(topService.price||topService.price_gbp||'')) : false;
-      const topServiceIsOffline = topService ? /(coventry|kenilworth|batsford|peak district|in-person)/i.test(String(topService.location||topService.location_address||topService.event_location||'')) : false;
+        const q = (query||'').toLowerCase();
+        const mentionsFree = /\bfree\b/.test(q);
+        const mentionsOnline = /\bonline\b/.test(q);
+        const mentionsCertificate = /\b(cert|certificate)\b/.test(q);
+        const hasLandingFree = Array.isArray(landing) && landing.some(l => (l.page_url||'').includes('free-online-photography-course'));
+        const topService = Array.isArray(services) ? services[0] : null;
+        const topServiceIsPaid = topService ? /£|\b\d{1,4}\b/.test(String(topService.price||topService.price_gbp||'')) : false;
+        const topServiceIsOffline = topService ? /(coventry|kenilworth|batsford|peak district|in-person)/i.test(String(topService.location||topService.location_address||topService.event_location||'')) : false;
 
-      if (mentionsFree && topServiceIsPaid) {
-        baseConfidence -= 0.35; confidenceFactors.push('Free query but top result is paid (-0.35)');
-      }
-      if (mentionsOnline && topServiceIsOffline) {
-        baseConfidence -= 0.25; confidenceFactors.push('Online query but top result offline (-0.25)');
-      }
-      if (mentionsCertificate) {
-        const hasCert = false; // no certificate detection yet
-        if (!hasCert) { baseConfidence -= 0.2; confidenceFactors.push('Certificate requested but not found (-0.2)'); }
-      }
-      if (hasLandingFree && (mentionsFree || mentionsOnline)) {
-        baseConfidence += 0.25; confidenceFactors.push('Landing free/online page present (+0.25)');
-      }
+        baseConfidence = applyFreeQueryPenalty(mentionsFree, topServiceIsPaid, baseConfidence, confidenceFactors);
+        baseConfidence = applyOnlineQueryPenalty(mentionsOnline, topServiceIsOffline, baseConfidence, confidenceFactors);
+        baseConfidence = applyCertificatePenalty(mentionsCertificate, baseConfidence, confidenceFactors);
+        baseConfidence = applyLandingBonus(hasLandingFree, mentionsFree, mentionsOnline, baseConfidence, confidenceFactors);
       };
       
       // Intent-aware penalties/bonuses
