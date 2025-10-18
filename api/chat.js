@@ -3326,8 +3326,16 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   // Check if this is a duration-based query that needs special handling
   const queryText = enhancedKeywords.join(' ').toLowerCase();
   console.log('🔍 findEvents debug:', { enhancedKeywords, queryText });
-  if (queryText.includes('short') && (queryText.includes('2-4') || queryText.includes('2.5') || queryText.includes('4hr'))) {
+  
+  // More robust condition for 2.5-4 hour workshops
+  if (queryText.includes('short') && (queryText.includes('2-4') || queryText.includes('2.5') || queryText.includes('4hr') || queryText.includes('hours'))) {
     console.log('🔍 Using custom duration-based query for 2.5-4 hour workshops');
+    return await findEventsByDuration(client, 2.5, 4, limit);
+  }
+  
+  // Also check for the exact query pattern
+  if (queryText.includes('short photography workshops 2-4 hours')) {
+    console.log('🔍 Using custom duration-based query for exact match');
     return await findEventsByDuration(client, 2.5, 4, limit);
   }
   
@@ -5680,7 +5688,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.61-debug-keywords", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.62-robust-condition", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6132,7 +6140,7 @@ export default async function handler(req, res) {
               question: clarification.question,
               options: clarification.options,
               confidence: confidencePercent,
-              debug: { version: "v1.2.61-debug-keywords", followUp: true, timestamp: new Date().toISOString() }
+              debug: { version: "v1.2.62-robust-condition", followUp: true, timestamp: new Date().toISOString() }
             });
             return;
           }
