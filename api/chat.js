@@ -1929,11 +1929,8 @@ function generateGenericClarification() {
   };
 }
 
-async function generateClarificationQuestion(query, client = null, pageContext = null) {
-  const lc = query.toLowerCase();
-  console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
-  
-  // Loop guard: if we have previously shown the same global set, offer skip
+// Helper functions for generateClarificationQuestion
+function checkLoopGuardPatterns(lc) {
   if (lc.includes("general photography advice") || lc.includes("photography courses and workshops") || lc.includes("photography equipment advice")) {
     return {
       type: "fallback_general",
@@ -1944,20 +1941,24 @@ async function generateClarificationQuestion(query, client = null, pageContext =
       confidence: 10
     };
   }
-  
-  // General photography equipment advice clarification - MUST come before other patterns
+  return null;
+}
+
+function checkSpecialEquipmentPatterns(lc) {
   if (lc.includes("general photography equipment advice clarification")) {
     console.log(`✅ Found general equipment advice clarification pattern`);
     return generateGeneralEquipmentClarification();
   }
   
-  // Equipment for course type clarification - MUST come before general equipment pattern
   if (lc.includes("equipment for photography course type clarification")) {
     console.log(`✅ Found equipment course type clarification pattern`);
     return generateEquipmentCourseTypeClarification();
   }
   
-  // Try evidence-based clarification first
+  return null;
+}
+
+async function tryEvidenceBasedClarification(client, query, pageContext) {
   if (client && pageContext) {
     const evidenceOptions = await generateClarificationOptionsFromEvidence(client, query, pageContext);
     if (evidenceOptions.length > 0) {
@@ -1969,31 +1970,23 @@ async function generateClarificationQuestion(query, client = null, pageContext =
       };
     }
   }
-  
-  // Current patterns (keep existing for backward compatibility)
-  if (lc.includes("equipment")) {
-    // Suppress generic equipment clarification; evidence-first flow will answer or narrow
+  return null;
+}
+
+function checkSuppressedPatterns(lc) {
+  if (lc.includes("equipment") || lc.includes("events") || lc.includes("training")) {
     return null;
   }
   
-  if (lc.includes("events")) {
-    // Suppress generic events clarification
-    return null;
-  }
-  
-  if (lc.includes("training")) {
-    return null;
-  }
-  
-  // Service-related queries (feedback, mentoring, private lessons, etc.)
   if (lc.includes("feedback") || lc.includes("personalised") || lc.includes("mentoring") || 
       lc.includes("private") || lc.includes("lessons") || lc.includes("services")) {
     return null;
   }
   
-  // EXPANDED PATTERNS FOR ALL 20 QUESTION TYPES
-  
-  // Generic course/workshop questions
+  return "continue";
+}
+
+function checkCourseWorkshopPatterns(lc) {
   if (lc.includes("do you do") && lc.includes("courses")) {
     return generateCourseClarification();
   }
@@ -2015,7 +2008,10 @@ async function generateClarificationQuestion(query, client = null, pageContext =
     };
   }
   
-  // Equipment questions
+  return null;
+}
+
+function checkEquipmentPatterns(lc) {
   if (lc.includes("what camera should i buy")) {
     return {
       type: "camera_clarification",
@@ -2042,7 +2038,10 @@ async function generateClarificationQuestion(query, client = null, pageContext =
     };
   }
   
-  // Service questions
+  return null;
+}
+
+function checkServicePatterns(lc) {
   if (lc.includes("what photography services do you offer")) {
     return {
       type: "service_clarification",
@@ -2056,7 +2055,10 @@ async function generateClarificationQuestion(query, client = null, pageContext =
     };
   }
   
-  // Technical questions
+  return null;
+}
+
+function checkTechnicalPatterns(lc) {
   if (lc.includes("how do i use manual mode")) {
     return {
       type: "technical_clarification",
@@ -2083,7 +2085,10 @@ async function generateClarificationQuestion(query, client = null, pageContext =
     };
   }
   
-  // About questions
+  return null;
+}
+
+function checkAboutPatterns(lc) {
   if (lc.includes("who is alan ranger")) {
     return {
       type: "about_clarification",
@@ -2110,7 +2115,10 @@ async function generateClarificationQuestion(query, client = null, pageContext =
     };
   }
   
-  // Free course questions
+  return null;
+}
+
+function checkFreeCourseWorkshopPatterns(lc) {
   if (lc.includes("is there a free") && lc.includes("course")) {
     return {
       type: "free_course_clarification",
@@ -2124,7 +2132,6 @@ async function generateClarificationQuestion(query, client = null, pageContext =
     };
   }
   
-  // Specific workshop questions
   if (lc.includes("when is the next") && lc.includes("bluebell")) {
     return {
       type: "bluebell_workshop_clarification",
@@ -2137,6 +2144,53 @@ async function generateClarificationQuestion(query, client = null, pageContext =
       ]
     };
   }
+  
+  return null;
+}
+
+async function generateClarificationQuestion(query, client = null, pageContext = null) {
+  const lc = query.toLowerCase();
+  console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
+  
+  // Check loop guard patterns
+  const loopGuardResult = checkLoopGuardPatterns(lc);
+  if (loopGuardResult) return loopGuardResult;
+  
+  // Check special equipment patterns
+  const specialEquipmentResult = checkSpecialEquipmentPatterns(lc);
+  if (specialEquipmentResult) return specialEquipmentResult;
+  
+  // Try evidence-based clarification
+  const evidenceResult = await tryEvidenceBasedClarification(client, query, pageContext);
+  if (evidenceResult) return evidenceResult;
+  
+  // Check suppressed patterns
+  const suppressedResult = checkSuppressedPatterns(lc);
+  if (suppressedResult === null) return null;
+  
+  // Check course/workshop patterns
+  const courseWorkshopResult = checkCourseWorkshopPatterns(lc);
+  if (courseWorkshopResult) return courseWorkshopResult;
+  
+  // Check equipment patterns
+  const equipmentResult = checkEquipmentPatterns(lc);
+  if (equipmentResult) return equipmentResult;
+  
+  // Check service patterns
+  const serviceResult = checkServicePatterns(lc);
+  if (serviceResult) return serviceResult;
+  
+  // Check technical patterns
+  const technicalResult = checkTechnicalPatterns(lc);
+  if (technicalResult) return technicalResult;
+  
+  // Check about patterns
+  const aboutResult = checkAboutPatterns(lc);
+  if (aboutResult) return aboutResult;
+  
+  // Check free course and workshop patterns
+  const freeCourseWorkshopResult = checkFreeCourseWorkshopPatterns(lc);
+  if (freeCourseWorkshopResult) return freeCourseWorkshopResult;
   
   if (lc.includes("how much") && lc.includes("macro photography workshop")) {
     return {
