@@ -5717,7 +5717,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: { 
-          version: "v1.2.85-fix-intent-order",
+          version: "v1.2.86-fix-debuginfo",
           debugInfo: debugInfo
         }
   });
@@ -6201,7 +6201,7 @@ export default async function handler(req, res) {
       containsCourse: query.toLowerCase().includes("course"),
       isClarificationResponse: isClarificationResponse
     };
-    console.log(`🔍 isClarificationResponse check:`, debugInfo);
+    console.log(`🔍 isClarificationResponse check:`, followUpDebugInfo);
     const followUpResult = isClarificationResponse ? handleClarificationFollowUp(query, previousQuery, intent) : null;
     console.log(`🔍 isClarificationResponse: ${isClarificationResponse} for query: "${query}"`);
     console.log(`🔍 followUpResult:`, followUpResult);
