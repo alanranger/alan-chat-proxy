@@ -3737,16 +3737,7 @@ function parseSessionField(ln, out) {
 }
 
 function extractFromDescription(desc) {
-  const out = {
-    location: null,
-    participants: null,
-    fitness: null,
-    availability: null,
-    experienceLevel: null,
-    equipmentNeeded: null,
-    summary: null,
-    sessions: [],
-  };
+  const out = initializeDescriptionOutput();
   if (!desc) return out;
 
   // Enhanced cleaning to prevent formatting issues and text duplication
@@ -3757,26 +3748,57 @@ function extractFromDescription(desc) {
 
   const helpers = createParsingHelpers(lines, out);
 
+  // Parse all lines
+  parseAllDescriptionLines(lines, helpers, out);
+
+  // Post-process summary if needed
+  postProcessSummary(out, lines);
+
+  return out;
+}
+
+// Helper functions for extractFromDescription
+function initializeDescriptionOutput() {
+  return {
+    location: null,
+    participants: null,
+    fitness: null,
+    availability: null,
+    experienceLevel: null,
+    equipmentNeeded: null,
+    summary: null,
+    sessions: [],
+  };
+}
+
+function parseAllDescriptionLines(lines, helpers, out) {
   for (let i = 0; i < lines.length; i++) {
     const ln = lines[i];
-
-    // Parse each field type
-    if (parseLocationField(ln, helpers)) continue;
-    
-    const participantsResult = parseParticipantsField(ln, helpers, i);
-    if (participantsResult === true) continue;
-    if (participantsResult?.skipNext) {
+    const skipNext = parseDescriptionLine(ln, helpers, out, i);
+    if (skipNext) {
       i++; // Skip the next line since we processed it
-      continue;
     }
-    
-    if (parseFitnessField(ln, helpers)) continue;
-    if (parseAvailabilityField(ln, helpers)) continue;
-    if (parseExperienceLevelField(ln, helpers)) continue;
-    if (parseEquipmentNeededField(ln, helpers)) continue;
-    if (parseSessionField(ln, out)) continue;
   }
+}
 
+function parseDescriptionLine(ln, helpers, out, i) {
+  // Parse each field type in order
+  if (parseLocationField(ln, helpers)) return false;
+  
+  const participantsResult = parseParticipantsField(ln, helpers, i);
+  if (participantsResult === true) return false;
+  if (participantsResult?.skipNext) return true;
+  
+  if (parseFitnessField(ln, helpers)) return false;
+  if (parseAvailabilityField(ln, helpers)) return false;
+  if (parseExperienceLevelField(ln, helpers)) return false;
+  if (parseEquipmentNeededField(ln, helpers)) return false;
+  if (parseSessionField(ln, out)) return false;
+  
+  return false;
+}
+
+function postProcessSummary(out, lines) {
   if (out.summary && /^summary$/i.test(out.summary.trim())) {
     const idx = lines.findIndex((s) => /^summary$/i.test(s.trim()));
     if (idx >= 0) {
@@ -3784,8 +3806,6 @@ function extractFromDescription(desc) {
       if (nxt) out.summary = nxt.trim();
     }
   }
-
-  return out;
 }
 
 /* --------------------- Build product panel (markdown) -------------------- */
