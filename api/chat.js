@@ -5195,7 +5195,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
       },
       confidence,
       debug: {
-        version: "v1.2.70-debug-pagecontext",
+        version: "v1.2.71-debug-pagecontext-raw",
         earlyReturn: true,
         eventsFound: events.length,
         formattedEvents: eventList.length
@@ -5231,7 +5231,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
         pills: []
       },
       confidence: 90,
-      debug: { version: "v1.2.70-debug-pagecontext", earlyReturn: true }
+      debug: { version: "v1.2.71-debug-pagecontext-raw", earlyReturn: true }
     });
     return articles.length > 0 || contentChunks.length > 0; // Return true only if content was found
   }
@@ -5716,7 +5716,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res) {
       pills: []
     },
     confidence,
-    debug: { version: "v1.2.70-debug-pagecontext" }
+    debug: { version: "v1.2.71-debug-pagecontext-raw" }
   });
   return true;
 }
@@ -5801,6 +5801,8 @@ export default async function handler(req, res) {
     console.log(`🔍 pageContext type:`, typeof pageContext);
     console.log(`🔍 pageContext.clarificationLevel:`, pageContext?.clarificationLevel);
     console.log(`🔍 pageContext.clarificationLevel > 0:`, pageContext?.clarificationLevel > 0);
+    console.log(`🔍 Raw pageContext from request:`, req.body.pageContext);
+    console.log(`🔍 pageContext parsed:`, JSON.stringify(pageContext, null, 2));
     if (pageContext && pageContext.clarificationLevel > 0) {
       console.log(`🔍 Detected clarification follow-up with level ${pageContext.clarificationLevel}`);
       console.log(`🔍 pageContext:`, JSON.stringify(pageContext, null, 2));
