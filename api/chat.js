@@ -3504,7 +3504,7 @@ async function handleFallbackQueries(client, categoryType, aliases, limit) {
   return mapEventsData(deduped2);
 }
 
-async function findEventsByDuration(client, categoryType, limit = 50) {
+async function findEventsByDuration(client, categoryType, limit = 100) {
   try {
     console.log(`🔍 findEventsByDuration called with categoryType: ${categoryType}, limit: ${limit}`);
     
