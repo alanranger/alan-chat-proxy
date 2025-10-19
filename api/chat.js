@@ -5916,6 +5916,39 @@ async function handleResidentialPricingGuard(client, query, previousQuery, pageC
  * Returns true if it sent a response.
  */
 async function handleEventsPipeline(client, query, keywords, pageContext, res, debugInfo = null) {
+  // Early routing: if the original query already carries a normalized duration token,
+  // bypass keyword-derived routing and fetch by category directly. This avoids
+  // losses during keyword extraction (e.g., stripping "2.5hrs-4hrs").
+  try {
+    const qlc = String(query || '').toLowerCase();
+    let durationCategory = null;
+    if (qlc.includes('2.5hrs-4hrs')) durationCategory = '2.5hrs-4hrs';
+    else if (qlc.includes('1-day')) durationCategory = '1-day';
+    else if (qlc.includes('2-5-days')) durationCategory = '2-5-days';
+
+    if (durationCategory) {
+      const eventsDirect = await findEventsByDuration(client, durationCategory, 120);
+      const eventListDirect = formatEventsForUi(eventsDirect);
+      const confidenceDirect = calculateEventConfidence(query || "", eventListDirect, null);
+      res.status(200).json({
+        ok: true,
+        type: "events",
+        answer: eventListDirect,
+        events: eventListDirect,
+        structured: {
+          intent: "events",
+          topic: (keywords || []).join(", "),
+          events: eventListDirect,
+          products: [],
+          pills: []
+        },
+        confidence: confidenceDirect,
+        debug: { version: "v1.2.100-complexity-fix", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+      });
+      return true;
+    }
+  } catch (_) { /* non-fatal: fall back to standard flow */ }
+
   const events = await findEvents(client, { keywords, limit: 80, pageContext });
   const eventList = formatEventsForUi(events);
   if (!Array.isArray(eventList)) {
