@@ -3404,7 +3404,6 @@ async function findEventsByDuration(client, categoryType, limit = 50) {
       .gte('date_start', new Date().toISOString()) // Only future events
       .not('date_start', 'is', null)
       .not('date_end', 'is', null)
-      .ilike('event_title', '%workshop%')
       .contains('categories', [categoryType]) // Filter by category
       .order('date_start', { ascending: true })
       .limit(limit);
@@ -3443,13 +3442,15 @@ async function findEventsByDuration(client, categoryType, limit = 50) {
         console.log(`🔍 Still no events found for category: ${categoryType} after relaxed query.`);
         return [];
       }
-      console.log(`🔍 Fallback returned ${data2.length} events for category: ${categoryType}`);
-      return mapEventsData(data2);
+      const deduped2 = dedupeEventsByKey(data2);
+      console.log(`🔍 Fallback returned ${deduped2.length} unique events for category: ${categoryType}`);
+      return mapEventsData(deduped2);
     }
     
-    console.log(`🔍 Found ${data.length} events with category: ${categoryType}`);
+    const deduped = dedupeEventsByKey(data);
+    console.log(`🔍 Found ${deduped.length} unique events with category: ${categoryType}`);
     
-    return mapEventsData(data);
+    return mapEventsData(deduped);
   } catch (error) {
     console.error('❌ Error in findEventsByDuration:', error);
     return [];
@@ -3464,6 +3465,21 @@ function buildEventsBaseQuery(client, limit) {
     .gte("date_start", new Date().toISOString()) // Only future events
     .order("date_start", { ascending: true }) // Sort by date ascending (earliest first)
     .limit(limit);
+}
+
+// Remove duplicate events by composite key (event_url + date_start)
+function dedupeEventsByKey(rows) {
+  if (!Array.isArray(rows)) return [];
+  const seen = new Set();
+  const unique = [];
+  for (const row of rows) {
+    const key = `${row.event_url || ''}::${row.date_start || ''}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(row);
+    }
+  }
+  return unique;
 }
 
 function enhanceKeywordsWithPageContext(keywords, pageContext) {
