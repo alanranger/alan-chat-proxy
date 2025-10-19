@@ -3609,6 +3609,8 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   console.log('🔍 findEvents results count:', data?.length || 0);
   if (data && data.length > 0) {
     console.log('🔍 findEvents first result:', data[0]);
+  } else {
+    console.log('🔍 findEvents: No results found - this will trigger clarification');
   }
   
   // Map and return results
