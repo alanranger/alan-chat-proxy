@@ -737,7 +737,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
           // CSV metadata fields - CLEANED - ALL FIELDS NOW EXIST IN PAGE_ENTITIES
           csv_type: csvMetadata?.csv_type || null,
           csv_metadata_id: csvMetadata?.id || null,
-          categories: csvMetadata?.categories ? csvMetadata.categories.map(c => cleanHTMLText(c)) : null,
+          categories: csvMetadata?.categories || null,
           tags: csvMetadata?.tags ? csvMetadata.tags.map(t => cleanHTMLText(t)) : null,
           publish_date: csvMetadata?.publish_date || null,
           start_date: csvMetadata?.start_date || null,
