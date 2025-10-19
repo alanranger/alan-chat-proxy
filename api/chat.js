@@ -2569,6 +2569,12 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   const lc = query.toLowerCase();
   console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
   
+  // BYPASS: If query contains normalized duration categories, skip clarification
+  if (lc.includes('1-day') || lc.includes('2.5hrs-4hrs') || lc.includes('2-5-days')) {
+    console.log(`🎯 Bypassing clarification for normalized duration category: "${lc}"`);
+    return null; // Let the system route to events
+  }
+  
   // Get clarification level and confidence
   const { level, confidence, shouldShowResults } = getClarificationLevelAndConfidence(query, pageContext);
   
