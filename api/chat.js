@@ -6273,9 +6273,9 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
         products: [],
         services: services,
         landing: [],
-        articles: articles,
-        pills: pills
+        articles: articles
       },
+      pills: pills,
       confidence,
       debug: { 
         version: "v1.3.20-expanded-classification", 
