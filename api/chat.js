@@ -3579,31 +3579,39 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
           const actualEndTime = event.end_time || '15:30:00';
           
           if (categoryType === '2.5hrs-4hrs') {
-            // Calculate session times based on actual event times
-            // Parse the actual times to calculate session splits
-            const startTime = actualStartTime.split(':').map(Number);
-            const endTime = actualEndTime.split(':').map(Number);
+            // Use the actual advertised session times from product pages
+            let earlyEndTime, lateStartTime;
             
-            // Calculate early session (first half of the day)
-            const earlyEndHour = Math.floor((startTime[0] + endTime[0]) / 2);
-            const earlyEndTime = `${earlyEndHour.toString().padStart(2, '0')}:00:00`;
-            
-            // Calculate late session (second half of the day)
-            const lateStartHour = earlyEndHour + 1;
-            const lateStartTime = `${lateStartHour.toString().padStart(2, '0')}:00:00`;
+            // Determine session times based on event type
+            if (event.event_title.toLowerCase().includes('batsford')) {
+              // Batsford: morning 8am-11:30am, afternoon 12:00pm-3:30pm
+              earlyEndTime = '11:30:00';
+              lateStartTime = '12:00:00';
+            } else if (event.event_title.toLowerCase().includes('bluebell')) {
+              // Bluebell: morning 5:45am-9:45am, afternoon 10:30am-2:30pm
+              earlyEndTime = '09:45:00';
+              lateStartTime = '10:30:00';
+            } else {
+              // Default calculation for other events
+              const startTime = actualStartTime.split(':').map(Number);
+              const endTime = actualEndTime.split(':').map(Number);
+              const earlyEndHour = Math.floor((startTime[0] + endTime[0]) / 2);
+              earlyEndTime = `${earlyEndHour.toString().padStart(2, '0')}:00:00`;
+              lateStartTime = `${(earlyEndHour + 1).toString().padStart(2, '0')}:00:00`;
+            }
             
             const earlySession = {
               ...event,
               session_type: 'early',
               start_time: actualStartTime, // Use actual start time
-              end_time: earlyEndTime,       // Calculated early end time
+              end_time: earlyEndTime,       // Use advertised early end time
               categories: ['2.5hrs-4hrs'],
               event_title: `${event.event_title} (Early Session)`
             };
             const lateSession = {
               ...event,
               session_type: 'late',
-              start_time: lateStartTime,    // Calculated late start time
+              start_time: lateStartTime,    // Use advertised late start time
               end_time: actualEndTime,      // Use actual end time
               categories: ['2.5hrs-4hrs'],
               event_title: `${event.event_title} (Late Session)`
@@ -5952,7 +5960,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.07-calculate-session-times", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.08-correct-session-times", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5977,7 +5985,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.07-calculate-session-times", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.08-correct-session-times", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5997,7 +6005,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.07-calculate-session-times",
+          version: "v1.3.08-correct-session-times",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6207,7 +6215,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.07-calculate-session-times", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.08-correct-session-times", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }
