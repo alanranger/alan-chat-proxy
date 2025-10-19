@@ -3146,8 +3146,9 @@ function checkShortWorkshopPatterns(matches, createRoute) {
 
 // Helper function to check one day workshop patterns
 function checkOneDayWorkshopPatterns(matches, createRoute) {
-  if (matches("1 day") || matches("one day photography workshops") || matches("1 day workshops")) {
-    return createRoute("route_to_events", "one day photography workshops", "events");
+  if (matches("1 day") || matches("one day photography workshops") || matches("1 day workshops") || matches("1-day")) {
+    // Normalize to canonical phrasing so downstream detection is consistent
+    return createRoute("route_to_events", "1-day workshops", "events");
   }
   return null;
 }
