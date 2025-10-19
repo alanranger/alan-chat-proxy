@@ -3404,6 +3404,8 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
       console.log('🔍 DEBUG: findEventsByDuration returned 0 events for 2.5hrs-4hrs');
     }
     return result;
+  } else {
+    console.log('🔍 DEBUG: queryText does not contain 2.5hrs-4hrs:', queryText);
   }
   
   // Check for 1-day workshops (normalized)
