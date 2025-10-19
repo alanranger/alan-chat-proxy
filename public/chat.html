@@ -600,7 +600,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-        <div class="badge-wrap"><span class="version">v1.2.88-fix-pagecontext-null</span></div>
+        <div class="badge-wrap"><span class="version">v1.2.90-fix-duration-filtering</span></div>
 
   <div class="card" id="chatCard">
     <!-- Sticky header -->
@@ -1281,9 +1281,27 @@ function getEventTypeInfo(e) {
   const eventTypeIcon = e.csv_type === 'course_events' ? '🎓' : 
                        e.csv_type === 'workshop_events' ? '🔧' : '📅';
   
-    const isResidential = e.date_start && e.date_end && new Date(e.date_end) > new Date(e.date_start);
-    const isWeekendWorkshop = e.categories && e.categories.includes('weekend residential photo workshops');
-    const residentialIndicator = (isResidential || isWeekendWorkshop) ? '🏠 Residential' : '';
+  // Calculate duration category instead of just "Residential"
+  let durationIndicator = '';
+  if (e.date_start && e.date_end) {
+    const start = new Date(e.date_start);
+    const end = new Date(e.date_end);
+    const durationHours = (end - start) / (1000 * 60 * 60);
+    
+    if (durationHours >= 2.5 && durationHours <= 4) {
+      durationIndicator = '⏱️ 2.5hr - 4hr';
+    } else if (durationHours >= 6 && durationHours <= 8) {
+      durationIndicator = '⏱️ 1 day';
+    } else if (durationHours > 24) {
+      durationIndicator = '🏠 Multi-day';
+    } else if (durationHours < 2.5) {
+      durationIndicator = '⏱️ Short';
+    }
+  }
+  
+  // Fallback to residential check for legacy data
+  const isWeekendWorkshop = e.categories && e.categories.includes('weekend residential photo workshops');
+  const residentialIndicator = (!durationIndicator && isWeekendWorkshop) ? '🏠 Residential' : durationIndicator;
     
   return { eventType, eventTypeIcon, residentialIndicator };
 }

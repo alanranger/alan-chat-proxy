@@ -3278,11 +3278,11 @@ function handleEventsBypass(query, events, res) {
     res.status(200).json({
       ok: true,
       type: "events",
-      answer: events,
+      answer: events, // events is already formatted by formatEventsForUi
       events,
       structured: { intent: "events", topic: (extractKeywords(query||"")||[]).join(", "), events, products: [], pills: [] },
       confidence,
-      debug: { version: "v1.3.0-evidence-first", bypassClarification: true }
+      debug: { version: "v1.2.90-fix-duration-filtering", bypassClarification: true }
     });
     return true;
   }
@@ -3343,6 +3343,12 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   if (queryText.includes('short photography workshops 2-4 hours')) {
     console.log('🔍 Using custom duration-based query for exact match');
     return await findEventsByDuration(client, 2.5, 4, limit);
+  }
+  
+  // Check for 1-day workshops
+  if (queryText.includes('one day photography workshops') || (queryText.includes('one day') && queryText.includes('workshops'))) {
+    console.log('🔍 Using custom duration-based query for 1-day workshops');
+    return await findEventsByDuration(client, 6, 8, limit);
   }
   
   // Debug: Check if we're missing the condition
@@ -5717,7 +5723,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.88-fix-pagecontext-null",
+          version: "v1.2.90-fix-duration-filtering",
           debugInfo: debugInfo
         }
   });
