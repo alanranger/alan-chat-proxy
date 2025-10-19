@@ -3605,7 +3605,6 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   logEventsQueryResults(data, q);
   
   // Debug: Log the actual query being executed
-  console.log('🔍 findEvents query executed:', q.toString());
   console.log('🔍 findEvents results count:', data?.length || 0);
   if (data && data.length > 0) {
     console.log('🔍 findEvents first result:', data[0]);
@@ -3892,22 +3891,13 @@ function applyKeywordFiltering(q, keywords) {
         meaningfulKeywords
       });
       
-      // For now, just search in event_location for location-based queries
-      // This should catch "devon" queries
-      const locationKeywords = meaningfulKeywords.filter(k => 
-        ['devon', 'wales', 'scotland', 'england', 'coventry', 'birmingham', 'london'].includes(k.toLowerCase())
-      );
+      // Generic approach: search for any keyword in both location and title fields
+      // This will work for any location or workshop type, not just hardcoded ones
+      const searchKeyword = meaningfulKeywords[0];
+      console.log(`🔍 Searching for keyword: ${searchKeyword}`);
       
-      if (locationKeywords.length > 0) {
-        const locationKeyword = locationKeywords[0];
-        console.log(`🔍 Searching for location: ${locationKeyword}`);
-        return q.ilike('event_location', `%${locationKeyword}%`);
-      }
-      
-      // For other keywords, search in event_title
-      const titleKeyword = meaningfulKeywords[0];
-      console.log(`🔍 Searching for title: ${titleKeyword}`);
-      return q.ilike('event_title', `%${titleKeyword}%`);
+      // Search in both event_location and event_title to catch location-based and title-based queries
+      return q.or(`event_location.ilike.%${searchKeyword}%,event_title.ilike.%${searchKeyword}%`);
     }
     return q;
 }
@@ -3973,13 +3963,17 @@ function mapEventsData(data) {
     _csv_end_time: event.end_time
   }));
   
+  // Remove duplicates by event_url to prevent showing the same event multiple times
+  const dedupedData = dedupeEventsByKey(mappedData, 'event_url');
+  
   console.log('🔍 findEvents mapped data:', {
     mappedDataCount: mappedData?.length || 0,
-    mappedDataSample: mappedData?.slice(0, 2) || [],
+    dedupedDataCount: dedupedData?.length || 0,
+    dedupedDataSample: dedupedData?.slice(0, 2) || [],
     originalDataCount: data?.length || 0
   });
   
-  return mappedData;
+  return dedupedData;
 }
 
 async function findProducts(client, { keywords, limit = 20, pageContext = null }) {
