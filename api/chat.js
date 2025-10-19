@@ -3397,14 +3397,10 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     return await findEventsByDuration(client, '2.5hrs-4hrs', limit);
   }
   
-  // Check for 1-day workshops
-  console.log('🔍 Checking 1-day workshop conditions for queryText:', queryText);
-  console.log('🔍 queryText.includes("one day photography workshops"):', queryText.includes('one day photography workshops'));
-  console.log('🔍 queryText.includes("one day"):', queryText.includes('one day'));
-  console.log('🔍 queryText.includes("workshops"):', queryText.includes('workshops'));
-  
-  if (queryText.includes('one day') || queryText.includes('1 day') || queryText.includes('1-day')) {
-    console.log('🔍 Using category-based query for 1-day workshops');
+  // Check for 1-day workshops (robust normalization across variants)
+  const oneDayRegex = /\b(1\s*[- ]?day|one\s*day)\b/;
+  if (oneDayRegex.test(queryText)) {
+    console.log('🔍 Using category-based query for 1-day workshops (regex)');
     return await findEventsByDuration(client, '1-day', limit);
   }
 
