@@ -3141,10 +3141,13 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   
   // Small helpers to reduce repetition while preserving behavior
   function createRoute(type, newQuery, newIntent) {
+    console.log(`🔍 Creating route: ${type} -> "${newQuery}" (${newIntent})`);
     return { type, newQuery, newIntent };
   }
   function matches(needle) {
-    return lc.includes(needle) || lc === needle;
+    const result = lc.includes(needle) || lc === needle;
+    console.log(`🔍 matches("${needle}"): ${result}`);
+    return result;
   }
   
   // Allow user to bypass clarification entirely
@@ -3282,7 +3285,7 @@ function handleEventsBypass(query, events, res) {
       events,
       structured: { intent: "events", topic: (extractKeywords(query||"")||[]).join(", "), events, products: [], pills: [] },
       confidence,
-      debug: { version: "v1.2.94-fix-all-patterns", bypassClarification: true, timestamp: new Date().toISOString() }
+      debug: { version: "v1.2.95-debug-followup", bypassClarification: true, timestamp: new Date().toISOString() }
     });
     return true;
   }
@@ -5738,7 +5741,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.94-fix-all-patterns",
+          version: "v1.2.95-debug-followup",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString()
         }
