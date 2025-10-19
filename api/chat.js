@@ -1237,13 +1237,14 @@ const TZ = "Europe/London";
 function fmtDateLondon(ts) {
   try {
     const d = new Date(ts);
-    return new Intl.DateTimeFormat("en-GB", {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      timeZone: TZ,
-    }).format(d);
+    // Use UTC methods to avoid timezone conversion since dates are already in GMT
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const weekday = weekdays[d.getUTCDay()];
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    const month = months[d.getUTCMonth()];
+    const year = d.getUTCFullYear();
+    return `${weekday}, ${day} ${month} ${year}`;
   } catch {
     return ts;
   }
@@ -3723,6 +3724,7 @@ function mapEventsData(data) {
     location: event.event_location,     // Map event_location to location for frontend
     price: event.price_gbp,             // Map price_gbp to price for frontend
     csv_type: event.subtype,            // Map subtype to csv_type for frontend
+    date: event.date_start,             // Map date_start to date for frontend
     _csv_start_time: event.start_time,  // Preserve CSV times for frontend
     _csv_end_time: event.end_time
   }));
@@ -5905,7 +5907,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.2.100-complexity-fix", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.2.102-fix-timezone", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5930,7 +5932,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-      debug: { version: "v1.3.00-timezone-fix", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.01-frontend-test", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5950,7 +5952,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.100-complexity-fix",
+          version: "v1.2.102-fix-timezone",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
