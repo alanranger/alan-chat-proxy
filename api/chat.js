@@ -3655,8 +3655,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
               start_time: actualStartTime, // Use actual start time
               end_time: actualEndTime,     // Use actual end time
               categories: ['1-day'],
-              event_title: `${event.event_title} (Full Day)`,
-              price_gbp: 150  // Full-day sessions cost £150
+              event_title: `${event.event_title} (Full Day)`
             };
             filteredEvents.push(fullDaySession);
           }
@@ -5991,7 +5990,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.14-fix-full-day-pricing", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.15-from-pricing", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6016,7 +6015,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.14-fix-full-day-pricing", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.15-from-pricing", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6036,7 +6035,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.14-fix-full-day-pricing",
+          version: "v1.3.15-from-pricing",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6246,7 +6245,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.14-fix-full-day-pricing", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.15-from-pricing", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }

@@ -1342,7 +1342,7 @@ function renderEventCard(e) {
   const href = e.href || e.event_url || e.page_url || e.source_url || e.url || '#';
   const where = e.location ? `${escapeHTML(e.location)}` : '';
   const title = e.title ? `${escapeHTML(e.title)}` : '';
-  const price = e.price_gbp ? `£${e.price_gbp}` : '';
+  const price = e.price_gbp ? `From: £${e.price_gbp}` : '';
   const timeInfo = formatEventTimeInfo(e);
   const { eventType, eventTypeIcon, residentialIndicator } = getEventTypeInfo(e);
   
