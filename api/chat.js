@@ -3580,7 +3580,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
           
           if (categoryType === '2.5hrs-4hrs') {
             // Extract session times from product description in database
-            let earlyEndTime, lateStartTime;
+            let earlyEndTime, lateStartTime, lateEndTime;
             
             const productDesc = event.product_description || '';
             console.log(`🔍 Product description for ${event.event_title}:`, productDesc.substring(0, 200) + '...');
@@ -3595,7 +3595,12 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
               if (morningMatch && afternoonMatch) {
                 earlyEndTime = `${morningMatch[2].padStart(2, '0')}:${morningMatch[3].padStart(2, '0')}:00`;
                 lateStartTime = `${afternoonMatch[1].padStart(2, '0')}:${afternoonMatch[2].padStart(2, '0')}:00`;
-                console.log(`🔍 Extracted Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}`);
+                // Convert PM time to 24-hour format (3:30 pm = 15:30)
+                const pmHour = parseInt(afternoonMatch[3]);
+                const pmMinute = afternoonMatch[4];
+                const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
+                lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
+                console.log(`🔍 Extracted Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
               } else {
                 console.log(`🔍 Could not extract Batsford session times from description`);
                 console.log(`🔍 Product description: ${productDesc.substring(0, 500)}`);
@@ -3609,7 +3614,12 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
               if (sessionMatch) {
                 earlyEndTime = `${sessionMatch[3].padStart(2, '0')}:${sessionMatch[4].padStart(2, '0')}:00`;
                 lateStartTime = `${sessionMatch[5].padStart(2, '0')}:${sessionMatch[6].padStart(2, '0')}:00`;
-                console.log(`🔍 Extracted Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}`);
+                // Convert PM time to 24-hour format (2:30 pm = 14:30)
+                const pmHour = parseInt(sessionMatch[7]);
+                const pmMinute = sessionMatch[8];
+                const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
+                lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
+                console.log(`🔍 Extracted Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
               } else {
                 console.log(`🔍 Could not extract Bluebell session times from description`);
                 console.log(`🔍 Product description: ${productDesc.substring(0, 500)}`);
@@ -3632,7 +3642,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
               ...event,
               session_type: 'late',
               start_time: lateStartTime,    // Use advertised late start time
-              end_time: actualEndTime,      // Use actual end time
+              end_time: lateEndTime,        // Use extracted late end time
               categories: ['2.5hrs-4hrs'],
               event_title: `${event.event_title} (Late Session)`
             };
@@ -5980,7 +5990,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.12-fix-regex-patterns", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.13-fix-late-session-times", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6005,7 +6015,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.12-fix-regex-patterns", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.13-fix-late-session-times", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6025,7 +6035,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.12-fix-regex-patterns",
+          version: "v1.3.13-fix-late-session-times",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6235,7 +6245,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.12-fix-regex-patterns", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.13-fix-late-session-times", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }

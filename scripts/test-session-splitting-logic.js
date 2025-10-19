@@ -88,7 +88,12 @@ function testSessionSplitting(events, categoryType) {
             if (morningMatch && afternoonMatch) {
               const earlyEndTime = `${morningMatch[2].padStart(2, '0')}:${morningMatch[3].padStart(2, '0')}:00`;
               const lateStartTime = `${afternoonMatch[1].padStart(2, '0')}:${afternoonMatch[2].padStart(2, '0')}:00`;
-              console.log(`✅ Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}`);
+              // Convert PM time to 24-hour format (3:30 pm = 15:30)
+              const pmHour = parseInt(afternoonMatch[3]);
+              const pmMinute = afternoonMatch[4];
+              const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
+              const lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
+              console.log(`✅ Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
               
               // Create early and late sessions
               const earlySession = {
@@ -103,7 +108,7 @@ function testSessionSplitting(events, categoryType) {
                 ...event,
                 session_type: 'late',
                 start_time: lateStartTime,
-                end_time: event.end_time,
+                end_time: lateEndTime,
                 categories: ['2.5hrs-4hrs'],
                 event_title: `${event.event_title} (Late Session)`
               };
@@ -122,7 +127,12 @@ function testSessionSplitting(events, categoryType) {
             if (sessionMatch) {
               const earlyEndTime = `${sessionMatch[3].padStart(2, '0')}:${sessionMatch[4].padStart(2, '0')}:00`;
               const lateStartTime = `${sessionMatch[5].padStart(2, '0')}:${sessionMatch[6].padStart(2, '0')}:00`;
-              console.log(`✅ Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}`);
+              // Convert PM time to 24-hour format (2:30 pm = 14:30)
+              const pmHour = parseInt(sessionMatch[7]);
+              const pmMinute = sessionMatch[8];
+              const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
+              const lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
+              console.log(`✅ Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
               
               // Create early and late sessions
               const earlySession = {
@@ -137,7 +147,7 @@ function testSessionSplitting(events, categoryType) {
                 ...event,
                 session_type: 'late',
                 start_time: lateStartTime,
-                end_time: event.end_time,
+                end_time: lateEndTime,
                 categories: ['2.5hrs-4hrs'],
                 event_title: `${event.event_title} (Late Session)`
               };
