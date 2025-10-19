@@ -3399,6 +3399,10 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     console.log('🔍 Using category-based query for 2.5hrs-4hrs workshops');
     const result = await findEventsByDuration(client, '2.5hrs-4hrs', limit);
     console.log('🔍 findEventsByDuration returned:', result?.length || 0, 'events for 2.5hrs-4hrs');
+    // Add debug info to result for troubleshooting
+    if (result && result.length === 0) {
+      console.log('🔍 DEBUG: findEventsByDuration returned 0 events for 2.5hrs-4hrs');
+    }
     return result;
   }
   
@@ -3530,6 +3534,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
 
     // ATTEMPT 1: text[] array 'cs' (contains) per alias using PostgREST literal
     for (const alias of aliases) {
+      console.log(`🔍 Trying alias: ${alias} with contains filter`);
       const { data: d1, error: e1 } = await client
         .from('v_events_for_chat')
         .select('*')
@@ -3537,6 +3542,9 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
         .filter('categories', 'cs', `{${alias}}`)
         .order('date_start', { ascending: true })
         .limit(200); // Higher limit to get all data before deduplication
+      
+      console.log(`🔍 Query result for alias ${alias}:`, { dataLength: d1?.length || 0, error: e1 });
+      
       if (!e1 && d1 && d1.length) {
         const deduped = dedupeEventsByKey(d1);
         console.log(`🔍 categories cs matched ${deduped.length} unique events for alias ${alias} (from ${d1.length} total rows)`);
