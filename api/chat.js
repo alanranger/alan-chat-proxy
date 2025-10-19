@@ -3541,16 +3541,13 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
     };
     const aliases = categoryAliases[categoryType] || [categoryType];
 
-    // ATTEMPT 1: Text search on categories representation (most reliable)
-    // Use ILIKE on categories::text for the canonical alias
+    // ATTEMPT 1: Use raw SQL query for reliable category filtering
     const primary = aliases[0] || categoryType;
-    const { data: d1, error: e1 } = await client
-      .from('v_events_for_chat')
-      .select('*')
-      .gte('date_start', `${todayIso}T00:00:00.000Z`)
-      .ilike('categories::text', `%${primary}%`)
-      .order('date_start', { ascending: true })
-      .limit(200);
+    const { data: d1, error: e1 } = await client.rpc('get_events_by_category', {
+      category_filter: primary,
+      start_date: `${todayIso}T00:00:00.000Z`,
+      limit_count: 200
+    });
     
     if (!e1 && d1 && d1.length) {
       const deduped = dedupeEventsByKey(d1);
