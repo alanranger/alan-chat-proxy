@@ -6361,7 +6361,7 @@ export default async function handler(req, res) {
     if (await handleNormalizedDurationQuery(query, pageContext, res)) return;
     
     // Continue with main processing
-    await processMainQuery(query, previousQuery, sessionId, pageContext, res, started);
+    await processMainQuery(query, previousQuery, sessionId, pageContext, res, started, req);
     
   } catch (error) {
     console.error('Handler error:', error);
@@ -6408,7 +6408,7 @@ async function handleNormalizedDurationQuery(query, pageContext, res) {
 }
 
 // Helper: Process main query (Low Complexity)
-async function processMainQuery(query, previousQuery, sessionId, pageContext, res, started) {
+async function processMainQuery(query, previousQuery, sessionId, pageContext, res, started, req) {
   const client = supabaseAdmin();
   
   // Create session if needed
