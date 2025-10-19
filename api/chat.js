@@ -2209,25 +2209,12 @@ function checkSuppressedPatterns(lc) {
 }
   
 function checkCourseWorkshopPatterns(lc) {
-  console.log(`🔍 checkCourseWorkshopPatterns called with: "${lc}"`);
-  
   if (lc.includes("do you do") && lc.includes("courses")) {
-    console.log(`🎯 Matched course pattern`);
     return generateCourseClarification();
   }
   
   // Enhanced workshop pattern matching to catch more variations
   // Match any query that contains "workshop" and doesn't contain specific duration indicators
-  console.log(`🔍 Checking workshop pattern conditions:`);
-  console.log(`   lc.includes("workshop"): ${lc.includes("workshop")}`);
-  console.log(`   !lc.includes("2.5hr"): ${!lc.includes("2.5hr")}`);
-  console.log(`   !lc.includes("4hr"): ${!lc.includes("4hr")}`);
-  console.log(`   !lc.includes("1 day"): ${!lc.includes("1 day")}`);
-  console.log(`   !lc.includes("multi day"): ${!lc.includes("multi day")}`);
-  console.log(`   !lc.includes("residential"): ${!lc.includes("residential")}`);
-  console.log(`   !lc.includes("short"): ${!lc.includes("short")}`);
-  console.log(`   !lc.includes("long"): ${!lc.includes("long")}`);
-  
   if (lc.includes("workshop") && 
       !lc.includes("2.5hr") && 
       !lc.includes("4hr") && 
@@ -2236,7 +2223,6 @@ function checkCourseWorkshopPatterns(lc) {
       !lc.includes("residential") &&
       !lc.includes("short") &&
       !lc.includes("long")) {
-    console.log(`🎯 Matched workshop pattern, returning generateWorkshopClarification()`);
     return generateWorkshopClarification();
   }
   
@@ -2788,14 +2774,10 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   
   // PRIORITY: Check course/workshop patterns FIRST (only for workshop-classified queries)
   if (classification.type === 'workshop') {
-    console.log(`🔍 Checking workshop patterns for: "${lc}"`);
     const courseWorkshopResult = checkCourseWorkshopPatterns(lc);
     if (courseWorkshopResult) {
-      console.log(`🎯 Workshop pattern matched, returning:`, courseWorkshopResult);
       courseWorkshopResult.confidence = confidence;
       return courseWorkshopResult;
-    } else {
-      console.log(`❌ No workshop pattern matched for: "${lc}"`);
     }
   }
   
@@ -6168,11 +6150,8 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
   // Check if we need clarification for events queries with low confidence
   // For workshop queries, use a higher threshold since they often need clarification
   const clarificationThreshold = (debugInfo?.intent === 'workshop') ? 0.8 : 0.6;
-  console.log(`🔍 Confidence check: ${confidence} vs threshold ${clarificationThreshold} (intent: ${debugInfo?.intent})`);
   if (confidence < clarificationThreshold) { // Low confidence threshold
-    console.log(`🤔 Low confidence (${confidence}) for events query: "${query}" - triggering clarification`);
     const clarification = await generateClarificationQuestion(query, client, pageContext);
-    console.log(`🔍 Clarification result:`, clarification);
     if (clarification) {
       const confidencePercent = clarification.confidence || 20;
       res.status(200).json({
