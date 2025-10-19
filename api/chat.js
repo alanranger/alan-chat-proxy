@@ -3354,9 +3354,15 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   console.log('🔍 queryText.includes("one day"):', queryText.includes('one day'));
   console.log('🔍 queryText.includes("workshops"):', queryText.includes('workshops'));
   
-  if (queryText.includes('one day') && queryText.includes('workshops')) {
+  if ((queryText.includes('one day') || queryText.includes('1 day') || queryText.includes('1-day')) && queryText.includes('workshops')) {
     console.log('🔍 Using category-based query for 1-day workshops');
     return await findEventsByDuration(client, '1-day', limit);
+  }
+
+  // Check for multi-day residential workshops (2-5 days)
+  if ((queryText.includes('multi day') || queryText.includes('2-5') || queryText.includes('2-5-days') || queryText.includes('residential')) && queryText.includes('workshops')) {
+    console.log('🔍 Using category-based query for multi-day residential workshops');
+    return await findEventsByDuration(client, '2-5-days', limit);
   }
   
   // Debug: Check if we're missing the condition
@@ -5715,7 +5721,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.2.64-pattern-debug", intent: "events", timestamp: new Date().toISOString() }
+      debug: { version: "v1.2.99-clarification-categories", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5735,7 +5741,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.98-force-deploy",
+          version: "v1.2.99-clarification-categories",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString()
         }
