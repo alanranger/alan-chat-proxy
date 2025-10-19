@@ -3530,67 +3530,63 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
   try {
     console.log(`🔍 findEventsByDuration called with categoryType: ${categoryType}, limit: ${limit}`);
     
-    
     const todayIso = new Date().toISOString().split('T')[0];
     
-    // Use category-based filtering instead of duration calculation
-    // Accept common alias tokens for categories (handles hyphen variants, synonyms)
-    const categoryAliases = {
-      '1-day': ['1-day', '1 day', 'one-day', 'day-1'],
-      '2-5-days': ['2-5-days', 'multi-day', 'residential', '2 days', '3 days', '4 days', '5 days'],
-      '2.5hrs-4hrs': ['2.5hrs-4hrs', '2.5hr-4hr', '2-4hrs', 'short']
-    };
-    const aliases = categoryAliases[categoryType] || [categoryType];
-
-    // ATTEMPT 1: Use raw SQL query for reliable category filtering
-    const primary = aliases[0] || categoryType;
-    const { data: d1, error: e1 } = await client.rpc('get_events_by_category', {
-      category_filter: primary,
-      start_date: `${todayIso}T00:00:00.000Z`,
-      limit_count: 200
-    });
+    // Get all events first, then filter by actual duration
+    const { data: allEvents, error: e1 } = await client
+      .from("v_events_for_chat")
+      .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, categories")
+      .gte("date_start", `${todayIso}T00:00:00.000Z`)
+      .order("date_start", { ascending: true })
+      .limit(200);
     
-    if (!e1 && d1 && d1.length) {
-      const deduped = dedupeEventsByKey(d1);
-      // Ensure chronological order is preserved after deduplication
-      deduped.sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
-      const limitedDeduped = deduped.slice(0, limit);
-      return mapEventsData(limitedDeduped);
-    }
-
-
-    // ATTEMPT 2: overlaps on all aliases (works for json/text arrays)
-    const { data, error } = await client
-      .from('v_events_for_chat')
-      .select('*')
-      .gte('date_start', `${todayIso}T00:00:00.000Z`) // Only future events (midnight)
-      .not('date_start', 'is', null)
-      .not('date_end', 'is', null)
-      .overlaps('categories', aliases) // Match any alias
-      .order('date_start', { ascending: true })
-      .limit(200); // Higher limit to get all data before deduplication
-    
-    console.log(`🔍 Category-based query returned ${data?.length || 0} events for category: ${categoryType}`);
-    if (data && data.length > 0) {
-      console.log('🔍 Sample events:', data.slice(0, 3).map(e => ({ 
-        title: e.event_title, 
-        categories: e.categories,
-        start: e.date_start, 
-        end: e.date_end
-      })));
-    }
-    
-    if (error) {
-      console.error('❌ Category-based query error:', error);
+    if (e1) {
+      console.error('❌ Error fetching events:', e1);
       return [];
     }
-    
-    if (!data || data.length === 0) {
-      return await handleFallbackQueries(client, categoryType, aliases, limit);
+
+    if (!allEvents || allEvents.length === 0) {
+      console.log('🔍 No events found');
+      return [];
     }
+
+    // Filter events by actual duration based on start_time and end_time
+    const filteredEvents = allEvents.filter(event => {
+      if (!event.start_time || !event.end_time) return false;
+      
+      // Parse times (format: HH:MM:SS)
+      const startTime = event.start_time.split(':').map(Number);
+      const endTime = event.end_time.split(':').map(Number);
+      
+      const startMinutes = startTime[0] * 60 + startTime[1];
+      const endMinutes = endTime[0] * 60 + endTime[1];
+      const durationMinutes = endMinutes - startMinutes;
+      const durationHours = durationMinutes / 60;
+      
+      console.log(`🔍 Event: ${event.event_title}, Duration: ${durationHours.toFixed(1)}hrs, Category: ${categoryType}`);
+      
+      // Filter based on actual duration
+      switch (categoryType) {
+        case '2.5hrs-4hrs':
+          // Show only short sessions (2.5-4 hours)
+          return durationHours >= 2.5 && durationHours <= 4;
+        case '1-day':
+          // Show only full-day sessions (6+ hours)
+          return durationHours >= 6;
+        case '2-5-days':
+          // Show multi-day events (24+ hours)
+          return durationHours >= 24;
+        default:
+          return true;
+      }
+    });
+
+    console.log(`🔍 Filtered ${filteredEvents.length} events for category: ${categoryType}`);
     
-    const deduped = dedupeEventsByKey(data);
-    console.log(`🔍 Found ${deduped.length} unique events with category: ${categoryType} (from ${data?.length || 0} total rows)`);
+    // Deduplicate by event_url
+    const deduped = dedupeEventsByKey(filteredEvents);
+    // Ensure chronological order is preserved after deduplication
+    deduped.sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
     
     // Apply the original limit after deduplication
     const limitedDeduped = deduped.slice(0, limit);
@@ -5907,7 +5903,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.2.102-fix-timezone", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.02-duration-based-filtering", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
