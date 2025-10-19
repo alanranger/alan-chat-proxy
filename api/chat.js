@@ -3569,6 +3569,25 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
       }
     }
 
+    // ATTEMPT 2: Fallback text search on categories representation
+    // If the contains path didn't return anything tangible (schema variance),
+    // use a safe ILIKE on categories::text for the canonical alias
+    {
+      const primary = aliases[0] || categoryType;
+      const { data: d2, error: e2 } = await client
+        .from('v_events_for_chat')
+        .select('*')
+        .gte('date_start', `${todayIso}T00:00:00.000Z`)
+        .ilike('categories::text', `%${primary}%`)
+        .order('date_start', { ascending: true })
+        .limit(200);
+      if (!e2 && d2 && d2.length) {
+        const deduped = dedupeEventsByKey(d2);
+        const limitedDeduped = deduped.slice(0, limit);
+        return mapEventsData(limitedDeduped);
+      }
+    }
+
     // ATTEMPT 2: overlaps on all aliases (works for json/text arrays)
     const { data, error } = await client
       .from('v_events_for_chat')
