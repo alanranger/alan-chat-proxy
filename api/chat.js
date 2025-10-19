@@ -3542,7 +3542,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
       .not('date_end', 'is', null)
       .overlaps('categories', aliases) // Match any alias
       .order('date_start', { ascending: true })
-      .limit(limit);
+      .limit(200); // Higher limit to get all data before deduplication
     
     console.log(`🔍 Category-based query returned ${data?.length || 0} events for category: ${categoryType}`);
     if (data && data.length > 0) {
@@ -3564,9 +3564,11 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
     }
     
     const deduped = dedupeEventsByKey(data);
-    console.log(`🔍 Found ${deduped.length} unique events with category: ${categoryType}`);
+    console.log(`🔍 Found ${deduped.length} unique events with category: ${categoryType} (from ${data?.length || 0} total rows)`);
     
-    return mapEventsData(deduped);
+    // Apply the original limit after deduplication
+    const limitedDeduped = deduped.slice(0, limit);
+    return mapEventsData(limitedDeduped);
   } catch (error) {
     console.error('❌ Error in findEventsByDuration:', error);
     return [];
