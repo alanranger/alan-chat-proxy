@@ -6501,6 +6501,12 @@ async function processByIntent(client, query, previousQuery, intent, pageContext
       if (directAnswerResponse) {
         return; // Response already sent
       }
+    } else if (classification.type === 'workshop') {
+      console.log(`🎯 Workshop query detected: "${query}" - routing to workshop system`);
+      // Route workshop queries to the events pipeline with workshop intent
+      const keywords = extractKeywords(query);
+      const handled = await handleEventsPipeline(client, query, keywords, pageContext, res, { intent: "workshop" });
+      if (handled) return;
     }
   }
   
