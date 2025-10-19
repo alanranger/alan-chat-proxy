@@ -3556,6 +3556,27 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
       }
     }
 
+    // ATTEMPT 1.5: Try text search on categories field as fallback
+    for (const alias of aliases) {
+      console.log(`🔍 Trying alias: ${alias} with text search`);
+      const { data: d1, error: e1 } = await client
+        .from('v_events_for_chat')
+        .select('*')
+        .gte('date_start', `${todayIso}T00:00:00.000Z`)
+        .ilike('categories::text', `%${alias}%`)
+        .order('date_start', { ascending: true })
+        .limit(200);
+      
+      console.log(`🔍 Text search result for alias ${alias}:`, { dataLength: d1?.length || 0, error: e1 });
+      
+      if (!e1 && d1 && d1.length) {
+        const deduped = dedupeEventsByKey(d1);
+        console.log(`🔍 categories text search matched ${deduped.length} unique events for alias ${alias} (from ${d1.length} total rows)`);
+        const limitedDeduped = deduped.slice(0, limit);
+        return mapEventsData(limitedDeduped);
+      }
+    }
+
     // ATTEMPT 2: overlaps on all aliases (works for json/text arrays)
     const { data, error } = await client
       .from('v_events_for_chat')
