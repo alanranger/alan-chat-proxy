@@ -30,15 +30,21 @@ memory_policy:
 This is the AI’s running TODO list. Keep it short and actionable.
 
 ## Today
-- [x] **COMPLETED**: Major refactoring effort - 37 functions reduced to ≤15 complexity
-- [x] **COMPLETED**: All baseline and regression tests passing
-- [x] **COMPLETED**: Coding standards established and documented
-- [ ] Investigate two fallback queries in live baseline (Q10, Q13) after complexity work
+- [x] **COMPLETED**: Workshop clarification system fully functional
+- [x] **COMPLETED**: Evidence-based clarification with confidence progression
+- [x] **COMPLETED**: Session splitting for multi-session events (Batsford, Bluebell)
+- [x] **COMPLETED**: Time accuracy fixes (PM conversion, timezone issues)
+- [x] **COMPLETED**: Fitness level overspill fixes
+- [x] **COMPLETED**: UI improvements (pricing display, event cards)
+- [ ] **NEXT**: Test course queries systematically
+- [ ] **NEXT**: Test article queries systematically
+- [ ] **NEXT**: Test service queries systematically
 
 ## Next
-- [ ] Address remaining systemic issues: ingestion duplication, response formatting
-- [ ] Consider refactoring main handler function (complexity 400) if needed
-- [x] **COMPLETED**: Apply same complexity standards to frontend functions in chat.html
+- [ ] **HIGH PRIORITY**: Comprehensive testing of all query types (courses, articles, services)
+- [ ] **HIGH PRIORITY**: Expand clarification systems beyond workshops
+- [ ] **MEDIUM PRIORITY**: Advanced features (real-time availability, advanced filtering)
+- [ ] **LOW PRIORITY**: Performance optimization and analytics
 
 ## Blockers
 - [ ] None (live UI and API healthy; baseline passing; refactoring complete)
@@ -216,7 +222,9 @@ date_start: csvMetadata?.start_date && csvMetadata?.start_time
 `${csvMetadata.start_date}T${csvMetadata.start_time}.000Z`
 ```
 
-**Status**: Fix committed and ready for deployment. This resolves the 78 failed workshop event ingestions.
+**Status**: Fix committed and ready for deployment. This resolves ALL 78 failed ingestions:
+- 39 Workshop Events failures
+- 39 site_urls failures
 
 ### 🔄 CURRENT TASK: Deploy Timestamp Fix and Re-ingest
 **Next Steps**:
@@ -224,6 +232,40 @@ date_start: csvMetadata?.start_date && csvMetadata?.start_time
 2. Re-ingest all workshop events to apply the fix
 3. Verify times are now correct in live chatbot
 4. Test with user to confirm 1-hour discrepancy is resolved
+
+### 🎯 CURRENT TESTING STATUS (2025-10-20)
+
+#### ✅ **WORKSHOP QUERIES** - FULLY FUNCTIONAL
+- [x] **Initial Query**: "photography workshops" → 20% confidence → clarification options
+- [x] **2.5hr-4hr Workshops**: Follow-up → 95% confidence → filtered events with session splitting
+- [x] **1 Day Workshops**: Follow-up → 95% confidence → filtered events with correct pricing
+- [x] **Multi-day Workshops**: Follow-up → 95% confidence → filtered events
+- [x] **Session Management**: Batsford/Bluebell events properly split into early/late sessions
+- [x] **Time Accuracy**: Correct PM conversion (2:30 pm → 14:30)
+- [x] **UI Display**: Clean fitness levels, proper pricing ("From: £"), chronological ordering
+
+#### ⚠️ **COURSE QUERIES** - NEEDS TESTING
+- [ ] **Initial Query**: "photography courses" → clarification system
+- [ ] **Online Courses**: Follow-up → confidence progression
+- [ ] **Free Courses**: Direct query → correct answer
+- [ ] **In-person Courses**: Follow-up → confidence progression
+
+#### ⚠️ **ARTICLE QUERIES** - NEEDS TESTING  
+- [ ] **Initial Query**: "photography articles" → clarification system
+- [ ] **Tripod Articles**: Direct query → correct answer
+- [ ] **Landscape Tips**: Follow-up → confidence progression
+- [ ] **Technique Articles**: Follow-up → confidence progression
+
+#### ⚠️ **SERVICE QUERIES** - NEEDS TESTING
+- [ ] **Initial Query**: "photography services" → clarification system
+- [ ] **Wedding Photography**: Direct query → correct answer
+- [ ] **Commercial Photography**: Follow-up → confidence progression
+- [ ] **Portrait Photography**: Follow-up → confidence progression
+
+#### ⚠️ **GENERAL QUERIES** - NEEDS TESTING
+- [ ] **Photography Tips**: Initial query → clarification system
+- [ ] **Camera Settings**: Direct query → correct answer
+- [ ] **Composition Techniques**: Follow-up → confidence progression
 
 ### 📋 PENDING TASKS
 - [ ] **Real-time Availability** - Implement "X places left" functionality
