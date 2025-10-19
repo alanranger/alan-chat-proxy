@@ -2540,6 +2540,116 @@ function getClarificationLevelAndConfidence(query, pageContext) {
   };
 }
 
+// NEW: Query Classification System
+function classifyQuery(query) {
+  const lc = query.toLowerCase();
+  
+  // DIRECT ANSWER QUERIES - Should bypass clarification entirely
+  const directAnswerPatterns = [
+    // About Alan Ranger
+    /who is alan ranger/i,
+    /tell me about alan ranger/i,
+    /alan ranger background/i,
+    /alan ranger experience/i,
+    /how long has alan ranger/i,
+    /alan ranger qualifications/i,
+    
+    // Business/Policy queries
+    /terms and conditions/i,
+    /cancellation policy/i,
+    /refund policy/i,
+    /booking policy/i,
+    /privacy policy/i,
+    /gift voucher/i,
+    /gift certificate/i,
+    
+    // Specific service queries
+    /do you do commercial photography/i,
+    /commercial photography services/i,
+    /wedding photography services/i,
+    /portrait photography services/i,
+    /event photography services/i,
+    
+    // Specific information queries
+    /customer reviews/i,
+    /testimonials/i,
+    /where can i read reviews/i,
+    /what equipment do i need/i,
+    /how do i book/i,
+    /booking process/i,
+    /contact information/i,
+    /phone number/i,
+    /email address/i,
+    
+    // Free course queries
+    /free online photography/i,
+    /free photography course/i,
+    /free photography academy/i,
+    /free online academy/i,
+    
+    // Technical queries that should have direct answers
+    /explain the exposure triangle/i,
+    /what is the exposure triangle/i,
+    /camera settings for low light/i,
+    /best camera settings/i,
+    /tripod recommendation/i,
+    /what tripod do you recommend/i,
+    /best tripod for/i,
+    
+    // Location/venue queries
+    /where are you located/i,
+    /studio location/i,
+    /workshop location/i,
+    /meeting point/i,
+    /parking/i,
+    /public transport/i
+  ];
+  
+  for (const pattern of directAnswerPatterns) {
+    if (pattern.test(query)) {
+      return { type: 'direct_answer', reason: 'specific_information_query' };
+    }
+  }
+  
+  // WORKSHOP QUERIES - Preserve existing functionality
+  const workshopPatterns = [
+    /photography workshop/i,
+    /workshop/i,
+    /photography training/i,
+    /photography course/i,
+    /photography lesson/i
+  ];
+  
+  for (const pattern of workshopPatterns) {
+    if (pattern.test(query)) {
+      return { type: 'workshop', reason: 'workshop_related_query' };
+    }
+  }
+  
+  // CLARIFICATION QUERIES - Broad queries that need clarification
+  const clarificationPatterns = [
+    /photography services/i,
+    /photography courses/i,
+    /photography articles/i,
+    /photography tips/i,
+    /photography help/i,
+    /photography advice/i,
+    /photography equipment/i,
+    /photography gear/i,
+    /photography techniques/i,
+    /photography tutorials/i
+  ];
+  
+  for (const pattern of clarificationPatterns) {
+    if (pattern.test(query)) {
+      return { type: 'clarification', reason: 'broad_query_needs_clarification' };
+    }
+  }
+  
+  // Default to clarification for unknown queries
+  return { type: 'clarification', reason: 'unknown_query_default' };
+}
+
 async function generateClarificationQuestion(query, client = null, pageContext = null) {
   const lc = query.toLowerCase();
   console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
@@ -2548,6 +2658,16 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   if (lc.includes('1-day') || lc.includes('2.5hrs-4hrs') || lc.includes('2-5-days')) {
     console.log(`🎯 Bypassing clarification for normalized duration category: "${lc}"`);
     return null; // Let the system route to events
+  }
+  
+  // NEW: Query Classification System
+  const classification = classifyQuery(query);
+  console.log(`🎯 Query classified as: ${classification.type} (${classification.reason})`);
+  
+  // BYPASS: Direct answer queries should not go to clarification
+  if (classification.type === 'direct_answer') {
+    console.log(`🎯 Bypassing clarification for direct answer query: "${lc}"`);
+    return null; // Let the system route to direct answer
   }
   
   // Get clarification level and confidence
@@ -2573,14 +2693,16 @@ async function generateClarificationQuestion(query, client = null, pageContext =
     return specialEquipmentResult;
   }
   
-  // PRIORITY: Check course/workshop patterns FIRST (before evidence-based)
-  const courseWorkshopResult = checkCourseWorkshopPatterns(lc);
-  if (courseWorkshopResult) {
-    console.log(`🎯 Workshop pattern matched, returning:`, courseWorkshopResult);
-    courseWorkshopResult.confidence = confidence;
-    return courseWorkshopResult;
-  } else {
-    console.log(`❌ No workshop pattern matched for: "${lc}"`);
+  // PRIORITY: Check course/workshop patterns FIRST (only for workshop-classified queries)
+  if (classification.type === 'workshop') {
+    const courseWorkshopResult = checkCourseWorkshopPatterns(lc);
+    if (courseWorkshopResult) {
+      console.log(`🎯 Workshop pattern matched, returning:`, courseWorkshopResult);
+      courseWorkshopResult.confidence = confidence;
+      return courseWorkshopResult;
+    } else {
+      console.log(`❌ No workshop pattern matched for: "${lc}"`);
+    }
   }
   
   // Try evidence-based clarification (only if no workshop patterns matched)
@@ -5936,7 +6058,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.17-fix-fitness-level-overspill", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.18-query-classification", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5961,7 +6083,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.17-fix-fitness-level-overspill", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.18-query-classification", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5981,7 +6103,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.17-fix-fitness-level-overspill",
+          version: "v1.3.18-query-classification",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6041,6 +6163,172 @@ async function gatherPreContent(client, query, previousQuery, intent, pageContex
 }
 
 /* -------------------------------- Handler -------------------------------- */
+// NEW: Direct Answer Handler for specific queries
+async function handleDirectAnswerQuery(client, query, pageContext, res) {
+  try {
+    const keywords = extractKeywords(query);
+    console.log(`🔍 Direct answer query: "${query}" with keywords:`, keywords);
+    
+    // Search for relevant content
+    const [articles, services, events] = await Promise.all([
+      findArticles(client, { keywords, limit: 10, pageContext }),
+      findServices(client, { keywords, limit: 10, pageContext }),
+      findEvents(client, { keywords, limit: 5, pageContext })
+    ]);
+    
+    console.log(`📊 Direct answer search results: ${articles.length} articles, ${services.length} services, ${events.length} events`);
+    
+    // Generate direct answer based on query type
+    let answer = '';
+    let confidence = 80; // High confidence for direct answers
+    
+    const lc = query.toLowerCase();
+    
+    // About Alan Ranger queries
+    if (lc.includes('alan ranger') || lc.includes('who is')) {
+      const aboutArticle = articles.find(a => 
+        a.title?.toLowerCase().includes('alan ranger') || 
+        a.page_url?.includes('about') ||
+        a.page_url?.includes('alan-ranger')
+      );
+      
+      if (aboutArticle) {
+        answer = `**About Alan Ranger**\n\nAlan Ranger is a professional photographer and photography instructor based in the UK. He offers photography workshops, courses, and services across various locations.\n\n*For more detailed information, visit: ${aboutArticle.page_url}*`;
+      } else {
+        answer = `**About Alan Ranger**\n\nAlan Ranger is a professional photographer and photography instructor who offers workshops, courses, and photography services. He specializes in landscape, portrait, and commercial photography.\n\n*For more information, please visit the website or contact directly.*`;
+      }
+    }
+    
+    // Terms and conditions queries
+    else if (lc.includes('terms') || lc.includes('conditions') || lc.includes('policy')) {
+      const termsArticle = articles.find(a => 
+        a.title?.toLowerCase().includes('terms') || 
+        a.title?.toLowerCase().includes('conditions') ||
+        a.title?.toLowerCase().includes('policy') ||
+        a.page_url?.includes('terms') ||
+        a.page_url?.includes('policy')
+      );
+      
+      if (termsArticle) {
+        answer = `**Terms and Conditions**\n\nFor detailed terms and conditions, please refer to the official policy page.\n\n*View full terms: ${termsArticle.page_url}*`;
+      } else {
+        answer = `**Terms and Conditions**\n\nFor specific terms and conditions, cancellation policies, and booking information, please contact Alan Ranger directly or check the website for the most current policies.\n\n*Contact information is available on the website.*`;
+      }
+    }
+    
+    // Commercial photography queries
+    else if (lc.includes('commercial photography') || lc.includes('do you do commercial')) {
+      const commercialService = services.find(s => 
+        s.title?.toLowerCase().includes('commercial') ||
+        s.page_url?.includes('commercial')
+      );
+      
+      if (commercialService) {
+        answer = `**Commercial Photography Services**\n\nYes, Alan Ranger offers professional commercial photography services including business photography, corporate events, and commercial shoots.\n\n*Learn more: ${commercialService.page_url}*`;
+      } else {
+        answer = `**Commercial Photography Services**\n\nYes, Alan Ranger provides professional commercial photography services for businesses, corporate events, and commercial projects.\n\n*For specific commercial photography needs, please contact directly to discuss requirements and availability.*`;
+      }
+    }
+    
+    // Free course queries
+    else if (lc.includes('free') && (lc.includes('course') || lc.includes('academy'))) {
+      const freeCourseService = services.find(s => 
+        s.title?.toLowerCase().includes('free') && s.title?.toLowerCase().includes('course')
+      );
+      
+      if (freeCourseService) {
+        answer = `**Free Online Photography Course**\n\nYes! Alan Ranger offers a free online photography course that covers the fundamentals of photography.\n\n*Access the free course: ${freeCourseService.page_url}*`;
+      } else {
+        answer = `**Free Online Photography Course**\n\nYes, Alan Ranger provides a free online photography course covering essential photography techniques and fundamentals.\n\n*Visit the website to access the free course materials.*`;
+      }
+    }
+    
+    // Customer reviews queries
+    else if (lc.includes('review') || lc.includes('testimonial')) {
+      answer = `**Customer Reviews and Testimonials**\n\nCustomer reviews and testimonials are available on the website and social media platforms. Many clients have shared their positive experiences with Alan Ranger's photography workshops and services.\n\n*Check the website or social media for detailed testimonials and reviews.*`;
+    }
+    
+    // Equipment queries
+    else if (lc.includes('equipment') || lc.includes('what do i need')) {
+      const equipmentArticle = articles.find(a => 
+        a.title?.toLowerCase().includes('equipment') ||
+        a.title?.toLowerCase().includes('gear') ||
+        a.title?.toLowerCase().includes('camera')
+      );
+      
+      if (equipmentArticle) {
+        answer = `**Equipment for Workshops**\n\nFor photography workshops, you'll typically need a camera (DSLR or mirrorless), lenses, and basic accessories. Specific requirements may vary by workshop type.\n\n*Detailed equipment guide: ${equipmentArticle.page_url}*`;
+      } else {
+        answer = `**Equipment for Workshops**\n\nFor photography workshops, you'll need a camera (DSLR or mirrorless), appropriate lenses, and basic accessories. Specific equipment requirements are provided when you book a workshop.\n\n*Contact for specific equipment recommendations based on the workshop you're interested in.*`;
+      }
+    }
+    
+    // Booking queries
+    else if (lc.includes('book') || lc.includes('booking')) {
+      answer = `**How to Book a Workshop**\n\nTo book a photography workshop, you can:\n\n1. Visit the website and browse available workshops\n2. Select your preferred date and location\n3. Complete the online booking form\n4. Make payment to secure your place\n\n*For assistance with booking, contact Alan Ranger directly.*`;
+    }
+    
+    // Technical queries (exposure triangle, tripod recommendations, etc.)
+    else if (lc.includes('exposure triangle') || lc.includes('tripod') || lc.includes('camera settings')) {
+      const technicalArticle = articles.find(a => 
+        a.title?.toLowerCase().includes('exposure') ||
+        a.title?.toLowerCase().includes('tripod') ||
+        a.title?.toLowerCase().includes('settings') ||
+        a.title?.toLowerCase().includes('camera')
+      );
+      
+      if (technicalArticle) {
+        answer = `**Photography Technical Advice**\n\nFor detailed technical advice on photography topics, Alan Ranger has written comprehensive guides and articles.\n\n*Read the full guide: ${technicalArticle.page_url}*`;
+      } else {
+        answer = `**Photography Technical Advice**\n\nFor specific technical photography advice, Alan Ranger provides detailed guidance through workshops, articles, and one-on-one mentoring.\n\n*Contact for personalized technical advice or check the website for available resources.*`;
+      }
+    }
+    
+    // Default response for other direct answer queries
+    else {
+      if (articles.length > 0) {
+        const bestArticle = articles[0];
+        answer = `**Information Found**\n\nI found relevant information about your query.\n\n*Read more: ${bestArticle.page_url}*`;
+      } else if (services.length > 0) {
+        const bestService = services[0];
+        answer = `**Service Information**\n\nHere's information about the service you're asking about.\n\n*Learn more: ${bestService.page_url}*`;
+      } else {
+        answer = `**Information Request**\n\nFor specific information about your query, please contact Alan Ranger directly or visit the website for more details.\n\n*Contact information is available on the website.*`;
+        confidence = 60; // Lower confidence if no specific content found
+      }
+    }
+    
+    // Send the direct answer response
+    res.status(200).json({
+      ok: true,
+      type: "advice",
+      answer_markdown: answer,
+      structured: {
+        intent: "direct_answer",
+        topic: keywords.join(", "),
+        events: [],
+        products: [],
+        services: services,
+        landing: [],
+        articles: articles
+      },
+      confidence,
+      debug: { 
+        version: "v1.3.18-query-classification", 
+        intent: "direct_answer", 
+        classification: "direct_answer",
+        timestamp: new Date().toISOString() 
+      }
+    });
+    
+    return true; // Response sent
+    
+  } catch (error) {
+    console.error('Error in handleDirectAnswerQuery:', error);
+    return false; // Let the system fall back to normal processing
+  }
+}
+
 export default async function handler(req, res) {
   // Chat API handler called
   const started = Date.now();
@@ -6179,6 +6467,18 @@ export default async function handler(req, res) {
       return; // Response already sent
     }
     
+    // NEW: DIRECT ANSWER CHECK: Handle queries that should bypass clarification
+    if (!pageContext || !pageContext.clarificationLevel) {
+      const classification = classifyQuery(query);
+      if (classification.type === 'direct_answer') {
+        console.log(`🎯 Direct answer query detected: "${query}" - bypassing clarification`);
+        const directAnswerResponse = await handleDirectAnswerQuery(client, query, pageContext, res);
+        if (directAnswerResponse) {
+          return; // Response already sent
+        }
+      }
+    }
+    
     // INITIAL CLARIFICATION CHECK: Check if this is a new query that needs clarification
     if (!pageContext || !pageContext.clarificationLevel) {
       console.log(`🔍 Checking initial clarification for: "${query}"`);
@@ -6191,7 +6491,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.17-fix-fitness-level-overspill", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.18-query-classification", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }
