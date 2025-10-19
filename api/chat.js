@@ -3395,6 +3395,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   console.log('🔍 findEvents debug:', { enhancedKeywords, queryText });
   
   // Check for 2.5hrs-4hrs workshops (normalized)
+  console.log('🔍 DEBUG: Checking if queryText contains 2.5hrs-4hrs:', queryText);
   if (queryText.includes('2.5hrs-4hrs')) {
     console.log('🔍 Using category-based query for 2.5hrs-4hrs workshops');
     const result = await findEventsByDuration(client, '2.5hrs-4hrs', limit);
