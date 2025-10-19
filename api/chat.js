@@ -3158,11 +3158,11 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   console.log(`🔍 matches("4hr"): ${matches("4hr")}`);
   console.log(`🔍 matches("short photography workshops"): ${matches("short photography workshops")}`);
   
-  if (matches("2.5hr") || matches("4hr") || matches("short photography workshops")) {
+  if (matches("2.5hr") || matches("4hr") || matches("short photography workshops") || matches("2.5hr - 4hr workshops")) {
     console.log(`✅ Matched workshop pattern, routing to events`);
     return createRoute("route_to_events", "short photography workshops 2-4 hours", "events");
   }
-  if (matches("1 day") || matches("one day photography workshops")) {
+  if (matches("1 day") || matches("one day photography workshops") || matches("1 day workshops")) {
     return createRoute("route_to_events", "one day photography workshops", "events");
   }
   if (matches("multi day") || matches("residential") || matches("multi day residential photography workshops")) {
@@ -3282,7 +3282,7 @@ function handleEventsBypass(query, events, res) {
       events,
       structured: { intent: "events", topic: (extractKeywords(query||"")||[]).join(", "), events, products: [], pills: [] },
       confidence,
-      debug: { version: "v1.2.91-force-deployment", bypassClarification: true, timestamp: new Date().toISOString() }
+      debug: { version: "v1.2.92-fix-one-day-pattern", bypassClarification: true, timestamp: new Date().toISOString() }
     });
     return true;
   }
@@ -5723,7 +5723,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.91-force-deployment",
+          version: "v1.2.92-fix-one-day-pattern",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString()
         }
