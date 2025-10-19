@@ -3574,32 +3574,37 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
         // For events with multiple categories, create separate entries for each session type
         if (event.categories.length > 1 && event.categories.includes('1-day') && event.categories.includes('2.5hrs-4hrs')) {
           // This is a multi-session event (like Bluebell workshops)
+          // Parse actual times from the event data
+          const actualStartTime = event.start_time || '08:00:00';
+          const actualEndTime = event.end_time || '15:30:00';
+          
           if (categoryType === '2.5hrs-4hrs') {
-            // Create entries for both early and late sessions
+            // Calculate session times based on actual event times
+            // For 2.5hr sessions, split the day into early and late sessions
             const earlySession = {
               ...event,
               session_type: 'early',
-              start_time: '09:30:00', // Early session time
-              end_time: '12:00:00',   // Early session end
+              start_time: actualStartTime, // Use actual start time
+              end_time: '12:00:00',        // Midday break
               categories: ['2.5hrs-4hrs'],
               event_title: `${event.event_title} (Early Session)`
             };
             const lateSession = {
               ...event,
               session_type: 'late',
-              start_time: '13:30:00', // Late session time
-              end_time: '16:00:00',   // Late session end
+              start_time: '13:00:00',      // After lunch
+              end_time: actualEndTime,     // Use actual end time
               categories: ['2.5hrs-4hrs'],
               event_title: `${event.event_title} (Late Session)`
             };
             filteredEvents.push(earlySession, lateSession);
           } else if (categoryType === '1-day') {
-            // Create entry for full-day session
+            // Create entry for full-day session using actual times
             const fullDaySession = {
               ...event,
               session_type: 'full-day',
-              start_time: '09:30:00', // Full day start
-              end_time: '16:00:00',   // Full day end
+              start_time: actualStartTime, // Use actual start time
+              end_time: actualEndTime,     // Use actual end time
               categories: ['1-day'],
               event_title: `${event.event_title} (Full Day)`
             };
@@ -5936,7 +5941,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.05-session-parsing-fix", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.06-fix-session-times", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5961,7 +5966,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.05-session-parsing-fix", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.06-fix-session-times", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5981,7 +5986,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.05-session-parsing-fix",
+          version: "v1.3.06-fix-session-times",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6191,7 +6196,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.05-session-parsing-fix", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.06-fix-session-times", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }
