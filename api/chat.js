@@ -3523,6 +3523,20 @@ async function handleFallbackQueries(client, categoryType, aliases, limit) {
 async function findEventsByDuration(client, categoryType, limit = 100) {
   try {
     console.log(`🔍 findEventsByDuration called with categoryType: ${categoryType}, limit: ${limit}`);
+    
+    // TEMPORARY TEST: Return a simple result to verify function is being called
+    if (categoryType === '2.5hrs-4hrs') {
+      console.log(`🔍 TEMPORARY TEST: Returning test result for 2.5hrs-4hrs`);
+      return [{
+        event_url: 'https://test.com/test',
+        event_title: 'Test 2.5hrs-4hrs Workshop',
+        date_start: '2025-01-20T10:00:00Z',
+        date_end: '2025-01-20T14:00:00Z',
+        event_location: 'Test Location',
+        price_gbp: '99'
+      }];
+    }
+    
     const todayIso = new Date().toISOString().split('T')[0];
     
     // Use category-based filtering instead of duration calculation
