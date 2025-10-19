@@ -2553,6 +2553,9 @@ function classifyQuery(query) {
     /alan ranger experience/i,
     /how long has alan ranger/i,
     /alan ranger qualifications/i,
+    /how long have you been professional/i,
+    /how long have you been/i,
+    /professional experience/i,
     
     // Business/Policy queries
     /terms and conditions/i,
