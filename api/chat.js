@@ -3587,7 +3587,9 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
             
             if (productDesc.includes('batsford') || event.event_title.toLowerCase().includes('batsford')) {
               // Extract Batsford session times from description
-              const morningMatch = productDesc.match(/morning workshops are (\d+)\s*am to (\d+):(\d+)\s*am/i);
+              // Looking for: "Half-Day morning workshops are 8 am to 11.30 am"
+              const morningMatch = productDesc.match(/morning workshops are (\d+)\s*am to (\d+)\.(\d+)\s*am/i);
+              // Looking for: "Half-Day afternoon workshops are from 12:00 pm to 3:30 pm"
               const afternoonMatch = productDesc.match(/afternoon workshops are from (\d+):(\d+)\s*pm to (\d+):(\d+)\s*pm/i);
               
               if (morningMatch && afternoonMatch) {
@@ -3600,6 +3602,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
               }
             } else if (productDesc.includes('bluebell') || event.event_title.toLowerCase().includes('bluebell')) {
               // Extract Bluebell session times from description
+              // Looking for: "4hrs - 5:45 am to 9:45 am or 10:30 am to 2:30 pm"
               const sessionMatch = productDesc.match(/(\d+):(\d+)\s*am to (\d+):(\d+)\s*am or (\d+):(\d+)\s*am to (\d+):(\d+)\s*pm/i);
               
               if (sessionMatch) {
@@ -5975,7 +5978,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.09-extract-session-times", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.10-fix-regex-patterns", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6000,7 +6003,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.09-extract-session-times", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.10-fix-regex-patterns", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6020,7 +6023,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.09-extract-session-times",
+          version: "v1.3.10-fix-regex-patterns",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6230,7 +6233,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.09-extract-session-times", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.10-fix-regex-patterns", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }

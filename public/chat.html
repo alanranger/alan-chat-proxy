@@ -1359,10 +1359,10 @@ function renderEventCard(e) {
             <div class="event-date">📅 ${when}</div>
             ${timeInfo}
             ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
-            ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
             ${e.participants ? `<div class="event-participants">👥 ${e.participants} participants</div>` : ''}
-            ${e.fitness_level ? `<div class="event-fitness">🏃 ${e.fitness_level}</div>` : ''}
+            ${e.fitness_level ? `<div class="event-fitness">🏃 Fitness Level: ${e.fitness_level}</div>` : ''}
             ${e.experience_level ? `<div class="event-experience">🎯 ${e.experience_level}</div>` : ''}
+            ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
           </div>
         </div>
       </div>
