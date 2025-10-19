@@ -3406,18 +3406,18 @@ async function findEventsByDuration(client, categoryType, limit = 50) {
     };
     const aliases = categoryAliases[categoryType] || [categoryType];
 
-    // ATTEMPT 1: strict contains per alias (works for text[])
+    // ATTEMPT 1: text[] array 'cs' (contains) per alias using PostgREST literal
     for (const alias of aliases) {
       const { data: d1, error: e1 } = await client
         .from('v_events_for_chat')
         .select('*')
         .gte('date_start', new Date().toISOString())
-        .contains('categories', [alias])
+        .filter('categories', 'cs', `{${alias}}`)
         .order('date_start', { ascending: true })
         .limit(limit);
       if (!e1 && d1 && d1.length) {
         const deduped = dedupeEventsByKey(d1);
-        console.log(`🔍 contains() matched ${deduped.length} events for alias ${alias}`);
+        console.log(`🔍 categories cs matched ${deduped.length} events for alias ${alias}`);
         return mapEventsData(deduped);
       }
     }
