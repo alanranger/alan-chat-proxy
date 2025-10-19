@@ -5968,6 +5968,14 @@ export default async function handler(req, res) {
     }
 
     let { query, topK, previousQuery, sessionId, pageContext } = req.body || {};
+    // Normalize common phrasing variants before any intent/clarification routing
+    if (typeof query === 'string') {
+      const q0 = query;
+      query = query.replace(/\b(1\s*day|one\s*day)\b/gi, '1-day');
+      if (q0 !== query) {
+        console.log('🔍 Normalized query text:', { before: q0, after: query });
+      }
+    }
     const client = supabaseAdmin();
     
     // DEBUG: Log the entire request body
