@@ -3884,27 +3884,16 @@ function applyKeywordFiltering(q, keywords) {
     });
     
     // Search in event_title, event_location, and product_title fields
-    // Use a simpler approach: search for any of the keywords in any of the fields
-    const searchConditions = [];
-    
-    for (const keyword of meaningfulKeywords) {
-      const keywordConditions = [
-        `event_title.ilike.'%${keyword}%'`,
-        `event_url.ilike.'%${keyword}%'`,
-        `event_location.ilike.'%${keyword}%'`,
-        `product_title.ilike.'%${keyword}%'`
-      ];
-      searchConditions.push(`(${keywordConditions.join(',')})`);
-    }
-    
-    console.log('🔍 findEvents debug:', {
-      meaningfulKeywords,
-      searchConditions,
-      query: searchConditions.join(',')
-    });
-    
-    if (searchConditions.length) {
-      return q.or(searchConditions.join(','));
+    // Use a simpler approach: search for the first meaningful keyword in all fields
+    if (meaningfulKeywords.length > 0) {
+      const firstKeyword = meaningfulKeywords[0];
+      console.log('🔍 findEvents debug:', {
+        meaningfulKeywords,
+        searchingFor: firstKeyword
+      });
+      
+      // Search for the first keyword in all relevant fields
+      return q.or(`event_title.ilike.'%${firstKeyword}%',event_url.ilike.'%${firstKeyword}%',event_location.ilike.'%${firstKeyword}%',product_title.ilike.'%${firstKeyword}%'`);
     }
     return q;
 }
