@@ -3382,7 +3382,9 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   const enhancedKeywords = enhanceKeywordsWithPageContext(keywords, pageContext);
   
   // Check if this is a duration-based query that needs special handling
-  const queryText = enhancedKeywords.join(' ').toLowerCase();
+  let queryText = enhancedKeywords.join(' ').toLowerCase();
+  // Normalize "one day" / "1 day" to canonical "1-day" so downstream detection is consistent
+  queryText = queryText.replace(/\b(1\s*day|one\s*day)\b/g, '1-day');
   console.log('🔍 findEvents debug:', { enhancedKeywords, queryText });
   
   // More robust condition for 2.5-4 hour workshops
