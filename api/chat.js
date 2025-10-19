@@ -6168,9 +6168,11 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
   // Check if we need clarification for events queries with low confidence
   // For workshop queries, use a higher threshold since they often need clarification
   const clarificationThreshold = (debugInfo?.intent === 'workshop') ? 0.8 : 0.6;
+  console.log(`🔍 Confidence check: ${confidence} vs threshold ${clarificationThreshold} (intent: ${debugInfo?.intent})`);
   if (confidence < clarificationThreshold) { // Low confidence threshold
     console.log(`🤔 Low confidence (${confidence}) for events query: "${query}" - triggering clarification`);
     const clarification = await generateClarificationQuestion(query, client, pageContext);
+    console.log(`🔍 Clarification result:`, clarification);
     if (clarification) {
       const confidencePercent = clarification.confidence || 20;
       res.status(200).json({
