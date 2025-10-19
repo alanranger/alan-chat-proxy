@@ -3139,7 +3139,7 @@ function handleSpecificCoursePatterns(query, lc, matches, createRoute) {
 function checkShortWorkshopPatterns(matches, createRoute) {
   if (matches("2.5hr") || matches("4hr") || matches("short photography workshops") || matches("2.5hr - 4hr workshops")) {
     console.log(`✅ Matched workshop pattern, routing to events`);
-    return createRoute("route_to_events", "short photography workshops 2-4 hours", "events");
+    return createRoute("route_to_events", "2.5hrs-4hrs workshops", "events");
   }
   return null;
 }
@@ -3156,7 +3156,7 @@ function checkOneDayWorkshopPatterns(matches, createRoute) {
 // Helper function to check multi-day workshop patterns
 function checkMultiDayWorkshopPatterns(matches, createRoute) {
   if (matches("multi day") || matches("residential") || matches("multi day residential photography workshops") || matches("Multi day residential workshops")) {
-    return createRoute("route_to_clarification", "multi day residential photography workshops", "clarification");
+    return createRoute("route_to_events", "2-5-days workshops", "events");
   }
   return null;
 }
@@ -3388,28 +3388,21 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   queryText = queryText.replace(/\b(1\s*day|one\s*day)\b/g, '1-day');
   console.log('🔍 findEvents debug:', { enhancedKeywords, queryText });
   
-  // More robust condition for 2.5-4 hour workshops
-  if (queryText.includes('short') && (queryText.includes('2-4') || queryText.includes('2.5') || queryText.includes('4hr') || queryText.includes('hours'))) {
-    console.log('🔍 Using category-based query for 2.5-4 hour workshops');
+  // Check for 2.5hrs-4hrs workshops (normalized)
+  if (queryText.includes('2.5hrs-4hrs')) {
+    console.log('🔍 Using category-based query for 2.5hrs-4hrs workshops');
     return await findEventsByDuration(client, '2.5hrs-4hrs', limit);
   }
   
-  // Also check for the exact query pattern
-  if (queryText.includes('short photography workshops 2-4 hours')) {
-    console.log('🔍 Using category-based query for exact match');
-    return await findEventsByDuration(client, '2.5hrs-4hrs', limit);
-  }
-  
-  // Check for 1-day workshops (robust normalization across variants)
-  const oneDayRegex = /\b(1\s*[- ]?day|one\s*day)\b/;
-  if (oneDayRegex.test(queryText)) {
-    console.log('🔍 Using category-based query for 1-day workshops (regex)');
+  // Check for 1-day workshops (normalized)
+  if (queryText.includes('1-day')) {
+    console.log('🔍 Using category-based query for 1-day workshops');
     return await findEventsByDuration(client, '1-day', limit);
   }
 
-  // Check for multi-day residential workshops (2-5 days)
-  if ((queryText.includes('multi day') || queryText.includes('2-5') || queryText.includes('2-5-days') || queryText.includes('residential')) && queryText.includes('workshops')) {
-    console.log('🔍 Using category-based query for multi-day residential workshops');
+  // Check for 2-5-days workshops (normalized)
+  if (queryText.includes('2-5-days')) {
+    console.log('🔍 Using category-based query for 2-5-days workshops');
     return await findEventsByDuration(client, '2-5-days', limit);
   }
   
@@ -3590,13 +3583,13 @@ function buildEventsBaseQuery(client, limit) {
     .limit(limit);
 }
 
-// Remove duplicate events by composite key (event_url + date_start)
+// Remove duplicate events by event_url only (same event can have multiple dates)
 function dedupeEventsByKey(rows) {
   if (!Array.isArray(rows)) return [];
   const seen = new Set();
   const unique = [];
   for (const row of rows) {
-    const key = `${row.event_url || ''}::${row.date_start || ''}`;
+    const key = row.event_url || '';
     if (!seen.has(key)) {
       seen.add(key);
       unique.push(row);
@@ -5971,7 +5964,10 @@ export default async function handler(req, res) {
     // Normalize common phrasing variants before any intent/clarification routing
     if (typeof query === 'string') {
       const q0 = query;
+      // Normalize duration categories for consistent routing
       query = query.replace(/\b(1\s*day|one\s*day)\b/gi, '1-day');
+      query = query.replace(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|short)\b/gi, '2.5hrs-4hrs');
+      query = query.replace(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/gi, '2-5-days');
       if (q0 !== query) {
         console.log('🔍 Normalized query text:', { before: q0, after: query });
       }
