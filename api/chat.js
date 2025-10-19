@@ -874,12 +874,12 @@ function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
       console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
       
       const fitnessPatterns = [
-    /Fitness:\s*(\d+\.?\s*[^\n]+)/i,           // "Fitness: 2. Easy-Moderate"
-    /Fitness\s*Level:\s*([^\n]+)/i,            // "Fitness Level: Easy"
-    /Experience\s*-\s*Level:\s*([^\n]+)/i,     // "Experience - Level: Beginner and Novice"
-    /Level:\s*([^\n]+)/i,                      // "Level: Beginners"
-    /Fitness\s*Required:\s*([^\n]+)/i,         // "Fitness Required: Easy"
-    /Physical\s*Level:\s*([^\n]+)/i            // "Physical Level: Easy"
+    /Fitness:\s*(\d+\.?\s*[A-Za-z\s\-]+?)(?:\n|$)/i,           // "Fitness: 2. Easy-Moderate" - stop at newline or end
+    /Fitness\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,            // "Fitness Level: Easy" - stop at newline or end
+    /Experience\s*-\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,     // "Experience - Level: Beginner and Novice" - stop at newline or end
+    /Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,                      // "Level: Beginners" - stop at newline or end
+    /Fitness\s*Required:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,         // "Fitness Required: Easy" - stop at newline or end
+    /Physical\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i            // "Physical Level: Easy" - stop at newline or end
       ];
       
       for (const pattern of fitnessPatterns) {
@@ -5936,7 +5936,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.16-remove-location-month-options", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.17-fix-fitness-level-overspill", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5961,7 +5961,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.16-remove-location-month-options", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.17-fix-fitness-level-overspill", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5981,7 +5981,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.16-remove-location-month-options",
+          version: "v1.3.17-fix-fitness-level-overspill",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6191,7 +6191,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.16-remove-location-month-options", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.17-fix-fitness-level-overspill", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }
