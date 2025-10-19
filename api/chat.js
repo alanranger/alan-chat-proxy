@@ -1817,30 +1817,6 @@ function getWorkshopTypeFromDuration(duration) {
   return 'Multi day residential workshops';
 }
 
-// Helper function to extract location-based types
-function getLocationBasedTypes(events) {
-  const locations = new Set();
-  for (const event of events) {
-    if (event.event_location && event.event_location.trim()) {
-      locations.add(event.event_location.trim());
-    }
-  }
-  
-  return locations.size > 0 ? ['Workshops by location'] : [];
-}
-
-// Helper function to extract month-based types
-function getMonthBasedTypes(events) {
-  const months = new Set();
-  for (const event of events) {
-    if (event.date_start) {
-      const month = new Date(event.date_start).getMonth();
-      months.add(month);
-    }
-  }
-  
-  return months.size > 0 ? ['Workshops by month'] : [];
-}
 
 function extractEventTypesAndCategories(events) {
       const eventTypes = new Set();
@@ -1848,14 +1824,6 @@ function extractEventTypesAndCategories(events) {
       
   // Extract duration-based workshop types
   extractDurationBasedTypes(events, eventTypes);
-  
-  // Add location-based types
-  const locationTypes = getLocationBasedTypes(events);
-  locationTypes.forEach(type => eventTypes.add(type));
-  
-  // Add month-based types
-  const monthTypes = getMonthBasedTypes(events);
-  monthTypes.forEach(type => eventTypes.add(type));
   
   // Extract categories from event titles
   extractTitleBasedCategories(events, eventCategories);
@@ -2132,9 +2100,7 @@ function generateWorkshopClarification() {
     options: [
       { text: "2.5hr - 4hr workshops", query: "short photography workshops 2-4 hours" },
       { text: "1 day workshops", query: "one day photography workshops" },
-      { text: "Multi day residential workshops", query: "multi day residential photography workshops" },
-      { text: "Workshops by location", query: "photography workshops by location" },
-      { text: "Workshops by month", query: "photography workshops by month" }
+      { text: "Multi day residential workshops", query: "multi day residential photography workshops" }
     ]
   };
 }
@@ -3176,21 +3142,6 @@ function checkMultiDayWorkshopPatterns(matches, createRoute) {
   return null;
 }
 
-// Helper function to check location-based workshop patterns
-function checkLocationWorkshopPatterns(matches, createRoute) {
-  if (matches("by location") || matches("photography workshops by location") || matches("Workshops by location")) {
-    return createRoute("route_to_clarification", "photography workshops by location", "clarification");
-  }
-  return null;
-}
-
-// Helper function to check month-based workshop patterns
-function checkMonthWorkshopPatterns(matches, createRoute) {
-  if (matches("by month") || matches("photography workshops by month") || matches("Workshops by month")) {
-    return createRoute("route_to_clarification", "photography workshops by month", "clarification");
-  }
-  return null;
-}
 
 // Helper function to handle workshop clarification patterns
 function handleWorkshopClarificationPatterns(query, lc, matches, createRoute) {
@@ -3208,11 +3159,6 @@ function handleWorkshopClarificationPatterns(query, lc, matches, createRoute) {
   const multiDayResult = checkMultiDayWorkshopPatterns(matches, createRoute);
   if (multiDayResult) return multiDayResult;
   
-  const locationResult = checkLocationWorkshopPatterns(matches, createRoute);
-  if (locationResult) return locationResult;
-  
-  const monthResult = checkMonthWorkshopPatterns(matches, createRoute);
-  if (monthResult) return monthResult;
   
   return null;
 }
@@ -5990,7 +5936,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.15-from-pricing", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.16-remove-location-month-options", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6015,7 +5961,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.15-from-pricing", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.16-remove-location-month-options", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6035,7 +5981,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.15-from-pricing",
+          version: "v1.3.16-remove-location-month-options",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6245,7 +6191,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.15-from-pricing", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.16-remove-location-month-options", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }
