@@ -3354,7 +3354,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   console.log('🔍 queryText.includes("one day"):', queryText.includes('one day'));
   console.log('🔍 queryText.includes("workshops"):', queryText.includes('workshops'));
   
-  if ((queryText.includes('one day') || queryText.includes('1 day') || queryText.includes('1-day')) && queryText.includes('workshops')) {
+  if (queryText.includes('one day') || queryText.includes('1 day') || queryText.includes('1-day')) {
     console.log('🔍 Using category-based query for 1-day workshops');
     return await findEventsByDuration(client, '1-day', limit);
   }
