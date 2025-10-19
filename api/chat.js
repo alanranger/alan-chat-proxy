@@ -5978,7 +5978,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.10-fix-regex-patterns", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.11-force-deploy", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6003,7 +6003,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.10-fix-regex-patterns", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.11-force-deploy", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6023,7 +6023,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.10-fix-regex-patterns",
+          version: "v1.3.11-force-deploy",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6233,7 +6233,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.10-fix-regex-patterns", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.11-force-deploy", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }
