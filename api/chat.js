@@ -3282,7 +3282,7 @@ function handleEventsBypass(query, events, res) {
       events,
       structured: { intent: "events", topic: (extractKeywords(query||"")||[]).join(", "), events, products: [], pills: [] },
       confidence,
-      debug: { version: "v1.2.92-fix-one-day-pattern", bypassClarification: true, timestamp: new Date().toISOString() }
+      debug: { version: "v1.2.93-debug-one-day", bypassClarification: true, timestamp: new Date().toISOString() }
     });
     return true;
   }
@@ -3346,6 +3346,11 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   }
   
   // Check for 1-day workshops
+  console.log('🔍 Checking 1-day workshop conditions for queryText:', queryText);
+  console.log('🔍 queryText.includes("one day photography workshops"):', queryText.includes('one day photography workshops'));
+  console.log('🔍 queryText.includes("one day"):', queryText.includes('one day'));
+  console.log('🔍 queryText.includes("workshops"):', queryText.includes('workshops'));
+  
   if (queryText.includes('one day photography workshops') || (queryText.includes('one day') && queryText.includes('workshops'))) {
     console.log('🔍 Using custom duration-based query for 1-day workshops');
     return await findEventsByDuration(client, 6, 8, limit);
@@ -3381,7 +3386,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
 
 async function findEventsByDuration(client, minHours, maxHours, limit = 50) {
   try {
-    console.log(`🔍 Finding events with duration between ${minHours} and ${maxHours} hours`);
+    console.log(`🔍 findEventsByDuration called with minHours: ${minHours}, maxHours: ${maxHours}, limit: ${limit}`);
     
     // Use raw SQL query to filter by actual duration
     const { data, error } = await client
@@ -3393,6 +3398,16 @@ async function findEventsByDuration(client, minHours, maxHours, limit = 50) {
       .ilike('event_title', '%workshop%')
       .order('date_start', { ascending: true })
       .limit(limit);
+    
+    console.log(`🔍 Raw database query returned ${data?.length || 0} events`);
+    if (data && data.length > 0) {
+      console.log('🔍 Sample raw events:', data.slice(0, 3).map(e => ({ 
+        title: e.event_title, 
+        start: e.date_start, 
+        end: e.date_end,
+        duration: e.date_start && e.date_end ? (new Date(e.date_end) - new Date(e.date_start)) / (1000 * 60 * 60) : 'N/A'
+      })));
+    }
     
     if (error) {
       console.error('❌ Duration-based query error:', error);
@@ -5723,7 +5738,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.92-fix-one-day-pattern",
+          version: "v1.2.93-debug-one-day",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString()
         }
