@@ -5893,7 +5893,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.03-category-filtering-fix", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.04-initial-clarification-fix", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5918,7 +5918,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.03-category-filtering-fix", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.04-initial-clarification-fix", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5938,7 +5938,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.03-category-filtering-fix",
+          version: "v1.3.04-initial-clarification-fix",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6134,6 +6134,24 @@ export default async function handler(req, res) {
     const residentialResponse = await handleResidentialPricingGuard(client, query, previousQuery, pageContext, res);
     if (residentialResponse) {
       return; // Response already sent
+    }
+    
+    // INITIAL CLARIFICATION CHECK: Check if this is a new query that needs clarification
+    if (!pageContext || !pageContext.clarificationLevel) {
+      console.log(`🔍 Checking initial clarification for: "${query}"`);
+      const initialClarification = await generateClarificationQuestion(query, client, pageContext);
+      if (initialClarification) {
+        console.log(`🔍 Returning initial clarification response`);
+        res.status(200).json({
+          ok: true,
+          type: "clarification",
+          question: initialClarification.question,
+          options: initialClarification.options,
+          confidence: initialClarification.confidence || 20,
+          debug: { version: "v1.3.04-initial-clarification-fix", intent: "initial_clarification", timestamp: new Date().toISOString() }
+        });
+        return;
+      }
     }
     
     // Retrieval-first: try to gather content and check content-based confidence
