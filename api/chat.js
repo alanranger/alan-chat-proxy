@@ -3509,6 +3509,7 @@ async function handleFallbackQueries(client, categoryType, aliases, limit) {
 async function findEventsByDuration(client, categoryType, limit = 100) {
   try {
     console.log(`🔍 findEventsByDuration called with categoryType: ${categoryType}, limit: ${limit}`);
+    const todayIso = new Date().toISOString().split('T')[0];
     
     // Use category-based filtering instead of duration calculation
     // Accept common alias tokens for categories (handles hyphen variants, synonyms)
@@ -3524,7 +3525,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
       const { data: d1, error: e1 } = await client
         .from('v_events_for_chat')
         .select('*')
-        .gte('date_start', new Date().toISOString())
+        .gte('date_start', `${todayIso}T00:00:00.000Z`)
         .filter('categories', 'cs', `{${alias}}`)
         .order('date_start', { ascending: true })
         .limit(200); // Higher limit to get all data before deduplication
@@ -3541,7 +3542,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
     const { data, error } = await client
       .from('v_events_for_chat')
       .select('*')
-      .gte('date_start', new Date().toISOString()) // Only future events
+      .gte('date_start', `${todayIso}T00:00:00.000Z`) // Only future events (midnight)
       .not('date_start', 'is', null)
       .not('date_end', 'is', null)
       .overlaps('categories', aliases) // Match any alias
