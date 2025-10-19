@@ -3447,8 +3447,22 @@ async function findEventsByDuration(client, categoryType, limit = 50) {
         return [];
       }
       if (!data2 || data2.length === 0) {
-        console.log(`🔍 Still no events found for category: ${categoryType} after relaxed query.`);
-        return [];
+        console.log(`🔍 Still no events via SQL for category: ${categoryType}. Applying JS-side filter over recent events...`);
+        const { data: data3, error: error3 } = await client
+          .from('v_events_for_chat')
+          .select('*')
+          .gte('date_start', `${todayIso}T00:00:00.000Z`)
+          .order('date_start', { ascending: true })
+          .limit(200);
+        if (error3 || !data3) {
+          console.error('❌ JS-side filter preload error:', error3);
+          return [];
+        }
+        const aliasSet = new Set(aliases.map(a => a.toLowerCase()));
+        const filtered = data3.filter(r => Array.isArray(r.categories) && r.categories.some(c => aliasSet.has(String(c).toLowerCase())));
+        const deduped3 = dedupeEventsByKey(filtered).slice(0, limit);
+        console.log(`🔍 JS-side filter returned ${deduped3.length} unique events for category: ${categoryType}`);
+        return mapEventsData(deduped3);
       }
       const deduped2 = dedupeEventsByKey(data2);
       console.log(`🔍 Fallback returned ${deduped2.length} unique events for category: ${categoryType}`);
