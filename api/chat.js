@@ -3397,7 +3397,9 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   // Check for 1-day workshops (normalized)
   if (queryText.includes('1-day')) {
     console.log('🔍 Using category-based query for 1-day workshops');
-    return await findEventsByDuration(client, '1-day', limit);
+    const result = await findEventsByDuration(client, '1-day', limit);
+    console.log('🔍 findEventsByDuration returned:', result?.length || 0, 'events');
+    return result;
   }
 
   // Check for 2-5-days workshops (normalized)
