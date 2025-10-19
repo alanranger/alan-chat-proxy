@@ -6489,8 +6489,21 @@ function determineIntent(query, previousQuery, pageContext) {
     return "clarification_followup";
   }
   
-  // Default intent detection
-  return detectIntent(query || "");
+  // Use new classification system instead of old detectIntent
+  const classification = classifyQuery(query || "");
+  console.log(`🎯 Query classified as: ${classification.type} (${classification.reason})`);
+  
+  // Map classification types to intent
+  switch (classification.type) {
+    case 'workshop':
+      return "workshop";
+    case 'direct_answer':
+      return "direct_answer";
+    case 'clarification':
+      return "clarification";
+    default:
+      return "events"; // fallback
+  }
 }
 
 // Helper: Process by intent (Low Complexity)
@@ -6498,6 +6511,14 @@ async function processByIntent(client, query, previousQuery, intent, pageContext
   // Handle clarification follow-ups
   if (intent === "clarification_followup") {
     return await handleClarificationFollowup(client, query, previousQuery, pageContext, res);
+  }
+  
+  // Handle workshop queries
+  if (intent === "workshop") {
+    console.log(`🎯 Workshop query detected: "${query}" - routing to workshop system`);
+    const keywords = extractKeywords(query);
+    const handled = await handleEventsPipeline(client, query, keywords, pageContext, res, { intent: "workshop" });
+    if (handled) return;
   }
   
   // Handle direct answer queries
