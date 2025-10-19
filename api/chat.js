@@ -5972,7 +5972,7 @@ export default async function handler(req, res) {
       const q0 = query;
       // Normalize duration categories for consistent routing
       query = query.replace(/\b(1\s*day|one\s*day)\b/gi, '1-day');
-      query = query.replace(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|short)\b/gi, '2.5hrs-4hrs');
+      query = query.replace(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|2\s*hr|2\s*hour|short)\b/gi, '2.5hrs-4hrs');
       query = query.replace(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/gi, '2-5-days');
       if (q0 !== query) {
         console.log('🔍 Normalized query text:', { before: q0, after: query });
