@@ -600,7 +600,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-        <div class="badge-wrap"><span class="version">v1.2.90-fix-duration-filtering</span></div>
+        <div class="badge-wrap"><span class="version">v1.2.91-force-deployment</span></div>
 
   <div class="card" id="chatCard">
     <!-- Sticky header -->
@@ -2016,7 +2016,9 @@ function renderAnswer(payload){
   const heuristic = heuristicConfidence(payload.structured||{});
 
   // Render the main textual answer first
-  const md = String(payload.answer_markdown || payload.answer || '');
+  // Only use payload.answer if it's a string, not an array (for events)
+  const answerText = payload.answer_markdown || (Array.isArray(payload.answer) ? '' : payload.answer) || '';
+  const md = String(answerText);
   if (md && md.trim()) {
     const {html} = mdToHtml(md);
     addBubble(html);
