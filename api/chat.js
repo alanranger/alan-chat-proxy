@@ -3969,8 +3969,9 @@ function mapEventsData(data) {
   console.log('🔍 findEvents mapped data:', {
     mappedDataCount: mappedData?.length || 0,
     dedupedDataCount: dedupedData?.length || 0,
-    dedupedDataSample: dedupedData?.slice(0, 2) || [],
-    originalDataCount: data?.length || 0
+    originalDataCount: data?.length || 0,
+    eventUrls: mappedData?.map(e => e.event_url) || [],
+    uniqueEventUrls: [...new Set(mappedData?.map(e => e.event_url) || [])]
   });
   
   return dedupedData;
