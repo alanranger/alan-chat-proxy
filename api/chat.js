@@ -3285,7 +3285,7 @@ function handleEventsBypass(query, events, res) {
       events,
       structured: { intent: "events", topic: (extractKeywords(query||"")||[]).join(", "), events, products: [], pills: [] },
       confidence,
-      debug: { version: "v1.2.95-debug-followup", bypassClarification: true, timestamp: new Date().toISOString() }
+      debug: { version: "v1.2.96-category-based", bypassClarification: true, timestamp: new Date().toISOString() }
     });
     return true;
   }
@@ -3338,14 +3338,14 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   
   // More robust condition for 2.5-4 hour workshops
   if (queryText.includes('short') && (queryText.includes('2-4') || queryText.includes('2.5') || queryText.includes('4hr') || queryText.includes('hours'))) {
-    console.log('🔍 Using custom duration-based query for 2.5-4 hour workshops');
-    return await findEventsByDuration(client, 2.5, 4, limit);
+    console.log('🔍 Using category-based query for 2.5-4 hour workshops');
+    return await findEventsByDuration(client, '2.5hrs-4hrs', limit);
   }
   
   // Also check for the exact query pattern
   if (queryText.includes('short photography workshops 2-4 hours')) {
-    console.log('🔍 Using custom duration-based query for exact match');
-    return await findEventsByDuration(client, 2.5, 4, limit);
+    console.log('🔍 Using category-based query for exact match');
+    return await findEventsByDuration(client, '2.5hrs-4hrs', limit);
   }
   
   // Check for 1-day workshops
@@ -3355,8 +3355,8 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   console.log('🔍 queryText.includes("workshops"):', queryText.includes('workshops'));
   
   if (queryText.includes('one day photography workshops') || (queryText.includes('one day') && queryText.includes('workshops'))) {
-    console.log('🔍 Using custom duration-based query for 1-day workshops');
-    return await findEventsByDuration(client, 6, 8, limit);
+    console.log('🔍 Using category-based query for 1-day workshops');
+    return await findEventsByDuration(client, '1-day', limit);
   }
   
   // Debug: Check if we're missing the condition
@@ -3387,11 +3387,11 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   return mapEventsData(data);
 }
 
-async function findEventsByDuration(client, minHours, maxHours, limit = 50) {
+async function findEventsByDuration(client, categoryType, limit = 50) {
   try {
-    console.log(`🔍 findEventsByDuration called with minHours: ${minHours}, maxHours: ${maxHours}, limit: ${limit}`);
+    console.log(`🔍 findEventsByDuration called with categoryType: ${categoryType}, limit: ${limit}`);
     
-    // Use raw SQL query to filter by actual duration
+    // Use category-based filtering instead of duration calculation
     const { data, error } = await client
       .from('v_events_for_chat')
       .select('*')
@@ -3399,39 +3399,33 @@ async function findEventsByDuration(client, minHours, maxHours, limit = 50) {
       .not('date_start', 'is', null)
       .not('date_end', 'is', null)
       .ilike('event_title', '%workshop%')
+      .contains('categories', [categoryType]) // Filter by category
       .order('date_start', { ascending: true })
       .limit(limit);
     
-    console.log(`🔍 Raw database query returned ${data?.length || 0} events`);
+    console.log(`🔍 Category-based query returned ${data?.length || 0} events for category: ${categoryType}`);
     if (data && data.length > 0) {
-      console.log('🔍 Sample raw events:', data.slice(0, 3).map(e => ({ 
+      console.log('🔍 Sample events:', data.slice(0, 3).map(e => ({ 
         title: e.event_title, 
+        categories: e.categories,
         start: e.date_start, 
-        end: e.date_end,
-        duration: e.date_start && e.date_end ? (new Date(e.date_end) - new Date(e.date_start)) / (1000 * 60 * 60) : 'N/A'
+        end: e.date_end
       })));
     }
     
     if (error) {
-      console.error('❌ Duration-based query error:', error);
+      console.error('❌ Category-based query error:', error);
       return [];
     }
     
-    // Filter by duration in JavaScript since Supabase doesn't support complex duration calculations
-    const filteredEvents = data.filter(event => {
-      if (!event.date_start || !event.date_end) return false;
-      
-      const start = new Date(event.date_start);
-      const end = new Date(event.date_end);
-      const durationHours = (end - start) / (1000 * 60 * 60);
-      
-      return durationHours >= minHours && durationHours <= maxHours;
-    });
+    if (!data || data.length === 0) {
+      console.log(`🔍 No events found with category: ${categoryType}`);
+      return [];
+    }
     
-    console.log(`🔍 Found ${filteredEvents.length} events with duration ${minHours}-${maxHours} hours`);
-    console.log('🔍 Sample events:', filteredEvents.slice(0, 3).map(e => ({ title: e.event_title, duration: (new Date(e.date_end) - new Date(e.date_start)) / (1000 * 60 * 60) })));
+    console.log(`🔍 Found ${data.length} events with category: ${categoryType}`);
     
-    return mapEventsData(filteredEvents);
+    return mapEventsData(data);
   } catch (error) {
     console.error('❌ Error in findEventsByDuration:', error);
     return [];
@@ -5741,7 +5735,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.95-debug-followup",
+          version: "v1.2.96-category-based",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString()
         }
