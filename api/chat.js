@@ -5996,6 +5996,16 @@ export default async function handler(req, res) {
         console.log('🔍 Normalized query text:', { before: q0, after: query });
       }
     }
+    
+    // BYPASS: If query contains normalized duration categories, go directly to events
+    if (typeof query === 'string' && (query.includes('1-day') || query.includes('2.5hrs-4hrs') || query.includes('2-5-days'))) {
+      console.log(`🎯 Bypassing all clarification logic for normalized duration query: "${query}"`);
+      const client = supabaseAdmin();
+      const keywords = extractKeywords(query);
+      const handled = await handleEventsPipeline(client, query, keywords, pageContext, res, { bypassReason: 'normalized_duration' });
+      if (handled) return;
+    }
+    
     const client = supabaseAdmin();
     
     // DEBUG: Log the entire request body
