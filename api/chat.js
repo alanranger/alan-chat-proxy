@@ -5953,7 +5953,9 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         debug: {
           version: "v1.2.100-complexity-fix",
           debugInfo: debugInfo,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          queryText: query,
+          keywords: keywords
         }
   });
   return true;
