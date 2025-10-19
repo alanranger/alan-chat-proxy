@@ -3551,6 +3551,8 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
     
     if (!e1 && d1 && d1.length) {
       const deduped = dedupeEventsByKey(d1);
+      // Ensure chronological order is preserved after deduplication
+      deduped.sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
       const limitedDeduped = deduped.slice(0, limit);
       return mapEventsData(limitedDeduped);
     }
