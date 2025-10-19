@@ -6259,15 +6259,7 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
     const { answer, confidence } = generateEvidenceBasedAnswer(query, articles, services, events);
     
     // Generate smart pills
-    console.log('🔍 Debug pills generation:', { 
-      query, 
-      articlesCount: articles?.length || 0, 
-      servicesCount: services?.length || 0, 
-      eventsCount: events?.length || 0,
-      classification: classification?.type 
-    });
     const pills = generateSmartPills(query, { articles, services, events }, classification);
-    console.log('🔍 Generated pills:', pills);
     
     // Send response
     res.status(200).json({
