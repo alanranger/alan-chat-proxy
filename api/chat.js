@@ -2248,7 +2248,15 @@ function checkCourseWorkshopPatterns(lc) {
   }
   
   // Enhanced workshop pattern matching to catch more variations
-  if ((lc.includes("do you run") || lc.includes("do you have") || lc.includes("what") || lc.includes("which") || lc.includes("when") || lc.includes("next")) && (lc.includes("workshops") || lc.includes("workshop"))) {
+  // Match any query that contains "workshop" and doesn't contain specific duration indicators
+  if (lc.includes("workshop") && 
+      !lc.includes("2.5hr") && 
+      !lc.includes("4hr") && 
+      !lc.includes("1 day") && 
+      !lc.includes("multi day") && 
+      !lc.includes("residential") &&
+      !lc.includes("short") &&
+      !lc.includes("long")) {
     return generateWorkshopClarification();
   }
   
@@ -3550,35 +3558,17 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
       return [];
     }
 
-    // Filter events by actual duration based on start_time and end_time
+    // Filter events by categories field (preferred method)
     const filteredEvents = allEvents.filter(event => {
-      if (!event.start_time || !event.end_time) return false;
-      
-      // Parse times (format: HH:MM:SS)
-      const startTime = event.start_time.split(':').map(Number);
-      const endTime = event.end_time.split(':').map(Number);
-      
-      const startMinutes = startTime[0] * 60 + startTime[1];
-      const endMinutes = endTime[0] * 60 + endTime[1];
-      const durationMinutes = endMinutes - startMinutes;
-      const durationHours = durationMinutes / 60;
-      
-      console.log(`🔍 Event: ${event.event_title}, Duration: ${durationHours.toFixed(1)}hrs, Category: ${categoryType}`);
-      
-      // Filter based on actual duration
-      switch (categoryType) {
-        case '2.5hrs-4hrs':
-          // Show only short sessions (2.5-4 hours)
-          return durationHours >= 2.5 && durationHours <= 4;
-        case '1-day':
-          // Show only full-day sessions (6+ hours)
-          return durationHours >= 6;
-        case '2-5-days':
-          // Show multi-day events (24+ hours)
-          return durationHours >= 24;
-        default:
-          return true;
+      if (!event.categories || !Array.isArray(event.categories)) {
+        console.log(`🔍 Event: ${event.event_title}, No categories field, skipping`);
+        return false;
       }
+      
+      const hasCategory = event.categories.includes(categoryType);
+      console.log(`🔍 Event: ${event.event_title}, Categories: ${JSON.stringify(event.categories)}, Has ${categoryType}: ${hasCategory}`);
+      
+      return hasCategory;
     });
 
     console.log(`🔍 Filtered ${filteredEvents.length} events for category: ${categoryType}`);
@@ -5903,7 +5893,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.02-duration-based-filtering", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.03-category-filtering-fix", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5928,7 +5918,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.01-frontend-test", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.03-category-filtering-fix", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5948,7 +5938,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.102-fix-timezone",
+          version: "v1.3.03-category-filtering-fix",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
