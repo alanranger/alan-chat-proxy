@@ -3529,6 +3529,17 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
   try {
     console.log(`🔍 findEventsByDuration called with categoryType: ${categoryType}, limit: ${limit}`);
     
+    // DEBUG: Return a test result to verify function is being called
+    if (categoryType === '2.5hrs-4hrs') {
+      return [{
+        event_url: 'https://test.com/debug',
+        event_title: 'DEBUG: findEventsByDuration called',
+        date_start: '2025-01-20T10:00:00Z',
+        date_end: '2025-01-20T14:00:00Z',
+        event_location: 'Debug Location',
+        price_gbp: '99'
+      }];
+    }
     
     const todayIso = new Date().toISOString().split('T')[0];
     
