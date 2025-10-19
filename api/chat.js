@@ -4828,8 +4828,7 @@ function formatEventsForUi(events) {
   
   // Preserve original fields so the frontend can format times and ranges
   const result = (events || [])
-    .map(transformEventForUI)
-    .slice(0, 12);
+    .map(transformEventForUI);
     
   console.log('🔍 formatEventsForUi output:', {
     outputLength: result.length,
