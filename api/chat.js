@@ -3392,6 +3392,10 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   let queryText = enhancedKeywords.join(' ').toLowerCase();
   // Normalize "one day" / "1 day" to canonical "1-day" so downstream detection is consistent
   queryText = queryText.replace(/\b(1\s*day|one\s*day)\b/g, '1-day');
+  // Normalize short duration phrasings to canonical token
+  queryText = queryText.replace(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|2\s*hr|2\s*hour|short)\b/g, '2.5hrs-4hrs');
+  // Normalize multi-day phrasings to canonical token
+  queryText = queryText.replace(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/g, '2-5-days');
   console.log('🔍 findEvents debug:', { enhancedKeywords, queryText });
   
   // Check for 2.5hrs-4hrs workshops (normalized)
