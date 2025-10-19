@@ -3443,6 +3443,34 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
 }
 
 // Helper function to handle fallback queries for findEventsByDuration
+function normalizeCategories(rawCategories) {
+  if (!rawCategories) return [];
+  // Already an array
+  if (Array.isArray(rawCategories)) {
+    return rawCategories.map(c => String(c).trim()).filter(Boolean);
+  }
+  const value = String(rawCategories).trim();
+  // Handle Postgres text[] rendered like {"1-day","2.5hrs-4hrs"}
+  if (value.startsWith('{') && value.endsWith('}')) {
+    const inner = value.slice(1, -1);
+    return inner
+      .split(',')
+      .map(s => s.replace(/^\"|\"$/g, '').trim())
+      .filter(Boolean);
+  }
+  // Handle JSON array string
+  if ((value.startsWith('[') && value.endsWith(']'))) {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.map(c => String(c).trim()).filter(Boolean) : [];
+    } catch (_) {
+      // fall through to generic splitting
+    }
+  }
+  // Generic fallback: split on comma/semicolon
+  return value.split(/[;,]/).map(s => s.trim()).filter(Boolean);
+}
+
 async function handleFallbackQueries(client, categoryType, aliases, limit) {
   console.log(`🔍 No events found with category: ${categoryType} on first pass. Retrying with relaxed filters...`);
   // Fallback 1: date filter from CURRENT_DATE (midnight) and no title filter
@@ -3471,7 +3499,10 @@ async function handleFallbackQueries(client, categoryType, aliases, limit) {
       return [];
     }
     const aliasSet = new Set(aliases.map(a => a.toLowerCase()));
-    const filtered = data3.filter(r => Array.isArray(r.categories) && r.categories.some(c => aliasSet.has(String(c).toLowerCase())));
+    const filtered = data3.filter(r => {
+      const cats = normalizeCategories(r.categories).map(c => c.toLowerCase());
+      return cats.some(c => aliasSet.has(c));
+    });
     const deduped3 = dedupeEventsByKey(filtered).slice(0, limit);
     console.log(`🔍 JS-side filter returned ${deduped3.length} unique events for category: ${categoryType}`);
     return mapEventsData(deduped3);
