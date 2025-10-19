@@ -247,7 +247,10 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .event-date,
 .event-time,
 .event-location,
-.event-availability {
+.event-availability,
+.event-participants,
+.event-fitness,
+.event-experience {
   font-size: 13px;
   color: #d1d5db;
 }
@@ -1358,6 +1361,7 @@ function renderEventCard(e) {
             ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
             ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
             ${e.participants ? `<div class="event-participants">👥 ${e.participants} participants</div>` : ''}
+            ${e.fitness_level ? `<div class="event-fitness">🏃 ${e.fitness_level}</div>` : ''}
             ${e.experience_level ? `<div class="event-experience">🎯 ${e.experience_level}</div>` : ''}
           </div>
         </div>
