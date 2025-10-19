@@ -3398,13 +3398,21 @@ async function findEventsByDuration(client, categoryType, limit = 50) {
     console.log(`🔍 findEventsByDuration called with categoryType: ${categoryType}, limit: ${limit}`);
     
     // Use category-based filtering instead of duration calculation
+    // Accept common alias tokens for categories (handles hyphen variants, synonyms)
+    const categoryAliases = {
+      '1-day': ['1-day', '1 day', 'one-day', 'day-1'],
+      '2-5-days': ['2-5-days', 'multi-day', 'residential', '2 days', '3 days', '4 days', '5 days'],
+      '2.5hrs-4hrs': ['2.5hrs-4hrs', '2.5hr-4hr', '2-4hrs', 'short']
+    };
+    const aliases = categoryAliases[categoryType] || [categoryType];
+
     const { data, error } = await client
       .from('v_events_for_chat')
       .select('*')
       .gte('date_start', new Date().toISOString()) // Only future events
       .not('date_start', 'is', null)
       .not('date_end', 'is', null)
-      .contains('categories', [categoryType]) // Filter by category
+      .overlaps('categories', aliases) // Match any alias
       .order('date_start', { ascending: true })
       .limit(limit);
     
@@ -3431,7 +3439,7 @@ async function findEventsByDuration(client, categoryType, limit = 50) {
         .from('v_events_for_chat')
         .select('*')
         .gte('date_start', `${todayIso}T00:00:00.000Z`)
-        .contains('categories', [categoryType])
+        .overlaps('categories', aliases)
         .order('date_start', { ascending: true })
         .limit(limit);
       if (error2) {
