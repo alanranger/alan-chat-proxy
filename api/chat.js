@@ -3525,11 +3525,13 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
         .gte('date_start', new Date().toISOString())
         .filter('categories', 'cs', `{${alias}}`)
         .order('date_start', { ascending: true })
-        .limit(limit);
+        .limit(200); // Higher limit to get all data before deduplication
       if (!e1 && d1 && d1.length) {
         const deduped = dedupeEventsByKey(d1);
-        console.log(`🔍 categories cs matched ${deduped.length} events for alias ${alias}`);
-        return mapEventsData(deduped);
+        console.log(`🔍 categories cs matched ${deduped.length} unique events for alias ${alias} (from ${d1.length} total rows)`);
+        // Apply the original limit after deduplication
+        const limitedDeduped = deduped.slice(0, limit);
+        return mapEventsData(limitedDeduped);
       }
     }
 
