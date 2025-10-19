@@ -2556,6 +2556,8 @@ function classifyQuery(query) {
     /how long have you been professional/i,
     /how long have you been/i,
     /professional experience/i,
+    /where is alan ranger based/i,
+    /alan ranger photographic background/i,
     
     // Business/Policy queries
     /terms and conditions/i,
@@ -2565,6 +2567,16 @@ function classifyQuery(query) {
     /privacy policy/i,
     /gift voucher/i,
     /gift certificate/i,
+    /cancellation or refund policy/i,
+    
+    // Contact and booking queries
+    /how can i contact you/i,
+    /book a discovery call/i,
+    /contact information/i,
+    /phone number/i,
+    /email address/i,
+    /how do i book/i,
+    /booking process/i,
     
     // Specific service queries
     /do you do commercial photography/i,
@@ -2572,23 +2584,41 @@ function classifyQuery(query) {
     /wedding photography services/i,
     /portrait photography services/i,
     /event photography services/i,
+    /property photography/i,
+    /real estate photography/i,
+    /product photography/i,
+    /e-commerce store/i,
+    /pricing structure for portrait/i,
+    /headshot work/i,
+    /corporate photography/i,
+    /retouching services/i,
+    /editing services/i,
+    /fine art prints/i,
+    /turnaround time/i,
+    /usage rights/i,
+    /licensing for photos/i,
+    /commission you for/i,
+    /commercial photography project/i,
+    /how far will you travel/i,
     
     // Specific information queries
     /customer reviews/i,
     /testimonials/i,
     /where can i read reviews/i,
     /what equipment do i need/i,
-    /how do i book/i,
-    /booking process/i,
-    /contact information/i,
-    /phone number/i,
-    /email address/i,
+    /what gear do i need/i,
+    /equipment needed/i,
+    /what sort of camera do i need/i,
+    /do i need a laptop/i,
+    /certificate with the photography course/i,
     
     // Free course queries
     /free online photography/i,
     /free photography course/i,
     /free photography academy/i,
     /free online academy/i,
+    /online photography course really free/i,
+    /subscribe to the free online/i,
     
     // Technical queries that should have direct answers
     /explain the exposure triangle/i,
@@ -2598,6 +2628,37 @@ function classifyQuery(query) {
     /tripod recommendation/i,
     /what tripod do you recommend/i,
     /best tripod for/i,
+    /what is long exposure/i,
+    /long exposure and how can i find out more/i,
+    /pictures never seem sharp/i,
+    /advise on what i am doing wrong/i,
+    /personalised feedback on my images/i,
+    /get personalised feedback/i,
+    
+    // Course and workshop specific queries
+    /what courses do you offer/i,
+    /complete beginners/i,
+    /evening classes in coventry/i,
+    /how many weeks is the beginners/i,
+    /get off auto class/i,
+    /standalone/i,
+    /topics are covered in the 5-week/i,
+    /miss one of the weekly classes/i,
+    /make it up/i,
+    /online or zoom lessons/i,
+    /mentoring/i,
+    /1-2-1 private lessons cost/i,
+    /private lessons cost/i,
+    /residential workshops/i,
+    /multi-day field trips/i,
+    /how many students per workshop/i,
+    /students per class/i,
+    /sign up to monthly mentoring/i,
+    /mentoring assignments/i,
+    /lightroom course/i,
+    /post-processing courses/i,
+    /rps mentoring/i,
+    /prerequisites for advanced courses/i,
     
     // Location/venue queries
     /where are you located/i,
@@ -2605,7 +2666,22 @@ function classifyQuery(query) {
     /workshop location/i,
     /meeting point/i,
     /parking/i,
-    /public transport/i
+    /public transport/i,
+    /where is your gallery/i,
+    /submit my images for feedback/i,
+    
+    // Age and accessibility queries
+    /can my.*yr old attend/i,
+    /age.*attend/i,
+    /young.*attend/i,
+    
+    // Ethical and professional queries
+    /ethical guidelines/i,
+    /photography tutor/i,
+    
+    // Pick N Mix queries
+    /what is pick n mix/i,
+    /pick n mix in the payment plans/i
   ];
   
   for (const pattern of directAnswerPatterns) {
@@ -6061,7 +6137,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.18-query-classification", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.20-expanded-classification", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6086,7 +6162,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.18-query-classification", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.20-expanded-classification", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6106,7 +6182,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.18-query-classification",
+          version: "v1.3.20-expanded-classification",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6166,142 +6242,26 @@ async function gatherPreContent(client, query, previousQuery, intent, pageContex
 }
 
 /* -------------------------------- Handler -------------------------------- */
-// NEW: Direct Answer Handler for specific queries
+// REFACTORED: Evidence-Based Direct Answer Handler (Low Complexity)
 async function handleDirectAnswerQuery(client, query, pageContext, res) {
   try {
+    const classification = classifyQuery(query);
     const keywords = extractKeywords(query);
-    console.log(`🔍 Direct answer query: "${query}" with keywords:`, keywords);
     
     // Search for relevant content
     const [articles, services, events] = await Promise.all([
-      findArticles(client, { keywords, limit: 10, pageContext }),
-      findServices(client, { keywords, limit: 10, pageContext }),
-      findEvents(client, { keywords, limit: 5, pageContext })
+      findArticles(client, { keywords, limit: 5, pageContext }),
+      findServices(client, { keywords, limit: 5, pageContext }),
+      findEvents(client, { keywords, limit: 3, pageContext })
     ]);
     
-    console.log(`📊 Direct answer search results: ${articles.length} articles, ${services.length} services, ${events.length} events`);
+    // Generate evidence-based answer
+    const { answer, confidence } = generateEvidenceBasedAnswer(query, articles, services, events);
     
-    // Generate direct answer based on query type
-    let answer = '';
-    let confidence = 80; // High confidence for direct answers
+    // Generate smart pills
+    const pills = generateSmartPills(query, { articles, services, events }, classification);
     
-    const lc = query.toLowerCase();
-    
-    // About Alan Ranger queries
-    if (lc.includes('alan ranger') || lc.includes('who is')) {
-      const aboutArticle = articles.find(a => 
-        a.title?.toLowerCase().includes('alan ranger') || 
-        a.page_url?.includes('about') ||
-        a.page_url?.includes('alan-ranger')
-      );
-      
-      if (aboutArticle) {
-        answer = `**About Alan Ranger**\n\nAlan Ranger is a professional photographer and photography instructor based in the UK. He offers photography workshops, courses, and services across various locations.\n\n*For more detailed information, visit: ${aboutArticle.page_url}*`;
-      } else {
-        answer = `**About Alan Ranger**\n\nAlan Ranger is a professional photographer and photography instructor who offers workshops, courses, and photography services. He specializes in landscape, portrait, and commercial photography.\n\n*For more information, please visit the website or contact directly.*`;
-      }
-    }
-    
-    // Terms and conditions queries
-    else if (lc.includes('terms') || lc.includes('conditions') || lc.includes('policy')) {
-      const termsArticle = articles.find(a => 
-        a.title?.toLowerCase().includes('terms') || 
-        a.title?.toLowerCase().includes('conditions') ||
-        a.title?.toLowerCase().includes('policy') ||
-        a.page_url?.includes('terms') ||
-        a.page_url?.includes('policy')
-      );
-      
-      if (termsArticle) {
-        answer = `**Terms and Conditions**\n\nFor detailed terms and conditions, please refer to the official policy page.\n\n*View full terms: ${termsArticle.page_url}*`;
-      } else {
-        answer = `**Terms and Conditions**\n\nFor specific terms and conditions, cancellation policies, and booking information, please contact Alan Ranger directly or check the website for the most current policies.\n\n*Contact information is available on the website.*`;
-      }
-    }
-    
-    // Commercial photography queries
-    else if (lc.includes('commercial photography') || lc.includes('do you do commercial')) {
-      const commercialService = services.find(s => 
-        s.title?.toLowerCase().includes('commercial') ||
-        s.page_url?.includes('commercial')
-      );
-      
-      if (commercialService) {
-        answer = `**Commercial Photography Services**\n\nYes, Alan Ranger offers professional commercial photography services including business photography, corporate events, and commercial shoots.\n\n*Learn more: ${commercialService.page_url}*`;
-      } else {
-        answer = `**Commercial Photography Services**\n\nYes, Alan Ranger provides professional commercial photography services for businesses, corporate events, and commercial projects.\n\n*For specific commercial photography needs, please contact directly to discuss requirements and availability.*`;
-      }
-    }
-    
-    // Free course queries
-    else if (lc.includes('free') && (lc.includes('course') || lc.includes('academy'))) {
-      const freeCourseService = services.find(s => 
-        s.title?.toLowerCase().includes('free') && s.title?.toLowerCase().includes('course')
-      );
-      
-      if (freeCourseService) {
-        answer = `**Free Online Photography Course**\n\nYes! Alan Ranger offers a free online photography course that covers the fundamentals of photography.\n\n*Access the free course: ${freeCourseService.page_url}*`;
-      } else {
-        answer = `**Free Online Photography Course**\n\nYes, Alan Ranger provides a free online photography course covering essential photography techniques and fundamentals.\n\n*Visit the website to access the free course materials.*`;
-      }
-    }
-    
-    // Customer reviews queries
-    else if (lc.includes('review') || lc.includes('testimonial')) {
-      answer = `**Customer Reviews and Testimonials**\n\nCustomer reviews and testimonials are available on the website and social media platforms. Many clients have shared their positive experiences with Alan Ranger's photography workshops and services.\n\n*Check the website or social media for detailed testimonials and reviews.*`;
-    }
-    
-    // Equipment queries
-    else if (lc.includes('equipment') || lc.includes('what do i need')) {
-      const equipmentArticle = articles.find(a => 
-        a.title?.toLowerCase().includes('equipment') ||
-        a.title?.toLowerCase().includes('gear') ||
-        a.title?.toLowerCase().includes('camera')
-      );
-      
-      if (equipmentArticle) {
-        answer = `**Equipment for Workshops**\n\nFor photography workshops, you'll typically need a camera (DSLR or mirrorless), lenses, and basic accessories. Specific requirements may vary by workshop type.\n\n*Detailed equipment guide: ${equipmentArticle.page_url}*`;
-      } else {
-        answer = `**Equipment for Workshops**\n\nFor photography workshops, you'll need a camera (DSLR or mirrorless), appropriate lenses, and basic accessories. Specific equipment requirements are provided when you book a workshop.\n\n*Contact for specific equipment recommendations based on the workshop you're interested in.*`;
-      }
-    }
-    
-    // Booking queries
-    else if (lc.includes('book') || lc.includes('booking')) {
-      answer = `**How to Book a Workshop**\n\nTo book a photography workshop, you can:\n\n1. Visit the website and browse available workshops\n2. Select your preferred date and location\n3. Complete the online booking form\n4. Make payment to secure your place\n\n*For assistance with booking, contact Alan Ranger directly.*`;
-    }
-    
-    // Technical queries (exposure triangle, tripod recommendations, etc.)
-    else if (lc.includes('exposure triangle') || lc.includes('tripod') || lc.includes('camera settings')) {
-      const technicalArticle = articles.find(a => 
-        a.title?.toLowerCase().includes('exposure') ||
-        a.title?.toLowerCase().includes('tripod') ||
-        a.title?.toLowerCase().includes('settings') ||
-        a.title?.toLowerCase().includes('camera')
-      );
-      
-      if (technicalArticle) {
-        answer = `**Photography Technical Advice**\n\nFor detailed technical advice on photography topics, Alan Ranger has written comprehensive guides and articles.\n\n*Read the full guide: ${technicalArticle.page_url}*`;
-      } else {
-        answer = `**Photography Technical Advice**\n\nFor specific technical photography advice, Alan Ranger provides detailed guidance through workshops, articles, and one-on-one mentoring.\n\n*Contact for personalized technical advice or check the website for available resources.*`;
-      }
-    }
-    
-    // Default response for other direct answer queries
-    else {
-      if (articles.length > 0) {
-        const bestArticle = articles[0];
-        answer = `**Information Found**\n\nI found relevant information about your query.\n\n*Read more: ${bestArticle.page_url}*`;
-      } else if (services.length > 0) {
-        const bestService = services[0];
-        answer = `**Service Information**\n\nHere's information about the service you're asking about.\n\n*Learn more: ${bestService.page_url}*`;
-      } else {
-        answer = `**Information Request**\n\nFor specific information about your query, please contact Alan Ranger directly or visit the website for more details.\n\n*Contact information is available on the website.*`;
-        confidence = 60; // Lower confidence if no specific content found
-      }
-    }
-    
-    // Send the direct answer response
+    // Send response
     res.status(200).json({
       ok: true,
       type: "advice",
@@ -6309,67 +6269,229 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
       structured: {
         intent: "direct_answer",
         topic: keywords.join(", "),
-        events: [],
+        events: events,
         products: [],
         services: services,
         landing: [],
-        articles: articles
+        articles: articles,
+        pills: pills
       },
       confidence,
       debug: { 
-        version: "v1.3.18-query-classification", 
+        version: "v1.3.20-expanded-classification", 
         intent: "direct_answer", 
-        classification: "direct_answer",
+        classification: classification.type,
         timestamp: new Date().toISOString() 
       }
     });
     
-    return true; // Response sent
+    return true;
     
   } catch (error) {
     console.error('Error in handleDirectAnswerQuery:', error);
-    return false; // Let the system fall back to normal processing
+    return false;
   }
 }
 
+// Helper: Generate evidence-based answer (Low Complexity)
+function generateEvidenceBasedAnswer(query, articles, services, events) {
+  const lc = query.toLowerCase();
+  let answer = '';
+  let confidence = 80;
+  
+  if (articles.length > 0) {
+    const bestArticle = articles[0];
+    answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
+  } else if (services.length > 0) {
+    const bestService = services[0];
+    answer = `Yes, Alan Ranger offers the services you're asking about.\n\n*Learn more: ${bestService.page_url}*`;
+  } else if (events.length > 0) {
+    const bestEvent = events[0];
+    answer = `Here's information about the workshops and events available.\n\n*View details: ${bestEvent.page_url}*`;
+  } else {
+    answer = `For specific information about your query, please contact Alan Ranger directly or visit the website for more details.`;
+    confidence = 60;
+  }
+  
+  return { answer, confidence };
+}
+
+// Helper: Generate smart pills (Low Complexity)
+function generateSmartPills(query, evidence, classification) {
+  const pills = [];
+  const lc = query.toLowerCase();
+  
+  if (classification.type === 'direct_answer') {
+    if (lc.includes('tripod') || lc.includes('equipment') || lc.includes('camera')) {
+      pills.push({ label: "Equipment Guide", url: "https://www.alanranger.com/equipment-recommendations", brand: true });
+      pills.push({ label: "Contact for Advice", url: "https://www.alanranger.com/contact", brand: true });
+    } else if (lc.includes('alan ranger') || lc.includes('who is')) {
+      pills.push({ label: "About Alan", url: "https://www.alanranger.com/about", brand: true });
+      pills.push({ label: "Qualifications", url: "https://www.alanranger.com/qualifications", brand: true });
+    } else if (lc.includes('commercial') || lc.includes('wedding') || lc.includes('portrait')) {
+      pills.push({ label: "Services", url: "https://www.alanranger.com/services", brand: true });
+      pills.push({ label: "Portfolio", url: "https://www.alanranger.com/portfolio", brand: true });
+    } else if (lc.includes('contact') || lc.includes('book')) {
+      pills.push({ label: "Contact Alan", url: "https://www.alanranger.com/contact", brand: true });
+      pills.push({ label: "Book Now", url: "https://www.alanranger.com/booking", brand: true });
+    } else {
+      pills.push({ label: "Learn More", url: "https://www.alanranger.com", brand: true });
+      pills.push({ label: "Contact Alan", url: "https://www.alanranger.com/contact", brand: true });
+    }
+  }
+  
+  return pills;
+}
+
+// REFACTORED: Main Handler - Broken into smaller functions
 export default async function handler(req, res) {
-  // Chat API handler called
   const started = Date.now();
   try {
-    if (req.method !== "POST") {
-      res
-        .status(405)
-        .json({ ok: false, error: "method_not_allowed", where: "http" });
+    // Validate request method
+    if (!validateRequestMethod(req, res)) return;
+    
+    // Extract and normalize query
+    const { query, topK, previousQuery, sessionId, pageContext } = extractAndNormalizeQuery(req.body);
+    if (!query) {
+      res.status(400).json({ ok: false, error: "missing_query" });
       return;
     }
+    
+    // Handle normalized duration queries
+    if (await handleNormalizedDurationQuery(query, pageContext, res)) return;
+    
+    // Continue with main processing
+    await processMainQuery(query, previousQuery, sessionId, pageContext, res, started);
+    
+  } catch (error) {
+    console.error('Handler error:', error);
+    res.status(500).json({ ok: false, error: "internal_server_error" });
+  }
+}
 
-    let { query, topK, previousQuery, sessionId, pageContext } = req.body || {};
-    // Normalize common phrasing variants before any intent/clarification routing
-    if (typeof query === 'string') {
-      const q0 = query;
-      // Normalize duration categories for consistent routing
-      query = query.replace(/\b(1\s*day|one\s*day)\b/gi, '1-day');
-      query = query.replace(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|2\s*hr|2\s*hour|short)\b/gi, '2.5hrs-4hrs');
-      query = query.replace(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/gi, '2-5-days');
-      if (q0 !== query) {
-        console.log('🔍 Normalized query text:', { before: q0, after: query });
+// Helper: Validate request method (Low Complexity)
+function validateRequestMethod(req, res) {
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "method_not_allowed", where: "http" });
+    return false;
+  }
+  return true;
+}
+
+// Helper: Extract and normalize query (Low Complexity)
+function extractAndNormalizeQuery(body) {
+  let { query, topK, previousQuery, sessionId, pageContext } = body || {};
+  
+  if (typeof query === 'string') {
+    const q0 = query;
+    // Normalize duration categories for consistent routing
+    query = query.replace(/\b(1\s*day|one\s*day)\b/gi, '1-day');
+    query = query.replace(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|2\s*hr|2\s*hour|short)\b/gi, '2.5hrs-4hrs');
+    query = query.replace(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/gi, '2-5-days');
+    if (q0 !== query) {
+      console.log('🔍 Normalized query text:', { before: q0, after: query });
+    }
+  }
+  
+  return { query, topK, previousQuery, sessionId, pageContext };
+}
+
+// Helper: Handle normalized duration queries (Low Complexity)
+async function handleNormalizedDurationQuery(query, pageContext, res) {
+  if (typeof query === 'string' && (query.includes('1-day') || query.includes('2.5hrs-4hrs') || query.includes('2-5-days'))) {
+    console.log(`🎯 Bypassing all clarification logic for normalized duration query: "${query}"`);
+    const client = supabaseAdmin();
+    const keywords = extractKeywords(query);
+    return await handleEventsPipeline(client, query, keywords, pageContext, res, { bypassReason: 'normalized_duration' });
+  }
+  return false;
+}
+
+// Helper: Process main query (Low Complexity)
+async function processMainQuery(query, previousQuery, sessionId, pageContext, res, started) {
+  const client = supabaseAdmin();
+  
+  // Create session if needed
+  await createSession(sessionId, req.headers['user-agent'], req.headers['x-forwarded-for'] || req.connection.remoteAddress);
+  
+  // Determine intent
+  const intent = determineIntent(query, previousQuery, pageContext);
+  
+  // Process based on intent
+  await processByIntent(client, query, previousQuery, intent, pageContext, res, started);
+}
+
+// Helper: Determine intent (Low Complexity)
+function determineIntent(query, previousQuery, pageContext) {
+  // Check for clarification follow-ups first
+  if (pageContext && pageContext.clarificationLevel > 0) {
+    return "clarification_followup";
+  }
+  
+  // Default intent detection
+  return detectIntent(query || "");
+}
+
+// Helper: Process by intent (Low Complexity)
+async function processByIntent(client, query, previousQuery, intent, pageContext, res, started) {
+  // Handle clarification follow-ups
+  if (intent === "clarification_followup") {
+    return await handleClarificationFollowUp(client, query, previousQuery, pageContext, res);
+  }
+  
+  // Handle direct answer queries
+  if (!pageContext || !pageContext.clarificationLevel) {
+    const classification = classifyQuery(query);
+    if (classification.type === 'direct_answer') {
+      console.log(`🎯 Direct answer query detected: "${query}" - bypassing clarification`);
+      const directAnswerResponse = await handleDirectAnswerQuery(client, query, pageContext, res);
+      if (directAnswerResponse) {
+        return; // Response already sent
       }
     }
-    
-    // BYPASS: If query contains normalized duration categories, go directly to events
-    if (typeof query === 'string' && (query.includes('1-day') || query.includes('2.5hrs-4hrs') || query.includes('2-5-days'))) {
-      console.log(`🎯 Bypassing all clarification logic for normalized duration query: "${query}"`);
-      const client = supabaseAdmin();
-      const keywords = extractKeywords(query);
-      const handled = await handleEventsPipeline(client, query, keywords, pageContext, res, { bypassReason: 'normalized_duration' });
-      if (handled) return;
+  }
+  
+  // Continue with existing logic for other intents
+  await processRemainingLogic(client, query, previousQuery, intent, pageContext, res, started);
+}
+
+// Helper: Process remaining logic (Low Complexity)
+async function processRemainingLogic(client, query, previousQuery, intent, pageContext, res, started) {
+  // Extract keywords for search
+  const keywords = extractKeywords(query);
+  
+  // Handle different intents
+  if (intent === "events") {
+    const handled = await handleEventsPipeline(client, query, keywords, pageContext, res, { intent });
+    if (handled) return;
+  } else if (intent === "advice") {
+    const handled = await handleAdvicePipeline(client, query, keywords, pageContext, res, { intent });
+    if (handled) return;
+  }
+  
+  // Fallback response
+  res.status(200).json({
+    ok: true,
+    type: "advice",
+    answer_markdown: "I'd be happy to help you with your photography questions. Could you please provide more specific details about what you're looking for?",
+    structured: {
+      intent: "fallback",
+      topic: keywords.join(", "),
+      events: [],
+      products: [],
+      services: [],
+      landing: [],
+      articles: []
+    },
+    confidence: 30,
+    debug: { 
+      version: "v1.3.19-evidence-based", 
+      intent: "fallback", 
+      classification: "fallback",
+      timestamp: new Date().toISOString() 
     }
-    
-    const client = supabaseAdmin();
-    
-    // DEBUG: Log the entire request body
-    console.log(`🔍 DEBUG: Full request body:`, JSON.stringify(req.body, null, 2));
-    console.log(`🔍 DEBUG: pageContext extracted:`, pageContext);
+  });
+}
     console.log(`🔍 DEBUG: pageContext type:`, typeof pageContext);
     
     // DEBUG: Store debug info for response
@@ -6494,7 +6616,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.18-query-classification", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.20-expanded-classification", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }
