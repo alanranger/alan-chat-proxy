@@ -3579,25 +3579,40 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
           const actualEndTime = event.end_time || '15:30:00';
           
           if (categoryType === '2.5hrs-4hrs') {
-            // Use the actual advertised session times from product pages
+            // Extract session times from product description in database
             let earlyEndTime, lateStartTime;
             
-            // Determine session times based on event type
-            if (event.event_title.toLowerCase().includes('batsford')) {
-              // Batsford: morning 8am-11:30am, afternoon 12:00pm-3:30pm
-              earlyEndTime = '11:30:00';
-              lateStartTime = '12:00:00';
-            } else if (event.event_title.toLowerCase().includes('bluebell')) {
-              // Bluebell: morning 5:45am-9:45am, afternoon 10:30am-2:30pm
-              earlyEndTime = '09:45:00';
-              lateStartTime = '10:30:00';
+            const productDesc = event.product_description || '';
+            console.log(`🔍 Product description for ${event.event_title}:`, productDesc.substring(0, 200) + '...');
+            
+            if (productDesc.includes('batsford') || event.event_title.toLowerCase().includes('batsford')) {
+              // Extract Batsford session times from description
+              const morningMatch = productDesc.match(/morning workshops are (\d+)\s*am to (\d+):(\d+)\s*am/i);
+              const afternoonMatch = productDesc.match(/afternoon workshops are from (\d+):(\d+)\s*pm to (\d+):(\d+)\s*pm/i);
+              
+              if (morningMatch && afternoonMatch) {
+                earlyEndTime = `${morningMatch[2].padStart(2, '0')}:${morningMatch[3].padStart(2, '0')}:00`;
+                lateStartTime = `${afternoonMatch[1].padStart(2, '0')}:${afternoonMatch[2].padStart(2, '0')}:00`;
+                console.log(`🔍 Extracted Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}`);
+              } else {
+                console.log(`🔍 Could not extract Batsford session times from description`);
+                return; // Skip if we can't extract times
+              }
+            } else if (productDesc.includes('bluebell') || event.event_title.toLowerCase().includes('bluebell')) {
+              // Extract Bluebell session times from description
+              const sessionMatch = productDesc.match(/(\d+):(\d+)\s*am to (\d+):(\d+)\s*am or (\d+):(\d+)\s*am to (\d+):(\d+)\s*pm/i);
+              
+              if (sessionMatch) {
+                earlyEndTime = `${sessionMatch[3].padStart(2, '0')}:${sessionMatch[4].padStart(2, '0')}:00`;
+                lateStartTime = `${sessionMatch[5].padStart(2, '0')}:${sessionMatch[6].padStart(2, '0')}:00`;
+                console.log(`🔍 Extracted Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}`);
+              } else {
+                console.log(`🔍 Could not extract Bluebell session times from description`);
+                return; // Skip if we can't extract times
+              }
             } else {
-              // Default calculation for other events
-              const startTime = actualStartTime.split(':').map(Number);
-              const endTime = actualEndTime.split(':').map(Number);
-              const earlyEndHour = Math.floor((startTime[0] + endTime[0]) / 2);
-              earlyEndTime = `${earlyEndHour.toString().padStart(2, '0')}:00:00`;
-              lateStartTime = `${(earlyEndHour + 1).toString().padStart(2, '0')}:00:00`;
+              console.log(`🔍 No specific session time extraction for ${event.event_title}`);
+              return; // Skip events without known session patterns
             }
             
             const earlySession = {
@@ -5960,7 +5975,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.08-correct-session-times", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.09-extract-session-times", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5985,7 +6000,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.08-correct-session-times", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.09-extract-session-times", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6005,7 +6020,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.08-correct-session-times",
+          version: "v1.3.09-extract-session-times",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6215,7 +6230,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.08-correct-session-times", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.09-extract-session-times", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }
