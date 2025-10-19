@@ -3580,20 +3580,31 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
           
           if (categoryType === '2.5hrs-4hrs') {
             // Calculate session times based on actual event times
-            // For 2.5hr sessions, split the day into early and late sessions
+            // Parse the actual times to calculate session splits
+            const startTime = actualStartTime.split(':').map(Number);
+            const endTime = actualEndTime.split(':').map(Number);
+            
+            // Calculate early session (first half of the day)
+            const earlyEndHour = Math.floor((startTime[0] + endTime[0]) / 2);
+            const earlyEndTime = `${earlyEndHour.toString().padStart(2, '0')}:00:00`;
+            
+            // Calculate late session (second half of the day)
+            const lateStartHour = earlyEndHour + 1;
+            const lateStartTime = `${lateStartHour.toString().padStart(2, '0')}:00:00`;
+            
             const earlySession = {
               ...event,
               session_type: 'early',
               start_time: actualStartTime, // Use actual start time
-              end_time: '12:00:00',        // Midday break
+              end_time: earlyEndTime,       // Calculated early end time
               categories: ['2.5hrs-4hrs'],
               event_title: `${event.event_title} (Early Session)`
             };
             const lateSession = {
               ...event,
               session_type: 'late',
-              start_time: '13:00:00',      // After lunch
-              end_time: actualEndTime,     // Use actual end time
+              start_time: lateStartTime,    // Calculated late start time
+              end_time: actualEndTime,      // Use actual end time
               categories: ['2.5hrs-4hrs'],
               event_title: `${event.event_title} (Late Session)`
             };
@@ -5941,7 +5952,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.06-fix-session-times", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.07-calculate-session-times", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5966,7 +5977,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.06-fix-session-times", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.07-calculate-session-times", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5986,7 +5997,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.06-fix-session-times",
+          version: "v1.3.07-calculate-session-times",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6196,7 +6207,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.06-fix-session-times", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.07-calculate-session-times", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }
