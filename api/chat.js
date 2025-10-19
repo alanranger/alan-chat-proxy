@@ -3543,7 +3543,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
     // Get all events first, then filter by actual duration
     const { data: allEvents, error: e1 } = await client
       .from("v_events_for_chat")
-      .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, categories")
+      .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, categories, product_description")
       .gte("date_start", `${todayIso}T00:00:00.000Z`)
       .order("date_start", { ascending: true })
       .limit(200);
@@ -3598,6 +3598,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
                 console.log(`🔍 Extracted Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}`);
               } else {
                 console.log(`🔍 Could not extract Batsford session times from description`);
+                console.log(`🔍 Product description: ${productDesc.substring(0, 500)}`);
                 return; // Skip if we can't extract times
               }
             } else if (productDesc.includes('bluebell') || event.event_title.toLowerCase().includes('bluebell')) {
@@ -3611,6 +3612,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
                 console.log(`🔍 Extracted Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}`);
               } else {
                 console.log(`🔍 Could not extract Bluebell session times from description`);
+                console.log(`🔍 Product description: ${productDesc.substring(0, 500)}`);
                 return; // Skip if we can't extract times
               }
             } else {
@@ -5978,7 +5980,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.11-force-deploy", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.12-fix-regex-patterns", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6003,7 +6005,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.11-force-deploy", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.12-fix-regex-patterns", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -6023,7 +6025,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.11-force-deploy",
+          version: "v1.3.12-fix-regex-patterns",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6233,7 +6235,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.11-force-deploy", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.12-fix-regex-patterns", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }
