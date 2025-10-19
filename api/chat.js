@@ -3135,6 +3135,72 @@ function handleSpecificCoursePatterns(query, lc, matches, createRoute) {
  * Handles user's clarification response and routes to correct content
  * 100% follow-up handling with perfect intent routing
  */
+// Helper function to check short workshop patterns
+function checkShortWorkshopPatterns(matches, createRoute) {
+  if (matches("2.5hr") || matches("4hr") || matches("short photography workshops") || matches("2.5hr - 4hr workshops")) {
+    console.log(`✅ Matched workshop pattern, routing to events`);
+    return createRoute("route_to_events", "short photography workshops 2-4 hours", "events");
+  }
+  return null;
+}
+
+// Helper function to check one day workshop patterns
+function checkOneDayWorkshopPatterns(matches, createRoute) {
+  if (matches("1 day") || matches("one day photography workshops") || matches("1 day workshops")) {
+    return createRoute("route_to_events", "one day photography workshops", "events");
+  }
+  return null;
+}
+
+// Helper function to check multi-day workshop patterns
+function checkMultiDayWorkshopPatterns(matches, createRoute) {
+  if (matches("multi day") || matches("residential") || matches("multi day residential photography workshops") || matches("Multi day residential workshops")) {
+    return createRoute("route_to_clarification", "multi day residential photography workshops", "clarification");
+  }
+  return null;
+}
+
+// Helper function to check location-based workshop patterns
+function checkLocationWorkshopPatterns(matches, createRoute) {
+  if (matches("by location") || matches("photography workshops by location") || matches("Workshops by location")) {
+    return createRoute("route_to_clarification", "photography workshops by location", "clarification");
+  }
+  return null;
+}
+
+// Helper function to check month-based workshop patterns
+function checkMonthWorkshopPatterns(matches, createRoute) {
+  if (matches("by month") || matches("photography workshops by month") || matches("Workshops by month")) {
+    return createRoute("route_to_clarification", "photography workshops by month", "clarification");
+  }
+  return null;
+}
+
+// Helper function to handle workshop clarification patterns
+function handleWorkshopClarificationPatterns(query, lc, matches, createRoute) {
+  console.log(`🔍 Checking workshop patterns for: "${lc}"`);
+  console.log(`🔍 matches("2.5hr"): ${matches("2.5hr")}`);
+  console.log(`🔍 matches("4hr"): ${matches("4hr")}`);
+  console.log(`🔍 matches("short photography workshops"): ${matches("short photography workshops")}`);
+  
+  const shortResult = checkShortWorkshopPatterns(matches, createRoute);
+  if (shortResult) return shortResult;
+  
+  const oneDayResult = checkOneDayWorkshopPatterns(matches, createRoute);
+  if (oneDayResult) return oneDayResult;
+  
+  const multiDayResult = checkMultiDayWorkshopPatterns(matches, createRoute);
+  if (multiDayResult) return multiDayResult;
+  
+  const locationResult = checkLocationWorkshopPatterns(matches, createRoute);
+  if (locationResult) return locationResult;
+  
+  const monthResult = checkMonthWorkshopPatterns(matches, createRoute);
+  if (monthResult) return monthResult;
+  
+  return null;
+}
+
 function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   const lc = query.toLowerCase();
   console.log(`🔍 handleClarificationFollowUp called with:`, { query, originalQuery, originalIntent, lc });
@@ -3156,26 +3222,9 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   }
   
   // Handle workshop clarification follow-ups - route to clarification for cascading logic
-  console.log(`🔍 Checking workshop patterns for: "${lc}"`);
-  console.log(`🔍 matches("2.5hr"): ${matches("2.5hr")}`);
-  console.log(`🔍 matches("4hr"): ${matches("4hr")}`);
-  console.log(`🔍 matches("short photography workshops"): ${matches("short photography workshops")}`);
-  
-  if (matches("2.5hr") || matches("4hr") || matches("short photography workshops") || matches("2.5hr - 4hr workshops")) {
-    console.log(`✅ Matched workshop pattern, routing to events`);
-    return createRoute("route_to_events", "short photography workshops 2-4 hours", "events");
-  }
-  if (matches("1 day") || matches("one day photography workshops") || matches("1 day workshops")) {
-    return createRoute("route_to_events", "one day photography workshops", "events");
-  }
-  if (matches("multi day") || matches("residential") || matches("multi day residential photography workshops") || matches("Multi day residential workshops")) {
-    return createRoute("route_to_clarification", "multi day residential photography workshops", "clarification");
-  }
-  if (matches("by location") || matches("photography workshops by location") || matches("Workshops by location")) {
-    return createRoute("route_to_clarification", "photography workshops by location", "clarification");
-  }
-  if (matches("by month") || matches("photography workshops by month") || matches("Workshops by month")) {
-    return createRoute("route_to_clarification", "photography workshops by month", "clarification");
+  const workshopResult = handleWorkshopClarificationPatterns(query, lc, matches, createRoute);
+  if (workshopResult) {
+    return workshopResult;
   }
   
   // Check specific course patterns first
@@ -3393,6 +3442,45 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   return mapEventsData(data);
 }
 
+// Helper function to handle fallback queries for findEventsByDuration
+async function handleFallbackQueries(client, categoryType, aliases, limit) {
+  console.log(`🔍 No events found with category: ${categoryType} on first pass. Retrying with relaxed filters...`);
+  // Fallback 1: date filter from CURRENT_DATE (midnight) and no title filter
+  const todayIso = new Date().toISOString().split('T')[0];
+  const { data: data2, error: error2 } = await client
+    .from('v_events_for_chat')
+    .select('*')
+    .gte('date_start', `${todayIso}T00:00:00.000Z`)
+    .overlaps('categories', aliases)
+    .order('date_start', { ascending: true })
+    .limit(limit);
+  if (error2) {
+    console.error('❌ Category-based fallback query error:', error2);
+    return [];
+  }
+  if (!data2 || data2.length === 0) {
+    console.log(`🔍 Still no events via SQL for category: ${categoryType}. Applying JS-side filter over recent events...`);
+    const { data: data3, error: error3 } = await client
+      .from('v_events_for_chat')
+      .select('*')
+      .gte('date_start', `${todayIso}T00:00:00.000Z`)
+      .order('date_start', { ascending: true })
+      .limit(200);
+    if (error3 || !data3) {
+      console.error('❌ JS-side filter preload error:', error3);
+      return [];
+    }
+    const aliasSet = new Set(aliases.map(a => a.toLowerCase()));
+    const filtered = data3.filter(r => Array.isArray(r.categories) && r.categories.some(c => aliasSet.has(String(c).toLowerCase())));
+    const deduped3 = dedupeEventsByKey(filtered).slice(0, limit);
+    console.log(`🔍 JS-side filter returned ${deduped3.length} unique events for category: ${categoryType}`);
+    return mapEventsData(deduped3);
+  }
+  const deduped2 = dedupeEventsByKey(data2);
+  console.log(`🔍 Fallback returned ${deduped2.length} unique events for category: ${categoryType}`);
+  return mapEventsData(deduped2);
+}
+
 async function findEventsByDuration(client, categoryType, limit = 50) {
   try {
     console.log(`🔍 findEventsByDuration called with categoryType: ${categoryType}, limit: ${limit}`);
@@ -3449,41 +3537,7 @@ async function findEventsByDuration(client, categoryType, limit = 50) {
     }
     
     if (!data || data.length === 0) {
-      console.log(`🔍 No events found with category: ${categoryType} on first pass. Retrying with relaxed filters...`);
-      // Fallback 1: date filter from CURRENT_DATE (midnight) and no title filter
-      const todayIso = new Date().toISOString().split('T')[0];
-      const { data: data2, error: error2 } = await client
-        .from('v_events_for_chat')
-        .select('*')
-        .gte('date_start', `${todayIso}T00:00:00.000Z`)
-        .overlaps('categories', aliases)
-        .order('date_start', { ascending: true })
-        .limit(limit);
-      if (error2) {
-        console.error('❌ Category-based fallback query error:', error2);
-        return [];
-      }
-      if (!data2 || data2.length === 0) {
-        console.log(`🔍 Still no events via SQL for category: ${categoryType}. Applying JS-side filter over recent events...`);
-        const { data: data3, error: error3 } = await client
-          .from('v_events_for_chat')
-          .select('*')
-          .gte('date_start', `${todayIso}T00:00:00.000Z`)
-          .order('date_start', { ascending: true })
-          .limit(200);
-        if (error3 || !data3) {
-          console.error('❌ JS-side filter preload error:', error3);
-          return [];
-        }
-        const aliasSet = new Set(aliases.map(a => a.toLowerCase()));
-        const filtered = data3.filter(r => Array.isArray(r.categories) && r.categories.some(c => aliasSet.has(String(c).toLowerCase())));
-        const deduped3 = dedupeEventsByKey(filtered).slice(0, limit);
-        console.log(`🔍 JS-side filter returned ${deduped3.length} unique events for category: ${categoryType}`);
-        return mapEventsData(deduped3);
-      }
-      const deduped2 = dedupeEventsByKey(data2);
-      console.log(`🔍 Fallback returned ${deduped2.length} unique events for category: ${categoryType}`);
-      return mapEventsData(deduped2);
+      return await handleFallbackQueries(client, categoryType, aliases, limit);
     }
     
     const deduped = dedupeEventsByKey(data);
@@ -5814,7 +5868,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.99-clarification-categories",
+          version: "v1.2.100-complexity-fix",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString()
         }
