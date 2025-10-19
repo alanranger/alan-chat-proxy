@@ -3558,23 +3558,64 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
       return [];
     }
 
-    // Filter events by categories field (preferred method)
-    const filteredEvents = allEvents.filter(event => {
+    // Filter events by categories field and create session-specific entries
+    const filteredEvents = [];
+    
+    allEvents.forEach(event => {
       if (!event.categories || !Array.isArray(event.categories)) {
         console.log(`🔍 Event: ${event.event_title}, No categories field, skipping`);
-        return false;
+        return;
       }
       
       const hasCategory = event.categories.includes(categoryType);
       console.log(`🔍 Event: ${event.event_title}, Categories: ${JSON.stringify(event.categories)}, Has ${categoryType}: ${hasCategory}`);
       
-      return hasCategory;
+      if (hasCategory) {
+        // For events with multiple categories, create separate entries for each session type
+        if (event.categories.length > 1 && event.categories.includes('1-day') && event.categories.includes('2.5hrs-4hrs')) {
+          // This is a multi-session event (like Bluebell workshops)
+          if (categoryType === '2.5hrs-4hrs') {
+            // Create entries for both early and late sessions
+            const earlySession = {
+              ...event,
+              session_type: 'early',
+              start_time: '09:30:00', // Early session time
+              end_time: '12:00:00',   // Early session end
+              categories: ['2.5hrs-4hrs'],
+              event_title: `${event.event_title} (Early Session)`
+            };
+            const lateSession = {
+              ...event,
+              session_type: 'late',
+              start_time: '13:30:00', // Late session time
+              end_time: '16:00:00',   // Late session end
+              categories: ['2.5hrs-4hrs'],
+              event_title: `${event.event_title} (Late Session)`
+            };
+            filteredEvents.push(earlySession, lateSession);
+          } else if (categoryType === '1-day') {
+            // Create entry for full-day session
+            const fullDaySession = {
+              ...event,
+              session_type: 'full-day',
+              start_time: '09:30:00', // Full day start
+              end_time: '16:00:00',   // Full day end
+              categories: ['1-day'],
+              event_title: `${event.event_title} (Full Day)`
+            };
+            filteredEvents.push(fullDaySession);
+          }
+        } else {
+          // Single category event, add as-is
+          filteredEvents.push(event);
+        }
+      }
     });
 
     console.log(`🔍 Filtered ${filteredEvents.length} events for category: ${categoryType}`);
     
-    // Deduplicate by event_url
-    const deduped = dedupeEventsByKey(filteredEvents);
+    // Deduplicate by event_url + session_type (since we now have multiple entries per URL)
+    const deduped = dedupeEventsByKey(filteredEvents, 'event_url', 'session_type');
     // Ensure chronological order is preserved after deduplication
     deduped.sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
     
@@ -3598,14 +3639,16 @@ function buildEventsBaseQuery(client, limit) {
 }
 
 // Remove duplicate events by event_url only (same event can have multiple dates)
-function dedupeEventsByKey(rows) {
+function dedupeEventsByKey(rows, keyField = 'event_url', secondaryKey = null) {
   if (!Array.isArray(rows)) return [];
   const seen = new Set();
   const unique = [];
   for (const row of rows) {
-    const key = row.event_url || '';
-    if (!seen.has(key)) {
-      seen.add(key);
+    const key = row[keyField] || '';
+    const secondary = secondaryKey ? (row[secondaryKey] || '') : '';
+    const compositeKey = secondaryKey ? `${key}|${secondary}` : key;
+    if (!seen.has(compositeKey)) {
+      seen.add(compositeKey);
       unique.push(row);
     }
   }
@@ -5893,7 +5936,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
           pills: []
         },
         confidence: confidenceDirect,
-        debug: { version: "v1.3.04-initial-clarification-fix", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.05-session-parsing-fix", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5918,7 +5961,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.04-initial-clarification-fix", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.05-session-parsing-fix", intent: "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
@@ -5938,7 +5981,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.3.04-initial-clarification-fix",
+          version: "v1.3.05-session-parsing-fix",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString(),
           queryText: query,
@@ -6148,7 +6191,7 @@ export default async function handler(req, res) {
           question: initialClarification.question,
           options: initialClarification.options,
           confidence: initialClarification.confidence || 20,
-          debug: { version: "v1.3.04-initial-clarification-fix", intent: "initial_clarification", timestamp: new Date().toISOString() }
+          debug: { version: "v1.3.05-session-parsing-fix", intent: "initial_clarification", timestamp: new Date().toISOString() }
         });
         return;
       }
