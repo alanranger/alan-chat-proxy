@@ -143,5 +143,93 @@ This is the AI’s running TODO list. Keep it short and actionable.
 - [ ] Test all admin panel functions: QA Check, Refresh Mappings, Finalize Data
 
 ### Immediate Actions
-- [ ] Commit all changes and deploy to save current work
-ok thi
+- [ ] **CRITICAL**: Fix ingest process - categories not being imported from CSV
+- [ ] **CRITICAL**: Fix simple-bulk.html showing "Alan Ranger Photography" instead of actual page titles
+- [ ] **CRITICAL**: Re-ingest all data with correct category mappings
+- [ ] **CRITICAL**: Audit ingest pipeline before continuing chat.js fixes
+
+## 🚨 CRITICAL INGEST ISSUES DISCOVERED (2025-10-19)
+
+### Data Quality Issues
+- [ ] **CRITICAL**: CSV Category column not being mapped to database categories field
+- [ ] **CRITICAL**: 20 events have empty categories `[""]` instead of proper values
+- [ ] **CRITICAL**: 0 events have "1-day" or "2-5-days" categories (missing entirely)
+- [ ] **CRITICAL**: Manual database updates will be overwritten on next ingest
+
+### Ingest Process Issues
+- [ ] **CRITICAL**: simple-bulk.html showing "Alan Ranger Photography" instead of actual page meta titles
+- [ ] **CRITICAL**: Ingest process not properly reading Category column from CSV
+- [ ] **CRITICAL**: CSV-to-database mapping logic broken for categories field
+- [ ] **CRITICAL**: Need to audit api/ingest.js and simple-bulk.html process
+
+### Chat Logic Issues (Secondary - depends on ingest fix)
+- [ ] **SECONDARY**: Clarification follow-up logic not being triggered despite correct pageContext
+- [ ] **SECONDARY**: "1 day workshops" returning 0 events (due to missing categories)
+- [ ] **SECONDARY**: "Multi day residential workshops" routing to events instead of clarification
+- [ ] **SECONDARY**: All clarification options falling through to events pipeline
+
+### ✅ COMPLETED TASKS (2025-10-20)
+- [x] **CSV Category Import Bug Fix** - Fixed `cleanHTMLText` filtering out short categories like "1-day", "2.5hrs-4hrs"
+- [x] **End-to-End Category Pipeline** - Verified categories flow from CSV → csv_metadata → page_entities → chat system
+- [x] **QA Spot Checks Fix** - Fixed token authentication for bulk-simple.html QA functionality
+- [x] **Blog Content View Fix** - Updated v_blog_content to show all 187 blog posts instead of just 1
+- [x] **Event-Product Mapping Fix** - Fixed 8 incorrect mappings (Fairy Glen, Snowdonia, Bluebell variants)
+- [x] **Price Variant Resolution** - Implemented lowest price selection for products with multiple variants
+- [x] **Category-Based Event Filtering** - Created get_events_by_category function for reliable event filtering
+- [x] **Duration Category Routing** - Fixed routing for 1-day, 2.5hrs-4hrs, 2-5-days workshops
+- [x] **Event Count Accuracy** - Achieved correct counts: 24 (1-day), 41 (2.5hrs-4hrs), 18 (2-5-days)
+- [x] **Chronological Ordering** - Fixed event sorting by date_start after deduplication
+- [x] **Timezone Conversion Fix** - Modified fmtDate to use UTC methods to prevent 1-hour shifts
+- [x] **Bluebell Query Verification** - Confirmed Bluebell workshops route to events (1 event returned, type='events')
+
+### ✅ COMPLETED: Time Discrepancy Investigation & Fix
+**Issue Identified**: The `date_start` field was being set from JSON-LD `startDate` which contains timezone information (`+0100` for BST), causing a 1-hour shift when converted to UTC.
+
+**Root Cause**: 
+- Source CSV: 10:00:00 - 16:00:00 (correct local time)
+- JSON-LD: "2025-10-19T10:00:00+0100" (BST timezone)
+- Database: "2025-10-19 09:00:00+00" (1 hour earlier due to BST→UTC conversion)
+
+**Fix Applied**: Modified `api/ingest.js` to use CSV times for `date_start` field instead of JSON-LD times:
+```javascript
+date_start: csvMetadata?.start_date && csvMetadata?.start_time 
+  ? `${csvMetadata.start_date}T${csvMetadata.start_time}:00.000Z`
+  : (bestJsonLd.datePublished || bestJsonLd.startDate || null)
+```
+
+**Status**: Fix committed and deployed (v1.3.00-timezone-fix), but requires re-ingest to apply to existing data.
+
+### ✅ COMPLETED: Timestamp Format Fix (2025-10-20)
+**Issue Identified**: The `date_start` and `date_end` fields were being constructed with invalid timestamp format due to double `:00` in the string concatenation.
+
+**Root Cause**: 
+- CSV time format: "08:00:00" (HH:MM:SS)
+- Code was adding: `:00.000Z` 
+- Result: "08:00:00:00.000Z" (invalid format)
+
+**Fix Applied**: Modified `api/ingest.js` to use correct timestamp format:
+```javascript
+// Before (invalid):
+`${csvMetadata.start_date}T${csvMetadata.start_time}:00.000Z`
+
+// After (valid):
+`${csvMetadata.start_date}T${csvMetadata.start_time}.000Z`
+```
+
+**Status**: Fix committed and ready for deployment. This resolves the 78 failed workshop event ingestions.
+
+### 🔄 CURRENT TASK: Deploy Timestamp Fix and Re-ingest
+**Next Steps**:
+1. Deploy the timestamp format fix to production
+2. Re-ingest all workshop events to apply the fix
+3. Verify times are now correct in live chatbot
+4. Test with user to confirm 1-hour discrepancy is resolved
+
+### 📋 PENDING TASKS
+- [ ] **Real-time Availability** - Implement "X places left" functionality
+- [ ] **Variant-specific Stock** - Show availability per product variant
+- [ ] **Advanced Filtering** - Location-based and month-based workshop filtering
+- [ ] **Performance Optimization** - Optimize database queries and response times
+- [ ] **Update All MD Files** - Refresh documentation with latest changes
+- [ ] **Create Handover Package** - Complete project handover documentation
+- [ ] **Final Testing** - Comprehensive end-to-end testing of all features

@@ -723,10 +723,10 @@ async function ingestSingleUrl(url, supa, options = {}) {
         title: bestJsonLd.headline || bestJsonLd.title || bestJsonLd.name || htmlTitle || h1Title || null,
         description: enhancedDescription,
         date_start: csvMetadata?.start_date && csvMetadata?.start_time 
-          ? `${csvMetadata.start_date}T${csvMetadata.start_time}:00.000Z`
+          ? `${csvMetadata.start_date}T${csvMetadata.start_time}.000Z`
           : (bestJsonLd.datePublished || bestJsonLd.startDate || null),
         date_end: csvMetadata?.end_date && csvMetadata?.end_time 
-          ? `${csvMetadata.end_date}T${csvMetadata.end_time}:00.000Z`
+          ? `${csvMetadata.end_date}T${csvMetadata.end_time}.000Z`
           : (bestJsonLd.endDate || null),
         location: bestJsonLd.location?.name || bestJsonLd.location?.address || null,
         price: bestJsonLd.offers?.price || null,
