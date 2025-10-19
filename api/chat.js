@@ -5735,7 +5735,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.97-fix-one-day-condition",
+          version: "v1.2.98-force-deploy",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString()
         }
