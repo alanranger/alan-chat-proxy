@@ -3354,7 +3354,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   console.log('🔍 queryText.includes("one day"):', queryText.includes('one day'));
   console.log('🔍 queryText.includes("workshops"):', queryText.includes('workshops'));
   
-  if (queryText.includes('one day photography workshops') || (queryText.includes('one day') && queryText.includes('workshops'))) {
+  if (queryText.includes('one day') && queryText.includes('workshops')) {
     console.log('🔍 Using category-based query for 1-day workshops');
     return await findEventsByDuration(client, '1-day', limit);
   }
@@ -5735,7 +5735,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.96-category-based",
+          version: "v1.2.97-fix-one-day-condition",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString()
         }
