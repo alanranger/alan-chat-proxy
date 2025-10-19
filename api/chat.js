@@ -3165,13 +3165,13 @@ function handleClarificationFollowUp(query, originalQuery, originalIntent) {
   if (matches("1 day") || matches("one day photography workshops") || matches("1 day workshops")) {
     return createRoute("route_to_events", "one day photography workshops", "events");
   }
-  if (matches("multi day") || matches("residential") || matches("multi day residential photography workshops")) {
+  if (matches("multi day") || matches("residential") || matches("multi day residential photography workshops") || matches("Multi day residential workshops")) {
     return createRoute("route_to_clarification", "multi day residential photography workshops", "clarification");
   }
-  if (matches("by location") || matches("photography workshops by location")) {
+  if (matches("by location") || matches("photography workshops by location") || matches("Workshops by location")) {
     return createRoute("route_to_clarification", "photography workshops by location", "clarification");
   }
-  if (matches("by month") || matches("photography workshops by month")) {
+  if (matches("by month") || matches("photography workshops by month") || matches("Workshops by month")) {
     return createRoute("route_to_clarification", "photography workshops by month", "clarification");
   }
   
@@ -3282,7 +3282,7 @@ function handleEventsBypass(query, events, res) {
       events,
       structured: { intent: "events", topic: (extractKeywords(query||"")||[]).join(", "), events, products: [], pills: [] },
       confidence,
-      debug: { version: "v1.2.93-debug-one-day", bypassClarification: true, timestamp: new Date().toISOString() }
+      debug: { version: "v1.2.94-fix-all-patterns", bypassClarification: true, timestamp: new Date().toISOString() }
     });
     return true;
   }
@@ -5738,7 +5738,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     },
     confidence,
         debug: {
-          version: "v1.2.93-debug-one-day",
+          version: "v1.2.94-fix-all-patterns",
           debugInfo: debugInfo,
           timestamp: new Date().toISOString()
         }
