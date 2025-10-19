@@ -3391,7 +3391,9 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   // Check for 2.5hrs-4hrs workshops (normalized)
   if (queryText.includes('2.5hrs-4hrs')) {
     console.log('🔍 Using category-based query for 2.5hrs-4hrs workshops');
-    return await findEventsByDuration(client, '2.5hrs-4hrs', limit);
+    const result = await findEventsByDuration(client, '2.5hrs-4hrs', limit);
+    console.log('🔍 findEventsByDuration returned:', result?.length || 0, 'events for 2.5hrs-4hrs');
+    return result;
   }
   
   // Check for 1-day workshops (normalized)
