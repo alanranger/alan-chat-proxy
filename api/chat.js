@@ -3425,8 +3425,26 @@ async function findEventsByDuration(client, categoryType, limit = 50) {
     }
     
     if (!data || data.length === 0) {
-      console.log(`🔍 No events found with category: ${categoryType}`);
-      return [];
+      console.log(`🔍 No events found with category: ${categoryType} on first pass. Retrying with relaxed filters...`);
+      // Fallback 1: date filter from CURRENT_DATE (midnight) and no title filter
+      const todayIso = new Date().toISOString().split('T')[0];
+      const { data: data2, error: error2 } = await client
+        .from('v_events_for_chat')
+        .select('*')
+        .gte('date_start', `${todayIso}T00:00:00.000Z`)
+        .contains('categories', [categoryType])
+        .order('date_start', { ascending: true })
+        .limit(limit);
+      if (error2) {
+        console.error('❌ Category-based fallback query error:', error2);
+        return [];
+      }
+      if (!data2 || data2.length === 0) {
+        console.log(`🔍 Still no events found for category: ${categoryType} after relaxed query.`);
+        return [];
+      }
+      console.log(`🔍 Fallback returned ${data2.length} events for category: ${categoryType}`);
+      return mapEventsData(data2);
     }
     
     console.log(`🔍 Found ${data.length} events with category: ${categoryType}`);
