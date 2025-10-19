@@ -3604,6 +3604,13 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   // Log query results for debugging
   logEventsQueryResults(data, q);
   
+  // Debug: Log the actual query being executed
+  console.log('🔍 findEvents query executed:', q.toString());
+  console.log('🔍 findEvents results count:', data?.length || 0);
+  if (data && data.length > 0) {
+    console.log('🔍 findEvents first result:', data[0]);
+  }
+  
   // Map and return results
   return mapEventsData(data);
 }
