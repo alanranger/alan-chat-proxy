@@ -6586,9 +6586,38 @@ async function tryRagFirst(client, query) {
     }
     
     // Remove duplicates
-    results.chunks = chunks.filter((chunk, index, self) => 
+    const uniqueChunks = chunks.filter((chunk, index, self) => 
       index === self.findIndex(c => c.url === chunk.url)
-    ).slice(0, 5);
+    );
+
+    // Simple relevance scoring to avoid off-topic dumps
+    const lcQuery = (query || "").toLowerCase();
+    const equipmentKeywords = ["tripod","head","ball head","carbon","aluminium","manfrotto","gitzo","benro","sirui","three legged","levelling"].map(k=>k.toLowerCase());
+    const offTopicHints = ["/photographic-workshops","/course","calendar","/events/","ics","google calendar"].map(k=>k.toLowerCase());
+    function scoreChunk(c){
+      const url = (c.url||"").toLowerCase();
+      const title = (c.title||"").toLowerCase();
+      const text = (c.chunk_text||"").toLowerCase();
+      let s = 0;
+      // keyword hits
+      for (const kw of equipmentKeywords){
+        if (text.includes(kw) || title.includes(kw)) s += 2;
+        if (url.includes(kw.replace(/\s+/g,'-'))) s += 2;
+      }
+      // direct query terms
+      lcQuery.split(/\s+/).forEach(w=>{ if (w && text.includes(w)) s += 0.25; });
+      // prefer equipment sections
+      if (url.includes('/photography-equipment') || url.includes('/recommended-products')) s += 3;
+      // penalise off-topic sections (events/calendars)
+      for (const hint of offTopicHints){ if (url.includes(hint) || text.includes(hint)) s -= 4; }
+      return s;
+    }
+
+    results.chunks = uniqueChunks
+      .map(c => ({...c, __score: scoreChunk(c)}))
+      .filter(c => c.__score > 0) // drop unrelated chunks
+      .sort((a,b)=> b.__score - a.__score)
+      .slice(0, 5);
     
     console.log(`📄 Found ${results.chunks.length} relevant chunks`);
     
