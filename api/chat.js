@@ -3523,7 +3523,7 @@ async function handleArticlesBypass(client, query, articles, res) {
         type: "advice",
         answer_markdown: md,
         structured: { intent: "advice", topic: (extractKeywords(query||"")||[]).join(", "), events: [], products: [], services: [], landing: [], articles },
-        confidence: 60,
+        confidence: 0.60,
         debug: { version: "v1.3.0-evidence-first", bypassClarification: true }
       });
       return true;
@@ -5124,10 +5124,10 @@ function createPillAdder(pills, used) {
 function determineCourseListingUrl(productUrl) {
   try {
     const u = String(productUrl || '');
-    if (/beginners-photography-(classes|course)/i.test(u) || /photography-services-near-me\/beginners-photography-course/i.test(u)) {
-      return "https://www.alanranger.com/beginners-photography-classes";
-    } else if (/lightroom-courses-for-beginners-coventry/i.test(u) || /photo-editing-course-coventry/i.test(u)) {
+    if (/lightroom|photo-?editing/i.test(u)) {
       return "https://www.alanranger.com/photo-editing-course-coventry";
+    } else if (/beginners-photography-(classes|course)/i.test(u) || /photography-services-near-me\/beginners-photography-course/i.test(u)) {
+      return "https://www.alanranger.com/beginners-photography-classes";
     }
   } catch {}
   return null;
@@ -5680,7 +5680,7 @@ async function maybeProcessEarlyReturnFallback(client, query, intent, pageContex
         })),
         pills: []
       },
-      confidence: 90,
+      confidence: 0.90,
       debug: { version: "v1.2.75-fix-debug-scope", earlyReturn: true }
     });
     return articles.length > 0 || contentChunks.length > 0; // Return true only if content was found
@@ -5801,7 +5801,7 @@ async function handleResidentialPricingShortcut(client, query, keywords, pageCon
         })),
         pills: []
       },
-      confidence: 60,
+      confidence: 0.60,
       debug: { version: "v1.2.47-residential-shortcut", shortcut: true }
     });
     return true; // Response sent
@@ -5881,7 +5881,7 @@ async function handleEquipmentAdviceSynthesis(client, qlc, keywords, pageContext
           })),
           pills: []
         },
-        confidence: 75,
+        confidence: 0.75,
         debug: { version: "v1.2.46-followup-equip-extracted", previousQuery: true }
       });
       return true;
@@ -5925,7 +5925,7 @@ async function handleAdviceFollowupSynthesis(client, qlc, keywords, pageContext,
           })),
           pills: []
         },
-        confidence: 70,
+        confidence: 0.70,
         debug: { version: "v1.2.46-followup-pricing-extracted", previousQuery: true }
       });
       return true;
@@ -6016,7 +6016,7 @@ async function handleAdviceClarification(client, query, keywords, pageContext, r
         })),
         pills: []
       },
-      confidence: 65,
+      confidence: 0.65,
       debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
     });
     return true;
@@ -6110,7 +6110,7 @@ async function handleResidentialPricingGuard(client, query, previousQuery, pageC
             })), 
             pills: [] 
           }, 
-          confidence: 70, 
+          confidence: 0.70, 
           debug: { version: "v1.2.48-guard-residential", guard: true } 
         });
         return true; // Response sent
@@ -6599,7 +6599,7 @@ async function processRemainingLogic(client, query, previousQuery, intent, pageC
       landing: [],
       articles: []
     },
-    confidence: 30,
+    confidence: 0.30,
     debug: { 
       version: "v1.3.19-evidence-based", 
       intent: "fallback", 

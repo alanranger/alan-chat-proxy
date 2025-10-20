@@ -603,7 +603,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 </head>
 <body>
 <div class="wrap">
-        <div class="badge-wrap"><span class="version">v1.3.01-frontend-test</span></div>
+        <div class="badge-wrap"><span class="version">v1.3.02-frontend-test</span></div>
 
   <div class="card" id="chatCard">
     <!-- Sticky header -->
@@ -1362,8 +1362,11 @@ function renderEventCard(e) {
             ${e.participants ? `<div class="event-participants">👥 ${e.participants} participants</div>` : ''}
             ${e.fitness_level ? `<div class="event-fitness">🏃 Fitness Level: ${e.fitness_level}</div>` : ''}
             ${e.experience_level ? `<div class="event-experience">🎯 ${e.experience_level}</div>` : ''}
+            ${e.experience ? `<div class="event-experience">🎯 Experience - Level: ${escapeHTML(e.experience)}</div>` : ''}
+            ${e.equipment_needed ? `<div class="event-equipment">🧰 Equipment Needed: ${escapeHTML(e.equipment_needed)}</div>` : ''}
             ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
           </div>
+          ${href && href !== '#' ? `<div style="margin-top:12px"><a class="product-book-btn" style="background:#f59e0b;border-color:#f59e0b" href="${href}" target="_blank" rel="noopener">More Info →</a></div>` : ''}
         </div>
       </div>
     `;
@@ -1853,35 +1856,26 @@ function renderActionPills(pills) {
   pills.forEach(p => { 
     const a = document.createElement('a'); 
     a.className = 'pill' + (p.priority ? ' priority' : '') + (p.secondary ? ' secondary' : ''); 
-    a.textContent = p.label; 
-    a.href = p.href; 
-    a.target = '_blank'; 
-    a.rel = 'noopener'; 
-      
-      // Add click event logging
-      a.addEventListener('click', () => {
-        fetch('/api/chat-log', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
-          },
-          body: JSON.stringify({
-            action: 'event',
-            data: { 
-              sessionId, 
-              eventType: 'pill_click', 
-              eventData: { label: p.label, href: p.href, priority: p.priority } 
-            }
-          })
-        }).catch(err => console.warn('Event logging failed:', err));
-      });
-      
-      wrap.appendChild(a); 
-    });
+    a.href = p.url || p.href || '#'; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = p.label || p.text || 'Open';
+    wrap.appendChild(a);
+  });
   
-    thread.appendChild(wrap);
-  }
+  addBubble(wrap.outerHTML);
+}
+
+// Default pills if none provided by API
+function buildDefaultPillsIfMissing(s){
+  const pills = [];
+  const ev = (s.events||[])[0];
+  if(ev && (ev.page_url||ev.url||ev.event_url)) pills.push({label:'View Event', url: ev.page_url||ev.url||ev.event_url, priority:true});
+  const prod = (s.products||[])[0];
+  if(prod && (prod.page_url||prod.url)) pills.push({label:'View Course', url: prod.page_url||prod.url, priority:true});
+  const art = (s.articles||[])[0];
+  if(art && (art.page_url||art.source_url||art.url)) pills.push({label:'Read Guide', url: art.page_url||art.source_url||art.url});
+  if(!pills.length && s.intent==='events') pills.push({label:'All Workshops', url:'https://www.alanranger.com/workshops'});
+  return pills;
+}
 
 // Helper function to create confidence footer
 function createConfidenceFooter(__rounded) {
@@ -2070,7 +2064,7 @@ function renderAnswer(payload){
   const artHTML = renderArticlesBlock(s, __lastQuery);
   if(artHTML) addBubble(artHTML);
 
-  const pills = buildActionPillsFromStructured(s, __lastQuery);
+  const pills = buildDefaultPillsIfMissing(s);
   renderActionPills(pills);
 
   const confId = createConfidenceFooter(__rounded);
