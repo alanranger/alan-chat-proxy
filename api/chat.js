@@ -6526,6 +6526,25 @@ async function handleNormalizedDurationQuery(query, pageContext, res) {
 async function tryRagFirst(client, query) {
   console.log(`🔍 RAG-First attempt for: "${query}"`);
   
+  // Helper to clean noisy HTML/text pulled from chunks
+  const cleanRagText = (raw) => {
+    if (!raw) return "";
+    let text = String(raw);
+    // Remove obvious navigation/catalogue blocks that start with /Cart or Back menus
+    text = text.replace(/\n?\/Cart[\s\S]*?(?=\n\n|$)/gi, "");
+    text = text.replace(/Back\s+(Workshops|Services|Gallery|Book|About|Blog)[\s\S]*?(?=\n\n|$)/gi, "");
+    // Strip social share/link blocks (Facebook, LinkedIn, Tumblr, Pinterest etc.)
+    text = text.replace(/https?:\/\/\S+/g, (m) => (m.includes("alanranger.com") ? m : ""));
+    text = text.replace(/Facebook\d*|LinkedIn\d*|Tumblr|Pinterest\d*/gi, "");
+    // Collapse multiple dashes/lines used as separators
+    text = text.replace(/-{4,}/g, "\n");
+    // Remove excessive whitespace
+    text = text.replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n");
+    // Keep first 2-3 paragraphs of meaningful content
+    const parts = text.split(/\n\n+/).filter(p => p.trim().length > 0);
+    return parts.slice(0, 3).join("\n\n");
+  };
+
   const results = {
     chunks: [],
     entities: [],
@@ -6618,7 +6637,16 @@ async function tryRagFirst(client, query) {
         sources = eventEntities.map(e => e.url);
       }
     } else if (results.chunks.length > 0) {
-      answer = results.chunks.map(c => c.chunk_text).join("\n\n");
+      // Clean and format chunk text for readable output
+      const cleaned = results.chunks
+        .map(c => cleanRagText(c.chunk_text))
+        .filter(Boolean);
+      answer = cleaned.join("\n\n");
+      // Cap final answer length for UI readability
+      const MAX_LEN = 1200;
+      if (answer.length > MAX_LEN) {
+        answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
+      }
       type = "advice";
       sources = results.chunks.map(c => c.url);
     }
