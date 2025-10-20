@@ -96,3 +96,6 @@ async function testFullDayPricing() {
 }
 
 testFullDayPricing().catch(console.error);
+
+
+

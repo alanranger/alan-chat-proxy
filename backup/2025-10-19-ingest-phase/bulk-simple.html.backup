@@ -1,0 +1,2746 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Alan Ranger Photography - Data Pipeline v2.1</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .card { background: #2a2a2a; padding: 20px; margin: 20px 0; border-radius: 8px; }
+    .section { margin: 30px 0; }
+    .file-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .file-item { background: #333; padding: 15px; border-radius: 5px; }
+    .file-item h4 { margin: 0 0 10px 0; color: #4CAF50; }
+    .file-item input[type="file"] { width: 100%; margin: 10px 0; }
+    .file-item small { color: #ccc; display: block; margin: 5px 0; }
+    .btn { background: #4CAF50; color: white; border: none; padding: 12px 22px; border-radius: 6px; cursor: pointer; margin: 6px; font-size: 15px; }
+    .btn:hover { background: #45a049; }
+    .btn-danger { background: #f44336; }
+    .btn-danger:hover { background: #da190b; }
+    .btn-primary { background: #2196F3; }
+    .btn-primary:hover { background: #1976D2; }
+    /* Emphasized step buttons */
+    .btn.step { padding: 14px 24px; font-weight: 600; }
+    .btn.step .step-num { font-size: 18px; font-weight: 800; display: inline-block; margin-right: 6px; }
+    @media (min-width: 900px){ .btn.step { font-size: 16px; } .btn.step .step-num { font-size: 20px; } }
+    .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .status.success { background: #4CAF50; color: white; }
+    .status.error { background: #f44336; color: white; }
+    .status.info { background: #2196F3; color: white; }
+    .status.skipped { background: #f39c12; color: #111; }
+    .results { background: #000; padding: 15px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+    .progress { width: 100%; background: #333; border-radius: 5px; margin: 10px 0; }
+    .progress-bar { height: 20px; background: #4CAF50; border-radius: 5px; transition: width 0.3s; }
+    .hidden { display: none; }
+    .token-section { background: #333; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+    .token-section input { width: 100%; padding: 8px; margin: 5px 0; background: #444; color: white; border: 1px solid #666; border-radius: 3px; }
+    
+    .stat-box {
+      text-align: center;
+      padding: 10px;
+      background: #2a2a2a;
+      border-radius: 5px;
+      border: 1px solid #444;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 5px;
+    }
+    
+    .stat-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+    }
+    
+    .stat-value.success { color: #51cf66; }
+    .stat-value.error { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 Alan Ranger Photography - Data Pipeline</h1>
+      <p>Metadata-Driven Content Pipeline</p>
+      <small>v1.0.8 - Metadata-Driven System</small>
+    </div>
+
+    <!-- DATA FLOW DIAGRAMS -->
+    <div class="card">
+      <h2>📊 System Architecture & Data Flow</h2>
+      
+      <!-- Enhanced Data Flow Pipeline -->
+      <div class="section">
+        <h3>🔄 Enhanced Data Flow Pipeline</h3>
+        <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
+          <div style="color: #4CAF50; font-weight: bold; margin-bottom: 15px;">STEP 1: CSV IMPORT → csv_metadata table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px;">
+            ├── Blog Articles (01) → csv_metadata.csv_type='blog_articles'<br>
+            ├── Course Events (02) → csv_metadata.csv_type='course_events'<br>
+            ├── Workshop Events (03) → csv_metadata.csv_type='workshop_events'<br>
+            ├── Course Products (04) → csv_metadata.csv_type='course_products'<br>
+            ├── Workshop Products (05) → csv_metadata.csv_type='workshop_products'<br>
+            ├── Site URLs (06) → csv_metadata.csv_type='site_urls'<br>
+            └── Product Schema (07) → csv_metadata.csv_type='product_schema'
+          </div>
+          
+          <div style="color: #2196F3; font-weight: bold; margin: 20px 0 15px 0;">STEP 2: ENHANCED INGEST → page_entities table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px;">
+            ├── Fetch HTML for all URLs → page_html table<br>
+            ├── Extract text and JSON-LD<br>
+            ├── Create page_chunks with CSV context<br>
+            └── Enhance page_entities with CSV metadata (categories, tags, publish_date, etc.)
+          </div>
+          
+          <div style="color: #FF9800; font-weight: bold; margin: 20px 0 15px 0;">STEP 3: EXISTING VIEWS (Enhanced with CSV data)</div>
+          <div style="margin-left: 20px; margin-bottom: 10px;">
+            ├── v_blog_content → Uses page_entities WHERE kind='article'<br>
+            ├── v_service_content → Uses page_entities WHERE kind='service'<br>
+            ├── v_product_content → Uses page_entities WHERE kind='product'<br>
+            └── v_events_for_chat → Uses page_entities WHERE kind='event'
+          </div>
+          
+          <div style="color: #9C27B0; font-weight: bold; margin: 20px 0 15px 0;">STEP 4: CHAT SYSTEM (Unchanged)</div>
+          <div style="margin-left: 20px; margin-bottom: 10px;">
+            ├── findArticles() → Queries page_entities (now with CSV metadata)<br>
+            ├── findProducts() → Queries page_entities (now with CSV metadata)<br>
+            ├── findEvents() → Queries page_entities (now with CSV metadata)<br>
+            └── All existing chat logic works unchanged
+          </div>
+        </div>
+      </div>
+      
+      <!-- CSV Metadata Status -->
+      <div class="section">
+        <h3>📈 CSV Metadata Status (csv_metadata table)</h3>
+        <div class="file-grid">
+          <div class="stat-box">
+            <div class="stat-label">Blog Articles</div>
+            <div class="stat-value" id="blog-count">-</div>
+            <div class="stat-desc">Technical content, tips, guides</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Course Events</div>
+            <div class="stat-value" id="course-events-count">-</div>
+            <div class="stat-desc">Individual course sessions</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Workshop Events</div>
+            <div class="stat-value" id="workshop-events-count">-</div>
+            <div class="stat-desc">Individual workshop sessions</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Course Products</div>
+            <div class="stat-value" id="course-products-count">-</div>
+            <div class="stat-desc">Course product pages</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Workshop Products</div>
+            <div class="stat-value" id="workshop-products-count">-</div>
+            <div class="stat-desc">Workshop product pages</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Site URLs</div>
+            <div class="stat-value" id="site-urls-count">-</div>
+            <div class="stat-desc">Site URLs for content ingestion</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Product Schema</div>
+            <div class="stat-value" id="product-schema-count">-</div>
+            <div class="stat-desc">Product schema and metadata</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced page_entities Status -->
+      <div class="section">
+        <h3>🗄️ Enhanced page_entities Status</h3>
+        <div class="file-grid">
+          <div class="stat-box">
+            <div class="stat-label">Articles (kind='article')</div>
+            <div class="stat-value" id="page-entities-articles">-</div>
+            <div class="stat-desc">Blog articles with CSV metadata</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Events (kind='event')</div>
+            <div class="stat-value" id="page-entities-events">-</div>
+            <div class="stat-desc">Workshop/course events with CSV metadata</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Products (kind='product')</div>
+            <div class="stat-value" id="page-entities-products">-</div>
+            <div class="stat-desc">Products with CSV metadata</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Services (kind='service')</div>
+            <div class="stat-value" id="page-entities-services">-</div>
+            <div class="stat-desc">Services with CSV metadata</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced Database Schema -->
+      <div class="section">
+        <h3>📋 Enhanced Database Schema</h3>
+        <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
+          <div style="color: #4CAF50; font-weight: bold; margin-bottom: 15px;">csv_metadata table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px; color: #fff;">
+            ├── Core fields: id, csv_type, url, title, categories, tags, publish_date<br>
+            ├── Date/Time: start_date, end_date, start_time, end_time<br>
+            ├── Location: location_name, location_address, location_city_state_zip<br>
+            ├── Content: excerpt, image_url, json_ld_data, workflow_state<br>
+            └── <span style="color: #FFD700;">NEW: participants, experience_level, equipment_needed, time_schedule, fitness_level, what_to_bring, course_duration, instructor_info, availability_status</span>
+          </div>
+          
+          <div style="color: #2196F3; font-weight: bold; margin: 20px 0 15px 0;">page_entities table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px; color: #fff;">
+            ├── Core fields: id, url, kind, title, description, date_start, date_end<br>
+            ├── Pricing: price, price_currency, availability, sku, provider<br>
+            ├── CSV Integration: csv_type, csv_metadata_id, categories, tags<br>
+            ├── Location: location, location_name, location_address, location_city_state_zip<br>
+            ├── Content: excerpt, image_url, json_ld_data, workflow_state<br>
+            └── <span style="color: #FFD700;">NEW: participants, experience_level, equipment_needed, time_schedule, fitness_level, what_to_bring, course_duration, instructor_info, availability_status</span>
+          </div>
+          
+          <div style="color: #FF9800; font-weight: bold; margin: 20px 0 15px 0;">page_chunks table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px; color: #fff;">
+            ├── Core fields: id, url, title, chunk_text, embedding, chunk_hash<br>
+            ├── Content: content, hash, tokens, created_at<br>
+            └── CSV Integration: csv_type, csv_metadata_id
+          </div>
+          
+          <div style="color: #9C27B0; font-weight: bold; margin: 20px 0 15px 0;">page_html table</div>
+          <div style="margin-left: 20px; margin-bottom: 10px; color: #fff;">
+            ├── Core fields: id, url, html_content, content_hash<br>
+            └── Timestamps: created_at, updated_at
+          </div>
+        </div>
+      </div>
+
+      <!-- Field-by-Field Import Tracking -->
+      <div class="section">
+        <h3>📊 Field-by-Field Import Tracking</h3>
+        <p style="color: #888; margin-bottom: 20px;">Track exactly which CSV fields are being imported and their success rates</p>
+        <div id="field-tracking-container">
+          <div style="background: #333; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px;">
+            <div style="color: #4CAF50; font-weight: bold; margin-bottom: 10px;">📋 CSV Field Import Status</div>
+            <div id="field-tracking-details" style="color: #ccc;">
+              No import data available yet. Run CSV imports to see field-by-field tracking.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Processing Status -->
+      <div class="section">
+        <h3>Content Processing Status</h3>
+        <div class="file-grid">
+          <div class="stat-box">
+            <div class="stat-label">Raw HTML</div>
+            <div class="stat-value" id="html-count">-</div>
+            <div class="stat-desc">Stored HTML content</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Entities</div>
+            <div class="stat-value" id="entities-count">-</div>
+            <div class="stat-desc">Page entities with metadata</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Chunks</div>
+            <div class="stat-value" id="chunks-count">-</div>
+            <div class="stat-desc">Text chunks with context</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Mappings</div>
+            <div class="stat-value" id="mappings-count">-</div>
+            <div class="stat-desc">Event-product relationships</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Views</div>
+            <div class="stat-value" id="views-count">-</div>
+            <div class="stat-desc">Enrichment views</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Flow Diagram -->
+      <div class="section">
+        <h3>🔄 Data Flow Pipeline</h3>
+        <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
+          <div style="color: #4CAF50; font-weight: bold; margin-bottom: 15px;">STEP 1: IMPORT CSV METADATA</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Blog Articles (01) → csv_metadata table<br>
+            ├── Course Events (02) → csv_metadata table<br>
+            ├── Workshop Events (03) → csv_metadata table<br>
+            ├── Course Products (04) → csv_metadata table<br>
+            ├── Workshop Products (05) → csv_metadata table<br>
+            ├── Site URLs (06) → csv_metadata table<br>
+            └── Product Schema (07) → csv_metadata table
+          </div>
+          
+          <div style="color: #4CAF50; font-weight: bold; margin: 20px 0 15px 0;">STEP 2: INGEST CONTENT</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Fetch HTML for all URLs<br>
+            ├── Store raw HTML in page_html table<br>
+            ├── Extract text and JSON-LD<br>
+            ├── Create page_chunks with CSV context<br>
+            └── Enhance page_entities with CSV metadata
+          </div>
+          
+          <div style="color: #4CAF50; font-weight: bold; margin: 20px 0 15px 0;">STEP 3: BUILD MAPPINGS</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Event-Product mappings using CSV metadata<br>
+            ├── Category-based relationships<br>
+            ├── Tag-based connections<br>
+            └── Location-based groupings
+          </div>
+          
+          <div style="color: #4CAF50; font-weight: bold; margin: 20px 0 15px 0;">STEP 4: FINALIZE SYSTEM</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Build metadata-driven enrichment views<br>
+            ├── Create CSV-type specific views<br>
+            ├── Warm all views and indexes<br>
+            └── Generate comprehensive data summary
+          </div>
+        </div>
+      </div>
+
+      <!-- File Categories -->
+      <div class="section">
+        <h3>📁 File Categories & Purposes</h3>
+        <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
+          <div style="color: #FF9800; font-weight: bold; margin-bottom: 15px;">RAW HTML STORAGE</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Blog Articles (45 files) - Technical content, tips, guides<br>
+            ├── Course Events (50 files) - Individual course sessions<br>
+            ├── Workshop Events (200 files) - Individual workshop sessions<br>
+            ├── Course Products (15 files) - Course product pages<br>
+            ├── Workshop Products (25 files) - Workshop product pages<br>
+            └── Other Content (0 files) - Miscellaneous pages
+          </div>
+          
+          <div style="color: #FF9800; font-weight: bold; margin: 20px 0 15px 0;">ENRICHED ENTITIES</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── Blog Articles (45) - With categories, tags, publish dates<br>
+            ├── Course Events (50) - With dates, times, locations, excerpts<br>
+            ├── Workshop Events (200) - With dates, times, locations, excerpts<br>
+            ├── Course Products (15) - With categories, tags, structured data<br>
+            ├── Workshop Products (25) - With categories, tags, structured data<br>
+            └── Other Content (0) - Miscellaneous entities
+          </div>
+          
+          <div style="color: #FF9800; font-weight: bold; margin: 20px 0 15px 0;">ENRICHMENT VIEWS</div>
+          <div style="margin-left: 20px; color: #fff;">
+            ├── v_blog_enrichment - Blog articles with metadata<br>
+            ├── v_course_event_enrichment - Course events with structured data<br>
+            ├── v_workshop_event_enrichment - Workshop events with structured data<br>
+            ├── v_course_product_enrichment - Course products with structured data<br>
+            ├── v_workshop_product_enrichment - Workshop products with structured data<br>
+            └── v_metadata_enrichment - Unified metadata-driven enrichment
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Issues -->
+      <div class="section">
+        <h3>⚠️ Current System Issues</h3>
+        <div style="background: #2a1a1a; padding: 20px; border-radius: 8px; border-left: 4px solid #f44336;">
+          <div style="color: #f44336; font-weight: bold; margin-bottom: 10px;">PROBLEMS IDENTIFIED:</div>
+          <div style="color: #fff; margin-left: 20px;">
+            • <strong>URL-Pattern Based Enrichment:</strong> v_workshop_enrichment only processes workshop URLs, ignores courses<br>
+            • <strong>CSV Metadata Integration:</strong> Rich metadata from 7 CSV types now integrated<br>
+            • <strong>Enhanced Data Flow:</strong> Import → Enhanced Ingest → Structured Data Extraction<br>
+            • <strong>Unified Views:</strong> Consistent enrichment logic across all content types<br>
+            • <strong>Structured Data Extraction:</strong> 10 new fields extracted from page content
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Token Section -->
+    <div class="token-section">
+      <h3>🔐 Authentication</h3>
+      <div class="status success">✅ Token: b6c3f0c9e6f44cce9e1a4f3f2d3a5c76 (Hardcoded)</div>
+      <small>Token is automatically configured for this private interface</small>
+    </div>
+
+    <!-- CSV Files Section -->
+    <div class="section">
+      <h2>📁 Upload Your CSV Files</h2>
+      <div class="file-grid">
+        <div class="file-item">
+          <h4>📝 Blog Articles</h4>
+          <input type="file" id="blogCsv" accept=".csv" />
+          <small>Blog posts with categories, tags, content</small>
+        </div>
+        <div class="file-item">
+          <h4>🎓 Course Events</h4>
+          <input type="file" id="courseEventsCsv" accept=".csv" />
+          <small>Scheduled course events with dates, times, locations</small>
+        </div>
+        <div class="file-item">
+          <h4>🏞️ Workshop Events</h4>
+          <input type="file" id="workshopEventsCsv" accept=".csv" />
+          <small>Scheduled workshop events with dates, times, locations</small>
+        </div>
+        <div class="file-item">
+          <h4>🎯 Service Pages</h4>
+          <input type="file" id="servicePagesCsv" accept=".csv" />
+          <small>Service and course page content</small>
+        </div>
+        <div class="file-item">
+          <h4>🧾 Service Products (prices, availability)</h4>
+          <input type="file" id="productsCsv" accept=".csv" />
+          <small>Service product CSV (prices, availability)</small>
+        </div>
+        <div class="file-item">
+          <h4>🌐 Site URLs</h4>
+          <input type="file" id="siteUrlsCsv" accept=".csv" />
+          <small>List of URLs to scrape from your website</small>
+        </div>
+        <div class="file-item">
+          <h4>📄 Landing Pages</h4>
+          <input type="file" id="landingPagesCsv" accept=".csv" />
+          <small>Landing page content and metadata</small>
+        </div>
+        <div class="file-item">
+          <h4>❓ Test Questions</h4>
+          <input type="file" id="testQuestionsCsv" accept=".csv" />
+          <small>Test questions for AI bot validation</small>
+        </div>
+        <div class="file-item">
+          <h4>📦 Bulk CSV Upload</h4>
+          <input type="file" id="bulkCsvs" accept=".csv" multiple />
+          <small>Drop multiple CSVs. Types auto-detected by headers/filename.</small>
+          <button class="btn" onclick="bulkUploadCSVs()">📥 Import Selected CSVs</button>
+          <div id="bulkPreview" style="margin-top:8px;color:#bbb;font-size:12px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="section">
+      <h2>🚀 Data Pipeline Steps (Execute in Order)</h2>
+      <div class="card">
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start;">
+          
+          <!-- Step 1 -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn btn-primary step" onclick="importAllCSVs()" id="importAllBtn">
+              <span class="step-num">1️⃣</span> 📥 Import Metadata
+        </button>
+            <span id="stepImport" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
+          </div>
+          <div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Import CSV Metadata</h4>
+            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
+              <div><strong>What it does:</strong> Imports rich metadata from all 7 CSV files into csv_metadata table.</div>
+              <div><strong>Process:</strong> Parses each CSV type (blog, course_events, workshop_events, course_products, workshop_products, site_urls, product_schema) with specific logic.</div>
+              <div><strong>Updates:</strong> <code>csv_metadata</code> table with categories, tags, dates, locations, excerpts, JSON-LD data.</div>
+              <div><strong>Result:</strong> Rich metadata foundation for all content types, enabling metadata-driven enrichment.</div>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn step" onclick="scrapeWebsite()" id="scrapeBtn">
+              <span class="step-num">2️⃣</span> 🕷️ Ingest Content
+        </button>
+            <span id="stepScrape" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
+            <div style="font-size:11px;color:#888;">
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_site" checked> site_urls</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_blog" checked> blog</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_event" checked> events</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_workshop" checked> workshops</label>
+              <label style="display:block;margin:2px 0;"><input type="checkbox" id="src_service" checked> services</label>
+              <div style="margin-top:6px;line-height:1.5;">
+                <div><strong>Tip:</strong> Keep <code>site_urls</code> checked (foundation). Check <code>blog</code>, <code>events</code>, <code>workshops</code>, <code>services</code> to add enhancement passes.</div>
+                <div><strong>Use all</strong> for full refresh. <strong>Uncheck</strong> categories to target a quick re‑run (e.g., only blog after a new blog CSV).</div>
+                <div>This only affects Step 2’s queue. Step 1 imports are already done.</div>
+              </div>
+            </div>
+            <button class="btn" onclick="scrapeWebsite(true)" id="dryRunBtn" style="font-size:11px;padding:6px 10px;">
+              🧪 Dry‑Run
+        </button>
+            <button class="btn" onclick="stopScrape()" id="stopScrapeBtn" style="display:none;font-size:11px;padding:6px 10px;">
+              ⏹️ Stop
+        </button>
+          </div>
+          <div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Ingest Content with CSV Context</h4>
+            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
+              <div><strong>What it does:</strong> Fetches HTML content and combines it with CSV metadata for comprehensive processing.</div>
+              <div><strong>Process:</strong> Fetches HTML → stores raw HTML → extracts text/JSON-LD → creates page_chunks with CSV context → enhances page_entities with CSV metadata.</div>
+              <div><strong>Updates:</strong> <code>page_html</code> (raw HTML), <code>page_chunks</code> (text with CSV context), <code>page_entities</code> (enhanced with CSV metadata).</div>
+              <div><strong>Result:</strong> Content enriched with CSV metadata, ready for metadata-driven mapping and chat.</div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn step" onclick="runMapping()" id="mappingBtn">
+              <span class="step-num">3️⃣</span> 🔗 Build Mappings
+        </button>
+            <span id="stepMap" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
+      </div>
+          <div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Build Metadata-Driven Mappings</h4>
+            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
+              <div><strong>What it does:</strong> Creates intelligent relationships using CSV metadata (categories, tags, locations, dates).</div>
+              <div><strong>Process:</strong> Uses CSV metadata to build event-product mappings, category-based relationships, tag-based connections, location-based groupings.</div>
+              <div><strong>Updates:</strong> <code>event_product_links_auto</code> with metadata-driven mappings, category relationships, tag connections.</div>
+              <div><strong>Result:</strong> Comprehensive content relationships based on rich CSV metadata, not just URL patterns.</div>
+      </div>
+          </div>
+
+          <!-- Step 4 -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn btn-primary step" onclick="finalizeNow()">
+              <span class="step-num">4️⃣</span> ✅ Finalize
+            </button>
+            <span id="stepFinalize" style="padding:4px 8px;border-radius:4px;background:#555;font-size:12px;text-align:center;">Status: idle</span>
+          </div>
+          <div>
+            <h4 style="margin:0 0 8px 0;color:#4CAF50;">Build Metadata-Driven Enrichment Views</h4>
+            <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
+              <div><strong>What it does:</strong> Builds comprehensive enrichment views using CSV metadata for all content types.</div>
+              <div><strong>Process:</strong> Creates metadata-driven enrichment views, CSV-type specific views, warms all views and indexes, generates comprehensive data summary.</div>
+              <div><strong>Updates:</strong> <code>v_blog_enrichment</code>, <code>v_course_event_enrichment</code>, <code>v_workshop_event_enrichment</code>, <code>v_course_product_enrichment</code>, <code>v_workshop_product_enrichment</code>, <code>v_metadata_enrichment</code>.</div>
+              <div><strong>Result:</strong> Complete metadata-driven enrichment system ready for high-quality chat responses.</div>
+            </div>
+          </div>
+
+        </div>
+        
+        <!-- Status & Tools Row -->
+        <div style="margin-top: 20px; padding: 15px; background: #1a1a1a; border-radius: 6px; border: 1px solid #333;">
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px;">
+            <span style="color:#888;font-weight:600;">System Status:</span>
+            <span id="parityStatus" style="padding:4px 8px;border-radius:4px;background:#444;font-size:12px;">Parity: …</span>
+            <span id="cronStatus" style="padding:4px 8px;border-radius:4px;background:#444;font-size:12px;">Cron: …</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+            <span style="color:#888;font-weight:600;">Tools:</span>
+            <button class="btn" onclick="exportMappings()" style="font-size:12px;padding:6px 10px;">⬇️ Export Mappings</button>
+            <button class="btn" onclick="exportUnmapped()" style="font-size:12px;padding:6px 10px;">⬇️ Export Unmapped</button>
+            <button class="btn" onclick="exportReconcile()" style="font-size:12px;padding:6px 10px;">⬇️ Export Reconcile</button>
+            <button class="btn" onclick="viewLightRefresh()" style="font-size:12px;padding:6px 10px;">🕒 View Light Refresh Logs</button>
+            <button class="btn" onclick="copyLightRefresh()" style="font-size:12px;padding:6px 10px;">📋 Copy Logs</button>
+            <button class="btn" onclick="runTestQuestions()" style="font-size:12px;padding:6px 10px;">🤖 Test Questions</button>
+            <button class="btn btn-danger" onclick="clearResults()" style="font-size:12px;padding:6px 10px;">🗑️ Clear Log</button>
+          </div>
+          <div style="margin-top: 12px;">
+            <small style="color:#888;">Test Questions CSV (query,expected): </small>
+            <input id="testQuestionsCsv" type="file" accept=".csv" style="margin-left:8px;font-size:12px;"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legend / Help Section -->
+    <div class="section">
+      <h2>ℹ️ What the Numbers Mean</h2>
+      <div class="card" style="font-size:14px;color:#ddd;line-height:1.5">
+        <ul style="margin:0 0 8px 18px;">
+          <li><strong>CSV Metadata Imported</strong>: Rich metadata rows imported from each CSV type (blog, course_events, workshop_events, course_products, workshop_products, site_urls, product_schema).</li>
+          <li><strong>Content Ingestion</strong>: URLs processed in Step 2 with CSV metadata context. Each URL gets enriched with its CSV metadata (categories, tags, dates, locations, excerpts).</li>
+          <li><strong>Success / Failed / Stopped / Skipped</strong>: Outcome of Step 2 for this run (Success means HTML stored in <code>page_html</code>, text saved to <code>page_chunks</code> with CSV context, and entities enhanced with CSV metadata).</li>
+          <li><strong>CSV Count</strong> (per category): Rows imported from CSVs in Step 1 for that category label.</li>
+          <li><strong>Duplicates Removed</strong> (per category): <em>Within-source</em> duplicates removed during Step 2 (e.g., the same blog URL listed twice in the blog CSV). Cross‑CSV duplicates are kept to allow metadata enhancement.</li>
+        </ul>
+        <div style="margin-top:8px;">
+          <strong>Where data goes:</strong>
+          <ul style="margin:6px 0 0 18px;">
+            <li><code>csv_metadata</code>: Rich metadata from all 7 CSV types (categories, tags, dates, locations, excerpts, JSON-LD data).</li>
+            <li><code>page_html</code>: Raw HTML content stored for structured data extraction.</li>
+            <li><code>page_chunks</code>: Text chunks with CSV metadata context (replaced on each successful scrape).</li>
+            <li><code>page_entities</code>: Enhanced entities with CSV metadata (categories, tags, locations, excerpts) linked to csv_metadata table.</li>
+            <li><code>event_product_links_auto</code>: Created by Step 3 using CSV metadata for intelligent relationships.</li>
+            <li>Metadata-driven enrichment views: <code>v_blog_enrichment</code>, <code>v_course_event_enrichment</code>, <code>v_workshop_event_enrichment</code>, <code>v_course_product_enrichment</code>, <code>v_workshop_product_enrichment</code>, <code>v_metadata_enrichment</code>. "Finalize" builds these.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Section -->
+    <div class="section" id="progressSection" class="hidden">
+      <h3>📊 Progress</h3>
+      <div class="progress">
+        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+      </div>
+      <div id="progressText">Ready to start...</div>
+    </div>
+
+    <!-- Debug & Control Section -->
+    <div class="section">
+      <h3>🔧 Debug & Control - Current Session vs Total Database</h3>
+      <div class="card">
+        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 10px;">
+              <div class="stat-box" title="CSV metadata from current import session (last 5 minutes)">
+                <div class="stat-label">Current Session</div>
+                <div class="stat-value" id="currentSessionRows">0</div>
+              </div>
+              <div class="stat-box" title="Total URLs in database (all sessions)">
+                <div class="stat-label">Total Database</div>
+                <div class="stat-value" id="totalDatabaseRows">0</div>
+              </div>
+              <div class="stat-box" title="URLs successfully ingested (new content processed)">
+                <div class="stat-label">Ingested</div>
+                <div class="stat-value success" id="successCount">0</div>
+              </div>
+              <div class="stat-box" title="URLs that failed to ingest">
+                <div class="stat-label">Failed</div>
+                <div class="stat-value error" id="failedCount">0</div>
+              </div>
+              <div class="stat-box" title="URLs stopped by user">
+                <div class="stat-label">Stopped</div>
+                <div class="stat-value" id="stoppedCount">0</div>
+              </div>
+              <div class="stat-box" title="URLs skipped: duplicates (already ingested) or hidden products (404)">
+                <div class="stat-label">Skipped</div>
+                <div class="stat-value" id="skippedCount">0</div>
+              </div>
+            </div>
+        <table id="categoryStats" style="margin-top: 10px; width: 100%; border-collapse: collapse; background: #1b1b1b; border: 1px solid #333;">
+          <!-- per-category stats will render here -->
+        </table>
+        <!-- Controls removed to avoid duplication; use the Results & Debug panel -->
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="section">
+      <h2>📋 Results & Debug</h2>
+      <div style="margin-bottom: 10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button class="btn" onclick="copyDebugLog()">📋 Copy Debug Log</button>
+        <button class="btn" onclick="downloadDebugLog()">⬇️ Download Debug Log</button>
+        <button class="btn" onclick="downloadFailed404()">⬇️ Download 404 URLs</button>
+        <button class="btn" onclick="clearResults()">🗑️ Clear Log</button>
+        <span style="margin-left:12px;color:#bbb;">Filter:</span>
+        <button class="btn" id="filterAll" onclick="setLogFilter('all')">All</button>
+        <button class="btn" id="filterSuccess" onclick="setLogFilter('success')">Success</button>
+        <button class="btn" id="filterError" onclick="setLogFilter('error')">Failed</button>
+        <button class="btn" id="filterSkipped" onclick="setLogFilter('skipped')">Skipped</button>
+      </div>
+      <div class="results" id="results">
+        Ready to import your data. Select your CSV files and click "Import All CSV Files".
+      </div>
+      <div id="lightRefreshResults" class="results" style="margin-top:10px; display:none;"></div>
+    </div>
+
+    <!-- QA Spot Checks Section -->
+    <div class="section">
+      <h2>🧪 QA Spot Checks</h2>
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn" onclick="runQaChecks()">Run QA Spot Checks</button>
+          <small style="color:#bbb">Checks counts via Supabase REST; no new functions needed.</small>
+        </div>
+        <div id="qaResults" style="margin-top:10px; font-family: monospace; white-space: pre-wrap;"></div>
+      </div>
+    </div>
+
+    <!-- Extract Structured JSON Section -->
+    <div class="section">
+      <h2>🔍 Extract Structured JSON (JSON-LD)</h2>
+      <div class="card">
+        <div style="margin-bottom: 15px;">
+          <label>URL to extract from:</label>
+          <input type="text" id="extractUrl" placeholder="https://www.alanranger.com/some-page" style="width: 100%; margin-bottom: 10px;" />
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+          <button class="btn" onclick="extractContent('events')">📅 Events/Courses</button>
+          <button class="btn" onclick="extractContent('articles')">📝 Articles</button>
+          <button class="btn" onclick="extractContent('products')">🛍️ Products</button>
+          <button class="btn" onclick="extractContent('services')">🎯 Services</button>
+          <button class="btn" onclick="extractContent('all')">🔍 All Content</button>
+          <button class="btn" onclick="clearExtractResults()">🗑️ Clear</button>
+        </div>
+        <div id="extractResults" style="margin-top: 15px; padding: 10px; background: #1a1a1a; border-radius: 5px; min-height: 100px; font-family: monospace; white-space: pre-wrap;"></div>
+      </div>
+    </div>
+
+    <!-- Quick Test Section -->
+    <div class="section">
+      <h2>🧪 Quick Test</h2>
+      <div class="card">
+        <input type="text" id="testUrl" placeholder="Enter URL to test" style="width: 70%; padding: 8px; margin: 5px; background: #444; color: white; border: 1px solid #666; border-radius: 3px;" />
+        <button class="btn" onclick="testSingleUrl()">Test URL</button>
+        <br>
+        <input type="text" id="testQuery" placeholder="Ask a question" style="width: 70%; padding: 8px; margin: 5px; background: #444; color: white; border: 1px solid #666; border-radius: 3px;" />
+        <button class="btn" onclick="testQuery()">Ask AI</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simple toast notifications
+    function showToast(message, timeoutMs = 2500) {
+      let holder = document.getElementById('toast-holder');
+      if (!holder) {
+        holder = document.createElement('div');
+        holder.id = 'toast-holder';
+        holder.style.position = 'fixed';
+        holder.style.right = '16px';
+        holder.style.bottom = '16px';
+        holder.style.zIndex = '2147483647';
+        document.body.appendChild(holder);
+      }
+      const toast = document.createElement('div');
+      toast.style.background = '#2a2a2a';
+      toast.style.border = '1px solid #444';
+      toast.style.color = '#fff';
+      toast.style.padding = '10px 14px';
+      toast.style.marginTop = '8px';
+      toast.style.borderRadius = '6px';
+      toast.style.boxShadow = '0 6px 18px rgba(0,0,0,0.35)';
+      toast.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+      toast.textContent = message;
+      holder.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; }, Math.max(500, timeoutMs - 300));
+      setTimeout(() => { toast.remove(); }, timeoutMs);
+    }
+
+    // Fullscreen overlay progress for CSV imports
+    function showOverlayProgress(title, total) {
+      let overlay = document.getElementById('overlay-progress');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'overlay-progress';
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.background = 'rgba(0,0,0,0.6)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = '2147483600';
+        overlay.innerHTML = `
+          <div style="width: min(520px, 90vw); background:#1b1b1b; border:1px solid #333; border-radius:8px; padding:18px; box-shadow:0 20px 60px rgba(0,0,0,.5); text-align:center;">
+            <div id="overlay-progress-title" style="color:#fff; font-weight:600; margin-bottom:10px;">Preparing…</div>
+            <div style="height:8px; background:#333; border-radius:4px; overflow:hidden;">
+              <div id="overlay-progress-bar" style="height:100%; width:0%; background:linear-gradient(90deg,#51cf66,#69db7c);"></div>
+            </div>
+            <div id="overlay-progress-text" style="margin-top:8px; color:#bbb; font-family:monospace">0%</div>
+          </div>`;
+        document.body.appendChild(overlay);
+      }
+      document.getElementById('overlay-progress-title').textContent = title || 'Processing…';
+      overlay.dataset.total = String(total || 0);
+      overlay.dataset.current = '0';
+      updateOverlayProgress(0, total || 0);
+      overlay.style.display = 'flex';
+    }
+
+    function updateOverlayProgress(current, total){
+      const overlay = document.getElementById('overlay-progress');
+      if (!overlay) return;
+      overlay.dataset.current = String(current);
+      if (total) overlay.dataset.total = String(total);
+      const t = Number(overlay.dataset.total||0);
+      const c = Number(overlay.dataset.current||0);
+      const pct = t>0 ? Math.max(0, Math.min(100, Math.round((c/t)*100))) : 0;
+      const bar = document.getElementById('overlay-progress-bar');
+      const txt = document.getElementById('overlay-progress-text');
+      if (bar) bar.style.width = pct + '%';
+      if (txt) txt.textContent = `${pct}% (${c}/${t})`;
+    }
+
+    function hideOverlayProgress(){
+      const overlay = document.getElementById('overlay-progress');
+      if (overlay) overlay.style.display = 'none';
+    }
+    // Token management - hardcoded for private use
+    function getToken() {
+      // Use legacy admin token for authenticated admin operations
+      return 'b6c3f0c9e6f44cce9e1a4f3f2d3a5c76';
+    }
+
+    // Results management
+    let logEntries = [];
+    let logFilter = 'all';
+    let failed404Set = new Set(); // collect failing 404 URLs during Step 2
+
+    function setLogFilter(f) {
+      logFilter = f;
+      renderLog();
+    }
+
+    function renderLog() {
+      const results = document.getElementById('results');
+      const visible = logEntries.filter(e => logFilter === 'all' || e.type === logFilter);
+      results.innerHTML = visible.map(e => `<div class="status ${e.type}">[${e.time}] ${e.message}</div>`).join('');
+      results.scrollTop = results.scrollHeight;
+    }
+
+    function addResult(message, type = 'info') {
+      // Promote certain messages to 'skipped' type
+      if (type === 'success' && /Skipped duplicate/i.test(message)) type = 'skipped';
+      const entry = { time: new Date().toLocaleTimeString(), type, message };
+      logEntries.push(entry);
+      // fast append if it matches current filter
+      if (logFilter === 'all' || logFilter === type) {
+        const results = document.getElementById('results');
+        results.innerHTML += `<div class="status ${type}">[${entry.time}] ${message}</div>`;
+        results.scrollTop = results.scrollHeight;
+      }
+    }
+
+    function clearResults() {
+      logEntries = [];
+      document.getElementById('results').innerHTML = 'Results cleared. Ready for new operations.';
+    }
+
+    // Download list of 404 URLs collected during scraping
+    function downloadFailed404(){
+      const urls = Array.from(failed404Set);
+      if (!urls.length){ addResult('ℹ️ No 404 URLs collected in this session','info'); return; }
+      const header = 'url\n';
+      const body = urls.map(u => `"${u.replace(/"/g,'""')}"`).join('\n');
+      const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `failed-404-urls-${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      addResult(`⬇️ Downloaded ${urls.length} 404 URLs`, 'success');
+    }
+
+    // Copy debug log to clipboard
+    function copyDebugLog() {
+      const results = document.getElementById('results');
+      const logText = results.textContent || results.innerText;
+      
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(logText).then(() => {
+          addResult('✅ Debug log copied to clipboard!', 'success');
+        }).catch(err => {
+          addResult('❌ Failed to copy to clipboard: ' + err.message, 'error');
+          fallbackCopyTextToClipboard(logText);
+        });
+      } else {
+        fallbackCopyTextToClipboard(logText);
+      }
+    }
+
+    // Fallback copy method for older browsers
+    function fallbackCopyTextToClipboard(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.position = "fixed";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          addResult('✅ Debug log copied to clipboard!', 'success');
+        } else {
+          addResult('❌ Failed to copy to clipboard', 'error');
+        }
+      } catch (err) {
+        addResult('❌ Failed to copy to clipboard: ' + err.message, 'error');
+      }
+      
+      document.body.removeChild(textArea);
+    }
+
+    // Progress management
+    function updateProgress(percent, text) {
+      document.getElementById('progressBar').style.width = percent + '%';
+      document.getElementById('progressText').textContent = text;
+      document.getElementById('progressSection').classList.remove('hidden');
+    }
+
+    // API calls
+    async function apiCall(endpoint, data = null, opts = {}) {
+      const token = getToken();
+      if (!token) {
+        addResult('❌ No token found. Please save your token first.', 'error');
+        return null;
+      }
+
+      try {
+        const controller = new AbortController();
+        const timeoutMs = opts.timeoutMs || 0;
+        let timeoutId = null;
+        if (timeoutMs > 0) {
+          timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        }
+        const response = await fetch(endpoint, {
+          method: data ? 'POST' : 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: data ? JSON.stringify(data) : undefined,
+          signal: controller.signal
+        });
+        if (timeoutId) clearTimeout(timeoutId);
+        const text = await response.text();
+        try { return JSON.parse(text); } catch { return { ok: response.ok, status: response.status, text }; }
+      } catch (error) {
+        addResult(`❌ API Error: ${error.message}`, 'error');
+        return null;
+      }
+    }
+
+    // Supabase REST GET with count=exact helper
+    async function restCount(path) {
+      const token = getToken();
+      try {
+        // Use hardcoded Supabase URL since process.env doesn't work in browser
+        const supabaseUrl = 'https://igzvwbvgvmzvvzoclufx.supabase.co';
+        const resp = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': token,
+            'Prefer': 'count=exact'
+          }
+        });
+        const total = parseInt(resp.headers.get('content-range')?.split('/')?.[1] || '0', 10);
+        return isNaN(total) ? 0 : total;
+      } catch (e) {
+        return `err:${e.message}`;
+      }
+    }
+
+    // Fetch total events and mapped events from v_events_for_chat
+    async function getMappingCounts() {
+      const total = await restCount('v_events_for_chat?select=event_url');
+      const mapped = await restCount('v_events_for_chat?select=event_url&product_url=not.is.null');
+      return { total: Number(total)||0, mapped: Number(mapped)||0 };
+    }
+
+    // Parity: compare distinct URLs in entities vs chunks for each required path
+    async function getParity() {
+      // Prefer consolidated tools endpoint (service role)
+      try {
+        const resp = await fetch('/api/tools?action=parity', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+        const j = await resp.json();
+        if (resp.ok && j && j.ok) return j;
+      } catch {}
+      // Fallback to REST counts
+      const entitiesWorkshops = await restCount('page_entities?select=url&url=ilike.*photographic-workshops-near-me*');
+      const chunksWorkshops   = await restCount('page_chunks?select=url&url=ilike.*photographic-workshops-near-me*');
+      const entitiesCourses   = await restCount('page_entities?select=url&url=ilike.*beginners-photography-lessons*');
+      const chunksCourses     = await restCount('page_chunks?select=url&url=ilike.*beginners-photography-lessons*');
+      return { entitiesWorkshops: Number(entitiesWorkshops)||0, chunksWorkshops: Number(chunksWorkshops)||0, entitiesCourses: Number(entitiesCourses)||0, chunksCourses: Number(chunksCourses)||0 };
+    }
+
+    async function updateParityPill() {
+      try {
+        const p = await getParity();
+        const pill = document.getElementById('parityStatus');
+        if (pill) {
+          pill.textContent = `Parity: W ${p.entitiesWorkshops}/${p.chunksWorkshops} | C ${p.entitiesCourses}/${p.chunksCourses}`;
+          const ok = (p.entitiesWorkshops>0 && p.entitiesWorkshops<=p.chunksWorkshops) && (p.entitiesCourses>0 && p.entitiesCourses<=p.chunksCourses);
+          pill.style.background = ok ? '#2a6' : '#a62';
+        }
+      } catch (e) {
+        const pill = document.getElementById('parityStatus');
+        if (pill) { pill.textContent = `Parity: error`; pill.style.background = '#a62'; }
+      }
+    }
+
+    async function updateCronPill() {
+      const pill = document.getElementById('cronStatus');
+      if (!pill) return;
+      try {
+        const resp = await fetch('/api/tools?action=cron_status', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+        const text = await resp.text();
+        let j; try { j = JSON.parse(text); } catch { j = null; }
+        if (!resp.ok || !j || j.error) throw new Error(j?.detail || `HTTP ${resp.status}`);
+        const { schedule, tz, counts, parity } = j;
+        pill.textContent = `Cron: ${schedule} ${tz ? '('+tz+')' : ''}`;
+        pill.style.background = '#2a6';
+        if (counts) addResult(`🕒 Cron counts — mapped: ${counts.mapped}/${counts.total}`, 'info');
+        if (parity) addResult(`🧮 Cron parity — W ${parity.entitiesWorkshops}/${parity.chunksWorkshops}, C ${parity.entitiesCourses}/${parity.chunksCourses}`, 'info');
+      } catch (e) {
+        pill.textContent = 'Cron: unavailable';
+        pill.style.background = '#a62';
+      }
+    }
+
+    async function runQaChecks() {
+      const el = document.getElementById('qaResults');
+      el.textContent = 'Running QA checks...';
+      try {
+        // Use Supabase REST counts directly (no backend endpoint)
+        const checks = [
+          { name: 'page_entities', path: 'page_entities?select=id' },
+          { name: 'page_chunks', path: 'page_chunks?select=id' },
+          // Raw blog entity count for clarity alongside v_blog_content
+          { name: 'page_entities_articles', path: 'page_entities?select=id&kind=eq.article' },
+          // canonical mapping view (may aggregate manual + auto)
+          { name: 'v_event_product_mappings', path: 'v_event_product_mappings?select=event_url' },
+          // raw auto table (may be empty if only view is used)
+          { name: 'event_product_links_auto', path: 'event_product_links_auto?select=id' },
+          { name: 'v_events_for_chat', path: 'v_events_for_chat?select=event_url' },
+          { name: 'v_blog_content', path: 'v_blog_content?select=url' },
+          { name: 'v_service_content', path: 'v_service_content?select=url' },
+          { name: 'v_product_content', path: 'v_product_content?select=url' }
+        ];
+        const rows = [];
+        for (const c of checks) {
+          const n = await restCount(c.path);
+          rows.push(`${c.name.padEnd(36)} ${String(n)}`);
+        }
+        el.textContent = rows.join('\n');
+      } catch (e) {
+        el.textContent = `QA error: ${e.message}`;
+      }
+    }
+
+    // Field tracking display function
+    function displayFieldTracking(csvType, fieldStats, successRate) {
+      const container = document.getElementById('field-tracking-details');
+      if (!container) return;
+      
+      const totalRows = fieldStats.total_rows;
+      const fieldsExpected = fieldStats.fields_expected;
+      const fieldsFound = fieldStats.fields_found;
+      const fieldsSuccess = fieldStats.fields_success;
+      
+      let html = `<div style="margin-bottom: 15px;">
+        <div style="color: #4CAF50; font-weight: bold;">📊 ${csvType.toUpperCase()} Import Results</div>
+        <div style="color: #fff; margin: 5px 0;">Total Rows: ${totalRows} | Success Rate: ${successRate.toFixed(1)}%</div>
+      </div>`;
+      
+      html += `<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+        <div style="color: #2196F3; font-weight: bold;">Field</div>
+        <div style="color: #2196F3; font-weight: bold;">Found</div>
+        <div style="color: #2196F3; font-weight: bold;">Success</div>
+      </div>`;
+      
+      fieldsExpected.forEach(field => {
+        const found = fieldsFound[field] || 0;
+        const success = fieldsSuccess[field] || 0;
+        const foundRate = totalRows > 0 ? (found / totalRows * 100).toFixed(1) : 0;
+        const successRate = found > 0 ? (success / found * 100).toFixed(1) : 0;
+        
+        const foundColor = found === totalRows ? '#4CAF50' : found > 0 ? '#FF9800' : '#f44336';
+        const successColor = success === found ? '#4CAF50' : success > 0 ? '#FF9800' : '#f44336';
+        
+        html += `<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 3px 0; border-bottom: 1px solid #444;">
+          <div style="color: #fff;">${field}</div>
+          <div style="color: ${foundColor};">${found}/${totalRows} (${foundRate}%)</div>
+          <div style="color: ${successColor};">${success}/${found} (${successRate}%)</div>
+        </div>`;
+      });
+      
+      // Add summary
+      const totalFields = fieldsExpected.length;
+      const perfectFields = fieldsExpected.filter(field => (fieldsFound[field] || 0) === totalRows && (fieldsSuccess[field] || 0) === totalRows).length;
+      const partialFields = fieldsExpected.filter(field => (fieldsFound[field] || 0) > 0 && (fieldsFound[field] || 0) < totalRows).length;
+      const missingFields = fieldsExpected.filter(field => (fieldsFound[field] || 0) === 0).length;
+      
+      html += `<div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #666;">
+        <div style="color: #4CAF50;">✅ Perfect: ${perfectFields}/${totalFields} fields</div>
+        <div style="color: #FF9800;">⚠️ Partial: ${partialFields}/${totalFields} fields</div>
+        <div style="color: #f44336;">❌ Missing: ${missingFields}/${totalFields} fields</div>
+      </div>`;
+      
+      container.innerHTML = html;
+    }
+
+    // CSV Metadata Import functions
+    async function importCsvMetadata(file, csvType) {
+      if (!file) {
+        addResult(`❌ No ${csvType} file selected`, 'error');
+        return false;
+      }
+
+      showToast(`Reading ${file.name} for metadata import...`);
+      addResult(`📥 Importing ${csvType} metadata...`);
+      const csvText = await file.text();
+      
+      // Count CSV rows by actually parsing the CSV (excluding header)
+      const lines = csvText.split('\n').filter(line => line.trim());
+      const actualRowCount = Math.max(0, lines.length - 1); // Subtract header
+      addResult(`📊 CSV has ${actualRowCount} data rows (${lines.length} total lines)`);
+
+      try {
+        const token = getToken();
+        const baseUrl = 'https://alan-chat-proxy.vercel.app';
+        
+        const response = await fetch(`${baseUrl}/api/csv-import`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            csvData: csvText,
+            contentType: 'metadata',
+            csvType: csvType
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          addResult(`✅ ${csvType} metadata import successful: ${result.metadata_imported}/${actualRowCount} records`, 'success');
+          
+          // Update csvRowCounts object for dashboard display (use imported count, not total CSV count)
+          if (csvRowCounts.hasOwnProperty(csvType)) {
+            csvRowCounts[csvType] = result.metadata_imported;
+            addResult(`🔧 DEBUG: Updated csvRowCounts[${csvType}] = ${result.metadata_imported} (imported) vs ${actualRowCount} (total CSV)`, 'info');
+          }
+          
+          // Display field-by-field tracking
+          if (result.field_stats) {
+            displayFieldTracking(csvType, result.field_stats, result.success_rate);
+          }
+          
+          // Show debug info for course_events and workshop_events
+          if (result.debug && (csvType === 'course_events' || csvType === 'workshop_events')) {
+            addResult(`🔍 DEBUG ${csvType}:`, 'info');
+            addResult(`  • Total rows: ${result.debug.totalRows}`, 'info');
+            addResult(`  • Column names: ${result.debug.firstRowKeys?.join(', ')}`, 'info');
+            addResult(`  • First Event_URL: ${result.debug.firstRowEventUrl || 'NOT FOUND'}`, 'info');
+            addResult(`  • Filtered count: ${result.debug.filteredCount}`, 'info');
+            if (result.debug.sampleRow) {
+              addResult(`  • Sample row keys: ${Object.keys(result.debug.sampleRow).join(', ')}`, 'info');
+            }
+          }
+          
+          return { success: true, csvRows: actualRowCount, imported: result.metadata_imported };
+        } else {
+          addResult(`❌ ${csvType} metadata import failed: ${result.error || result.detail || 'Unknown error'}`, 'error');
+          return { success: false, csvRows: actualRowCount, imported: 0 };
+        }
+      } catch (error) {
+        addResult(`❌ ${csvType} metadata import error: ${error.message}`, 'error');
+        return { success: false, csvRows: actualRowCount, imported: 0 };
+      }
+    }
+
+    // CSV Import functions (legacy - for backward compatibility)
+    async function importCSV(file, contentType) {
+      if (!file) {
+        addResult(`❌ No ${contentType} file selected`, 'error');
+        return false;
+      }
+
+      showToast(`Reading ${file.name}…`);
+      addResult(`📥 Importing ${contentType} data...`);
+      const csvText = await file.text();
+      
+      // Count CSV rows by actually parsing the CSV (excluding header)
+      const lines = csvText.split('\n').filter(line => line.trim());
+      const headerLine = lines[0];
+      
+      // Proper CSV parser that handles quoted fields
+      function parseCSVLine(line) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        let i = 0;
+        
+        while (i < line.length) {
+          const ch = line[i];
+          if (ch === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+              current += '"';
+              i += 2;
+              continue;
+            }
+            inQuotes = !inQuotes;
+          } else if (ch === ',' && !inQuotes) {
+            result.push(current);
+            current = '';
+            i++;
+            continue;
+          } else {
+            current += ch;
+          }
+          i++;
+        }
+        result.push(current);
+        return result.map(s => s.replace(/^\s+|\s+$/g, '').replace(/^"|"$/g, ''));
+      }
+      
+      const headers = parseCSVLine(headerLine).map(h => h.toLowerCase());
+
+      function resolveCsvKey(contentType, headers, name){
+        const hasJsonLd = headers.some(h => h.includes('json-ld') || h.includes('structured data'));
+        const lowerName = (name||'').toLowerCase();
+        if (contentType === 'product' && hasJsonLd) return 'json_extraction';
+        // Treat the 05 bundle (Photo Workshops UK ...) as Workshop Products row in dashboard
+        if (lowerName.includes('photo workshops uk')) return 'workshop_products';
+        if (contentType === 'product' && lowerName.includes('workshop')) return 'workshop_products';
+        if (contentType === 'service') return 'course_products';
+        return contentTypeToCsvKey[contentType] || contentType;
+      }
+      
+      // Parse CSV properly to get actual row count
+      let actualRowCount = 0;
+      let i = 1;
+      while (i < lines.length) {
+        let line = lines[i];
+        if (!line.trim()) {
+          i++;
+          continue;
+        }
+        
+        // Handle multi-line quoted fields
+        let quoteCount = (line.match(/"/g) || []).length;
+        let j = i + 1;
+        while (quoteCount % 2 !== 0 && j < lines.length) {
+          line += '\n' + lines[j];
+          quoteCount = (line.match(/"/g) || []).length;
+          j++;
+        }
+        
+        // Parse the line properly
+        const values = parseCSVLine(line);
+        if (values.length === headers.length) {
+          actualRowCount++;
+        } else {
+          console.warn(`CSV row ${i} has ${values.length} columns, expected ${headers.length}`);
+        }
+        
+        i = j;
+      }
+      
+      addResult(`📊 CSV has ${actualRowCount} data rows (${lines.length} total lines)`);
+      
+      // Handle special cases that don't use the multi-import endpoint
+      if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'test_questions') {
+        // Update total CSV imported count for reference files too
+        stats.csvImportedRows += actualRowCount;
+        updateStats();
+        
+        // Store CSV count for dashboard display even for reference files (accumulate, don't overwrite)
+        const csvKey = resolveCsvKey(contentType, headers, file?.name);
+        if (csvRowCounts.hasOwnProperty(csvKey)) {
+          // For site_urls, only keep the largest count (main site URLs file)
+          if (contentType === 'site_urls') {
+            csvRowCounts[csvKey] = Math.max(csvRowCounts[csvKey], actualRowCount);
+          } else {
+            csvRowCounts[csvKey] += actualRowCount; // Add to existing count
+          }
+          // Dashboard will be updated after import completes
+        }
+        // Cache URLs for scraping from ALL CSV types
+        if (!window.__cachedCsvData) {
+          window.__cachedCsvData = {};
+        }
+        
+        // Extract URLs from this CSV
+        const lines = csvText.split('\n').filter(line => line.trim());
+        const urls = lines.slice(1).map(line => {
+          const values = line.split(',');
+          // Try different URL columns based on CSV type
+          if (contentType === 'site_urls' || contentType === 'landing_pages') {
+            return values[0]; // First column for site URLs
+          } else if (contentType === 'blog') {
+            return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+          } else if (contentType === 'event' || contentType === 'workshop') {
+            return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+          } else if (contentType === 'product' || contentType === 'service') {
+            return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+          }
+          return null;
+        }).filter(url => url && url.startsWith('http'));
+        
+        // Store URLs for this CSV type
+        window.__cachedCsvData[contentType] = {
+          urls: urls,
+          count: urls.length
+        };
+        
+        addResult(`🔗 ${contentType} URLs cached for Scrape step: ${urls.length} URLs`, 'info');
+        
+        // Update "Web Scraping" count for site_urls
+        if (contentType === 'site_urls') {
+          stats.loadedRows = urls.length;
+          updateStats();
+          addResult(`📊 Found ${urls.length} URLs ready for scraping`);
+        }
+        addResult(`ℹ️ ${contentType} files are for reference only - not imported to database`, 'info');
+        return { success: true, csvRows: actualRowCount, imported: 0 }; // Count as successful since these are reference files
+      }
+      
+      // Correct endpoint (csv-import) so imports actually run
+      const result = await apiCall('https://alan-chat-proxy.vercel.app/api/csv-import', { csvData: csvText, contentType });
+      
+        if (result && result.ok) {
+          addResult(`✅ ${contentType} import successful: ${result.imported}/${actualRowCount} records (CSV rows → ingested)`, 'success');
+          
+          // Update total CSV imported count
+          stats.csvImportedRows += actualRowCount;
+          updateStats();
+          
+          // Store CSV count for dashboard display (accumulate, don't overwrite)
+          const csvKey = resolveCsvKey(contentType, headers, file?.name);
+          console.log(`DEBUG: ${contentType} -> ${csvKey}, adding ${actualRowCount} rows`);
+          if (csvRowCounts.hasOwnProperty(csvKey)) {
+            // For site_urls, only keep the largest count (main site URLs file)
+            if (contentType === 'site_urls') {
+              csvRowCounts[csvKey] = Math.max(csvRowCounts[csvKey], actualRowCount);
+            } else {
+              csvRowCounts[csvKey] += actualRowCount; // Add to existing count
+            }
+            console.log(`DEBUG: csvRowCounts[${csvKey}] is now ${csvRowCounts[csvKey]}`);
+            // Dashboard will be updated after import completes
+          } else {
+            console.log(`DEBUG: csvRowCounts does not have key: ${csvKey}`);
+          }
+          
+          // Cache URLs for scraping from ALL CSV types (including regular imports)
+          if (!window.__cachedCsvData) {
+            window.__cachedCsvData = {};
+          }
+          
+          // Extract URLs from this CSV
+          const lines = csvText.split('\n').filter(line => line.trim());
+          const urls = lines.slice(1).map(line => {
+            const values = line.split(',');
+            // Try different URL columns based on CSV type
+            if (contentType === 'site_urls' || contentType === 'landing_pages') {
+              return values[0]; // First column for site URLs
+            } else if (contentType === 'blog') {
+              return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+            } else if (contentType === 'event' || contentType === 'workshop') {
+              return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+            } else if (contentType === 'product' || contentType === 'service') {
+              return values.find(v => v && v.includes('alanranger.com')); // Find URL column
+            }
+            return null;
+          }).filter(url => url && url.startsWith('http'));
+          
+          // Store URLs for this CSV type
+          window.__cachedCsvData[contentType] = {
+            urls: urls,
+            count: urls.length
+          };
+          
+          addResult(`🔗 ${contentType} URLs cached for Scrape step: ${urls.length} URLs`, 'info');
+        // Cache site_urls text for scrape step if it was imported via bulk box
+        if (contentType === 'site_urls') {
+          try { 
+            window.__cachedSiteUrlsText = await file.text(); 
+            addResult('🔗 Site URLs cached for Scrape step.', 'info');
+            
+            // Update Web Scraping count
+            const lines = window.__cachedSiteUrlsText.split('\n').filter(line => line.trim());
+            const urls = lines.slice(1).map(line => line.split(',')[0]).filter(url => url && url.startsWith('http'));
+            stats.loadedRows = urls.length;
+            updateStats();
+            addResult(`📊 Found ${urls.length} URLs ready for scraping`);
+          } catch {}
+        }
+        return { success: true, csvRows: actualRowCount, imported: result.imported };
+      } else {
+        addResult(`❌ ${contentType} import failed: ${result?.error || result?.detail || 'Unknown error'}`, 'error');
+        if (result && result.text) addResult(`↪︎ server said: ${result.text.slice(0,400)}`, 'error');
+        if (result?.detail) {
+          addResult(`🔍 Error details: ${JSON.stringify(result.detail)}`, 'error');
+        }
+        return { success: false, csvRows: actualRowCount, imported: 0 };
+      }
+    }
+
+    // Main import function
+    async function importAllCSVs() {
+      const token = getToken();
+      showToast('Starting Import All…');
+      addResult('🔐 Using hardcoded token for authentication');
+      document.getElementById('stepImport').style.background = '#3a3';
+      document.getElementById('stepImport').textContent = 'Status: running';
+
+      updateProgress(0, 'Starting CSV imports...');
+      addResult('🚀 Starting CSV import process...');
+
+      const files = [
+        { file: document.getElementById('blogCsv').files[0], type: 'blog', csvType: 'blog', name: 'Blog Articles' },
+        { file: document.getElementById('courseEventsCsv').files[0], type: 'event', csvType: 'course_events', name: 'Course Events' },
+        { file: document.getElementById('workshopEventsCsv').files[0], type: 'workshop', csvType: 'workshop_events', name: 'Workshop Events' },
+        { file: document.getElementById('servicePagesCsv').files[0], type: 'service', csvType: 'course_products', name: 'Service Pages' },
+        { file: document.getElementById('productsCsv').files[0], type: 'product', csvType: 'workshop_products', name: 'Physical Products' },
+        { file: document.getElementById('siteUrlsCsv').files[0], type: 'site_urls', csvType: 'site_urls', name: 'Site URLs' },
+        { file: document.getElementById('landingPagesCsv').files[0], type: 'landing_pages', csvType: 'site_urls', name: 'Landing Pages' },
+        { file: document.getElementById('testQuestionsCsv').files[0], type: 'test_questions', csvType: 'site_urls', name: 'Test Questions' }
+      ];
+
+      let successCount = 0;
+      let totalCount = files.filter(f => f.file).length;
+      let totalCsvRows = 0;
+      let totalImported = 0;
+
+      if (totalCount === 0) {
+        addResult('❌ No CSV files selected', 'error');
+        return;
+      }
+
+      if (totalCount) { showOverlayProgress('Importing metadata from selected CSVs…', totalCount); }
+
+      for (let i = 0; i < files.length; i++) {
+        const { file, type, csvType, name } = files[i];
+        if (file) {
+          updateProgress((i / totalCount) * 100, `Importing ${name} metadata...`);
+          const result = await importCsvMetadata(file, csvType);
+          updateOverlayProgress(Math.min((i+1), totalCount), totalCount);
+          if (result && result.success) {
+            successCount++;
+            totalCsvRows += result.csvRows || 0;
+            totalImported += result.imported || 0;
+          }
+        }
+      }
+
+      updateProgress(100, `Metadata import complete: ${successCount}/${totalCount} successful`);
+      addResult(`🎉 Metadata import complete! ${successCount}/${totalCount} files imported successfully.`, 'success');
+      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} metadata records imported (${totalCsvRows - totalImported} CSV rows skipped)`, 'info');
+      document.getElementById('stepImport').style.background = successCount===totalCount ? '#2a6' : '#a62';
+      document.getElementById('stepImport').textContent = `Status: ${successCount}/${totalCount} (${totalImported}/${totalCsvRows} records)`;
+      
+      hideOverlayProgress();
+      // Update both dashboards
+      await updateCsvMetadataDashboard();
+      await updateDebugControlDashboard();
+    }
+
+    // --- Bulk CSV Upload ---
+    function detectTypeFromHeaders(firstLine){
+      const h = (firstLine||'').toLowerCase();
+      if (h.includes('event_title') && h.includes('start_date') && h.includes('start_time')) return 'event';
+      if (h.includes('title,') && h.includes('url') && h.includes('categories') && h.includes('tags')) return 'blog';
+      if (h.includes('product url') || h.includes('price')) return 'product';
+      if (h.includes('service') || h.includes('mentoring') || h.includes('course') || h.includes('class')) return 'service';
+      if (h.startsWith('url') || h.includes('url') && !h.includes('title')) return 'site_urls';
+      if (h.includes('landing')) return 'landing_pages';
+      return null;
+    }
+
+    function detectTypeByName(name){
+      const n = (name||'').toLowerCase();
+      if (n.includes('photo workshops uk')) return 'workshop';
+      if (n.includes('photography services')) return 'service';
+      if (n.includes('workshop')) return 'workshop';
+      if (n.includes('event')) return 'event';
+      if (n.includes('blog') || n.includes('news')) return 'blog';
+      if (n.includes('product')) return 'product';
+      if (n.includes('service') || n.includes('mentoring') || n.includes('course') || n.includes('class')) return 'service';
+      if (n.includes('site') && n.includes('url')) return 'site_urls';
+      if (n.includes('urls') || n.includes('url')) return 'site_urls';
+      if (n.includes('landing')) return 'landing_pages';
+      if (n.includes('question')) return 'test_questions';
+      return null;
+    }
+
+    async function bulkUploadCSVs(){
+      showToast('Preparing selected CSVs for metadata import…');
+      console.log('bulkUploadCSVs called');
+      try {
+        const input = document.getElementById('bulkCsvs');
+        console.log('Input element:', input);
+        const files = Array.from(input.files||[]);
+        console.log('Files:', files);
+        if (!files.length){ addResult('❌ No files selected for bulk upload','error'); return; }
+      const previewEl = document.getElementById('bulkPreview');
+      previewEl.textContent = 'Detecting file types for metadata import...';
+
+      const plan = [];
+      addResult(`🔍 Processing ${files.length} files for metadata import...`);
+      for (const f of files){
+        const text = await f.text();
+        const first = text.split('\n')[0] || '';
+        // Prefer filename hint when present (more specific per bundle), else headers
+        const nameHint = detectTypeByName(f.name);
+        const headerHint = detectTypeFromHeaders(first);
+        let type = nameHint || headerHint;
+        if (type === 'workshop') type = 'workshop';
+        if (type === 'event' && f.name.includes('workshop')) type = 'workshop';
+        if (!type){
+          addResult(`❓ Could not detect type for ${f.name}. Skipping.`, 'error');
+          continue;
+        }
+        
+        // Map old types to new CSV metadata types
+        const csvTypeMapping = {
+          'blog': 'blog',
+          'event': 'course_events',
+          'workshop': 'workshop_events',
+          'service': 'course_products',
+          'product': 'workshop_products',
+          'site_urls': 'site_urls'
+        };
+        
+        // Special case: File 05 (Photo Workshops UK) should be workshop_products, not workshop_events
+        if (f.name.includes('Photo Workshops UK _ Landscape Photography Workshops-CSV.csv')) {
+          type = 'workshop_products';
+        }
+        
+        // Special case: File 07 (Product Schema) should be product_schema, not workshop_products
+        if (f.name.includes('alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS.csv')) {
+          type = 'product_schema';
+        }
+        
+        const csvType = csvTypeMapping[type] || type;
+        addResult(`✅ Detected ${f.name} as ${type} → ${csvType} metadata`);
+        plan.push({ file: f, type, csvType, first });
+      }
+
+      if (!plan.length){ addResult('❌ No recognizable CSVs in bulk selection','error'); return; }
+
+      previewEl.innerHTML = plan.map(p => `<div>• ${p.file.name} → <strong>${p.type}</strong></div>`).join('');
+
+      // Show progress bar
+      const progressContainer = document.createElement('div');
+      progressContainer.id = 'bulkProgressContainer';
+      progressContainer.innerHTML = `
+        <div style="margin: 10px 0; padding: 10px; background: #1b1b1b; border: 1px solid #333; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span>Bulk Import Progress</span>
+            <span id="bulkProgressText">0/${plan.length}</span>
+          </div>
+          <div style="width: 100%; background: #333; border-radius: 2px; height: 20px; overflow: hidden;">
+            <div id="bulkProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #51cf66, #69db7c); transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+      `;
+      document.getElementById('results').appendChild(progressContainer);
+      
+      // Force initial display and scroll to progress bar
+      addResult('🔄 Starting metadata import with progress tracking...', 'info');
+      progressContainer.scrollIntoView({ behavior: 'smooth' });
+      
+      // Show progress in main dashboard too
+      const progressEl = document.getElementById('csvImportedRows');
+      if (progressEl) {
+        progressEl.textContent = 'Importing...';
+        progressEl.style.color = '#69db7c';
+      }
+      
+      // Debug: Check if elements exist
+      console.log('Progress bar elements:', {
+        container: document.getElementById('bulkProgressContainer'),
+        bar: document.getElementById('bulkProgressBar'),
+        text: document.getElementById('bulkProgressText')
+      });
+      
+      // Force a small delay to ensure DOM is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Import sequentially for clear logs with overlay progress
+      showOverlayProgress('Importing metadata from selected CSVs…', plan.length);
+      let ok = 0;
+      let totalCsvRows = 0;
+      let totalImported = 0;
+      for (let i=0;i<plan.length;i++){
+        const p = plan[i];
+        
+        // Update progress
+        const progress = ((i + 1) / plan.length) * 100;
+        const progressBar = document.getElementById('bulkProgressBar');
+        const progressText = document.getElementById('bulkProgressText');
+        
+        if (progressBar && progressText) {
+          progressBar.style.width = progress + '%';
+          progressText.textContent = `${i + 1}/${plan.length}`;
+          console.log(`Progress: ${i + 1}/${plan.length} (${progress.toFixed(1)}%)`);
+        } else {
+          console.warn('Progress bar elements not found!', { progressBar, progressText });
+        }
+        
+        // Update main dashboard progress
+        const dashboardEl = document.getElementById('csvImportedRows');
+        if (dashboardEl) {
+          dashboardEl.textContent = `Importing ${i + 1}/${plan.length}...`;
+        }
+        
+        addResult(`📦 Importing ${p.file.name} as ${p.csvType} metadata...`);
+        try {
+          const result = await importCsvMetadata(p.file, p.csvType);
+          if (result && result.success) {
+            ok++;
+            totalCsvRows += result.csvRows || 0;
+            totalImported += result.imported || 0;
+            addResult(`✅ ${p.file.name} metadata imported: ${result.imported}/${result.csvRows} records`, 'success');
+          } else {
+            addResult(`❌ ${p.file.name} metadata import failed`, 'error');
+          }
+        } catch (error) {
+          addResult(`❌ ${p.file.name} metadata import error: ${error.message}`, 'error');
+        }
+        updateOverlayProgress(i+1, plan.length);
+      }
+      
+      // Remove progress bar
+      const progressBarEl = document.getElementById('bulkProgressContainer');
+      if (progressBarEl) {
+        progressBarEl.remove();
+      }
+      
+      // Reset main dashboard to show final count
+      const finalProgressEl = document.getElementById('csvImportedRows');
+      if (finalProgressEl) {
+        finalProgressEl.textContent = stats.csvImportedRows;
+        finalProgressEl.style.color = '';
+      }
+      
+      addResult(`✅ Metadata import complete: ${ok}/${plan.length} files imported`, 'success');
+      addResult(`📊 Summary: ${totalImported}/${totalCsvRows} metadata records imported (${totalCsvRows - totalImported} CSV rows skipped)`, 'info');
+
+      // Update both dashboards
+      await updateCsvMetadataDashboard();
+      await updateDebugControlDashboard();
+      hideOverlayProgress();
+      } catch (error) {
+        console.error('Error in bulkUploadCSVs:', error);
+        addResult(`❌ Bulk upload failed: ${error.message}`, 'error');
+      }
+    }
+
+    // Website scraping
+    async function scrapeWebsite(dryRun=false) {
+      // Collect URLs from csv_metadata table (metadata-driven system)
+      /** @type {{ url: string, source: string }[]} */
+      let allEntries = [];
+      let urlSources = [];
+
+      const includeSite = document.getElementById('src_site')?.checked !== false;
+      const includeBlog = document.getElementById('src_blog')?.checked === true;
+      const includeEvent = document.getElementById('src_event')?.checked === true;
+      const includeWorkshop = document.getElementById('src_workshop')?.checked === true;
+      const includeService = document.getElementById('src_service')?.checked === true;
+
+      try {
+        // Get URLs from csv_metadata table - ONLY from current session
+        const token = getToken();
+        const baseUrl = 'https://alan-chat-proxy.vercel.app';
+        
+        addResult('🔍 Fetching URLs from current import session...', 'info');
+        
+        // Get URLs from csv_metadata table - ONLY from current import session (last 5 minutes)
+        const response = await fetch(`${baseUrl}/api/tools?action=get_urls&recent=true`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          addResult(`❌ Failed to fetch URLs: ${response.status}`, 'error');
+          return;
+        }
+        
+        const data = await response.json();
+        const csvMetadataUrls = data.urls || [];
+        
+        addResult(`📊 Found ${csvMetadataUrls.length} URLs from current import session (imported in last 5 minutes)`, 'info');
+        if (csvMetadataUrls.length === 0) {
+          addResult(`⚠️ No URLs found from recent imports. Make sure you've imported CSVs in the last 5 minutes.`, 'warning');
+          return;
+        }
+        
+        // Store current session URLs for dashboard display
+        window.currentSessionUrls = csvMetadataUrls;
+        
+        // Filter URLs based on checkboxes and map to source categories
+        csvMetadataUrls.forEach(item => {
+          const { url, csv_type } = item;
+          let include = false;
+          let source = '';
+          
+          switch (csv_type) {
+            case 'site_urls':
+              include = includeSite;
+              source = 'site_urls';
+              break;
+            case 'blog':
+              include = includeBlog;
+              source = 'blog';
+              break;
+            case 'course_events':
+            case 'workshop_events':
+              include = includeEvent || includeWorkshop;
+              source = csv_type === 'course_events' ? 'event' : 'workshop';
+              break;
+            case 'course_products':
+              include = includeService;
+              source = 'service';
+              break;
+            case 'workshop_products':
+              include = includeService;
+              source = 'workshop_products';
+              break;
+            case 'product_schema':
+              include = includeService;
+              source = 'product_schema';
+              break;
+            default:
+              include = false;
+          }
+          
+          if (include && url) {
+            allEntries.push({ url, source });
+          }
+        });
+        
+        // Group by source for reporting
+        const sourceCounts = {};
+        allEntries.forEach(entry => {
+          sourceCounts[entry.source] = (sourceCounts[entry.source] || 0) + 1;
+        });
+        
+        Object.entries(sourceCounts).forEach(([source, count]) => {
+          urlSources.push(`${source}: ${count}`);
+        });
+        
+      } catch (error) {
+        addResult(`❌ Error fetching URLs from csv_metadata: ${error.message}`, 'error');
+        return;
+      }
+
+      if (allEntries.length === 0) {
+        addResult('❌ No URLs found to scrape. Please import CSV files first.', 'error');
+        return;
+      }
+
+      // De-duplicate within the same source only; keep cross-source duplicates for enhancement
+      const seenBySource = new Map(); // source => Set(url)
+      const dupBySource = new Map();  // source => number
+      const uniqueEntries = [];
+      let withinSourceDuplicates = 0;
+      for (const e of allEntries) {
+        if (!seenBySource.has(e.source)) seenBySource.set(e.source, new Set());
+        if (!dupBySource.has(e.source)) dupBySource.set(e.source, 0);
+        const seenSet = seenBySource.get(e.source);
+        if (seenSet.has(e.url)) {
+          withinSourceDuplicates++;
+          dupBySource.set(e.source, dupBySource.get(e.source) + 1);
+          continue;
+        }
+        seenSet.add(e.url);
+        uniqueEntries.push(e);
+      }
+
+      // Map per-source duplicates to dashboard categories for display
+      withinSourceDupByCategory = {
+        'blog_articles': 0,
+        'course_events': 0,
+        'workshop_events': 0,
+        'course_products': 0,
+        'workshop_products': 0,
+        'product_schema': 0,
+        'website_urls': 0,
+        'json_extraction': 0
+      };
+      const sourceToCategory = (src) => src === 'blog' ? 'blog_articles'
+        : src === 'event' ? 'course_events'
+        : src === 'workshop' ? 'workshop_events'
+        : src === 'service' ? 'course_products'
+        : src === 'workshop_products' ? 'workshop_products'
+        : src === 'product_schema' ? 'product_schema'
+        : src === 'site' ? 'website_urls'
+        : 'website_urls';
+      for (const [src, cnt] of dupBySource.entries()) {
+        const catKey = sourceToCategory(src);
+        withinSourceDupByCategory[catKey] = (withinSourceDupByCategory[catKey] || 0) + cnt;
+      }
+
+      // Record foundation vs enhancement breakdown for dashboard
+      const foundationCount = (seenBySource.get('site')?.size || 0);
+      const enhancementCount = uniqueEntries.length - foundationCount;
+      window.__foundationEnhancementBreakdown = { foundation: foundationCount, enhancement: enhancementCount };
+
+      // reset 404 collection and enable stop button
+      failed404Set = new Set();
+      let stopRequested = false;
+      window.__stopScrape = () => { stopRequested = true; addResult('⏹️ Stop requested. Finishing current URL...', 'info'); };
+      document.getElementById('stopScrapeBtn').style.display = 'inline-block';
+
+      addResult('🕷️ Starting content ingestion...');
+      // Update dashboard at start of ingestion
+      await updateDebugControlDashboard();
+      document.getElementById('stepScrape').style.background = '#3a3';
+      document.getElementById('stepScrape').textContent = 'Status: running';
+      
+      addResult(`📊 Found ${uniqueEntries.length} URLs to ingest (${allEntries.length} total, ${withinSourceDuplicates} within-source duplicates removed)`);
+      const perSrcMsg = Array.from(dupBySource.entries()).map(([s,c]) => `${s}:${c}`).join(', ');
+      if (perSrcMsg) addResult(`📌 Within-source duplicate breakdown — ${perSrcMsg}`);
+      addResult(`📋 Sources: ${urlSources.join(', ')}`);
+
+      const entries = uniqueEntries;
+
+      // stats counters
+      stats.loadedRows = entries.length;
+      stats.successCount = 0;
+      stats.failedCount = 0;
+      stats.stoppedCount = 0;
+      updateStats(); // Update dashboard immediately
+
+      // Separate CSV import stats from URL scraping stats for clarity
+      const cat = () => ({ success: 0, failed: 0, skipped: 0 });
+      let csvImportStats = {
+        'blog_articles': cat(),
+        'course_events': cat(),
+        'workshop_events': cat(),
+        'service_pages': cat(),
+        'service_products': cat(),
+        'landing_pages': cat(),
+        'test_questions': cat()
+      };
+      
+      // Use global urlScrapingStats - don't redeclare
+
+      function categorize(url, result, sourceCategory) {
+        const u = (url||'').toLowerCase();
+        // Prioritize the declared source category when present
+        if (sourceCategory === 'blog') return 'blog_articles';
+        if (sourceCategory === 'event') return 'course_events';
+        if (sourceCategory === 'workshop') return 'workshop_events';
+        if (sourceCategory === 'service') return 'course_products';
+        if (sourceCategory === 'workshop_products') return 'workshop_products';
+        if (sourceCategory === 'product_schema') return 'product_schema';
+        if (sourceCategory === 'site_urls') return 'site_urls';
+        if (sourceCategory === 'site') {
+          // site foundation can be any; fall through to URL heuristics
+        }
+        // Broader patterns to catch more content
+        if (u.includes('/blog') || u.includes('/news') || u.includes('/blog-on-photography')) return 'blog_articles';
+        if (u.includes('/course') || u.includes('/lesson') || u.includes('/beginners-photography-lessons')) return 'course_events';
+        if (u.includes('/workshop') || u.includes('/photo-workshop') || u.includes('/photographic-workshops-near-me') || u.includes('/photo-workshops-uk')) return 'workshop_events';
+        if (u.includes('/service') || u.includes('/mentoring') || u.includes('/photography-services-near-me')) return 'course_products';
+        if (u.includes('/shop') || u.includes('/product') || u.includes('/photography-shop') || u.includes('/photography-presents')) return 'course_products';
+        if (u.includes('/landing') || u.includes('/page')) return 'website_urls'; // Changed from landing_pages
+        
+        // Check for JSON-LD content in result
+        if (result && result.jsonLdFound) return 'json_extraction';
+        
+        // Everything else is a generic website URL
+        return 'website_urls';
+      }
+
+
+      // Batch processing with throttling
+      const BATCH_SIZE = 10; // increased for faster processing with SMALL plan
+      const BATCH_DELAY = 2000; // keep conservative delay
+      const TIMEOUT_MS = 45000; // allow longer than backend timeout (30s + processing time)
+      let completed = 0;
+
+      async function processBatch(batchEntries, batchIndex) {
+        addResult(`📦 Processing batch ${batchIndex + 1}: ${batchEntries.length} URLs`, 'info');
+        
+        // Process all URLs in this batch concurrently
+        const promises = batchEntries.map(async (entry, urlIndex) => {
+          const { url, source } = entry;
+          const globalIndex = batchIndex * BATCH_SIZE + urlIndex;
+          updateProgress((completed / entries.length) * 100, `Scraping ${url}...`);
+          
+          const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
+          const category = categorize(url, result, source);
+          
+          // Ensure category exists in urlScrapingStats
+          if (!window.urlScrapingStats[category]) {
+            window.urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };
+          }
+          
+          if (result && (result.ok === true || (result.ok === undefined && result.status >= 200 && result.status < 300))) {
+            if (result.skipped === true) {
+              addResult(`⏭️ Skipped (hidden product): ${url}  (source: batch ${batchIndex + 1}) — ${result.reason || 'Product not currently published'}`, 'skipped');
+              window.urlScrapingStats[category].skipped++;
+              stats.skippedCount++;
+            } else if (result.message && result.message.includes('duplicates')) {
+              addResult(`✅ Content already exists: ${url}  (source: batch ${batchIndex + 1}) — ${result.message}`, 'success');
+              window.urlScrapingStats[category].skipped++;
+              stats.skippedCount++;
+            } else {
+              addResult(`✅ Ingested: ${url}`, 'success');
+              stats.successCount++;
+              window.urlScrapingStats[category].success++;
+            }
+          } else {
+            const reason = result && (result.error || result.detail || result.text) ? `${result.error || ''} ${result.detail || ''} ${result.text || ''}`.trim() : 'unknown';
+            const reasonLc = reason.toLowerCase();
+            if (reasonLc.includes('uniq_events_with_date') || reasonLc.includes('duplicate key value')) {
+              addResult(`✅ Skipped duplicate: ${url}  (source: batch ${batchIndex + 1}) — ${reason}`, 'success');
+              window.urlScrapingStats[category].skipped++;
+              stats.skippedCount++;
+            } else if (reasonLc.includes('aborted') || reasonLc.includes('timeout')) {
+              addResult(`❌ Timeout: ${url}  (source: batch ${batchIndex + 1})`, 'error');
+              stats.failedCount++;
+              window.urlScrapingStats[category].failed++;
+            } else {
+              // Improve diagnostics formatting when backend attaches attempt details
+              let extra = '';
+              try {
+                const j = typeof result === 'string' ? JSON.parse(result) : result;
+                if (j && j.detail && /attempts/.test(j.detail)) {
+                  extra = `\n↪ Attempts: ${j.detail}`;
+                } else if (j && j.attempts) {
+                  extra = `\n↪ Attempts: ${JSON.stringify(j.attempts)}`;
+                }
+              } catch {}
+              // collect 404s for export
+              if (reasonLc.includes(' 404') || /\b404\b/.test(reasonLc)) {
+                try { failed404Set.add(url); } catch {}
+              }
+              // Check if this is a 404 (hidden product) vs real failure
+              const is404 = reason && (
+                reason.includes('404') || 
+                reason.includes('HEAD 404') ||
+                reason.includes('GET 404')
+              );
+              
+              if (is404) {
+                addResult(`⏭️ Skipped (hidden product): ${url}  (source: batch ${batchIndex + 1}) — Product not currently published`, 'skipped');
+                stats.skippedCount++;
+                window.urlScrapingStats[category].skipped++;
+              } else {
+                addResult(`❌ Failed to ingest: ${url}  (source: batch ${batchIndex + 1}) — ${reason}${extra}`, 'error');
+              stats.failedCount++;
+                window.urlScrapingStats[category].failed++;
+              }
+            }
+          }
+          completed++;
+          updateProgress((completed / entries.length) * 100, `Ingesting (${completed}/${entries.length}) - ${entries.length - completed} remaining`);
+          updateStats();
+          
+          // Update dashboard every 2 batches to reduce API load
+          if (completed % (BATCH_SIZE * 2) === 0 || completed === entries.length) {
+            updateDebugControlDashboard();
+          }
+        });
+        
+        // Wait for all URLs in this batch to complete
+        await Promise.all(promises);
+      }
+
+      // Process URLs in batches
+      const batches = [];
+      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+        batches.push(entries.slice(i, i + BATCH_SIZE));
+      }
+      
+      addResult(`📊 Processing ${entries.length} URLs in ${batches.length} batches of ${BATCH_SIZE}`, 'info');
+      
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        if (stopRequested) break;
+        
+        await processBatch(batches[batchIndex], batchIndex);
+        
+        // Add delay between batches (except for the last batch)
+        if (batchIndex < batches.length - 1) {
+          addResult(`⏳ Waiting ${BATCH_DELAY/1000}s before next batch...`, 'info');
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+        }
+      }
+
+      if (stopRequested) {
+        stats.stoppedCount = entries.length - completed;
+        updateStats();
+      }
+
+      updateProgress(100, 'Content ingestion complete');
+      addResult('🎉 Content ingestion complete!', 'success');
+      // Update dashboard at end of ingestion
+      await updateDebugControlDashboard();
+      
+      // Debug: Log final urlScrapingStats
+      
+      document.getElementById('stepScrape').style.background = stats.failedCount === 0 ? '#2a6' : '#a62';
+      document.getElementById('stepScrape').textContent = `Status: ${stats.successCount} ingested, ${stats.failedCount} failed, ${stats.stoppedCount} stopped`;
+      document.getElementById('stopScrapeBtn').style.display = 'none';
+
+      // Update parity after scraping completes
+      updateParityPill();
+      updateCronPill();
+    }
+
+    function stopScrape() {
+      if (typeof window.__stopScrape === 'function') window.__stopScrape();
+    }
+
+    // Event-Product mapping
+    async function runMapping() {
+      addResult('🔗 Running event → product mapping...');
+      showOverlayProgress('Creating event → product mappings…', 3);
+      document.getElementById('stepMap').style.background = '#3a3';
+      document.getElementById('stepMap').textContent = 'Status: running';
+      const token = getToken();
+      try {
+        updateOverlayProgress(1, 3);
+        // fetch before/after counts for dashboard clarity
+        const before = await apiCall('/api/admin?action=refresh', { preview: true });
+        updateOverlayProgress(2, 3);
+        const result = await apiCall('/api/admin?action=refresh', {});
+        if (result && result.ok) {
+          const mappingsCreated = result.mappingsCreated || 0;
+          const afterCount = result.afterCount || 0;
+          const beforeCount = before?.afterCount ?? before?.count ?? (afterCount - mappingsCreated);
+          // also show live totals from the chat view
+          // try consolidated backend counts first (service role), then fallback to REST counts
+          let counts;
+          try {
+            const resp = await fetch('/api/tools?action=counts', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+            const j = await resp.json();
+            if (resp.ok && j && j.ok) counts = { total: j.total, mapped: j.mapped };
+          } catch {}
+          if (!counts) counts = await getMappingCounts();
+          addResult(`✅ Event → Product mapping complete! Created ${mappingsCreated} new mappings (${afterCount} auto-links). View totals: ${counts.mapped}/${counts.total} mapped.`, 'success');
+          if (result.sampleMappings && result.sampleMappings.length > 0) {
+            addResult(`📊 Sample mappings: ${result.sampleMappings.map(m => `${m.event_url} → ${m.product_url} (score: ${m.score})`).join(', ')}`, 'info');
+          }
+          document.getElementById('stepMap').style.background = '#2a6';
+          document.getElementById('stepMap').textContent = `Status: ${counts.mapped}/${counts.total} mapped`;
+          updateOverlayProgress(3, 3);
+          // Update parity as well (entities likely increased via backfill/refresh)
+          updateParityPill();
+        } else {
+          // Fallback: if the RPC failed (e.g., timeout), check live counts.
+          let counts;
+          try {
+            const resp = await fetch('/api/tools?action=counts', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+            const j = await resp.json();
+            if (resp.ok && j && j.ok) counts = { total: j.total, mapped: j.mapped };
+          } catch {}
+          if (!counts) counts = await getMappingCounts();
+          if (counts && counts.total && counts.mapped === counts.total) {
+            addResult(`✅ Mapping likely completed despite timeout. Totals now ${counts.mapped}/${counts.total} mapped.`, 'success');
+            document.getElementById('stepMap').style.background = '#2a6';
+            document.getElementById('stepMap').textContent = `Status: ${counts.mapped}/${counts.total} mapped`;
+          updateParityPill();
+        } else {
+          const errorDetail = result?.detail || result?.error || 'Unknown error';
+          addResult(`❌ Mapping failed: ${errorDetail}`, 'error');
+          document.getElementById('stepMap').style.background = '#a62';
+            document.getElementById('stepMap').textContent = 'Status: failed';
+          }
+        }
+      } catch (e) {
+        addResult(`❌ Mapping error: ${e.message}`, 'error');
+        document.getElementById('stepMap').style.background = '#a62';
+        document.getElementById('stepMap').textContent = 'Status: failed';
+      }
+      hideOverlayProgress();
+    }
+
+    // Finalize: trigger mapping refresh and warm views/tables
+    async function finalizeNow() {
+      addResult('✅ Finalize requested: refreshing mappings and warming views...');
+      showOverlayProgress('Finalizing (refreshing & warming)…', 3);
+      document.getElementById('stepFinalize').style.background = '#3a3';
+      document.getElementById('stepFinalize').textContent = 'Status: running';
+      showToast('Finalizing… refreshing mappings and warming views', 2500);
+      try {
+        updateOverlayProgress(1, 3);
+        const resp = await fetch('/api/tools?action=finalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+          body: JSON.stringify({})
+        });
+        const text = await resp.text();
+        let j; try { j = JSON.parse(text); } catch { j = { ok:false, raw:text }; }
+        if (!resp.ok || !j?.ok) {
+          addResult(`❌ Finalize failed: ${j?.error || resp.status} ${j?.detail || ''}`, 'error');
+          document.getElementById('stepFinalize').textContent = 'Status: failed';
+          document.getElementById('stepFinalize').style.background = '#a62';
+          hideOverlayProgress();
+          return;
+        }
+        updateOverlayProgress(2, 3);
+        addResult('✅ Finalize completed.', 'success');
+        if (j.before) addResult(`Before: ${JSON.stringify(j.before)}`, 'info');
+        if (j.after) addResult(`After: ${JSON.stringify(j.after)}`, 'info');
+        if (j.warm) addResult(`Warm: ${JSON.stringify(j.warm)}`, 'info');
+        const m = (j?.after?.afterCount ?? j?.after?.mappingsCreated ?? '')
+        const warm = j?.warm || {};
+        const warmed = [];
+        if (warm.v_event_product_mappings != null) warmed.push(`mappings ${warm.v_event_product_mappings}`);
+        if (warm.page_chunks != null) warmed.push(`chunks ${warm.page_chunks}`);
+        document.getElementById('stepFinalize').textContent = warmed.length ? `Status: warmed ${warmed.join(', ')}` : 'Status: done';
+        document.getElementById('stepFinalize').style.background = '#2a6';
+        showToast('Finalize complete ✓', 2000);
+        updateParityPill();
+        updateCronPill();
+      } catch (e) {
+        addResult(`❌ Finalize error: ${e.message}`, 'error');
+        document.getElementById('stepFinalize').textContent = 'Status: error';
+        document.getElementById('stepFinalize').style.background = '#a62';
+      }
+      hideOverlayProgress();
+    }
+
+    // Test functions
+    async function testSingleUrl() {
+      const url = document.getElementById('testUrl').value;
+      if (!url) {
+        addResult('❌ Please enter a URL to test', 'error');
+        return;
+      }
+
+      addResult(`🧪 Testing URL: ${url}`);
+      const result = await apiCall('/api/ingest', { url });
+      if (result && result.ok) {
+        addResult(`✅ URL test successful: ${url}`, 'success');
+      } else {
+        addResult(`❌ URL test failed: ${url}`, 'error');
+      }
+    }
+
+    async function testQuery() {
+      const query = document.getElementById('testQuery').value;
+      if (!query) {
+        addResult('❌ Please enter a question to test', 'error');
+        return;
+      }
+
+      addResult(`🤖 Testing AI query: "${query}"`);
+      const result = await apiCall('/api/chat', { query });
+      if (result && result.answer) {
+        addResult(`✅ AI Response: ${result.answer}`, 'success');
+      } else {
+        addResult(`❌ AI query failed`, 'error');
+      }
+    }
+
+    // Extract structured JSON functions
+    async function extractContent(contentType) {
+      const url = document.getElementById('extractUrl').value;
+      if (!url) {
+        document.getElementById('extractResults').textContent = 'Please enter a URL first';
+        return;
+      }
+      
+      document.getElementById('extractResults').textContent = `Extracting ${contentType} from ${url}...`;
+      
+      try {
+        const response = await fetch('/api/ingest', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({ url })
+        });
+        
+        const text = await response.text();
+        let result; try { result = JSON.parse(text); } catch { result = { ok:false, raw:text }; }
+        document.getElementById('extractResults').textContent = JSON.stringify(result, null, 2);
+      } catch (error) {
+        document.getElementById('extractResults').textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    function clearExtractResults() {
+      document.getElementById('extractResults').textContent = '';
+    }
+
+    // Download debug log
+    function downloadDebugLog() {
+      const logText = logEntries.map(e => `[${e.time}] ${e.message}`).join('\n');
+      const blob = new Blob([logText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `debug-log-${new Date().toISOString().replace(/[:.]/g,'-')}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      addResult('⬇️ Debug log downloaded.', 'success');
+    }
+
+    // Export mappings CSV
+    async function exportMappings(){
+      try{
+        const resp = await fetch('/api/tools?action=export', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+        if (!resp.ok){ addResult(`❌ Export failed: ${resp.status}`, 'error'); return; }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `event-product-mappings-${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        addResult('⬇️ Exported mappings CSV', 'success');
+      }catch(e){ addResult(`❌ Export error: ${e.message}`, 'error'); }
+    }
+
+    // Export unmapped events
+    async function exportUnmapped(){
+      try{
+        const resp = await fetch('/api/tools?action=export_unmapped', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+        if (!resp.ok){ addResult(`❌ Export unmapped failed: ${resp.status}`, 'error'); return; }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `unmapped-events-${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        addResult('⬇️ Exported unmapped events CSV', 'success');
+      }catch(e){ addResult(`❌ Export unmapped error: ${e.message}`, 'error'); }
+    }
+
+    // Export reconcile CSV (public flag for convenience in UI)
+    async function exportReconcile(){
+      try{
+        const url = `/api/tools?action=export_reconcile&public=1`;
+        const resp = await fetch(url);
+        if (!resp.ok){ addResult(`❌ Export reconcile failed: ${resp.status}`, 'error'); return; }
+        const blob = await resp.blob();
+        const dl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = dl; a.download = `reconcile-event-mapping-${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(dl);
+        addResult('⬇️ Exported reconcile CSV', 'success');
+      }catch(e){ addResult(`❌ Export reconcile error: ${e.message}`, 'error'); }
+    }
+
+    // View hourly light refresh logs
+    async function viewLightRefresh(){
+      try{
+        const resp = await fetch('/api/light-refresh?action=status&limit=20');
+        const j = await resp.json();
+        const box = document.getElementById('lightRefreshResults');
+        if (!box) return;
+        box.style.display = 'block';
+        if (!resp.ok || !j || j.error){
+          box.textContent = `Error loading light refresh logs: ${j?.detail || resp.status}`;
+          addResult(`❌ Light refresh status failed: ${j?.detail || resp.status}`, 'error');
+          return;
+        }
+        const rows = (j.rows||[]).map(r => ({
+          started_at: r.started_at,
+          finished_at: r.finished_at,
+          urls_total: r.urls_total,
+          ingested_count: r.ingested_count,
+          failed_count: r.failed_count
+        }));
+        const header = 'started_at,finished_at,urls_total,ingested,failed';
+        const lines = rows.map(r => `${r.started_at},${r.finished_at},${r.urls_total},${r.ingested_count},${r.failed_count}`);
+        box.textContent = [header].concat(lines).join('\n');
+        addResult(`🕒 Loaded ${rows.length} light refresh runs`, 'info');
+      }catch(e){
+        addResult(`❌ Light refresh status error: ${e.message}`, 'error');
+      }
+    }
+
+    // Copy the light refresh results to clipboard
+    function copyLightRefresh(){
+      const box = document.getElementById('lightRefreshResults');
+      if (!box || !box.textContent){ addResult('ℹ️ No light refresh logs to copy', 'info'); return; }
+      const txt = box.textContent;
+      if (navigator.clipboard && window.isSecureContext){
+        navigator.clipboard.writeText(txt).then(()=>{
+          addResult('✅ Light refresh logs copied to clipboard', 'success');
+        }).catch(e=> addResult('❌ Copy failed: '+e.message, 'error'));
+      } else {
+        fallbackCopyTextToClipboard(txt);
+      }
+    }
+
+    // CSV parser (minimal, quoted fields supported)
+    function parseCSV(text){
+      const rows=[]; let row=[], val='', inQ=false;
+      function pushVal(){ row.push(val); val=''; }
+      function pushRow(){ if(row.length){ rows.push(row); } row=[]; }
+      for(let i=0;i<text.length;i++){
+        const ch=text[i];
+        if(inQ){
+          if(ch==='"'){
+            if(text[i+1]==='"'){ val+='"'; i++; } else { inQ=false; }
+          } else { val+=ch; }
+        } else {
+          if(ch==='"'){ inQ=true; }
+          else if(ch===','){ pushVal(); }
+          else if(ch==='\n'){ pushVal(); pushRow(); }
+          else if(ch!=='\r'){ val+=ch; }
+        }
+      }
+      if(val.length||row.length){ pushVal(); pushRow(); }
+      if(!rows.length) return [];
+      const header = rows[0].map(h => (h||'').trim().toLowerCase());
+      return rows.slice(1).map(r => {
+        const o={};
+        for(let i=0;i<header.length;i++){ o[header[i]]=(r[i]||'').trim(); }
+        return o;
+      });
+    }
+
+    // Test Questions Batch Runner
+    async function runTestQuestions(){
+      try{
+        addResult('🤖 Starting test questions batch...', 'info');
+        
+        // Load test questions from CSV
+        const testQuestionsFile = document.getElementById('testQuestionsCsv').files[0];
+        if (!testQuestionsFile) {
+          addResult('❌ Please select test questions CSV file first', 'error');
+          return;
+        }
+        
+        const csvText = await testQuestionsFile.text();
+        const questions = parseCSV(csvText);
+        
+        if (!questions.length) {
+          addResult('❌ No test questions found in CSV', 'error');
+          return;
+        }
+        
+        addResult(`📝 Found ${questions.length} test questions`, 'info');
+        
+        const results = [];
+        let processed = 0;
+        
+        for (const question of questions) {
+          if (!question.query) continue;
+          
+          try {
+            addResult(`🤖 Testing: "${question.query}"`, 'info');
+            
+            // Call the AI bot
+            const response = await fetch('/api/chat', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getToken()}`
+              },
+              body: JSON.stringify({
+                query: question.query,
+                topK: 8
+              })
+            });
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const answer = data.answer_markdown || data.answer || 'No answer provided';
+            const citations = (data.citations || []).join('; ');
+            
+            results.push({
+              query: question.query,
+              expected: question.expected || '',
+              answer: answer,
+              citations: citations,
+              timestamp: new Date().toISOString()
+            });
+            
+            processed++;
+            addResult(`✅ Completed ${processed}/${questions.length}`, 'success');
+            
+            // Small delay to avoid overwhelming the API
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+          } catch (error) {
+            addResult(`❌ Failed: "${question.query}" - ${error.message}`, 'error');
+            results.push({
+              query: question.query,
+              expected: question.expected || '',
+              answer: `ERROR: ${error.message}`,
+              citations: '',
+              timestamp: new Date().toISOString()
+            });
+            processed++;
+          }
+        }
+        
+        // Export results to CSV
+        const csvHeader = 'query,expected,answer,citations,timestamp\n';
+        const csvRows = results.map(r => {
+          const escape = (s) => `"${String(s || '').replace(/"/g, '""')}"`;
+          return `${escape(r.query)},${escape(r.expected)},${escape(r.answer)},${escape(r.citations)},${escape(r.timestamp)}`;
+        }).join('\n');
+        
+        const csvContent = csvHeader + csvRows;
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `test-questions-results-${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        addResult(`🎉 Test questions complete! Processed ${processed}/${questions.length}. Results exported to CSV.`, 'success');
+        
+      } catch (error) {
+        addResult(`❌ Test questions batch failed: ${error.message}`, 'error');
+      }
+    }
+    
+    // Statistics tracking
+    let stats = {
+      csvImportedRows: 0,
+      loadedRows: 0,
+      successCount: 0,
+      failedCount: 0,
+      stoppedCount: 0
+    };
+    
+    // CSV row counts for dashboard display
+    let csvRowCounts = {
+      'blog': 0,
+      'course_events': 0,
+      'workshop_events': 0,
+      'course_products': 0,
+      'workshop_products': 0,
+      'site_urls': 0,
+      'product_schema': 0
+    };
+    
+    // URL scraping stats for dashboard display (global for dashboard access)
+    window.urlScrapingStats = {
+      'blog': { success: 0, failed: 0, skipped: 0 },
+      'course_events': { success: 0, failed: 0, skipped: 0 },
+      'workshop_events': { success: 0, failed: 0, skipped: 0 },
+      'course_products': { success: 0, failed: 0, skipped: 0 },
+      'workshop_products': { success: 0, failed: 0, skipped: 0 },
+      'site_urls': { success: 0, failed: 0, skipped: 0 },
+      'product_schema': { success: 0, failed: 0, skipped: 0 }
+    };
+
+    // Track within-source duplicates removed per dashboard category (for Step 2)
+    let withinSourceDupByCategory = {
+      'blog': 0,
+      'course_events': 0,
+      'workshop_events': 0,
+      'course_products': 0,
+      'workshop_products': 0,
+      'site_urls': 0,
+      'product_schema': 0
+    };
+    
+    // Map import content types to dashboard category keys
+    const contentTypeToCsvKey = {
+      'blog': 'blog',
+      'event': 'course_events',
+      'workshop': 'workshop_events',
+      'service': 'course_products',
+      'product': 'workshop_products',
+      'site_urls': 'site_urls',
+      'test_questions': 'product_schema'
+    };
+
+    // Track CSV filenames per category for display
+    const csvFileNames = {
+      'blog_articles': '01-Alan Ranger Blog On Photography - Tips, Offers and News-CSV',
+      'course_events': '02 - www-alanranger-com__5013f4b2c4aaa4752ac69b17__beginners-photography-lessons.csv',
+      'workshop_events': '03 - www-alanranger-com__5013f4b2c4aaa4752ac69b17__photographic-workshops-near-me.csv',
+      'course_products': '04 - Photography Services _ courses, 1-2-1 _ mentoring-CSV.csv',
+      'workshop_products': '05 - Photo Workshops UK _ Landscape Photography Workshops-CSV.csv',
+      'website_urls': '06 - site urls - Sheet1.csv',
+      'json_extraction': '07 - alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS'
+    };
+    
+    // Global function to update CSV metadata dashboard
+    async function updateCsvMetadataDashboard() {
+      try {
+        console.log('DEBUG: updateCsvMetadataDashboard called');
+        const token = getToken();
+        const baseUrl = 'https://alan-chat-proxy.vercel.app';
+        
+        // Query csv_metadata table for counts by csv_type
+        const response = await fetch(`${baseUrl}/api/tools?action=counts`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          console.warn('Failed to fetch CSV metadata counts:', response.status);
+          return;
+        }
+        
+        const data = await response.json();
+        const csvMetadataCounts = data.csv_metadata || {};
+        
+        console.log('DEBUG: Dashboard update - API response:', data);
+        console.log('DEBUG: Dashboard update - CSV metadata counts:', csvMetadataCounts);
+        
+        // Update dashboard elements
+        const updates = {
+          'blog-count': csvMetadataCounts.blog || 0,
+          'course-events-count': csvMetadataCounts.course_events || 0,
+          'workshop-events-count': csvMetadataCounts.workshop_events || 0,
+          'course-products-count': csvMetadataCounts.course_products || 0,
+          'workshop-products-count': csvMetadataCounts.workshop_products || 0,
+          'site-urls-count': csvMetadataCounts.site_urls || 0,
+          'product-schema-count': csvMetadataCounts.product_schema || 0
+        };
+        
+        // Update each element
+        Object.entries(updates).forEach(([id, count]) => {
+          const element = document.getElementById(id);
+          if (element) {
+            console.log(`DEBUG: Updating ${id} to ${count}`);
+            element.textContent = count;
+            element.style.color = count > 0 ? '#4CAF50' : '#666';
+          } else {
+            console.warn(`DEBUG: Element ${id} not found`);
+          }
+        });
+        
+        // Update content processing status
+        const contentUpdates = {
+          'html-count': data.page_html || 0,
+          'entities-count': data.page_entities || 0,
+          'chunks-count': data.page_chunks || 0,
+          'mappings-count': data.event_product_links_auto || 0,
+          'views-count': data.enrichment_views || 0
+        };
+        
+        Object.entries(contentUpdates).forEach(([id, count]) => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.textContent = count;
+            element.style.color = count > 0 ? '#4CAF50' : '#666';
+          }
+        });
+        
+        // Update enhanced page_entities status
+        const pageEntitiesUpdates = {
+          'page-entities-articles': data.page_entities_articles || 0,
+          'page-entities-events': data.page_entities_events || 0,
+          'page-entities-products': data.page_entities_products || 0,
+          'page-entities-services': data.page_entities_services || 0
+        };
+        
+        Object.entries(pageEntitiesUpdates).forEach(([id, count]) => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.textContent = count;
+            element.style.color = count > 0 ? '#4CAF50' : '#666';
+          }
+        });
+        
+      } catch (error) {
+        console.warn('Error updating CSV metadata dashboard:', error);
+      }
+    }
+
+    // Global function to render category stats (updated for metadata-driven system)
+    async function updateDebugControlDashboard() {
+      console.log('DEBUG: updateDebugControlDashboard called');
+      const el = document.getElementById('categoryStats');
+      if (!el) {
+        console.warn('DEBUG: categoryStats element not found');
+        return;
+      }
+      
+      try {
+        const token = getToken();
+        const baseUrl = 'https://alan-chat-proxy.vercel.app';
+        
+        // Get current session URLs (recent imports)
+        const currentSessionResponse = await fetch(`${baseUrl}/api/tools?action=get_urls&recent=true`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        // Get total database counts for comparison
+        const totalResponse = await fetch(`${baseUrl}/api/tools?action=counts`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!currentSessionResponse.ok || !totalResponse.ok) {
+          console.warn('Failed to fetch dashboard data');
+          return;
+        }
+        
+        const currentSessionData = await currentSessionResponse.json();
+        const totalData = await totalResponse.json();
+        
+        const currentSessionUrls = currentSessionData.urls || [];
+        const totalMetadata = Object.values(totalData.csv_metadata || {}).reduce((sum, count) => sum + count, 0);
+        
+        console.log('DEBUG: Current session URLs:', currentSessionUrls.length);
+        console.log('DEBUG: Total database count:', totalMetadata);
+        
+        // Update summary boxes with correct element IDs
+        const currentSessionEl = document.getElementById('currentSessionRows');
+        const totalDatabaseEl = document.getElementById('totalDatabaseRows');
+        const ingestedEl = document.getElementById('successCount');
+        const failedEl = document.getElementById('failedCount');
+        const stoppedEl = document.getElementById('stoppedCount');
+        const skippedEl = document.getElementById('skippedCount');
+        
+        // Show current session count (from window.currentSessionUrls)
+        const currentSessionCount = window.currentSessionUrls ? window.currentSessionUrls.length : 0;
+        if (currentSessionEl) {
+          currentSessionEl.textContent = currentSessionCount;
+          console.log('DEBUG: Updated currentSessionRows to:', currentSessionCount);
+        }
+        
+        // Show total database count
+        if (totalDatabaseEl) {
+          totalDatabaseEl.textContent = totalMetadata;
+          console.log('DEBUG: Updated totalDatabaseRows to:', totalMetadata);
+        } else {
+          console.warn('DEBUG: totalDatabaseRows element not found');
+        }
+        
+        if (ingestedEl) {
+          // During ingestion, use live stats; otherwise use persistent database counts
+          const liveSuccessCount = window.urlScrapingStats ? 
+            Object.values(window.urlScrapingStats).reduce((sum, cat) => sum + (cat.success || 0), 0) : 0;
+          const persistentCount = totalData.page_chunks || 0;
+          const displayCount = liveSuccessCount > 0 ? liveSuccessCount : persistentCount;
+          ingestedEl.textContent = displayCount;
+          addResult(`🔧 DEBUG: Updated successCount to: ${displayCount} (live: ${liveSuccessCount}, persistent: ${persistentCount})`, 'info');
+        } else {
+          addResult('🔧 DEBUG: successCount element not found', 'warning');
+        }
+        
+        if (failedEl) {
+          failedEl.textContent = 0; // No failed imports in metadata system
+        }
+        if (stoppedEl) {
+          stoppedEl.textContent = 0;
+        }
+        if (skippedEl) {
+          skippedEl.textContent = 0;
+        }
+        
+        // Use csvRowCounts object which is now properly updated by importCsvMetadata
+        addResult(`🔧 DEBUG: csvRowCounts object: ${JSON.stringify(csvRowCounts)}`, 'info');
+        const currentSessionByCategory = {
+          'blog_articles': { length: csvRowCounts.blog || 0 },
+          'course_events': { length: csvRowCounts.course_events || 0 },
+          'workshop_events': { length: csvRowCounts.workshop_events || 0 },
+          'course_products': { length: csvRowCounts.course_products || 0 },
+          'workshop_products': { length: csvRowCounts.workshop_products || 0 },
+          'site_urls': { length: csvRowCounts.site_urls || 0 },
+          'product_schema': { length: csvRowCounts.product_schema || 0 }
+        };
+        
+        // Update the detailed table to show ORIGINAL CSV IMPORT COUNTS (not current session)
+        const categories = [
+          { key: 'blog_articles', label: 'Blog Articles', code: ' — 01' },
+          { key: 'course_events', label: 'Course Events', code: ' — 02' },
+          { key: 'workshop_events', label: 'Workshop Events', code: ' — 03' },
+          { key: 'course_products', label: 'Course/Service Products', code: ' — 04' },
+          { key: 'workshop_products', label: 'Workshop Products', code: ' — 05' },
+          { key: 'site_urls', label: 'site_urls', code: ' — 06' },
+          { key: 'product_schema', label: 'product_schema', code: ' — 07' }
+        ];
+        
+        // Clear existing content and rebuild table
+        el.innerHTML = '';
+        
+        let totalCsvCount = 0, totalSuccess = 0, totalFailed = 0, totalSkipped = 0, totalDuplicatesRemoved = 0;
+        
+        // Create table rows showing ORIGINAL CSV IMPORT COUNTS
+        const rows = categories.map(cat => {
+          // Get count from original CSV import
+          const currentSessionCount = currentSessionByCategory[cat.key] ? currentSessionByCategory[cat.key].length : 0;
+          totalCsvCount += currentSessionCount;
+          
+          // Get actual ingestion results from live stats during ingestion, or 0 if not ingesting
+          const liveStats = window.urlScrapingStats && window.urlScrapingStats[cat.key] ? window.urlScrapingStats[cat.key] : { success: 0, failed: 0, skipped: 0 };
+          const successCount = liveStats.success || 0;
+          const failedCount = liveStats.failed || 0;
+          const skippedCount = liveStats.skipped || 0;
+          
+          const duplicatesRemoved = 0; // This should always be 0 in the detailed table
+          
+          totalSuccess += successCount;
+          totalFailed += failedCount;
+          totalSkipped += skippedCount;
+        totalDuplicatesRemoved += duplicatesRemoved;
+          
+          return `
+            <tr>
+              <td style="padding: 4px 8px; text-align: left;">${cat.label}${cat.code}</td>
+              <td style="padding: 4px 8px; text-align: left;">${currentSessionCount}</td>
+              <td style="padding: 4px 8px; text-align: left; color: #4CAF50;">${successCount}</td>
+              <td style="padding: 4px 8px; text-align: left; color: #f44336;">${failedCount}</td>
+              <td style="padding: 4px 8px; text-align: left; color: #2196F3;">${skippedCount}</td>
+              <td style="padding: 4px 8px; text-align: left; color: #FF9800;">${duplicatesRemoved}</td>
+            </tr>
+          `;
+      }).join('');
+      
+      // Add totals row
+        const totalsRow = `
+          <tr style="font-weight: bold; border-top: 2px solid #666; background: #2a2a2a;">
+            <td style="padding: 4px 8px; text-align: left;">TOTALS</td>
+            <td style="padding: 4px 8px; text-align: left;">${totalCsvCount}</td>
+            <td style="padding: 4px 8px; text-align: left; color: #4CAF50;">${totalSuccess}</td>
+            <td style="padding: 4px 8px; text-align: left; color: #f44336;">${totalFailed}</td>
+            <td style="padding: 4px 8px; text-align: left; color: #2196F3;">${totalSkipped}</td>
+            <td style="padding: 4px 8px; text-align: left; color: #FF9800;">${totalDuplicatesRemoved}</td>
+          </tr>
+        `;
+        
+        // Rebuild the entire table structure
+        el.innerHTML = `
+          <thead>
+            <tr>
+              <th style="text-align: left; padding: 4px 8px;">Category</th>
+              <th style="text-align: left; padding: 4px 8px;">Current Session</th>
+              <th style="text-align: left; padding: 4px 8px;">Success</th>
+              <th style="text-align: left; padding: 4px 8px;">Failed</th>
+              <th style="text-align: left; padding: 4px 8px;">Skipped</th>
+              <th style="text-align: left; padding: 4px 8px;">Duplicates Removed</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+            ${totalsRow}
+          </tbody>
+        `;
+        
+        
+      } catch (error) {
+        addResult(`🔧 DEBUG: Error updating Debug & Control dashboard: ${error.message}`, 'error');
+        console.warn('Error updating Debug & Control dashboard:', error);
+      }
+    }
+
+    // Legacy renderCategoryStats function removed - using updateDebugControlDashboard() instead
+    
+    function updateStats() {
+      // Update current session count if available
+      if (window.currentSessionUrls) {
+        const currentSessionEl = document.getElementById('currentSessionRows');
+        if (currentSessionEl) {
+          currentSessionEl.textContent = window.currentSessionUrls.length;
+        }
+      }
+      
+      // Update ingestion stats
+      document.getElementById('successCount').textContent = stats.successCount;
+      document.getElementById('failedCount').textContent = stats.failedCount;
+      document.getElementById('stoppedCount').textContent = stats.stoppedCount;
+      const skipped = (stats.loadedRows - (stats.successCount + stats.failedCount + stats.stoppedCount));
+      document.getElementById('skippedCount').textContent = skipped;
+    }
+    
+    function resetStats() {
+      stats = { csvImportedRows: 0, loadedRows: 0, successCount: 0, failedCount: 0, stoppedCount: 0 };
+      updateStats();
+    }
+
+    // Load hardcoded token on page load
+    window.onload = async function() {
+      addResult('✅ Hardcoded token ready for use');
+      updateStats();
+      updateParityPill();
+      updateCronPill();
+      await updateCsvMetadataDashboard(); // Load initial CSV metadata dashboard
+      await updateDebugControlDashboard(); // Load initial Debug & Control dashboard
+    };
+  </script>
+</body>
+</html>
