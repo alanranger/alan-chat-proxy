@@ -70,16 +70,29 @@ async function ragSearch(client, query) {
     
     // Search page_chunks for content with multiple patterns
     let chunks = [];
-    for (const pattern of searchPatterns.slice(0, 3)) { // Limit to avoid too many queries
-      const { data: patternChunks, error: chunksError } = await client
+    
+    // Search with individual keywords (most important)
+    for (const keyword of keywords) {
+      const { data: keywordChunks, error: chunksError } = await client
         .from('page_chunks')
         .select('url, title, chunk_text')
-        .ilike('chunk_text', pattern)
+        .ilike('chunk_text', `%${keyword}%`)
         .limit(3);
       
-      if (!chunksError && patternChunks) {
-        chunks = [...chunks, ...patternChunks];
+      if (!chunksError && keywordChunks) {
+        chunks = [...chunks, ...keywordChunks];
       }
+    }
+    
+    // Also try the full query
+    const { data: fullQueryChunks, error: fullQueryError } = await client
+      .from('page_chunks')
+      .select('url, title, chunk_text')
+      .ilike('chunk_text', `%${query}%`)
+      .limit(2);
+    
+    if (!fullQueryError && fullQueryChunks) {
+      chunks = [...chunks, ...fullQueryChunks];
     }
     
     // Remove duplicates
