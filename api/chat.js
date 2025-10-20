@@ -6523,6 +6523,53 @@ async function handleNormalizedDurationQuery(query, pageContext, res) {
 }
 
 // RAG-First approach: Try to answer directly from database
+// Helper: Calculate chunk relevance score (Low Complexity)
+function calculateChunkScore(chunk, primaryKeyword, equipmentKeywords, technicalKeywords, lcQuery, offTopicHints) {
+  const url = (chunk.url||"").toLowerCase();
+  const title = (chunk.title||"").toLowerCase();
+  const text = (chunk.chunk_text||"").toLowerCase();
+  let s = 0;
+  
+  // Primary keyword scoring (highest priority)
+  if (primaryKeyword) {
+    if (title.includes(primaryKeyword)) s += 5;
+    if (url.includes(primaryKeyword.replace(/\s+/g,'-'))) s += 4;
+    if (text.includes(primaryKeyword)) s += 2;
+  }
+  
+  // Equipment-specific scoring
+  for (const kw of equipmentKeywords){
+    if (text.includes(kw) || title.includes(kw)) s += 2;
+    if (url.includes(kw.replace(/\s+/g,'-'))) s += 2;
+  }
+  
+  // Technical content scoring
+  for (const kw of technicalKeywords){
+    if (text.includes(kw) || title.includes(kw)) s += 1.5;
+  }
+  
+  // Direct query term matches
+  lcQuery.split(/\s+/).forEach(w=>{ 
+    if (w && w.length > 2 && text.includes(w)) s += 0.5; 
+  });
+  
+  // URL-based scoring
+  if (url.includes('/photography-equipment') || url.includes('/recommended-products')) s += 3;
+  if (url.includes('/photography-tips') || url.includes('/techniques')) s += 2;
+  if (url.includes('/blog') || url.includes('/articles')) s += 1;
+  
+  // Penalize off-topic content
+  for (const hint of offTopicHints){ 
+    if (url.includes(hint) || text.includes(hint)) s -= 5; 
+  }
+  
+  // Penalize very short or very long content
+  if (text.length < 50) s -= 2;
+  if (text.length > 2000) s -= 1;
+  
+  return s;
+}
+
 async function tryRagFirst(client, query) {
   console.log(`🔍 RAG-First attempt for: "${query}"`);
   
@@ -6619,49 +6666,7 @@ async function tryRagFirst(client, query) {
     const offTopicHints = ["/photographic-workshops","/course","calendar","/events/","ics","google calendar","/book","/contact","/gallery"];
     
     function scoreChunk(c){
-      const url = (c.url||"").toLowerCase();
-      const title = (c.title||"").toLowerCase();
-      const text = (c.chunk_text||"").toLowerCase();
-      let s = 0;
-      
-      // Primary keyword scoring (highest priority)
-      if (primaryKeyword) {
-        if (title.includes(primaryKeyword)) s += 5;
-        if (url.includes(primaryKeyword.replace(/\s+/g,'-'))) s += 4;
-        if (text.includes(primaryKeyword)) s += 2;
-      }
-      
-      // Equipment-specific scoring
-      for (const kw of equipmentKeywords){
-        if (text.includes(kw) || title.includes(kw)) s += 2;
-        if (url.includes(kw.replace(/\s+/g,'-'))) s += 2;
-      }
-      
-      // Technical content scoring
-      for (const kw of technicalKeywords){
-        if (text.includes(kw) || title.includes(kw)) s += 1.5;
-      }
-      
-      // Direct query term matches
-      lcQuery.split(/\s+/).forEach(w=>{ 
-        if (w && w.length > 2 && text.includes(w)) s += 0.5; 
-      });
-      
-      // URL-based scoring
-      if (url.includes('/photography-equipment') || url.includes('/recommended-products')) s += 3;
-      if (url.includes('/photography-tips') || url.includes('/techniques')) s += 2;
-      if (url.includes('/blog') || url.includes('/articles')) s += 1;
-      
-      // Penalize off-topic content
-      for (const hint of offTopicHints){ 
-        if (url.includes(hint) || text.includes(hint)) s -= 5; 
-      }
-      
-      // Penalize very short or very long content
-      if (text.length < 50) s -= 2;
-      if (text.length > 2000) s -= 1;
-      
-      return s;
+      return calculateChunkScore(c, primaryKeyword, equipmentKeywords, technicalKeywords, lcQuery, offTopicHints);
     }
 
     results.chunks = uniqueChunks
@@ -6745,6 +6750,14 @@ async function tryRagFirst(client, query) {
       }
       type = "advice";
       sources = results.chunks.map(c => c.url);
+    } else if (results.entities.length > 0) {
+      // Handle entities for advice queries (non-event entities)
+      const adviceEntities = results.entities.filter(e => e.kind !== 'event');
+      if (adviceEntities.length > 0) {
+        answer = adviceEntities.map(e => `${e.title}: ${e.description || 'More information available'}. Learn more: ${e.url}`).join("\n\n");
+        type = "advice";
+        sources = adviceEntities.map(e => e.url);
+      }
     }
     
     return {
