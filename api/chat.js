@@ -2666,7 +2666,6 @@ function classifyQuery(query) {
     /students per class/i,
     /sign up to monthly mentoring/i,
     /mentoring assignments/i,
-    /lightroom course/i,
     /post-processing courses/i,
     /rps mentoring/i,
     /prerequisites for advanced courses/i,
