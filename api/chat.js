@@ -5,13 +5,13 @@
 export const config = { runtime: "nodejs" };
 
 import { createClient } from "@supabase/supabase-js";
-import crypto from 'crypto';
+import { createHash } from 'crypto';
 
 /* ----------------------- Helper Functions ----------------------- */
 // Hash IP for privacy
 const hashIP = (ip) => {
   if (!ip) return null;
-  return crypto.createHash('sha256').update(ip + 'chat-log-salt').digest('hex').substring(0, 16);
+  return createHash('sha256').update(ip + 'chat-log-salt').digest('hex').substring(0, 16);
 };
 
 // Extract publish date from CSV data (now properly populated)
