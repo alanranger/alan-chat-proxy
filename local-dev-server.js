@@ -3,6 +3,7 @@
  * This avoids Vercel dev recursive invocation issues
  */
 
+import 'dotenv/config';
 import { createServer } from 'http';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
