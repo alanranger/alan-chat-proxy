@@ -1417,7 +1417,7 @@ function renderEventCard(e) {
             ${e.equipment_needed ? `<div class="event-equipment">🧰 Equipment Needed: ${escapeHTML(e.equipment_needed)}</div>` : ''}
             ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
           </div>
-          ${href && href !== '#' ? `<div style="margin-top:12px"><a class="product-book-btn" style="background:#F15A22;border-color:#F15A22" href="${href}" target="_blank" rel="noopener">More Info →</a></div>` : ''}
+          ${href && href !== '#' ? `<div style="margin-top:12px"><a class="product-book-btn" style="background:#F15A22;border-color:#F15A22;color:#000000" href="${href}" target="_blank" rel="noopener">More Info →</a></div>` : ''}
         </div>
       </div>
     `;
