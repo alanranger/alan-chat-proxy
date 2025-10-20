@@ -23,6 +23,8 @@ const server = createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  console.log(`📥 ${req.method} ${req.url}`);
+
   if (req.method === 'OPTIONS') {
     res.writeHead(200);
     res.end();
