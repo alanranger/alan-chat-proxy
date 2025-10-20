@@ -6624,9 +6624,17 @@ async function tryRagFirst(client, query) {
         if (!primaryKeyword) return c.__score > 0;
         const url = (c.url||"").toLowerCase();
         const title = (c.title||"").toLowerCase();
-        const text = (c.chunk_text||"").toLowerCase();
-        const hasPrimary = url.includes(primaryKeyword) || title.includes(primaryKeyword) || text.includes(primaryKeyword);
-        return hasPrimary && c.__score > 0;
+        // Require primary noun in URL or TITLE (not just incidental text)
+        let hasPrimaryStrong = url.includes(primaryKeyword) || title.includes(primaryKeyword);
+        // Extra hardening for equipment-style nouns
+        const equipNouns = ["tripod","ball head","ballhead","head","gitzo","benro","manfrotto","sirui"];
+        if (equipNouns.some(n => primaryKeyword.includes(n))) {
+          const slugMatch = [primaryKeyword.replace(/\s+/g,'-'), primaryKeyword.replace(/\s+/g,'')];
+          if (!(hasPrimaryStrong || slugMatch.some(s => url.includes(s) || title.includes(s)))) {
+            return false;
+          }
+        }
+        return hasPrimaryStrong && c.__score > 0;
       })
       .sort((a,b)=> b.__score - a.__score)
       .slice(0, 5);
