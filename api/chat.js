@@ -2706,7 +2706,9 @@ function classifyQuery(query) {
     /workshop/i,
     /photography training/i,
     /photography course/i,
-    /photography lesson/i
+    /photography lesson/i,
+    /lightroom course/i,
+    /lightroom courses/i
   ];
   
   for (const pattern of workshopPatterns) {
