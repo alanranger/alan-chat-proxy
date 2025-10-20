@@ -3994,8 +3994,8 @@ function mapEventsData(data) {
     _csv_end_time: event.end_time
   }));
   
-  // Remove duplicates by event_url to prevent showing the same event multiple times
-  const dedupedData = dedupeEventsByKey(mappedData, 'event_url');
+  // Remove duplicates by event_url + date_start to allow same event on different dates
+  const dedupedData = dedupeEventsByKey(mappedData, 'event_url', 'date_start');
   
   console.log('🔍 findEvents mapped data:', {
     mappedDataCount: mappedData?.length || 0,
