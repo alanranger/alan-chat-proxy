@@ -6170,7 +6170,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
-        debug: { version: "v1.3.20-expanded-classification", intent: "events", timestamp: new Date().toISOString() }
+        debug: { version: "v1.3.20-expanded-classification", intent: debugInfo?.intent || "events", timestamp: new Date().toISOString() }
       });
       return true;
     }
