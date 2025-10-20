@@ -30,15 +30,15 @@ memory_policy:
 This is the AI’s running TODO list. Keep it short and actionable.
 
 ## Today
-- [x] **COMPLETED**: Workshop clarification system fully functional
-- [x] **COMPLETED**: Evidence-based clarification with confidence progression
-- [x] **COMPLETED**: Session splitting for multi-session events (Batsford, Bluebell)
-- [x] **COMPLETED**: Time accuracy fixes (PM conversion, timezone issues)
-- [x] **COMPLETED**: Fitness level overspill fixes
-- [x] **COMPLETED**: UI improvements (pricing display, event cards)
-- [ ] **NEXT**: Test course queries systematically
-- [ ] **NEXT**: Test article queries systematically
-- [ ] **NEXT**: Test service queries systematically
+- [x] **COMPLETED**: Root and branch analysis of entire chatbot system (10,000+ lines)
+- [x] **COMPLETED**: Moved excess chat.js files to avoid API folder limits
+- [x] **COMPLETED**: Documented Option A vs Option C decision analysis
+- [ ] **IN PROGRESS**: Option A - Fix Current Hybrid System implementation
+- [ ] **NEXT**: Fix RAG output formatting (1-2 hours)
+- [ ] **NEXT**: Lower confidence threshold from 0.8 to 0.6 (30 minutes)
+- [ ] **NEXT**: Improve relevance filtering (1-2 hours)
+- [ ] **NEXT**: Add debug logging (1 hour)
+- [ ] **NEXT**: Test key queries with 75-second deployment waits (2-3 hours)
 
 ## Next
 - [ ] **HIGH PRIORITY**: Comprehensive testing of all query types (courses, articles, services)

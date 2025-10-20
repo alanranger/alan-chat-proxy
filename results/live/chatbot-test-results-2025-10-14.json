@@ -1,0 +1,137 @@
+{
+  "testResults": [
+    {
+      "questionId": 1,
+      "category": "Generic Course Query",
+      "userQuestion": "do you do photography courses?",
+      "chatbotResponse": "Yes, we provide photography courses! Can you be more specific as we do photography courses in Coventry and also have an online photography course.",
+      "userFollowUpResponse": "I am in interested in the online courses as cant get to coventry",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "service",
+        "expectedUrls": [
+          "https://www.alanranger.com/free-online-photography-course"
+        ],
+        "expectedResponse": "Perfect, the free online photography course would suit you.\n\nPerfect Start for beginners and those who want to use a professional resource to clarify concepts or principles.\n\nDIY learning!\n\n✓ Self-Learning\n\n✓ Online Photography Course\n\n✓ Free Lifetime Access\n\n✓ Access to 60 Foundation Modules\n\n✓ Theory and Practical Exercises\n\nEnrol Now"
+      },
+      "originalExpectedIntent": "advice",
+      "originalExpectedKind": "mixed",
+      "timestamp": "2025-10-14T00:29:38.484Z"
+    },
+    {
+      "questionId": 2,
+      "category": "Specific Course Query",
+      "userQuestion": "what beginners photography courses do you have?",
+      "chatbotResponse": "We have a comprehensive beginners photography course. What would you like to know about it?",
+      "userFollowUpResponse": "the one that says camera course",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "product",
+        "expectedUrls": [
+          "https://www.alanranger.com/beginners-photography-classes"
+        ],
+        "expectedResponse": "Heres the the camera course details and booking information.  do you need any more information?"
+      },
+      "originalExpectedIntent": "advice",
+      "originalExpectedKind": "product",
+      "timestamp": "2025-10-14T00:31:42.392Z"
+    },
+    {
+      "questionId": 3,
+      "category": "Generic Workshop Query",
+      "userQuestion": "do you run photography workshops?",
+      "chatbotResponse": "Yes, we run photography workshops! Can you be more specific about what type of workshop you're interested in?",
+      "userFollowUpResponse": "the bluebells ones",
+      "businessOwnerResponse": {
+        "expectedIntent": "events",
+        "expectedKind": "event",
+        "expectedUrls": [
+          "https://www.alanranger.com/bluebell-woods-near-me/",
+          "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+          "https://www.alanranger.com/photographic-workshops-near-me (bluebells)"
+        ],
+        "expectedResponse": "we have multiple dates for this event, below is the list of those event dates and various options"
+      },
+      "originalExpectedIntent": "events",
+      "originalExpectedKind": "event",
+      "timestamp": "2025-10-14T00:38:47.449Z"
+    },
+    {
+      "questionId": 4,
+      "category": "Equipment Query",
+      "userQuestion": "what camera should I buy?",
+      "chatbotResponse": "I can help with camera recommendations! What type of photography are you interested in?",
+      "userFollowUpResponse": "i like to shoot all sorts so any entry level beginners camera - i heard that sony was good",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "article",
+        "expectedUrls": [
+          "https://www.alanranger.com/blog-on-photography/choosing-a-camera/"
+        ],
+        "expectedResponse": "Its difficult to answer this specifically without more context but i have useful guide you look at that will help you"
+      },
+      "originalExpectedIntent": "advice",
+      "originalExpectedKind": "article",
+      "timestamp": "2025-10-14T00:41:09.492Z"
+    },
+    {
+      "questionId": 5,
+      "category": "About Query",
+      "userQuestion": "who is Alan Ranger?",
+      "chatbotResponse": "Alan Ranger is a professional photographer and tutor. What would you like to know about him?",
+      "userFollowUpResponse": "how long has he been teaching and where is he based?",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "landing",
+        "expectedUrls": [
+          "https://www.alanranger.com/about-alan-ranger"
+        ],
+        "expectedResponse": "Alan has over 20 years of experience and is based in Coventry"
+      },
+      "originalExpectedIntent": "advice",
+      "originalExpectedKind": "landing",
+      "timestamp": "2025-10-14T00:43:03.337Z"
+    },
+    {
+      "questionId": 6,
+      "category": "Service Query",
+      "userQuestion": "what photography services do you offer?",
+      "chatbotResponse": "We offer various photography services. What type of service are you looking for?",
+      "userFollowUpResponse": "i am interested in private lessons as my work rota and shifts mean i cant do regular evening classes",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "service",
+        "expectedUrls": [
+          "https://www.alanranger.com/private-photography-lessons",
+          "https://www.alanranger.com/photography-lessons-online-121"
+        ],
+        "expectedResponse": "there are a couple of options that may suit you.\n1, face to face private lessons or\n2. online lessons \n\nboth options are flexible to suit your schedule"
+      },
+      "originalExpectedIntent": "advice",
+      "originalExpectedKind": "service",
+      "timestamp": "2025-10-14T00:46:29.576Z"
+    },
+    {
+      "questionId": 7,
+      "category": "Free Course Query",
+      "userQuestion": "is there a free online photography course?",
+      "chatbotResponse": "Yes! We have a free online photography course. Would you like to know more about it?",
+      "userFollowUpResponse": "yes , is it really free and how do i join?",
+      "businessOwnerResponse": {
+        "expectedIntent": "advice",
+        "expectedKind": "landing",
+        "expectedUrls": [
+          "https://www.alanranger.com/free-online-photography-course",
+          "https://www.alanranger.com/online-photography-course"
+        ],
+        "expectedResponse": "Yes, its absolutely Free and you can find more details on these two links\nhttps://www.alanranger.com/free-online-photography-course\nhttps://www.alanranger.com/online-photography-course"
+      },
+      "originalExpectedIntent": "advice",
+      "originalExpectedKind": "landing",
+      "timestamp": "2025-10-14T00:49:24.986Z"
+    }
+  ],
+  "timestamp": "2025-10-14T00:51:05.322Z",
+  "totalQuestions": 20,
+  "completedQuestions": 7
+}

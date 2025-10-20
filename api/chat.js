@@ -6526,22 +6526,39 @@ async function handleNormalizedDurationQuery(query, pageContext, res) {
 async function tryRagFirst(client, query) {
   console.log(`🔍 RAG-First attempt for: "${query}"`);
   
-  // Helper to clean noisy HTML/text pulled from chunks
+  // Enhanced helper to clean and format RAG text for better readability
   const cleanRagText = (raw) => {
     if (!raw) return "";
     let text = String(raw);
-    // Remove obvious navigation/catalogue blocks that start with /Cart or Back menus
+    
+    // Remove obvious navigation/catalogue blocks
     text = text.replace(/\n?\/Cart[\s\S]*?(?=\n\n|$)/gi, "");
     text = text.replace(/Back\s+(Workshops|Services|Gallery|Book|About|Blog)[\s\S]*?(?=\n\n|$)/gi, "");
+    
     // Strip social share/link blocks (Facebook, LinkedIn, Tumblr, Pinterest etc.)
     text = text.replace(/https?:\/\/\S+/g, (m) => (m.includes("alanranger.com") ? m : ""));
     text = text.replace(/Facebook\d*|LinkedIn\d*|Tumblr|Pinterest\d*/gi, "");
+    
+    // Remove common navigation elements
+    text = text.replace(/Home\s*\/\s*About\s*\/\s*Services\s*\/\s*Gallery\s*\/\s*Contact/gi, "");
+    text = text.replace(/Privacy\s*Policy\s*\/\s*Terms\s*of\s*Service/gi, "");
+    
     // Collapse multiple dashes/lines used as separators
     text = text.replace(/-{4,}/g, "\n");
-    // Remove excessive whitespace
+    
+    // Remove excessive whitespace and normalize
     text = text.replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n");
-    // Keep first 2-3 paragraphs of meaningful content
-    const parts = text.split(/\n\n+/).filter(p => p.trim().length > 0);
+    
+    // Split into paragraphs and filter meaningful content
+    const parts = text.split(/\n\n+/).filter(p => {
+      const trimmed = p.trim();
+      return trimmed.length > 20 && // Minimum length
+             !trimmed.match(/^(Home|About|Services|Gallery|Contact|Privacy|Terms)/i) && // Skip navigation
+             !trimmed.match(/^[0-9\s\-\.]+$/) && // Skip pure numbers/dashes
+             trimmed.length < 500; // Skip overly long blocks
+    });
+    
+    // Return first 2-3 meaningful paragraphs
     return parts.slice(0, 3).join("\n\n");
   };
 
@@ -6590,30 +6607,60 @@ async function tryRagFirst(client, query) {
       index === self.findIndex(c => c.url === chunk.url)
     );
 
-    // Simple relevance scoring to avoid off-topic dumps
+    // Enhanced relevance scoring with better filtering
     const lcQuery = (query || "").toLowerCase();
-    // Determine primary noun keyword (first strong keyword from extractKeywords that is not a stopword)
     const allKws = extractKeywords(query).map(k=>k.toLowerCase());
     const stop = new Set(["what","when","where","how","which","the","a","an","your","you","next","is","are","do","i","me","my","course","workshop","lesson"]);
     const primaryKeyword = (allKws.find(k => k.length >= 5 && !stop.has(k)) || allKws.find(k=>!stop.has(k)) || "").toLowerCase();
-    const equipmentKeywords = ["tripod","head","ball head","carbon","aluminium","manfrotto","gitzo","benro","sirui","three legged","levelling"].map(k=>k.toLowerCase());
-    const offTopicHints = ["/photographic-workshops","/course","calendar","/events/","ics","google calendar"].map(k=>k.toLowerCase());
+    
+    // Enhanced keyword categories for better scoring
+    const equipmentKeywords = ["tripod","head","ball head","carbon","aluminium","manfrotto","gitzo","benro","sirui","three legged","levelling","camera","lens","filter","flash"];
+    const technicalKeywords = ["iso","aperture","shutter","exposure","focus","composition","lighting","settings","technique","tips","advice"];
+    const offTopicHints = ["/photographic-workshops","/course","calendar","/events/","ics","google calendar","/book","/contact","/gallery"];
+    
     function scoreChunk(c){
       const url = (c.url||"").toLowerCase();
       const title = (c.title||"").toLowerCase();
       const text = (c.chunk_text||"").toLowerCase();
       let s = 0;
-      // keyword hits
+      
+      // Primary keyword scoring (highest priority)
+      if (primaryKeyword) {
+        if (title.includes(primaryKeyword)) s += 5;
+        if (url.includes(primaryKeyword.replace(/\s+/g,'-'))) s += 4;
+        if (text.includes(primaryKeyword)) s += 2;
+      }
+      
+      // Equipment-specific scoring
       for (const kw of equipmentKeywords){
         if (text.includes(kw) || title.includes(kw)) s += 2;
         if (url.includes(kw.replace(/\s+/g,'-'))) s += 2;
       }
-      // direct query terms
-      lcQuery.split(/\s+/).forEach(w=>{ if (w && text.includes(w)) s += 0.25; });
-      // prefer equipment sections
+      
+      // Technical content scoring
+      for (const kw of technicalKeywords){
+        if (text.includes(kw) || title.includes(kw)) s += 1.5;
+      }
+      
+      // Direct query term matches
+      lcQuery.split(/\s+/).forEach(w=>{ 
+        if (w && w.length > 2 && text.includes(w)) s += 0.5; 
+      });
+      
+      // URL-based scoring
       if (url.includes('/photography-equipment') || url.includes('/recommended-products')) s += 3;
-      // penalise off-topic sections (events/calendars)
-      for (const hint of offTopicHints){ if (url.includes(hint) || text.includes(hint)) s -= 4; }
+      if (url.includes('/photography-tips') || url.includes('/techniques')) s += 2;
+      if (url.includes('/blog') || url.includes('/articles')) s += 1;
+      
+      // Penalize off-topic content
+      for (const hint of offTopicHints){ 
+        if (url.includes(hint) || text.includes(hint)) s -= 5; 
+      }
+      
+      // Penalize very short or very long content
+      if (text.length < 50) s -= 2;
+      if (text.length > 2000) s -= 1;
+      
       return s;
     }
 
@@ -6738,7 +6785,7 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
   const ragResult = await tryRagFirst(client, query);
   console.log(`📊 RAG Result: success=${ragResult.success}, confidence=${ragResult.confidence}, answerLength=${ragResult.answer?.length || 0}`);
   
-  if (ragResult.success && ragResult.confidence >= 0.8) {
+  if (ragResult.success && ragResult.confidence >= 0.6) {
     console.log(`✅ RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
     return res.status(200).json({
       ok: true,
@@ -6759,9 +6806,11 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
   }
   
   console.log(`🔄 RAG-First insufficient (${ragResult.confidence} confidence), falling back to existing system`);
+  console.log(`📊 RAG Debug: chunks=${ragResult.chunksFound}, entities=${ragResult.entitiesFound}, totalMatches=${ragResult.totalMatches}`);
   
   // Determine intent using existing system
   const intent = determineIntent(query, previousQuery, pageContext);
+  console.log(`🎯 Classification Intent: ${intent}`);
   
   // Process based on intent
   await processByIntent(client, query, previousQuery, intent, pageContext, res, started);

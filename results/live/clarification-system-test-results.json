@@ -1,0 +1,78 @@
+{
+  "timestamp": "2025-10-14T17:03:38.357Z",
+  "testType": "clarification_system_phase1",
+  "totalTests": 8,
+  "passed": 8,
+  "failed": 0,
+  "successRate": 100,
+  "results": [
+    {
+      "query": "what equipment do I need",
+      "expectedClarification": true,
+      "actualClarification": true,
+      "expectedType": "equipment_clarification",
+      "actualType": "equipment_clarification",
+      "expectedQuestion": "What type of photography activity are you planning? This will help me recommend the right equipment.",
+      "actualQuestion": "What type of photography activity are you planning? This will help me recommend the right equipment.",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "photography events",
+      "expectedClarification": true,
+      "actualClarification": true,
+      "expectedType": "events_clarification",
+      "actualType": "events_clarification",
+      "expectedQuestion": "What type of photography events are you interested in?",
+      "actualQuestion": "What type of photography events are you interested in?",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "photography training",
+      "expectedClarification": true,
+      "actualClarification": true,
+      "expectedType": "training_clarification",
+      "actualType": "training_clarification",
+      "expectedQuestion": "What type of photography training are you looking for?",
+      "actualQuestion": "What type of photography training are you looking for?",
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "photography courses in Coventry",
+      "expectedClarification": false,
+      "actualClarification": false,
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "workshop schedule",
+      "expectedClarification": false,
+      "actualClarification": false,
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "equipment for photography course",
+      "expectedClarification": false,
+      "actualClarification": false,
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "photography courses",
+      "expectedClarification": false,
+      "actualClarification": false,
+      "passed": true,
+      "failureReason": null
+    },
+    {
+      "query": "photography workshops",
+      "expectedClarification": false,
+      "actualClarification": false,
+      "passed": true,
+      "failureReason": null
+    }
+  ]
+}

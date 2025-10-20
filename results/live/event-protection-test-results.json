@@ -1,0 +1,124 @@
+{
+  "timestamp": "2025-10-14T16:54:23.602Z",
+  "totalTests": 23,
+  "passed": 0,
+  "failed": 23,
+  "successRate": 0,
+  "results": [
+    {
+      "query": "photography courses in Coventry",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "workshop schedule",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "when are the next photography classes",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "how much does the beginners course cost",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "where are the photography workshops held",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "do you do photography courses",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "photography course for beginners",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "camera course near me",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "photography lessons Coventry",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "photography workshop",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "lightroom workshop",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "photoshop workshop",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "workshop dates",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "how much does it cost",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "where is it held",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "when is the next one",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "how many people attend",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "what equipment do I need",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "how do I book",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "photography events",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "camera classes",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "photography training",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    },
+    {
+      "query": "photography lessons",
+      "passed": false,
+      "failureReason": "Error: fetch failed"
+    }
+  ]
+}

@@ -1,0 +1,309 @@
+{
+  "summary": {
+    "byType": {
+      "events": 12,
+      "advice": 147,
+      "clarification": 12
+    },
+    "byIntent": {
+      "unknown": 12,
+      "direct_answer": 58,
+      "fallback": 89,
+      "workshop": 12
+    },
+    "byClassification": {
+      "unknown": 24,
+      "direct_answer": 58,
+      "fallback": 89
+    },
+    "fallbackCount": 0,
+    "clarificationCount": 12,
+    "eventsCount": 12,
+    "adviceCount": 147,
+    "totalQuestions": 171
+  },
+  "problematicQueries": [
+    {
+      "question": "How early should I arrive before a class or workshop begins?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    },
+    {
+      "question": "What happens if it rains during outdoor workshops?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    },
+    {
+      "question": "What's included in your photography workshops?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    },
+    {
+      "question": "How many people are in each workshop group?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    },
+    {
+      "question": "What happens if it rains during a workshop?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    },
+    {
+      "question": "Do you offer weekend or evening workshops?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    },
+    {
+      "question": "what is your next workshop date and where is it",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    },
+    {
+      "question": "Do you do astrophotography workshops",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    },
+    {
+      "question": "What gear or equipment do I need to bring to a workshop?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    },
+    {
+      "question": "How do I know which course or workshop is best for me?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    },
+    {
+      "question": "Do you offer Batsford Arboretum photography workshops?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    },
+    {
+      "question": "What is your Secrets of Woodland Photography workshop?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown",
+      "issue": "Workshop intent but clarification response"
+    }
+  ],
+  "workshopQueries": [
+    {
+      "question": "How early should I arrive before a class or workshop begins?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    },
+    {
+      "question": "What happens if it rains during outdoor workshops?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    },
+    {
+      "question": "What's included in your photography workshops?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    },
+    {
+      "question": "How many people are in each workshop group?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    },
+    {
+      "question": "What happens if it rains during a workshop?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    },
+    {
+      "question": "Do you offer weekend or evening workshops?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    },
+    {
+      "question": "what is your next workshop date and where is it",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    },
+    {
+      "question": "Do you do astrophotography workshops",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    },
+    {
+      "question": "What gear or equipment do I need to bring to a workshop?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    },
+    {
+      "question": "How do I know which course or workshop is best for me?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    },
+    {
+      "question": "Do you offer Batsford Arboretum photography workshops?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    },
+    {
+      "question": "What is your Secrets of Woodland Photography workshop?",
+      "type": "clarification",
+      "intent": "workshop",
+      "classification": "unknown"
+    }
+  ],
+  "directAnswerQueries": [
+    {
+      "question": "What tripod do you recommend",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "How do I get personalised feedback on my images",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "Is the online photography course really free",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "What is long exposure and how can I find out more about it",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "My pictures never seem sharp. Can you advise on what I am doing wrong",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "Who is Alan Ranger and what is his photographic background?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "Where is Alan Ranger based?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "How can I contact you or book a discovery call?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "What is your cancellation or refund policy for courses/workshops?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "How do I subscribe to the free online photography course?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "Where is your gallery and can I submit my images for feedback?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "What ethical guidelines do you follow as a photography tutor?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "What topics are covered in the 5-week beginner course?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "What if I miss one of the weekly classes can I make it up?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "Do you offer online or Zoom lessons / mentoring?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "How much do 1-2-1 private lessons cost?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "Can I sign up to monthly mentoring assignments?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "Are there any prerequisites for advanced courses?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "Do you do property photography / real estate photography?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    },
+    {
+      "question": "Can you do product photography for my e-commerce store?",
+      "type": "advice",
+      "intent": "direct_answer",
+      "classification": "direct_answer"
+    }
+  ],
+  "fallbackQueries": [],
+  "timestamp": "2025-10-20T16:02:43.023Z"
+}

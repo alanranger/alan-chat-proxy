@@ -1,0 +1,102 @@
+{
+  "timestamp": "2025-10-14T17:00:33.909Z",
+  "testType": "edge_cases_analysis",
+  "totalEdgeCases": 3,
+  "clarificationNeeded": 3,
+  "clarificationRate": 100,
+  "results": [
+    {
+      "query": "what equipment do I need",
+      "expectedIntent": "events",
+      "actualIntent": "advice",
+      "analysis": {
+        "mentionsCourse": false,
+        "mentionsWorkshop": false,
+        "hasEventHints": false,
+        "hasAdviceKeywords": true,
+        "hasFollowUpQuestions": false
+      },
+      "rootCause": "Contains 'equipment' which triggers advice keywords, but context suggests event-related equipment needs",
+      "clarificationNeeded": true,
+      "suggestedClarification": {
+        "question": "What type of photography activity are you planning? This will help me recommend the right equipment.",
+        "options": [
+          {
+            "text": "Photography course/workshop",
+            "query": "equipment for photography course"
+          },
+          {
+            "text": "General photography advice",
+            "query": "photography equipment advice"
+          },
+          {
+            "text": "Specific camera/lens advice",
+            "query": "camera lens recommendations"
+          }
+        ]
+      }
+    },
+    {
+      "query": "photography events",
+      "expectedIntent": "events",
+      "actualIntent": "advice",
+      "analysis": {
+        "mentionsCourse": false,
+        "mentionsWorkshop": false,
+        "hasEventHints": false,
+        "hasAdviceKeywords": false,
+        "hasFollowUpQuestions": false
+      },
+      "rootCause": "Contains 'events' but no course/workshop keywords, so doesn't match event detection logic",
+      "clarificationNeeded": true,
+      "suggestedClarification": {
+        "question": "What type of photography events are you interested in?",
+        "options": [
+          {
+            "text": "Photography courses",
+            "query": "photography courses"
+          },
+          {
+            "text": "Photography workshops",
+            "query": "photography workshops"
+          },
+          {
+            "text": "Photography exhibitions",
+            "query": "photography exhibitions"
+          }
+        ]
+      }
+    },
+    {
+      "query": "photography training",
+      "expectedIntent": "events",
+      "actualIntent": "advice",
+      "analysis": {
+        "mentionsCourse": false,
+        "mentionsWorkshop": false,
+        "hasEventHints": false,
+        "hasAdviceKeywords": true,
+        "hasFollowUpQuestions": false
+      },
+      "rootCause": "Contains 'training' which triggers advice keywords, but could refer to training courses/events",
+      "clarificationNeeded": true,
+      "suggestedClarification": {
+        "question": "What type of photography training are you looking for?",
+        "options": [
+          {
+            "text": "Photography courses",
+            "query": "photography courses"
+          },
+          {
+            "text": "Photography workshops",
+            "query": "photography workshops"
+          },
+          {
+            "text": "Photography mentoring",
+            "query": "photography mentoring"
+          }
+        ]
+      }
+    }
+  ]
+}

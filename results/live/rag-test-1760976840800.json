@@ -1,0 +1,37 @@
+[
+  {
+    "question": "what is ISO",
+    "type": "advice",
+    "intent": "fallback",
+    "classification": "fallback",
+    "confidence": 0.3,
+    "hasEvents": false,
+    "needsClarification": false
+  },
+  {
+    "question": "when is the next devon workshop",
+    "type": "events",
+    "confidence": 0.95,
+    "hasDirectAnswer": false,
+    "hasEvents": true,
+    "needsClarification": false
+  },
+  {
+    "question": "what is the exposure triangle",
+    "type": "advice",
+    "intent": "direct_answer",
+    "classification": "direct_answer",
+    "confidence": 0.8,
+    "hasEvents": false,
+    "needsClarification": false
+  },
+  {
+    "question": "how do I improve my photography skills",
+    "type": "advice",
+    "intent": "fallback",
+    "classification": "fallback",
+    "confidence": 0.3,
+    "hasEvents": false,
+    "needsClarification": false
+  }
+]
