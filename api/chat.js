@@ -2537,10 +2537,10 @@ function getClarificationLevelAndConfidence(query, pageContext) {
   const currentLevel = pageContext?.clarificationLevel || 0;
   
   // Confidence progression: 20% → 50% → 80%
-  const confidenceLevels = [20, 50, 80];
-  // For initial query (level 0), use confidenceLevels[0] = 20%
-  // For follow-up 1 (level 1), use confidenceLevels[1] = 50%
-  // For follow-up 2 (level 2), use confidenceLevels[2] = 80%
+  const confidenceLevels = [0.2, 0.5, 0.8];
+  // For initial query (level 0), use confidenceLevels[0] = 0.2 (20%)
+  // For follow-up 1 (level 1), use confidenceLevels[1] = 0.5 (50%)
+  // For follow-up 2 (level 2), use confidenceLevels[2] = 0.8 (80%)
   const confidence = confidenceLevels[currentLevel] || confidenceLevels[0];
   
   return {
@@ -3589,6 +3589,26 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   if (queryText.includes('2-5-days')) {
     console.log('🔍 Using category-based query for 2-5-days workshops');
     return await findEventsByDuration(client, '2-5-days', limit);
+  }
+  
+  // Check for Lightroom course queries
+  if (queryText.includes('lightroom') || queryText.includes('photo editing') || queryText.includes('editing')) {
+    console.log('🔍 Using Lightroom-specific search');
+    const { data, error } = await client
+      .from('v_events_for_chat')
+      .select('*')
+      .gte('date_start', new Date().toISOString().split('T')[0] + 'T00:00:00.000Z')
+      .or('event_title.ilike.%lightroom%,event_title.ilike.%photo editing%,event_title.ilike.%editing%')
+      .order('date_start', { ascending: true })
+      .limit(limit);
+    
+    if (error) {
+      console.error('❌ Lightroom search error:', error);
+      return [];
+    }
+    
+    console.log('🔍 Lightroom search found:', data?.length || 0, 'events');
+    return mapEventsData(data);
   }
   
   // Debug: Check if we're missing the condition
@@ -6316,14 +6336,18 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
 function generateEvidenceBasedAnswer(query, articles, services, events) {
   const lc = query.toLowerCase();
   let answer = '';
-  let confidence = 80;
+  let confidence = 0.8;
   
   if (articles.length > 0) {
     const bestArticle = articles[0];
     answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
   } else if (services.length > 0) {
     const bestService = services[0];
-    answer = `Yes, Alan Ranger offers the services you're asking about.\n\n*Learn more: ${bestService.page_url}*`;
+    // For Lightroom queries, prefer the specific Lightroom course page
+    const serviceUrl = (query && /lightroom|photo-?editing/i.test(query)) 
+      ? "https://www.alanranger.com/photo-editing-course-coventry"
+      : bestService.page_url;
+    answer = `Yes, Alan Ranger offers the services you're asking about.\n\n*Learn more: ${serviceUrl}*`;
   } else if (events.length > 0) {
     const bestEvent = events[0];
     answer = `Here's information about the workshops and events available.\n\n*View details: ${bestEvent.page_url}*`;

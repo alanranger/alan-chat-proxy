@@ -1291,10 +1291,61 @@ function formatEventTimeInfo(e) {
 
 // Helper function to get event type info
 function getEventTypeInfo(e) {
-  const eventType = e.csv_type === 'course_events' ? 'Course' : 
-                   e.csv_type === 'workshop_events' ? 'Workshop' : 'Event';
-  const eventTypeIcon = e.csv_type === 'course_events' ? '🎓' : 
-                       e.csv_type === 'workshop_events' ? '🔧' : '📅';
+  // Determine event type from multiple sources
+  let eventType = 'Event';
+  let eventTypeIcon = '📅';
+  
+  // Check csv_type first
+  if (e.csv_type === 'course_events') {
+    eventType = 'Course';
+    eventTypeIcon = '🎓';
+  } else if (e.csv_type === 'workshop_events') {
+    eventType = 'Workshop';
+    eventTypeIcon = '🔧';
+  }
+  
+  // Check categories for more specific types
+  if (e.categories && Array.isArray(e.categories)) {
+    const categories = e.categories.map(c => String(c).toLowerCase());
+    
+    if (categories.some(c => c.includes('lightroom') || c.includes('photo-editing'))) {
+      eventType = 'Lightroom Course';
+      eventTypeIcon = '🎨';
+    } else if (categories.some(c => c.includes('beginners') || c.includes('beginner'))) {
+      eventType = 'Beginners Course';
+      eventTypeIcon = '🎓';
+    } else if (categories.some(c => c.includes('portrait'))) {
+      eventType = 'Portrait Course';
+      eventTypeIcon = '👤';
+    } else if (categories.some(c => c.includes('landscape'))) {
+      eventType = 'Landscape Workshop';
+      eventTypeIcon = '🏔️';
+    } else if (categories.some(c => c.includes('macro'))) {
+      eventType = 'Macro Workshop';
+      eventTypeIcon = '🔍';
+    }
+  }
+  
+  // Check title for additional context
+  if (e.title) {
+    const title = e.title.toLowerCase();
+    if (title.includes('lightroom') || title.includes('photo editing')) {
+      eventType = 'Lightroom Course';
+      eventTypeIcon = '🎨';
+    } else if (title.includes('beginners')) {
+      eventType = 'Beginners Course';
+      eventTypeIcon = '🎓';
+    } else if (title.includes('portrait')) {
+      eventType = 'Portrait Course';
+      eventTypeIcon = '👤';
+    } else if (title.includes('landscape')) {
+      eventType = 'Landscape Workshop';
+      eventTypeIcon = '🏔️';
+    } else if (title.includes('macro')) {
+      eventType = 'Macro Workshop';
+      eventTypeIcon = '🔍';
+    }
+  }
   
   // Use categories field if available (preferred method)
   let durationIndicator = '';
