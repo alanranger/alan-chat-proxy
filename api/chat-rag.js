@@ -57,19 +57,37 @@ async function ragSearch(client, query) {
   };
   
   try {
-    // Search page_chunks for content
-    const { data: chunks, error: chunksError } = await client
-      .from('page_chunks')
-      .select('url, title, chunk_text')
-      .ilike('chunk_text', `%${query}%`)
-      .limit(5);
+    // Extract keywords for better search
+    const keywords = extractKeywords(query);
+    console.log(`🔑 Extracted keywords: ${keywords.join(', ')}`);
     
-    if (chunksError) {
-      console.error('Chunks search error:', chunksError);
-    } else {
-      results.chunks = chunks || [];
-      console.log(`📄 Found ${results.chunks.length} relevant chunks`);
+    // Build search patterns
+    const searchPatterns = [
+      query, // Full query
+      ...keywords, // Individual keywords
+      ...keywords.map(k => `%${k}%`) // Keyword patterns
+    ];
+    
+    // Search page_chunks for content with multiple patterns
+    let chunks = [];
+    for (const pattern of searchPatterns.slice(0, 3)) { // Limit to avoid too many queries
+      const { data: patternChunks, error: chunksError } = await client
+        .from('page_chunks')
+        .select('url, title, chunk_text')
+        .ilike('chunk_text', pattern)
+        .limit(3);
+      
+      if (!chunksError && patternChunks) {
+        chunks = [...chunks, ...patternChunks];
+      }
     }
+    
+    // Remove duplicates
+    results.chunks = chunks.filter((chunk, index, self) => 
+      index === self.findIndex(c => c.url === chunk.url)
+    ).slice(0, 5);
+    
+    console.log(`📄 Found ${results.chunks.length} relevant chunks`);
     
     // Search page_entities for events/services
     const { data: entities, error: entitiesError } = await client
