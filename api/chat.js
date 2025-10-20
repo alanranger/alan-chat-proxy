@@ -6522,6 +6522,133 @@ async function handleNormalizedDurationQuery(query, pageContext, res) {
   return false;
 }
 
+// RAG-First approach: Try to answer directly from database
+async function tryRagFirst(client, query) {
+  console.log(`🔍 RAG-First attempt for: "${query}"`);
+  
+  const results = {
+    chunks: [],
+    entities: [],
+    totalMatches: 0,
+    confidence: 0,
+    answerType: 'none'
+  };
+  
+  try {
+    // Extract keywords for better search
+    const keywords = extractKeywords(query);
+    console.log(`🔑 Extracted keywords: ${keywords.join(', ')}`);
+    
+    // Search page_chunks for content with keywords
+    let chunks = [];
+    
+    // Search with individual keywords (most important)
+    for (const keyword of keywords) {
+      const { data: keywordChunks, error: chunksError } = await client
+        .from('page_chunks')
+        .select('url, title, chunk_text')
+        .ilike('chunk_text', `%${keyword}%`)
+        .limit(3);
+      
+      if (!chunksError && keywordChunks) {
+        chunks = [...chunks, ...keywordChunks];
+      }
+    }
+    
+    // Also try the full query
+    const { data: fullQueryChunks, error: fullQueryError } = await client
+      .from('page_chunks')
+      .select('url, title, chunk_text')
+      .ilike('chunk_text', `%${query}%`)
+      .limit(2);
+    
+    if (!fullQueryError && fullQueryChunks) {
+      chunks = [...chunks, ...fullQueryChunks];
+    }
+    
+    // Remove duplicates
+    results.chunks = chunks.filter((chunk, index, self) => 
+      index === self.findIndex(c => c.url === chunk.url)
+    ).slice(0, 5);
+    
+    console.log(`📄 Found ${results.chunks.length} relevant chunks`);
+    
+    // Search page_entities for events/services
+    const { data: entities, error: entitiesError } = await client
+      .from('page_entities')
+      .select('url, title, description, location, date_start, kind')
+      .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
+      .limit(5);
+    
+    if (entitiesError) {
+      console.error('Entities search error:', entitiesError);
+    } else {
+      results.entities = entities || [];
+      console.log(`🏷️ Found ${results.entities.length} relevant entities`);
+    }
+    
+    // Calculate confidence and determine answer type
+    results.totalMatches = results.chunks.length + results.entities.length;
+    
+    if (results.chunks.length > 0) {
+      results.confidence = Math.min(0.9, 0.6 + (results.chunks.length * 0.1));
+      results.answerType = 'content';
+    }
+    
+    if (results.entities.length > 0) {
+      const eventEntities = results.entities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
+      if (eventEntities.length > 0) {
+        results.confidence = Math.max(results.confidence, 0.9);
+        results.answerType = 'events';
+      } else {
+        results.confidence = Math.max(results.confidence, 0.7);
+      }
+    }
+    
+    // Generate answer
+    let answer = "";
+    let type = "advice";
+    let sources = [];
+    
+    if (results.answerType === 'events' && results.entities.length > 0) {
+      const eventEntities = results.entities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
+      if (eventEntities.length > 0) {
+        answer = eventEntities.map(e => `${e.title} on ${new Date(e.date_start).toDateString()} at ${e.location}. More info: ${e.url}`).join("\n");
+        type = "events";
+        sources = eventEntities.map(e => e.url);
+      }
+    } else if (results.chunks.length > 0) {
+      answer = results.chunks.map(c => c.chunk_text).join("\n\n");
+      type = "advice";
+      sources = results.chunks.map(c => c.url);
+    }
+    
+    return {
+      success: results.confidence >= 0.6,
+      confidence: results.confidence,
+      answer: answer,
+      type: type,
+      sources: sources,
+      totalMatches: results.totalMatches,
+      chunksFound: results.chunks.length,
+      entitiesFound: results.entities.length
+    };
+    
+  } catch (error) {
+    console.error('RAG search error:', error);
+    return {
+      success: false,
+      confidence: 0,
+      answer: "",
+      type: "advice",
+      sources: [],
+      totalMatches: 0,
+      chunksFound: 0,
+      entitiesFound: 0
+    };
+  }
+}
+
 // Helper: Process main query (Low Complexity)
 async function processMainQuery(query, previousQuery, sessionId, pageContext, res, started, req) {
   const client = supabaseAdmin();
@@ -6529,7 +6656,31 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
   // Create session if needed
   await createSession(sessionId, req.headers['user-agent'], req.headers['x-forwarded-for'] || req.connection.remoteAddress);
   
-  // Determine intent
+  // RAG-FIRST APPROACH: Try to answer directly from database first
+  const ragResult = await tryRagFirst(client, query);
+  if (ragResult.success && ragResult.confidence >= 0.8) {
+    console.log(`✅ RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
+    return res.status(200).json({
+      ok: true,
+      type: ragResult.type,
+      answer: ragResult.answer,
+      confidence: ragResult.confidence,
+      sources: ragResult.sources,
+      debugInfo: {
+        intent: "rag_first",
+        classification: "direct_answer",
+        confidence: ragResult.confidence,
+        totalMatches: ragResult.totalMatches,
+        chunksFound: ragResult.chunksFound,
+        entitiesFound: ragResult.entitiesFound,
+        approach: "rag_first_hybrid"
+      }
+    });
+  }
+  
+  console.log(`🔄 RAG-First insufficient (${ragResult.confidence} confidence), falling back to existing system`);
+  
+  // Determine intent using existing system
   const intent = determineIntent(query, previousQuery, pageContext);
   
   // Process based on intent
