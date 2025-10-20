@@ -6592,6 +6592,10 @@ async function tryRagFirst(client, query) {
 
     // Simple relevance scoring to avoid off-topic dumps
     const lcQuery = (query || "").toLowerCase();
+    // Determine primary noun keyword (first strong keyword from extractKeywords that is not a stopword)
+    const allKws = extractKeywords(query).map(k=>k.toLowerCase());
+    const stop = new Set(["what","when","where","how","which","the","a","an","your","you","next","is","are","do","i","me","my","course","workshop","lesson"]);
+    const primaryKeyword = (allKws.find(k => k.length >= 5 && !stop.has(k)) || allKws.find(k=>!stop.has(k)) || "").toLowerCase();
     const equipmentKeywords = ["tripod","head","ball head","carbon","aluminium","manfrotto","gitzo","benro","sirui","three legged","levelling"].map(k=>k.toLowerCase());
     const offTopicHints = ["/photographic-workshops","/course","calendar","/events/","ics","google calendar"].map(k=>k.toLowerCase());
     function scoreChunk(c){
@@ -6615,7 +6619,15 @@ async function tryRagFirst(client, query) {
 
     results.chunks = uniqueChunks
       .map(c => ({...c, __score: scoreChunk(c)}))
-      .filter(c => c.__score > 0) // drop unrelated chunks
+      // Hard requirement: if we detected a primary keyword, ensure it exists in title/text/url
+      .filter(c => {
+        if (!primaryKeyword) return c.__score > 0;
+        const url = (c.url||"").toLowerCase();
+        const title = (c.title||"").toLowerCase();
+        const text = (c.chunk_text||"").toLowerCase();
+        const hasPrimary = url.includes(primaryKeyword) || title.includes(primaryKeyword) || text.includes(primaryKeyword);
+        return hasPrimary && c.__score > 0;
+      })
       .sort((a,b)=> b.__score - a.__score)
       .slice(0, 5);
     
