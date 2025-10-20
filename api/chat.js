@@ -6424,16 +6424,18 @@ export default async function handler(req, res) {
     
     // Extract and normalize query
     const { query, topK, previousQuery, sessionId, pageContext } = extractAndNormalizeQuery(req.body);
+    // Sanitize page context: ignore self-hosted chat page to avoid misleading clarification routing
+    const sanitizedPageContext = (pageContext && typeof pageContext.pathname === 'string' && /\/chat\.html$/i.test(pageContext.pathname)) ? null : pageContext;
     if (!query) {
       res.status(400).json({ ok: false, error: "missing_query" });
       return;
     }
     
     // Handle normalized duration queries
-    if (await handleNormalizedDurationQuery(query, pageContext, res)) return;
+    if (await handleNormalizedDurationQuery(query, sanitizedPageContext, res)) return;
     
     // Continue with main processing
-    await processMainQuery(query, previousQuery, sessionId, pageContext, res, started, req);
+    await processMainQuery(query, previousQuery, sessionId, sanitizedPageContext, res, started, req);
     
   } catch (error) {
     console.error('Handler error:', error);
