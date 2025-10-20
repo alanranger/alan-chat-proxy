@@ -6657,7 +6657,10 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
   await createSession(sessionId, req.headers['user-agent'], req.headers['x-forwarded-for'] || req.connection.remoteAddress);
   
   // RAG-FIRST APPROACH: Try to answer directly from database first
+  console.log(`🚀 Starting RAG-First attempt for: "${query}"`);
   const ragResult = await tryRagFirst(client, query);
+  console.log(`📊 RAG Result: success=${ragResult.success}, confidence=${ragResult.confidence}, answerLength=${ragResult.answer?.length || 0}`);
+  
   if (ragResult.success && ragResult.confidence >= 0.8) {
     console.log(`✅ RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
     return res.status(200).json({
