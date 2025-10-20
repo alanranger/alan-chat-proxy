@@ -44,6 +44,7 @@
     "puppeteer": "^24.25.0"
   },
   "overrides": {
-    "@csstools/css-color-parser": "3.0.4"
+    "@csstools/css-color-parser": "3.0.4",
+    "postcss": "8.4.31"
   }
 }
