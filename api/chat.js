@@ -3598,7 +3598,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
       .from('v_events_for_chat')
       .select('*')
       .gte('date_start', new Date().toISOString().split('T')[0] + 'T00:00:00.000Z')
-      .or('event_title.ilike.%lightroom%,event_title.ilike.%photo editing%,event_title.ilike.%editing%')
+      .or('event_title.ilike.%lightroom%,event_title.ilike.%photo editing%,event_title.ilike.%editing%,categories.cs.{beginners-lightroom}')
       .order('date_start', { ascending: true })
       .limit(limit);
     
@@ -3608,6 +3608,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     }
     
     console.log('🔍 Lightroom search found:', data?.length || 0, 'events');
+    console.log('🔍 Lightroom search results:', data?.map(e => ({ title: e.event_title, date: e.date_start })));
     return mapEventsData(data);
   }
   
