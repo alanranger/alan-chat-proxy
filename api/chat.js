@@ -6752,11 +6752,16 @@ async function tryRagFirst(client, query) {
       sources = results.chunks.map(c => c.url);
     } else if (results.entities.length > 0) {
       // Handle entities for advice queries (non-event entities)
+      console.log(`🔍 Found ${results.entities.length} entities, kinds:`, results.entities.map(e => e.kind));
       const adviceEntities = results.entities.filter(e => e.kind !== 'event');
+      console.log(`📝 Filtered to ${adviceEntities.length} advice entities`);
       if (adviceEntities.length > 0) {
         answer = adviceEntities.map(e => `${e.title}: ${e.description || 'More information available'}. Learn more: ${e.url}`).join("\n\n");
         type = "advice";
         sources = adviceEntities.map(e => e.url);
+        console.log(`✅ Generated answer from ${adviceEntities.length} entities`);
+      } else {
+        console.log(`⚠️ No advice entities found, all entities are events`);
       }
     }
     
