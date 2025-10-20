@@ -1,5 +1,4 @@
 {
-  "installCommand": "npm install --production --no-optional",
   "crons": [
     {
       "path": "/api/light-refresh?action=run",
