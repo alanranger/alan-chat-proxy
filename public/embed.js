@@ -101,9 +101,13 @@
       panel.id = 'alan-chat-panel';
       const [w,h] = cfg.size.split('x').map(v=>parseInt(v||'0',10));
       const off = cfg.offset;
-      const posStyles = (cfg.position === 'bl')
-        ? { left: off+'px', bottom: (off+64)+'px' }
-        : { right: off+'px', bottom: (off+64)+'px' };
+      // Center the chat panel on screen instead of bottom-right/bottom-left
+      const centerX = (window.innerWidth - (w||420)) / 2;
+      const centerY = (window.innerHeight - (h||640)) / 2;
+      const posStyles = {
+        left: Math.max(off, centerX) + 'px',
+        top: Math.max(off, centerY) + 'px'
+      };
       Object.assign(panel.style, { width: (w||420)+'px', height: (h||640)+'px', ...posStyles });
 
       const close = doc.createElement('div');

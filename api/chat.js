@@ -1109,7 +1109,7 @@ function getServiceAnswers(lc) {
     return `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`;
   }
   
-  if (lc.includes("service") || lc.includes("what do you offer") || lc.includes("what services")) {
+  if (lc.includes("service") || (lc.includes("what do you offer") && !lc.includes("courses")) || lc.includes("what services")) {
     return `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations. [View All Services](https://www.alanranger.com/photography-tuition-services)\n\n`;
   }
   
