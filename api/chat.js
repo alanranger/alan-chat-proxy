@@ -7350,7 +7350,7 @@ async function tryRagFirst(client, query) {
       console.log(`🔍 Searching for keyword: "${keyword}"`);
       const { data: keywordEntities, error: entitiesError } = await client
         .from('page_entities')
-        .select('url, title, description, location, date_start, kind, publish_date, last_seen')
+        .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
         .or(`title.ilike.%${keyword}%,description.ilike.%${keyword}%,location.ilike.%${keyword}%`)
         .limit(5);
       
@@ -7363,13 +7363,7 @@ async function tryRagFirst(client, query) {
             // TODO: Fix permissions for page_html table access
             console.log(`📄 Processing ${keywordEntities.length} entities for keyword "${keyword}"`);
             
-            // Create basic meta descriptions as fallback
-            for (const entity of keywordEntities) {
-              if (entity.title && !entity.meta_description) {
-                // Create a basic description from the title
-                entity.meta_description = `Learn about ${entity.title.toLowerCase()}. Professional photography guide by Alan Ranger.`;
-              }
-            }
+            // Use the description field as-is (no hardcoded fallbacks)
         
         keywordEntities.forEach(e => console.log(`  - "${e.title}" (${e.kind})`));
         entities = [...entities, ...keywordEntities];
@@ -7381,7 +7375,7 @@ async function tryRagFirst(client, query) {
     // Also try the full query
     const { data: fullQueryEntities, error: fullQueryEntitiesError } = await client
       .from('page_entities')
-      .select('url, title, description, location, date_start, kind')
+      .select('url, title, description, meta_description, location, date_start, kind')
       .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
       .limit(2);
     
