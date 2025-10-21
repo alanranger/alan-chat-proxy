@@ -772,9 +772,9 @@ function isMalformedChunk(text) {
         text.includes('] 0 Likes') ||
         text.includes('Sign In') ||
         text.includes('My Account') ||
-        text.includes('Back ') ||
-        text.includes('[/') ||
-         text.includes('Cart 0');
+        text.includes('Cart 0') ||
+        // Only filter out chunks that are mostly navigation (more than 80% navigation)
+        (text.includes('Back ') && text.includes('[/') && text.length < 200);
 }
 
 function hasRelevantContent(chunk, exactTerm, slug) {
