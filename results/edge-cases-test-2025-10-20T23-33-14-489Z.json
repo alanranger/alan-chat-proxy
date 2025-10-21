@@ -1,0 +1,114 @@
+{
+  "summary": {
+    "total": 9,
+    "successCount": 1,
+    "hasExperienceLevelCount": 0,
+    "hasEquipmentInfoCount": 0,
+    "successPercent": "11.1",
+    "experienceLevelPercent": "0.0",
+    "equipmentInfoPercent": "0.0"
+  },
+  "results": [
+    {
+      "question": "advanced photography workshops",
+      "type": "clarification",
+      "confidence": 0.2,
+      "answerLength": 0,
+      "eventsCount": 0,
+      "hasExperienceLevel": false,
+      "hasEquipmentInfo": false,
+      "isWorking": false,
+      "success": false
+    },
+    {
+      "question": "workshop equipment provided",
+      "type": "clarification",
+      "confidence": 0.2,
+      "answerLength": 0,
+      "eventsCount": 0,
+      "hasExperienceLevel": false,
+      "hasEquipmentInfo": false,
+      "isWorking": false,
+      "success": false
+    },
+    {
+      "question": "what gear do I need for workshops",
+      "type": "clarification",
+      "confidence": 0.2,
+      "answerLength": 0,
+      "eventsCount": 0,
+      "hasExperienceLevel": false,
+      "hasEquipmentInfo": false,
+      "isWorking": false,
+      "success": false
+    },
+    {
+      "question": "beginner photography workshops",
+      "type": "error",
+      "confidence": 0,
+      "answerLength": 0,
+      "eventsCount": 0,
+      "hasExperienceLevel": false,
+      "hasEquipmentInfo": false,
+      "isWorking": false,
+      "success": false,
+      "error": "data.answer.substring is not a function"
+    },
+    {
+      "question": "intermediate photography courses",
+      "type": "clarification",
+      "confidence": 0.2,
+      "answerLength": 0,
+      "eventsCount": 0,
+      "hasExperienceLevel": false,
+      "hasEquipmentInfo": false,
+      "isWorking": false,
+      "success": false
+    },
+    {
+      "question": "what equipment is needed for photography courses",
+      "type": "error",
+      "confidence": 0,
+      "answerLength": 0,
+      "eventsCount": 0,
+      "hasExperienceLevel": false,
+      "hasEquipmentInfo": false,
+      "isWorking": false,
+      "success": false,
+      "error": "data.answer.substring is not a function"
+    },
+    {
+      "question": "do you provide equipment for workshops",
+      "type": "clarification",
+      "confidence": 0.2,
+      "answerLength": 0,
+      "eventsCount": 0,
+      "hasExperienceLevel": false,
+      "hasEquipmentInfo": false,
+      "isWorking": false,
+      "success": false
+    },
+    {
+      "question": "what camera do I need for your courses",
+      "type": "advice",
+      "confidence": 0.7,
+      "answerLength": 699,
+      "eventsCount": 0,
+      "hasExperienceLevel": false,
+      "hasEquipmentInfo": false,
+      "isWorking": true,
+      "success": true
+    },
+    {
+      "question": "experience level required for workshops",
+      "type": "clarification",
+      "confidence": 0.2,
+      "answerLength": 0,
+      "eventsCount": 0,
+      "hasExperienceLevel": false,
+      "hasEquipmentInfo": false,
+      "isWorking": false,
+      "success": false
+    }
+  ]
+}

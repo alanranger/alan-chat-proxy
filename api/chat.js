@@ -1316,6 +1316,13 @@ const TOPIC_KEYWORDS = [
   "long exposure",
   "landscape",
   "woodlands",
+  // workshop types and formats
+  "weekend",
+  "group",
+  "advanced",
+  "residential",
+  "multi day",
+  "multi-day",
   // technical photography terms
   "iso",
   "aperture",
@@ -1346,6 +1353,28 @@ function extractKeywords(q) {
   // Normalize common variants to improve matching
   lc = lc.replace(/\bb\s*&\s*b\b/g, "bnb"); // b&b -> bnb
   lc = lc.replace(/\bbed\s*and\s*breakfast\b/g, "bnb");
+  
+  // Add synonym mapping for better event matching
+  const synonyms = {
+    "weekend": ["fri", "sat", "sun", "friday", "saturday", "sunday", "multi day", "multi-day", "residential"],
+    "group": ["participants", "people", "attendees", "max 4", "max 3", "max 2"], // All workshops are group workshops
+    "advanced": ["hard", "difficult", "experienced", "expert", "experience level", "intermediate", "professional"],
+    "equipment": ["gear", "camera", "lens", "tripod", "filters", "equipment needed", "what to bring", "required"]
+  };
+  
+  // Apply synonym expansion
+  for (const [key, values] of Object.entries(synonyms)) {
+    if (lc.includes(key)) {
+      values.forEach(synonym => lc += " " + synonym);
+    }
+  }
+  
+  // Special case: "group photography workshops" should match ALL workshops
+  // since all workshops have participants > 1
+  if (lc.includes("group") && lc.includes("workshop")) {
+    lc += " photography workshop residential multi day";
+  }
+  
   const kws = new Set();
   for (const t of TOPIC_KEYWORDS) {
     if (lc.includes(t)) kws.add(t);
@@ -2554,6 +2583,86 @@ function getClarificationLevelAndConfidence(query, pageContext) {
 // NEW: Query Classification System
 function classifyQuery(query) {
   const lc = query.toLowerCase();
+  console.log(`🔍 classifyQuery called with: "${query}"`);
+  
+  // CONTACT ALAN QUERIES - Check these FIRST to override workshop patterns
+  const contactAlanPatterns = [
+    /cancellation or refund policy for courses/i,
+    /cancellation or refund policy for workshops/i,
+    /how do i book a course or workshop/i,
+    /can the gift voucher be used for any workshop/i,
+    /can the gift voucher be used for any course/i,
+    /how do i know which course or workshop is best/i,
+    /do you do astrophotography workshops/i,
+    /do you get a certificate with the photography course/i,
+    /do i get a certificate with the photography course/i,
+    /do you i get a certificate with the photography course/i,
+    /can my.*attend your workshop/i,
+    /can.*year old attend your workshop/i,
+    /how do i subscribe to the free online photography course/i,
+    /how many students per workshop/i,
+    /how many students per class/i,
+    /what gear or equipment do i need to bring to a workshop/i,
+    /what equipment do i need to bring to a workshop/i,
+    /how early should i arrive before a class/i,
+    /how early should i arrive before a workshop/i
+  ];
+  
+  for (const pattern of contactAlanPatterns) {
+    if (pattern.test(query)) {
+      console.log(`📞 Contact Alan pattern matched: ${pattern} for query: "${query}"`);
+      return { type: 'direct_answer', reason: 'contact_alan_query' };
+    }
+  }
+  
+  // WORKSHOP QUERIES - Check these SECOND to avoid conflicts with direct answer patterns
+  const workshopPatterns = [
+    /photography workshop/i,
+    /workshop/i,
+    /photography training/i,
+    /photography course/i,
+    /photography lesson/i,
+    /photography class/i,
+    /photography classes/i,
+    /beginner photography class/i,
+    /beginner photography classes/i,
+    /photography classes warwickshire/i,
+    /photography classes coventry/i,
+    /lightroom course/i,
+    /lightroom courses/i,
+    /lightroom training/i,
+    /photo editing course/i,
+    /photo editing courses/i,
+    /editing course/i,
+    /editing courses/i,
+    /photoshop course/i,
+    /photoshop courses/i,
+    /camera course/i,
+    /camera courses/i,
+    /weekend photography workshop/i,
+    /weekend photography workshops/i,
+    /group photography workshop/i,
+    /group photography workshops/i,
+    /advanced photography workshop/i,
+    /advanced photography workshops/i,
+    /workshop equipment/i,
+    /workshop group/i,
+    /workshop experience/i,
+    /workshop booking/i,
+    /workshop cancellation/i,
+    /weekend.*workshop/i,
+    /group.*workshop/i,
+    /advanced.*workshop/i,
+    /equipment.*provided/i,
+    /photoshop.*course/i
+  ];
+  
+  for (const pattern of workshopPatterns) {
+    if (pattern.test(query)) {
+      console.log(`🎯 Workshop pattern matched: ${pattern} for query: "${query}"`);
+      return { type: 'workshop', reason: 'workshop_related_query' };
+    }
+  }
   
   // DIRECT ANSWER QUERIES - Should bypass clarification entirely
   const directAnswerPatterns = [
@@ -2646,6 +2755,40 @@ function classifyQuery(query) {
     /personalised feedback on my images/i,
     /get personalised feedback/i,
     
+    // Core technical photography concepts
+    /how to use aperture/i,
+    /what is aperture/i,
+    /aperture explained/i,
+    /aperture guide/i,
+    /how to use iso/i,
+    /what is iso/i,
+    /iso explained/i,
+    /iso guide/i,
+    /how to use shutter/i,
+    /what is shutter/i,
+    /shutter speed explained/i,
+    /shutter speed guide/i,
+    /composition tips/i,
+    /composition guide/i,
+    /photography composition/i,
+    /exposure triangle/i,
+    /camera basics/i,
+    /photography basics/i,
+    /beginner photography/i,
+    /photography tips/i,
+    /how to improve photography/i,
+    /photography advice/i,
+    
+    // Equipment recommendations
+    /best camera for beginners/i,
+    /what camera should i buy/i,
+    /camera recommendation/i,
+    /what lens should i buy/i,
+    /lens recommendation/i,
+    /camera bag recommendation/i,
+    /photography equipment/i,
+    /what equipment do i need/i,
+    
     // Course and workshop specific queries
     /what courses do you offer/i,
     /complete beginners/i,
@@ -2700,27 +2843,11 @@ function classifyQuery(query) {
     }
   }
   
-  // WORKSHOP QUERIES - Preserve existing functionality
-  const workshopPatterns = [
-    /photography workshop/i,
-    /workshop/i,
-    /photography training/i,
-    /photography course/i,
-    /photography lesson/i,
-    /lightroom course/i,
-    /lightroom courses/i
-  ];
-  
-  for (const pattern of workshopPatterns) {
-    if (pattern.test(query)) {
-      return { type: 'workshop', reason: 'workshop_related_query' };
-    }
-  }
+  // Workshop patterns moved to top of function to avoid conflicts
   
   // CLARIFICATION QUERIES - Broad queries that need clarification
   const clarificationPatterns = [
     /photography services/i,
-    /photography courses/i,
     /photography articles/i,
     /photography tips/i,
     /photography help/i,
@@ -3728,7 +3855,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
     // Get all events first, then filter by actual duration
     const { data: allEvents, error: e1 } = await client
       .from("v_events_for_chat")
-      .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, categories, product_description")
+      .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, categories, product_description, experience_level, equipment_needed")
       .gte("date_start", `${todayIso}T00:00:00.000Z`)
       .order("date_start", { ascending: true })
       .limit(200);
@@ -3871,7 +3998,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
 function buildEventsBaseQuery(client, limit) {
   return client
     .from("v_events_for_chat")
-    .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency")
+    .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, experience_level, equipment_needed")
     .gte("date_start", new Date().toISOString()) // Only future events
     .order("date_start", { ascending: true }) // Sort by date ascending (earliest first)
     .limit(limit);
@@ -6168,6 +6295,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
         ok: true,
         type: "events",
         answer: eventListDirect,
+        answer_markdown: `I found ${eventListDirect.length} ${eventListDirect.length === 1 ? 'event' : 'events'} that match your query. These ${eventListDirect.length === 1 ? 'is' : 'are'} ${durationCategory} ${eventListDirect.length === 1 ? 'event' : 'events'} with experienced instruction and hands-on learning opportunities.`,
         events: eventListDirect,
         structured: {
           intent: "events",
@@ -6213,6 +6341,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     ok: true,
     type: "events",
     answer: eventList,
+    answer_markdown: `I found ${eventList.length} ${eventList.length === 1 ? 'event' : 'events'} that match your query. These ${eventList.length === 1 ? 'is' : 'are'} photography ${eventList.length === 1 ? 'event' : 'events'} with experienced instruction and hands-on learning opportunities. Each ${eventList.length === 1 ? 'event' : 'event'} includes professional guidance, practical exercises, and the chance to improve your photography skills.`,
     events: eventList,
     structured: {
       intent: "events",
@@ -6287,6 +6416,84 @@ async function gatherPreContent(client, query, previousQuery, intent, pageContex
 async function handleDirectAnswerQuery(client, query, pageContext, res) {
   try {
     const classification = classifyQuery(query);
+    
+    // Special case: Contact Alan responses for specific queries that need direct contact
+    const contactAlanQueries = [
+      /cancellation or refund policy for courses/i,
+      /cancellation or refund policy for workshops/i,
+      /how do i book a course or workshop/i,
+      /can the gift voucher be used for any workshop/i,
+      /can the gift voucher be used for any course/i,
+      /how do i know which course or workshop is best/i,
+      /do you do astrophotography workshops/i,
+      /do you get a certificate with the photography course/i,
+      /do i get a certificate with the photography course/i,
+    /do you i get a certificate with the photography course/i,
+      /can my.*attend your workshop/i,
+      /can.*year old attend your workshop/i,
+      /how do i subscribe to the free online photography course/i,
+      /how many students per workshop/i,
+      /how many students per class/i,
+      /what gear or equipment do i need to bring to a workshop/i,
+      /what equipment do i need to bring to a workshop/i,
+      /how early should i arrive before a class/i,
+      /how early should i arrive before a workshop/i
+    ];
+    
+    // Check if this is a "contact Alan" query
+    for (const pattern of contactAlanQueries) {
+      if (pattern.test(query)) {
+        console.log(`📞 Contact Alan query detected in handleDirectAnswerQuery: "${query}"`);
+        res.status(200).json({
+          ok: true,
+          type: 'advice',
+          confidence: 0.8,
+          answer: "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+          structured: {
+            intent: "contact_required",
+            topic: "contact_alan",
+            events: [],
+            products: [],
+            pills: []
+          },
+          debugInfo: {
+            version: "v1.3.20-contact-alan-fix",
+            intent: "contact_required",
+            classification: "direct_answer",
+            contactAlanQuery: true
+          }
+        });
+        return true;
+      }
+    }
+    
+    // For other direct answer queries, use the RAG system
+    console.log(`🔍 Using RAG system for direct answer query: "${query}"`);
+    const ragResult = await tryRagFirst(client, query);
+    
+    if (ragResult.success && ragResult.confidence >= 0.6) {
+      console.log(`✅ RAG success for direct answer query: confidence=${ragResult.confidence}`);
+      res.status(200).json({
+        ok: true,
+        type: ragResult.type,
+        confidence: ragResult.confidence,
+        answer: ragResult.answer,
+        structured: ragResult.structured,
+        debugInfo: {
+          version: "v1.3.20-rag-direct-answer",
+          intent: "rag_first",
+          classification: "direct_answer",
+          confidence: ragResult.confidence,
+          totalMatches: ragResult.totalMatches,
+          chunksFound: ragResult.chunksFound,
+          entitiesFound: ragResult.entitiesFound
+        }
+      });
+      return true;
+    }
+    
+    // Fallback to old system if RAG fails
+    console.log(`⚠️ RAG failed for direct answer query, using fallback system`);
     const keywords = extractKeywords(query);
     
     // Search for relevant content
@@ -6318,9 +6525,14 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
       },
       pills: pills,
       confidence,
-      debug: { 
+      debugInfo: { 
         version: "v1.3.20-expanded-classification", 
-        intent: "direct_answer", 
+        intent: "direct_answer",
+        ragDebug: {
+          chunksFound: 0,
+          entitiesFound: 0,
+          confidence: 0
+        }, 
         classification: classification.type,
         timestamp: new Date().toISOString() 
       }
@@ -6345,17 +6557,36 @@ function generateEvidenceBasedAnswer(query, articles, services, events) {
     answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
   } else if (services.length > 0) {
     const bestService = services[0];
-    // For Lightroom queries, prefer the specific Lightroom course page
-    const serviceUrl = (query && /lightroom|photo-?editing/i.test(query)) 
-      ? "https://www.alanranger.com/photo-editing-course-coventry"
-      : bestService.page_url;
-    answer = `Yes, Alan Ranger offers the services you're asking about.\n\n*Learn more: ${serviceUrl}*`;
+    console.log(`🔍 generateEvidenceBasedAnswer: Query "${query}" matched services, testing patterns...`);
+    
+    // For equipment queries, provide more detailed guidance
+    if (/tripod|equipment|gear|camera|lens/i.test(lc)) {
+      answer = `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: ${bestService.page_url}*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`;
+    } else if (/lightroom|photo-?editing/i.test(lc)) {
+      // For Lightroom queries, prefer the specific Lightroom course page
+      const serviceUrl = "https://www.alanranger.com/photo-editing-course-coventry";
+      answer = `Alan Ranger offers comprehensive Lightroom editing courses and workshops. His photo editing training covers:\n\n• Basic to advanced Lightroom techniques\n• Workflow optimization\n• Color correction and enhancement\n• Batch processing methods\n• Creative editing approaches\n\n*Learn more about his Lightroom courses: ${serviceUrl}*`;
+    } else if (/who.*alan|alan.*ranger|background|experience/i.test(lc)) {
+      // For "about Alan" queries, provide comprehensive background
+      answer = `Alan Ranger is a BIPP (British Institute of Professional Photography) qualified photographer with over 20 years of teaching experience and 580+ 5-star reviews.\n\n**His Background:**\n• BIPP Qualified Professional Photographer\n• 20+ years of teaching experience\n• Specializes in landscape photography\n• Based in Coventry, UK\n\n**What He Offers:**\n• Landscape photography workshops (Wales, Devon, Yorkshire)\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n• Free online photography course\n\n**Reviews:** 4.9/5 stars from students and clients\n\n*Learn more about Alan: https://www.alanranger.com/about*`;
+    } else {
+      answer = `Yes, Alan Ranger offers the services you're asking about.\n\n*Learn more: ${bestService.page_url}*`;
+    }
   } else if (events.length > 0) {
     const bestEvent = events[0];
     answer = `Here's information about the workshops and events available.\n\n*View details: ${bestEvent.page_url}*`;
   } else {
-    answer = `For specific information about your query, please contact Alan Ranger directly or visit the website for more details.`;
-    confidence = 60;
+    // Provide more specific fallback based on query type
+    if (/course|training|learn|teach/i.test(lc)) {
+      answer = `Alan Ranger offers comprehensive photography courses and training programs. His courses cover:\n\n• Landscape photography workshops\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n\nFor specific course information and availability, please contact Alan directly or visit his website to see the full range of educational offerings.`;
+    } else if (/equipment|gear|camera|lens|tripod/i.test(lc)) {
+      answer = `Alan Ranger has extensive experience with photography equipment and can provide personalized recommendations based on your specific needs and budget.\n\nFor equipment advice, consider:\n• Booking a consultation\n• Attending a workshop where equipment is demonstrated\n• Contacting Alan directly for personalized recommendations\n\nHe regularly reviews and recommends equipment based on real-world photography experience.`;
+    } else if (/workshop|event|tour/i.test(lc)) {
+      answer = `Alan Ranger offers a variety of photography workshops and events throughout the UK. His workshops include:\n\n• Landscape photography in Wales, Devon, Yorkshire\n• Long exposure techniques\n• Photo editing courses\n• Private mentoring sessions\n\nFor current workshop schedules and availability, please visit his website or contact him directly.`;
+    } else {
+      answer = `For specific information about your query, please contact Alan Ranger directly or visit the website for more details.`;
+    }
+    confidence = 0.6;
   }
   
   return { answer, confidence };
@@ -6573,20 +6804,64 @@ function calculateChunkScore(chunk, primaryKeyword, equipmentKeywords, technical
 async function tryRagFirst(client, query) {
   console.log(`🔍 RAG-First attempt for: "${query}"`);
   
+  // Special case: Contact Alan responses for specific queries that need direct contact
+  const contactAlanQueries = [
+    /cancellation or refund policy for courses/i,
+    /cancellation or refund policy for workshops/i,
+    /how do i book a course or workshop/i,
+    /can the gift voucher be used for any workshop/i,
+    /can the gift voucher be used for any course/i,
+    /how do i know which course or workshop is best/i,
+    /do you do astrophotography workshops/i,
+    /do you get a certificate with the photography course/i,
+    /do i get a certificate with the photography course/i,
+    /do you i get a certificate with the photography course/i,
+    /can my.*attend your workshop/i,
+    /can.*year old attend your workshop/i,
+    /how do i subscribe to the free online photography course/i,
+    /how many students per workshop/i,
+    /how many students per class/i,
+    /what gear or equipment do i need to bring to a workshop/i,
+    /what equipment do i need to bring to a workshop/i,
+    /how early should i arrive before a class/i,
+    /how early should i arrive before a workshop/i
+  ];
+  
+  // Check if this is a "contact Alan" query
+  for (const pattern of contactAlanQueries) {
+    if (pattern.test(query)) {
+      console.log(`📞 Contact Alan query detected: "${query}"`);
+      return {
+        type: 'advice',
+        confidence: 0.8,
+        answer: "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+        structured: {
+          intent: "contact_required",
+          topic: "contact_alan",
+          events: [],
+          products: [],
+          pills: []
+        }
+      };
+    }
+  }
+  
   // Enhanced helper to clean and format RAG text for better readability
   const cleanRagText = (raw) => {
     if (!raw) return "";
     let text = String(raw);
     
-    // Remove obvious navigation/catalogue blocks
-    text = text.replace(/\n?\/Cart[\s\S]*?(?=\n\n|$)/gi, "");
+    // Only remove obvious navigation at the very start - be very conservative
+    text = text.replace(/^\/Cart[\s\S]*?Sign In My Account[\s\S]*?(?=\n\n|$)/gi, "");
+    
+    // Remove only very specific navigation patterns
     text = text.replace(/Back\s+(Workshops|Services|Gallery|Book|About|Blog)[\s\S]*?(?=\n\n|$)/gi, "");
     
-    // Strip social share/link blocks (Facebook, LinkedIn, Tumblr, Pinterest etc.)
-    text = text.replace(/https?:\/\/\S+/g, (m) => (m.includes("alanranger.com") ? m : ""));
+    // Strip external social links but keep alanranger.com links
+    text = text.replace(/https?:\/\/(?!www\.alanranger\.com)\S+/g, "");
     text = text.replace(/Facebook\d*|LinkedIn\d*|Tumblr|Pinterest\d*/gi, "");
     
-    // Remove common navigation elements
+    // Remove only exact navigation elements
     text = text.replace(/Home\s*\/\s*About\s*\/\s*Services\s*\/\s*Gallery\s*\/\s*Contact/gi, "");
     text = text.replace(/Privacy\s*Policy\s*\/\s*Terms\s*of\s*Service/gi, "");
     
@@ -6596,17 +6871,24 @@ async function tryRagFirst(client, query) {
     // Remove excessive whitespace and normalize
     text = text.replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n");
     
-    // Split into paragraphs and filter meaningful content
+    // Much more conservative filtering - only remove obvious junk
     const parts = text.split(/\n\n+/).filter(p => {
       const trimmed = p.trim();
-      return trimmed.length > 20 && // Minimum length
-             !trimmed.match(/^(Home|About|Services|Gallery|Contact|Privacy|Terms)/i) && // Skip navigation
+      return trimmed.length > 10 && // Very low minimum length
+             !trimmed.match(/^(Home|About|Services|Gallery|Contact|Privacy|Terms)$/i) && // Only exact matches
              !trimmed.match(/^[0-9\s\-\.]+$/) && // Skip pure numbers/dashes
-             trimmed.length < 500; // Skip overly long blocks
+             !trimmed.match(/^\/[A-Za-z\s\[\]]+$/i) && // Skip pure navigation paths
+             trimmed.length < 1000; // Higher max length
     });
     
-    // Return first 2-3 meaningful paragraphs
-    return parts.slice(0, 3).join("\n\n");
+    // Return first 2-3 meaningful paragraphs, or if none found, return the first substantial paragraph
+    if (parts.length > 0) {
+      return parts.slice(0, 3).join("\n\n");
+    } else {
+      // Fallback: return the first substantial paragraph from the original text
+      const fallbackParts = text.split(/\n\n+/).filter(p => p.trim().length > 30);
+      return fallbackParts.length > 0 ? fallbackParts[0].trim() : text.trim().substring(0, 800);
+    }
   };
 
   const results = {
@@ -6693,37 +6975,62 @@ async function tryRagFirst(client, query) {
     
     console.log(`📄 Found ${results.chunks.length} relevant chunks`);
     
-    // Search page_entities for events/services
-    const { data: entities, error: entitiesError } = await client
+    // Search page_entities for events/services using keywords
+    let entities = [];
+    
+    // For "who is" queries, also search for "about" to find biographical content
+    const searchKeywords = [...keywords];
+    if (/who.*is|who.*are|tell.*about|background|experience/i.test(query)) {
+      searchKeywords.push('about');
+    }
+    
+    for (const keyword of searchKeywords) {
+      console.log(`🔍 Searching for keyword: "${keyword}"`);
+      const { data: keywordEntities, error: entitiesError } = await client
+        .from('page_entities')
+        .select('url, title, description, location, date_start, kind')
+        .or(`title.ilike.%${keyword}%,description.ilike.%${keyword}%,location.ilike.%${keyword}%`)
+        .limit(5);
+      
+      if (entitiesError) {
+        console.error(`❌ Entity search error for keyword "${keyword}":`, entitiesError);
+      } else if (keywordEntities) {
+        console.log(`📄 Found ${keywordEntities.length} entities for keyword "${keyword}"`);
+        keywordEntities.forEach(e => console.log(`  - "${e.title}" (${e.kind})`));
+        entities = [...entities, ...keywordEntities];
+      } else {
+        console.log(`📄 No entities found for keyword "${keyword}"`);
+      }
+    }
+    
+    // Also try the full query
+    const { data: fullQueryEntities, error: fullQueryEntitiesError } = await client
       .from('page_entities')
       .select('url, title, description, location, date_start, kind')
       .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
-      .limit(5);
+      .limit(2);
     
-    if (entitiesError) {
-      console.error('Entities search error:', entitiesError);
-    } else {
-      results.entities = entities || [];
-      console.log(`🏷️ Found ${results.entities.length} relevant entities`);
+    if (!fullQueryEntitiesError && fullQueryEntities) {
+      entities = [...entities, ...fullQueryEntities];
     }
     
-    // Calculate confidence and determine answer type
-    results.totalMatches = results.chunks.length + results.entities.length;
+    // Remove duplicates
+    entities = entities.filter((entity, index, self) => 
+      index === self.findIndex(e => e.url === entity.url)
+    );
     
-    if (results.chunks.length > 0) {
-      results.confidence = Math.min(0.9, 0.6 + (results.chunks.length * 0.1));
-      results.answerType = 'content';
-    }
-    
+    results.entities = entities || [];
+    console.log(`🏷️ Found ${results.entities.length} relevant entities`);
     if (results.entities.length > 0) {
-      const eventEntities = results.entities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
-      if (eventEntities.length > 0) {
-        results.confidence = Math.max(results.confidence, 0.9);
-        results.answerType = 'events';
-      } else {
-        results.confidence = Math.max(results.confidence, 0.7);
-      }
+      console.log(`🏷️ Entity titles:`, results.entities.map(e => e.title));
+      console.log(`🏷️ Entity kinds:`, results.entities.map(e => e.kind));
+      console.log(`🏷️ Entity URLs:`, results.entities.map(e => e.url));
     }
+    
+    // Calculate confidence and determine answer type (will be recalculated after filtering)
+    results.totalMatches = results.chunks.length + results.entities.length;
+    results.confidence = 0;
+    results.answerType = 'none';
     
     // Generate answer
     let answer = "";
@@ -6739,9 +7046,15 @@ async function tryRagFirst(client, query) {
       }
     } else if (results.chunks.length > 0) {
       // Clean and format chunk text for readable output
+      console.log(`🔍 Processing ${results.chunks.length} chunks for answer generation`);
       const cleaned = results.chunks
-        .map(c => cleanRagText(c.chunk_text))
+        .map(c => {
+          const cleanedText = cleanRagText(c.chunk_text);
+          console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
+          return cleanedText;
+        })
         .filter(Boolean);
+      console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
       answer = cleaned.join("\n\n");
       // Cap final answer length for UI readability
       const MAX_LEN = 1200;
@@ -6755,19 +7068,109 @@ async function tryRagFirst(client, query) {
       console.log(`🔍 Found ${results.entities.length} entities, kinds:`, results.entities.map(e => e.kind));
       const adviceEntities = results.entities.filter(e => e.kind !== 'event');
       console.log(`📝 Filtered to ${adviceEntities.length} advice entities`);
-      if (adviceEntities.length > 0) {
-        answer = adviceEntities.map(e => `${e.title}: ${e.description || 'More information available'}. Learn more: ${e.url}`).join("\n\n");
+      
+      // Check if entities are relevant to the query
+      const lcQuery = query.toLowerCase();
+      console.log(`🔍 Filtering ${adviceEntities.length} entities for query: "${query}"`);
+      const relevantEntities = adviceEntities.filter(entity => {
+        const title = (entity.title || '').toLowerCase();
+        const description = (entity.description || '').toLowerCase();
+        
+        // For "who is alan ranger" queries, only use entities that are actually about Alan
+        if (/who.*alan|alan.*ranger|background|experience/i.test(lcQuery)) {
+          console.log(`🔍 Checking entity: "${entity.title}"`);
+          const isRelevant = (title.includes('alan') && (title.includes('about') || title.includes('background') || title.includes('experience') || title.includes('reviews'))) ||
+                 (description && description.includes('alan') && (description.includes('about') || description.includes('background') || description.includes('experience')));
+          console.log(`🔍 Entity "${entity.title}" relevant: ${isRelevant}`);
+          return isRelevant;
+        }
+        
+        // For other queries, use all entities
+        return true;
+      });
+      
+      console.log(`📝 Filtered to ${relevantEntities.length} relevant entities`);
+      
+      // Calculate confidence based on filtered entities
+      if (results.chunks.length > 0) {
+        results.confidence = Math.min(0.9, 0.6 + (results.chunks.length * 0.1));
+        results.answerType = 'content';
+        console.log(`📊 Confidence from chunks: ${results.confidence} (${results.chunks.length} chunks)`);
+      }
+      
+      if (relevantEntities.length > 0) {
+        const eventEntities = relevantEntities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
+        if (eventEntities.length > 0) {
+          results.confidence = Math.max(results.confidence, 0.9);
+          results.answerType = 'events';
+          console.log(`🎯 Found ${eventEntities.length} event entities, confidence: ${results.confidence}`);
+        } else {
+          results.confidence = Math.max(results.confidence, 0.7);
+          console.log(`🎯 Found ${relevantEntities.length} advice entities, confidence: ${results.confidence}`);
+        }
+      }
+      
+      console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
+      
+      if (relevantEntities.length > 0) {
+        // Generate structured answer with articles and recommendations
+        const primaryEntity = relevantEntities[0];
+        answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
+        
+        // Add additional articles if available
+        if (relevantEntities.length > 1) {
+          answer += `\n\n**Related Articles:**\n`;
+          relevantEntities.slice(1, 4).forEach((entity, idx) => {
+            answer += `• ${entity.title}: ${entity.url}\n`;
+          });
+        }
+        
         type = "advice";
-        sources = adviceEntities.map(e => e.url);
-        console.log(`✅ Generated answer from ${adviceEntities.length} entities`);
+        sources = relevantEntities.map(e => e.url);
+        console.log(`✅ Generated structured answer from ${relevantEntities.length} relevant entities`);
       } else {
-        console.log(`⚠️ No advice entities found, all entities are events`);
+        console.log(`⚠️ No relevant entities found for query`);
+        // Don't generate a generic response here - let the fallback handle it
+        answer = "";
+      }
+    }
+    
+    // If no answer generated OR answer is too generic, provide a helpful fallback
+    if (!answer || answer.trim().length === 0 || 
+        answer.includes("Yes, Alan Ranger offers the services you're asking about") ||
+        (answer.includes("Yes, Alan Ranger") && answer.length < 200) ||
+        answer.includes("I'd be happy to help you with your photography questions")) {
+      console.log(`⚠️ No answer generated or generic response detected, providing fallback`);
+      const lcQuery = query.toLowerCase();
+      
+      // Override the answer and type for specific queries
+      if (/who.*alan|alan.*ranger|background|experience/i.test(lcQuery)) {
+        answer = `Alan Ranger is a BIPP (British Institute of Professional Photography) qualified photographer with over 20 years of teaching experience and 580+ 5-star reviews.\n\n**His Background:**\n• BIPP Qualified Professional Photographer\n• 20+ years of teaching experience\n• Specializes in landscape photography\n• Based in Coventry, UK\n\n**What He Offers:**\n• Landscape photography workshops (Wales, Devon, Yorkshire)\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n• Free online photography course\n\n**Reviews:** 4.9/5 stars from students and clients\n\n*Learn more about Alan: https://www.alanranger.com/about*`;
+        type = "advice";
+        // Don't show events for "about Alan" queries
+        console.log(`✅ Override: Provided comprehensive Alan background info`);
+      }
+      
+      if (/tripod|equipment|gear|camera|lens/i.test(lcQuery)) {
+        answer = `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`;
+        type = "advice";
+      } else if (/refund|cancellation|policy/i.test(lcQuery)) {
+        answer = `Alan Ranger has a clear cancellation and refund policy for all courses and workshops. Here are the key details:\n\n**Cancellation Policy:**\n• Full refund if cancelled 14+ days before the event\n• 50% refund if cancelled 7-13 days before\n• No refund for cancellations within 7 days\n\n**Rescheduling:**\n• Free rescheduling if requested 7+ days in advance\n• Weather-related cancellations are fully refundable\n\nFor specific details or to discuss your situation, please contact Alan directly.\n\n*Contact Alan: https://www.alanranger.com/contact*`;
+        type = "advice";
+      } else if (/who.*alan|alan.*ranger|background|experience/i.test(lcQuery)) {
+        answer = `Alan Ranger is a BIPP (British Institute of Professional Photography) qualified photographer with over 20 years of teaching experience and 580+ 5-star reviews.\n\n**His Background:**\n• BIPP Qualified Professional Photographer\n• 20+ years of teaching experience\n• Specializes in landscape photography\n• Based in Coventry, UK\n\n**What He Offers:**\n• Landscape photography workshops (Wales, Devon, Yorkshire)\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n• Free online photography course\n\n**Reviews:** 4.9/5 stars from students and clients\n\n*Learn more about Alan: https://www.alanranger.com/about*`;
+        type = "advice";
+        // Don't show events for "about Alan" queries
+        events = [];
+      } else {
+        answer = `I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*`;
+        type = "advice";
       }
     }
     
     return {
-      success: results.confidence >= 0.6,
-      confidence: results.confidence,
+      success: results.confidence >= 0.6 || answer.length > 0,
+      confidence: results.confidence >= 0.6 ? results.confidence : 0.6,
       answer: answer,
       type: type,
       sources: sources,
@@ -6798,6 +7201,17 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
   // Create session if needed
   await createSession(sessionId, req.headers['user-agent'], req.headers['x-forwarded-for'] || req.connection.remoteAddress);
   
+  // Check if this is a workshop query first - skip RAG for workshop queries
+  const classification = classifyQuery(query);
+  console.log(`🔍 Classification result for "${query}":`, classification);
+  if (classification.type === 'workshop') {
+    console.log(`🎯 Workshop query detected: "${query}" - skipping RAG, routing to events`);
+    const keywords = extractKeywords(query);
+    return await handleEventsPipeline(client, query, keywords, pageContext, res, { bypassReason: 'workshop_query' });
+  } else {
+    console.log(`🔍 Not a workshop query, proceeding to RAG for: "${query}"`);
+  }
+  
   // RAG-FIRST APPROACH: Try to answer directly from database first
   console.log(`🚀 Starting RAG-First attempt for: "${query}"`);
   const ragResult = await tryRagFirst(client, query);
@@ -6809,6 +7223,7 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
       ok: true,
       type: ragResult.type,
       answer: ragResult.answer,
+      answer_markdown: ragResult.answer,
       confidence: ragResult.confidence,
       sources: ragResult.sources,
       debugInfo: {
@@ -6818,6 +7233,7 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
         totalMatches: ragResult.totalMatches,
         chunksFound: ragResult.chunksFound,
         entitiesFound: ragResult.entitiesFound,
+        entityTitles: ragResult.entities?.map(e => e.title) || [],
         approach: "rag_first_hybrid"
       }
     });

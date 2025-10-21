@@ -32,7 +32,9 @@ const server = createServer(async (req, res) => {
   }
 
   // Route API requests to the chat handler
+  console.log(`🔍 Checking route: ${req.url} ${req.method}`);
   if (req.url === '/api/chat' && req.method === 'POST') {
+    console.log('✅ Matched POST /api/chat route');
     try {
       let body = '';
       req.on('data', chunk => {
@@ -54,7 +56,17 @@ const server = createServer(async (req, res) => {
           };
           
           // Call the chat handler
-          await chatHandler.default({ body: data }, mockRes);
+          console.log('🔄 Calling chat handler...');
+          const mockReq = {
+            method: 'POST',
+            body: data,
+            headers: {
+              'user-agent': 'local-dev-server',
+              'x-forwarded-for': '127.0.0.1'
+            }
+          };
+          await chatHandler.default(mockReq, mockRes);
+          console.log('✅ Chat handler completed');
         } catch (error) {
           console.error('Error processing chat request:', error);
           res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -67,6 +79,7 @@ const server = createServer(async (req, res) => {
       res.end(JSON.stringify({ error: 'Internal server error' }));
     }
   } else {
+    console.log(`❌ No route matched for ${req.url} ${req.method}`);
     // Serve static files
     try {
       let filePath = req.url === '/' ? '/public/chat.html' : req.url;

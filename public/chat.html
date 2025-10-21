@@ -250,7 +250,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 .event-availability,
 .event-participants,
 .event-fitness,
-.event-experience {
+.event-experience,
+.event-equipment {
   font-size: 13px;
   color: #d1d5db;
 }
@@ -674,7 +675,7 @@ pre.json{white-space:pre-wrap;word-break:break-word;margin:0;padding:8px;backgro
 
 <script>
 /* ================= Config ================= */
-const CHAT_ENDPOINT = 'https://alan-chat-proxy.vercel.app/api/chat';
+const CHAT_ENDPOINT = 'http://localhost:3000/api/chat';
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('debug') === '1') requestAnimationFrame(()=>{ document.getElementById('debugPanel').open = true; });
 
@@ -1412,9 +1413,9 @@ function renderEventCard(e) {
             ${where ? `<div class="event-location">📍 ${where}</div>` : ''}
             ${e.participants ? `<div class="event-participants">👥 ${e.participants} participants</div>` : ''}
             ${e.fitness_level ? `<div class="event-fitness">🏃 Fitness Level: ${e.fitness_level}</div>` : ''}
-            ${e.experience_level ? `<div class="event-experience">🎯 ${e.experience_level}</div>` : ''}
+            ${e.experience_level ? `<div class="event-experience">🎯 Experience: ${e.experience_level}</div>` : ''}
             ${e.experience ? `<div class="event-experience">🎯 Experience - Level: ${escapeHTML(e.experience)}</div>` : ''}
-            ${e.equipment_needed ? `<div class="event-equipment">🧰 Equipment Needed: ${escapeHTML(e.equipment_needed)}</div>` : ''}
+            ${e.equipment_needed ? `<div class="event-equipment">📷 Equipment Needed: ${escapeHTML(e.equipment_needed)}</div>` : ''}
             ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
           </div>
           ${href && href !== '#' ? `<div style="margin-top:12px"><a class="product-book-btn" style="background:#F15A22;border-color:#F15A22;color:#000000" href="${href}" target="_blank" rel="noopener">More Info →</a></div>` : ''}
