@@ -7115,8 +7115,8 @@ async function tryRagFirst(client, query) {
       console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
       
       if (relevantEntities.length > 0) {
-        // Check if this is a policy/terms query
-        const isPolicyQuery = /terms.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
+        // Check if this is a policy/terms query (flexible pattern to handle typos)
+        const isPolicyQuery = /terms.*conditions|terms.*anc.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
         
         if (isPolicyQuery) {
           // For policy queries, provide direct information
