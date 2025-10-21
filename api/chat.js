@@ -854,6 +854,16 @@ function extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChu
   const fitnessAnswer = extractFitnessLevelAnswer(query, chunkText, relevantChunk);
   if (fitnessAnswer) return fitnessAnswer;
   
+  // ENHANCED: Look for concept relationship explanations first (for "exposure triangle", "ISO", etc.)
+  console.log(`🔍 DEBUG: Trying concept explanation for query="${query}"`);
+  const conceptAnswer = extractConceptExplanation(chunkText, query, exactTerm, relevantChunk);
+  if (conceptAnswer) {
+    console.log(`✅ DEBUG: Found concept answer: "${conceptAnswer.substring(0, 100)}..."`);
+    return conceptAnswer;
+  } else {
+    console.log(`⚠️ DEBUG: No concept answer found`);
+  }
+  
   // Look for definitional sentences
   const definitionAnswer = extractDefinitionSentence(chunkText, exactTerm, relevantChunk);
   if (definitionAnswer) return definitionAnswer;
@@ -865,6 +875,121 @@ function extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChu
   // Look for relevant paragraphs
   const paragraphAnswer = extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChunk);
   if (paragraphAnswer) return paragraphAnswer;
+  
+  return null;
+}
+
+function extractConceptExplanation(chunkText, query, exactTerm, relevantChunk) {
+  const lc = query.toLowerCase();
+  
+  // Handle exposure triangle specifically - create intelligent synthesis
+  if (lc.includes('exposure triangle') || lc.includes('triangle')) {
+    // Look for sentences that explain the relationship between aperture, shutter, and ISO
+    const sentences = chunkText.split(/[.!?]+/);
+    const triangleSentences = sentences.filter(s => {
+      const sLower = s.toLowerCase();
+      return (sLower.includes('aperture') && sLower.includes('shutter') && sLower.includes('iso')) ||
+             (sLower.includes('triangle') && (sLower.includes('exposure') || sLower.includes('photography')));
+    });
+    
+    if (triangleSentences.length > 0) {
+      const bestSentence = triangleSentences[0].trim();
+      if (bestSentence.length > 50) {
+        return formatResponseMarkdown(
+          relevantChunk.title || 'Exposure Triangle',
+          relevantChunk.url,
+          bestSentence
+        );
+      }
+    }
+    
+    // If no direct triangle explanation, create intelligent synthesis
+    const apertureSentences = sentences.filter(s => {
+      const sLower = s.toLowerCase();
+      return sLower.includes('aperture') && (sLower.includes('f/') || sLower.includes('opening') || sLower.includes('light'));
+    });
+    
+    const shutterSentences = sentences.filter(s => {
+      const sLower = s.toLowerCase();
+      return sLower.includes('shutter') && (sLower.includes('speed') || sLower.includes('time') || sLower.includes('exposure'));
+    });
+    
+    const isoSentences = sentences.filter(s => {
+      const sLower = s.toLowerCase();
+      return sLower.includes('iso') && (sLower.includes('sensitivity') || sLower.includes('light') || sLower.includes('exposure'));
+    });
+    
+    // If we have content about all three elements, create a synthesis
+    if (apertureSentences.length > 0 && shutterSentences.length > 0 && isoSentences.length > 0) {
+      const synthesis = `The exposure triangle is the fundamental relationship between three key camera settings that control how much light reaches your camera's sensor: aperture (the size of the lens opening), shutter speed (how long the sensor is exposed to light), and ISO (the sensor's sensitivity to light). These three elements work together to create a properly exposed photograph - when you adjust one, you typically need to compensate with one or both of the others to maintain the same exposure level.`;
+      
+      return formatResponseMarkdown(
+        'Understanding the Exposure Triangle',
+        relevantChunk.url,
+        synthesis
+      );
+    }
+  }
+  
+  // Handle ISO specifically - look for sensitivity explanations
+  if (lc.includes('iso') && !lc.includes('triangle')) {
+    const sentences = chunkText.split(/[.!?]+/);
+    const isoSentences = sentences.filter(s => {
+      const sLower = s.toLowerCase();
+      return sLower.includes('iso') && (sLower.includes('sensitivity') || sLower.includes('light') || sLower.includes('exposure'));
+    });
+    
+    if (isoSentences.length > 0) {
+      const bestSentence = isoSentences[0].trim();
+      if (bestSentence.length > 50) {
+        return formatResponseMarkdown(
+          relevantChunk.title || 'ISO in Photography',
+          relevantChunk.url,
+          bestSentence
+        );
+      }
+    }
+  }
+  
+  // Handle aperture specifically
+  if (lc.includes('aperture') && !lc.includes('triangle')) {
+    const sentences = chunkText.split(/[.!?]+/);
+    const apertureSentences = sentences.filter(s => {
+      const sLower = s.toLowerCase();
+      return sLower.includes('aperture') && (sLower.includes('f/') || sLower.includes('depth of field') || sLower.includes('opening'));
+    });
+    
+    if (apertureSentences.length > 0) {
+      const bestSentence = apertureSentences[0].trim();
+      if (bestSentence.length > 50) {
+        return formatResponseMarkdown(
+          relevantChunk.title || 'Aperture in Photography',
+          relevantChunk.url,
+          bestSentence
+        );
+      }
+    }
+  }
+  
+  // Handle shutter speed specifically
+  if (lc.includes('shutter speed') && !lc.includes('triangle')) {
+    const sentences = chunkText.split(/[.!?]+/);
+    const shutterSentences = sentences.filter(s => {
+      const sLower = s.toLowerCase();
+      return sLower.includes('shutter') && (sLower.includes('speed') || sLower.includes('motion') || sLower.includes('blur'));
+    });
+    
+    if (shutterSentences.length > 0) {
+      const bestSentence = shutterSentences[0].trim();
+      if (bestSentence.length > 50) {
+        return formatResponseMarkdown(
+          relevantChunk.title || 'Shutter Speed in Photography',
+          relevantChunk.url,
+          bestSentence
+        );
+      }
+    }
+  }
   
   return null;
 }
@@ -1199,7 +1324,13 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   }
   
   // PRIORITY 1: Extract from JSON-LD FAQ data in articles
-  if (exactTerm && articles.length > 0) {
+  // SKIP for concept relationship queries - go directly to content chunks for better synthesis
+  const isConceptRelationshipQuery = lc.includes('triangle') || lc.includes('relationship') || 
+                                     (lc.includes('exposure') && (lc.includes('triangle') || lc.includes('aperture') || lc.includes('shutter') || lc.includes('iso')));
+  
+  console.log(`🔍 DEBUG: isConceptRelationshipQuery=${isConceptRelationshipQuery} for query="${query}"`);
+  
+  if (exactTerm && articles.length > 0 && !isConceptRelationshipQuery) {
     const relevantArticle = findRelevantArticleForTerm(exactTerm, articles);
     
     if (relevantArticle) {
@@ -6399,6 +6530,9 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
       res.status(200).json({
         ok: true,
         type: "clarification",
+        answer: clarification.question,
+        answer_markdown: clarification.question,
+        clarification: clarification.question,
         question: clarification.question,
         options: clarification.options,
         confidence: confidencePercent,
@@ -6412,7 +6546,7 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
     ok: true,
     type: "events",
     answer: eventList,
-    answer_markdown: `I found ${eventList.length} ${eventList.length === 1 ? 'event' : 'events'} that match your query. These ${eventList.length === 1 ? 'is' : 'are'} photography ${eventList.length === 1 ? 'event' : 'events'} with experienced instruction and hands-on learning opportunities. Each ${eventList.length === 1 ? 'event' : 'event'} includes professional guidance, practical exercises, and the chance to improve your photography skills.`,
+    answer_markdown: generateEventAnswerMarkdown(eventList, query || ""),
     events: eventList,
     structured: {
       intent: "events",
@@ -7428,21 +7562,29 @@ async function tryRagFirst(client, query) {
         sources = eventEntities.map(e => e.url);
       }
     } else if (results.chunks.length > 0) {
-      // Clean and format chunk text for readable output
-      console.log(`🔍 Processing ${results.chunks.length} chunks for answer generation`);
-      const cleaned = results.chunks
-        .map(c => {
-          const cleanedText = cleanRagText(c.chunk_text);
-          console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
-          return cleanedText;
-        })
-        .filter(Boolean);
-      console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
-      answer = cleaned.join("\n\n");
-      // Cap final answer length for UI readability - much shorter for better UX
-      const MAX_LEN = 800;
-      if (answer.length > MAX_LEN) {
-        answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
+      // Use generateDirectAnswer for intelligent concept synthesis
+      console.log(`🔍 Using generateDirectAnswer for ${results.chunks.length} chunks`);
+      const directAnswer = generateDirectAnswer(query, [], results.chunks);
+      if (directAnswer) {
+        answer = directAnswer;
+        console.log(`✅ Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+      } else {
+        console.log(`⚠️ No intelligent answer found, using fallback chunk processing`);
+        // Fallback to direct chunk processing
+        const cleaned = results.chunks
+          .map(c => {
+            const cleanedText = cleanRagText(c.chunk_text);
+            console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
+            return cleanedText;
+          })
+          .filter(Boolean);
+        console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
+        answer = cleaned.join("\n\n");
+        // Cap final answer length for UI readability - much shorter for better UX
+        const MAX_LEN = 800;
+        if (answer.length > MAX_LEN) {
+          answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
+        }
       }
       type = "advice";
       sources = results.chunks.map(c => c.url);
@@ -7518,34 +7660,23 @@ async function tryRagFirst(client, query) {
           sources = [policyEntity.url];
           console.log(`✅ Generated policy-specific answer for terms and conditions query`);
         } else {
-          // Use the original RAG/DET system for intelligent answers
-          const queryWords = query.toLowerCase().split(" ").filter(w => w.length > 2);
-          const exactTerm = query.toLowerCase().replace(/^what\s+is\s+/, "").trim();
-          
-          // PRIORITY 1: Try to extract from content chunks (original RAG/DET)
-          console.log(`🔍 DEBUG: Trying content chunks - query="${query}", chunks=${results.chunks.length}`);
-          const chunkAnswer = extractAnswerFromContentChunks(query, queryWords, exactTerm, results.chunks);
-          if (chunkAnswer) {
-            answer = chunkAnswer;
-            console.log(`✅ Generated answer from content chunks (RAG/DET): "${chunkAnswer.substring(0, 100)}..."`);
+          // Use the enhanced generateDirectAnswer function for intelligent concept synthesis
+          console.log(`🔍 DEBUG: Using generateDirectAnswer for enhanced concept synthesis`);
+          const directAnswer = generateDirectAnswer(query, relevantEntities, results.chunks);
+          if (directAnswer) {
+            answer = directAnswer;
+            console.log(`✅ Generated enhanced answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
           } else {
-            console.log(`⚠️ No chunk answer found, trying JSON-LD fallback`);
-            // PRIORITY 2: Try JSON-LD FAQ data from entities
+            console.log(`⚠️ No enhanced answer found, trying fallback`);
+            // Fallback to description
             const primaryEntity = relevantEntities[0];
-            const jsonLdAnswer = extractAnswerFromJsonLd(primaryEntity, query);
-            if (jsonLdAnswer) {
-              answer = jsonLdAnswer;
-              console.log(`✅ Generated answer from JSON-LD FAQ data`);
-            } else {
-              // PRIORITY 3: Fallback to description
-              answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
-              console.log(`✅ Generated fallback answer from description`);
-            }
+            answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
+            console.log(`✅ Generated fallback answer from description`);
           }
           
           type = "advice";
           sources = relevantEntities.map(e => e.url);
-          console.log(`✅ Generated structured answer from ${relevantEntities.length} relevant entities`);
+          console.log(`✅ Generated enhanced answer from ${relevantEntities.length} relevant entities`);
         }
       } else {
         console.log(`⚠️ No relevant entities found for query`);
@@ -7774,4 +7905,62 @@ async function processRemainingLogic(client, query, previousQuery, intent, pageC
       timestamp: new Date().toISOString() 
     }
   });
+}
+
+// Generate detailed event answer markdown with specific event information
+function generateEventAnswerMarkdown(eventList, query) {
+  if (!eventList || eventList.length === 0) {
+    return "I couldn't find any events matching your query.";
+  }
+  
+  const queryLower = query.toLowerCase();
+  const isLocationQuery = queryLower.includes('devon') || queryLower.includes('coventry') || queryLower.includes('kenilworth') || queryLower.includes('exmoor');
+  const isTimeQuery = queryLower.includes('next') || queryLower.includes('when') || queryLower.includes('date');
+  
+  let answer = `I found ${eventList.length} ${eventList.length === 1 ? 'event' : 'events'} that match your query.`;
+  
+  if (isTimeQuery && eventList.length > 0) {
+    // Sort events by date to show the next one first
+    const sortedEvents = [...eventList].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const nextEvent = sortedEvents[0];
+    const eventDate = new Date(nextEvent.date);
+    const formattedDate = eventDate.toLocaleDateString('en-GB', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    answer += ` The next ${isLocationQuery ? 'Devon ' : ''}workshop is "${nextEvent.title || nextEvent.event_title}" on ${formattedDate} in ${nextEvent.location || 'Devon'}.`;
+  }
+  
+  if (isLocationQuery) {
+    const locations = [...new Set(eventList.map(e => e.location).filter(Boolean))];
+    if (locations.length > 0) {
+      answer += ` These workshops are located in ${locations.join(' and ')}.`;
+    }
+  }
+  
+  // Add specific event details
+  if (eventList.length <= 3) {
+    answer += ` Here are the details:`;
+    eventList.forEach((event, index) => {
+      const eventDate = new Date(event.date);
+      const formattedDate = eventDate.toLocaleDateString('en-GB', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      answer += `\n\n**${event.title || event.event_title}**`;
+      answer += `\n• Date: ${formattedDate}`;
+      if (event.location) answer += `\n• Location: ${event.location}`;
+      if (event.price) answer += `\n• Price: £${event.price}`;
+      if (event.experience_level) answer += `\n• Level: ${event.experience_level}`;
+    });
+  } else {
+    answer += ` These include workshops in various locations with different skill levels and dates.`;
+  }
+  
+  return answer;
 }
