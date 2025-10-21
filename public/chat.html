@@ -229,8 +229,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 }
 
 .article-more-info:hover {
-  background: #e04a1a;
-  color: #0b0f16;
+  background: #e04a1a !important;
+  color: #0b0f16 !important;
   text-decoration: none;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(241, 90, 34, 0.3);
@@ -1676,8 +1676,8 @@ function renderArticlesBlock(structured, query){
       if (tags) categoryTags += `<span class="article-tags"># ${tags}</span>`;
     }
     
-    // Get meta description (first 160 chars)
-    const metaDescription = a.description || a.raw?.description || a.json_ld_data?.description || '';
+    // Get meta description (first 160 chars) - use actual description field, not title
+    const metaDescription = a.meta_description || a.raw?.meta_description || a.json_ld_data?.description || a.description || '';
     const shortDescription = metaDescription ? metaDescription.substring(0, 160).trim() + (metaDescription.length > 160 ? '...' : '') : '';
     
     // Get actual publish date (not last_seen)
