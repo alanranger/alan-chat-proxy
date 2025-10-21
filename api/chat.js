@@ -729,8 +729,8 @@ function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
       const faqItems = faqData.mainEntity;
       const primaryQuestion = faqItems.find(item => {
         const question = (item.name || "").toLowerCase();
-        return question.includes(exactTerm) && 
-               (question.includes("what does") || question.includes("what is"));
+        const queryLower = exactTerm.toLowerCase();
+        return question.includes(queryLower) || queryLower.includes(question.split(' ')[0]);
       });
       
       if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
@@ -7497,10 +7497,9 @@ async function tryRagFirst(client, query) {
         } else {
           // Use sophisticated answer generation with FAQ data extraction
           const primaryEntity = relevantEntities[0];
-          const exactTerm = query.toLowerCase().replace(/^what\s+is\s+/, "").trim();
           
-          // Try to extract from JSON-LD FAQ data first
-          const jsonLdAnswer = extractAnswerFromJsonLd(primaryEntity, exactTerm);
+          // Try to extract from JSON-LD FAQ data first (generic approach)
+          const jsonLdAnswer = extractAnswerFromJsonLd(primaryEntity, query);
           if (jsonLdAnswer) {
             answer = jsonLdAnswer;
             console.log(`✅ Generated answer from JSON-LD FAQ data`);
