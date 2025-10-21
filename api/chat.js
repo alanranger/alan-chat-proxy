@@ -1100,37 +1100,6 @@ function getPrivacyDataProtectionAnswer(lc) {
   return null;
   }
   
-// Generate related articles - generic for all questions
-function generateRelatedArticles(query) {
-  // Return the same comprehensive set of articles for all queries
-  return [
-    {
-      title: "Beginners Photography Course",
-      url: "https://www.alanranger.com/beginners-photography-course",
-      type: "Course Information"
-    },
-    {
-      title: "Photo Workshops Calendar",
-      url: "https://www.alanranger.com/workshops",
-      type: "Workshop Information"
-    },
-    {
-      title: "Photography Equipment Recommendations",
-      url: "https://www.alanranger.com/photography-equipment-recommendations",
-      type: "Photography Guide"
-    },
-    {
-      title: "Private Photography Lessons - Face-To-Face",
-      url: "https://www.alanranger.com/private-photography-lessons",
-      type: "Course Information"
-    },
-    {
-      title: "RPS Courses - Mentoring Guidance on gaining a LRPS or ARPS",
-      url: "https://www.alanranger.com/rps-courses-mentoring-distinctions",
-      type: "Course Information"
-    }
-  ];
-}
 
 function getServiceAnswers(lc) {
   // RPS Mentoring Course - specific handling
@@ -7641,15 +7610,12 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
   if (ragResult.success && ragResult.confidence >= 0.6) {
     console.log(`✅ RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
     
-    // Generate related articles based on query
-    const relatedArticles = generateRelatedArticles(query);
-    
     // Use RAG sources as-is (generic approach)
     let finalSources = ragResult.sources;
     let finalStructured = ragResult.structured;
     
-    // Add articles to structured object for frontend
-    finalStructured.articles = relatedArticles;
+    // Don't override articles - let RAG system provide relevant articles
+    // The frontend will use pickArticles() to intelligently select relevant ones
     
     return res.status(200).json({
       ok: true,
@@ -7659,7 +7625,6 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
       confidence: ragResult.confidence,
       sources: finalSources,
       structured: finalStructured,
-      relatedArticles: relatedArticles,
       debugInfo: {
         intent: "rag_first",
         classification: "direct_answer",
