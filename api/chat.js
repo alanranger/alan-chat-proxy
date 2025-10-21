@@ -7709,13 +7709,25 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
     // Generate related articles based on query
     const relatedArticles = generateRelatedArticles(query);
     
+    // Override sources for specific queries to use correct URLs
+    let finalSources = ragResult.sources;
+    const lc = query.toLowerCase();
+    
+    if (lc.includes("rps mentoring") || lc.includes("rps course") || lc.includes("rps distinctions")) {
+      finalSources = ["https://www.alanranger.com/rps-courses-mentoring-distinctions"];
+    } else if (lc.includes("private photography lessons") || lc.includes("private lessons") || lc.includes("1-2-1")) {
+      finalSources = ["https://www.alanranger.com/private-photography-lessons"];
+    } else if (lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment")) {
+      finalSources = ["https://www.alanranger.com/photography-equipment-recommendations"];
+    }
+    
     return res.status(200).json({
       ok: true,
       type: ragResult.type,
       answer: ragResult.answer,
       answer_markdown: ragResult.answer,
       confidence: ragResult.confidence,
-      sources: ragResult.sources,
+      sources: finalSources,
       structured: ragResult.structured,
       relatedArticles: relatedArticles,
       debugInfo: {
