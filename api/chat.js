@@ -7655,7 +7655,7 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
     } else if (lc.includes("private photography lessons") || lc.includes("private lessons") || lc.includes("1-2-1")) {
       finalSources = ["https://www.alanranger.com/private-photography-lessons"];
       finalStructured.sources = ["https://www.alanranger.com/private-photography-lessons"];
-    } else if (lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment")) {
+    } else if (lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment") || lc.includes("iso") || lc.includes("aperture") || lc.includes("shutter") || lc.includes("camera") || lc.includes("photography tips") || lc.includes("photography advice")) {
       finalSources = ["https://www.alanranger.com/photography-equipment-recommendations"];
       finalStructured.sources = ["https://www.alanranger.com/photography-equipment-recommendations"];
     }
