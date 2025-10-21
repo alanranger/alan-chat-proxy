@@ -7037,9 +7037,10 @@ async function tryRagFirst(client, query) {
     text = text.replace(/&#x7D;/g, "}");
     text = text.replace(/&#x7E;/g, "~");
     
-    // Fix specific problematic patterns
+    // Fix specific problematic patterns - more aggressive
     text = text.replace(/\?\?\?/g, "'"); // Replace ??? with apostrophe
     text = text.replace(/wi\?\?\?/g, "with"); // Fix truncated "with"
+    text = text.replace(/Beg\?\?\?/g, "Beginners"); // Fix truncated "Beginners"
     text = text.replace(/That\?\?\?s/g, "That's");
     text = text.replace(/doesn\?\?\?t/g, "doesn't");
     text = text.replace(/don\?\?\?t/g, "don't");
@@ -7051,6 +7052,11 @@ async function tryRagFirst(client, query) {
     text = text.replace(/they\?\?\?re/g, "they're");
     text = text.replace(/it\?\?\?s/g, "it's");
     text = text.replace(/Alan\?\?\?s/g, "Alan's");
+    text = text.replace(/What\?\?\?s/g, "What's");
+    text = text.replace(/more\?\?\?/g, "more");
+    
+    // Fix any remaining ??? patterns
+    text = text.replace(/\?\?\?/g, "'");
     
     // Remove navigation and UI elements
     text = text.replace(/^\/Cart[\s\S]*?Sign In My Account[\s\S]*?(?=\n\n|$)/gi, "");
@@ -7145,9 +7151,15 @@ async function tryRagFirst(client, query) {
   function formatRagText(text) {
     if (!text) return "";
     
+    console.log(`🎨 Formatting text: "${text.substring(0, 100)}..."`);
+    
     // Fix truncated words at the end
     text = text.replace(/wi\.\.\.$/, "with you.");
+    text = text.replace(/Beg\.\.\.$/, "Beginners.");
     text = text.replace(/\.\.\.$/, ".");
+    
+    // Fix any remaining ??? patterns
+    text = text.replace(/\?\?\?/g, "'");
     
     // Add line breaks before bullet points and sections
     text = text.replace(/\* CONTENT/g, "\n\n**CONTENT**");
@@ -7161,8 +7173,16 @@ async function tryRagFirst(client, query) {
     text = text.replace(/([.!?])\s*(Terms:)/g, "$1\n\n**$2**");
     text = text.replace(/([.!?])\s*(Method:)/g, "$1\n\n**$2**");
     
-    // Add line breaks for long sentences
+    // Add line breaks for long sentences - more aggressive
     text = text.replace(/([.!?])\s*([A-Z][a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+)/g, "$1\n\n$2");
+    text = text.replace(/([.!?])\s*([A-Z][a-z]+ [a-z]+ [a-z]+ [a-z]+)/g, "$1\n\n$2");
+    text = text.replace(/([.!?])\s*([A-Z][a-z]+ [a-z]+ [a-z]+)/g, "$1\n\n$2");
+    
+    // Add line breaks for specific patterns
+    text = text.replace(/([.!?])\s*(That's why)/g, "$1\n\n$2");
+    text = text.replace(/([.!?])\s*(What's more)/g, "$1\n\n$2");
+    text = text.replace(/([.!?])\s*(This is)/g, "$1\n\n$2");
+    text = text.replace(/([.!?])\s*(I understand)/g, "$1\n\n$2");
     
     // Clean up multiple line breaks
     text = text.replace(/\n{3,}/g, "\n\n");
@@ -7172,6 +7192,7 @@ async function tryRagFirst(client, query) {
       text = text.trim() + ".";
     }
     
+    console.log(`🎨 Formatted result: "${text.substring(0, 100)}..."`);
     return text.trim();
   }
 
