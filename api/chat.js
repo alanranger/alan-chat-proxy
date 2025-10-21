@@ -1397,12 +1397,14 @@ function extractKeywords(q) {
     if (lc.includes(t)) kws.add(t);
   }
   
-  // Add technical terms (3+ chars) and general words (4+ chars)
+  // Add technical terms (3+ chars) and meaningful words (4+ chars)
   const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+  const stopWords = ["what", "when", "where", "which", "how", "why", "who", "can", "will", "should", "could", "would", "do", "does", "did", "are", "is", "was", "were", "have", "has", "had", "you", "your", "yours", "me", "my", "mine", "we", "our", "ours", "they", "their", "theirs", "them", "us", "him", "her", "his", "hers", "it", "its"];
+  
   lc
     .replace(/[^\p{L}\p{N}\s-]/gu, " ")
     .split(/\s+/)
-    .filter((w) => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4))
+    .filter((w) => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4) && !stopWords.includes(w))
     .forEach((w) => kws.add(w));
     
   return Array.from(kws);
