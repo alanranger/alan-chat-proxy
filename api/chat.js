@@ -7554,8 +7554,8 @@ async function tryRagFirst(client, query) {
     }
     
     return {
-      success: results.confidence >= 0.6 || answer.length > 0,
-      confidence: results.confidence >= 0.6 ? results.confidence : 0.6,
+      success: results.confidence >= 0.3 || answer.length > 0,
+      confidence: results.confidence >= 0.3 ? results.confidence : 0.6,
       answer: answer,
       type: type,
       sources: sources,
