@@ -7452,6 +7452,20 @@ async function tryRagFirst(client, query) {
         
         // Use all entities - no hardcoded filtering
         return true;
+      }).sort((a, b) => {
+        // Sort by relevance: exact title matches first, then by publish date (newest first)
+        const queryLower = query.toLowerCase();
+        const aTitle = (a.title || '').toLowerCase();
+        const bTitle = (b.title || '').toLowerCase();
+        
+        // Exact title match gets highest priority
+        if (aTitle.includes(queryLower) && !bTitle.includes(queryLower)) return -1;
+        if (bTitle.includes(queryLower) && !aTitle.includes(queryLower)) return 1;
+        
+        // Then by publish date (newest first)
+        const aDate = new Date(a.publish_date || '1900-01-01');
+        const bDate = new Date(b.publish_date || '1900-01-01');
+        return bDate - aDate;
       });
       
       console.log(`📝 Filtered to ${relevantEntities.length} relevant entities`);
