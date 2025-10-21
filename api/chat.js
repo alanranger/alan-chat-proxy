@@ -2125,10 +2125,10 @@ function generateCourseClarification() {
     type: "course_clarification",
     question: "Yes, we offer several photography courses! What type of course are you interested in?",
     options: [
-      { text: "Online courses (free and paid)", query: "Online courses (free and paid)" },
-      { text: "In-person courses in Coventry", query: "photography courses Coventry" },
-      { text: "Specific topic courses", query: "specialized photography courses" },
-      { text: "Beginner courses", query: "beginner photography courses" }
+      { text: "Beginners camera course", query: "beginners camera course" },
+      { text: "Photo editing course", query: "photo editing course" },
+      { text: "RPS mentoring course", query: "rps mentoring course" },
+      { text: "Private photography lessons", query: "private photography lessons" }
     ]
   };
 }
@@ -2249,7 +2249,9 @@ function checkSuppressedPatterns(lc) {
 }
   
 function checkCourseWorkshopPatterns(lc) {
-  if (lc.includes("do you do") && lc.includes("courses")) {
+  if ((lc.includes("do you do") && lc.includes("courses")) || 
+      lc.includes("what courses") || 
+      lc.includes("do you offer courses")) {
     return generateCourseClarification();
   }
   
@@ -2857,7 +2859,11 @@ function classifyQuery(query) {
     /photography equipment/i,
     /photography gear/i,
     /photography techniques/i,
-    /photography tutorials/i
+    /photography tutorials/i,
+    /what courses do you offer/i,
+    /what courses/i,
+    /do you offer courses/i,
+    /do you do courses/i
   ];
   
   for (const pattern of clarificationPatterns) {
