@@ -8,7 +8,34 @@ export const config = { runtime: 'nodejs' };
 import crypto from 'node:crypto';
 import { htmlToText } from 'html-to-text';
 import { createClient } from '@supabase/supabase-js';
+import { JSDOM } from 'jsdom';
 import { extractStructuredDataFromHTML, enhanceDescriptionWithStructuredData, generateContentHash, cleanHTMLText } from '../lib/htmlExtractor.js';
+
+// Extract meta description from HTML
+function extractMetaDescription(html) {
+  if (!html || typeof html !== 'string') return null;
+  
+  try {
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
+    
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc && metaDesc.content) {
+      return metaDesc.content.trim();
+    }
+    
+    // Fallback: look for Open Graph description
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc && ogDesc.content) {
+      return ogDesc.content.trim();
+    }
+    
+    return null;
+  } catch (e) {
+    console.error('Error extracting meta description:', e);
+    return null;
+  }
+}
 
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
@@ -722,6 +749,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
         kind: finalKind,
         title: bestJsonLd.headline || bestJsonLd.title || bestJsonLd.name || htmlTitle || h1Title || null,
         description: enhancedDescription,
+        meta_description: extractMetaDescription(html),
         date_start: csvMetadata?.start_date && csvMetadata?.start_time 
           ? `${csvMetadata.start_date}T${csvMetadata.start_time}.000Z`
           : (bestJsonLd.datePublished || bestJsonLd.startDate || null),
@@ -872,6 +900,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
                 .update({
                   title: e.title,
                   description: e.description,
+                  meta_description: e.meta_description,
                   date_start: e.date_start,
                   date_end: e.date_end,
                   location: e.location,
