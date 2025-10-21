@@ -7375,7 +7375,7 @@ async function tryRagFirst(client, query) {
       console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
       answer = cleaned.join("\n\n");
       // Cap final answer length for UI readability
-      const MAX_LEN = 2000;
+      const MAX_LEN = 3000;
       if (answer.length > MAX_LEN) {
         answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
       }
