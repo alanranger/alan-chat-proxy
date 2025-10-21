@@ -7368,8 +7368,19 @@ async function tryRagFirst(client, query) {
               .eq('url', entity.url)
               .single();
             
-            if (!htmlError && htmlData) {
-              entity.page_html = htmlData;
+            if (!htmlError && htmlData && htmlData.html_content) {
+              // Extract meta description from HTML
+              const metaMatch = htmlData.html_content.match(/<meta name="description" content="([^"]*)"[^>]*>/i);
+              if (metaMatch && metaMatch[1]) {
+                entity.meta_description = metaMatch[1]
+                  .replace(/&quot;/g, '"')
+                  .replace(/&amp;/g, '&')
+                  .replace(/&#124;/g, '|')
+                  .replace(/&lt;/g, '<')
+                  .replace(/&gt;/g, '>')
+                  .replace(/\r\n/g, ' ')
+                  .trim();
+              }
             }
           }
         }

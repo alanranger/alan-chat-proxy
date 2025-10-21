@@ -1676,8 +1676,8 @@ function renderArticlesBlock(structured, query){
       if (tags) categoryTags += `<span class="article-tags"># ${tags}</span>`;
     }
     
-    // Get meta description (simplified for now)
-    const metaDescription = a.description || a.raw?.description || a.json_ld_data?.description || '';
+    // Get meta description from extracted HTML meta tag
+    const metaDescription = a.meta_description || a.description || a.raw?.description || a.json_ld_data?.description || '';
     const shortDescription = metaDescription && metaDescription !== t && metaDescription.length > 50 ? 
       metaDescription.substring(0, 160).trim() + (metaDescription.length > 160 ? '...' : '') : '';
     
