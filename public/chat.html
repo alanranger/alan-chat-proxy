@@ -1676,9 +1676,10 @@ function renderArticlesBlock(structured, query){
       if (tags) categoryTags += `<span class="article-tags"># ${tags}</span>`;
     }
     
-    // Get meta description (first 160 chars) - use description field that exists
+    // Get meta description (first 160 chars) - only show if different from title
     const metaDescription = a.description || a.raw?.description || a.json_ld_data?.description || '';
-    const shortDescription = metaDescription && metaDescription !== t ? metaDescription.substring(0, 160).trim() + (metaDescription.length > 160 ? '...' : '') : '';
+    const shortDescription = metaDescription && metaDescription !== t && metaDescription.length > 20 ? 
+      metaDescription.substring(0, 160).trim() + (metaDescription.length > 160 ? '...' : '') : '';
     
     // Get actual publish date (fallback to last_seen if no publish date)
     const publishDate = a.publish_date || a.date_published || a.raw?.datePublished || a.last_seen || '';
