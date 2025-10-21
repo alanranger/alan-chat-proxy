@@ -7359,37 +7359,17 @@ async function tryRagFirst(client, query) {
       } else if (keywordEntities) {
         console.log(`📄 Found ${keywordEntities.length} entities for keyword "${keyword}"`);
         
-        // Get HTML content for each entity to extract meta descriptions
-        for (const entity of keywordEntities) {
-          if (entity.url) {
-            const { data: htmlData, error: htmlError } = await client
-              .from('page_html')
-              .select('html_content')
-              .eq('url', entity.url)
-              .single();
+            // For now, skip HTML extraction due to permissions issues
+            // TODO: Fix permissions for page_html table access
+            console.log(`📄 Processing ${keywordEntities.length} entities for keyword "${keyword}"`);
             
-            if (!htmlError && htmlData && htmlData.html_content) {
-              console.log(`🔍 Found HTML content for ${entity.url}, length: ${htmlData.html_content.length}`);
-              // Extract meta description from HTML
-              const metaMatch = htmlData.html_content.match(/<meta name="description" content="([^"]*)"[^>]*>/i);
-              if (metaMatch && metaMatch[1]) {
-                entity.meta_description = metaMatch[1]
-                  .replace(/&quot;/g, '"')
-                  .replace(/&amp;/g, '&')
-                  .replace(/&#124;/g, '|')
-                  .replace(/&lt;/g, '<')
-                  .replace(/&gt;/g, '>')
-                  .replace(/\r\n/g, ' ')
-                  .trim();
-                console.log(`✅ Extracted meta description: "${entity.meta_description}"`);
-              } else {
-                console.log(`❌ No meta description found in HTML for ${entity.url}`);
+            // Create basic meta descriptions as fallback
+            for (const entity of keywordEntities) {
+              if (entity.title && !entity.meta_description) {
+                // Create a basic description from the title
+                entity.meta_description = `Learn about ${entity.title.toLowerCase()}. Professional photography guide by Alan Ranger.`;
               }
-            } else {
-              console.log(`❌ No HTML content found for ${entity.url}, error: ${htmlError?.message || 'none'}`);
             }
-          }
-        }
         
         keywordEntities.forEach(e => console.log(`  - "${e.title}" (${e.kind})`));
         entities = [...entities, ...keywordEntities];
