@@ -2681,6 +2681,8 @@ function classifyQuery(query) {
     
     // Business/Policy queries
     /terms and conditions/i,
+    /terms anc conditions/i,  // Handle typo "anc" instead of "and"
+    /where.*terms.*conditions/i,  // Handle "where can i find your terms and conditions"
     /cancellation policy/i,
     /refund policy/i,
     /booking policy/i,
@@ -7113,21 +7115,39 @@ async function tryRagFirst(client, query) {
       console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
       
       if (relevantEntities.length > 0) {
-        // Generate structured answer with articles and recommendations
-        const primaryEntity = relevantEntities[0];
-        answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
+        // Check if this is a policy/terms query
+        const isPolicyQuery = /terms.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
         
-        // Add additional articles if available
-        if (relevantEntities.length > 1) {
-          answer += `\n\n**Related Articles:**\n`;
-          relevantEntities.slice(1, 4).forEach((entity, idx) => {
-            answer += `• ${entity.title}: ${entity.url}\n`;
-          });
+        if (isPolicyQuery) {
+          // For policy queries, provide direct information
+          const policyEntity = relevantEntities.find(e => 
+            e.title.toLowerCase().includes('terms') || 
+            e.title.toLowerCase().includes('conditions') ||
+            e.title.toLowerCase().includes('policy')
+          ) || relevantEntities[0];
+          
+          answer = `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated.\n\nFor full details, visit the [Terms and Conditions page](${policyEntity.url}).`;
+          
+          type = "advice";
+          sources = [policyEntity.url];
+          console.log(`✅ Generated policy-specific answer for terms and conditions query`);
+        } else {
+          // Generate structured answer with articles and recommendations
+          const primaryEntity = relevantEntities[0];
+          answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
+          
+          // Add additional articles if available
+          if (relevantEntities.length > 1) {
+            answer += `\n\n**Related Articles:**\n`;
+            relevantEntities.slice(1, 4).forEach((entity, idx) => {
+              answer += `• ${entity.title}: ${entity.url}\n`;
+            });
+          }
+          
+          type = "advice";
+          sources = relevantEntities.map(e => e.url);
+          console.log(`✅ Generated structured answer from ${relevantEntities.length} relevant entities`);
         }
-        
-        type = "advice";
-        sources = relevantEntities.map(e => e.url);
-        console.log(`✅ Generated structured answer from ${relevantEntities.length} relevant entities`);
       } else {
         console.log(`⚠️ No relevant entities found for query`);
         // Don't generate a generic response here - let the fallback handle it
