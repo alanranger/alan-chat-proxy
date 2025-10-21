@@ -7492,17 +7492,9 @@ async function tryRagFirst(client, query) {
           sources = [policyEntity.url];
           console.log(`✅ Generated policy-specific answer for terms and conditions query`);
         } else {
-          // Generate structured answer with articles and recommendations
+          // Generate brief structured answer without redundant articles list
           const primaryEntity = relevantEntities[0];
           answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
-          
-          // Add additional articles if available
-          if (relevantEntities.length > 1) {
-            answer += `\n\n**Related Articles:**\n`;
-            relevantEntities.slice(1, 4).forEach((entity, idx) => {
-              answer += `• ${entity.title}: ${entity.url}\n`;
-            });
-          }
           
           type = "advice";
           sources = relevantEntities.map(e => e.url);

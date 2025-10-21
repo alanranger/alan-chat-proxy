@@ -113,7 +113,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 /* Article Cards */
 .articles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 12px;
   margin-top: 12px;
 }
@@ -127,10 +127,87 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 }
 
 .article-card:hover {
-  border-color: #3b82f6;
+  border-color: #10b981;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
 }
+
+.article-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.article-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.article-title a {
+  color: #10b981;
+  text-decoration: none;
+}
+
+.article-title a:hover {
+  color: #34d399;
+  text-decoration: underline;
+}
+
+.article-type-badge {
+  background: #065f46;
+  color: #10b981;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.article-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.article-date {
+  font-size: 13px;
+  color: #d1d5db;
+}
+
+.article-categories {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.article-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.article-more-info {
+  background: #F15A22;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.article-more-info:hover {
+  background: #e04a1a;
+  color: #ffffff;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(241, 90, 34, 0.3);
+}
+
 
 .article-title {
   margin: 0 0 8px 0;
@@ -1612,14 +1689,19 @@ function renderArticlesBlock(structured, query){
     return `
       <div class="article-card">
         <div class="article-content">
-          <h4 class="article-title">
-            <a href="${validHref}" target="_blank" rel="noopener">${escapeHTML(t)}</a>
-          </h4>
-          <div class="article-meta">
-            <span class="article-source">📖 Photography Guide</span>
-            ${displayDate ? `<span class="article-date">📅 ${displayDate}</span>` : ''}
+          <div class="article-header">
+            <h4 class="article-title">
+              <a href="${validHref}" target="_blank" rel="noopener">${escapeHTML(t)}</a>
+            </h4>
+            <div class="article-type-badge">📖 Photography Guide</div>
           </div>
-          ${categoryTags ? `<div class="article-categories">${categoryTags}</div>` : ''}
+          <div class="article-details">
+            ${displayDate ? `<div class="article-date">📅 ${displayDate}</div>` : ''}
+            ${categoryTags ? `<div class="article-categories">${categoryTags}</div>` : ''}
+          </div>
+          <div class="article-actions">
+            <a href="${validHref}" target="_blank" rel="noopener" class="article-more-info">More Info →</a>
+          </div>
         </div>
       </div>
     `;
@@ -1923,18 +2005,10 @@ function buildDefaultPillsIfMissing(s){
   if(ev && (ev.page_url||ev.url||ev.event_url)) pills.push({label:'View Event', url: ev.page_url||ev.url||ev.event_url, priority:true});
   const prod = (s.products||[])[0];
   if(prod && (prod.page_url||prod.url)) pills.push({label:'View Course', url: prod.page_url||prod.url, priority:true});
-  const art = (s.articles||[])[0];
-  if(art && (art.page_url||art.source_url||art.url)) pills.push({label:'Read Guide', url: art.page_url||art.source_url||art.url});
+  // Articles now have individual "More Info" buttons, no need for pills
   
-  // Add source URL pills from RAG responses
-  if(s.sources && s.sources.length > 0) {
-    s.sources.forEach((source, index) => {
-      if(source && source.includes('alanranger.com')) {
-        const label = s.sources.length === 1 ? 'More Info' : `More Info ${index + 1}`;
-        pills.push({label: label, url: source, priority: true});
-      }
-    });
-  }
+  // Don't add source URL pills for articles since they now have individual "More Info" buttons
+  // Only add pills for events and products
   
   if(!pills.length && s.intent==='events') pills.push({label:'All Workshops', url:'https://www.alanranger.com/workshops'});
   return pills;
