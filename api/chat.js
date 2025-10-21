@@ -2641,7 +2641,7 @@ function classifyQuery(query) {
     /workshop/i,
     /photography training/i,
     /photography course/i,
-    /photography lesson/i,
+    /^(?!.*private).*photography lesson/i,  // Exclude private lessons
     /photography class/i,
     /photography classes/i,
     /beginner photography class/i,
@@ -2684,6 +2684,24 @@ function classifyQuery(query) {
     }
   }
   
+  // PRIVATE LESSONS AND MENTORING - Check these BEFORE workshop patterns
+  const privateLessonsPatterns = [
+    /private photography lessons/i,
+    /private lessons/i,
+    /1-2-1.*lessons/i,
+    /one-to-one.*lessons/i,
+    /rps mentoring course/i,
+    /rps mentoring/i,
+    /rps course/i
+  ];
+  
+  for (const pattern of privateLessonsPatterns) {
+    if (pattern.test(query)) {
+      console.log(`🎯 Private lessons pattern matched: ${pattern} for query: "${query}"`);
+      return { type: 'direct_answer', reason: 'private_lessons_query' };
+    }
+  }
+
   // DIRECT ANSWER QUERIES - Should bypass clarification entirely
   const directAnswerPatterns = [
     // About Alan Ranger
@@ -6486,6 +6504,36 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
             intent: "contact_required",
             classification: "direct_answer",
             contactAlanQuery: true
+          }
+        });
+        return true;
+      }
+    }
+    
+    // Check if this is a private lessons query
+    if (classification.reason === 'private_lessons_query') {
+      console.log(`📚 Private lessons query detected in handleDirectAnswerQuery: "${query}"`);
+      
+      // Use the existing service answers for private lessons
+      const serviceAnswer = getServiceAnswers(query.toLowerCase());
+      if (serviceAnswer) {
+        res.status(200).json({
+          ok: true,
+          type: 'advice',
+          confidence: 0.9,
+          answer: serviceAnswer,
+          structured: {
+            intent: "advice",
+            topic: "private_lessons",
+            events: [],
+            products: [],
+            pills: []
+          },
+          debugInfo: {
+            version: "v1.3.20-private-lessons-fix",
+            intent: "advice",
+            classification: "direct_answer",
+            privateLessonsQuery: true
           }
         });
         return true;
