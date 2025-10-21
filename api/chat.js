@@ -1100,13 +1100,126 @@ function getPrivacyDataProtectionAnswer(lc) {
   return null;
   }
   
+// Generate related articles based on query topic
+function generateRelatedArticles(query) {
+  const lc = query.toLowerCase();
+  
+  // Tripod and Equipment articles
+  if (lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment") || lc.includes("gear")) {
+    return [
+      {
+        title: "Recommended Lightweight Tripods | Professional Guide",
+        url: "https://www.alanranger.com/blog-on-photography/recommended-lightweight-tripods",
+        type: "Photography Guide"
+      },
+      {
+        title: "Benro Review - Head to Head with Gitzo and Manfrotto Tripods", 
+        url: "https://www.alanranger.com/blog-on-photography/tripods-gitzo-vs-benro-review",
+        type: "Photography Guide"
+      },
+      {
+        title: "5 Reasons why a tripod will help you to become better",
+        url: "https://www.alanranger.com/blog-on-photography/5-reasons-why-a-tripod-will-help-you-to-become-better",
+        type: "Photography Guide"
+      },
+      {
+        title: "How to use a tripod correctly | Professional Guide",
+        url: "https://www.alanranger.com/blog-on-photography/basics-how-to-use-a-tripod",
+        type: "Photography Guide"
+      },
+      {
+        title: "The Perfect Travel Tripod: Benro Cyanbird Tripod Review",
+        url: "https://www.alanranger.com/blog-on-photography/the-perfect-travel-tripod-benro-cyanbird",
+        type: "Photography Guide"
+      }
+    ];
+  }
+  
+  // RPS Mentoring articles
+  if (lc.includes("rps") || lc.includes("mentoring") || lc.includes("distinctions")) {
+    return [
+      {
+        title: "RPS Courses - Mentoring Guidance on gaining a LRPS or ARPS",
+        url: "https://www.alanranger.com/rps-courses-mentoring-distinctions",
+        type: "Course Information"
+      },
+      {
+        title: "Private Photography Lessons - Face-To-Face",
+        url: "https://www.alanranger.com/private-photography-lessons", 
+        type: "Course Information"
+      },
+      {
+        title: "Monthly Mentoring Assignments",
+        url: "https://www.alanranger.com/monthly-mentoring-assignments",
+        type: "Course Information"
+      }
+    ];
+  }
+  
+  // Private Lessons articles
+  if (lc.includes("private") || lc.includes("1-2-1") || lc.includes("face-to-face")) {
+    return [
+      {
+        title: "Private Photography Lessons - Face-To-Face",
+        url: "https://www.alanranger.com/private-photography-lessons",
+        type: "Course Information"
+      },
+      {
+        title: "RPS Courses - Mentoring Guidance on gaining a LRPS or ARPS", 
+        url: "https://www.alanranger.com/rps-courses-mentoring-distinctions",
+        type: "Course Information"
+      },
+      {
+        title: "Beginners Photography Course",
+        url: "https://www.alanranger.com/beginners-photography-course",
+        type: "Course Information"
+      }
+    ];
+  }
+  
+  // General photography articles
+  return [
+    {
+      title: "Beginners Photography Course",
+      url: "https://www.alanranger.com/beginners-photography-course",
+      type: "Course Information"
+    },
+    {
+      title: "Photo Workshops Calendar",
+      url: "https://www.alanranger.com/workshops",
+      type: "Workshop Information"
+    },
+    {
+      title: "Photography Equipment Recommendations",
+      url: "https://www.alanranger.com/photography-equipment-recommendations",
+      type: "Photography Guide"
+    }
+  ];
+}
+
 function getServiceAnswers(lc) {
-  if (lc.includes("private") || lc.includes("mentoring") || lc.includes("1-2-1") || lc.includes("tuition")) {
+  // RPS Mentoring Course - specific handling
+  if (lc.includes("rps mentoring") || lc.includes("rps course") || lc.includes("rps distinctions")) {
+    return `**RPS Mentoring Course**: Alan provides independent mentoring for RPS (Royal Photographic Society) Distinction qualifications. He holds both Licentiate and Associate Distinctions and offers personalized online mentoring via Zoom to help you achieve success. Sessions are flexible and can be taken within 12 months of booking. [Learn More](https://www.alanranger.com/rps-courses-mentoring-distinctions)\n\n`;
+  }
+  
+  // Private Photography Lessons - specific handling  
+  if (lc.includes("private photography lessons") || lc.includes("private lessons") || lc.includes("1-2-1") || lc.includes("face-to-face")) {
+    return `**Private Photography Lessons**: Alan offers bespoke face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are tailored to your specific needs and delivered at times that suit your availability. [Book Private Lessons](https://www.alanranger.com/private-photography-lessons)\n\n`;
+  }
+  
+  // General private/mentoring queries
+  if (lc.includes("private") || lc.includes("mentoring") || lc.includes("tuition")) {
     return `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n`;
   }
   
   if (lc.includes("voucher") || lc.includes("gift") || lc.includes("present")) {
     return `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`;
+  }
+  
+  // Tripod and Equipment Recommendations - direct answer without clarification
+  if (lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment") || lc.includes("gear") || lc.includes("camera") || lc.includes("lens")) {
+    return `**Equipment Recommendations**: Based on Alan's extensive experience with photography equipment, he recommends checking out his detailed equipment guides. He has comprehensive reviews and recommendations for different types of photography and budgets. [View Equipment Guides](https://www.alanranger.com/photography-equipment-recommendations)\n\n`;
   }
   
   if (lc.includes("service") || (lc.includes("what do you offer") && !lc.includes("courses")) || lc.includes("what services")) {
@@ -7100,6 +7213,33 @@ async function tryRagFirst(client, query) {
       }
     }
     
+    // Prioritize content that looks like it's from the beginning of a page
+    // Look for common page introduction patterns
+    const introPatterns = [
+      /^Alan Ranger Photography/,
+      /^Are you ready/,
+      /^If you prefer/,
+      /^Based on Alan/,
+      /^Alan offers/,
+      /^I can provide/,
+      /^For equipment/,
+      /^Alan provides/
+    ];
+    
+    // If we find an intro pattern, try to extract from there
+    for (const pattern of introPatterns) {
+      if (pattern.test(text)) {
+        console.log(`🎯 Found intro pattern: ${pattern}`);
+        // Extract content from this point
+        const match = text.match(pattern);
+        if (match) {
+          const startIndex = match.index;
+          text = text.substring(startIndex);
+          break;
+        }
+      }
+    }
+    
     // Collapse multiple dashes/lines used as separators
     text = text.replace(/-{4,}/g, "\n");
     
@@ -7374,8 +7514,8 @@ async function tryRagFirst(client, query) {
         .filter(Boolean);
       console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
       answer = cleaned.join("\n\n");
-      // Cap final answer length for UI readability
-      const MAX_LEN = 3000;
+      // Cap final answer length for UI readability - much shorter for better UX
+      const MAX_LEN = 800;
       if (answer.length > MAX_LEN) {
         answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
       }
@@ -7565,6 +7705,10 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
   
   if (ragResult.success && ragResult.confidence >= 0.6) {
     console.log(`✅ RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
+    
+    // Generate related articles based on query
+    const relatedArticles = generateRelatedArticles(query);
+    
     return res.status(200).json({
       ok: true,
       type: ragResult.type,
@@ -7573,6 +7717,7 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
       confidence: ragResult.confidence,
       sources: ragResult.sources,
       structured: ragResult.structured,
+      relatedArticles: relatedArticles,
       debugInfo: {
         intent: "rag_first",
         classification: "direct_answer",
