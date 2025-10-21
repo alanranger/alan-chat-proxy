@@ -11,7 +11,7 @@ import { createClient } from '@supabase/supabase-js';
 import { JSDOM } from 'jsdom';
 import { extractStructuredDataFromHTML, enhanceDescriptionWithStructuredData, generateContentHash, cleanHTMLText } from '../lib/htmlExtractor.js';
 
-// Extract meta description from HTML
+// Extract meta description from HTML - updated for deployment
 function extractMetaDescription(html) {
   if (!html || typeof html !== 'string') return null;
   
