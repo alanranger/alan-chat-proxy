@@ -2794,7 +2794,6 @@ function classifyQuery(query) {
     /what equipment do i need/i,
     
     // Course and workshop specific queries
-    /what courses do you offer/i,
     /complete beginners/i,
     /evening classes in coventry/i,
     /how many weeks is the beginners/i,
