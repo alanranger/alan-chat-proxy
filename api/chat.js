@@ -7514,11 +7514,13 @@ async function tryRagFirst(client, query) {
           const exactTerm = query.toLowerCase().replace(/^what\s+is\s+/, "").trim();
           
           // PRIORITY 1: Try to extract from content chunks (original RAG/DET)
+          console.log(`🔍 DEBUG: Trying content chunks - query="${query}", chunks=${results.chunks.length}`);
           const chunkAnswer = extractAnswerFromContentChunks(query, queryWords, exactTerm, results.chunks);
           if (chunkAnswer) {
             answer = chunkAnswer;
-            console.log(`✅ Generated answer from content chunks (RAG/DET)`);
+            console.log(`✅ Generated answer from content chunks (RAG/DET): "${chunkAnswer.substring(0, 100)}..."`);
           } else {
+            console.log(`⚠️ No chunk answer found, trying JSON-LD fallback`);
             // PRIORITY 2: Try JSON-LD FAQ data from entities
             const primaryEntity = relevantEntities[0];
             const jsonLdAnswer = extractAnswerFromJsonLd(primaryEntity, query);
