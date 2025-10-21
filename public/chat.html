@@ -184,6 +184,18 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
   color: #9ca3af;
 }
 
+.article-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.article-source {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
 .article-actions {
   display: flex;
   justify-content: flex-end;
@@ -191,7 +203,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 .article-more-info {
   background: #F15A22;
-  color: #ffffff;
+  color: #0b0f16;
   padding: 8px 16px;
   border-radius: 4px;
   font-size: 12px;
@@ -202,7 +214,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 .article-more-info:hover {
   background: #e04a1a;
-  color: #ffffff;
+  color: #0b0f16;
   text-decoration: none;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(241, 90, 34, 0.3);
@@ -1693,11 +1705,13 @@ function renderArticlesBlock(structured, query){
             <h4 class="article-title">
               <a href="${validHref}" target="_blank" rel="noopener">${escapeHTML(t)}</a>
             </h4>
-            <div class="article-type-badge">📖 Photography Guide</div>
           </div>
           <div class="article-details">
-            ${displayDate ? `<div class="article-date">📅 ${displayDate}</div>` : ''}
             ${categoryTags ? `<div class="article-categories">${categoryTags}</div>` : ''}
+            <div class="article-meta">
+              <span class="article-source">📖 Photography Guide</span>
+              ${displayDate ? `<span class="article-date">📅 ${displayDate}</span>` : ''}
+            </div>
           </div>
           <div class="article-actions">
             <a href="${validHref}" target="_blank" rel="noopener" class="article-more-info">More Info →</a>
