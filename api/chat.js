@@ -7350,7 +7350,7 @@ async function tryRagFirst(client, query) {
       console.log(`🔍 Searching for keyword: "${keyword}"`);
       const { data: keywordEntities, error: entitiesError } = await client
         .from('page_entities')
-        .select('url, title, description, location, date_start, kind')
+        .select('url, title, description, location, date_start, kind, publish_date, last_seen')
         .or(`title.ilike.%${keyword}%,description.ilike.%${keyword}%,location.ilike.%${keyword}%`)
         .limit(5);
       
