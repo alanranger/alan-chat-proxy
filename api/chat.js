@@ -718,13 +718,15 @@ function extractAnswerFromArticleDescription(relevantArticle) {
 }
 
 function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
-  if (!relevantArticle.json_ld_data || !relevantArticle.json_ld_data.mainEntity) {
+  // Check both json_ld_data and raw fields for FAQ data
+  const faqData = relevantArticle.json_ld_data || relevantArticle.raw;
+  if (!faqData || !faqData.mainEntity) {
     return null;
   }
   
         console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
       
-      const faqItems = relevantArticle.json_ld_data.mainEntity;
+      const faqItems = faqData.mainEntity;
       const primaryQuestion = faqItems.find(item => {
         const question = (item.name || "").toLowerCase();
         return question.includes(exactTerm) && 
@@ -7493,9 +7495,20 @@ async function tryRagFirst(client, query) {
           sources = [policyEntity.url];
           console.log(`✅ Generated policy-specific answer for terms and conditions query`);
         } else {
-          // Generate brief structured answer without redundant articles list
+          // Use sophisticated answer generation with FAQ data extraction
           const primaryEntity = relevantEntities[0];
-          answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
+          const exactTerm = query.toLowerCase().replace(/^what\s+is\s+/, "").trim();
+          
+          // Try to extract from JSON-LD FAQ data first
+          const jsonLdAnswer = extractAnswerFromJsonLd(primaryEntity, exactTerm);
+          if (jsonLdAnswer) {
+            answer = jsonLdAnswer;
+            console.log(`✅ Generated answer from JSON-LD FAQ data`);
+          } else {
+            // Fallback to description
+            answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
+            console.log(`✅ Generated fallback answer from description`);
+          }
           
           type = "advice";
           sources = relevantEntities.map(e => e.url);
