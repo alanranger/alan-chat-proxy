@@ -6979,24 +6979,63 @@ async function tryRagFirst(client, query) {
     if (!raw) return "";
     let text = String(raw);
     
-    // Remove URL-encoded image paths and artifacts at the start
+    console.log(`🧹 Original text: "${text.substring(0, 100)}..."`);
+    
+    // Remove URL-encoded image paths and artifacts at the start - more aggressive
     text = text.replace(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)[&\s]*/gi, "");
     text = text.replace(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)&url=[^\s]*/gi, "");
     
-    // Remove URL-encoded content and HTML artifacts
+    // Remove URL-encoded content and HTML artifacts - more aggressive
     text = text.replace(/&url=https?%3A%2F%2F[^\s]*/gi, "");
     text = text.replace(/https?%3A%2F%2F[^\s]*/gi, "");
+    text = text.replace(/PRIVATE-PHOTOGRAPHY-LESSONS\.png[^\s]*/gi, "");
     
     // Remove unrendered markdown links like [/rps-courses-mentoring-distinctions]
     text = text.replace(/\[\/[^\]]+\]/g, "");
     
-    // Remove HTML entities and encoding artifacts
+    // Remove HTML entities and encoding artifacts - more comprehensive
     text = text.replace(/&amp;/g, "&");
     text = text.replace(/&lt;/g, "<");
     text = text.replace(/&gt;/g, ">");
     text = text.replace(/&quot;/g, '"');
     text = text.replace(/&#39;/g, "'");
     text = text.replace(/&nbsp;/g, " ");
+    text = text.replace(/&#x27;/g, "'");
+    text = text.replace(/&#x2F;/g, "/");
+    text = text.replace(/&#x3D;/g, "=");
+    text = text.replace(/&#x3A;/g, ":");
+    text = text.replace(/&#x2E;/g, ".");
+    text = text.replace(/&#x2D;/g, "-");
+    text = text.replace(/&#x5F;/g, "_");
+    text = text.replace(/&#x2B;/g, "+");
+    text = text.replace(/&#x20;/g, " ");
+    text = text.replace(/&#x21;/g, "!");
+    text = text.replace(/&#x22;/g, '"');
+    text = text.replace(/&#x23;/g, "#");
+    text = text.replace(/&#x24;/g, "$");
+    text = text.replace(/&#x25;/g, "%");
+    text = text.replace(/&#x26;/g, "&");
+    text = text.replace(/&#x28;/g, "(");
+    text = text.replace(/&#x29;/g, ")");
+    text = text.replace(/&#x2A;/g, "*");
+    text = text.replace(/&#x2C;/g, ",");
+    text = text.replace(/&#x2F;/g, "/");
+    text = text.replace(/&#x3A;/g, ":");
+    text = text.replace(/&#x3B;/g, ";");
+    text = text.replace(/&#x3C;/g, "<");
+    text = text.replace(/&#x3D;/g, "=");
+    text = text.replace(/&#x3E;/g, ">");
+    text = text.replace(/&#x3F;/g, "?");
+    text = text.replace(/&#x40;/g, "@");
+    text = text.replace(/&#x5B;/g, "[");
+    text = text.replace(/&#x5C;/g, "\\");
+    text = text.replace(/&#x5D;/g, "]");
+    text = text.replace(/&#x5E;/g, "^");
+    text = text.replace(/&#x60;/g, "`");
+    text = text.replace(/&#x7B;/g, "{");
+    text = text.replace(/&#x7C;/g, "|");
+    text = text.replace(/&#x7D;/g, "}");
+    text = text.replace(/&#x7E;/g, "~");
     
     // Remove navigation and UI elements
     text = text.replace(/^\/Cart[\s\S]*?Sign In My Account[\s\S]*?(?=\n\n|$)/gi, "");
@@ -7011,6 +7050,10 @@ async function tryRagFirst(client, query) {
     // Remove shopping cart and e-commerce artifacts
     text = text.replace(/Add to Cart|Only \d+ available|Select Course|Posted in/gi, "");
     text = text.replace(/Course:\s*Select Course[\s\S]*?(?=\n\n|$)/gi, "");
+    
+    // Remove specific artifacts that are common
+    text = text.replace(/^\s*ed for updated portfolios and images\s*/gi, "");
+    text = text.replace(/^\s*[a-z]+\s+for\s+updated\s+portfolios\s*/gi, "");
     
     // Clean up truncated text that starts mid-sentence
     if (text.match(/^[a-z]/)) {
@@ -7043,8 +7086,11 @@ async function tryRagFirst(client, query) {
              !trimmed.match(/^\/[A-Za-z\s\[\]]+$/i) &&
              !trimmed.match(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)/gi) && // Skip image filenames
              !trimmed.match(/^[A-Z\s]+$/i) && // Skip all-caps headers
+             !trimmed.match(/^ed for updated portfolios/i) && // Skip specific artifacts
              trimmed.length < 1000;
     });
+    
+    console.log(`🧹 After cleaning: "${text.substring(0, 100)}..."`);
     
     // Return the best content
     if (parts.length > 0) {
@@ -7056,6 +7102,7 @@ async function tryRagFirst(client, query) {
         result = result.charAt(0).toUpperCase() + result.slice(1);
       }
       
+      console.log(`🧹 Final result: "${result.substring(0, 100)}..."`);
       return result;
     } else {
       // Fallback: clean and return first substantial content
@@ -7065,9 +7112,12 @@ async function tryRagFirst(client, query) {
         if (result.match(/^[a-z]/)) {
           result = result.charAt(0).toUpperCase() + result.slice(1);
         }
+        console.log(`🧹 Fallback result: "${result.substring(0, 100)}..."`);
         return result;
       }
-      return text.trim().substring(0, 800);
+      const finalResult = text.trim().substring(0, 800);
+      console.log(`🧹 Final fallback: "${finalResult.substring(0, 100)}..."`);
+      return finalResult;
     }
   };
 
