@@ -156,6 +156,13 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
   text-decoration: underline;
 }
 
+.article-description {
+  font-size: 13px;
+  color: #d1d5db;
+  line-height: 1.4;
+  margin: 8px 0 12px 0;
+}
+
 .article-type-badge {
   background: #065f46;
   color: #10b981;
@@ -206,7 +213,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 .article-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  margin-top: 12px;
 }
 
 .article-more-info {
@@ -1668,6 +1676,18 @@ function renderArticlesBlock(structured, query){
       if (tags) categoryTags += `<span class="article-tags"># ${tags}</span>`;
     }
     
+    // Get meta description (first 160 chars)
+    const metaDescription = a.description || a.raw?.description || a.json_ld_data?.description || '';
+    const shortDescription = metaDescription ? metaDescription.substring(0, 160).trim() + (metaDescription.length > 160 ? '...' : '') : '';
+    
+    // Get actual publish date (not last_seen)
+    const publishDate = a.publish_date || a.date_published || a.raw?.datePublished || '';
+    const displayPublishDate = publishDate ? new Date(publishDate).toLocaleDateString('en-GB', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric' 
+    }) : '';
+    
     return `
       <div class="article-card">
         <div class="article-content">
@@ -1676,10 +1696,11 @@ function renderArticlesBlock(structured, query){
               <a href="${validHref}" target="_blank" rel="noopener">${escapeHTML(t)}</a>
             </h4>
           </div>
+          ${shortDescription ? `<div class="article-description">${escapeHTML(shortDescription)}</div>` : ''}
           <div class="article-details">
             ${categoryTags ? `<div class="article-categories">${categoryTags}</div>` : ''}
             <div class="article-meta">
-              ${displayDate ? `<span class="article-date">📅 ${displayDate}</span>` : ''}
+              ${displayPublishDate ? `<span class="article-date">📅 ${displayPublishDate}</span>` : ''}
             </div>
           </div>
           <div class="article-actions">
