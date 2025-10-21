@@ -7361,6 +7361,7 @@ async function tryRagFirst(client, query) {
       .from('page_entities')
       .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
       .or(searchKeywords.map(k => `title.ilike.%${k}%,description.ilike.%${k}%,location.ilike.%${k}%`).join(','))
+      .eq('kind', 'article')  // Only return articles for the articles array
       .limit(25);
     
     if (entitiesError) {
