@@ -7379,6 +7379,7 @@ async function tryRagFirst(client, query) {
       .from('page_entities')
       .select('url, title, description, meta_description, location, date_start, kind')
       .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
+      .eq('kind', 'article')  // Only return articles for the articles array
       .limit(15);
     
     if (!fullQueryEntitiesError && fullQueryEntities) {
