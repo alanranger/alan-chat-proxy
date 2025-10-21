@@ -882,7 +882,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
               }
             } else {
               // Non-event: update with fresh fields
-              const overwriteFields = ['title','description','location','price','price_currency','availability','sku','provider','raw'];
+              const overwriteFields = ['title','description','meta_description','location','price','price_currency','availability','sku','provider','raw'];
               for (const k of overwriteFields) {
                 if (e[k] !== undefined && e[k] !== null && e[k] !== '') merged[k] = e[k];
               }
