@@ -2588,9 +2588,21 @@ function classifyQuery(query) {
   console.log(`🔍 classifyQuery called with: "${query}"`);
   
   // COURSE QUERIES - Check these FIRST to ensure they go to clarification
-  if (lc === "what courses do you offer" || lc.includes("what courses do you offer")) {
-    console.log(`🎯 Course query detected: "${query}" - routing to clarification`);
-    return { type: 'clarification', reason: 'course_query_needs_clarification' };
+  const courseClarificationPatterns = [
+    /what courses do you offer/i,
+    /what photography courses do you have/i,
+    /what photography courses do you offer/i,
+    /what courses do you have/i,
+    /what courses/i,
+    /do you offer courses/i,
+    /do you do courses/i
+  ];
+  
+  for (const pattern of courseClarificationPatterns) {
+    if (pattern.test(query)) {
+      console.log(`🎯 Course query detected: "${query}" - routing to clarification`);
+      return { type: 'clarification', reason: 'course_query_needs_clarification' };
+    }
   }
   
   // CONTACT ALAN QUERIES - Check these SECOND to override workshop patterns
@@ -6559,6 +6571,61 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
   }
 }
 
+// Helper: Handle clarification queries (Low Complexity)
+async function handleClarificationQuery(client, query, classification, pageContext, res) {
+  try {
+    console.log(`🎯 Handling clarification query: "${query}" with reason: ${classification.reason}`);
+    
+    // Check if this is a course-related clarification
+    if (classification.reason === 'course_query_needs_clarification') {
+      console.log(`📚 Course clarification query detected: "${query}"`);
+      res.status(200).json({
+        ok: true,
+        type: 'course_clarification',
+        question: "Yes, we offer several photography courses! What type of course are you interested in?",
+        options: [
+          { text: "Beginners camera course", query: "beginners camera course" },
+          { text: "Photo editing course", query: "photo editing course" },
+          { text: "RPS mentoring course", query: "rps mentoring course" },
+          { text: "Private photography lessons", query: "private photography lessons" }
+        ],
+        debugInfo: {
+          version: "v1.3.20-course-clarification-fix",
+          intent: "clarification",
+          classification: "clarification",
+          reason: classification.reason
+        }
+      });
+      return true;
+    }
+    
+    // Handle other clarification types
+    console.log(`🔍 Generic clarification query: "${query}"`);
+    res.status(200).json({
+      ok: true,
+      type: 'clarification',
+      question: "I'd be happy to help you with your photography questions! Could you be more specific about what you're looking for?",
+      options: [
+        { text: "Photography workshops", query: "photography workshops" },
+        { text: "Photo editing courses", query: "photo editing courses" },
+        { text: "Private lessons", query: "private photography lessons" },
+        { text: "Equipment advice", query: "photography equipment advice" }
+      ],
+      debugInfo: {
+        version: "v1.3.20-generic-clarification",
+        intent: "clarification",
+        classification: "clarification",
+        reason: classification.reason
+      }
+    });
+    return true;
+    
+  } catch (error) {
+    console.error('Error in handleClarificationQuery:', error);
+    return false;
+  }
+}
+
 // Helper: Generate evidence-based answer (Low Complexity)
 function generateEvidenceBasedAnswer(query, articles, services, events) {
   const lc = query.toLowerCase();
@@ -7239,8 +7306,11 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
     console.log(`🎯 Workshop query detected: "${query}" - skipping RAG, routing to events`);
     const keywords = extractKeywords(query);
     return await handleEventsPipeline(client, query, keywords, pageContext, res, { bypassReason: 'workshop_query' });
+  } else if (classification.type === 'clarification') {
+    console.log(`🎯 Clarification query detected: "${query}" - routing to clarification`);
+    return await handleClarificationQuery(client, query, classification, pageContext, res);
   } else {
-    console.log(`🔍 Not a workshop query, proceeding to RAG for: "${query}"`);
+    console.log(`🔍 Not a workshop or clarification query, proceeding to RAG for: "${query}"`);
   }
   
   // RAG-FIRST APPROACH: Try to answer directly from database first
