@@ -1840,6 +1840,13 @@
           const result = await apiCall('/api/ingest', { url, dryRun }, { timeoutMs: TIMEOUT_MS });
           const category = categorize(url, result, source);
           
+          // Debug: Log meta description extraction results
+          if (result && result.meta_description) {
+            addResult(`🔍 Meta description extracted for ${url}: "${result.meta_description.substring(0, 100)}..."`, 'info');
+          } else if (result && result.ok) {
+            addResult(`⚠️ No meta description found for ${url}`, 'warning');
+          }
+          
           // Ensure category exists in urlScrapingStats
           if (!window.urlScrapingStats[category]) {
             window.urlScrapingStats[category] = { success: 0, failed: 0, skipped: 0 };

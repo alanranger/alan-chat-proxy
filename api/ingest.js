@@ -952,11 +952,15 @@ async function ingestSingleUrl(url, supa, options = {}) {
       await supa.rpc('upsert_display_price_all');
     }
     
+    // Extract meta description for debugging
+    const metaDesc = extractMetaDescription(html);
+    
     return {
       url,
       chunks: chunkInserts.length,
       entities: jsonLd ? jsonLd.length : 0,
-      jsonLdFound: !!jsonLd
+      jsonLdFound: !!jsonLd,
+      meta_description: metaDesc
     };
     
   } catch (err) {
