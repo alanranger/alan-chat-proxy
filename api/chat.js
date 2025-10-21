@@ -2587,7 +2587,13 @@ function classifyQuery(query) {
   const lc = query.toLowerCase();
   console.log(`🔍 classifyQuery called with: "${query}"`);
   
-  // CONTACT ALAN QUERIES - Check these FIRST to override workshop patterns
+  // COURSE QUERIES - Check these FIRST to ensure they go to clarification
+  if (lc === "what courses do you offer" || lc.includes("what courses do you offer")) {
+    console.log(`🎯 Course query detected: "${query}" - routing to clarification`);
+    return { type: 'clarification', reason: 'course_query_needs_clarification' };
+  }
+  
+  // CONTACT ALAN QUERIES - Check these SECOND to override workshop patterns
   const contactAlanPatterns = [
     /cancellation or refund policy for courses/i,
     /cancellation or refund policy for workshops/i,
