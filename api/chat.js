@@ -7362,7 +7362,7 @@ async function tryRagFirst(client, query) {
       console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
       answer = cleaned.join("\n\n");
       // Cap final answer length for UI readability
-      const MAX_LEN = 1200;
+      const MAX_LEN = 2000;
       if (answer.length > MAX_LEN) {
         answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
       }
@@ -7559,6 +7559,7 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
       answer_markdown: ragResult.answer,
       confidence: ragResult.confidence,
       sources: ragResult.sources,
+      structured: ragResult.structured,
       debugInfo: {
         intent: "rag_first",
         classification: "direct_answer",
