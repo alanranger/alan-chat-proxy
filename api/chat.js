@@ -7509,18 +7509,27 @@ async function tryRagFirst(client, query) {
           sources = [policyEntity.url];
           console.log(`✅ Generated policy-specific answer for terms and conditions query`);
         } else {
-          // Use sophisticated answer generation with FAQ data extraction
-          const primaryEntity = relevantEntities[0];
+          // Use the original RAG/DET system for intelligent answers
+          const queryWords = query.toLowerCase().split(" ").filter(w => w.length > 2);
+          const exactTerm = query.toLowerCase().replace(/^what\s+is\s+/, "").trim();
           
-          // Try to extract from JSON-LD FAQ data first (generic approach)
-          const jsonLdAnswer = extractAnswerFromJsonLd(primaryEntity, query);
-          if (jsonLdAnswer) {
-            answer = jsonLdAnswer;
-            console.log(`✅ Generated answer from JSON-LD FAQ data`);
+          // PRIORITY 1: Try to extract from content chunks (original RAG/DET)
+          const chunkAnswer = extractAnswerFromContentChunks(query, queryWords, exactTerm, results.chunks);
+          if (chunkAnswer) {
+            answer = chunkAnswer;
+            console.log(`✅ Generated answer from content chunks (RAG/DET)`);
           } else {
-            // Fallback to description
-            answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
-            console.log(`✅ Generated fallback answer from description`);
+            // PRIORITY 2: Try JSON-LD FAQ data from entities
+            const primaryEntity = relevantEntities[0];
+            const jsonLdAnswer = extractAnswerFromJsonLd(primaryEntity, query);
+            if (jsonLdAnswer) {
+              answer = jsonLdAnswer;
+              console.log(`✅ Generated answer from JSON-LD FAQ data`);
+            } else {
+              // PRIORITY 3: Fallback to description
+              answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
+              console.log(`✅ Generated fallback answer from description`);
+            }
           }
           
           type = "advice";
