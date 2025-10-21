@@ -2935,8 +2935,8 @@ function classifyQuery(query) {
     }
   }
   
-  // Default to clarification for unknown queries
-  return { type: 'clarification', reason: 'unknown_query_default' };
+  // Default to direct_answer for unknown queries - let RAG system try first
+  return { type: 'direct_answer', reason: 'unknown_query_default_to_rag' };
 }
 
 async function generateClarificationQuestion(query, client = null, pageContext = null) {
@@ -6572,7 +6572,7 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
     console.log(`🔍 Using RAG system for direct answer query: "${query}"`);
     const ragResult = await tryRagFirst(client, query);
     
-    if (ragResult.success && ragResult.confidence >= 0.6) {
+    if (ragResult.success && ragResult.confidence >= 0.3) {
       console.log(`✅ RAG success for direct answer query: confidence=${ragResult.confidence}`);
       res.status(200).json({
         ok: true,
@@ -7331,8 +7331,11 @@ async function tryRagFirst(client, query) {
         if (!primaryKeyword) return c.__score > 0;
         const url = (c.url||"").toLowerCase();
         const title = (c.title||"").toLowerCase();
-        // Require primary noun in URL or TITLE (not just incidental text)
-        let hasPrimaryStrong = url.includes(primaryKeyword) || title.includes(primaryKeyword);
+        const text = (c.chunk_text||"").toLowerCase();
+        
+        // Check if primary keyword appears in URL, title, or text content
+        let hasPrimaryStrong = url.includes(primaryKeyword) || title.includes(primaryKeyword) || text.includes(primaryKeyword);
+        
         // Extra hardening for equipment-style nouns
         const equipNouns = ["tripod","ball head","ballhead","head","gitzo","benro","manfrotto","sirui"];
         if (equipNouns.some(n => primaryKeyword.includes(n))) {
@@ -7347,6 +7350,12 @@ async function tryRagFirst(client, query) {
       .slice(0, 5);
     
     console.log(`📄 Found ${results.chunks.length} relevant chunks`);
+    
+    // Debug logging
+    console.log(`🔍 DEBUG: Found ${results.chunks.length} chunks after scoring and filtering`);
+    if (results.chunks.length > 0) {
+      console.log(`🔍 DEBUG: First chunk preview: "${results.chunks[0].chunk_text?.substring(0, 100)}..."`);
+    }
     
     // Search page_entities for events/services using keywords
     let entities = [];
@@ -7626,7 +7635,7 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
   const ragResult = await tryRagFirst(client, query);
   console.log(`📊 RAG Result: success=${ragResult.success}, confidence=${ragResult.confidence}, answerLength=${ragResult.answer?.length || 0}`);
   
-  if (ragResult.success && ragResult.confidence >= 0.6) {
+  if (ragResult.success && ragResult.confidence >= 0.3) {
     console.log(`✅ RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
     
     // Use RAG sources as-is (generic approach)
