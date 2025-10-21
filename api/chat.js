@@ -7037,6 +7037,21 @@ async function tryRagFirst(client, query) {
     text = text.replace(/&#x7D;/g, "}");
     text = text.replace(/&#x7E;/g, "~");
     
+    // Fix specific problematic patterns
+    text = text.replace(/\?\?\?/g, "'"); // Replace ??? with apostrophe
+    text = text.replace(/wi\?\?\?/g, "with"); // Fix truncated "with"
+    text = text.replace(/That\?\?\?s/g, "That's");
+    text = text.replace(/doesn\?\?\?t/g, "doesn't");
+    text = text.replace(/don\?\?\?t/g, "don't");
+    text = text.replace(/can\?\?\?t/g, "can't");
+    text = text.replace(/won\?\?\?t/g, "won't");
+    text = text.replace(/I\?\?\?m/g, "I'm");
+    text = text.replace(/you\?\?\?re/g, "you're");
+    text = text.replace(/we\?\?\?re/g, "we're");
+    text = text.replace(/they\?\?\?re/g, "they're");
+    text = text.replace(/it\?\?\?s/g, "it's");
+    text = text.replace(/Alan\?\?\?s/g, "Alan's");
+    
     // Remove navigation and UI elements
     text = text.replace(/^\/Cart[\s\S]*?Sign In My Account[\s\S]*?(?=\n\n|$)/gi, "");
     text = text.replace(/Back\s+(Workshops|Services|Gallery|Book|About|Blog)[\s\S]*?(?=\n\n|$)/gi, "");
@@ -7102,6 +7117,9 @@ async function tryRagFirst(client, query) {
         result = result.charAt(0).toUpperCase() + result.slice(1);
       }
       
+      // Add proper formatting with line breaks and bullet points
+      result = formatRagText(result);
+      
       console.log(`🧹 Final result: "${result.substring(0, 100)}..."`);
       return result;
     } else {
@@ -7112,14 +7130,50 @@ async function tryRagFirst(client, query) {
         if (result.match(/^[a-z]/)) {
           result = result.charAt(0).toUpperCase() + result.slice(1);
         }
+        result = formatRagText(result);
         console.log(`🧹 Fallback result: "${result.substring(0, 100)}..."`);
         return result;
       }
       const finalResult = text.trim().substring(0, 800);
-      console.log(`🧹 Final fallback: "${finalResult.substring(0, 100)}..."`);
-      return finalResult;
+      const formattedResult = formatRagText(finalResult);
+      console.log(`🧹 Final fallback: "${formattedResult.substring(0, 100)}..."`);
+      return formattedResult;
     }
   };
+
+  // Helper function to format RAG text with proper line breaks and bullet points
+  function formatRagText(text) {
+    if (!text) return "";
+    
+    // Fix truncated words at the end
+    text = text.replace(/wi\.\.\.$/, "with you.");
+    text = text.replace(/\.\.\.$/, ".");
+    
+    // Add line breaks before bullet points and sections
+    text = text.replace(/\* CONTENT/g, "\n\n**CONTENT**");
+    text = text.replace(/\* Terms:/g, "\n\n**Terms:**");
+    text = text.replace(/\* Method:/g, "\n\n**Method:**");
+    text = text.replace(/\* /g, "\n• ");
+    
+    // Add line breaks before common section headers
+    text = text.replace(/([.!?])\s*([A-Z][a-z]+ [A-Z][a-z]+:)/g, "$1\n\n**$2**");
+    text = text.replace(/([.!?])\s*(Course:)/g, "$1\n\n**$2**");
+    text = text.replace(/([.!?])\s*(Terms:)/g, "$1\n\n**$2**");
+    text = text.replace(/([.!?])\s*(Method:)/g, "$1\n\n**$2**");
+    
+    // Add line breaks for long sentences
+    text = text.replace(/([.!?])\s*([A-Z][a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+)/g, "$1\n\n$2");
+    
+    // Clean up multiple line breaks
+    text = text.replace(/\n{3,}/g, "\n\n");
+    
+    // Ensure proper sentence endings
+    if (!text.match(/[.!?]$/)) {
+      text = text.trim() + ".";
+    }
+    
+    return text.trim();
+  }
 
   const results = {
     chunks: [],
@@ -7422,6 +7476,13 @@ async function tryRagFirst(client, query) {
       answer: answer,
       type: type,
       sources: sources,
+      structured: {
+        intent: type,
+        sources: sources,
+        events: [],
+        products: [],
+        articles: []
+      },
       totalMatches: results.totalMatches,
       chunksFound: results.chunks.length,
       entitiesFound: results.entities.length
