@@ -7076,6 +7076,14 @@ async function tryRagFirst(client, query) {
     text = text.replace(/^\s*ed for updated portfolios and images\s*/gi, "");
     text = text.replace(/^\s*[a-z]+\s+for\s+updated\s+portfolios\s*/gi, "");
     
+    // Remove unrelated event information
+    text = text.replace(/Earlier Event:.*?Later Event:.*?$/gi, "");
+    text = text.replace(/Earlier Event:.*?$/gi, "");
+    text = text.replace(/Later Event:.*?$/gi, "");
+    text = text.replace(/\d+ November.*?$/gi, "");
+    text = text.replace(/\d+ December.*?$/gi, "");
+    text = text.replace(/Camera Courses For Beginners.*?$/gi, "");
+    
     // Clean up truncated text that starts mid-sentence
     if (text.match(/^[a-z]/)) {
       // If text starts with lowercase, try to find a better starting point
@@ -7166,6 +7174,11 @@ async function tryRagFirst(client, query) {
     text = text.replace(/\* Terms:/g, "\n\n**Terms:**");
     text = text.replace(/\* Method:/g, "\n\n**Method:**");
     text = text.replace(/\* /g, "\n• ");
+    
+    // Fix malformed markdown
+    text = text.replace(/\*\*Terms:\*/g, "**Terms:**");
+    text = text.replace(/\*\*Method:\*/g, "**Method:**");
+    text = text.replace(/\*\*CONTENT\*/g, "**CONTENT**");
     
     // Add line breaks before common section headers
     text = text.replace(/([.!?])\s*([A-Z][a-z]+ [A-Z][a-z]+:)/g, "$1\n\n**$2**");
