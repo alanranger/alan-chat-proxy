@@ -1100,12 +1100,12 @@ function getPrivacyDataProtectionAnswer(lc) {
   return null;
   }
   
-// Generate related articles based on query topic
+// Generate related articles based on query topic - now generic for all questions
 function generateRelatedArticles(query) {
   const lc = query.toLowerCase();
   
   // Tripod and Equipment articles
-  if (lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment") || lc.includes("gear")) {
+  if (lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment") || lc.includes("gear") || lc.includes("camera") || lc.includes("lens")) {
     return [
       {
         title: "Recommended Lightweight Tripods | Professional Guide",
@@ -1135,8 +1135,101 @@ function generateRelatedArticles(query) {
     ];
   }
   
-  // RPS Mentoring articles
-  if (lc.includes("rps") || lc.includes("mentoring") || lc.includes("distinctions")) {
+  // Photography technique articles
+  if (lc.includes("aperture") || lc.includes("iso") || lc.includes("shutter") || lc.includes("exposure") || lc.includes("composition") || lc.includes("lighting")) {
+    return [
+      {
+        title: "Understanding Aperture in Photography | Complete Guide",
+        url: "https://www.alanranger.com/blog-on-photography/understanding-aperture-in-photography",
+        type: "Photography Guide"
+      },
+      {
+        title: "ISO Settings Explained | Professional Photography Guide",
+        url: "https://www.alanranger.com/blog-on-photography/iso-settings-explained",
+        type: "Photography Guide"
+      },
+      {
+        title: "Shutter Speed Guide | Freezing Motion and Creating Blur",
+        url: "https://www.alanranger.com/blog-on-photography/shutter-speed-guide",
+        type: "Photography Guide"
+      },
+      {
+        title: "Composition Rules in Photography | Rule of Thirds and Beyond",
+        url: "https://www.alanranger.com/blog-on-photography/composition-rules-in-photography",
+        type: "Photography Guide"
+      },
+      {
+        title: "Natural Light Photography Tips | Golden Hour and Blue Hour",
+        url: "https://www.alanranger.com/blog-on-photography/natural-light-photography-tips",
+        type: "Photography Guide"
+      }
+    ];
+  }
+  
+  // Workshop and course articles
+  if (lc.includes("workshop") || lc.includes("course") || lc.includes("class") || lc.includes("lesson") || lc.includes("training")) {
+    return [
+      {
+        title: "Beginners Photography Course",
+        url: "https://www.alanranger.com/beginners-photography-course",
+        type: "Course Information"
+      },
+      {
+        title: "Photo Workshops Calendar",
+        url: "https://www.alanranger.com/workshops",
+        type: "Workshop Information"
+      },
+      {
+        title: "Private Photography Lessons - Face-To-Face",
+        url: "https://www.alanranger.com/private-photography-lessons",
+        type: "Course Information"
+      },
+      {
+        title: "RPS Courses - Mentoring Guidance on gaining a LRPS or ARPS",
+        url: "https://www.alanranger.com/rps-courses-mentoring-distinctions",
+        type: "Course Information"
+      },
+      {
+        title: "Beginners Lightroom Course",
+        url: "https://www.alanranger.com/beginners-lightroom-course",
+        type: "Course Information"
+      }
+    ];
+  }
+  
+  // Landscape and nature photography articles
+  if (lc.includes("landscape") || lc.includes("nature") || lc.includes("bluebell") || lc.includes("woodland") || lc.includes("sunrise") || lc.includes("sunset")) {
+    return [
+      {
+        title: "Capturing Spring's Blue Charm: Top Bluebell Woodland Tips",
+        url: "https://www.alanranger.com/blog-on-photography/capturing-springs-blue-charm-top-bluebell-woodland-tips",
+        type: "Photography Guide"
+      },
+      {
+        title: "Top Tips for photographing bluebells | A Professional Guide",
+        url: "https://www.alanranger.com/blog-on-photography/top-tips-for-photographing-bluebells",
+        type: "Photography Guide"
+      },
+      {
+        title: "Landscape Photography Workshop Locations",
+        url: "https://www.alanranger.com/workshops",
+        type: "Workshop Information"
+      },
+      {
+        title: "Sunrise Photography Tips | Golden Hour Techniques",
+        url: "https://www.alanranger.com/blog-on-photography/sunrise-photography-tips",
+        type: "Photography Guide"
+      },
+      {
+        title: "Wales Photography Workshops | Snowdonia and Pembrokeshire",
+        url: "https://www.alanranger.com/workshops",
+        type: "Workshop Information"
+      }
+    ];
+  }
+  
+  // RPS and mentoring articles
+  if (lc.includes("rps") || lc.includes("mentoring") || lc.includes("distinctions") || lc.includes("private") || lc.includes("1-2-1")) {
     return [
       {
         title: "RPS Courses - Mentoring Guidance on gaining a LRPS or ARPS",
@@ -1145,39 +1238,28 @@ function generateRelatedArticles(query) {
       },
       {
         title: "Private Photography Lessons - Face-To-Face",
-        url: "https://www.alanranger.com/private-photography-lessons", 
+        url: "https://www.alanranger.com/private-photography-lessons",
         type: "Course Information"
       },
       {
         title: "Monthly Mentoring Assignments",
         url: "https://www.alanranger.com/monthly-mentoring-assignments",
         type: "Course Information"
-      }
-    ];
-  }
-  
-  // Private Lessons articles
-  if (lc.includes("private") || lc.includes("1-2-1") || lc.includes("face-to-face")) {
-    return [
-      {
-        title: "Private Photography Lessons - Face-To-Face",
-        url: "https://www.alanranger.com/private-photography-lessons",
-        type: "Course Information"
-      },
-      {
-        title: "RPS Courses - Mentoring Guidance on gaining a LRPS or ARPS", 
-        url: "https://www.alanranger.com/rps-courses-mentoring-distinctions",
-        type: "Course Information"
       },
       {
         title: "Beginners Photography Course",
         url: "https://www.alanranger.com/beginners-photography-course",
         type: "Course Information"
+      },
+      {
+        title: "Photography Mentoring and Support",
+        url: "https://www.alanranger.com/photography-tuition-services",
+        type: "Course Information"
       }
     ];
   }
   
-  // General photography articles
+  // General photography articles - fallback for all other queries
   return [
     {
       title: "Beginners Photography Course",
@@ -1193,6 +1275,16 @@ function generateRelatedArticles(query) {
       title: "Photography Equipment Recommendations",
       url: "https://www.alanranger.com/photography-equipment-recommendations",
       type: "Photography Guide"
+    },
+    {
+      title: "Understanding Aperture in Photography | Complete Guide",
+      url: "https://www.alanranger.com/blog-on-photography/understanding-aperture-in-photography",
+      type: "Photography Guide"
+    },
+    {
+      title: "Private Photography Lessons - Face-To-Face",
+      url: "https://www.alanranger.com/private-photography-lessons",
+      type: "Course Information"
     }
   ];
 }
