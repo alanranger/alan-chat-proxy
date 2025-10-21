@@ -7346,30 +7346,22 @@ async function tryRagFirst(client, query) {
       searchKeywords.push('about');
     }
     
-    for (const keyword of searchKeywords) {
-      console.log(`🔍 Searching for keyword: "${keyword}"`);
-      const { data: keywordEntities, error: entitiesError } = await client
-        .from('page_entities')
-        .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
-        .or(`title.ilike.%${keyword}%,description.ilike.%${keyword}%,location.ilike.%${keyword}%`)
-        .limit(15);
-      
-      if (entitiesError) {
-        console.error(`❌ Entity search error for keyword "${keyword}":`, entitiesError);
-      } else if (keywordEntities) {
-        console.log(`📄 Found ${keywordEntities.length} entities for keyword "${keyword}"`);
-        
-            // For now, skip HTML extraction due to permissions issues
-            // TODO: Fix permissions for page_html table access
-            console.log(`📄 Processing ${keywordEntities.length} entities for keyword "${keyword}"`);
-            
-            // Use the description field as-is (no hardcoded fallbacks)
-        
-        keywordEntities.forEach(e => console.log(`  - "${e.title}" (${e.kind})`));
-        entities = [...entities, ...keywordEntities];
-      } else {
-        console.log(`📄 No entities found for keyword "${keyword}"`);
-      }
+    // Search for all keywords at once with higher limit for better coverage
+    console.log(`🔍 Searching for all keywords: ${searchKeywords.join(', ')}`);
+    const { data: keywordEntities, error: entitiesError } = await client
+      .from('page_entities')
+      .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
+      .or(searchKeywords.map(k => `title.ilike.%${k}%,description.ilike.%${k}%,location.ilike.%${k}%`).join(','))
+      .limit(25);
+    
+    if (entitiesError) {
+      console.error(`❌ Entity search error:`, entitiesError);
+    } else if (keywordEntities) {
+      console.log(`📄 Found ${keywordEntities.length} entities for all keywords`);
+      keywordEntities.forEach(e => console.log(`  - "${e.title}" (${e.kind})`));
+      entities = [...entities, ...keywordEntities];
+    } else {
+      console.log(`📄 No entities found for keywords`);
     }
     
     // Also try the full query
@@ -7377,7 +7369,7 @@ async function tryRagFirst(client, query) {
       .from('page_entities')
       .select('url, title, description, meta_description, location, date_start, kind')
       .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
-      .limit(10);
+      .limit(15);
     
     if (!fullQueryEntitiesError && fullQueryEntities) {
       entities = [...entities, ...fullQueryEntities];
