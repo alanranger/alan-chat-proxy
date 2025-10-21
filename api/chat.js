@@ -6979,19 +6979,54 @@ async function tryRagFirst(client, query) {
     if (!raw) return "";
     let text = String(raw);
     
-    // Only remove obvious navigation at the very start - be very conservative
+    // Remove URL-encoded image paths and artifacts at the start
+    text = text.replace(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)[&\s]*/gi, "");
+    text = text.replace(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)&url=[^\s]*/gi, "");
+    
+    // Remove URL-encoded content and HTML artifacts
+    text = text.replace(/&url=https?%3A%2F%2F[^\s]*/gi, "");
+    text = text.replace(/https?%3A%2F%2F[^\s]*/gi, "");
+    
+    // Remove unrendered markdown links like [/rps-courses-mentoring-distinctions]
+    text = text.replace(/\[\/[^\]]+\]/g, "");
+    
+    // Remove HTML entities and encoding artifacts
+    text = text.replace(/&amp;/g, "&");
+    text = text.replace(/&lt;/g, "<");
+    text = text.replace(/&gt;/g, ">");
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/&#39;/g, "'");
+    text = text.replace(/&nbsp;/g, " ");
+    
+    // Remove navigation and UI elements
     text = text.replace(/^\/Cart[\s\S]*?Sign In My Account[\s\S]*?(?=\n\n|$)/gi, "");
-    
-    // Remove only very specific navigation patterns
     text = text.replace(/Back\s+(Workshops|Services|Gallery|Book|About|Blog)[\s\S]*?(?=\n\n|$)/gi, "");
+    text = text.replace(/Home\s*\/\s*About\s*\/\s*Services\s*\/\s*Gallery\s*\/\s*Contact/gi, "");
+    text = text.replace(/Privacy\s*Policy\s*\/\s*Terms\s*of\s*Service/gi, "");
     
-    // Strip external social links but keep alanranger.com links
+    // Remove external social links but keep alanranger.com links
     text = text.replace(/https?:\/\/(?!www\.alanranger\.com)\S+/g, "");
     text = text.replace(/Facebook\d*|LinkedIn\d*|Tumblr|Pinterest\d*/gi, "");
     
-    // Remove only exact navigation elements
-    text = text.replace(/Home\s*\/\s*About\s*\/\s*Services\s*\/\s*Gallery\s*\/\s*Contact/gi, "");
-    text = text.replace(/Privacy\s*Policy\s*\/\s*Terms\s*of\s*Service/gi, "");
+    // Remove shopping cart and e-commerce artifacts
+    text = text.replace(/Add to Cart|Only \d+ available|Select Course|Posted in/gi, "");
+    text = text.replace(/Course:\s*Select Course[\s\S]*?(?=\n\n|$)/gi, "");
+    
+    // Clean up truncated text that starts mid-sentence
+    if (text.match(/^[a-z]/)) {
+      // If text starts with lowercase, try to find a better starting point
+      const sentences = text.split(/[.!?]+/);
+      if (sentences.length > 1) {
+        // Find the first complete sentence
+        for (let i = 1; i < sentences.length; i++) {
+          const candidate = sentences.slice(i).join('. ').trim();
+          if (candidate.length > 50 && candidate.match(/^[A-Z]/)) {
+            text = candidate;
+            break;
+          }
+        }
+      }
+    }
     
     // Collapse multiple dashes/lines used as separators
     text = text.replace(/-{4,}/g, "\n");
@@ -6999,23 +7034,40 @@ async function tryRagFirst(client, query) {
     // Remove excessive whitespace and normalize
     text = text.replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n");
     
-    // Much more conservative filtering - only remove obvious junk
+    // Filter out malformed content and find meaningful paragraphs
     const parts = text.split(/\n\n+/).filter(p => {
       const trimmed = p.trim();
-      return trimmed.length > 10 && // Very low minimum length
-             !trimmed.match(/^(Home|About|Services|Gallery|Contact|Privacy|Terms)$/i) && // Only exact matches
-             !trimmed.match(/^[0-9\s\-\.]+$/) && // Skip pure numbers/dashes
-             !trimmed.match(/^\/[A-Za-z\s\[\]]+$/i) && // Skip pure navigation paths
-             trimmed.length < 1000; // Higher max length
+      return trimmed.length > 20 && // Minimum meaningful length
+             !trimmed.match(/^(Home|About|Services|Gallery|Contact|Privacy|Terms)$/i) &&
+             !trimmed.match(/^[0-9\s\-\.]+$/) &&
+             !trimmed.match(/^\/[A-Za-z\s\[\]]+$/i) &&
+             !trimmed.match(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)/gi) && // Skip image filenames
+             !trimmed.match(/^[A-Z\s]+$/i) && // Skip all-caps headers
+             trimmed.length < 1000;
     });
     
-    // Return first 2-3 meaningful paragraphs, or if none found, return the first substantial paragraph
+    // Return the best content
     if (parts.length > 0) {
-      return parts.slice(0, 3).join("\n\n");
+      // Join meaningful paragraphs and ensure proper formatting
+      let result = parts.slice(0, 3).join("\n\n");
+      
+      // Ensure the result starts with a proper sentence
+      if (result.match(/^[a-z]/)) {
+        result = result.charAt(0).toUpperCase() + result.slice(1);
+      }
+      
+      return result;
     } else {
-      // Fallback: return the first substantial paragraph from the original text
+      // Fallback: clean and return first substantial content
       const fallbackParts = text.split(/\n\n+/).filter(p => p.trim().length > 30);
-      return fallbackParts.length > 0 ? fallbackParts[0].trim() : text.trim().substring(0, 800);
+      if (fallbackParts.length > 0) {
+        let result = fallbackParts[0].trim();
+        if (result.match(/^[a-z]/)) {
+          result = result.charAt(0).toUpperCase() + result.slice(1);
+        }
+        return result;
+      }
+      return text.trim().substring(0, 800);
     }
   };
 

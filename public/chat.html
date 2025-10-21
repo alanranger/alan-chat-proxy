@@ -1925,6 +1925,17 @@ function buildDefaultPillsIfMissing(s){
   if(prod && (prod.page_url||prod.url)) pills.push({label:'View Course', url: prod.page_url||prod.url, priority:true});
   const art = (s.articles||[])[0];
   if(art && (art.page_url||art.source_url||art.url)) pills.push({label:'Read Guide', url: art.page_url||art.source_url||art.url});
+  
+  // Add source URL pills from RAG responses
+  if(s.sources && s.sources.length > 0) {
+    s.sources.forEach((source, index) => {
+      if(source && source.includes('alanranger.com')) {
+        const label = s.sources.length === 1 ? 'More Info' : `More Info ${index + 1}`;
+        pills.push({label: label, url: source, priority: true});
+      }
+    });
+  }
+  
   if(!pills.length && s.intent==='events') pills.push({label:'All Workshops', url:'https://www.alanranger.com/workshops'});
   return pills;
 }
