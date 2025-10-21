@@ -147,7 +147,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 }
 
 .article-title a {
-  color: #10b981;
+  color: #10b981 !important;
   text-decoration: none;
 }
 
@@ -210,8 +210,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 }
 
 .article-more-info {
-  background: #F15A22;
-  color: #0b0f16;
+  background: #F15A22 !important;
+  color: #0b0f16 !important;
   padding: 8px 16px;
   border-radius: 4px;
   font-size: 12px;
@@ -1679,7 +1679,6 @@ function renderArticlesBlock(structured, query){
           <div class="article-details">
             ${categoryTags ? `<div class="article-categories">${categoryTags}</div>` : ''}
             <div class="article-meta">
-              <span class="article-source">📖 Photography Guide</span>
               ${displayDate ? `<span class="article-date">📅 ${displayDate}</span>` : ''}
             </div>
           </div>
