@@ -1560,7 +1560,7 @@ function articleTitle(a){
   
   // Final fallback
   if (!title || /^alan ranger photography$/i.test(title)) {
-    title = 'Photography Guide';
+    title = 'Photography Article';
   }
   
   return title;
@@ -1676,12 +1676,12 @@ function renderArticlesBlock(structured, query){
       if (tags) categoryTags += `<span class="article-tags"># ${tags}</span>`;
     }
     
-    // Get meta description (first 160 chars) - use actual description field, not title
-    const metaDescription = a.meta_description || a.raw?.meta_description || a.json_ld_data?.description || a.description || '';
-    const shortDescription = metaDescription ? metaDescription.substring(0, 160).trim() + (metaDescription.length > 160 ? '...' : '') : '';
+    // Get meta description (first 160 chars) - use description field that exists
+    const metaDescription = a.description || a.raw?.description || a.json_ld_data?.description || '';
+    const shortDescription = metaDescription && metaDescription !== t ? metaDescription.substring(0, 160).trim() + (metaDescription.length > 160 ? '...' : '') : '';
     
-    // Get actual publish date (not last_seen)
-    const publishDate = a.publish_date || a.date_published || a.raw?.datePublished || '';
+    // Get actual publish date (fallback to last_seen if no publish date)
+    const publishDate = a.publish_date || a.date_published || a.raw?.datePublished || a.last_seen || '';
     const displayPublishDate = publishDate ? new Date(publishDate).toLocaleDateString('en-GB', { 
       day: 'numeric', 
       month: 'short', 
