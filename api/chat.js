@@ -7350,10 +7350,7 @@ async function tryRagFirst(client, query) {
       console.log(`🔍 Searching for keyword: "${keyword}"`);
       const { data: keywordEntities, error: entitiesError } = await client
         .from('page_entities')
-        .select(`
-          url, title, description, location, date_start, kind, publish_date, last_seen,
-          page_html!inner(html_content)
-        `)
+        .select('url, title, description, location, date_start, kind, publish_date, last_seen')
         .or(`title.ilike.%${keyword}%,description.ilike.%${keyword}%,location.ilike.%${keyword}%`)
         .limit(5);
       
@@ -7361,6 +7358,22 @@ async function tryRagFirst(client, query) {
         console.error(`❌ Entity search error for keyword "${keyword}":`, entitiesError);
       } else if (keywordEntities) {
         console.log(`📄 Found ${keywordEntities.length} entities for keyword "${keyword}"`);
+        
+        // Get HTML content for each entity to extract meta descriptions
+        for (const entity of keywordEntities) {
+          if (entity.url) {
+            const { data: htmlData, error: htmlError } = await client
+              .from('page_html')
+              .select('html_content')
+              .eq('url', entity.url)
+              .single();
+            
+            if (!htmlError && htmlData) {
+              entity.page_html = htmlData;
+            }
+          }
+        }
+        
         keywordEntities.forEach(e => console.log(`  - "${e.title}" (${e.kind})`));
         entities = [...entities, ...keywordEntities];
       } else {
