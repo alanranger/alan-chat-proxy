@@ -7369,6 +7369,7 @@ async function tryRagFirst(client, query) {
               .single();
             
             if (!htmlError && htmlData && htmlData.html_content) {
+              console.log(`🔍 Found HTML content for ${entity.url}, length: ${htmlData.html_content.length}`);
               // Extract meta description from HTML
               const metaMatch = htmlData.html_content.match(/<meta name="description" content="([^"]*)"[^>]*>/i);
               if (metaMatch && metaMatch[1]) {
@@ -7380,7 +7381,12 @@ async function tryRagFirst(client, query) {
                   .replace(/&gt;/g, '>')
                   .replace(/\r\n/g, ' ')
                   .trim();
+                console.log(`✅ Extracted meta description: "${entity.meta_description}"`);
+              } else {
+                console.log(`❌ No meta description found in HTML for ${entity.url}`);
               }
+            } else {
+              console.log(`❌ No HTML content found for ${entity.url}, error: ${htmlError?.message || 'none'}`);
             }
           }
         }
