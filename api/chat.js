@@ -7559,7 +7559,7 @@ async function tryRagFirst(client, query) {
         sources: sources,
         events: [],
         products: [],
-        articles: []
+        articles: results.entities || []
       },
       totalMatches: results.totalMatches,
       chunksFound: results.chunks.length,
