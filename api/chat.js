@@ -7451,16 +7451,7 @@ async function tryRagFirst(client, query) {
         const title = (entity.title || '').toLowerCase();
         const description = (entity.description || '').toLowerCase();
         
-        // For "who is alan ranger" queries, only use entities that are actually about Alan
-        if (/who.*alan|alan.*ranger|background|experience/i.test(lcQuery)) {
-          console.log(`🔍 Checking entity: "${entity.title}"`);
-          const isRelevant = (title.includes('alan') && (title.includes('about') || title.includes('background') || title.includes('experience') || title.includes('reviews'))) ||
-                 (description && description.includes('alan') && (description.includes('about') || description.includes('background') || description.includes('experience')));
-          console.log(`🔍 Entity "${entity.title}" relevant: ${isRelevant}`);
-          return isRelevant;
-        }
-        
-        // For other queries, use all entities
+        // Use all entities - no hardcoded filtering
         return true;
       });
       
@@ -7528,13 +7519,7 @@ async function tryRagFirst(client, query) {
       console.log(`⚠️ No answer generated or generic response detected, providing fallback`);
       const lcQuery = query.toLowerCase();
       
-      // Override the answer and type for specific queries
-      if (/who.*alan|alan.*ranger|background|experience/i.test(lcQuery)) {
-        answer = `Alan Ranger is a BIPP (British Institute of Professional Photography) qualified photographer with over 20 years of teaching experience and 580+ 5-star reviews.\n\n**His Background:**\n• BIPP Qualified Professional Photographer\n• 20+ years of teaching experience\n• Specializes in landscape photography\n• Based in Coventry, UK\n\n**What He Offers:**\n• Landscape photography workshops (Wales, Devon, Yorkshire)\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n• Free online photography course\n\n**Reviews:** 4.9/5 stars from students and clients\n\n*Learn more about Alan: https://www.alanranger.com/about*`;
-        type = "advice";
-        // Don't show events for "about Alan" queries
-        console.log(`✅ Override: Provided comprehensive Alan background info`);
-      }
+      // No hardcoded overrides - let the system work naturally
       
       if (/tripod|equipment|gear|camera|lens/i.test(lcQuery)) {
         answer = `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`;
@@ -7542,11 +7527,6 @@ async function tryRagFirst(client, query) {
       } else if (/refund|cancellation|policy/i.test(lcQuery)) {
         answer = `Alan Ranger has a clear cancellation and refund policy for all courses and workshops. Here are the key details:\n\n**Cancellation Policy:**\n• Full refund if cancelled 14+ days before the event\n• 50% refund if cancelled 7-13 days before\n• No refund for cancellations within 7 days\n\n**Rescheduling:**\n• Free rescheduling if requested 7+ days in advance\n• Weather-related cancellations are fully refundable\n\nFor specific details or to discuss your situation, please contact Alan directly.\n\n*Contact Alan: https://www.alanranger.com/contact*`;
         type = "advice";
-      } else if (/who.*alan|alan.*ranger|background|experience/i.test(lcQuery)) {
-        answer = `Alan Ranger is a BIPP (British Institute of Professional Photography) qualified photographer with over 20 years of teaching experience and 580+ 5-star reviews.\n\n**His Background:**\n• BIPP Qualified Professional Photographer\n• 20+ years of teaching experience\n• Specializes in landscape photography\n• Based in Coventry, UK\n\n**What He Offers:**\n• Landscape photography workshops (Wales, Devon, Yorkshire)\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n• Free online photography course\n\n**Reviews:** 4.9/5 stars from students and clients\n\n*Learn more about Alan: https://www.alanranger.com/about*`;
-        type = "advice";
-        // Don't show events for "about Alan" queries
-        events = [];
       } else {
         answer = `I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*`;
         type = "advice";
