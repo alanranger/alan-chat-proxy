@@ -124,6 +124,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
   border-radius: 8px;
   padding: 16px;
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .article-card:hover {
@@ -201,9 +204,10 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 .article-meta {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
-  margin-top: 8px;
+  margin-top: auto;
+  padding-top: 8px;
 }
 
 .article-source {
