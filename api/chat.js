@@ -7646,14 +7646,18 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
     
     // Override sources for specific queries to use correct URLs
     let finalSources = ragResult.sources;
+    let finalStructured = ragResult.structured;
     const lc = query.toLowerCase();
     
     if (lc.includes("rps mentoring") || lc.includes("rps course") || lc.includes("rps distinctions")) {
       finalSources = ["https://www.alanranger.com/rps-courses-mentoring-distinctions"];
+      finalStructured.sources = ["https://www.alanranger.com/rps-courses-mentoring-distinctions"];
     } else if (lc.includes("private photography lessons") || lc.includes("private lessons") || lc.includes("1-2-1")) {
       finalSources = ["https://www.alanranger.com/private-photography-lessons"];
+      finalStructured.sources = ["https://www.alanranger.com/private-photography-lessons"];
     } else if (lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment")) {
       finalSources = ["https://www.alanranger.com/photography-equipment-recommendations"];
+      finalStructured.sources = ["https://www.alanranger.com/photography-equipment-recommendations"];
     }
     
     return res.status(200).json({
@@ -7663,7 +7667,7 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
       answer_markdown: ragResult.answer,
       confidence: ragResult.confidence,
       sources: finalSources,
-      structured: ragResult.structured,
+      structured: finalStructured,
       relatedArticles: relatedArticles,
       debugInfo: {
         intent: "rag_first",
