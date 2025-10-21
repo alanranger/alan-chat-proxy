@@ -2335,7 +2335,7 @@ async function sendQueryWithContext(query, originalQuery) {
     closeTyping();
     
     // Handle clarification responses
-    if (data && data.ok && data.type === "clarification") {
+    if (data && data.ok && (data.type === "clarification" || data.type === "course_clarification")) {
       console.log('Received clarification response:', data);
       renderClarification(data);
       gaTrack('clarification_rendered', { ms: Math.round(performance.now()-t0) });
@@ -2402,7 +2402,7 @@ async function sendQuery(query){
     closeTyping();
     
     // Handle clarification responses
-    if (data && data.ok && data.type === "clarification") {
+    if (data && data.ok && (data.type === "clarification" || data.type === "course_clarification")) {
       console.log('Received clarification response:', data);
       renderClarification(data);
       gaTrack('clarification_rendered', { ms: Math.round(performance.now()-t0) });
