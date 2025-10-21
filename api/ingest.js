@@ -892,9 +892,11 @@ async function ingestSingleUrl(url, supa, options = {}) {
             if (updErr) throw new Error(`Entity update failed: ${updErr.message}`);
           } else {
             // Try insert; if unique constraint blocks, fallback to update existing natural key
+            console.log(`DEBUG: Inserting entity for ${e.url} with meta_description:`, e.meta_description ? `"${e.meta_description.substring(0, 50)}..."` : 'null');
             const { error: insErr } = await supa.from('page_entities').insert([e]);
             if (insErr) {
               // Fallback: update by (url, kind)
+              console.log(`DEBUG: Updating entity for ${e.url} with meta_description:`, e.meta_description ? `"${e.meta_description.substring(0, 50)}..."` : 'null');
               const { error: updErr } = await supa
                 .from('page_entities')
                 .update({
@@ -954,6 +956,9 @@ async function ingestSingleUrl(url, supa, options = {}) {
     
     // Extract meta description for debugging
     const metaDesc = extractMetaDescription(html);
+    
+    // Debug: Log meta description extraction
+    console.log(`DEBUG: Meta description for ${url}:`, metaDesc ? `"${metaDesc.substring(0, 100)}..."` : 'null');
     
     return {
       url,
