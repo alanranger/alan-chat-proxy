@@ -1979,7 +1979,7 @@ function setupConfidencePillHandlers(confId, payload, s, heuristic, __rounded) {
       box.innerHTML = `<button class="close" aria-label="Close">×</button><h4>Confidence reasoning</h4><pre class="json"></pre><div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button id="reason-copy" class="send" style="padding:6px 10px">Copy log</button></div>`;
       
       const pre = box.querySelector('pre');
-      const data = { structured: s, debug: payload.debug||{}, heuristic: heuristic, final: __rounded };
+      const data = { structured: s, debug: payload.debug||payload.debugInfo||{}, heuristic: heuristic, final: __rounded };
       setDebugJSON(pre, data, { maxLen: 2000, maxItems: 50 });
       
       box.querySelector('#reason-copy').addEventListener('click', async ()=>{
@@ -2073,8 +2073,8 @@ function renderFallbackMessage(gate, s, md, __rounded) {
 // Helper function to setup debug information
 function setupDebugInfo(payload, gate) {
   setDebugJSON(dbgStruct, payload.structured||{});
-  setDebugJSON(dbgDebug, payload.debug||{});
-  const note = payload.debug ? {...payload.debug, product_gate: gate} : { product_gate: gate };
+  setDebugJSON(dbgDebug, payload.debug||payload.debugInfo||{});
+  const note = (payload.debug || payload.debugInfo) ? {...(payload.debug||payload.debugInfo), product_gate: gate} : { product_gate: gate };
   
   // Add equipment extraction debug info
   if (window.debugEquipmentExtraction) {
