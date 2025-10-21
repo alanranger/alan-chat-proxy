@@ -201,7 +201,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
 .article-meta {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-top: 8px;
 }
@@ -1701,7 +1701,7 @@ function renderArticlesBlock(structured, query){
           <div class="article-details">
             ${categoryTags ? `<div class="article-categories">${categoryTags}</div>` : ''}
             <div class="article-meta">
-              ${displayPublishDate ? `<span class="article-date">📅 ${displayPublishDate}</span>` : ''}
+              ${displayPublishDate ? `<span class="article-date">📅 Published: ${displayPublishDate}</span>` : ''}
             </div>
           </div>
           <div class="article-actions">
