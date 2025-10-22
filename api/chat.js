@@ -7260,7 +7260,7 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
     return sendRagSuccessResponse(res, ragResult);
   }
   
-  return handleRagFallback(client, context, ragResult);
+  return handleRagFallbackWithIntent(client, context, ragResult);
 }
 
 // Helper function to initialize session
@@ -7332,7 +7332,7 @@ function sendRagSuccessResponse(res, ragResult) {
 }
 
 // Helper function to handle RAG fallback
-async function handleRagFallback(client, context, ragResult) {
+async function handleRagFallbackWithIntent(client, context, ragResult) {
   console.log(`🔄 RAG-First insufficient (${ragResult.confidence} confidence), falling back to existing system`);
   console.log(`📊 RAG Debug: chunks=${ragResult.chunksFound}, entities=${ragResult.entitiesFound}, totalMatches=${ragResult.totalMatches}`);
   
