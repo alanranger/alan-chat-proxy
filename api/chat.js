@@ -5631,75 +5631,87 @@ function generateEvidenceBasedAnswer(query, articles, services, events) {
 }
 
 // Helper: Generate smart pills (Low Complexity)
-function generateSmartPills(query, evidence, classification) {
-  const pills = [];
-  const lc = query.toLowerCase();
+// Helper: Create pill from item
+function createPillFromItem(item) {
+  if (!item.url || !item.title) return null;
+  return {
+    label: item.title.length > 30 ? item.title.substring(0, 30) + '...' : item.title,
+    url: item.url,
+    brand: false
+  };
+}
+
+// Helper: Add evidence-based pills
+function addEvidencePills(pills, evidence) {
   const { articles, services, events } = evidence;
   
-  // Generate pills based on evidence found
   if (articles && articles.length > 0) {
-    // Add relevant articles as pills
     articles.slice(0, 2).forEach(article => {
-      if (article.url && article.title) {
-        pills.push({ 
-          label: article.title.length > 30 ? article.title.substring(0, 30) + '...' : article.title, 
-          url: article.url, 
-          brand: false 
-        });
-      }
+      const pill = createPillFromItem(article);
+      if (pill) pills.push(pill);
     });
   }
   
   if (services && services.length > 0) {
-    // Add relevant services as pills
     services.slice(0, 2).forEach(service => {
-      if (service.url && service.title) {
-        pills.push({ 
-          label: service.title.length > 30 ? service.title.substring(0, 30) + '...' : service.title, 
-          url: service.url, 
-          brand: false 
-        });
-      }
+      const pill = createPillFromItem(service);
+      if (pill) pills.push(pill);
     });
   }
   
   if (events && events.length > 0) {
-    // Add relevant events as pills
     events.slice(0, 2).forEach(event => {
-      if (event.url && event.title) {
-        pills.push({ 
-          label: event.title.length > 30 ? event.title.substring(0, 30) + '...' : event.title, 
-          url: event.url, 
-          brand: false 
-        });
-      }
+      const pill = createPillFromItem(event);
+      if (pill) pills.push(pill);
     });
   }
+}
+
+// Helper: Add contextual pills based on query content
+function addContextualPills(pills, lc) {
+  const contextualPills = [
+    {
+      keywords: ['tripod', 'equipment', 'camera', 'lens'],
+      pill: { label: "Equipment Guide", url: "https://www.alanranger.com/equipment-recommendations", brand: true }
+    },
+    {
+      keywords: ['alan ranger', 'who is', 'about'],
+      pill: { label: "About Alan", url: "https://www.alanranger.com/about", brand: true }
+    },
+    {
+      keywords: ['commercial', 'wedding', 'portrait', 'service'],
+      pill: { label: "Services", url: "https://www.alanranger.com/services", brand: true }
+    },
+    {
+      keywords: ['workshop', 'course', 'class'],
+      pill: { label: "Workshops", url: "https://www.alanranger.com/workshops", brand: true }
+    },
+    {
+      keywords: ['contact', 'book', 'enquiry'],
+      pill: { label: "Contact Alan", url: "https://www.alanranger.com/contact", brand: true }
+    },
+    {
+      keywords: ['blog', 'tip', 'learn'],
+      pill: { label: "Photography Blog", url: "https://www.alanranger.com/blog", brand: true }
+    }
+  ];
+  
+  contextualPills.forEach(({ keywords, pill }) => {
+    if (keywords.some(keyword => lc.includes(keyword))) {
+      pills.push(pill);
+    }
+  });
+}
+
+function generateSmartPills(query, evidence, classification) {
+  const pills = [];
+  const lc = query.toLowerCase();
+  
+  // Add evidence-based pills
+  addEvidencePills(pills, evidence);
   
   // Add contextual pills based on query content
-  if (lc.includes('tripod') || lc.includes('equipment') || lc.includes('camera') || lc.includes('lens')) {
-    pills.push({ label: "Equipment Guide", url: "https://www.alanranger.com/equipment-recommendations", brand: true });
-  }
-  
-  if (lc.includes('alan ranger') || lc.includes('who is') || lc.includes('about')) {
-    pills.push({ label: "About Alan", url: "https://www.alanranger.com/about", brand: true });
-  }
-  
-  if (lc.includes('commercial') || lc.includes('wedding') || lc.includes('portrait') || lc.includes('service')) {
-    pills.push({ label: "Services", url: "https://www.alanranger.com/services", brand: true });
-  }
-  
-  if (lc.includes('workshop') || lc.includes('course') || lc.includes('class')) {
-    pills.push({ label: "Workshops", url: "https://www.alanranger.com/workshops", brand: true });
-  }
-  
-  if (lc.includes('contact') || lc.includes('book') || lc.includes('enquiry')) {
-    pills.push({ label: "Contact Alan", url: "https://www.alanranger.com/contact", brand: true });
-  }
-  
-  if (lc.includes('blog') || lc.includes('tip') || lc.includes('learn')) {
-    pills.push({ label: "Photography Blog", url: "https://www.alanranger.com/blog", brand: true });
-  }
+  addContextualPills(pills, lc);
   
   // Always add contact as fallback if no other pills
   if (pills.length === 0) {
@@ -5792,51 +5804,101 @@ async function handleNormalizedDurationQuery(query, pageContext, res) {
 }
 
 // RAG-First approach: Try to answer directly from database
+// Helper: Calculate primary keyword score
+function calculatePrimaryKeywordScore(primaryKeyword, title, url, text) {
+  if (!primaryKeyword) return 0;
+  let score = 0;
+  if (title.includes(primaryKeyword)) score += 5;
+  if (url.includes(primaryKeyword.replace(/\s+/g,'-'))) score += 4;
+  if (text.includes(primaryKeyword)) score += 2;
+  return score;
+}
+
+// Helper: Calculate equipment keyword score
+function calculateEquipmentKeywordScore(equipmentKeywords, title, url, text) {
+  let score = 0;
+  for (const kw of equipmentKeywords) {
+    if (text.includes(kw) || title.includes(kw)) score += 2;
+    if (url.includes(kw.replace(/\s+/g,'-'))) score += 2;
+  }
+  return score;
+}
+
+// Helper: Calculate technical keyword score
+function calculateTechnicalKeywordScore(technicalKeywords, title, text) {
+  let score = 0;
+  for (const kw of technicalKeywords) {
+    if (text.includes(kw) || title.includes(kw)) score += 1.5;
+  }
+  return score;
+}
+
+// Helper: Calculate query term score
+function calculateQueryTermScore(lcQuery, text) {
+  let score = 0;
+  lcQuery.split(/\s+/).forEach(w => { 
+    if (w && w.length > 2 && text.includes(w)) score += 0.5; 
+  });
+  return score;
+}
+
+// Helper: Calculate URL-based score
+function calculateUrlScore(url) {
+  let score = 0;
+  if (url.includes('/photography-equipment') || url.includes('/recommended-products')) score += 3;
+  if (url.includes('/photography-tips') || url.includes('/techniques')) score += 2;
+  if (url.includes('/blog') || url.includes('/articles')) score += 1;
+  return score;
+}
+
+// Helper: Calculate content length penalties
+function calculateContentLengthPenalties(text) {
+  let penalty = 0;
+  if (text.length < 50) penalty -= 2;
+  if (text.length > 2000) penalty -= 1;
+  return penalty;
+}
+
+// Helper: Calculate off-topic penalties
+function calculateOffTopicPenalties(offTopicHints, url, text) {
+  let penalty = 0;
+  for (const hint of offTopicHints) { 
+    if (url.includes(hint) || text.includes(hint)) penalty -= 5; 
+  }
+  return penalty;
+}
+
 // Helper: Calculate chunk relevance score (Low Complexity)
-function calculateChunkScore(chunk, primaryKeyword, equipmentKeywords, technicalKeywords, lcQuery, offTopicHints) {
+function calculateChunkScore(chunk, scoringParams) {
+  const { primaryKeyword, equipmentKeywords, technicalKeywords, lcQuery, offTopicHints } = scoringParams;
   const url = (chunk.url||"").toLowerCase();
   const title = (chunk.title||"").toLowerCase();
   const text = (chunk.chunk_text||"").toLowerCase();
-  let s = 0;
+  
+  let score = 0;
   
   // Primary keyword scoring (highest priority)
-  if (primaryKeyword) {
-    if (title.includes(primaryKeyword)) s += 5;
-    if (url.includes(primaryKeyword.replace(/\s+/g,'-'))) s += 4;
-    if (text.includes(primaryKeyword)) s += 2;
-  }
+  score += calculatePrimaryKeywordScore(primaryKeyword, title, url, text);
   
   // Equipment-specific scoring
-  for (const kw of equipmentKeywords){
-    if (text.includes(kw) || title.includes(kw)) s += 2;
-    if (url.includes(kw.replace(/\s+/g,'-'))) s += 2;
-  }
+  score += calculateEquipmentKeywordScore(equipmentKeywords, title, url, text);
   
   // Technical content scoring
-  for (const kw of technicalKeywords){
-    if (text.includes(kw) || title.includes(kw)) s += 1.5;
-  }
+  score += calculateTechnicalKeywordScore(technicalKeywords, title, text);
   
   // Direct query term matches
-  lcQuery.split(/\s+/).forEach(w=>{ 
-    if (w && w.length > 2 && text.includes(w)) s += 0.5; 
-  });
+  score += calculateQueryTermScore(lcQuery, text);
   
   // URL-based scoring
-  if (url.includes('/photography-equipment') || url.includes('/recommended-products')) s += 3;
-  if (url.includes('/photography-tips') || url.includes('/techniques')) s += 2;
-  if (url.includes('/blog') || url.includes('/articles')) s += 1;
+  score += calculateUrlScore(url);
   
   // Penalize off-topic content
-  for (const hint of offTopicHints){ 
-    if (url.includes(hint) || text.includes(hint)) s -= 5; 
-  }
+  score += calculateOffTopicPenalties(offTopicHints, url, text);
   
   // Penalize very short or very long content
-  if (text.length < 50) s -= 2;
-  if (text.length > 2000) s -= 1;
+  score += calculateContentLengthPenalties(text);
   
-  return s;
+  return score;
 }
 
 // Helper function to clean and format RAG text
@@ -6155,7 +6217,8 @@ function scoreAndFilterChunks(chunks, primaryKeyword, lcQuery, isConceptQuery) {
   const workshopKeywords = ['workshop', 'course', 'event', 'booking', 'dates', 'location', 'participants'];
   
   function scoreChunk(c) {
-    return calculateChunkScore(c, primaryKeyword, equipmentKeywords, technicalKeywords, lcQuery, offTopicHints);
+    const scoringParams = { primaryKeyword, equipmentKeywords, technicalKeywords, lcQuery, offTopicHints };
+    return calculateChunkScore(c, scoringParams);
   }
 
   return chunks
@@ -6489,6 +6552,87 @@ function assembleRagResult(results, finalAnswer, finalType, finalSources) {
   };
 }
 
+// Helper: Initialize RAG search results
+function initializeRagResults() {
+  return {
+    chunks: [],
+    entities: [],
+    totalMatches: 0,
+    confidence: 0,
+    answerType: 'none'
+  };
+}
+
+// Helper: Search and process RAG content
+async function searchAndProcessRagContent(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery) {
+  const chunks = await searchRagContent(client, query, keywords, isConceptQuery, primaryKeyword);
+  const processedChunks = scoreAndFilterChunks(chunks, primaryKeyword, lcQuery, isConceptQuery);
+  console.log(`📄 Found ${processedChunks.length} relevant chunks`);
+  return processedChunks;
+}
+
+// Helper: Search and process RAG entities
+async function searchAndProcessRagEntities(client, query, keywords, isConceptQuery, primaryKeyword) {
+  const entities = await searchRagEntities(client, query, keywords, isConceptQuery, primaryKeyword);
+  const processedEntities = entities || [];
+  console.log(`🏷️ Found ${processedEntities.length} relevant entities`);
+  return processedEntities;
+}
+
+// Helper: Build RAG response structure
+function buildRagResponse(results, finalAnswer, finalType, finalSources) {
+  return {
+    success: results.confidence >= 0.3 || finalAnswer.length > 0,
+    confidence: results.confidence >= 0.3 ? results.confidence : 0.6,
+    answer: finalAnswer,
+    type: finalType,
+    sources: finalSources,
+    structured: {
+      intent: finalType,
+      sources: finalSources,
+      events: [],
+      products: [],
+      articles: results.entities || []
+    },
+    totalMatches: results.totalMatches,
+    chunksFound: results.chunks.length,
+    entitiesFound: results.entities.length
+  };
+}
+
+// Helper: Handle RAG search errors
+function handleRagError(error) {
+  console.error('RAG search error:', error);
+  return {
+    success: false,
+    confidence: 0,
+    answer: "",
+    type: "advice",
+    sources: [],
+    totalMatches: 0,
+    chunksFound: 0,
+    entitiesFound: 0
+  };
+}
+
+// Helper: Process RAG search results
+async function processRagSearchResults(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery) {
+  const results = initializeRagResults();
+  
+  // Search for content chunks
+  results.chunks = await searchAndProcessRagContent(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery);
+  
+  // Search for entities
+  results.entities = await searchAndProcessRagEntities(client, query, keywords, isConceptQuery, primaryKeyword);
+  
+  // Calculate confidence and determine answer type
+  results.totalMatches = results.chunks.length + results.entities.length;
+  results.confidence = 0;
+  results.answerType = 'none';
+  
+  return results;
+}
+
 async function tryRagFirst(client, query) {
   console.log(`🔍 RAG-First attempt for: "${query}"`);
   
@@ -6498,32 +6642,12 @@ async function tryRagFirst(client, query) {
     return contactResponse;
   }
   
-  const results = {
-    chunks: [],
-    entities: [],
-    totalMatches: 0,
-    confidence: 0,
-    answerType: 'none'
-  };
-  
   try {
     // Prepare query parameters
     const { keywords, lcQuery, isConceptQuery, primaryKeyword } = prepareRagQuery(query);
     
-    // Search for content chunks
-    const chunks = await searchRagContent(client, query, keywords, isConceptQuery, primaryKeyword);
-    results.chunks = scoreAndFilterChunks(chunks, primaryKeyword, lcQuery, isConceptQuery);
-    console.log(`📄 Found ${results.chunks.length} relevant chunks`);
-    
-    // Search for entities
-    const entities = await searchRagEntities(client, query, keywords, isConceptQuery, primaryKeyword);
-    results.entities = entities || [];
-    console.log(`🏷️ Found ${results.entities.length} relevant entities`);
-    
-    // Calculate confidence and determine answer type
-    results.totalMatches = results.chunks.length + results.entities.length;
-    results.confidence = 0;
-    results.answerType = 'none';
+    // Process RAG search results
+    const results = await processRagSearchResults(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery);
     
     // Generate answer using helper function
     const { answer, type, sources } = generateRagAnswer(query, results.entities, results.chunks, results);
@@ -6531,36 +6655,10 @@ async function tryRagFirst(client, query) {
     // Handle fallback cases
     const { finalAnswer, finalType, finalSources } = handleRagFallbackLogic(answer, type, sources, query);
     
-    return {
-      success: results.confidence >= 0.3 || finalAnswer.length > 0,
-      confidence: results.confidence >= 0.3 ? results.confidence : 0.6,
-      answer: finalAnswer,
-      type: finalType,
-      sources: finalSources,
-      structured: {
-        intent: finalType,
-        sources: finalSources,
-        events: [],
-        products: [],
-        articles: results.entities || []
-      },
-      totalMatches: results.totalMatches,
-      chunksFound: results.chunks.length,
-      entitiesFound: results.entities.length
-    };
+    return buildRagResponse(results, finalAnswer, finalType, finalSources);
     
   } catch (error) {
-    console.error('RAG search error:', error);
-    return {
-      success: false,
-      confidence: 0,
-      answer: "",
-      type: "advice",
-      sources: [],
-      totalMatches: 0,
-      chunksFound: 0,
-      entitiesFound: 0
-    };
+    return handleRagError(error);
   }
 }
 

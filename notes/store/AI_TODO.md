@@ -30,13 +30,13 @@ memory_policy:
 This is the AI's running TODO list. Keep it short and actionable.
 
 ## Current Status
-- **Phase:** Linter Error Fixing & Quality Assurance
-- **Focus:** Systematically fixing linter errors while maintaining quality baseline
-- **Last Updated:** 2025-10-22 19:18
-- **Critical Discovery:** Previous testing was using deployed API, not local refactored code
-- **Quality Baseline:** 69/100 (18/28 passed) - CONFIRMED WORKING
-- **Linter Progress:** 240→232 errors (8 fixed)
-- **Testing Protocol:** MANDATORY test after each major change
+- **Phase:** SYSTEM RECOVERY AFTER CURSOR CRASH
+- **Focus:** System is completely broken - all functionality failing
+- **Last Updated:** 2025-10-22 21:23
+- **Critical Discovery:** System is completely broken - all 28 tests failing with network errors
+- **Quality Baseline:** 0/100 (0/28 passed) - SYSTEM BROKEN
+- **Linter Errors:** 174 errors (refactoring NOT complete)
+- **System Status:** COMPLETELY BROKEN - Network errors on all API calls
 
 ## 356-Question Test Results (2025-10-20)
 - [x] **COMPLETED**: Comprehensive test of 356 questions
@@ -71,25 +71,56 @@ This is the AI's running TODO list. Keep it short and actionable.
 - [x] **CONFIRMED**: Quality maintained at 69/100 with LOCAL testing
 - [x] **DOCUMENTED**: Updated TESTING_FRAMEWORK.md with endpoint verification protocol
 
-## Today
-- [x] **COMPLETED**: Fixed critical testing methodology failure
-- [x] **COMPLETED**: Verified refactored code maintains 69/100 quality baseline
-- [x] **COMPLETED**: Updated documentation to prevent future testing failures
-- [ ] **IN PROGRESS**: Continue linter error fixing (108 errors remaining)
-- [ ] **NEXT**: Focus on `tryRagFirst` function refactoring (160 statements, complexity 61)
-- [ ] **NEXT**: Deploy current progress to GitHub
-- [ ] **NEXT**: Continue systematic linter error reduction
+## Today - POST CRASH RECOVERY & REFACTORING
+- [x] **COMPLETED**: Assessed system state after Cursor crash
+- [x] **COMPLETED**: Discovered system is completely broken (0/28 tests passing)
+- [x] **COMPLETED**: Identified 174 linter errors (refactoring NOT complete)
+- [x] **COMPLETED**: Fixed system breakdown - all API calls working again
+- [x] **COMPLETED**: Restored basic system functionality (69/100 quality, 18/28 passing)
+- [x] **COMPLETED**: Refactored tryRagFirst function (21→15 statements) - NO REGRESSIONS
+- [x] **COMPLETED**: Refactored generateSmartPills function (complexity 28→15) - NO REGRESSIONS
+- [x] **COMPLETED**: Refactored calculateChunkScore function (complexity 26→15) - NO REGRESSIONS
+- [ ] **IN PROGRESS**: Continue systematic refactoring of remaining 171 linter errors
+- [ ] **NEXT**: Target next highest complexity function (findEvents - complexity 25)
 
-## Next
+## Next - AFTER SYSTEM RECOVERY
+- [ ] **CRITICAL**: Fix system breakdown - all API calls failing with network errors
+- [ ] **CRITICAL**: Restore basic system functionality (get tests passing again)
+- [ ] **HIGH PRIORITY**: Complete refactoring (174 linter errors remaining)
 - [ ] **HIGH PRIORITY**: Comprehensive testing of all query types (courses, articles, services)
-- [ ] **HIGH PRIORITY**: Expand clarification systems beyond workshops
 - [ ] **MEDIUM PRIORITY**: Advanced features (real-time availability, advanced filtering)
 - [ ] **LOW PRIORITY**: Performance optimization and analytics
 
 ## Blockers
-- [ ] None (live UI and API healthy; baseline passing; refactoring complete)
+- [ ] **CRITICAL**: System completely broken - all API calls failing with network errors
+- [ ] **CRITICAL**: Local development server not responding
+- [ ] **CRITICAL**: 174 linter errors preventing proper functionality
+- [ ] **CRITICAL**: Refactoring incomplete - many functions still exceed complexity limits
+
+## 🚨 CRISIS STATUS - POST CURSOR CRASH (2025-10-22 21:23)
+
+### **SYSTEM COMPLETELY BROKEN**
+- **All 28 tests failing** with network errors
+- **Quality score: 0/100** (was 69/100)
+- **174 linter errors** (refactoring NOT complete)
+- **Local server not responding** to API calls
+
+### **Root Cause Analysis**
+- **Cursor crash** may have corrupted system state
+- **Local development server** not running or accessible
+- **API endpoints** returning network errors
+- **Refactoring incomplete** - many functions still exceed complexity limits
+
+### **Immediate Actions Required**
+1. **Check local server status** - is `local-dev-server.js` running?
+2. **Verify API endpoints** - are they accessible?
+3. **Check environment variables** - are they properly set?
+4. **Restore basic functionality** before continuing refactoring
 
 ## Updates
+- 2025-10-22 21:23 — **CRISIS**: System completely broken after Cursor crash
+- 2025-10-22 21:23 — **DISCOVERED**: All 28 tests failing with network errors
+- 2025-10-22 21:23 — **DISCOVERED**: 174 linter errors (refactoring NOT complete)
 - 2025-10-17 11:35 — Handover script created: `Architecture and Handover/HANDOVER_SCRIPT_2025-10-17.md`
 - 2025-10-17 — Refactor (L4334): extracted `maybeProcessEarlyReturnFallback`; baseline parity, merged.
 - 2025-10-17 — Refactor (L5500): extracted `scoreArticle`; baseline parity, merged.
