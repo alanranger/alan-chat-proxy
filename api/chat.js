@@ -566,27 +566,28 @@ function cleanResponseText(text) {
 
 // Helper function to improve markdown formatting
 function formatResponseMarkdown(title, url, description, relatedContent = []) {
+  const context = { title, url, description, relatedContent };
   let markdown = '';
   
   // Add title as header
-  if (title) {
-    markdown += `# ${title}\n\n`;
+  if (context.title) {
+    markdown += `# ${context.title}\n\n`;
   }
   
   // Add source URL as clickable link
-  if (url) {
-    markdown += `**Source**: [${url}](${url})\n\n`;
+  if (context.url) {
+    markdown += `**Source**: [${context.url}](${context.url})\n\n`;
   }
   
   // Add description
-  if (description) {
-    markdown += `${description}\n\n`;
+  if (context.description) {
+    markdown += `${context.description}\n\n`;
   }
   
   // Add related content section if available
-  if (relatedContent && relatedContent.length > 0) {
+  if (context.relatedContent && context.relatedContent.length > 0) {
     markdown += `## Related Content\n\n`;
-    relatedContent.forEach(item => {
+    context.relatedContent.forEach(item => {
       if (item.title && item.url) {
         markdown += `- [${item.title}](${item.url})\n`;
       }
@@ -723,14 +724,16 @@ function hasRelevantContent(chunk, exactTerm, slug) {
 
 // Helper function to check direct word matches
 function checkDirectMatches(text, title, url, exactTerm) {
-  return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm);
+  const context = { text, title, url, exactTerm };
+  return hasWord(context.text, context.exactTerm) || hasWord(context.title, context.exactTerm) || hasWord(context.url, context.exactTerm);
 }
 
 // Helper function to check "what is" patterns
 function checkWhatIsPatterns(url, title, text, exactTerm, slug) {
-  return url.includes(`/what-is-${slug}`) || 
-         title.includes(`what is ${exactTerm}`) || 
-         text.includes(`what is ${exactTerm}`);
+  const context = { url, title, text, exactTerm, slug };
+  return context.url.includes(`/what-is-${context.slug}`) || 
+         context.title.includes(`what is ${context.exactTerm}`) || 
+         context.text.includes(`what is ${context.exactTerm}`);
 }
 
 function filterContentChunk(chunk, exactTerm, slug) {
@@ -807,13 +810,15 @@ function prepareChunkText(relevantChunk) {
 
 // Helper function to extract answer from text using multiple strategies
 function extractAnswerFromText(query, queryWords, exactTerm, chunkText, relevantChunk) {
+  const context = { query, queryWords, exactTerm, chunkText, relevantChunk };
+  
   // Check for fitness level information first
-  const fitnessAnswer = extractFitnessLevelAnswer(query, chunkText, relevantChunk);
+  const fitnessAnswer = extractFitnessLevelAnswer(context.query, context.chunkText, context.relevantChunk);
   if (fitnessAnswer) return fitnessAnswer;
   
   // Look for concept relationship explanations
-  console.log(`🔍 DEBUG: Trying concept explanation for query="${query}"`);
-  const conceptAnswer = extractConceptExplanation(chunkText, query, exactTerm, relevantChunk);
+  console.log(`🔍 DEBUG: Trying concept explanation for query="${context.query}"`);
+  const conceptAnswer = extractConceptExplanation(context.chunkText, context.query, context.exactTerm, context.relevantChunk);
   if (conceptAnswer) {
     console.log(`✅ DEBUG: Found concept answer: "${conceptAnswer.substring(0, 100)}..."`);
     return conceptAnswer;
@@ -822,15 +827,15 @@ function extractAnswerFromText(query, queryWords, exactTerm, chunkText, relevant
   }
   
   // Look for definitional sentences
-  const definitionAnswer = extractDefinitionSentence(chunkText, exactTerm, relevantChunk);
+  const definitionAnswer = extractDefinitionSentence(context.chunkText, context.exactTerm, context.relevantChunk);
   if (definitionAnswer) return definitionAnswer;
   
   // Look for relevant sentences
-  const sentenceAnswer = extractRelevantSentence(chunkText, queryWords, relevantChunk);
+  const sentenceAnswer = extractRelevantSentence(context.chunkText, context.queryWords, context.relevantChunk);
   if (sentenceAnswer) return sentenceAnswer;
   
   // Look for relevant paragraphs
-  const paragraphAnswer = extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChunk);
+  const paragraphAnswer = extractRelevantParagraph(context.chunkText, context.queryWords, context.exactTerm, context.relevantChunk);
   if (paragraphAnswer) return paragraphAnswer;
   
   return null;
