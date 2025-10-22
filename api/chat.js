@@ -1349,24 +1349,26 @@ function tryArticleBasedAnswerWithConcept(exactTerm, articles, lc) {
 
 // Helper function to try all answer sources in priority order
 function tryAllAnswerSources(lc, query, queryWords, exactTerm, articles, contentChunks) {
+  const context = { lc, query, queryWords, exactTerm, articles, contentChunks };
+  
   // PRIORITY 0: Course-specific equipment advice
-  const courseAnswer = tryCourseEquipmentAnswerHelper(lc);
+  const courseAnswer = tryCourseEquipmentAnswerHelper(context.lc);
   if (courseAnswer) return courseAnswer;
   
   // PRIORITY 1: Extract from JSON-LD FAQ data in articles
-  const articleAnswer = tryArticleBasedAnswerWithConcept(exactTerm, articles, lc);
+  const articleAnswer = tryArticleBasedAnswerWithConcept(context.exactTerm, context.articles, context.lc);
   if (articleAnswer) return articleAnswer;
   
   // PRIORITY 2: Extract from content chunks
-  const chunkAnswer = tryContentChunkAnswer(query, queryWords, exactTerm, contentChunks);
+  const chunkAnswer = tryContentChunkAnswer(context.query, context.queryWords, context.exactTerm, context.contentChunks);
   if (chunkAnswer) return chunkAnswer;
   
   // PRIORITY 3: Equipment advice
-  const equipmentAnswer = tryEquipmentAdviceAnswer(lc, articles, contentChunks);
+  const equipmentAnswer = tryEquipmentAdviceAnswer(context.lc, context.articles, context.contentChunks);
   if (equipmentAnswer) return equipmentAnswer;
   
   // PRIORITY 4: Hardcoded answers
-  const hardcodedAnswer = tryHardcodedAnswer(lc);
+  const hardcodedAnswer = tryHardcodedAnswer(context.lc);
   if (hardcodedAnswer) return hardcodedAnswer;
   
   return null;
@@ -7245,70 +7247,99 @@ async function tryRagFirst(client, query) {
 
 // Helper: Process main query (Low Complexity)
 async function processMainQuery(query, previousQuery, sessionId, pageContext, res, started, req) {
+  const context = { query, previousQuery, sessionId, pageContext, res, started, req };
   const client = supabaseAdmin();
   
-  // Create session if needed
-  await createSession(sessionId, req.headers['user-agent'], req.headers['x-forwarded-for'] || req.connection.remoteAddress);
+  await initializeSession(context);
   
-  // Check if this is a workshop query first - skip RAG for workshop queries
-  const classification = classifyQuery(query);
-  console.log(`🔍 Classification result for "${query}":`, classification);
+  const classification = await handleQueryClassification(client, context);
+  if (classification.handled) return;
+  
+  const ragResult = await attemptRagFirst(client, context);
+  if (ragResult.success) {
+    return sendRagSuccessResponse(res, ragResult);
+  }
+  
+  return handleRagFallback(client, context, ragResult);
+}
+
+// Helper function to initialize session
+async function initializeSession(context) {
+  await createSession(context.sessionId, context.req.headers['user-agent'], context.req.headers['x-forwarded-for'] || context.req.connection.remoteAddress);
+}
+
+// Helper function to handle query classification
+async function handleQueryClassification(client, context) {
+  const classification = classifyQuery(context.query);
+  console.log(`🔍 Classification result for "${context.query}":`, classification);
+  
   if (classification.type === 'workshop') {
-    console.log(`🎯 Workshop query detected: "${query}" - skipping RAG, routing to events`);
-    const keywords = extractKeywords(query);
-    return await handleEventsPipeline({ client, query, keywords, pageContext, res, debugInfo: { bypassReason: 'workshop_query' } });
+    return await handleWorkshopClassification(client, context);
   } else if (classification.type === 'clarification') {
-    console.log(`🎯 Clarification query detected: "${query}" - routing to clarification`);
-    return await handleClarificationQuery(client, query, classification, pageContext, res);
+    return await handleClarificationClassification(client, context, classification);
   } else {
-    console.log(`🔍 Not a workshop or clarification query, proceeding to RAG for: "${query}"`);
+    console.log(`🔍 Not a workshop or clarification query, proceeding to RAG for: "${context.query}"`);
+    return { handled: false };
   }
-  
-  // RAG-FIRST APPROACH: Try to answer directly from database first
-  console.log(`🚀 Starting RAG-First attempt for: "${query}"`);
-  const ragResult = await tryRagFirst(client, query);
+}
+
+// Helper function to handle workshop classification
+async function handleWorkshopClassification(client, context) {
+  console.log(`🎯 Workshop query detected: "${context.query}" - skipping RAG, routing to events`);
+  const keywords = extractKeywords(context.query);
+  await handleEventsPipeline({ client, query: context.query, keywords, pageContext: context.pageContext, res: context.res, debugInfo: { bypassReason: 'workshop_query' } });
+  return { handled: true };
+}
+
+// Helper function to handle clarification classification
+async function handleClarificationClassification(client, context, classification) {
+  console.log(`🎯 Clarification query detected: "${context.query}" - routing to clarification`);
+  await handleClarificationQuery(client, context.query, classification, context.pageContext, context.res);
+  return { handled: true };
+}
+
+// Helper function to attempt RAG first
+async function attemptRagFirst(client, context) {
+  console.log(`🚀 Starting RAG-First attempt for: "${context.query}"`);
+  const ragResult = await tryRagFirst(client, context.query);
   console.log(`📊 RAG Result: success=${ragResult.success}, confidence=${ragResult.confidence}, answerLength=${ragResult.answer?.length || 0}`);
+  return ragResult;
+}
+
+// Helper function to send RAG success response
+function sendRagSuccessResponse(res, ragResult) {
+  console.log(`✅ RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
   
-  if (ragResult.success && ragResult.confidence >= 0.3) {
-    console.log(`✅ RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
-    
-    // Use RAG sources as-is (generic approach)
-    let finalSources = ragResult.sources;
-    let finalStructured = ragResult.structured;
-    
-    // Don't override articles - let RAG system provide relevant articles
-    // The frontend will use pickArticles() to intelligently select relevant ones
-    
-    return res.status(200).json({
-      ok: true,
-      type: ragResult.type,
-      answer: ragResult.answer,
-      answer_markdown: ragResult.answer,
+  return res.status(200).json({
+    ok: true,
+    type: ragResult.type,
+    answer: ragResult.answer,
+    answer_markdown: ragResult.answer,
+    confidence: ragResult.confidence,
+    sources: ragResult.sources,
+    structured: ragResult.structured,
+    debugInfo: {
+      intent: "rag_first",
+      classification: "direct_answer",
       confidence: ragResult.confidence,
-      sources: finalSources,
-      structured: finalStructured,
-      debugInfo: {
-        intent: "rag_first",
-        classification: "direct_answer",
-        confidence: ragResult.confidence,
-        totalMatches: ragResult.totalMatches,
-        chunksFound: ragResult.chunksFound,
-        entitiesFound: ragResult.entitiesFound,
-        entityTitles: ragResult.entities?.map(e => e.title) || [],
-        approach: "rag_first_hybrid"
-      }
-    });
-  }
-  
+      totalMatches: ragResult.totalMatches,
+      chunksFound: ragResult.chunksFound,
+      entitiesFound: ragResult.entitiesFound,
+      entityTitles: ragResult.entities?.map(e => e.title) || [],
+      approach: "rag_first_hybrid"
+    }
+  });
+}
+
+// Helper function to handle RAG fallback
+async function handleRagFallback(client, context, ragResult) {
   console.log(`🔄 RAG-First insufficient (${ragResult.confidence} confidence), falling back to existing system`);
   console.log(`📊 RAG Debug: chunks=${ragResult.chunksFound}, entities=${ragResult.entitiesFound}, totalMatches=${ragResult.totalMatches}`);
   
-  // Determine intent using existing system
-  const intent = determineIntent(query, previousQuery, pageContext);
+  const intent = determineIntent(context.query, context.previousQuery, context.pageContext);
   console.log(`🎯 Classification Intent: ${intent}`);
   
-  // Process based on intent
-  await processByIntent(client, query, previousQuery, intent, pageContext, res, started);
+  await processByIntent(client, context.query, context.previousQuery, intent, context.pageContext, context.res, context.started);
 }
 
 // Helper: Determine intent (Low Complexity)
