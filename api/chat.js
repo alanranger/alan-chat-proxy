@@ -565,8 +565,7 @@ function cleanResponseText(text) {
 }
 
 // Helper function to improve markdown formatting
-function formatResponseMarkdown(title, url, description, relatedContent = []) {
-  const context = { title, url, description, relatedContent };
+function formatResponseMarkdown(context) {
   let markdown = '';
   
   // Add title as header
@@ -636,11 +635,11 @@ function extractAnswerFromArticleDescription(relevantArticle) {
       if (relevantArticle.description && relevantArticle.description.length > 50) {
         const cleanDescription = cleanResponseText(relevantArticle.description);
         console.log(`🔍 generateDirectAnswer: Using article description="${cleanDescription.substring(0, 200)}..."`);
-        return formatResponseMarkdown(
-          relevantArticle.title || 'Article Information',
-          relevantArticle.page_url || relevantArticle.url,
-          cleanDescription
-        );
+        return formatResponseMarkdown({
+          title: relevantArticle.title || 'Article Information',
+          url: relevantArticle.page_url || relevantArticle.url,
+          description: cleanDescription
+        });
   }
   return null;
 }
@@ -658,11 +657,11 @@ function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
   if (!answerText || answerText.length <= 50) return null;
   
   console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
-  return formatResponseMarkdown(
-    relevantArticle.title || 'FAQ Information',
-    relevantArticle.page_url || relevantArticle.url,
-    answerText
-  );
+  return formatResponseMarkdown({
+    title: relevantArticle.title || 'FAQ Information',
+    url: relevantArticle.page_url || relevantArticle.url,
+    description: answerText
+  });
 }
 
 // Helper function to get FAQ data from article
@@ -860,11 +859,11 @@ function handleExposureTriangle(chunkText, relevantChunk) {
   if (triangleSentences.length > 0) {
     const bestSentence = triangleSentences[0].trim();
     if (bestSentence.length > 50) {
-      return formatResponseMarkdown(
-        relevantChunk.title || 'Exposure Triangle',
-        relevantChunk.url,
-        bestSentence
-      );
+      return formatResponseMarkdown({
+        title: relevantChunk.title || 'Exposure Triangle',
+        url: relevantChunk.url,
+        description: bestSentence
+      });
     }
   }
   
@@ -874,26 +873,27 @@ function handleExposureTriangle(chunkText, relevantChunk) {
   const isoSentences = findRelevantSentences(chunkText, ['iso', 'sensitivity', 'light', 'exposure']);
   
   if (apertureSentences.length > 0 && shutterSentences.length > 0 && isoSentences.length > 0) {
-    return formatResponseMarkdown(
-      'Understanding the Exposure Triangle',
-      relevantChunk.url,
-      createTriangleSynthesis()
-    );
+    return formatResponseMarkdown({
+      title: 'Understanding the Exposure Triangle',
+      url: relevantChunk.url,
+      description: createTriangleSynthesis()
+    });
   }
   
   return null;
 }
 
 function handleSingleConcept(chunkText, relevantChunk, keywords, title) {
-  const sentences = findRelevantSentences(chunkText, keywords);
+  const context = { chunkText, relevantChunk, keywords, title };
+  const sentences = findRelevantSentences(context.chunkText, context.keywords);
   if (sentences.length > 0) {
     const bestSentence = sentences[0].trim();
     if (bestSentence.length > 50) {
-      return formatResponseMarkdown(
-        relevantChunk.title || title,
-        relevantChunk.url,
-        bestSentence
-      );
+      return formatResponseMarkdown({
+        title: context.relevantChunk.title || context.title,
+        url: context.relevantChunk.url,
+        description: bestSentence
+      });
     }
   }
   return null;
@@ -954,11 +954,11 @@ function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
       const foundFitnessWord = fitnessWords.find(word => chunkTextLower.includes(word));
       
       if (foundFitnessWord) {
-        return formatResponseMarkdown(
-          'Fitness Level Information',
-          relevantChunk.url,
-          `The fitness level required is ${foundFitnessWord}. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`
-        );
+        return formatResponseMarkdown({
+          title: 'Fitness Level Information',
+          url: relevantChunk.url,
+          description: `The fitness level required is ${foundFitnessWord}. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`
+        });
       }
   
   return null;
@@ -976,11 +976,11 @@ function extractDefinitionSentence(chunkText, exactTerm, relevantChunk) {
   });
     
     if (defSentence) {
-      return formatResponseMarkdown(
-        'Definition',
-        relevantChunk.url,
-        defSentence.trim()
-      );
+      return formatResponseMarkdown({
+        title: 'Definition',
+        url: relevantChunk.url,
+        description: defSentence.trim()
+      });
     }
 
   return null;
@@ -1011,11 +1011,11 @@ function extractRelevantSentence(chunkText, queryWords, relevantChunk) {
     });
     
     if (relevantSentence) {
-      return formatResponseMarkdown(
-        'Information',
-        relevantChunk.url,
-        relevantSentence.trim()
-      );
+      return formatResponseMarkdown({
+        title: 'Information',
+        url: relevantChunk.url,
+        description: relevantSentence.trim()
+      });
     }
     
   return null;
@@ -1027,11 +1027,11 @@ function extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChun
       const byPara = chunkText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 50);
       const para = byPara.find(p => p.toLowerCase().includes(`what is ${exactTerm}`) && p.length <= 300);
       if (para) {
-        return formatResponseMarkdown(
-          'Definition',
-          relevantChunk.url,
-          para.trim()
-        );
+        return formatResponseMarkdown({
+          title: 'Definition',
+          url: relevantChunk.url,
+          description: para.trim()
+        });
       }
     }
 
@@ -1051,11 +1051,11 @@ function extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChun
     });
     
     if (relevantParagraph && relevantParagraph.length < 300) {
-      return formatResponseMarkdown(
-        'Information',
-        relevantChunk.url,
-        relevantParagraph.trim()
-      );
+      return formatResponseMarkdown({
+        title: 'Information',
+        url: relevantChunk.url,
+        description: relevantParagraph.trim()
+      });
   }
   
   return null;
