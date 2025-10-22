@@ -4,8 +4,11 @@
 // Now parses patterns like "Fitness: 1. Easy" and "Experience - Level: Beginner"
 export const config = { runtime: "nodejs" };
 
+// Global variables for Node.js environment
+/* global console, process, URL */
+
 import { createClient } from "@supabase/supabase-js";
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 
 /* ----------------------- Helper Functions ----------------------- */
 // Hash IP for privacy
@@ -36,7 +39,7 @@ const extractPublishDate = (article) => {
     }
     
     return null;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -63,14 +66,14 @@ const extractKeywordsFromPath = (pathname) => {
     'wedding': ['wedding', 'ceremony', 'event']
   };
   
-  pathParts.forEach(part => {
+  for (const part of pathParts) {
     const lowerPart = part.toLowerCase();
     if (pathMappings[lowerPart]) {
       keywords.push(...pathMappings[lowerPart]);
     } else if (part.length > 3) {
       keywords.push(part);
     }
-  });
+  }
   
   return [...new Set(keywords)]; // Remove duplicates
 };
@@ -138,96 +141,14 @@ const logQuestion = async (sessionId, question) => {
   }
 };
 
-const logAnswer = async (sessionId, question, answer, intent, confidence, responseTimeMs, sourcesUsed, pageContext = null) => {
-  try {
-    const client = supabaseAdmin();
-    
-    // Insert the complete interaction into chat_interactions
-    const { error } = await client.from('chat_interactions').insert([{
-      session_id: sessionId,
-      question: question,
-      answer: answer,
-      intent: intent,
-      confidence: confidence ? parseFloat(confidence) : null,
-      response_time_ms: responseTimeMs ? parseInt(responseTimeMs) : null,
-      sources_used: sourcesUsed || null,
-      page_context: pageContext ? {
-        url: pageContext.url,
-        title: pageContext.title,
-        pathname: pageContext.pathname
-      } : null
-    }]);
-    
-    if (error) throw new Error(`Answer log failed: ${error.message}`);
-    
-    // Update session question count
-    const { error: rpcError } = await client.rpc('increment_session_questions', { session_id: sessionId });
-    if (rpcError) throw new Error(`RPC failed: ${rpcError.message}`);
-  } catch (err) {
-    console.warn('Answer logging failed:', err.message);
-  }
-};
 
 /* ----------------------- Direct Answer Generation ----------------------- */
-// Helper function to get service FAQ topics
-function getServiceFAQTopics() {
-  return [
-    { key: "payment", hints: ["payment", "pick n mix", "plan", "instalment", "installment"], prefer: ["/photography-payment-plan", "/terms-and-conditions"] },
-    { key: "contact", hints: ["contact", "discovery", "call", "phone", "email"], prefer: ["/contact-us", "/contact-us-alan-ranger-photography"] },
-    { key: "certificate", hints: ["certificate"], prefer: ["/beginners-photography-classes", "/photography-courses"] },
-    { key: "course-topics", hints: ["topics", "5-week", "beginner"], prefer: ["/beginners-photography-classes", "/get-off-auto"] },
-    { key: "standalone", hints: ["standalone", "get off auto"], prefer: ["/get-off-auto", "/beginners-photography-classes"] },
-    { key: "refund", hints: ["refund", "cancel", "cancellation"], prefer: ["/terms-and-conditions"] }
-  ];
-}
 
 // Helper function to find matching topic
-function findMatchingTopic(query) {
-  const q = (query || "").toLowerCase();
-  const topics = getServiceFAQTopics();
-  return topics.find(t => t.hints.some(h => q.includes(h)));
-}
 
-// Helper function to find prioritized chunk
-function findPrioritizedChunk(contentChunks, match) {
-  const prefer = (u) => (match.prefer || []).some(p => (u || "").includes(p));
 
-  return (contentChunks || []).find(c => prefer(c.url)) || contentChunks.find(c => {
-    const text = (c.chunk_text || c.content || "").toLowerCase();
-    return match.hints.some(h => text.includes(h));
-  });
-}
 
-// Helper function to pick URL from chunk or articles
-function pickServiceFAQUrl(prioritizedChunk, articles, match) {
-    if (prioritizedChunk?.url) return prioritizedChunk.url;
-  
-  const prefer = (u) => (match.prefer || []).some(p => (u || "").includes(p));
-    const art = (articles || []).find(a => prefer(a.page_url || a.source_url || ""));
-    return art ? (art.page_url || art.source_url) : null;
-}
 
-// Helper function to extract relevant paragraph for service FAQ
-function extractServiceFAQParagraph(prioritizedChunk, match) {
-  const text = (prioritizedChunk?.chunk_text || prioritizedChunk?.content || "");
-  const paras = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 40);
-  return paras.find(p => match.hints.some(h => p.toLowerCase().includes(h))) || paras[0];
-}
-
-function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
-  const match = findMatchingTopic(query);
-  if (!match) return null;
-
-  const prioritizedChunk = findPrioritizedChunk(contentChunks, match);
-  const url = pickServiceFAQUrl(prioritizedChunk, articles, match);
-  
-  if (!prioritizedChunk && !url) return null;
-
-  const para = extractServiceFAQParagraph(prioritizedChunk, match);
-  if (!para) return null;
-
-  return `**${para.substring(0, 300).trim()}**\n\n${url ? `*Source: ${url}*\n\n` : ""}`;
-}
 
 // Helper function to detect equipment advice queries
 function isEquipmentAdviceQuery(query) {
@@ -282,7 +203,7 @@ function generateEquipmentAdviceResponse(query, articles, contentChunks) {
 
 // Helper function to extract and score paragraphs from text
 function pickPricingParas(text, hints) {
-    const t = (text || "").replace(/\s+/g, " ").trim();
+    const t = (text || "").replaceAll(/\s+/g, " ").trim();
     const paras = t.split(/\n\s*\n|\.\s+(?=[A-Z])/).map(p => p.trim()).filter(p => p.length > 40);
     const scored = paras.map(p => ({
       p,
@@ -523,11 +444,15 @@ function extractKeyConsiderations(articles, contentChunks) {
   };
   
   // Extract from articles
-  articles.forEach(article => processArticleForConsiderations(article, considerations));
+  for (const article of articles) {
+    processArticleForConsiderations(article, considerations);
+  }
   
   // Extract from content chunks (with malformed content filtering)
   if (contentChunks && contentChunks.length > 0) {
-    contentChunks.forEach(chunk => processContentChunk(chunk, considerations));
+    for (const chunk of contentChunks) {
+      processContentChunk(chunk, considerations);
+    }
   }
   
   return considerations;
@@ -573,9 +498,9 @@ function synthesizeEquipmentAdvice(equipmentType, considerations, relevantArticl
   // Add article references
   if (relevantArticles.length > 0) {
     response += `\n\n**For detailed reviews and specific recommendations, check out these guides:**\n`;
-    relevantArticles.slice(0, 3).forEach(article => {
+    for (const article of relevantArticles.slice(0, 3)) {
       response += `- [${article.title}](${article.page_url || article.url})\n`;
-      });
+    }
     }
     
     return response;
@@ -626,13 +551,13 @@ function cleanResponseText(text) {
   if (!text || typeof text !== 'string') return text;
   
   // Remove debug artifacts and junk characters
-  text = text.replace(/\/\s*\d+\s*\/[^]*$/g, ''); // Remove "/ 0 /" patterns
-  text = text.replace(/searchBack[^]*$/g, ''); // Remove "searchBack" artifacts
-  text = text.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, ''); // Remove UTM parameters
-  text = text.replace(/\* Next lesson:.*?\*\*/g, ''); // Remove "Next lesson" artifacts
-  text = text.replace(/\[ARTICLE\]\s*/g, ''); // Remove [ARTICLE] headers
-  text = text.replace(/\[CONTENT\]\s*/g, ''); // Remove [CONTENT] headers
-  text = text.replace(/\s+/g, ' ').trim(); // Normalize whitespace
+  text = text.replaceAll(/\/\s*\d+\s*\/[^]*$/g, ''); // Remove "/ 0 /" patterns
+  text = text.replaceAll(/searchBack[^]*$/g, ''); // Remove "searchBack" artifacts
+  text = text.replaceAll(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, ''); // Remove UTM parameters
+  text = text.replaceAll(/\* Next lesson:.*?\*\*/g, ''); // Remove "Next lesson" artifacts
+  text = text.replaceAll(/\[ARTICLE\]\s*/g, ''); // Remove [ARTICLE] headers
+  text = text.replaceAll(/\[CONTENT\]\s*/g, ''); // Remove [CONTENT] headers
+  text = text.replaceAll(/\s+/g, ' ').trim(); // Normalize whitespace
   
   return text;
 }
@@ -659,11 +584,11 @@ function formatResponseMarkdown(title, url, description, relatedContent = []) {
   // Add related content section if available
   if (relatedContent && relatedContent.length > 0) {
     markdown += `## Related Content\n\n`;
-    relatedContent.forEach(item => {
+    for (const item of relatedContent) {
       if (item.title && item.url) {
         markdown += `- [${item.title}](${item.url})\n`;
       }
-    });
+    }
     markdown += '\n';
   }
   
@@ -696,7 +621,7 @@ function findRelevantArticleForTerm(exactTerm, articles) {
       const jsonLd = article.json_ld_data;
       
         return title.includes(`${exactTerm}`) ||
-             url.includes(`what-is-${exactTerm.replace(/\s+/g, "-")}`) ||
+             url.includes(`what-is-${exactTerm.replaceAll(/\s+/g, "-")}`) ||
              (jsonLd && jsonLd.mainEntity && Array.isArray(jsonLd.mainEntity));
     });
     }
@@ -737,7 +662,7 @@ function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
         let answerText = primaryQuestion.acceptedAnswer.text;
         
         // Clean HTML tags from the answer
-        answerText = answerText.replace(/<[^>]*>/g, '').trim();
+        answerText = answerText.replaceAll(/<[^>]*>/g, '').trim();
         
         // Use the comprehensive cleaning function
         answerText = cleanResponseText(answerText);
@@ -758,7 +683,7 @@ function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
 function hasWord(text, term) {
     if (!term) return false;
     try {
-      const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const esc = term.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const re = new RegExp(`\\b${esc}\\b`, "i");
       return re.test(text || "");
   } catch {
@@ -801,7 +726,7 @@ function filterContentChunk(chunk, exactTerm, slug) {
 function filterCandidateChunks(exactTerm, contentChunks) {
   if (!exactTerm) return contentChunks || [];
   
-  const slug = exactTerm.replace(/\s+/g, "-");
+  const slug = exactTerm.replaceAll(/\s+/g, "-");
   return (contentChunks || []).filter(c => filterContentChunk(c, exactTerm, slug));
 }
 
@@ -824,7 +749,7 @@ function scoreChunks(candidateChunks, queryWords, exactTerm) {
     if (exactTerm) {
       if (hasWord(text, exactTerm)) s += 6;
       if (hasWord(title, exactTerm)) s += 8;
-      const slug = exactTerm.replace(/\s+/g, "-");
+      const slug = exactTerm.replaceAll(/\s+/g, "-");
       if (url.includes(`/what-is-${slug}`)) s += 10;
     }
     
@@ -847,8 +772,8 @@ function extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChu
     chunkText = cleanResponseText(chunkText);
     
     // Remove metadata headers that start with [ARTICLE] or similar
-    chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
-    chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
+    chunkText = chunkText.replaceAll(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
+    chunkText = chunkText.replaceAll(/^\[.*?\].*?Published:.*?\n\n/, '');
     
   // Check for fitness level information first
   const fitnessAnswer = extractFitnessLevelAnswer(query, chunkText, relevantChunk);
@@ -1310,7 +1235,7 @@ function getHardcodedAnswer(lc) {
 function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
-  const exactTerm = lc.replace(/^what\s+is\s+/, "").trim();
+  const exactTerm = lc.replaceAll(/^what\s+is\s+/, "").trim();
   
   // DEBUG: Log what we're working with
   console.log(`🔍 generateDirectAnswer: Query="${query}"`);
@@ -1392,7 +1317,6 @@ function supabaseAdmin() {
 }
 
 /* ------------------------------ Small utils ------------------------------ */
-const TZ = "Europe/London";
 
 function fmtDateLondon(ts) {
   try {
@@ -1409,9 +1333,6 @@ function fmtDateLondon(ts) {
     return ts;
   }
 }
-function uniq(arr) {
-  return [...new Set((arr || []).filter(Boolean))];
-}
 function toGBP(n) {
   if (n == null || isNaN(Number(n))) return null;
   return new Intl.NumberFormat("en-GB", {
@@ -1419,9 +1340,6 @@ function toGBP(n) {
     currency: "GBP",
     maximumFractionDigits: 0,
   }).format(Number(n));
-}
-function pickUrl(row) {
-  return row?.page_url || row?.source_url || row?.url || null;
 }
 function originOf(url) {
   try {
@@ -1435,17 +1353,6 @@ function originOf(url) {
 // Note: We deliberately do not normalize typos; we ask users to rephrase instead.
 
 /* ----------------------- Intent + keyword extraction --------------------- */
-const EVENT_HINTS = [
-  "date",
-  "dates",
-  "when",
-  "next",
-  "upcoming",
-  "available",
-  "where",
-  "workshop",
-  "schedule",
-];
 
 const TOPIC_KEYWORDS = [
   // locations
@@ -1501,8 +1408,8 @@ const TOPIC_KEYWORDS = [
 function extractKeywords(q) {
   let lc = (q || "").toLowerCase();
   // Normalize common variants to improve matching
-  lc = lc.replace(/\bb\s*&\s*b\b/g, "bnb"); // b&b -> bnb
-  lc = lc.replace(/\bbed\s*and\s*breakfast\b/g, "bnb");
+  lc = lc.replaceAll(/\bb\s*&\s*b\b/g, "bnb"); // b&b -> bnb
+  lc = lc.replaceAll(/\bbed\s*and\s*breakfast\b/g, "bnb");
   
   // Add synonym mapping for better event matching
   const synonyms = {
@@ -1515,7 +1422,9 @@ function extractKeywords(q) {
   // Apply synonym expansion
   for (const [key, values] of Object.entries(synonyms)) {
     if (lc.includes(key)) {
-      values.forEach(synonym => lc += " " + synonym);
+      for (const synonym of values) {
+        lc += " " + synonym;
+      }
     }
   }
   
@@ -1535,7 +1444,7 @@ function extractKeywords(q) {
   const stopWords = ["what", "when", "where", "which", "how", "why", "who", "can", "will", "should", "could", "would", "do", "does", "did", "are", "is", "was", "were", "have", "has", "had", "you", "your", "yours", "me", "my", "mine", "we", "our", "ours", "they", "their", "theirs", "them", "us", "him", "her", "his", "hers", "it", "its"];
   
   lc
-    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replaceAll(/[^\p{L}\p{N}\s-]/gu, " ")
     .split(/\s+/)
     .filter((w) => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4) && !stopWords.includes(w))
     .forEach((w) => kws.add(w));
@@ -1544,22 +1453,8 @@ function extractKeywords(q) {
 }
 
 // Helper functions for intent detection
-function isFollowUpQuestion(lc) {
-  const followUpQuestions = [
-    "how much", "cost", "price", "where", "location", "when", "date",
-    "how many", "people", "attend", "fitness", "level", "duration", "long",
-    "how do i book", "book", "booking", "required", "needed", "suitable"
-  ];
-  return followUpQuestions.some(word => lc.includes(word));
-}
 
-function hasWorkshopMention(lc) {
-  return lc.includes("workshop");
-}
 
-function isSpecificCourseQuery(lc) {
-  return lc.includes("course") || lc.includes("class") || lc.includes("lesson");
-}
 
 function isEquipmentQuery(lc) {
   const equipmentKeywords = [
@@ -1587,13 +1482,7 @@ function isTechnicalQuery(lc) {
   return technicalKeywords.some(word => lc.includes(word));
 }
 
-function isAboutQuery(lc) {
-  return lc.includes("about");
-}
 
-function isGeneralQuery(lc) {
-  return lc.includes("general") || lc.includes("help");
-}
 
 // Helper functions for detectIntent
 function isFreeCourseQuery(lc) {
@@ -1614,48 +1503,6 @@ function handleFollowUpLogic(isFollowUp, mentionsWorkshop) {
   return null;
 }
 
-function detectIntent(q) {
-  const lc = (q || "").toLowerCase();
-  
-  // PRIORITY: Free course queries should be treated as advice, not events
-  if (isFreeCourseQuery(lc)) {
-    return "advice"; // Free course queries need cross-entity search
-  }
-  
-  // Check for course/class queries
-  const mentionsCourse = isSpecificCourseQuery(lc);
-  const mentionsWorkshop = hasWorkshopMention(lc);
-  
-  // PRIORITY: Flexible services should be treated as advice, not events
-  if (isServiceQuery(lc)) {
-    return "advice"; // Flexible services need cross-entity search (products + services + articles)
-  }
-  
-  // Both courses and workshops have events - they're both scheduled sessions
-  if (mentionsCourse || mentionsWorkshop) {
-    return "events"; // Both courses and workshops are events (scheduled sessions)
-  }
-  
-  // ADVICE keywords
-  if (isEquipmentQuery(lc) || isTechnicalQuery(lc)) {
-    return "advice";
-  }
-  
-  // heuristic: if question starts with "when/where" + includes 'workshop' → events
-  if (isWhenWhereWorkshopQuery(q, mentionsWorkshop)) return "events";
-  
-  // Check if this is a follow-up question about event details
-  const isFollowUp = isFollowUpQuestion(lc);
-  
-  // Handle follow-up logic
-  const followUpResult = handleFollowUpLogic(isFollowUp, mentionsWorkshop);
-  if (followUpResult) {
-    return followUpResult;
-  }
-  
-  // default
-  return "advice";
-}
 
 /* --------------------------- Interactive Clarification System --------------------------- */
 
@@ -1663,76 +1510,9 @@ function detectIntent(q) {
  * LOGICAL CONFIDENCE SYSTEM - Check if we have enough context to provide a confident answer
  * Uses logical rules instead of broken numerical confidence scores
  */
-// Calculate RAG-based confidence for clarification questions
-async function calculateRAGConfidence(query, client, pageContext) {
-  try {
-    const keywords = extractKeywords(query);
-    const articles = await findArticles(client, { keywords, limit: 10, pageContext });
-    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-    const contentChunks = await findContentChunks(client, { keywords, limit: 5, articleUrls });
-    
-    // Calculate confidence based on content found
-    let confidence = 0.1; // Base confidence
-    
-    if (articles.length > 0) {
-      confidence += Math.min(0.3, articles.length * 0.05); // Up to 30% for articles
-    }
-    
-    if (contentChunks.length > 0) {
-      confidence += Math.min(0.4, contentChunks.length * 0.08); // Up to 40% for content chunks
-    }
-    
-    // Check if content is highly relevant
-    const queryWords = query.toLowerCase().split(' ').filter(w => w.length > 2);
-    let relevanceScore = 0;
-    
-    if (articles.length > 0) {
-      articles.forEach(article => {
-        const title = (article.title || '').toLowerCase();
-        const description = (article.description || '').toLowerCase();
-        const text = `${title} ${description}`;
-        
-        queryWords.forEach(word => {
-          if (text.includes(word)) relevanceScore += 0.1;
-        });
-      });
-    }
-    
-    confidence += Math.min(0.2, relevanceScore); // Up to 20% for relevance
-    
-    return Math.min(0.95, Math.max(0.1, confidence)); // Cap between 10% and 95%
-  } catch (error) {
-    console.warn('Error calculating RAG confidence:', error);
-    return 0.3; // Default confidence if calculation fails
-  }
-}
 
-function applyFreeQueryPenalty(mentionsFree, topServiceIsPaid, baseConfidence, confidenceFactors) {
-  if (mentionsFree && topServiceIsPaid) {
-    baseConfidence -= 0.35; 
-    confidenceFactors.push('Free query but top result is paid (-0.35)');
-  }
-  return baseConfidence;
-}
 
-function applyOnlineQueryPenalty(mentionsOnline, topServiceIsOffline, baseConfidence, confidenceFactors) {
-  if (mentionsOnline && topServiceIsOffline) {
-    baseConfidence -= 0.25; 
-    confidenceFactors.push('Online query but top result offline (-0.25)');
-  }
-  return baseConfidence;
-}
 
-function applyCertificatePenalty(mentionsCertificate, baseConfidence, confidenceFactors) {
-  if (mentionsCertificate) {
-    const hasCert = false; // no certificate detection yet
-    if (!hasCert) { 
-      baseConfidence -= 0.2; 
-      confidenceFactors.push('Certificate requested but not found (-0.2)'); 
-    }
-  }
-  return baseConfidence;
-}
 
 function applyLandingBonus(hasLandingFree, mentionsFree, mentionsOnline, baseConfidence, confidenceFactors) {
   if (hasLandingFree && (mentionsFree || mentionsOnline)) {
@@ -2189,7 +1969,6 @@ function deduplicateAndLimitOptions(options) {
 
 async function generateClarificationOptionsFromEvidence(client, query, pageContext) {
   try {
-    const keywords = extractKeywords(query || "");
     const evidence = await getEvidenceSnapshot(client, query, pageContext);
     
     const options = [];
@@ -2736,7 +2515,6 @@ function getClarificationLevelAndConfidence(query, pageContext) {
 
 // NEW: Query Classification System
 function classifyQuery(query) {
-  const lc = query.toLowerCase();
   console.log(`🔍 classifyQuery called with: "${query}"`);
   
   // COURSE QUERIES - Check these FIRST to ensure they go to clarification
@@ -3885,11 +3663,11 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   // Check if this is a duration-based query that needs special handling
   let queryText = enhancedKeywords.join(' ').toLowerCase();
   // Normalize "one day" / "1 day" to canonical "1-day" so downstream detection is consistent
-  queryText = queryText.replace(/\b(1\s*day|one\s*day)\b/g, '1-day');
+  queryText = queryText.replaceAll(/\b(1\s*day|one\s*day)\b/g, '1-day');
   // Normalize short duration phrasings to canonical token
-  queryText = queryText.replace(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|2\s*hr|2\s*hour|short)\b/g, '2.5hrs-4hrs');
+  queryText = queryText.replaceAll(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|2\s*hr|2\s*hour|short)\b/g, '2.5hrs-4hrs');
   // Normalize multi-day phrasings to canonical token
-  queryText = queryText.replace(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/g, '2-5-days');
+  queryText = queryText.replaceAll(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/g, '2-5-days');
   console.log('🔍 findEvents debug:', { enhancedKeywords, queryText });
   
   // Check for 2.5hrs-4hrs workshops (normalized)
@@ -3991,7 +3769,7 @@ function normalizeCategories(rawCategories) {
     const inner = value.slice(1, -1);
     return inner
       .split(',')
-      .map(s => s.replace(/^\"|\"$/g, '').trim())
+      .map(s => s.replaceAll(/^\"|\"$/g, '').trim())
       .filter(Boolean);
   }
   // Handle JSON array string
@@ -4457,7 +4235,7 @@ function addCoreConceptScore(hasCore, coreConcepts, t, u, add, has) {
 // Helper functions for core concept scoring
 function processCoreConceptBoosts(coreConcepts, t, u, add, has) {
   for (const c of coreConcepts) {
-    const slug = c.replace(/\s+/g, "-");
+    const slug = c.replaceAll(/\s+/g, "-");
     applyConceptBoosts(c, slug, t, u, add, has);
   }
 }
@@ -4619,7 +4397,7 @@ async function dedupeAndEnrichArticles(client, articles) {
           // Look for title patterns in the content
           const titleMatch = text.match(/^([A-Z][A-Z\s\-&]+(?:REVIEW|GUIDE|TIPS|REASONS|TRIPOD|PHOTOGRAPHY)[A-Z\s\-&]*)/m);
           if (titleMatch) {
-          return titleMatch[1].trim().replace(/\s+/g, ' ');
+          return titleMatch[1].trim().replaceAll(/\s+/g, ' ');
           }
         }
       } catch {}
@@ -4660,7 +4438,7 @@ function deriveTitleFromUrl(u) {
     const parts = (url.pathname || '').split('/').filter(Boolean);
     const last = parts[parts.length - 1] || '';
     if (!last) return null;
-    const words = last.replace(/[-_]+/g, ' ').replace(/\.(html?)$/i,' ').trim();
+    const words = last.replaceAll(/[-_]+/g, ' ').replaceAll(/\.(html?)$/i,' ').trim();
     // Title case important words
     return words.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ').trim();
   } catch { return null; }
@@ -4767,7 +4545,7 @@ function extractPdfUrl(text) {
             let pdfUrl = Array.isArray(m) ? m[0] : m[1];
             // Convert internal Squarespace URLs to public URLs
             if (pdfUrl.includes('alan-ranger.squarespace.com')) {
-              pdfUrl = pdfUrl.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
+              pdfUrl = pdfUrl.replaceAll('alan-ranger.squarespace.com', 'www.alanranger.com');
             }
     return pdfUrl;
           }
@@ -4784,7 +4562,7 @@ function extractRelatedLink(text) {
             
             // Convert internal Squarespace URLs to public URLs
             if (url.includes('alan-ranger.squarespace.com')) {
-              url = url.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
+              url = url.replaceAll('alan-ranger.squarespace.com', 'www.alanranger.com');
             }
             
             // Only accept direct Alan Ranger URLs, not URLs that contain Alan Ranger URLs as parameters
@@ -4806,7 +4584,7 @@ function findLabelMatch(text) {
 }
 
 function cleanExtractedLabel(label) {
-  return label.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
+  return label.replaceAll(/\]$/, '').replaceAll(/\[$/, '').replaceAll(/[\[\]]/g, '');
 }
 
 function generateLabelFromUrl(url) {
@@ -4814,7 +4592,7 @@ function generateLabelFromUrl(url) {
                   const urlObj = new URL(url);
                   const pathParts = urlObj.pathname.split('/').filter(Boolean);
                   const lastPart = pathParts[pathParts.length - 1] || 'Related Content';
-    return lastPart.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    return lastPart.replaceAll(/[-_]+/g, ' ').replaceAll(/\b\w/g, l => l.toUpperCase());
                 } catch {
     return 'Related Content';
   }
@@ -4834,7 +4612,7 @@ function extractRelatedLabel(text, url) {
 }
 
 function cleanUrlLabel(label) {
-  return label.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
+  return label.replaceAll(/\]$/, '').replaceAll(/\[$/, '').replaceAll(/[\[\]]/g, '');
 }
 
 async function getArticleAuxLinks(client, articleUrl) {
@@ -4903,26 +4681,26 @@ function processTableData(data, table) {
 // Helper functions for description parsing
 function cleanDescriptionText(desc) {
   return String(desc)
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags completely
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags completely
-    .replace(/<[^>]*>/g, ' ') // Remove all HTML tags
-    .replace(/\s*style="[^"]*"/gi, '') // Remove style attributes
-    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi, '') // Remove data attributes
-    .replace(/\s*contenteditable="[^"]*"/gi, '') // Remove contenteditable
-    .replace(/\s*class="[^"]*"/gi, '') // Remove class attributes
-    .replace(/\s*id="[^"]*"/gi, '') // Remove id attributes
-    .replace(/\s*data-rte-[^=]*="[^"]*"/gi, '') // Remove Squarespace RTE attributes
-    .replace(/\s*data-indent="[^"]*"/gi, '') // Remove indent attributes
-    .replace(/\s*white-space:pre-wrap[^"]*"/gi, '') // Remove white-space styles
-    .replace(/\s*margin-left:[^"]*"/gi, '') // Remove margin styles
-    .replace(/\s+/g, ' ') // Normalize whitespace
+    .replaceAll(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags completely
+    .replaceAll(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags completely
+    .replaceAll(/<[^>]*>/g, ' ') // Remove all HTML tags
+    .replaceAll(/\s*style="[^"]*"/gi, '') // Remove style attributes
+    .replaceAll(/\s*data-[a-z0-9_-]+="[^"]*"/gi, '') // Remove data attributes
+    .replaceAll(/\s*contenteditable="[^"]*"/gi, '') // Remove contenteditable
+    .replaceAll(/\s*class="[^"]*"/gi, '') // Remove class attributes
+    .replaceAll(/\s*id="[^"]*"/gi, '') // Remove id attributes
+    .replaceAll(/\s*data-rte-[^=]*="[^"]*"/gi, '') // Remove Squarespace RTE attributes
+    .replaceAll(/\s*data-indent="[^"]*"/gi, '') // Remove indent attributes
+    .replaceAll(/\s*white-space:pre-wrap[^"]*"/gi, '') // Remove white-space styles
+    .replaceAll(/\s*margin-left:[^"]*"/gi, '') // Remove margin styles
+    .replaceAll(/\s+/g, ' ') // Normalize whitespace
     .trim();
 }
 
 function normalizeLines(rawText) {
   return rawText
     .split(/\r?\n/)
-    .map((s) => s.replace(/\s+/g, ' ').trim())
+    .map((s) => s.replaceAll(/\s+/g, ' ').trim())
     .filter(Boolean)
     .filter((line, index, arr) => {
       // Remove duplicate lines (common issue causing text duplication)
@@ -5035,8 +4813,6 @@ function parseExperienceLevelField(ln, helpers) {
 }
 
 function parseEquipmentNeededField(ln, helpers) {
-  const { matches, valueAfter, nextVal, setIf } = helpers;
-  
   // Check different equipment parsing patterns
   return parseStandardEquipmentFormat(ln, helpers) ||
          parseAsteriskEquipmentFormat(ln, helpers) ||
@@ -5205,7 +4981,8 @@ function scrubDescription(description) {
   
 async function fetchChunkData(primary) {
   try {
-    const chunkResponse = await supabase
+    const client = supabaseAdmin();
+    const chunkResponse = await client
       .from('page_chunks')
       .select('chunk_text')
       .eq('url', primary.page_url)
@@ -5607,7 +5384,6 @@ function findRelevantEvent(events, lowerQuery, dataContext) {
     
   // Check for contextually relevant events
     if (dataContext.originalQuery) {
-      const originalQueryLower = dataContext.originalQuery.toLowerCase();
       console.log(`🔍 RAG: Looking for event matching original query: "${dataContext.originalQuery}"`);
       
       const keyTerms = dataContext.originalQuery.toLowerCase()
@@ -5703,9 +5479,9 @@ function checkEventFitnessLevel(event, lowerQuery) {
 }
 
 async function extractRelevantInfo(query, dataContext) {
-  const { products, events, articles } = dataContext;
+  const { products, events } = dataContext;
   const lowerQuery = query.toLowerCase();
-  const { hasText, formatDateGB, scrubAttrs, summarize } = createTextHelpers();
+  const { hasText, formatDateGB, summarize } = createTextHelpers();
   
   // For event-based questions, prioritize the structured event data
   if (events && events.length > 0) {
@@ -6970,7 +6746,7 @@ export default async function handler(req, res) {
     if (!validateRequestMethod(req, res)) return;
     
     // Extract and normalize query
-    const { query, topK, previousQuery, sessionId, pageContext } = extractAndNormalizeQuery(req.body);
+    const { query, previousQuery, sessionId, pageContext } = extractAndNormalizeQuery(req.body);
     // Sanitize page context: ignore self-hosted chat page to avoid misleading clarification routing
     const sanitizedPageContext = (pageContext && typeof pageContext.pathname === 'string' && /\/chat\.html$/i.test(pageContext.pathname)) ? null : pageContext;
     if (!query) {
@@ -7595,7 +7371,6 @@ async function tryRagFirst(client, query) {
       console.log(`📝 Filtered to ${adviceEntities.length} advice entities`);
       
       // Check if entities are relevant to the query
-      const lcQuery = query.toLowerCase();
       console.log(`🔍 Filtering ${adviceEntities.length} entities for query: "${query}"`);
       const relevantEntities = adviceEntities.filter(entity => {
         const title = (entity.title || '').toLowerCase();
@@ -7691,14 +7466,13 @@ async function tryRagFirst(client, query) {
         (answer.includes("Yes, Alan Ranger") && answer.length < 200) ||
         answer.includes("I'd be happy to help you with your photography questions")) {
       console.log(`⚠️ No answer generated or generic response detected, providing fallback`);
-      const lcQuery = query.toLowerCase();
       
       // No hardcoded overrides - let the system work naturally
       
-      if (/tripod|equipment|gear|camera|lens/i.test(lcQuery)) {
+      if (/tripod|equipment|gear|camera|lens/i.test(query)) {
         answer = `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`;
         type = "advice";
-      } else if (/refund|cancellation|policy/i.test(lcQuery)) {
+      } else if (/refund|cancellation|policy/i.test(query)) {
         answer = `Alan Ranger has a clear cancellation and refund policy for all courses and workshops. Here are the key details:\n\n**Cancellation Policy:**\n• Full refund if cancelled 14+ days before the event\n• 50% refund if cancelled 7-13 days before\n• No refund for cancellations within 7 days\n\n**Rescheduling:**\n• Free rescheduling if requested 7+ days in advance\n• Weather-related cancellations are fully refundable\n\nFor specific details or to discuss your situation, please contact Alan directly.\n\n*Contact Alan: https://www.alanranger.com/contact*`;
         type = "advice";
       } else {

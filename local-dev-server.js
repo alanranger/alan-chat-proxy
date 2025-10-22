@@ -80,11 +80,29 @@ const server = createServer(async (req, res) => {
     }
   } else {
     console.log(`❌ No route matched for ${req.url} ${req.method}`);
+    
+    // Handle specific missing routes
+    if (req.url === '/api/chat-log' && req.method === 'POST') {
+      // Mock chat log endpoint
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, logged: true }));
+      return;
+    }
+    
+    if (req.url === '/favicon.ico') {
+      // Return a simple favicon
+      res.writeHead(200, { 'Content-Type': 'image/x-icon' });
+      res.end();
+      return;
+    }
+    
     // Serve static files
     try {
-      let filePath = req.url === '/' ? '/public/chat.html' : req.url;
-      if (filePath.startsWith('/public/')) {
-        filePath = filePath.substring(7); // Remove /public prefix
+      let filePath = req.url === '/' ? 'chat.html' : req.url.substring(1); // Remove leading slash
+      
+      // Handle URL encoded spaces
+      if (filePath.includes('%20')) {
+        filePath = decodeURIComponent(filePath);
       }
       
       const fullPath = join(__dirname, 'public', filePath);
@@ -97,11 +115,16 @@ const server = createServer(async (req, res) => {
         res.setHeader('Content-Type', 'application/javascript');
       } else if (filePath.endsWith('.css')) {
         res.setHeader('Content-Type', 'text/css');
+      } else if (filePath.endsWith('.png')) {
+        res.setHeader('Content-Type', 'image/png');
+      } else if (filePath.endsWith('.ico')) {
+        res.setHeader('Content-Type', 'image/x-icon');
       }
       
       res.writeHead(200);
       res.end(content);
     } catch (error) {
+      console.log(`❌ File not found: ${req.url}`);
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('File not found');
     }
