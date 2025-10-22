@@ -7013,59 +7013,86 @@ async function processRemainingLogic(client, query, previousQuery, intent, pageC
 }
 
 // Generate detailed event answer markdown with specific event information
+// Helper function to check query types
+function analyzeQueryTypes(query) {
+  const queryLower = query.toLowerCase();
+  return {
+    isLocationQuery: queryLower.includes('devon') || queryLower.includes('coventry') || queryLower.includes('kenilworth') || queryLower.includes('exmoor'),
+    isTimeQuery: queryLower.includes('next') || queryLower.includes('when') || queryLower.includes('date')
+  };
+}
+
+// Helper function to format event date
+function formatEventDate(dateString) {
+  const eventDate = new Date(dateString);
+  return eventDate.toLocaleDateString('en-GB', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+}
+
+// Helper function to handle time query response
+function handleTimeQueryResponse(eventList, isLocationQuery) {
+  const sortedEvents = [...eventList].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const nextEvent = sortedEvents[0];
+  const formattedDate = formatEventDate(nextEvent.date);
+  
+  return ` The next ${isLocationQuery ? 'Devon ' : ''}workshop is "${nextEvent.title || nextEvent.event_title}" on ${formattedDate} in ${nextEvent.location || 'Devon'}.`;
+}
+
+// Helper function to handle location query response
+function handleLocationQueryResponse(eventList) {
+  const locations = [...new Set(eventList.map(e => e.location).filter(Boolean))];
+  if (locations.length > 0) {
+    return ` These workshops are located in ${locations.join(' and ')}.`;
+  }
+  return '';
+}
+
+// Helper function to format individual event details
+function formatEventDetails(event) {
+  const formattedDate = formatEventDate(event.date);
+  let details = `\n\n**${event.title || event.event_title}**`;
+  details += `\n• Date: ${formattedDate}`;
+  if (event.location) details += `\n• Location: ${event.location}`;
+  if (event.price) details += `\n• Price: £${event.price}`;
+  if (event.experience_level) details += `\n• Level: ${event.experience_level}`;
+  return details;
+}
+
+// Helper function to add event details
+function addEventDetails(eventList) {
+  if (eventList.length <= 3) {
+    let details = ` Here are the details:`;
+    eventList.forEach(event => {
+      details += formatEventDetails(event);
+    });
+    return details;
+  } else {
+    return ` These include workshops in various locations with different skill levels and dates.`;
+  }
+}
+
 function generateEventAnswerMarkdown(eventList, query) {
   if (!eventList || eventList.length === 0) {
     return "I couldn't find any events matching your query.";
   }
   
-  const queryLower = query.toLowerCase();
-  const isLocationQuery = queryLower.includes('devon') || queryLower.includes('coventry') || queryLower.includes('kenilworth') || queryLower.includes('exmoor');
-  const isTimeQuery = queryLower.includes('next') || queryLower.includes('when') || queryLower.includes('date');
+  const { isLocationQuery, isTimeQuery } = analyzeQueryTypes(query);
   
   let answer = `I found ${eventList.length} ${eventList.length === 1 ? 'event' : 'events'} that match your query.`;
   
   if (isTimeQuery && eventList.length > 0) {
-    // Sort events by date to show the next one first
-    const sortedEvents = [...eventList].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const nextEvent = sortedEvents[0];
-    const eventDate = new Date(nextEvent.date);
-    const formattedDate = eventDate.toLocaleDateString('en-GB', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-    
-    answer += ` The next ${isLocationQuery ? 'Devon ' : ''}workshop is "${nextEvent.title || nextEvent.event_title}" on ${formattedDate} in ${nextEvent.location || 'Devon'}.`;
+    answer += handleTimeQueryResponse(eventList, isLocationQuery);
   }
   
   if (isLocationQuery) {
-    const locations = [...new Set(eventList.map(e => e.location).filter(Boolean))];
-    if (locations.length > 0) {
-      answer += ` These workshops are located in ${locations.join(' and ')}.`;
-    }
+    answer += handleLocationQueryResponse(eventList);
   }
   
-  // Add specific event details
-  if (eventList.length <= 3) {
-    answer += ` Here are the details:`;
-    eventList.forEach((event, index) => {
-      const eventDate = new Date(event.date);
-      const formattedDate = eventDate.toLocaleDateString('en-GB', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
-      answer += `\n\n**${event.title || event.event_title}**`;
-      answer += `\n• Date: ${formattedDate}`;
-      if (event.location) answer += `\n• Location: ${event.location}`;
-      if (event.price) answer += `\n• Price: £${event.price}`;
-      if (event.experience_level) answer += `\n• Level: ${event.experience_level}`;
-    });
-  } else {
-    answer += ` These include workshops in various locations with different skill levels and dates.`;
-  }
+  answer += addEventDetails(eventList);
   
   return answer;
 }
