@@ -6431,143 +6431,152 @@ async function searchRagEntities(client, query, keywords, isConceptQuery, primar
   );
 }
 
-// Helper function to generate RAG answer
-function generateRagAnswer(query, entities, chunks, results) {
-  let answer = "";
-  let type = "advice";
-  let sources = [];
+// Helper function to handle event entities
+function handleEventEntities(entities) {
+  const eventEntities = entities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
+  if (eventEntities.length > 0) {
+    const answer = eventEntities.map(e => `${e.title} on ${new Date(e.date_start).toDateString()} at ${e.location}. More info: ${e.url}`).join("\n");
+    const sources = eventEntities.map(e => e.url);
+    return { answer, type: "events", sources };
+  }
+  return null;
+}
+
+// Helper function to handle chunk processing
+function handleChunkProcessing(query, entities, chunks) {
+  console.log(`🔍 Using generateDirectAnswer for ${chunks.length} chunks`);
+  const directAnswer = generateDirectAnswer(query, entities, chunks);
+  if (directAnswer) {
+    console.log(`✅ Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+    return { answer: directAnswer, type: "advice", sources: chunks.map(c => c.url) };
+  }
   
-  if (results.answerType === 'events' && entities.length > 0) {
-    const eventEntities = entities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
+  console.log(`⚠️ No intelligent answer found, using fallback chunk processing`);
+  const cleaned = chunks
+    .map(c => {
+      const cleanedText = cleanRagText(c.chunk_text);
+      console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
+      return cleanedText;
+    })
+    .filter(Boolean);
+  
+  console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
+  let answer = cleaned.join("\n\n");
+  
+  // Cap final answer length for UI readability
+  const MAX_LEN = 800;
+  if (answer.length > MAX_LEN) {
+    answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
+  }
+  
+  return { answer, type: "advice", sources: chunks.map(c => c.url) };
+}
+
+// Helper function to filter and sort entities
+function filterAndSortEntities(entities, query) {
+  const adviceEntities = entities.filter(e => e.kind !== 'event');
+  console.log(`📝 Filtered to ${adviceEntities.length} advice entities`);
+  
+  const relevantEntities = adviceEntities.filter(entity => {
+    // Use all entities - no hardcoded filtering
+    return true;
+  }).sort((a, b) => {
+    const queryLower = query.toLowerCase();
+    const aTitle = (a.title || '').toLowerCase();
+    const bTitle = (b.title || '').toLowerCase();
+    
+    // Exact title match gets highest priority
+    if (aTitle.includes(queryLower) && !bTitle.includes(queryLower)) return -1;
+    if (bTitle.includes(queryLower) && !aTitle.includes(queryLower)) return 1;
+    
+    // Then by publish date (newest first)
+    const aDate = new Date(a.publish_date || '1900-01-01');
+    const bDate = new Date(b.publish_date || '1900-01-01');
+    return bDate - aDate;
+  });
+  
+  console.log(`📝 Filtered to ${relevantEntities.length} relevant entities`);
+  return relevantEntities;
+}
+
+// Helper function to calculate confidence
+function calculateEntityConfidence(relevantEntities, chunks, results) {
+  if (chunks.length > 0) {
+    results.confidence = Math.min(0.9, 0.6 + (chunks.length * 0.1));
+    results.answerType = 'content';
+    console.log(`📊 Confidence from chunks: ${results.confidence} (${chunks.length} chunks)`);
+  }
+  
+  if (relevantEntities.length > 0) {
+    const eventEntities = relevantEntities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
     if (eventEntities.length > 0) {
-      answer = eventEntities.map(e => `${e.title} on ${new Date(e.date_start).toDateString()} at ${e.location}. More info: ${e.url}`).join("\n");
-      type = "events";
-      sources = eventEntities.map(e => e.url);
-    }
-  } else if (chunks.length > 0) {
-    // Use generateDirectAnswer for intelligent concept synthesis
-    console.log(`🔍 Using generateDirectAnswer for ${chunks.length} chunks`);
-    const directAnswer = generateDirectAnswer(query, entities, chunks);
-    if (directAnswer) {
-      answer = directAnswer;
-      console.log(`✅ Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+      results.confidence = Math.max(results.confidence, 0.9);
+      results.answerType = 'events';
+      console.log(`🎯 Found ${eventEntities.length} event entities, confidence: ${results.confidence}`);
     } else {
-      console.log(`⚠️ No intelligent answer found, using fallback chunk processing`);
-      // Fallback to direct chunk processing
-      const cleaned = chunks
-        .map(c => {
-          const cleanedText = cleanRagText(c.chunk_text);
-          console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
-          return cleanedText;
-        })
-        .filter(Boolean);
-      console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
-      answer = cleaned.join("\n\n");
-      // Cap final answer length for UI readability - much shorter for better UX
-      const MAX_LEN = 800;
-      if (answer.length > MAX_LEN) {
-        answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
-      }
-    }
-    type = "advice";
-    sources = chunks.map(c => c.url);
-  } else if (entities.length > 0) {
-    // Handle entities for advice queries (non-event entities)
-    console.log(`🔍 Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
-    const adviceEntities = entities.filter(e => e.kind !== 'event');
-    console.log(`📝 Filtered to ${adviceEntities.length} advice entities`);
-    
-    // Check if entities are relevant to the query
-    console.log(`🔍 Filtering ${adviceEntities.length} entities for query: "${query}"`);
-    const relevantEntities = adviceEntities.filter(entity => {
-      const title = (entity.title || '').toLowerCase();
-      const description = (entity.description || '').toLowerCase();
-      
-      // Use all entities - no hardcoded filtering
-      return true;
-    }).sort((a, b) => {
-      // Sort by relevance: exact title matches first, then by publish date (newest first)
-      const queryLower = query.toLowerCase();
-      const aTitle = (a.title || '').toLowerCase();
-      const bTitle = (b.title || '').toLowerCase();
-      
-      // Exact title match gets highest priority
-      if (aTitle.includes(queryLower) && !bTitle.includes(queryLower)) return -1;
-      if (bTitle.includes(queryLower) && !aTitle.includes(queryLower)) return 1;
-      
-      // Then by publish date (newest first)
-      const aDate = new Date(a.publish_date || '1900-01-01');
-      const bDate = new Date(b.publish_date || '1900-01-01');
-      return bDate - aDate;
-    });
-    
-    console.log(`📝 Filtered to ${relevantEntities.length} relevant entities`);
-    
-    // Calculate confidence based on filtered entities
-    if (chunks.length > 0) {
-      results.confidence = Math.min(0.9, 0.6 + (chunks.length * 0.1));
-      results.answerType = 'content';
-      console.log(`📊 Confidence from chunks: ${results.confidence} (${chunks.length} chunks)`);
-    }
-    
-    if (relevantEntities.length > 0) {
-      const eventEntities = relevantEntities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
-      if (eventEntities.length > 0) {
-        results.confidence = Math.max(results.confidence, 0.9);
-        results.answerType = 'events';
-        console.log(`🎯 Found ${eventEntities.length} event entities, confidence: ${results.confidence}`);
-      } else {
-        results.confidence = Math.max(results.confidence, 0.7);
-        console.log(`🎯 Found ${relevantEntities.length} advice entities, confidence: ${results.confidence}`);
-      }
-    }
-    
-    console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
-    
-    if (relevantEntities.length > 0) {
-      // Check if this is a policy/terms query (flexible pattern to handle typos)
-      const isPolicyQuery = /terms.*conditions|terms.*anc.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
-      
-      if (isPolicyQuery) {
-        // For policy queries, provide direct information
-        const policyEntity = relevantEntities.find(e => 
-          e.title.toLowerCase().includes('terms') || 
-          e.title.toLowerCase().includes('conditions') ||
-          e.title.toLowerCase().includes('policy')
-        ) || relevantEntities[0];
-        
-        answer = `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated.\n\nFor full details, visit the [Terms and Conditions page](${policyEntity.url}).`;
-        
-        type = "advice";
-        sources = [policyEntity.url];
-        console.log(`✅ Generated policy-specific answer for terms and conditions query`);
-      } else {
-        // Use the enhanced generateDirectAnswer function for intelligent concept synthesis
-        console.log(`🔍 DEBUG: Using generateDirectAnswer for enhanced concept synthesis`);
-        const directAnswer = generateDirectAnswer(query, relevantEntities, chunks);
-        if (directAnswer) {
-          answer = directAnswer;
-          console.log(`✅ Generated enhanced answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
-        } else {
-          console.log(`⚠️ No enhanced answer found, trying fallback`);
-          // Fallback to description
-          const primaryEntity = relevantEntities[0];
-          answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
-          console.log(`✅ Generated fallback answer from description`);
-        }
-        
-        type = "advice";
-        sources = relevantEntities.map(e => e.url);
-        console.log(`✅ Generated enhanced answer from ${relevantEntities.length} relevant entities`);
-      }
-    } else {
-      console.log(`⚠️ No relevant entities found for query`);
-      // Don't generate a generic response here - let the fallback handle it
-      answer = "";
+      results.confidence = Math.max(results.confidence, 0.7);
+      console.log(`🎯 Found ${relevantEntities.length} advice entities, confidence: ${results.confidence}`);
     }
   }
   
-  return { answer, type, sources };
+  console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
+}
+
+// Helper function to handle policy queries
+function handlePolicyQuery(relevantEntities) {
+  const policyEntity = relevantEntities.find(e => 
+    e.title.toLowerCase().includes('terms') || 
+    e.title.toLowerCase().includes('conditions') ||
+    e.title.toLowerCase().includes('policy')
+  ) || relevantEntities[0];
+  
+  const answer = `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated.\n\nFor full details, visit the [Terms and Conditions page](${policyEntity.url}).`;
+  
+  console.log(`✅ Generated policy-specific answer for terms and conditions query`);
+  return { answer, type: "advice", sources: [policyEntity.url] };
+}
+
+// Helper function to handle regular entity processing
+function handleRegularEntityProcessing(query, relevantEntities, chunks) {
+  console.log(`🔍 DEBUG: Using generateDirectAnswer for enhanced concept synthesis`);
+  const directAnswer = generateDirectAnswer(query, relevantEntities, chunks);
+  if (directAnswer) {
+    console.log(`✅ Generated enhanced answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+    return { answer: directAnswer, type: "advice", sources: relevantEntities.map(e => e.url) };
+  }
+  
+  console.log(`⚠️ No enhanced answer found, trying fallback`);
+  const primaryEntity = relevantEntities[0];
+  const answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
+  console.log(`✅ Generated fallback answer from description`);
+  
+  return { answer, type: "advice", sources: relevantEntities.map(e => e.url) };
+}
+
+// Helper function to generate RAG answer
+function generateRagAnswer(params) {
+  const { query, entities, chunks, results } = params;
+  
+  if (results.answerType === 'events' && entities.length > 0) {
+    const eventResult = handleEventEntities(entities);
+    if (eventResult) return eventResult;
+  } else if (chunks.length > 0) {
+    return handleChunkProcessing(query, entities, chunks);
+  } else if (entities.length > 0) {
+    console.log(`🔍 Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
+    const relevantEntities = filterAndSortEntities(entities, query);
+    calculateEntityConfidence(relevantEntities, chunks, results);
+    
+    if (relevantEntities.length > 0) {
+      const isPolicyQuery = /terms.*conditions|terms.*anc.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
+      return isPolicyQuery ? handlePolicyQuery(relevantEntities) : handleRegularEntityProcessing(query, relevantEntities, chunks);
+    } else {
+      console.log(`⚠️ No relevant entities found for query`);
+      return { answer: "", type: "advice", sources: [] };
+    }
+  }
+  
+  return { answer: "", type: "advice", sources: [] };
 }
 
 // Helper function to prepare RAG query parameters
@@ -6743,7 +6752,7 @@ async function tryRagFirst(client, query) {
     const results = await processRagSearchResults(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery);
     
     // Generate answer using helper function
-    const { answer, type, sources } = generateRagAnswer(query, results.entities, results.chunks, results);
+    const { answer, type, sources } = generateRagAnswer({ query, entities: results.entities, chunks: results.chunks, results });
     
     // Handle fallback cases
     const { finalAnswer, finalType, finalSources } = handleRagFallbackLogic(answer, type, sources, query);
