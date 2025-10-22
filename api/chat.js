@@ -3604,57 +3604,70 @@ function addBaseKeywordScore(context) {
   }
 }
 
-function addOnlineCourseBoost(categories, kw, t, add, has) {
-    const isOnlineCourse = categories.includes("online photography course");
-    const coreConcepts = [
-      "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
-      "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
-      "raw", "jpeg", "hdr", "focal length", "long exposure"
-    ];
-    const hasCore = coreConcepts.some(c => kw.includes(c));
+function addOnlineCourseBoost(context) {
+  const isOnlineCourse = context.categories.includes("online photography course");
+  const coreConcepts = [
+    "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
+    "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
+    "raw", "jpeg", "hdr", "focal length", "long exposure"
+  ];
+  const hasCore = coreConcepts.some(c => context.kw.includes(c));
+  
+  if (hasCore && isOnlineCourse) {
+    context.add(25); // Major boost for online course content on technical topics
     
-    if (hasCore && isOnlineCourse) {
-    add(25); // Major boost for online course content on technical topics
-      
-      // Extra boost for "What is..." format articles in online course
-      for (const c of coreConcepts) {
-      if (has(t, `what is ${c}`) || has(t, `${c} in photography`)) {
-        add(15); // Additional boost for structured learning content
-        }
-      }
-      
-      // Boost for PDF checklists and guides
-    if (has(t, "pdf") || has(t, "checklist") || has(t, "guide")) {
-      add(10);
+    // Extra boost for "What is..." format articles in online course
+    for (const c of coreConcepts) {
+      if (context.has(context.t, `what is ${c}`) || context.has(context.t, `${c} in photography`)) {
+        context.add(15); // Additional boost for structured learning content
       }
     }
     
+    // Boost for PDF checklists and guides
+    if (context.has(context.t, "pdf") || context.has(context.t, "checklist") || context.has(context.t, "guide")) {
+      context.add(10);
+    }
+  }
+  
   return { hasCore, coreConcepts };
 }
 
-function addCoreConceptScore(hasCore, coreConcepts, t, u, add, has) {
-  if (!hasCore) return;
+function addCoreConceptScore(context) {
+  if (!context.hasCore) return;
   
   // Process core concept scoring
-  processCoreConceptBoosts(coreConcepts, t, u, add, has);
+  processCoreConceptBoosts({
+    coreConcepts: context.coreConcepts,
+    t: context.t,
+    u: context.u,
+    add: context.add,
+    has: context.has
+  });
   
   // Apply penalties for generic content
-  applyGenericContentPenalties(t, u, add);
+  applyGenericContentPenalties(context.t, context.u, context.add);
 }
 
 // Helper functions for core concept scoring
-function processCoreConceptBoosts(coreConcepts, t, u, add, has) {
-  for (const c of coreConcepts) {
+function processCoreConceptBoosts(context) {
+  for (const c of context.coreConcepts) {
     const slug = c.replace(/\s+/g, "-");
-    applyConceptBoosts(c, slug, t, u, add, has);
+    applyConceptBoosts({
+      concept: c,
+      slug: slug,
+      t: context.t,
+      u: context.u,
+      add: context.add,
+      has: context.has
+    });
   }
 }
 
-function applyConceptBoosts(concept, slug, t, u, add, has) {
-  if (t.startsWith(`what is ${concept}`)) add(20); // ideal explainer
-  if (has(t, `what is ${concept}`)) add(10);
-  if (has(u, `/what-is-${slug}`)) add(12);
-  if (has(u, `${slug}`)) add(3);
+function applyConceptBoosts(context) {
+  if (context.t.startsWith(`what is ${context.concept}`)) context.add(20); // ideal explainer
+  if (context.has(context.t, `what is ${context.concept}`)) context.add(10);
+  if (context.has(context.u, `/what-is-${context.slug}`)) context.add(12);
+  if (context.has(context.u, `${context.slug}`)) context.add(3);
 }
 
 function applyGenericContentPenalties(t, u, add) {
@@ -3743,8 +3756,8 @@ function scoreArticleRow(r, kw) {
   const has = (str, needle)=> str.includes(needle);
   
   addBaseKeywordScore({ kw, t, u, add, has });
-  const { hasCore, coreConcepts } = addOnlineCourseBoost(categories, kw, t, add, has);
-  addCoreConceptScore(hasCore, coreConcepts, t, u, add, has);
+  const { hasCore, coreConcepts } = addOnlineCourseBoost({ categories, kw, t, add, has });
+  addCoreConceptScore({ hasCore, coreConcepts, t, u, add, has });
   addCategoryBoost(categories, hasCore, add);
   
   return addRecencyTieBreaker(s, r);
@@ -4279,26 +4292,26 @@ function initializeDescriptionOutput() {
 function parseAllDescriptionLines(lines, helpers, out) {
   for (let i = 0; i < lines.length; i++) {
     const ln = lines[i];
-    const skipNext = parseDescriptionLine(ln, helpers, out, i);
+    const skipNext = parseDescriptionLine({ ln, helpers, out, i });
     if (skipNext) {
       i++; // Skip the next line since we processed it
     }
   }
 }
 
-function parseDescriptionLine(ln, helpers, out, i) {
+function parseDescriptionLine(context) {
   // Parse each field type in order
-  if (parseLocationField(ln, helpers)) return false;
+  if (parseLocationField(context.ln, context.helpers)) return false;
   
-  const participantsResult = parseParticipantsField(ln, helpers, i);
+  const participantsResult = parseParticipantsField(context.ln, context.helpers, context.i);
   if (participantsResult === true) return false;
   if (participantsResult?.skipNext) return true;
   
-  if (parseFitnessField(ln, helpers)) return false;
-  if (parseAvailabilityField(ln, helpers)) return false;
-  if (parseExperienceLevelField(ln, helpers)) return false;
-  if (parseEquipmentNeededField(ln, helpers)) return false;
-  if (parseSessionField(ln, out)) return false;
+  if (parseFitnessField(context.ln, context.helpers)) return false;
+  if (parseAvailabilityField(context.ln, context.helpers)) return false;
+  if (parseExperienceLevelField(context.ln, context.helpers)) return false;
+  if (parseEquipmentNeededField(context.ln, context.helpers)) return false;
+  if (parseSessionField(context.ln, context.out)) return false;
   
   return false;
 }
