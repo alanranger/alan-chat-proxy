@@ -900,24 +900,25 @@ function handleSingleConcept(chunkText, relevantChunk, keywords, title) {
 }
 
 function extractConceptExplanation(chunkText, query, exactTerm, relevantChunk) {
-  const lc = query.toLowerCase();
+  const context = { chunkText, query, exactTerm, relevantChunk };
+  const lc = context.query.toLowerCase();
   
   // Handle exposure triangle specifically
   if (lc.includes('exposure triangle') || lc.includes('triangle')) {
-    return handleExposureTriangle(chunkText, relevantChunk);
+    return handleExposureTriangle(context.chunkText, context.relevantChunk);
   }
   
   // Handle individual concepts
   if (lc.includes('iso') && !lc.includes('triangle')) {
-    return handleSingleConcept(chunkText, relevantChunk, ['iso', 'sensitivity', 'light', 'exposure'], 'ISO in Photography');
+    return handleSingleConcept(context.chunkText, context.relevantChunk, ['iso', 'sensitivity', 'light', 'exposure'], 'ISO in Photography');
   }
   
   if (lc.includes('aperture') && !lc.includes('triangle')) {
-    return handleSingleConcept(chunkText, relevantChunk, ['aperture', 'f/', 'depth of field', 'opening'], 'Aperture in Photography');
+    return handleSingleConcept(context.chunkText, context.relevantChunk, ['aperture', 'f/', 'depth of field', 'opening'], 'Aperture in Photography');
   }
   
   if (lc.includes('shutter speed') && !lc.includes('triangle')) {
-    return handleSingleConcept(chunkText, relevantChunk, ['shutter', 'speed', 'motion', 'blur'], 'Shutter Speed in Photography');
+    return handleSingleConcept(context.chunkText, context.relevantChunk, ['shutter', 'speed', 'motion', 'blur'], 'Shutter Speed in Photography');
   }
   
   return null;
@@ -1022,44 +1023,46 @@ function extractRelevantSentence(chunkText, queryWords, relevantChunk) {
 }
 
 function extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChunk) {
-    // Fallback: if no good sentence found, try to extract the first paragraph containing "what is <term>"
-    if (exactTerm) {
-      const byPara = chunkText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 50);
-      const para = byPara.find(p => p.toLowerCase().includes(`what is ${exactTerm}`) && p.length <= 300);
-      if (para) {
-        return formatResponseMarkdown({
-          title: 'Definition',
-          url: relevantChunk.url,
-          description: para.trim()
-        });
-      }
-    }
-
-    // Fallback: if no good sentence found, try to extract a relevant paragraph
-    const paragraphs = chunkText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
-    const relevantParagraph = paragraphs.find(p => {
-      const pLower = p.toLowerCase();
-      const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
-      const importantWords = queryWords.filter(w => 
-        w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
-      );
-      return importantWords.some(word => pLower.includes(word)) &&
-             !pLower.includes('[article]') &&
-             !pLower.includes('published:') &&
-             !pLower.includes('url:') &&
-             !pLower.includes('alan ranger photography');
-    });
-    
-    if (relevantParagraph && relevantParagraph.length < 300) {
+  const context = { chunkText, queryWords, exactTerm, relevantChunk };
+  
+  // Fallback: if no good sentence found, try to extract the first paragraph containing "what is <term>"
+  if (context.exactTerm) {
+    const byPara = context.chunkText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 50);
+    const para = byPara.find(p => p.toLowerCase().includes(`what is ${context.exactTerm}`) && p.length <= 300);
+    if (para) {
       return formatResponseMarkdown({
-        title: 'Information',
-        url: relevantChunk.url,
-        description: relevantParagraph.trim()
+        title: 'Definition',
+        url: context.relevantChunk.url,
+        description: para.trim()
       });
+    }
+  }
+
+  // Fallback: if no good sentence found, try to extract a relevant paragraph
+  const paragraphs = context.chunkText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
+  const relevantParagraph = paragraphs.find(p => {
+    const pLower = p.toLowerCase();
+    const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+    const importantWords = context.queryWords.filter(w => 
+      w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
+    );
+    return importantWords.some(word => pLower.includes(word)) &&
+           !pLower.includes('[article]') &&
+           !pLower.includes('published:') &&
+           !pLower.includes('url:') &&
+           !pLower.includes('alan ranger photography');
+  });
+  
+  if (relevantParagraph && relevantParagraph.length < 300) {
+    return formatResponseMarkdown({
+      title: 'Information',
+      url: context.relevantChunk.url,
+      description: relevantParagraph.trim()
+    });
   }
   
   return null;
-  }
+}
   
 // Helper functions for getHardcodedAnswer
 function getCameraAnswer() {
