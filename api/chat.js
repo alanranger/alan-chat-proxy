@@ -1361,9 +1361,7 @@ function tryArticleBasedAnswerWithConcept(exactTerm, articles, lc) {
 }
 
 // Helper function to try all answer sources in priority order
-function tryAllAnswerSources(lc, query, queryWords, exactTerm, articles, contentChunks) {
-  const context = { lc, query, queryWords, exactTerm, articles, contentChunks };
-  
+function tryAllAnswerSources(context) {
   // PRIORITY 0: Course-specific equipment advice
   const courseAnswer = tryCourseEquipmentAnswerHelper(context.lc);
   if (courseAnswer) return courseAnswer;
@@ -1392,7 +1390,7 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   
   logDirectAnswerDebug(query, articles, contentChunks);
   
-  return tryAllAnswerSources(lc, query, queryWords, exactTerm, articles, contentChunks);
+  return tryAllAnswerSources({ lc, query, queryWords, exactTerm, articles, contentChunks });
 }
 
 /* ---------------------------- Supabase client ---------------------------- */
