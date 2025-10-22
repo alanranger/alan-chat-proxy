@@ -5974,45 +5974,75 @@ async function handleClarificationQuery(client, query, classification, pageConte
 }
 
 // Helper: Generate evidence-based answer (Low Complexity)
+// Helper function to generate article-based answer
+function generateArticleAnswer(articles) {
+  const bestArticle = articles[0];
+  return `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
+}
+
+// Helper function to generate equipment service answer
+function generateEquipmentServiceAnswer(bestService) {
+  return `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: ${bestService.page_url}*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`;
+}
+
+// Helper function to generate Lightroom service answer
+function generateLightroomServiceAnswer() {
+  const serviceUrl = "https://www.alanranger.com/photo-editing-course-coventry";
+  return `Alan Ranger offers comprehensive Lightroom editing courses and workshops. His photo editing training covers:\n\n• Basic to advanced Lightroom techniques\n• Workflow optimization\n• Color correction and enhancement\n• Batch processing methods\n• Creative editing approaches\n\n*Learn more about his Lightroom courses: ${serviceUrl}*`;
+}
+
+// Helper function to generate Alan background answer
+function generateAlanBackgroundAnswer() {
+  return `Alan Ranger is a BIPP (British Institute of Professional Photography) qualified photographer with over 20 years of teaching experience and 580+ 5-star reviews.\n\n**His Background:**\n• BIPP Qualified Professional Photographer\n• 20+ years of teaching experience\n• Specializes in landscape photography\n• Based in Coventry, UK\n\n**What He Offers:**\n• Landscape photography workshops (Wales, Devon, Yorkshire)\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n• Free online photography course\n\n**Reviews:** 4.9/5 stars from students and clients\n\n*Learn more about Alan: https://www.alanranger.com/about*`;
+}
+
+// Helper function to generate service-based answer
+function generateServiceAnswer(query, services) {
+  const bestService = services[0];
+  const lc = query.toLowerCase();
+  
+  console.log(`🔍 generateEvidenceBasedAnswer: Query "${query}" matched services, testing patterns...`);
+  
+  if (/tripod|equipment|gear|camera|lens/i.test(lc)) {
+    return generateEquipmentServiceAnswer(bestService);
+  } else if (/lightroom|photo-?editing/i.test(lc)) {
+    return generateLightroomServiceAnswer();
+  } else if (/who.*alan|alan.*ranger|background|experience/i.test(lc)) {
+    return generateAlanBackgroundAnswer();
+  } else {
+    return `Yes, Alan Ranger offers the services you're asking about.\n\n*Learn more: ${bestService.page_url}*`;
+  }
+}
+
+// Helper function to generate fallback answer
+function generateFallbackAnswer(query) {
+  const lc = query.toLowerCase();
+  
+  if (/course|training|learn|teach/i.test(lc)) {
+    return `Alan Ranger offers comprehensive photography courses and training programs. His courses cover:\n\n• Landscape photography workshops\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n\nFor specific course information and availability, please contact Alan directly or visit his website to see the full range of educational offerings.`;
+  } else if (/equipment|gear|camera|lens|tripod/i.test(lc)) {
+    return `Alan Ranger has extensive experience with photography equipment and can provide personalized recommendations based on your specific needs and budget.\n\nFor equipment advice, consider:\n• Booking a consultation\n• Attending a workshop where equipment is demonstrated\n• Contacting Alan directly for personalized recommendations\n\nHe regularly reviews and recommends equipment based on real-world photography experience.`;
+  } else if (/workshop|event|tour/i.test(lc)) {
+    return `Alan Ranger offers a variety of photography workshops and events throughout the UK. His workshops include:\n\n• Landscape photography in Wales, Devon, Yorkshire\n• Long exposure techniques\n• Photo editing courses\n• Private mentoring sessions\n\nFor current workshop schedules and availability, please visit his website or contact him directly.`;
+  } else {
+    return `For specific information about your query, please contact Alan Ranger directly or visit the website for more details.`;
+  }
+}
+
 function generateEvidenceBasedAnswer(query, articles, services, events) {
   const lc = query.toLowerCase();
   let answer = '';
   let confidence = 0.8;
   
   if (articles.length > 0) {
-    const bestArticle = articles[0];
-    answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
+    answer = generateArticleAnswer(articles);
   } else if (services.length > 0) {
-    const bestService = services[0];
-    console.log(`🔍 generateEvidenceBasedAnswer: Query "${query}" matched services, testing patterns...`);
-    
-    // For equipment queries, provide more detailed guidance
-    if (/tripod|equipment|gear|camera|lens/i.test(lc)) {
-      answer = `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: ${bestService.page_url}*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`;
-    } else if (/lightroom|photo-?editing/i.test(lc)) {
-      // For Lightroom queries, prefer the specific Lightroom course page
-      const serviceUrl = "https://www.alanranger.com/photo-editing-course-coventry";
-      answer = `Alan Ranger offers comprehensive Lightroom editing courses and workshops. His photo editing training covers:\n\n• Basic to advanced Lightroom techniques\n• Workflow optimization\n• Color correction and enhancement\n• Batch processing methods\n• Creative editing approaches\n\n*Learn more about his Lightroom courses: ${serviceUrl}*`;
-    } else if (/who.*alan|alan.*ranger|background|experience/i.test(lc)) {
-      // For "about Alan" queries, provide comprehensive background
-      answer = `Alan Ranger is a BIPP (British Institute of Professional Photography) qualified photographer with over 20 years of teaching experience and 580+ 5-star reviews.\n\n**His Background:**\n• BIPP Qualified Professional Photographer\n• 20+ years of teaching experience\n• Specializes in landscape photography\n• Based in Coventry, UK\n\n**What He Offers:**\n• Landscape photography workshops (Wales, Devon, Yorkshire)\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n• Free online photography course\n\n**Reviews:** 4.9/5 stars from students and clients\n\n*Learn more about Alan: https://www.alanranger.com/about*`;
-    } else {
-      answer = `Yes, Alan Ranger offers the services you're asking about.\n\n*Learn more: ${bestService.page_url}*`;
-    }
+    answer = generateServiceAnswer(query, services);
   } else if (events.length > 0) {
     const bestEvent = events[0];
     answer = `Here's information about the workshops and events available.\n\n*View details: ${bestEvent.page_url}*`;
   } else {
-    // Provide more specific fallback based on query type
-    if (/course|training|learn|teach/i.test(lc)) {
-      answer = `Alan Ranger offers comprehensive photography courses and training programs. His courses cover:\n\n• Landscape photography workshops\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n\nFor specific course information and availability, please contact Alan directly or visit his website to see the full range of educational offerings.`;
-    } else if (/equipment|gear|camera|lens|tripod/i.test(lc)) {
-      answer = `Alan Ranger has extensive experience with photography equipment and can provide personalized recommendations based on your specific needs and budget.\n\nFor equipment advice, consider:\n• Booking a consultation\n• Attending a workshop where equipment is demonstrated\n• Contacting Alan directly for personalized recommendations\n\nHe regularly reviews and recommends equipment based on real-world photography experience.`;
-    } else if (/workshop|event|tour/i.test(lc)) {
-      answer = `Alan Ranger offers a variety of photography workshops and events throughout the UK. His workshops include:\n\n• Landscape photography in Wales, Devon, Yorkshire\n• Long exposure techniques\n• Photo editing courses\n• Private mentoring sessions\n\nFor current workshop schedules and availability, please visit his website or contact him directly.`;
-    } else {
-      answer = `For specific information about your query, please contact Alan Ranger directly or visit the website for more details.`;
-    }
+    answer = generateFallbackAnswer(query);
     confidence = 0.6;
   }
   
