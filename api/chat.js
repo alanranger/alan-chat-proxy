@@ -1670,46 +1670,68 @@ function deduplicateAndLimitOptions(options) {
     return uniqueOptions;
 }
 
+// Helper function to log evidence debug information
+function logEvidenceDebug(evidence) {
+  const evidenceDebug = {
+    eventsCount: evidence.events?.length || 0,
+    articlesCount: evidence.articles?.length || 0,
+    servicesCount: evidence.services?.length || 0,
+    sampleEvents: evidence.events?.slice(0, 2) || []
+  };
+  console.log('🔍 Evidence debug:', evidenceDebug);
+}
+
+// Helper function to process event evidence
+function processEventEvidence(evidence, options) {
+  if (evidence.events && evidence.events.length > 0) {
+    const { eventTypes, eventCategories } = extractEventTypesAndCategories(evidence.events);
+    const eventDebug = { eventTypes: Array.from(eventTypes), eventCategories: Array.from(eventCategories) };
+    console.log('🔍 Event types and categories:', eventDebug);
+    addEventOptions(options, eventTypes, eventCategories);
+    
+    // If we have good event options, skip services to avoid generic options
+    if (options.length > 0) {
+      console.log('🔍 Found event-based options, skipping services');
+      return true; // Indicates we should return early
+    }
+  }
+  return false;
+}
+
+// Helper function to process article evidence
+function processArticleEvidence(evidence, options) {
+  if (evidence.articles && evidence.articles.length > 0) {
+    const { articleCategories, articleTags } = extractArticleCategoriesAndTags(evidence.articles);
+    addArticleOptions(options, articleCategories, articleTags);
+  }
+}
+
+// Helper function to process service evidence (fallback)
+function processServiceEvidence(evidence, options) {
+  if (evidence.services && evidence.services.length > 0 && options.length === 0) {
+    console.log('🔍 No event options found, falling back to services');
+    const serviceTypes = extractServiceTypes(evidence.services);
+    addServiceOptions(options, serviceTypes);
+  }
+}
+
 async function generateClarificationOptionsFromEvidence(client, query, pageContext) {
   try {
     const evidence = await getEvidenceSnapshot(client, query, pageContext);
-    
     const options = [];
     
-    // Generate options from events evidence (PRIORITY)
-    const evidenceDebug = {
-      eventsCount: evidence.events?.length || 0,
-      articlesCount: evidence.articles?.length || 0,
-      servicesCount: evidence.services?.length || 0,
-      sampleEvents: evidence.events?.slice(0, 2) || []
-    };
-    console.log('🔍 Evidence debug:', evidenceDebug);
+    logEvidenceDebug(evidence);
     
-    if (evidence.events && evidence.events.length > 0) {
-      const { eventTypes, eventCategories } = extractEventTypesAndCategories(evidence.events);
-      const eventDebug = { eventTypes: Array.from(eventTypes), eventCategories: Array.from(eventCategories) };
-      console.log('🔍 Event types and categories:', eventDebug);
-      addEventOptions(options, eventTypes, eventCategories);
-      
-      // If we have good event options, skip services to avoid generic options
-      if (options.length > 0) {
-        console.log('🔍 Found event-based options, skipping services');
-        return deduplicateAndLimitOptions(options);
-      }
+    // Process event evidence (PRIORITY)
+    if (processEventEvidence(evidence, options)) {
+      return deduplicateAndLimitOptions(options);
     }
     
-    // Generate options from articles evidence
-    if (evidence.articles && evidence.articles.length > 0) {
-      const { articleCategories, articleTags } = extractArticleCategoriesAndTags(evidence.articles);
-      addArticleOptions(options, articleCategories, articleTags);
-    }
+    // Process article evidence
+    processArticleEvidence(evidence, options);
     
-    // Generate options from services evidence (FALLBACK ONLY)
-    if (evidence.services && evidence.services.length > 0 && options.length === 0) {
-      console.log('🔍 No event options found, falling back to services');
-      const serviceTypes = extractServiceTypes(evidence.services);
-      addServiceOptions(options, serviceTypes);
-    }
+    // Process service evidence (FALLBACK ONLY)
+    processServiceEvidence(evidence, options);
     
     return deduplicateAndLimitOptions(options);
   } catch (error) {
