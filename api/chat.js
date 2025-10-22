@@ -778,12 +778,18 @@ function scoreChunks(candidateChunks, queryWords, exactTerm) {
   }).sort((a,b)=>b.s-a.s);
 }
   
-function extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChunks) {
-  const relevantChunk = findRelevantChunk(exactTerm, contentChunks, queryWords);
+function extractAnswerFromContentChunks(context) {
+  const relevantChunk = findRelevantChunk(context.exactTerm, context.contentChunks, context.queryWords);
   if (!relevantChunk) return null;
   
   const chunkText = prepareChunkText(relevantChunk);
-  return extractAnswerFromText(query, queryWords, exactTerm, chunkText, relevantChunk);
+  return extractAnswerFromText({
+    query: context.query,
+    queryWords: context.queryWords,
+    exactTerm: context.exactTerm,
+    chunkText: chunkText,
+    relevantChunk: relevantChunk
+  });
 }
 
 // Helper function to find the most relevant chunk
@@ -1306,7 +1312,7 @@ function tryArticleBasedAnswer(exactTerm, articles, isConceptRelationshipQuery) 
 
 function tryContentChunkAnswer(query, queryWords, exactTerm, contentChunks) {
   const context = { query, queryWords, exactTerm, contentChunks };
-  return extractAnswerFromContentChunks(context.query, context.queryWords, context.exactTerm, context.contentChunks);
+  return extractAnswerFromContentChunks(context);
 }
 
 function tryEquipmentAdviceAnswer(lc, articles, contentChunks) {
