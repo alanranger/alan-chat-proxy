@@ -1307,7 +1307,8 @@ function tryArticleBasedAnswer(exactTerm, articles, isConceptRelationshipQuery) 
 }
 
 function tryContentChunkAnswer(query, queryWords, exactTerm, contentChunks) {
-  return extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChunks);
+  const context = { query, queryWords, exactTerm, contentChunks };
+  return extractAnswerFromContentChunks(context.query, context.queryWords, context.exactTerm, context.contentChunks);
 }
 
 function tryEquipmentAdviceAnswer(lc, articles, contentChunks) {
