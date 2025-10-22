@@ -3596,13 +3596,13 @@ async function findServices(client, { keywords, limit = 50, pageContext = null }
 }
 
 // Helper functions for findArticles scoring
-function addBaseKeywordScore(kw, t, u, add, has) {
-    for (const k of kw) {
-      if (!k) continue;
-    if (has(t, k)) add(3);        // strong match in title
-    if (has(u, k)) add(1);        // weak match in URL
+function addBaseKeywordScore(context) {
+  for (const k of context.kw) {
+    if (!k) continue;
+    if (context.has(context.t, k)) context.add(3);        // strong match in title
+    if (context.has(context.u, k)) context.add(1);        // weak match in URL
   }
-    }
+}
 
 function addOnlineCourseBoost(categories, kw, t, add, has) {
     const isOnlineCourse = categories.includes("online photography course");
@@ -3742,7 +3742,7 @@ function scoreArticleRow(r, kw) {
   const add = (n)=>{ s += n; };
   const has = (str, needle)=> str.includes(needle);
   
-  addBaseKeywordScore(kw, t, u, add, has);
+  addBaseKeywordScore({ kw, t, u, add, has });
   const { hasCore, coreConcepts } = addOnlineCourseBoost(categories, kw, t, add, has);
   addCoreConceptScore(hasCore, coreConcepts, t, u, add, has);
   addCategoryBoost(categories, hasCore, add);
