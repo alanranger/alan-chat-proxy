@@ -812,8 +812,7 @@ function prepareChunkText(relevantChunk) {
 }
 
 // Helper function to extract answer from text using multiple strategies
-function extractAnswerFromText(query, queryWords, exactTerm, chunkText, relevantChunk) {
-  const context = { query, queryWords, exactTerm, chunkText, relevantChunk };
+function extractAnswerFromText(context) {
   
   // Check for fitness level information first
   const fitnessAnswer = extractFitnessLevelAnswer(context.query, context.chunkText, context.relevantChunk);
@@ -821,7 +820,7 @@ function extractAnswerFromText(query, queryWords, exactTerm, chunkText, relevant
   
   // Look for concept relationship explanations
   console.log(`🔍 DEBUG: Trying concept explanation for query="${context.query}"`);
-  const conceptAnswer = extractConceptExplanation(context.chunkText, context.query, context.exactTerm, context.relevantChunk);
+  const conceptAnswer = extractConceptExplanation(context);
   if (conceptAnswer) {
     console.log(`✅ DEBUG: Found concept answer: "${conceptAnswer.substring(0, 100)}..."`);
     return conceptAnswer;
@@ -838,7 +837,7 @@ function extractAnswerFromText(query, queryWords, exactTerm, chunkText, relevant
   if (sentenceAnswer) return sentenceAnswer;
   
   // Look for relevant paragraphs
-  const paragraphAnswer = extractRelevantParagraph(context.chunkText, context.queryWords, context.exactTerm, context.relevantChunk);
+  const paragraphAnswer = extractRelevantParagraph(context);
   if (paragraphAnswer) return paragraphAnswer;
   
   return null;
@@ -887,8 +886,7 @@ function handleExposureTriangle(chunkText, relevantChunk) {
   return null;
 }
 
-function handleSingleConcept(chunkText, relevantChunk, keywords, title) {
-  const context = { chunkText, relevantChunk, keywords, title };
+function handleSingleConcept(context) {
   const sentences = findRelevantSentences(context.chunkText, context.keywords);
   if (sentences.length > 0) {
     const bestSentence = sentences[0].trim();
@@ -903,8 +901,7 @@ function handleSingleConcept(chunkText, relevantChunk, keywords, title) {
   return null;
 }
 
-function extractConceptExplanation(chunkText, query, exactTerm, relevantChunk) {
-  const context = { chunkText, query, exactTerm, relevantChunk };
+function extractConceptExplanation(context) {
   const lc = context.query.toLowerCase();
   
   // Handle exposure triangle specifically
@@ -914,15 +911,30 @@ function extractConceptExplanation(chunkText, query, exactTerm, relevantChunk) {
   
   // Handle individual concepts
   if (lc.includes('iso') && !lc.includes('triangle')) {
-    return handleSingleConcept(context.chunkText, context.relevantChunk, ['iso', 'sensitivity', 'light', 'exposure'], 'ISO in Photography');
+    return handleSingleConcept({
+      chunkText: context.chunkText,
+      relevantChunk: context.relevantChunk,
+      keywords: ['iso', 'sensitivity', 'light', 'exposure'],
+      title: 'ISO in Photography'
+    });
   }
   
   if (lc.includes('aperture') && !lc.includes('triangle')) {
-    return handleSingleConcept(context.chunkText, context.relevantChunk, ['aperture', 'f/', 'depth of field', 'opening'], 'Aperture in Photography');
+    return handleSingleConcept({
+      chunkText: context.chunkText,
+      relevantChunk: context.relevantChunk,
+      keywords: ['aperture', 'f/', 'depth of field', 'opening'],
+      title: 'Aperture in Photography'
+    });
   }
   
   if (lc.includes('shutter speed') && !lc.includes('triangle')) {
-    return handleSingleConcept(context.chunkText, context.relevantChunk, ['shutter', 'speed', 'motion', 'blur'], 'Shutter Speed in Photography');
+    return handleSingleConcept({
+      chunkText: context.chunkText,
+      relevantChunk: context.relevantChunk,
+      keywords: ['shutter', 'speed', 'motion', 'blur'],
+      title: 'Shutter Speed in Photography'
+    });
   }
   
   return null;
@@ -1026,8 +1038,7 @@ function extractRelevantSentence(chunkText, queryWords, relevantChunk) {
   return null;
 }
 
-function extractRelevantParagraph(chunkText, queryWords, exactTerm, relevantChunk) {
-  const context = { chunkText, queryWords, exactTerm, relevantChunk };
+function extractRelevantParagraph(context) {
   
   // Fallback: if no good sentence found, try to extract the first paragraph containing "what is <term>"
   if (context.exactTerm) {
@@ -1310,8 +1321,7 @@ function tryArticleBasedAnswer(exactTerm, articles, isConceptRelationshipQuery) 
   return null;
 }
 
-function tryContentChunkAnswer(query, queryWords, exactTerm, contentChunks) {
-  const context = { query, queryWords, exactTerm, contentChunks };
+function tryContentChunkAnswer(context) {
   return extractAnswerFromContentChunks(context);
 }
 
@@ -1371,7 +1381,7 @@ function tryAllAnswerSources(context) {
   if (articleAnswer) return articleAnswer;
   
   // PRIORITY 2: Extract from content chunks
-  const chunkAnswer = tryContentChunkAnswer(context.query, context.queryWords, context.exactTerm, context.contentChunks);
+  const chunkAnswer = tryContentChunkAnswer(context);
   if (chunkAnswer) return chunkAnswer;
   
   // PRIORITY 3: Equipment advice
