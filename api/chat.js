@@ -324,27 +324,6 @@ function findRelevantEquipmentArticles(equipmentType, articles) {
 }
 
 // Helper function to process individual content chunks
-function processContentChunk(chunk, considerations) {
-  let chunkText = (chunk.chunk_text || chunk.content || '');
-  
-  // Clean the text first
-  chunkText = cleanResponseText(chunkText);
-  
-  // Convert to lowercase for processing
-  chunkText = chunkText.toLowerCase();
-  
-  // Filter out malformed content
-  if (isMalformedContent(chunkText)) {
-    return; // Skip this chunk
-  }
-  
-  // Extract different types of considerations
-  extractBudgetConsiderations(chunkText, considerations);
-  extractWeightConsiderations(chunkText, considerations);
-  extractUsageConsiderations(chunkText, considerations);
-  extractTerrainConsiderations(chunkText, considerations);
-  extractExperienceConsiderations(chunkText, considerations);
-}
 
 // Helper function to check for malformed content
 function isMalformedContent(chunkText) {
@@ -390,47 +369,7 @@ function extractExperienceConsiderations(chunkText, considerations) {
 }
 
 // Helper function to process individual articles for considerations
-function processArticleForConsiderations(article, considerations) {
-  const text = `${article.title || ''} ${article.description || ''}`.toLowerCase();
-  
-  // Extract different types of considerations from articles
-  extractArticleBudgetConsiderations(text, article, considerations);
-  extractArticleWeightConsiderations(text, article, considerations);
-  extractArticleUsageConsiderations(text, article, considerations);
-  extractArticleTerrainConsiderations(text, article, considerations);
-  extractArticleExperienceConsiderations(text, article, considerations);
-}
 
-// Helper functions to extract different types of considerations from articles
-function extractArticleBudgetConsiderations(text, article, considerations) {
-  if (text.includes('budget') || text.includes('price') || text.includes('cost') || text.includes('affordable')) {
-    considerations.budget.push(article.title || 'Budget considerations');
-  }
-}
-
-function extractArticleWeightConsiderations(text, article, considerations) {
-  if (text.includes('weight') || text.includes('lightweight') || text.includes('heavy') || text.includes('portable')) {
-    considerations.weight.push(article.title || 'Weight considerations');
-  }
-}
-
-function extractArticleUsageConsiderations(text, article, considerations) {
-  if (text.includes('landscape') || text.includes('portrait') || text.includes('travel') || text.includes('studio')) {
-    considerations.usage.push(article.title || 'Usage considerations');
-  }
-}
-
-function extractArticleTerrainConsiderations(text, article, considerations) {
-  if (text.includes('terrain') || text.includes('hiking') || text.includes('outdoor') || text.includes('weather')) {
-    considerations.terrain.push(article.title || 'Terrain considerations');
-  }
-}
-
-function extractArticleExperienceConsiderations(text, article, considerations) {
-  if (text.includes('beginner') || text.includes('advanced') || text.includes('professional') || text.includes('experience')) {
-    considerations.experience.push(article.title || 'Experience level');
-  }
-}
 
 // Extract key considerations from articles and content chunks
 function extractKeyConsiderations(articles, contentChunks) {
@@ -1465,129 +1404,12 @@ function extractKeywords(q) {
 
 
 // Helper function to detect specific keywords
-function hasSpecificKeywords(query) {
-  const lc = query.toLowerCase();
-  const specificKeywords = [
-    // Equipment
-    "camera", "lens", "tripod", "filter", "bag", "memory card",
-    // Courses/Workshops
-    "beginner", "advanced", "rps", "lightroom", "online", "private", "course", "workshop",
-    // Services
-    "mentoring", "feedback", "critique", "lessons", "training", "service",
-    // Technical
-    "iso", "aperture", "shutter", "exposure", "composition", "lighting", "white balance",
-    "depth of field", "framing", "macro", "portrait", "landscape", "street",
-    // About
-    "alan", "ranger", "about", "who is", "where is", "contact"
-  ];
-  
-  return specificKeywords.some(keyword => lc.includes(keyword));
-}
 
 /**
  * COMPLETE CLARIFICATION SYSTEM - PHASE 1: Detection
  * Detects queries that need clarification based on comprehensive 20-question analysis
  * 100% detection rate for all ambiguous query types
  */
-function needsClarification(query) {
-  console.log(`🔍 needsClarification called with: "${query}"`);
-  if (!query) return false;
-  
-  const lc = query.toLowerCase();
-
-  // Helper functions for specific query detection
-  const isSpecificTripodQuery = () => {
-    return lc.includes("tripod") || lc.includes("which tripod") || lc.includes("what tripod");
-  };
-  
-  const isResidentialWorkshopPricingQuery = () => {
-    return (lc.includes("residential") && lc.includes("workshop")) || lc.includes("b&b") || lc.includes("bed and breakfast");
-  };
-  
-  const getCurrentPatterns = () => {
-    return [
-    lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop"),
-    lc.includes("events") && !lc.includes("course") && !lc.includes("workshop"),
-    lc.includes("training") && !lc.includes("course") && !lc.includes("workshop")
-  ];
-  };
-  
-  const getGenericQuestionPatterns = () => {
-    return [
-    lc.includes("do you do") && (lc.includes("courses") || lc.includes("workshops")),
-    lc.includes("do you run") && lc.includes("workshops"),
-    lc.includes("do you offer") && (lc.includes("lessons") || lc.includes("services")),
-    lc.includes("are your") && lc.includes("suitable"),
-    lc.includes("do you have") && lc.includes("courses"),
-    lc.includes("is there a free") && lc.includes("course"),
-    lc.includes("how long have you been teaching"),
-      lc.includes("who is") && lc.includes("alan")
-    ];
-  };
-    
-  const getSpecificAmbiguousPatterns = () => {
-    return [
-    lc.includes("what") && (lc.includes("courses") || lc.includes("workshops")) && !lc.includes("included"),
-    lc.includes("when is") && lc.includes("workshop"),
-    (lc.includes("how much") && lc.includes("workshop") && !lc.includes("residential") && !lc.includes("b&b") && !lc.includes("bed and breakfast")),
-    lc.includes("what's the difference"),
-    lc.includes("what photography workshops") && lc.includes("coming up"),
-    lc.includes("what's included in") && lc.includes("course"),
-      lc.includes("what camera should i buy")
-    ];
-  };
-    
-  const getTechnicalAdvicePatterns = () => {
-    return [
-    lc.includes("how do i") && lc.includes("camera"),
-    lc.includes("what's the best") && lc.includes("lens"),
-    lc.includes("what camera settings"),
-    lc.includes("can you help me choose"),
-    lc.includes("what photography services do you offer")
-  ];
-  };
-  
-  const logEquipmentQueryDebug = () => {
-    if (lc.includes("equipment")) {
-      console.log(`🔍 Equipment query detected: "${query}"`);
-      console.log(`   lc.includes("equipment"): ${lc.includes("equipment")}`);
-      console.log(`   lc.includes("course"): ${lc.includes("course")}`);
-      console.log(`   lc.includes("workshop"): ${lc.includes("workshop")}`);
-      console.log(`   Pattern result: ${lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop")}`);
-    }
-  };
-  
-  const logFinalResult = () => {
-    if (lc.includes("equipment")) {
-      console.log(`   Final needsClarification result: ${result}`);
-    }
-  };
-  
-  // Early returns for specific queries that should not trigger clarification
-  if (isSpecificTripodQuery()) return false;
-  if (isResidentialWorkshopPricingQuery()) return false;
-  
-  // Log debug information for equipment queries
-  logEquipmentQueryDebug();
-  
-  // Get all pattern arrays
-  const currentPatterns = getCurrentPatterns();
-  const genericPatterns = getGenericQuestionPatterns();
-  const specificPatterns = getSpecificAmbiguousPatterns();
-  const technicalPatterns = getTechnicalAdvicePatterns();
-  
-  // Evaluate retrieval-first short-circuit: if query contains item-specific equipment
-  // keywords and not broad terms, avoid clarification here and let content decide.
-  const itemSpecific = ["tripod","lens","bag","memory card"].some(k => lc.includes(k));
-  const broadOnly = lc.includes("equipment") && !itemSpecific;
-  const allPatterns = [...currentPatterns, ...genericPatterns, ...specificPatterns, ...technicalPatterns];
-  const result = broadOnly || allPatterns.some(pattern => pattern);
-  
-  // Log final result for equipment queries
-  logFinalResult();
-  
-  return result;
-}
 /**
  * Generate clarification options from evidence buckets
  * Sources options from actual data instead of hardcoded patterns
