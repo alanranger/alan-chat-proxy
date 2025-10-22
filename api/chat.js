@@ -1672,7 +1672,7 @@ function addServiceOptionsToArray(options, meaningfulTypes) {
 function addServiceOptions(options, serviceTypes) {
   const meaningfulTypes = filterAndFormatServiceTypes(serviceTypes);
   addServiceOptionsToArray(options, meaningfulTypes);
-}
+    }
     
 function deduplicateAndLimitOptions(options) {
     const uniqueOptions = [];
@@ -2369,10 +2369,9 @@ function checkPrivateLessonsPatterns(query) {
   return null;
   }
 
-// Helper function to check direct answer patterns
-function checkDirectAnswerPatterns(query) {
-  const directAnswerPatterns = [
-    // About Alan Ranger
+// Helper function to get about Alan Ranger patterns
+function getAboutAlanPatterns() {
+  return [
     /who is alan ranger/i,
     /tell me about alan ranger/i,
     /alan ranger background/i,
@@ -2383,9 +2382,13 @@ function checkDirectAnswerPatterns(query) {
     /how long have you been/i,
     /professional experience/i,
     /where is alan ranger based/i,
-    /alan ranger photographic background/i,
+    /alan ranger photographic background/i
+  ];
+}
     
-    // Business/Policy queries
+// Helper function to get business/policy patterns
+function getBusinessPolicyPatterns() {
+  return [
     /terms and conditions/i,
     /terms anc conditions/i,  // Handle typo "anc" instead of "and"
     /where.*terms.*conditions/i,  // Handle "where can i find your terms and conditions"
@@ -2395,18 +2398,26 @@ function checkDirectAnswerPatterns(query) {
     /privacy policy/i,
     /gift voucher/i,
     /gift certificate/i,
-    /cancellation or refund policy/i,
+    /cancellation or refund policy/i
+  ];
+}
     
-    // Contact and booking queries
+// Helper function to get contact/booking patterns
+function getContactBookingPatterns() {
+  return [
     /how can i contact you/i,
     /book a discovery call/i,
     /contact information/i,
     /phone number/i,
     /email address/i,
     /how do i book/i,
-    /booking process/i,
+    /booking process/i
+  ];
+}
     
-    // Specific service queries
+// Helper function to get service patterns
+function getServicePatterns() {
+  return [
     /do you do commercial photography/i,
     /commercial photography services/i,
     /wedding photography services/i,
@@ -2427,28 +2438,13 @@ function checkDirectAnswerPatterns(query) {
     /licensing for photos/i,
     /commission you for/i,
     /commercial photography project/i,
-    /how far will you travel/i,
-    
-    // Specific information queries
-    /customer reviews/i,
-    /testimonials/i,
-    /where can i read reviews/i,
-    /what equipment do i need/i,
-    /what gear do i need/i,
-    /equipment needed/i,
-    /what sort of camera do i need/i,
-    /do i need a laptop/i,
-    /certificate with the photography course/i,
-    
-    // Free course queries
-    /free online photography/i,
-    /free photography course/i,
-    /free photography academy/i,
-    /free online academy/i,
-    /online photography course really free/i,
-    /subscribe to the free online/i,
-    
-    // Technical queries that should have direct answers
+    /how far will you travel/i
+  ];
+}
+
+// Helper function to get technical patterns
+function getTechnicalPatterns() {
+  return [
     /explain the exposure triangle/i,
     /what is the exposure triangle/i,
     /camera settings for low light/i,
@@ -2462,8 +2458,6 @@ function checkDirectAnswerPatterns(query) {
     /advise on what i am doing wrong/i,
     /personalised feedback on my images/i,
     /get personalised feedback/i,
-    
-    // Core technical photography concepts
     /how to use aperture/i,
     /what is aperture/i,
     /aperture explained/i,
@@ -2476,8 +2470,6 @@ function checkDirectAnswerPatterns(query) {
     /what is shutter/i,
     /shutter speed explained/i,
     /shutter speed guide/i,
-    
-    // Generic equipment usage patterns
     /how to use.*tripod/i,
     /how to use.*camera/i,
     /how to use.*lens/i,
@@ -2492,9 +2484,13 @@ function checkDirectAnswerPatterns(query) {
     /beginner photography/i,
     /photography tips/i,
     /how to improve photography/i,
-    /photography advice/i,
+    /photography advice/i
+  ];
+}
     
-    // Equipment recommendations
+// Helper function to get equipment patterns
+function getEquipmentPatterns() {
+  return [
     /best camera for beginners/i,
     /what camera should i buy/i,
     /camera recommendation/i,
@@ -2502,9 +2498,13 @@ function checkDirectAnswerPatterns(query) {
     /lens recommendation/i,
     /camera bag recommendation/i,
     /photography equipment/i,
-    /what equipment do i need/i,
+    /what equipment do i need/i
+  ];
+}
     
-    // Course and workshop specific queries
+// Helper function to get course/workshop patterns
+function getCourseWorkshopPatterns() {
+  return [
     /complete beginners/i,
     /evening classes in coventry/i,
     /how many weeks is the beginners/i,
@@ -2525,9 +2525,13 @@ function checkDirectAnswerPatterns(query) {
     /mentoring assignments/i,
     /post-processing courses/i,
     /rps mentoring/i,
-    /prerequisites for advanced courses/i,
+    /prerequisites for advanced courses/i
+  ];
+}
     
-    // Location/venue queries
+// Helper function to get location/venue patterns
+function getLocationVenuePatterns() {
+  return [
     /where are you located/i,
     /studio location/i,
     /workshop location/i,
@@ -2535,23 +2539,53 @@ function checkDirectAnswerPatterns(query) {
     /parking/i,
     /public transport/i,
     /where is your gallery/i,
-    /submit my images for feedback/i,
-    
-    // Age and accessibility queries
+    /submit my images for feedback/i
+  ];
+}
+
+// Helper function to get miscellaneous patterns
+function getMiscellaneousPatterns() {
+  return [
+    /customer reviews/i,
+    /testimonials/i,
+    /where can i read reviews/i,
+    /what equipment do i need/i,
+    /what gear do i need/i,
+    /equipment needed/i,
+    /what sort of camera do i need/i,
+    /do i need a laptop/i,
+    /certificate with the photography course/i,
+    /free online photography/i,
+    /free photography course/i,
+    /free photography academy/i,
+    /free online academy/i,
+    /online photography course really free/i,
+    /subscribe to the free online/i,
     /can my.*yr old attend/i,
     /age.*attend/i,
     /young.*attend/i,
-    
-    // Ethical and professional queries
     /ethical guidelines/i,
     /photography tutor/i,
-    
-    // Pick N Mix queries
     /what is pick n mix/i,
     /pick n mix in the payment plans/i
   ];
+}
+
+// Helper function to check direct answer patterns
+function checkDirectAnswerPatterns(query) {
+  const allPatterns = [
+    ...getAboutAlanPatterns(),
+    ...getBusinessPolicyPatterns(),
+    ...getContactBookingPatterns(),
+    ...getServicePatterns(),
+    ...getTechnicalPatterns(),
+    ...getEquipmentPatterns(),
+    ...getCourseWorkshopPatterns(),
+    ...getLocationVenuePatterns(),
+    ...getMiscellaneousPatterns()
+  ];
   
-  for (const pattern of directAnswerPatterns) {
+  for (const pattern of allPatterns) {
     if (pattern.test(query)) {
       return { type: 'direct_answer', reason: 'specific_information_query' };
     }
