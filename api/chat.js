@@ -484,7 +484,7 @@ function synthesizeEquipmentAdvice(equipmentType, considerations, relevantArticl
   }
   
   // Add specific advice based on equipment type
-  response += addSpecificAdvice(equipmentType, considerations);
+  response += addSpecificAdvice(equipmentType);
   
   // Add article references
   if (relevantArticles.length > 0) {
@@ -532,7 +532,7 @@ function generateBasicEquipmentAdvice(equipmentType) {
   
   let response = `**Equipment Recommendations:**\n\n`;
   response += `Choosing the right ${equipmentName} depends on several factors: your budget, intended usage, and photography style. `;
-  response += addSpecificAdvice(equipmentType, {});
+  response += addSpecificAdvice(equipmentType);
   response += `\n\nFor detailed reviews and specific recommendations, check out Alan's photography guides on his blog.`;
   
   return response;
@@ -6329,6 +6329,75 @@ function checkContactAlanQuery(query) {
   return null;
 }
 
+// Helper function to search for specific guide articles
+async function searchSpecificGuideArticles(client, primaryKeyword) {
+  const { data: guideChunks, error: guideError } = await client
+    .from('page_chunks')
+    .select('url, title, chunk_text')
+    .ilike('url', `%what-is-${primaryKeyword}%`)
+    .limit(5);
+  
+  if (!guideError && guideChunks) {
+    console.log(`🎯 Found ${guideChunks.length} specific guide chunks for "${primaryKeyword}"`);
+    return guideChunks;
+  }
+  return [];
+}
+
+// Helper function to search for broader guide articles
+async function searchBroaderGuideArticles(client, primaryKeyword) {
+  const { data: broaderGuideChunks, error: broaderError } = await client
+    .from('page_chunks')
+    .select('url, title, chunk_text')
+    .ilike('url', '%what-is-%')
+    .ilike('chunk_text', `%${primaryKeyword}%`)
+    .limit(3);
+  
+  if (!broaderError && broaderGuideChunks) {
+    console.log(`🎯 Found ${broaderGuideChunks.length} broader guide chunks`);
+    return broaderGuideChunks;
+  }
+  return [];
+}
+
+// Helper function to search with keywords
+async function searchWithKeywords(client, keywords) {
+  let chunks = [];
+  for (const keyword of keywords) {
+    const { data: keywordChunks, error: chunksError } = await client
+      .from('page_chunks')
+      .select('url, title, chunk_text')
+      .ilike('chunk_text', `%${keyword}%`)
+      .limit(3);
+    
+    if (!chunksError && keywordChunks) {
+      chunks = [...chunks, ...keywordChunks];
+    }
+  }
+  return chunks;
+}
+
+// Helper function to search with full query
+async function searchWithFullQuery(client, query) {
+  const { data: fullQueryChunks, error: fullQueryError } = await client
+    .from('page_chunks')
+    .select('url, title, chunk_text')
+    .ilike('chunk_text', `%${query}%`)
+    .limit(2);
+  
+  if (!fullQueryError && fullQueryChunks) {
+    return fullQueryChunks;
+  }
+  return [];
+}
+
+// Helper function to remove duplicate chunks
+function removeDuplicateChunks(chunks) {
+  return chunks.filter((chunk, index, self) => 
+    index === self.findIndex(c => c.url === chunk.url)
+  );
+}
+
 // Helper function to search for RAG content chunks
 async function searchRagContent(client, query, keywords, isConceptQuery, primaryKeyword) {
   let chunks = [];
@@ -6337,32 +6406,12 @@ async function searchRagContent(client, query, keywords, isConceptQuery, primary
   if (isConceptQuery) {
     console.log(`🎯 Concept query detected: "${query}" - prioritizing guide articles`);
     
-    // First, try to find specific guide articles
-    const { data: guideChunks, error: guideError } = await client
-      .from('page_chunks')
-      .select('url, title, chunk_text')
-      .ilike('url', `%what-is-${primaryKeyword}%`)
-      .limit(5);
+    // Search for specific and broader guide articles
+    const specificGuides = await searchSpecificGuideArticles(client, primaryKeyword);
+    const broaderGuides = await searchBroaderGuideArticles(client, primaryKeyword);
     
-    if (!guideError && guideChunks) {
-      chunks = [...chunks, ...guideChunks];
-      console.log(`🎯 Found ${guideChunks.length} specific guide chunks for "${primaryKeyword}"`);
-    }
+    chunks = [...chunks, ...specificGuides, ...broaderGuides];
     
-    // Also try broader guide search
-    const { data: broaderGuideChunks, error: broaderError } = await client
-      .from('page_chunks')
-      .select('url, title, chunk_text')
-      .ilike('url', '%what-is-%')
-      .ilike('chunk_text', `%${primaryKeyword}%`)
-      .limit(3);
-    
-    if (!broaderError && broaderGuideChunks) {
-      chunks = [...chunks, ...broaderGuideChunks];
-      console.log(`🎯 Found ${broaderGuideChunks.length} broader guide chunks`);
-    }
-    
-    // If we found guide chunks, skip the general keyword search
     if (chunks.length > 0) {
       console.log(`🎯 Using ${chunks.length} guide chunks, skipping general search`);
     } else {
@@ -6372,35 +6421,16 @@ async function searchRagContent(client, query, keywords, isConceptQuery, primary
   
   // Only do general keyword search if we didn't find guide chunks
   if (!isConceptQuery || chunks.length === 0) {
-    // Search with individual keywords (most important)
-    for (const keyword of keywords) {
-      const { data: keywordChunks, error: chunksError } = await client
-        .from('page_chunks')
-        .select('url, title, chunk_text')
-        .ilike('chunk_text', `%${keyword}%`)
-        .limit(3);
-      
-      if (!chunksError && keywordChunks) {
-        chunks = [...chunks, ...keywordChunks];
-      }
-    }
+    const keywordChunks = await searchWithKeywords(client, keywords);
+    chunks = [...chunks, ...keywordChunks];
   }
   
   // Also try the full query
-  const { data: fullQueryChunks, error: fullQueryError } = await client
-    .from('page_chunks')
-    .select('url, title, chunk_text')
-    .ilike('chunk_text', `%${query}%`)
-    .limit(2);
-  
-  if (!fullQueryError && fullQueryChunks) {
-    chunks = [...chunks, ...fullQueryChunks];
-  }
+  const fullQueryChunks = await searchWithFullQuery(client, query);
+  chunks = [...chunks, ...fullQueryChunks];
   
   // Remove duplicates
-  return chunks.filter((chunk, index, self) => 
-    index === self.findIndex(c => c.url === chunk.url)
-  );
+  return removeDuplicateChunks(chunks);
 }
 
 // Helper function to score and filter chunks
