@@ -717,19 +717,17 @@ function hasRelevantContent(chunk, exactTerm, slug) {
   const title = String(chunk.title||"").toLowerCase();
   const text = String(chunk.chunk_text||chunk.content||"").toLowerCase();
   
-  return checkDirectMatches(text, title, url, exactTerm) || 
-         checkWhatIsPatterns(url, title, text, exactTerm, slug);
+  return checkDirectMatches({ text, title, url, exactTerm }) || 
+         checkWhatIsPatterns({ url, title, text, exactTerm, slug });
 }
 
 // Helper function to check direct word matches
-function checkDirectMatches(text, title, url, exactTerm) {
-  const context = { text, title, url, exactTerm };
+function checkDirectMatches(context) {
   return hasWord(context.text, context.exactTerm) || hasWord(context.title, context.exactTerm) || hasWord(context.url, context.exactTerm);
 }
 
 // Helper function to check "what is" patterns
-function checkWhatIsPatterns(url, title, text, exactTerm, slug) {
-  const context = { url, title, text, exactTerm, slug };
+function checkWhatIsPatterns(context) {
   return context.url.includes(`/what-is-${context.slug}`) || 
          context.title.includes(`what is ${context.exactTerm}`) || 
          context.text.includes(`what is ${context.exactTerm}`);
