@@ -5379,7 +5379,9 @@ function sendEventsResponse(eventList, query, keywords, confidence, res, debugIn
   });
 }
 
-async function handleEventsPipeline(client, query, keywords, pageContext, res, debugInfo = null) {
+async function handleEventsPipeline(params) {
+  const { client, query, keywords, pageContext, res, debugInfo = null } = params;
+  
   // Early routing: if the original query already carries a normalized duration token,
   // bypass keyword-derived routing and fetch by category directly. This avoids
   // losses during keyword extraction (e.g., stripping "2.5hrs-4hrs").
@@ -5392,13 +5394,11 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
 
   const events = await findEvents(client, { keywords, limit: 80, pageContext });
   const eventList = formatEventsForUi(events);
-  if (!Array.isArray(eventList)) {
-    return false;
-  }
-  const confidence = calculateEventConfidence(query || "", eventList, null);
+  if (!Array.isArray(eventList)) return false;
   
-  // Check if we need clarification for events queries with low confidence
+  const confidence = calculateEventConfidence(query || "", eventList, null);
   const clarificationThreshold = (debugInfo?.intent === 'workshop') ? 0.8 : 0.6;
+  
   if (confidence < clarificationThreshold) {
     const clarificationHandled = await handleClarificationResponse(query, client, pageContext, res, debugInfo);
     if (clarificationHandled) return true;
@@ -5891,7 +5891,7 @@ async function handleNormalizedDurationQuery(query, pageContext, res) {
     console.log(`🎯 Bypassing all clarification logic for normalized duration query: "${query}"`);
     const client = supabaseAdmin();
     const keywords = extractKeywords(query);
-    return await handleEventsPipeline(client, query, keywords, pageContext, res, { bypassReason: 'normalized_duration' });
+    return await handleEventsPipeline({ client, query, keywords, pageContext, res, debugInfo: { bypassReason: 'normalized_duration' } });
   }
   return false;
 }
@@ -6768,7 +6768,7 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
   if (classification.type === 'workshop') {
     console.log(`🎯 Workshop query detected: "${query}" - skipping RAG, routing to events`);
     const keywords = extractKeywords(query);
-    return await handleEventsPipeline(client, query, keywords, pageContext, res, { bypassReason: 'workshop_query' });
+    return await handleEventsPipeline({ client, query, keywords, pageContext, res, debugInfo: { bypassReason: 'workshop_query' } });
   } else if (classification.type === 'clarification') {
     console.log(`🎯 Clarification query detected: "${query}" - routing to clarification`);
     return await handleClarificationQuery(client, query, classification, pageContext, res);
@@ -6858,7 +6858,7 @@ async function processByIntent(client, query, previousQuery, intent, pageContext
   if (intent === "workshop") {
     console.log(`🎯 Workshop query detected: "${query}" - routing to workshop system`);
     const keywords = extractKeywords(query);
-    const handled = await handleEventsPipeline(client, query, keywords, pageContext, res, { intent: "workshop" });
+    const handled = await handleEventsPipeline({ client, query, keywords, pageContext, res, debugInfo: { intent: "workshop" } });
     if (handled) return;
   }
   
@@ -6875,7 +6875,7 @@ async function processByIntent(client, query, previousQuery, intent, pageContext
       console.log(`🎯 Workshop query detected: "${query}" - routing to workshop system`);
       // Route workshop queries to the events pipeline with workshop intent
       const keywords = extractKeywords(query);
-      const handled = await handleEventsPipeline(client, query, keywords, pageContext, res, { intent: "workshop" });
+      const handled = await handleEventsPipeline({ client, query, keywords, pageContext, res, debugInfo: { intent: "workshop" } });
       if (handled) return;
     }
   }
@@ -6891,7 +6891,7 @@ async function processRemainingLogic(client, query, previousQuery, intent, pageC
   
   // Handle different intents
   if (intent === "events") {
-    const handled = await handleEventsPipeline(client, query, keywords, pageContext, res, { intent });
+    const handled = await handleEventsPipeline({ client, query, keywords, pageContext, res, debugInfo: { intent } });
     if (handled) return;
   } else if (intent === "advice") {
     const handled = await handleAdviceClarification(client, query, keywords, pageContext, res);
