@@ -1242,27 +1242,48 @@ function tryHardcodedAnswer(lc) {
   return getHardcodedAnswer(lc);
 }
 
-function generateDirectAnswer(query, articles, contentChunks = []) {
+// Helper function to prepare query data
+function prepareQueryData(query) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
   const exactTerm = lc.replace(/^what\s+is\s+/, "").trim();
   
-  // DEBUG: Log what we're working with
+  return { lc, queryWords, exactTerm };
+}
+
+// Helper function to log debug information
+function logDirectAnswerDebug(query, articles, contentChunks) {
   console.log(`🔍 generateDirectAnswer: Query="${query}"`);
   console.log(`🔍 generateDirectAnswer: Articles count=${articles.length}`);
   console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
-  
+}
+
+// Helper function to check if query is concept relationship
+function isConceptRelationshipQuery(lc) {
+  return lc.includes('triangle') || lc.includes('relationship') || 
+         (lc.includes('exposure') && (lc.includes('triangle') || lc.includes('aperture') || lc.includes('shutter') || lc.includes('iso')));
+}
+
+// Helper function to try course equipment answer
+function tryCourseEquipmentAnswerHelper(lc) {
+  return tryCourseEquipmentAnswer(lc);
+}
+
+// Helper function to try article-based answer
+function tryArticleBasedAnswerWithConcept(exactTerm, articles, lc) {
+  const isConceptRelationship = isConceptRelationshipQuery(lc);
+  console.log(`🔍 DEBUG: isConceptRelationshipQuery=${isConceptRelationship} for query="${exactTerm}"`);
+  return tryArticleBasedAnswer(exactTerm, articles, isConceptRelationship);
+}
+
+// Helper function to try all answer sources in priority order
+function tryAllAnswerSources(lc, query, queryWords, exactTerm, articles, contentChunks) {
   // PRIORITY 0: Course-specific equipment advice
-  const courseAnswer = tryCourseEquipmentAnswer(lc);
+  const courseAnswer = tryCourseEquipmentAnswerHelper(lc);
   if (courseAnswer) return courseAnswer;
   
   // PRIORITY 1: Extract from JSON-LD FAQ data in articles
-  const isConceptRelationshipQuery = lc.includes('triangle') || lc.includes('relationship') || 
-                                     (lc.includes('exposure') && (lc.includes('triangle') || lc.includes('aperture') || lc.includes('shutter') || lc.includes('iso')));
-  
-  console.log(`🔍 DEBUG: isConceptRelationshipQuery=${isConceptRelationshipQuery} for query="${query}"`);
-  
-  const articleAnswer = tryArticleBasedAnswer(exactTerm, articles, isConceptRelationshipQuery);
+  const articleAnswer = tryArticleBasedAnswerWithConcept(exactTerm, articles, lc);
   if (articleAnswer) return articleAnswer;
   
   // PRIORITY 2: Extract from content chunks
@@ -1278,6 +1299,14 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   if (hardcodedAnswer) return hardcodedAnswer;
   
   return null;
+}
+
+function generateDirectAnswer(query, articles, contentChunks = []) {
+  const { lc, queryWords, exactTerm } = prepareQueryData(query);
+  
+  logDirectAnswerDebug(query, articles, contentChunks);
+  
+  return tryAllAnswerSources(lc, query, queryWords, exactTerm, articles, contentChunks);
 }
 
 /* ---------------------------- Supabase client ---------------------------- */
@@ -2297,7 +2326,7 @@ function checkContactAlanPatterns(query) {
   }
   
 // Helper function to check workshop patterns
-function checkWorkshopPatterns(query) {
+function checkWorkshopQueryPatterns(query) {
   const workshopPatterns = [
     /photography workshop/i,
     /workshop/i,
@@ -2629,7 +2658,7 @@ function classifyQuery(query) {
   const contactResult = checkContactAlanPatterns(query);
   if (contactResult) return contactResult;
   
-  const workshopResult = checkWorkshopPatterns(query);
+  const workshopResult = checkWorkshopQueryPatterns(query);
   if (workshopResult) return workshopResult;
   
   const privateResult = checkPrivateLessonsPatterns(query);
@@ -5683,7 +5712,7 @@ function getContactAlanPatterns() {
 }
 
 // Helper function to check contact Alan patterns
-function checkContactAlanPatterns(query) {
+function checkContactAlanQueryPatterns(query) {
   const patterns = getContactAlanPatterns();
   for (const pattern of patterns) {
     if (pattern.test(query)) {
@@ -5808,7 +5837,7 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
     const classification = classifyQuery(query);
     
     // Check if this is a "contact Alan" query
-    if (checkContactAlanPatterns(query)) {
+    if (checkContactAlanQueryPatterns(query)) {
       handleContactAlanResponse(query, res);
       return true;
     }
