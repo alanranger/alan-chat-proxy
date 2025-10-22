@@ -451,6 +451,16 @@ function extractKeyConsiderations(articles, contentChunks) {
 
 // Synthesize equipment advice response
 function synthesizeEquipmentAdvice(equipmentType, considerations, relevantArticles) {
+  const equipmentName = getEquipmentDisplayName(equipmentType);
+  let response = buildEquipmentResponseHeader(equipmentName);
+  response += buildConsiderationsText(considerations);
+  response += addSpecificAdvice(equipmentType);
+  response += buildArticleReferences(relevantArticles);
+  return response;
+}
+
+// Helper function to get equipment display name
+function getEquipmentDisplayName(equipmentType) {
   const equipmentNames = {
     'tripod': 'tripod',
     'camera': 'camera',
@@ -462,14 +472,16 @@ function synthesizeEquipmentAdvice(equipmentType, considerations, relevantArticl
     'laptop': 'laptop',
     'software': 'editing software'
   };
-  
-  const equipmentName = equipmentNames[equipmentType] || equipmentType;
-  
-  // Build the response framework
-  let response = `**Equipment Recommendations:**\n\n`;
-  response += `Choosing the right ${equipmentName} depends on several factors: `;
-  
-  // Add key considerations
+  return equipmentNames[equipmentType] || equipmentType;
+}
+
+// Helper function to build response header
+function buildEquipmentResponseHeader(equipmentName) {
+  return `**Equipment Recommendations:**\n\nChoosing the right ${equipmentName} depends on several factors: `;
+}
+
+// Helper function to build considerations text
+function buildConsiderationsText(considerations) {
   const considerationTexts = [];
   if (considerations.budget.length > 0) considerationTexts.push('budget');
   if (considerations.weight.length > 0) considerationTexts.push('weight requirements');
@@ -478,24 +490,23 @@ function synthesizeEquipmentAdvice(equipmentType, considerations, relevantArticl
   if (considerations.experience.length > 0) considerationTexts.push('experience level');
   
   if (considerationTexts.length > 0) {
-    response += considerationTexts.join(', ') + '. ';
+    return considerationTexts.join(', ') + '. ';
   } else {
-    response += 'your specific needs and photography style. ';
+    return 'your specific needs and photography style. ';
   }
-  
-  // Add specific advice based on equipment type
-  response += addSpecificAdvice(equipmentType);
-  
-  // Add article references
+}
+
+// Helper function to build article references
+function buildArticleReferences(relevantArticles) {
   if (relevantArticles.length > 0) {
-    response += `\n\n**For detailed reviews and specific recommendations, check out these guides:**\n`;
+    let references = `\n\n**For detailed reviews and specific recommendations, check out these guides:**\n`;
     relevantArticles.slice(0, 3).forEach(article => {
-      response += `- [${article.title}](${article.page_url || article.url})\n`;
-      });
-    }
-    
-    return response;
+      references += `- [${article.title}](${article.page_url || article.url})\n`;
+    });
+    return references;
   }
+  return '';
+}
   
 // Add specific advice based on equipment type
 function addSpecificAdvice(equipmentType) {
@@ -2895,42 +2906,9 @@ async function getEvidenceSnapshot(client, query, pageContext) {
   }
 }
 
-function handleEventsBypass(query, events, res) {
-  if (Array.isArray(events) && events.length > 0) {
-    const confidence = calculateEventConfidence(query || "", events, null);
-    res.status(200).json({
-      ok: true,
-      type: "events",
-      answer: events, // events is already formatted by formatEventsForUi
-      events,
-      structured: { intent: "events", topic: (extractKeywords(query||"")||[]).join(", "), events, products: [], pills: [] },
-      confidence,
-      debug: { version: "v1.2.96-category-based", bypassClarification: true, timestamp: new Date().toISOString() }
-    });
-    return true;
-  }
-  return false;
-  }
+// Removed unused function: handleEventsBypass
 
-async function handleArticlesBypass(client, query, articles, res) {
-  if ((articles || []).length > 0) {
-    const articleUrls = (articles || []).map(a => a.page_url || a.source_url).filter(Boolean);
-    const chunks = await findContentChunks(client, { keywords: extractKeywords(query||""), limit: 12, articleUrls });
-    const md = generateDirectAnswer(query || "", articles || [], chunks || []);
-    if (md) {
-      res.status(200).json({
-        ok: true,
-        type: "advice",
-        answer_markdown: md,
-        structured: { intent: "advice", topic: (extractKeywords(query||"")||[]).join(", "), events: [], products: [], services: [], landing: [], articles },
-        confidence: 0.60,
-        debug: { version: "v1.3.0-evidence-first", bypassClarification: true }
-      });
-      return true;
-    }
-  }
-  return false;
-}
+// Removed unused function: handleArticlesBypass
 
 // If we already have evidence, bypass generic clarification and show results
 
@@ -3075,7 +3053,7 @@ function normalizeCategories(rawCategories) {
     const inner = value.slice(1, -1);
     return inner
       .split(',')
-      .map(s => s.replace(/^\"|\"$/g, '').trim())
+      .map(s => s.replace(/^"|"$/g, '').trim())
       .filter(Boolean);
   }
   // Handle JSON array string
