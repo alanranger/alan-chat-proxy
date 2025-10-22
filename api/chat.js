@@ -3613,60 +3613,82 @@ function hasNonEquipmentKeywords(title) {
          title.includes('lighting') || title.includes('editing');
 }
 
-async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
-  // If we have page context, try to find related articles first
+// Helper function to handle page context
+function handlePageContext(pageContext, keywords) {
   if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
       console.log('Article search - Page context keywords:', pathKeywords);
-      // Add page context to search terms
-      keywords = [...pathKeywords, ...keywords];
+      return [...pathKeywords, ...keywords];
     }
   }
+  return keywords;
+}
 
-  // Use the new CSV-driven unified articles view
-  let q = client
+// Helper function to build base query
+function buildArticlesBaseQuery(client, limit) {
+  return client
     .from("v_articles_unified")
     .select("id, title, page_url, categories, tags, image_url, publish_date, description, json_ld_data, last_seen, kind, source_type")
-    .limit(limit * 5); // Increased from limit * 3 to get more results
+    .limit(limit * 5);
+}
 
+// Helper function to build search conditions
+function buildSearchConditions(keywords) {
   const parts = [];
   const t1 = anyIlike("title", keywords); if (t1) parts.push(t1);
   const t2 = anyIlike("page_url", keywords); if (t2) parts.push(t2);
-  // JSON fields (headline/name) where schema types store titles
   const t3 = anyIlike("json_ld_data->>headline", keywords); if (t3) parts.push(t3);
   const t4 = anyIlike("json_ld_data->>name", keywords); if (t4) parts.push(t4);
+  return parts;
+}
+
+// Helper function to apply search conditions
+function applySearchConditions(q, keywords) {
+  const parts = buildSearchConditions(keywords);
   if (parts.length) q = q.or(parts.join(","));
+  return q;
+}
 
-  const { data, error } = await q;
-  if (error) return [];
-  const rows = data || [];
+// Helper function to score a single row
+function scoreArticleRow(r, kw) {
+  const t = (r.title || r.raw?.name || "").toLowerCase();
+  const u = (r.page_url || r.source_url || "").toLowerCase();
+  const categories = r.categories || [];
+  let s = 0;
+  
+  const add = (n)=>{ s += n; };
+  const has = (str, needle)=> str.includes(needle);
+  
+  addBaseKeywordScore(kw, t, u, add, has);
+  const { hasCore, coreConcepts } = addOnlineCourseBoost(categories, kw, t, add, has);
+  addCoreConceptScore(hasCore, coreConcepts, t, u, add, has);
+  addCategoryBoost(categories, hasCore, add);
+  
+  return addRecencyTieBreaker(s, r);
+}
 
+// Helper function to process and sort results
+function processAndSortResults(rows, keywords, limit) {
   const kw = (keywords || []).map(k => String(k || "").toLowerCase());
-  const scoreRow = (r) => {
-    const t = (r.title || r.raw?.name || "").toLowerCase();
-    const u = (r.page_url || r.source_url || "").toLowerCase();
-    const categories = r.categories || [];
-    let s = 0;
-    
-    // helpers (no behavior change)
-    const add = (n)=>{ s += n; };
-    const has = (str, needle)=> str.includes(needle);
-    
-    // Apply all scoring factors
-    addBaseKeywordScore(kw, t, u, add, has);
-    const { hasCore, coreConcepts } = addOnlineCourseBoost(categories, kw, t, add, has);
-    addCoreConceptScore(hasCore, coreConcepts, t, u, add, has);
-    addCategoryBoost(categories, hasCore, add);
-    
-    return addRecencyTieBreaker(s, r);
-  };
-
+  
   return rows
-    .map(r => ({ r, s: scoreRow(r) }))
+    .map(r => ({ r, s: scoreArticleRow(r, kw) }))
     .sort((a,b) => b.s - a.s)
     .slice(0, limit)
     .map(x => x.r);
+}
+
+async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
+  const enhancedKeywords = handlePageContext(pageContext, keywords);
+  
+  let q = buildArticlesBaseQuery(client, limit);
+  q = applySearchConditions(q, enhancedKeywords);
+
+  const { data, error } = await q;
+  if (error) return [];
+  
+  return processAndSortResults(data || [], enhancedKeywords, limit);
 }
 
 // De-duplicate articles by canonical URL and enrich titles
