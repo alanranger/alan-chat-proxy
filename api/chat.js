@@ -5636,86 +5636,165 @@ async function gatherPreContent(client, query, previousQuery, intent, pageContex
 
 /* -------------------------------- Handler -------------------------------- */
 // REFACTORED: Evidence-Based Direct Answer Handler (Low Complexity)
+// Helper function to get contact Alan patterns
+function getContactAlanPatterns() {
+  return [
+    /cancellation or refund policy for courses/i,
+    /cancellation or refund policy for workshops/i,
+    /how do i book a course or workshop/i,
+    /can the gift voucher be used for any workshop/i,
+    /can the gift voucher be used for any course/i,
+    /how do i know which course or workshop is best/i,
+    /do you do astrophotography workshops/i,
+    /do you get a certificate with the photography course/i,
+    /do i get a certificate with the photography course/i,
+    /do you i get a certificate with the photography course/i,
+    /can my.*attend your workshop/i,
+    /can.*year old attend your workshop/i,
+    /how do i subscribe to the free online photography course/i,
+    /how many students per workshop/i,
+    /how many students per class/i,
+    /what gear or equipment do i need to bring to a workshop/i,
+    /what equipment do i need to bring to a workshop/i,
+    /how early should i arrive before a class/i,
+    /how early should i arrive before a workshop/i
+  ];
+}
+
+// Helper function to check contact Alan patterns
+function checkContactAlanPatterns(query) {
+  const patterns = getContactAlanPatterns();
+  for (const pattern of patterns) {
+    if (pattern.test(query)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Helper function to handle contact Alan response
+function handleContactAlanResponse(query, res) {
+  console.log(`📞 Contact Alan query detected in handleDirectAnswerQuery: "${query}"`);
+  res.status(200).json({
+    ok: true,
+    type: 'advice',
+    confidence: 0.8,
+    answer: "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+    structured: {
+      intent: "contact_required",
+      topic: "contact_alan",
+      events: [],
+      products: [],
+      pills: []
+    },
+    debugInfo: {
+      version: "v1.3.20-contact-alan-fix",
+      intent: "contact_required",
+      classification: "direct_answer",
+      contactAlanQuery: true
+    }
+  });
+}
+
+// Helper function to handle private lessons response
+function handlePrivateLessonsResponse(query, res) {
+  console.log(`📚 Private lessons query detected in handleDirectAnswerQuery: "${query}"`);
+  
+  const serviceAnswer = getServiceAnswers(query.toLowerCase());
+  if (serviceAnswer) {
+    res.status(200).json({
+      ok: true,
+      type: 'advice',
+      confidence: 0.9,
+      answer: serviceAnswer,
+      structured: {
+        intent: "advice",
+        topic: "private_lessons",
+        events: [],
+        products: [],
+        pills: []
+      },
+      debugInfo: {
+        version: "v1.3.20-private-lessons-fix",
+        intent: "advice",
+        classification: "direct_answer",
+        privateLessonsQuery: true
+      }
+    });
+    return true;
+  }
+  return false;
+}
+
+// Helper function to handle RAG response
+function handleRagResponse(ragResult, res) {
+  console.log(`✅ RAG success for direct answer query: confidence=${ragResult.confidence}`);
+  res.status(200).json({
+    ok: true,
+    type: ragResult.type,
+    confidence: ragResult.confidence,
+    answer: ragResult.answer,
+    structured: ragResult.structured,
+    debugInfo: {
+      version: "v1.3.20-rag-direct-answer",
+      intent: "rag_first",
+      classification: "direct_answer",
+      confidence: ragResult.confidence,
+      totalMatches: ragResult.totalMatches,
+      chunksFound: ragResult.chunksFound,
+      entitiesFound: ragResult.entitiesFound
+    }
+  });
+}
+
+// Helper function to handle fallback response
+function handleFallbackResponse(query, articles, services, events, classification, res) {
+  const keywords = extractKeywords(query);
+  const { answer, confidence } = generateEvidenceBasedAnswer(query, articles, services, events);
+  const pills = generateSmartPills(query, { articles, services, events }, classification);
+  
+  res.status(200).json({
+    ok: true,
+    type: "advice",
+    answer_markdown: answer,
+    structured: {
+      intent: "direct_answer",
+      topic: keywords.join(", "),
+      events: events,
+      products: [],
+      services: services,
+      landing: [],
+      articles: articles
+    },
+    pills: pills,
+    confidence,
+    debugInfo: { 
+      version: "v1.3.20-expanded-classification", 
+      intent: "direct_answer",
+      ragDebug: {
+        chunksFound: 0,
+        entitiesFound: 0,
+        confidence: 0
+      }, 
+      classification: classification.type,
+      timestamp: new Date().toISOString() 
+    }
+  });
+}
+
 async function handleDirectAnswerQuery(client, query, pageContext, res) {
   try {
     const classification = classifyQuery(query);
     
-    // Special case: Contact Alan responses for specific queries that need direct contact
-    const contactAlanQueries = [
-      /cancellation or refund policy for courses/i,
-      /cancellation or refund policy for workshops/i,
-      /how do i book a course or workshop/i,
-      /can the gift voucher be used for any workshop/i,
-      /can the gift voucher be used for any course/i,
-      /how do i know which course or workshop is best/i,
-      /do you do astrophotography workshops/i,
-      /do you get a certificate with the photography course/i,
-      /do i get a certificate with the photography course/i,
-    /do you i get a certificate with the photography course/i,
-      /can my.*attend your workshop/i,
-      /can.*year old attend your workshop/i,
-      /how do i subscribe to the free online photography course/i,
-      /how many students per workshop/i,
-      /how many students per class/i,
-      /what gear or equipment do i need to bring to a workshop/i,
-      /what equipment do i need to bring to a workshop/i,
-      /how early should i arrive before a class/i,
-      /how early should i arrive before a workshop/i
-    ];
-    
     // Check if this is a "contact Alan" query
-    for (const pattern of contactAlanQueries) {
-      if (pattern.test(query)) {
-        console.log(`📞 Contact Alan query detected in handleDirectAnswerQuery: "${query}"`);
-        res.status(200).json({
-          ok: true,
-          type: 'advice',
-          confidence: 0.8,
-          answer: "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
-          structured: {
-            intent: "contact_required",
-            topic: "contact_alan",
-            events: [],
-            products: [],
-            pills: []
-          },
-          debugInfo: {
-            version: "v1.3.20-contact-alan-fix",
-            intent: "contact_required",
-            classification: "direct_answer",
-            contactAlanQuery: true
-          }
-        });
-        return true;
-      }
+    if (checkContactAlanPatterns(query)) {
+      handleContactAlanResponse(query, res);
+      return true;
     }
     
     // Check if this is a private lessons query
     if (classification.reason === 'private_lessons_query') {
-      console.log(`📚 Private lessons query detected in handleDirectAnswerQuery: "${query}"`);
-      
-      // Use the existing service answers for private lessons
-      const serviceAnswer = getServiceAnswers(query.toLowerCase());
-      if (serviceAnswer) {
-        res.status(200).json({
-          ok: true,
-          type: 'advice',
-          confidence: 0.9,
-          answer: serviceAnswer,
-          structured: {
-            intent: "advice",
-            topic: "private_lessons",
-            events: [],
-            products: [],
-            pills: []
-          },
-          debugInfo: {
-            version: "v1.3.20-private-lessons-fix",
-            intent: "advice",
-            classification: "direct_answer",
-            privateLessonsQuery: true
-          }
-        });
+      if (handlePrivateLessonsResponse(query, res)) {
         return true;
       }
     }
@@ -5725,23 +5804,7 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
     const ragResult = await tryRagFirst(client, query);
     
     if (ragResult.success && ragResult.confidence >= 0.3) {
-      console.log(`✅ RAG success for direct answer query: confidence=${ragResult.confidence}`);
-      res.status(200).json({
-        ok: true,
-        type: ragResult.type,
-        confidence: ragResult.confidence,
-        answer: ragResult.answer,
-        structured: ragResult.structured,
-        debugInfo: {
-          version: "v1.3.20-rag-direct-answer",
-          intent: "rag_first",
-          classification: "direct_answer",
-          confidence: ragResult.confidence,
-          totalMatches: ragResult.totalMatches,
-          chunksFound: ragResult.chunksFound,
-          entitiesFound: ragResult.entitiesFound
-        }
-      });
+      handleRagResponse(ragResult, res);
       return true;
     }
     
@@ -5756,41 +5819,7 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
       findEvents(client, { keywords, limit: 3, pageContext })
     ]);
     
-    // Generate evidence-based answer
-    const { answer, confidence } = generateEvidenceBasedAnswer(query, articles, services, events);
-    
-    // Generate smart pills
-    const pills = generateSmartPills(query, { articles, services, events }, classification);
-    
-    // Send response
-    res.status(200).json({
-      ok: true,
-      type: "advice",
-      answer_markdown: answer,
-      structured: {
-        intent: "direct_answer",
-        topic: keywords.join(", "),
-        events: events,
-        products: [],
-        services: services,
-        landing: [],
-        articles: articles
-      },
-      pills: pills,
-      confidence,
-      debugInfo: { 
-        version: "v1.3.20-expanded-classification", 
-        intent: "direct_answer",
-        ragDebug: {
-          chunksFound: 0,
-          entitiesFound: 0,
-          confidence: 0
-        }, 
-        classification: classification.type,
-        timestamp: new Date().toISOString() 
-      }
-    });
-    
+    handleFallbackResponse(query, articles, services, events, classification, res);
     return true;
     
   } catch (error) {
