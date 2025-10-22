@@ -4846,17 +4846,38 @@ function analyzeProductAttributes(product, responseAttributes) {
   trackProductPricing(productPrice, responseAttributes);
 }
   
+// Helper function to apply intent-based penalties
+function applyIntentPenalties(queryRequirements, responseAttributes, addFactor) {
+  if (queryRequirements.free && !responseAttributes.hasFreeContent) { 
+    addFactor("Free query but no free content", -0.5); 
+  }
+  if (queryRequirements.online && !responseAttributes.hasOnlineContent) { 
+    addFactor("Online query but no online content", -0.3); 
+  }
+  if (queryRequirements.certificate && !responseAttributes.hasCertificateInfo) { 
+    addFactor("Certificate query but no certificate info", -0.4); 
+  }
+  if (queryRequirements.inPerson && !responseAttributes.hasInPersonContent) { 
+    addFactor("In-person query but no in-person content", -0.2); 
+  }
+}
+
+// Helper function to apply intent-based bonuses
+function applyIntentBonuses(queryRequirements, responseAttributes, addFactor) {
+  if (queryRequirements.free && responseAttributes.hasFreeContent) { 
+    addFactor("Free query matched with free content", 0.3); 
+  }
+  if (queryRequirements.online && responseAttributes.hasOnlineContent) { 
+    addFactor("Online query matched with online content", 0.2); 
+  }
+  if (queryRequirements.certificate && responseAttributes.hasCertificateInfo) { 
+    addFactor("Certificate query matched with certificate info", 0.3); 
+  }
+}
+
 function applyIntentBasedScoring(queryRequirements, responseAttributes, addFactor) {
-  // Apply intent-based penalties for mismatches
-  if (queryRequirements.free && !responseAttributes.hasFreeContent) { addFactor("Free query but no free content", -0.5); }
-  if (queryRequirements.online && !responseAttributes.hasOnlineContent) { addFactor("Online query but no online content", -0.3); }
-  if (queryRequirements.certificate && !responseAttributes.hasCertificateInfo) { addFactor("Certificate query but no certificate info", -0.4); }
-  if (queryRequirements.inPerson && !responseAttributes.hasInPersonContent) { addFactor("In-person query but no in-person content", -0.2); }
-  
-  // Apply bonuses for good matches
-  if (queryRequirements.free && responseAttributes.hasFreeContent) { addFactor("Free query matched with free content", 0.3); }
-  if (queryRequirements.online && responseAttributes.hasOnlineContent) { addFactor("Online query matched with online content", 0.2); }
-  if (queryRequirements.certificate && responseAttributes.hasCertificateInfo) { addFactor("Certificate query matched with certificate info", 0.3); }
+  applyIntentPenalties(queryRequirements, responseAttributes, addFactor);
+  applyIntentBonuses(queryRequirements, responseAttributes, addFactor);
 }
 
 function applyQuerySpecificityScoring(queryLower, addFactor) {
