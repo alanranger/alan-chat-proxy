@@ -2827,18 +2827,18 @@ function checkPriorityPatterns(lc, classification, confidence) {
 }
 
 // Helper function to check evidence-based clarification
-async function checkEvidenceBasedClarification(client, query, pageContext, lc, confidence) {
+async function checkEvidenceBasedClarification(context) {
   // Try evidence-based clarification (only if no workshop patterns matched)
-  const evidenceResult = await tryEvidenceBasedClarification(client, query, pageContext);
+  const evidenceResult = await tryEvidenceBasedClarification(context.client, context.query, context.pageContext);
   if (evidenceResult) {
     console.log(`🔍 Evidence-based clarification returned:`, evidenceResult);
-    evidenceResult.confidence = confidence;
+    evidenceResult.confidence = context.confidence;
     return evidenceResult;
   } else {
-    console.log(`❌ No evidence-based clarification for: "${lc}"`);
+    console.log(`❌ No evidence-based clarification for: "${context.lc}"`);
   }
   return null;
-  }
+}
   
 // Helper function to check all pattern groups
 function checkAllPatternGroups(lc, confidence) {
@@ -2925,7 +2925,7 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   if (priorityResult) return priorityResult;
   
   // Check evidence-based clarification
-  const evidenceResult = await checkEvidenceBasedClarification(client, query, pageContext, lc, confidence);
+  const evidenceResult = await checkEvidenceBasedClarification({ client, query, pageContext, lc, confidence });
   if (evidenceResult) return evidenceResult;
   
   // Check all pattern groups and return result
