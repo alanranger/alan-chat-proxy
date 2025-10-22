@@ -645,42 +645,50 @@ function extractAnswerFromArticleDescription(relevantArticle) {
 }
 
 function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
-  // Check both json_ld_data and raw fields for FAQ data
+  const faqData = getFaqData(relevantArticle);
+  if (!faqData) return null;
+  
+  console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
+  
+  const primaryQuestion = findPrimaryQuestion(faqData.mainEntity, exactTerm);
+  if (!primaryQuestion) return null;
+  
+  const answerText = extractAndCleanAnswer(primaryQuestion);
+  if (!answerText || answerText.length <= 50) return null;
+  
+  console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
+  return formatResponseMarkdown(
+    relevantArticle.title || 'FAQ Information',
+    relevantArticle.page_url || relevantArticle.url,
+    answerText
+  );
+}
+
+// Helper function to get FAQ data from article
+function getFaqData(relevantArticle) {
   const faqData = relevantArticle.json_ld_data || relevantArticle.raw;
-  if (!faqData || !faqData.mainEntity) {
-    return null;
-  }
+  return (faqData && faqData.mainEntity) ? faqData : null;
+}
+
+// Helper function to find primary question
+function findPrimaryQuestion(faqItems, exactTerm) {
+  return faqItems.find(item => {
+    const question = (item.name || "").toLowerCase();
+    const queryLower = exactTerm.toLowerCase();
+    return question.includes(queryLower) || queryLower.includes(question.split(' ')[0]);
+  });
+}
+
+// Helper function to extract and clean answer text
+function extractAndCleanAnswer(primaryQuestion) {
+  if (!primaryQuestion?.acceptedAnswer?.text) return null;
   
-        console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
-      
-      const faqItems = faqData.mainEntity;
-      const primaryQuestion = faqItems.find(item => {
-        const question = (item.name || "").toLowerCase();
-        const queryLower = exactTerm.toLowerCase();
-        return question.includes(queryLower) || queryLower.includes(question.split(' ')[0]);
-      });
-      
-      if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
-        let answerText = primaryQuestion.acceptedAnswer.text;
-        
-        // Clean HTML tags from the answer
-        answerText = answerText.replace(/<[^>]*>/g, '').trim();
-        
-        // Use the comprehensive cleaning function
-        answerText = cleanResponseText(answerText);
-        
-        if (answerText.length > 50) {
-          console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
-          return formatResponseMarkdown(
-            relevantArticle.title || 'FAQ Information',
-            relevantArticle.page_url || relevantArticle.url,
-            answerText
-          );
-          }
-        }
+  let answerText = primaryQuestion.acceptedAnswer.text;
+  answerText = answerText.replace(/<[^>]*>/g, '').trim();
+  answerText = cleanResponseText(answerText);
   
-  return null;
-  }
+  return answerText;
+}
   
 function hasWord(text, term) {
     if (!term) return false;
@@ -709,8 +717,19 @@ function hasRelevantContent(chunk, exactTerm, slug) {
   const title = String(chunk.title||"").toLowerCase();
   const text = String(chunk.chunk_text||chunk.content||"").toLowerCase();
   
-  return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm) || 
-         url.includes(`/what-is-${slug}`) || title.includes(`what is ${exactTerm}`) || 
+  return checkDirectMatches(text, title, url, exactTerm) || 
+         checkWhatIsPatterns(url, title, text, exactTerm, slug);
+}
+
+// Helper function to check direct word matches
+function checkDirectMatches(text, title, url, exactTerm) {
+  return hasWord(text, exactTerm) || hasWord(title, exactTerm) || hasWord(url, exactTerm);
+}
+
+// Helper function to check "what is" patterns
+function checkWhatIsPatterns(url, title, text, exactTerm, slug) {
+  return url.includes(`/what-is-${slug}`) || 
+         title.includes(`what is ${exactTerm}`) || 
          text.includes(`what is ${exactTerm}`);
 }
 
@@ -760,28 +779,39 @@ function scoreChunks(candidateChunks, queryWords, exactTerm) {
 }
   
 function extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChunks) {
+  const relevantChunk = findRelevantChunk(exactTerm, contentChunks, queryWords);
+  if (!relevantChunk) return null;
+  
+  const chunkText = prepareChunkText(relevantChunk);
+  return extractAnswerFromText(query, queryWords, exactTerm, chunkText, relevantChunk);
+}
+
+// Helper function to find the most relevant chunk
+function findRelevantChunk(exactTerm, contentChunks, queryWords) {
   const candidateChunks = filterCandidateChunks(exactTerm, contentChunks);
   const scoredChunks = scoreChunks(candidateChunks, queryWords, exactTerm);
   const relevantChunk = (scoredChunks.length ? scoredChunks[0].chunk : null);
   
   console.log(`🔍 generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
-  
-  if (!relevantChunk) return null;
-  
-    let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
-    
-    // Use the comprehensive cleaning function
-    chunkText = cleanResponseText(chunkText);
-    
-    // Remove metadata headers that start with [ARTICLE] or similar
-    chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
-    chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
-    
+  return relevantChunk;
+}
+
+// Helper function to prepare chunk text
+function prepareChunkText(relevantChunk) {
+  let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
+  chunkText = cleanResponseText(chunkText);
+  chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
+  chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
+  return chunkText;
+}
+
+// Helper function to extract answer from text using multiple strategies
+function extractAnswerFromText(query, queryWords, exactTerm, chunkText, relevantChunk) {
   // Check for fitness level information first
   const fitnessAnswer = extractFitnessLevelAnswer(query, chunkText, relevantChunk);
   if (fitnessAnswer) return fitnessAnswer;
   
-  // ENHANCED: Look for concept relationship explanations first (for "exposure triangle", "ISO", etc.)
+  // Look for concept relationship explanations
   console.log(`🔍 DEBUG: Trying concept explanation for query="${query}"`);
   const conceptAnswer = extractConceptExplanation(chunkText, query, exactTerm, relevantChunk);
   if (conceptAnswer) {
@@ -1040,30 +1070,60 @@ function getEquipmentAnswer() {
   }
   
 function getTechnicalAnswers(lc) {
+  return getJpegRawAnswer(lc) ||
+         getExposureTriangleAnswer(lc) ||
+         getCompositionAnswer(lc) ||
+         getFilterAnswer(lc) ||
+         getDepthOfFieldAnswer(lc) ||
+         getSharpnessAnswer(lc) ||
+         null;
+}
+
+// Helper function for JPEG vs RAW
+function getJpegRawAnswer(lc) {
   if (lc.includes("jpeg") && lc.includes("raw")) {
     return `**JPEG vs RAW**: JPEG files are smaller and ready to use, while RAW files give you more editing flexibility but require post-processing. For beginners, JPEG is fine to start with, but RAW becomes valuable as you develop your editing skills.\n\n`;
   }
-  
+  return null;
+}
+
+// Helper function for exposure triangle
+function getExposureTriangleAnswer(lc) {
   if (lc.includes("exposure triangle")) {
     return `**The Exposure Triangle** consists of three key settings:\n- **Aperture** (f-stop): Controls depth of field and light\n- **Shutter Speed**: Controls motion blur and light\n- **ISO**: Controls sensor sensitivity and light\n\nBalancing these three creates proper exposure.\n\n`;
   }
-  
+  return null;
+}
+
+// Helper function for composition
+function getCompositionAnswer(lc) {
   if (lc.includes("composition") || lc.includes("storytelling")) {
     return `Great composition is about leading the viewer's eye through your image. Key techniques include the rule of thirds, leading lines, framing, and creating visual balance. The goal is to tell a story or convey emotion through your arrangement of elements.\n\n`;
   }
-  
+  return null;
+}
+
+// Helper function for filters
+function getFilterAnswer(lc) {
   if (lc.includes("filter") || lc.includes("nd filter")) {
     return `**ND (Neutral Density) filters** reduce light entering your camera, allowing for longer exposures. They're great for blurring water, creating motion effects, or shooting in bright conditions. **Graduated filters** help balance exposure between bright skies and darker foregrounds.\n\n`;
   }
-  
+  return null;
+}
+
+// Helper function for depth of field
+function getDepthOfFieldAnswer(lc) {
   if (lc.includes("depth of field")) {
     return `**Depth of field** is the area of your image that appears sharp. You control it with aperture: wider apertures (lower f-numbers) create shallow depth of field, while smaller apertures (higher f-numbers) keep more of the image in focus.\n\n`;
   }
-  
+  return null;
+}
+
+// Helper function for sharpness
+function getSharpnessAnswer(lc) {
   if (lc.includes("sharp") || lc.includes("blurry")) {
     return `Sharp images come from proper technique: use a fast enough shutter speed to avoid camera shake, focus accurately, and use appropriate aperture settings. Tripods help with stability, and good lighting makes focusing easier.\n\n`;
   }
-  
   return null;
 }
 
