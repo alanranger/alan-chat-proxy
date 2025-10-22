@@ -622,7 +622,7 @@ function findRelevantArticleForTerm(exactTerm, articles) {
       
         return title.includes(`${exactTerm}`) ||
              url.includes(`what-is-${exactTerm.replaceAll(/\s+/g, "-")}`) ||
-             (jsonLd && jsonLd.mainEntity && Array.isArray(jsonLd.mainEntity));
+             (jsonLd?.mainEntity && Array.isArray(jsonLd.mainEntity));
     });
     }
     
@@ -645,7 +645,7 @@ function extractAnswerFromArticleDescription(relevantArticle) {
 function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
   // Check both json_ld_data and raw fields for FAQ data
   const faqData = relevantArticle.json_ld_data || relevantArticle.raw;
-  if (!faqData || !faqData.mainEntity) {
+  if (!faqData?.mainEntity) {
     return null;
   }
   
@@ -658,7 +658,7 @@ function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
         return question.includes(queryLower) || queryLower.includes(question.split(' ')[0]);
       });
       
-      if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
+      if (primaryQuestion?.acceptedAnswer?.text) {
         let answerText = primaryQuestion.acceptedAnswer.text;
         
         // Clean HTML tags from the answer
@@ -937,7 +937,7 @@ function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
       for (const pattern of fitnessPatterns) {
         const match = chunkText.match(pattern);
         console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
-        if (match && match[1]) {
+        if (match?.[1]) {
           const fitnessLevel = match[1].trim();
           console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
           return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
@@ -1456,52 +1456,14 @@ function extractKeywords(q) {
 
 
 
-function isEquipmentQuery(lc) {
-  const equipmentKeywords = [
-    "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
-    "need", "require", "recommend", "advise", "help", "wrong", "problem"
-  ];
-  return equipmentKeywords.some(word => lc.includes(word));
-}
 
-function isServiceQuery(lc) {
-  return (
-    lc.includes("private") && (lc.includes("lesson") || lc.includes("class")) ||
-    lc.includes("online") && (lc.includes("course") || lc.includes("lesson")) ||
-    lc.includes("mentoring") ||
-    lc.includes("1-2-1") || lc.includes("1-to-1") || lc.includes("one-to-one")
-  );
-}
 
-function isTechnicalQuery(lc) {
-  const technicalKeywords = [
-    "free", "online", "sort of", "what do i", "do i need", "get a",
-    "what is", "what are", "how does", "explain", "define", "meaning",
-    "training", "mentoring", "tutoring"
-  ];
-  return technicalKeywords.some(word => lc.includes(word));
-}
 
 
 
 // Helper functions for detectIntent
-function isFreeCourseQuery(lc) {
-  return lc.includes("free") && (lc.includes("course") || lc.includes("online"));
-}
 
-function isWhenWhereWorkshopQuery(q, mentionsWorkshop) {
-  return /^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop;
-}
 
-function handleFollowUpLogic(isFollowUp, mentionsWorkshop) {
-  if (isFollowUp && mentionsWorkshop) {
-    return "events";
-  }
-  if (isFollowUp && !mentionsWorkshop) {
-    return "advice";
-  }
-  return null;
-}
 
 
 /* --------------------------- Interactive Clarification System --------------------------- */
@@ -1864,14 +1826,14 @@ function extractArticleCategoriesAndTags(articles) {
   articles.forEach(article => {
         if (article.categories && Array.isArray(article.categories)) {
           article.categories.forEach(cat => {
-            if (cat && cat.trim()) {
+            if (cat?.trim()) {
               articleCategories.add(cat.trim());
             }
           });
         }
         if (article.tags && Array.isArray(article.tags)) {
           article.tags.forEach(tag => {
-            if (tag && tag.trim()) {
+            if (tag?.trim()) {
               articleTags.add(tag.trim());
             }
           });
@@ -1910,7 +1872,7 @@ function extractServiceTypes(services) {
   services.forEach(service => {
         if (service.categories && Array.isArray(service.categories)) {
           service.categories.forEach(cat => {
-            if (cat && cat.trim()) {
+            if (cat?.trim()) {
               serviceTypes.add(cat.trim());
             }
           });
@@ -4002,7 +3964,7 @@ function dedupeEventsByKey(rows, keyField = 'event_url', secondaryKey = null) {
 }
 
 function enhanceKeywordsWithPageContext(keywords, pageContext) {
-  if (pageContext && pageContext.pathname) {
+  if (pageContext?.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
       console.log('Page context keywords:', pathKeywords);
@@ -4117,7 +4079,7 @@ function mapEventsData(data) {
 
 async function findProducts(client, { keywords, limit = 20, pageContext = null }) {
   // If we have page context, try to find related products first
-  if (pageContext && pageContext.pathname) {
+  if (pageContext?.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
       console.log('Product search - Page context keywords:', pathKeywords);
@@ -4287,7 +4249,7 @@ function hasNonEquipmentKeywords(title) {
 
 async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
   // If we have page context, try to find related articles first
-  if (pageContext && pageContext.pathname) {
+  if (pageContext?.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
       console.log('Article search - Page context keywords:', pathKeywords);
@@ -4541,7 +4503,7 @@ function extractPdfUrl(text) {
           const m =
             text.match(/https?:\/\/\S+?\.pdf/gi) ||
             text.match(/href="([^"]+\.pdf)"/i);
-          if (m && m[0]) {
+          if (m?.[0]) {
             let pdfUrl = Array.isArray(m) ? m[0] : m[1];
             // Convert internal Squarespace URLs to public URLs
             if (pdfUrl.includes('alan-ranger.squarespace.com')) {
@@ -4557,7 +4519,7 @@ function extractRelatedLink(text) {
             text.match(
               /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']*)/i
             ) || text.match(/href="([^"]*alanranger\.com[^"]*)"/i);
-          if (rel && rel[0]) {
+          if (rel?.[0]) {
             let url = Array.isArray(rel) ? rel[0] : rel[1];
             
             // Convert internal Squarespace URLs to public URLs
@@ -4602,7 +4564,7 @@ function extractRelatedLabel(text, url) {
   // Robust label extraction: prioritize explicit link text, then clean URL path
   const labelMatch = findLabelMatch(text);
   
-  if (labelMatch && labelMatch[1]) {
+  if (labelMatch?.[1]) {
     const cleanLabel = cleanExtractedLabel(labelMatch[1].trim());
     return cleanLabel;
   } else {
@@ -5265,7 +5227,7 @@ function determineEventSectionUrl(firstEventUrl) {
   try {
     const fe = String(firstEventUrl || '');
     const m = fe.match(/^https?:\/\/[^/]+\/(beginners-photography-lessons)\//i);
-    if (m && m[1]) {
+    if (m?.[1]) {
       const base = fe.split(m[1])[0] + m[1];
       return base.startsWith('http') ? base : `https://www.alanranger.com/${m[1]}`;
     }
@@ -5441,7 +5403,7 @@ function getEventLabel(event) {
 
 // Helper function to extract and format brief description
 function extractEventBrief(products, summarize) {
-  if (products && products.length && (products[0].description || products[0]?.raw?.description)) {
+  if (products?.length && (products[0].description || products[0]?.raw?.description)) {
     let brief = summarize(products[0].description || products[0]?.raw?.description);
         if (brief.length > 220) brief = brief.slice(0, 220).replace(/\s+\S*$/, '') + '…';
     return brief;
@@ -5660,8 +5622,8 @@ function applyEventQualityScoring(events, addFactor) {
     }
     
     // Check for specific event types
-    const hasWorkshops = events.some(e => e.subtype && e.subtype.toLowerCase().includes('workshop'));
-    const hasCourses = events.some(e => e.subtype && e.subtype.toLowerCase().includes('course'));
+    const hasWorkshops = events.some(e => e.subtype?.toLowerCase().includes('workshop'));
+    const hasCourses = events.some(e => e.subtype?.toLowerCase().includes('course'));
     if (hasWorkshops || hasCourses) { addFactor("Specific event types", 0.1); }
     }
   }
