@@ -8,7 +8,7 @@ export const config = { runtime: "nodejs" };
 /* global console, process, URL */
 
 import { createClient } from "@supabase/supabase-js";
-import { createHash } from 'node:crypto';
+import { createHash } from 'crypto';
 
 /* ----------------------- Helper Functions ----------------------- */
 // Hash IP for privacy
@@ -39,7 +39,7 @@ const extractPublishDate = (article) => {
     }
     
     return null;
-  } catch {
+  } catch (error) {
     return null;
   }
 };
@@ -66,14 +66,14 @@ const extractKeywordsFromPath = (pathname) => {
     'wedding': ['wedding', 'ceremony', 'event']
   };
   
-  for (const part of pathParts) {
+  pathParts.forEach(part => {
     const lowerPart = part.toLowerCase();
     if (pathMappings[lowerPart]) {
       keywords.push(...pathMappings[lowerPart]);
     } else if (part.length > 3) {
       keywords.push(part);
     }
-  }
+  });
   
   return [...new Set(keywords)]; // Remove duplicates
 };
@@ -141,14 +141,96 @@ const logQuestion = async (sessionId, question) => {
   }
 };
 
+const logAnswer = async (sessionId, question, answer, intent, confidence, responseTimeMs, sourcesUsed, pageContext = null) => {
+  try {
+    const client = supabaseAdmin();
+    
+    // Insert the complete interaction into chat_interactions
+    const { error } = await client.from('chat_interactions').insert([{
+      session_id: sessionId,
+      question: question,
+      answer: answer,
+      intent: intent,
+      confidence: confidence ? parseFloat(confidence) : null,
+      response_time_ms: responseTimeMs ? parseInt(responseTimeMs) : null,
+      sources_used: sourcesUsed || null,
+      page_context: pageContext ? {
+        url: pageContext.url,
+        title: pageContext.title,
+        pathname: pageContext.pathname
+      } : null
+    }]);
+    
+    if (error) throw new Error(`Answer log failed: ${error.message}`);
+    
+    // Update session question count
+    const { error: rpcError } = await client.rpc('increment_session_questions', { session_id: sessionId });
+    if (rpcError) throw new Error(`RPC failed: ${rpcError.message}`);
+  } catch (err) {
+    console.warn('Answer logging failed:', err.message);
+  }
+};
 
 /* ----------------------- Direct Answer Generation ----------------------- */
+// Helper function to get service FAQ topics
+function getServiceFAQTopics() {
+  return [
+    { key: "payment", hints: ["payment", "pick n mix", "plan", "instalment", "installment"], prefer: ["/photography-payment-plan", "/terms-and-conditions"] },
+    { key: "contact", hints: ["contact", "discovery", "call", "phone", "email"], prefer: ["/contact-us", "/contact-us-alan-ranger-photography"] },
+    { key: "certificate", hints: ["certificate"], prefer: ["/beginners-photography-classes", "/photography-courses"] },
+    { key: "course-topics", hints: ["topics", "5-week", "beginner"], prefer: ["/beginners-photography-classes", "/get-off-auto"] },
+    { key: "standalone", hints: ["standalone", "get off auto"], prefer: ["/get-off-auto", "/beginners-photography-classes"] },
+    { key: "refund", hints: ["refund", "cancel", "cancellation"], prefer: ["/terms-and-conditions"] }
+  ];
+}
 
 // Helper function to find matching topic
+function findMatchingTopic(query) {
+  const q = (query || "").toLowerCase();
+  const topics = getServiceFAQTopics();
+  return topics.find(t => t.hints.some(h => q.includes(h)));
+}
 
+// Helper function to find prioritized chunk
+function findPrioritizedChunk(contentChunks, match) {
+  const prefer = (u) => (match.prefer || []).some(p => (u || "").includes(p));
 
+  return (contentChunks || []).find(c => prefer(c.url)) || contentChunks.find(c => {
+    const text = (c.chunk_text || c.content || "").toLowerCase();
+    return match.hints.some(h => text.includes(h));
+  });
+}
 
+// Helper function to pick URL from chunk or articles
+function pickServiceFAQUrl(prioritizedChunk, articles, match) {
+    if (prioritizedChunk?.url) return prioritizedChunk.url;
+  
+  const prefer = (u) => (match.prefer || []).some(p => (u || "").includes(p));
+    const art = (articles || []).find(a => prefer(a.page_url || a.source_url || ""));
+    return art ? (art.page_url || art.source_url) : null;
+}
 
+// Helper function to extract relevant paragraph for service FAQ
+function extractServiceFAQParagraph(prioritizedChunk, match) {
+  const text = (prioritizedChunk?.chunk_text || prioritizedChunk?.content || "");
+  const paras = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 40);
+  return paras.find(p => match.hints.some(h => p.toLowerCase().includes(h))) || paras[0];
+}
+
+function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
+  const match = findMatchingTopic(query);
+  if (!match) return null;
+
+  const prioritizedChunk = findPrioritizedChunk(contentChunks, match);
+  const url = pickServiceFAQUrl(prioritizedChunk, articles, match);
+  
+  if (!prioritizedChunk && !url) return null;
+
+  const para = extractServiceFAQParagraph(prioritizedChunk, match);
+  if (!para) return null;
+
+  return `**${para.substring(0, 300).trim()}**\n\n${url ? `*Source: ${url}*\n\n` : ""}`;
+}
 
 // Helper function to detect equipment advice queries
 function isEquipmentAdviceQuery(query) {
@@ -203,7 +285,7 @@ function generateEquipmentAdviceResponse(query, articles, contentChunks) {
 
 // Helper function to extract and score paragraphs from text
 function pickPricingParas(text, hints) {
-    const t = (text || "").replaceAll(/\s+/g, " ").trim();
+    const t = (text || "").replace(/\s+/g, " ").trim();
     const paras = t.split(/\n\s*\n|\.\s+(?=[A-Z])/).map(p => p.trim()).filter(p => p.length > 40);
     const scored = paras.map(p => ({
       p,
@@ -324,6 +406,27 @@ function findRelevantEquipmentArticles(equipmentType, articles) {
 }
 
 // Helper function to process individual content chunks
+function processContentChunk(chunk, considerations) {
+  let chunkText = (chunk.chunk_text || chunk.content || '');
+  
+  // Clean the text first
+  chunkText = cleanResponseText(chunkText);
+  
+  // Convert to lowercase for processing
+  chunkText = chunkText.toLowerCase();
+  
+  // Filter out malformed content
+  if (isMalformedContent(chunkText)) {
+    return; // Skip this chunk
+  }
+  
+  // Extract different types of considerations
+  extractBudgetConsiderations(chunkText, considerations);
+  extractWeightConsiderations(chunkText, considerations);
+  extractUsageConsiderations(chunkText, considerations);
+  extractTerrainConsiderations(chunkText, considerations);
+  extractExperienceConsiderations(chunkText, considerations);
+}
 
 // Helper function to check for malformed content
 function isMalformedContent(chunkText) {
@@ -369,11 +472,51 @@ function extractExperienceConsiderations(chunkText, considerations) {
 }
 
 // Helper function to process individual articles for considerations
+function processArticleForConsiderations(article, considerations) {
+  const text = `${article.title || ''} ${article.description || ''}`.toLowerCase();
+  
+  // Extract different types of considerations from articles
+  extractArticleBudgetConsiderations(text, article, considerations);
+  extractArticleWeightConsiderations(text, article, considerations);
+  extractArticleUsageConsiderations(text, article, considerations);
+  extractArticleTerrainConsiderations(text, article, considerations);
+  extractArticleExperienceConsiderations(text, article, considerations);
+}
 
+// Helper functions to extract different types of considerations from articles
+function extractArticleBudgetConsiderations(text, article, considerations) {
+  if (text.includes('budget') || text.includes('price') || text.includes('cost') || text.includes('affordable')) {
+    considerations.budget.push(article.title || 'Budget considerations');
+  }
+}
+
+function extractArticleWeightConsiderations(text, article, considerations) {
+  if (text.includes('weight') || text.includes('lightweight') || text.includes('heavy') || text.includes('portable')) {
+    considerations.weight.push(article.title || 'Weight considerations');
+  }
+}
+
+function extractArticleUsageConsiderations(text, article, considerations) {
+  if (text.includes('landscape') || text.includes('portrait') || text.includes('travel') || text.includes('studio')) {
+    considerations.usage.push(article.title || 'Usage considerations');
+  }
+}
+
+function extractArticleTerrainConsiderations(text, article, considerations) {
+  if (text.includes('terrain') || text.includes('hiking') || text.includes('outdoor') || text.includes('weather')) {
+    considerations.terrain.push(article.title || 'Terrain considerations');
+  }
+}
+
+function extractArticleExperienceConsiderations(text, article, considerations) {
+  if (text.includes('beginner') || text.includes('advanced') || text.includes('professional') || text.includes('experience')) {
+    considerations.experience.push(article.title || 'Experience level');
+  }
+}
 
 // Extract key considerations from articles and content chunks
 function extractKeyConsiderations(articles, contentChunks) {
-  return {
+  const considerations = {
     budget: [],
     weight: [],
     usage: [],
@@ -381,6 +524,16 @@ function extractKeyConsiderations(articles, contentChunks) {
     experience: [],
     specific: []
   };
+  
+  // Extract from articles
+  articles.forEach(article => processArticleForConsiderations(article, considerations));
+  
+  // Extract from content chunks (with malformed content filtering)
+  if (contentChunks && contentChunks.length > 0) {
+    contentChunks.forEach(chunk => processContentChunk(chunk, considerations));
+  }
+  
+  return considerations;
 }
 
 // Synthesize equipment advice response
@@ -423,9 +576,9 @@ function synthesizeEquipmentAdvice(equipmentType, considerations, relevantArticl
   // Add article references
   if (relevantArticles.length > 0) {
     response += `\n\n**For detailed reviews and specific recommendations, check out these guides:**\n`;
-    for (const article of relevantArticles.slice(0, 3)) {
+    relevantArticles.slice(0, 3).forEach(article => {
       response += `- [${article.title}](${article.page_url || article.url})\n`;
-    }
+      });
     }
     
     return response;
@@ -476,13 +629,13 @@ function cleanResponseText(text) {
   if (!text || typeof text !== 'string') return text;
   
   // Remove debug artifacts and junk characters
-  text = text.replaceAll(/\/\s*\d+\s*\/[^]*$/g, ''); // Remove "/ 0 /" patterns
-  text = text.replaceAll(/searchBack[^]*$/g, ''); // Remove "searchBack" artifacts
-  text = text.replaceAll(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, ''); // Remove UTM parameters
-  text = text.replaceAll(/\* Next lesson:.*?\*\*/g, ''); // Remove "Next lesson" artifacts
-  text = text.replaceAll(/\[ARTICLE\]\s*/g, ''); // Remove [ARTICLE] headers
-  text = text.replaceAll(/\[CONTENT\]\s*/g, ''); // Remove [CONTENT] headers
-  text = text.replaceAll(/\s+/g, ' ').trim(); // Normalize whitespace
+  text = text.replace(/\/\s*\d+\s*\/[^]*$/g, ''); // Remove "/ 0 /" patterns
+  text = text.replace(/searchBack[^]*$/g, ''); // Remove "searchBack" artifacts
+  text = text.replace(/utm_source=blog&utm_medium=cta&utm_campaign=continue-learning&utm_content=.*?\]/g, ''); // Remove UTM parameters
+  text = text.replace(/\* Next lesson:.*?\*\*/g, ''); // Remove "Next lesson" artifacts
+  text = text.replace(/\[ARTICLE\]\s*/g, ''); // Remove [ARTICLE] headers
+  text = text.replace(/\[CONTENT\]\s*/g, ''); // Remove [CONTENT] headers
+  text = text.replace(/\s+/g, ' ').trim(); // Normalize whitespace
   
   return text;
 }
@@ -509,11 +662,11 @@ function formatResponseMarkdown(title, url, description, relatedContent = []) {
   // Add related content section if available
   if (relatedContent && relatedContent.length > 0) {
     markdown += `## Related Content\n\n`;
-    for (const item of relatedContent) {
+    relatedContent.forEach(item => {
       if (item.title && item.url) {
         markdown += `- [${item.title}](${item.url})\n`;
       }
-    }
+    });
     markdown += '\n';
   }
   
@@ -546,8 +699,8 @@ function findRelevantArticleForTerm(exactTerm, articles) {
       const jsonLd = article.json_ld_data;
       
         return title.includes(`${exactTerm}`) ||
-             url.includes(`what-is-${exactTerm.replaceAll(/\s+/g, "-")}`) ||
-             (jsonLd?.mainEntity && Array.isArray(jsonLd.mainEntity));
+             url.includes(`what-is-${exactTerm.replace(/\s+/g, "-")}`) ||
+             (jsonLd && jsonLd.mainEntity && Array.isArray(jsonLd.mainEntity));
     });
     }
     
@@ -570,7 +723,7 @@ function extractAnswerFromArticleDescription(relevantArticle) {
 function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
   // Check both json_ld_data and raw fields for FAQ data
   const faqData = relevantArticle.json_ld_data || relevantArticle.raw;
-  if (!faqData?.mainEntity) {
+  if (!faqData || !faqData.mainEntity) {
     return null;
   }
   
@@ -583,11 +736,11 @@ function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
         return question.includes(queryLower) || queryLower.includes(question.split(' ')[0]);
       });
       
-      if (primaryQuestion?.acceptedAnswer?.text) {
+      if (primaryQuestion && primaryQuestion.acceptedAnswer && primaryQuestion.acceptedAnswer.text) {
         let answerText = primaryQuestion.acceptedAnswer.text;
         
         // Clean HTML tags from the answer
-        answerText = answerText.replaceAll(/<[^>]*>/g, '').trim();
+        answerText = answerText.replace(/<[^>]*>/g, '').trim();
         
         // Use the comprehensive cleaning function
         answerText = cleanResponseText(answerText);
@@ -608,7 +761,7 @@ function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
 function hasWord(text, term) {
     if (!term) return false;
     try {
-      const esc = term.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const re = new RegExp(`\\b${esc}\\b`, "i");
       return re.test(text || "");
   } catch {
@@ -651,7 +804,7 @@ function filterContentChunk(chunk, exactTerm, slug) {
 function filterCandidateChunks(exactTerm, contentChunks) {
   if (!exactTerm) return contentChunks || [];
   
-  const slug = exactTerm.replaceAll(/\s+/g, "-");
+  const slug = exactTerm.replace(/\s+/g, "-");
   return (contentChunks || []).filter(c => filterContentChunk(c, exactTerm, slug));
 }
 
@@ -674,7 +827,7 @@ function scoreChunks(candidateChunks, queryWords, exactTerm) {
     if (exactTerm) {
       if (hasWord(text, exactTerm)) s += 6;
       if (hasWord(title, exactTerm)) s += 8;
-      const slug = exactTerm.replaceAll(/\s+/g, "-");
+      const slug = exactTerm.replace(/\s+/g, "-");
       if (url.includes(`/what-is-${slug}`)) s += 10;
     }
     
@@ -697,8 +850,8 @@ function extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChu
     chunkText = cleanResponseText(chunkText);
     
     // Remove metadata headers that start with [ARTICLE] or similar
-    chunkText = chunkText.replaceAll(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
-    chunkText = chunkText.replaceAll(/^\[.*?\].*?Published:.*?\n\n/, '');
+    chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
+    chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
     
   // Check for fitness level information first
   const fitnessAnswer = extractFitnessLevelAnswer(query, chunkText, relevantChunk);
@@ -851,18 +1004,18 @@ function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
       console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
       
       const fitnessPatterns = [
-    /Fitness:\s*(\d+\.?\s*[A-Za-z\s-]+?)(?:\n|$)/i,           // "Fitness: 2. Easy-Moderate" - stop at newline or end
-    /Fitness\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,            // "Fitness Level: Easy" - stop at newline or end
-    /Experience\s*-\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,     // "Experience - Level: Beginner and Novice" - stop at newline or end
-    /Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,                      // "Level: Beginners" - stop at newline or end
-    /Fitness\s*Required:\s*([A-Za-z\s-]+?)(?:\n|$)/i,         // "Fitness Required: Easy" - stop at newline or end
-    /Physical\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i            // "Physical Level: Easy" - stop at newline or end
+    /Fitness:\s*(\d+\.?\s*[A-Za-z\s\-]+?)(?:\n|$)/i,           // "Fitness: 2. Easy-Moderate" - stop at newline or end
+    /Fitness\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,            // "Fitness Level: Easy" - stop at newline or end
+    /Experience\s*-\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,     // "Experience - Level: Beginner and Novice" - stop at newline or end
+    /Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,                      // "Level: Beginners" - stop at newline or end
+    /Fitness\s*Required:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,         // "Fitness Required: Easy" - stop at newline or end
+    /Physical\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i            // "Physical Level: Easy" - stop at newline or end
       ];
       
       for (const pattern of fitnessPatterns) {
         const match = chunkText.match(pattern);
         console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
-        if (match?.[1]) {
+        if (match && match[1]) {
           const fitnessLevel = match[1].trim();
           console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
           return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
@@ -1160,7 +1313,7 @@ function getHardcodedAnswer(lc) {
 function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
-  const exactTerm = lc.replaceAll(/^what\s+is\s+/, "").trim();
+  const exactTerm = lc.replace(/^what\s+is\s+/, "").trim();
   
   // DEBUG: Log what we're working with
   console.log(`🔍 generateDirectAnswer: Query="${query}"`);
@@ -1242,6 +1395,7 @@ function supabaseAdmin() {
 }
 
 /* ------------------------------ Small utils ------------------------------ */
+const TZ = "Europe/London";
 
 function fmtDateLondon(ts) {
   try {
@@ -1258,6 +1412,9 @@ function fmtDateLondon(ts) {
     return ts;
   }
 }
+function uniq(arr) {
+  return [...new Set((arr || []).filter(Boolean))];
+}
 function toGBP(n) {
   if (n == null || isNaN(Number(n))) return null;
   return new Intl.NumberFormat("en-GB", {
@@ -1265,6 +1422,9 @@ function toGBP(n) {
     currency: "GBP",
     maximumFractionDigits: 0,
   }).format(Number(n));
+}
+function pickUrl(row) {
+  return row?.page_url || row?.source_url || row?.url || null;
 }
 function originOf(url) {
   try {
@@ -1278,6 +1438,17 @@ function originOf(url) {
 // Note: We deliberately do not normalize typos; we ask users to rephrase instead.
 
 /* ----------------------- Intent + keyword extraction --------------------- */
+const EVENT_HINTS = [
+  "date",
+  "dates",
+  "when",
+  "next",
+  "upcoming",
+  "available",
+  "where",
+  "workshop",
+  "schedule",
+];
 
 const TOPIC_KEYWORDS = [
   // locations
@@ -1333,8 +1504,8 @@ const TOPIC_KEYWORDS = [
 function extractKeywords(q) {
   let lc = (q || "").toLowerCase();
   // Normalize common variants to improve matching
-  lc = lc.replaceAll(/\bb\s*&\s*b\b/g, "bnb"); // b&b -> bnb
-  lc = lc.replaceAll(/\bbed\s*and\s*breakfast\b/g, "bnb");
+  lc = lc.replace(/\bb\s*&\s*b\b/g, "bnb"); // b&b -> bnb
+  lc = lc.replace(/\bbed\s*and\s*breakfast\b/g, "bnb");
   
   // Add synonym mapping for better event matching
   const synonyms = {
@@ -1347,9 +1518,7 @@ function extractKeywords(q) {
   // Apply synonym expansion
   for (const [key, values] of Object.entries(synonyms)) {
     if (lc.includes(key)) {
-      for (const synonym of values) {
-        lc += " " + synonym;
-      }
+      values.forEach(synonym => lc += " " + synonym);
     }
   }
   
@@ -1369,7 +1538,7 @@ function extractKeywords(q) {
   const stopWords = ["what", "when", "where", "which", "how", "why", "who", "can", "will", "should", "could", "would", "do", "does", "did", "are", "is", "was", "were", "have", "has", "had", "you", "your", "yours", "me", "my", "mine", "we", "our", "ours", "they", "their", "theirs", "them", "us", "him", "her", "his", "hers", "it", "its"];
   
   lc
-    .replaceAll(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
     .split(/\s+/)
     .filter((w) => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4) && !stopWords.includes(w))
     .forEach((w) => kws.add(w));
@@ -1378,18 +1547,118 @@ function extractKeywords(q) {
 }
 
 // Helper functions for intent detection
+function isFollowUpQuestion(lc) {
+  const followUpQuestions = [
+    "how much", "cost", "price", "where", "location", "when", "date",
+    "how many", "people", "attend", "fitness", "level", "duration", "long",
+    "how do i book", "book", "booking", "required", "needed", "suitable"
+  ];
+  return followUpQuestions.some(word => lc.includes(word));
+}
 
+function hasWorkshopMention(lc) {
+  return lc.includes("workshop");
+}
 
+function isSpecificCourseQuery(lc) {
+  return lc.includes("course") || lc.includes("class") || lc.includes("lesson");
+}
 
+function isEquipmentQuery(lc) {
+  const equipmentKeywords = [
+    "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
+    "need", "require", "recommend", "advise", "help", "wrong", "problem"
+  ];
+  return equipmentKeywords.some(word => lc.includes(word));
+}
 
+function isServiceQuery(lc) {
+  return (
+    lc.includes("private") && (lc.includes("lesson") || lc.includes("class")) ||
+    lc.includes("online") && (lc.includes("course") || lc.includes("lesson")) ||
+    lc.includes("mentoring") ||
+    lc.includes("1-2-1") || lc.includes("1-to-1") || lc.includes("one-to-one")
+  );
+}
 
+function isTechnicalQuery(lc) {
+  const technicalKeywords = [
+    "free", "online", "sort of", "what do i", "do i need", "get a",
+    "what is", "what are", "how does", "explain", "define", "meaning",
+    "training", "mentoring", "tutoring"
+  ];
+  return technicalKeywords.some(word => lc.includes(word));
+}
 
+function isAboutQuery(lc) {
+  return lc.includes("about");
+}
 
+function isGeneralQuery(lc) {
+  return lc.includes("general") || lc.includes("help");
+}
 
 // Helper functions for detectIntent
+function isFreeCourseQuery(lc) {
+  return lc.includes("free") && (lc.includes("course") || lc.includes("online"));
+}
 
+function isWhenWhereWorkshopQuery(q, mentionsWorkshop) {
+  return /^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop;
+}
 
+function handleFollowUpLogic(isFollowUp, mentionsWorkshop) {
+  if (isFollowUp && mentionsWorkshop) {
+    return "events";
+  }
+  if (isFollowUp && !mentionsWorkshop) {
+    return "advice";
+  }
+  return null;
+}
 
+function detectIntent(q) {
+  const lc = (q || "").toLowerCase();
+  
+  // PRIORITY: Free course queries should be treated as advice, not events
+  if (isFreeCourseQuery(lc)) {
+    return "advice"; // Free course queries need cross-entity search
+  }
+  
+  // Check for course/class queries
+  const mentionsCourse = isSpecificCourseQuery(lc);
+  const mentionsWorkshop = hasWorkshopMention(lc);
+  
+  // PRIORITY: Flexible services should be treated as advice, not events
+  if (isServiceQuery(lc)) {
+    return "advice"; // Flexible services need cross-entity search (products + services + articles)
+  }
+  
+  // Both courses and workshops have events - they're both scheduled sessions
+  if (mentionsCourse || mentionsWorkshop) {
+    return "events"; // Both courses and workshops are events (scheduled sessions)
+  }
+  
+  // ADVICE keywords
+  if (isEquipmentQuery(lc) || isTechnicalQuery(lc)) {
+    return "advice";
+  }
+  
+  // heuristic: if question starts with "when/where" + includes 'workshop' → events
+  if (isWhenWhereWorkshopQuery(q, mentionsWorkshop)) return "events";
+  
+  // Check if this is a follow-up question about event details
+  const isFollowUp = isFollowUpQuestion(lc);
+  
+  // Handle follow-up logic
+  const followUpResult = handleFollowUpLogic(isFollowUp, mentionsWorkshop);
+  if (followUpResult) {
+    return followUpResult;
+  }
+  
+  // default
+  return "advice";
+}
 
 /* --------------------------- Interactive Clarification System --------------------------- */
 
@@ -1397,19 +1666,326 @@ function extractKeywords(q) {
  * LOGICAL CONFIDENCE SYSTEM - Check if we have enough context to provide a confident answer
  * Uses logical rules instead of broken numerical confidence scores
  */
+// Calculate RAG-based confidence for clarification questions
+async function calculateRAGConfidence(query, client, pageContext) {
+  try {
+    const keywords = extractKeywords(query);
+    const articles = await findArticles(client, { keywords, limit: 10, pageContext });
+    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+    const contentChunks = await findContentChunks(client, { keywords, limit: 5, articleUrls });
+    
+    // Calculate confidence based on content found
+    let confidence = 0.1; // Base confidence
+    
+    if (articles.length > 0) {
+      confidence += Math.min(0.3, articles.length * 0.05); // Up to 30% for articles
+    }
+    
+    if (contentChunks.length > 0) {
+      confidence += Math.min(0.4, contentChunks.length * 0.08); // Up to 40% for content chunks
+    }
+    
+    // Check if content is highly relevant
+    const queryWords = query.toLowerCase().split(' ').filter(w => w.length > 2);
+    let relevanceScore = 0;
+    
+    if (articles.length > 0) {
+      articles.forEach(article => {
+        const title = (article.title || '').toLowerCase();
+        const description = (article.description || '').toLowerCase();
+        const text = `${title} ${description}`;
+        
+        queryWords.forEach(word => {
+          if (text.includes(word)) relevanceScore += 0.1;
+        });
+      });
+    }
+    
+    confidence += Math.min(0.2, relevanceScore); // Up to 20% for relevance
+    
+    return Math.min(0.95, Math.max(0.1, confidence)); // Cap between 10% and 95%
+  } catch (error) {
+    console.warn('Error calculating RAG confidence:', error);
+    return 0.3; // Default confidence if calculation fails
+  }
+}
 
+function applyFreeQueryPenalty(mentionsFree, topServiceIsPaid, baseConfidence, confidenceFactors) {
+  if (mentionsFree && topServiceIsPaid) {
+    baseConfidence -= 0.35; 
+    confidenceFactors.push('Free query but top result is paid (-0.35)');
+  }
+  return baseConfidence;
+}
 
+function applyOnlineQueryPenalty(mentionsOnline, topServiceIsOffline, baseConfidence, confidenceFactors) {
+  if (mentionsOnline && topServiceIsOffline) {
+    baseConfidence -= 0.25; 
+    confidenceFactors.push('Online query but top result offline (-0.25)');
+  }
+  return baseConfidence;
+}
 
+function applyCertificatePenalty(mentionsCertificate, baseConfidence, confidenceFactors) {
+  if (mentionsCertificate) {
+    const hasCert = false; // no certificate detection yet
+    if (!hasCert) { 
+      baseConfidence -= 0.2; 
+      confidenceFactors.push('Certificate requested but not found (-0.2)'); 
+    }
+  }
+  return baseConfidence;
+}
 
+function applyLandingBonus(hasLandingFree, mentionsFree, mentionsOnline, baseConfidence, confidenceFactors) {
+  if (hasLandingFree && (mentionsFree || mentionsOnline)) {
+    baseConfidence += 0.25; 
+    confidenceFactors.push('Landing free/online page present (+0.25)');
+  }
+  return baseConfidence;
+}
 
+function hasContentBasedConfidence(query, intent, content) {
+  if (!query) return false;
+  
+  const lc = query.toLowerCase();
+
+  // Helper functions for confidence checks
+  const isClarificationQuestion = () => {
+    return lc.includes("what type of") && lc.includes("are you planning") && lc.includes("this will help");
+  };
+  
+  const isOverlyBroadCourseQuery = () => {
+    return lc === "do you do courses" || lc === "do you offer courses" || lc === "what courses do you offer";
+  };
+  
+  const isVagueQuery = () => {
+    const queryLength = query.length;
+    if (queryLength <= 10 && !hasSpecificKeywords(query)) return true;
+    
+    const vaguePatterns = [
+      "photography help", "photography advice", "help with photography", 
+      "what can you help me with", "photography tips", "photography guidance",
+      "photography support", "photography assistance", "photography questions"
+    ];
+    return vaguePatterns.some(pattern => lc.includes(pattern));
+  };
+  
+  const hasInsufficientContent = () => {
+  const articleCount = content.articles?.length || 0;
+  const eventCount = content.events?.length || 0;
+  const productCount = content.products?.length || 0;
+  const relevanceScore = content.relevanceScore || 0;
+    const totalContent = articleCount + eventCount + productCount;
+    
+    return totalContent <= 1 && relevanceScore < 0.3;
+  };
+  
+  const hasRichContent = () => {
+    const articleCount = content.articles?.length || 0;
+    const eventCount = content.events?.length || 0;
+    const productCount = content.products?.length || 0;
+    const relevanceScore = content.relevanceScore || 0;
+  const totalContent = articleCount + eventCount + productCount;
+  
+    return totalContent >= 3 && relevanceScore > 0.6;
+  };
+  
+  const hasMediumContentWithKeywords = () => {
+    const articleCount = content.articles?.length || 0;
+    const eventCount = content.events?.length || 0;
+    const productCount = content.products?.length || 0;
+    const relevanceScore = content.relevanceScore || 0;
+    const totalContent = articleCount + eventCount + productCount;
+    
+    return totalContent >= 2 && relevanceScore > 0.5 && hasSpecificKeywords(query);
+  };
+  
+  const isEventsQueryWithContent = () => {
+    const eventCount = content.events?.length || 0;
+    const articleCount = content.articles?.length || 0;
+    const productCount = content.products?.length || 0;
+    const totalContent = articleCount + eventCount + productCount;
+    
+    return intent === "events" && hasSpecificKeywords(query) && (eventCount > 0 || totalContent > 0);
+  };
+  
+  const isEquipmentQueryWithContent = () => {
+    const articleCount = content.articles?.length || 0;
+    const productCount = content.products?.length || 0;
+    
+    return lc.includes("tripod") && (articleCount > 0 || productCount > 0);
+  };
+  
+  const isResidentialWorkshopPricingQuery = () => {
+    const eventCount = content.events?.length || 0;
+    const articleCount = content.articles?.length || 0;
+    const relevanceScore = content.relevanceScore || 0;
+    
+    if (lc.includes("residential") && lc.includes("workshop") &&
+        (lc.includes("price") || lc.includes("cost") || lc.includes("b&b") || lc.includes("bed and breakfast"))) {
+    if (eventCount > 0) return true;
+    if (articleCount > 0 || relevanceScore >= 0.3) return true;
+  }
+    return false;
+  };
+  
+  const isPricingAccommodationQuery = () => {
+    const eventCount = content.events?.length || 0;
+    const articleCount = content.articles?.length || 0;
+    const relevanceScore = content.relevanceScore || 0;
+    
+  const pricingAccommodationHints = ["price", "cost", "fees", "pricing", "b&b", "bed and breakfast", "accommodation", "stay", "include b&b", "includes b&b"];
+  if (pricingAccommodationHints.some(h => lc.includes(h))) {
+    if (eventCount > 0) return true;
+    if (articleCount >= 1 && relevanceScore >= 0.3) return true;
+    if (relevanceScore >= 0.5) return true;
+  }
+    return false;
+  };
+  
+  // Early returns for clarification cases
+  if (isClarificationQuestion()) return false;
+  if (isOverlyBroadCourseQuery()) return false;
+  if (isVagueQuery()) return false;
+  if (hasInsufficientContent()) return false;
+  
+  // Confidence cases
+  if (hasRichContent()) return true;
+  if (hasMediumContentWithKeywords()) return true;
+  if (isEventsQueryWithContent()) return true;
+  if (isEquipmentQueryWithContent()) return true;
+  if (isResidentialWorkshopPricingQuery()) return true;
+  if (isPricingAccommodationQuery()) return true;
+  
+  // Default to clarification for safety
+  return false;
+}
 
 // Helper function to detect specific keywords
+function hasSpecificKeywords(query) {
+  const lc = query.toLowerCase();
+  const specificKeywords = [
+    // Equipment
+    "camera", "lens", "tripod", "filter", "bag", "memory card",
+    // Courses/Workshops
+    "beginner", "advanced", "rps", "lightroom", "online", "private", "course", "workshop",
+    // Services
+    "mentoring", "feedback", "critique", "lessons", "training", "service",
+    // Technical
+    "iso", "aperture", "shutter", "exposure", "composition", "lighting", "white balance",
+    "depth of field", "framing", "macro", "portrait", "landscape", "street",
+    // About
+    "alan", "ranger", "about", "who is", "where is", "contact"
+  ];
+  
+  return specificKeywords.some(keyword => lc.includes(keyword));
+}
 
 /**
  * COMPLETE CLARIFICATION SYSTEM - PHASE 1: Detection
  * Detects queries that need clarification based on comprehensive 20-question analysis
  * 100% detection rate for all ambiguous query types
  */
+function needsClarification(query) {
+  console.log(`🔍 needsClarification called with: "${query}"`);
+  if (!query) return false;
+  
+  const lc = query.toLowerCase();
+
+  // Helper functions for specific query detection
+  const isSpecificTripodQuery = () => {
+    return lc.includes("tripod") || lc.includes("which tripod") || lc.includes("what tripod");
+  };
+  
+  const isResidentialWorkshopPricingQuery = () => {
+    return (lc.includes("residential") && lc.includes("workshop")) || lc.includes("b&b") || lc.includes("bed and breakfast");
+  };
+  
+  const getCurrentPatterns = () => {
+    return [
+    lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop"),
+    lc.includes("events") && !lc.includes("course") && !lc.includes("workshop"),
+    lc.includes("training") && !lc.includes("course") && !lc.includes("workshop")
+  ];
+  };
+  
+  const getGenericQuestionPatterns = () => {
+    return [
+    lc.includes("do you do") && (lc.includes("courses") || lc.includes("workshops")),
+    lc.includes("do you run") && lc.includes("workshops"),
+    lc.includes("do you offer") && (lc.includes("lessons") || lc.includes("services")),
+    lc.includes("are your") && lc.includes("suitable"),
+    lc.includes("do you have") && lc.includes("courses"),
+    lc.includes("is there a free") && lc.includes("course"),
+    lc.includes("how long have you been teaching"),
+      lc.includes("who is") && lc.includes("alan")
+    ];
+  };
+    
+  const getSpecificAmbiguousPatterns = () => {
+    return [
+    lc.includes("what") && (lc.includes("courses") || lc.includes("workshops")) && !lc.includes("included"),
+    lc.includes("when is") && lc.includes("workshop"),
+    (lc.includes("how much") && lc.includes("workshop") && !lc.includes("residential") && !lc.includes("b&b") && !lc.includes("bed and breakfast")),
+    lc.includes("what's the difference"),
+    lc.includes("what photography workshops") && lc.includes("coming up"),
+    lc.includes("what's included in") && lc.includes("course"),
+      lc.includes("what camera should i buy")
+    ];
+  };
+    
+  const getTechnicalAdvicePatterns = () => {
+    return [
+    lc.includes("how do i") && lc.includes("camera"),
+    lc.includes("what's the best") && lc.includes("lens"),
+    lc.includes("what camera settings"),
+    lc.includes("can you help me choose"),
+    lc.includes("what photography services do you offer")
+  ];
+  };
+  
+  const logEquipmentQueryDebug = () => {
+    if (lc.includes("equipment")) {
+      console.log(`🔍 Equipment query detected: "${query}"`);
+      console.log(`   lc.includes("equipment"): ${lc.includes("equipment")}`);
+      console.log(`   lc.includes("course"): ${lc.includes("course")}`);
+      console.log(`   lc.includes("workshop"): ${lc.includes("workshop")}`);
+      console.log(`   Pattern result: ${lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop")}`);
+    }
+  };
+  
+  const logFinalResult = () => {
+    if (lc.includes("equipment")) {
+      console.log(`   Final needsClarification result: ${result}`);
+    }
+  };
+  
+  // Early returns for specific queries that should not trigger clarification
+  if (isSpecificTripodQuery()) return false;
+  if (isResidentialWorkshopPricingQuery()) return false;
+  
+  // Log debug information for equipment queries
+  logEquipmentQueryDebug();
+  
+  // Get all pattern arrays
+  const currentPatterns = getCurrentPatterns();
+  const genericPatterns = getGenericQuestionPatterns();
+  const specificPatterns = getSpecificAmbiguousPatterns();
+  const technicalPatterns = getTechnicalAdvicePatterns();
+  
+  // Evaluate retrieval-first short-circuit: if query contains item-specific equipment
+  // keywords and not broad terms, avoid clarification here and let content decide.
+  const itemSpecific = ["tripod","lens","bag","memory card"].some(k => lc.includes(k));
+  const broadOnly = lc.includes("equipment") && !itemSpecific;
+  const allPatterns = [...currentPatterns, ...genericPatterns, ...specificPatterns, ...technicalPatterns];
+  const result = broadOnly || allPatterns.some(pattern => pattern);
+  
+  // Log final result for equipment queries
+  logFinalResult();
+  
+  return result;
+}
 /**
  * Generate clarification options from evidence buckets
  * Sources options from actual data instead of hardcoded patterns
@@ -1511,14 +2087,14 @@ function extractArticleCategoriesAndTags(articles) {
   articles.forEach(article => {
         if (article.categories && Array.isArray(article.categories)) {
           article.categories.forEach(cat => {
-            if (cat?.trim()) {
+            if (cat && cat.trim()) {
               articleCategories.add(cat.trim());
             }
           });
         }
         if (article.tags && Array.isArray(article.tags)) {
           article.tags.forEach(tag => {
-            if (tag?.trim()) {
+            if (tag && tag.trim()) {
               articleTags.add(tag.trim());
             }
           });
@@ -1557,7 +2133,7 @@ function extractServiceTypes(services) {
   services.forEach(service => {
         if (service.categories && Array.isArray(service.categories)) {
           service.categories.forEach(cat => {
-            if (cat?.trim()) {
+            if (cat && cat.trim()) {
               serviceTypes.add(cat.trim());
             }
           });
@@ -1616,6 +2192,7 @@ function deduplicateAndLimitOptions(options) {
 
 async function generateClarificationOptionsFromEvidence(client, query, pageContext) {
   try {
+    const keywords = extractKeywords(query || "");
     const evidence = await getEvidenceSnapshot(client, query, pageContext);
     
     const options = [];
@@ -2162,6 +2739,7 @@ function getClarificationLevelAndConfidence(query, pageContext) {
 
 // NEW: Query Classification System
 function classifyQuery(query) {
+  const lc = query.toLowerCase();
   console.log(`🔍 classifyQuery called with: "${query}"`);
   
   // COURSE QUERIES - Check these FIRST to ensure they go to clarification
@@ -3310,11 +3888,11 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   // Check if this is a duration-based query that needs special handling
   let queryText = enhancedKeywords.join(' ').toLowerCase();
   // Normalize "one day" / "1 day" to canonical "1-day" so downstream detection is consistent
-  queryText = queryText.replaceAll(/\b(1\s*day|one\s*day)\b/g, '1-day');
+  queryText = queryText.replace(/\b(1\s*day|one\s*day)\b/g, '1-day');
   // Normalize short duration phrasings to canonical token
-  queryText = queryText.replaceAll(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|2\s*hr|2\s*hour|short)\b/g, '2.5hrs-4hrs');
+  queryText = queryText.replace(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|2\s*hr|2\s*hour|short)\b/g, '2.5hrs-4hrs');
   // Normalize multi-day phrasings to canonical token
-  queryText = queryText.replaceAll(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/g, '2-5-days');
+  queryText = queryText.replace(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/g, '2-5-days');
   console.log('🔍 findEvents debug:', { enhancedKeywords, queryText });
   
   // Check for 2.5hrs-4hrs workshops (normalized)
@@ -3416,7 +3994,7 @@ function normalizeCategories(rawCategories) {
     const inner = value.slice(1, -1);
     return inner
       .split(',')
-      .map(s => s.replaceAll(/^"|"$/g, '').trim())
+      .map(s => s.replace(/^\"|\"$/g, '').trim())
       .filter(Boolean);
   }
   // Handle JSON array string
@@ -3649,7 +4227,7 @@ function dedupeEventsByKey(rows, keyField = 'event_url', secondaryKey = null) {
 }
 
 function enhanceKeywordsWithPageContext(keywords, pageContext) {
-  if (pageContext?.pathname) {
+  if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
       console.log('Page context keywords:', pathKeywords);
@@ -3764,7 +4342,7 @@ function mapEventsData(data) {
 
 async function findProducts(client, { keywords, limit = 20, pageContext = null }) {
   // If we have page context, try to find related products first
-  if (pageContext?.pathname) {
+  if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
       console.log('Product search - Page context keywords:', pathKeywords);
@@ -3882,7 +4460,7 @@ function addCoreConceptScore(hasCore, coreConcepts, t, u, add, has) {
 // Helper functions for core concept scoring
 function processCoreConceptBoosts(coreConcepts, t, u, add, has) {
   for (const c of coreConcepts) {
-    const slug = c.replaceAll(/\s+/g, "-");
+    const slug = c.replace(/\s+/g, "-");
     applyConceptBoosts(c, slug, t, u, add, has);
   }
 }
@@ -3934,7 +4512,7 @@ function hasNonEquipmentKeywords(title) {
 
 async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
   // If we have page context, try to find related articles first
-  if (pageContext?.pathname) {
+  if (pageContext && pageContext.pathname) {
     const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
     if (pathKeywords.length > 0) {
       console.log('Article search - Page context keywords:', pathKeywords);
@@ -4044,7 +4622,7 @@ async function dedupeAndEnrichArticles(client, articles) {
           // Look for title patterns in the content
           const titleMatch = text.match(/^([A-Z][A-Z\s\-&]+(?:REVIEW|GUIDE|TIPS|REASONS|TRIPOD|PHOTOGRAPHY)[A-Z\s\-&]*)/m);
           if (titleMatch) {
-          return titleMatch[1].trim().replaceAll(/\s+/g, ' ');
+          return titleMatch[1].trim().replace(/\s+/g, ' ');
           }
         }
       } catch {}
@@ -4085,7 +4663,7 @@ function deriveTitleFromUrl(u) {
     const parts = (url.pathname || '').split('/').filter(Boolean);
     const last = parts[parts.length - 1] || '';
     if (!last) return null;
-    const words = last.replaceAll(/[-_]+/g, ' ').replaceAll(/\.(html?)$/i,' ').trim();
+    const words = last.replace(/[-_]+/g, ' ').replace(/\.(html?)$/i,' ').trim();
     // Title case important words
     return words.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ').trim();
   } catch { return null; }
@@ -4188,11 +4766,11 @@ function extractPdfUrl(text) {
           const m =
             text.match(/https?:\/\/\S+?\.pdf/gi) ||
             text.match(/href="([^"]+\.pdf)"/i);
-          if (m?.[0]) {
+          if (m && m[0]) {
             let pdfUrl = Array.isArray(m) ? m[0] : m[1];
             // Convert internal Squarespace URLs to public URLs
             if (pdfUrl.includes('alan-ranger.squarespace.com')) {
-              pdfUrl = pdfUrl.replaceAll('alan-ranger.squarespace.com', 'www.alanranger.com');
+              pdfUrl = pdfUrl.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
             }
     return pdfUrl;
           }
@@ -4204,12 +4782,12 @@ function extractRelatedLink(text) {
             text.match(
               /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']*)/i
             ) || text.match(/href="([^"]*alanranger\.com[^"]*)"/i);
-          if (rel?.[0]) {
+          if (rel && rel[0]) {
             let url = Array.isArray(rel) ? rel[0] : rel[1];
             
             // Convert internal Squarespace URLs to public URLs
             if (url.includes('alan-ranger.squarespace.com')) {
-              url = url.replaceAll('alan-ranger.squarespace.com', 'www.alanranger.com');
+              url = url.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
             }
             
             // Only accept direct Alan Ranger URLs, not URLs that contain Alan Ranger URLs as parameters
@@ -4231,7 +4809,7 @@ function findLabelMatch(text) {
 }
 
 function cleanExtractedLabel(label) {
-  return label.replaceAll(/\]$/, '').replaceAll(/\[$/, '').replaceAll(/[[\]]/g, '');
+  return label.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
 }
 
 function generateLabelFromUrl(url) {
@@ -4239,7 +4817,7 @@ function generateLabelFromUrl(url) {
                   const urlObj = new URL(url);
                   const pathParts = urlObj.pathname.split('/').filter(Boolean);
                   const lastPart = pathParts[pathParts.length - 1] || 'Related Content';
-    return lastPart.replaceAll(/[-_]+/g, ' ').replaceAll(/\b\w/g, l => l.toUpperCase());
+    return lastPart.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 } catch {
     return 'Related Content';
   }
@@ -4249,7 +4827,7 @@ function extractRelatedLabel(text, url) {
   // Robust label extraction: prioritize explicit link text, then clean URL path
   const labelMatch = findLabelMatch(text);
   
-  if (labelMatch?.[1]) {
+  if (labelMatch && labelMatch[1]) {
     const cleanLabel = cleanExtractedLabel(labelMatch[1].trim());
     return cleanLabel;
   } else {
@@ -4259,7 +4837,7 @@ function extractRelatedLabel(text, url) {
 }
 
 function cleanUrlLabel(label) {
-  return label.replaceAll(/\]$/, '').replaceAll(/\[$/, '').replaceAll(/[[\]]/g, '');
+  return label.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
 }
 
 async function getArticleAuxLinks(client, articleUrl) {
@@ -4328,26 +4906,26 @@ function processTableData(data, table) {
 // Helper functions for description parsing
 function cleanDescriptionText(desc) {
   return String(desc)
-    .replaceAll(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags completely
-    .replaceAll(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags completely
-    .replaceAll(/<[^>]*>/g, ' ') // Remove all HTML tags
-    .replaceAll(/\s*style="[^"]*"/gi, '') // Remove style attributes
-    .replaceAll(/\s*data-[a-z0-9_-]+="[^"]*"/gi, '') // Remove data attributes
-    .replaceAll(/\s*contenteditable="[^"]*"/gi, '') // Remove contenteditable
-    .replaceAll(/\s*class="[^"]*"/gi, '') // Remove class attributes
-    .replaceAll(/\s*id="[^"]*"/gi, '') // Remove id attributes
-    .replaceAll(/\s*data-rte-[^=]*="[^"]*"/gi, '') // Remove Squarespace RTE attributes
-    .replaceAll(/\s*data-indent="[^"]*"/gi, '') // Remove indent attributes
-    .replaceAll(/\s*white-space:pre-wrap[^"]*"/gi, '') // Remove white-space styles
-    .replaceAll(/\s*margin-left:[^"]*"/gi, '') // Remove margin styles
-    .replaceAll(/\s+/g, ' ') // Normalize whitespace
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags completely
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags completely
+    .replace(/<[^>]*>/g, ' ') // Remove all HTML tags
+    .replace(/\s*style="[^"]*"/gi, '') // Remove style attributes
+    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi, '') // Remove data attributes
+    .replace(/\s*contenteditable="[^"]*"/gi, '') // Remove contenteditable
+    .replace(/\s*class="[^"]*"/gi, '') // Remove class attributes
+    .replace(/\s*id="[^"]*"/gi, '') // Remove id attributes
+    .replace(/\s*data-rte-[^=]*="[^"]*"/gi, '') // Remove Squarespace RTE attributes
+    .replace(/\s*data-indent="[^"]*"/gi, '') // Remove indent attributes
+    .replace(/\s*white-space:pre-wrap[^"]*"/gi, '') // Remove white-space styles
+    .replace(/\s*margin-left:[^"]*"/gi, '') // Remove margin styles
+    .replace(/\s+/g, ' ') // Normalize whitespace
     .trim();
 }
 
 function normalizeLines(rawText) {
   return rawText
     .split(/\r?\n/)
-    .map((s) => s.replaceAll(/\s+/g, ' ').trim())
+    .map((s) => s.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .filter((line, index, arr) => {
       // Remove duplicate lines (common issue causing text duplication)
@@ -4460,6 +5038,8 @@ function parseExperienceLevelField(ln, helpers) {
 }
 
 function parseEquipmentNeededField(ln, helpers) {
+  const { matches, valueAfter, nextVal, setIf } = helpers;
+  
   // Check different equipment parsing patterns
   return parseStandardEquipmentFormat(ln, helpers) ||
          parseAsteriskEquipmentFormat(ln, helpers) ||
@@ -4620,10 +5200,10 @@ function scrubDescription(description) {
     .replace(/\s*style="[^"]*"/gi,'')
     .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
     .replace(/\s*contenteditable="[^"]*"/gi,'')
-    .replace(/•\s*Standard\s*[—-]\s*£\d+/gi,'') // Remove "• Standard — £150" lines
-    .replace(/Standard\s*[—-]\s*£\d+/gi,'') // Remove "Standard — £150" lines
-    .replace(/\s*•\s*Standard\s*[—-]\s*£\d+/gi,'') // Remove " • Standard — £150" lines
-    .replace(/\s*Standard\s*[—-]\s*£\d+/gi,''); // Remove " Standard — £150" lines
+    .replace(/•\s*Standard\s*[—\-]\s*£\d+/gi,'') // Remove "• Standard — £150" lines
+    .replace(/Standard\s*[—\-]\s*£\d+/gi,'') // Remove "Standard — £150" lines
+    .replace(/\s*•\s*Standard\s*[—\-]\s*£\d+/gi,'') // Remove " • Standard — £150" lines
+    .replace(/\s*Standard\s*[—\-]\s*£\d+/gi,''); // Remove " Standard — £150" lines
 }
   
 async function fetchChunkData(primary) {
@@ -4912,7 +5492,7 @@ function determineEventSectionUrl(firstEventUrl) {
   try {
     const fe = String(firstEventUrl || '');
     const m = fe.match(/^https?:\/\/[^/]+\/(beginners-photography-lessons)\//i);
-    if (m?.[1]) {
+    if (m && m[1]) {
       const base = fe.split(m[1])[0] + m[1];
       return base.startsWith('http') ? base : `https://www.alanranger.com/${m[1]}`;
     }
@@ -5031,6 +5611,7 @@ function findRelevantEvent(events, lowerQuery, dataContext) {
     
   // Check for contextually relevant events
     if (dataContext.originalQuery) {
+      const originalQueryLower = dataContext.originalQuery.toLowerCase();
       console.log(`🔍 RAG: Looking for event matching original query: "${dataContext.originalQuery}"`);
       
       const keyTerms = dataContext.originalQuery.toLowerCase()
@@ -5088,7 +5669,7 @@ function getEventLabel(event) {
 
 // Helper function to extract and format brief description
 function extractEventBrief(products, summarize) {
-  if (products?.length && (products[0].description || products[0]?.raw?.description)) {
+  if (products && products.length && (products[0].description || products[0]?.raw?.description)) {
     let brief = summarize(products[0].description || products[0]?.raw?.description);
         if (brief.length > 220) brief = brief.slice(0, 220).replace(/\s+\S*$/, '') + '…';
     return brief;
@@ -5126,9 +5707,9 @@ function checkEventFitnessLevel(event, lowerQuery) {
 }
 
 async function extractRelevantInfo(query, dataContext) {
-  const { products, events } = dataContext;
+  const { products, events, articles } = dataContext;
   const lowerQuery = query.toLowerCase();
-  const { hasText, formatDateGB, summarize } = createTextHelpers();
+  const { hasText, formatDateGB, scrubAttrs, summarize } = createTextHelpers();
   
   // For event-based questions, prioritize the structured event data
   if (events && events.length > 0) {
@@ -5307,8 +5888,8 @@ function applyEventQualityScoring(events, addFactor) {
     }
     
     // Check for specific event types
-    const hasWorkshops = events.some(e => e.subtype?.toLowerCase().includes('workshop'));
-    const hasCourses = events.some(e => e.subtype?.toLowerCase().includes('course'));
+    const hasWorkshops = events.some(e => e.subtype && e.subtype.toLowerCase().includes('workshop'));
+    const hasCourses = events.some(e => e.subtype && e.subtype.toLowerCase().includes('course'));
     if (hasWorkshops || hasCourses) { addFactor("Specific event types", 0.1); }
     }
   }
@@ -6393,7 +6974,7 @@ export default async function handler(req, res) {
     if (!validateRequestMethod(req, res)) return;
     
     // Extract and normalize query
-    const { query, previousQuery, sessionId, pageContext } = extractAndNormalizeQuery(req.body);
+    const { query, topK, previousQuery, sessionId, pageContext } = extractAndNormalizeQuery(req.body);
     // Sanitize page context: ignore self-hosted chat page to avoid misleading clarification routing
     const sanitizedPageContext = (pageContext && typeof pageContext.pathname === 'string' && /\/chat\.html$/i.test(pageContext.pathname)) ? null : pageContext;
     if (!query) {
@@ -6723,8 +7304,8 @@ async function tryRagFirst(client, query) {
       const trimmed = p.trim();
       return trimmed.length > 20 && // Minimum meaningful length
              !trimmed.match(/^(Home|About|Services|Gallery|Contact|Privacy|Terms)$/i) &&
-             !trimmed.match(/^[0-9\s-\.]+$/) &&
-             !trimmed.match(/^\/[A-Za-z\s[\]]+$/i) &&
+             !trimmed.match(/^[0-9\s\-\.]+$/) &&
+             !trimmed.match(/^\/[A-Za-z\s\[\]]+$/i) &&
              !trimmed.match(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)/gi) && // Skip image filenames
              !trimmed.match(/^[A-Z\s]+$/i) && // Skip all-caps headers
              !trimmed.match(/^ed for updated portfolios/i) && // Skip specific artifacts
@@ -6834,19 +7415,68 @@ async function tryRagFirst(client, query) {
     const keywords = extractKeywords(query);
     console.log(`🔑 Extracted keywords: ${keywords.join(', ')}`);
     
+    // For concept queries like "what is exposure", prioritize guide/explanation content over workshop content
+    const lcQuery = (query || "").toLowerCase();
+    const isConceptQuery = lcQuery.includes('what is') || lcQuery.includes('what are') || lcQuery.includes('explain');
+    
+    // Extract primary keyword for guide article searches
+    const allKws = extractKeywords(query).map(k=>k.toLowerCase());
+    const stop = new Set(["what","when","where","how","which","the","a","an","your","you","next","is","are","do","i","me","my","course","workshop","lesson"]);
+    const primaryKeyword = (allKws.find(k => k.length >= 5 && !stop.has(k)) || allKws.find(k=>!stop.has(k)) || "").toLowerCase();
+    
     // Search page_chunks for content with keywords
     let chunks = [];
     
-    // Search with individual keywords (most important)
-    for (const keyword of keywords) {
-      const { data: keywordChunks, error: chunksError } = await client
+    // For concept queries like "what is exposure", prioritize guide articles
+    if (isConceptQuery) {
+      console.log(`🎯 Concept query detected: "${query}" - prioritizing guide articles`);
+      
+      // First, try to find specific guide articles
+      const { data: guideChunks, error: guideError } = await client
         .from('page_chunks')
         .select('url, title, chunk_text')
-        .ilike('chunk_text', `%${keyword}%`)
+        .ilike('url', `%what-is-${primaryKeyword}%`)
+        .limit(5);
+      
+      if (!guideError && guideChunks) {
+        chunks = [...chunks, ...guideChunks];
+        console.log(`🎯 Found ${guideChunks.length} specific guide chunks for "${primaryKeyword}"`);
+      }
+      
+      // Also try broader guide search
+      const { data: broaderGuideChunks, error: broaderError } = await client
+        .from('page_chunks')
+        .select('url, title, chunk_text')
+        .ilike('url', '%what-is-%')
+        .ilike('chunk_text', `%${primaryKeyword}%`)
         .limit(3);
       
-      if (!chunksError && keywordChunks) {
-        chunks = [...chunks, ...keywordChunks];
+      if (!broaderError && broaderGuideChunks) {
+        chunks = [...chunks, ...broaderGuideChunks];
+        console.log(`🎯 Found ${broaderGuideChunks.length} broader guide chunks`);
+      }
+      
+      // If we found guide chunks, skip the general keyword search
+      if (chunks.length > 0) {
+        console.log(`🎯 Using ${chunks.length} guide chunks, skipping general search`);
+      } else {
+        console.log(`⚠️ No guide chunks found, falling back to general search`);
+      }
+    }
+    
+    // Only do general keyword search if we didn't find guide chunks
+    if (!isConceptQuery || chunks.length === 0) {
+      // Search with individual keywords (most important)
+      for (const keyword of keywords) {
+        const { data: keywordChunks, error: chunksError } = await client
+          .from('page_chunks')
+          .select('url, title, chunk_text')
+          .ilike('chunk_text', `%${keyword}%`)
+          .limit(3);
+        
+        if (!chunksError && keywordChunks) {
+          chunks = [...chunks, ...keywordChunks];
+        }
       }
     }
     
@@ -6867,10 +7497,10 @@ async function tryRagFirst(client, query) {
     );
 
     // Enhanced relevance scoring with better filtering
-    const lcQuery = (query || "").toLowerCase();
-    const allKws = extractKeywords(query).map(k=>k.toLowerCase());
-    const stop = new Set(["what","when","where","how","which","the","a","an","your","you","next","is","are","do","i","me","my","course","workshop","lesson"]);
-    const primaryKeyword = (allKws.find(k => k.length >= 5 && !stop.has(k)) || allKws.find(k=>!stop.has(k)) || "").toLowerCase();
+    
+    // For concept queries like "what is exposure", prioritize guide/explanation content over workshop content
+    const conceptKeywords = ['guide', 'explanation', 'tutorial', 'basics', 'beginner', 'learn', 'understanding'];
+    const workshopKeywords = ['workshop', 'course', 'event', 'booking', 'dates', 'location', 'participants'];
     
     // Enhanced keyword categories for better scoring
     const equipmentKeywords = ["tripod","head","ball head","carbon","aluminium","manfrotto","gitzo","benro","sirui","three legged","levelling","camera","lens","filter","flash"];
@@ -6882,7 +7512,34 @@ async function tryRagFirst(client, query) {
     }
 
     results.chunks = uniqueChunks
-      .map(c => ({...c, __score: scoreChunk(c)}))
+      .map(c => {
+        const score = scoreChunk(c);
+        
+        // For concept queries, boost score for guide/explanation content and penalize workshop content
+        let adjustedScore = score;
+        if (isConceptQuery) {
+          const url = (c.url||"").toLowerCase();
+          const title = (c.title||"").toLowerCase();
+          const text = (c.chunk_text||"").toLowerCase();
+          
+          // Boost score for concept-related content
+          if (conceptKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
+            adjustedScore += 2.0;
+          }
+          
+          // Penalize workshop/event content for concept queries
+          if (workshopKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
+            adjustedScore -= 1.5;
+          }
+          
+          // Extra penalty for workshop URLs
+          if (url.includes('/photographic-workshops') || url.includes('/photo-workshops') || url.includes('/events/')) {
+            adjustedScore -= 2.0;
+          }
+        }
+        
+        return {...c, __score: adjustedScore};
+      })
       // Hard requirement: if we detected a primary keyword, ensure it exists in title/text/url
       .filter(c => {
         if (!primaryKeyword) return c.__score > 0;
@@ -6916,6 +7573,24 @@ async function tryRagFirst(client, query) {
     
     // Search page_entities for events/services using keywords
     let entities = [];
+    
+    // For concept queries, prioritize guide articles
+    if (isConceptQuery) {
+      console.log(`🎯 Searching for guide articles for concept query`);
+      const { data: guideArticles, error: guideError } = await client
+        .from('page_entities')
+        .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
+        .ilike('url', `%what-is-${primaryKeyword}%`)
+        .eq('kind', 'article')
+        .limit(5);
+      
+      if (!guideError && guideArticles) {
+        console.log(`🎯 Found ${guideArticles.length} guide articles`);
+        guideArticles.forEach(e => console.log(`  - "${e.title}" (${e.url})`));
+        entities = [...entities, ...guideArticles];
+        results.entities = guideArticles;
+      }
+    }
     
     // For "who is" queries, also search for "about" to find biographical content
     const searchKeywords = [...keywords];
@@ -6959,7 +7634,12 @@ async function tryRagFirst(client, query) {
       index === self.findIndex(e => e.url === entity.url)
     );
     
-    results.entities = entities || [];
+    // Don't overwrite guide articles for concept queries
+    if (!isConceptQuery || results.entities.length === 0) {
+      results.entities = entities || [];
+    } else {
+      console.log(`🎯 Keeping ${results.entities.length} guide articles for concept query`);
+    }
     console.log(`🏷️ Found ${results.entities.length} relevant entities`);
     if (results.entities.length > 0) {
       console.log(`🏷️ Entity titles:`, results.entities.map(e => e.title));
@@ -6987,7 +7667,7 @@ async function tryRagFirst(client, query) {
     } else if (results.chunks.length > 0) {
       // Use generateDirectAnswer for intelligent concept synthesis
       console.log(`🔍 Using generateDirectAnswer for ${results.chunks.length} chunks`);
-      const directAnswer = generateDirectAnswer(query, [], results.chunks);
+      const directAnswer = generateDirectAnswer(query, results.entities, results.chunks);
       if (directAnswer) {
         answer = directAnswer;
         console.log(`✅ Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
@@ -7116,10 +7796,10 @@ async function tryRagFirst(client, query) {
       
       // No hardcoded overrides - let the system work naturally
       
-      if (/tripod|equipment|gear|camera|lens/i.test(query)) {
+      if (/tripod|equipment|gear|camera|lens/i.test(query.toLowerCase())) {
         answer = `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`;
         type = "advice";
-      } else if (/refund|cancellation|policy/i.test(query)) {
+      } else if (/refund|cancellation|policy/i.test(query.toLowerCase())) {
         answer = `Alan Ranger has a clear cancellation and refund policy for all courses and workshops. Here are the key details:\n\n**Cancellation Policy:**\n• Full refund if cancelled 14+ days before the event\n• 50% refund if cancelled 7-13 days before\n• No refund for cancellations within 7 days\n\n**Rescheduling:**\n• Free rescheduling if requested 7+ days in advance\n• Weather-related cancellations are fully refundable\n\nFor specific details or to discuss your situation, please contact Alan directly.\n\n*Contact Alan: https://www.alanranger.com/contact*`;
         type = "advice";
       } else {
