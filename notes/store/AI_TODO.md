@@ -80,8 +80,10 @@ This is the AI's running TODO list. Keep it short and actionable.
 - [x] **COMPLETED**: Refactored tryRagFirst function (21→15 statements) - NO REGRESSIONS
 - [x] **COMPLETED**: Refactored generateSmartPills function (complexity 28→15) - NO REGRESSIONS
 - [x] **COMPLETED**: Refactored calculateChunkScore function (complexity 26→15) - NO REGRESSIONS
-- [ ] **IN PROGRESS**: Continue systematic refactoring of remaining 171 linter errors
-- [ ] **NEXT**: Target next highest complexity function (findEvents - complexity 25)
+- [x] **COMPLETED**: Refactored findEvents function (complexity 25→15) - NO REGRESSIONS
+- [x] **COMPLETED**: Refactored findEventsByDuration function (112 lines→15 statements) - NO REGRESSIONS
+- [ ] **IN PROGRESS**: Continue systematic refactoring of remaining 168 linter errors
+- [ ] **NEXT**: Target next highest complexity function (handleEventsPipeline - complexity 25)
 
 ## Next - AFTER SYSTEM RECOVERY
 - [ ] **CRITICAL**: Fix system breakdown - all API calls failing with network errors

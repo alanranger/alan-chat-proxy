@@ -2728,11 +2728,8 @@ async function handleArticlesBypass(client, query, articles, res) {
 
 // If we already have evidence, bypass generic clarification and show results
 
-async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
-  // Enhance keywords with page context
-  const enhancedKeywords = enhanceKeywordsWithPageContext(keywords, pageContext);
-  
-  // Check if this is a duration-based query that needs special handling
+// Helper: Normalize query text for duration detection
+function normalizeQueryText(enhancedKeywords) {
   let queryText = enhancedKeywords.join(' ').toLowerCase();
   // Normalize "one day" / "1 day" to canonical "1-day" so downstream detection is consistent
   queryText = queryText.replace(/\b(1\s*day|one\s*day)\b/g, '1-day');
@@ -2740,21 +2737,20 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   queryText = queryText.replace(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|2\s*hr|2\s*hour|short)\b/g, '2.5hrs-4hrs');
   // Normalize multi-day phrasings to canonical token
   queryText = queryText.replace(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/g, '2-5-days');
-  console.log('🔍 findEvents debug:', { enhancedKeywords, queryText });
-  
+  return queryText;
+}
+
+// Helper: Handle duration-based queries
+async function handleDurationQueries(client, queryText, limit) {
   // Check for 2.5hrs-4hrs workshops (normalized)
-  console.log('🔍 DEBUG: Checking if queryText contains 2.5hrs-4hrs:', queryText);
   if (queryText.includes('2.5hrs-4hrs')) {
     console.log('🔍 Using category-based query for 2.5hrs-4hrs workshops');
     const result = await findEventsByDuration(client, '2.5hrs-4hrs', limit);
     console.log('🔍 findEventsByDuration returned:', result?.length || 0, 'events for 2.5hrs-4hrs');
-    // Add debug info to result for troubleshooting
     if (result && result.length === 0) {
       console.log('🔍 DEBUG: findEventsByDuration returned 0 events for 2.5hrs-4hrs');
     }
     return result;
-  } else {
-    console.log('🔍 DEBUG: queryText does not contain 2.5hrs-4hrs:', queryText);
   }
   
   // Check for 1-day workshops (normalized)
@@ -2771,7 +2767,11 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     return await findEventsByDuration(client, '2-5-days', limit);
   }
   
-  // Check for Lightroom course queries
+  return null; // No duration match found
+}
+
+// Helper: Handle Lightroom course queries
+async function handleLightroomQueries(client, queryText, limit) {
   if (queryText.includes('lightroom') || queryText.includes('photo editing') || queryText.includes('editing')) {
     console.log('🔍 Using Lightroom-specific search');
     const { data, error } = await client
@@ -2792,7 +2792,11 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
     return mapEventsData(data);
   }
   
-  // Debug: Check if we're missing the condition
+  return null; // No Lightroom match found
+}
+
+// Helper: Handle regular keyword-based search
+async function handleRegularSearch(client, enhancedKeywords, limit) {
   console.log('🔍 No duration condition matched, using regular query');
   
   // Build base query for regular keyword-based search
@@ -2828,6 +2832,30 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   return mapEventsData(data);
 }
 
+async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
+  // Enhance keywords with page context
+  const enhancedKeywords = enhanceKeywordsWithPageContext(keywords, pageContext);
+  
+  // Normalize query text for duration detection
+  const queryText = normalizeQueryText(enhancedKeywords);
+  console.log('🔍 findEvents debug:', { enhancedKeywords, queryText });
+  
+  // Check for duration-based queries first
+  const durationResult = await handleDurationQueries(client, queryText, limit);
+  if (durationResult !== null) {
+    return durationResult;
+  }
+  
+  // Check for Lightroom course queries
+  const lightroomResult = await handleLightroomQueries(client, queryText, limit);
+  if (lightroomResult !== null) {
+    return lightroomResult;
+  }
+  
+  // Fall back to regular keyword-based search
+  return await handleRegularSearch(client, enhancedKeywords, limit);
+}
+
 // Helper function to handle fallback queries for findEventsByDuration
 function normalizeCategories(rawCategories) {
   if (!rawCategories) return [];
@@ -2858,148 +2886,192 @@ function normalizeCategories(rawCategories) {
 }
 
 
+// Helper: Extract Batsford session times
+function extractBatsfordTimes(productDesc) {
+  const morningMatch = productDesc.match(/morning workshops are (\d+)\s*am to (\d+)\.(\d+)\s*am/i);
+  const afternoonMatch = productDesc.match(/afternoon workshops are from (\d+):(\d+)\s*pm to (\d+):(\d+)\s*pm/i);
+  
+  if (morningMatch && afternoonMatch) {
+    const earlyEndTime = `${morningMatch[2].padStart(2, '0')}:${morningMatch[3].padStart(2, '0')}:00`;
+    const lateStartTime = `${afternoonMatch[1].padStart(2, '0')}:${afternoonMatch[2].padStart(2, '0')}:00`;
+    const pmHour = parseInt(afternoonMatch[3]);
+    const pmMinute = afternoonMatch[4];
+    const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
+    const lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
+    console.log(`🔍 Extracted Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
+    return { earlyEndTime, lateStartTime, lateEndTime };
+  }
+  return null;
+}
+
+// Helper: Extract Bluebell session times
+function extractBluebellTimes(productDesc) {
+  const sessionMatch = productDesc.match(/(\d+):(\d+)\s*am to (\d+):(\d+)\s*am or (\d+):(\d+)\s*am to (\d+):(\d+)\s*pm/i);
+  
+  if (sessionMatch) {
+    const earlyEndTime = `${sessionMatch[3].padStart(2, '0')}:${sessionMatch[4].padStart(2, '0')}:00`;
+    const lateStartTime = `${sessionMatch[5].padStart(2, '0')}:${sessionMatch[6].padStart(2, '0')}:00`;
+    const pmHour = parseInt(sessionMatch[7]);
+    const pmMinute = sessionMatch[8];
+    const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
+    const lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
+    console.log(`🔍 Extracted Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
+    return { earlyEndTime, lateStartTime, lateEndTime };
+  }
+  return null;
+}
+
+// Helper: Extract session times from product description
+function extractSessionTimes(event) {
+  const productDesc = event.product_description || '';
+  console.log(`🔍 Product description for ${event.event_title}:`, productDesc.substring(0, 200) + '...');
+  
+  if (productDesc.includes('batsford') || event.event_title.toLowerCase().includes('batsford')) {
+    return extractBatsfordTimes(productDesc);
+  } else if (productDesc.includes('bluebell') || event.event_title.toLowerCase().includes('bluebell')) {
+    return extractBluebellTimes(productDesc);
+  }
+  
+  console.log(`🔍 No specific session time extraction for ${event.event_title}`);
+  return null;
+}
+
+// Helper: Create session entries for multi-session events
+function createSessionEntries(event, categoryType, sessionTimes) {
+  const { earlyEndTime, lateStartTime, lateEndTime } = sessionTimes;
+  const actualStartTime = event.start_time || '08:00:00';
+  const actualEndTime = event.end_time || '15:30:00';
+  
+  if (categoryType === '2.5hrs-4hrs') {
+    const earlySession = {
+      ...event,
+      session_type: 'early',
+      start_time: actualStartTime,
+      end_time: earlyEndTime,
+      categories: ['2.5hrs-4hrs'],
+      event_title: `${event.event_title} (Early Session)`
+    };
+    const lateSession = {
+      ...event,
+      session_type: 'late',
+      start_time: lateStartTime,
+      end_time: lateEndTime,
+      categories: ['2.5hrs-4hrs'],
+      event_title: `${event.event_title} (Late Session)`
+    };
+    return [earlySession, lateSession];
+  } else if (categoryType === '1-day') {
+    const fullDaySession = {
+      ...event,
+      session_type: 'full-day',
+      start_time: actualStartTime,
+      end_time: actualEndTime,
+      categories: ['1-day'],
+      event_title: `${event.event_title} (Full Day)`
+    };
+    return [fullDaySession];
+  }
+  
+  return [];
+}
+
+// Helper: Process multi-session events
+function processMultiSessionEvent(event, categoryType) {
+  const sessionTimes = extractSessionTimes(event);
+  if (!sessionTimes) {
+    return [];
+  }
+  
+  return createSessionEntries(event, categoryType, sessionTimes);
+}
+
+// Helper: Process single events
+function processSingleEvent(event) {
+  return [event];
+}
+
+// Helper: Process and filter events
+function processEvents(allEvents, categoryType) {
+  const filteredEvents = [];
+  
+  allEvents.forEach(event => {
+    if (!event.categories || !Array.isArray(event.categories)) {
+      console.log(`🔍 Event: ${event.event_title}, No categories field, skipping`);
+      return;
+    }
+    
+    const hasCategory = event.categories.includes(categoryType);
+    console.log(`🔍 Event: ${event.event_title}, Categories: ${JSON.stringify(event.categories)}, Has ${categoryType}: ${hasCategory}`);
+    
+    if (hasCategory) {
+      if (event.categories.length > 1 && event.categories.includes('1-day') && event.categories.includes('2.5hrs-4hrs')) {
+        // Multi-session event
+        const sessionEntries = processMultiSessionEvent(event, categoryType);
+        filteredEvents.push(...sessionEntries);
+      } else {
+        // Single category event
+        const singleEntries = processSingleEvent(event);
+        filteredEvents.push(...singleEntries);
+      }
+    }
+  });
+  
+  return filteredEvents;
+}
+
+// Helper: Fetch events from database
+async function fetchEventsFromDatabase(client) {
+  const todayIso = new Date().toISOString().split('T')[0];
+  
+  const { data: allEvents, error: e1 } = await client
+    .from("v_events_for_chat")
+    .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, categories, product_description, experience_level, equipment_needed")
+    .gte("date_start", `${todayIso}T00:00:00.000Z`)
+    .order("date_start", { ascending: true })
+    .limit(200);
+  
+  if (e1) {
+    console.error('❌ Error fetching events:', e1);
+    return [];
+  }
+
+  if (!allEvents || allEvents.length === 0) {
+    console.log('🔍 No events found');
+    return [];
+  }
+
+  return allEvents;
+}
+
+// Helper: Process and return final results
+function processAndReturnResults(filteredEvents, categoryType, limit) {
+  console.log(`🔍 Filtered ${filteredEvents.length} events for category: ${categoryType}`);
+  
+  // Deduplicate by event_url + session_type (since we now have multiple entries per URL)
+  const deduped = dedupeEventsByKey(filteredEvents, 'event_url', 'session_type');
+  // Ensure chronological order is preserved after deduplication
+  deduped.sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
+  
+  // Apply the original limit after deduplication
+  const limitedDeduped = deduped.slice(0, limit);
+  return mapEventsData(limitedDeduped);
+}
+
 async function findEventsByDuration(client, categoryType, limit = 100) {
   try {
     console.log(`🔍 findEventsByDuration called with categoryType: ${categoryType}, limit: ${limit}`);
     
-    const todayIso = new Date().toISOString().split('T')[0];
-    
-    // Get all events first, then filter by actual duration
-    const { data: allEvents, error: e1 } = await client
-      .from("v_events_for_chat")
-      .select("event_url, subtype, product_url, product_title, price_gbp, availability, date_start, date_end, start_time, end_time, event_location, map_method, confidence, participants, fitness_level, event_title, json_price, json_availability, price_currency, categories, product_description, experience_level, equipment_needed")
-      .gte("date_start", `${todayIso}T00:00:00.000Z`)
-      .order("date_start", { ascending: true })
-      .limit(200);
-    
-    if (e1) {
-      console.error('❌ Error fetching events:', e1);
+    // Fetch events from database
+    const allEvents = await fetchEventsFromDatabase(client);
+    if (allEvents.length === 0) {
       return [];
     }
 
-    if (!allEvents || allEvents.length === 0) {
-      console.log('🔍 No events found');
-      return [];
-    }
-
-    // Filter events by categories field and create session-specific entries
-    const filteredEvents = [];
+    // Process and filter events
+    const filteredEvents = processEvents(allEvents, categoryType);
     
-    allEvents.forEach(event => {
-      if (!event.categories || !Array.isArray(event.categories)) {
-        console.log(`🔍 Event: ${event.event_title}, No categories field, skipping`);
-        return;
-      }
-      
-      const hasCategory = event.categories.includes(categoryType);
-      console.log(`🔍 Event: ${event.event_title}, Categories: ${JSON.stringify(event.categories)}, Has ${categoryType}: ${hasCategory}`);
-      
-      if (hasCategory) {
-        // For events with multiple categories, create separate entries for each session type
-        if (event.categories.length > 1 && event.categories.includes('1-day') && event.categories.includes('2.5hrs-4hrs')) {
-          // This is a multi-session event (like Bluebell workshops)
-          // Parse actual times from the event data
-          const actualStartTime = event.start_time || '08:00:00';
-          const actualEndTime = event.end_time || '15:30:00';
-          
-          if (categoryType === '2.5hrs-4hrs') {
-            // Extract session times from product description in database
-            let earlyEndTime, lateStartTime, lateEndTime;
-            
-            const productDesc = event.product_description || '';
-            console.log(`🔍 Product description for ${event.event_title}:`, productDesc.substring(0, 200) + '...');
-            
-            if (productDesc.includes('batsford') || event.event_title.toLowerCase().includes('batsford')) {
-              // Extract Batsford session times from description
-              // Looking for: "Half-Day morning workshops are 8 am to 11.30 am"
-              const morningMatch = productDesc.match(/morning workshops are (\d+)\s*am to (\d+)\.(\d+)\s*am/i);
-              // Looking for: "Half-Day afternoon workshops are from 12:00 pm to 3:30 pm"
-              const afternoonMatch = productDesc.match(/afternoon workshops are from (\d+):(\d+)\s*pm to (\d+):(\d+)\s*pm/i);
-              
-              if (morningMatch && afternoonMatch) {
-                earlyEndTime = `${morningMatch[2].padStart(2, '0')}:${morningMatch[3].padStart(2, '0')}:00`;
-                lateStartTime = `${afternoonMatch[1].padStart(2, '0')}:${afternoonMatch[2].padStart(2, '0')}:00`;
-                // Convert PM time to 24-hour format (3:30 pm = 15:30)
-                const pmHour = parseInt(afternoonMatch[3]);
-                const pmMinute = afternoonMatch[4];
-                const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
-                lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
-                console.log(`🔍 Extracted Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
-              } else {
-                console.log(`🔍 Could not extract Batsford session times from description`);
-                console.log(`🔍 Product description: ${productDesc.substring(0, 500)}`);
-                return; // Skip if we can't extract times
-              }
-            } else if (productDesc.includes('bluebell') || event.event_title.toLowerCase().includes('bluebell')) {
-              // Extract Bluebell session times from description
-              // Looking for: "4hrs - 5:45 am to 9:45 am or 10:30 am to 2:30 pm"
-              const sessionMatch = productDesc.match(/(\d+):(\d+)\s*am to (\d+):(\d+)\s*am or (\d+):(\d+)\s*am to (\d+):(\d+)\s*pm/i);
-              
-              if (sessionMatch) {
-                earlyEndTime = `${sessionMatch[3].padStart(2, '0')}:${sessionMatch[4].padStart(2, '0')}:00`;
-                lateStartTime = `${sessionMatch[5].padStart(2, '0')}:${sessionMatch[6].padStart(2, '0')}:00`;
-                // Convert PM time to 24-hour format (2:30 pm = 14:30)
-                const pmHour = parseInt(sessionMatch[7]);
-                const pmMinute = sessionMatch[8];
-                const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
-                lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
-                console.log(`🔍 Extracted Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
-              } else {
-                console.log(`🔍 Could not extract Bluebell session times from description`);
-                console.log(`🔍 Product description: ${productDesc.substring(0, 500)}`);
-                return; // Skip if we can't extract times
-              }
-            } else {
-              console.log(`🔍 No specific session time extraction for ${event.event_title}`);
-              return; // Skip events without known session patterns
-            }
-            
-            const earlySession = {
-              ...event,
-              session_type: 'early',
-              start_time: actualStartTime, // Use actual start time
-              end_time: earlyEndTime,       // Use advertised early end time
-              categories: ['2.5hrs-4hrs'],
-              event_title: `${event.event_title} (Early Session)`
-            };
-            const lateSession = {
-              ...event,
-              session_type: 'late',
-              start_time: lateStartTime,    // Use advertised late start time
-              end_time: lateEndTime,        // Use extracted late end time
-              categories: ['2.5hrs-4hrs'],
-              event_title: `${event.event_title} (Late Session)`
-            };
-            filteredEvents.push(earlySession, lateSession);
-          } else if (categoryType === '1-day') {
-            // Create entry for full-day session using actual times
-            const fullDaySession = {
-              ...event,
-              session_type: 'full-day',
-              start_time: actualStartTime, // Use actual start time
-              end_time: actualEndTime,     // Use actual end time
-              categories: ['1-day'],
-              event_title: `${event.event_title} (Full Day)`
-            };
-            filteredEvents.push(fullDaySession);
-          }
-        } else {
-          // Single category event, add as-is
-          filteredEvents.push(event);
-        }
-      }
-    });
-
-    console.log(`🔍 Filtered ${filteredEvents.length} events for category: ${categoryType}`);
-    
-    // Deduplicate by event_url + session_type (since we now have multiple entries per URL)
-    const deduped = dedupeEventsByKey(filteredEvents, 'event_url', 'session_type');
-    // Ensure chronological order is preserved after deduplication
-    deduped.sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
-    
-    // Apply the original limit after deduplication
-    const limitedDeduped = deduped.slice(0, limit);
-    return mapEventsData(limitedDeduped);
+    // Process and return final results
+    return processAndReturnResults(filteredEvents, categoryType, limit);
   } catch (error) {
     console.error('❌ Error in findEventsByDuration:', error);
     return [];
@@ -5226,70 +5298,63 @@ async function handleResidentialPricingGuard(client, query, previousQuery, pageC
  * Handle the core events retrieval and response pipeline.
  * Returns true if it sent a response.
  */
-async function handleEventsPipeline(client, query, keywords, pageContext, res, debugInfo = null) {
-  // Early routing: if the original query already carries a normalized duration token,
-  // bypass keyword-derived routing and fetch by category directly. This avoids
-  // losses during keyword extraction (e.g., stripping "2.5hrs-4hrs").
-  try {
-    const qlc = String(query || '').toLowerCase();
-    let durationCategory = null;
-    if (qlc.includes('2.5hrs-4hrs')) durationCategory = '2.5hrs-4hrs';
-    else if (qlc.includes('1-day')) durationCategory = '1-day';
-    else if (qlc.includes('2-5-days')) durationCategory = '2-5-days';
+// Helper function to extract duration category from query
+function extractDurationCategory(query) {
+  const qlc = String(query || '').toLowerCase();
+  if (qlc.includes('2.5hrs-4hrs')) return '2.5hrs-4hrs';
+  if (qlc.includes('1-day')) return '1-day';
+  if (qlc.includes('2-5-days')) return '2-5-days';
+  return null;
+}
 
-    if (durationCategory) {
-      const eventsDirect = await findEventsByDuration(client, durationCategory, 120);
-      const eventListDirect = formatEventsForUi(eventsDirect);
-      const confidenceDirect = calculateEventConfidence(query || "", eventListDirect, null);
-      res.status(200).json({
-        ok: true,
-        type: "events",
-        answer: eventListDirect,
-        answer_markdown: `I found ${eventListDirect.length} ${eventListDirect.length === 1 ? 'event' : 'events'} that match your query. These ${eventListDirect.length === 1 ? 'is' : 'are'} ${durationCategory} ${eventListDirect.length === 1 ? 'event' : 'events'} with experienced instruction and hands-on learning opportunities.`,
-        events: eventListDirect,
-        structured: {
-          intent: "events",
-          topic: (keywords || []).join(", "),
-          events: eventListDirect,
-          products: [],
-          pills: []
-        },
-        confidence: confidenceDirect,
-        debug: { version: "v1.3.20-expanded-classification", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
-      });
-      return true;
-    }
-  } catch (_) { /* non-fatal: fall back to standard flow */ }
+// Helper function to handle direct duration routing
+async function handleDirectDurationRouting(client, query, keywords, durationCategory, res, debugInfo) {
+  const eventsDirect = await findEventsByDuration(client, durationCategory, 120);
+  const eventListDirect = formatEventsForUi(eventsDirect);
+  const confidenceDirect = calculateEventConfidence(query || "", eventListDirect, null);
+  
+  res.status(200).json({
+    ok: true,
+    type: "events",
+    answer: eventListDirect,
+    answer_markdown: `I found ${eventListDirect.length} ${eventListDirect.length === 1 ? 'event' : 'events'} that match your query. These ${eventListDirect.length === 1 ? 'is' : 'are'} ${durationCategory} ${eventListDirect.length === 1 ? 'event' : 'events'} with experienced instruction and hands-on learning opportunities.`,
+    events: eventListDirect,
+    structured: {
+      intent: "events",
+      topic: (keywords || []).join(", "),
+      events: eventListDirect,
+      products: [],
+      pills: []
+    },
+    confidence: confidenceDirect,
+    debug: { version: "v1.3.20-expanded-classification", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+  });
+  return true;
+}
 
-  const events = await findEvents(client, { keywords, limit: 80, pageContext });
-  const eventList = formatEventsForUi(events);
-  if (!Array.isArray(eventList)) {
-    return false;
+// Helper function to handle clarification response
+async function handleClarificationResponse(query, client, pageContext, res, debugInfo) {
+  const clarification = await generateClarificationQuestion(query, client, pageContext);
+  if (clarification) {
+    const confidencePercent = clarification.confidence || 20;
+    res.status(200).json({
+      ok: true,
+      type: "clarification",
+      answer: clarification.question,
+      answer_markdown: clarification.question,
+      clarification: clarification.question,
+      question: clarification.question,
+      options: clarification.options,
+      confidence: confidencePercent,
+      debug: { version: "v1.3.20-expanded-classification", intent: debugInfo?.intent || "events", timestamp: new Date().toISOString() }
+    });
+    return true;
   }
-  const confidence = calculateEventConfidence(query || "", eventList, null);
-  
-  // Check if we need clarification for events queries with low confidence
-  // For workshop queries, use a higher threshold since they often need clarification
-  const clarificationThreshold = (debugInfo?.intent === 'workshop') ? 0.8 : 0.6;
-  if (confidence < clarificationThreshold) { // Low confidence threshold
-    const clarification = await generateClarificationQuestion(query, client, pageContext);
-    if (clarification) {
-      const confidencePercent = clarification.confidence || 20;
-      res.status(200).json({
-        ok: true,
-        type: "clarification",
-        answer: clarification.question,
-        answer_markdown: clarification.question,
-        clarification: clarification.question,
-        question: clarification.question,
-        options: clarification.options,
-        confidence: confidencePercent,
-        debug: { version: "v1.3.20-expanded-classification", intent: debugInfo?.intent || "events", timestamp: new Date().toISOString() }
-      });
-      return true;
-    }
-  }
-  
+  return false;
+}
+
+// Helper function to send final events response
+function sendEventsResponse(eventList, query, keywords, confidence, res, debugInfo) {
   res.status(200).json({
     ok: true,
     type: "events",
@@ -5304,14 +5369,42 @@ async function handleEventsPipeline(client, query, keywords, pageContext, res, d
       pills: []
     },
     confidence,
-        debug: {
-          version: "v1.3.20-expanded-classification",
-          debugInfo: debugInfo,
-          timestamp: new Date().toISOString(),
-          queryText: query,
-          keywords: keywords
-        }
+    debug: {
+      version: "v1.3.20-expanded-classification",
+      debugInfo: debugInfo,
+      timestamp: new Date().toISOString(),
+      queryText: query,
+      keywords: keywords
+    }
   });
+}
+
+async function handleEventsPipeline(client, query, keywords, pageContext, res, debugInfo = null) {
+  // Early routing: if the original query already carries a normalized duration token,
+  // bypass keyword-derived routing and fetch by category directly. This avoids
+  // losses during keyword extraction (e.g., stripping "2.5hrs-4hrs").
+  try {
+    const durationCategory = extractDurationCategory(query);
+    if (durationCategory) {
+      return await handleDirectDurationRouting(client, query, keywords, durationCategory, res, debugInfo);
+    }
+  } catch (_) { /* non-fatal: fall back to standard flow */ }
+
+  const events = await findEvents(client, { keywords, limit: 80, pageContext });
+  const eventList = formatEventsForUi(events);
+  if (!Array.isArray(eventList)) {
+    return false;
+  }
+  const confidence = calculateEventConfidence(query || "", eventList, null);
+  
+  // Check if we need clarification for events queries with low confidence
+  const clarificationThreshold = (debugInfo?.intent === 'workshop') ? 0.8 : 0.6;
+  if (confidence < clarificationThreshold) {
+    const clarificationHandled = await handleClarificationResponse(query, client, pageContext, res, debugInfo);
+    if (clarificationHandled) return true;
+  }
+  
+  sendEventsResponse(eventList, query, keywords, confidence, res, debugInfo);
   return true;
 }
 
