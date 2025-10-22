@@ -66,30 +66,49 @@ npx eslint api/chat.js --rule='complexity: [2, 15]' --format=compact
 
 ### Workflow for Refactoring
 
+**CRITICAL: ENDPOINT VERIFICATION PROTOCOL**
+
 1. **Before Starting ANY Changes**:
    ```bash
-   # CRITICAL: Check current complexity
+   # STEP 1: Verify local server setup
+   $env:SUPABASE_URL="https://igzvwbvgvmzvvzoclufx.supabase.co"; $env:SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2Nzc5MjgsImV4cCI6MjA3MzI1MzkyOH0.A9TCmnXKJhDRYBkrO0mAMPiUQeV9enweeyRWKWQ1SZY"; node local-dev-server.js
+   
+   # STEP 2: Verify chat.html uses LOCAL endpoint
+   grep "CHAT_ENDPOINT" public/chat.html
+   # MUST show: const CHAT_ENDPOINT = '/api/chat';
+   # NOT: const CHAT_ENDPOINT = 'https://alan-chat-proxy.vercel.app/api/chat';
+   
+   # STEP 3: Test local endpoint works
+   curl -X POST http://localhost:3000/api/chat -H "Content-Type: application/json" -d '{"query":"test"}'
+   
+   # STEP 4: Check current complexity
    npx eslint api/chat.js --rule='complexity: [2, 15]' --format=compact
    
-   # Capture baseline behavior
-   npm run test:baseline
+   # STEP 5: Capture baseline behavior (LOCAL)
+   node quality-benchmark-test.cjs
    ```
-   This ensures no functions exceed complexity 15 and captures current behavior.
+   This ensures local setup is correct and captures LOCAL behavior.
 
 2. **During Refactoring**:
    ```bash
    # After each change, check complexity
    npx eslint api/chat.js --rule='complexity: [2, 15]' --format=compact
    
-   # Compare against baseline
+   # CRITICAL: Test LOCAL endpoint after each change
+   node quality-benchmark-test.cjs
+   
+   # Compare against LOCAL baseline
    npm run test:compare baseline-YYYY-MM-DD.json
    ```
-   This ensures complexity remains ≤ 15 and detects regressions.
+   This ensures complexity remains ≤ 15 and detects regressions in LOCAL code.
 
 3. **Before Deployment**:
    ```bash
    # Final complexity check
    npx eslint api/chat.js --rule='complexity: [2, 15]' --format=compact
+   
+   # Test LOCAL endpoint one final time
+   node quality-benchmark-test.cjs
    
    # Run all safety checks
    npm run test:all
@@ -168,12 +187,97 @@ The framework captures detailed baselines including:
 
 ## 🔧 Configuration
 
+### **ESTABLISHED BASELINE (2025-10-22)**
+
+**Baseline Test File**: `results/quality-benchmark-before-2025-10-22T17-04-41-287Z.json`
+
+**Baseline Metrics**:
+- **Average Quality Score**: 69/100
+- **Passed Tests**: 18/28 (64.3%)
+- **Failed Tests**: 10/28 (35.7%)
+- **Total Tests**: 28
+
+**Critical Note**: This baseline was established AFTER fixing the critical testing methodology failure where tests were incorrectly calling the deployed API instead of local code. This baseline represents the true local system performance before refactoring.
+
+**Updated**: 2025-10-22 19:18 - Confirmed working baseline with correct API keys and local server
+
+### **REGRESSION ANALYSIS PROTOCOL**
+
+**MANDATORY**: After every test run, perform comprehensive regression analysis:
+
+```bash
+# Create comparison script
+node -e "
+const fs = require('fs');
+const baseline = JSON.parse(fs.readFileSync('results/quality-benchmark-before-2025-10-22T17-04-41-287Z.json', 'utf8'));
+const current = JSON.parse(fs.readFileSync('results/quality-benchmark-before-2025-10-22T17-26-44-940Z.json', 'utf8'));
+
+console.log('🔍 COMPREHENSIVE REGRESSION ANALYSIS');
+console.log('====================================');
+console.log(\`Baseline: \${baseline.passedTests}/\${baseline.totalTests} passed (\${baseline.averageScore}/100)\`);
+console.log(\`Current:  \${current.passedTests}/\${current.totalTests} passed (\${current.averageScore}/100)\`);
+console.log('');
+
+const regressions = [];
+const improvements = [];
+const unchanged = [];
+
+baseline.results.forEach((baselineResult, index) => {
+  const currentResult = current.results[index];
+  if (!currentResult) return;
+  
+  const baselinePassed = baselineResult.quality.overall >= 70;
+  const currentPassed = currentResult.quality.overall >= 70;
+  const scoreDiff = currentResult.quality.overall - baselineResult.quality.overall;
+  
+  if (baselinePassed && !currentPassed) {
+    regressions.push({query: baselineResult.query, baseline: baselineResult.quality.overall, current: currentResult.quality.overall, diff: scoreDiff});
+  } else if (!baselinePassed && currentPassed) {
+    improvements.push({query: baselineResult.query, baseline: baselineResult.quality.overall, current: currentResult.quality.overall, diff: scoreDiff});
+  } else if (Math.abs(scoreDiff) >= 5) {
+    unchanged.push({query: baselineResult.query, baseline: baselineResult.quality.overall, current: currentResult.quality.overall, diff: scoreDiff});
+  }
+});
+
+console.log('📉 REGRESSIONS (Passed → Failed):');
+regressions.forEach(r => console.log(\`❌ \"\${r.query}\" \${r.baseline}→\${r.current} (\${r.diff})\`));
+
+console.log('📈 IMPROVEMENTS (Failed → Passed):');
+improvements.forEach(i => console.log(\`✅ \"\${i.query}\" \${i.baseline}→\${i.current} (+\${i.diff})\`));
+
+console.log('📊 SIGNIFICANT CHANGES (≥5 points):');
+unchanged.forEach(u => console.log(\`🔄 \"\${u.query}\" \${u.baseline}→\${u.current} (\${u.diff > 0 ? '+' : ''}\${u.diff})\`));
+
+console.log(\`\\n📋 SUMMARY: \${regressions.length} regressions, \${improvements.length} improvements, \${unchanged.length} significant changes\`);
+"
+```
+
+**Documentation Requirements**:
+- Record every regression analysis in `notes/store/REGRESSION_ANALYSIS.md`
+- Include timestamp, changes made, and full comparison results
+- Track patterns across multiple test runs
+
 ### Test Endpoints
 
+**CRITICAL: LOCAL TESTING REQUIREMENTS**
+
+For local development and refactoring, ALWAYS use local endpoints:
+
 ```javascript
+// LOCAL TESTING (MANDATORY for refactoring)
+const API_ENDPOINT = 'http://localhost:3000/api/chat';
+const FRONTEND_URL = 'http://localhost:3000/chat.html';
+
+// PRODUCTION TESTING (only for deployment validation)
 const API_ENDPOINT = 'https://alan-chat-proxy.vercel.app/api/chat';
 const FRONTEND_URL = 'https://alan-chat-proxy.vercel.app/chat.html';
 ```
+
+**MANDATORY VERIFICATION STEPS:**
+1. **Verify chat.html endpoint**: Check `public/chat.html` line 759 uses `/api/chat` (not deployed URL)
+2. **Verify local server**: Confirm `local-dev-server.js` imports `./api/chat.js`
+3. **Test local endpoint**: Run `curl http://localhost:3000/api/chat` to confirm local API
+4. **NEVER assume**: Always verify what endpoint tests are actually calling
 
 ### Test Thresholds
 

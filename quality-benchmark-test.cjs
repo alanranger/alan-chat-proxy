@@ -413,6 +413,81 @@ async function runQualityBenchmark() {
   fs.writeFileSync(resultsFile, JSON.stringify(benchmarkResults, null, 2));
   console.log(`💾 Results saved to: ${resultsFile}`);
   
+  // Run regression analysis if baseline exists
+  const baselineFile = 'results/quality-benchmark-before-2025-10-22T17-04-41-287Z.json';
+  if (fs.existsSync(baselineFile)) {
+    console.log('\n🔍 COMPREHENSIVE REGRESSION ANALYSIS');
+    console.log('====================================');
+    
+    try {
+      const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
+      console.log(`Baseline: ${baseline.passedTests}/${baseline.totalTests} passed (${baseline.averageScore}/100)`);
+      console.log(`Current:  ${benchmarkResults.passedTests}/${benchmarkResults.totalTests} passed (${benchmarkResults.averageScore}/100)`);
+      console.log('');
+      
+      const regressions = [];
+      const improvements = [];
+      const unchanged = [];
+      
+      baseline.results.forEach((baselineResult, index) => {
+        const currentResult = benchmarkResults.results[index];
+        if (!currentResult) return;
+        
+        const baselinePassed = baselineResult.quality.overall >= 70;
+        const currentPassed = currentResult.quality.overall >= 70;
+        const scoreDiff = currentResult.quality.overall - baselineResult.quality.overall;
+        
+        if (baselinePassed && !currentPassed) {
+          regressions.push({
+            query: baselineResult.query,
+            baselineScore: baselineResult.quality.overall,
+            currentScore: currentResult.quality.overall,
+            diff: scoreDiff
+          });
+        } else if (!baselinePassed && currentPassed) {
+          improvements.push({
+            query: baselineResult.query,
+            baselineScore: baselineResult.quality.overall,
+            currentScore: currentResult.quality.overall,
+            diff: scoreDiff
+          });
+        } else if (Math.abs(scoreDiff) >= 5) {
+          unchanged.push({
+            query: baselineResult.query,
+            baselineScore: baselineResult.quality.overall,
+            currentScore: currentResult.quality.overall,
+            diff: scoreDiff
+          });
+        }
+      });
+      
+      console.log('📉 REGRESSIONS (Passed → Failed):');
+      regressions.forEach(r => console.log(`  ❌ "${r.query}" ${r.baselineScore}→${r.currentScore} (${r.diff})`));
+      
+      console.log('📈 IMPROVEMENTS (Failed → Passed):');
+      improvements.forEach(i => console.log(`  ✅ "${i.query}" ${i.baselineScore}→${i.currentScore} (+${i.diff})`));
+      
+      console.log('📊 SIGNIFICANT CHANGES (≥5 points):');
+      unchanged.forEach(u => console.log(`  🔄 "${u.query}" ${u.baselineScore}→${u.currentScore} (${u.diff > 0 ? '+' : ''}${u.diff})`));
+      
+      console.log('');
+      console.log(`Total Regressions: ${regressions.length}`);
+      console.log(`Total Improvements: ${improvements.length}`);
+      console.log(`Total Significant Changes: ${unchanged.length}`);
+      
+      if (regressions.length > 0) {
+        console.log('\n⚠️  WARNING: Regressions detected! Review changes before proceeding.');
+      } else {
+        console.log('\n✅ No regressions detected. Safe to proceed.');
+      }
+      
+    } catch (error) {
+      console.log(`❌ Regression analysis failed: ${error.message}`);
+    }
+  } else {
+    console.log('\n📝 No baseline found for comparison. This will be used as the new baseline.');
+  }
+  
   return benchmarkResults;
 }
 

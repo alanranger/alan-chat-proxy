@@ -31,3 +31,12 @@ failedQuestions.forEach((result, index) => {
   }
   console.log(`   `);
 });
+
+
+
+
+
+
+
+
+

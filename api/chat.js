@@ -5,7 +5,6 @@
 export const config = { runtime: "nodejs" };
 
 // Global variables for Node.js environment
-/* global console, process, URL */
 
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from 'crypto';
@@ -796,116 +795,83 @@ function extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChu
   return null;
 }
 
-function extractConceptExplanation(chunkText, query, exactTerm, relevantChunk) {
-  const lc = query.toLowerCase();
-  
-  // Handle exposure triangle specifically - create intelligent synthesis
-  if (lc.includes('exposure triangle') || lc.includes('triangle')) {
-    // Look for sentences that explain the relationship between aperture, shutter, and ISO
-    const sentences = chunkText.split(/[.!?]+/);
-    const triangleSentences = sentences.filter(s => {
-      const sLower = s.toLowerCase();
-      return (sLower.includes('aperture') && sLower.includes('shutter') && sLower.includes('iso')) ||
-             (sLower.includes('triangle') && (sLower.includes('exposure') || sLower.includes('photography')));
-    });
-    
-    if (triangleSentences.length > 0) {
-      const bestSentence = triangleSentences[0].trim();
-      if (bestSentence.length > 50) {
-        return formatResponseMarkdown(
-          relevantChunk.title || 'Exposure Triangle',
-          relevantChunk.url,
-          bestSentence
-        );
-      }
-    }
-    
-    // If no direct triangle explanation, create intelligent synthesis
-    const apertureSentences = sentences.filter(s => {
-      const sLower = s.toLowerCase();
-      return sLower.includes('aperture') && (sLower.includes('f/') || sLower.includes('opening') || sLower.includes('light'));
-    });
-    
-    const shutterSentences = sentences.filter(s => {
-      const sLower = s.toLowerCase();
-      return sLower.includes('shutter') && (sLower.includes('speed') || sLower.includes('time') || sLower.includes('exposure'));
-    });
-    
-    const isoSentences = sentences.filter(s => {
-      const sLower = s.toLowerCase();
-      return sLower.includes('iso') && (sLower.includes('sensitivity') || sLower.includes('light') || sLower.includes('exposure'));
-    });
-    
-    // If we have content about all three elements, create a synthesis
-    if (apertureSentences.length > 0 && shutterSentences.length > 0 && isoSentences.length > 0) {
-      const synthesis = `The exposure triangle is the fundamental relationship between three key camera settings that control how much light reaches your camera's sensor: aperture (the size of the lens opening), shutter speed (how long the sensor is exposed to light), and ISO (the sensor's sensitivity to light). These three elements work together to create a properly exposed photograph - when you adjust one, you typically need to compensate with one or both of the others to maintain the same exposure level.`;
-      
+// Helper functions for extractConceptExplanation
+function findRelevantSentences(chunkText, keywords) {
+  const sentences = chunkText.split(/[.!?]+/);
+  return sentences.filter(s => {
+    const sLower = s.toLowerCase();
+    return keywords.every(keyword => sLower.includes(keyword));
+  });
+}
+
+function createTriangleSynthesis() {
+  return `The exposure triangle is the fundamental relationship between three key camera settings that control how much light reaches your camera's sensor: aperture (the size of the lens opening), shutter speed (how long the sensor is exposed to light), and ISO (the sensor's sensitivity to light). These three elements work together to create a properly exposed photograph - when you adjust one, you typically need to compensate with one or both of the others to maintain the same exposure level.`;
+}
+
+function handleExposureTriangle(chunkText, relevantChunk) {
+  // Look for direct triangle explanations
+  const triangleSentences = findRelevantSentences(chunkText, ['aperture', 'shutter', 'iso']);
+  if (triangleSentences.length > 0) {
+    const bestSentence = triangleSentences[0].trim();
+    if (bestSentence.length > 50) {
       return formatResponseMarkdown(
-        'Understanding the Exposure Triangle',
+        relevantChunk.title || 'Exposure Triangle',
         relevantChunk.url,
-        synthesis
+        bestSentence
       );
     }
   }
   
-  // Handle ISO specifically - look for sensitivity explanations
+  // Create synthesis if we have content about all three elements
+  const apertureSentences = findRelevantSentences(chunkText, ['aperture', 'f/', 'opening', 'light']);
+  const shutterSentences = findRelevantSentences(chunkText, ['shutter', 'speed', 'time', 'exposure']);
+  const isoSentences = findRelevantSentences(chunkText, ['iso', 'sensitivity', 'light', 'exposure']);
+  
+  if (apertureSentences.length > 0 && shutterSentences.length > 0 && isoSentences.length > 0) {
+    return formatResponseMarkdown(
+      'Understanding the Exposure Triangle',
+      relevantChunk.url,
+      createTriangleSynthesis()
+    );
+  }
+  
+  return null;
+}
+
+function handleSingleConcept(chunkText, relevantChunk, keywords, title) {
+  const sentences = findRelevantSentences(chunkText, keywords);
+  if (sentences.length > 0) {
+    const bestSentence = sentences[0].trim();
+    if (bestSentence.length > 50) {
+      return formatResponseMarkdown(
+        relevantChunk.title || title,
+        relevantChunk.url,
+        bestSentence
+      );
+    }
+  }
+  return null;
+}
+
+function extractConceptExplanation(chunkText, query, exactTerm, relevantChunk) {
+  const lc = query.toLowerCase();
+  
+  // Handle exposure triangle specifically
+  if (lc.includes('exposure triangle') || lc.includes('triangle')) {
+    return handleExposureTriangle(chunkText, relevantChunk);
+  }
+  
+  // Handle individual concepts
   if (lc.includes('iso') && !lc.includes('triangle')) {
-    const sentences = chunkText.split(/[.!?]+/);
-    const isoSentences = sentences.filter(s => {
-      const sLower = s.toLowerCase();
-      return sLower.includes('iso') && (sLower.includes('sensitivity') || sLower.includes('light') || sLower.includes('exposure'));
-    });
-    
-    if (isoSentences.length > 0) {
-      const bestSentence = isoSentences[0].trim();
-      if (bestSentence.length > 50) {
-        return formatResponseMarkdown(
-          relevantChunk.title || 'ISO in Photography',
-          relevantChunk.url,
-          bestSentence
-        );
-      }
-    }
+    return handleSingleConcept(chunkText, relevantChunk, ['iso', 'sensitivity', 'light', 'exposure'], 'ISO in Photography');
   }
   
-  // Handle aperture specifically
   if (lc.includes('aperture') && !lc.includes('triangle')) {
-    const sentences = chunkText.split(/[.!?]+/);
-    const apertureSentences = sentences.filter(s => {
-      const sLower = s.toLowerCase();
-      return sLower.includes('aperture') && (sLower.includes('f/') || sLower.includes('depth of field') || sLower.includes('opening'));
-    });
-    
-    if (apertureSentences.length > 0) {
-      const bestSentence = apertureSentences[0].trim();
-      if (bestSentence.length > 50) {
-        return formatResponseMarkdown(
-          relevantChunk.title || 'Aperture in Photography',
-          relevantChunk.url,
-          bestSentence
-        );
-      }
-    }
+    return handleSingleConcept(chunkText, relevantChunk, ['aperture', 'f/', 'depth of field', 'opening'], 'Aperture in Photography');
   }
   
-  // Handle shutter speed specifically
   if (lc.includes('shutter speed') && !lc.includes('triangle')) {
-    const sentences = chunkText.split(/[.!?]+/);
-    const shutterSentences = sentences.filter(s => {
-      const sLower = s.toLowerCase();
-      return sLower.includes('shutter') && (sLower.includes('speed') || sLower.includes('motion') || sLower.includes('blur'));
-    });
-    
-    if (shutterSentences.length > 0) {
-      const bestSentence = shutterSentences[0].trim();
-      if (bestSentence.length > 50) {
-        return formatResponseMarkdown(
-          relevantChunk.title || 'Shutter Speed in Photography',
-          relevantChunk.url,
-          bestSentence
-        );
-      }
-    }
+    return handleSingleConcept(chunkText, relevantChunk, ['shutter', 'speed', 'motion', 'blur'], 'Shutter Speed in Photography');
   }
   
   return null;
@@ -1145,35 +1111,40 @@ function getPrivacyDataProtectionAnswer(lc) {
   }
   
 
+// Service answer patterns
+const SERVICE_PATTERNS = [
+  {
+    matcher: (lc) => lc.includes("rps mentoring") || lc.includes("rps course") || lc.includes("rps distinctions"),
+    answer: `**RPS Mentoring Course**: Alan provides independent mentoring for RPS (Royal Photographic Society) Distinction qualifications. He holds both Licentiate and Associate Distinctions and offers personalized online mentoring via Zoom to help you achieve success. Sessions are flexible and can be taken within 12 months of booking. [Learn More](https://www.alanranger.com/rps-courses-mentoring-distinctions)\n\n`
+  },
+  {
+    matcher: (lc) => lc.includes("private photography lessons") || lc.includes("private lessons") || lc.includes("1-2-1") || lc.includes("face-to-face"),
+    answer: `**Private Photography Lessons**: Alan offers bespoke face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are tailored to your specific needs and delivered at times that suit your availability. [Book Private Lessons](https://www.alanranger.com/private-photography-lessons)\n\n`
+  },
+  {
+    matcher: (lc) => lc.includes("private") || lc.includes("mentoring") || lc.includes("tuition"),
+    answer: `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n`
+  },
+  {
+    matcher: (lc) => lc.includes("voucher") || lc.includes("gift") || lc.includes("present"),
+    answer: `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`
+  },
+  {
+    matcher: (lc) => lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment") || lc.includes("gear") || lc.includes("camera") || lc.includes("lens"),
+    answer: `**Equipment Recommendations**: Based on Alan's extensive experience with photography equipment, he recommends checking out his detailed equipment guides. He has comprehensive reviews and recommendations for different types of photography and budgets. [View Equipment Guides](https://www.alanranger.com/photography-equipment-recommendations)\n\n`
+  },
+  {
+    matcher: (lc) => lc.includes("service") || (lc.includes("what do you offer") && !lc.includes("courses")) || lc.includes("what services"),
+    answer: `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations. [View All Services](https://www.alanranger.com/photography-tuition-services)\n\n`
+  }
+];
+
 function getServiceAnswers(lc) {
-  // RPS Mentoring Course - specific handling
-  if (lc.includes("rps mentoring") || lc.includes("rps course") || lc.includes("rps distinctions")) {
-    return `**RPS Mentoring Course**: Alan provides independent mentoring for RPS (Royal Photographic Society) Distinction qualifications. He holds both Licentiate and Associate Distinctions and offers personalized online mentoring via Zoom to help you achieve success. Sessions are flexible and can be taken within 12 months of booking. [Learn More](https://www.alanranger.com/rps-courses-mentoring-distinctions)\n\n`;
+  for (const pattern of SERVICE_PATTERNS) {
+    if (pattern.matcher(lc)) {
+      return pattern.answer;
+    }
   }
-  
-  // Private Photography Lessons - specific handling  
-  if (lc.includes("private photography lessons") || lc.includes("private lessons") || lc.includes("1-2-1") || lc.includes("face-to-face")) {
-    return `**Private Photography Lessons**: Alan offers bespoke face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are tailored to your specific needs and delivered at times that suit your availability. [Book Private Lessons](https://www.alanranger.com/private-photography-lessons)\n\n`;
-  }
-  
-  // General private/mentoring queries
-  if (lc.includes("private") || lc.includes("mentoring") || lc.includes("tuition")) {
-    return `**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n`;
-  }
-  
-  if (lc.includes("voucher") || lc.includes("gift") || lc.includes("present")) {
-    return `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`;
-  }
-  
-  // Tripod and Equipment Recommendations - direct answer without clarification
-  if (lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment") || lc.includes("gear") || lc.includes("camera") || lc.includes("lens")) {
-    return `**Equipment Recommendations**: Based on Alan's extensive experience with photography equipment, he recommends checking out his detailed equipment guides. He has comprehensive reviews and recommendations for different types of photography and budgets. [View Equipment Guides](https://www.alanranger.com/photography-equipment-recommendations)\n\n`;
-  }
-  
-  if (lc.includes("service") || (lc.includes("what do you offer") && !lc.includes("courses")) || lc.includes("what services")) {
-    return `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations. [View All Services](https://www.alanranger.com/photography-tuition-services)\n\n`;
-  }
-  
   return null;
 }
 
@@ -1224,6 +1195,53 @@ function getHardcodedAnswer(lc) {
   return null;
 }
 
+// Helper functions for generateDirectAnswer
+function tryCourseEquipmentAnswer(lc) {
+  if (isCourseEquipmentQuery(lc)) {
+    console.log(`🔧 Course-specific equipment advice triggered for: "${lc}"`);
+    return generateCourseEquipmentAnswer();
+  }
+  return null;
+}
+
+function tryArticleBasedAnswer(exactTerm, articles, isConceptRelationshipQuery) {
+  if (exactTerm && articles.length > 0 && !isConceptRelationshipQuery) {
+    const relevantArticle = findRelevantArticleForTerm(exactTerm, articles);
+    
+    if (relevantArticle) {
+      console.log(`🔍 generateDirectAnswer: Found relevant article="${relevantArticle.title}"`);
+      
+      // Use article description first (most reliable)
+      const descriptionAnswer = extractAnswerFromArticleDescription(relevantArticle);
+      if (descriptionAnswer) {
+        return descriptionAnswer;
+      }
+      
+      // Fall back to JSON-LD FAQ data if no description
+      const jsonLdAnswer = extractAnswerFromJsonLd(relevantArticle, exactTerm);
+      if (jsonLdAnswer) {
+        return jsonLdAnswer;
+      }
+    }
+  }
+  return null;
+}
+
+function tryContentChunkAnswer(query, queryWords, exactTerm, contentChunks) {
+  return extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChunks);
+}
+
+function tryEquipmentAdviceAnswer(lc, articles, contentChunks) {
+  if (isEquipmentAdviceQuery(lc)) {
+    return generateEquipmentAdviceResponse(lc, articles, contentChunks);
+  }
+  return null;
+}
+
+function tryHardcodedAnswer(lc) {
+  return getHardcodedAnswer(lc);
+}
+
 function generateDirectAnswer(query, articles, contentChunks = []) {
   const lc = (query || "").toLowerCase();
   const queryWords = lc.split(" ").filter(w => w.length > 2);
@@ -1234,58 +1252,31 @@ function generateDirectAnswer(query, articles, contentChunks = []) {
   console.log(`🔍 generateDirectAnswer: Articles count=${articles.length}`);
   console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
   
-  // PRIORITY 0: Course-specific equipment advice - MUST come first before any article searching
-  if (isCourseEquipmentQuery(lc)) {
-    console.log(`🔧 Course-specific equipment advice triggered for: "${query}"`);
-    return generateCourseEquipmentAnswer();
-  }
+  // PRIORITY 0: Course-specific equipment advice
+  const courseAnswer = tryCourseEquipmentAnswer(lc);
+  if (courseAnswer) return courseAnswer;
   
   // PRIORITY 1: Extract from JSON-LD FAQ data in articles
-  // SKIP for concept relationship queries - go directly to content chunks for better synthesis
   const isConceptRelationshipQuery = lc.includes('triangle') || lc.includes('relationship') || 
                                      (lc.includes('exposure') && (lc.includes('triangle') || lc.includes('aperture') || lc.includes('shutter') || lc.includes('iso')));
   
   console.log(`🔍 DEBUG: isConceptRelationshipQuery=${isConceptRelationshipQuery} for query="${query}"`);
   
-  if (exactTerm && articles.length > 0 && !isConceptRelationshipQuery) {
-    const relevantArticle = findRelevantArticleForTerm(exactTerm, articles);
-    
-    if (relevantArticle) {
-      console.log(`🔍 generateDirectAnswer: Found relevant article="${relevantArticle.title}"`);
-      
-      // PRIORITY 1: Use article description first (most reliable)
-      const descriptionAnswer = extractAnswerFromArticleDescription(relevantArticle);
-      if (descriptionAnswer) {
-        return descriptionAnswer;
-      }
-      
-      // PRIORITY 2: Fall back to JSON-LD FAQ data if no description
-      const jsonLdAnswer = extractAnswerFromJsonLd(relevantArticle, exactTerm);
-      if (jsonLdAnswer) {
-        return jsonLdAnswer;
-      }
-    }
-  }
+  const articleAnswer = tryArticleBasedAnswer(exactTerm, articles, isConceptRelationshipQuery);
+  if (articleAnswer) return articleAnswer;
   
-  // PRIORITY 2: Extract from content chunks (existing logic)
-  const chunkAnswer = extractAnswerFromContentChunks(query, queryWords, exactTerm, contentChunks);
-  if (chunkAnswer) {
-    return chunkAnswer;
-  }
+  // PRIORITY 2: Extract from content chunks
+  const chunkAnswer = tryContentChunkAnswer(query, queryWords, exactTerm, contentChunks);
+  if (chunkAnswer) return chunkAnswer;
   
+  // PRIORITY 3: Equipment advice
+  const equipmentAnswer = tryEquipmentAdviceAnswer(lc, articles, contentChunks);
+  if (equipmentAnswer) return equipmentAnswer;
   
-  // Enhanced Equipment Advice - Check if this is an equipment recommendation query
-  if (isEquipmentAdviceQuery(lc)) {
-    return generateEquipmentAdviceResponse(lc, articles, contentChunks);
-  }
+  // PRIORITY 4: Hardcoded answers
+  const hardcodedAnswer = tryHardcodedAnswer(lc);
+  if (hardcodedAnswer) return hardcodedAnswer;
   
-  // Check for hardcoded answers
-  const hardcodedAnswer = getHardcodedAnswer(lc);
-  if (hardcodedAnswer) {
-    return hardcodedAnswer;
-  }
-  
-  // Return null if no specific answer can be generated
   return null;
 }
 
@@ -2041,140 +2032,131 @@ function checkFreeCourseWorkshopPatterns(lc) {
   return null;
 }
 
+// Pattern definitions for clarification responses
+const CLARIFICATION_PATTERNS = [
+  {
+    matcher: (lc) => lc.includes("how much") && lc.includes("macro photography workshop"),
+    type: "macro_workshop_clarification",
+    question: "Our macro photography workshop has different pricing options. What would you like to know about the costs?",
+    options: [
+      { text: "General pricing", query: "macro workshop pricing" },
+      { text: "Specific date pricing", query: "specific date macro workshop" },
+      { text: "Package deals", query: "macro workshop packages" },
+      { text: "What's included", query: "macro workshop includes" }
+    ]
+  },
+  {
+    matcher: (lc) => lc.includes("what's included in") && lc.includes("landscape photography course"),
+    type: "course_content_clarification",
+    question: "Our landscape photography course covers many aspects. What specific areas are you most interested in?",
+    options: [
+      { text: "Course curriculum", query: "landscape course curriculum" },
+      { text: "Beginner suitability", query: "landscape course beginners" },
+      { text: "Equipment needed", query: "landscape course equipment" },
+      { text: "Practical sessions", query: "landscape course practical" }
+    ]
+  },
+  {
+    matcher: (lc) => lc.includes("are your photography courses suitable for complete beginners"),
+    type: "beginner_suitability_clarification",
+    question: "Absolutely! We have courses designed specifically for beginners. What type of photography interests you most?",
+    options: [
+      { text: "General beginner courses", query: "beginner photography courses" },
+      { text: "Beginner editing course", query: "beginner editing course" },
+      { text: "Camera basics", query: "camera basics course" },
+      { text: "Composition fundamentals", query: "composition fundamentals" }
+    ]
+  },
+  {
+    matcher: (lc) => lc.includes("do you have any photography courses in birmingham"),
+    type: "location_clarification",
+    question: "We run courses in various locations. What type of photography course are you looking for?",
+    options: [
+      { text: "Courses near Birmingham", query: "courses near Birmingham" },
+      { text: "Online courses instead", query: "online courses alternative" },
+      { text: "Travel to Coventry", query: "courses in Coventry" },
+      { text: "Private lessons", query: "private lessons flexible" }
+    ]
+  },
+  {
+    matcher: (lc) => lc.includes("what's the difference between your online and in-person courses"),
+    type: "format_comparison_clarification",
+    question: "Great question! We offer both formats with different benefits. What would you like to know about each?",
+    options: [
+      { text: "Key differences", query: "online vs in-person differences" },
+      { text: "Online course benefits", query: "online course benefits" },
+      { text: "In-person course benefits", query: "in-person course benefits" },
+      { text: "Which is right for me", query: "course format recommendation" }
+    ]
+  },
+  {
+    matcher: (lc) => lc.includes("can you help me choose between a dslr and mirrorless camera"),
+    type: "camera_type_clarification",
+    question: "Both have their advantages! What's your main photography interest and experience level?",
+    options: [
+      { text: "DSLR advantages", query: "DSLR camera advantages" },
+      { text: "Mirrorless advantages", query: "mirrorless camera advantages" },
+      { text: "For intermediate photographers", query: "camera upgrade intermediate" },
+      { text: "Budget considerations", query: "DSLR vs mirrorless budget" }
+    ]
+  },
+  {
+    matcher: (lc) => lc.includes("what photography workshops do you have coming up this month"),
+    type: "upcoming_workshops_clarification",
+    question: "We have several workshops scheduled this month. What type of photography workshop interests you?",
+    options: [
+      { text: "Outdoor photography workshops", query: "outdoor photography workshops" },
+      { text: "All upcoming workshops", query: "all upcoming workshops" },
+      { text: "Beginner workshops", query: "beginner workshops this month" },
+      { text: "Specific topics", query: "specific topic workshops" }
+    ]
+  },
+  {
+    matcher: (lc) => lc.includes("photography course workshop type clarification"),
+    type: "course_workshop_type_clarification",
+    question: "Great! We offer both practical workshops outdoors and courses as evening classes or online. What would you prefer?",
+    options: [
+      { text: "Practical outdoor workshops", query: "outdoor photography workshops" },
+      { text: "Evening classes", query: "evening photography classes" },
+      { text: "Online courses", query: "online photography courses" },
+      { text: "Tell me about all options", query: "all photography course options" }
+    ]
+  },
+  {
+    matcher: (lc) => lc.includes("online photography courses") || lc.includes("evening photography classes"),
+    type: "course_type_clarification",
+    question: "I see you're interested in online courses. Are you looking for free online content or paid beginner courses?",
+    options: [
+      { text: "Beginners camera course", query: "beginners camera course" },
+      { text: "Beginners Lightroom course", query: "beginners lightroom course" },
+      { text: "RPS mentoring course", query: "rps mentoring course" },
+      { text: "Free online photography course", query: "free online photography course" },
+      { text: "Online private lessons", query: "online private photography lessons" }
+    ]
+  },
+  {
+    matcher: (lc) => lc.includes("online photography courses (free and paid) clarification"),
+    type: "free_vs_paid_clarification",
+    question: "I see you're interested in online courses. Are you looking for free online content or paid beginner courses?",
+    options: [
+      { text: "Free online photography course", query: "free online photography course" },
+      { text: "Online private lessons", query: "online private photography lessons" },
+      { text: "Beginners camera course", query: "beginners camera course" },
+      { text: "Beginners Lightroom course", query: "beginners lightroom course" },
+      { text: "RPS mentoring course", query: "rps mentoring course" }
+    ],
+    confidence: 30
+  }
+];
+
 function checkRemainingPatterns(lc) {
-  if (lc.includes("how much") && lc.includes("macro photography workshop")) {
-    return {
-      type: "macro_workshop_clarification",
-      question: "Our macro photography workshop has different pricing options. What would you like to know about the costs?",
-      options: [
-        { text: "General pricing", query: "macro workshop pricing" },
-        { text: "Specific date pricing", query: "specific date macro workshop" },
-        { text: "Package deals", query: "macro workshop packages" },
-        { text: "What's included", query: "macro workshop includes" }
-      ]
-    };
+  for (const pattern of CLARIFICATION_PATTERNS) {
+    if (pattern.matcher(lc)) {
+      const response = { type: pattern.type, question: pattern.question, options: pattern.options };
+      if (pattern.confidence !== undefined) response.confidence = pattern.confidence;
+      return response;
+    }
   }
-  
-  if (lc.includes("what's included in") && lc.includes("landscape photography course")) {
-    return {
-      type: "course_content_clarification",
-      question: "Our landscape photography course covers many aspects. What specific areas are you most interested in?",
-      options: [
-        { text: "Course curriculum", query: "landscape course curriculum" },
-        { text: "Beginner suitability", query: "landscape course beginners" },
-        { text: "Equipment needed", query: "landscape course equipment" },
-        { text: "Practical sessions", query: "landscape course practical" }
-      ]
-    };
-  }
-  
-  if (lc.includes("are your photography courses suitable for complete beginners")) {
-    return {
-      type: "beginner_suitability_clarification",
-      question: "Absolutely! We have courses designed specifically for beginners. What type of photography interests you most?",
-      options: [
-        { text: "General beginner courses", query: "beginner photography courses" },
-        { text: "Beginner editing course", query: "beginner editing course" },
-        { text: "Camera basics", query: "camera basics course" },
-        { text: "Composition fundamentals", query: "composition fundamentals" }
-      ]
-    };
-  }
-  
-  if (lc.includes("do you have any photography courses in birmingham")) {
-    return {
-      type: "location_clarification",
-      question: "We run courses in various locations. What type of photography course are you looking for?",
-      options: [
-        { text: "Courses near Birmingham", query: "courses near Birmingham" },
-        { text: "Online courses instead", query: "online courses alternative" },
-        { text: "Travel to Coventry", query: "courses in Coventry" },
-        { text: "Private lessons", query: "private lessons flexible" }
-      ]
-    };
-  }
-  
-  if (lc.includes("what's the difference between your online and in-person courses")) {
-    return {
-      type: "format_comparison_clarification",
-      question: "Great question! We offer both formats with different benefits. What would you like to know about each?",
-      options: [
-        { text: "Key differences", query: "online vs in-person differences" },
-        { text: "Online course benefits", query: "online course benefits" },
-        { text: "In-person course benefits", query: "in-person course benefits" },
-        { text: "Which is right for me", query: "course format recommendation" }
-      ]
-    };
-  }
-  
-  if (lc.includes("can you help me choose between a dslr and mirrorless camera")) {
-    return {
-      type: "camera_type_clarification",
-      question: "Both have their advantages! What's your main photography interest and experience level?",
-      options: [
-        { text: "DSLR advantages", query: "DSLR camera advantages" },
-        { text: "Mirrorless advantages", query: "mirrorless camera advantages" },
-        { text: "For intermediate photographers", query: "camera upgrade intermediate" },
-        { text: "Budget considerations", query: "DSLR vs mirrorless budget" }
-      ]
-    };
-  }
-  
-  if (lc.includes("what photography workshops do you have coming up this month")) {
-    return {
-      type: "upcoming_workshops_clarification",
-      question: "We have several workshops scheduled this month. What type of photography workshop interests you?",
-      options: [
-        { text: "Outdoor photography workshops", query: "outdoor photography workshops" },
-        { text: "All upcoming workshops", query: "all upcoming workshops" },
-        { text: "Beginner workshops", query: "beginner workshops this month" },
-        { text: "Specific topics", query: "specific topic workshops" }
-      ]
-    };
-  }
-  
-  if (lc.includes("photography course workshop type clarification")) {
-    return {
-      type: "course_workshop_type_clarification",
-      question: "Great! We offer both practical workshops outdoors and courses as evening classes or online. What would you prefer?",
-      options: [
-        { text: "Practical outdoor workshops", query: "outdoor photography workshops" },
-        { text: "Evening classes", query: "evening photography classes" },
-        { text: "Online courses", query: "online photography courses" },
-        { text: "Tell me about all options", query: "all photography course options" }
-      ]
-    };
-  }
-  
-  if (lc.includes("online photography courses") || lc.includes("evening photography classes")) {
-    return {
-      type: "course_type_clarification",
-      question: "I see you're interested in online courses. Are you looking for free online content or paid beginner courses?",
-      options: [
-        { text: "Beginners camera course", query: "beginners camera course" },
-        { text: "Beginners Lightroom course", query: "beginners lightroom course" },
-        { text: "RPS mentoring course", query: "rps mentoring course" },
-        { text: "Free online photography course", query: "free online photography course" },
-        { text: "Online private lessons", query: "online private photography lessons" }
-      ]
-    };
-  }
-  
-  if (lc.includes("online photography courses (free and paid) clarification")) {
-    return {
-      type: "free_vs_paid_clarification",
-      question: "I see you're interested in online courses. Are you looking for free online content or paid beginner courses?",
-      options: [
-        { text: "Free online photography course", query: "free online photography course" },
-        { text: "Online private lessons", query: "online private photography lessons" },
-        { text: "Beginners camera course", query: "beginners camera course" },
-        { text: "Beginners Lightroom course", query: "beginners lightroom course" },
-        { text: "RPS mentoring course", query: "rps mentoring course" }
-      ],
-      confidence: 30
-    };
-  }
-  
   return null;
 }
 
@@ -2664,129 +2646,8 @@ async function generateClarificationQuestion(query, client = null, pageContext =
 
 
 
-function handleServicePatterns(query, lc) {
-  // Private lessons and pricing should be handled as advice/services, not events
-  if (
-    lc.includes("private photography lessons") ||
-    lc.includes("1-2-1 private lessons") ||
-    lc.includes("1-2-1 lessons") ||
-    lc.includes("one-to-one private lessons") ||
-    ((lc.includes("private") || lc.includes("lesson")) && (lc.includes("price") || lc.includes("cost")))
-  ) {
-    return {
-      type: "route_to_advice",
-      newQuery: lc.includes("price") || lc.includes("cost") ? "private photography lessons price" : "private photography lessons",
-      newIntent: "advice"
-    };
-  } else if (lc.includes("photography image feedback") || lc.includes("image feedback")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "photography image feedback",
-      newIntent: "advice"
-    };
-  } else if (lc.includes("photography services")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "photography services",
-      newIntent: "advice"
-    };
-  }
-  return null;
-  }
   
-function handleCurrentPatterns(query, lc) {
-  if (lc.includes("equipment for photography course")) {
-    return {
-      type: "route_to_clarification",
-      newQuery: "equipment for photography course type clarification",
-      newIntent: "clarification"
-    };
-  } else if (lc.includes("photography courses")) {
-    return {
-      type: "route_to_events", 
-      newQuery: "photography courses",
-      newIntent: "events"
-    };
-  } else if (lc.includes("photography workshops")) {
-    return {
-      type: "route_to_events",
-      newQuery: "photography workshops", 
-      newIntent: "events"
-    };
-  } else if (lc.includes("photography equipment advice")) {
-    return {
-      type: "route_to_clarification",
-      newQuery: "general photography equipment advice clarification",
-      newIntent: "clarification"
-    };
-  } else if (lc.includes("camera recommendations") || lc.includes("lens recommendations") || 
-             lc.includes("tripod recommendations") || lc.includes("camera bag recommendations") ||
-             lc.includes("memory card recommendations")) {
-    return {
-      type: "route_to_advice",
-      newQuery: query,
-      newIntent: "advice"
-    };
-  } else if (lc.includes("camera lens recommendations")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "camera lens recommendations",
-      newIntent: "advice"
-    };
-  } else if (lc.includes("photography exhibitions")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "photography exhibitions",
-      newIntent: "advice"
-    };
-  } else if (lc.includes("photography mentoring")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "photography mentoring",
-      newIntent: "advice"
-    };
-  }
-  return null;
-}
 
-function handleSpecificCoursePatterns(query, lc, matches, createRoute) {
-  const specificCoursePatterns = [
-    {
-      key: "free online photography course",
-      log: (q) => console.log(`✅ Matched free online course pattern for: "${q}"`),
-      route: createRoute("route_to_advice", "free online photography course", "advice")
-    },
-    {
-      key: "online private photography lessons",
-      log: (q) => console.log(`✅ Matched online private lessons pattern for: "${q}"`),
-      route: createRoute("route_to_advice", "online private photography lessons", "advice")
-    },
-    {
-      key: "beginners camera course",
-      log: (q) => console.log(`✅ Matched beginners camera course pattern for: "${q}"`),
-      route: createRoute("route_to_advice", "beginners camera course", "advice")
-    },
-    {
-      key: "beginners lightroom course",
-      log: (q) => console.log(`✅ Matched beginners lightroom course pattern for: "${q}"`),
-      route: createRoute("route_to_advice", "beginners lightroom course", "advice")
-    },
-    {
-      key: "rps mentoring course",
-      log: (q) => console.log(`✅ Matched rps mentoring course pattern for: "${q}"`),
-      route: createRoute("route_to_advice", "rps mentoring course", "advice")
-    }
-  ];
-  
-  for (const entry of specificCoursePatterns) {
-    if (matches(entry.key)) {
-      entry.log(query);
-      return entry.route;
-    }
-  }
-  
-  return null;
-}
 
 /**
  * COMPLETE CLARIFICATION SYSTEM - PHASE 3: Follow-up Handling
@@ -2794,51 +2655,9 @@ function handleSpecificCoursePatterns(query, lc, matches, createRoute) {
  * 100% follow-up handling with perfect intent routing
  */
 // Helper function to check short workshop patterns
-function checkShortWorkshopPatterns(matches, createRoute) {
-  if (matches("2.5hr") || matches("4hr") || matches("short photography workshops") || matches("2.5hr - 4hr workshops")) {
-    console.log(`✅ Matched workshop pattern, routing to events`);
-    return createRoute("route_to_events", "2.5hrs-4hrs workshops", "events");
-  }
-  return null;
-}
-
-// Helper function to check one day workshop patterns
-function checkOneDayWorkshopPatterns(matches, createRoute) {
-  if (matches("1 day") || matches("one day photography workshops") || matches("1 day workshops") || matches("1-day")) {
-    // Normalize to canonical phrasing so downstream detection is consistent
-    return createRoute("route_to_events", "1-day workshops", "events");
-  }
-  return null;
-}
-
-// Helper function to check multi-day workshop patterns
-function checkMultiDayWorkshopPatterns(matches, createRoute) {
-  if (matches("multi day") || matches("residential") || matches("multi day residential photography workshops") || matches("Multi day residential workshops")) {
-    return createRoute("route_to_events", "2-5-days workshops", "events");
-  }
-  return null;
-}
 
 
 // Helper function to handle workshop clarification patterns
-function handleWorkshopClarificationPatterns(query, lc, matches, createRoute) {
-  console.log(`🔍 Checking workshop patterns for: "${lc}"`);
-  console.log(`🔍 matches("2.5hr"): ${matches("2.5hr")}`);
-  console.log(`🔍 matches("4hr"): ${matches("4hr")}`);
-  console.log(`🔍 matches("short photography workshops"): ${matches("short photography workshops")}`);
-  
-  const shortResult = checkShortWorkshopPatterns(matches, createRoute);
-  if (shortResult) return shortResult;
-  
-  const oneDayResult = checkOneDayWorkshopPatterns(matches, createRoute);
-  if (oneDayResult) return oneDayResult;
-  
-  const multiDayResult = checkMultiDayWorkshopPatterns(matches, createRoute);
-  if (multiDayResult) return multiDayResult;
-  
-  
-  return null;
-}
 
 
 /* ----------------------- DB helpers (robust fallbacks) ------------------- */
@@ -2865,7 +2684,7 @@ async function getEvidenceSnapshot(client, query, pageContext) {
       findServices(client, { keywords, limit: 10, pageContext })
     ]);
     return { events: events || [], articles: articles || [], services: services || [] };
-  } catch (e) {
+  } catch {
     return { events: [], articles: [], services: [] };
   }
 }
@@ -2908,20 +2727,6 @@ async function handleArticlesBypass(client, query, articles, res) {
 }
 
 // If we already have evidence, bypass generic clarification and show results
-async function maybeBypassClarification(client, query, pageContext, res) {
-  const snap = await getEvidenceSnapshot(client, query, pageContext);
-  const events = formatEventsForUi(snap.events || []);
-  
-  if (handleEventsBypass(query, events, res)) {
-    return true;
-  }
-  
-  if (await handleArticlesBypass(client, query, snap.articles, res)) {
-    return true;
-  }
-
-  return false;
-}
 
 async function findEvents(client, { keywords, limit = 50, pageContext = null }) {
   // Enhance keywords with page context
@@ -3044,7 +2849,7 @@ function normalizeCategories(rawCategories) {
     try {
       const parsed = JSON.parse(value);
       return Array.isArray(parsed) ? parsed.map(c => String(c).trim()).filter(Boolean) : [];
-    } catch (_) {
+    } catch {
       // fall through to generic splitting
     }
   }
@@ -3052,46 +2857,6 @@ function normalizeCategories(rawCategories) {
   return value.split(/[;,]/).map(s => s.trim()).filter(Boolean);
 }
 
-async function handleFallbackQueries(client, categoryType, aliases, limit) {
-  console.log(`🔍 No events found with category: ${categoryType} on first pass. Retrying with relaxed filters...`);
-  // Fallback 1: date filter from CURRENT_DATE (midnight) and no title filter
-  const todayIso = new Date().toISOString().split('T')[0];
-  const { data: data2, error: error2 } = await client
-    .from('v_events_for_chat')
-    .select('*')
-    .gte('date_start', `${todayIso}T00:00:00.000Z`)
-    .overlaps('categories', aliases)
-    .order('date_start', { ascending: true })
-    .limit(limit);
-  if (error2) {
-    console.error('❌ Category-based fallback query error:', error2);
-    return [];
-  }
-  if (!data2 || data2.length === 0) {
-    console.log(`🔍 Still no events via SQL for category: ${categoryType}. Applying JS-side filter over recent events...`);
-    const { data: data3, error: error3 } = await client
-      .from('v_events_for_chat')
-      .select('*')
-      .gte('date_start', `${todayIso}T00:00:00.000Z`)
-      .order('date_start', { ascending: true })
-      .limit(200);
-    if (error3 || !data3) {
-      console.error('❌ JS-side filter preload error:', error3);
-      return [];
-    }
-    const aliasSet = new Set(aliases.map(a => a.toLowerCase()));
-    const filtered = data3.filter(r => {
-      const cats = normalizeCategories(r.categories).map(c => c.toLowerCase());
-      return cats.some(c => aliasSet.has(c));
-    });
-    const deduped3 = dedupeEventsByKey(filtered).slice(0, limit);
-    console.log(`🔍 JS-side filter returned ${deduped3.length} unique events for category: ${categoryType}`);
-    return mapEventsData(deduped3);
-  }
-  const deduped2 = dedupeEventsByKey(data2);
-  console.log(`🔍 Fallback returned ${deduped2.length} unique events for category: ${categoryType}`);
-  return mapEventsData(deduped2);
-}
 
 async function findEventsByDuration(client, categoryType, limit = 100) {
   try {
@@ -3878,70 +3643,7 @@ function extractRelatedLabel(text, url) {
   }
 }
 
-function cleanUrlLabel(label) {
-  return label.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
-}
 
-async function getArticleAuxLinks(client, articleUrl) {
-  const result = { pdf: null, related: null, relatedLabel: null };
-  if (!articleUrl) return result;
-
-  // try different chunk tables/columns safely
-  const tables = tryTables();
-
-  for (const t of tables) {
-    const tableResult = await processTableForAuxLinks(client, t, articleUrl);
-    if (tableResult) {
-      Object.assign(result, tableResult);
-        if (result.pdf && result.related) break;
-      }
-  }
-  return result;
-}
-
-// Helper functions for getArticleAuxLinks
-async function processTableForAuxLinks(client, table, articleUrl) {
-  try {
-    const { data } = await client
-      .from(table.table)
-      .select(`${table.urlCol}, ${table.textCol}`)
-      .eq(table.urlCol, articleUrl)
-      .limit(20);
-    
-    if (!data?.length) return null;
-
-    return processTableData(data, table);
-  } catch {
-      // ignore and try next table
-    return null;
-  }
-}
-
-function processTableData(data, table) {
-  const result = { pdf: null, related: null, relatedLabel: null };
-  
-  for (const row of data) {
-    const text = row?.[table.textCol] || "";
-    
-    // find pdf
-    if (!result.pdf) {
-      result.pdf = extractPdfUrl(text);
-    }
-    
-    // find first internal related link with hint text
-    if (!result.related) {
-      const url = extractRelatedLink(text);
-      if (url) {
-        result.related = url;
-        result.relatedLabel = extractRelatedLabel(text, url);
-      }
-    }
-    
-    if (result.pdf && result.related) break;
-  }
-  
-  return result;
-}
 
 /* ----------------------- Product description parsing -------------------- */
 
@@ -6137,10 +5839,196 @@ function calculateChunkScore(chunk, primaryKeyword, equipmentKeywords, technical
   return s;
 }
 
-async function tryRagFirst(client, query) {
-  console.log(`🔍 RAG-First attempt for: "${query}"`);
+// Helper function to clean and format RAG text
+function cleanRagText(raw) {
+  if (!raw) return "";
+  let text = String(raw);
   
-  // Special case: Contact Alan responses for specific queries that need direct contact
+  console.log(`🧹 Original text: "${text.substring(0, 100)}..."`);
+  
+  // Remove URL-encoded image paths and artifacts at the start - more aggressive
+  text = text.replace(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)[&\s]*/gi, "");
+  text = text.replace(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)&url=[^\s]*/gi, "");
+  
+  // Remove URL-encoded content and HTML artifacts - more aggressive
+  text = text.replace(/&url=https?%3A%2F%2F[^\s]*/gi, "");
+  text = text.replace(/https?%3A%2F%2F[^\s]*/gi, "");
+  text = text.replace(/PRIVATE-PHOTOGRAPHY-LESSONS\.png[^\s]*/gi, "");
+  
+  // Remove unrendered markdown links like [/rps-courses-mentoring-distinctions]
+  text = text.replace(/\[\/[^\]]+\]/g, "");
+  
+  // Remove HTML entities and encoding artifacts - more comprehensive
+  text = text.replace(/&amp;/g, "&");
+  text = text.replace(/&lt;/g, "<");
+  text = text.replace(/&gt;/g, ">");
+  text = text.replace(/&quot;/g, '"');
+  text = text.replace(/&#39;/g, "'");
+  text = text.replace(/&nbsp;/g, " ");
+  text = text.replace(/&#x27;/g, "'");
+  text = text.replace(/&#x2F;/g, "/");
+  text = text.replace(/&#x3D;/g, "=");
+  text = text.replace(/&#x3A;/g, ":");
+  text = text.replace(/&#x2E;/g, ".");
+  text = text.replace(/&#x2D;/g, "-");
+  text = text.replace(/&#x5F;/g, "_");
+  text = text.replace(/&#x2B;/g, "+");
+  text = text.replace(/&#x20;/g, " ");
+  text = text.replace(/&#x21;/g, "!");
+  text = text.replace(/&#x22;/g, '"');
+  text = text.replace(/&#x23;/g, "#");
+  text = text.replace(/&#x24;/g, "$");
+  text = text.replace(/&#x25;/g, "%");
+  text = text.replace(/&#x26;/g, "&");
+  text = text.replace(/&#x28;/g, "(");
+  text = text.replace(/&#x29;/g, ")");
+  text = text.replace(/&#x2A;/g, "*");
+  text = text.replace(/&#x2C;/g, ",");
+  text = text.replace(/&#x2F;/g, "/");
+  text = text.replace(/&#x3A;/g, ":");
+  text = text.replace(/&#x3B;/g, ";");
+  text = text.replace(/&#x3C;/g, "<");
+  text = text.replace(/&#x3D;/g, "=");
+  text = text.replace(/&#x3E;/g, ">");
+  text = text.replace(/&#x3F;/g, "?");
+  text = text.replace(/&#x40;/g, "@");
+  text = text.replace(/&#x5B;/g, "[");
+  text = text.replace(/&#x5C;/g, "\\");
+  text = text.replace(/&#x5D;/g, "]");
+  text = text.replace(/&#x5E;/g, "^");
+  text = text.replace(/&#x60;/g, "`");
+  text = text.replace(/&#x7B;/g, "{");
+  text = text.replace(/&#x7C;/g, "|");
+  text = text.replace(/&#x7D;/g, "}");
+  text = text.replace(/&#x7E;/g, "~");
+  
+  // Fix specific problematic patterns - more aggressive
+  text = text.replace(/\?\?\?/g, "'"); // Replace ??? with apostrophe
+  text = text.replace(/wi\?\?\?/g, "with"); // Fix truncated "with"
+  text = text.replace(/Beg\?\?\?/g, "Beginners"); // Fix truncated "Beginners"
+  text = text.replace(/That\?\?\?s/g, "That's");
+  text = text.replace(/doesn\?\?\?t/g, "doesn't");
+  text = text.replace(/don\?\?\?t/g, "don't");
+  text = text.replace(/can\?\?\?t/g, "can't");
+  text = text.replace(/won\?\?\?t/g, "won't");
+  text = text.replace(/I\?\?\?m/g, "I'm");
+  text = text.replace(/you\?\?\?re/g, "you're");
+  text = text.replace(/we\?\?\?re/g, "we're");
+  text = text.replace(/they\?\?\?re/g, "they're");
+  text = text.replace(/it\?\?\?s/g, "it's");
+  text = text.replace(/Alan\?\?\?s/g, "Alan's");
+  text = text.replace(/What\?\?\?s/g, "What's");
+  text = text.replace(/more\?\?\?/g, "more");
+  
+  // Fix any remaining ??? patterns
+  text = text.replace(/\?\?\?/g, "'");
+  
+  // Remove navigation and UI elements
+  text = text.replace(/^\/Cart[\s\S]*?Sign In My Account[\s\S]*?(?=\n\n|$)/gi, "");
+  text = text.replace(/Back\s+(Workshops|Services|Gallery|Book|About|Blog)[\s\S]*?(?=\n\n|$)/gi, "");
+  text = text.replace(/Home\s*\/\s*About\s*\/\s*Services\s*\/\s*Gallery\s*\/\s*Contact/gi, "");
+  text = text.replace(/Privacy\s*Policy\s*\/\s*Terms\s*of\s*Service/gi, "");
+  
+  // Remove external social links but keep alanranger.com links
+  text = text.replace(/https?:\/\/(?!www\.alanranger\.com)\S+/g, "");
+  text = text.replace(/Facebook\d*|LinkedIn\d*|Tumblr|Pinterest\d*/gi, "");
+  
+  // Remove shopping cart and e-commerce artifacts
+  text = text.replace(/Add to Cart|Only \d+ available|Select Course|Posted in/gi, "");
+  text = text.replace(/Course:\s*Select Course[\s\S]*?(?=\n\n|$)/gi, "");
+  
+  // Remove specific artifacts that are common
+  text = text.replace(/^\s*ed for updated portfolios and images\s*/gi, "");
+  text = text.replace(/^\s*[a-z]+\s+for\s+updated\s+portfolios\s*/gi, "");
+  
+  // Remove unrelated event information
+  text = text.replace(/Earlier Event:.*?Later Event:.*?$/gi, "");
+  text = text.replace(/Earlier Event:.*?$/gi, "");
+  text = text.replace(/Later Event:.*?$/gi, "");
+  text = text.replace(/\d+ November.*?$/gi, "");
+  text = text.replace(/\d+ December.*?$/gi, "");
+  text = text.replace(/Camera Courses For Beginners.*?$/gi, "");
+  
+  // Clean up truncated text that starts mid-sentence
+  if (text.match(/^[a-z]/)) {
+    // If text starts with lowercase, try to find a better starting point
+    const sentences = text.split(/[.!?]+/);
+    if (sentences.length > 1) {
+      // Find the first complete sentence
+      for (let i = 1; i < sentences.length; i++) {
+        const candidate = sentences.slice(i).join('. ').trim();
+        if (candidate.length > 50 && candidate.match(/^[A-Z]/)) {
+          text = candidate;
+          break;
+        }
+      }
+    }
+  }
+  
+  // Prioritize content that looks like it's from the beginning of a page
+  // Look for common page introduction patterns
+  const introPatterns = [
+    /^Alan Ranger Photography/,
+    /^Are you ready/,
+    /^If you prefer/,
+    /^Based on Alan/,
+    /^Alan offers/,
+    /^I can provide/,
+    /^For equipment/,
+    /^Alan provides/
+  ];
+  
+  // If we find an intro pattern, try to extract from there
+  for (const pattern of introPatterns) {
+    if (pattern.test(text)) {
+      console.log(`🎯 Found intro pattern: ${pattern}`);
+      // Extract content from this point
+      const match = text.match(pattern);
+      if (match) {
+        const startIndex = match.index;
+        text = text.substring(startIndex);
+        break;
+      }
+    }
+  }
+  
+  // Collapse multiple dashes/lines used as separators
+  text = text.replace(/-{4,}/g, "\n");
+  
+  // Remove excessive whitespace and normalize
+  text = text.replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n");
+  
+  // Filter out malformed content and find meaningful paragraphs
+  const parts = text.split(/\n\n+/).filter(p => {
+    const trimmed = p.trim();
+    return trimmed.length > 20 && // Minimum meaningful length
+           !trimmed.match(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)/) && // Not just image names
+           !trimmed.match(/^Back\s+(Workshops|Services|Gallery|Book|About|Blog)/) && // Not navigation
+           !trimmed.match(/^Home\s*\/\s*About/) && // Not breadcrumbs
+           !trimmed.match(/^Privacy\s*Policy/) && // Not footer links
+           !trimmed.match(/^Facebook|^LinkedIn|^Tumblr|^Pinterest/) && // Not social links
+           !trimmed.match(/^Add to Cart|^Only \d+ available/) && // Not e-commerce UI
+           !trimmed.match(/^Earlier Event:|^Later Event:/) && // Not event navigation
+           !trimmed.match(/^\d+ November|^\d+ December/) && // Not date headers
+           !trimmed.match(/^Camera Courses For Beginners/) && // Not unrelated content
+           trimmed.length < 5000; // Not too long (likely malformed)
+  });
+  
+  if (parts.length > 0) {
+    // Take the first meaningful part, but prefer longer ones
+    const sortedParts = parts.sort((a, b) => b.length - a.length);
+    text = sortedParts[0];
+  }
+  
+  // Final cleanup
+  text = text.replace(/\s{2,}/g, " ").trim();
+  
+  console.log(`🧹 Cleaned text: "${text.substring(0, 100)}..."`);
+  return text;
+}
+
+// Helper function to check for contact Alan queries
+function checkContactAlanQuery(query) {
   const contactAlanQueries = [
     /cancellation or refund policy for courses/i,
     /cancellation or refund policy for workshops/i,
@@ -6163,7 +6051,6 @@ async function tryRagFirst(client, query) {
     /how early should i arrive before a workshop/i
   ];
   
-  // Check if this is a "contact Alan" query
   for (const pattern of contactAlanQueries) {
     if (pattern.test(query)) {
       console.log(`📞 Contact Alan query detected: "${query}"`);
@@ -6181,269 +6068,436 @@ async function tryRagFirst(client, query) {
       };
     }
   }
-  
-  // Enhanced helper to clean and format RAG text for better readability
-  const cleanRagText = (raw) => {
-    if (!raw) return "";
-    let text = String(raw);
-    
-    console.log(`🧹 Original text: "${text.substring(0, 100)}..."`);
-    
-    // Remove URL-encoded image paths and artifacts at the start - more aggressive
-    text = text.replace(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)[&\s]*/gi, "");
-    text = text.replace(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)&url=[^\s]*/gi, "");
-    
-    // Remove URL-encoded content and HTML artifacts - more aggressive
-    text = text.replace(/&url=https?%3A%2F%2F[^\s]*/gi, "");
-    text = text.replace(/https?%3A%2F%2F[^\s]*/gi, "");
-    text = text.replace(/PRIVATE-PHOTOGRAPHY-LESSONS\.png[^\s]*/gi, "");
-    
-    // Remove unrendered markdown links like [/rps-courses-mentoring-distinctions]
-    text = text.replace(/\[\/[^\]]+\]/g, "");
-    
-    // Remove HTML entities and encoding artifacts - more comprehensive
-    text = text.replace(/&amp;/g, "&");
-    text = text.replace(/&lt;/g, "<");
-    text = text.replace(/&gt;/g, ">");
-    text = text.replace(/&quot;/g, '"');
-    text = text.replace(/&#39;/g, "'");
-    text = text.replace(/&nbsp;/g, " ");
-    text = text.replace(/&#x27;/g, "'");
-    text = text.replace(/&#x2F;/g, "/");
-    text = text.replace(/&#x3D;/g, "=");
-    text = text.replace(/&#x3A;/g, ":");
-    text = text.replace(/&#x2E;/g, ".");
-    text = text.replace(/&#x2D;/g, "-");
-    text = text.replace(/&#x5F;/g, "_");
-    text = text.replace(/&#x2B;/g, "+");
-    text = text.replace(/&#x20;/g, " ");
-    text = text.replace(/&#x21;/g, "!");
-    text = text.replace(/&#x22;/g, '"');
-    text = text.replace(/&#x23;/g, "#");
-    text = text.replace(/&#x24;/g, "$");
-    text = text.replace(/&#x25;/g, "%");
-    text = text.replace(/&#x26;/g, "&");
-    text = text.replace(/&#x28;/g, "(");
-    text = text.replace(/&#x29;/g, ")");
-    text = text.replace(/&#x2A;/g, "*");
-    text = text.replace(/&#x2C;/g, ",");
-    text = text.replace(/&#x2F;/g, "/");
-    text = text.replace(/&#x3A;/g, ":");
-    text = text.replace(/&#x3B;/g, ";");
-    text = text.replace(/&#x3C;/g, "<");
-    text = text.replace(/&#x3D;/g, "=");
-    text = text.replace(/&#x3E;/g, ">");
-    text = text.replace(/&#x3F;/g, "?");
-    text = text.replace(/&#x40;/g, "@");
-    text = text.replace(/&#x5B;/g, "[");
-    text = text.replace(/&#x5C;/g, "\\");
-    text = text.replace(/&#x5D;/g, "]");
-    text = text.replace(/&#x5E;/g, "^");
-    text = text.replace(/&#x60;/g, "`");
-    text = text.replace(/&#x7B;/g, "{");
-    text = text.replace(/&#x7C;/g, "|");
-    text = text.replace(/&#x7D;/g, "}");
-    text = text.replace(/&#x7E;/g, "~");
-    
-    // Fix specific problematic patterns - more aggressive
-    text = text.replace(/\?\?\?/g, "'"); // Replace ??? with apostrophe
-    text = text.replace(/wi\?\?\?/g, "with"); // Fix truncated "with"
-    text = text.replace(/Beg\?\?\?/g, "Beginners"); // Fix truncated "Beginners"
-    text = text.replace(/That\?\?\?s/g, "That's");
-    text = text.replace(/doesn\?\?\?t/g, "doesn't");
-    text = text.replace(/don\?\?\?t/g, "don't");
-    text = text.replace(/can\?\?\?t/g, "can't");
-    text = text.replace(/won\?\?\?t/g, "won't");
-    text = text.replace(/I\?\?\?m/g, "I'm");
-    text = text.replace(/you\?\?\?re/g, "you're");
-    text = text.replace(/we\?\?\?re/g, "we're");
-    text = text.replace(/they\?\?\?re/g, "they're");
-    text = text.replace(/it\?\?\?s/g, "it's");
-    text = text.replace(/Alan\?\?\?s/g, "Alan's");
-    text = text.replace(/What\?\?\?s/g, "What's");
-    text = text.replace(/more\?\?\?/g, "more");
-    
-    // Fix any remaining ??? patterns
-    text = text.replace(/\?\?\?/g, "'");
-    
-    // Remove navigation and UI elements
-    text = text.replace(/^\/Cart[\s\S]*?Sign In My Account[\s\S]*?(?=\n\n|$)/gi, "");
-    text = text.replace(/Back\s+(Workshops|Services|Gallery|Book|About|Blog)[\s\S]*?(?=\n\n|$)/gi, "");
-    text = text.replace(/Home\s*\/\s*About\s*\/\s*Services\s*\/\s*Gallery\s*\/\s*Contact/gi, "");
-    text = text.replace(/Privacy\s*Policy\s*\/\s*Terms\s*of\s*Service/gi, "");
-    
-    // Remove external social links but keep alanranger.com links
-    text = text.replace(/https?:\/\/(?!www\.alanranger\.com)\S+/g, "");
-    text = text.replace(/Facebook\d*|LinkedIn\d*|Tumblr|Pinterest\d*/gi, "");
-    
-    // Remove shopping cart and e-commerce artifacts
-    text = text.replace(/Add to Cart|Only \d+ available|Select Course|Posted in/gi, "");
-    text = text.replace(/Course:\s*Select Course[\s\S]*?(?=\n\n|$)/gi, "");
-    
-    // Remove specific artifacts that are common
-    text = text.replace(/^\s*ed for updated portfolios and images\s*/gi, "");
-    text = text.replace(/^\s*[a-z]+\s+for\s+updated\s+portfolios\s*/gi, "");
-    
-    // Remove unrelated event information
-    text = text.replace(/Earlier Event:.*?Later Event:.*?$/gi, "");
-    text = text.replace(/Earlier Event:.*?$/gi, "");
-    text = text.replace(/Later Event:.*?$/gi, "");
-    text = text.replace(/\d+ November.*?$/gi, "");
-    text = text.replace(/\d+ December.*?$/gi, "");
-    text = text.replace(/Camera Courses For Beginners.*?$/gi, "");
-    
-    // Clean up truncated text that starts mid-sentence
-    if (text.match(/^[a-z]/)) {
-      // If text starts with lowercase, try to find a better starting point
-      const sentences = text.split(/[.!?]+/);
-      if (sentences.length > 1) {
-        // Find the first complete sentence
-        for (let i = 1; i < sentences.length; i++) {
-          const candidate = sentences.slice(i).join('. ').trim();
-          if (candidate.length > 50 && candidate.match(/^[A-Z]/)) {
-            text = candidate;
-            break;
-          }
-        }
-      }
-    }
-    
-    // Prioritize content that looks like it's from the beginning of a page
-    // Look for common page introduction patterns
-    const introPatterns = [
-      /^Alan Ranger Photography/,
-      /^Are you ready/,
-      /^If you prefer/,
-      /^Based on Alan/,
-      /^Alan offers/,
-      /^I can provide/,
-      /^For equipment/,
-      /^Alan provides/
-    ];
-    
-    // If we find an intro pattern, try to extract from there
-    for (const pattern of introPatterns) {
-      if (pattern.test(text)) {
-        console.log(`🎯 Found intro pattern: ${pattern}`);
-        // Extract content from this point
-        const match = text.match(pattern);
-        if (match) {
-          const startIndex = match.index;
-          text = text.substring(startIndex);
-          break;
-        }
-      }
-    }
-    
-    // Collapse multiple dashes/lines used as separators
-    text = text.replace(/-{4,}/g, "\n");
-    
-    // Remove excessive whitespace and normalize
-    text = text.replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n");
-    
-    // Filter out malformed content and find meaningful paragraphs
-    const parts = text.split(/\n\n+/).filter(p => {
-      const trimmed = p.trim();
-      return trimmed.length > 20 && // Minimum meaningful length
-             !trimmed.match(/^(Home|About|Services|Gallery|Contact|Privacy|Terms)$/i) &&
-             !trimmed.match(/^[0-9\s\-\.]+$/) &&
-             !trimmed.match(/^\/[A-Za-z\s\[\]]+$/i) &&
-             !trimmed.match(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)/gi) && // Skip image filenames
-             !trimmed.match(/^[A-Z\s]+$/i) && // Skip all-caps headers
-             !trimmed.match(/^ed for updated portfolios/i) && // Skip specific artifacts
-             trimmed.length < 1000;
-    });
-    
-    console.log(`🧹 After cleaning: "${text.substring(0, 100)}..."`);
-    
-    // Return the best content
-    if (parts.length > 0) {
-      // Join meaningful paragraphs and ensure proper formatting
-      let result = parts.slice(0, 3).join("\n\n");
-      
-      // Ensure the result starts with a proper sentence
-      if (result.match(/^[a-z]/)) {
-        result = result.charAt(0).toUpperCase() + result.slice(1);
-      }
-      
-      // Add proper formatting with line breaks and bullet points
-      result = formatRagText(result);
-      
-      console.log(`🧹 Final result: "${result.substring(0, 100)}..."`);
-      return result;
-    } else {
-      // Fallback: clean and return first substantial content
-      const fallbackParts = text.split(/\n\n+/).filter(p => p.trim().length > 30);
-      if (fallbackParts.length > 0) {
-        let result = fallbackParts[0].trim();
-        if (result.match(/^[a-z]/)) {
-          result = result.charAt(0).toUpperCase() + result.slice(1);
-        }
-        result = formatRagText(result);
-        console.log(`🧹 Fallback result: "${result.substring(0, 100)}..."`);
-        return result;
-      }
-      const finalResult = text.trim().substring(0, 800);
-      const formattedResult = formatRagText(finalResult);
-      console.log(`🧹 Final fallback: "${formattedResult.substring(0, 100)}..."`);
-      return formattedResult;
-    }
-  };
+  return null;
+}
 
-  // Helper function to format RAG text with proper line breaks and bullet points
-  function formatRagText(text) {
-    if (!text) return "";
+// Helper function to search for RAG content chunks
+async function searchRagContent(client, query, keywords, isConceptQuery, primaryKeyword) {
+  let chunks = [];
+  
+  // For concept queries like "what is exposure", prioritize guide articles
+  if (isConceptQuery) {
+    console.log(`🎯 Concept query detected: "${query}" - prioritizing guide articles`);
     
-    console.log(`🎨 Formatting text: "${text.substring(0, 100)}..."`);
+    // First, try to find specific guide articles
+    const { data: guideChunks, error: guideError } = await client
+      .from('page_chunks')
+      .select('url, title, chunk_text')
+      .ilike('url', `%what-is-${primaryKeyword}%`)
+      .limit(5);
     
-    // Fix truncated words at the end
-    text = text.replace(/wi\.\.\.$/, "with you.");
-    text = text.replace(/Beg\.\.\.$/, "Beginners.");
-    text = text.replace(/\.\.\.$/, ".");
-    
-    // Fix any remaining ??? patterns
-    text = text.replace(/\?\?\?/g, "'");
-    
-    // Add line breaks before bullet points and sections
-    text = text.replace(/\* CONTENT/g, "\n\n**CONTENT**");
-    text = text.replace(/\* Terms:/g, "\n\n**Terms:**");
-    text = text.replace(/\* Method:/g, "\n\n**Method:**");
-    text = text.replace(/\* /g, "\n• ");
-    
-    // Fix malformed markdown
-    text = text.replace(/\*\*Terms:\*/g, "**Terms:**");
-    text = text.replace(/\*\*Method:\*/g, "**Method:**");
-    text = text.replace(/\*\*CONTENT\*/g, "**CONTENT**");
-    
-    // Add line breaks before common section headers
-    text = text.replace(/([.!?])\s*([A-Z][a-z]+ [A-Z][a-z]+:)/g, "$1\n\n**$2**");
-    text = text.replace(/([.!?])\s*(Course:)/g, "$1\n\n**$2**");
-    text = text.replace(/([.!?])\s*(Terms:)/g, "$1\n\n**$2**");
-    text = text.replace(/([.!?])\s*(Method:)/g, "$1\n\n**$2**");
-    
-    // Add line breaks for long sentences - more aggressive
-    text = text.replace(/([.!?])\s*([A-Z][a-z]+ [a-z]+ [a-z]+ [a-z]+ [a-z]+)/g, "$1\n\n$2");
-    text = text.replace(/([.!?])\s*([A-Z][a-z]+ [a-z]+ [a-z]+ [a-z]+)/g, "$1\n\n$2");
-    text = text.replace(/([.!?])\s*([A-Z][a-z]+ [a-z]+ [a-z]+)/g, "$1\n\n$2");
-    
-    // Add line breaks for specific patterns
-    text = text.replace(/([.!?])\s*(That's why)/g, "$1\n\n$2");
-    text = text.replace(/([.!?])\s*(What's more)/g, "$1\n\n$2");
-    text = text.replace(/([.!?])\s*(This is)/g, "$1\n\n$2");
-    text = text.replace(/([.!?])\s*(I understand)/g, "$1\n\n$2");
-    
-    // Clean up multiple line breaks
-    text = text.replace(/\n{3,}/g, "\n\n");
-    
-    // Ensure proper sentence endings
-    if (!text.match(/[.!?]$/)) {
-      text = text.trim() + ".";
+    if (!guideError && guideChunks) {
+      chunks = [...chunks, ...guideChunks];
+      console.log(`🎯 Found ${guideChunks.length} specific guide chunks for "${primaryKeyword}"`);
     }
     
-    console.log(`🎨 Formatted result: "${text.substring(0, 100)}..."`);
-    return text.trim();
+    // Also try broader guide search
+    const { data: broaderGuideChunks, error: broaderError } = await client
+      .from('page_chunks')
+      .select('url, title, chunk_text')
+      .ilike('url', '%what-is-%')
+      .ilike('chunk_text', `%${primaryKeyword}%`)
+      .limit(3);
+    
+    if (!broaderError && broaderGuideChunks) {
+      chunks = [...chunks, ...broaderGuideChunks];
+      console.log(`🎯 Found ${broaderGuideChunks.length} broader guide chunks`);
+    }
+    
+    // If we found guide chunks, skip the general keyword search
+    if (chunks.length > 0) {
+      console.log(`🎯 Using ${chunks.length} guide chunks, skipping general search`);
+    } else {
+      console.log(`⚠️ No guide chunks found, falling back to general search`);
+    }
+  }
+  
+  // Only do general keyword search if we didn't find guide chunks
+  if (!isConceptQuery || chunks.length === 0) {
+    // Search with individual keywords (most important)
+    for (const keyword of keywords) {
+      const { data: keywordChunks, error: chunksError } = await client
+        .from('page_chunks')
+        .select('url, title, chunk_text')
+        .ilike('chunk_text', `%${keyword}%`)
+        .limit(3);
+      
+      if (!chunksError && keywordChunks) {
+        chunks = [...chunks, ...keywordChunks];
+      }
+    }
+  }
+  
+  // Also try the full query
+  const { data: fullQueryChunks, error: fullQueryError } = await client
+    .from('page_chunks')
+    .select('url, title, chunk_text')
+    .ilike('chunk_text', `%${query}%`)
+    .limit(2);
+  
+  if (!fullQueryError && fullQueryChunks) {
+    chunks = [...chunks, ...fullQueryChunks];
+  }
+  
+  // Remove duplicates
+  return chunks.filter((chunk, index, self) => 
+    index === self.findIndex(c => c.url === chunk.url)
+  );
+}
+
+// Helper function to score and filter chunks
+function scoreAndFilterChunks(chunks, primaryKeyword, lcQuery, isConceptQuery) {
+  const equipmentKeywords = ["tripod","head","ball head","carbon","aluminium","manfrotto","gitzo","benro","sirui","three legged","levelling","camera","lens","filter","flash"];
+  const technicalKeywords = ["iso","aperture","shutter","exposure","focus","composition","lighting","settings","technique","tips","advice"];
+  const offTopicHints = ["/photographic-workshops","/course","calendar","/events/","ics","google calendar","/book","/contact","/gallery"];
+  
+  const conceptKeywords = ['guide', 'explanation', 'tutorial', 'basics', 'beginner', 'learn', 'understanding'];
+  const workshopKeywords = ['workshop', 'course', 'event', 'booking', 'dates', 'location', 'participants'];
+  
+  function scoreChunk(c) {
+    return calculateChunkScore(c, primaryKeyword, equipmentKeywords, technicalKeywords, lcQuery, offTopicHints);
   }
 
+  return chunks
+    .map(c => {
+      const score = scoreChunk(c);
+      
+      // For concept queries, boost score for guide/explanation content and penalize workshop content
+      let adjustedScore = score;
+      if (isConceptQuery) {
+        const url = (c.url||"").toLowerCase();
+        const title = (c.title||"").toLowerCase();
+        const text = (c.chunk_text||"").toLowerCase();
+        
+        // Boost score for concept-related content
+        if (conceptKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
+          adjustedScore += 2.0;
+        }
+        
+        // Penalize workshop/event content for concept queries
+        if (workshopKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
+          adjustedScore -= 1.5;
+        }
+        
+        // Extra penalty for workshop URLs
+        if (url.includes('/photographic-workshops') || url.includes('/photo-workshops') || url.includes('/events/')) {
+          adjustedScore -= 2.0;
+        }
+      }
+      
+      return {...c, __score: adjustedScore};
+    })
+    // Hard requirement: if we detected a primary keyword, ensure it exists in title/text/url
+    .filter(c => {
+      if (!primaryKeyword) return c.__score > 0;
+      const url = (c.url||"").toLowerCase();
+      const title = (c.title||"").toLowerCase();
+      const text = (c.chunk_text||"").toLowerCase();
+      
+      // Check if primary keyword appears in URL, title, or text content
+      let hasPrimaryStrong = url.includes(primaryKeyword) || title.includes(primaryKeyword) || text.includes(primaryKeyword);
+      
+      // Extra hardening for equipment-style nouns
+      const equipNouns = ["tripod","ball head","ballhead","head","gitzo","benro","manfrotto","sirui"];
+      if (equipNouns.some(n => primaryKeyword.includes(n))) {
+        const slugMatch = [primaryKeyword.replace(/\s+/g,'-'), primaryKeyword.replace(/\s+/g,'')];
+        if (!(hasPrimaryStrong || slugMatch.some(s => url.includes(s) || title.includes(s)))) {
+          return false;
+        }
+      }
+      return hasPrimaryStrong && c.__score > 0;
+    })
+    .sort((a,b)=> b.__score - a.__score)
+    .slice(0, 5);
+}
+
+// Helper function to search for RAG entities
+async function searchRagEntities(client, query, keywords, isConceptQuery, primaryKeyword) {
+  let entities = [];
+  
+  // For concept queries, prioritize guide articles
+  if (isConceptQuery) {
+    console.log(`🎯 Searching for guide articles for concept query`);
+    const { data: guideArticles, error: guideError } = await client
+      .from('page_entities')
+      .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
+      .ilike('url', `%what-is-${primaryKeyword}%`)
+      .eq('kind', 'article')
+      .limit(5);
+    
+    if (!guideError && guideArticles) {
+      console.log(`🎯 Found ${guideArticles.length} guide articles`);
+      guideArticles.forEach(e => console.log(`  - "${e.title}" (${e.url})`));
+      entities = [...entities, ...guideArticles];
+    }
+  }
+  
+  // For "who is" queries, also search for "about" to find biographical content
+  const searchKeywords = [...keywords];
+  if (/who.*is|who.*are|tell.*about|background|experience/i.test(query)) {
+    searchKeywords.push('about');
+  }
+  
+  // Search for all keywords at once with higher limit for better coverage
+  console.log(`🔍 Searching for all keywords: ${searchKeywords.join(', ')}`);
+  const { data: keywordEntities, error: entitiesError } = await client
+    .from('page_entities')
+    .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
+    .or(searchKeywords.map(k => `title.ilike.%${k}%,description.ilike.%${k}%,location.ilike.%${k}%`).join(','))
+    .eq('kind', 'article')  // Only return articles for the articles array
+    .limit(25);
+  
+  if (entitiesError) {
+    console.error(`❌ Entity search error:`, entitiesError);
+  } else if (keywordEntities) {
+    console.log(`📄 Found ${keywordEntities.length} entities for all keywords`);
+    keywordEntities.forEach(e => console.log(`  - "${e.title}" (${e.kind})`));
+    entities = [...entities, ...keywordEntities];
+  } else {
+    console.log(`📄 No entities found for keywords`);
+  }
+  
+  // Also try the full query
+  const { data: fullQueryEntities, error: fullQueryEntitiesError } = await client
+    .from('page_entities')
+    .select('url, title, description, meta_description, location, date_start, kind')
+    .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
+    .eq('kind', 'article')  // Only return articles for the articles array
+    .limit(15);
+  
+  if (!fullQueryEntitiesError && fullQueryEntities) {
+    entities = [...entities, ...fullQueryEntities];
+  }
+  
+  // Remove duplicates
+  return entities.filter((entity, index, self) => 
+    index === self.findIndex(e => e.url === entity.url)
+  );
+}
+
+// Helper function to generate RAG answer
+function generateRagAnswer(query, entities, chunks, results) {
+  let answer = "";
+  let type = "advice";
+  let sources = [];
+  
+  if (results.answerType === 'events' && entities.length > 0) {
+    const eventEntities = entities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
+    if (eventEntities.length > 0) {
+      answer = eventEntities.map(e => `${e.title} on ${new Date(e.date_start).toDateString()} at ${e.location}. More info: ${e.url}`).join("\n");
+      type = "events";
+      sources = eventEntities.map(e => e.url);
+    }
+  } else if (chunks.length > 0) {
+    // Use generateDirectAnswer for intelligent concept synthesis
+    console.log(`🔍 Using generateDirectAnswer for ${chunks.length} chunks`);
+    const directAnswer = generateDirectAnswer(query, entities, chunks);
+    if (directAnswer) {
+      answer = directAnswer;
+      console.log(`✅ Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+    } else {
+      console.log(`⚠️ No intelligent answer found, using fallback chunk processing`);
+      // Fallback to direct chunk processing
+      const cleaned = chunks
+        .map(c => {
+          const cleanedText = cleanRagText(c.chunk_text);
+          console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
+          return cleanedText;
+        })
+        .filter(Boolean);
+      console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
+      answer = cleaned.join("\n\n");
+      // Cap final answer length for UI readability - much shorter for better UX
+      const MAX_LEN = 800;
+      if (answer.length > MAX_LEN) {
+        answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
+      }
+    }
+    type = "advice";
+    sources = chunks.map(c => c.url);
+  } else if (entities.length > 0) {
+    // Handle entities for advice queries (non-event entities)
+    console.log(`🔍 Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
+    const adviceEntities = entities.filter(e => e.kind !== 'event');
+    console.log(`📝 Filtered to ${adviceEntities.length} advice entities`);
+    
+    // Check if entities are relevant to the query
+    console.log(`🔍 Filtering ${adviceEntities.length} entities for query: "${query}"`);
+    const relevantEntities = adviceEntities.filter(entity => {
+      const title = (entity.title || '').toLowerCase();
+      const description = (entity.description || '').toLowerCase();
+      
+      // Use all entities - no hardcoded filtering
+      return true;
+    }).sort((a, b) => {
+      // Sort by relevance: exact title matches first, then by publish date (newest first)
+      const queryLower = query.toLowerCase();
+      const aTitle = (a.title || '').toLowerCase();
+      const bTitle = (b.title || '').toLowerCase();
+      
+      // Exact title match gets highest priority
+      if (aTitle.includes(queryLower) && !bTitle.includes(queryLower)) return -1;
+      if (bTitle.includes(queryLower) && !aTitle.includes(queryLower)) return 1;
+      
+      // Then by publish date (newest first)
+      const aDate = new Date(a.publish_date || '1900-01-01');
+      const bDate = new Date(b.publish_date || '1900-01-01');
+      return bDate - aDate;
+    });
+    
+    console.log(`📝 Filtered to ${relevantEntities.length} relevant entities`);
+    
+    // Calculate confidence based on filtered entities
+    if (chunks.length > 0) {
+      results.confidence = Math.min(0.9, 0.6 + (chunks.length * 0.1));
+      results.answerType = 'content';
+      console.log(`📊 Confidence from chunks: ${results.confidence} (${chunks.length} chunks)`);
+    }
+    
+    if (relevantEntities.length > 0) {
+      const eventEntities = relevantEntities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
+      if (eventEntities.length > 0) {
+        results.confidence = Math.max(results.confidence, 0.9);
+        results.answerType = 'events';
+        console.log(`🎯 Found ${eventEntities.length} event entities, confidence: ${results.confidence}`);
+      } else {
+        results.confidence = Math.max(results.confidence, 0.7);
+        console.log(`🎯 Found ${relevantEntities.length} advice entities, confidence: ${results.confidence}`);
+      }
+    }
+    
+    console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
+    
+    if (relevantEntities.length > 0) {
+      // Check if this is a policy/terms query (flexible pattern to handle typos)
+      const isPolicyQuery = /terms.*conditions|terms.*anc.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
+      
+      if (isPolicyQuery) {
+        // For policy queries, provide direct information
+        const policyEntity = relevantEntities.find(e => 
+          e.title.toLowerCase().includes('terms') || 
+          e.title.toLowerCase().includes('conditions') ||
+          e.title.toLowerCase().includes('policy')
+        ) || relevantEntities[0];
+        
+        answer = `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated.\n\nFor full details, visit the [Terms and Conditions page](${policyEntity.url}).`;
+        
+        type = "advice";
+        sources = [policyEntity.url];
+        console.log(`✅ Generated policy-specific answer for terms and conditions query`);
+      } else {
+        // Use the enhanced generateDirectAnswer function for intelligent concept synthesis
+        console.log(`🔍 DEBUG: Using generateDirectAnswer for enhanced concept synthesis`);
+        const directAnswer = generateDirectAnswer(query, relevantEntities, chunks);
+        if (directAnswer) {
+          answer = directAnswer;
+          console.log(`✅ Generated enhanced answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+        } else {
+          console.log(`⚠️ No enhanced answer found, trying fallback`);
+          // Fallback to description
+          const primaryEntity = relevantEntities[0];
+          answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
+          console.log(`✅ Generated fallback answer from description`);
+        }
+        
+        type = "advice";
+        sources = relevantEntities.map(e => e.url);
+        console.log(`✅ Generated enhanced answer from ${relevantEntities.length} relevant entities`);
+      }
+    } else {
+      console.log(`⚠️ No relevant entities found for query`);
+      // Don't generate a generic response here - let the fallback handle it
+      answer = "";
+    }
+  }
+  
+  return { answer, type, sources };
+}
+
+// Helper function to prepare RAG query parameters
+function prepareRagQuery(query) {
+  const keywords = extractKeywords(query);
+  console.log(`🔑 Extracted keywords: ${keywords.join(', ')}`);
+  
+  const lcQuery = (query || "").toLowerCase();
+  const isConceptQuery = lcQuery.includes('what is') || lcQuery.includes('what are') || lcQuery.includes('explain');
+  
+  // Extract primary keyword for guide article searches
+  const allKws = extractKeywords(query).map(k=>k.toLowerCase());
+  const stop = new Set(["what","when","where","how","which","the","a","an","your","you","next","is","are","do","i","me","my","course","workshop","lesson"]);
+  const primaryKeyword = (allKws.find(k => k.length >= 5 && !stop.has(k)) || allKws.find(k=>!stop.has(k)) || "").toLowerCase();
+  
+  return { keywords, lcQuery, isConceptQuery, primaryKeyword };
+}
+
+// Helper function to handle fallback responses
+function handleRagFallbackLogic(answer, type, sources, query) {
+  let finalAnswer = answer;
+  let finalType = type;
+  let finalSources = sources;
+  
+  if (!answer || answer.trim().length === 0 || 
+      answer.includes("Yes, Alan Ranger offers the services you're asking about") ||
+      (answer.includes("Yes, Alan Ranger") && answer.length < 200) ||
+      answer.includes("I'd be happy to help you with your photography questions")) {
+    console.log(`⚠️ No answer generated or generic response detected, providing fallback`);
+    const fallback = handleRagFallback(query);
+    finalAnswer = fallback.answer;
+    finalType = fallback.type;
+  }
+  
+  return { finalAnswer, finalType, finalSources };
+}
+
+function handleRagFallback(query) {
+  if (/tripod|equipment|gear|camera|lens/i.test(query.toLowerCase())) {
+    return {
+      answer: `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`,
+      type: "advice"
+    };
+  } else if (/refund|cancellation|policy/i.test(query.toLowerCase())) {
+    return {
+      answer: `Alan Ranger has a clear cancellation and refund policy for all courses and workshops. Here are the key details:\n\n**Cancellation Policy:**\n• Full refund if cancelled 14+ days before the event\n• 50% refund if cancelled 7-13 days before\n• No refund for cancellations within 7 days\n\n**Rescheduling:**\n• Free rescheduling if requested 7+ days in advance\n• Weather-related cancellations are fully refundable\n\nFor specific details or to discuss your situation, please contact Alan directly.\n\n*Contact Alan: https://www.alanranger.com/contact*`,
+      type: "advice"
+    };
+  } else {
+    return {
+      answer: `I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*`,
+      type: "advice"
+    };
+  }
+}
+
+// Helper function to assemble RAG result
+function assembleRagResult(results, finalAnswer, finalType, finalSources) {
+  return {
+    success: results.confidence >= 0.3 || finalAnswer.length > 0,
+    confidence: results.confidence >= 0.3 ? results.confidence : 0.6,
+    answer: finalAnswer,
+    type: finalType,
+    sources: finalSources,
+    structured: {
+      intent: finalType,
+      sources: finalSources,
+      events: [],
+      products: [],
+      articles: results.entities || []
+    },
+    totalMatches: results.totalMatches,
+    chunksFound: results.chunks.length,
+    entitiesFound: results.entities.length
+  };
+}
+
+async function tryRagFirst(client, query) {
+  console.log(`🔍 RAG-First attempt for: "${query}"`);
+  
+  // Check for contact Alan queries first
+  const contactResponse = checkContactAlanQuery(query);
+  if (contactResponse) {
+    return contactResponse;
+  }
+  
   const results = {
     chunks: [],
     entities: [],
@@ -6453,412 +6507,39 @@ async function tryRagFirst(client, query) {
   };
   
   try {
-    // Extract keywords for better search
-    const keywords = extractKeywords(query);
-    console.log(`🔑 Extracted keywords: ${keywords.join(', ')}`);
+    // Prepare query parameters
+    const { keywords, lcQuery, isConceptQuery, primaryKeyword } = prepareRagQuery(query);
     
-    // For concept queries like "what is exposure", prioritize guide/explanation content over workshop content
-    const lcQuery = (query || "").toLowerCase();
-    const isConceptQuery = lcQuery.includes('what is') || lcQuery.includes('what are') || lcQuery.includes('explain');
-    
-    // Extract primary keyword for guide article searches
-    const allKws = extractKeywords(query).map(k=>k.toLowerCase());
-    const stop = new Set(["what","when","where","how","which","the","a","an","your","you","next","is","are","do","i","me","my","course","workshop","lesson"]);
-    const primaryKeyword = (allKws.find(k => k.length >= 5 && !stop.has(k)) || allKws.find(k=>!stop.has(k)) || "").toLowerCase();
-    
-    // Search page_chunks for content with keywords
-    let chunks = [];
-    
-    // For concept queries like "what is exposure", prioritize guide articles
-    if (isConceptQuery) {
-      console.log(`🎯 Concept query detected: "${query}" - prioritizing guide articles`);
-      
-      // First, try to find specific guide articles
-      const { data: guideChunks, error: guideError } = await client
-        .from('page_chunks')
-        .select('url, title, chunk_text')
-        .ilike('url', `%what-is-${primaryKeyword}%`)
-        .limit(5);
-      
-      if (!guideError && guideChunks) {
-        chunks = [...chunks, ...guideChunks];
-        console.log(`🎯 Found ${guideChunks.length} specific guide chunks for "${primaryKeyword}"`);
-      }
-      
-      // Also try broader guide search
-      const { data: broaderGuideChunks, error: broaderError } = await client
-        .from('page_chunks')
-        .select('url, title, chunk_text')
-        .ilike('url', '%what-is-%')
-        .ilike('chunk_text', `%${primaryKeyword}%`)
-        .limit(3);
-      
-      if (!broaderError && broaderGuideChunks) {
-        chunks = [...chunks, ...broaderGuideChunks];
-        console.log(`🎯 Found ${broaderGuideChunks.length} broader guide chunks`);
-      }
-      
-      // If we found guide chunks, skip the general keyword search
-      if (chunks.length > 0) {
-        console.log(`🎯 Using ${chunks.length} guide chunks, skipping general search`);
-      } else {
-        console.log(`⚠️ No guide chunks found, falling back to general search`);
-      }
-    }
-    
-    // Only do general keyword search if we didn't find guide chunks
-    if (!isConceptQuery || chunks.length === 0) {
-      // Search with individual keywords (most important)
-      for (const keyword of keywords) {
-        const { data: keywordChunks, error: chunksError } = await client
-          .from('page_chunks')
-          .select('url, title, chunk_text')
-          .ilike('chunk_text', `%${keyword}%`)
-          .limit(3);
-        
-        if (!chunksError && keywordChunks) {
-          chunks = [...chunks, ...keywordChunks];
-        }
-      }
-    }
-    
-    // Also try the full query
-    const { data: fullQueryChunks, error: fullQueryError } = await client
-      .from('page_chunks')
-      .select('url, title, chunk_text')
-      .ilike('chunk_text', `%${query}%`)
-      .limit(2);
-    
-    if (!fullQueryError && fullQueryChunks) {
-      chunks = [...chunks, ...fullQueryChunks];
-    }
-    
-    // Remove duplicates
-    const uniqueChunks = chunks.filter((chunk, index, self) => 
-      index === self.findIndex(c => c.url === chunk.url)
-    );
-
-    // Enhanced relevance scoring with better filtering
-    
-    // For concept queries like "what is exposure", prioritize guide/explanation content over workshop content
-    const conceptKeywords = ['guide', 'explanation', 'tutorial', 'basics', 'beginner', 'learn', 'understanding'];
-    const workshopKeywords = ['workshop', 'course', 'event', 'booking', 'dates', 'location', 'participants'];
-    
-    // Enhanced keyword categories for better scoring
-    const equipmentKeywords = ["tripod","head","ball head","carbon","aluminium","manfrotto","gitzo","benro","sirui","three legged","levelling","camera","lens","filter","flash"];
-    const technicalKeywords = ["iso","aperture","shutter","exposure","focus","composition","lighting","settings","technique","tips","advice"];
-    const offTopicHints = ["/photographic-workshops","/course","calendar","/events/","ics","google calendar","/book","/contact","/gallery"];
-    
-    function scoreChunk(c){
-      return calculateChunkScore(c, primaryKeyword, equipmentKeywords, technicalKeywords, lcQuery, offTopicHints);
-    }
-
-    results.chunks = uniqueChunks
-      .map(c => {
-        const score = scoreChunk(c);
-        
-        // For concept queries, boost score for guide/explanation content and penalize workshop content
-        let adjustedScore = score;
-        if (isConceptQuery) {
-          const url = (c.url||"").toLowerCase();
-          const title = (c.title||"").toLowerCase();
-          const text = (c.chunk_text||"").toLowerCase();
-          
-          // Boost score for concept-related content
-          if (conceptKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
-            adjustedScore += 2.0;
-          }
-          
-          // Penalize workshop/event content for concept queries
-          if (workshopKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
-            adjustedScore -= 1.5;
-          }
-          
-          // Extra penalty for workshop URLs
-          if (url.includes('/photographic-workshops') || url.includes('/photo-workshops') || url.includes('/events/')) {
-            adjustedScore -= 2.0;
-          }
-        }
-        
-        return {...c, __score: adjustedScore};
-      })
-      // Hard requirement: if we detected a primary keyword, ensure it exists in title/text/url
-      .filter(c => {
-        if (!primaryKeyword) return c.__score > 0;
-        const url = (c.url||"").toLowerCase();
-        const title = (c.title||"").toLowerCase();
-        const text = (c.chunk_text||"").toLowerCase();
-        
-        // Check if primary keyword appears in URL, title, or text content
-        let hasPrimaryStrong = url.includes(primaryKeyword) || title.includes(primaryKeyword) || text.includes(primaryKeyword);
-        
-        // Extra hardening for equipment-style nouns
-        const equipNouns = ["tripod","ball head","ballhead","head","gitzo","benro","manfrotto","sirui"];
-        if (equipNouns.some(n => primaryKeyword.includes(n))) {
-          const slugMatch = [primaryKeyword.replace(/\s+/g,'-'), primaryKeyword.replace(/\s+/g,'')];
-          if (!(hasPrimaryStrong || slugMatch.some(s => url.includes(s) || title.includes(s)))) {
-            return false;
-          }
-        }
-        return hasPrimaryStrong && c.__score > 0;
-      })
-      .sort((a,b)=> b.__score - a.__score)
-      .slice(0, 5);
-    
+    // Search for content chunks
+    const chunks = await searchRagContent(client, query, keywords, isConceptQuery, primaryKeyword);
+    results.chunks = scoreAndFilterChunks(chunks, primaryKeyword, lcQuery, isConceptQuery);
     console.log(`📄 Found ${results.chunks.length} relevant chunks`);
     
-    // Debug logging
-    console.log(`🔍 DEBUG: Found ${results.chunks.length} chunks after scoring and filtering`);
-    if (results.chunks.length > 0) {
-      console.log(`🔍 DEBUG: First chunk preview: "${results.chunks[0].chunk_text?.substring(0, 100)}..."`);
-    }
-    
-    // Search page_entities for events/services using keywords
-    let entities = [];
-    
-    // For concept queries, prioritize guide articles
-    if (isConceptQuery) {
-      console.log(`🎯 Searching for guide articles for concept query`);
-      const { data: guideArticles, error: guideError } = await client
-        .from('page_entities')
-        .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
-        .ilike('url', `%what-is-${primaryKeyword}%`)
-        .eq('kind', 'article')
-        .limit(5);
-      
-      if (!guideError && guideArticles) {
-        console.log(`🎯 Found ${guideArticles.length} guide articles`);
-        guideArticles.forEach(e => console.log(`  - "${e.title}" (${e.url})`));
-        entities = [...entities, ...guideArticles];
-        results.entities = guideArticles;
-      }
-    }
-    
-    // For "who is" queries, also search for "about" to find biographical content
-    const searchKeywords = [...keywords];
-    if (/who.*is|who.*are|tell.*about|background|experience/i.test(query)) {
-      searchKeywords.push('about');
-    }
-    
-    // Search for all keywords at once with higher limit for better coverage
-    console.log(`🔍 Searching for all keywords: ${searchKeywords.join(', ')}`);
-    const { data: keywordEntities, error: entitiesError } = await client
-      .from('page_entities')
-      .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
-      .or(searchKeywords.map(k => `title.ilike.%${k}%,description.ilike.%${k}%,location.ilike.%${k}%`).join(','))
-      .eq('kind', 'article')  // Only return articles for the articles array
-      .limit(25);
-    
-    if (entitiesError) {
-      console.error(`❌ Entity search error:`, entitiesError);
-    } else if (keywordEntities) {
-      console.log(`📄 Found ${keywordEntities.length} entities for all keywords`);
-      keywordEntities.forEach(e => console.log(`  - "${e.title}" (${e.kind})`));
-      entities = [...entities, ...keywordEntities];
-    } else {
-      console.log(`📄 No entities found for keywords`);
-    }
-    
-    // Also try the full query
-    const { data: fullQueryEntities, error: fullQueryEntitiesError } = await client
-      .from('page_entities')
-      .select('url, title, description, meta_description, location, date_start, kind')
-      .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
-      .eq('kind', 'article')  // Only return articles for the articles array
-      .limit(15);
-    
-    if (!fullQueryEntitiesError && fullQueryEntities) {
-      entities = [...entities, ...fullQueryEntities];
-    }
-    
-    // Remove duplicates
-    entities = entities.filter((entity, index, self) => 
-      index === self.findIndex(e => e.url === entity.url)
-    );
-    
-    // Don't overwrite guide articles for concept queries
-    if (!isConceptQuery || results.entities.length === 0) {
-      results.entities = entities || [];
-    } else {
-      console.log(`🎯 Keeping ${results.entities.length} guide articles for concept query`);
-    }
+    // Search for entities
+    const entities = await searchRagEntities(client, query, keywords, isConceptQuery, primaryKeyword);
+    results.entities = entities || [];
     console.log(`🏷️ Found ${results.entities.length} relevant entities`);
-    if (results.entities.length > 0) {
-      console.log(`🏷️ Entity titles:`, results.entities.map(e => e.title));
-      console.log(`🏷️ Entity kinds:`, results.entities.map(e => e.kind));
-      console.log(`🏷️ Entity URLs:`, results.entities.map(e => e.url));
-    }
     
-    // Calculate confidence and determine answer type (will be recalculated after filtering)
+    // Calculate confidence and determine answer type
     results.totalMatches = results.chunks.length + results.entities.length;
     results.confidence = 0;
     results.answerType = 'none';
     
-    // Generate answer
-    let answer = "";
-    let type = "advice";
-    let sources = [];
+    // Generate answer using helper function
+    const { answer, type, sources } = generateRagAnswer(query, results.entities, results.chunks, results);
     
-    if (results.answerType === 'events' && results.entities.length > 0) {
-      const eventEntities = results.entities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
-      if (eventEntities.length > 0) {
-        answer = eventEntities.map(e => `${e.title} on ${new Date(e.date_start).toDateString()} at ${e.location}. More info: ${e.url}`).join("\n");
-        type = "events";
-        sources = eventEntities.map(e => e.url);
-      }
-    } else if (results.chunks.length > 0) {
-      // Use generateDirectAnswer for intelligent concept synthesis
-      console.log(`🔍 Using generateDirectAnswer for ${results.chunks.length} chunks`);
-      const directAnswer = generateDirectAnswer(query, results.entities, results.chunks);
-      if (directAnswer) {
-        answer = directAnswer;
-        console.log(`✅ Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
-      } else {
-        console.log(`⚠️ No intelligent answer found, using fallback chunk processing`);
-        // Fallback to direct chunk processing
-        const cleaned = results.chunks
-          .map(c => {
-            const cleanedText = cleanRagText(c.chunk_text);
-            console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
-            return cleanedText;
-          })
-          .filter(Boolean);
-        console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
-        answer = cleaned.join("\n\n");
-        // Cap final answer length for UI readability - much shorter for better UX
-        const MAX_LEN = 800;
-        if (answer.length > MAX_LEN) {
-          answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
-        }
-      }
-      type = "advice";
-      sources = results.chunks.map(c => c.url);
-    } else if (results.entities.length > 0) {
-      // Handle entities for advice queries (non-event entities)
-      console.log(`🔍 Found ${results.entities.length} entities, kinds:`, results.entities.map(e => e.kind));
-      const adviceEntities = results.entities.filter(e => e.kind !== 'event');
-      console.log(`📝 Filtered to ${adviceEntities.length} advice entities`);
-      
-      // Check if entities are relevant to the query
-      console.log(`🔍 Filtering ${adviceEntities.length} entities for query: "${query}"`);
-      const relevantEntities = adviceEntities.filter(entity => {
-        const title = (entity.title || '').toLowerCase();
-        const description = (entity.description || '').toLowerCase();
-        
-        // Use all entities - no hardcoded filtering
-        return true;
-      }).sort((a, b) => {
-        // Sort by relevance: exact title matches first, then by publish date (newest first)
-        const queryLower = query.toLowerCase();
-        const aTitle = (a.title || '').toLowerCase();
-        const bTitle = (b.title || '').toLowerCase();
-        
-        // Exact title match gets highest priority
-        if (aTitle.includes(queryLower) && !bTitle.includes(queryLower)) return -1;
-        if (bTitle.includes(queryLower) && !aTitle.includes(queryLower)) return 1;
-        
-        // Then by publish date (newest first)
-        const aDate = new Date(a.publish_date || '1900-01-01');
-        const bDate = new Date(b.publish_date || '1900-01-01');
-        return bDate - aDate;
-      });
-      
-      console.log(`📝 Filtered to ${relevantEntities.length} relevant entities`);
-      
-      // Calculate confidence based on filtered entities
-      if (results.chunks.length > 0) {
-        results.confidence = Math.min(0.9, 0.6 + (results.chunks.length * 0.1));
-        results.answerType = 'content';
-        console.log(`📊 Confidence from chunks: ${results.confidence} (${results.chunks.length} chunks)`);
-      }
-      
-      if (relevantEntities.length > 0) {
-        const eventEntities = relevantEntities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
-        if (eventEntities.length > 0) {
-          results.confidence = Math.max(results.confidence, 0.9);
-          results.answerType = 'events';
-          console.log(`🎯 Found ${eventEntities.length} event entities, confidence: ${results.confidence}`);
-        } else {
-          results.confidence = Math.max(results.confidence, 0.7);
-          console.log(`🎯 Found ${relevantEntities.length} advice entities, confidence: ${results.confidence}`);
-        }
-      }
-      
-      console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
-      
-      if (relevantEntities.length > 0) {
-        // Check if this is a policy/terms query (flexible pattern to handle typos)
-        const isPolicyQuery = /terms.*conditions|terms.*anc.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
-        
-        if (isPolicyQuery) {
-          // For policy queries, provide direct information
-          const policyEntity = relevantEntities.find(e => 
-            e.title.toLowerCase().includes('terms') || 
-            e.title.toLowerCase().includes('conditions') ||
-            e.title.toLowerCase().includes('policy')
-          ) || relevantEntities[0];
-          
-          answer = `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated.\n\nFor full details, visit the [Terms and Conditions page](${policyEntity.url}).`;
-          
-          type = "advice";
-          sources = [policyEntity.url];
-          console.log(`✅ Generated policy-specific answer for terms and conditions query`);
-        } else {
-          // Use the enhanced generateDirectAnswer function for intelligent concept synthesis
-          console.log(`🔍 DEBUG: Using generateDirectAnswer for enhanced concept synthesis`);
-          const directAnswer = generateDirectAnswer(query, relevantEntities, results.chunks);
-          if (directAnswer) {
-            answer = directAnswer;
-            console.log(`✅ Generated enhanced answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
-          } else {
-            console.log(`⚠️ No enhanced answer found, trying fallback`);
-            // Fallback to description
-            const primaryEntity = relevantEntities[0];
-            answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
-            console.log(`✅ Generated fallback answer from description`);
-          }
-          
-          type = "advice";
-          sources = relevantEntities.map(e => e.url);
-          console.log(`✅ Generated enhanced answer from ${relevantEntities.length} relevant entities`);
-        }
-      } else {
-        console.log(`⚠️ No relevant entities found for query`);
-        // Don't generate a generic response here - let the fallback handle it
-        answer = "";
-      }
-    }
-    
-    // If no answer generated OR answer is too generic, provide a helpful fallback
-    if (!answer || answer.trim().length === 0 || 
-        answer.includes("Yes, Alan Ranger offers the services you're asking about") ||
-        (answer.includes("Yes, Alan Ranger") && answer.length < 200) ||
-        answer.includes("I'd be happy to help you with your photography questions")) {
-      console.log(`⚠️ No answer generated or generic response detected, providing fallback`);
-      
-      // No hardcoded overrides - let the system work naturally
-      
-      if (/tripod|equipment|gear|camera|lens/i.test(query.toLowerCase())) {
-        answer = `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`;
-        type = "advice";
-      } else if (/refund|cancellation|policy/i.test(query.toLowerCase())) {
-        answer = `Alan Ranger has a clear cancellation and refund policy for all courses and workshops. Here are the key details:\n\n**Cancellation Policy:**\n• Full refund if cancelled 14+ days before the event\n• 50% refund if cancelled 7-13 days before\n• No refund for cancellations within 7 days\n\n**Rescheduling:**\n• Free rescheduling if requested 7+ days in advance\n• Weather-related cancellations are fully refundable\n\nFor specific details or to discuss your situation, please contact Alan directly.\n\n*Contact Alan: https://www.alanranger.com/contact*`;
-        type = "advice";
-      } else {
-        answer = `I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*`;
-        type = "advice";
-      }
-    }
+    // Handle fallback cases
+    const { finalAnswer, finalType, finalSources } = handleRagFallbackLogic(answer, type, sources, query);
     
     return {
-      success: results.confidence >= 0.3 || answer.length > 0,
+      success: results.confidence >= 0.3 || finalAnswer.length > 0,
       confidence: results.confidence >= 0.3 ? results.confidence : 0.6,
-      answer: answer,
-      type: type,
-      sources: sources,
+      answer: finalAnswer,
+      type: finalType,
+      sources: finalSources,
       structured: {
-        intent: type,
-        sources: sources,
+        intent: finalType,
+        sources: finalSources,
         events: [],
         products: [],
         articles: results.entities || []

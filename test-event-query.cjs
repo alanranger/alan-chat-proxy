@@ -57,3 +57,12 @@ function testEventQuery() {
 
 console.log('🔍 Testing event query...\n');
 testEventQuery();
+
+
+
+
+
+
+
+
+
