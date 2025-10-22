@@ -1662,12 +1662,12 @@ function filterAndFormatServiceTypes(serviceTypes) {
 // Helper function to add service options to array
 function addServiceOptionsToArray(options, meaningfulTypes) {
   for (const type of meaningfulTypes) {
-    options.push({
+          options.push({
       text: type,
       query: type.toLowerCase()
-    });
-  }
-}
+          });
+        }
+    }
 
 function addServiceOptions(options, serviceTypes) {
   const meaningfulTypes = filterAndFormatServiceTypes(serviceTypes);
@@ -1691,46 +1691,46 @@ function deduplicateAndLimitOptions(options) {
 
 // Helper function to log evidence debug information
 function logEvidenceDebug(evidence) {
-  const evidenceDebug = {
-    eventsCount: evidence.events?.length || 0,
-    articlesCount: evidence.articles?.length || 0,
-    servicesCount: evidence.services?.length || 0,
-    sampleEvents: evidence.events?.slice(0, 2) || []
-  };
-  console.log('🔍 Evidence debug:', evidenceDebug);
+    const evidenceDebug = {
+      eventsCount: evidence.events?.length || 0,
+      articlesCount: evidence.articles?.length || 0,
+      servicesCount: evidence.services?.length || 0,
+      sampleEvents: evidence.events?.slice(0, 2) || []
+    };
+    console.log('🔍 Evidence debug:', evidenceDebug);
 }
-
+    
 // Helper function to process event evidence
 function processEventEvidence(evidence, options) {
-  if (evidence.events && evidence.events.length > 0) {
-    const { eventTypes, eventCategories } = extractEventTypesAndCategories(evidence.events);
-    const eventDebug = { eventTypes: Array.from(eventTypes), eventCategories: Array.from(eventCategories) };
-    console.log('🔍 Event types and categories:', eventDebug);
-    addEventOptions(options, eventTypes, eventCategories);
-    
-    // If we have good event options, skip services to avoid generic options
-    if (options.length > 0) {
-      console.log('🔍 Found event-based options, skipping services');
+    if (evidence.events && evidence.events.length > 0) {
+      const { eventTypes, eventCategories } = extractEventTypesAndCategories(evidence.events);
+      const eventDebug = { eventTypes: Array.from(eventTypes), eventCategories: Array.from(eventCategories) };
+      console.log('🔍 Event types and categories:', eventDebug);
+      addEventOptions(options, eventTypes, eventCategories);
+      
+      // If we have good event options, skip services to avoid generic options
+      if (options.length > 0) {
+        console.log('🔍 Found event-based options, skipping services');
       return true; // Indicates we should return early
-    }
+      }
   }
   return false;
-}
-
+    }
+    
 // Helper function to process article evidence
 function processArticleEvidence(evidence, options) {
-  if (evidence.articles && evidence.articles.length > 0) {
-    const { articleCategories, articleTags } = extractArticleCategoriesAndTags(evidence.articles);
-    addArticleOptions(options, articleCategories, articleTags);
+    if (evidence.articles && evidence.articles.length > 0) {
+      const { articleCategories, articleTags } = extractArticleCategoriesAndTags(evidence.articles);
+      addArticleOptions(options, articleCategories, articleTags);
   }
-}
-
+    }
+    
 // Helper function to process service evidence (fallback)
 function processServiceEvidence(evidence, options) {
-  if (evidence.services && evidence.services.length > 0 && options.length === 0) {
-    console.log('🔍 No event options found, falling back to services');
-    const serviceTypes = extractServiceTypes(evidence.services);
-    addServiceOptions(options, serviceTypes);
+    if (evidence.services && evidence.services.length > 0 && options.length === 0) {
+      console.log('🔍 No event options found, falling back to services');
+      const serviceTypes = extractServiceTypes(evidence.services);
+      addServiceOptions(options, serviceTypes);
   }
 }
 
@@ -1897,15 +1897,18 @@ function checkSuppressedPatterns(lc) {
   return "continue";
 }
   
-function checkCourseWorkshopPatterns(lc) {
+// Helper function to check course patterns
+function checkCoursePatterns(lc) {
   if ((lc.includes("do you do") && lc.includes("courses")) || 
       lc.includes("what courses") || 
       lc.includes("do you offer courses")) {
     return generateCourseClarification();
   }
+  return null;
+  }
   
-  // Enhanced workshop pattern matching to catch more variations
-  // Match any query that contains "workshop" and doesn't contain specific duration indicators
+// Helper function to check workshop patterns
+function checkWorkshopPatterns(lc) {
   if (lc.includes("workshop") && 
       !lc.includes("2.5hr") && 
       !lc.includes("4hr") && 
@@ -1916,10 +1919,11 @@ function checkCourseWorkshopPatterns(lc) {
       !lc.includes("long")) {
     return generateWorkshopClarification();
   }
+  return null;
+  }
   
-  // Note: Follow-up workshop queries (like "short photography workshops 2-4 hours") 
-  // should NOT match here - they should go to evidence-based clarification instead
-  
+// Helper function to check lessons patterns
+function checkLessonsPatterns(lc) {
   if (lc.includes("do you offer") && lc.includes("lessons")) {
     return {
       type: "lessons_clarification",
@@ -1932,6 +1936,21 @@ function checkCourseWorkshopPatterns(lc) {
       ]
     };
   }
+  return null;
+}
+
+function checkCourseWorkshopPatterns(lc) {
+  // Check course patterns first
+  const courseResult = checkCoursePatterns(lc);
+  if (courseResult) return courseResult;
+  
+  // Check workshop patterns
+  const workshopResult = checkWorkshopPatterns(lc);
+  if (workshopResult) return workshopResult;
+  
+  // Check lessons patterns
+  const lessonsResult = checkLessonsPatterns(lc);
+  if (lessonsResult) return lessonsResult;
   
   return null;
 }
@@ -2242,8 +2261,8 @@ function checkCourseClarificationPatterns(query) {
     }
   }
   return null;
-}
-
+  }
+  
 // Helper function to check contact Alan patterns
 function checkContactAlanPatterns(query) {
   const contactAlanPatterns = [
@@ -2275,8 +2294,8 @@ function checkContactAlanPatterns(query) {
     }
   }
   return null;
-}
-
+  }
+  
 // Helper function to check workshop patterns
 function checkWorkshopPatterns(query) {
   const workshopPatterns = [
@@ -2327,8 +2346,8 @@ function checkWorkshopPatterns(query) {
     }
   }
   return null;
-}
-
+  }
+  
 // Helper function to check private lessons patterns
 function checkPrivateLessonsPatterns(query) {
   const privateLessonsPatterns = [
@@ -2348,7 +2367,7 @@ function checkPrivateLessonsPatterns(query) {
     }
   }
   return null;
-}
+  }
 
 // Helper function to check direct answer patterns
 function checkDirectAnswerPatterns(query) {
@@ -2538,8 +2557,8 @@ function checkDirectAnswerPatterns(query) {
     }
   }
   return null;
-}
-
+  }
+  
 // Helper function to check clarification patterns
 function checkClarificationPatterns(query) {
   const clarificationPatterns = [
@@ -2662,8 +2681,8 @@ async function checkEvidenceBasedClarification(client, query, pageContext, lc, c
     console.log(`❌ No evidence-based clarification for: "${lc}"`);
   }
   return null;
-}
-
+  }
+  
 // Helper function to check all pattern groups
 function checkAllPatternGroups(lc, confidence) {
   // Check suppressed patterns
@@ -2863,7 +2882,7 @@ function normalizeQueryText(enhancedKeywords) {
   queryText = queryText.replace(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/g, '2-5-days');
   return queryText;
 }
-
+  
 // Helper: Handle duration-based queries
 async function handleDurationQueries(client, queryText, limit) {
   // Check for 2.5hrs-4hrs workshops (normalized)
@@ -3012,17 +3031,17 @@ function normalizeCategories(rawCategories) {
 
 // Helper: Extract Batsford session times
 function extractBatsfordTimes(productDesc) {
-  const morningMatch = productDesc.match(/morning workshops are (\d+)\s*am to (\d+)\.(\d+)\s*am/i);
-  const afternoonMatch = productDesc.match(/afternoon workshops are from (\d+):(\d+)\s*pm to (\d+):(\d+)\s*pm/i);
-  
-  if (morningMatch && afternoonMatch) {
+              const morningMatch = productDesc.match(/morning workshops are (\d+)\s*am to (\d+)\.(\d+)\s*am/i);
+              const afternoonMatch = productDesc.match(/afternoon workshops are from (\d+):(\d+)\s*pm to (\d+):(\d+)\s*pm/i);
+              
+              if (morningMatch && afternoonMatch) {
     const earlyEndTime = `${morningMatch[2].padStart(2, '0')}:${morningMatch[3].padStart(2, '0')}:00`;
     const lateStartTime = `${afternoonMatch[1].padStart(2, '0')}:${afternoonMatch[2].padStart(2, '0')}:00`;
-    const pmHour = parseInt(afternoonMatch[3]);
-    const pmMinute = afternoonMatch[4];
-    const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
+                const pmHour = parseInt(afternoonMatch[3]);
+                const pmMinute = afternoonMatch[4];
+                const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
     const lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
-    console.log(`🔍 Extracted Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
+                console.log(`🔍 Extracted Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
     return { earlyEndTime, lateStartTime, lateEndTime };
   }
   return null;
@@ -3030,16 +3049,16 @@ function extractBatsfordTimes(productDesc) {
 
 // Helper: Extract Bluebell session times
 function extractBluebellTimes(productDesc) {
-  const sessionMatch = productDesc.match(/(\d+):(\d+)\s*am to (\d+):(\d+)\s*am or (\d+):(\d+)\s*am to (\d+):(\d+)\s*pm/i);
-  
-  if (sessionMatch) {
+              const sessionMatch = productDesc.match(/(\d+):(\d+)\s*am to (\d+):(\d+)\s*am or (\d+):(\d+)\s*am to (\d+):(\d+)\s*pm/i);
+              
+              if (sessionMatch) {
     const earlyEndTime = `${sessionMatch[3].padStart(2, '0')}:${sessionMatch[4].padStart(2, '0')}:00`;
     const lateStartTime = `${sessionMatch[5].padStart(2, '0')}:${sessionMatch[6].padStart(2, '0')}:00`;
-    const pmHour = parseInt(sessionMatch[7]);
-    const pmMinute = sessionMatch[8];
-    const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
+                const pmHour = parseInt(sessionMatch[7]);
+                const pmMinute = sessionMatch[8];
+                const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
     const lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
-    console.log(`🔍 Extracted Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
+                console.log(`🔍 Extracted Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
     return { earlyEndTime, lateStartTime, lateEndTime };
   }
   return null;
@@ -3056,7 +3075,7 @@ function extractSessionTimes(event) {
     return extractBluebellTimes(productDesc);
   }
   
-  console.log(`🔍 No specific session time extraction for ${event.event_title}`);
+              console.log(`🔍 No specific session time extraction for ${event.event_title}`);
   return null;
 }
 
@@ -3067,32 +3086,32 @@ function createSessionEntries(event, categoryType, sessionTimes) {
   const actualEndTime = event.end_time || '15:30:00';
   
   if (categoryType === '2.5hrs-4hrs') {
-    const earlySession = {
-      ...event,
-      session_type: 'early',
+            const earlySession = {
+              ...event,
+              session_type: 'early',
       start_time: actualStartTime,
       end_time: earlyEndTime,
-      categories: ['2.5hrs-4hrs'],
-      event_title: `${event.event_title} (Early Session)`
-    };
-    const lateSession = {
-      ...event,
-      session_type: 'late',
+              categories: ['2.5hrs-4hrs'],
+              event_title: `${event.event_title} (Early Session)`
+            };
+            const lateSession = {
+              ...event,
+              session_type: 'late',
       start_time: lateStartTime,
       end_time: lateEndTime,
-      categories: ['2.5hrs-4hrs'],
-      event_title: `${event.event_title} (Late Session)`
-    };
+              categories: ['2.5hrs-4hrs'],
+              event_title: `${event.event_title} (Late Session)`
+            };
     return [earlySession, lateSession];
-  } else if (categoryType === '1-day') {
-    const fullDaySession = {
-      ...event,
-      session_type: 'full-day',
+          } else if (categoryType === '1-day') {
+            const fullDaySession = {
+              ...event,
+              session_type: 'full-day',
       start_time: actualStartTime,
       end_time: actualEndTime,
-      categories: ['1-day'],
-      event_title: `${event.event_title} (Full Day)`
-    };
+              categories: ['1-day'],
+              event_title: `${event.event_title} (Full Day)`
+            };
     return [fullDaySession];
   }
   
@@ -3132,14 +3151,14 @@ function processEvents(allEvents, categoryType) {
         // Multi-session event
         const sessionEntries = processMultiSessionEvent(event, categoryType);
         filteredEvents.push(...sessionEntries);
-      } else {
+        } else {
         // Single category event
         const singleEntries = processSingleEvent(event);
         filteredEvents.push(...singleEntries);
+        }
       }
-    }
-  });
-  
+    });
+
   return filteredEvents;
 }
 
@@ -3169,16 +3188,16 @@ async function fetchEventsFromDatabase(client) {
 
 // Helper: Process and return final results
 function processAndReturnResults(filteredEvents, categoryType, limit) {
-  console.log(`🔍 Filtered ${filteredEvents.length} events for category: ${categoryType}`);
-  
-  // Deduplicate by event_url + session_type (since we now have multiple entries per URL)
-  const deduped = dedupeEventsByKey(filteredEvents, 'event_url', 'session_type');
-  // Ensure chronological order is preserved after deduplication
-  deduped.sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
-  
-  // Apply the original limit after deduplication
-  const limitedDeduped = deduped.slice(0, limit);
-  return mapEventsData(limitedDeduped);
+    console.log(`🔍 Filtered ${filteredEvents.length} events for category: ${categoryType}`);
+    
+    // Deduplicate by event_url + session_type (since we now have multiple entries per URL)
+    const deduped = dedupeEventsByKey(filteredEvents, 'event_url', 'session_type');
+    // Ensure chronological order is preserved after deduplication
+    deduped.sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
+    
+    // Apply the original limit after deduplication
+    const limitedDeduped = deduped.slice(0, limit);
+    return mapEventsData(limitedDeduped);
 }
 
 async function findEventsByDuration(client, categoryType, limit = 100) {
@@ -5424,7 +5443,7 @@ async function handleResidentialPricingGuard(client, query, previousQuery, pageC
  */
 // Helper function to extract duration category from query
 function extractDurationCategory(query) {
-  const qlc = String(query || '').toLowerCase();
+    const qlc = String(query || '').toLowerCase();
   if (qlc.includes('2.5hrs-4hrs')) return '2.5hrs-4hrs';
   if (qlc.includes('1-day')) return '1-day';
   if (qlc.includes('2-5-days')) return '2-5-days';
@@ -5433,50 +5452,50 @@ function extractDurationCategory(query) {
 
 // Helper function to handle direct duration routing
 async function handleDirectDurationRouting(client, query, keywords, durationCategory, res, debugInfo) {
-  const eventsDirect = await findEventsByDuration(client, durationCategory, 120);
-  const eventListDirect = formatEventsForUi(eventsDirect);
-  const confidenceDirect = calculateEventConfidence(query || "", eventListDirect, null);
+      const eventsDirect = await findEventsByDuration(client, durationCategory, 120);
+      const eventListDirect = formatEventsForUi(eventsDirect);
+      const confidenceDirect = calculateEventConfidence(query || "", eventListDirect, null);
   
-  res.status(200).json({
-    ok: true,
-    type: "events",
-    answer: eventListDirect,
-    answer_markdown: `I found ${eventListDirect.length} ${eventListDirect.length === 1 ? 'event' : 'events'} that match your query. These ${eventListDirect.length === 1 ? 'is' : 'are'} ${durationCategory} ${eventListDirect.length === 1 ? 'event' : 'events'} with experienced instruction and hands-on learning opportunities.`,
-    events: eventListDirect,
-    structured: {
-      intent: "events",
-      topic: (keywords || []).join(", "),
-      events: eventListDirect,
-      products: [],
-      pills: []
-    },
-    confidence: confidenceDirect,
-    debug: { version: "v1.3.20-expanded-classification", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
-  });
-  return true;
-}
+      res.status(200).json({
+        ok: true,
+        type: "events",
+        answer: eventListDirect,
+        answer_markdown: `I found ${eventListDirect.length} ${eventListDirect.length === 1 ? 'event' : 'events'} that match your query. These ${eventListDirect.length === 1 ? 'is' : 'are'} ${durationCategory} ${eventListDirect.length === 1 ? 'event' : 'events'} with experienced instruction and hands-on learning opportunities.`,
+        events: eventListDirect,
+        structured: {
+          intent: "events",
+          topic: (keywords || []).join(", "),
+          events: eventListDirect,
+          products: [],
+          pills: []
+        },
+        confidence: confidenceDirect,
+        debug: { version: "v1.3.20-expanded-classification", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
+      });
+      return true;
+    }
 
 // Helper function to handle clarification response
 async function handleClarificationResponse(query, client, pageContext, res, debugInfo) {
-  const clarification = await generateClarificationQuestion(query, client, pageContext);
-  if (clarification) {
-    const confidencePercent = clarification.confidence || 20;
-    res.status(200).json({
-      ok: true,
-      type: "clarification",
-      answer: clarification.question,
-      answer_markdown: clarification.question,
-      clarification: clarification.question,
-      question: clarification.question,
-      options: clarification.options,
-      confidence: confidencePercent,
-      debug: { version: "v1.3.20-expanded-classification", intent: debugInfo?.intent || "events", timestamp: new Date().toISOString() }
-    });
-    return true;
-  }
+    const clarification = await generateClarificationQuestion(query, client, pageContext);
+    if (clarification) {
+      const confidencePercent = clarification.confidence || 20;
+      res.status(200).json({
+        ok: true,
+        type: "clarification",
+        answer: clarification.question,
+        answer_markdown: clarification.question,
+        clarification: clarification.question,
+        question: clarification.question,
+        options: clarification.options,
+        confidence: confidencePercent,
+        debug: { version: "v1.3.20-expanded-classification", intent: debugInfo?.intent || "events", timestamp: new Date().toISOString() }
+      });
+      return true;
+    }
   return false;
-}
-
+  }
+  
 // Helper function to send final events response
 function sendEventsResponse(eventList, query, keywords, confidence, res, debugInfo) {
   res.status(200).json({
@@ -5493,13 +5512,13 @@ function sendEventsResponse(eventList, query, keywords, confidence, res, debugIn
       pills: []
     },
     confidence,
-    debug: {
-      version: "v1.3.20-expanded-classification",
-      debugInfo: debugInfo,
-      timestamp: new Date().toISOString(),
-      queryText: query,
-      keywords: keywords
-    }
+        debug: {
+          version: "v1.3.20-expanded-classification",
+          debugInfo: debugInfo,
+          timestamp: new Date().toISOString(),
+          queryText: query,
+          keywords: keywords
+        }
   });
 }
 
@@ -6224,8 +6243,8 @@ function fixTruncatedText(text) {
     }
   }
   return text;
-}
-
+  }
+  
 // Helper function to find intro patterns
 function findIntroPattern(text) {
   const introPatterns = [
@@ -6350,30 +6369,30 @@ function checkContactAlanQuery(query) {
 
 // Helper function to search for specific guide articles
 async function searchSpecificGuideArticles(client, primaryKeyword) {
-  const { data: guideChunks, error: guideError } = await client
-    .from('page_chunks')
-    .select('url, title, chunk_text')
-    .ilike('url', `%what-is-${primaryKeyword}%`)
-    .limit(5);
-  
-  if (!guideError && guideChunks) {
-    console.log(`🎯 Found ${guideChunks.length} specific guide chunks for "${primaryKeyword}"`);
+    const { data: guideChunks, error: guideError } = await client
+      .from('page_chunks')
+      .select('url, title, chunk_text')
+      .ilike('url', `%what-is-${primaryKeyword}%`)
+      .limit(5);
+    
+    if (!guideError && guideChunks) {
+      console.log(`🎯 Found ${guideChunks.length} specific guide chunks for "${primaryKeyword}"`);
     return guideChunks;
   }
   return [];
-}
-
+    }
+    
 // Helper function to search for broader guide articles
 async function searchBroaderGuideArticles(client, primaryKeyword) {
-  const { data: broaderGuideChunks, error: broaderError } = await client
-    .from('page_chunks')
-    .select('url, title, chunk_text')
-    .ilike('url', '%what-is-%')
-    .ilike('chunk_text', `%${primaryKeyword}%`)
-    .limit(3);
-  
-  if (!broaderError && broaderGuideChunks) {
-    console.log(`🎯 Found ${broaderGuideChunks.length} broader guide chunks`);
+    const { data: broaderGuideChunks, error: broaderError } = await client
+      .from('page_chunks')
+      .select('url, title, chunk_text')
+      .ilike('url', '%what-is-%')
+      .ilike('chunk_text', `%${primaryKeyword}%`)
+      .limit(3);
+    
+    if (!broaderError && broaderGuideChunks) {
+      console.log(`🎯 Found ${broaderGuideChunks.length} broader guide chunks`);
     return broaderGuideChunks;
   }
   return [];
@@ -6382,20 +6401,20 @@ async function searchBroaderGuideArticles(client, primaryKeyword) {
 // Helper function to search with keywords
 async function searchWithKeywords(client, keywords) {
   let chunks = [];
-  for (const keyword of keywords) {
-    const { data: keywordChunks, error: chunksError } = await client
-      .from('page_chunks')
-      .select('url, title, chunk_text')
-      .ilike('chunk_text', `%${keyword}%`)
-      .limit(3);
-    
-    if (!chunksError && keywordChunks) {
-      chunks = [...chunks, ...keywordChunks];
+    for (const keyword of keywords) {
+      const { data: keywordChunks, error: chunksError } = await client
+        .from('page_chunks')
+        .select('url, title, chunk_text')
+        .ilike('chunk_text', `%${keyword}%`)
+        .limit(3);
+      
+      if (!chunksError && keywordChunks) {
+        chunks = [...chunks, ...keywordChunks];
+      }
     }
-  }
   return chunks;
-}
-
+  }
+  
 // Helper function to search with full query
 async function searchWithFullQuery(client, query) {
   const { data: fullQueryChunks, error: fullQueryError } = await client
@@ -6408,8 +6427,8 @@ async function searchWithFullQuery(client, query) {
     return fullQueryChunks;
   }
   return [];
-}
-
+  }
+  
 // Helper function to remove duplicate chunks
 function removeDuplicateChunks(chunks) {
   return chunks.filter((chunk, index, self) => 
@@ -6585,8 +6604,8 @@ async function searchRagEntities(client, query, keywords, isConceptQuery, primar
 
 // Helper function to handle event entities
 function handleEventEntities(entities) {
-  const eventEntities = entities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
-  if (eventEntities.length > 0) {
+    const eventEntities = entities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
+    if (eventEntities.length > 0) {
     const answer = eventEntities.map(e => `${e.title} on ${new Date(e.date_start).toDateString()} at ${e.location}. More info: ${e.url}`).join("\n");
     const sources = eventEntities.map(e => e.url);
     return { answer, type: "events", sources };
@@ -6596,111 +6615,111 @@ function handleEventEntities(entities) {
 
 // Helper function to handle chunk processing
 function handleChunkProcessing(query, entities, chunks) {
-  console.log(`🔍 Using generateDirectAnswer for ${chunks.length} chunks`);
-  const directAnswer = generateDirectAnswer(query, entities, chunks);
-  if (directAnswer) {
-    console.log(`✅ Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+    console.log(`🔍 Using generateDirectAnswer for ${chunks.length} chunks`);
+    const directAnswer = generateDirectAnswer(query, entities, chunks);
+    if (directAnswer) {
+      console.log(`✅ Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
     return { answer: directAnswer, type: "advice", sources: chunks.map(c => c.url) };
   }
   
-  console.log(`⚠️ No intelligent answer found, using fallback chunk processing`);
-  const cleaned = chunks
-    .map(c => {
-      const cleanedText = cleanRagText(c.chunk_text);
-      console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
-      return cleanedText;
-    })
-    .filter(Boolean);
+      console.log(`⚠️ No intelligent answer found, using fallback chunk processing`);
+      const cleaned = chunks
+        .map(c => {
+          const cleanedText = cleanRagText(c.chunk_text);
+          console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
+          return cleanedText;
+        })
+        .filter(Boolean);
   
-  console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
+      console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
   let answer = cleaned.join("\n\n");
   
   // Cap final answer length for UI readability
-  const MAX_LEN = 800;
-  if (answer.length > MAX_LEN) {
-    answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
-  }
+      const MAX_LEN = 800;
+      if (answer.length > MAX_LEN) {
+        answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
+      }
   
   return { answer, type: "advice", sources: chunks.map(c => c.url) };
 }
 
 // Helper function to filter and sort entities
 function filterAndSortEntities(entities, query) {
-  const adviceEntities = entities.filter(e => e.kind !== 'event');
-  console.log(`📝 Filtered to ${adviceEntities.length} advice entities`);
-  
-  const relevantEntities = adviceEntities.filter(entity => {
-    // Use all entities - no hardcoded filtering
-    return true;
-  }).sort((a, b) => {
-    const queryLower = query.toLowerCase();
-    const aTitle = (a.title || '').toLowerCase();
-    const bTitle = (b.title || '').toLowerCase();
+    const adviceEntities = entities.filter(e => e.kind !== 'event');
+    console.log(`📝 Filtered to ${adviceEntities.length} advice entities`);
     
-    // Exact title match gets highest priority
-    if (aTitle.includes(queryLower) && !bTitle.includes(queryLower)) return -1;
-    if (bTitle.includes(queryLower) && !aTitle.includes(queryLower)) return 1;
+    const relevantEntities = adviceEntities.filter(entity => {
+      // Use all entities - no hardcoded filtering
+      return true;
+    }).sort((a, b) => {
+      const queryLower = query.toLowerCase();
+      const aTitle = (a.title || '').toLowerCase();
+      const bTitle = (b.title || '').toLowerCase();
+      
+      // Exact title match gets highest priority
+      if (aTitle.includes(queryLower) && !bTitle.includes(queryLower)) return -1;
+      if (bTitle.includes(queryLower) && !aTitle.includes(queryLower)) return 1;
+      
+      // Then by publish date (newest first)
+      const aDate = new Date(a.publish_date || '1900-01-01');
+      const bDate = new Date(b.publish_date || '1900-01-01');
+      return bDate - aDate;
+    });
     
-    // Then by publish date (newest first)
-    const aDate = new Date(a.publish_date || '1900-01-01');
-    const bDate = new Date(b.publish_date || '1900-01-01');
-    return bDate - aDate;
-  });
-  
-  console.log(`📝 Filtered to ${relevantEntities.length} relevant entities`);
+    console.log(`📝 Filtered to ${relevantEntities.length} relevant entities`);
   return relevantEntities;
 }
-
+    
 // Helper function to calculate confidence
 function calculateEntityConfidence(relevantEntities, chunks, results) {
-  if (chunks.length > 0) {
-    results.confidence = Math.min(0.9, 0.6 + (chunks.length * 0.1));
-    results.answerType = 'content';
-    console.log(`📊 Confidence from chunks: ${results.confidence} (${chunks.length} chunks)`);
-  }
-  
-  if (relevantEntities.length > 0) {
-    const eventEntities = relevantEntities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
-    if (eventEntities.length > 0) {
-      results.confidence = Math.max(results.confidence, 0.9);
-      results.answerType = 'events';
-      console.log(`🎯 Found ${eventEntities.length} event entities, confidence: ${results.confidence}`);
-    } else {
-      results.confidence = Math.max(results.confidence, 0.7);
-      console.log(`🎯 Found ${relevantEntities.length} advice entities, confidence: ${results.confidence}`);
+    if (chunks.length > 0) {
+      results.confidence = Math.min(0.9, 0.6 + (chunks.length * 0.1));
+      results.answerType = 'content';
+      console.log(`📊 Confidence from chunks: ${results.confidence} (${chunks.length} chunks)`);
     }
-  }
-  
-  console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
+    
+    if (relevantEntities.length > 0) {
+      const eventEntities = relevantEntities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
+      if (eventEntities.length > 0) {
+        results.confidence = Math.max(results.confidence, 0.9);
+        results.answerType = 'events';
+        console.log(`🎯 Found ${eventEntities.length} event entities, confidence: ${results.confidence}`);
+      } else {
+        results.confidence = Math.max(results.confidence, 0.7);
+        console.log(`🎯 Found ${relevantEntities.length} advice entities, confidence: ${results.confidence}`);
+      }
+    }
+    
+    console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
 }
 
 // Helper function to handle policy queries
 function handlePolicyQuery(relevantEntities) {
-  const policyEntity = relevantEntities.find(e => 
-    e.title.toLowerCase().includes('terms') || 
-    e.title.toLowerCase().includes('conditions') ||
-    e.title.toLowerCase().includes('policy')
-  ) || relevantEntities[0];
-  
+        const policyEntity = relevantEntities.find(e => 
+          e.title.toLowerCase().includes('terms') || 
+          e.title.toLowerCase().includes('conditions') ||
+          e.title.toLowerCase().includes('policy')
+        ) || relevantEntities[0];
+        
   const answer = `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated.\n\nFor full details, visit the [Terms and Conditions page](${policyEntity.url}).`;
-  
-  console.log(`✅ Generated policy-specific answer for terms and conditions query`);
+        
+        console.log(`✅ Generated policy-specific answer for terms and conditions query`);
   return { answer, type: "advice", sources: [policyEntity.url] };
 }
 
 // Helper function to handle regular entity processing
 function handleRegularEntityProcessing(query, relevantEntities, chunks) {
-  console.log(`🔍 DEBUG: Using generateDirectAnswer for enhanced concept synthesis`);
-  const directAnswer = generateDirectAnswer(query, relevantEntities, chunks);
-  if (directAnswer) {
-    console.log(`✅ Generated enhanced answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+        console.log(`🔍 DEBUG: Using generateDirectAnswer for enhanced concept synthesis`);
+        const directAnswer = generateDirectAnswer(query, relevantEntities, chunks);
+        if (directAnswer) {
+          console.log(`✅ Generated enhanced answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
     return { answer: directAnswer, type: "advice", sources: relevantEntities.map(e => e.url) };
   }
   
-  console.log(`⚠️ No enhanced answer found, trying fallback`);
-  const primaryEntity = relevantEntities[0];
+          console.log(`⚠️ No enhanced answer found, trying fallback`);
+          const primaryEntity = relevantEntities[0];
   const answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
-  console.log(`✅ Generated fallback answer from description`);
+          console.log(`✅ Generated fallback answer from description`);
   
   return { answer, type: "advice", sources: relevantEntities.map(e => e.url) };
 }
@@ -6819,7 +6838,7 @@ function initializeRagResults() {
 
 // Helper: Search and process RAG content
 async function searchAndProcessRagContent(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery) {
-  const chunks = await searchRagContent(client, query, keywords, isConceptQuery, primaryKeyword);
+    const chunks = await searchRagContent(client, query, keywords, isConceptQuery, primaryKeyword);
   const processedChunks = scoreAndFilterChunks(chunks, primaryKeyword, lcQuery, isConceptQuery);
   console.log(`📄 Found ${processedChunks.length} relevant chunks`);
   return processedChunks;
@@ -6827,7 +6846,7 @@ async function searchAndProcessRagContent(client, query, keywords, isConceptQuer
 
 // Helper: Search and process RAG entities
 async function searchAndProcessRagEntities(client, query, keywords, isConceptQuery, primaryKeyword) {
-  const entities = await searchRagEntities(client, query, keywords, isConceptQuery, primaryKeyword);
+    const entities = await searchRagEntities(client, query, keywords, isConceptQuery, primaryKeyword);
   const processedEntities = entities || [];
   console.log(`🏷️ Found ${processedEntities.length} relevant entities`);
   return processedEntities;
@@ -6835,38 +6854,38 @@ async function searchAndProcessRagEntities(client, query, keywords, isConceptQue
 
 // Helper: Build RAG response structure
 function buildRagResponse(results, finalAnswer, finalType, finalSources) {
-  return {
-    success: results.confidence >= 0.3 || finalAnswer.length > 0,
-    confidence: results.confidence >= 0.3 ? results.confidence : 0.6,
-    answer: finalAnswer,
-    type: finalType,
-    sources: finalSources,
-    structured: {
-      intent: finalType,
+    return {
+      success: results.confidence >= 0.3 || finalAnswer.length > 0,
+      confidence: results.confidence >= 0.3 ? results.confidence : 0.6,
+      answer: finalAnswer,
+      type: finalType,
       sources: finalSources,
-      events: [],
-      products: [],
-      articles: results.entities || []
-    },
-    totalMatches: results.totalMatches,
-    chunksFound: results.chunks.length,
-    entitiesFound: results.entities.length
-  };
+      structured: {
+        intent: finalType,
+        sources: finalSources,
+        events: [],
+        products: [],
+        articles: results.entities || []
+      },
+      totalMatches: results.totalMatches,
+      chunksFound: results.chunks.length,
+      entitiesFound: results.entities.length
+    };
 }
-
+    
 // Helper: Handle RAG search errors
 function handleRagError(error) {
-  console.error('RAG search error:', error);
-  return {
-    success: false,
-    confidence: 0,
-    answer: "",
-    type: "advice",
-    sources: [],
-    totalMatches: 0,
-    chunksFound: 0,
-    entitiesFound: 0
-  };
+    console.error('RAG search error:', error);
+    return {
+      success: false,
+      confidence: 0,
+      answer: "",
+      type: "advice",
+      sources: [],
+      totalMatches: 0,
+      chunksFound: 0,
+      entitiesFound: 0
+    };
 }
 
 // Helper: Process RAG search results
@@ -7097,11 +7116,11 @@ function analyzeQueryTypes(query) {
 function formatEventDate(dateString) {
   const eventDate = new Date(dateString);
   return eventDate.toLocaleDateString('en-GB', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
 }
 
 // Helper function to handle time query response
@@ -7115,8 +7134,8 @@ function handleTimeQueryResponse(eventList, isLocationQuery) {
 
 // Helper function to handle location query response
 function handleLocationQueryResponse(eventList) {
-  const locations = [...new Set(eventList.map(e => e.location).filter(Boolean))];
-  if (locations.length > 0) {
+    const locations = [...new Set(eventList.map(e => e.location).filter(Boolean))];
+    if (locations.length > 0) {
     return ` These workshops are located in ${locations.join(' and ')}.`;
   }
   return '';
