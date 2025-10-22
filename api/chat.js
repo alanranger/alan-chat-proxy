@@ -2551,35 +2551,38 @@ function classifyQuery(query) {
   return { type: 'direct_answer', reason: 'unknown_query_default_to_rag' };
 }
 
-async function generateClarificationQuestion(query, client = null, pageContext = null) {
-  const lc = query.toLowerCase();
-  console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
-  
+// Helper function to check bypass conditions
+function checkBypassConditions(lc, classification) {
   // BYPASS: If query contains normalized duration categories, skip clarification
   if (lc.includes('1-day') || lc.includes('2.5hrs-4hrs') || lc.includes('2-5-days')) {
     console.log(`🎯 Bypassing clarification for normalized duration category: "${lc}"`);
-    return null; // Let the system route to events
+    return { shouldBypass: true, reason: 'normalized_duration' };
   }
-  
-  // NEW: Query Classification System
-  const classification = classifyQuery(query);
-  console.log(`🎯 Query classified as: ${classification.type} (${classification.reason})`);
   
   // BYPASS: Direct answer queries should not go to clarification
   if (classification.type === 'direct_answer') {
     console.log(`🎯 Bypassing clarification for direct answer query: "${lc}"`);
-    return null; // Let the system route to direct answer
+    return { shouldBypass: true, reason: 'direct_answer' };
   }
   
-  // Get clarification level and confidence
+  return { shouldBypass: false };
+}
+
+// Helper function to check clarification level and max clarifications
+function checkClarificationLevel(query, pageContext) {
   const { level, confidence, shouldShowResults } = getClarificationLevelAndConfidence(query, pageContext);
   
   // If we've reached max clarifications, show results instead
   if (shouldShowResults) {
     console.log(`🎯 Max clarifications reached (level ${level}), showing results instead`);
-    return null; // Let the system show results
+    return { shouldBypass: true, reason: 'max_clarifications', confidence };
   }
   
+  return { shouldBypass: false, confidence };
+}
+
+// Helper function to check priority patterns
+function checkPriorityPatterns(lc, classification, confidence) {
   // Check loop guard patterns
   const loopGuardResult = checkLoopGuardPatterns(lc);
   if (loopGuardResult) {
@@ -2603,6 +2606,11 @@ async function generateClarificationQuestion(query, client = null, pageContext =
     }
   }
   
+  return null;
+}
+
+// Helper function to check evidence-based clarification
+async function checkEvidenceBasedClarification(client, query, pageContext, lc, confidence) {
   // Try evidence-based clarification (only if no workshop patterns matched)
   const evidenceResult = await tryEvidenceBasedClarification(client, query, pageContext);
   if (evidenceResult) {
@@ -2612,7 +2620,11 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   } else {
     console.log(`❌ No evidence-based clarification for: "${lc}"`);
   }
-  
+  return null;
+}
+
+// Helper function to check all pattern groups
+function checkAllPatternGroups(lc, confidence) {
   // Check suppressed patterns
   const suppressedResult = checkSuppressedPatterns(lc);
   if (suppressedResult === null) return null;
@@ -2659,6 +2671,11 @@ async function generateClarificationQuestion(query, client = null, pageContext =
     return remainingResult;
   }
   
+  return null;
+}
+
+// Helper function to generate generic fallback
+function generateGenericFallback(query, confidence) {
   // CONTENT-BASED FALLBACK: If no specific pattern matches, use generic clarification
   console.log(`✅ No specific pattern matched for: "${query}" - using generic clarification`);
   const genericResult = generateGenericClarification();
@@ -2666,6 +2683,37 @@ async function generateClarificationQuestion(query, client = null, pageContext =
     genericResult.confidence = confidence;
   }
   return genericResult;
+}
+
+async function generateClarificationQuestion(query, client = null, pageContext = null) {
+  const lc = query.toLowerCase();
+  console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
+  
+  // NEW: Query Classification System
+  const classification = classifyQuery(query);
+  console.log(`🎯 Query classified as: ${classification.type} (${classification.reason})`);
+  
+  // Check bypass conditions
+  const bypassCheck = checkBypassConditions(lc, classification);
+  if (bypassCheck.shouldBypass) return null;
+  
+  // Check clarification level and max clarifications
+  const levelCheck = checkClarificationLevel(query, pageContext);
+  if (levelCheck.shouldBypass) return null;
+  
+  const confidence = levelCheck.confidence;
+  
+  // Check priority patterns
+  const priorityResult = checkPriorityPatterns(lc, classification, confidence);
+  if (priorityResult) return priorityResult;
+  
+  // Check evidence-based clarification
+  const evidenceResult = await checkEvidenceBasedClarification(client, query, pageContext, lc, confidence);
+  if (evidenceResult) return evidenceResult;
+  
+  // Check all pattern groups and return result
+  const patternResult = checkAllPatternGroups(lc, confidence);
+  return patternResult || generateGenericFallback(query, confidence);
 }
 // Helper functions for handleClarificationFollowUp
 
