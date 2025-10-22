@@ -5497,15 +5497,17 @@ async function handleEventsClarification(client, query, intent, keywords, pageCo
 }
 
 async function handleClarificationFollowup(client, previousQuery, query, intent, keywords, pageContext, res) {
-  if (!isClarificationResponse(previousQuery, query)) return false;
+  const context = { client, previousQuery, query, intent, keywords, pageContext, res };
+  
+  if (!isClarificationResponse(context.previousQuery, context.query)) return false;
 
   // Route by chosen clarification intent if present in text
-  if (await handleEventsClarification(client, query, intent, keywords, pageContext, res)) {
+  if (await handleEventsClarification(context.client, context.query, context.intent, context.keywords, context.pageContext, context.res)) {
     return true;
   }
 
   // Advice-oriented clarification
-  return await handleAdviceClarification(client, query, keywords, pageContext, res);
+  return await handleAdviceClarification(context.client, context.query, context.keywords, context.pageContext, context.res);
 }
 
 async function handleAdviceClarification(client, query, keywords, pageContext, res) {
@@ -7148,8 +7150,10 @@ function initializeRagResults() {
 
 // Helper: Search and process RAG content
 async function searchAndProcessRagContent(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery) {
-    const chunks = await searchRagContent(client, query, keywords, isConceptQuery, primaryKeyword);
-  const processedChunks = scoreAndFilterChunks(chunks, primaryKeyword, lcQuery, isConceptQuery);
+  const context = { client, query, keywords, isConceptQuery, primaryKeyword, lcQuery };
+  
+  const chunks = await searchRagContent(context.client, context.query, context.keywords, context.isConceptQuery, context.primaryKeyword);
+  const processedChunks = scoreAndFilterChunks(chunks, context.primaryKeyword, context.lcQuery, context.isConceptQuery);
   console.log(`📄 Found ${processedChunks.length} relevant chunks`);
   return processedChunks;
 }
@@ -7200,13 +7204,14 @@ function handleRagError(error) {
 
 // Helper: Process RAG search results
 async function processRagSearchResults(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery) {
+  const context = { client, query, keywords, isConceptQuery, primaryKeyword, lcQuery };
   const results = initializeRagResults();
   
   // Search for content chunks
-  results.chunks = await searchAndProcessRagContent(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery);
+  results.chunks = await searchAndProcessRagContent(context.client, context.query, context.keywords, context.isConceptQuery, context.primaryKeyword, context.lcQuery);
   
   // Search for entities
-  results.entities = await searchAndProcessRagEntities(client, query, keywords, isConceptQuery, primaryKeyword);
+  results.entities = await searchAndProcessRagEntities(context.client, context.query, context.keywords, context.isConceptQuery, context.primaryKeyword);
   
   // Calculate confidence and determine answer type
   results.totalMatches = results.chunks.length + results.entities.length;
@@ -7437,19 +7442,26 @@ async function handleWorkshopClassification(context) {
 
 // Helper: Process remaining logic (Low Complexity)
 async function processRemainingLogic(client, query, previousQuery, intent, pageContext, res, started) {
+  const context = { client, query, previousQuery, intent, pageContext, res, started };
+  
   // Extract keywords for search
-  const keywords = extractKeywords(query);
+  const keywords = extractKeywords(context.query);
   
   // Handle different intents
-  if (intent === "events") {
-    const handled = await handleEventsPipeline({ client, query, keywords, pageContext, res, debugInfo: { intent } });
+  if (context.intent === "events") {
+    const handled = await handleEventsPipeline({ client: context.client, query: context.query, keywords, pageContext: context.pageContext, res: context.res, debugInfo: { intent: context.intent } });
     if (handled) return;
-  } else if (intent === "advice") {
-    const handled = await handleAdviceClarification(client, query, keywords, pageContext, res);
+  } else if (context.intent === "advice") {
+    const handled = await handleAdviceClarification(context.client, context.query, keywords, context.pageContext, context.res);
     if (handled) return;
   }
   
   // Fallback response
+  return sendFallbackResponse(context.res, keywords);
+}
+
+// Helper function to send fallback response
+function sendFallbackResponse(res, keywords) {
   res.status(200).json({
     ok: true,
     type: "advice",
