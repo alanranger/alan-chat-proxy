@@ -2182,10 +2182,8 @@ function getClarificationLevelAndConfidence(query, pageContext) {
 }
 
 // NEW: Query Classification System
-function classifyQuery(query) {
-  console.log(`🔍 classifyQuery called with: "${query}"`);
-  
-  // COURSE QUERIES - Check these FIRST to ensure they go to clarification
+// Helper function to check course clarification patterns
+function checkCourseClarificationPatterns(query) {
   const courseClarificationPatterns = [
     /what courses do you offer/i,
     /what photography courses do you have/i,
@@ -2202,8 +2200,11 @@ function classifyQuery(query) {
       return { type: 'clarification', reason: 'course_query_needs_clarification' };
     }
   }
-  
-  // CONTACT ALAN QUERIES - Check these SECOND to override workshop patterns
+  return null;
+}
+
+// Helper function to check contact Alan patterns
+function checkContactAlanPatterns(query) {
   const contactAlanPatterns = [
     /cancellation or refund policy for courses/i,
     /cancellation or refund policy for workshops/i,
@@ -2232,8 +2233,11 @@ function classifyQuery(query) {
       return { type: 'direct_answer', reason: 'contact_alan_query' };
     }
   }
-  
-  // WORKSHOP QUERIES - Check these SECOND to avoid conflicts with direct answer patterns
+  return null;
+}
+
+// Helper function to check workshop patterns
+function checkWorkshopPatterns(query) {
   const workshopPatterns = [
     /photography workshop/i,
     /workshop/i,
@@ -2281,8 +2285,11 @@ function classifyQuery(query) {
       return { type: 'workshop', reason: 'workshop_related_query' };
     }
   }
-  
-  // PRIVATE LESSONS AND MENTORING - Check these BEFORE workshop patterns
+  return null;
+}
+
+// Helper function to check private lessons patterns
+function checkPrivateLessonsPatterns(query) {
   const privateLessonsPatterns = [
     /private photography lessons/i,
     /private lessons/i,
@@ -2299,8 +2306,11 @@ function classifyQuery(query) {
       return { type: 'direct_answer', reason: 'private_lessons_query' };
     }
   }
+  return null;
+}
 
-  // DIRECT ANSWER QUERIES - Should bypass clarification entirely
+// Helper function to check direct answer patterns
+function checkDirectAnswerPatterns(query) {
   const directAnswerPatterns = [
     // About Alan Ranger
     /who is alan ranger/i,
@@ -2486,10 +2496,11 @@ function classifyQuery(query) {
       return { type: 'direct_answer', reason: 'specific_information_query' };
     }
   }
-  
-  // Workshop patterns moved to top of function to avoid conflicts
-  
-  // CLARIFICATION QUERIES - Broad queries that need clarification
+  return null;
+}
+
+// Helper function to check clarification patterns
+function checkClarificationPatterns(query) {
   const clarificationPatterns = [
     /photography services/i,
     /photography articles/i,
@@ -2511,6 +2522,30 @@ function classifyQuery(query) {
       return { type: 'clarification', reason: 'broad_query_needs_clarification' };
     }
   }
+  return null;
+}
+
+function classifyQuery(query) {
+  console.log(`🔍 classifyQuery called with: "${query}"`);
+  
+  // Check patterns in order of priority
+  const courseResult = checkCourseClarificationPatterns(query);
+  if (courseResult) return courseResult;
+  
+  const contactResult = checkContactAlanPatterns(query);
+  if (contactResult) return contactResult;
+  
+  const workshopResult = checkWorkshopPatterns(query);
+  if (workshopResult) return workshopResult;
+  
+  const privateResult = checkPrivateLessonsPatterns(query);
+  if (privateResult) return privateResult;
+  
+  const directResult = checkDirectAnswerPatterns(query);
+  if (directResult) return directResult;
+  
+  const clarificationResult = checkClarificationPatterns(query);
+  if (clarificationResult) return clarificationResult;
   
   // Default to direct_answer for unknown queries - let RAG system try first
   return { type: 'direct_answer', reason: 'unknown_query_default_to_rag' };
