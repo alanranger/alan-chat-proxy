@@ -3473,8 +3473,8 @@ function buildKeywordConditions(keywords) {
   return orConditions;
 }
 
-// Helper function to apply keyword filtering
-function applyKeywordFiltering(q, keywords) {
+// Helper function to apply keyword filtering for services
+function applyServicesKeywordFiltering(q, keywords) {
   if (keywords && keywords.length > 0) {
     const orConditions = buildKeywordConditions(keywords);
     
@@ -3500,7 +3500,7 @@ async function findServices(client, { keywords, limit = 50, pageContext = null }
   console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
   
   let q = buildServicesBaseQuery(client, limit);
-  q = applyKeywordFiltering(q, keywords);
+  q = applyServicesKeywordFiltering(q, keywords);
 
   const { data, error } = await q;
 
