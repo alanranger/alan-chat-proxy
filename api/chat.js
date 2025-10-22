@@ -7412,7 +7412,7 @@ async function handleDirectAnswerOrWorkshop(context) {
   if (classification.type === 'direct_answer') {
     return await handleDirectAnswerClassification(context);
   } else if (classification.type === 'workshop') {
-    return await handleWorkshopClassification(context);
+    return await handleWorkshopClassificationWithContext(context);
   }
   
   return false;
@@ -7426,7 +7426,7 @@ async function handleDirectAnswerClassification(context) {
 }
 
 // Helper function to handle workshop classification
-async function handleWorkshopClassification(context) {
+async function handleWorkshopClassificationWithContext(context) {
   console.log(`🎯 Workshop query detected: "${context.query}" - routing to workshop system`);
   const keywords = extractKeywords(context.query);
   const handled = await handleEventsPipeline({ 
