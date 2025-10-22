@@ -1232,37 +1232,37 @@ function getAboutAnswers(lc) {
 }
 
 function getHardcodedAnswer(lc) {
-  // Camera recommendations
+  return getCameraRecommendation(lc) ||
+         getCertificateQuestionAnswer(lc) ||
+         getEquipmentQuestionAnswer(lc) ||
+         getTechnicalAnswers(lc) ||
+         getPolicyAnswers(lc) ||
+         getServiceAnswers(lc) ||
+         getAboutAnswers(lc) ||
+         null;
+}
+
+// Helper function for camera recommendations
+function getCameraRecommendation(lc) {
   if (lc.includes("camera") && (lc.includes("need") || lc.includes("recommend"))) {
     return getCameraAnswer();
   }
-  
-  // Certificate questions
+  return null;
+}
+
+// Helper function for certificate questions
+function getCertificateQuestionAnswer(lc) {
   if (lc.includes("certificate")) {
     return getCertificateAnswer();
   }
-  
-  // Equipment questions
+  return null;
+}
+
+// Helper function for equipment questions
+function getEquipmentQuestionAnswer(lc) {
   if (lc.includes("equipment") || lc.includes("gear") || lc.includes("laptop")) {
     return getEquipmentAnswer();
   }
-  
-  // Technical questions
-  const technicalAnswer = getTechnicalAnswers(lc);
-  if (technicalAnswer) return technicalAnswer;
-  
-  // Policy questions
-  const policyAnswer = getPolicyAnswers(lc);
-  if (policyAnswer) return policyAnswer;
-  
-  // Service questions
-  const serviceAnswer = getServiceAnswers(lc);
-  if (serviceAnswer) return serviceAnswer;
-  
-  // About questions
-  const aboutAnswer = getAboutAnswers(lc);
-  if (aboutAnswer) return aboutAnswer;
-  
   return null;
 }
 
