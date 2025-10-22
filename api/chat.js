@@ -3103,29 +3103,50 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
 // Helper function to handle fallback queries for findEventsByDuration
 function normalizeCategories(rawCategories) {
   if (!rawCategories) return [];
-  // Already an array
+  
   if (Array.isArray(rawCategories)) {
-    return rawCategories.map(c => String(c).trim()).filter(Boolean);
+    return normalizeArrayCategories(rawCategories);
   }
+  
   const value = String(rawCategories).trim();
-  // Handle Postgres text[] rendered like {"1-day","2.5hrs-4hrs"}
+  
   if (value.startsWith('{') && value.endsWith('}')) {
-    const inner = value.slice(1, -1);
-    return inner
-      .split(',')
-      .map(s => s.replace(/^"|"$/g, '').trim())
-      .filter(Boolean);
+    return normalizePostgresArray(value);
   }
-  // Handle JSON array string
-  if ((value.startsWith('[') && value.endsWith(']'))) {
-    try {
-      const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed.map(c => String(c).trim()).filter(Boolean) : [];
-    } catch {
-      // fall through to generic splitting
-    }
+  
+  if (value.startsWith('[') && value.endsWith(']')) {
+    return normalizeJsonArray(value);
   }
-  // Generic fallback: split on comma/semicolon
+  
+  return normalizeGenericString(value);
+}
+
+// Helper function to normalize array categories
+function normalizeArrayCategories(categories) {
+  return categories.map(c => String(c).trim()).filter(Boolean);
+}
+
+// Helper function to normalize Postgres array format
+function normalizePostgresArray(value) {
+  const inner = value.slice(1, -1);
+  return inner
+    .split(',')
+    .map(s => s.replace(/^"|"$/g, '').trim())
+    .filter(Boolean);
+}
+
+// Helper function to normalize JSON array format
+function normalizeJsonArray(value) {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(c => String(c).trim()).filter(Boolean) : [];
+  } catch {
+    return normalizeGenericString(value);
+  }
+}
+
+// Helper function to normalize generic string format
+function normalizeGenericString(value) {
   return value.split(/[;,]/).map(s => s.trim()).filter(Boolean);
 }
 
@@ -4811,31 +4832,36 @@ async function extractRelevantInfo(query, dataContext) {
   const lowerQuery = query.toLowerCase();
   const { hasText, formatDateGB, scrubAttrs, summarize } = createTextHelpers();
   
-  // For event-based questions, prioritize the structured event data
   if (events && events.length > 0) {
-    console.log(`🔍 RAG: Found ${events.length} events, checking structured data`);
-    
-    const event = findRelevantEvent(events, lowerQuery, dataContext);
-    
-    // Check for specific information types
-    const participantsResult = checkEventParticipants(event, lowerQuery);
-    if (participantsResult) return participantsResult;
-    
-    const locationResult = checkEventLocation(event, lowerQuery, hasText);
-    if (locationResult) return locationResult;
-    
-    const priceResult = checkEventPrice(event, lowerQuery);
-    if (priceResult) return priceResult;
-    
-    const dateResult = checkEventDate(event, lowerQuery, products, formatDateGB, summarize);
-    if (dateResult) return dateResult;
-    
-    const fitnessResult = checkEventFitnessLevel(event, lowerQuery);
-    if (fitnessResult) return fitnessResult;
+    return processEventInformation(events, lowerQuery, dataContext, hasText, formatDateGB, summarize, products);
   }
   
-  // If no specific information found, provide a helpful response
   return `I don't have a confident answer to that yet. I'm trained on Alan's site, so I may miss things. If you'd like to follow up, please reach out:`;
+}
+
+// Helper function to process event information
+function processEventInformation(events, lowerQuery, dataContext, hasText, formatDateGB, summarize, products) {
+  console.log(`🔍 RAG: Found ${events.length} events, checking structured data`);
+  
+  const event = findRelevantEvent(events, lowerQuery, dataContext);
+  
+  // Check for specific information types
+  const participantsResult = checkEventParticipants(event, lowerQuery);
+  if (participantsResult) return participantsResult;
+  
+  const locationResult = checkEventLocation(event, lowerQuery, hasText);
+  if (locationResult) return locationResult;
+  
+  const priceResult = checkEventPrice(event, lowerQuery);
+  if (priceResult) return priceResult;
+  
+  const dateResult = checkEventDate(event, lowerQuery, products, formatDateGB, summarize);
+  if (dateResult) return dateResult;
+  
+  const fitnessResult = checkEventFitnessLevel(event, lowerQuery);
+  if (fitnessResult) return fitnessResult;
+  
+  return null;
 }
 
 // Calculate nuanced confidence for events with intent-based scoring
@@ -6709,130 +6735,176 @@ async function searchRagContent(client, query, keywords, isConceptQuery, primary
 
 // Helper function to score and filter chunks
 function scoreAndFilterChunks(chunks, primaryKeyword, lcQuery, isConceptQuery) {
-  const equipmentKeywords = ["tripod","head","ball head","carbon","aluminium","manfrotto","gitzo","benro","sirui","three legged","levelling","camera","lens","filter","flash"];
-  const technicalKeywords = ["iso","aperture","shutter","exposure","focus","composition","lighting","settings","technique","tips","advice"];
-  const offTopicHints = ["/photographic-workshops","/course","calendar","/events/","ics","google calendar","/book","/contact","/gallery"];
-  
+  const keywords = getScoringKeywords();
   const conceptKeywords = ['guide', 'explanation', 'tutorial', 'basics', 'beginner', 'learn', 'understanding'];
   const workshopKeywords = ['workshop', 'course', 'event', 'booking', 'dates', 'location', 'participants'];
   
-  function scoreChunk(c) {
-    const scoringParams = { primaryKeyword, equipmentKeywords, technicalKeywords, lcQuery, offTopicHints };
-    return calculateChunkScore(c, scoringParams);
-  }
-
   return chunks
-    .map(c => {
-      const score = scoreChunk(c);
-      
-      // For concept queries, boost score for guide/explanation content and penalize workshop content
-      let adjustedScore = score;
-      if (isConceptQuery) {
-        const url = (c.url||"").toLowerCase();
-        const title = (c.title||"").toLowerCase();
-        const text = (c.chunk_text||"").toLowerCase();
-        
-        // Boost score for concept-related content
-        if (conceptKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
-          adjustedScore += 2.0;
-        }
-        
-        // Penalize workshop/event content for concept queries
-        if (workshopKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
-          adjustedScore -= 1.5;
-        }
-        
-        // Extra penalty for workshop URLs
-        if (url.includes('/photographic-workshops') || url.includes('/photo-workshops') || url.includes('/events/')) {
-          adjustedScore -= 2.0;
-        }
-      }
-      
-      return {...c, __score: adjustedScore};
-    })
-    // Hard requirement: if we detected a primary keyword, ensure it exists in title/text/url
-    .filter(c => {
-      if (!primaryKeyword) return c.__score > 0;
-      const url = (c.url||"").toLowerCase();
-      const title = (c.title||"").toLowerCase();
-      const text = (c.chunk_text||"").toLowerCase();
-      
-      // Check if primary keyword appears in URL, title, or text content
-      let hasPrimaryStrong = url.includes(primaryKeyword) || title.includes(primaryKeyword) || text.includes(primaryKeyword);
-      
-      // Extra hardening for equipment-style nouns
-      const equipNouns = ["tripod","ball head","ballhead","head","gitzo","benro","manfrotto","sirui"];
-      if (equipNouns.some(n => primaryKeyword.includes(n))) {
-        const slugMatch = [primaryKeyword.replace(/\s+/g,'-'), primaryKeyword.replace(/\s+/g,'')];
-        if (!(hasPrimaryStrong || slugMatch.some(s => url.includes(s) || title.includes(s)))) {
-          return false;
-        }
-      }
-      return hasPrimaryStrong && c.__score > 0;
-    })
+    .map(c => scoreChunkWithAdjustments(c, primaryKeyword, lcQuery, isConceptQuery, keywords, conceptKeywords, workshopKeywords))
+    .filter(c => filterChunkByPrimaryKeyword(c, primaryKeyword))
     .sort((a,b)=> b.__score - a.__score)
     .slice(0, 5);
+}
+
+// Helper function to get scoring keywords
+function getScoringKeywords() {
+  return {
+    equipmentKeywords: ["tripod","head","ball head","carbon","aluminium","manfrotto","gitzo","benro","sirui","three legged","levelling","camera","lens","filter","flash"],
+    technicalKeywords: ["iso","aperture","shutter","exposure","focus","composition","lighting","settings","technique","tips","advice"],
+    offTopicHints: ["/photographic-workshops","/course","calendar","/events/","ics","google calendar","/book","/contact","/gallery"]
+  };
+}
+
+// Helper function to score chunk with concept adjustments
+function scoreChunkWithAdjustments(chunk, primaryKeyword, lcQuery, isConceptQuery, keywords, conceptKeywords, workshopKeywords) {
+  const scoringParams = { primaryKeyword, ...keywords, lcQuery };
+  let score = calculateChunkScore(chunk, scoringParams);
+  
+  if (isConceptQuery) {
+    score = applyConceptQueryAdjustments(chunk, score, conceptKeywords, workshopKeywords);
+  }
+  
+  return {...chunk, __score: score};
+}
+
+// Helper function to apply concept query adjustments
+function applyConceptQueryAdjustments(chunk, score, conceptKeywords, workshopKeywords) {
+  const url = (chunk.url||"").toLowerCase();
+  const title = (chunk.title||"").toLowerCase();
+  const text = (chunk.chunk_text||"").toLowerCase();
+  
+  // Boost score for concept-related content
+  if (conceptKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
+    score += 2.0;
+  }
+  
+  // Penalize workshop/event content for concept queries
+  if (workshopKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
+    score -= 1.5;
+  }
+  
+  // Extra penalty for workshop URLs
+  if (url.includes('/photographic-workshops') || url.includes('/photo-workshops') || url.includes('/events/')) {
+    score -= 2.0;
+  }
+  
+  return score;
+}
+
+// Helper function to filter chunks by primary keyword
+function filterChunkByPrimaryKeyword(chunk, primaryKeyword) {
+  if (!primaryKeyword) return chunk.__score > 0;
+  
+  const url = (chunk.url||"").toLowerCase();
+  const title = (chunk.title||"").toLowerCase();
+  const text = (chunk.chunk_text||"").toLowerCase();
+  
+  let hasPrimaryStrong = url.includes(primaryKeyword) || title.includes(primaryKeyword) || text.includes(primaryKeyword);
+  
+  // Extra hardening for equipment-style nouns
+  const equipNouns = ["tripod","ball head","ballhead","head","gitzo","benro","manfrotto","sirui"];
+  if (equipNouns.some(n => primaryKeyword.includes(n))) {
+    const slugMatch = [primaryKeyword.replace(/\s+/g,'-'), primaryKeyword.replace(/\s+/g,'')];
+    if (!(hasPrimaryStrong || slugMatch.some(s => url.includes(s) || title.includes(s)))) {
+      return false;
+    }
+  }
+  
+  return hasPrimaryStrong && chunk.__score > 0;
 }
 
 // Helper function to search for RAG entities
 async function searchRagEntities(client, query, keywords, isConceptQuery, primaryKeyword) {
   let entities = [];
   
-  // For concept queries, prioritize guide articles
+  // Search for concept guide articles if needed
   if (isConceptQuery) {
-    console.log(`🎯 Searching for guide articles for concept query`);
-    const { data: guideArticles, error: guideError } = await client
-      .from('page_entities')
-      .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
-      .ilike('url', `%what-is-${primaryKeyword}%`)
-      .eq('kind', 'article')
-      .limit(5);
-    
-    if (!guideError && guideArticles) {
-      console.log(`🎯 Found ${guideArticles.length} guide articles`);
-      guideArticles.forEach(e => console.log(`  - "${e.title}" (${e.url})`));
-      entities = [...entities, ...guideArticles];
-    }
+    const guideEntities = await searchConceptGuideArticles(client, primaryKeyword);
+    entities = [...entities, ...guideEntities];
   }
   
-  // For "who is" queries, also search for "about" to find biographical content
+  // Search for keyword-based entities
+  const searchKeywords = buildSearchKeywords(query, keywords);
+  const keywordEntities = await searchKeywordEntities(client, searchKeywords);
+  entities = [...entities, ...keywordEntities];
+  
+  // Search for full query entities
+  const fullQueryEntities = await searchFullQueryEntities(client, query);
+  entities = [...entities, ...fullQueryEntities];
+  
+  // Remove duplicates and return
+  return removeDuplicateEntities(entities);
+}
+
+// Helper function to search for concept guide articles
+async function searchConceptGuideArticles(client, primaryKeyword) {
+  console.log(`🎯 Searching for guide articles for concept query`);
+  const { data: guideArticles, error: guideError } = await client
+    .from('page_entities')
+    .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
+    .ilike('url', `%what-is-${primaryKeyword}%`)
+    .eq('kind', 'article')
+    .limit(5);
+  
+  if (!guideError && guideArticles) {
+    console.log(`🎯 Found ${guideArticles.length} guide articles`);
+    guideArticles.forEach(e => console.log(`  - "${e.title}" (${e.url})`));
+    return guideArticles;
+  }
+  
+  return [];
+}
+
+// Helper function to build search keywords
+function buildSearchKeywords(query, keywords) {
   const searchKeywords = [...keywords];
   if (/who.*is|who.*are|tell.*about|background|experience/i.test(query)) {
     searchKeywords.push('about');
   }
-  
-  // Search for all keywords at once with higher limit for better coverage
+  return searchKeywords;
+}
+
+// Helper function to search for keyword-based entities
+async function searchKeywordEntities(client, searchKeywords) {
   console.log(`🔍 Searching for all keywords: ${searchKeywords.join(', ')}`);
   const { data: keywordEntities, error: entitiesError } = await client
     .from('page_entities')
     .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
     .or(searchKeywords.map(k => `title.ilike.%${k}%,description.ilike.%${k}%,location.ilike.%${k}%`).join(','))
-    .eq('kind', 'article')  // Only return articles for the articles array
+    .eq('kind', 'article')
     .limit(25);
   
   if (entitiesError) {
     console.error(`❌ Entity search error:`, entitiesError);
+    return [];
   } else if (keywordEntities) {
     console.log(`📄 Found ${keywordEntities.length} entities for all keywords`);
     keywordEntities.forEach(e => console.log(`  - "${e.title}" (${e.kind})`));
-    entities = [...entities, ...keywordEntities];
+    return keywordEntities;
   } else {
     console.log(`📄 No entities found for keywords`);
+    return [];
   }
-  
-  // Also try the full query
+}
+
+// Helper function to search for full query entities
+async function searchFullQueryEntities(client, query) {
   const { data: fullQueryEntities, error: fullQueryEntitiesError } = await client
     .from('page_entities')
     .select('url, title, description, meta_description, location, date_start, kind')
     .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
-    .eq('kind', 'article')  // Only return articles for the articles array
+    .eq('kind', 'article')
     .limit(15);
   
   if (!fullQueryEntitiesError && fullQueryEntities) {
-    entities = [...entities, ...fullQueryEntities];
+    return fullQueryEntities;
   }
   
-  // Remove duplicates
+  return [];
+}
+
+// Helper function to remove duplicate entities
+function removeDuplicateEntities(entities) {
   return entities.filter((entity, index, self) => 
     index === self.findIndex(e => e.url === entity.url)
   );
@@ -7265,39 +7337,71 @@ function determineIntent(query, previousQuery, pageContext) {
 
 // Helper: Process by intent (Low Complexity)
 async function processByIntent(client, query, previousQuery, intent, pageContext, res, started) {
-  // Handle clarification follow-ups
+  const context = { client, query, previousQuery, intent, pageContext, res, started };
+  
   if (intent === "clarification_followup") {
     return await handleClarificationFollowup(client, query, previousQuery, pageContext, res);
   }
   
-  // Handle workshop queries
   if (intent === "workshop") {
-    console.log(`🎯 Workshop query detected: "${query}" - routing to workshop system`);
-    const keywords = extractKeywords(query);
-    const handled = await handleEventsPipeline({ client, query, keywords, pageContext, res, debugInfo: { intent: "workshop" } });
-    if (handled) return;
+    return await handleWorkshopIntent(context);
   }
   
-  // Handle direct answer queries
   if (!pageContext || !pageContext.clarificationLevel) {
-    const classification = classifyQuery(query);
-    if (classification.type === 'direct_answer') {
-      console.log(`🎯 Direct answer query detected: "${query}" - bypassing clarification`);
-      const directAnswerResponse = await handleDirectAnswerQuery(client, query, pageContext, res);
-      if (directAnswerResponse) {
-        return; // Response already sent
-      }
-    } else if (classification.type === 'workshop') {
-      console.log(`🎯 Workshop query detected: "${query}" - routing to workshop system`);
-      // Route workshop queries to the events pipeline with workshop intent
-      const keywords = extractKeywords(query);
-      const handled = await handleEventsPipeline({ client, query, keywords, pageContext, res, debugInfo: { intent: "workshop" } });
-      if (handled) return;
-    }
+    return await handleDirectAnswerOrWorkshop(context);
   }
   
-  // Continue with existing logic for other intents
-  await processRemainingLogic(client, query, previousQuery, intent, pageContext, res, started);
+  return await processRemainingLogic(client, query, previousQuery, intent, pageContext, res, started);
+}
+
+// Helper function to handle workshop intent
+async function handleWorkshopIntent(context) {
+  console.log(`🎯 Workshop query detected: "${context.query}" - routing to workshop system`);
+  const keywords = extractKeywords(context.query);
+  const handled = await handleEventsPipeline({ 
+    client: context.client, 
+    query: context.query, 
+    keywords, 
+    pageContext: context.pageContext, 
+    res: context.res, 
+    debugInfo: { intent: "workshop" } 
+  });
+  return handled;
+}
+
+// Helper function to handle direct answer or workshop classification
+async function handleDirectAnswerOrWorkshop(context) {
+  const classification = classifyQuery(context.query);
+  
+  if (classification.type === 'direct_answer') {
+    return await handleDirectAnswerClassification(context);
+  } else if (classification.type === 'workshop') {
+    return await handleWorkshopClassification(context);
+  }
+  
+  return false;
+}
+
+// Helper function to handle direct answer classification
+async function handleDirectAnswerClassification(context) {
+  console.log(`🎯 Direct answer query detected: "${context.query}" - bypassing clarification`);
+  const directAnswerResponse = await handleDirectAnswerQuery(context.client, context.query, context.pageContext, context.res);
+  return directAnswerResponse;
+}
+
+// Helper function to handle workshop classification
+async function handleWorkshopClassification(context) {
+  console.log(`🎯 Workshop query detected: "${context.query}" - routing to workshop system`);
+  const keywords = extractKeywords(context.query);
+  const handled = await handleEventsPipeline({ 
+    client: context.client, 
+    query: context.query, 
+    keywords, 
+    pageContext: context.pageContext, 
+    res: context.res, 
+    debugInfo: { intent: "workshop" } 
+  });
+  return handled;
 }
 
 // Helper: Process remaining logic (Low Complexity)
