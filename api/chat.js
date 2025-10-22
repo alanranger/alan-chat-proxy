@@ -434,7 +434,7 @@ function extractArticleExperienceConsiderations(text, article, considerations) {
 
 // Extract key considerations from articles and content chunks
 function extractKeyConsiderations(articles, contentChunks) {
-  const considerations = {
+  return {
     budget: [],
     weight: [],
     usage: [],
@@ -442,20 +442,6 @@ function extractKeyConsiderations(articles, contentChunks) {
     experience: [],
     specific: []
   };
-  
-  // Extract from articles
-  for (const article of articles) {
-    processArticleForConsiderations(article, considerations);
-  }
-  
-  // Extract from content chunks (with malformed content filtering)
-  if (contentChunks && contentChunks.length > 0) {
-    for (const chunk of contentChunks) {
-      processContentChunk(chunk, considerations);
-    }
-  }
-  
-  return considerations;
 }
 
 // Synthesize equipment advice response
@@ -926,12 +912,12 @@ function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
       console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
       
       const fitnessPatterns = [
-    /Fitness:\s*(\d+\.?\s*[A-Za-z\s\-]+?)(?:\n|$)/i,           // "Fitness: 2. Easy-Moderate" - stop at newline or end
-    /Fitness\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,            // "Fitness Level: Easy" - stop at newline or end
-    /Experience\s*-\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,     // "Experience - Level: Beginner and Novice" - stop at newline or end
-    /Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,                      // "Level: Beginners" - stop at newline or end
-    /Fitness\s*Required:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,         // "Fitness Required: Easy" - stop at newline or end
-    /Physical\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i            // "Physical Level: Easy" - stop at newline or end
+    /Fitness:\s*(\d+\.?\s*[A-Za-z\s-]+?)(?:\n|$)/i,           // "Fitness: 2. Easy-Moderate" - stop at newline or end
+    /Fitness\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,            // "Fitness Level: Easy" - stop at newline or end
+    /Experience\s*-\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,     // "Experience - Level: Beginner and Novice" - stop at newline or end
+    /Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,                      // "Level: Beginners" - stop at newline or end
+    /Fitness\s*Required:\s*([A-Za-z\s-]+?)(?:\n|$)/i,         // "Fitness Required: Easy" - stop at newline or end
+    /Physical\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i            // "Physical Level: Easy" - stop at newline or end
       ];
       
       for (const pattern of fitnessPatterns) {
@@ -1476,130 +1462,7 @@ function extractKeywords(q) {
 
 
 
-function applyLandingBonus(hasLandingFree, mentionsFree, mentionsOnline, baseConfidence, confidenceFactors) {
-  if (hasLandingFree && (mentionsFree || mentionsOnline)) {
-    baseConfidence += 0.25; 
-    confidenceFactors.push('Landing free/online page present (+0.25)');
-  }
-  return baseConfidence;
-}
 
-function hasContentBasedConfidence(query, intent, content) {
-  if (!query) return false;
-  
-  const lc = query.toLowerCase();
-
-  // Helper functions for confidence checks
-  const isClarificationQuestion = () => {
-    return lc.includes("what type of") && lc.includes("are you planning") && lc.includes("this will help");
-  };
-  
-  const isOverlyBroadCourseQuery = () => {
-    return lc === "do you do courses" || lc === "do you offer courses" || lc === "what courses do you offer";
-  };
-  
-  const isVagueQuery = () => {
-    const queryLength = query.length;
-    if (queryLength <= 10 && !hasSpecificKeywords(query)) return true;
-    
-    const vaguePatterns = [
-      "photography help", "photography advice", "help with photography", 
-      "what can you help me with", "photography tips", "photography guidance",
-      "photography support", "photography assistance", "photography questions"
-    ];
-    return vaguePatterns.some(pattern => lc.includes(pattern));
-  };
-  
-  const hasInsufficientContent = () => {
-  const articleCount = content.articles?.length || 0;
-  const eventCount = content.events?.length || 0;
-  const productCount = content.products?.length || 0;
-  const relevanceScore = content.relevanceScore || 0;
-    const totalContent = articleCount + eventCount + productCount;
-    
-    return totalContent <= 1 && relevanceScore < 0.3;
-  };
-  
-  const hasRichContent = () => {
-    const articleCount = content.articles?.length || 0;
-    const eventCount = content.events?.length || 0;
-    const productCount = content.products?.length || 0;
-    const relevanceScore = content.relevanceScore || 0;
-  const totalContent = articleCount + eventCount + productCount;
-  
-    return totalContent >= 3 && relevanceScore > 0.6;
-  };
-  
-  const hasMediumContentWithKeywords = () => {
-    const articleCount = content.articles?.length || 0;
-    const eventCount = content.events?.length || 0;
-    const productCount = content.products?.length || 0;
-    const relevanceScore = content.relevanceScore || 0;
-    const totalContent = articleCount + eventCount + productCount;
-    
-    return totalContent >= 2 && relevanceScore > 0.5 && hasSpecificKeywords(query);
-  };
-  
-  const isEventsQueryWithContent = () => {
-    const eventCount = content.events?.length || 0;
-    const articleCount = content.articles?.length || 0;
-    const productCount = content.products?.length || 0;
-    const totalContent = articleCount + eventCount + productCount;
-    
-    return intent === "events" && hasSpecificKeywords(query) && (eventCount > 0 || totalContent > 0);
-  };
-  
-  const isEquipmentQueryWithContent = () => {
-    const articleCount = content.articles?.length || 0;
-    const productCount = content.products?.length || 0;
-    
-    return lc.includes("tripod") && (articleCount > 0 || productCount > 0);
-  };
-  
-  const isResidentialWorkshopPricingQuery = () => {
-    const eventCount = content.events?.length || 0;
-    const articleCount = content.articles?.length || 0;
-    const relevanceScore = content.relevanceScore || 0;
-    
-    if (lc.includes("residential") && lc.includes("workshop") &&
-        (lc.includes("price") || lc.includes("cost") || lc.includes("b&b") || lc.includes("bed and breakfast"))) {
-    if (eventCount > 0) return true;
-    if (articleCount > 0 || relevanceScore >= 0.3) return true;
-  }
-    return false;
-  };
-  
-  const isPricingAccommodationQuery = () => {
-    const eventCount = content.events?.length || 0;
-    const articleCount = content.articles?.length || 0;
-    const relevanceScore = content.relevanceScore || 0;
-    
-  const pricingAccommodationHints = ["price", "cost", "fees", "pricing", "b&b", "bed and breakfast", "accommodation", "stay", "include b&b", "includes b&b"];
-  if (pricingAccommodationHints.some(h => lc.includes(h))) {
-    if (eventCount > 0) return true;
-    if (articleCount >= 1 && relevanceScore >= 0.3) return true;
-    if (relevanceScore >= 0.5) return true;
-  }
-    return false;
-  };
-  
-  // Early returns for clarification cases
-  if (isClarificationQuestion()) return false;
-  if (isOverlyBroadCourseQuery()) return false;
-  if (isVagueQuery()) return false;
-  if (hasInsufficientContent()) return false;
-  
-  // Confidence cases
-  if (hasRichContent()) return true;
-  if (hasMediumContentWithKeywords()) return true;
-  if (isEventsQueryWithContent()) return true;
-  if (isEquipmentQueryWithContent()) return true;
-  if (isResidentialWorkshopPricingQuery()) return true;
-  if (isPricingAccommodationQuery()) return true;
-  
-  // Default to clarification for safety
-  return false;
-}
 
 // Helper function to detect specific keywords
 function hasSpecificKeywords(query) {
@@ -3731,7 +3594,7 @@ function normalizeCategories(rawCategories) {
     const inner = value.slice(1, -1);
     return inner
       .split(',')
-      .map(s => s.replaceAll(/^\"|\"$/g, '').trim())
+      .map(s => s.replaceAll(/^"|"$/g, '').trim())
       .filter(Boolean);
   }
   // Handle JSON array string
@@ -4546,7 +4409,7 @@ function findLabelMatch(text) {
 }
 
 function cleanExtractedLabel(label) {
-  return label.replaceAll(/\]$/, '').replaceAll(/\[$/, '').replaceAll(/[\[\]]/g, '');
+  return label.replaceAll(/\]$/, '').replaceAll(/\[$/, '').replaceAll(/[[\]]/g, '');
 }
 
 function generateLabelFromUrl(url) {
@@ -4574,7 +4437,7 @@ function extractRelatedLabel(text, url) {
 }
 
 function cleanUrlLabel(label) {
-  return label.replaceAll(/\]$/, '').replaceAll(/\[$/, '').replaceAll(/[\[\]]/g, '');
+  return label.replaceAll(/\]$/, '').replaceAll(/\[$/, '').replaceAll(/[[\]]/g, '');
 }
 
 async function getArticleAuxLinks(client, articleUrl) {
@@ -4935,10 +4798,10 @@ function scrubDescription(description) {
     .replace(/\s*style="[^"]*"/gi,'')
     .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
     .replace(/\s*contenteditable="[^"]*"/gi,'')
-    .replace(/•\s*Standard\s*[—\-]\s*£\d+/gi,'') // Remove "• Standard — £150" lines
-    .replace(/Standard\s*[—\-]\s*£\d+/gi,'') // Remove "Standard — £150" lines
-    .replace(/\s*•\s*Standard\s*[—\-]\s*£\d+/gi,'') // Remove " • Standard — £150" lines
-    .replace(/\s*Standard\s*[—\-]\s*£\d+/gi,''); // Remove " Standard — £150" lines
+    .replace(/•\s*Standard\s*[—-]\s*£\d+/gi,'') // Remove "• Standard — £150" lines
+    .replace(/Standard\s*[—-]\s*£\d+/gi,'') // Remove "Standard — £150" lines
+    .replace(/\s*•\s*Standard\s*[—-]\s*£\d+/gi,'') // Remove " • Standard — £150" lines
+    .replace(/\s*Standard\s*[—-]\s*£\d+/gi,''); // Remove " Standard — £150" lines
 }
   
 async function fetchChunkData(primary) {
@@ -7038,8 +6901,8 @@ async function tryRagFirst(client, query) {
       const trimmed = p.trim();
       return trimmed.length > 20 && // Minimum meaningful length
              !trimmed.match(/^(Home|About|Services|Gallery|Contact|Privacy|Terms)$/i) &&
-             !trimmed.match(/^[0-9\s\-\.]+$/) &&
-             !trimmed.match(/^\/[A-Za-z\s\[\]]+$/i) &&
+             !trimmed.match(/^[0-9\s-\.]+$/) &&
+             !trimmed.match(/^\/[A-Za-z\s[\]]+$/i) &&
              !trimmed.match(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)/gi) && // Skip image filenames
              !trimmed.match(/^[A-Z\s]+$/i) && // Skip all-caps headers
              !trimmed.match(/^ed for updated portfolios/i) && // Skip specific artifacts
