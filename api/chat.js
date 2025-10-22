@@ -3453,30 +3453,54 @@ async function findProducts(client, { keywords, limit = 20, pageContext = null }
   if (error) return [];
   return data || [];
 }
-async function findServices(client, { keywords, limit = 50, pageContext = null }) {
-  // Search for services (free course might be classified as service)
-  console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
-  
-  let q = client
+// Helper function to build base query
+function buildServicesBaseQuery(client, limit) {
+  return client
     .from("page_entities")
     .select("*")
     .eq("kind", "service")
-    .order("last_seen", { ascending: false })  // Prioritize recently seen/updated entities
+    .order("last_seen", { ascending: false })
     .limit(limit);
+}
 
+// Helper function to build OR conditions for keywords
+function buildKeywordConditions(keywords) {
+  const orConditions = [];
+  keywords.forEach(keyword => {
+    orConditions.push(`title.ilike.%${keyword}%`);
+    orConditions.push(`page_url.ilike.%${keyword}%`);
+  });
+  return orConditions;
+}
+
+// Helper function to apply keyword filtering
+function applyKeywordFiltering(q, keywords) {
   if (keywords && keywords.length > 0) {
-    // Build OR conditions for each keyword across title and page_url
-    const orConditions = [];
-    keywords.forEach(keyword => {
-      orConditions.push(`title.ilike.%${keyword}%`);
-      orConditions.push(`page_url.ilike.%${keyword}%`);
-    });
+    const orConditions = buildKeywordConditions(keywords);
     
     if (orConditions.length > 0) {
       q = q.or(orConditions.join(','));
       console.log(`🔧 Using OR conditions: ${orConditions.join(',')}`);
     }
   }
+  return q;
+}
+
+// Helper function to log services results
+function logServicesResults(data) {
+  console.log(`🔧 findServices returned ${data?.length || 0} services`);
+  if (data && data.length > 0) {
+    data.forEach((service, i) => {
+      console.log(`  ${i+1}. "${service.title}" (${service.page_url})`);
+    });
+  }
+}
+
+async function findServices(client, { keywords, limit = 50, pageContext = null }) {
+  console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
+  
+  let q = buildServicesBaseQuery(client, limit);
+  q = applyKeywordFiltering(q, keywords);
 
   const { data, error } = await q;
 
@@ -3485,13 +3509,7 @@ async function findServices(client, { keywords, limit = 50, pageContext = null }
     return [];
   }
 
-  console.log(`🔧 findServices returned ${data?.length || 0} services`);
-  if (data && data.length > 0) {
-    data.forEach((service, i) => {
-      console.log(`  ${i+1}. "${service.title}" (${service.page_url})`);
-    });
-  }
-
+  logServicesResults(data);
   return data || [];
 }
 
