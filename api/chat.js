@@ -5994,13 +5994,8 @@ function calculateChunkScore(chunk, scoringParams) {
   return score;
 }
 
-// Helper function to clean and format RAG text
-function cleanRagText(raw) {
-  if (!raw) return "";
-  let text = String(raw);
-  
-  console.log(`🧹 Original text: "${text.substring(0, 100)}..."`);
-  
+// Helper function to remove URL artifacts
+function removeUrlArtifacts(text) {
   // Remove URL-encoded image paths and artifacts at the start - more aggressive
   text = text.replace(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)[&\s]*/gi, "");
   text = text.replace(/^[A-Z0-9\-_]+\.(png|jpg|jpeg|gif|webp)&url=[^\s]*/gi, "");
@@ -6013,115 +6008,102 @@ function cleanRagText(raw) {
   // Remove unrendered markdown links like [/rps-courses-mentoring-distinctions]
   text = text.replace(/\[\/[^\]]+\]/g, "");
   
-  // Remove HTML entities and encoding artifacts - more comprehensive
-  text = text.replace(/&amp;/g, "&");
-  text = text.replace(/&lt;/g, "<");
-  text = text.replace(/&gt;/g, ">");
-  text = text.replace(/&quot;/g, '"');
-  text = text.replace(/&#39;/g, "'");
-  text = text.replace(/&nbsp;/g, " ");
-  text = text.replace(/&#x27;/g, "'");
-  text = text.replace(/&#x2F;/g, "/");
-  text = text.replace(/&#x3D;/g, "=");
-  text = text.replace(/&#x3A;/g, ":");
-  text = text.replace(/&#x2E;/g, ".");
-  text = text.replace(/&#x2D;/g, "-");
-  text = text.replace(/&#x5F;/g, "_");
-  text = text.replace(/&#x2B;/g, "+");
-  text = text.replace(/&#x20;/g, " ");
-  text = text.replace(/&#x21;/g, "!");
-  text = text.replace(/&#x22;/g, '"');
-  text = text.replace(/&#x23;/g, "#");
-  text = text.replace(/&#x24;/g, "$");
-  text = text.replace(/&#x25;/g, "%");
-  text = text.replace(/&#x26;/g, "&");
-  text = text.replace(/&#x28;/g, "(");
-  text = text.replace(/&#x29;/g, ")");
-  text = text.replace(/&#x2A;/g, "*");
-  text = text.replace(/&#x2C;/g, ",");
-  text = text.replace(/&#x2F;/g, "/");
-  text = text.replace(/&#x3A;/g, ":");
-  text = text.replace(/&#x3B;/g, ";");
-  text = text.replace(/&#x3C;/g, "<");
-  text = text.replace(/&#x3D;/g, "=");
-  text = text.replace(/&#x3E;/g, ">");
-  text = text.replace(/&#x3F;/g, "?");
-  text = text.replace(/&#x40;/g, "@");
-  text = text.replace(/&#x5B;/g, "[");
-  text = text.replace(/&#x5C;/g, "\\");
-  text = text.replace(/&#x5D;/g, "]");
-  text = text.replace(/&#x5E;/g, "^");
-  text = text.replace(/&#x60;/g, "`");
-  text = text.replace(/&#x7B;/g, "{");
-  text = text.replace(/&#x7C;/g, "|");
-  text = text.replace(/&#x7D;/g, "}");
-  text = text.replace(/&#x7E;/g, "~");
+  return text;
+}
+
+// Helper function to decode HTML entities
+function decodeHtmlEntities(text) {
+  const entityMap = {
+    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&nbsp;': ' ',
+    '&#x27;': "'", '&#x2F;': '/', '&#x3D;': '=', '&#x3A;': ':', '&#x2E;': '.', '&#x2D;': '-',
+    '&#x5F;': '_', '&#x2B;': '+', '&#x20;': ' ', '&#x21;': '!', '&#x22;': '"', '&#x23;': '#',
+    '&#x24;': '$', '&#x25;': '%', '&#x26;': '&', '&#x28;': '(', '&#x29;': ')', '&#x2A;': '*',
+    '&#x2C;': ',', '&#x3B;': ';', '&#x3C;': '<', '&#x3E;': '>', '&#x3F;': '?', '&#x40;': '@',
+    '&#x5B;': '[', '&#x5C;': '\\', '&#x5D;': ']', '&#x5E;': '^', '&#x60;': '`', '&#x7B;': '{',
+    '&#x7C;': '|', '&#x7D;': '}', '&#x7E;': '~'
+  };
   
-  // Fix specific problematic patterns - more aggressive
-  text = text.replace(/\?\?\?/g, "'"); // Replace ??? with apostrophe
-  text = text.replace(/wi\?\?\?/g, "with"); // Fix truncated "with"
-  text = text.replace(/Beg\?\?\?/g, "Beginners"); // Fix truncated "Beginners"
-  text = text.replace(/That\?\?\?s/g, "That's");
-  text = text.replace(/doesn\?\?\?t/g, "doesn't");
-  text = text.replace(/don\?\?\?t/g, "don't");
-  text = text.replace(/can\?\?\?t/g, "can't");
-  text = text.replace(/won\?\?\?t/g, "won't");
-  text = text.replace(/I\?\?\?m/g, "I'm");
-  text = text.replace(/you\?\?\?re/g, "you're");
-  text = text.replace(/we\?\?\?re/g, "we're");
-  text = text.replace(/they\?\?\?re/g, "they're");
-  text = text.replace(/it\?\?\?s/g, "it's");
-  text = text.replace(/Alan\?\?\?s/g, "Alan's");
-  text = text.replace(/What\?\?\?s/g, "What's");
-  text = text.replace(/more\?\?\?/g, "more");
+  for (const [entity, replacement] of Object.entries(entityMap)) {
+    text = text.replace(new RegExp(entity, 'g'), replacement);
+  }
   
-  // Fix any remaining ??? patterns
-  text = text.replace(/\?\?\?/g, "'");
+  return text;
+}
+
+// Helper function to fix problematic patterns
+function fixProblematicPatterns(text) {
+  const patterns = [
+    { from: /\?\?\?/g, to: "'" },
+    { from: /wi\?\?\?/g, to: "with" },
+    { from: /Beg\?\?\?/g, to: "Beginners" },
+    { from: /That\?\?\?s/g, to: "That's" },
+    { from: /doesn\?\?\?t/g, to: "doesn't" },
+    { from: /don\?\?\?t/g, to: "don't" },
+    { from: /can\?\?\?t/g, to: "can't" },
+    { from: /won\?\?\?t/g, to: "won't" },
+    { from: /I\?\?\?m/g, to: "I'm" },
+    { from: /you\?\?\?re/g, to: "you're" },
+    { from: /we\?\?\?re/g, to: "we're" },
+    { from: /they\?\?\?re/g, to: "they're" },
+    { from: /it\?\?\?s/g, to: "it's" },
+    { from: /Alan\?\?\?s/g, to: "Alan's" },
+    { from: /What\?\?\?s/g, to: "What's" },
+    { from: /more\?\?\?/g, to: "more" }
+  ];
   
-  // Remove navigation and UI elements
-  text = text.replace(/^\/Cart[\s\S]*?Sign In My Account[\s\S]*?(?=\n\n|$)/gi, "");
-  text = text.replace(/Back\s+(Workshops|Services|Gallery|Book|About|Blog)[\s\S]*?(?=\n\n|$)/gi, "");
-  text = text.replace(/Home\s*\/\s*About\s*\/\s*Services\s*\/\s*Gallery\s*\/\s*Contact/gi, "");
-  text = text.replace(/Privacy\s*Policy\s*\/\s*Terms\s*of\s*Service/gi, "");
+  for (const pattern of patterns) {
+    text = text.replace(pattern.from, pattern.to);
+  }
   
-  // Remove external social links but keep alanranger.com links
-  text = text.replace(/https?:\/\/(?!www\.alanranger\.com)\S+/g, "");
-  text = text.replace(/Facebook\d*|LinkedIn\d*|Tumblr|Pinterest\d*/gi, "");
+  return text;
+}
+
+// Helper function to remove UI elements
+function removeUiElements(text) {
+  const uiPatterns = [
+    /^\/Cart[\s\S]*?Sign In My Account[\s\S]*?(?=\n\n|$)/gi,
+    /Back\s+(Workshops|Services|Gallery|Book|About|Blog)[\s\S]*?(?=\n\n|$)/gi,
+    /Home\s*\/\s*About\s*\/\s*Services\s*\/\s*Gallery\s*\/\s*Contact/gi,
+    /Privacy\s*Policy\s*\/\s*Terms\s*of\s*Service/gi,
+    /https?:\/\/(?!www\.alanranger\.com)\S+/g,
+    /Facebook\d*|LinkedIn\d*|Tumblr|Pinterest\d*/gi,
+    /Add to Cart|Only \d+ available|Select Course|Posted in/gi,
+    /Course:\s*Select Course[\s\S]*?(?=\n\n|$)/gi,
+    /^\s*ed for updated portfolios and images\s*/gi,
+    /^\s*[a-z]+\s+for\s+updated\s+portfolios\s*/gi,
+    /Earlier Event:.*?Later Event:.*?$/gi,
+    /Earlier Event:.*?$/gi,
+    /Later Event:.*?$/gi,
+    /^\d+ November.*?$/gi,
+    /^\d+ December.*?$/gi,
+    /Camera Courses For Beginners.*?$/gi
+  ];
   
-  // Remove shopping cart and e-commerce artifacts
-  text = text.replace(/Add to Cart|Only \d+ available|Select Course|Posted in/gi, "");
-  text = text.replace(/Course:\s*Select Course[\s\S]*?(?=\n\n|$)/gi, "");
+  for (const pattern of uiPatterns) {
+    text = text.replace(pattern, "");
+  }
   
-  // Remove specific artifacts that are common
-  text = text.replace(/^\s*ed for updated portfolios and images\s*/gi, "");
-  text = text.replace(/^\s*[a-z]+\s+for\s+updated\s+portfolios\s*/gi, "");
-  
-  // Remove unrelated event information
-  text = text.replace(/Earlier Event:.*?Later Event:.*?$/gi, "");
-  text = text.replace(/Earlier Event:.*?$/gi, "");
-  text = text.replace(/Later Event:.*?$/gi, "");
-  text = text.replace(/\d+ November.*?$/gi, "");
-  text = text.replace(/\d+ December.*?$/gi, "");
-  text = text.replace(/Camera Courses For Beginners.*?$/gi, "");
-  
-  // Clean up truncated text that starts mid-sentence
+  return text;
+}
+
+// Helper function to fix truncated text
+function fixTruncatedText(text) {
   if (text.match(/^[a-z]/)) {
-    // If text starts with lowercase, try to find a better starting point
     const sentences = text.split(/[.!?]+/);
     if (sentences.length > 1) {
-      // Find the first complete sentence
       for (let i = 1; i < sentences.length; i++) {
         const candidate = sentences.slice(i).join('. ').trim();
         if (candidate.length > 50 && candidate.match(/^[A-Z]/)) {
-          text = candidate;
-          break;
+          return candidate;
         }
       }
     }
   }
-  
-  // Prioritize content that looks like it's from the beginning of a page
-  // Look for common page introduction patterns
+  return text;
+}
+
+// Helper function to find intro patterns
+function findIntroPattern(text) {
   const introPatterns = [
     /^Alan Ranger Photography/,
     /^Are you ready/,
@@ -6133,27 +6115,20 @@ function cleanRagText(raw) {
     /^Alan provides/
   ];
   
-  // If we find an intro pattern, try to extract from there
   for (const pattern of introPatterns) {
     if (pattern.test(text)) {
       console.log(`🎯 Found intro pattern: ${pattern}`);
-      // Extract content from this point
       const match = text.match(pattern);
       if (match) {
-        const startIndex = match.index;
-        text = text.substring(startIndex);
-        break;
+        return text.substring(match.index);
       }
     }
   }
-  
-  // Collapse multiple dashes/lines used as separators
-  text = text.replace(/-{4,}/g, "\n");
-  
-  // Remove excessive whitespace and normalize
-  text = text.replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n");
-  
-  // Filter out malformed content and find meaningful paragraphs
+  return text;
+}
+
+// Helper function to filter meaningful content
+function filterMeaningfulContent(text) {
   const parts = text.split(/\n\n+/).filter(p => {
     const trimmed = p.trim();
     return trimmed.length > 20 && // Minimum meaningful length
@@ -6170,10 +6145,33 @@ function cleanRagText(raw) {
   });
   
   if (parts.length > 0) {
-    // Take the first meaningful part, but prefer longer ones
     const sortedParts = parts.sort((a, b) => b.length - a.length);
-    text = sortedParts[0];
+    return sortedParts[0];
   }
+  return text;
+}
+
+// Helper function to clean and format RAG text
+function cleanRagText(raw) {
+  if (!raw) return "";
+  let text = String(raw);
+  
+  console.log(`🧹 Original text: "${text.substring(0, 100)}..."`);
+  
+  text = removeUrlArtifacts(text);
+  text = decodeHtmlEntities(text);
+  text = fixProblematicPatterns(text);
+  text = removeUiElements(text);
+  text = fixTruncatedText(text);
+  text = findIntroPattern(text);
+  
+  // Collapse multiple dashes/lines used as separators
+  text = text.replace(/-{4,}/g, "\n");
+  
+  // Remove excessive whitespace and normalize
+  text = text.replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n");
+  
+  text = filterMeaningfulContent(text);
   
   // Final cleanup
   text = text.replace(/\s{2,}/g, " ").trim();
