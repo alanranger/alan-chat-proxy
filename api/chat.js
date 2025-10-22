@@ -39,7 +39,7 @@ const extractPublishDate = (article) => {
     }
     
     return null;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -141,96 +141,10 @@ const logQuestion = async (sessionId, question) => {
   }
 };
 
-const logAnswer = async (sessionId, question, answer, intent, confidence, responseTimeMs, sourcesUsed, pageContext = null) => {
-  try {
-    const client = supabaseAdmin();
-    
-    // Insert the complete interaction into chat_interactions
-    const { error } = await client.from('chat_interactions').insert([{
-      session_id: sessionId,
-      question: question,
-      answer: answer,
-      intent: intent,
-      confidence: confidence ? parseFloat(confidence) : null,
-      response_time_ms: responseTimeMs ? parseInt(responseTimeMs) : null,
-      sources_used: sourcesUsed || null,
-      page_context: pageContext ? {
-        url: pageContext.url,
-        title: pageContext.title,
-        pathname: pageContext.pathname
-      } : null
-    }]);
-    
-    if (error) throw new Error(`Answer log failed: ${error.message}`);
-    
-    // Update session question count
-    const { error: rpcError } = await client.rpc('increment_session_questions', { session_id: sessionId });
-    if (rpcError) throw new Error(`RPC failed: ${rpcError.message}`);
-  } catch (err) {
-    console.warn('Answer logging failed:', err.message);
-  }
-};
 
 /* ----------------------- Direct Answer Generation ----------------------- */
-// Helper function to get service FAQ topics
-function getServiceFAQTopics() {
-  return [
-    { key: "payment", hints: ["payment", "pick n mix", "plan", "instalment", "installment"], prefer: ["/photography-payment-plan", "/terms-and-conditions"] },
-    { key: "contact", hints: ["contact", "discovery", "call", "phone", "email"], prefer: ["/contact-us", "/contact-us-alan-ranger-photography"] },
-    { key: "certificate", hints: ["certificate"], prefer: ["/beginners-photography-classes", "/photography-courses"] },
-    { key: "course-topics", hints: ["topics", "5-week", "beginner"], prefer: ["/beginners-photography-classes", "/get-off-auto"] },
-    { key: "standalone", hints: ["standalone", "get off auto"], prefer: ["/get-off-auto", "/beginners-photography-classes"] },
-    { key: "refund", hints: ["refund", "cancel", "cancellation"], prefer: ["/terms-and-conditions"] }
-  ];
-}
 
-// Helper function to find matching topic
-function findMatchingTopic(query) {
-  const q = (query || "").toLowerCase();
-  const topics = getServiceFAQTopics();
-  return topics.find(t => t.hints.some(h => q.includes(h)));
-}
 
-// Helper function to find prioritized chunk
-function findPrioritizedChunk(contentChunks, match) {
-  const prefer = (u) => (match.prefer || []).some(p => (u || "").includes(p));
-
-  return (contentChunks || []).find(c => prefer(c.url)) || contentChunks.find(c => {
-    const text = (c.chunk_text || c.content || "").toLowerCase();
-    return match.hints.some(h => text.includes(h));
-  });
-}
-
-// Helper function to pick URL from chunk or articles
-function pickServiceFAQUrl(prioritizedChunk, articles, match) {
-    if (prioritizedChunk?.url) return prioritizedChunk.url;
-  
-  const prefer = (u) => (match.prefer || []).some(p => (u || "").includes(p));
-    const art = (articles || []).find(a => prefer(a.page_url || a.source_url || ""));
-    return art ? (art.page_url || art.source_url) : null;
-}
-
-// Helper function to extract relevant paragraph for service FAQ
-function extractServiceFAQParagraph(prioritizedChunk, match) {
-  const text = (prioritizedChunk?.chunk_text || prioritizedChunk?.content || "");
-  const paras = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 40);
-  return paras.find(p => match.hints.some(h => p.toLowerCase().includes(h))) || paras[0];
-}
-
-function generateServiceFAQAnswer(query, contentChunks = [], articles = []) {
-  const match = findMatchingTopic(query);
-  if (!match) return null;
-
-  const prioritizedChunk = findPrioritizedChunk(contentChunks, match);
-  const url = pickServiceFAQUrl(prioritizedChunk, articles, match);
-  
-  if (!prioritizedChunk && !url) return null;
-
-  const para = extractServiceFAQParagraph(prioritizedChunk, match);
-  if (!para) return null;
-
-  return `**${para.substring(0, 300).trim()}**\n\n${url ? `*Source: ${url}*\n\n` : ""}`;
-}
 
 // Helper function to detect equipment advice queries
 function isEquipmentAdviceQuery(query) {
@@ -585,7 +499,7 @@ function synthesizeEquipmentAdvice(equipmentType, considerations, relevantArticl
   }
   
 // Add specific advice based on equipment type
-function addSpecificAdvice(equipmentType, considerations) {
+function addSpecificAdvice(equipmentType) {
   const adviceMap = {
     'tripod': `For landscape photography, you'll want something sturdy but portable. For travel, weight becomes crucial. For studio work, stability is key. `,
     'camera': `For beginners, start with what you have and focus on learning technique. For advanced users, consider your primary photography style and budget. `,
@@ -1004,12 +918,12 @@ function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
       console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
       
       const fitnessPatterns = [
-    /Fitness:\s*(\d+\.?\s*[A-Za-z\s\-]+?)(?:\n|$)/i,           // "Fitness: 2. Easy-Moderate" - stop at newline or end
-    /Fitness\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,            // "Fitness Level: Easy" - stop at newline or end
-    /Experience\s*-\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,     // "Experience - Level: Beginner and Novice" - stop at newline or end
-    /Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,                      // "Level: Beginners" - stop at newline or end
-    /Fitness\s*Required:\s*([A-Za-z\s\-]+?)(?:\n|$)/i,         // "Fitness Required: Easy" - stop at newline or end
-    /Physical\s*Level:\s*([A-Za-z\s\-]+?)(?:\n|$)/i            // "Physical Level: Easy" - stop at newline or end
+    /Fitness:\s*(\d+\.?\s*[A-Za-z\s-]+?)(?:\n|$)/i,           // "Fitness: 2. Easy-Moderate" - stop at newline or end
+    /Fitness\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,            // "Fitness Level: Easy" - stop at newline or end
+    /Experience\s*-\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,     // "Experience - Level: Beginner and Novice" - stop at newline or end
+    /Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,                      // "Level: Beginners" - stop at newline or end
+    /Fitness\s*Required:\s*([A-Za-z\s-]+?)(?:\n|$)/i,         // "Fitness Required: Easy" - stop at newline or end
+    /Physical\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i            // "Physical Level: Easy" - stop at newline or end
       ];
       
       for (const pattern of fitnessPatterns) {
@@ -1395,7 +1309,6 @@ function supabaseAdmin() {
 }
 
 /* ------------------------------ Small utils ------------------------------ */
-const TZ = "Europe/London";
 
 function fmtDateLondon(ts) {
   try {
@@ -1412,9 +1325,6 @@ function fmtDateLondon(ts) {
     return ts;
   }
 }
-function uniq(arr) {
-  return [...new Set((arr || []).filter(Boolean))];
-}
 function toGBP(n) {
   if (n == null || isNaN(Number(n))) return null;
   return new Intl.NumberFormat("en-GB", {
@@ -1422,9 +1332,6 @@ function toGBP(n) {
     currency: "GBP",
     maximumFractionDigits: 0,
   }).format(Number(n));
-}
-function pickUrl(row) {
-  return row?.page_url || row?.source_url || row?.url || null;
 }
 function originOf(url) {
   try {
@@ -1438,17 +1345,6 @@ function originOf(url) {
 // Note: We deliberately do not normalize typos; we ask users to rephrase instead.
 
 /* ----------------------- Intent + keyword extraction --------------------- */
-const EVENT_HINTS = [
-  "date",
-  "dates",
-  "when",
-  "next",
-  "upcoming",
-  "available",
-  "where",
-  "workshop",
-  "schedule",
-];
 
 const TOPIC_KEYWORDS = [
   // locations
@@ -1547,118 +1443,18 @@ function extractKeywords(q) {
 }
 
 // Helper functions for intent detection
-function isFollowUpQuestion(lc) {
-  const followUpQuestions = [
-    "how much", "cost", "price", "where", "location", "when", "date",
-    "how many", "people", "attend", "fitness", "level", "duration", "long",
-    "how do i book", "book", "booking", "required", "needed", "suitable"
-  ];
-  return followUpQuestions.some(word => lc.includes(word));
-}
 
-function hasWorkshopMention(lc) {
-  return lc.includes("workshop");
-}
 
-function isSpecificCourseQuery(lc) {
-  return lc.includes("course") || lc.includes("class") || lc.includes("lesson");
-}
 
-function isEquipmentQuery(lc) {
-  const equipmentKeywords = [
-    "certificate", "camera", "laptop", "equipment", "tripod", "lens", "gear",
-    "need", "require", "recommend", "advise", "help", "wrong", "problem"
-  ];
-  return equipmentKeywords.some(word => lc.includes(word));
-}
 
-function isServiceQuery(lc) {
-  return (
-    lc.includes("private") && (lc.includes("lesson") || lc.includes("class")) ||
-    lc.includes("online") && (lc.includes("course") || lc.includes("lesson")) ||
-    lc.includes("mentoring") ||
-    lc.includes("1-2-1") || lc.includes("1-to-1") || lc.includes("one-to-one")
-  );
-}
 
-function isTechnicalQuery(lc) {
-  const technicalKeywords = [
-    "free", "online", "sort of", "what do i", "do i need", "get a",
-    "what is", "what are", "how does", "explain", "define", "meaning",
-    "training", "mentoring", "tutoring"
-  ];
-  return technicalKeywords.some(word => lc.includes(word));
-}
 
-function isAboutQuery(lc) {
-  return lc.includes("about");
-}
 
-function isGeneralQuery(lc) {
-  return lc.includes("general") || lc.includes("help");
-}
 
 // Helper functions for detectIntent
-function isFreeCourseQuery(lc) {
-  return lc.includes("free") && (lc.includes("course") || lc.includes("online"));
-}
 
-function isWhenWhereWorkshopQuery(q, mentionsWorkshop) {
-  return /^\s*(when|where)\b/i.test(q || "") && mentionsWorkshop;
-}
 
-function handleFollowUpLogic(isFollowUp, mentionsWorkshop) {
-  if (isFollowUp && mentionsWorkshop) {
-    return "events";
-  }
-  if (isFollowUp && !mentionsWorkshop) {
-    return "advice";
-  }
-  return null;
-}
 
-function detectIntent(q) {
-  const lc = (q || "").toLowerCase();
-  
-  // PRIORITY: Free course queries should be treated as advice, not events
-  if (isFreeCourseQuery(lc)) {
-    return "advice"; // Free course queries need cross-entity search
-  }
-  
-  // Check for course/class queries
-  const mentionsCourse = isSpecificCourseQuery(lc);
-  const mentionsWorkshop = hasWorkshopMention(lc);
-  
-  // PRIORITY: Flexible services should be treated as advice, not events
-  if (isServiceQuery(lc)) {
-    return "advice"; // Flexible services need cross-entity search (products + services + articles)
-  }
-  
-  // Both courses and workshops have events - they're both scheduled sessions
-  if (mentionsCourse || mentionsWorkshop) {
-    return "events"; // Both courses and workshops are events (scheduled sessions)
-  }
-  
-  // ADVICE keywords
-  if (isEquipmentQuery(lc) || isTechnicalQuery(lc)) {
-    return "advice";
-  }
-  
-  // heuristic: if question starts with "when/where" + includes 'workshop' → events
-  if (isWhenWhereWorkshopQuery(q, mentionsWorkshop)) return "events";
-  
-  // Check if this is a follow-up question about event details
-  const isFollowUp = isFollowUpQuestion(lc);
-  
-  // Handle follow-up logic
-  const followUpResult = handleFollowUpLogic(isFollowUp, mentionsWorkshop);
-  if (followUpResult) {
-    return followUpResult;
-  }
-  
-  // default
-  return "advice";
-}
 
 /* --------------------------- Interactive Clarification System --------------------------- */
 
@@ -1667,325 +1463,18 @@ function detectIntent(q) {
  * Uses logical rules instead of broken numerical confidence scores
  */
 // Calculate RAG-based confidence for clarification questions
-async function calculateRAGConfidence(query, client, pageContext) {
-  try {
-    const keywords = extractKeywords(query);
-    const articles = await findArticles(client, { keywords, limit: 10, pageContext });
-    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-    const contentChunks = await findContentChunks(client, { keywords, limit: 5, articleUrls });
-    
-    // Calculate confidence based on content found
-    let confidence = 0.1; // Base confidence
-    
-    if (articles.length > 0) {
-      confidence += Math.min(0.3, articles.length * 0.05); // Up to 30% for articles
-    }
-    
-    if (contentChunks.length > 0) {
-      confidence += Math.min(0.4, contentChunks.length * 0.08); // Up to 40% for content chunks
-    }
-    
-    // Check if content is highly relevant
-    const queryWords = query.toLowerCase().split(' ').filter(w => w.length > 2);
-    let relevanceScore = 0;
-    
-    if (articles.length > 0) {
-      articles.forEach(article => {
-        const title = (article.title || '').toLowerCase();
-        const description = (article.description || '').toLowerCase();
-        const text = `${title} ${description}`;
-        
-        queryWords.forEach(word => {
-          if (text.includes(word)) relevanceScore += 0.1;
-        });
-      });
-    }
-    
-    confidence += Math.min(0.2, relevanceScore); // Up to 20% for relevance
-    
-    return Math.min(0.95, Math.max(0.1, confidence)); // Cap between 10% and 95%
-  } catch (error) {
-    console.warn('Error calculating RAG confidence:', error);
-    return 0.3; // Default confidence if calculation fails
-  }
-}
 
-function applyFreeQueryPenalty(mentionsFree, topServiceIsPaid, baseConfidence, confidenceFactors) {
-  if (mentionsFree && topServiceIsPaid) {
-    baseConfidence -= 0.35; 
-    confidenceFactors.push('Free query but top result is paid (-0.35)');
-  }
-  return baseConfidence;
-}
 
-function applyOnlineQueryPenalty(mentionsOnline, topServiceIsOffline, baseConfidence, confidenceFactors) {
-  if (mentionsOnline && topServiceIsOffline) {
-    baseConfidence -= 0.25; 
-    confidenceFactors.push('Online query but top result offline (-0.25)');
-  }
-  return baseConfidence;
-}
 
-function applyCertificatePenalty(mentionsCertificate, baseConfidence, confidenceFactors) {
-  if (mentionsCertificate) {
-    const hasCert = false; // no certificate detection yet
-    if (!hasCert) { 
-      baseConfidence -= 0.2; 
-      confidenceFactors.push('Certificate requested but not found (-0.2)'); 
-    }
-  }
-  return baseConfidence;
-}
 
-function applyLandingBonus(hasLandingFree, mentionsFree, mentionsOnline, baseConfidence, confidenceFactors) {
-  if (hasLandingFree && (mentionsFree || mentionsOnline)) {
-    baseConfidence += 0.25; 
-    confidenceFactors.push('Landing free/online page present (+0.25)');
-  }
-  return baseConfidence;
-}
 
-function hasContentBasedConfidence(query, intent, content) {
-  if (!query) return false;
-  
-  const lc = query.toLowerCase();
 
-  // Helper functions for confidence checks
-  const isClarificationQuestion = () => {
-    return lc.includes("what type of") && lc.includes("are you planning") && lc.includes("this will help");
-  };
-  
-  const isOverlyBroadCourseQuery = () => {
-    return lc === "do you do courses" || lc === "do you offer courses" || lc === "what courses do you offer";
-  };
-  
-  const isVagueQuery = () => {
-    const queryLength = query.length;
-    if (queryLength <= 10 && !hasSpecificKeywords(query)) return true;
-    
-    const vaguePatterns = [
-      "photography help", "photography advice", "help with photography", 
-      "what can you help me with", "photography tips", "photography guidance",
-      "photography support", "photography assistance", "photography questions"
-    ];
-    return vaguePatterns.some(pattern => lc.includes(pattern));
-  };
-  
-  const hasInsufficientContent = () => {
-  const articleCount = content.articles?.length || 0;
-  const eventCount = content.events?.length || 0;
-  const productCount = content.products?.length || 0;
-  const relevanceScore = content.relevanceScore || 0;
-    const totalContent = articleCount + eventCount + productCount;
-    
-    return totalContent <= 1 && relevanceScore < 0.3;
-  };
-  
-  const hasRichContent = () => {
-    const articleCount = content.articles?.length || 0;
-    const eventCount = content.events?.length || 0;
-    const productCount = content.products?.length || 0;
-    const relevanceScore = content.relevanceScore || 0;
-  const totalContent = articleCount + eventCount + productCount;
-  
-    return totalContent >= 3 && relevanceScore > 0.6;
-  };
-  
-  const hasMediumContentWithKeywords = () => {
-    const articleCount = content.articles?.length || 0;
-    const eventCount = content.events?.length || 0;
-    const productCount = content.products?.length || 0;
-    const relevanceScore = content.relevanceScore || 0;
-    const totalContent = articleCount + eventCount + productCount;
-    
-    return totalContent >= 2 && relevanceScore > 0.5 && hasSpecificKeywords(query);
-  };
-  
-  const isEventsQueryWithContent = () => {
-    const eventCount = content.events?.length || 0;
-    const articleCount = content.articles?.length || 0;
-    const productCount = content.products?.length || 0;
-    const totalContent = articleCount + eventCount + productCount;
-    
-    return intent === "events" && hasSpecificKeywords(query) && (eventCount > 0 || totalContent > 0);
-  };
-  
-  const isEquipmentQueryWithContent = () => {
-    const articleCount = content.articles?.length || 0;
-    const productCount = content.products?.length || 0;
-    
-    return lc.includes("tripod") && (articleCount > 0 || productCount > 0);
-  };
-  
-  const isResidentialWorkshopPricingQuery = () => {
-    const eventCount = content.events?.length || 0;
-    const articleCount = content.articles?.length || 0;
-    const relevanceScore = content.relevanceScore || 0;
-    
-    if (lc.includes("residential") && lc.includes("workshop") &&
-        (lc.includes("price") || lc.includes("cost") || lc.includes("b&b") || lc.includes("bed and breakfast"))) {
-    if (eventCount > 0) return true;
-    if (articleCount > 0 || relevanceScore >= 0.3) return true;
-  }
-    return false;
-  };
-  
-  const isPricingAccommodationQuery = () => {
-    const eventCount = content.events?.length || 0;
-    const articleCount = content.articles?.length || 0;
-    const relevanceScore = content.relevanceScore || 0;
-    
-  const pricingAccommodationHints = ["price", "cost", "fees", "pricing", "b&b", "bed and breakfast", "accommodation", "stay", "include b&b", "includes b&b"];
-  if (pricingAccommodationHints.some(h => lc.includes(h))) {
-    if (eventCount > 0) return true;
-    if (articleCount >= 1 && relevanceScore >= 0.3) return true;
-    if (relevanceScore >= 0.5) return true;
-  }
-    return false;
-  };
-  
-  // Early returns for clarification cases
-  if (isClarificationQuestion()) return false;
-  if (isOverlyBroadCourseQuery()) return false;
-  if (isVagueQuery()) return false;
-  if (hasInsufficientContent()) return false;
-  
-  // Confidence cases
-  if (hasRichContent()) return true;
-  if (hasMediumContentWithKeywords()) return true;
-  if (isEventsQueryWithContent()) return true;
-  if (isEquipmentQueryWithContent()) return true;
-  if (isResidentialWorkshopPricingQuery()) return true;
-  if (isPricingAccommodationQuery()) return true;
-  
-  // Default to clarification for safety
-  return false;
-}
-
-// Helper function to detect specific keywords
-function hasSpecificKeywords(query) {
-  const lc = query.toLowerCase();
-  const specificKeywords = [
-    // Equipment
-    "camera", "lens", "tripod", "filter", "bag", "memory card",
-    // Courses/Workshops
-    "beginner", "advanced", "rps", "lightroom", "online", "private", "course", "workshop",
-    // Services
-    "mentoring", "feedback", "critique", "lessons", "training", "service",
-    // Technical
-    "iso", "aperture", "shutter", "exposure", "composition", "lighting", "white balance",
-    "depth of field", "framing", "macro", "portrait", "landscape", "street",
-    // About
-    "alan", "ranger", "about", "who is", "where is", "contact"
-  ];
-  
-  return specificKeywords.some(keyword => lc.includes(keyword));
-}
 
 /**
  * COMPLETE CLARIFICATION SYSTEM - PHASE 1: Detection
  * Detects queries that need clarification based on comprehensive 20-question analysis
  * 100% detection rate for all ambiguous query types
  */
-function needsClarification(query) {
-  console.log(`🔍 needsClarification called with: "${query}"`);
-  if (!query) return false;
-  
-  const lc = query.toLowerCase();
-
-  // Helper functions for specific query detection
-  const isSpecificTripodQuery = () => {
-    return lc.includes("tripod") || lc.includes("which tripod") || lc.includes("what tripod");
-  };
-  
-  const isResidentialWorkshopPricingQuery = () => {
-    return (lc.includes("residential") && lc.includes("workshop")) || lc.includes("b&b") || lc.includes("bed and breakfast");
-  };
-  
-  const getCurrentPatterns = () => {
-    return [
-    lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop"),
-    lc.includes("events") && !lc.includes("course") && !lc.includes("workshop"),
-    lc.includes("training") && !lc.includes("course") && !lc.includes("workshop")
-  ];
-  };
-  
-  const getGenericQuestionPatterns = () => {
-    return [
-    lc.includes("do you do") && (lc.includes("courses") || lc.includes("workshops")),
-    lc.includes("do you run") && lc.includes("workshops"),
-    lc.includes("do you offer") && (lc.includes("lessons") || lc.includes("services")),
-    lc.includes("are your") && lc.includes("suitable"),
-    lc.includes("do you have") && lc.includes("courses"),
-    lc.includes("is there a free") && lc.includes("course"),
-    lc.includes("how long have you been teaching"),
-      lc.includes("who is") && lc.includes("alan")
-    ];
-  };
-    
-  const getSpecificAmbiguousPatterns = () => {
-    return [
-    lc.includes("what") && (lc.includes("courses") || lc.includes("workshops")) && !lc.includes("included"),
-    lc.includes("when is") && lc.includes("workshop"),
-    (lc.includes("how much") && lc.includes("workshop") && !lc.includes("residential") && !lc.includes("b&b") && !lc.includes("bed and breakfast")),
-    lc.includes("what's the difference"),
-    lc.includes("what photography workshops") && lc.includes("coming up"),
-    lc.includes("what's included in") && lc.includes("course"),
-      lc.includes("what camera should i buy")
-    ];
-  };
-    
-  const getTechnicalAdvicePatterns = () => {
-    return [
-    lc.includes("how do i") && lc.includes("camera"),
-    lc.includes("what's the best") && lc.includes("lens"),
-    lc.includes("what camera settings"),
-    lc.includes("can you help me choose"),
-    lc.includes("what photography services do you offer")
-  ];
-  };
-  
-  const logEquipmentQueryDebug = () => {
-    if (lc.includes("equipment")) {
-      console.log(`🔍 Equipment query detected: "${query}"`);
-      console.log(`   lc.includes("equipment"): ${lc.includes("equipment")}`);
-      console.log(`   lc.includes("course"): ${lc.includes("course")}`);
-      console.log(`   lc.includes("workshop"): ${lc.includes("workshop")}`);
-      console.log(`   Pattern result: ${lc.includes("equipment") && !lc.includes("course") && !lc.includes("workshop")}`);
-    }
-  };
-  
-  const logFinalResult = () => {
-    if (lc.includes("equipment")) {
-      console.log(`   Final needsClarification result: ${result}`);
-    }
-  };
-  
-  // Early returns for specific queries that should not trigger clarification
-  if (isSpecificTripodQuery()) return false;
-  if (isResidentialWorkshopPricingQuery()) return false;
-  
-  // Log debug information for equipment queries
-  logEquipmentQueryDebug();
-  
-  // Get all pattern arrays
-  const currentPatterns = getCurrentPatterns();
-  const genericPatterns = getGenericQuestionPatterns();
-  const specificPatterns = getSpecificAmbiguousPatterns();
-  const technicalPatterns = getTechnicalAdvicePatterns();
-  
-  // Evaluate retrieval-first short-circuit: if query contains item-specific equipment
-  // keywords and not broad terms, avoid clarification here and let content decide.
-  const itemSpecific = ["tripod","lens","bag","memory card"].some(k => lc.includes(k));
-  const broadOnly = lc.includes("equipment") && !itemSpecific;
-  const allPatterns = [...currentPatterns, ...genericPatterns, ...specificPatterns, ...technicalPatterns];
-  const result = broadOnly || allPatterns.some(pattern => pattern);
-  
-  // Log final result for equipment queries
-  logFinalResult();
-  
-  return result;
-}
 /**
  * Generate clarification options from evidence buckets
  * Sources options from actual data instead of hardcoded patterns
@@ -2192,7 +1681,6 @@ function deduplicateAndLimitOptions(options) {
 
 async function generateClarificationOptionsFromEvidence(client, query, pageContext) {
   try {
-    const keywords = extractKeywords(query || "");
     const evidence = await getEvidenceSnapshot(client, query, pageContext);
     
     const options = [];
@@ -2300,33 +1788,7 @@ function generateWorkshopClarification() {
   };
 }
 
-function generateLocationClarification() {
-  return {
-    type: "location_clarification",
-    question: "We run courses in various locations. What type of photography course are you looking for?",
-    options: [
-      { text: "Courses near Birmingham", query: "courses near Birmingham" },
-      { text: "Online courses instead", query: "online courses alternative" },
-      { text: "Travel to Coventry", query: "courses in Coventry" },
-      { text: "Private lessons", query: "private lessons flexible" }
-    ]
-  };
-}
 
-function generateTopicClarification() {
-  return {
-    type: "topic_clarification",
-    question: "I'd be happy to help! Could you be more specific about what you're looking for?",
-    options: [
-      { text: "Photography equipment advice", query: "photography equipment advice" },
-      { text: "Photography courses and workshops", query: "photography courses" },
-      { text: "Photography services and mentoring", query: "photography services" },
-      { text: "General photography advice", query: "photography advice" },
-      { text: "About Alan Ranger", query: "about alan ranger" }
-    ],
-    confidence: 10
-  };
-}
 
 function generateGenericClarification() {
   return {
@@ -2739,7 +2201,6 @@ function getClarificationLevelAndConfidence(query, pageContext) {
 
 // NEW: Query Classification System
 function classifyQuery(query) {
-  const lc = query.toLowerCase();
   console.log(`🔍 classifyQuery called with: "${query}"`);
   
   // COURSE QUERIES - Check these FIRST to ensure they go to clarification
@@ -3190,344 +2651,18 @@ async function generateClarificationQuestion(query, client = null, pageContext =
   return genericResult;
 }
 // Helper functions for handleClarificationFollowUp
-function handleOnlineCoursesPatterns(query, lc) {
-  if (lc.includes("online courses (free and paid)") || lc === "online courses (free and paid)") {
-    console.log(`✅ Matched exact online courses pattern for: "${query}"`);
-    return {
-      type: "route_to_clarification",
-      newQuery: "online photography courses (free and paid) clarification",
-      newIntent: "clarification"
-    };
-  }
-  return null;
-}
 
-function handleFinalPatterns(query, lc) {
-  if (lc.includes("basic camera settings") || lc.includes("composition") || lc.includes("editing")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "camera settings and composition lessons",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("intermediate") && lc.includes("upgrade")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "camera upgrade for intermediate photographers",
-      newIntent: "advice"
-    };
-  }
-  
-  // About information patterns
-  if (lc.includes("teaching") || lc.includes("how long")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "Alan Ranger teaching experience",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("qualified") || lc.includes("qualifications")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "Alan Ranger qualifications",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("where is he based") || lc.includes("location")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "Alan Ranger location",
-      newIntent: "advice"
-    };
-  }
-  
-  // Service types
-  if (lc.includes("private lessons") || lc.includes("private")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "private photography lessons",
-      newIntent: "advice"
-    };
-  }
-  
-  return null;
-}
 
-function handleWorkshopAndEquipmentPatterns(query, lc) {
-  // Workshop types
-  if (lc.includes("bluebell") || lc.includes("bluebells")) {
-    return {
-      type: "route_to_events",
-      newQuery: "bluebell photography workshops",
-      newIntent: "events"
-    };
-  }
-  
-  // FIXED: Q19 - "any outdoor photography" should route to advice, not events
-  if (lc.includes("outdoor photography") || lc.includes("outdoor")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "outdoor photography workshops information",
-      newIntent: "advice"
-    };
-  }
-  
-  // Equipment advice patterns
-  if (lc.includes("sony")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "sony camera recommendations",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("entry level") || lc.includes("beginners camera")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "beginner camera recommendations",
-      newIntent: "advice"
-    };
-  }
-  
-  return null;
-}
 
-function handleEquipmentAndCoursePatterns(query, lc) {
-  // FIXED: Photography course/workshop should trigger follow-up clarification (but not equipment queries)
-  if (lc.includes("photography course/workshop") && !lc.includes("equipment")) {
-    return {
-      type: "route_to_clarification",
-      newQuery: "photography course workshop type clarification",
-      newIntent: "clarification"
-    };
-  }
 
-  // Equipment for specific course types - these should be confident enough
-  if (lc.includes("equipment for beginners camera course")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "equipment for beginners camera course",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("equipment for lightroom course")) {
-    return {
-      type: "route_to_advice", 
-      newQuery: "equipment for lightroom course",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("equipment for rps course")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "equipment for rps course", 
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("equipment for online course")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "equipment for online course",
-      newIntent: "advice"
-    };
-  }
-  
-  if (lc.includes("general photography course equipment")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "general photography course equipment",
-      newIntent: "advice"
-    };
-  }
-  
-  // Specific course types
-  if (lc.includes("camera course")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "camera course for beginners",
-      newIntent: "advice"
-    };
-  }
-  
-  // FIXED: Q13 - "the beginners editing course" should route to advice, not events
-  if (lc.includes("editing course") || lc.includes("beginners editing")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "beginner editing course information",
-      newIntent: "advice"
-    };
-  }
-  
-  return null;
-}
-
-// Helper function to handle remaining inline follow-up patterns
-function handleInlineFollowUpPatterns(query, lc) {
-  // Check different pattern groups in order
-  return handleUpcomingEventsPatterns(query, lc) ||
-         handleGenericFallbackPatterns(query, lc) ||
-         handleCourseSpecificPatterns(query, lc) ||
-         handleOnlineCoursePatterns(query, lc) ||
-         handleCatchAllCoursePatterns(query, lc) ||
-         null;
-}
 
 // Helper functions for different pattern groups
-function handleUpcomingEventsPatterns(query, lc) {
-  if (lc.includes("coming up this month") || lc.includes("upcoming")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "upcoming photography workshops information",
-      newIntent: "advice"
-    };
-  }
-  return null;
-  }
   
-function handleGenericFallbackPatterns(query, lc) {
-  if (lc.includes("yes") && lc.includes("free")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "free course details",
-      newIntent: "advice"
-    };
-  }
   
-  if (lc.includes("beginner") && lc.includes("ok")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "beginner photography courses",
-      newIntent: "advice"
-    };
-  }
-  return null;
-  }
-  
-function handleCourseSpecificPatterns(query, lc) {
-  if (lc.includes("beginner courses") || lc.includes("beginner photography courses")) {
-    console.log(`✅ Matched beginner courses pattern for: "${query}"`);
-    return {
-      type: "route_to_events",
-      newQuery: "beginner photography courses",
-      newIntent: "events"
-    };
-  }
-  
-  if (lc.includes("in-person courses") || lc.includes("coventry") || lc.includes("photography courses coventry")) {
-    return {
-      type: "route_to_events", 
-      newQuery: "photography courses Coventry",
-      newIntent: "events"
-    };
-  }
-  
-  if (lc.includes("specific topic courses") || lc.includes("specialized photography courses")) {
-    return {
-      type: "route_to_events",
-      newQuery: "specialized photography courses",
-      newIntent: "events"
-    };
-  }
-  return null;
-}
 
-function handleOnlineCoursePatterns(query, lc) {
-  if (lc.includes("online courses") || lc.includes("free and paid") || lc.includes("online photography courses") || 
-      lc.includes("online courses (free") || lc.includes("free and paid)")) {
-    console.log(`✅ Matched online courses pattern for: "${query}"`);
-    return {
-      type: "route_to_clarification",
-      newQuery: "online photography courses (free and paid) clarification", 
-      newIntent: "clarification"
-    };
-  }
-  
-  // Specific pattern for the exact failing query
-  if (lc.includes("online courses (free and paid)") || lc === "online courses (free and paid)") {
-    console.log(`✅ Matched exact online courses pattern for: "${query}"`);
-    return {
-      type: "route_to_clarification",
-      newQuery: "online photography courses (free and paid) clarification",
-      newIntent: "clarification"
-    };
-  }
-  return null;
-}
 
-function handleCatchAllCoursePatterns(query, lc) {
-  // Catch-all for any course-related follow-up that wasn't caught above
-  // BUT exclude queries that should go to clarification (like "online courses (free and paid)")
-  if (lc.includes("courses") && (lc.includes("in-person") || lc.includes("beginner") || lc.includes("specific")) && 
-      !lc.includes("online courses (free and paid)") && !lc.includes("free and paid")) {
-    console.log(`✅ Matched catch-all courses pattern for: "${query}"`);
-    return {
-      type: "route_to_events",
-      newQuery: query, // Use the original query
-      newIntent: "events"
-    };
-  }
-  return null;
-}
 
-function handleAllRemainingPatterns(query, lc) {
-  if (lc.includes("specific topic courses") || lc === "specific topic courses") {
-    console.log(`✅ Matched specific topic courses pattern for: "${query}"`);
-    return {
-      type: "route_to_events",
-      newQuery: "specialized photography courses",
-      newIntent: "events"
-    };
-  }
-  
-  if (lc.includes("beginner courses") || lc === "beginner courses") {
-    console.log(`✅ Matched beginner courses pattern for: "${query}"`);
-    return {
-      type: "route_to_events",
-      newQuery: "beginner photography courses",
-      newIntent: "events"
-    };
-  }
 
-  // Online courses patterns (legacy)
-  if (lc.includes("online") || lc.includes("can't get to coventry")) {
-    return {
-      type: "route_to_advice",
-      newQuery: "online photography courses",
-      newIntent: "advice"
-    };
-  }
-  
-  return null;
-}
-
-function handleComprehensivePatterns(query, lc) {
-  if (lc.includes("in-person courses in coventry") || lc === "in-person courses in coventry") {
-    console.log(`✅ Matched in-person courses pattern for: "${query}"`);
-    return {
-      type: "route_to_events",
-      newQuery: "photography courses Coventry",
-      newIntent: "events"
-    };
-  }
-  
-  // Lightroom course patterns
-  if (lc.includes("lightroom course") || lc.includes("lightroom courses")) {
-    console.log(`✅ Matched Lightroom course pattern for: "${query}"`);
-    return {
-      type: "route_to_events",
-      newQuery: "Lightroom photography courses",
-      newIntent: "events"
-    };
-  }
-  
-  return null;
-}
 
 function handleServicePatterns(query, lc) {
   // Private lessons and pricing should be handled as advice/services, not events
@@ -3705,99 +2840,6 @@ function handleWorkshopClarificationPatterns(query, lc, matches, createRoute) {
   return null;
 }
 
-function handleClarificationFollowUp(query, originalQuery, originalIntent) {
-  const lc = query.toLowerCase();
-  console.log(`🔍 handleClarificationFollowUp called with:`, { query, originalQuery, originalIntent, lc });
-  
-  // Small helpers to reduce repetition while preserving behavior
-  function createRoute(type, newQuery, newIntent) {
-    console.log(`🔍 Creating route: ${type} -> "${newQuery}" (${newIntent})`);
-    return { type, newQuery, newIntent };
-  }
-  function matches(needle) {
-    const result = lc.includes(needle) || lc === needle;
-    console.log(`🔍 matches("${needle}"): ${result}`);
-    return result;
-  }
-  
-  // Allow user to bypass clarification entirely
-  if (matches("show me results")) {
-    return createRoute("route_to_advice", originalQuery || query, "advice");
-  }
-  
-  // Handle workshop clarification follow-ups - route to clarification for cascading logic
-  const workshopResult = handleWorkshopClarificationPatterns(query, lc, matches, createRoute);
-  if (workshopResult) {
-    return workshopResult;
-  }
-  
-  // Check specific course patterns first
-  const specificCourseResult = handleSpecificCoursePatterns(query, lc, matches, createRoute);
-  if (specificCourseResult) {
-    return specificCourseResult;
-  }
-  
-  // Check online courses and current patterns
-  const onlineCoursesResult = handleOnlineCoursesPatterns(query, lc);
-  if (onlineCoursesResult) {
-    return onlineCoursesResult;
-  }
-  
-  const currentPatternsResult = handleCurrentPatterns(query, lc);
-  if (currentPatternsResult) {
-    return currentPatternsResult;
-  }
-  
-  // Check service patterns
-  const servicePatternsResult = handleServicePatterns(query, lc);
-  if (servicePatternsResult) {
-    return servicePatternsResult;
-  }
-  
-  // Check comprehensive patterns
-  const comprehensiveResult = handleComprehensivePatterns(query, lc);
-  if (comprehensiveResult) {
-    return comprehensiveResult;
-  }
-  
-  // Check remaining patterns
-  const remainingPatternsResult = handleAllRemainingPatterns(query, lc);
-  if (remainingPatternsResult) {
-    return remainingPatternsResult;
-  }
-  
-  // Check equipment and course patterns
-  const equipmentCourseResult = handleEquipmentAndCoursePatterns(query, lc);
-  if (equipmentCourseResult) {
-    return equipmentCourseResult;
-  }
-  
-  // Check workshop and equipment patterns
-  const workshopEquipmentResult = handleWorkshopAndEquipmentPatterns(query, lc);
-  if (workshopEquipmentResult) {
-    return workshopEquipmentResult;
-  }
-  
-  // Check final patterns
-  const finalPatternsResult = handleFinalPatterns(query, lc);
-  if (finalPatternsResult) {
-    return finalPatternsResult;
-  }
-  
-  // Check remaining inline patterns
-  const inlinePatternsResult = handleInlineFollowUpPatterns(query, lc);
-  if (inlinePatternsResult) {
-    return inlinePatternsResult;
-  }
-  
-  // ULTIMATE FALLBACK - if we get here, something is wrong
-  console.log(`❌ NO PATTERN MATCHED for: "${query}" (${lc})`);
-  return {
-    type: "route_to_events",
-    newQuery: query,
-    newIntent: "events"
-  };
-}
 
 /* ----------------------- DB helpers (robust fallbacks) ------------------- */
 
