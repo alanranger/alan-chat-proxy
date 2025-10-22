@@ -1623,37 +1623,56 @@ function extractServiceTypes(services) {
   return serviceTypes;
 }
 
-function addServiceOptions(options, serviceTypes) {
-  // Filter and format meaningful service types
+// Helper function to check if service type is valid
+function isValidServiceType(type) {
+  return type && type.length > 3;
+}
+
+// Helper function to check if service type should be skipped
+function shouldSkipServiceType(type) {
+  return type.includes('All Photography Workshops') || type.includes('services');
+}
+
+// Helper function to format service type
+function formatServiceType(type) {
+  if (type.includes('2.5hrs-4hrs')) return '2.5hr - 4hr workshops';
+  if (type.includes('1-day')) return '1 day workshops';
+  if (type.includes('2-5-days') || type.includes('weekend residential')) return 'Multi day residential workshops';
+  if (type.includes('coastal')) return 'Coastal workshops';
+  if (type.includes('landscape')) return 'Landscape workshops';
+  if (type.includes('bluebell')) return 'Bluebell workshops';
+  if (type.includes('macro') || type.includes('abstract')) return 'Macro & Abstract workshops';
+  return type;
+}
+
+// Helper function to filter and format service types
+function filterAndFormatServiceTypes(serviceTypes) {
   const meaningfulTypes = new Set();
   
   for (const type of serviceTypes) {
-    if (!type || type.length <= 3) continue;
+    if (!isValidServiceType(type) || shouldSkipServiceType(type)) continue;
     
-    // Skip generic categories
-    if (type.includes('All Photography Workshops') || type.includes('services')) continue;
-    
-    // Format meaningful categories
-    let formattedType = type;
-    if (type.includes('2.5hrs-4hrs')) formattedType = '2.5hr - 4hr workshops';
-    else if (type.includes('1-day')) formattedType = '1 day workshops';
-    else if (type.includes('2-5-days') || type.includes('weekend residential')) formattedType = 'Multi day residential workshops';
-    else if (type.includes('coastal')) formattedType = 'Coastal workshops';
-    else if (type.includes('landscape')) formattedType = 'Landscape workshops';
-    else if (type.includes('bluebell')) formattedType = 'Bluebell workshops';
-    else if (type.includes('macro') || type.includes('abstract')) formattedType = 'Macro & Abstract workshops';
-    
+    const formattedType = formatServiceType(type);
     meaningfulTypes.add(formattedType);
   }
   
-  // Add meaningful service options
+  return meaningfulTypes;
+}
+
+// Helper function to add service options to array
+function addServiceOptionsToArray(options, meaningfulTypes) {
   for (const type of meaningfulTypes) {
-          options.push({
+    options.push({
       text: type,
       query: type.toLowerCase()
-          });
-        }
-    }
+    });
+  }
+}
+
+function addServiceOptions(options, serviceTypes) {
+  const meaningfulTypes = filterAndFormatServiceTypes(serviceTypes);
+  addServiceOptionsToArray(options, meaningfulTypes);
+}
     
 function deduplicateAndLimitOptions(options) {
     const uniqueOptions = [];
