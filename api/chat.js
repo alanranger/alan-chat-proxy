@@ -4260,15 +4260,18 @@ function calculateEventConfidence(query, events, product) {
 }
 
 function initializeConfidenceContext(query) {
-  return {
+  const context = {
     baseConfidence: 0.3,
     confidenceFactors: [],
-    queryLower: query.toLowerCase(),
-    addFactor: (message, delta) => {
-      this.baseConfidence += delta;
-      this.confidenceFactors.push(`${message} (${delta >= 0 ? '+' : ''}${delta})`);
-    }
+    queryLower: query.toLowerCase()
   };
+  
+  context.addFactor = (message, delta) => {
+    context.baseConfidence += delta;
+    context.confidenceFactors.push(`${message} (${delta >= 0 ? '+' : ''}${delta})`);
+  };
+  
+  return context;
 }
 
 function analyzeDataAttributes(events, product, context) {
