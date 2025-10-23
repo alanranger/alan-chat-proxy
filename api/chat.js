@@ -4261,9 +4261,17 @@ function calculateEventConfidence(query, events, product) {
 
 function initializeConfidenceContext(query) {
   const context = {
-    baseConfidence: 0.3,
+    baseConfidence: 0.1, // Start low, build up based on actual quality
     confidenceFactors: [],
-    queryLower: query.toLowerCase()
+    queryLower: query.toLowerCase(),
+    qualityIndicators: {
+      hasRelevantEvents: false,
+      hasRelevantArticles: false,
+      hasDirectAnswer: false,
+      hasActionableInfo: false,
+      responseCompleteness: 0,
+      responseAccuracy: 0
+    }
   };
   
   context.addFactor = (message, delta) => {
@@ -4279,6 +4287,7 @@ function analyzeDataAttributes(events, product, context) {
   
   // Analyze events for response attributes
   if (events && events.length > 0) {
+    context.qualityIndicators.hasRelevantEvents = true;
     events.forEach(event => analyzeEventAttributes(event, responseAttributes));
     responseAttributes.averagePrice = responseAttributes.averagePrice / events.length;
   }
@@ -4303,10 +4312,52 @@ function applyAllScoringFactors(context) {
 }
 
 function finalizeConfidence(query, context) {
-  const finalConfidence = Math.max(0.1, Math.min(0.95, context.baseConfidence));
+  // Calculate confidence based on Alan's quality indicators
+  let qualityScore = 0;
+  
+  // Perfect (95-100): Has everything - direct answer, relevant events, relevant articles, actionable info
+  if (context.qualityIndicators.hasDirectAnswer && 
+      context.qualityIndicators.hasRelevantEvents && 
+      context.qualityIndicators.hasRelevantArticles && 
+      context.qualityIndicators.hasActionableInfo &&
+      context.qualityIndicators.responseCompleteness >= 0.8 &&
+      context.qualityIndicators.responseAccuracy >= 0.8) {
+    qualityScore = 0.95; // 95% confidence for perfect responses
+  }
+  // Nearly Perfect (90-94): Has most elements
+  else if (context.qualityIndicators.hasDirectAnswer && 
+           (context.qualityIndicators.hasRelevantEvents || context.qualityIndicators.hasRelevantArticles) &&
+           context.qualityIndicators.responseCompleteness >= 0.7 &&
+           context.qualityIndicators.responseAccuracy >= 0.7) {
+    qualityScore = 0.90; // 90% confidence for nearly perfect
+  }
+  // Very Good (75-89): Has good answer and some supporting content
+  else if (context.qualityIndicators.hasDirectAnswer && 
+           context.qualityIndicators.responseCompleteness >= 0.6 &&
+           context.qualityIndicators.responseAccuracy >= 0.6) {
+    qualityScore = 0.80; // 80% confidence for very good
+  }
+  // Good (50-74): Has some useful content
+  else if (context.qualityIndicators.hasDirectAnswer || 
+           context.qualityIndicators.hasRelevantEvents || 
+           context.qualityIndicators.hasRelevantArticles) {
+    qualityScore = 0.60; // 60% confidence for good
+  }
+  // Poor (30-49): Limited useful content
+  else if (context.qualityIndicators.responseCompleteness >= 0.3) {
+    qualityScore = 0.40; // 40% confidence for poor
+  }
+  // Very Poor (0-29): Little to no useful content
+  else {
+    qualityScore = 0.20; // 20% confidence for very poor
+  }
+  
+  // Apply base confidence adjustments
+  const finalConfidence = Math.max(0.1, Math.min(0.95, qualityScore + context.baseConfidence));
   
   if (context.confidenceFactors.length > 0) {
-    console.log(`🎯 Event confidence factors for "${query}": ${context.confidenceFactors.join(', ')} = ${(finalConfidence * 100).toFixed(1)}%`);
+    console.log(`🎯 Alan's Quality-Based Confidence for "${query}": ${context.confidenceFactors.join(', ')} = ${(finalConfidence * 100).toFixed(1)}%`);
+    console.log(`📊 Quality Indicators: Direct=${context.qualityIndicators.hasDirectAnswer}, Events=${context.qualityIndicators.hasRelevantEvents}, Articles=${context.qualityIndicators.hasRelevantArticles}, Actionable=${context.qualityIndicators.hasActionableInfo}`);
   }
   
   return finalConfidence;
@@ -6172,26 +6223,53 @@ function filterAndSortEntities(entities, query) {
   return relevantEntities;
 }
     
-// Helper function to calculate confidence
+// Helper function to calculate confidence based on Alan's quality definitions
 function calculateEntityConfidence(relevantEntities, chunks, results) {
+    // Start with low confidence, build up based on actual quality
+    let qualityScore = 0.1;
+    let qualityFactors = [];
+    
+    // Analyze content quality
     if (chunks.length > 0) {
-      results.confidence = Math.min(0.9, 0.6 + (chunks.length * 0.1));
       results.answerType = 'content';
-      console.log(`📊 Confidence from chunks: ${results.confidence} (${chunks.length} chunks)`);
+      // More chunks = higher quality (up to a point)
+      const chunkQuality = Math.min(0.3, chunks.length * 0.05);
+      qualityScore += chunkQuality;
+      qualityFactors.push(`Content chunks: +${(chunkQuality * 100).toFixed(1)}%`);
     }
     
     if (relevantEntities.length > 0) {
       const eventEntities = relevantEntities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
       if (eventEntities.length > 0) {
-        results.confidence = Math.max(results.confidence, 0.9);
         results.answerType = 'events';
-        console.log(`🎯 Found ${eventEntities.length} event entities, confidence: ${results.confidence}`);
+        // High quality: relevant future events
+        qualityScore += 0.4;
+        qualityFactors.push(`Future events: +40%`);
+        console.log(`🎯 Found ${eventEntities.length} future event entities`);
       } else {
-        results.confidence = Math.max(results.confidence, 0.7);
-        console.log(`🎯 Found ${relevantEntities.length} advice entities, confidence: ${results.confidence}`);
+        // Medium quality: advice entities
+        qualityScore += 0.2;
+        qualityFactors.push(`Advice entities: +20%`);
+        console.log(`🎯 Found ${relevantEntities.length} advice entities`);
       }
     }
     
+    // Apply Alan's quality-based confidence scoring
+    if (qualityScore >= 0.8) {
+      results.confidence = 0.95; // Perfect
+    } else if (qualityScore >= 0.7) {
+      results.confidence = 0.90; // Nearly Perfect
+    } else if (qualityScore >= 0.6) {
+      results.confidence = 0.80; // Very Good
+    } else if (qualityScore >= 0.4) {
+      results.confidence = 0.60; // Good
+    } else if (qualityScore >= 0.2) {
+      results.confidence = 0.40; // Poor
+    } else {
+      results.confidence = 0.20; // Very Poor
+    }
+    
+    console.log(`📊 Alan's Quality-Based Entity Confidence: ${qualityFactors.join(', ')} = ${(results.confidence * 100).toFixed(1)}%`);
     console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
 }
 
