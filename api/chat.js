@@ -7477,7 +7477,14 @@ async function tryRagFirst(client, query) {
     const { keywords, lcQuery, isConceptQuery, primaryKeyword } = prepareRagQuery(query);
     
     // Process RAG search results
-    const results = await processRagSearchResults(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery);
+    const results = await processRagSearchResults({
+      client,
+      query,
+      keywords,
+      isConceptQuery,
+      primaryKeyword,
+      lcQuery
+    });
     
     // Generate answer using helper function
     const { answer, type, sources } = generateRagAnswer({ query, entities: results.entities, chunks: results.chunks, results });
