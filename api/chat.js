@@ -3059,14 +3059,15 @@ async function handleDurationQueries(client, queryText, limit) {
   
   for (const { keyword, category } of durationMappings) {
     if (queryText.includes(keyword)) {
-      return await processDurationQuery(client, category, limit, keyword);
+      return await processDurationQuery({ client, category, limit, keyword });
     }
   }
   
   return null; // No duration match found
 }
 
-async function processDurationQuery(client, category, limit, keyword) {
+async function processDurationQuery(context) {
+  const { client, category, limit, keyword } = context;
   console.log(`🔍 Using category-based query for ${keyword} workshops`);
   const result = await findEventsByDuration(client, category, limit);
   console.log(`🔍 findEventsByDuration returned: ${result?.length || 0} events for ${keyword}`);
@@ -3165,54 +3166,6 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
 }
 
 // Helper function to handle fallback queries for findEventsByDuration
-function normalizeCategories(rawCategories) {
-  if (!rawCategories) return [];
-  
-  if (Array.isArray(rawCategories)) {
-    return normalizeArrayCategories(rawCategories);
-  }
-  
-  const value = String(rawCategories).trim();
-  
-  if (value.startsWith('{') && value.endsWith('}')) {
-    return normalizePostgresArray(value);
-  }
-  
-  if (value.startsWith('[') && value.endsWith(']')) {
-    return normalizeJsonArray(value);
-  }
-  
-  return normalizeGenericString(value);
-}
-
-// Helper function to normalize array categories
-function normalizeArrayCategories(categories) {
-  return categories.map(c => String(c).trim()).filter(Boolean);
-}
-
-// Helper function to normalize Postgres array format
-function normalizePostgresArray(value) {
-  const inner = value.slice(1, -1);
-  return inner
-    .split(',')
-    .map(s => s.replace(/^"|"$/g, '').trim())
-    .filter(Boolean);
-}
-
-// Helper function to normalize JSON array format
-function normalizeJsonArray(value) {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.map(c => String(c).trim()).filter(Boolean) : [];
-  } catch {
-    return normalizeGenericString(value);
-  }
-}
-
-// Helper function to normalize generic string format
-function normalizeGenericString(value) {
-  return value.split(/[;,]/).map(s => s.trim()).filter(Boolean);
-}
 
 
 // Helper: Extract Batsford session times
@@ -3725,25 +3678,6 @@ function addRecencyTieBreaker(s, r) {
     return s * 1_000_000 + seen;
 }
 
-function isEquipmentArticle(article) {
-  const title = (article.title || '').toLowerCase();
-  const url = (article.page_url || article.source_url || '').toLowerCase();
-  
-  return hasEquipmentKeywords(title, url) && !hasNonEquipmentKeywords(title);
-}
-
-function hasEquipmentKeywords(title, url) {
-  return title.includes('tripod') || title.includes('equipment') || 
-         title.includes('camera') || title.includes('lens') ||
-         url.includes('tripod') || url.includes('equipment') ||
-         url.includes('camera') || url.includes('lens');
-}
-
-function hasNonEquipmentKeywords(title) {
-  return title.includes('depth of field') || title.includes('iso') ||
-         title.includes('exposure') || title.includes('composition') ||
-         title.includes('lighting') || title.includes('editing');
-}
 
 // Helper function to handle page context
 function handlePageContext(pageContext, keywords) {
@@ -4250,8 +4184,6 @@ function parseExperienceLevelField(ln, helpers) {
 }
 
 function parseEquipmentNeededField(ln, helpers) {
-  const { matches, valueAfter, nextVal, setIf } = helpers;
-  
   // Check different equipment parsing patterns
   return parseStandardEquipmentFormat(ln, helpers) ||
          parseAsteriskEquipmentFormat(ln, helpers) ||
@@ -4806,42 +4738,53 @@ function findRelevantEvent(events, lowerQuery, dataContext) {
   let event = events[0]; // Default to first event
   
   // Check for location-specific events
-    const locationKeywords = ['devon', 'cornwall', 'yorkshire', 'peak district', 'lake district', 'snowdonia', 'anglesey', 'norfolk', 'suffolk', 'dorset', 'somerset'];
-    const mentionedLocation = locationKeywords.find(loc => lowerQuery.includes(loc));
-    
-    if (mentionedLocation) {
-      const locationEvent = events.find(e => {
-        const eventLocation = (e.event_location || '').toLowerCase();
-        return eventLocation.includes(mentionedLocation);
-      });
-      
-      if (locationEvent) {
-        event = locationEvent;
-        console.log(`🔍 RAG: Found location-specific event for ${mentionedLocation}: ${event.event_title}`);
-      }
-    }
-    
+  const locationEvent = findLocationSpecificEvent(events, lowerQuery);
+  if (locationEvent) event = locationEvent;
+  
   // Check for contextually relevant events
-    if (dataContext.originalQuery) {
-      const originalQueryLower = dataContext.originalQuery.toLowerCase();
-      console.log(`🔍 RAG: Looking for event matching original query: "${dataContext.originalQuery}"`);
-      
-      const keyTerms = dataContext.originalQuery.toLowerCase()
-        .split(/\s+/)
-        .filter(term => term.length > 3 && !['when', 'where', 'how', 'what', 'next', 'workshop', 'photography'].includes(term));
-      
-      const matchingEvent = events.find(e => {
-        const eventText = `${e.event_title || ''} ${e.event_location || ''}`.toLowerCase();
-        return keyTerms.some(term => eventText.includes(term));
-      });
-      
-      if (matchingEvent) {
-        event = matchingEvent;
-        console.log(`🔍 RAG: Found contextually relevant event: ${event.event_title}`);
-      }
-    }
+  const contextualEvent = findContextualEvent(events, dataContext);
+  if (contextualEvent) event = contextualEvent;
     
   return event;
+}
+
+function findLocationSpecificEvent(events, lowerQuery) {
+  const locationKeywords = ['devon', 'cornwall', 'yorkshire', 'peak district', 'lake district', 'snowdonia', 'anglesey', 'norfolk', 'suffolk', 'dorset', 'somerset'];
+  const mentionedLocation = locationKeywords.find(loc => lowerQuery.includes(loc));
+  
+  if (!mentionedLocation) return null;
+  
+  const locationEvent = events.find(e => {
+    const eventLocation = (e.event_location || '').toLowerCase();
+    return eventLocation.includes(mentionedLocation);
+  });
+  
+  if (locationEvent) {
+    console.log(`🔍 RAG: Found location-specific event for ${mentionedLocation}: ${locationEvent.event_title}`);
+  }
+  
+  return locationEvent;
+}
+
+function findContextualEvent(events, dataContext) {
+  if (!dataContext.originalQuery) return null;
+  
+  console.log(`🔍 RAG: Looking for event matching original query: "${dataContext.originalQuery}"`);
+  
+  const keyTerms = dataContext.originalQuery.toLowerCase()
+    .split(/\s+/)
+    .filter(term => term.length > 3 && !['when', 'where', 'how', 'what', 'next', 'workshop', 'photography'].includes(term));
+  
+  const matchingEvent = events.find(e => {
+    const eventText = `${e.event_title || ''} ${e.event_location || ''}`.toLowerCase();
+    return keyTerms.some(term => eventText.includes(term));
+  });
+  
+  if (matchingEvent) {
+    console.log(`🔍 RAG: Found contextually relevant event: ${matchingEvent.event_title}`);
+  }
+  
+  return matchingEvent;
 }
 
 function checkEventParticipants(event, lowerQuery) {
@@ -4919,9 +4862,9 @@ function checkEventFitnessLevel(event, lowerQuery) {
 }
 
 async function extractRelevantInfo(query, dataContext) {
-  const { products, events, articles } = dataContext;
+  const { products, events } = dataContext;
   const lowerQuery = query.toLowerCase();
-  const { hasText, formatDateGB, scrubAttrs, summarize } = createTextHelpers();
+  const { hasText, formatDateGB, summarize } = createTextHelpers();
   
   if (events && events.length > 0) {
     return processEventInformation({ events, lowerQuery, dataContext, hasText, formatDateGB, summarize, products });
@@ -5176,7 +5119,7 @@ function calculateEventConfidence(query, events, product) {
   analyzeDataAttributes(events, product, context);
   
   // Apply all scoring factors
-  applyAllScoringFactors(query, events, product, context);
+  applyAllScoringFactors({ ...context, events, product });
   
   // Return final confidence with logging
   return finalizeConfidence(query, context);
@@ -5211,7 +5154,8 @@ function analyzeDataAttributes(events, product, context) {
   context.responseAttributes = responseAttributes;
 }
 
-function applyAllScoringFactors(query, events, product, context) {
+function applyAllScoringFactors(context) {
+  const { events, product } = context;
   const queryRequirements = extractQueryRequirements(context.queryLower);
   
   applyIntentBasedScoring(queryRequirements, context.responseAttributes, context.addFactor);
@@ -6307,7 +6251,6 @@ function generateFallbackAnswer(query) {
 }
 
 function generateEvidenceBasedAnswer(context) {
-  const lc = context.query.toLowerCase();
   let answer = '';
   let confidence = 0.8;
   
@@ -6426,7 +6369,7 @@ export default async function handler(req, res) {
     if (!validateRequestMethod(req, res)) return;
     
     // Extract and normalize query
-    const { query, topK, previousQuery, sessionId, pageContext } = extractAndNormalizeQuery(req.body);
+    const { query, previousQuery, sessionId, pageContext } = extractAndNormalizeQuery(req.body);
     // Sanitize page context: ignore self-hosted chat page to avoid misleading clarification routing
     const sanitizedPageContext = (pageContext && typeof pageContext.pathname === 'string' && /\/chat\.html$/i.test(pageContext.pathname)) ? null : pageContext;
     if (!query) {
@@ -6480,7 +6423,7 @@ function validateRequestMethod(req, res) {
 
 // Helper: Extract and normalize query (Low Complexity)
 function extractAndNormalizeQuery(body) {
-  let { query, topK, previousQuery, sessionId, pageContext } = body || {};
+  let { query, previousQuery, sessionId, pageContext } = body || {};
   
   if (typeof query === 'string') {
     const q0 = query;
