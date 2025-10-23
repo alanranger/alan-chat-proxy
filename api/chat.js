@@ -3757,97 +3757,6 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   return processAndSortResults(data || [], enhancedKeywords, limit);
 }
 
-// De-duplicate articles by canonical URL and enrich titles
-async function dedupeAndEnrichArticles(client, articles) {
-  if (!Array.isArray(articles) || !articles.length) return [];
-  
-  // Helper functions
-  const groupArticlesByUrl = () => {
-  const byUrl = new Map();
-  for (const a of articles) {
-    const url = a.page_url || a.source_url || a.url || '';
-    if (!url) continue;
-    
-    const existing = byUrl.get(url);
-    if (!existing) {
-      byUrl.set(url, [a]);
-    } else {
-      existing.push(a);
-    }
-  }
-    return byUrl;
-  };
-  
-  const selectBestVariant = (variants) => {
-    return variants.reduce((prev, curr) => {
-      const prevTitle = prev.title || prev.raw?.name || '';
-      const currTitle = curr.title || curr.raw?.name || '';
-      
-      // Prefer non-generic titles
-      const prevGeneric = /^alan ranger photography$/i.test(prevTitle);
-      const currGeneric = /^alan ranger photography$/i.test(currTitle);
-      
-      if (prevGeneric && !currGeneric) return curr;
-      if (!prevGeneric && currGeneric) return prev;
-      
-      // If both generic or both real, prefer article over service
-      if (prev.kind === 'article' && curr.kind !== 'article') return prev;
-      if (curr.kind === 'article' && prev.kind !== 'article') return curr;
-      
-      return prev;
-    });
-  };
-    
-  const extractTitleFromChunks = async (url) => {
-      try {
-        const { data: chunks } = await client
-          .from('page_chunks')
-          .select('chunk_text')
-          .eq('url', url)
-          .not('chunk_text', 'is', null)
-          .limit(3);
-        
-        // Extract title from content - look for patterns like "TITLE - SUBTITLE" or "TITLE\n\nSUBTITLE"
-        for (const chunk of chunks || []) {
-          const text = chunk.chunk_text || '';
-          // Look for title patterns in the content
-          const titleMatch = text.match(/^([A-Z][A-Z\s\-&]+(?:REVIEW|GUIDE|TIPS|REASONS|TRIPOD|PHOTOGRAPHY)[A-Z\s\-&]*)/m);
-          if (titleMatch) {
-          return titleMatch[1].trim().replace(/\s+/g, ' ');
-          }
-        }
-      } catch {}
-    return null;
-  };
-      
-  const enrichTitle = async (best, url) => {
-    let title = best.title || best.raw?.name || '';
-      if (!title || /^alan ranger photography$/i.test(title)) {
-      // Try to get real title from page_chunks content
-      const extractedTitle = await extractTitleFromChunks(url);
-      if (extractedTitle) {
-        title = extractedTitle;
-      } else {
-        // Fallback to slug-derived title
-        title = deriveTitleFromUrl(url);
-      }
-    }
-    return title;
-  };
-  
-  // Group by canonical URL
-  const byUrl = groupArticlesByUrl();
-  
-  // For each URL, pick the best variant and enrich title
-  const enriched = [];
-  for (const [url, variants] of byUrl) {
-    const best = selectBestVariant(variants);
-    const title = await enrichTitle(best, url);
-    enriched.push({ ...best, title });
-  }
-  
-  return enriched;
-}
 function deriveTitleFromUrl(u) {
   try {
     const url = new URL(u);
@@ -4299,91 +4208,8 @@ function logExtractionDebug(context) {
   console.log("Equipment Needed extracted:", context.extracted.equipmentNeeded);
 }
 
-function extractSummaryFromDescription(fullDescription) {
-  if (!fullDescription) return null;
 
-  // Try to extract from description section first
-  const descriptionSummary = extractFromDescriptionSection(fullDescription);
-  if (descriptionSummary) {
-    return descriptionSummary;
-  }
-  
-  // Fallback to full description processing
-  return extractFromFullDescription(fullDescription);
-}
 
-// Helper functions for summary extraction
-function extractFromDescriptionSection(fullDescription) {
-    const lastDescriptionIndex = fullDescription.toLowerCase().lastIndexOf('description:');
-  if (lastDescriptionIndex === -1) return null;
-
-      // Get text after the last "Description:"
-      let potentialSummaryText = fullDescription.substring(lastDescriptionIndex + 'description:'.length).trim();
-
-  // Further refine to stop at other section headers
-      const stopWords = ['summary:', 'location:', 'dates:', 'half-day morning workshops are', 'half-day afternoon workshops are', 'one day workshops are', 'participants:', 'fitness:', 'photography workshop', 'event details:'];
-  const stopIndex = findEarliestStopWord(potentialSummaryText, stopWords);
-  const summaryText = potentialSummaryText.substring(0, stopIndex).trim();
-
-  return processSummaryText(summaryText);
-}
-
-function findEarliestStopWord(text, stopWords) {
-  let stopIndex = text.length;
-      for (const word of stopWords) {
-    const idx = text.toLowerCase().indexOf(word);
-        if (idx !== -1 && idx < stopIndex) {
-          stopIndex = idx;
-        }
-      }
-  return stopIndex;
-}
-
-function extractFromFullDescription(fullDescription) {
-  return processSummaryText(fullDescription);
-}
-
-function processSummaryText(text) {
-  if (!text) return null;
-  
-  const sentences = text
-        .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .split(/[.!?]+/)
-        .map(s => s.trim())
-        .filter(s => s.length > 30) // Filter out very short fragments
-        .slice(0, 2); // Take first 2 sentences
-
-      if (sentences.length > 0) {
-    return sentences.join('. ') + (sentences.length > 1 ? '.' : '');
-  }
-  
-  return null;
-}
-
-function attachPricesToSessions(context) {
-  if (!context.sessions.length) return context.sessions;
-  
-  if (context.lowPrice != null && context.highPrice != null && context.sessions.length >= 2) {
-    context.sessions[0].price = context.lowPrice;
-    context.sessions[1].price = context.highPrice;
-  } else if (context.primary?.price != null) {
-    context.sessions.forEach((s) => (s.price = context.primary.price));
-  }
-  
-  return context.sessions;
-}
-
-function buildFactsList(info) {
-  const facts = [];
-  if (info.location) facts.push(`**Location:** ${info.location}`);
-  if (info.participants) facts.push(`**Participants:** ${info.participants}`);
-  if (info.fitness) facts.push(`**Fitness:** ${info.fitness}`);
-  if (info.availability) facts.push(`**Availability:** ${info.availability}`);
-  if (info.experienceLevel) facts.push(`**Experience Level:** ${info.experienceLevel}`);
-  if (info.equipmentNeeded) facts.push(`**Equipment Needed:** ${info.equipmentNeeded}`);
-  return facts;
-}
 
 function buildSessionsList(sessions) {
   const sessionLines = [];
@@ -4395,45 +4221,8 @@ function buildSessionsList(sessions) {
   return sessionLines;
 }
 
-async function prepareProductData(products) {
-  const primary = products.find((p) => p.price != null) || products[0];
-  const { lowPrice, highPrice } = extractPriceRange(products);
-  const priceHead = buildPriceHeader(primary, lowPrice, highPrice);
-  const title = primary.title || primary?.raw?.name || "Workshop";
-  
-  return { primary, lowPrice, highPrice, priceHead, title };
-}
 
-async function extractProductInfo(primary) {
-  const fullDescription = scrubDescription(primary.description || primary?.raw?.description || "");
-  const chunkData = await fetchChunkData(primary);
-  const sourceText = chunkData || fullDescription;
-  const info = extractFromDescription(sourceText) || {};
-  
-  logExtractionDebug({ desc: fullDescription, chunk: chunkData, src: sourceText, extracted: info });
-  
-  return { fullDescription, info };
-}
 
-function buildProductContentLines(context) {
-  const lines = [];
-  lines.push(`**${context.title}**${context.priceHead}`);
-
-  if (context.summary) lines.push(`\n${context.summary}`);
-  
-  if (context.facts.length) {
-    lines.push("");
-    for (const f of context.facts) lines.push(f);
-  }
-
-  if (context.sessions.length) {
-    lines.push("");
-    const sessionLines = buildSessionsList(context.sessions);
-    for (const line of sessionLines) lines.push(line);
-  }
-
-  return lines;
-}
 
 
 /* ----------------------------- Event list UI ----------------------------- */
@@ -4545,70 +4334,10 @@ function determineEventSectionUrl(firstEventUrl) {
   return null;
 }
 
-function buildEventPills({ productUrl, firstEventUrl, landingUrl, photosUrl }) {
-  const pills = [];
-  const used = new Set();
-  const add = createPillAdder(pills, used);
 
-  add("Book Now", productUrl || firstEventUrl, true);
-
-  // Event Listing + More Events both point at listing root (no search page)
-  let listUrl = landingUrl || (firstEventUrl && originOf(firstEventUrl) + "/photography-workshops");
-  
-  // Special-case: course products (beginners classes) should link to the course listing
-  const courseUrl = determineCourseListingUrl(productUrl);
-  if (courseUrl) {
-    listUrl = courseUrl;
-  }
-  
-  // If events come from the courses section, prefer the section listing root deterministically
-  const eventSectionUrl = determineEventSectionUrl(firstEventUrl);
-  if (eventSectionUrl) {
-    listUrl = eventSectionUrl;
-  }
-  
-  add("Event Listing", listUrl, true);
-  add("More Events", listUrl, true);
-
-  add("Photos", photosUrl || (firstEventUrl && originOf(firstEventUrl) + "/gallery-image-portfolios"), false);
-  return pills;
-}
-
-function buildAdvicePills({ articleUrl, query, pdfUrl, relatedUrl, relatedLabel }) {
-  const pills = [];
-  const add = (label, url, brand = true) => {
-    if (!label || !url) return;
-    pills.push({ label, url, brand });
-  };
-  add("Read Guide", articleUrl, true);
-  add("More Articles", `https://www.alanranger.com/search?query=${encodeURIComponent(query || "")}`, true);
-  if (pdfUrl) add("Download PDF", pdfUrl, true);
-  if (relatedUrl) {
-    // Ensure we never show raw URLs as labels
-    let cleanLabel = relatedLabel || "Related";
-    if (cleanLabel.includes('http') || cleanLabel.includes('www.') || cleanLabel.length > 50) {
-      cleanLabel = "Related Content";
-    }
-    add(cleanLabel, relatedUrl, false);
-  }
-  return pills.slice(0, 4);
-}
 
 /* --------------------------- Generic resolvers --------------------------- */
 
-async function resolveEventsAndProduct(client, { keywords, pageContext = null }) {
-  // Events filtered by keywords (stronger locality match)
-  const events = await findEvents(client, { keywords, limit: 80, pageContext });
-
-  // Try to pick the best-matching product for these keywords
-  const products = await findProducts(client, { keywords, limit: 10, pageContext });
-  const product = products?.[0] || null;
-
-  // Landing page (if any), else the event origin's workshops root
-  const landing = (await findLanding(client, { keywords })) || null;
-
-  return { events, product, landing };
-}
 
 /* ---------------------------- Extract Relevant Info ---------------------------- */
 // Helper functions for extractRelevantInfo
@@ -4762,48 +4491,6 @@ function checkEventFitnessLevel(event, lowerQuery) {
   return null;
 }
 
-async function extractRelevantInfo(query, dataContext) {
-  const { products, events } = dataContext;
-  const lowerQuery = query.toLowerCase();
-  const { hasText, formatDateGB, summarize } = createTextHelpers();
-  
-  if (events && events.length > 0) {
-    return processEventInformation({ events, lowerQuery, dataContext, hasText, formatDateGB, summarize, products });
-  }
-  
-  return `I don't have a confident answer to that yet. I'm trained on Alan's site, so I may miss things. If you'd like to follow up, please reach out:`;
-}
-
-// Helper function to process event information
-function processEventInformation(context) {
-  console.log(`🔍 RAG: Found ${context.events.length} events, checking structured data`);
-  
-  const event = findRelevantEvent(context.events, context.lowerQuery, context.dataContext);
-  
-  // Check for specific information types
-  const participantsResult = checkEventParticipants(event, context.lowerQuery);
-  if (participantsResult) return participantsResult;
-  
-  const locationResult = checkEventLocation(event, context.lowerQuery, context.hasText);
-  if (locationResult) return locationResult;
-  
-  const priceResult = checkEventPrice(event, context.lowerQuery);
-  if (priceResult) return priceResult;
-  
-  const dateResult = checkEventDate({
-    event,
-    lowerQuery: context.lowerQuery,
-    products: context.products,
-    formatDateGB: context.formatDateGB,
-    summarize: context.summarize
-  });
-  if (dateResult) return dateResult;
-  
-  const fitnessResult = checkEventFitnessLevel(event, context.lowerQuery);
-  if (fitnessResult) return fitnessResult;
-  
-  return null;
-}
 
 // Calculate nuanced confidence for events with intent-based scoring
 // Helper functions for calculateEventConfidence
