@@ -1054,6 +1054,13 @@
             const progress = ((index + 1) / testQuestions.length) * 100;
             document.getElementById('progressFill').style.width = progress + '%';
             
+            // Update current question card
+            document.querySelectorAll('.question-card').forEach(card => card.classList.remove('current'));
+            const currentCard = document.getElementById(`question-${index}`);
+            if (currentCard) {
+                currentCard.classList.add('current');
+            }
+            
             // Show loading
             document.getElementById('loadingSection').classList.remove('hidden');
             document.getElementById('responseSection').classList.add('hidden');
@@ -1134,7 +1141,7 @@
             testResults.push(result);
             
             // Save to localStorage
-            savedScores[question.question] = {
+            savedScores[testQuestions[currentQuestionIndex].question] = {
                 confidenceScore: confidenceScore,
                 qualityScore: qualityScore,
                 verdict: verdict,
