@@ -24,7 +24,11 @@
     "lint:fix": "eslint . --ext .js --fix",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "quality": "npm run lint && npm run test:safety"
+    "quality": "npm run lint && npm run test:safety",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "**/*.{js,cjs,mjs}": "eslint --max-warnings=0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
@@ -45,6 +49,8 @@
     "eslint-plugin-complexity": "^1.0.2",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-sonarjs": "^3.0.5",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
     "node-fetch": "^3.3.2",
     "playwright": "^1.56.0",
     "prettier": "^3.6.2",
