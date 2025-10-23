@@ -702,14 +702,20 @@ function hasWord(text, term) {
 }
   
 function isMalformedChunk(text) {
-  return text.length < 50 || 
-        text.includes('%3A%2F%2F') || 
-        text.includes('] 0 Likes') ||
-        text.includes('Sign In') ||
-        text.includes('My Account') ||
-        text.includes('Cart 0') ||
-        // Only filter out chunks that are mostly navigation (more than 80% navigation)
-        (text.includes('Back ') && text.includes('[/') && text.length < 200);
+  // Check basic length requirement
+  if (text.length < 50) return true;
+  
+  // Check for URL encoding issues
+  if (text.includes('%3A%2F%2F')) return true;
+  
+  // Check for navigation elements
+  if (text.includes('] 0 Likes') || text.includes('Sign In') || 
+      text.includes('My Account') || text.includes('Cart 0')) {
+    return true;
+  }
+  
+  // Check for navigation-heavy content
+  return text.includes('Back ') && text.includes('[/') && text.length < 200;
 }
 
 function hasRelevantContent(chunk, exactTerm, slug) {
@@ -909,32 +915,37 @@ function extractConceptExplanation(context) {
     return handleExposureTriangle(context.chunkText, context.relevantChunk);
   }
   
-  // Handle individual concepts
-  if (lc.includes('iso') && !lc.includes('triangle')) {
-    return handleSingleConcept({
-      chunkText: context.chunkText,
-      relevantChunk: context.relevantChunk,
+  // Handle individual concepts using a lookup approach
+  const conceptHandlers = [
+    {
+      keyword: 'iso',
+      exclude: 'triangle',
       keywords: ['iso', 'sensitivity', 'light', 'exposure'],
       title: 'ISO in Photography'
-    });
-  }
-  
-  if (lc.includes('aperture') && !lc.includes('triangle')) {
-    return handleSingleConcept({
-      chunkText: context.chunkText,
-      relevantChunk: context.relevantChunk,
+    },
+    {
+      keyword: 'aperture',
+      exclude: 'triangle',
       keywords: ['aperture', 'f/', 'depth of field', 'opening'],
       title: 'Aperture in Photography'
-    });
-  }
-  
-  if (lc.includes('shutter speed') && !lc.includes('triangle')) {
-    return handleSingleConcept({
-      chunkText: context.chunkText,
-      relevantChunk: context.relevantChunk,
+    },
+    {
+      keyword: 'shutter speed',
+      exclude: 'triangle',
       keywords: ['shutter', 'speed', 'motion', 'blur'],
       title: 'Shutter Speed in Photography'
-    });
+    }
+  ];
+  
+  for (const handler of conceptHandlers) {
+    if (lc.includes(handler.keyword) && !lc.includes(handler.exclude)) {
+      return handleSingleConcept({
+        chunkText: context.chunkText,
+        relevantChunk: context.relevantChunk,
+        keywords: handler.keywords,
+        title: handler.title
+      });
+    }
   }
   
   return null;
@@ -944,42 +955,53 @@ function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
   const lc = query.toLowerCase();
   if (!lc.includes('fitness') && !lc.includes('level')) return null;
   
-      console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
-      
-      const fitnessPatterns = [
-    /Fitness:\s*(\d+\.?\s*[A-Za-z\s-]+?)(?:\n|$)/i,           // "Fitness: 2. Easy-Moderate" - stop at newline or end
-    /Fitness\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,            // "Fitness Level: Easy" - stop at newline or end
-    /Experience\s*-\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,     // "Experience - Level: Beginner and Novice" - stop at newline or end
-    /Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,                      // "Level: Beginners" - stop at newline or end
-    /Fitness\s*Required:\s*([A-Za-z\s-]+?)(?:\n|$)/i,         // "Fitness Required: Easy" - stop at newline or end
-    /Physical\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i            // "Physical Level: Easy" - stop at newline or end
-      ];
-      
-      for (const pattern of fitnessPatterns) {
-        const match = chunkText.match(pattern);
-        console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
-        if (match && match[1]) {
-          const fitnessLevel = match[1].trim();
-          console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
-          return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
-        }
-      }
-      
-      // Fallback: look for common fitness level words in the chunk
-      const fitnessWords = ['easy', 'moderate', 'hard', 'beginner', 'intermediate', 'advanced', 'low', 'medium', 'high'];
-      const chunkTextLower = chunkText.toLowerCase();
-      const foundFitnessWord = fitnessWords.find(word => chunkTextLower.includes(word));
-      
-      if (foundFitnessWord) {
-        return formatResponseMarkdown({
-          title: 'Fitness Level Information',
-          url: relevantChunk.url,
-          description: `The fitness level required is ${foundFitnessWord}. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`
-        });
-      }
+  console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
+  
+  // Try pattern matching first
+  const fitnessLevel = findFitnessLevelByPatterns(chunkText);
+  if (fitnessLevel) {
+    console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
+    return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
+  }
+  
+  // Fallback: look for common fitness level words
+  const foundFitnessWord = findFitnessLevelByKeywords(chunkText);
+  if (foundFitnessWord) {
+    return formatResponseMarkdown({
+      title: 'Fitness Level Information',
+      url: relevantChunk.url,
+      description: `The fitness level required is ${foundFitnessWord}. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`
+    });
+  }
   
   return null;
+}
+
+function findFitnessLevelByPatterns(chunkText) {
+  const fitnessPatterns = [
+    /Fitness:\s*(\d+\.?\s*[A-Za-z\s-]+?)(?:\n|$)/i,
+    /Fitness\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,
+    /Experience\s*-\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,
+    /Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,
+    /Fitness\s*Required:\s*([A-Za-z\s-]+?)(?:\n|$)/i,
+    /Physical\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i
+  ];
+  
+  for (const pattern of fitnessPatterns) {
+    const match = chunkText.match(pattern);
+    console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
+    if (match && match[1]) {
+      return match[1].trim();
     }
+  }
+  return null;
+}
+
+function findFitnessLevelByKeywords(chunkText) {
+  const fitnessWords = ['easy', 'moderate', 'hard', 'beginner', 'intermediate', 'advanced', 'low', 'medium', 'high'];
+  const chunkTextLower = chunkText.toLowerCase();
+  return fitnessWords.find(word => chunkTextLower.includes(word));
+}
     
 function extractDefinitionSentence(chunkText, exactTerm, relevantChunk) {
   // Prefer definitional sentences for core concepts
@@ -1243,15 +1265,35 @@ function getServiceAnswers(lc) {
 }
 
 function getAboutAnswers(lc) {
-  if (lc.includes("alan ranger") && (lc.includes("who") || lc.includes("background") || lc.includes("about"))) {
-    return `**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)\n\n`;
+  // Check for Alan Ranger biographical queries
+  if (isAlanRangerQuery(lc)) {
+    return getAlanRangerBio();
   }
   
-  if (lc.includes("ethical") || lc.includes("guidelines") || lc.includes("environmental") || lc.includes("carbon")) {
-    return `**Ethical Guidelines**: Alan Ranger Photography follows strict ethical policies focused on environmental consciousness and responsible education. The business maintains a carbon-neutral footprint through annual carbon impact assessments and offsetting projects. A tree is planted for every workshop place sold to help offset travel carbon footprint. Alan practices the Nature First code of ethics to ensure responsible custodianship of nature. Workshops are limited to 6 or fewer participants for personalised 1-2-1 time, with detailed itineraries including weather backups and health and safety prioritised. [View Ethical Policy](https://www.alanranger.com/my-ethical-policy)\n\n`;
+  // Check for ethical/environmental queries
+  if (isEthicalQuery(lc)) {
+    return getEthicalGuidelines();
   }
   
   return null;
+}
+
+function isAlanRangerQuery(lc) {
+  return lc.includes("alan ranger") && 
+         (lc.includes("who") || lc.includes("background") || lc.includes("about"));
+}
+
+function isEthicalQuery(lc) {
+  const ethicalKeywords = ["ethical", "guidelines", "environmental", "carbon"];
+  return ethicalKeywords.some(keyword => lc.includes(keyword));
+}
+
+function getAlanRangerBio() {
+  return `**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)\n\n`;
+}
+
+function getEthicalGuidelines() {
+  return `**Ethical Guidelines**: Alan Ranger Photography follows strict ethical policies focused on environmental consciousness and responsible education. The business maintains a carbon-neutral footprint through annual carbon impact assessments and offsetting projects. A tree is planted for every workshop place sold to help offset travel carbon footprint. Alan practices the Nature First code of ethics to ensure responsible custodianship of nature. Workshops are limited to 6 or fewer participants for personalised 1-2-1 time, with detailed itineraries including weather backups and health and safety prioritised. [View Ethical Policy](https://www.alanranger.com/my-ethical-policy)\n\n`;
 }
 
 function getHardcodedAnswer(lc) {
@@ -1512,38 +1554,54 @@ const TOPIC_KEYWORDS = [
 ];
 
 function extractKeywords(q) {
-  let lc = (q || "").toLowerCase();
-  // Normalize common variants to improve matching
-  lc = lc.replace(/\bb\s*&\s*b\b/g, "bnb"); // b&b -> bnb
-  lc = lc.replace(/\bbed\s*and\s*breakfast\b/g, "bnb");
+  let lc = normalizeQuery(q);
+  lc = applySynonymExpansion(lc);
+  lc = applySpecialCases(lc);
   
-  // Add synonym mapping for better event matching
+  const kws = new Set();
+  addTopicKeywords(kws, lc);
+  addTechnicalAndMeaningfulWords(kws, lc);
+  
+  return Array.from(kws);
+}
+
+function normalizeQuery(q) {
+  let lc = (q || "").toLowerCase();
+  lc = lc.replace(/\bb\s*&\s*b\b/g, "bnb");
+  lc = lc.replace(/\bbed\s*and\s*breakfast\b/g, "bnb");
+  return lc;
+}
+
+function applySynonymExpansion(lc) {
   const synonyms = {
     "weekend": ["fri", "sat", "sun", "friday", "saturday", "sunday", "multi day", "multi-day", "residential"],
-    "group": ["participants", "people", "attendees", "max 4", "max 3", "max 2"], // All workshops are group workshops
+    "group": ["participants", "people", "attendees", "max 4", "max 3", "max 2"],
     "advanced": ["hard", "difficult", "experienced", "expert", "experience level", "intermediate", "professional"],
     "equipment": ["gear", "camera", "lens", "tripod", "filters", "equipment needed", "what to bring", "required"]
   };
   
-  // Apply synonym expansion
   for (const [key, values] of Object.entries(synonyms)) {
     if (lc.includes(key)) {
       values.forEach(synonym => lc += " " + synonym);
     }
   }
-  
-  // Special case: "group photography workshops" should match ALL workshops
-  // since all workshops have participants > 1
+  return lc;
+}
+
+function applySpecialCases(lc) {
   if (lc.includes("group") && lc.includes("workshop")) {
     lc += " photography workshop residential multi day";
   }
-  
-  const kws = new Set();
+  return lc;
+}
+
+function addTopicKeywords(kws, lc) {
   for (const t of TOPIC_KEYWORDS) {
     if (lc.includes(t)) kws.add(t);
   }
-  
-  // Add technical terms (3+ chars) and meaningful words (4+ chars)
+}
+
+function addTechnicalAndMeaningfulWords(kws, lc) {
   const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
   const stopWords = ["what", "when", "where", "which", "how", "why", "who", "can", "will", "should", "could", "would", "do", "does", "did", "are", "is", "was", "were", "have", "has", "had", "you", "your", "yours", "me", "my", "mine", "we", "our", "ours", "they", "their", "theirs", "them", "us", "him", "her", "his", "hers", "it", "its"];
   
@@ -1552,8 +1610,6 @@ function extractKeywords(q) {
     .split(/\s+/)
     .filter((w) => w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4) && !stopWords.includes(w))
     .forEach((w) => kws.add(w));
-    
-  return Array.from(kws);
 }
 
 // Helper functions for intent detection
@@ -1758,13 +1814,22 @@ function shouldSkipServiceType(type) {
 
 // Helper function to format service type
 function formatServiceType(type) {
-  if (type.includes('2.5hrs-4hrs')) return '2.5hr - 4hr workshops';
-  if (type.includes('1-day')) return '1 day workshops';
-  if (type.includes('2-5-days') || type.includes('weekend residential')) return 'Multi day residential workshops';
-  if (type.includes('coastal')) return 'Coastal workshops';
-  if (type.includes('landscape')) return 'Landscape workshops';
-  if (type.includes('bluebell')) return 'Bluebell workshops';
-  if (type.includes('macro') || type.includes('abstract')) return 'Macro & Abstract workshops';
+  const serviceTypeMappings = [
+    { keywords: ['2.5hrs-4hrs'], formatted: '2.5hr - 4hr workshops' },
+    { keywords: ['1-day'], formatted: '1 day workshops' },
+    { keywords: ['2-5-days', 'weekend residential'], formatted: 'Multi day residential workshops' },
+    { keywords: ['coastal'], formatted: 'Coastal workshops' },
+    { keywords: ['landscape'], formatted: 'Landscape workshops' },
+    { keywords: ['bluebell'], formatted: 'Bluebell workshops' },
+    { keywords: ['macro', 'abstract'], formatted: 'Macro & Abstract workshops' }
+  ];
+  
+  for (const mapping of serviceTypeMappings) {
+    if (mapping.keywords.some(keyword => type.includes(keyword))) {
+      return mapping.formatted;
+    }
+  }
+  
   return type;
 }
 
