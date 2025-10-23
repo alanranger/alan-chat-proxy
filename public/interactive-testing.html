@@ -405,16 +405,18 @@
             <h3>🤖 Chat Bot Response</h3>
             <div id="responseDisplay" class="response-display">
                 <div id="chatResponse" class="chat-response"></div>
-            </div>
-            
+        </div>
+
             <div class="scoring-section">
                 <div class="score-input">
-                    <label for="confidenceScore">Your Confidence Score (0-100):</label>
-                    <input type="number" id="confidenceScore" min="0" max="100" placeholder="e.g., 75">
+                    <label for="confidenceScore">Your Assessment: How confident should the bot be? (0-100):</label>
+                    <input type="number" id="confidenceScore" min="0" max="100" placeholder="e.g., 85">
+                    <small style="color: #666;">Compare this to the bot's actual confidence shown above</small>
                 </div>
                 <div class="score-input">
-                    <label for="qualityScore">Your Quality Score (0-100):</label>
-                    <input type="number" id="qualityScore" min="0" max="100" placeholder="e.g., 85">
+                    <label for="qualityScore">Your Assessment: How good is the response? (0-100):</label>
+                    <input type="number" id="qualityScore" min="0" max="100" placeholder="e.g., 100">
+                    <small style="color: #666;">Rate the overall quality of the bot's response</small>
                 </div>
                 <div class="score-input">
                     <label for="verdict">Your Verdict:</label>
@@ -432,7 +434,7 @@
                     <label for="notes">Your Notes/Issues:</label>
                     <textarea id="notes" placeholder="What issues did you find? What should be improved?"></textarea>
                 </div>
-            </div>
+                </div>
             
             <div style="margin-top: 20px;">
                 <button class="btn btn-success" onclick="saveScore()">Save Score & Next Question</button>
@@ -910,11 +912,12 @@
                 chatResponse.appendChild(answerDiv);
             }
             
-            // Confidence pill
+            // Bot's confidence score - make it prominent
             if (data.confidence) {
                 const confidencePill = document.createElement('div');
                 confidencePill.className = 'confidence-pill';
-                confidencePill.textContent = `Confidence: ${Math.round(data.confidence * 100)}%`;
+                confidencePill.style.cssText = 'background: #ff9800; color: white; padding: 8px 16px; border-radius: 20px; font-size: 16px; font-weight: bold; margin: 10px 0; display: inline-block;';
+                confidencePill.textContent = `🤖 Bot's Confidence: ${Math.round(data.confidence * 100)}%`;
                 chatResponse.appendChild(confidencePill);
             }
             
