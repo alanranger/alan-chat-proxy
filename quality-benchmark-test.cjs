@@ -1,276 +1,58 @@
 const http = require('http');
 const fs = require('fs');
 
-// Quality assessment criteria based on Alan's manual testing
+// Quality assessment criteria
 const QUALITY_CRITERIA = {
   RELEVANCE: 'relevance',           // Does the answer directly address the question?
   COMPLETENESS: 'completeness',     // Is the answer complete and informative?
   ACCURACY: 'accuracy',            // Is the information accurate and helpful?
   STRUCTURE: 'structure',           // Is the response well-structured?
-  ACTIONABILITY: 'actionability',   // Does it provide actionable information?
-  CONFIDENCE_ALIGNMENT: 'confidence_alignment', // Is bot confidence aligned with response quality?
-  ARTICLE_RELEVANCE: 'article_relevance', // Are related articles relevant and helpful?
-  CLASSIFICATION_SUCCESS: 'classification_success' // Does classification work properly?
+  ACTIONABILITY: 'actionability'    // Does it provide actionable information?
 };
 
-// Alan's quality scoring criteria
-const ALAN_QUALITY_BENCHMARKS = {
-  PERFECT: { min: 95, max: 100, label: 'Perfect' },
-  NEARLY_PERFECT: { min: 90, max: 94, label: 'Nearly Perfect' },
-  VERY_GOOD: { min: 75, max: 89, label: 'Very Good' },
-  GOOD: { min: 50, max: 74, label: 'Good' },
-  POOR: { min: 30, max: 49, label: 'Poor' },
-  VERY_POOR: { min: 0, max: 29, label: 'Very Poor' }
-};
-
-// Confidence pills analysis criteria
-const CONFIDENCE_PILLS_CRITERIA = {
-  CONFIDENCE_SCORE: 'confidence_score',     // What is the confidence percentage?
-  CONFIDENCE_FACTORS: 'confidence_factors', // What factors contributed to confidence?
-  PILLS_PRESENT: 'pills_present',          // Are confidence pills present in response?
-  PILLS_COUNT: 'pills_count',              // How many confidence pills are there?
-  PILLS_CONTENT: 'pills_content'           // What is the content of confidence pills?
-};
-
-// Alan's 28 test questions with expected quality scores and confidence alignment
+// Test questions covering different query types and quality aspects
 const TEST_QUESTIONS = [
   // Technical photography concepts
-  { 
-    query: "what is exposure triangle", 
-    expectedType: "advice", 
-    qualityFocus: "Should explain the relationship between aperture, shutter speed, and ISO",
-    alanExpectedScore: 90,
-    alanExpectedConfidence: 90,
-    alanNotes: "should have higher confidence - gave a good right answer and show perfectly matched article tiles"
-  },
-  { 
-    query: "what is iso", 
-    expectedType: "advice", 
-    qualityFocus: "Should explain ISO sensitivity and its role in exposure",
-    alanExpectedScore: 75,
-    alanExpectedConfidence: 75,
-    alanNotes: "didn't answer the question it referenced the article but did show relevant articles in article block"
-  },
-  { 
-    query: "what is aperture", 
-    expectedType: "advice", 
-    qualityFocus: "Should explain aperture, f-stops, and depth of field",
-    alanExpectedScore: 10,
-    alanExpectedConfidence: 10,
-    alanNotes: "didn't even attempt to answer question and no related articles section"
-  },
-  { 
-    query: "what is shutter speed", 
-    expectedType: "advice", 
-    qualityFocus: "Should explain shutter speed and motion control",
-    alanExpectedScore: 50,
-    alanExpectedConfidence: 50,
-    alanNotes: "didn't answer the question showed one correct article but the pdf field checklist was from wrong blog and topic"
-  },
+  { query: "what is exposure triangle", expectedType: "advice", qualityFocus: "Should explain the relationship between aperture, shutter speed, and ISO" },
+  { query: "what is iso", expectedType: "advice", qualityFocus: "Should explain ISO sensitivity and its role in exposure" },
+  { query: "what is aperture", expectedType: "advice", qualityFocus: "Should explain aperture, f-stops, and depth of field" },
+  { query: "what is shutter speed", expectedType: "advice", qualityFocus: "Should explain shutter speed and motion control" },
   
   // Equipment recommendations
-  { 
-    query: "what tripod do you recommend", 
-    expectedType: "advice", 
-    qualityFocus: "Should provide specific tripod recommendations with reasoning",
-    alanExpectedScore: 95,
-    alanExpectedConfidence: 95,
-    alanNotes: "should have higher confidence - gave a good right answer and show perfectly matched article tiles"
-  },
-  { 
-    query: "what camera should I buy", 
-    expectedType: "advice", 
-    qualityFocus: "Should provide camera recommendations based on needs",
-    alanExpectedScore: 50,
-    alanExpectedConfidence: 50,
-    alanNotes: "initial response good but related article tiles not great and there were better ones available not showing"
-  },
-  { 
-    query: "what camera do you recommend for a beginner", 
-    expectedType: "advice", 
-    qualityFocus: "Should provide beginner camera recommendations",
-    alanExpectedScore: 50,
-    alanExpectedConfidence: 50,
-    alanNotes: "initial response good but related article tiles not great and there were better ones available not showing"
-  },
+  { query: "what tripod do you recommend", expectedType: "advice", qualityFocus: "Should provide specific tripod recommendations with reasoning" },
+  { query: "what camera should I buy", expectedType: "advice", qualityFocus: "Should provide camera recommendations based on needs" },
   
   // Person queries
-  { 
-    query: "peter orton", 
-    expectedType: "advice", 
-    qualityFocus: "Should find Peter Orton article and connect to related RPS content",
-    alanExpectedScore: 75,
-    alanExpectedConfidence: 75,
-    alanNotes: "good but could have shown more related articles for other case studies too"
-  },
-  { 
-    query: "who is alan ranger", 
-    expectedType: "advice", 
-    qualityFocus: "Should provide biographical information about Alan",
-    alanExpectedScore: 75,
-    alanExpectedConfidence: 75,
-    alanNotes: "good initial response but shouldn't have shown related articles, should shown orange pill linked to about-alan page"
-  },
+  { query: "peter orton", expectedType: "advice", qualityFocus: "Should find Peter Orton article and connect to related RPS content" },
+  { query: "who is alan ranger", expectedType: "advice", qualityFocus: "Should provide biographical information about Alan" },
   
   // Event queries
-  { 
-    query: "when is your next devon workshop", 
-    expectedType: "events", 
-    qualityFocus: "Should list Devon workshops with dates and details",
-    alanExpectedScore: 95,
-    alanExpectedConfidence: 95,
-    alanNotes: "no changes required"
-  },
-  { 
-    query: "when is your next photography course", 
-    expectedType: "events", 
-    qualityFocus: "Should list photography courses with dates",
-    alanExpectedScore: 30,
-    alanExpectedConfidence: 30,
-    alanNotes: "it lists workshops not courses in the events block"
-  },
-  { 
-    query: "when are your next bluebell workshops", 
-    expectedType: "events", 
-    qualityFocus: "Should list bluebell workshop dates",
-    alanExpectedScore: 100,
-    alanExpectedConfidence: 100,
-    alanNotes: "no changes required"
-  },
-  { 
-    query: "do you have autumn workshops", 
-    expectedType: "events", 
-    qualityFocus: "Should list autumn workshop options",
-    alanExpectedScore: 50,
-    alanExpectedConfidence: 50,
-    alanNotes: "missing some events for autumn like peak district but need to check if they contain enough clues to be classified as autumn"
-  },
+  { query: "when is your next devon workshop", expectedType: "events", qualityFocus: "Should list Devon workshops with dates and details" },
+  { query: "when is your next photography course", expectedType: "events", qualityFocus: "Should list photography courses with dates" },
   
   // Technical advice
-  { 
-    query: "how to take sharp photos", 
-    expectedType: "advice", 
-    qualityFocus: "Should provide practical tips for sharp photography",
-    alanExpectedScore: 50,
-    alanExpectedConfidence: 50,
-    alanNotes: "initial response good but related article tiles not great and there were better ones available not showing"
-  },
-  { 
-    query: "what is long exposure photography", 
-    expectedType: "advice", 
-    qualityFocus: "Should explain long exposure techniques and applications",
-    alanExpectedScore: 75,
-    alanExpectedConfidence: 75,
-    alanNotes: "didn't answer the question it referenced the article but did show relevant articles in article block"
-  },
-  { 
-    query: "why are my images always grainy and noisy", 
-    expectedType: "advice", 
-    qualityFocus: "Should provide solutions for grainy/noisy images",
-    alanExpectedScore: 10,
-    alanExpectedConfidence: 10,
-    alanNotes: "wrong initial response that isn't related and two related articles not related at all - should have found answers on ISO"
-  },
-  { 
-    query: "why arent my images sharp", 
-    expectedType: "advice", 
-    qualityFocus: "Should provide tips for sharper images",
-    alanExpectedScore: 50,
-    alanExpectedConfidence: 50,
-    alanNotes: "initial response good but related article tiles showing two unrelated articles rather than better ones"
-  },
+  { query: "how to take sharp photos", expectedType: "advice", qualityFocus: "Should provide practical tips for sharp photography" },
+  { query: "what is long exposure photography", expectedType: "advice", qualityFocus: "Should explain long exposure techniques and applications" },
   
   // Course/workshop logistics
-  { 
-    query: "do I need a laptop for lightroom course", 
-    expectedType: "advice", 
-    qualityFocus: "Should answer equipment requirements for the course",
-    alanExpectedScore: 75,
-    alanExpectedConfidence: 75,
-    alanNotes: "initial response not good as didn't answer question but course tiles correct and they answer the question"
-  },
-  { 
-    query: "do you provide photography courses", 
-    expectedType: "advice", 
-    qualityFocus: "Should list available photography courses",
-    alanExpectedScore: 10,
-    alanExpectedConfidence: 10,
-    alanNotes: "confidence pill says 0.2% then classification options > go to wrong events these are not the classification options we agreed and had working before"
-  },
-  { 
-    query: "do you have online lessons", 
-    expectedType: "advice", 
-    qualityFocus: "Should mention online lesson options",
-    alanExpectedScore: 30,
-    alanExpectedConfidence: 30,
-    alanNotes: "initial response weak and links/pills to the landing pages or article tiles"
-  },
-  { 
-    query: "do you have a lightroom course", 
-    expectedType: "advice", 
-    qualityFocus: "Should list Lightroom course options",
-    alanExpectedScore: 75,
-    alanExpectedConfidence: 75,
-    alanNotes: "listed right events but could also have responded initially with a better answer"
-  },
-  { 
-    query: "whats your online photography course", 
-    expectedType: "advice", 
-    qualityFocus: "Should describe online course offerings",
-    alanExpectedScore: 10,
-    alanExpectedConfidence: 10,
-    alanNotes: "confidence pill says 0.2% then classification options > go to wrong events these are not the classification options we agreed and had working before"
-  },
+  { query: "do I need a laptop for lightroom course", expectedType: "advice", qualityFocus: "Should answer equipment requirements for the course" },
   
-  // Business information
-  { 
-    query: "where i can see your terms and conditions", 
-    expectedType: "advice", 
-    qualityFocus: "Should provide terms and conditions information",
-    alanExpectedScore: 95,
-    alanExpectedConfidence: 95,
-    alanNotes: "no changes required"
-  },
-  { 
-    query: "tell me about rps mentoring", 
-    expectedType: "advice", 
-    qualityFocus: "Should explain RPS mentoring services",
-    alanExpectedScore: 75,
-    alanExpectedConfidence: 75,
-    alanNotes: "perfect initial response and did show one relevant article and one not relevant and could have easily found articles with rps"
-  },
-  { 
-    query: "do you do commercial photography", 
-    expectedType: "advice", 
-    qualityFocus: "Should explain commercial photography services",
-    alanExpectedScore: 10,
-    alanExpectedConfidence: 10,
-    alanNotes: "Initial response had nothing to do with question, related articles were not about the question"
-  },
-  { 
-    query: "do you do portrait photography", 
-    expectedType: "advice", 
-    qualityFocus: "Should explain portrait photography services",
-    alanExpectedScore: 10,
-    alanExpectedConfidence: 10,
-    alanNotes: "Initial response had nothing to do with question, related articles were not about the question"
-  },
-  { 
-    query: "is your photography academy really free", 
-    expectedType: "advice", 
-    qualityFocus: "Should clarify free vs paid academy content",
-    alanExpectedScore: 10,
-    alanExpectedConfidence: 10,
-    alanNotes: "Initial response had nothing to do with question, related articles were not about the question"
-  },
-  { 
-    query: "what camera do i need for your courses and workshops", 
-    expectedType: "advice", 
-    qualityFocus: "Should specify camera requirements for courses",
-    alanExpectedScore: 10,
-    alanExpectedConfidence: 10,
-    alanNotes: "Initial response had nothing to do with question, related articles were not about the question"
-  }
+  // NEW REALISTIC QUESTIONS
+  { query: "do you provide photography courses", expectedType: "advice", qualityFocus: "Should list available photography courses" },
+  { query: "do you have online lessons", expectedType: "advice", qualityFocus: "Should mention online lesson options" },
+  { query: "where i can see your terms and conditions", expectedType: "advice", qualityFocus: "Should provide terms and conditions information" },
+  { query: "when are your next bluebell workshops", expectedType: "events", qualityFocus: "Should list bluebell workshop dates" },
+  { query: "do you have autumn workshops", expectedType: "events", qualityFocus: "Should list autumn workshop options" },
+  { query: "tell me about rps mentoring", expectedType: "advice", qualityFocus: "Should explain RPS mentoring services" },
+  { query: "do you have a lightroom course", expectedType: "advice", qualityFocus: "Should list Lightroom course options" },
+  { query: "do you do commercial photography", expectedType: "advice", qualityFocus: "Should explain commercial photography services" },
+  { query: "do you do portrait photography", expectedType: "advice", qualityFocus: "Should explain portrait photography services" },
+  { query: "why are my images always grainy and noisy", expectedType: "advice", qualityFocus: "Should provide solutions for grainy/noisy images" },
+  { query: "why arent my images sharp", expectedType: "advice", qualityFocus: "Should provide tips for sharper images" },
+  { query: "what camera do i need for your courses and workshops", expectedType: "advice", qualityFocus: "Should specify camera requirements for courses" },
+  { query: "what camera do you recommend for a beginner", expectedType: "advice", qualityFocus: "Should provide beginner camera recommendations" },
+  { query: "whats your online photography course", expectedType: "advice", qualityFocus: "Should describe online course offerings" },
+  { query: "is your photography academy really free", expectedType: "advice", qualityFocus: "Should clarify free vs paid academy content" }
 ];
 
 async function testQuery(query, expectedType, qualityFocus) {
@@ -302,7 +84,6 @@ async function testQuery(query, expectedType, qualityFocus) {
         try {
           const response = JSON.parse(responseData);
           const qualityAssessment = assessResponseQuality(response, query, expectedType, qualityFocus);
-          const confidencePills = assessConfidencePills(response);
           
           resolve({
             query,
@@ -310,8 +91,7 @@ async function testQuery(query, expectedType, qualityFocus) {
             qualityFocus,
             status: res.statusCode,
             response: response,
-            quality: qualityAssessment,
-            confidencePills: confidencePills
+            quality: qualityAssessment
           });
         } catch (e) {
           resolve({
@@ -349,7 +129,7 @@ function assessResponseQuality(response, query, expectedType, qualityFocus) {
   // Check if we got a response
   if (!response.ok) {
     issues.push('No response received');
-    return { overall: 0, issues, breakdown: {}, confidencePills: {} };
+    return { overall: 0, issues, breakdown: {} };
   }
 
   // 1. RELEVANCE (25 points)
@@ -558,149 +338,12 @@ function assessActionability(response, query) {
   return Math.min(15, score);
 }
 
-function assessConfidencePills(response) {
-  const confidencePills = {
-    confidence_score: null,
-    confidence_factors: [],
-    pills_present: false,
-    pills_count: 0,
-    pills_content: []
-  };
-
-  // Extract confidence score
-  if (typeof response.confidence === 'number') {
-    confidencePills.confidence_score = Math.round(response.confidence * 100);
-  } else if (typeof response.confidence_pct === 'number') {
-    confidencePills.confidence_score = response.confidence_pct;
-  }
-
-  // Check for confidence factors in debug info
-  if (response.debug?.confidenceFactors) {
-    confidencePills.confidence_factors = response.debug.confidenceFactors;
-  }
-
-  // Check for pills in structured response
-  if (response.structured?.pills) {
-    confidencePills.pills_present = true;
-    confidencePills.pills_count = response.structured.pills.length;
-    confidencePills.pills_content = response.structured.pills.map(pill => ({
-      label: pill.label || pill.text,
-      url: pill.url || pill.href,
-      priority: pill.priority || false,
-      secondary: pill.secondary || false
-    }));
-  }
-
-  // Check for confidence pills in other locations
-  if (response.confidencePills) {
-    confidencePills.pills_present = true;
-    confidencePills.pills_count = response.confidencePills.length;
-    confidencePills.pills_content = response.confidencePills;
-  }
-
-  return confidencePills;
-}
-
-// Enhanced assessment using Alan's quality benchmarks
-function assessResponseQualityEnhanced(response, question, alanExpectedScore, alanExpectedConfidence, alanNotes) {
-  const breakdown = {
-    relevance: 0,
-    completeness: 0,
-    accuracy: 0,
-    structure: 0,
-    actionability: 0,
-    confidenceAlignment: 0,
-    articleRelevance: 0,
-    classificationSuccess: 0,
-    confidencePills: {}
-  };
-
-  try {
-    // Basic quality assessment
-    const responseText = response.answer || response.response || '';
-    const hasEvents = response.structured && response.structured.events && response.structured.events.length > 0;
-    const hasArticles = response.structured && response.structured.articles && response.structured.articles.length > 0;
-    
-    // Relevance (0-20 points)
-    if (responseText.length > 50) breakdown.relevance += 10;
-    if (responseText.includes('photography') || responseText.includes('camera') || responseText.includes('workshop')) breakdown.relevance += 10;
-    
-    // Completeness (0-20 points)
-    if (responseText.length > 100) breakdown.completeness += 10;
-    if (hasEvents || hasArticles) breakdown.completeness += 10;
-    
-    // Accuracy (0-20 points)
-    if (responseText.length > 50 && !responseText.includes('error')) breakdown.accuracy += 20;
-    
-    // Structure (0-20 points)
-    if (response.structured) breakdown.structure += 20;
-    
-    // Actionability (0-20 points)
-    if (hasEvents || hasArticles) breakdown.actionability += 20;
-    
-    // Confidence alignment (0-20 points)
-    const botConfidence = response.confidence ? Math.round(response.confidence * 100) : 0;
-    const confidenceDiff = Math.abs(botConfidence - alanExpectedConfidence);
-    if (confidenceDiff <= 20) breakdown.confidenceAlignment = 20;
-    else if (confidenceDiff <= 40) breakdown.confidenceAlignment = 15;
-    else if (confidenceDiff <= 60) breakdown.confidenceAlignment = 10;
-    else breakdown.confidenceAlignment = 5;
-    
-    // Article relevance (0-20 points)
-    if (hasArticles) {
-      breakdown.articleRelevance = 15; // Base score for having articles
-      if (response.structured.articles.length >= 2) breakdown.articleRelevance += 5;
-    }
-    
-    // Classification success (0-20 points)
-    if (response.structured && response.structured.events && response.structured.events.length > 0) {
-      breakdown.classificationSuccess = 20;
-    } else if (responseText.includes('workshop') || responseText.includes('course')) {
-      breakdown.classificationSuccess = 10; // Partial success
-    }
-    
-    // Assess confidence pills
-    breakdown.confidencePills = assessConfidencePills(response);
-    
-  } catch (error) {
-    console.error('Error in enhanced quality assessment:', error);
-  }
-
-  return breakdown;
-}
-
-// Calculate quality score using Alan's benchmarks
-function calculateQualityScore(breakdown) {
-  const totalScore = Object.values(breakdown).reduce((sum, value) => {
-    if (typeof value === 'number') return sum + value;
-    return sum;
-  }, 0);
-  
-  return Math.min(100, Math.max(0, totalScore));
-}
-
-// Determine quality category based on Alan's benchmarks
-function getQualityCategory(score) {
-  if (score >= 95) return ALAN_QUALITY_BENCHMARKS.PERFECT;
-  if (score >= 90) return ALAN_QUALITY_BENCHMARKS.NEARLY_PERFECT;
-  if (score >= 75) return ALAN_QUALITY_BENCHMARKS.VERY_GOOD;
-  if (score >= 50) return ALAN_QUALITY_BENCHMARKS.GOOD;
-  if (score >= 30) return ALAN_QUALITY_BENCHMARKS.POOR;
-  return ALAN_QUALITY_BENCHMARKS.VERY_POOR;
-}
-
 async function runQualityBenchmark() {
-  console.log('🔍 ENHANCED QUALITY BENCHMARK TEST - ALAN\'S BENCHMARKS');
-  console.log('='.repeat(60));
-  console.log('Using Alan\'s quality scoring criteria and confidence alignment');
+  console.log('🔍 QUALITY BENCHMARK TEST - BEFORE IMPROVEMENTS');
   console.log('='.repeat(60));
   
   const results = [];
   let totalScore = 0;
-  let alanScoreTotal = 0;
-  let confidenceAlignmentTotal = 0;
-  let perfectScores = 0;
-  let veryPoorScores = 0;
   let totalTests = TEST_QUESTIONS.length;
   
   for (const testCase of TEST_QUESTIONS) {
@@ -709,60 +352,16 @@ async function runQualityBenchmark() {
     
     try {
       const result = await testQuery(testCase.query, testCase.expectedType, testCase.qualityFocus);
-      
-      // Use enhanced assessment with Alan's benchmarks
-      const enhancedBreakdown = assessResponseQualityEnhanced(
-        result.response, 
-        testCase.query, 
-        testCase.alanExpectedScore, 
-        testCase.alanExpectedConfidence, 
-        testCase.alanNotes
-      );
-      
-      const enhancedScore = calculateQualityScore(enhancedBreakdown);
-      const qualityCategory = getQualityCategory(enhancedScore);
-      
-      // Update result with enhanced assessment
-      result.qualityScore = enhancedScore;
-      result.breakdown = enhancedBreakdown;
-      result.qualityCategory = qualityCategory;
-      result.alanExpectedScore = testCase.alanExpectedScore;
-      result.alanExpectedConfidence = testCase.alanExpectedConfidence;
-      result.alanNotes = testCase.alanNotes;
-      
       results.push(result);
-      totalScore += enhancedScore;
-      alanScoreTotal += testCase.alanExpectedScore;
-      confidenceAlignmentTotal += enhancedBreakdown.confidenceAlignment;
       
-      // Track quality categories
-      if (enhancedScore >= 95) perfectScores++;
-      if (enhancedScore < 30) veryPoorScores++;
+      const quality = result.quality;
+      totalScore += quality.overall;
       
-      console.log(`   ✅ Enhanced Score: ${enhancedScore}/100 (${qualityCategory.label})`);
-      console.log(`   🎯 Alan Expected: ${testCase.alanExpectedScore}/100`);
-      console.log(`   📊 Confidence Alignment: ${enhancedBreakdown.confidenceAlignment}/20`);
+      console.log(`   ✅ Status: ${result.status}`);
+      console.log(`   📊 Quality Score: ${quality.overall}/100`);
       console.log(`   📝 Answer Length: ${result.response?.answer?.length || 0} chars`);
       console.log(`   📚 Articles: ${result.response?.structured?.articles?.length || 0}`);
       console.log(`   📅 Events: ${result.response?.structured?.events?.length || 0}`);
-      
-      // Show confidence pills information
-      if (result.confidencePills) {
-        const pills = result.confidencePills;
-        console.log(`   🎯 Bot Confidence: ${pills.confidence_score || 'N/A'}%`);
-        console.log(`   🎯 Alan Expected: ${testCase.alanExpectedConfidence}%`);
-        if (pills.pills_present) {
-          console.log(`   💊 Pills: ${pills.pills_count} present`);
-          if (pills.pills_content.length > 0) {
-            console.log(`   💊 Pill Content: ${pills.pills_content.map(p => p.label).join(', ')}`);
-          }
-        } else {
-          console.log(`   💊 Pills: None present`);
-        }
-        if (pills.confidence_factors.length > 0) {
-          console.log(`   🔍 Confidence Factors: ${pills.confidence_factors.join(', ')}`);
-        }
-      }
       
       if (quality.issues.length > 0) {
         console.log(`   ⚠️  Issues: ${quality.issues.join(', ')}`);
@@ -785,17 +384,29 @@ async function runQualityBenchmark() {
   }
   
   const averageScore = Math.round(totalScore / totalTests);
-  const alanAverageScore = Math.round(alanScoreTotal / totalTests);
-  const averageConfidenceAlignment = Math.round(confidenceAlignmentTotal / totalTests);
   
-  console.log(`\n📊 ENHANCED BENCHMARK RESULTS - ALAN'S BENCHMARKS`);
+  // Calculate quality score distribution using Alan's benchmarks
+  const perfectScores = results.filter(r => r.quality.overall >= 95).length;
+  const nearlyPerfectScores = results.filter(r => r.quality.overall >= 90 && r.quality.overall < 95).length;
+  const veryGoodScores = results.filter(r => r.quality.overall >= 75 && r.quality.overall < 90).length;
+  const goodScores = results.filter(r => r.quality.overall >= 50 && r.quality.overall < 75).length;
+  const poorScores = results.filter(r => r.quality.overall >= 30 && r.quality.overall < 50).length;
+  const veryPoorScores = results.filter(r => r.quality.overall < 30).length;
+  
+  console.log(`\n📊 BENCHMARK RESULTS - ALAN'S QUALITY DISTRIBUTION`);
   console.log('='.repeat(60));
-  console.log(`📈 Enhanced Average Score: ${averageScore}/100`);
-  console.log(`🎯 Alan Expected Average: ${alanAverageScore}/100`);
-  console.log(`📊 Confidence Alignment: ${averageConfidenceAlignment}/20`);
-  console.log(`✅ Perfect Scores (95+): ${perfectScores}/${totalTests} (${Math.round(perfectScores/totalTests*100)}%)`);
-  console.log(`❌ Very Poor Scores (<30): ${veryPoorScores}/${totalTests} (${Math.round(veryPoorScores/totalTests*100)}%)`);
-  console.log(`🎯 Target: 15+ perfect scores (50%+), <3 very poor scores (10% or less)`);
+  console.log(`📈 Average Quality Score: ${averageScore}/100`);
+  console.log(`🎯 Alan's Baseline: 52/100 (from manual testing)`);
+  console.log(`📊 Quality Distribution:`);
+  console.log(`   Perfect (95-100):     ${perfectScores}/${totalTests} (${Math.round(perfectScores/totalTests*100)}%)`);
+  console.log(`   Nearly Perfect (90-94): ${nearlyPerfectScores}/${totalTests} (${Math.round(nearlyPerfectScores/totalTests*100)}%)`);
+  console.log(`   Very Good (75-89):    ${veryGoodScores}/${totalTests} (${Math.round(veryGoodScores/totalTests*100)}%)`);
+  console.log(`   Good (50-74):         ${goodScores}/${totalTests} (${Math.round(goodScores/totalTests*100)}%)`);
+  console.log(`   Poor (30-49):         ${poorScores}/${totalTests} (${Math.round(poorScores/totalTests*100)}%)`);
+  console.log(`   Very Poor (0-29):     ${veryPoorScores}/${totalTests} (${Math.round(veryPoorScores/totalTests*100)}%)`);
+  console.log(`🎯 Target: 15+ perfect (50%+), <3 very poor (10% or less)`);
+  console.log(`✅ Tests Passed (70+): ${results.filter(r => r.quality.overall >= 70).length}/${totalTests}`);
+  console.log(`❌ Tests Failed (<70): ${results.filter(r => r.quality.overall < 70).length}/${totalTests}`);
   
   // Save results
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -805,9 +416,23 @@ async function runQualityBenchmark() {
     timestamp: new Date().toISOString(),
     phase: 'before_improvements',
     averageScore,
+    alanBaseline: 52, // Alan's manual testing baseline
     totalTests,
     passedTests: results.filter(r => r.quality.overall >= 70).length,
     failedTests: results.filter(r => r.quality.overall < 70).length,
+    qualityDistribution: {
+      perfect: perfectScores,
+      nearlyPerfect: nearlyPerfectScores,
+      veryGood: veryGoodScores,
+      good: goodScores,
+      poor: poorScores,
+      veryPoor: veryPoorScores
+    },
+    targets: {
+      perfectTarget: 15, // 50%+ perfect scores
+      veryPoorTarget: 3, // <10% very poor scores
+      averageTarget: 80  // 80+ average score
+    },
     results: results
   };
   
