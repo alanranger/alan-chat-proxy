@@ -458,7 +458,8 @@
 
     <div class="test-section">
         <h2>📊 Results Summary</h2>
-        <button class="btn" onclick="exportResults()">📥 Export Results</button>
+        <button class="btn btn-info" onclick="exportResults()">📥 Export Results</button>
+        <button class="btn btn-warning" onclick="importResults()">📤 Import Results</button>
         <button class="btn btn-secondary" onclick="clearResults()">🗑️ Clear All Results</button>
         
         <table class="results-table" id="resultsTable">
@@ -936,8 +937,8 @@
                             ${event.date_start ? `Date: ${event.date_start}` : ''}
                             ${event.location ? ` | Location: ${event.location}` : ''}
                             ${event.price ? ` | Price: ${event.price}` : ''}
-                        </div>
-                    `;
+                </div>
+            `;
                     eventsBlock.appendChild(eventDiv);
                 });
                 
@@ -1254,6 +1255,99 @@
                 // Reset to first question
                 loadQuestion(0);
             }
+        }
+
+        // Export results to CSV file
+        function exportResults() {
+            const csvContent = generateCSV();
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `interactive-test-results-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Import results from CSV file
+        function importResults() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const csv = e.target.result;
+                        parseAndImportCSV(csv);
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        // Generate CSV content
+        function generateCSV() {
+            const headers = ['Question', 'Category', 'Focus', 'Your Confidence Score', 'Your Quality Score', 'Verdict', 'Notes', 'Timestamp'];
+            const rows = testResults.map(result => [
+                `"${result.question}"`,
+                `"${result.category}"`,
+                `"${result.focus}"`,
+                result.confidenceScore,
+                result.qualityScore,
+                `"${result.verdict}"`,
+                `"${result.notes}"`,
+                `"${result.timestamp}"`
+            ]);
+            
+            return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+        }
+
+        // Parse and import CSV
+        function parseAndImportCSV(csv) {
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',');
+            
+            // Clear existing results
+            testResults = [];
+            savedScores = {};
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim()) {
+                    const values = lines[i].split(',');
+                    const result = {
+                        questionIndex: i - 1,
+                        question: values[0].replace(/"/g, ''),
+                        category: values[1].replace(/"/g, ''),
+                        focus: values[2].replace(/"/g, ''),
+                        confidenceScore: parseInt(values[3]),
+                        qualityScore: parseInt(values[4]),
+                        verdict: values[5].replace(/"/g, ''),
+                        notes: values[6].replace(/"/g, ''),
+                        timestamp: values[7].replace(/"/g, '')
+                    };
+                    
+                    testResults.push(result);
+                    savedScores[result.question] = {
+                        confidenceScore: result.confidenceScore,
+                        qualityScore: result.qualityScore,
+                        verdict: result.verdict,
+                        notes: result.notes,
+                        timestamp: result.timestamp
+                    };
+                }
+            }
+            
+            saveScoresToStorage();
+            updateStats();
+            updateResultsTable();
+            populateQuestionsList();
+            
+            alert(`Imported ${testResults.length} results successfully!`);
         }
 
         // Initialize when page loads
