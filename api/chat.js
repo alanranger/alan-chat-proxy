@@ -4382,13 +4382,13 @@ async function fetchChunkData(primary) {
   return "";
 }
 
-function logExtractionDebug(desc, chunk, src, extracted) {
-  console.log("Full description:", desc);
-  console.log("Chunk data:", chunk);
-  console.log("Source text for extraction:", src);
-  console.log("Extracted info:", JSON.stringify(extracted, null, 2));
-  console.log("Experience Level extracted:", extracted.experienceLevel);
-  console.log("Equipment Needed extracted:", extracted.equipmentNeeded);
+function logExtractionDebug(context) {
+  console.log("Full description:", context.desc);
+  console.log("Chunk data:", context.chunk);
+  console.log("Source text for extraction:", context.src);
+  console.log("Extracted info:", JSON.stringify(context.extracted, null, 2));
+  console.log("Experience Level extracted:", context.extracted.experienceLevel);
+  console.log("Equipment Needed extracted:", context.extracted.equipmentNeeded);
 }
 
 function extractSummaryFromDescription(fullDescription) {
@@ -4453,17 +4453,17 @@ function processSummaryText(text) {
   return null;
 }
 
-function attachPricesToSessions(sessions, lowPrice, highPrice, primary) {
-  if (!sessions.length) return sessions;
+function attachPricesToSessions(context) {
+  if (!context.sessions.length) return context.sessions;
   
-    if (lowPrice != null && highPrice != null && sessions.length >= 2) {
-      sessions[0].price = lowPrice;
-      sessions[1].price = highPrice;
-    } else if (primary?.price != null) {
-      sessions.forEach((s) => (s.price = primary.price));
-    }
+  if (context.lowPrice != null && context.highPrice != null && context.sessions.length >= 2) {
+    context.sessions[0].price = context.lowPrice;
+    context.sessions[1].price = context.highPrice;
+  } else if (context.primary?.price != null) {
+    context.sessions.forEach((s) => (s.price = context.primary.price));
+  }
   
-  return sessions;
+  return context.sessions;
 }
 
 function buildFactsList(info) {
@@ -4502,25 +4502,25 @@ async function extractProductInfo(primary) {
   const sourceText = chunkData || fullDescription;
   const info = extractFromDescription(sourceText) || {};
   
-  logExtractionDebug(fullDescription, chunkData, sourceText, info);
+  logExtractionDebug({ desc: fullDescription, chunk: chunkData, src: sourceText, extracted: info });
   
   return { fullDescription, info };
 }
 
-function buildProductContentLines(title, priceHead, summary, facts, sessions) {
+function buildProductContentLines(context) {
   const lines = [];
-  lines.push(`**${title}**${priceHead}`);
+  lines.push(`**${context.title}**${context.priceHead}`);
 
-  if (summary) lines.push(`\n${summary}`);
+  if (context.summary) lines.push(`\n${context.summary}`);
   
-  if (facts.length) {
+  if (context.facts.length) {
     lines.push("");
-    for (const f of facts) lines.push(f);
+    for (const f of context.facts) lines.push(f);
   }
 
-  if (sessions.length) {
+  if (context.sessions.length) {
     lines.push("");
-    const sessionLines = buildSessionsList(sessions);
+    const sessionLines = buildSessionsList(context.sessions);
     for (const line of sessionLines) lines.push(line);
   }
 
@@ -4534,7 +4534,7 @@ async function buildProductPanelMarkdown(products) {
   const { fullDescription, info } = await extractProductInfo(primary);
   
   const summary = extractSummaryFromDescription(fullDescription);
-  const sessions = attachPricesToSessions([...(info.sessions || [])], lowPrice, highPrice, primary);
+  const sessions = attachPricesToSessions({ sessions: [...(info.sessions || [])], lowPrice, highPrice, primary });
   const facts = buildFactsList(info);
   
   console.log("Facts to add:", facts);
@@ -4544,7 +4544,7 @@ async function buildProductPanelMarkdown(products) {
   console.log("Info experienceLevel:", info.experienceLevel);
   console.log("Info equipmentNeeded:", info.equipmentNeeded);
 
-  const lines = buildProductContentLines(title, priceHead, summary, facts, sessions);
+  const lines = buildProductContentLines({ title, priceHead, summary, facts, sessions });
   return lines.join("\n");
 }
 
@@ -4840,13 +4840,13 @@ function formatDateResponse(formattedDate, label, brief) {
         return brief ? `${lead} ${brief}` : `${lead}`;
       }
 
-function checkEventDate(event, lowerQuery, products, formatDateGB, summarize) {
-  if (lowerQuery.includes('when') || lowerQuery.includes('date')) {
-    if (event.date_start) {
-      const formattedDate = formatDateGB(event.date_start);
+function checkEventDate(context) {
+  if (context.lowerQuery.includes('when') || context.lowerQuery.includes('date')) {
+    if (context.event.date_start) {
+      const formattedDate = context.formatDateGB(context.event.date_start);
       console.log(`✅ RAG: Found date="${formattedDate}" in structured event data`);
-      const label = getEventLabel(event);
-      const brief = extractEventBrief(products, summarize);
+      const label = getEventLabel(context.event);
+      const brief = extractEventBrief(context.products, context.summarize);
       return formatDateResponse(formattedDate, label, brief);
     }
   }
@@ -4869,32 +4869,38 @@ async function extractRelevantInfo(query, dataContext) {
   const { hasText, formatDateGB, scrubAttrs, summarize } = createTextHelpers();
   
   if (events && events.length > 0) {
-    return processEventInformation(events, lowerQuery, dataContext, hasText, formatDateGB, summarize, products);
+    return processEventInformation({ events, lowerQuery, dataContext, hasText, formatDateGB, summarize, products });
   }
   
   return `I don't have a confident answer to that yet. I'm trained on Alan's site, so I may miss things. If you'd like to follow up, please reach out:`;
 }
 
 // Helper function to process event information
-function processEventInformation(events, lowerQuery, dataContext, hasText, formatDateGB, summarize, products) {
-  console.log(`🔍 RAG: Found ${events.length} events, checking structured data`);
+function processEventInformation(context) {
+  console.log(`🔍 RAG: Found ${context.events.length} events, checking structured data`);
   
-  const event = findRelevantEvent(events, lowerQuery, dataContext);
+  const event = findRelevantEvent(context.events, context.lowerQuery, context.dataContext);
   
   // Check for specific information types
-  const participantsResult = checkEventParticipants(event, lowerQuery);
+  const participantsResult = checkEventParticipants(event, context.lowerQuery);
   if (participantsResult) return participantsResult;
   
-  const locationResult = checkEventLocation(event, lowerQuery, hasText);
+  const locationResult = checkEventLocation(event, context.lowerQuery, context.hasText);
   if (locationResult) return locationResult;
   
-  const priceResult = checkEventPrice(event, lowerQuery);
+  const priceResult = checkEventPrice(event, context.lowerQuery);
   if (priceResult) return priceResult;
   
-  const dateResult = checkEventDate(event, lowerQuery, products, formatDateGB, summarize);
+  const dateResult = checkEventDate({
+    event,
+    lowerQuery: context.lowerQuery,
+    products: context.products,
+    formatDateGB: context.formatDateGB,
+    summarize: context.summarize
+  });
   if (dateResult) return dateResult;
   
-  const fitnessResult = checkEventFitnessLevel(event, lowerQuery);
+  const fitnessResult = checkEventFitnessLevel(event, context.lowerQuery);
   if (fitnessResult) return fitnessResult;
   
   return null;
@@ -5157,26 +5163,26 @@ function calculateEventConfidence(query, events, product) {
  * Preserves existing behavior exactly.
  */
 // Helper function to process events early return
-async function processEventsEarlyReturn(client, query, directKeywords, pageContext, res) {
-  const events = await findEvents(client, { keywords: directKeywords, limit: 80, pageContext });
+async function processEventsEarlyReturn(context) {
+  const events = await findEvents(context.client, { keywords: context.directKeywords, limit: 80, pageContext: context.pageContext });
   const eventList = formatEventsForUi(events);
-  const confidence = calculateEventConfidence(query || "", eventList, null);
+  const confidence = calculateEventConfidence(context.query || "", eventList, null);
   
   console.log('🔍 EARLY RETURN EVENTS: Found events via early return path:', {
     totalEvents: events.length,
     formattedEvents: eventList.length,
     confidence,
-    query
+    query: context.query
   });
   
-  res.status(200).json({
+  context.res.status(200).json({
     ok: true,
     type: "events",
     answer: eventList,
     events: eventList,
     structured: {
       intent: "events",
-      topic: directKeywords.join(", "),
+      topic: context.directKeywords.join(", "),
       events: eventList,
       products: [],
       pills: []
@@ -5194,21 +5200,21 @@ async function processEventsEarlyReturn(client, query, directKeywords, pageConte
 }
 
 // Helper function to process advice early return
-async function processAdviceEarlyReturn(client, query, directKeywords, pageContext, res) {
-  let articles = await findArticles(client, { keywords: directKeywords, limit: 30, pageContext });
+async function processAdviceEarlyReturn(context) {
+  let articles = await findArticles(context.client, { keywords: context.directKeywords, limit: 30, pageContext: context.pageContext });
   articles = (articles || []).map(normalizeArticle);
   const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-  const contentChunks = await findContentChunks(client, { keywords: directKeywords, limit: 15, articleUrls });
-  const pricingAnswer = generatePricingAccommodationAnswer(query || "", articles, contentChunks);
-  const answerMarkdown = pricingAnswer || generateDirectAnswer(query || "", articles, contentChunks);
+  const contentChunks = await findContentChunks(context.client, { keywords: context.directKeywords, limit: 15, articleUrls });
+  const pricingAnswer = generatePricingAccommodationAnswer(context.query || "", articles, contentChunks);
+  const answerMarkdown = pricingAnswer || generateDirectAnswer(context.query || "", articles, contentChunks);
   
-  res.status(200).json({
+  context.res.status(200).json({
     ok: true,
     type: "advice",
     answer_markdown: answerMarkdown,
     structured: {
       intent: "advice",
-      topic: directKeywords.join(", "),
+      topic: context.directKeywords.join(", "),
       events: [],
       products: [],
       services: [],
@@ -5230,13 +5236,25 @@ async function processAdviceEarlyReturn(client, query, directKeywords, pageConte
   return articles.length > 0 || contentChunks.length > 0;
 }
 
-async function maybeProcessEarlyReturnFallback(client, query, intent, pageContext, res) {
-  const directKeywords = extractKeywords(query || "");
+async function maybeProcessEarlyReturnFallback(context) {
+  const directKeywords = extractKeywords(context.query || "");
   
-  if (intent === "events") {
-    return await processEventsEarlyReturn(client, query, directKeywords, pageContext, res);
+  if (context.intent === "events") {
+    return await processEventsEarlyReturn({
+      client: context.client,
+      query: context.query,
+      directKeywords,
+      pageContext: context.pageContext,
+      res: context.res
+    });
   } else {
-    return await processAdviceEarlyReturn(client, query, directKeywords, pageContext, res);
+    return await processAdviceEarlyReturn({
+      client: context.client,
+      query: context.query,
+      directKeywords,
+      pageContext: context.pageContext,
+      res: context.res
+    });
   }
 }
 
@@ -5286,15 +5304,15 @@ function filterMultiDayEvents(events) {
   });
 }
 
-async function handleResidentialEventsShortcut(client, query, pageContext, res) {
-  const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
-  const events = await findEvents(client, { keywords: directKeywords, limit: 120, pageContext });
+async function handleResidentialEventsShortcut(context) {
+  const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(context.query || "")]));
+  const events = await findEvents(context.client, { keywords: directKeywords, limit: 120, pageContext: context.pageContext });
   const formattedEvents = formatEventsForUi(events) || [];
   const multiDayEvents = filterMultiDayEvents(formattedEvents);
   
   if (multiDayEvents.length) {
-    const confidence = calculateEventConfidence(query || "", multiDayEvents, null);
-    res.status(200).json({
+    const confidence = calculateEventConfidence(context.query || "", multiDayEvents, null);
+    context.res.status(200).json({
       ok: true,
       type: "events",
       answer: multiDayEvents,
@@ -5314,26 +5332,31 @@ async function handleResidentialEventsShortcut(client, query, pageContext, res) 
   return false;
 }
 
-async function handleResidentialPricingShortcut(client, query, keywords, pageContext, res) {
-  if (!isResidentialPricingQueryShortcut(query)) {
+async function handleResidentialPricingShortcut(context) {
+  if (!isResidentialPricingQueryShortcut(context.query)) {
     return false; // No response sent, continue with normal flow
   }
   
-  if (await handleResidentialEventsShortcut(client, query, pageContext, res)) {
+  if (await handleResidentialEventsShortcut({
+    client: context.client,
+    query: context.query,
+    pageContext: context.pageContext,
+    res: context.res
+  })) {
     return true;
   }
   
   // Fallback: synthesize concise pricing/B&B answer with links
-  const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
+  const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(context.query || "")]));
   const enrichedKeywords = Array.from(new Set([...directKeywords, "b&b", "bed", "breakfast", "price", "cost"]));
-  const articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
+  const articles = await findArticles(context.client, { keywords: enrichedKeywords, limit: 30, pageContext: context.pageContext });
   const normalizedArticles = (articles || []).map(normalizeArticle);
   const articleUrls = normalizedArticles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-  const contentChunks = await findContentChunks(client, { keywords: enrichedKeywords, limit: 20, articleUrls });
-  const answerMarkdown = generatePricingAccommodationAnswer(query || "", normalizedArticles, contentChunks);
+  const contentChunks = await findContentChunks(context.client, { keywords: enrichedKeywords, limit: 20, articleUrls });
+  const answerMarkdown = generatePricingAccommodationAnswer(context.query || "", normalizedArticles, contentChunks);
   
   if (answerMarkdown) {
-    res.status(200).json({
+    context.res.status(200).json({
       ok: true,
       type: "advice",
       answer_markdown: answerMarkdown,
