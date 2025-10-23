@@ -3568,7 +3568,7 @@ function logServicesResults(data) {
   }
 }
 
-async function findServices(client, { keywords, limit = 50, pageContext = null }) {
+async function findServices(client, { keywords, limit = 50 }) {
   console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
   
   let q = buildServicesBaseQuery(client, limit);
@@ -3962,88 +3962,9 @@ async function findLanding(client, { keywords, limit = 10 }) {
 /* -------- find PDF / related link within article chunks (best effort) ---- */
 
 // Helper functions for article auxiliary links extraction
-function tryTables() {
-  return [
-    { table: "page_chunks", urlCol: "source_url", textCol: "chunk_text" },
-    { table: "page_chunks", urlCol: "page_url", textCol: "chunk_text" },
-    { table: "chunks", urlCol: "source_url", textCol: "chunk_text" },
-    { table: "chunks", urlCol: "page_url", textCol: "chunk_text" },
-  ];
-}
 
-function extractPdfUrl(text) {
-          const m =
-            text.match(/https?:\/\/\S+?\.pdf/gi) ||
-            text.match(/href="([^"]+\.pdf)"/i);
-          if (m && m[0]) {
-            let pdfUrl = Array.isArray(m) ? m[0] : m[1];
-            // Convert internal Squarespace URLs to public URLs
-            if (pdfUrl.includes('alan-ranger.squarespace.com')) {
-              pdfUrl = pdfUrl.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
-            }
-    return pdfUrl;
-          }
-  return null;
-        }
 
-function extractRelatedLink(text) {
-          const rel =
-            text.match(
-              /(https?:\/\/[^\s)>"']*alanranger\.com[^\s)>"']*)/i
-            ) || text.match(/href="([^"]*alanranger\.com[^"]*)"/i);
-          if (rel && rel[0]) {
-            let url = Array.isArray(rel) ? rel[0] : rel[1];
-            
-            // Convert internal Squarespace URLs to public URLs
-            if (url.includes('alan-ranger.squarespace.com')) {
-              url = url.replace('alan-ranger.squarespace.com', 'www.alanranger.com');
-            }
-            
-            // Only accept direct Alan Ranger URLs, not URLs that contain Alan Ranger URLs as parameters
-            if (url.startsWith('https://www.alanranger.com/') || 
-                url.startsWith('https://alanranger.com/') ||
-                url.startsWith('http://www.alanranger.com/') ||
-                url.startsWith('http://alanranger.com/')) {
-      return url;
-    }
-  }
-  return null;
-}
 
-// Helper functions for related label extraction
-function findLabelMatch(text) {
-  return text.match(/\[([^\]]+)\]\([^)]+\)/) ||
-                  text.match(/>([^<]{3,60})<\/a>/i) ||
-                  text.match(/<a[^>]*>([^<]{3,60})<\/a>/i);
-}
-
-function cleanExtractedLabel(label) {
-  return label.replace(/\]$/, '').replace(/\[$/, '').replace(/[\[\]]/g, '');
-}
-
-function generateLabelFromUrl(url) {
-                try {
-                  const urlObj = new URL(url);
-                  const pathParts = urlObj.pathname.split('/').filter(Boolean);
-                  const lastPart = pathParts[pathParts.length - 1] || 'Related Content';
-    return lastPart.replace(/[-_]+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                } catch {
-    return 'Related Content';
-  }
-}
-
-function extractRelatedLabel(text, url) {
-  // Robust label extraction: prioritize explicit link text, then clean URL path
-  const labelMatch = findLabelMatch(text);
-  
-  if (labelMatch && labelMatch[1]) {
-    const cleanLabel = cleanExtractedLabel(labelMatch[1].trim());
-    return cleanLabel;
-  } else {
-    // Generate a clean label from the URL path
-    return generateLabelFromUrl(url);
-  }
-}
 
 
 
@@ -4514,26 +4435,6 @@ function buildProductContentLines(context) {
   return lines;
 }
 
-async function buildProductPanelMarkdown(products) {
-  if (!products?.length) return "";
-
-  const { primary, lowPrice, highPrice, priceHead, title } = await prepareProductData(products);
-  const { fullDescription, info } = await extractProductInfo(primary);
-  
-  const summary = extractSummaryFromDescription(fullDescription);
-  const sessions = attachPricesToSessions({ sessions: [...(info.sessions || [])], lowPrice, highPrice, primary });
-  const facts = buildFactsList(info);
-  
-  console.log("Facts to add:", facts);
-  console.log("Info participants:", info.participants);
-  console.log("Info fitness:", info.fitness);
-  console.log("Info location:", info.location);
-  console.log("Info experienceLevel:", info.experienceLevel);
-  console.log("Info equipmentNeeded:", info.equipmentNeeded);
-
-  const lines = buildProductContentLines({ title, priceHead, summary, facts, sessions });
-  return lines.join("\n");
-}
 
 /* ----------------------------- Event list UI ----------------------------- */
 function transformEventForUI(e) {
@@ -6436,7 +6337,7 @@ function extractAndNormalizeQuery(body) {
     }
   }
   
-  return { query, topK, previousQuery, sessionId, pageContext };
+  return { query, previousQuery, sessionId, pageContext };
 }
 
 // Helper: Handle normalized duration queries (Low Complexity)
