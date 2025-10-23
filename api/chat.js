@@ -5426,67 +5426,73 @@ function normalizeArticle(a) {
  * Handle follow-up direct synthesis for advice queries (equipment/pricing)
  * Returns true if a response was sent.
  */
-async function handleEquipmentAdviceSynthesis(client, qlc, keywords, pageContext, res) {
-  if (!isEquipmentAdviceQuery(qlc)) return false;
+async function handleEquipmentAdviceSynthesis(context) {
+  if (!isEquipmentAdviceQuery(context.qlc)) return false;
   
-  const articles = await findArticles(client, { keywords, limit: 30, pageContext });
+  const articles = await findArticles(context.client, { keywords: context.keywords, limit: 30, pageContext: context.pageContext });
   const normalizedArticles = (articles || []).map(normalizeArticle);
   const articleUrls = normalizedArticles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-    const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
-  const synthesized = generateEquipmentAdviceResponse(qlc, normalizedArticles || [], contentChunks || []);
+  const contentChunks = await findContentChunks(context.client, { keywords: context.keywords, limit: 20, articleUrls });
+  const synthesized = generateEquipmentAdviceResponse(context.qlc, normalizedArticles || [], contentChunks || []);
   
-    if (synthesized) {
-      res.status(200).json({
-        ok: true,
-        type: "advice",
-        answer_markdown: synthesized,
-        structured: {
-          intent: "advice",
-          topic: keywords.join(", "),
-          events: [],
-          products: [],
-          services: [],
-          landing: [],
+  if (synthesized) {
+    context.res.status(200).json({
+      ok: true,
+      type: "advice",
+      answer_markdown: synthesized,
+      structured: {
+        intent: "advice",
+        topic: context.keywords.join(", "),
+        events: [],
+        products: [],
+        services: [],
+        landing: [],
         articles: (normalizedArticles || []).map(a => ({
-            ...a,
-            display_date: (function(){
-              const extracted = extractPublishDate(a);
-              const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-              return extracted || fallback;
-            })()
-          })),
-          pills: []
-        },
-        confidence: 0.75,
-        debug: { version: "v1.2.46-followup-equip-extracted", previousQuery: true }
-      });
-      return true;
-    }
+          ...a,
+          display_date: (function(){
+            const extracted = extractPublishDate(a);
+            const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+            return extracted || fallback;
+          })()
+        })),
+        pills: []
+      },
+      confidence: 0.75,
+      debug: { version: "v1.2.46-followup-equip-extracted", previousQuery: true }
+    });
+    return true;
+  }
   return false;
 }
 
-async function handleAdviceFollowupSynthesis(client, qlc, keywords, pageContext, res) {
+async function handleAdviceFollowupSynthesis(context) {
   // Equipment advice synthesis
-  if (await handleEquipmentAdviceSynthesis(client, qlc, keywords, pageContext, res)) {
+  if (await handleEquipmentAdviceSynthesis({
+    client: context.client,
+    qlc: context.qlc,
+    keywords: context.keywords,
+    pageContext: context.pageContext,
+    res: context.res
+  })) {
     return true;
   }
 
   // Pricing/accommodation synthesis
-  const pricingSynth = generatePricingAccommodationAnswer(qlc);
+  const pricingSynth = generatePricingAccommodationAnswer(context.qlc);
   if (pricingSynth) {
-    let articles = await findArticles(client, { keywords, limit: 30, pageContext });
+    let articles = await findArticles(context.client, { keywords: context.keywords, limit: 30, pageContext: context.pageContext });
     articles = (articles || []).map(normalizeArticle);
     const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-    const contentChunks = await findContentChunks(client, { keywords, limit: 20, articleUrls });
-    const answer = generatePricingAccommodationAnswer(qlc, articles || [], contentChunks || []);
+    const contentChunks = await findContentChunks(context.client, { keywords: context.keywords, limit: 20, articleUrls });
+    const answer = generatePricingAccommodationAnswer(context.qlc, articles || [], contentChunks || []);
     if (answer) {
-      res.status(200).json({
+      context.res.status(200).json({
         ok: true,
         type: "advice",
         answer_markdown: answer,
         structured: {
           intent: "advice",
-          topic: keywords.join(", "),
+          topic: context.keywords.join(", "),
           events: [],
           products: [],
           services: [],
@@ -5527,77 +5533,88 @@ function isClarificationResponse(previousQuery, query) {
   );
 }
 
-async function handleEventsClarification(client, query, intent, keywords, pageContext, res) {
-  if (!(query.toLowerCase().includes("events") || query.toLowerCase().includes("courses") || intent === "events")) {
+async function handleEventsClarification(context) {
+  if (!(context.query.toLowerCase().includes("events") || context.query.toLowerCase().includes("courses") || context.intent === "events")) {
     return false;
   }
 
-    const events = await findEvents(client, { keywords, limit: 80, pageContext });
-    const eventList = formatEventsForUi(events);
-    const confidence = calculateEventConfidence(query || "", eventList, null);
-    res.status(200).json({
-      ok: true,
-      type: "events",
-      answer: eventList,
+  const events = await findEvents(context.client, { keywords: context.keywords, limit: 80, pageContext: context.pageContext });
+  const eventList = formatEventsForUi(events);
+  const confidence = calculateEventConfidence(context.query || "", eventList, null);
+  context.res.status(200).json({
+    ok: true,
+    type: "events",
+    answer: eventList,
+    events: eventList,
+    structured: {
+      intent: "events",
+      topic: (context.keywords || []).join(", "),
       events: eventList,
-      structured: {
-        intent: "events",
-        topic: (keywords || []).join(", "),
-        events: eventList,
-        products: [],
-        pills: []
-      },
-      confidence,
-      debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
-    });
+      products: [],
+      pills: []
+    },
+    confidence,
+    debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
+  });
   return true;
 }
 
-async function handleClarificationFollowup(client, previousQuery, query, intent, keywords, pageContext, res) {
-  const context = { client, previousQuery, query, intent, keywords, pageContext, res };
-  
+async function handleClarificationFollowup(context) {
   if (!isClarificationResponse(context.previousQuery, context.query)) return false;
 
   // Route by chosen clarification intent if present in text
-  if (await handleEventsClarification(context.client, context.query, context.intent, context.keywords, context.pageContext, context.res)) {
+  if (await handleEventsClarification({
+    client: context.client,
+    query: context.query,
+    intent: context.intent,
+    keywords: context.keywords,
+    pageContext: context.pageContext,
+    res: context.res
+  })) {
     return true;
   }
 
   // Advice-oriented clarification
-  return await handleAdviceClarification(context.client, context.query, context.keywords, context.pageContext, context.res);
+  return await handleAdviceClarification({
+    client: context.client,
+    query: context.query,
+    keywords: context.keywords,
+    pageContext: context.pageContext,
+    res: context.res
+  });
 }
 
-async function handleAdviceClarification(client, query, keywords, pageContext, res) {
-  let articles = await findArticles(client, { keywords, limit: 30, pageContext });
+async function handleAdviceClarification(context) {
+  let articles = await findArticles(context.client, { keywords: context.keywords, limit: 30, pageContext: context.pageContext });
   articles = (articles || []).map(normalizeArticle);
-    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-    const contentChunks = await findContentChunks(client, { keywords, limit: 15, articleUrls });
-    const answerMarkdown = generateDirectAnswer(query || "", articles, contentChunks);
-    res.status(200).json({
-      ok: true,
-      type: "advice",
-      answer_markdown: answerMarkdown,
-      structured: {
-        intent: "advice",
-        topic: (keywords || []).join(", "),
-        events: [],
-        products: [],
-        services: [],
-        landing: [],
-        articles: (articles || []).map(a => ({
-          ...a,
-          display_date: (function(){
-            const extracted = extractPublishDate(a);
-            const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-            return extracted || fallback;
-          })()
-        })),
-        pills: []
-      },
-      confidence: 0.65,
-      debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
-    });
-    return true;
+  const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+  const contentChunks = await findContentChunks(context.client, { keywords: context.keywords, limit: 15, articleUrls });
+  const answerMarkdown = generateDirectAnswer(context.query || "", articles, contentChunks);
+  context.res.status(200).json({
+    ok: true,
+    type: "advice",
+    answer_markdown: answerMarkdown,
+    structured: {
+      intent: "advice",
+      topic: (context.keywords || []).join(", "),
+      events: [],
+      products: [],
+      services: [],
+      landing: [],
+      articles: (articles || []).map(a => ({
+        ...a,
+        display_date: (function(){
+          const extracted = extractPublishDate(a);
+          const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+          return extracted || fallback;
+        })()
+      })),
+      pills: []
+    },
+    confidence: 0.65,
+    debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
+  });
+  return true;
 }
 /**
  * Handle residential pricing guard - bypasses clarification for residential workshop pricing queries
@@ -5623,51 +5640,56 @@ function processArticlesForDisplay(articles) {
   return (articles || []).map(normalizeArticle);
 }
 
-async function handleResidentialEventsResponse(client, query, pageContext, res) {
-  const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
-  const events = await findEvents(client, { keywords: directKeywords, limit: 140, pageContext });
+async function handleResidentialEventsResponse(context) {
+  const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(context.query || "")]));
+  const events = await findEvents(context.client, { keywords: directKeywords, limit: 140, pageContext: context.pageContext });
   const formattedEvents = formatEventsForUi(events) || [];
   const residentialEvents = filterResidentialEvents(formattedEvents);
   
   if (residentialEvents.length) {
-    const confidence = calculateEventConfidence(query || "", residentialEvents, null);
-        res.status(200).json({ 
-          ok: true, 
-          type: "events", 
+    const confidence = calculateEventConfidence(context.query || "", residentialEvents, null);
+    context.res.status(200).json({ 
+      ok: true, 
+      type: "events", 
       answer: residentialEvents, 
       events: residentialEvents, 
-          structured: { 
-            intent: "events", 
+      structured: { 
+        intent: "events", 
         topic: directKeywords.join(", "), 
         events: residentialEvents, 
-            products: [], 
-            pills: [] 
-          }, 
+        products: [], 
+        pills: [] 
+      }, 
       confidence, 
-          debug: { version: "v1.2.48-guard-residential", guard: true } 
-        });
-        return true; // Response sent
+      debug: { version: "v1.2.48-guard-residential", guard: true } 
+    });
+    return true; // Response sent
   }
   return false;
 }
 
-async function handleResidentialPricingGuard(client, query, previousQuery, pageContext, res) {
+async function handleResidentialPricingGuard(context) {
   try {
-    if (!previousQuery && isResidentialPricingQuery(query)) {
-      if (await handleResidentialEventsResponse(client, query, pageContext, res)) {
+    if (!context.previousQuery && isResidentialPricingQuery(context.query)) {
+      if (await handleResidentialEventsResponse({
+        client: context.client,
+        query: context.query,
+        pageContext: context.pageContext,
+        res: context.res
+      })) {
         return true;
       }
       
-      const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(query || "")]));
+      const directKeywords = Array.from(new Set(["residential", "workshop", ...extractKeywords(context.query || "")]));
       const enrichedKeywords = Array.from(new Set([...directKeywords, "b&b", "bed", "breakfast", "price", "cost"]));
-      const articles = await findArticles(client, { keywords: enrichedKeywords, limit: 30, pageContext });
+      const articles = await findArticles(context.client, { keywords: enrichedKeywords, limit: 30, pageContext: context.pageContext });
       const processedArticles = processArticlesForDisplay(articles);
       const articleUrls = processedArticles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-      const chunks = await findContentChunks(client, { keywords: enrichedKeywords, limit: 20, articleUrls });
-      const markdown = generateDirectAnswer(query || "", processedArticles, chunks) || generatePricingAccommodationAnswer(query || "", processedArticles, chunks);
+      const chunks = await findContentChunks(context.client, { keywords: enrichedKeywords, limit: 20, articleUrls });
+      const markdown = generateDirectAnswer(context.query || "", processedArticles, chunks) || generatePricingAccommodationAnswer(context.query || "", processedArticles, chunks);
       
       if (markdown) {
-        res.status(200).json({ 
+        context.res.status(200).json({ 
           ok: true, 
           type: "advice", 
           answer_markdown: markdown, 
@@ -5715,74 +5737,74 @@ function extractDurationCategory(query) {
 }
 
 // Helper function to handle direct duration routing
-async function handleDirectDurationRouting(client, query, keywords, durationCategory, res, debugInfo) {
-      const eventsDirect = await findEventsByDuration(client, durationCategory, 120);
-      const eventListDirect = formatEventsForUi(eventsDirect);
-      const confidenceDirect = calculateEventConfidence(query || "", eventListDirect, null);
-  
-      res.status(200).json({
-        ok: true,
-        type: "events",
-        answer: eventListDirect,
-        answer_markdown: `I found ${eventListDirect.length} ${eventListDirect.length === 1 ? 'event' : 'events'} that match your query. These ${eventListDirect.length === 1 ? 'is' : 'are'} ${durationCategory} ${eventListDirect.length === 1 ? 'event' : 'events'} with experienced instruction and hands-on learning opportunities.`,
-        events: eventListDirect,
-        structured: {
-          intent: "events",
-          topic: (keywords || []).join(", "),
-          events: eventListDirect,
-          products: [],
-          pills: []
-        },
-        confidence: confidenceDirect,
-        debug: { version: "v1.3.20-expanded-classification", debugInfo: { ...(debugInfo||{}), routed:"duration_direct", durationCategory }, timestamp: new Date().toISOString() }
-      });
-      return true;
-    }
+async function handleDirectDurationRouting(context) {
+  const eventsDirect = await findEventsByDuration(context.client, context.durationCategory, 120);
+  const eventListDirect = formatEventsForUi(eventsDirect);
+  const confidenceDirect = calculateEventConfidence(context.query || "", eventListDirect, null);
 
-// Helper function to handle clarification response
-async function handleClarificationResponse(query, client, pageContext, res, debugInfo) {
-    const clarification = await generateClarificationQuestion(query, client, pageContext);
-    if (clarification) {
-      const confidencePercent = clarification.confidence || 20;
-      res.status(200).json({
-        ok: true,
-        type: "clarification",
-        answer: clarification.question,
-        answer_markdown: clarification.question,
-        clarification: clarification.question,
-        question: clarification.question,
-        options: clarification.options,
-        confidence: confidencePercent,
-        debug: { version: "v1.3.20-expanded-classification", intent: debugInfo?.intent || "events", timestamp: new Date().toISOString() }
-      });
-      return true;
-    }
-  return false;
-  }
-  
-// Helper function to send final events response
-function sendEventsResponse(eventList, query, keywords, confidence, res, debugInfo) {
-  res.status(200).json({
+  context.res.status(200).json({
     ok: true,
     type: "events",
-    answer: eventList,
-    answer_markdown: generateEventAnswerMarkdown(eventList, query || ""),
-    events: eventList,
+    answer: eventListDirect,
+    answer_markdown: `I found ${eventListDirect.length} ${eventListDirect.length === 1 ? 'event' : 'events'} that match your query. These ${eventListDirect.length === 1 ? 'is' : 'are'} ${context.durationCategory} ${eventListDirect.length === 1 ? 'event' : 'events'} with experienced instruction and hands-on learning opportunities.`,
+    events: eventListDirect,
     structured: {
       intent: "events",
-      topic: (keywords || []).join(", "),
-      events: eventList,
+      topic: (context.keywords || []).join(", "),
+      events: eventListDirect,
       products: [],
       pills: []
     },
-    confidence,
-        debug: {
-          version: "v1.3.20-expanded-classification",
-          debugInfo: debugInfo,
-          timestamp: new Date().toISOString(),
-          queryText: query,
-          keywords: keywords
-        }
+    confidence: confidenceDirect,
+    debug: { version: "v1.3.20-expanded-classification", debugInfo: { ...(context.debugInfo||{}), routed:"duration_direct", durationCategory: context.durationCategory }, timestamp: new Date().toISOString() }
+  });
+  return true;
+}
+
+// Helper function to handle clarification response
+async function handleClarificationResponse(context) {
+  const clarification = await generateClarificationQuestion(context.query, context.client, context.pageContext);
+  if (clarification) {
+    const confidencePercent = clarification.confidence || 20;
+    context.res.status(200).json({
+      ok: true,
+      type: "clarification",
+      answer: clarification.question,
+      answer_markdown: clarification.question,
+      clarification: clarification.question,
+      question: clarification.question,
+      options: clarification.options,
+      confidence: confidencePercent,
+      debug: { version: "v1.3.20-expanded-classification", intent: context.debugInfo?.intent || "events", timestamp: new Date().toISOString() }
+    });
+    return true;
+  }
+  return false;
+}
+  
+// Helper function to send final events response
+function sendEventsResponse(context) {
+  context.res.status(200).json({
+    ok: true,
+    type: "events",
+    answer: context.eventList,
+    answer_markdown: generateEventAnswerMarkdown(context.eventList, context.query || ""),
+    events: context.eventList,
+    structured: {
+      intent: "events",
+      topic: (context.keywords || []).join(", "),
+      events: context.eventList,
+      products: [],
+      pills: []
+    },
+    confidence: context.confidence,
+    debug: {
+      version: "v1.3.20-expanded-classification",
+      debugInfo: context.debugInfo,
+      timestamp: new Date().toISOString(),
+      queryText: context.query,
+      keywords: context.keywords
+    }
   });
 }
 
@@ -5839,20 +5861,20 @@ function handleSessionAndLogging(sessionId, query, req) {
 /**
  * Gather pre-content for confidence checking
  */
-async function gatherPreContent(client, query, previousQuery, intent, pageContext) {
+async function gatherPreContent(context) {
   let preContent = { articles: [], events: [], products: [], relevanceScore: 0 };
   
-  if (!previousQuery) {
+  if (!context.previousQuery) {
     try {
-      const preKeywords = extractKeywords(query || "");
-      if (intent === "events") {
-        const eventsPeek = await findEvents(client, { keywords: preKeywords, limit: 50, pageContext });
+      const preKeywords = extractKeywords(context.query || "");
+      if (context.intent === "events") {
+        const eventsPeek = await findEvents(context.client, { keywords: preKeywords, limit: 50, pageContext: context.pageContext });
         preContent.events = formatEventsForUi(eventsPeek);
       } else {
-        const articlesPeek = await findArticles(client, { keywords: preKeywords, limit: 20, pageContext });
+        const articlesPeek = await findArticles(context.client, { keywords: preKeywords, limit: 20, pageContext: context.pageContext });
         preContent.articles = articlesPeek;
         const articleUrlsPeek = articlesPeek?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
-        const chunksPeek = await findContentChunks(client, { keywords: preKeywords, limit: 10, articleUrls: articleUrlsPeek });
+        const chunksPeek = await findContentChunks(context.client, { keywords: preKeywords, limit: 10, articleUrls: articleUrlsPeek });
         // Rough relevance: number of chunks found
         preContent.relevanceScore = Math.min(1, (chunksPeek?.length || 0) / 10);
       }
@@ -5978,23 +6000,23 @@ function handleRagResponse(ragResult, res) {
 }
 
 // Helper function to handle fallback response
-function handleFallbackResponse(query, articles, services, events, classification, res) {
-  const keywords = extractKeywords(query);
-  const { answer, confidence } = generateEvidenceBasedAnswer(query, articles, services, events);
-  const pills = generateSmartPills(query, { articles, services, events }, classification);
+function handleFallbackResponse(context) {
+  const keywords = extractKeywords(context.query);
+  const { answer, confidence } = generateEvidenceBasedAnswer(context.query, context.articles, context.services, context.events);
+  const pills = generateSmartPills(context.query, { articles: context.articles, services: context.services, events: context.events }, context.classification);
   
-  res.status(200).json({
+  context.res.status(200).json({
     ok: true,
     type: "advice",
     answer_markdown: answer,
     structured: {
       intent: "direct_answer",
       topic: keywords.join(", "),
-      events: events,
+      events: context.events,
       products: [],
-      services: services,
+      services: context.services,
       landing: [],
-      articles: articles
+      articles: context.articles
     },
     pills: pills,
     confidence,
@@ -6006,50 +6028,57 @@ function handleFallbackResponse(query, articles, services, events, classificatio
         entitiesFound: 0,
         confidence: 0
       }, 
-      classification: classification.type,
+      classification: context.classification.type,
       timestamp: new Date().toISOString() 
     }
   });
 }
 
-async function handleDirectAnswerQuery(client, query, pageContext, res) {
+async function handleDirectAnswerQuery(context) {
   try {
-    const classification = classifyQuery(query);
+    const classification = classifyQuery(context.query);
     
     // Check if this is a "contact Alan" query
-    if (checkContactAlanQueryPatterns(query)) {
-      handleContactAlanResponse(query, res);
+    if (checkContactAlanQueryPatterns(context.query)) {
+      handleContactAlanResponse(context.query, context.res);
       return true;
     }
     
     // Check if this is a private lessons query
     if (classification.reason === 'private_lessons_query') {
-      if (handlePrivateLessonsResponse(query, res)) {
+      if (handlePrivateLessonsResponse(context.query, context.res)) {
         return true;
       }
     }
     
     // For other direct answer queries, use the RAG system
-    console.log(`🔍 Using RAG system for direct answer query: "${query}"`);
-    const ragResult = await tryRagFirst(client, query);
+    console.log(`🔍 Using RAG system for direct answer query: "${context.query}"`);
+    const ragResult = await tryRagFirst(context.client, context.query);
     
     if (ragResult.success && ragResult.confidence >= 0.3) {
-      handleRagResponse(ragResult, res);
+      handleRagResponse(ragResult, context.res);
       return true;
     }
     
     // Fallback to old system if RAG fails
     console.log(`⚠️ RAG failed for direct answer query, using fallback system`);
-    const keywords = extractKeywords(query);
+    const keywords = extractKeywords(context.query);
     
     // Search for relevant content
     const [articles, services, events] = await Promise.all([
-      findArticles(client, { keywords, limit: 5, pageContext }),
-      findServices(client, { keywords, limit: 5, pageContext }),
-      findEvents(client, { keywords, limit: 3, pageContext })
+      findArticles(context.client, { keywords, limit: 5, pageContext: context.pageContext }),
+      findServices(context.client, { keywords, limit: 5, pageContext: context.pageContext }),
+      findEvents(context.client, { keywords, limit: 3, pageContext: context.pageContext })
     ]);
     
-    handleFallbackResponse(query, articles, services, events, classification, res);
+    handleFallbackResponse({
+      query: context.query,
+      articles,
+      services,
+      events,
+      classification,
+      res: context.res
+    });
     return true;
     
   } catch (error) {
@@ -6059,14 +6088,14 @@ async function handleDirectAnswerQuery(client, query, pageContext, res) {
 }
 
 // Helper: Handle clarification queries (Low Complexity)
-async function handleClarificationQuery(client, query, classification, pageContext, res) {
+async function handleClarificationQuery(context) {
   try {
-    console.log(`🎯 Handling clarification query: "${query}" with reason: ${classification.reason}`);
+    console.log(`🎯 Handling clarification query: "${context.query}" with reason: ${context.classification.reason}`);
     
     // Check if this is a course-related clarification
-    if (classification.reason === 'course_query_needs_clarification') {
-      console.log(`📚 Course clarification query detected: "${query}"`);
-      res.status(200).json({
+    if (context.classification.reason === 'course_query_needs_clarification') {
+      console.log(`📚 Course clarification query detected: "${context.query}"`);
+      context.res.status(200).json({
         ok: true,
         type: 'course_clarification',
         question: "Yes, we offer several photography courses! What type of course are you interested in?",
@@ -6080,15 +6109,15 @@ async function handleClarificationQuery(client, query, classification, pageConte
           version: "v1.3.20-course-clarification-fix",
           intent: "clarification",
           classification: "clarification",
-          reason: classification.reason
+          reason: context.classification.reason
         }
       });
       return true;
     }
     
     // Handle other clarification types
-    console.log(`🔍 Generic clarification query: "${query}"`);
-    res.status(200).json({
+    console.log(`🔍 Generic clarification query: "${context.query}"`);
+    context.res.status(200).json({
       ok: true,
       type: 'clarification',
       question: "I'd be happy to help you with your photography questions! Could you be more specific about what you're looking for?",
@@ -6102,7 +6131,7 @@ async function handleClarificationQuery(client, query, classification, pageConte
         version: "v1.3.20-generic-clarification",
         intent: "clarification",
         classification: "clarification",
-        reason: classification.reason
+        reason: context.classification.reason
       }
     });
     return true;
@@ -6169,20 +6198,20 @@ function generateFallbackAnswer(query) {
   }
 }
 
-function generateEvidenceBasedAnswer(query, articles, services, events) {
-  const lc = query.toLowerCase();
+function generateEvidenceBasedAnswer(context) {
+  const lc = context.query.toLowerCase();
   let answer = '';
   let confidence = 0.8;
   
-  if (articles.length > 0) {
-    answer = generateArticleAnswer(articles);
-  } else if (services.length > 0) {
-    answer = generateServiceAnswer(query, services);
-  } else if (events.length > 0) {
-    const bestEvent = events[0];
+  if (context.articles.length > 0) {
+    answer = generateArticleAnswer(context.articles);
+  } else if (context.services.length > 0) {
+    answer = generateServiceAnswer(context.query, context.services);
+  } else if (context.events.length > 0) {
+    const bestEvent = context.events[0];
     answer = `Here's information about the workshops and events available.\n\n*View details: ${bestEvent.page_url}*`;
   } else {
-    answer = generateFallbackAnswer(query);
+    answer = generateFallbackAnswer(context.query);
     confidence = 0.6;
   }
   
@@ -6364,21 +6393,21 @@ async function handleNormalizedDurationQuery(query, pageContext, res) {
 
 // RAG-First approach: Try to answer directly from database
 // Helper: Calculate primary keyword score
-function calculatePrimaryKeywordScore(primaryKeyword, title, url, text) {
-  if (!primaryKeyword) return 0;
+function calculatePrimaryKeywordScore(context) {
+  if (!context.primaryKeyword) return 0;
   let score = 0;
-  if (title.includes(primaryKeyword)) score += 5;
-  if (url.includes(primaryKeyword.replace(/\s+/g,'-'))) score += 4;
-  if (text.includes(primaryKeyword)) score += 2;
+  if (context.title.includes(context.primaryKeyword)) score += 5;
+  if (context.url.includes(context.primaryKeyword.replace(/\s+/g,'-'))) score += 4;
+  if (context.text.includes(context.primaryKeyword)) score += 2;
   return score;
 }
 
 // Helper: Calculate equipment keyword score
-function calculateEquipmentKeywordScore(equipmentKeywords, title, url, text) {
+function calculateEquipmentKeywordScore(context) {
   let score = 0;
-  for (const kw of equipmentKeywords) {
-    if (text.includes(kw) || title.includes(kw)) score += 2;
-    if (url.includes(kw.replace(/\s+/g,'-'))) score += 2;
+  for (const kw of context.equipmentKeywords) {
+    if (context.text.includes(kw) || context.title.includes(kw)) score += 2;
+    if (context.url.includes(kw.replace(/\s+/g,'-'))) score += 2;
   }
   return score;
 }
@@ -6760,16 +6789,16 @@ function removeDuplicateChunks(chunks) {
 }
 
 // Helper function to search for RAG content chunks
-async function searchRagContent(client, query, keywords, isConceptQuery, primaryKeyword) {
+async function searchRagContent(context) {
   let chunks = [];
   
   // For concept queries like "what is exposure", prioritize guide articles
-  if (isConceptQuery) {
-    console.log(`🎯 Concept query detected: "${query}" - prioritizing guide articles`);
+  if (context.isConceptQuery) {
+    console.log(`🎯 Concept query detected: "${context.query}" - prioritizing guide articles`);
     
     // Search for specific and broader guide articles
-    const specificGuides = await searchSpecificGuideArticles(client, primaryKeyword);
-    const broaderGuides = await searchBroaderGuideArticles(client, primaryKeyword);
+    const specificGuides = await searchSpecificGuideArticles(context.client, context.primaryKeyword);
+    const broaderGuides = await searchBroaderGuideArticles(context.client, context.primaryKeyword);
     
     chunks = [...chunks, ...specificGuides, ...broaderGuides];
     
@@ -6781,13 +6810,13 @@ async function searchRagContent(client, query, keywords, isConceptQuery, primary
   }
   
   // Only do general keyword search if we didn't find guide chunks
-  if (!isConceptQuery || chunks.length === 0) {
-    const keywordChunks = await searchWithKeywords(client, keywords);
+  if (!context.isConceptQuery || chunks.length === 0) {
+    const keywordChunks = await searchWithKeywords(context.client, context.keywords);
     chunks = [...chunks, ...keywordChunks];
   }
   
   // Also try the full query
-  const fullQueryChunks = await searchWithFullQuery(client, query);
+  const fullQueryChunks = await searchWithFullQuery(context.client, context.query);
   chunks = [...chunks, ...fullQueryChunks];
   
   // Remove duplicates
