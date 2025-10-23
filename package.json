@@ -25,7 +25,7 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "quality": "npm run lint && npm run test:safety",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "lint-staged": {
     "**/*.{js,cjs,mjs}": "eslint --max-warnings=0"
