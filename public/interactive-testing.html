@@ -652,11 +652,26 @@
         let currentQuestionIndex = 0;
         let testResults = [];
         let isTestRunning = false;
+        let savedScores = {};
 
         // Initialize the test
         function initTest() {
+            loadSavedScores();
             populateQuestionsList();
             loadQuestion(0);
+        }
+
+        // Load saved scores from localStorage
+        function loadSavedScores() {
+            const saved = localStorage.getItem('interactiveTestScores');
+            if (saved) {
+                savedScores = JSON.parse(saved);
+            }
+        }
+
+        // Save scores to localStorage
+        function saveScoresToStorage() {
+            localStorage.setItem('interactiveTestScores', JSON.stringify(savedScores));
         }
 
         // Render chat response in proper format
@@ -772,11 +787,33 @@
                 const questionDiv = document.createElement('div');
                 questionDiv.className = 'question-card';
                 questionDiv.id = `question-${index}`;
+                
+                // Check if we have previous scores for this question
+                const previousScore = savedScores[q.question];
+                let statusHtml = '<span class="status-badge status-pending">Pending</span>';
+                let previousScoresHtml = '';
+                
+                if (previousScore) {
+                    const statusClass = previousScore.qualityScore >= 70 ? 'status-pass' : 'status-fail';
+                    statusHtml = `<span class="status-badge ${statusClass}">${previousScore.verdict}</span>`;
+                    
+                    previousScoresHtml = `
+                        <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 14px;">
+                            <strong>Previous Score:</strong> ${previousScore.qualityScore}/100 | 
+                            <strong>Confidence:</strong> ${previousScore.confidenceScore}% | 
+                            <strong>Verdict:</strong> ${previousScore.verdict}
+                            ${previousScore.notes ? `<br><strong>Notes:</strong> ${previousScore.notes}` : ''}
+                            <br><small>Last tested: ${new Date(previousScore.timestamp).toLocaleString()}</small>
+                        </div>
+                    `;
+                }
+                
                 questionDiv.innerHTML = `
                     <h4>${q.question}</h4>
                     <p><strong>Category:</strong> ${q.category}</p>
                     <p><strong>Focus:</strong> ${q.focus}</p>
-                    <p><strong>Status:</strong> <span class="status-badge status-pending">Pending</span></p>
+                    <p><strong>Status:</strong> ${statusHtml}</p>
+                    ${previousScoresHtml}
                 `;
                 questionsList.appendChild(questionDiv);
             });
@@ -805,11 +842,21 @@
             document.getElementById('loadingSection').classList.remove('hidden');
             document.getElementById('responseSection').classList.add('hidden');
             
-            // Clear previous scores
-            document.getElementById('confidenceScore').value = '';
-            document.getElementById('qualityScore').value = '';
-            document.getElementById('verdict').value = '';
-            document.getElementById('notes').value = '';
+            // Load previous scores if available
+            const questionKey = question.question;
+            const previousScore = savedScores[questionKey];
+            
+            if (previousScore) {
+                document.getElementById('confidenceScore').value = previousScore.confidenceScore || '';
+                document.getElementById('qualityScore').value = previousScore.qualityScore || '';
+                document.getElementById('verdict').value = previousScore.verdict || '';
+                document.getElementById('notes').value = previousScore.notes || '';
+            } else {
+                document.getElementById('confidenceScore').value = '';
+                document.getElementById('qualityScore').value = '';
+                document.getElementById('verdict').value = '';
+                document.getElementById('notes').value = '';
+            }
             
             try {
                 // Get response from chat bot
@@ -869,6 +916,16 @@
             };
 
             testResults.push(result);
+            
+            // Save to localStorage
+            savedScores[question.question] = {
+                confidenceScore: confidenceScore,
+                qualityScore: qualityScore,
+                verdict: verdict,
+                notes: notes,
+                timestamp: new Date().toISOString()
+            };
+            saveScoresToStorage();
             
             // Update question card
             const questionCard = document.getElementById(`question-${currentQuestionIndex}`);
@@ -944,9 +1001,13 @@
 
         // Clear all results
         function clearResults() {
-            if (confirm('Are you sure you want to clear all results?')) {
+            if (confirm('Are you sure you want to clear all results? This will delete all saved scores and notes.')) {
                 testResults = [];
                 currentQuestionIndex = 0;
+                savedScores = {};
+                
+                // Clear localStorage
+                localStorage.removeItem('interactiveTestScores');
                 
                 // Reset all question cards
                 for (let i = 0; i < testQuestions.length; i++) {
