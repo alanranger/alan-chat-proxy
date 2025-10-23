@@ -6824,14 +6824,22 @@ async function searchRagContent(context) {
 }
 
 // Helper function to score and filter chunks
-function scoreAndFilterChunks(chunks, primaryKeyword, lcQuery, isConceptQuery) {
+function scoreAndFilterChunks(context) {
   const keywords = getScoringKeywords();
   const conceptKeywords = ['guide', 'explanation', 'tutorial', 'basics', 'beginner', 'learn', 'understanding'];
   const workshopKeywords = ['workshop', 'course', 'event', 'booking', 'dates', 'location', 'participants'];
   
-  return chunks
-    .map(c => scoreChunkWithAdjustments(c, primaryKeyword, lcQuery, isConceptQuery, keywords, conceptKeywords, workshopKeywords))
-    .filter(c => filterChunkByPrimaryKeyword(c, primaryKeyword))
+  return context.chunks
+    .map(c => scoreChunkWithAdjustments({
+      chunk: c,
+      primaryKeyword: context.primaryKeyword,
+      lcQuery: context.lcQuery,
+      isConceptQuery: context.isConceptQuery,
+      keywords,
+      conceptKeywords,
+      workshopKeywords
+    }))
+    .filter(c => filterChunkByPrimaryKeyword(c, context.primaryKeyword))
     .sort((a,b)=> b.__score - a.__score)
     .slice(0, 5);
 }
@@ -6846,39 +6854,44 @@ function getScoringKeywords() {
 }
 
 // Helper function to score chunk with concept adjustments
-function scoreChunkWithAdjustments(chunk, primaryKeyword, lcQuery, isConceptQuery, keywords, conceptKeywords, workshopKeywords) {
-  const scoringParams = { primaryKeyword, ...keywords, lcQuery };
-  let score = calculateChunkScore(chunk, scoringParams);
+function scoreChunkWithAdjustments(context) {
+  const scoringParams = { primaryKeyword: context.primaryKeyword, ...context.keywords, lcQuery: context.lcQuery };
+  let score = calculateChunkScore(context.chunk, scoringParams);
   
-  if (isConceptQuery) {
-    score = applyConceptQueryAdjustments(chunk, score, conceptKeywords, workshopKeywords);
+  if (context.isConceptQuery) {
+    score = applyConceptQueryAdjustments({
+      chunk: context.chunk,
+      score,
+      conceptKeywords: context.conceptKeywords,
+      workshopKeywords: context.workshopKeywords
+    });
   }
   
-  return {...chunk, __score: score};
+  return {...context.chunk, __score: score};
 }
 
 // Helper function to apply concept query adjustments
-function applyConceptQueryAdjustments(chunk, score, conceptKeywords, workshopKeywords) {
-  const url = (chunk.url||"").toLowerCase();
-  const title = (chunk.title||"").toLowerCase();
-  const text = (chunk.chunk_text||"").toLowerCase();
+function applyConceptQueryAdjustments(context) {
+  const url = (context.chunk.url||"").toLowerCase();
+  const title = (context.chunk.title||"").toLowerCase();
+  const text = (context.chunk.chunk_text||"").toLowerCase();
   
   // Boost score for concept-related content
-  if (conceptKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
-    score += 2.0;
+  if (context.conceptKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
+    context.score += 2.0;
   }
   
   // Penalize workshop/event content for concept queries
-  if (workshopKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
-    score -= 1.5;
+  if (context.workshopKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
+    context.score -= 1.5;
   }
   
   // Extra penalty for workshop URLs
   if (url.includes('/photographic-workshops') || url.includes('/photo-workshops') || url.includes('/events/')) {
-    score -= 2.0;
+    context.score -= 2.0;
   }
   
-  return score;
+  return context.score;
 }
 
 // Helper function to filter chunks by primary keyword
@@ -6904,22 +6917,22 @@ function filterChunkByPrimaryKeyword(chunk, primaryKeyword) {
 }
 
 // Helper function to search for RAG entities
-async function searchRagEntities(client, query, keywords, isConceptQuery, primaryKeyword) {
+async function searchRagEntities(context) {
   let entities = [];
   
   // Search for concept guide articles if needed
-  if (isConceptQuery) {
-    const guideEntities = await searchConceptGuideArticles(client, primaryKeyword);
+  if (context.isConceptQuery) {
+    const guideEntities = await searchConceptGuideArticles(context.client, context.primaryKeyword);
     entities = [...entities, ...guideEntities];
   }
   
   // Search for keyword-based entities
-  const searchKeywords = buildSearchKeywords(query, keywords);
-  const keywordEntities = await searchKeywordEntities(client, searchKeywords);
+  const searchKeywords = buildSearchKeywords(context.query, context.keywords);
+  const keywordEntities = await searchKeywordEntities(context.client, searchKeywords);
   entities = [...entities, ...keywordEntities];
   
   // Search for full query entities
-  const fullQueryEntities = await searchFullQueryEntities(client, query);
+  const fullQueryEntities = await searchFullQueryEntities(context.client, context.query);
   entities = [...entities, ...fullQueryEntities];
   
   // Remove duplicates and return
@@ -7165,17 +7178,17 @@ function prepareRagQuery(query) {
 }
 
 // Helper function to handle fallback responses
-function handleRagFallbackLogic(answer, type, sources, query) {
-  let finalAnswer = answer;
-  let finalType = type;
-  let finalSources = sources;
+function handleRagFallbackLogic(context) {
+  let finalAnswer = context.answer;
+  let finalType = context.type;
+  let finalSources = context.sources;
   
-  if (!answer || answer.trim().length === 0 || 
-      answer.includes("Yes, Alan Ranger offers the services you're asking about") ||
-      (answer.includes("Yes, Alan Ranger") && answer.length < 200) ||
-      answer.includes("I'd be happy to help you with your photography questions")) {
+  if (!context.answer || context.answer.trim().length === 0 || 
+      context.answer.includes("Yes, Alan Ranger offers the services you're asking about") ||
+      (context.answer.includes("Yes, Alan Ranger") && context.answer.length < 200) ||
+      context.answer.includes("I'd be happy to help you with your photography questions")) {
     console.log(`⚠️ No answer generated or generic response detected, providing fallback`);
-    const fallback = handleRagFallback(query);
+    const fallback = handleRagFallback(context.query);
     finalAnswer = fallback.answer;
     finalType = fallback.type;
   }
@@ -7203,23 +7216,23 @@ function handleRagFallback(query) {
 }
 
 // Helper function to assemble RAG result
-function assembleRagResult(results, finalAnswer, finalType, finalSources) {
+function assembleRagResult(context) {
   return {
-    success: results.confidence >= 0.3 || finalAnswer.length > 0,
-    confidence: results.confidence >= 0.3 ? results.confidence : 0.6,
-    answer: finalAnswer,
-    type: finalType,
-    sources: finalSources,
+    success: context.results.confidence >= 0.3 || context.finalAnswer.length > 0,
+    confidence: context.results.confidence >= 0.3 ? context.results.confidence : 0.6,
+    answer: context.finalAnswer,
+    type: context.finalType,
+    sources: context.finalSources,
     structured: {
-      intent: finalType,
-      sources: finalSources,
+      intent: context.finalType,
+      sources: context.finalSources,
       events: [],
       products: [],
-      articles: results.entities || []
+      articles: context.results.entities || []
     },
-    totalMatches: results.totalMatches,
-    chunksFound: results.chunks.length,
-    entitiesFound: results.entities.length
+    totalMatches: context.results.totalMatches,
+    chunksFound: context.results.chunks.length,
+    entitiesFound: context.results.entities.length
   };
 }
 
@@ -7235,42 +7248,57 @@ function initializeRagResults() {
 }
 
 // Helper: Search and process RAG content
-async function searchAndProcessRagContent(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery) {
-  const context = { client, query, keywords, isConceptQuery, primaryKeyword, lcQuery };
-  
-  const chunks = await searchRagContent(context.client, context.query, context.keywords, context.isConceptQuery, context.primaryKeyword);
-  const processedChunks = scoreAndFilterChunks(chunks, context.primaryKeyword, context.lcQuery, context.isConceptQuery);
+async function searchAndProcessRagContent(context) {
+  const chunks = await searchRagContent({
+    client: context.client,
+    query: context.query,
+    keywords: context.keywords,
+    isConceptQuery: context.isConceptQuery,
+    primaryKeyword: context.primaryKeyword
+  });
+  const processedChunks = scoreAndFilterChunks({
+    chunks,
+    primaryKeyword: context.primaryKeyword,
+    lcQuery: context.lcQuery,
+    isConceptQuery: context.isConceptQuery
+  });
   console.log(`📄 Found ${processedChunks.length} relevant chunks`);
   return processedChunks;
 }
 
 // Helper: Search and process RAG entities
-async function searchAndProcessRagEntities(client, query, keywords, isConceptQuery, primaryKeyword) {
-    const entities = await searchRagEntities(client, query, keywords, isConceptQuery, primaryKeyword);
+async function searchAndProcessRagEntities(context) {
+  const entities = await searchRagEntities({
+    client: context.client,
+    query: context.query,
+    keywords: context.keywords,
+    isConceptQuery: context.isConceptQuery,
+    primaryKeyword: context.primaryKeyword
+  });
   const processedEntities = entities || [];
   console.log(`🏷️ Found ${processedEntities.length} relevant entities`);
   return processedEntities;
 }
 
 // Helper: Build RAG response structure
-function buildRagResponse(results, finalAnswer, finalType, finalSources) {
-    return {
-      success: results.confidence >= 0.3 || finalAnswer.length > 0,
-      confidence: results.confidence >= 0.3 ? results.confidence : 0.6,
-      answer: finalAnswer,
-      type: finalType,
-      sources: finalSources,
-      structured: {
-        intent: finalType,
-        sources: finalSources,
-        events: [],
-        products: [],
-        articles: results.entities || []
-      },
-      totalMatches: results.totalMatches,
-      chunksFound: results.chunks.length,
-      entitiesFound: results.entities.length
-    };
+function buildRagResponse(context) {
+  return {
+    success: context.results.confidence >= 0.3 || context.finalAnswer.length > 0,
+    confidence: context.results.confidence >= 0.3 ? context.results.confidence : 0.6,
+    answer: context.finalAnswer,
+    type: context.finalType,
+    sources: context.finalSources,
+    structured: {
+      intent: context.finalType,
+      sources: context.finalSources,
+      events: [],
+      products: [],
+      articles: context.results.entities || []
+    },
+    totalMatches: context.results.totalMatches,
+    chunksFound: context.results.chunks.length,
+    entitiesFound: context.results.entities.length
+  };
 }
     
 // Helper: Handle RAG search errors
@@ -7289,15 +7317,27 @@ function handleRagError(error) {
 }
 
 // Helper: Process RAG search results
-async function processRagSearchResults(client, query, keywords, isConceptQuery, primaryKeyword, lcQuery) {
-  const context = { client, query, keywords, isConceptQuery, primaryKeyword, lcQuery };
+async function processRagSearchResults(context) {
   const results = initializeRagResults();
   
   // Search for content chunks
-  results.chunks = await searchAndProcessRagContent(context.client, context.query, context.keywords, context.isConceptQuery, context.primaryKeyword, context.lcQuery);
+  results.chunks = await searchAndProcessRagContent({
+    client: context.client,
+    query: context.query,
+    keywords: context.keywords,
+    isConceptQuery: context.isConceptQuery,
+    primaryKeyword: context.primaryKeyword,
+    lcQuery: context.lcQuery
+  });
   
   // Search for entities
-  results.entities = await searchAndProcessRagEntities(context.client, context.query, context.keywords, context.isConceptQuery, context.primaryKeyword);
+  results.entities = await searchAndProcessRagEntities({
+    client: context.client,
+    query: context.query,
+    keywords: context.keywords,
+    isConceptQuery: context.isConceptQuery,
+    primaryKeyword: context.primaryKeyword
+  });
   
   // Calculate confidence and determine answer type
   results.totalMatches = results.chunks.length + results.entities.length;
@@ -7337,8 +7377,7 @@ async function tryRagFirst(client, query) {
 }
 
 // Helper: Process main query (Low Complexity)
-async function processMainQuery(query, previousQuery, sessionId, pageContext, res, started, req) {
-  const context = { query, previousQuery, sessionId, pageContext, res, started, req };
+async function processMainQuery(context) {
   const client = supabaseAdmin();
   
   await initializeSession(context);
@@ -7348,7 +7387,7 @@ async function processMainQuery(query, previousQuery, sessionId, pageContext, re
   
   const ragResult = await attemptRagFirst(client, context);
   if (ragResult.success) {
-    return sendRagSuccessResponse(res, ragResult);
+    return sendRagSuccessResponse(context.res, ragResult);
   }
   
   return handleRagFallbackWithIntent(client, context, ragResult);
@@ -7458,22 +7497,34 @@ function determineIntent(query, previousQuery, pageContext) {
 }
 
 // Helper: Process by intent (Low Complexity)
-async function processByIntent(client, query, previousQuery, intent, pageContext, res, started) {
-  const context = { client, query, previousQuery, intent, pageContext, res, started };
-  
-  if (intent === "clarification_followup") {
-    return await handleClarificationFollowup(client, query, previousQuery, pageContext, res);
+async function processByIntent(context) {
+  if (context.intent === "clarification_followup") {
+    return await handleClarificationFollowup({
+      client: context.client,
+      query: context.query,
+      previousQuery: context.previousQuery,
+      pageContext: context.pageContext,
+      res: context.res
+    });
   }
   
-  if (intent === "workshop") {
+  if (context.intent === "workshop") {
     return await handleWorkshopIntent(context);
   }
   
-  if (!pageContext || !pageContext.clarificationLevel) {
+  if (!context.pageContext || !context.pageContext.clarificationLevel) {
     return await handleDirectAnswerOrWorkshop(context);
   }
   
-  return await processRemainingLogic(client, query, previousQuery, intent, pageContext, res, started);
+  return await processRemainingLogic({
+    client: context.client,
+    query: context.query,
+    previousQuery: context.previousQuery,
+    intent: context.intent,
+    pageContext: context.pageContext,
+    res: context.res,
+    started: context.started
+  });
 }
 
 // Helper function to handle workshop intent
@@ -7527,18 +7578,29 @@ async function handleWorkshopClassificationWithContext(context) {
 }
 
 // Helper: Process remaining logic (Low Complexity)
-async function processRemainingLogic(client, query, previousQuery, intent, pageContext, res, started) {
-  const context = { client, query, previousQuery, intent, pageContext, res, started };
-  
+async function processRemainingLogic(context) {
   // Extract keywords for search
   const keywords = extractKeywords(context.query);
   
   // Handle different intents
   if (context.intent === "events") {
-    const handled = await handleEventsPipeline({ client: context.client, query: context.query, keywords, pageContext: context.pageContext, res: context.res, debugInfo: { intent: context.intent } });
+    const handled = await handleEventsPipeline({ 
+      client: context.client, 
+      query: context.query, 
+      keywords, 
+      pageContext: context.pageContext, 
+      res: context.res, 
+      debugInfo: { intent: context.intent } 
+    });
     if (handled) return;
   } else if (context.intent === "advice") {
-    const handled = await handleAdviceClarification(context.client, context.query, keywords, context.pageContext, context.res);
+    const handled = await handleAdviceClarification({
+      client: context.client,
+      query: context.query,
+      keywords,
+      pageContext: context.pageContext,
+      res: context.res
+    });
     if (handled) return;
   }
   
