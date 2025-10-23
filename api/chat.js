@@ -3051,32 +3051,31 @@ function normalizeQueryText(enhancedKeywords) {
   
 // Helper: Handle duration-based queries
 async function handleDurationQueries(client, queryText, limit) {
-  // Check for 2.5hrs-4hrs workshops (normalized)
-  if (queryText.includes('2.5hrs-4hrs')) {
-    console.log('🔍 Using category-based query for 2.5hrs-4hrs workshops');
-    const result = await findEventsByDuration(client, '2.5hrs-4hrs', limit);
-    console.log('🔍 findEventsByDuration returned:', result?.length || 0, 'events for 2.5hrs-4hrs');
-    if (result && result.length === 0) {
-      console.log('🔍 DEBUG: findEventsByDuration returned 0 events for 2.5hrs-4hrs');
-    }
-    return result;
-  }
+  const durationMappings = [
+    { keyword: '2.5hrs-4hrs', category: '2.5hrs-4hrs' },
+    { keyword: '1-day', category: '1-day' },
+    { keyword: '2-5-days', category: '2-5-days' }
+  ];
   
-  // Check for 1-day workshops (normalized)
-  if (queryText.includes('1-day')) {
-    console.log('🔍 Using category-based query for 1-day workshops');
-    const result = await findEventsByDuration(client, '1-day', limit);
-    console.log('🔍 findEventsByDuration returned:', result?.length || 0, 'events');
-    return result;
-  }
-
-  // Check for 2-5-days workshops (normalized)
-  if (queryText.includes('2-5-days')) {
-    console.log('🔍 Using category-based query for 2-5-days workshops');
-    return await findEventsByDuration(client, '2-5-days', limit);
+  for (const { keyword, category } of durationMappings) {
+    if (queryText.includes(keyword)) {
+      return await processDurationQuery(client, category, limit, keyword);
+    }
   }
   
   return null; // No duration match found
+}
+
+async function processDurationQuery(client, category, limit, keyword) {
+  console.log(`🔍 Using category-based query for ${keyword} workshops`);
+  const result = await findEventsByDuration(client, category, limit);
+  console.log(`🔍 findEventsByDuration returned: ${result?.length || 0} events for ${keyword}`);
+  
+  if (result && result.length === 0) {
+    console.log(`🔍 DEBUG: findEventsByDuration returned 0 events for ${keyword}`);
+  }
+  
+  return result;
 }
 
 // Helper: Handle Lightroom course queries
@@ -3435,17 +3434,6 @@ function dedupeEventsByKey(rows, keyField = 'event_url', secondaryKey = null) {
   return unique;
 }
 
-function enhanceKeywordsWithPageContext(keywords, pageContext) {
-  if (pageContext && pageContext.pathname) {
-    const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
-    if (pathKeywords.length > 0) {
-      console.log('Page context keywords:', pathKeywords);
-      // Add page context to search terms
-      return [...pathKeywords, ...keywords];
-    }
-  }
-  return keywords;
-  }
 
 function applyKeywordFiltering(q, keywords) {
     // Filter out generic query words that don't help find events
@@ -3550,30 +3538,37 @@ function mapEventsData(data) {
 }
 
 async function findProducts(client, { keywords, limit = 20, pageContext = null }) {
-  // If we have page context, try to find related products first
-  if (pageContext && pageContext.pathname) {
-    const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
-    if (pathKeywords.length > 0) {
-      console.log('Product search - Page context keywords:', pathKeywords);
-      // Add page context to search terms
-      keywords = [...pathKeywords, ...keywords];
-    }
-  }
+  const enhancedKeywords = enhanceKeywordsWithPageContext(keywords, pageContext);
+  const query = buildProductQuery(client, limit, enhancedKeywords);
+  return await executeProductQuery(query);
+}
 
-  let q = client
-        .from("page_entities")
+function enhanceKeywordsWithPageContext(keywords, pageContext) {
+  if (!pageContext?.pathname) return keywords;
+  
+  const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
+  if (pathKeywords.length === 0) return keywords;
+  
+  console.log('Product search - Page context keywords:', pathKeywords);
+  return [...pathKeywords, ...keywords];
+}
+
+function buildProductQuery(client, limit, keywords) {
+  let query = client
+    .from("page_entities")
     .select("*")
-        .eq("kind", "product")
+    .eq("kind", "product")
     .order("last_seen", { ascending: false })
     .limit(limit);
 
-  // Products are unified; do not gate by csvType
+  const orExpr = anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
+  if (orExpr) query = query.or(orExpr);
+  
+  return query;
+}
 
-  const orExpr =
-    anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
-  if (orExpr) q = q.or(orExpr);
-
-  const { data, error } = await q;
+async function executeProductQuery(query) {
+  const { data, error } = await query;
   if (error) return [];
   return data || [];
 }
@@ -3933,32 +3928,50 @@ function deriveTitleFromUrl(u) {
 
 
 function calculateContentScore(item, keywords, coreConcepts) {
-  const text = (item.chunk_text || item.content || "").toLowerCase();
-  const title = (item.title || "").toLowerCase();
-  const url = (item.url || "").toLowerCase();
+  const context = prepareScoringContext(item);
+  let score = calculateBaseScore(context, keywords);
   
-  let score = 0;
-  
-  // Base keyword scoring
-  keywords.forEach(keyword => {
-    const kw = keyword.toLowerCase();
-    if (text.includes(kw) || title.includes(kw)) score += 1;
-  });
-  
-  // MAJOR BOOST: Online course content for technical concepts
-  const hasCore = coreConcepts.some(c => keywords.some(k => k.toLowerCase().includes(c)));
-  if (hasCore) {
-    // Boost for online course URLs (what-is-* pattern)
-    if (url.includes("/what-is-") || title.includes("what is")) score += 10;
-    
-    // Boost for PDF checklists and guides
-    if (title.includes("pdf") || title.includes("checklist") || title.includes("guide")) score += 8;
-    
-    // Boost for structured learning content
-    if (title.includes("guide for beginners") || title.includes("guide for beginner")) score += 5;
+  if (hasCoreConcepts(keywords, coreConcepts)) {
+    score += calculateCoreConceptBoosts(context);
   }
   
   return score;
+}
+
+function prepareScoringContext(item) {
+  return {
+    text: (item.chunk_text || item.content || "").toLowerCase(),
+    title: (item.title || "").toLowerCase(),
+    url: (item.url || "").toLowerCase()
+  };
+}
+
+function calculateBaseScore(context, keywords) {
+  let score = 0;
+  keywords.forEach(keyword => {
+    const kw = keyword.toLowerCase();
+    if (context.text.includes(kw) || context.title.includes(kw)) score += 1;
+  });
+  return score;
+}
+
+function hasCoreConcepts(keywords, coreConcepts) {
+  return coreConcepts.some(c => keywords.some(k => k.toLowerCase().includes(c)));
+}
+
+function calculateCoreConceptBoosts(context) {
+  let boost = 0;
+  
+  // Boost for online course URLs (what-is-* pattern)
+  if (context.url.includes("/what-is-") || context.title.includes("what is")) boost += 10;
+  
+  // Boost for PDF checklists and guides
+  if (context.title.includes("pdf") || context.title.includes("checklist") || context.title.includes("guide")) boost += 8;
+  
+  // Boost for structured learning content
+  if (context.title.includes("guide for beginners") || context.title.includes("guide for beginner")) boost += 5;
+  
+  return boost;
 }
 
 async function findContentChunks(client, { keywords, limit = 5, articleUrls = [] }) {
