@@ -5891,7 +5891,14 @@ async function handleEventsPipeline(params) {
   try {
     const durationCategory = extractDurationCategory(query);
     if (durationCategory) {
-      return await handleDirectDurationRouting(client, query, keywords, durationCategory, res, debugInfo);
+      return await handleDirectDurationRouting({
+        client,
+        query,
+        keywords,
+        durationCategory,
+        res,
+        debugInfo
+      });
     }
   } catch (_) { /* non-fatal: fall back to standard flow */ }
 
@@ -5903,11 +5910,24 @@ async function handleEventsPipeline(params) {
   const clarificationThreshold = (debugInfo?.intent === 'workshop') ? 0.8 : 0.6;
   
   if (confidence < clarificationThreshold) {
-    const clarificationHandled = await handleClarificationResponse(query, client, pageContext, res, debugInfo);
+    const clarificationHandled = await handleClarificationResponse({
+      query,
+      client,
+      pageContext,
+      res,
+      debugInfo
+    });
     if (clarificationHandled) return true;
   }
   
-  sendEventsResponse(eventList, query, keywords, confidence, res, debugInfo);
+  sendEventsResponse({
+    eventList,
+    query,
+    keywords,
+    confidence,
+    res,
+    debugInfo
+  });
   return true;
 }
 
@@ -6076,7 +6096,12 @@ function handleRagResponse(ragResult, res) {
 // Helper function to handle fallback response
 function handleFallbackResponse(context) {
   const keywords = extractKeywords(context.query);
-  const { answer, confidence } = generateEvidenceBasedAnswer(context.query, context.articles, context.services, context.events);
+  const { answer, confidence } = generateEvidenceBasedAnswer({
+    query: context.query,
+    articles: context.articles,
+    services: context.services,
+    events: context.events
+  });
   const pills = generateSmartPills(context.query, { articles: context.articles, services: context.services, events: context.events }, context.classification);
   
   context.res.status(200).json({
@@ -6413,7 +6438,15 @@ export default async function handler(req, res) {
     if (await handleNormalizedDurationQuery(query, sanitizedPageContext, res)) return;
     
     // Continue with main processing
-    await processMainQuery(query, previousQuery, sessionId, sanitizedPageContext, res, started, req);
+    await processMainQuery({
+      query,
+      previousQuery,
+      sessionId,
+      pageContext: sanitizedPageContext,
+      res,
+      started,
+      req
+    });
     
   } catch (error) {
     console.error('Handler error:', error);
@@ -6549,10 +6582,10 @@ function calculateChunkScore(chunk, scoringParams) {
   let score = 0;
   
   // Primary keyword scoring (highest priority)
-  score += calculatePrimaryKeywordScore(primaryKeyword, title, url, text);
+  score += calculatePrimaryKeywordScore({ primaryKeyword, title, url, text });
   
   // Equipment-specific scoring
-  score += calculateEquipmentKeywordScore(equipmentKeywords, title, url, text);
+  score += calculateEquipmentKeywordScore({ equipmentKeywords, title, url, text });
   
   // Technical content scoring
   score += calculateTechnicalKeywordScore(technicalKeywords, title, text);
@@ -7450,9 +7483,9 @@ async function tryRagFirst(client, query) {
     const { answer, type, sources } = generateRagAnswer({ query, entities: results.entities, chunks: results.chunks, results });
     
     // Handle fallback cases
-    const { finalAnswer, finalType, finalSources } = handleRagFallbackLogic(answer, type, sources, query);
+    const { finalAnswer, finalType, finalSources } = handleRagFallbackLogic({ answer, type, sources, query });
     
-    return buildRagResponse(results, finalAnswer, finalType, finalSources);
+    return buildRagResponse({ results, finalAnswer, finalType, finalSources });
     
   } catch (error) {
     return handleRagError(error);
@@ -7507,7 +7540,13 @@ async function handleWorkshopClassification(client, context) {
 // Helper function to handle clarification classification
 async function handleClarificationClassification(client, context, classification) {
   console.log(`🎯 Clarification query detected: "${context.query}" - routing to clarification`);
-  await handleClarificationQuery(client, context.query, classification, context.pageContext, context.res);
+  await handleClarificationQuery({
+    client,
+    query: context.query,
+    classification,
+    pageContext: context.pageContext,
+    res: context.res
+  });
   return { handled: true };
 }
 
@@ -7552,7 +7591,15 @@ async function handleRagFallbackWithIntent(client, context, ragResult) {
   const intent = determineIntent(context.query, context.previousQuery, context.pageContext);
   console.log(`🎯 Classification Intent: ${intent}`);
   
-  await processByIntent(client, context.query, context.previousQuery, intent, context.pageContext, context.res, context.started);
+  await processByIntent({
+    client,
+    query: context.query,
+    previousQuery: context.previousQuery,
+    intent,
+    pageContext: context.pageContext,
+    res: context.res,
+    started: context.started
+  });
 }
 
 // Helper: Determine intent (Low Complexity)
@@ -7641,7 +7688,12 @@ async function handleDirectAnswerOrWorkshop(context) {
 // Helper function to handle direct answer classification
 async function handleDirectAnswerClassification(context) {
   console.log(`🎯 Direct answer query detected: "${context.query}" - bypassing clarification`);
-  const directAnswerResponse = await handleDirectAnswerQuery(context.client, context.query, context.pageContext, context.res);
+  const directAnswerResponse = await handleDirectAnswerQuery({
+    client: context.client,
+    query: context.query,
+    pageContext: context.pageContext,
+    res: context.res
+  });
   return directAnswerResponse;
 }
 
