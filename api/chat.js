@@ -1489,14 +1489,6 @@ function toGBP(n) {
     maximumFractionDigits: 0,
   }).format(Number(n));
 }
-function originOf(url) {
-  try {
-    const u = new URL(url);
-    return `${u.protocol}//${u.host}`;
-  } catch {
-    return null;
-  }
-}
 
 // Note: We deliberately do not normalize typos; we ask users to rephrase instead.
 
@@ -3490,11 +3482,6 @@ function mapEventsData(data) {
   return dedupedData;
 }
 
-async function findProducts(client, { keywords, limit = 20, pageContext = null }) {
-  const enhancedKeywords = enhanceKeywordsWithPageContext(keywords, pageContext);
-  const query = buildProductQuery(client, limit, enhancedKeywords);
-  return await executeProductQuery(query);
-}
 
 function enhanceKeywordsWithPageContext(keywords, pageContext) {
   if (!pageContext?.pathname) return keywords;
@@ -3757,17 +3744,6 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   return processAndSortResults(data || [], enhancedKeywords, limit);
 }
 
-function deriveTitleFromUrl(u) {
-  try {
-    const url = new URL(u);
-    const parts = (url.pathname || '').split('/').filter(Boolean);
-    const last = parts[parts.length - 1] || '';
-    if (!last) return null;
-    const words = last.replace(/[-_]+/g, ' ').replace(/\.(html?)$/i,' ').trim();
-    // Title case important words
-    return words.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ').trim();
-  } catch { return null; }
-}
 
 
 function calculateContentScore(item, keywords, coreConcepts) {
@@ -3852,21 +3828,6 @@ async function findContentChunks(client, { keywords, limit = 5, articleUrls = []
   return sortedData.slice(0, limit);
 }
 
-async function findLanding(client, { keywords, limit = 10 }) {
-  // Return landing pages by keywords, newest first
-  let q = client
-      .from("page_entities")
-    .select("*")
-    .eq("kind", "landing")
-      .order("last_seen", { ascending: false })
-    .limit(limit);
-
-  const orExpr = anyIlike("title", keywords) || anyIlike("page_url", keywords) || null;
-  if (orExpr) q = q.or(orExpr);
-
-  const { data } = await q;
-  return Array.isArray(data) ? data : [];
-}
 
 /* -------- find PDF / related link within article chunks (best effort) ---- */
 
@@ -4071,155 +4032,18 @@ function parseSessionField(ln, out) {
   return false;
 }
 
-function extractFromDescription(desc) {
-  const out = initializeDescriptionOutput();
-  if (!desc) return out;
 
-  // Enhanced cleaning to prevent formatting issues and text duplication
-  const rawText = cleanDescriptionText(desc);
-  const lines = normalizeLines(rawText);
-  
-  if (lines.length) out.summary = lines[0];
-
-  const helpers = createParsingHelpers(lines, out);
-
-  // Parse all lines
-  parseAllDescriptionLines(lines, helpers, out);
-
-  // Post-process summary if needed
-  postProcessSummary(out, lines);
-
-  return out;
-}
-
-// Helper functions for extractFromDescription
-function initializeDescriptionOutput() {
-  return {
-    location: null,
-    participants: null,
-    fitness: null,
-    availability: null,
-    experienceLevel: null,
-    equipmentNeeded: null,
-    summary: null,
-    sessions: [],
-  };
-}
-
-function parseAllDescriptionLines(lines, helpers, out) {
-  for (let i = 0; i < lines.length; i++) {
-    const ln = lines[i];
-    const skipNext = parseDescriptionLine({ ln, helpers, out, i });
-    if (skipNext) {
-      i++; // Skip the next line since we processed it
-    }
-  }
-}
-
-function parseDescriptionLine(context) {
-  // Parse each field type in order
-  if (parseLocationField(context.ln, context.helpers)) return false;
-  
-  const participantsResult = parseParticipantsField(context.ln, context.helpers, context.i);
-  if (participantsResult === true) return false;
-  if (participantsResult?.skipNext) return true;
-  
-  if (parseFitnessField(context.ln, context.helpers)) return false;
-  if (parseAvailabilityField(context.ln, context.helpers)) return false;
-  if (parseExperienceLevelField(context.ln, context.helpers)) return false;
-  if (parseEquipmentNeededField(context.ln, context.helpers)) return false;
-  if (parseSessionField(context.ln, context.out)) return false;
-  
-  return false;
-}
-
-function postProcessSummary(out, lines) {
-  if (out.summary && /^summary$/i.test(out.summary.trim())) {
-    const idx = lines.findIndex((s) => /^summary$/i.test(s.trim()));
-    if (idx >= 0) {
-      const nxt = lines.slice(idx + 1).find((s) => s.trim());
-      if (nxt) out.summary = nxt.trim();
-    }
-  }
-}
 
 /* --------------------- Build product panel (markdown) -------------------- */
 
 // Helper functions for product panel markdown generation
-function extractPriceRange(products) {
-  let lowPrice = null, highPrice = null;
-  for (const p of products) {
-    const ro = p?.raw?.offers || {};
-    const lp = ro.lowPrice ?? ro.lowprice ?? null;
-    const hp = ro.highPrice ?? ro.highprice ?? null;
-    if (lp != null) lowPrice = lp;
-    if (hp != null) highPrice = hp;
-  }
-  return { lowPrice, highPrice };
-}
 
-function buildPriceHeader(primary, lowPrice, highPrice) {
-  const headlineSingle = primary?.price != null ? toGBP(primary.price) : null;
-  const lowTx = lowPrice != null ? toGBP(lowPrice) : null;
-  const highTx = highPrice != null ? toGBP(highPrice) : null;
-
-  const headBits = [];
-  if (headlineSingle) headBits.push(headlineSingle);
-  if (lowTx && highTx) headBits.push(`${lowTx}–${highTx}`);
-  return headBits.length ? ` — ${headBits.join(" • ")}` : "";
-}
-
-function scrubDescription(description) {
-  return String(description || '')
-    .replace(/\s*style="[^"]*"/gi,'')
-    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
-    .replace(/\s*contenteditable="[^"]*"/gi,'')
-    .replace(/•\s*Standard\s*[—\-]\s*£\d+/gi,'') // Remove "• Standard — £150" lines
-    .replace(/Standard\s*[—\-]\s*£\d+/gi,'') // Remove "Standard — £150" lines
-    .replace(/\s*•\s*Standard\s*[—\-]\s*£\d+/gi,'') // Remove " • Standard — £150" lines
-    .replace(/\s*Standard\s*[—\-]\s*£\d+/gi,''); // Remove " Standard — £150" lines
-}
   
-async function fetchChunkData(primary) {
-  try {
-    const client = supabaseAdmin();
-    const chunkResponse = await client
-      .from('page_chunks')
-      .select('chunk_text')
-      .eq('url', primary.page_url)
-      .limit(1)
-      .single();
-    
-    if (chunkResponse.data) {
-      return chunkResponse.data.chunk_text || "";
-    }
-  } catch (e) {
-    // Ignore chunk fetch errors
-  }
-  return "";
-}
-
-function logExtractionDebug(context) {
-  console.log("Full description:", context.desc);
-  console.log("Chunk data:", context.chunk);
-  console.log("Source text for extraction:", context.src);
-  console.log("Extracted info:", JSON.stringify(context.extracted, null, 2));
-  console.log("Experience Level extracted:", context.extracted.experienceLevel);
-  console.log("Equipment Needed extracted:", context.extracted.equipmentNeeded);
-}
 
 
 
 
-function buildSessionsList(sessions) {
-  const sessionLines = [];
-  for (const s of sessions) {
-    const pretty = s.label.replace(/\bhrs\b/i, "hours");
-    const ptxt = s.price != null ? ` — ${toGBP(s.price)}` : "";
-    sessionLines.push(`- **${pretty}** — ${s.time}${ptxt}`);
-  }
-  return sessionLines;
-}
+
 
 
 
@@ -4301,38 +4125,8 @@ function formatEventsForUi(events) {
 }
 /* ----------------------------- Pills builders ---------------------------- */
 // Helper functions for event pills building
-function createPillAdder(pills, used) {
-  return (label, url, brand = true) => {
-    if (!label || !url) return;
-    if (used.has(url)) return;
-    used.add(url);
-    pills.push({ label, url, brand });
-  };
-}
 
-function determineCourseListingUrl(productUrl) {
-  try {
-    const u = String(productUrl || '');
-    if (/lightroom|photo-?editing/i.test(u)) {
-      return "https://www.alanranger.com/photo-editing-course-coventry";
-    } else if (/beginners-photography-(classes|course)/i.test(u) || /photography-services-near-me\/beginners-photography-course/i.test(u)) {
-      return "https://www.alanranger.com/beginners-photography-classes";
-    }
-  } catch {}
-  return null;
-}
 
-function determineEventSectionUrl(firstEventUrl) {
-  try {
-    const fe = String(firstEventUrl || '');
-    const m = fe.match(/^https?:\/\/[^/]+\/(beginners-photography-lessons)\//i);
-    if (m && m[1]) {
-      const base = fe.split(m[1])[0] + m[1];
-      return base.startsWith('http') ? base : `https://www.alanranger.com/${m[1]}`;
-    }
-  } catch {}
-  return null;
-}
 
 
 
@@ -4341,28 +4135,6 @@ function determineEventSectionUrl(firstEventUrl) {
 
 /* ---------------------------- Extract Relevant Info ---------------------------- */
 // Helper functions for extractRelevantInfo
-function createTextHelpers() {
-  const hasText = (s)=> typeof s === 'string' && s.trim().length > 0;
-  const formatDateGB = (iso)=> {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-    } catch(_) { return null; }
-  };
-  const scrubAttrs = (s)=> String(s||'')
-    .replace(/\s*style="[^"]*"/gi,'')
-    .replace(/\s*data-[a-z0-9_-]+="[^"]*"/gi,'')
-    .replace(/\s*contenteditable="[^"]*"/gi,'')
-    .replace(/\s*>\s*/g,' ')
-    .replace(/<[^>]*>/g,' ')
-    .replace(/\s+/g,' ').trim();
-  const summarize = (t)=>{
-    const clean = scrubAttrs(t||'');
-    const parts = clean.split(/[.!?]+/).map(s=>s.trim()).filter(s=>s.length>30);
-    return parts.slice(0,2).join('. ') + (parts.length?'.':'');
-  };
-  return { hasText, formatDateGB, scrubAttrs, summarize };
-}
 
 function findRelevantEvent(events, lowerQuery, dataContext) {
   let event = events[0]; // Default to first event
