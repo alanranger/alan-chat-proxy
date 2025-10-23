@@ -2907,50 +2907,27 @@ async function checkEvidenceBasedClarification(context) {
   
 // Helper function to check all pattern groups
 function checkAllPatternGroups(lc, confidence) {
-  // Check suppressed patterns
+  // Check suppressed patterns first
   const suppressedResult = checkSuppressedPatterns(lc);
   if (suppressedResult === null) return null;
   
-  // Check equipment patterns
-  const equipmentResult = checkEquipmentPatterns(lc);
-  if (equipmentResult) {
-    equipmentResult.confidence = confidence;
-    return equipmentResult;
-  }
+  // Define pattern checkers in priority order
+  const patternCheckers = [
+    { name: 'equipment', checker: checkEquipmentPatterns },
+    { name: 'service', checker: checkServicePatterns },
+    { name: 'technical', checker: checkTechnicalPatterns },
+    { name: 'about', checker: checkAboutPatterns },
+    { name: 'freeCourseWorkshop', checker: checkFreeCourseWorkshopPatterns },
+    { name: 'remaining', checker: checkRemainingPatterns }
+  ];
   
-  // Check service patterns
-  const serviceResult = checkServicePatterns(lc);
-  if (serviceResult) {
-    serviceResult.confidence = confidence;
-    return serviceResult;
-  }
-  
-  // Check technical patterns
-  const technicalResult = checkTechnicalPatterns(lc);
-  if (technicalResult) {
-    technicalResult.confidence = confidence;
-    return technicalResult;
-  }
-  
-  // Check about patterns
-  const aboutResult = checkAboutPatterns(lc);
-  if (aboutResult) {
-    aboutResult.confidence = confidence;
-    return aboutResult;
-  }
-  
-  // Check free course and workshop patterns
-  const freeCourseWorkshopResult = checkFreeCourseWorkshopPatterns(lc);
-  if (freeCourseWorkshopResult) {
-    freeCourseWorkshopResult.confidence = confidence;
-    return freeCourseWorkshopResult;
-  }
-  
-  // Check remaining patterns
-  const remainingResult = checkRemainingPatterns(lc);
-  if (remainingResult) {
-    remainingResult.confidence = confidence;
-    return remainingResult;
+  // Check each pattern group
+  for (const { checker } of patternCheckers) {
+    const result = checker(lc);
+    if (result) {
+      result.confidence = confidence;
+      return result;
+    }
   }
   
   return null;
@@ -5180,17 +5157,31 @@ function applyRelevanceScoring(queryLower, events, addFactor) {
 }
 
 function calculateEventConfidence(query, events, product) {
-  let baseConfidence = 0.3;
-  let confidenceFactors = [];
+  const context = initializeConfidenceContext(query);
   
-  const queryLower = query.toLowerCase();
-  // Small helpers to reduce repetition (no behavior change)
-  const addFactor = (message, delta) => { baseConfidence += delta; confidenceFactors.push(`${message} (${delta >= 0 ? '+' : ''}${delta})`); };
+  // Analyze data for response attributes
+  analyzeDataAttributes(events, product, context);
   
-  // Extract query requirements
-  const queryRequirements = extractQueryRequirements(queryLower);
+  // Apply all scoring factors
+  applyAllScoringFactors(query, events, product, context);
   
-  // Initialize response attributes
+  // Return final confidence with logging
+  return finalizeConfidence(query, context);
+}
+
+function initializeConfidenceContext(query) {
+  return {
+    baseConfidence: 0.3,
+    confidenceFactors: [],
+    queryLower: query.toLowerCase(),
+    addFactor: (message, delta) => {
+      this.baseConfidence += delta;
+      this.confidenceFactors.push(`${message} (${delta >= 0 ? '+' : ''}${delta})`);
+    }
+  };
+}
+
+function analyzeDataAttributes(events, product, context) {
   const responseAttributes = initializeResponseAttributes();
   
   // Analyze events for response attributes
@@ -5204,19 +5195,24 @@ function calculateEventConfidence(query, events, product) {
     analyzeProductAttributes(product, responseAttributes);
   }
   
-  // Apply all scoring factors
-  applyIntentBasedScoring(queryRequirements, responseAttributes, addFactor);
-  applyQuerySpecificityScoring(queryLower, addFactor);
-  applyEventQualityScoring(events, addFactor);
-  applyProductScoring(product, addFactor);
-  applyRelevanceScoring(queryLower, events, addFactor);
+  context.responseAttributes = responseAttributes;
+}
+
+function applyAllScoringFactors(query, events, product, context) {
+  const queryRequirements = extractQueryRequirements(context.queryLower);
   
-  // Cap confidence between 0.1 and 0.95
-  const finalConfidence = Math.max(0.1, Math.min(0.95, baseConfidence));
+  applyIntentBasedScoring(queryRequirements, context.responseAttributes, context.addFactor);
+  applyQuerySpecificityScoring(context.queryLower, context.addFactor);
+  applyEventQualityScoring(events, context.addFactor);
+  applyProductScoring(product, context.addFactor);
+  applyRelevanceScoring(context.queryLower, events, context.addFactor);
+}
+
+function finalizeConfidence(query, context) {
+  const finalConfidence = Math.max(0.1, Math.min(0.95, context.baseConfidence));
   
-  // Log confidence factors for debugging
-  if (confidenceFactors.length > 0) {
-    console.log(`🎯 Event confidence factors for "${query}": ${confidenceFactors.join(', ')} = ${(finalConfidence * 100).toFixed(1)}%`);
+  if (context.confidenceFactors.length > 0) {
+    console.log(`🎯 Event confidence factors for "${query}": ${context.confidenceFactors.join(', ')} = ${(finalConfidence * 100).toFixed(1)}%`);
   }
   
   return finalConfidence;
@@ -6103,53 +6099,62 @@ async function handleDirectAnswerQuery(context) {
   try {
     const classification = classifyQuery(context.query);
     
-    // Check if this is a "contact Alan" query
-    if (checkContactAlanQueryPatterns(context.query)) {
-      handleContactAlanResponse(context.query, context.res);
+    // Handle special query types first
+    if (handleSpecialQueryTypes(context, classification)) {
       return true;
     }
     
-    // Check if this is a private lessons query
-    if (classification.reason === 'private_lessons_query') {
-      if (handlePrivateLessonsResponse(context.query, context.res)) {
-        return true;
-      }
-    }
-    
-    // For other direct answer queries, use the RAG system
-    console.log(`🔍 Using RAG system for direct answer query: "${context.query}"`);
+    // Try RAG system for direct answers
     const ragResult = await tryRagFirst(context.client, context.query);
-    
     if (ragResult.success && ragResult.confidence >= 0.3) {
       handleRagResponse(ragResult, context.res);
       return true;
     }
     
-    // Fallback to old system if RAG fails
-    console.log(`⚠️ RAG failed for direct answer query, using fallback system`);
-    const keywords = extractKeywords(context.query);
-    
-    // Search for relevant content
-    const [articles, services, events] = await Promise.all([
-      findArticles(context.client, { keywords, limit: 5, pageContext: context.pageContext }),
-      findServices(context.client, { keywords, limit: 5, pageContext: context.pageContext }),
-      findEvents(context.client, { keywords, limit: 3, pageContext: context.pageContext })
-    ]);
-    
-    handleFallbackResponse({
-      query: context.query,
-      articles,
-      services,
-      events,
-      classification,
-      res: context.res
-    });
-    return true;
+    // Fallback to old system
+    return await handleFallbackSystem(context, classification);
     
   } catch (error) {
     console.error('Error in handleDirectAnswerQuery:', error);
     return false;
   }
+}
+
+function handleSpecialQueryTypes(context, classification) {
+  // Check if this is a "contact Alan" query
+  if (checkContactAlanQueryPatterns(context.query)) {
+    handleContactAlanResponse(context.query, context.res);
+    return true;
+  }
+  
+  // Check if this is a private lessons query
+  if (classification.reason === 'private_lessons_query') {
+    return handlePrivateLessonsResponse(context.query, context.res);
+  }
+  
+  return false;
+}
+
+async function handleFallbackSystem(context, classification) {
+  console.log(`⚠️ RAG failed for direct answer query, using fallback system`);
+  const keywords = extractKeywords(context.query);
+  
+  // Search for relevant content
+  const [articles, services, events] = await Promise.all([
+    findArticles(context.client, { keywords, limit: 5, pageContext: context.pageContext }),
+    findServices(context.client, { keywords, limit: 5, pageContext: context.pageContext }),
+    findEvents(context.client, { keywords, limit: 3, pageContext: context.pageContext })
+  ]);
+  
+  handleFallbackResponse({
+    query: context.query,
+    articles,
+    services,
+    events,
+    classification,
+    res: context.res
+  });
+  return true;
 }
 
 // Helper: Handle clarification queries (Low Complexity)
