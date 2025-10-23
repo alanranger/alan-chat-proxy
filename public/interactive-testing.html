@@ -3,559 +3,745 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Chat Bot Testing</title>
+    <title>🤖 Enhanced Interactive Chat Bot Testing</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
+            background: #f8f9fa;
         }
-        .container {
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .test-section {
             background: white;
-            border-radius: 10px;
-            padding: 20px;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .question {
+        
+        .question-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .question-card.current {
+            border-color: #007bff;
             background: #e3f2fd;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px 0;
-            border-left: 4px solid #2196f3;
         }
-        .response-area {
+        
+        .question-card.completed {
+            border-color: #28a745;
+            background: #e8f5e8;
+        }
+        
+        .question-card.failed {
+            border-color: #dc3545;
+            background: #ffeaea;
+        }
+        
+        .response-display {
             background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px 0;
-            border: 2px dashed #dee2e6;
-        }
-
-        .business-response-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin: 15px 0;
-        }
-
-        .response-field {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .response-field label {
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #333;
-        }
-
-        .response-field input,
-        .response-field select,
-        .response-field textarea {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .response-field.full-width {
-            grid-column: 1 / -1;
-        }
-
-        .response-field small {
-            color: #666;
-            font-size: 12px;
-            margin-top: 5px;
-            font-style: italic;
-        }
-        textarea {
-            width: 100%;
-            min-height: 80px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-family: inherit;
-            resize: vertical;
-        }
-        button {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover {
-            background: #218838;
-        }
-        .log-area {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
             border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
             max-height: 300px;
             overflow-y: auto;
         }
-        .log-entry {
-            margin: 5px 0;
-            padding: 5px;
-            background: white;
-            border-radius: 3px;
-            font-size: 12px;
+        
+        .scoring-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
         }
-        .current-question {
-            background: #fff3cd;
-            border-left-color: #ffc107;
+        
+        .score-input {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
-        .completed-question {
-            background: #d4edda;
-            border-left-color: #28a745;
+        
+        .score-input label {
+            font-weight: 600;
+            color: #495057;
         }
-        .status {
-            text-align: center;
+        
+        .score-input input, .score-input select, .score-input textarea {
             padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .score-input textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 20px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #28a745, #20c997);
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 24px;
             font-weight: bold;
+            color: #007bff;
         }
-        .status.active {
-            background: #d1ecf1;
-            color: #0c5460;
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .status.completed {
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .results-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-pass {
             background: #d4edda;
             color: #155724;
+        }
+        
+        .status-fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🤖 Interactive Chat Bot Testing</h1>
-        <p><strong>Purpose:</strong> Test user responses to understand what intent, kind, and routing should happen for different queries.</p>
-        
-        <div id="status" class="status active">
-            Ready to start testing
-        </div>
+    <div class="header">
+        <h1>🤖 Enhanced Interactive Chat Bot Testing</h1>
+        <p>Test your 28-question baseline with your business knowledge scoring</p>
+    </div>
 
-        <div id="question-container">
-            <!-- Questions will be dynamically inserted here -->
+    <div class="test-section">
+        <h2>📊 Test Progress</h2>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
         </div>
-
-        <div class="response-area">
-            <h3>Your Response (as User):</h3>
-            <textarea id="user-response" placeholder="Type your response as if you're a user asking the chatbot..."></textarea>
-            <br>
-            <button onclick="submitResponse()">Submit User Response</button>
-            <button onclick="skipQuestion()">Skip Question</button>
-        </div>
-
-        <div class="response-area" id="business-response-section" style="display: none;">
-            <h3>Business Owner Response (What Should Happen):</h3>
-            <p><strong>As the business owner, what should the chatbot do with the user's follow-up response?</strong></p>
-            <div class="business-response-grid">
-                <div class="response-field">
-                    <label for="expected-intent">Expected Intent:</label>
-                    <select id="expected-intent">
-                        <option value="advice">advice</option>
-                        <option value="events">events</option>
-                        <option value="booking">booking</option>
-                        <option value="contact">contact</option>
-                    </select>
-                </div>
-                <div class="response-field">
-                    <label for="expected-kind">Expected Kind:</label>
-                    <select id="expected-kind">
-                        <option value="article">article</option>
-                        <option value="product">product</option>
-                        <option value="event">event</option>
-                        <option value="service">service</option>
-                        <option value="landing">landing</option>
-                        <option value="mixed">mixed</option>
-                    </select>
-                </div>
-                <div class="response-field full-width">
-                    <label for="expected-urls">Expected URLs/Pages (one per line):</label>
-                    <textarea id="expected-urls" placeholder="e.g., /courses/landscape-photography&#10;/workshops/bluebell-2024&#10;/private-lessons" rows="4"></textarea>
-                    <small>Enter each URL on a separate line. These will become the links/pills in the chatbot response.</small>
-                </div>
-                <div class="response-field">
-                    <label for="expected-response">Expected Response Type:</label>
-                    <textarea id="expected-response" placeholder="Describe what the chatbot should respond with..." rows="3"></textarea>
-                </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="currentQuestion">1</div>
+                <div class="stat-label">Current Question</div>
             </div>
-            <button onclick="submitBusinessResponse()">Submit Business Response</button>
-        </div>
-
-        <div class="log-area">
-            <h3>📊 Testing Log</h3>
-            <div id="log-container">
-                <div class="log-entry">Testing session started...</div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalQuestions">28</div>
+                <div class="stat-label">Total Questions</div>
             </div>
-        </div>
-
-        <div style="text-align: center; margin-top: 20px;">
-            <button onclick="exportLog()">Export Test Results</button>
-            <button onclick="clearLog()">Clear Log</button>
+            <div class="stat-card">
+                <div class="stat-number" id="completedCount">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="averageScore">0</div>
+                <div class="stat-label">Avg Score</div>
+            </div>
         </div>
     </div>
 
+    <div class="test-section">
+        <h2>📝 Current Question</h2>
+        <div id="currentQuestionCard" class="question-card current">
+            <h3 id="questionText">Loading question...</h3>
+            <p id="questionFocus">Loading focus...</p>
+        </div>
+        
+        <div id="responseSection" class="hidden">
+            <h3>🤖 Chat Bot Response</h3>
+            <div id="responseDisplay" class="response-display">Loading response...</div>
+            
+            <div class="scoring-section">
+                <div class="score-input">
+                    <label for="confidenceScore">Your Confidence Score (0-100):</label>
+                    <input type="number" id="confidenceScore" min="0" max="100" placeholder="e.g., 75">
+                </div>
+                <div class="score-input">
+                    <label for="qualityScore">Your Quality Score (0-100):</label>
+                    <input type="number" id="qualityScore" min="0" max="100" placeholder="e.g., 85">
+                </div>
+                <div class="score-input">
+                    <label for="verdict">Your Verdict:</label>
+                    <select id="verdict">
+                        <option value="">Select verdict...</option>
+                        <option value="perfect">Perfect</option>
+                        <option value="nearly perfect">Nearly Perfect</option>
+                        <option value="very good">Very Good</option>
+                        <option value="good">Good</option>
+                        <option value="poor">Poor</option>
+                        <option value="very poor">Very Poor</option>
+                    </select>
+                </div>
+                <div class="score-input">
+                    <label for="notes">Your Notes/Issues:</label>
+                    <textarea id="notes" placeholder="What issues did you find? What should be improved?"></textarea>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button class="btn btn-success" onclick="saveScore()">Save Score & Next Question</button>
+                <button class="btn btn-secondary" onclick="skipQuestion()">Skip Question</button>
+            </div>
+        </div>
+        
+        <div id="loadingSection">
+            <div class="loading">
+                <p>🔄 Loading question and getting chat bot response...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 All Questions</h2>
+        <div id="questionsList">
+            <!-- Questions will be populated here -->
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Results Summary</h2>
+        <button class="btn" onclick="exportResults()">📥 Export Results</button>
+        <button class="btn btn-secondary" onclick="clearResults()">🗑️ Clear All Results</button>
+        
+        <table class="results-table" id="resultsTable">
+            <thead>
+                <tr>
+                    <th>Question</th>
+                    <th>Verdict</th>
+                    <th>Quality Score</th>
+                    <th>Confidence Score</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody">
+                <!-- Results will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
     <script>
-        // Test questions array - 20 questions covering all content types
+        // Test questions from Alan's baseline
         const testQuestions = [
             {
-                id: 1,
-                userQuestion: "do you do photography courses?",
-                chatbotResponse: "Yes, we provide photography courses! Can you be more specific as we do photography courses in Coventry and also have an online photography course.",
-                category: "Generic Course Query",
-                expectedIntent: "advice",
-                expectedKind: "mixed"
+                category: "Technical Photography Concepts",
+                question: "what is exposure triangle",
+                focus: "Should explain the relationship between aperture, shutter speed, and ISO",
+                expectedType: "advice"
             },
             {
-                id: 2,
-                userQuestion: "what beginners photography courses do you have?",
-                chatbotResponse: "We have a comprehensive beginners photography course. What would you like to know about it?",
-                category: "Specific Course Query",
-                expectedIntent: "advice", 
-                expectedKind: "product"
+                category: "Technical Photography Concepts", 
+                question: "what is iso",
+                focus: "Should explain ISO sensitivity and its role in exposure",
+                expectedType: "advice"
             },
             {
-                id: 3,
-                userQuestion: "do you run photography workshops?",
-                chatbotResponse: "Yes, we run photography workshops! Can you be more specific about what type of workshop you're interested in?",
-                category: "Generic Workshop Query",
-                expectedIntent: "events",
-                expectedKind: "event"
+                category: "Technical Photography Concepts",
+                question: "what is aperture", 
+                focus: "Should explain aperture, f-stops, and depth of field",
+                expectedType: "advice"
             },
             {
-                id: 4,
-                userQuestion: "what camera should I buy?",
-                chatbotResponse: "I can help with camera recommendations! What type of photography are you interested in?",
-                category: "Equipment Query",
-                expectedIntent: "advice",
-                expectedKind: "article"
+                category: "Technical Photography Concepts",
+                question: "what is shutter speed",
+                focus: "Should explain shutter speed and motion control", 
+                expectedType: "advice"
             },
             {
-                id: 5,
-                userQuestion: "who is Alan Ranger?",
-                chatbotResponse: "Alan Ranger is a professional photographer and tutor. What would you like to know about him?",
-                category: "About Query",
-                expectedIntent: "advice",
-                expectedKind: "landing"
+                category: "Equipment Recommendations",
+                question: "what tripod do you recommend",
+                focus: "Should provide specific tripod recommendations with reasoning",
+                expectedType: "advice"
             },
             {
-                id: 6,
-                userQuestion: "what photography services do you offer?",
-                chatbotResponse: "We offer various photography services. What type of service are you looking for?",
-                category: "Service Query",
-                expectedIntent: "advice",
-                expectedKind: "service"
+                category: "Equipment Recommendations",
+                question: "what camera should I buy",
+                focus: "Should provide camera recommendations based on needs",
+                expectedType: "advice"
             },
             {
-                id: 7,
-                userQuestion: "is there a free online photography course?",
-                chatbotResponse: "Yes! We have a free online photography course. Would you like to know more about it?",
-                category: "Free Course Query",
-                expectedIntent: "advice",
-                expectedKind: "landing"
+                category: "Equipment Recommendations", 
+                question: "what camera do you recommend for a beginner",
+                focus: "Should provide beginner camera recommendations",
+                expectedType: "advice"
             },
             {
-                id: 8,
-                userQuestion: "when is the next bluebell photography workshop?",
-                chatbotResponse: "We have bluebell photography workshops coming up. What would you like to know about them?",
-                category: "Specific Workshop Query",
-                expectedIntent: "events",
-                expectedKind: "event"
+                category: "Person Queries",
+                question: "peter orton",
+                focus: "Should find Peter Orton article and connect to related RPS content",
+                expectedType: "advice"
             },
             {
-                id: 9,
-                userQuestion: "how do I use manual mode on my camera?",
-                chatbotResponse: "Great question! Manual mode gives you full control. What specific aspect of manual mode would you like to learn about?",
-                category: "Technical Photography Query",
-                expectedIntent: "advice",
-                expectedKind: "article"
+                category: "Person Queries",
+                question: "who is alan ranger", 
+                focus: "Should provide biographical information about Alan",
+                expectedType: "advice"
             },
             {
-                id: 10,
-                userQuestion: "what's the best lens for portrait photography?",
-                chatbotResponse: "Portrait photography has several great lens options. What's your budget range and camera system?",
-                category: "Equipment Advice Query",
-                expectedIntent: "advice",
-                expectedKind: "article"
+                category: "Event Queries",
+                question: "when is your next devon workshop",
+                focus: "Should list Devon workshops with dates and details",
+                expectedType: "events"
             },
             {
-                id: 11,
-                userQuestion: "do you offer one-to-one photography lessons?",
-                chatbotResponse: "Yes, we offer private photography lessons! What type of photography would you like to focus on?",
-                category: "Private Lesson Query",
-                expectedIntent: "advice",
-                expectedKind: "service"
+                category: "Event Queries",
+                question: "when is your next photography course",
+                focus: "Should list photography courses with dates", 
+                expectedType: "events"
             },
             {
-                id: 12,
-                userQuestion: "what's included in your landscape photography course?",
-                chatbotResponse: "Our landscape photography course covers many aspects. What specific areas are you most interested in?",
-                category: "Course Content Query",
-                expectedIntent: "advice",
-                expectedKind: "product"
+                category: "Event Queries",
+                question: "when are your next bluebell workshops",
+                focus: "Should list bluebell workshop dates",
+                expectedType: "events"
             },
             {
-                id: 13,
-                userQuestion: "are your photography courses suitable for complete beginners?",
-                chatbotResponse: "Absolutely! We have courses designed specifically for beginners. What type of photography interests you most?",
-                category: "Beginner Suitability Query",
-                expectedIntent: "advice",
-                expectedKind: "landing"
+                category: "Event Queries",
+                question: "do you have autumn workshops",
+                focus: "Should list autumn workshop options",
+                expectedType: "events"
             },
             {
-                id: 14,
-                userQuestion: "how much does the macro photography workshop cost?",
-                chatbotResponse: "Our macro photography workshop has different pricing options. What would you like to know about the costs?",
-                category: "Workshop Pricing Query",
-                expectedIntent: "events",
-                expectedKind: "event"
+                category: "Technical Advice",
+                question: "how to take sharp photos",
+                focus: "Should provide practical tips for sharp photography",
+                expectedType: "advice"
             },
             {
-                id: 15,
-                userQuestion: "what camera settings should I use for night photography?",
-                chatbotResponse: "Night photography requires specific settings. What type of night photography are you planning?",
-                category: "Technical Settings Query",
-                expectedIntent: "advice",
-                expectedKind: "article"
+                category: "Technical Advice",
+                question: "what is long exposure photography",
+                focus: "Should explain long exposure techniques and applications",
+                expectedType: "advice"
             },
             {
-                id: 16,
-                userQuestion: "do you have any photography courses in Birmingham?",
-                chatbotResponse: "We run courses in various locations. What type of photography course are you looking for?",
-                category: "Location-Specific Query",
-                expectedIntent: "advice",
-                expectedKind: "mixed"
+                category: "Technical Advice",
+                question: "why are my images always grainy and noisy",
+                focus: "Should provide solutions for grainy/noisy images",
+                expectedType: "advice"
             },
             {
-                id: 17,
-                userQuestion: "what's the difference between your online and in-person courses?",
-                chatbotResponse: "Great question! We offer both formats with different benefits. What would you like to know about each?",
-                category: "Course Format Comparison Query",
-                expectedIntent: "advice",
-                expectedKind: "mixed"
+                category: "Technical Advice",
+                question: "why arent my images sharp",
+                focus: "Should provide tips for sharper images",
+                expectedType: "advice"
             },
             {
-                id: 18,
-                userQuestion: "can you help me choose between a DSLR and mirrorless camera?",
-                chatbotResponse: "Both have their advantages! What's your main photography interest and experience level?",
-                category: "Camera Type Advice Query",
-                expectedIntent: "advice",
-                expectedKind: "article"
+                category: "Course/Workshop Logistics",
+                question: "do I need a laptop for lightroom course",
+                focus: "Should answer equipment requirements for the course",
+                expectedType: "advice"
             },
             {
-                id: 19,
-                userQuestion: "what photography workshops do you have coming up this month?",
-                chatbotResponse: "We have several workshops scheduled this month. What type of photography workshop interests you?",
-                category: "Upcoming Events Query",
-                expectedIntent: "events",
-                expectedKind: "event"
+                category: "Course/Workshop Logistics",
+                question: "do you provide photography courses",
+                focus: "Should list available photography courses",
+                expectedType: "advice"
             },
             {
-                id: 20,
-                userQuestion: "how long have you been teaching photography?",
-                chatbotResponse: "I've been teaching photography for many years. What would you like to know about my teaching experience?",
-                category: "About/Experience Query",
-                expectedIntent: "advice",
-                expectedKind: "landing"
+                category: "Course/Workshop Logistics",
+                question: "do you have online lessons",
+                focus: "Should mention online lesson options",
+                expectedType: "advice"
+            },
+            {
+                category: "Course/Workshop Logistics",
+                question: "do you have a lightroom course",
+                focus: "Should list Lightroom course options",
+                expectedType: "advice"
+            },
+            {
+                category: "Course/Workshop Logistics",
+                question: "whats your online photography course",
+                focus: "Should describe online course offerings",
+                expectedType: "advice"
+            },
+            {
+                category: "Business Information",
+                question: "where i can see your terms and conditions",
+                focus: "Should provide terms and conditions information",
+                expectedType: "advice"
+            },
+            {
+                category: "Business Information",
+                question: "tell me about rps mentoring",
+                focus: "Should explain RPS mentoring services",
+                expectedType: "advice"
+            },
+            {
+                category: "Business Information",
+                question: "do you do commercial photography",
+                focus: "Should explain commercial photography services",
+                expectedType: "advice"
+            },
+            {
+                category: "Business Information",
+                question: "do you do portrait photography",
+                focus: "Should explain portrait photography services",
+                expectedType: "advice"
+            },
+            {
+                category: "Business Information",
+                question: "is your photography academy really free",
+                focus: "Should clarify free vs paid academy content",
+                expectedType: "advice"
+            },
+            {
+                category: "Equipment Requirements",
+                question: "what camera do i need for your courses and workshops",
+                focus: "Should specify camera requirements for courses",
+                expectedType: "advice"
             }
         ];
 
         let currentQuestionIndex = 0;
         let testResults = [];
+        let isTestRunning = false;
 
-        function displayCurrentQuestion() {
-            const question = testQuestions[currentQuestionIndex];
-            const container = document.getElementById('question-container');
-            
-            container.innerHTML = `
-                <div class="question current-question">
-                    <h3>Question ${question.id}: ${question.category}</h3>
-                    <p><strong>User asks:</strong> "${question.userQuestion}"</p>
-                    <p><strong>Chatbot responds:</strong> "${question.chatbotResponse}"</p>
-                    <p><strong>Now you respond as the user:</strong></p>
-                    <p><strong>Expected Intent:</strong> ${question.expectedIntent} | <strong>Expected Kind:</strong> ${question.expectedKind}</p>
-                </div>
-            `;
-            
-            document.getElementById('user-response').value = '';
-            document.getElementById('user-response').focus();
-            
-            updateStatus(`Question ${currentQuestionIndex + 1} of ${testQuestions.length} - ${question.category}`);
+        // Initialize the test
+        function initTest() {
+            populateQuestionsList();
+            loadQuestion(0);
         }
 
-        function submitResponse() {
-            const response = document.getElementById('user-response').value.trim();
-            if (!response) {
-                alert('Please enter a response');
+        // Populate the questions list
+        function populateQuestionsList() {
+            const questionsList = document.getElementById('questionsList');
+            questionsList.innerHTML = '';
+            
+            testQuestions.forEach((q, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-card';
+                questionDiv.id = `question-${index}`;
+                questionDiv.innerHTML = `
+                    <h4>${q.question}</h4>
+                    <p><strong>Category:</strong> ${q.category}</p>
+                    <p><strong>Focus:</strong> ${q.focus}</p>
+                    <p><strong>Status:</strong> <span class="status-badge status-pending">Pending</span></p>
+                `;
+                questionsList.appendChild(questionDiv);
+            });
+        }
+
+        // Load a specific question
+        async function loadQuestion(index) {
+            if (index >= testQuestions.length) {
+                alert('All questions completed!');
                 return;
             }
 
-            // Store the user response temporarily
-            window.currentUserResponse = response;
+            currentQuestionIndex = index;
+            const question = testQuestions[index];
             
-            // Show the business response section
-            document.getElementById('business-response-section').style.display = 'block';
-            document.getElementById('user-response').disabled = true;
-            document.querySelector('button[onclick="submitResponse()"]').disabled = true;
+            // Update UI
+            document.getElementById('questionText').textContent = question.question;
+            document.getElementById('questionFocus').textContent = question.focus;
+            document.getElementById('currentQuestion').textContent = index + 1;
             
-            logEntry(`Q${testQuestions[currentQuestionIndex].id}: User response submitted - "${response}"`, 'response');
-            updateStatus(`Question ${currentQuestionIndex + 1} of ${testQuestions.length} - Now provide business owner response`);
+            // Update progress
+            const progress = ((index + 1) / testQuestions.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            
+            // Show loading
+            document.getElementById('loadingSection').classList.remove('hidden');
+            document.getElementById('responseSection').classList.add('hidden');
+            
+            // Clear previous scores
+            document.getElementById('confidenceScore').value = '';
+            document.getElementById('qualityScore').value = '';
+            document.getElementById('verdict').value = '';
+            document.getElementById('notes').value = '';
+            
+            try {
+                // Get response from chat bot
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: question.question,
+                        sessionId: 'interactive-test-session'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Display response
+                document.getElementById('responseDisplay').textContent = JSON.stringify(data, null, 2);
+                
+                // Hide loading, show response section
+                document.getElementById('loadingSection').classList.add('hidden');
+                document.getElementById('responseSection').classList.remove('hidden');
+                
+            } catch (error) {
+                document.getElementById('responseDisplay').textContent = `Error: ${error.message}`;
+                document.getElementById('loadingSection').classList.add('hidden');
+                document.getElementById('responseSection').classList.remove('hidden');
+            }
         }
 
-        function submitBusinessResponse() {
-            const expectedIntent = document.getElementById('expected-intent').value;
-            const expectedKind = document.getElementById('expected-kind').value;
-            const expectedUrlsText = document.getElementById('expected-urls').value.trim();
-            const expectedResponse = document.getElementById('expected-response').value.trim();
-
-            if (!expectedUrlsText || !expectedResponse) {
-                alert('Please fill in the Expected URLs and Expected Response fields');
+        // Save score and move to next question
+        function saveScore() {
+            const confidenceScore = parseInt(document.getElementById('confidenceScore').value);
+            const qualityScore = parseInt(document.getElementById('qualityScore').value);
+            const verdict = document.getElementById('verdict').value;
+            const notes = document.getElementById('notes').value;
+            
+            if (!confidenceScore || !qualityScore || !verdict) {
+                alert('Please fill in all required fields');
                 return;
             }
-
-            // Parse URLs from textarea (one per line)
-            const expectedUrls = expectedUrlsText.split('\n')
-                .map(url => url.trim())
-                .filter(url => url.length > 0);
-
-            const question = testQuestions[currentQuestionIndex];
+            
             const result = {
-                questionId: question.id,
-                category: question.category,
-                userQuestion: question.userQuestion,
-                chatbotResponse: question.chatbotResponse,
-                userFollowUpResponse: window.currentUserResponse,
-                businessOwnerResponse: {
-                    expectedIntent: expectedIntent,
-                    expectedKind: expectedKind,
-                    expectedUrls: expectedUrls,
-                    expectedResponse: expectedResponse
-                },
-                originalExpectedIntent: question.expectedIntent,
-                originalExpectedKind: question.expectedKind,
+                questionIndex: currentQuestionIndex,
+                question: testQuestions[currentQuestionIndex].question,
+                category: testQuestions[currentQuestionIndex].category,
+                focus: testQuestions[currentQuestionIndex].focus,
+                confidenceScore: confidenceScore,
+                qualityScore: qualityScore,
+                verdict: verdict,
+                notes: notes,
                 timestamp: new Date().toISOString()
             };
-
+            
             testResults.push(result);
-            logEntry(`Q${question.id}: Business response submitted - Intent: ${expectedIntent}, Kind: ${expectedKind}`, 'business');
             
-            // Mark question as completed
-            const container = document.getElementById('question-container');
-            const urlsList = expectedUrls.map(url => `<li>${url}</li>`).join('');
-            container.innerHTML = `
-                <div class="question completed-question">
-                    <h3>✅ Question ${question.id}: ${question.category} - COMPLETED</h3>
-                    <p><strong>User asked:</strong> "${question.userQuestion}"</p>
-                    <p><strong>Chatbot responded:</strong> "${question.chatbotResponse}"</p>
-                    <p><strong>User follow-up:</strong> "${window.currentUserResponse}"</p>
-                    <p><strong>Business expects:</strong> Intent: ${expectedIntent}, Kind: ${expectedKind}</p>
-                    <p><strong>Expected URLs (${expectedUrls.length}):</strong></p>
-                    <ul>${urlsList}</ul>
-                    <p><strong>Expected response:</strong> ${expectedResponse}</p>
-                </div>
-            `;
-
-            // Reset for next question
-            document.getElementById('business-response-section').style.display = 'none';
-            document.getElementById('user-response').disabled = false;
-            document.getElementById('user-response').value = '';
-            document.querySelector('button[onclick="submitResponse()"]').disabled = false;
-            document.getElementById('expected-intent').value = 'advice';
-            document.getElementById('expected-kind').value = 'article';
-            document.getElementById('expected-urls').value = '';
-            document.getElementById('expected-response').value = '';
-
-            currentQuestionIndex++;
+            // Update question card
+            const questionCard = document.getElementById(`question-${currentQuestionIndex}`);
+            questionCard.classList.remove('current');
+            questionCard.classList.add('completed');
             
-            if (currentQuestionIndex < testQuestions.length) {
-                setTimeout(() => {
-                    displayCurrentQuestion();
-                }, 2000);
-            } else {
-                updateStatus('All questions completed!');
-                logEntry('🎉 All testing completed!', 'success');
-            }
+            const statusBadge = questionCard.querySelector('.status-badge');
+            statusBadge.textContent = verdict;
+            statusBadge.className = `status-badge ${qualityScore >= 70 ? 'status-pass' : 'status-fail'}`;
+            
+            // Update stats
+            updateStats();
+            updateResultsTable();
+            
+            // Move to next question
+            loadQuestion(currentQuestionIndex + 1);
         }
 
+        // Skip current question
         function skipQuestion() {
-            const question = testQuestions[currentQuestionIndex];
-            logEntry(`Q${question.id}: SKIPPED`, 'skip');
+            loadQuestion(currentQuestionIndex + 1);
+        }
+
+        // Update statistics
+        function updateStats() {
+            const completed = testResults.length;
+            const total = testQuestions.length;
             
-            currentQuestionIndex++;
+            document.getElementById('completedCount').textContent = completed;
             
-            if (currentQuestionIndex < testQuestions.length) {
-                displayCurrentQuestion();
-            } else {
-                updateStatus('All questions completed!');
-                logEntry('🎉 All testing completed!', 'success');
+            if (completed > 0) {
+                const avgScore = testResults.reduce((sum, r) => sum + r.qualityScore, 0) / completed;
+                document.getElementById('averageScore').textContent = Math.round(avgScore);
             }
         }
 
-        function logEntry(message, type = 'info') {
-            const logContainer = document.getElementById('log-container');
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        // Update results table
+        function updateResultsTable() {
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
             
-            if (type === 'response') {
-                entry.style.background = '#e7f3ff';
-            } else if (type === 'success') {
-                entry.style.background = '#d4edda';
-            } else if (type === 'skip') {
-                entry.style.background = '#fff3cd';
-            }
-            
-            logContainer.appendChild(entry);
-            logContainer.scrollTop = logContainer.scrollHeight;
+            testResults.forEach(result => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${result.question}</td>
+                    <td>${result.verdict}</td>
+                    <td>${result.qualityScore}</td>
+                    <td>${result.confidenceScore}</td>
+                    <td><span class="status-badge ${result.qualityScore >= 70 ? 'status-pass' : 'status-fail'}">${result.qualityScore >= 70 ? 'Pass' : 'Fail'}</span></td>
+                    <td>${result.notes}</td>
+                `;
+                tbody.appendChild(row);
+            });
         }
 
-        function updateStatus(message) {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            
-            if (currentQuestionIndex >= testQuestions.length) {
-                status.className = 'status completed';
-            } else {
-                status.className = 'status active';
-            }
-        }
-
-        function exportLog() {
+        // Export results
+        function exportResults() {
             const data = {
-                testResults: testResults,
                 timestamp: new Date().toISOString(),
                 totalQuestions: testQuestions.length,
-                completedQuestions: testResults.length
+                completedQuestions: testResults.length,
+                results: testResults
             };
             
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `chatbot-test-results-${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `interactive-test-results-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
             a.click();
             URL.revokeObjectURL(url);
         }
 
-        function clearLog() {
-            if (confirm('Are you sure you want to clear the log?')) {
-                document.getElementById('log-container').innerHTML = '<div class="log-entry">Log cleared...</div>';
+        // Clear all results
+        function clearResults() {
+            if (confirm('Are you sure you want to clear all results?')) {
                 testResults = [];
                 currentQuestionIndex = 0;
-                displayCurrentQuestion();
+                
+                // Reset all question cards
+                for (let i = 0; i < testQuestions.length; i++) {
+                    const questionCard = document.getElementById(`question-${i}`);
+                    questionCard.classList.remove('current', 'completed', 'failed');
+                    questionCard.classList.add('pending');
+                    
+                    const statusBadge = questionCard.querySelector('.status-badge');
+                    statusBadge.textContent = 'Pending';
+                    statusBadge.className = 'status-badge status-pending';
+                }
+                
+                // Reset stats
+                document.getElementById('completedCount').textContent = '0';
+                document.getElementById('averageScore').textContent = '0';
+                document.getElementById('progressFill').style.width = '0%';
+                
+                // Clear results table
+                document.getElementById('resultsBody').innerHTML = '';
+                
+                // Reset to first question
+                loadQuestion(0);
             }
         }
 
-        // Initialize
-        displayCurrentQuestion();
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initTest);
     </script>
 </body>
 </html>
