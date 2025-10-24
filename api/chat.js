@@ -7491,5 +7491,4 @@ function generateEventAnswerMarkdown(eventList, query) {
   return answer;
 }
 
-// Export the handler for Vercel
-export default handler;
+// Handler is already exported above
