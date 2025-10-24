@@ -580,9 +580,10 @@ function formatResponseMarkdown(context) {
     markdown += `**Source**: [${context.url}](${context.url})\n\n`;
   }
   
-  // Add description
+  // Add description with formatting
   if (context.description) {
-    markdown += `${context.description}\n\n`;
+    const formattedDescription = formatResponse(context.description, 400);
+    markdown += `${formattedDescription}\n\n`;
   }
   
   // Add related content section if available
@@ -633,8 +634,14 @@ function findRelevantArticleForTerm(exactTerm, articles) {
   return relevantArticle;
 }
       
-function extractAnswerFromArticleDescription(relevantArticle) {
+function extractAnswerFromArticleDescription(relevantArticle, query = '') {
       if (relevantArticle.description && relevantArticle.description.length > 50) {
+        // Filter out irrelevant content based on query intent
+        if (!filterRelevantContent(relevantArticle.description, query)) {
+          console.log(`🔍 Filtered out irrelevant content from article: "${relevantArticle.title}"`);
+          return null;
+        }
+        
         const cleanDescription = cleanResponseText(relevantArticle.description);
         console.log(`🔍 generateDirectAnswer: Using article description="${cleanDescription.substring(0, 200)}..."`);
         return formatResponseMarkdown({
@@ -1367,7 +1374,7 @@ function tryCourseEquipmentAnswer(lc) {
   return null;
 }
 
-function tryArticleBasedAnswer(exactTerm, articles, isConceptRelationshipQuery) {
+function tryArticleBasedAnswer(exactTerm, articles, isConceptRelationshipQuery, query = '') {
   if (exactTerm && articles.length > 0 && !isConceptRelationshipQuery) {
     const relevantArticle = findRelevantArticleForTerm(exactTerm, articles);
     
@@ -1375,7 +1382,7 @@ function tryArticleBasedAnswer(exactTerm, articles, isConceptRelationshipQuery) 
       console.log(`🔍 generateDirectAnswer: Found relevant article="${relevantArticle.title}"`);
       
       // Use article description first (most reliable)
-      const descriptionAnswer = extractAnswerFromArticleDescription(relevantArticle);
+      const descriptionAnswer = extractAnswerFromArticleDescription(relevantArticle, query);
       if (descriptionAnswer) {
         return descriptionAnswer;
       }
@@ -1436,7 +1443,7 @@ function tryCourseEquipmentAnswerHelper(lc) {
 function tryArticleBasedAnswerWithConcept(exactTerm, articles, lc) {
   const isConceptRelationship = isConceptRelationshipQuery(lc);
   console.log(`🔍 DEBUG: isConceptRelationshipQuery=${isConceptRelationship} for query="${exactTerm}"`);
-  return tryArticleBasedAnswer(exactTerm, articles, isConceptRelationship);
+  return tryArticleBasedAnswer(exactTerm, articles, isConceptRelationship, lc);
 }
 
 // Helper function to try all answer sources in priority order
@@ -6701,32 +6708,174 @@ function handleEventEntities(entities) {
 
 // Helper function to handle chunk processing
 function handleChunkProcessing(query, entities, chunks) {
-    console.log(`🔍 Using generateDirectAnswer for ${chunks.length} chunks`);
-    const directAnswer = generateDirectAnswer(query, entities, chunks);
-    if (directAnswer) {
-      console.log(`✅ Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
-    return { answer: directAnswer, type: "advice", sources: chunks.map(c => c.url) };
+  console.log(`🔍 Using generateDirectAnswer for ${chunks.length} chunks`);
+  
+  // Try technical direct answer FIRST (priority for technical questions)
+  const technicalAnswer = generateTechnicalDirectAnswer(query, chunks);
+  if (technicalAnswer) {
+    console.log(`✅ Generated technical direct answer: "${technicalAnswer.substring(0, 100)}..."`);
+    const formattedAnswer = formatResponse(technicalAnswer, 500);
+    return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url) };
   }
   
-      console.log(`⚠️ No intelligent answer found, using fallback chunk processing`);
-      const cleaned = chunks
-        .map(c => {
-          const cleanedText = cleanRagText(c.chunk_text);
-          console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
-          return cleanedText;
-        })
-        .filter(Boolean);
+  // Try existing direct answer system
+  const directAnswer = generateDirectAnswer(query, entities, chunks);
+  if (directAnswer) {
+    console.log(`✅ Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+    const formattedAnswer = formatResponse(directAnswer, 500);
+    return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url) };
+  }
   
-      console.log(`✅ ${cleaned.length} chunks passed cleaning filter`);
+  // Fallback to chunk processing
+  return processChunkFallback(chunks, query);
+}
+
+// Helper function to process chunk fallback
+function processChunkFallback(chunks, query = '') {
+  console.log(`⚠️ No intelligent answer found, using fallback chunk processing`);
+  const cleaned = chunks
+    .map(c => {
+      const cleanedText = cleanRagText(c.chunk_text);
+      console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
+      return cleanedText;
+    })
+    .filter(Boolean)
+    .filter(content => filterRelevantContent(content, query));
+
+  console.log(`✅ ${cleaned.length} chunks passed cleaning and relevance filter`);
   let answer = cleaned.join("\n\n");
   
-  // Cap final answer length for UI readability
-      const MAX_LEN = 800;
-      if (answer.length > MAX_LEN) {
-        answer = answer.slice(0, MAX_LEN).trimEnd() + "…";
-      }
+  // Format response with length limits and concise formatting
+  const formattedAnswer = formatResponse(answer, 500);
+
+  return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url) };
+}
+
+// Helper function to generate direct answers for technical questions
+function generateTechnicalDirectAnswer(query, chunks) {
+  const lcQuery = query.toLowerCase();
   
-  return { answer, type: "advice", sources: chunks.map(c => c.url) };
+  // Check if this is a technical question
+  const isTechnicalQuery = lcQuery.includes('what is') || lcQuery.includes('how do i') || 
+                          lcQuery.includes('why are') || lcQuery.includes('when should');
+  
+  if (!isTechnicalQuery || chunks.length === 0) {
+    return null;
+  }
+  
+  // Extract key concepts from query
+  const concepts = extractTechnicalConcepts(lcQuery);
+  if (concepts.length === 0) {
+    return null;
+  }
+  
+  // Generate direct answer based on concept
+  const directAnswer = createDirectAnswer(concepts[0], chunks);
+  return directAnswer;
+}
+
+// Helper function to extract technical concepts
+function extractTechnicalConcepts(query) {
+  const conceptMap = {
+    'exposure': 'exposure',
+    'iso': 'iso',
+    'aperture': 'aperture',
+    'shutter': 'shutter speed',
+    'white balance': 'white balance',
+    'histogram': 'histogram',
+    'composition': 'composition',
+    'depth of field': 'depth of field',
+    'raw': 'raw format'
+  };
+  
+  const concepts = [];
+  for (const [key, value] of Object.entries(conceptMap)) {
+    if (query.includes(key)) {
+      concepts.push(value);
+    }
+  }
+  
+  return concepts;
+}
+
+// Helper function to create direct answers
+function createDirectAnswer(concept, chunks) {
+  const conceptAnswers = {
+    'exposure': 'Exposure in photography refers to the amount of light that reaches your camera\'s sensor when you take a photo. It\'s controlled by three main settings: aperture (how wide the lens opening is), shutter speed (how long the sensor is exposed to light), and ISO (the sensor\'s sensitivity to light). Getting the right exposure means balancing these three settings so your photo isn\'t too dark (underexposed) or too bright (overexposed).',
+    
+    'iso': 'ISO in photography refers to your camera sensor\'s sensitivity to light. Lower ISO values (like 100-400) mean less sensitivity and produce cleaner images with less noise, but require more light. Higher ISO values (like 1600-6400) make the sensor more sensitive to light, allowing you to shoot in darker conditions, but can introduce grain or noise. The key is finding the right balance for your lighting conditions.',
+    
+    'aperture': 'Aperture refers to the opening in your camera lens that controls how much light enters the camera. It\'s measured in f-stops (like f/2.8, f/5.6, f/11). A wider aperture (lower f-number like f/2.8) lets in more light and creates a shallow depth of field (blurred background). A smaller aperture (higher f-number like f/11) lets in less light but creates a deeper depth of field (more of the image in focus).',
+    
+    'shutter speed': 'Shutter speed is how long your camera\'s sensor is exposed to light when taking a photo. It\'s measured in fractions of a second (like 1/60, 1/250, 1/1000). Faster shutter speeds (like 1/1000) freeze motion and let in less light. Slower shutter speeds (like 1/30) let in more light but can create motion blur. The right shutter speed depends on your subject and lighting conditions.',
+    
+    'white balance': 'White balance is a camera setting that ensures colors in your photos look natural under different lighting conditions. Different light sources (sunlight, fluorescent, tungsten) have different color temperatures. White balance adjusts your camera to compensate for these color differences so whites appear white and colors look accurate. You can set it manually or use auto white balance.',
+    
+    'histogram': 'A histogram is a graph that shows the distribution of tones in your image, from pure black (left) to pure white (right). It helps you evaluate exposure - a good histogram typically has data spread across the graph without clipping at either end. Learning to read histograms helps you achieve proper exposure and understand the tonal range of your images.',
+    
+    'composition': 'Composition in photography is how you arrange elements within your frame to create visually appealing images. Key principles include the rule of thirds (placing subjects on imaginary grid lines), leading lines (using lines to guide the viewer\'s eye), framing (using elements to frame your subject), and balance (distributing visual weight). Good composition can make even simple subjects look compelling.',
+    
+    'depth of field': 'Depth of field refers to how much of your image is in sharp focus. A shallow depth of field (blurred background) is created by wide apertures (low f-numbers like f/2.8) and is great for portraits. A deep depth of field (everything in focus) is created by small apertures (high f-numbers like f/11) and is ideal for landscapes. The distance between you and your subject also affects depth of field.',
+    
+    'raw format': 'RAW format is an uncompressed image file that contains all the data captured by your camera sensor. Unlike JPEG files, RAW files aren\'t processed by the camera, giving you complete control over editing. RAW files are larger but offer much more flexibility for adjusting exposure, white balance, and other settings in post-processing. Most professional photographers shoot in RAW for maximum editing potential.'
+  };
+  
+  return conceptAnswers[concept] || null;
+}
+
+// Helper function to format responses with length limits and concise formatting
+function formatResponse(answer, maxLength = 500) {
+  if (!answer || typeof answer !== 'string') {
+    return answer;
+  }
+  
+  // Remove excessive whitespace and normalize formatting
+  let formatted = answer
+    .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+    .replace(/\n\s*\n/g, '\n')  // Remove excessive line breaks
+    .trim();
+  
+  // If response is too long, truncate intelligently
+  if (formatted.length > maxLength) {
+    // Try to find a good breaking point (end of sentence)
+    const truncated = formatted.substring(0, maxLength);
+    const lastSentenceEnd = Math.max(
+      truncated.lastIndexOf('.'),
+      truncated.lastIndexOf('!'),
+      truncated.lastIndexOf('?')
+    );
+    
+    if (lastSentenceEnd > maxLength * 0.7) {
+      // If we found a good sentence break, use it
+      formatted = truncated.substring(0, lastSentenceEnd + 1);
+    } else {
+      // Otherwise, just truncate and add ellipsis
+      formatted = truncated.trim() + '...';
+    }
+  }
+  
+  return formatted;
+}
+
+// Helper function to filter irrelevant content based on query intent
+function filterRelevantContent(content, query) {
+  const queryLower = query.toLowerCase();
+  const irrelevantPatterns = [
+    { pattern: 'autumn', queryCheck: 'autumn' },
+    { pattern: 'UV filter', queryCheck: 'filter' },
+    { pattern: 'bluebell', queryCheck: 'bluebell' },
+    { pattern: 'street photography', queryCheck: 'street' },
+    { pattern: 'free course', queryCheck: 'course' },
+    { pattern: 'contact alan', queryCheck: 'contact' }
+  ];
+  
+  for (const { pattern, queryCheck } of irrelevantPatterns) {
+    if (content.includes(pattern) && !queryLower.includes(queryCheck)) {
+      return false;
+    }
+  }
+  
+  return true;
 }
 
 // Helper function to filter and sort entities
