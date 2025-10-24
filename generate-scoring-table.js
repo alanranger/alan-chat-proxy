@@ -4,7 +4,7 @@ const path = require('path');
 // Find the latest results file
 const files = fs.readdirSync('./results')
   .filter(f => f.startsWith('quality-benchmark-before-') && f.endsWith('.json'))
-  .sort((a, b) => a.localeCompare(b))
+  .sort()
   .reverse();
 
 const latestFile = files[0];

@@ -1,6 +1,30 @@
 const http = require('http');
 const fs = require('fs');
 
+// Map API confidence (0-1) to Alan's quality score (0-100)
+function mapConfidenceToQualityScore(apiConfidence) {
+  // Convert confidence to percentage and map to Alan's bands
+  const confidencePercent = Math.round(apiConfidence * 100);
+  
+  // Map to Alan's quality bands
+  if (confidencePercent >= 95) return 100; // Perfect
+  if (confidencePercent >= 90) return 95;  // Nearly Perfect
+  if (confidencePercent >= 75) return 80;  // Very Good
+  if (confidencePercent >= 50) return 60;  // Good
+  if (confidencePercent >= 30) return 40;  // Poor
+  return 20; // Very Poor
+}
+
+// Get quality band label
+function getQualityBand(qualityScore) {
+  if (qualityScore >= 95) return 'Perfect';
+  if (qualityScore >= 90) return 'Nearly Perfect';
+  if (qualityScore >= 75) return 'Very Good';
+  if (qualityScore >= 50) return 'Good';
+  if (qualityScore >= 30) return 'Poor';
+  return 'Very Poor';
+}
+
 // Quality assessment criteria
 const QUALITY_CRITERIA = {
   RELEVANCE: 'relevance',           // Does the answer directly address the question?
@@ -83,7 +107,11 @@ async function testQuery(query, expectedType, qualityFocus) {
       res.on('end', () => {
         try {
           const response = JSON.parse(responseData);
-          const qualityAssessment = assessResponseQuality(response, query, expectedType, qualityFocus);
+          
+          // Use API confidence score and map to Alan's quality bands
+          const apiConfidence = response.confidence || 0;
+          const qualityScore = mapConfidenceToQualityScore(apiConfidence);
+          const qualityBand = getQualityBand(qualityScore);
           
           resolve({
             query,
@@ -91,7 +119,12 @@ async function testQuery(query, expectedType, qualityFocus) {
             qualityFocus,
             status: res.statusCode,
             response: response,
-            quality: qualityAssessment
+            quality: {
+              overall: qualityScore,
+              band: qualityBand,
+              apiConfidence: apiConfidence,
+              issues: qualityScore < 30 ? ['Very Poor Response'] : qualityScore < 50 ? ['Poor Response'] : []
+            }
           });
         } catch (e) {
           resolve({
@@ -358,7 +391,8 @@ async function runQualityBenchmark() {
       totalScore += quality.overall;
       
       console.log(`   ✅ Status: ${result.status}`);
-      console.log(`   📊 Quality Score: ${quality.overall}/100`);
+      console.log(`   📊 Quality Score: ${quality.overall}/100 (${quality.band})`);
+      console.log(`   🤖 API Confidence: ${(quality.apiConfidence * 100).toFixed(1)}%`);
       console.log(`   📝 Answer Length: ${result.response?.answer?.length || 0} chars`);
       console.log(`   📚 Articles: ${result.response?.structured?.articles?.length || 0}`);
       console.log(`   📅 Events: ${result.response?.structured?.events?.length || 0}`);
@@ -366,9 +400,6 @@ async function runQualityBenchmark() {
       if (quality.issues.length > 0) {
         console.log(`   ⚠️  Issues: ${quality.issues.join(', ')}`);
       }
-      
-      // Show quality breakdown
-      console.log(`   📈 Breakdown: R:${quality.breakdown.relevance} C:${quality.breakdown.completeness} A:${quality.breakdown.accuracy} S:${quality.breakdown.structure} Ac:${quality.breakdown.actionability}`);
       
     } catch (error) {
       console.log(`   ❌ Error: ${error.message}`);

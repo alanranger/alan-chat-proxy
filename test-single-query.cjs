@@ -1,8 +1,8 @@
 const http = require('http');
 
-async function testEventQuery() {
+async function testSingleQuery() {
   return new Promise((resolve, reject) => {
-    const data = JSON.stringify({query: "when is your next devon workshop", sessionId: 'test'});
+    const data = JSON.stringify({query: "what is exposure triangle", sessionId: 'test'});
     const options = {
       hostname: 'localhost',
       port: 3001,
@@ -20,15 +20,11 @@ async function testEventQuery() {
       res.on('end', () => {
         try {
           const result = JSON.parse(body);
-          console.log('✅ ORIGINAL SERVER EVENT RESPONSE:');
+          console.log('✅ ORIGINAL SERVER RESPONSE:');
           console.log('Status:', res.statusCode);
           console.log('Confidence:', result.confidence);
-          console.log('Answer type:', typeof result.answer);
-          console.log('Answer is array:', Array.isArray(result.answer));
-          console.log('Answer length:', result.answer?.length || 'N/A');
-          console.log('Answer preview:', JSON.stringify(result.answer).substring(0, 200));
-          console.log('Events:', result.events?.length || 0);
-          console.log('Full response keys:', Object.keys(result));
+          console.log('Answer length:', result.answer?.length || 0);
+          console.log('Answer preview:', result.answer?.substring(0, 200) || 'No answer');
           resolve(result);
         } catch (e) {
           console.log('❌ Parse error:', e.message);
@@ -48,4 +44,6 @@ async function testEventQuery() {
   });
 }
 
-testEventQuery().catch(console.error);
+testSingleQuery().catch(console.error);
+
+

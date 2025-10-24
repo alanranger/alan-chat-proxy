@@ -301,23 +301,23 @@ function findRelevantEquipmentArticles(equipmentType, articles) {
 }
 
 function filterRelevantArticles(article, keywords) {
-    if (!article) return false;
-    
-    const title = (article.title || '').toLowerCase();
-    const description = (article.description || '').toLowerCase();
-    
-    // Filter out articles with malformed content
-    if (description.includes('rotto 405') || 
-        description.includes('gitzo gt3532ls') ||
-        description.includes('manfrotto 405') ||
-        description.includes('carbon fibre breaking down') ||
-        description.includes('needed two replacement legs')) {
-      return false;
-    }
-    
-    return keywords.some(keyword => 
-      title.includes(keyword) || description.includes(keyword)
-    );
+  if (!article) return false;
+  
+  const title = (article.title || '').toLowerCase();
+  const description = (article.description || '').toLowerCase();
+  
+  // Filter out articles with malformed content
+  if (description.includes('rotto 405') || 
+      description.includes('gitzo gt3532ls') ||
+      description.includes('manfrotto 405') ||
+      description.includes('carbon fibre breaking down') ||
+      description.includes('needed two replacement legs')) {
+    return false;
+  }
+  
+  return keywords.some(keyword => 
+    title.includes(keyword) || description.includes(keyword)
+  );
 }
 
 // Helper function to process individual content chunks
@@ -504,11 +504,11 @@ function buildArticleReferences(relevantArticles) {
     let references = `\n\n**For detailed reviews and specific recommendations, check out these guides:**\n`;
     relevantArticles.slice(0, 3).forEach(article => {
       references += `- [${article.title}](${article.page_url || article.url})\n`;
-      });
+    });
     return references;
-    }
-  return '';
   }
+  return '';
+}
   
 // Add specific advice based on equipment type
 function addSpecificAdvice(equipmentType) {
@@ -650,8 +650,8 @@ function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
   const faqData = getFaqData(relevantArticle);
   if (!faqData) return null;
   
-        console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
-      
+  console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
+  
   const primaryQuestion = findPrimaryQuestion(faqData.mainEntity, exactTerm);
   if (!primaryQuestion) return null;
   
@@ -675,22 +675,22 @@ function getFaqData(relevantArticle) {
 // Helper function to find primary question
 function findPrimaryQuestion(faqItems, exactTerm) {
   return faqItems.find(item => {
-        const question = (item.name || "").toLowerCase();
-        const queryLower = exactTerm.toLowerCase();
-        return question.includes(queryLower) || queryLower.includes(question.split(' ')[0]);
-      });
+    const question = (item.name || "").toLowerCase();
+    const queryLower = exactTerm.toLowerCase();
+    return question.includes(queryLower) || queryLower.includes(question.split(' ')[0]);
+  });
 }
-      
+
 // Helper function to extract and clean answer text
 function extractAndCleanAnswer(primaryQuestion) {
   if (!primaryQuestion?.acceptedAnswer?.text) return null;
-        
+  
   let answerText = primaryQuestion.acceptedAnswer.text;
-        answerText = answerText.replace(/<[^>]*>/g, '').trim();
-        answerText = cleanResponseText(answerText);
-        
+  answerText = answerText.replace(/<[^>]*>/g, '').trim();
+  answerText = cleanResponseText(answerText);
+  
   return answerText;
-  }
+}
   
 function hasWord(text, term) {
     if (!term) return false;
@@ -767,25 +767,25 @@ function scoreChunks(candidateChunks, queryWords, exactTerm) {
 }
 
 function scoreChunkRelevance(chunk, importantWords, exactTerm) {
-    const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
-    const title = (chunk.title || "").toLowerCase();
-    const url = String(chunk.url || "").toLowerCase();
-    let s = 0;
-    
-    for (const w of importantWords) { 
-      if (hasWord(text,w)) s += 2; 
-      if (hasWord(title,w)) s += 3; 
-      if (hasWord(url,w)) s += 2; 
-    }
-    
-    if (exactTerm) {
-      if (hasWord(text, exactTerm)) s += 6;
-      if (hasWord(title, exactTerm)) s += 8;
-      const slug = exactTerm.replace(/\s+/g, "-");
-      if (url.includes(`/what-is-${slug}`)) s += 10;
-    }
-    
-    return { chunk, s };
+  const text = (chunk.chunk_text || chunk.content || "").toLowerCase();
+  const title = (chunk.title || "").toLowerCase();
+  const url = String(chunk.url || "").toLowerCase();
+  let s = 0;
+  
+  for (const w of importantWords) { 
+    if (hasWord(text,w)) s += 2; 
+    if (hasWord(title,w)) s += 3; 
+    if (hasWord(url,w)) s += 2; 
+  }
+  
+  if (exactTerm) {
+    if (hasWord(text, exactTerm)) s += 6;
+    if (hasWord(title, exactTerm)) s += 8;
+    const slug = exactTerm.replace(/\s+/g, "-");
+    if (url.includes(`/what-is-${slug}`)) s += 10;
+  }
+  
+  return { chunk, s };
 }
   
 function extractAnswerFromContentChunks(context) {
@@ -811,19 +811,19 @@ function findRelevantChunk(exactTerm, contentChunks, queryWords) {
   console.log(`🔍 generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
   return relevantChunk;
 }
-  
+
 // Helper function to prepare chunk text
 function prepareChunkText(relevantChunk) {
-    let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
-    chunkText = cleanResponseText(chunkText);
-    chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
-    chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
+  let chunkText = relevantChunk.chunk_text || relevantChunk.content || "";
+  chunkText = cleanResponseText(chunkText);
+  chunkText = chunkText.replace(/^\[ARTICLE\].*?URL:.*?\n\n/, '');
+  chunkText = chunkText.replace(/^\[.*?\].*?Published:.*?\n\n/, '');
   return chunkText;
 }
 
 // Helper function to extract answer from text using multiple strategies
 function extractAnswerFromText(context) {
-    
+  
   // Check for fitness level information first
   const fitnessAnswer = extractFitnessLevelAnswer(context.query, context.chunkText, context.relevantChunk);
   if (fitnessAnswer) return fitnessAnswer;
@@ -959,8 +959,8 @@ function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
   const lc = query.toLowerCase();
   if (!lc.includes('fitness') && !lc.includes('level')) return null;
   
-      console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
-      
+  console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
+  
   // Try pattern matching first
   const fitnessLevel = findFitnessLevelByPatterns(chunkText);
   if (fitnessLevel) {
@@ -982,30 +982,30 @@ function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
 }
 
 function findFitnessLevelByPatterns(chunkText) {
-      const fitnessPatterns = [
+  const fitnessPatterns = [
     /Fitness:\s*(\d+\.?\s*[A-Za-z\s-]+?)(?:\n|$)/i,
     /Fitness\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,
     /Experience\s*-\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,
     /Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i,
     /Fitness\s*Required:\s*([A-Za-z\s-]+?)(?:\n|$)/i,
     /Physical\s*Level:\s*([A-Za-z\s-]+?)(?:\n|$)/i
-      ];
-      
-      for (const pattern of fitnessPatterns) {
-        const match = chunkText.match(pattern);
-        console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
-        if (match && match[1]) {
+  ];
+  
+  for (const pattern of fitnessPatterns) {
+    const match = chunkText.match(pattern);
+    console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
+    if (match && match[1]) {
       return match[1].trim();
-        }
+    }
   }
   return null;
-      }
-      
+}
+
 function findFitnessLevelByKeywords(chunkText) {
-      const fitnessWords = ['easy', 'moderate', 'hard', 'beginner', 'intermediate', 'advanced', 'low', 'medium', 'high'];
-      const chunkTextLower = chunkText.toLowerCase();
+  const fitnessWords = ['easy', 'moderate', 'hard', 'beginner', 'intermediate', 'advanced', 'low', 'medium', 'high'];
+  const chunkTextLower = chunkText.toLowerCase();
   return fitnessWords.find(word => chunkTextLower.includes(word));
-    }
+}
     
 function extractDefinitionSentence(chunkText, exactTerm, relevantChunk) {
   // Prefer definitional sentences for core concepts
@@ -1030,24 +1030,24 @@ function extractDefinitionSentence(chunkText, exactTerm, relevantChunk) {
 }
 
 function isRelevantSentence(s, queryWords) {
-      const sLower = s.toLowerCase();
-      const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
-      const importantWords = queryWords.filter(w => 
-        w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
-      );
-      return importantWords.some(word => sLower.includes(word)) && 
-             sLower.length > 30 && sLower.length < 200 && // Good length for a direct answer
-             !sLower.includes('[article]') && // Skip metadata
-             !sLower.includes('published:') && // Skip metadata
-             !sLower.includes('url:') && // Skip metadata
-             !sLower.includes('alan ranger photography') && // Skip navigation
-             !sLower.includes('%3a%2f%2f') && // Skip URL-encoded text
-             !sLower.includes('] 0 likes') && // Skip malformed text
-             !sLower.includes('sign in') && // Skip navigation
-             !sLower.includes('my account') && // Skip navigation
-             !sLower.includes('back ') && // Skip navigation
-             !sLower.includes('[/') && // Skip navigation links
-             !sLower.includes('cart 0'); // Skip navigation
+  const sLower = s.toLowerCase();
+  const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+  const importantWords = queryWords.filter(w => 
+    w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
+  );
+  return importantWords.some(word => sLower.includes(word)) && 
+         sLower.length > 30 && sLower.length < 200 && // Good length for a direct answer
+         !sLower.includes('[article]') && // Skip metadata
+         !sLower.includes('published:') && // Skip metadata
+         !sLower.includes('url:') && // Skip metadata
+         !sLower.includes('alan ranger photography') && // Skip navigation
+         !sLower.includes('%3a%2f%2f') && // Skip URL-encoded text
+         !sLower.includes('] 0 likes') && // Skip malformed text
+         !sLower.includes('sign in') && // Skip navigation
+         !sLower.includes('my account') && // Skip navigation
+         !sLower.includes('back ') && // Skip navigation
+         !sLower.includes('[/') && // Skip navigation links
+         !sLower.includes('cart 0'); // Skip navigation
 }
 
 function extractRelevantSentence(chunkText, queryWords, relevantChunk) {
@@ -1068,35 +1068,35 @@ function extractRelevantSentence(chunkText, queryWords, relevantChunk) {
 
 function extractRelevantParagraph(context) {
   
-    // Fallback: if no good sentence found, try to extract the first paragraph containing "what is <term>"
+  // Fallback: if no good sentence found, try to extract the first paragraph containing "what is <term>"
   if (context.exactTerm) {
     const byPara = context.chunkText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 50);
     const para = byPara.find(p => p.toLowerCase().includes(`what is ${context.exactTerm}`) && p.length <= 300);
-      if (para) {
+    if (para) {
       return formatResponseMarkdown({
         title: 'Definition',
         url: context.relevantChunk.url,
         description: para.trim()
       });
-      }
     }
+  }
 
-    // Fallback: if no good sentence found, try to extract a relevant paragraph
+  // Fallback: if no good sentence found, try to extract a relevant paragraph
   const paragraphs = context.chunkText.split(/\n\s*\n/).filter(p => p.trim().length > 50);
-    const relevantParagraph = paragraphs.find(p => {
-      const pLower = p.toLowerCase();
-      const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
+  const relevantParagraph = paragraphs.find(p => {
+    const pLower = p.toLowerCase();
+    const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
     const importantWords = context.queryWords.filter(w => 
-        w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
-      );
-      return importantWords.some(word => pLower.includes(word)) &&
-             !pLower.includes('[article]') &&
-             !pLower.includes('published:') &&
-             !pLower.includes('url:') &&
-             !pLower.includes('alan ranger photography');
-    });
-    
-    if (relevantParagraph && relevantParagraph.length < 300) {
+      w.length >= 3 && (technicalTerms.includes(w) || w.length >= 4)
+    );
+    return importantWords.some(word => pLower.includes(word)) &&
+           !pLower.includes('[article]') &&
+           !pLower.includes('published:') &&
+           !pLower.includes('url:') &&
+           !pLower.includes('alan ranger photography');
+  });
+  
+  if (relevantParagraph && relevantParagraph.length < 300) {
     return formatResponseMarkdown({
       title: 'Information',
       url: context.relevantChunk.url,
@@ -1105,7 +1105,7 @@ function extractRelevantParagraph(context) {
   }
   
   return null;
-  }
+}
   
 // Helper functions for getHardcodedAnswer
 function getCameraAnswer() {
@@ -1127,7 +1127,6 @@ function getTechnicalAnswers(lc) {
          getFilterAnswer(lc) ||
          getDepthOfFieldAnswer(lc) ||
          getSharpnessAnswer(lc) ||
-         getImageQualityAnswer(lc) ||
          null;
 }
 
@@ -1137,52 +1136,44 @@ function getJpegRawAnswer(lc) {
     return `**JPEG vs RAW**: JPEG files are smaller and ready to use, while RAW files give you more editing flexibility but require post-processing. For beginners, JPEG is fine to start with, but RAW becomes valuable as you develop your editing skills.\n\n`;
   }
   return null;
-  }
-  
+}
+
 // Helper function for exposure triangle
 function getExposureTriangleAnswer(lc) {
   if (lc.includes("exposure triangle")) {
     return `**The Exposure Triangle** consists of three key settings:\n- **Aperture** (f-stop): Controls depth of field and light\n- **Shutter Speed**: Controls motion blur and light\n- **ISO**: Controls sensor sensitivity and light\n\nBalancing these three creates proper exposure.\n\n`;
   }
   return null;
-  }
-  
+}
+
 // Helper function for composition
 function getCompositionAnswer(lc) {
   if (lc.includes("composition") || lc.includes("storytelling")) {
     return `Great composition is about leading the viewer's eye through your image. Key techniques include the rule of thirds, leading lines, framing, and creating visual balance. The goal is to tell a story or convey emotion through your arrangement of elements.\n\n`;
   }
   return null;
-  }
-  
+}
+
 // Helper function for filters
 function getFilterAnswer(lc) {
   if (lc.includes("filter") || lc.includes("nd filter")) {
     return `**ND (Neutral Density) filters** reduce light entering your camera, allowing for longer exposures. They're great for blurring water, creating motion effects, or shooting in bright conditions. **Graduated filters** help balance exposure between bright skies and darker foregrounds.\n\n`;
   }
   return null;
-  }
-  
+}
+
 // Helper function for depth of field
 function getDepthOfFieldAnswer(lc) {
   if (lc.includes("depth of field")) {
     return `**Depth of field** is the area of your image that appears sharp. You control it with aperture: wider apertures (lower f-numbers) create shallow depth of field, while smaller apertures (higher f-numbers) keep more of the image in focus.\n\n`;
   }
   return null;
-  }
-  
+}
+
 // Helper function for sharpness
 function getSharpnessAnswer(lc) {
   if (lc.includes("sharp") || lc.includes("blurry")) {
     return `Sharp images come from proper technique: use a fast enough shutter speed to avoid camera shake, focus accurately, and use appropriate aperture settings. Tripods help with stability, and good lighting makes focusing easier.\n\n`;
-  }
-  return null;
-}
-
-// Helper function for image quality issues (grainy, noisy)
-function getImageQualityAnswer(lc) {
-  if (lc.includes("grainy") || lc.includes("noisy") || lc.includes("grain") || lc.includes("noise")) {
-    return `**Image Quality Issues**: Grainy or noisy images are usually caused by high ISO settings in low light. To reduce noise: use the lowest ISO possible for your situation, ensure proper exposure (underexposed images show more noise when brightened), use a tripod for longer exposures instead of high ISO, and consider noise reduction in post-processing. Better lighting also helps reduce the need for high ISO.\n\n`;
   }
   return null;
 }
@@ -1267,18 +1258,6 @@ const SERVICE_PATTERNS = [
   {
     matcher: (lc) => lc.includes("service") || (lc.includes("what do you offer") && !lc.includes("courses")) || lc.includes("what services"),
     answer: `**Services Available**: Alan Ranger Photography offers comprehensive photography services including workshops, courses, private lessons, mentoring, gift vouchers, gear checks, fine art prints, and payment plans. Services include face-to-face and online options, with locations in Coventry and various UK destinations. [View All Services](https://www.alanranger.com/photography-tuition-services)\n\n`
-  },
-  {
-    matcher: (lc) => lc.includes("commercial photography") || lc.includes("do you do commercial"),
-    answer: `**Commercial Photography**: Alan specializes in photography education and workshops rather than commercial photography services. His focus is on teaching photography through courses, workshops, and private lessons. For commercial photography needs, he can recommend other professional photographers in his network. [View Alan's Services](https://www.alanranger.com/photography-tuition-services)\n\n`
-  },
-  {
-    matcher: (lc) => lc.includes("portrait photography") || lc.includes("do you do portrait"),
-    answer: `**Portrait Photography**: Alan focuses on photography education rather than portrait photography services. His expertise is in teaching photography through courses, workshops, and private lessons. For portrait photography needs, he can recommend other professional photographers in his network. [View Alan's Services](https://www.alanranger.com/photography-tuition-services)\n\n`
-  },
-  {
-    matcher: (lc) => lc.includes("photography academy") && lc.includes("free"),
-    answer: `**Free Photography Academy**: Yes! Alan offers a completely free online photography course that you can subscribe to. It's designed to help beginners learn photography fundamentals at their own pace. The course covers essential topics like exposure, composition, and camera settings. [Subscribe to Free Course](https://www.alanranger.com/free-online-photography-course)\n\n`
   }
 ];
 
@@ -1340,16 +1319,16 @@ function getCameraRecommendation(lc) {
     return getCameraAnswer();
   }
   return null;
-  }
-  
+}
+
 // Helper function for certificate questions
 function getCertificateQuestionAnswer(lc) {
   if (lc.includes("certificate")) {
     return getCertificateAnswer();
   }
   return null;
-  }
-  
+}
+
 // Helper function for equipment questions
 function getEquipmentQuestionAnswer(lc) {
   if (lc.includes("equipment") || lc.includes("gear") || lc.includes("laptop")) {
@@ -1582,7 +1561,7 @@ function normalizeQuery(q) {
   lc = lc.replace(/\bbed\s*and\s*breakfast\b/g, "bnb");
   return lc;
 }
-  
+
 function applySynonymExpansion(lc) {
   const synonyms = {
     "weekend": ["fri", "sat", "sun", "friday", "saturday", "sunday", "multi day", "multi-day", "residential"],
@@ -1597,21 +1576,21 @@ function applySynonymExpansion(lc) {
     }
   }
   return lc;
-  }
-  
+}
+
 function applySpecialCases(lc) {
   if (lc.includes("group") && lc.includes("workshop")) {
     lc += " photography workshop residential multi day";
   }
   return lc;
-  }
-  
+}
+
 function addTopicKeywords(kws, lc) {
   for (const t of TOPIC_KEYWORDS) {
     if (lc.includes(t)) kws.add(t);
   }
-  }
-  
+}
+
 function addTechnicalAndMeaningfulWords(kws, lc) {
   const technicalTerms = ["iso", "raw", "jpg", "png", "dpi", "ppi", "rgb", "cmyk"];
   const stopWords = ["what", "when", "where", "which", "how", "why", "who", "can", "will", "should", "could", "would", "do", "does", "did", "are", "is", "was", "were", "have", "has", "had", "you", "your", "yours", "me", "my", "mine", "we", "our", "ours", "they", "their", "theirs", "them", "us", "him", "her", "his", "hers", "it", "its"];
@@ -2448,7 +2427,7 @@ function checkCourseClarificationPatterns(query) {
     /what photography courses do you have/i,
     /what photography courses do you offer/i,
     /what courses do you have/i,
-    /^(?!.*what.*camera.*need).*what courses/i,  // Exclude equipment requirement queries
+    /what courses/i,
     /do you offer courses/i,
     /do you do courses/i
   ];
@@ -2518,8 +2497,8 @@ function checkWorkshopQueryPatterns(query) {
     /editing courses/i,
     /photoshop course/i,
     /photoshop courses/i,
-    /^(?!.*what.*camera.*need).*camera course/i,  // Exclude equipment requirement queries
-    /^(?!.*what.*camera.*need).*camera courses/i,  // Exclude equipment requirement queries
+    /camera course/i,
+    /camera courses/i,
     /weekend photography workshop/i,
     /weekend photography workshops/i,
     /group photography workshop/i,
@@ -2697,12 +2676,7 @@ function getEquipmentPatterns() {
     /lens recommendation/i,
     /camera bag recommendation/i,
     /photography equipment/i,
-    /what equipment do i need/i,
-    /what camera do i need/i,
-    /camera requirements/i,
-    /equipment requirements/i,
-    /what camera.*need.*course/i,
-    /what camera.*need.*workshop/i
+    /what equipment do i need/i
   ];
 }
     
@@ -2826,14 +2800,6 @@ function checkClarificationPatterns(query) {
 function classifyQuery(query) {
   console.log(`🔍 classifyQuery called with: "${query}"`);
   
-  // PRIORITY: Check for equipment requirement queries FIRST
-  if (query.toLowerCase().includes('what camera do i need') || 
-      query.toLowerCase().includes('camera requirements') ||
-      query.toLowerCase().includes('equipment requirements')) {
-    console.log(`🎯 Equipment requirement query detected: "${query}" - routing to direct_answer`);
-    return { type: 'direct_answer', reason: 'equipment_requirement_query' };
-  }
-  
   // Check patterns in order of priority
   const courseResult = checkCourseClarificationPatterns(query);
   if (courseResult) return courseResult;
@@ -2927,7 +2893,7 @@ async function checkEvidenceBasedClarification(context) {
     console.log(`❌ No evidence-based clarification for: "${context.lc}"`);
   }
   return null;
-  }
+}
   
 // Helper function to check all pattern groups
 function checkAllPatternGroups(lc, confidence) {
@@ -3518,18 +3484,18 @@ function mapEventsData(data) {
 function enhanceKeywordsWithPageContext(keywords, pageContext) {
   if (!pageContext?.pathname) return keywords;
   
-    const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
+  const pathKeywords = extractKeywordsFromPath(pageContext.pathname);
   if (pathKeywords.length === 0) return keywords;
   
-      console.log('Product search - Page context keywords:', pathKeywords);
+  console.log('Product search - Page context keywords:', pathKeywords);
   return [...pathKeywords, ...keywords];
-  }
+}
 
 
 // Helper function to build base query
 function buildServicesBaseQuery(client, limit) {
   return client
-        .from("page_entities")
+    .from("page_entities")
     .select("*")
     .eq("kind", "service")
     .order("last_seen", { ascending: false })
@@ -3538,11 +3504,11 @@ function buildServicesBaseQuery(client, limit) {
 
 // Helper function to build OR conditions for keywords
 function buildKeywordConditions(keywords) {
-    const orConditions = [];
-    keywords.forEach(keyword => {
-      orConditions.push(`title.ilike.%${keyword}%`);
-      orConditions.push(`page_url.ilike.%${keyword}%`);
-    });
+  const orConditions = [];
+  keywords.forEach(keyword => {
+    orConditions.push(`title.ilike.%${keyword}%`);
+    orConditions.push(`page_url.ilike.%${keyword}%`);
+  });
   return orConditions;
 }
 
@@ -3589,37 +3555,37 @@ async function findServices(client, { keywords, limit = 50 }) {
 // Helper functions for findArticles scoring
 function addBaseKeywordScore(context) {
   for (const k of context.kw) {
-      if (!k) continue;
+    if (!k) continue;
     if (context.has(context.t, k)) context.add(3);        // strong match in title
     if (context.has(context.u, k)) context.add(1);        // weak match in URL
   }
-    }
+}
 
 function addOnlineCourseBoost(context) {
   const isOnlineCourse = context.categories.includes("online photography course");
-    const coreConcepts = [
-      "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
-      "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
-      "raw", "jpeg", "hdr", "focal length", "long exposure"
-    ];
+  const coreConcepts = [
+    "iso", "aperture", "shutter speed", "white balance", "depth of field", "metering",
+    "exposure", "composition", "macro", "landscape", "portrait", "street", "wildlife",
+    "raw", "jpeg", "hdr", "focal length", "long exposure"
+  ];
   const hasCore = coreConcepts.some(c => context.kw.includes(c));
-    
-    if (hasCore && isOnlineCourse) {
+  
+  if (hasCore && isOnlineCourse) {
     context.add(25); // Major boost for online course content on technical topics
-      
-      // Extra boost for "What is..." format articles in online course
-      for (const c of coreConcepts) {
+    
+    // Extra boost for "What is..." format articles in online course
+    for (const c of coreConcepts) {
       if (context.has(context.t, `what is ${c}`) || context.has(context.t, `${c} in photography`)) {
         context.add(15); // Additional boost for structured learning content
-        }
-      }
-      
-      // Boost for PDF checklists and guides
-    if (context.has(context.t, "pdf") || context.has(context.t, "checklist") || context.has(context.t, "guide")) {
-      context.add(10);
       }
     }
     
+    // Boost for PDF checklists and guides
+    if (context.has(context.t, "pdf") || context.has(context.t, "checklist") || context.has(context.t, "guide")) {
+      context.add(10);
+    }
+  }
+  
   return { hasCore, coreConcepts };
 }
 
@@ -3690,7 +3656,7 @@ function handlePageContext(pageContext, keywords) {
     }
   }
   return keywords;
-  }
+}
 
 // Helper function to build base query
 function buildArticlesBaseQuery(client, limit) {
@@ -3719,26 +3685,26 @@ function applySearchConditions(q, keywords) {
 
 // Helper function to score a single row
 function scoreArticleRow(r, kw) {
-    const t = (r.title || r.raw?.name || "").toLowerCase();
-    const u = (r.page_url || r.source_url || "").toLowerCase();
-    const categories = r.categories || [];
-    let s = 0;
-    
-    const add = (n)=>{ s += n; };
-    const has = (str, needle)=> str.includes(needle);
-    
+  const t = (r.title || r.raw?.name || "").toLowerCase();
+  const u = (r.page_url || r.source_url || "").toLowerCase();
+  const categories = r.categories || [];
+  let s = 0;
+  
+  const add = (n)=>{ s += n; };
+  const has = (str, needle)=> str.includes(needle);
+  
   addBaseKeywordScore({ kw, t, u, add, has });
   const { hasCore, coreConcepts } = addOnlineCourseBoost({ categories, kw, t, add, has });
   addCoreConceptScore({ hasCore, coreConcepts, t, u, add, has });
-    addCategoryBoost(categories, hasCore, add);
-    
-    return addRecencyTieBreaker(s, r);
+  addCategoryBoost(categories, hasCore, add);
+  
+  return addRecencyTieBreaker(s, r);
 }
 
 // Helper function to process and sort results
 function processAndSortResults(rows, keywords, limit) {
   const kw = (keywords || []).map(k => String(k || "").toLowerCase());
-
+  
   return rows
     .map(r => ({ r, s: scoreArticleRow(r, kw) }))
     .sort((a,b) => b.s - a.s)
@@ -3795,13 +3761,13 @@ function hasCoreConcepts(keywords, coreConcepts) {
 function calculateCoreConceptBoosts(context) {
   let boost = 0;
   
-    // Boost for online course URLs (what-is-* pattern)
+  // Boost for online course URLs (what-is-* pattern)
   if (context.url.includes("/what-is-") || context.title.includes("what is")) boost += 10;
-    
-    // Boost for PDF checklists and guides
+  
+  // Boost for PDF checklists and guides
   if (context.title.includes("pdf") || context.title.includes("checklist") || context.title.includes("guide")) boost += 8;
-    
-    // Boost for structured learning content
+  
+  // Boost for structured learning content
   if (context.title.includes("guide for beginners") || context.title.includes("guide for beginner")) boost += 5;
   
   return boost;
@@ -4295,46 +4261,22 @@ function calculateEventConfidence(query, events, product) {
 
 function initializeConfidenceContext(query) {
   const context = {
-    baseConfidence: 0.3, // Start with reasonable baseline for events
+    baseConfidence: 0.3,
     confidenceFactors: [],
     queryLower: query.toLowerCase(),
-    qualityIndicators: {
-      hasDirectAnswer: false,        // Chat-style direct answer, not just references
-      hasRelevantEvents: false,      // Events match query type (workshop=workshop, course=course)
-      hasRelevantArticles: false,   // Articles match query topic
-      hasActionableInfo: false,     // Provides specific next steps
-      responseCompleteness: 0,      // 0-1: How thoroughly question is addressed
-      responseAccuracy: 0           // 0-1: How correct and helpful the info is
+    addFactor: (message, delta) => {
+      context.baseConfidence += delta;
+      context.confidenceFactors.push(`${message} (${delta >= 0 ? '+' : ''}${delta})`);
     }
   };
-  
-  context.addFactor = (message, delta) => {
-    context.baseConfidence += delta;
-    context.confidenceFactors.push(`${message} (${delta >= 0 ? '+' : ''}${delta})`);
-  };
-  
   return context;
 }
 
 function analyzeDataAttributes(events, product, context) {
   const responseAttributes = initializeResponseAttributes();
   
-  // Analyze events for response attributes and quality indicators
+  // Analyze events for response attributes
   if (events && events.length > 0) {
-    // Set hasRelevantEvents based on query type matching
-    const queryLower = context.queryLower;
-    const hasWorkshopQuery = queryLower.includes('workshop');
-    const hasCourseQuery = queryLower.includes('course') || queryLower.includes('class');
-    
-    // Check if events match the query type (workshop=workshop, course=course)
-    const relevantEvents = events.filter(event => {
-      // If we have events, they are relevant for event queries
-      // The original logic was too restrictive - any events found for event queries should be considered relevant
-      return true;
-    });
-    
-    context.qualityIndicators.hasRelevantEvents = relevantEvents.length > 0;
-    
     events.forEach(event => analyzeEventAttributes(event, responseAttributes));
     responseAttributes.averagePrice = responseAttributes.averagePrice / events.length;
   }
@@ -4345,385 +4287,6 @@ function analyzeDataAttributes(events, product, context) {
   }
   
   context.responseAttributes = responseAttributes;
-}
-
-function analyzeResponseContent(responseText, articles, context) {
-  console.log(`🚀 analyzeResponseContent called for query: "${context.queryLower}"`);
-  console.log(`🚀 Response text: "${responseText.substring(0, 100)}..."`);
-  console.log(`🚀 Articles count: ${articles ? articles.length : 0}`);
-  
-  // Initialize quality indicators if they don't exist
-  if (!context.qualityIndicators) {
-    context.qualityIndicators = {
-      hasDirectAnswer: false,
-      hasRelevantEvents: false,
-      hasRelevantArticles: false,
-      hasActionableInfo: false,
-      responseCompleteness: 0,
-      responseAccuracy: 0
-    };
-  }
-  
-  // Preserve existing hasRelevantEvents value if it was set by analyzeDataAttributes
-  const existingHasRelevantEvents = context.qualityIndicators.hasRelevantEvents;
-  
-  // Don't override hasRelevantEvents if it was already set to true by analyzeDataAttributes
-  if (existingHasRelevantEvents === true) {
-    console.log(`🔍 Preserving hasRelevantEvents: true from analyzeDataAttributes`);
-  }
-  
-  // Special case for event queries: if this is an event query and we have events, set hasRelevantEvents to true
-  const isEventQuery = responseText && responseText.includes('I found') && responseText.includes('events');
-  if (isEventQuery && !existingHasRelevantEvents) {
-    context.qualityIndicators.hasRelevantEvents = true;
-    console.log(`🔍 Event query detected - setting hasRelevantEvents: true`);
-  }
-  
-  // Ensure queryLower exists
-  const queryLower = context.queryLower || (context.query || '').toLowerCase();
-  
-  // Analyze if response has direct answer (chat-style, not just references)
-  const hasDirectAnswer = analyzeDirectAnswer(responseText, queryLower);
-  context.qualityIndicators.hasDirectAnswer = hasDirectAnswer;
-  
-  // Analyze if articles are relevant to the query
-  const hasRelevantArticles = analyzeArticleRelevance(articles, queryLower);
-  context.qualityIndicators.hasRelevantArticles = hasRelevantArticles;
-  
-  // Analyze if response has actionable information
-  const hasActionableInfo = analyzeActionableInfo(responseText) || hasRelevantArticles || context.qualityIndicators.hasRelevantEvents;
-  context.qualityIndicators.hasActionableInfo = hasActionableInfo;
-  
-  // Calculate completeness and accuracy scores
-  context.qualityIndicators.responseCompleteness = calculateCompleteness(responseText, queryLower);
-  context.qualityIndicators.responseAccuracy = calculateAccuracy(responseText, queryLower);
-  
-  // Debug logging
-  console.log(`🔍 Quality Analysis for "${context.queryLower}":`);
-  console.log(`   Direct Answer: ${hasDirectAnswer}`);
-  console.log(`   Relevant Articles: ${hasRelevantArticles}`);
-  console.log(`   Actionable Info: ${hasActionableInfo}`);
-  console.log(`   Completeness: ${(context.qualityIndicators.responseCompleteness * 100).toFixed(1)}%`);
-  console.log(`   Accuracy: ${(context.qualityIndicators.responseAccuracy * 100).toFixed(1)}%`);
-  
-  // Restore hasRelevantEvents value if it was set to true by analyzeDataAttributes
-  if (existingHasRelevantEvents === true) {
-    context.qualityIndicators.hasRelevantEvents = true;
-    console.log(`🔍 Restored hasRelevantEvents: true from analyzeDataAttributes`);
-  }
-  
-  // Debug logging (removed file writing to avoid ES module issues)
-  console.log('🔍 Quality Analysis Complete');
-}
-
-function analyzeDirectAnswer(responseText, queryLower) {
-  // Check if response provides a direct, chat-style answer (not just references)
-  const responseLower = responseText.toLowerCase();
-  
-  // Extract key terms from the query - handle undefined queryLower
-  const queryWords = (queryLower || '').split(/\s+/).filter(word => word.length > 2);
-  
-  console.log(`🔍 analyzeDirectAnswer: query="${queryLower}", response="${responseText.substring(0, 50)}..."`);
-  console.log(`🔍 Query words: ${queryWords.join(', ')}`);
-  
-  // Check for completely irrelevant responses
-  const isIrrelevant = (
-    responseLower.includes('based on alan ranger\'s expertise') &&
-    responseLower.includes('autumn photography') && // Generic fallback content
-    !queryLower.includes('autumn') // Query is not about autumn
-  );
-  
-  console.log(`🔍 Is irrelevant: ${isIrrelevant}`);
-  
-  if (isIrrelevant) {
-    console.log(`❌ Response is completely irrelevant`);
-    return false;
-  }
-  
-  // Check for generic responses that don't answer the question
-  const isGeneric = (
-    responseLower.startsWith('based on alan ranger\'s expertise') &&
-    responseLower.includes('here\'s what you need to know') &&
-    !responseLower.includes(queryWords[0]) // Doesn't address the specific question
-  );
-  
-  console.log(`🔍 Is generic: ${isGeneric}`);
-  
-  if (isGeneric) {
-    console.log(`❌ Response is generic and doesn't answer the question`);
-    return false;
-  }
-  
-  // Look for direct answer patterns with keyword matching - more flexible for good responses
-  const hasDirectAnswer = (
-    responseText.length > 50 && // Not just "Here are some events..."
-    !responseLower.startsWith('here are some') &&
-    !responseLower.startsWith('i found some') &&
-    !responseLower.startsWith('here are the') &&
-    // Must contain key terms from the query
-    queryWords.some(word => responseLower.includes(word)) &&
-    (
-      // Direct answers
-      responseLower.includes('yes') || responseLower.includes('no') || 
-      responseLower.includes('i can') || responseLower.includes('we offer') ||
-      responseLower.includes('we have') || responseLower.includes('we provide') ||
-      // Technical content
-      responseLower.includes('aperture') || responseLower.includes('shutter') ||
-      responseLower.includes('iso') || responseLower.includes('exposure') ||
-      // Equipment/advice content
-      responseLower.includes('camera') || responseLower.includes('lens') ||
-      responseLower.includes('recommend') || responseLower.includes('suggest') ||
-      responseLower.includes('equipment') || responseLower.includes('beginner') ||
-      // Educational content
-      responseLower.includes('guide') || responseLower.includes('tutorial') ||
-      responseLower.includes('photography') || responseLower.includes('technique') ||
-      // Event/workshop content - NEW CRITERIA
-      responseLower.includes('found') && responseLower.includes('event') ||
-      responseLower.includes('workshop') && responseLower.includes('date') ||
-      responseLower.includes('course') && responseLower.includes('next') ||
-      responseLower.includes('workshop') && responseLower.includes('devon') ||
-      responseLower.includes('course') && responseLower.includes('photography') ||
-      responseLower.includes('workshop') && responseLower.includes('bluebell') ||
-      responseLower.includes('workshop') && responseLower.includes('autumn')
-    )
-  );
-  
-  console.log(`🔍 Has direct answer: ${hasDirectAnswer}`);
-  
-  return hasDirectAnswer;
-}
-
-function analyzeArticleRelevance(articles, queryLower) {
-  if (!articles || articles.length === 0) return false;
-  
-  // Extract key terms from the query - handle undefined queryLower
-  const queryWords = (queryLower || '').split(/\s+/).filter(word => word.length > 2);
-  
-  // Check for completely irrelevant articles (like autumn photography for commercial photography queries)
-  const irrelevantPatterns = [
-    'autumn photography', 'creative autumn', 'seasonal photography'
-  ];
-  
-  const hasIrrelevantArticles = articles.some(article => {
-    const articleTitle = (article.title || '').toLowerCase();
-    return irrelevantPatterns.some(pattern => articleTitle.includes(pattern));
-  });
-  
-  if (hasIrrelevantArticles && !queryLower.includes('autumn')) {
-    return false; // Articles are completely irrelevant to the query
-  }
-  
-  // Check if articles contain keywords from the query
-  const relevantArticles = articles.filter(article => {
-    const articleTitle = (article.title || '').toLowerCase();
-    const articleContent = (article.content || '').toLowerCase();
-    
-    return queryWords.some(word => 
-      articleTitle.includes(word) || articleContent.includes(word)
-    );
-  });
-  
-  // Require at least 50% of articles to be relevant
-  const relevanceRatio = relevantArticles.length / articles.length;
-  return relevanceRatio >= 0.5;
-}
-
-function checkBusinessActionableInfo(responseLower) {
-  return (
-    (responseLower.includes('contact') && responseLower.includes('alan')) ||
-    (responseLower.includes('book') && responseLower.includes('course')) ||
-    (responseLower.includes('call') && responseLower.includes('alan')) ||
-    (responseLower.includes('email') && responseLower.includes('alan')) ||
-    (responseLower.includes('price') && responseLower.includes('course')) ||
-    (responseLower.includes('cost') && responseLower.includes('course')) ||
-    (responseLower.includes('date') && responseLower.includes('course')) ||
-    (responseLower.includes('time') && responseLower.includes('course')) ||
-    (responseLower.includes('location') && responseLower.includes('yorkshire')) ||
-    (responseLower.includes('address') && responseLower.includes('yorkshire'))
-  );
-}
-
-function checkTechnicalActionableInfo(responseLower) {
-  return (
-    (responseLower.includes('recommend') && responseLower.includes('camera')) ||
-    (responseLower.includes('suggest') && responseLower.includes('equipment')) ||
-    (responseLower.includes('guide') && responseLower.includes('photography')) ||
-    (responseLower.includes('tutorial') && responseLower.includes('photography')) ||
-    // Technical photography concepts that provide actionable knowledge
-    (responseLower.includes('exposure triangle') && responseLower.includes('settings')) ||
-    (responseLower.includes('aperture') && responseLower.includes('controls')) ||
-    (responseLower.includes('shutter speed') && responseLower.includes('motion')) ||
-    (responseLower.includes('iso') && responseLower.includes('sensitivity')) ||
-    (responseLower.includes('depth of field') && responseLower.includes('aperture')) ||
-    (responseLower.includes('motion blur') && responseLower.includes('shutter')) ||
-    (responseLower.includes('noise') && responseLower.includes('iso')) ||
-    (responseLower.includes('sharp') && responseLower.includes('technique'))
-  );
-}
-
-function checkEventActionableInfo(responseLower) {
-  return (
-    (responseLower.includes('found') && responseLower.includes('event')) ||
-    (responseLower.includes('workshop') && responseLower.includes('date')) ||
-    (responseLower.includes('course') && responseLower.includes('next')) ||
-    (responseLower.includes('workshop') && responseLower.includes('devon')) ||
-    (responseLower.includes('course') && responseLower.includes('photography')) ||
-    (responseLower.includes('workshop') && responseLower.includes('bluebell')) ||
-    (responseLower.includes('workshop') && responseLower.includes('autumn')) ||
-    (responseLower.includes('event') && responseLower.includes('match'))
-  );
-}
-
-function analyzeActionableInfo(responseText) {
-  const responseLower = responseText.toLowerCase();
-  
-  return (
-    checkBusinessActionableInfo(responseLower) ||
-    checkTechnicalActionableInfo(responseLower) ||
-    checkEventActionableInfo(responseLower)
-  );
-}
-
-function calculateQueryWordCompleteness(responseLower, queryWords) {
-  const addressedWords = queryWords.filter(word => responseLower.includes(word));
-  return (addressedWords.length / queryWords.length) * 0.3;
-}
-
-function calculateLengthCompleteness(responseText) {
-  if (responseText.length > 500) return 0.3;
-  if (responseText.length > 200) return 0.2;
-  if (responseText.length > 100) return 0.1;
-  return 0;
-}
-
-function calculateInformationTypeCompleteness(responseLower) {
-  let score = 0;
-  if (responseLower.includes('yes') || responseLower.includes('no')) score += 0.1;
-  if (responseLower.includes('we') || responseLower.includes('i can')) score += 0.1;
-  if (responseLower.includes('offer') || responseLower.includes('provide')) score += 0.1;
-  return score;
-}
-
-function calculateTechnicalCompleteness(responseLower) {
-  let score = 0;
-  if (responseLower.includes('guide') || responseLower.includes('tutorial')) score += 0.1;
-  if (responseLower.includes('equipment') || responseLower.includes('camera')) score += 0.1;
-  return score;
-}
-
-function calculateEventCompleteness(responseLower) {
-  let score = 0;
-  if (responseLower.includes('found') && responseLower.includes('event')) score += 0.1;
-  if (responseLower.includes('workshop') && responseLower.includes('date')) score += 0.1;
-  if (responseLower.includes('course') && responseLower.includes('next')) score += 0.1;
-  if (responseLower.includes('workshop') && (responseLower.includes('devon') || responseLower.includes('bluebell') || responseLower.includes('autumn'))) score += 0.1;
-  return score;
-}
-
-function calculateCompleteness(responseText, queryLower) {
-  const responseLower = responseText.toLowerCase();
-  const queryWords = (queryLower || '').split(/\s+/).filter(word => word.length > 2);
-  
-  let completenessScore = 0;
-  completenessScore += calculateQueryWordCompleteness(responseLower, queryWords);
-  completenessScore += calculateLengthCompleteness(responseText);
-  completenessScore += calculateInformationTypeCompleteness(responseLower);
-  completenessScore += calculateTechnicalCompleteness(responseLower);
-  completenessScore += calculateEventCompleteness(responseLower);
-  
-  return Math.min(1.0, completenessScore);
-}
-
-function checkIrrelevantResponse(responseLower, queryLower) {
-  if (responseLower.includes('based on alan ranger\'s expertise') && 
-      responseLower.includes('autumn photography') && 
-      !queryLower.includes('autumn')) {
-    return 0.0; // Completely irrelevant
-  }
-  return null;
-}
-
-function checkGenericResponse(responseLower, queryWords) {
-  if (responseLower.startsWith('based on alan ranger\'s expertise') &&
-      responseLower.includes('here\'s what you need to know') &&
-      !queryWords.some(word => responseLower.includes(word))) {
-    return 0.1; // Generic response that doesn't answer the question
-  }
-  return null;
-}
-
-function calculateHelpfulIndicators(responseLower) {
-  let score = 0;
-  if (responseLower.includes('yes') || responseLower.includes('no')) score += 0.2;
-  if (responseLower.includes('we offer') || responseLower.includes('we provide')) score += 0.2;
-  if (responseLower.includes('i can help') || responseLower.includes('i can assist')) score += 0.1;
-  return score;
-}
-
-function calculateQueryRelevance(responseLower, queryWords) {
-  if (queryWords.some(word => responseLower.includes(word))) return 0.2;
-  return 0;
-}
-
-function calculateEventAccuracy(responseLower) {
-  let score = 0;
-  if (responseLower.includes('found') && responseLower.includes('event')) score += 0.2;
-  if (responseLower.includes('workshop') && responseLower.includes('date')) score += 0.2;
-  if (responseLower.includes('course') && responseLower.includes('next')) score += 0.2;
-  if (responseLower.includes('workshop') && (responseLower.includes('devon') || responseLower.includes('bluebell') || responseLower.includes('autumn'))) score += 0.1;
-  return score;
-}
-
-function calculateUnhelpfulIndicators(responseLower) {
-  let penalty = 0;
-  if (responseLower.includes('i don\'t know') || responseLower.includes('i can\'t help')) penalty -= 0.3;
-  if (responseLower.includes('sorry') && responseLower.includes('can\'t')) penalty -= 0.2;
-  return penalty;
-}
-
-function calculateAccuracy(responseText, queryLower) {
-  console.log(`🔍 calculateAccuracy called for query: "${queryLower}"`);
-  console.log(`🔍 Response text: "${responseText.substring(0, 100)}..."`);
-  
-  const responseLower = responseText.toLowerCase();
-  const queryWords = (queryLower || '').split(/\s+/).filter(word => word.length > 2);
-  
-  // Check for completely irrelevant responses
-  const irrelevantScore = checkIrrelevantResponse(responseLower, queryLower);
-  if (irrelevantScore !== null) {
-    console.log(`🔍 Response is irrelevant, returning ${irrelevantScore}`);
-    return irrelevantScore;
-  }
-  
-  // Check for generic responses
-  const genericScore = checkGenericResponse(responseLower, queryWords);
-  if (genericScore !== null) {
-    console.log(`🔍 Response is generic, returning ${genericScore}`);
-    return genericScore;
-  }
-  
-  let accuracyScore = 0.5; // Start with neutral score
-  console.log(`🔍 Starting accuracy score: ${accuracyScore}`);
-  
-  const helpfulScore = calculateHelpfulIndicators(responseLower);
-  console.log(`🔍 Helpful indicators score: ${helpfulScore}`);
-  accuracyScore += helpfulScore;
-  
-  const relevanceScore = calculateQueryRelevance(responseLower, queryWords);
-  console.log(`🔍 Query relevance score: ${relevanceScore}`);
-  accuracyScore += relevanceScore;
-  
-  const eventScore = calculateEventAccuracy(responseLower);
-  console.log(`🔍 Event accuracy score: ${eventScore}`);
-  accuracyScore += eventScore;
-  
-  const unhelpfulScore = calculateUnhelpfulIndicators(responseLower);
-  console.log(`🔍 Unhelpful indicators score: ${unhelpfulScore}`);
-  accuracyScore += unhelpfulScore;
-  
-  const finalScore = Math.max(0.0, Math.min(1.0, accuracyScore));
-  console.log(`🔍 Final accuracy score: ${finalScore}`);
-  return finalScore;
 }
 
 function applyAllScoringFactors(context) {
@@ -4738,102 +4301,10 @@ function applyAllScoringFactors(context) {
 }
 
 function finalizeConfidence(query, context) {
-  // Calculate confidence based on Alan's quality indicators using his requested bands
-  let confidenceScore = 0;
+  const finalConfidence = Math.max(0.1, Math.min(0.95, context.baseConfidence));
   
-  // Ensure quality indicators exist
-  if (!context.qualityIndicators) {
-    context.qualityIndicators = {
-      hasDirectAnswer: false,
-      hasRelevantEvents: false,
-      hasRelevantArticles: false,
-      hasActionableInfo: false,
-      responseCompleteness: 0,
-      responseAccuracy: 0
-    };
-  }
-  
-  // CRITICAL: Check for completely irrelevant responses first
-  // If no direct answer AND no relevant content AND low accuracy, it's very poor
-  const isCompletelyIrrelevant = (
-    !context.qualityIndicators.hasDirectAnswer && 
-    !context.qualityIndicators.hasRelevantEvents && 
-    !context.qualityIndicators.hasRelevantArticles &&
-    context.qualityIndicators.responseAccuracy < 0.3
-  );
-  
-  console.log(`🔍 QUALITY INDICATORS DEBUG for "${query}":`);
-  console.log(`   hasDirectAnswer: ${context.qualityIndicators.hasDirectAnswer}`);
-  console.log(`   hasRelevantEvents: ${context.qualityIndicators.hasRelevantEvents}`);
-  console.log(`   hasRelevantArticles: ${context.qualityIndicators.hasRelevantArticles}`);
-  console.log(`   hasActionableInfo: ${context.qualityIndicators.hasActionableInfo}`);
-  console.log(`   responseCompleteness: ${context.qualityIndicators.responseCompleteness}`);
-  console.log(`   responseAccuracy: ${context.qualityIndicators.responseAccuracy}`);
-  console.log(`   isCompletelyIrrelevant: ${isCompletelyIrrelevant}`);
-  
-  if (isCompletelyIrrelevant) {
-    confidenceScore = 0.10; // 10% confidence for completely irrelevant responses
-    console.log(`🎯 FORCED TO 10% - Completely irrelevant response`);
-  }
-  // Perfect (100%): Has everything - direct answer, relevant events, relevant articles, actionable info
-  else if (context.qualityIndicators.hasDirectAnswer && 
-      context.qualityIndicators.hasRelevantEvents && 
-      context.qualityIndicators.hasRelevantArticles && 
-      context.qualityIndicators.hasActionableInfo &&
-      context.qualityIndicators.responseCompleteness >= 0.9 &&
-      context.qualityIndicators.responseAccuracy >= 0.9) {
-    confidenceScore = 1.0; // 100% confidence for perfect responses
-    console.log(`🎯 SELECTED: Perfect (100%) - All quality indicators met`);
-  }
-  // Nearly Perfect (95%): Has most elements with high quality
-  else if (context.qualityIndicators.hasDirectAnswer && 
-           (context.qualityIndicators.hasRelevantEvents || context.qualityIndicators.hasRelevantArticles) &&
-           context.qualityIndicators.responseCompleteness >= 0.8 &&
-           context.qualityIndicators.responseAccuracy >= 0.8) {
-    confidenceScore = 0.95; // 95% confidence for nearly perfect
-    console.log(`🎯 SELECTED: Nearly Perfect (95%) - Direct answer + supporting content`);
-  }
-    // Special case for event queries: High-quality event responses with relevant events
-    else if (context.qualityIndicators.hasDirectAnswer && 
-             context.qualityIndicators.hasRelevantEvents &&
-             context.qualityIndicators.responseCompleteness >= 0.3 &&
-             context.qualityIndicators.responseAccuracy >= 0.6) {
-      confidenceScore = 0.95; // 95% confidence for excellent event responses
-      console.log(`🎯 SELECTED: Nearly Perfect (95%) - Excellent event response with relevant events`);
-    }
-  // Very Good (75%): Has good answer and some supporting content
-  else if (context.qualityIndicators.hasDirectAnswer && 
-           context.qualityIndicators.responseCompleteness >= 0.4 &&
-           context.qualityIndicators.responseAccuracy >= 0.4) {
-    confidenceScore = 0.75; // 75% confidence for very good
-    console.log(`🎯 SELECTED: Very Good (75%) - Direct answer + good completeness/accuracy`);
-  }
-  // Good (50%): Has some useful content
-  else if (context.qualityIndicators.hasDirectAnswer || 
-           context.qualityIndicators.hasRelevantEvents || 
-           context.qualityIndicators.hasRelevantArticles) {
-    confidenceScore = 0.50; // 50% confidence for good
-    console.log(`🎯 SELECTED: Good (50%) - Some useful content found`);
-  }
-  // Poor (30%): Limited useful content
-  else if (context.qualityIndicators.responseCompleteness >= 0.3) {
-    confidenceScore = 0.30; // 30% confidence for poor
-    console.log(`🎯 SELECTED: Poor (30%) - Limited useful content`);
-  }
-  // Very Poor (10%): Little to no useful content
-  else {
-    confidenceScore = 0.10; // 10% confidence for very poor
-    console.log(`🎯 SELECTED: Very Poor (10%) - Little to no useful content`);
-  }
-  
-  // Apply base confidence adjustments (minimal impact)
-  const baseConfidence = context.baseConfidence || 0.1;
-  const finalConfidence = Math.max(0.1, Math.min(1.0, confidenceScore + (baseConfidence * 0.1)));
-  
-  if (context.confidenceFactors && context.confidenceFactors.length > 0) {
-    console.log(`🎯 Alan's Quality-Based Confidence for "${query}": ${context.confidenceFactors.join(', ')} = ${(finalConfidence * 100).toFixed(1)}%`);
-    console.log(`📊 Quality Indicators: Direct=${context.qualityIndicators.hasDirectAnswer}, Events=${context.qualityIndicators.hasRelevantEvents}, Articles=${context.qualityIndicators.hasRelevantArticles}, Actionable=${context.qualityIndicators.hasActionableInfo}`);
-    console.log(`📊 Quality Scores: Completeness=${(context.qualityIndicators.responseCompleteness * 100).toFixed(1)}%, Accuracy=${(context.qualityIndicators.responseAccuracy * 100).toFixed(1)}%`);
+  if (context.confidenceFactors.length > 0) {
+    console.log(`🎯 Event confidence factors for "${query}": ${context.confidenceFactors.join(', ')} = ${(finalConfidence * 100).toFixed(1)}%`);
   }
   
   return finalConfidence;
@@ -4847,41 +4318,36 @@ function finalizeConfidence(query, context) {
 // Helper function to process events early return
 async function processEventsEarlyReturn(context) {
   const events = await findEvents(context.client, { keywords: context.directKeywords, limit: 80, pageContext: context.pageContext });
-    const eventList = formatEventsForUi(events);
+  const eventList = formatEventsForUi(events);
+  const confidence = calculateEventConfidence(context.query || "", eventList, null);
   
-  // Use quality-based confidence scoring
-  const confidenceContext = initializeConfidenceContext(context.query || "");
-  analyzeDataAttributes(events, null, confidenceContext);
-  // Don't call analyzeResponseContent with empty strings - will be called with actual content later
-  const confidence = finalizeConfidence(context.query || "", confidenceContext);
-  
-    console.log('🔍 EARLY RETURN EVENTS: Found events via early return path:', {
-      totalEvents: events.length,
-      formattedEvents: eventList.length,
-      confidence,
+  console.log('🔍 EARLY RETURN EVENTS: Found events via early return path:', {
+    totalEvents: events.length,
+    formattedEvents: eventList.length,
+    confidence,
     query: context.query
-    });
+  });
   
   context.res.status(200).json({
-      ok: true,
-      type: "events",
-      answer: eventList,
-      events: eventList,
-      structured: {
-        intent: "events",
+    ok: true,
+    type: "events",
+    answer: eventList,
+    events: eventList,
+    structured: {
+      intent: "events",
       topic: context.directKeywords.join(", "),
-        events: eventList,
-        products: [],
-        pills: []
-      },
-      confidence,
-      debug: {
-        version: "v1.2.75-fix-debug-scope",
-        earlyReturn: true,
-        eventsFound: events.length,
-        formattedEvents: eventList.length
-      }
-    });
+      events: eventList,
+      products: [],
+      pills: []
+    },
+    confidence,
+    debug: {
+      version: "v1.2.75-fix-debug-scope",
+      earlyReturn: true,
+      eventsFound: events.length,
+      formattedEvents: eventList.length
+    }
+  });
   
   return events.length > 0;
 }
@@ -4889,36 +4355,36 @@ async function processEventsEarlyReturn(context) {
 // Helper function to process advice early return
 async function processAdviceEarlyReturn(context) {
   let articles = await findArticles(context.client, { keywords: context.directKeywords, limit: 30, pageContext: context.pageContext });
-    articles = (articles || []).map(normalizeArticle);
-    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+  articles = (articles || []).map(normalizeArticle);
+  const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
   const contentChunks = await findContentChunks(context.client, { keywords: context.directKeywords, limit: 15, articleUrls });
   const pricingAnswer = generatePricingAccommodationAnswer(context.query || "", articles, contentChunks);
   const answerMarkdown = pricingAnswer || generateDirectAnswer(context.query || "", articles, contentChunks);
   
   context.res.status(200).json({
-      ok: true,
-      type: "advice",
-      answer_markdown: answerMarkdown,
-      structured: {
-        intent: "advice",
+    ok: true,
+    type: "advice",
+    answer_markdown: answerMarkdown,
+    structured: {
+      intent: "advice",
       topic: context.directKeywords.join(", "),
-        events: [],
-        products: [],
-        services: [],
-        landing: [],
-        articles: (articles || []).map(a => ({
-          ...a,
-          display_date: (function(){
-            const extracted = extractPublishDate(a);
-            const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-            return extracted || fallback;
-          })()
-        })),
-        pills: []
-      },
-      confidence: 0.90,
-      debug: { version: "v1.2.75-fix-debug-scope", earlyReturn: true }
-    });
+      events: [],
+      products: [],
+      services: [],
+      landing: [],
+      articles: (articles || []).map(a => ({
+        ...a,
+        display_date: (function(){
+          const extracted = extractPublishDate(a);
+          const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+          return extracted || fallback;
+        })()
+      })),
+      pills: []
+    },
+    confidence: 0.90,
+    debug: { version: "v1.2.75-fix-debug-scope", earlyReturn: true }
+  });
   
   return articles.length > 0 || contentChunks.length > 0;
 }
@@ -4946,11 +4412,7 @@ async function handleResidentialEventsShortcut(context) {
   const multiDayEvents = filterMultiDayEvents(formattedEvents);
   
   if (multiDayEvents.length) {
-    // Use quality-based confidence scoring
-    const confidenceContext = initializeConfidenceContext(context.query || "");
-    analyzeDataAttributes(multiDayEvents, null, confidenceContext);
-    // Don't call analyzeResponseContent with empty strings - will be called with actual content later
-    const confidence = finalizeConfidence(context.query || "", confidenceContext);
+    const confidence = calculateEventConfidence(context.query || "", multiDayEvents, null);
     context.res.status(200).json({
       ok: true,
       type: "events",
@@ -5021,33 +4483,33 @@ async function handleEquipmentAdviceSynthesis(context) {
   const contentChunks = await findContentChunks(context.client, { keywords: context.keywords, limit: 20, articleUrls });
   const synthesized = generateEquipmentAdviceResponse(context.qlc, normalizedArticles || [], contentChunks || []);
   
-    if (synthesized) {
+  if (synthesized) {
     context.res.status(200).json({
-        ok: true,
-        type: "advice",
-        answer_markdown: synthesized,
-        structured: {
-          intent: "advice",
+      ok: true,
+      type: "advice",
+      answer_markdown: synthesized,
+      structured: {
+        intent: "advice",
         topic: context.keywords.join(", "),
-          events: [],
-          products: [],
-          services: [],
-          landing: [],
+        events: [],
+        products: [],
+        services: [],
+        landing: [],
         articles: (normalizedArticles || []).map(a => ({
-            ...a,
-            display_date: (function(){
-              const extracted = extractPublishDate(a);
-              const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-              return extracted || fallback;
-            })()
-          })),
-          pills: []
-        },
-        confidence: 0.75,
-        debug: { version: "v1.2.46-followup-equip-extracted", previousQuery: true }
-      });
-      return true;
-    }
+          ...a,
+          display_date: (function(){
+            const extracted = extractPublishDate(a);
+            const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+            return extracted || fallback;
+          })()
+        })),
+        pills: []
+      },
+      confidence: 0.75,
+      debug: { version: "v1.2.46-followup-equip-extracted", previousQuery: true }
+    });
+    return true;
+  }
   return false;
 }
 
@@ -5125,28 +4587,23 @@ async function handleEventsClarification(context) {
   }
 
   const events = await findEvents(context.client, { keywords: context.keywords, limit: 80, pageContext: context.pageContext });
-    const eventList = formatEventsForUi(events);
-  
-  // Use quality-based confidence scoring
-  const confidenceContext = initializeConfidenceContext(context.query || "");
-  analyzeDataAttributes(events, null, confidenceContext);
-  // Don't call analyzeResponseContent with empty strings - will be called with actual content later
-  const confidence = finalizeConfidence(context.query || "", confidenceContext);
+  const eventList = formatEventsForUi(events);
+  const confidence = calculateEventConfidence(context.query || "", eventList, null);
   context.res.status(200).json({
-      ok: true,
-      type: "events",
-      answer: eventList,
-      events: eventList,
-      structured: {
-        intent: "events",
+    ok: true,
+    type: "events",
+    answer: eventList,
+    events: eventList,
+    structured: {
+      intent: "events",
       topic: (context.keywords || []).join(", "),
-        events: eventList,
-        products: [],
-        pills: []
-      },
-      confidence,
-      debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
-    });
+      events: eventList,
+      products: [],
+      pills: []
+    },
+    confidence,
+    debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
+  });
   return true;
 }
 
@@ -5178,34 +4635,34 @@ async function handleClarificationFollowup(context) {
 async function handleAdviceClarification(context) {
   let articles = await findArticles(context.client, { keywords: context.keywords, limit: 30, pageContext: context.pageContext });
   articles = (articles || []).map(normalizeArticle);
-    const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
+  const articleUrls = articles?.map(a => a.page_url || a.source_url).filter(Boolean) || [];
   const contentChunks = await findContentChunks(context.client, { keywords: context.keywords, limit: 15, articleUrls });
   const answerMarkdown = generateDirectAnswer(context.query || "", articles, contentChunks);
   context.res.status(200).json({
-      ok: true,
-      type: "advice",
-      answer_markdown: answerMarkdown,
-      structured: {
-        intent: "advice",
+    ok: true,
+    type: "advice",
+    answer_markdown: answerMarkdown,
+    structured: {
+      intent: "advice",
       topic: (context.keywords || []).join(", "),
-        events: [],
-        products: [],
-        services: [],
-        landing: [],
-        articles: (articles || []).map(a => ({
-          ...a,
-          display_date: (function(){
-            const extracted = extractPublishDate(a);
-            const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
-            return extracted || fallback;
-          })()
-        })),
-        pills: []
-      },
-      confidence: 0.65,
-      debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
-    });
-    return true;
+      events: [],
+      products: [],
+      services: [],
+      landing: [],
+      articles: (articles || []).map(a => ({
+        ...a,
+        display_date: (function(){
+          const extracted = extractPublishDate(a);
+          const fallback = a.last_seen ? new Date(a.last_seen).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+          return extracted || fallback;
+        })()
+      })),
+      pills: []
+    },
+    confidence: 0.65,
+    debug: { version: "v1.2.47-clarification-followup", previousQuery: true }
+  });
+  return true;
 }
 /**
  * Handle residential pricing guard - bypasses clarification for residential workshop pricing queries
@@ -5238,27 +4695,23 @@ async function handleResidentialEventsResponse(context) {
   const residentialEvents = filterResidentialEvents(formattedEvents);
   
   if (residentialEvents.length) {
-    // Use quality-based confidence scoring
-    const confidenceContext = initializeConfidenceContext(context.query || "");
-    analyzeDataAttributes(residentialEvents, null, confidenceContext);
-    // Don't call analyzeResponseContent with empty strings - will be called with actual content later
-    const confidence = finalizeConfidence(context.query || "", confidenceContext);
+    const confidence = calculateEventConfidence(context.query || "", residentialEvents, null);
     context.res.status(200).json({ 
-          ok: true, 
-          type: "events", 
+      ok: true, 
+      type: "events", 
       answer: residentialEvents, 
       events: residentialEvents, 
-          structured: { 
-            intent: "events", 
+      structured: { 
+        intent: "events", 
         topic: directKeywords.join(", "), 
         events: residentialEvents, 
-            products: [], 
-            pills: [] 
-          }, 
+        products: [], 
+        pills: [] 
+      }, 
       confidence, 
-          debug: { version: "v1.2.48-guard-residential", guard: true } 
-        });
-        return true; // Response sent
+      debug: { version: "v1.2.48-guard-residential", guard: true } 
+    });
+    return true; // Response sent
   }
   return false;
 }
@@ -5334,92 +4787,56 @@ function extractDurationCategory(query) {
 // Helper function to handle direct duration routing
 async function handleDirectDurationRouting(context) {
   const eventsDirect = await findEventsByDuration(context.client, context.durationCategory, 120);
-      const eventListDirect = formatEventsForUi(eventsDirect);
-  
-  // Use quality-based confidence scoring
-  const confidenceContext = initializeConfidenceContext(context.query || "");
-  analyzeDataAttributes(eventsDirect, null, confidenceContext);
-  // Don't call analyzeResponseContent with empty strings - will be called with actual content later
-  const confidenceDirect = finalizeConfidence(context.query || "", confidenceContext);
+  const eventListDirect = formatEventsForUi(eventsDirect);
+  const confidenceDirect = calculateEventConfidence(context.query || "", eventListDirect, null);
 
   context.res.status(200).json({
-        ok: true,
-        type: "events",
-        answer: eventListDirect,
+    ok: true,
+    type: "events",
+    answer: eventListDirect,
     answer_markdown: `I found ${eventListDirect.length} ${eventListDirect.length === 1 ? 'event' : 'events'} that match your query. These ${eventListDirect.length === 1 ? 'is' : 'are'} ${context.durationCategory} ${eventListDirect.length === 1 ? 'event' : 'events'} with experienced instruction and hands-on learning opportunities.`,
-        events: eventListDirect,
-        structured: {
-          intent: "events",
+    events: eventListDirect,
+    structured: {
+      intent: "events",
       topic: (context.keywords || []).join(", "),
-          events: eventListDirect,
-          products: [],
-          pills: []
-        },
-        confidence: confidenceDirect,
+      events: eventListDirect,
+      products: [],
+      pills: []
+    },
+    confidence: confidenceDirect,
     debug: { version: "v1.3.20-expanded-classification", debugInfo: { ...(context.debugInfo||{}), routed:"duration_direct", durationCategory: context.durationCategory }, timestamp: new Date().toISOString() }
-      });
-      return true;
-    }
+  });
+  return true;
+}
 
 // Helper function to handle clarification response
 async function handleClarificationResponse(context) {
   const clarification = await generateClarificationQuestion(context.query, context.client, context.pageContext);
-    if (clarification) {
-      const confidencePercent = clarification.confidence || 20;
+  if (clarification) {
+    const confidencePercent = clarification.confidence || 20;
     context.res.status(200).json({
-        ok: true,
-        type: "clarification",
-        answer: clarification.question,
-        answer_markdown: clarification.question,
-        clarification: clarification.question,
-        question: clarification.question,
-        options: clarification.options,
-        confidence: confidencePercent,
+      ok: true,
+      type: "clarification",
+      answer: clarification.question,
+      answer_markdown: clarification.question,
+      clarification: clarification.question,
+      question: clarification.question,
+      options: clarification.options,
+      confidence: confidencePercent,
       debug: { version: "v1.3.20-expanded-classification", intent: context.debugInfo?.intent || "events", timestamp: new Date().toISOString() }
-      });
-      return true;
-    }
-  return false;
+    });
+    return true;
   }
+  return false;
+}
   
 // Helper function to send final events response
 function sendEventsResponse(context) {
-  // Generate the formatted answer
-  const formattedAnswer = generateEventAnswerMarkdown(context.eventList, context.query || "");
-  
-  // Apply quality analysis to recalculate confidence based on new criteria
-  if (context.query && formattedAnswer) {
-    console.log(`🔍 Applying quality analysis to event response for: "${context.query}"`);
-    try {
-      // Initialize quality indicators if they don't exist
-      if (!context.qualityIndicators) {
-        context.qualityIndicators = {
-          hasDirectAnswer: false,
-          hasRelevantEvents: false,
-          hasRelevantArticles: false,
-          hasActionableInfo: false,
-          responseCompleteness: 0,
-          responseAccuracy: 0
-        };
-      }
-      
-      // Analyze the formatted response content
-      analyzeResponseContent(formattedAnswer, [], context);
-      
-      // Recalculate confidence based on quality indicators
-      const newConfidence = finalizeConfidence(context.query, context);
-      console.log(`🎯 Event confidence updated: ${(newConfidence * 100).toFixed(1)}% (was ${(context.confidence * 100).toFixed(1)}%)`);
-      context.confidence = newConfidence;
-    } catch (error) {
-      console.log(`❌ Error in event quality analysis: ${error.message}`);
-    }
-  }
-  
   context.res.status(200).json({
     ok: true,
     type: "events",
-    answer: formattedAnswer,
-    answer_markdown: formattedAnswer,
+    answer: context.eventList,
+    answer_markdown: generateEventAnswerMarkdown(context.eventList, context.query || ""),
     events: context.eventList,
     structured: {
       intent: "events",
@@ -5429,10 +4846,10 @@ function sendEventsResponse(context) {
       pills: []
     },
     confidence: context.confidence,
-        debug: {
-          version: "v1.3.20-expanded-classification",
+    debug: {
+      version: "v1.3.20-expanded-classification",
       debugInfo: context.debugInfo,
-          timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
       queryText: context.query,
       keywords: context.keywords
     }
@@ -5464,7 +4881,7 @@ async function handleEventsPipeline(params) {
   if (!Array.isArray(eventList)) return false;
   
   const confidence = calculateEventConfidence(query || "", eventList, null);
-  const clarificationThreshold = (debugInfo?.intent === 'workshop') ? 0.2 : 0.2; // Temporarily lowered for debugging
+  const clarificationThreshold = (debugInfo?.intent === 'workshop') ? 0.8 : 0.6;
   
   if (confidence < clarificationThreshold) {
     const clarificationHandled = await handleClarificationResponse({
@@ -5542,33 +4959,33 @@ async function gatherPreContent(context) {
 // Helper function to get contact Alan patterns
 function getContactAlanPatterns() {
   return [
-      /cancellation or refund policy for courses/i,
-      /cancellation or refund policy for workshops/i,
-      /how do i book a course or workshop/i,
-      /can the gift voucher be used for any workshop/i,
-      /can the gift voucher be used for any course/i,
-      /how do i know which course or workshop is best/i,
-      /do you do astrophotography workshops/i,
-      /do you get a certificate with the photography course/i,
-      /do i get a certificate with the photography course/i,
+    /cancellation or refund policy for courses/i,
+    /cancellation or refund policy for workshops/i,
+    /how do i book a course or workshop/i,
+    /can the gift voucher be used for any workshop/i,
+    /can the gift voucher be used for any course/i,
+    /how do i know which course or workshop is best/i,
+    /do you do astrophotography workshops/i,
+    /do you get a certificate with the photography course/i,
+    /do i get a certificate with the photography course/i,
     /do you i get a certificate with the photography course/i,
-      /can my.*attend your workshop/i,
-      /can.*year old attend your workshop/i,
-      /how do i subscribe to the free online photography course/i,
-      /how many students per workshop/i,
-      /how many students per class/i,
-      /what gear or equipment do i need to bring to a workshop/i,
-      /what equipment do i need to bring to a workshop/i,
-      /how early should i arrive before a class/i,
-      /how early should i arrive before a workshop/i
-    ];
+    /can my.*attend your workshop/i,
+    /can.*year old attend your workshop/i,
+    /how do i subscribe to the free online photography course/i,
+    /how many students per workshop/i,
+    /how many students per class/i,
+    /what gear or equipment do i need to bring to a workshop/i,
+    /what equipment do i need to bring to a workshop/i,
+    /how early should i arrive before a class/i,
+    /how early should i arrive before a workshop/i
+  ];
 }
 
 // Helper function to check contact Alan patterns
 function checkContactAlanQueryPatterns(query) {
   const patterns = getContactAlanPatterns();
   for (const pattern of patterns) {
-      if (pattern.test(query)) {
+    if (pattern.test(query)) {
       return true;
     }
   }
@@ -5577,77 +4994,77 @@ function checkContactAlanQueryPatterns(query) {
 
 // Helper function to handle contact Alan response
 function handleContactAlanResponse(query, res) {
-        console.log(`📞 Contact Alan query detected in handleDirectAnswerQuery: "${query}"`);
-        res.status(200).json({
-          ok: true,
-          type: 'advice',
-          confidence: 0.8,
-          answer: "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
-          structured: {
-            intent: "contact_required",
-            topic: "contact_alan",
-            events: [],
-            products: [],
-            pills: []
-          },
-          debugInfo: {
-            version: "v1.3.20-contact-alan-fix",
-            intent: "contact_required",
-            classification: "direct_answer",
-            contactAlanQuery: true
-          }
-        });
+  console.log(`📞 Contact Alan query detected in handleDirectAnswerQuery: "${query}"`);
+  res.status(200).json({
+    ok: true,
+    type: 'advice',
+    confidence: 0.8,
+    answer: "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+    structured: {
+      intent: "contact_required",
+      topic: "contact_alan",
+      events: [],
+      products: [],
+      pills: []
+    },
+    debugInfo: {
+      version: "v1.3.20-contact-alan-fix",
+      intent: "contact_required",
+      classification: "direct_answer",
+      contactAlanQuery: true
     }
-    
+  });
+}
+
 // Helper function to handle private lessons response
 function handlePrivateLessonsResponse(query, res) {
-      console.log(`📚 Private lessons query detected in handleDirectAnswerQuery: "${query}"`);
-      
-      const serviceAnswer = getServiceAnswers(query.toLowerCase());
-      if (serviceAnswer) {
-        res.status(200).json({
-          ok: true,
-          type: 'advice',
-          confidence: 0.9,
-          answer: serviceAnswer,
-          structured: {
-            intent: "advice",
-            topic: "private_lessons",
-            events: [],
-            products: [],
-            pills: []
-          },
-          debugInfo: {
-            version: "v1.3.20-private-lessons-fix",
-            intent: "advice",
-            classification: "direct_answer",
-            privateLessonsQuery: true
-          }
-        });
-        return true;
+  console.log(`📚 Private lessons query detected in handleDirectAnswerQuery: "${query}"`);
+  
+  const serviceAnswer = getServiceAnswers(query.toLowerCase());
+  if (serviceAnswer) {
+    res.status(200).json({
+      ok: true,
+      type: 'advice',
+      confidence: 0.9,
+      answer: serviceAnswer,
+      structured: {
+        intent: "advice",
+        topic: "private_lessons",
+        events: [],
+        products: [],
+        pills: []
+      },
+      debugInfo: {
+        version: "v1.3.20-private-lessons-fix",
+        intent: "advice",
+        classification: "direct_answer",
+        privateLessonsQuery: true
       }
+    });
+    return true;
+  }
   return false;
 }
 
 // Helper function to handle RAG response
 function handleRagResponse(ragResult, res) {
-      console.log(`✅ RAG success for direct answer query: confidence=${ragResult.confidence}`);
-      res.status(200).json({
-        ok: true,
-        type: ragResult.type,
-        confidence: ragResult.confidence,
-        answer: ragResult.answer,
-        structured: ragResult.structured,
-        debugInfo: {
-          version: "v1.3.20-rag-direct-answer",
-          intent: "rag_first",
-          classification: "direct_answer",
-          confidence: ragResult.confidence,
-          totalMatches: ragResult.totalMatches,
-          chunksFound: ragResult.chunksFound,
-          entitiesFound: ragResult.entitiesFound
-        }
-      });
+  console.log(`✅ RAG success for direct answer query: confidence=${ragResult.confidence}`);
+  res.status(200).json({
+    ok: true,
+    type: ragResult.type,
+    confidence: ragResult.confidence,
+    answer: ragResult.answer,
+    structured: ragResult.structured,
+    debugInfo: {
+      version: "v1.3.20-rag-direct-answer",
+      intent: "rag_first",
+      classification: "direct_answer",
+      confidence: ragResult.confidence,
+      totalMatches: ragResult.totalMatches,
+      chunksFound: ragResult.chunksFound,
+      entitiesFound: ragResult.entitiesFound
+    }
+  });
 }
 
 // Helper function to handle fallback response
@@ -5662,32 +5079,32 @@ function handleFallbackResponse(context) {
   const pills = generateSmartPills(context.query, { articles: context.articles, services: context.services, events: context.events }, context.classification);
   
   context.res.status(200).json({
-      ok: true,
-      type: "advice",
-      answer_markdown: answer,
-      structured: {
-        intent: "direct_answer",
-        topic: keywords.join(", "),
+    ok: true,
+    type: "advice",
+    answer_markdown: answer,
+    structured: {
+      intent: "direct_answer",
+      topic: keywords.join(", "),
       events: context.events,
-        products: [],
+      products: [],
       services: context.services,
-        landing: [],
+      landing: [],
       articles: context.articles
-      },
-      pills: pills,
-      confidence,
-      debugInfo: { 
-        version: "v1.3.20-expanded-classification", 
-        intent: "direct_answer",
-        ragDebug: {
-          chunksFound: 0,
-          entitiesFound: 0,
-          confidence: 0
-        }, 
+    },
+    pills: pills,
+    confidence,
+    debugInfo: { 
+      version: "v1.3.20-expanded-classification", 
+      intent: "direct_answer",
+      ragDebug: {
+        chunksFound: 0,
+        entitiesFound: 0,
+        confidence: 0
+      }, 
       classification: context.classification.type,
-        timestamp: new Date().toISOString() 
-      }
-    });
+      timestamp: new Date().toISOString() 
+    }
+  });
 }
 
 async function handleDirectAnswerQuery(context) {
@@ -5696,7 +5113,7 @@ async function handleDirectAnswerQuery(context) {
     
     // Handle special query types first
     if (handleSpecialQueryTypes(context, classification)) {
-    return true;
+      return true;
     }
     
     // Try RAG system for direct answers
@@ -5810,7 +5227,7 @@ async function handleClarificationQuery(context) {
 // Helper: Generate evidence-based answer (Low Complexity)
 // Helper function to generate article-based answer
 function generateArticleAnswer(articles) {
-    const bestArticle = articles[0];
+  const bestArticle = articles[0];
   return `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
 }
 
@@ -5832,18 +5249,18 @@ function generateAlanBackgroundAnswer() {
 
 // Helper function to generate service-based answer
 function generateServiceAnswer(query, services) {
-    const bestService = services[0];
+  const bestService = services[0];
   const lc = query.toLowerCase();
   
-    console.log(`🔍 generateEvidenceBasedAnswer: Query "${query}" matched services, testing patterns...`);
-    
-    if (/tripod|equipment|gear|camera|lens/i.test(lc)) {
+  console.log(`🔍 generateEvidenceBasedAnswer: Query "${query}" matched services, testing patterns...`);
+  
+  if (/tripod|equipment|gear|camera|lens/i.test(lc)) {
     return generateEquipmentServiceAnswer(bestService);
-    } else if (/lightroom|photo-?editing/i.test(lc)) {
+  } else if (/lightroom|photo-?editing/i.test(lc)) {
     return generateLightroomServiceAnswer();
-    } else if (/who.*alan|alan.*ranger|background|experience/i.test(lc)) {
+  } else if (/who.*alan|alan.*ranger|background|experience/i.test(lc)) {
     return generateAlanBackgroundAnswer();
-    } else {
+  } else {
     return `Yes, Alan Ranger offers the services you're asking about.\n\n*Learn more: ${bestService.page_url}*`;
   }
 }
@@ -5852,19 +5269,20 @@ function generateServiceAnswer(query, services) {
 function generateFallbackAnswer(query) {
   const lc = query.toLowerCase();
   
-    if (/course|training|learn|teach/i.test(lc)) {
+  if (/course|training|learn|teach/i.test(lc)) {
     return `Alan Ranger offers comprehensive photography courses and training programs. His courses cover:\n\n• Landscape photography workshops\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n\nFor specific course information and availability, please contact Alan directly or visit his website to see the full range of educational offerings.`;
-    } else if (/equipment|gear|camera|lens|tripod/i.test(lc)) {
+  } else if (/equipment|gear|camera|lens|tripod/i.test(lc)) {
     return `Alan Ranger has extensive experience with photography equipment and can provide personalized recommendations based on your specific needs and budget.\n\nFor equipment advice, consider:\n• Booking a consultation\n• Attending a workshop where equipment is demonstrated\n• Contacting Alan directly for personalized recommendations\n\nHe regularly reviews and recommends equipment based on real-world photography experience.`;
-    } else if (/workshop|event|tour/i.test(lc)) {
+  } else if (/workshop|event|tour/i.test(lc)) {
     return `Alan Ranger offers a variety of photography workshops and events throughout the UK. His workshops include:\n\n• Landscape photography in Wales, Devon, Yorkshire\n• Long exposure techniques\n• Photo editing courses\n• Private mentoring sessions\n\nFor current workshop schedules and availability, please visit his website or contact him directly.`;
-    } else {
+  } else {
     return `For specific information about your query, please contact Alan Ranger directly or visit the website for more details.`;
   }
 }
 
 function generateEvidenceBasedAnswer(context) {
   let answer = '';
+  let confidence = 0.8;
   
   if (context.articles.length > 0) {
     answer = generateArticleAnswer(context.articles);
@@ -5875,12 +5293,8 @@ function generateEvidenceBasedAnswer(context) {
     answer = `Here's information about the workshops and events available.\n\n*View details: ${bestEvent.page_url}*`;
   } else {
     answer = generateFallbackAnswer(context.query);
+    confidence = 0.6;
   }
-  
-  // Use quality-based confidence scoring instead of hardcoded values
-  const confidenceContext = initializeConfidenceContext(context.query);
-  analyzeResponseContent(answer, context.articles || [], confidenceContext);
-  const confidence = finalizeConfidence(context.query, confidenceContext);
   
   return { answer, confidence };
 }
@@ -6550,19 +5964,19 @@ function applyConceptQueryAdjustments(context) {
   const url = (context.chunk.url||"").toLowerCase();
   const title = (context.chunk.title||"").toLowerCase();
   const text = (context.chunk.chunk_text||"").toLowerCase();
-        
-        // Boost score for concept-related content
+  
+  // Boost score for concept-related content
   if (context.conceptKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
     context.score += 2.0;
-        }
-        
-        // Penalize workshop/event content for concept queries
+  }
+  
+  // Penalize workshop/event content for concept queries
   if (context.workshopKeywords.some(keyword => url.includes(keyword) || title.includes(keyword) || text.includes(keyword))) {
     context.score -= 1.5;
-        }
-        
-        // Extra penalty for workshop URLs
-        if (url.includes('/photographic-workshops') || url.includes('/photo-workshops') || url.includes('/events/')) {
+  }
+  
+  // Extra penalty for workshop URLs
+  if (url.includes('/photographic-workshops') || url.includes('/photo-workshops') || url.includes('/events/')) {
     context.score -= 2.0;
   }
   
@@ -6577,16 +5991,16 @@ function filterChunkByPrimaryKeyword(chunk, primaryKeyword) {
   const title = (chunk.title||"").toLowerCase();
   const text = (chunk.chunk_text||"").toLowerCase();
   
-      let hasPrimaryStrong = url.includes(primaryKeyword) || title.includes(primaryKeyword) || text.includes(primaryKeyword);
-      
-      // Extra hardening for equipment-style nouns
-      const equipNouns = ["tripod","ball head","ballhead","head","gitzo","benro","manfrotto","sirui"];
-      if (equipNouns.some(n => primaryKeyword.includes(n))) {
-        const slugMatch = [primaryKeyword.replace(/\s+/g,'-'), primaryKeyword.replace(/\s+/g,'')];
-        if (!(hasPrimaryStrong || slugMatch.some(s => url.includes(s) || title.includes(s)))) {
-          return false;
-        }
-      }
+  let hasPrimaryStrong = url.includes(primaryKeyword) || title.includes(primaryKeyword) || text.includes(primaryKeyword);
+  
+  // Extra hardening for equipment-style nouns
+  const equipNouns = ["tripod","ball head","ballhead","head","gitzo","benro","manfrotto","sirui"];
+  if (equipNouns.some(n => primaryKeyword.includes(n))) {
+    const slugMatch = [primaryKeyword.replace(/\s+/g,'-'), primaryKeyword.replace(/\s+/g,'')];
+    if (!(hasPrimaryStrong || slugMatch.some(s => url.includes(s) || title.includes(s)))) {
+      return false;
+    }
+  }
   
   return hasPrimaryStrong && chunk.__score > 0;
 }
@@ -6616,23 +6030,23 @@ async function searchRagEntities(context) {
 
 // Helper function to search for concept guide articles
 async function searchConceptGuideArticles(client, primaryKeyword) {
-    console.log(`🎯 Searching for guide articles for concept query`);
-    const { data: guideArticles, error: guideError } = await client
-      .from('page_entities')
-      .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
-      .ilike('url', `%what-is-${primaryKeyword}%`)
-      .eq('kind', 'article')
-      .limit(5);
-    
-    if (!guideError && guideArticles) {
-      console.log(`🎯 Found ${guideArticles.length} guide articles`);
-      guideArticles.forEach(e => console.log(`  - "${e.title}" (${e.url})`));
-    return guideArticles;
-    }
+  console.log(`🎯 Searching for guide articles for concept query`);
+  const { data: guideArticles, error: guideError } = await client
+    .from('page_entities')
+    .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
+    .ilike('url', `%what-is-${primaryKeyword}%`)
+    .eq('kind', 'article')
+    .limit(5);
   
-  return [];
+  if (!guideError && guideArticles) {
+    console.log(`🎯 Found ${guideArticles.length} guide articles`);
+    guideArticles.forEach(e => console.log(`  - "${e.title}" (${e.url})`));
+    return guideArticles;
   }
   
+  return [];
+}
+
 // Helper function to build search keywords
 function buildSearchKeywords(query, keywords) {
   const searchKeywords = [...keywords];
@@ -6640,8 +6054,8 @@ function buildSearchKeywords(query, keywords) {
     searchKeywords.push('about');
   }
   return searchKeywords;
-  }
-  
+}
+
 // Helper function to search for keyword-based entities
 async function searchKeywordEntities(client, searchKeywords) {
   console.log(`🔍 Searching for all keywords: ${searchKeywords.join(', ')}`);
@@ -6663,8 +6077,8 @@ async function searchKeywordEntities(client, searchKeywords) {
     console.log(`📄 No entities found for keywords`);
     return [];
   }
-  }
-  
+}
+
 // Helper function to search for full query entities
 async function searchFullQueryEntities(client, query) {
   const { data: fullQueryEntities, error: fullQueryEntitiesError } = await client
@@ -6756,53 +6170,26 @@ function filterAndSortEntities(entities, query) {
   return relevantEntities;
 }
     
-// Helper function to calculate confidence based on Alan's quality definitions
+// Helper function to calculate confidence
 function calculateEntityConfidence(relevantEntities, chunks, results) {
-    // Start with low confidence, build up based on actual quality
-    let qualityScore = 0.1;
-    let qualityFactors = [];
-    
-    // Analyze content quality
     if (chunks.length > 0) {
+      results.confidence = Math.min(0.9, 0.6 + (chunks.length * 0.1));
       results.answerType = 'content';
-      // More chunks = higher quality (up to a point)
-      const chunkQuality = Math.min(0.3, chunks.length * 0.05);
-      qualityScore += chunkQuality;
-      qualityFactors.push(`Content chunks: +${(chunkQuality * 100).toFixed(1)}%`);
+      console.log(`📊 Confidence from chunks: ${results.confidence} (${chunks.length} chunks)`);
     }
     
     if (relevantEntities.length > 0) {
       const eventEntities = relevantEntities.filter(e => e.kind === 'event' && e.date_start && new Date(e.date_start) >= new Date());
       if (eventEntities.length > 0) {
+        results.confidence = Math.max(results.confidence, 0.9);
         results.answerType = 'events';
-        // High quality: relevant future events
-        qualityScore += 0.4;
-        qualityFactors.push(`Future events: +40%`);
-        console.log(`🎯 Found ${eventEntities.length} future event entities`);
+        console.log(`🎯 Found ${eventEntities.length} event entities, confidence: ${results.confidence}`);
       } else {
-        // Medium quality: advice entities
-        qualityScore += 0.2;
-        qualityFactors.push(`Advice entities: +20%`);
-        console.log(`🎯 Found ${relevantEntities.length} advice entities`);
+        results.confidence = Math.max(results.confidence, 0.7);
+        console.log(`🎯 Found ${relevantEntities.length} advice entities, confidence: ${results.confidence}`);
       }
     }
     
-    // Apply Alan's quality-based confidence scoring using his requested bands
-    if (qualityScore >= 0.8) {
-      results.confidence = 1.0; // 100% - Perfect
-    } else if (qualityScore >= 0.7) {
-      results.confidence = 0.95; // 95% - Nearly Perfect
-    } else if (qualityScore >= 0.6) {
-      results.confidence = 0.75; // 75% - Very Good
-    } else if (qualityScore >= 0.4) {
-      results.confidence = 0.50; // 50% - Good
-    } else if (qualityScore >= 0.2) {
-      results.confidence = 0.30; // 30% - Poor
-    } else {
-      results.confidence = 0.10; // 10% - Very Poor
-    }
-    
-    console.log(`📊 Alan's Quality-Based Entity Confidence: ${qualityFactors.join(', ')} = ${(results.confidence * 100).toFixed(1)}%`);
     console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
 }
 
@@ -6965,17 +6352,17 @@ async function searchAndProcessRagEntities(context) {
 
 // Helper: Build RAG response structure
 function buildRagResponse(context) {
-    return {
+  return {
     success: context.results.confidence >= 0.3 || context.finalAnswer.length > 0,
-    confidence: context.results.confidence >= 0.3 ? context.results.confidence : 0.1,
+    confidence: context.results.confidence >= 0.3 ? context.results.confidence : 0.6,
     answer: context.finalAnswer,
     type: context.finalType,
     sources: context.finalSources,
-      structured: {
+    structured: {
       intent: context.finalType,
       sources: context.finalSources,
-        events: [],
-        products: [],
+      events: [],
+      products: [],
       articles: context.results.entities || []
     },
     totalMatches: context.results.totalMatches,
@@ -7039,32 +6426,6 @@ async function tryRagFirst(client, query) {
     return contactResponse;
   }
   
-  // Check for service patterns first
-  const serviceResponse = getServiceAnswers(query.toLowerCase());
-  if (serviceResponse) {
-    console.log(`🎯 Service pattern matched for: "${query}"`);
-    return {
-      success: true,
-      confidence: 0.8,
-      answer: serviceResponse,
-      type: "advice",
-      sources: { articles: [] }
-    };
-  }
-  
-  // Check for technical patterns first
-  const technicalResponse = getTechnicalAnswers(query.toLowerCase());
-  if (technicalResponse) {
-    console.log(`🎯 Technical pattern matched for: "${query}"`);
-    return {
-      success: true,
-      confidence: 0.8,
-      answer: technicalResponse,
-      type: "advice",
-      sources: { articles: [] }
-    };
-  }
-  
   try {
     // Prepare query parameters
     const { keywords, lcQuery, isConceptQuery, primaryKeyword } = prepareRagQuery(query);
@@ -7094,23 +6455,18 @@ async function tryRagFirst(client, query) {
 
 // Helper: Process main query (Low Complexity)
 async function processMainQuery(context) {
-  console.log(`🚀 processMainQuery called for: "${context.query}"`);
   const client = supabaseAdmin();
   
   await initializeSession(context);
   
   const classification = await handleQueryClassification(client, context);
-  console.log(`🔍 Classification handled: ${classification.handled}`);
   if (classification.handled) return;
   
   const ragResult = await attemptRagFirst(client, context);
-  console.log(`🔍 RAG result success: ${ragResult.success}`);
   if (ragResult.success) {
-    console.log(`🔍 Calling sendRagSuccessResponse...`);
-    return sendRagSuccessResponse(context.res, ragResult, context);
+    return sendRagSuccessResponse(context.res, ragResult);
   }
   
-  console.log(`🔍 Calling handleRagFallbackWithIntent...`);
   return handleRagFallbackWithIntent(client, context, ragResult);
 }
 
@@ -7162,65 +6518,32 @@ async function attemptRagFirst(client, context) {
   console.log(`📊 RAG Result: success=${ragResult.success}, confidence=${ragResult.confidence}, answerLength=${ragResult.answer?.length || 0}`);
   return ragResult;
 }
-  
+
 // Helper function to send RAG success response
-function sendRagSuccessResponse(res, ragResult, context) {
-    console.log(`✅ RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
-  console.log(`🔍 Context exists: ${!!context}`);
-  console.log(`🔍 Answer exists: ${!!ragResult.answer}`);
-  console.log(`🔍 Context query: ${context?.query}`);
-  console.log(`🔍 Context queryLower: ${context?.queryLower}`);
-  console.log(`🔍 Quality indicators exist: ${!!context?.qualityIndicators}`);
+function sendRagSuccessResponse(res, ragResult) {
+  console.log(`✅ RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
   
-  // Analyze response content for quality indicators
-  console.log(`🔍 RAG SUCCESS RESPONSE - Quality Analysis Check:`);
-  console.log(`🔍 Context exists: ${!!context}`);
-  console.log(`🔍 Answer exists: ${!!ragResult.answer}`);
-  console.log(`🔍 Context query: ${context?.query}`);
-  console.log(`🔍 Context queryLower: ${context?.queryLower}`);
-  console.log(`🔍 Quality indicators exist: ${!!context?.qualityIndicators}`);
-  
-  if (context && ragResult.answer) {
-    console.log(`🔍 Analyzing response for quality indicators...`);
-    try {
-      // Ensure context has queryLower
-      if (!context.queryLower && context.query) {
-        context.queryLower = context.query.toLowerCase();
-      }
-      analyzeResponseContent(ragResult.answer, ragResult.sources?.articles || [], context);
-      // Recalculate confidence based on quality indicators
-      const newConfidence = finalizeConfidence(context.query, context);
-      console.log(`🎯 Quality-based confidence: ${(newConfidence * 100).toFixed(1)}% (was ${(ragResult.confidence * 100).toFixed(1)}%)`);
-      ragResult.confidence = newConfidence;
-    } catch (error) {
-      console.log(`❌ Error in quality analysis: ${error.message}`);
-      console.log(`❌ Error stack: ${error.stack}`);
-    }
-  } else {
-    console.log(`❌ No context or answer for quality analysis`);
-  }
-    
-    return res.status(200).json({
-      ok: true,
-      type: ragResult.type,
-      answer: ragResult.answer,
-      answer_markdown: ragResult.answer,
-      confidence: ragResult.confidence,
+  return res.status(200).json({
+    ok: true,
+    type: ragResult.type,
+    answer: ragResult.answer,
+    answer_markdown: ragResult.answer,
+    confidence: ragResult.confidence,
     sources: ragResult.sources,
     structured: ragResult.structured,
-      debugInfo: {
-        intent: "rag_first",
-        classification: "direct_answer",
-        confidence: ragResult.confidence,
-        totalMatches: ragResult.totalMatches,
-        chunksFound: ragResult.chunksFound,
-        entitiesFound: ragResult.entitiesFound,
-        entityTitles: ragResult.entities?.map(e => e.title) || [],
-        approach: "rag_first_hybrid"
-      }
-    });
-  }
-  
+    debugInfo: {
+      intent: "rag_first",
+      classification: "direct_answer",
+      confidence: ragResult.confidence,
+      totalMatches: ragResult.totalMatches,
+      chunksFound: ragResult.chunksFound,
+      entitiesFound: ragResult.entitiesFound,
+      entityTitles: ragResult.entities?.map(e => e.title) || [],
+      approach: "rag_first_hybrid"
+    }
+  });
+}
+
 // Helper function to handle RAG fallback
 async function handleRagFallbackWithIntent(client, context, ragResult) {
   console.log(`🔄 RAG-First insufficient (${ragResult.confidence} confidence), falling back to existing system`);
@@ -7316,7 +6639,7 @@ async function handleDirectAnswerOrWorkshop(context) {
   
   if (classification.type === 'direct_answer') {
     return await handleDirectAnswerClassification(context);
-    } else if (classification.type === 'workshop') {
+  } else if (classification.type === 'workshop') {
     return await handleWorkshopClassificationWithContext(context);
   }
   
@@ -7490,6 +6813,3 @@ function generateEventAnswerMarkdown(eventList, query) {
   
   return answer;
 }
-
-// Export the handler for Vercel
-module.exports = handler;

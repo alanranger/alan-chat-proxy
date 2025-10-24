@@ -8,69 +8,50 @@ const lines = csvContent.split('\n');
 // Parse the CSV data
 const baselineScores = {};
 
-// Helper function to clean question text
-function cleanQuestionText(question) {
-  question = question.replace(/^"1\. ""/, '').replace(/""- Should.*$/, '').replace(/^"/, '').replace(/"$/, '').trim();
-  
-  if (question.includes('""')) {
-    question = question.split('""')[0];
-  }
-  if (question.includes('')) {
-    question = question.split('')[0];
-  }
-  
-  return question;
-}
-
-// Helper function to extract confidence score from notes
-function extractConfidenceScore(notes) {
-  if (notes.includes('0.2%')) {
-    return 0.2;
-  } else if (notes.includes('should have higher confidence')) {
-    return 85;
-  } else if (notes.includes('confidence')) {
-    const confidenceMatch = notes.match(/(\d+)%/);
-    if (confidenceMatch) {
-      return parseInt(confidenceMatch[1]);
-    }
-  }
-  return 70; // Default
-}
-
-// Helper function to process a single line
-function processLine(line, index) {
-  if (index < 2) return null; // Skip header lines
+lines.forEach((line, index) => {
+  if (index < 2) return; // Skip header lines
   
   const parts = line.split(',');
-  if (parts.length < 4) return null;
-  
-  const question = cleanQuestionText(parts[0].trim());
-  const verdict = parts[1]?.trim();
-  const qualityScore = parseInt(parts[2]?.trim());
-  const notes = parts[3]?.trim();
-  
-  if (!question || !verdict || isNaN(qualityScore)) return null;
-  
-  return {
-    question,
-    confidenceScore: extractConfidenceScore(notes),
-    qualityScore,
-    verdict,
-    notes,
-    timestamp: '2025-10-23T00:00:00.000Z'
-  };
-}
-
-lines.forEach((line, index) => {
-  const result = processLine(line, index);
-  if (result) {
-    baselineScores[result.question] = {
-      confidenceScore: result.confidenceScore,
-      qualityScore: result.qualityScore,
-      verdict: result.verdict,
-      notes: result.notes,
-      timestamp: result.timestamp
-    };
+  if (parts.length >= 4) {
+    let question = parts[0].trim();
+    // Clean up the question text - extract just the question part
+    question = question.replace(/^"1\. ""/, '').replace(/""- Should.*$/, '').replace(/^"/, '').replace(/"$/, '').trim();
+    
+    // Further cleanup to get just the question
+    if (question.includes('""')) {
+      question = question.split('""')[0];
+    }
+    if (question.includes('')) {
+      question = question.split('')[0];
+    }
+    
+    const verdict = parts[1]?.trim();
+    const qualityScore = parseInt(parts[2]?.trim());
+    const notes = parts[3]?.trim();
+    
+    if (question && verdict && !isNaN(qualityScore)) {
+      // Extract confidence score from notes if mentioned
+      let confidenceScore = 70; // Default
+      if (notes.includes('0.2%')) {
+        confidenceScore = 0.2;
+      } else if (notes.includes('should have higher confidence')) {
+        confidenceScore = 85;
+      } else if (notes.includes('confidence')) {
+        // Try to extract confidence from notes
+        const confidenceMatch = notes.match(/(\d+)%/);
+        if (confidenceMatch) {
+          confidenceScore = parseInt(confidenceMatch[1]);
+        }
+      }
+      
+      baselineScores[question] = {
+        confidenceScore: confidenceScore,
+        qualityScore: qualityScore,
+        verdict: verdict,
+        notes: notes,
+        timestamp: '2025-10-23T00:00:00.000Z' // Baseline date
+      };
+    }
   }
 });
 
