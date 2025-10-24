@@ -6869,7 +6869,7 @@ function prepareRagQuery(query) {
   console.log(`🔑 Extracted keywords: ${keywords.join(', ')}`);
   
   const lcQuery = (query || "").toLowerCase();
-  const isConceptQuery = lcQuery.includes('what is') || lcQuery.includes('what are') || lcQuery.includes('explain');
+  const isConceptQuery = false; // TEMPORARILY DISABLED FOR TESTING
   
   // Extract primary keyword for guide article searches
   const allKws = extractKeywords(query).map(k=>k.toLowerCase());
