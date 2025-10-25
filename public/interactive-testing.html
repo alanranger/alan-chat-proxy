@@ -409,38 +409,20 @@
 
             <div class="scoring-section">
                 <div class="score-input">
-                    <label for="confidenceScore">Your Assessment: How confident should the bot be? (0-100):</label>
-                    <input type="number" id="confidenceScore" min="0" max="100" placeholder="e.g., 85">
-                    <small style="color: #666;">Compare this to the bot's actual confidence shown above</small>
-                    <textarea id="confidenceNotes" placeholder="Why did you score the bot's confidence this way? What should it be based on?" style="margin-top: 5px; min-height: 60px;"></textarea>
-                </div>
-                <div class="score-input">
-                    <label for="qualityScore">Initial Response Quality (0-100):</label>
+                    <label for="qualityScore">How good is the bot's initial answer? (0-100):</label>
                     <input type="number" id="qualityScore" min="0" max="100" placeholder="e.g., 100">
-                    <small style="color: #666;">Does the bot's initial answer directly address the question? 100=Perfect direct answer, 50=Partial answer, 0=Wrong/no answer</small>
-                    <textarea id="qualityNotes" placeholder="Why did you score the initial response this way? Was it direct, accurate, helpful?" style="margin-top: 5px; min-height: 60px;"></textarea>
+                    <small style="color: #666;">100=Perfect direct answer, 50=Partial answer, 0=Wrong/no answer</small>
+                    <textarea id="qualityNotes" placeholder="Why did you score the initial answer this way?" style="margin-top: 5px; min-height: 60px;"></textarea>
                 </div>
                 <div class="score-input">
-                    <label for="relevanceScore">Related Information Relevance (0-100):</label>
+                    <label for="relevanceScore">How relevant are the articles/events shown? (0-100):</label>
                     <input type="number" id="relevanceScore" min="0" max="100" placeholder="e.g., 100">
-                    <small style="color: #666;">Are the articles/events/landing pages shown relevant to the question? 100=All relevant, 50=Some relevant, 0=All irrelevant</small>
-                    <textarea id="relevanceNotes" placeholder="Why did you score the related information this way? Were the articles/events relevant to the question?" style="margin-top: 5px; min-height: 60px;"></textarea>
-                </div>
-                <div class="score-input">
-                    <label for="verdict">Your Verdict:</label>
-                    <select id="verdict">
-                        <option value="">Select verdict...</option>
-                        <option value="perfect">Perfect</option>
-                        <option value="nearly perfect">Nearly Perfect</option>
-                        <option value="very good">Very Good</option>
-                        <option value="good">Good</option>
-                        <option value="poor">Poor</option>
-                        <option value="very poor">Very Poor</option>
-                    </select>
+                    <small style="color: #666;">100=All relevant, 50=Some relevant, 0=All irrelevant</small>
+                    <textarea id="relevanceNotes" placeholder="Why did you score the related information this way?" style="margin-top: 5px; min-height: 60px;"></textarea>
                 </div>
                 <div class="score-input">
                     <label for="notes">Overall Notes/Issues:</label>
-                    <textarea id="notes" placeholder="Overall assessment - what issues did you find? What should be improved?"></textarea>
+                    <textarea id="notes" placeholder="What issues did you find? What should be improved?"></textarea>
                 </div>
                 </div>
             
@@ -474,9 +456,7 @@
             <thead>
                 <tr>
                     <th>Question</th>
-                    <th>Verdict</th>
                     <th>Quality Score</th>
-                    <th>Confidence Score</th>
                     <th>Relevance Score</th>
                     <th>Status</th>
                     <th>Notes</th>
@@ -1080,21 +1060,15 @@
             const previousScore = savedScores[questionKey];
             
             if (previousScore) {
-                document.getElementById('confidenceScore').value = previousScore.confidenceScore || '';
                 document.getElementById('qualityScore').value = previousScore.qualityScore || '';
                 document.getElementById('relevanceScore').value = previousScore.relevanceScore || '';
-                document.getElementById('verdict').value = previousScore.verdict || '';
                 document.getElementById('notes').value = previousScore.notes || '';
-                document.getElementById('confidenceNotes').value = previousScore.confidenceNotes || '';
                 document.getElementById('qualityNotes').value = previousScore.qualityNotes || '';
                 document.getElementById('relevanceNotes').value = previousScore.relevanceNotes || '';
             } else {
-                document.getElementById('confidenceScore').value = '';
                 document.getElementById('qualityScore').value = '';
                 document.getElementById('relevanceScore').value = '';
-                document.getElementById('verdict').value = '';
                 document.getElementById('notes').value = '';
-                document.getElementById('confidenceNotes').value = '';
                 document.getElementById('qualityNotes').value = '';
                 document.getElementById('relevanceNotes').value = '';
             }
@@ -1134,16 +1108,13 @@
 
         // Save score and move to next question
         function saveScore() {
-            const confidenceScore = parseInt(document.getElementById('confidenceScore').value);
             const qualityScore = parseInt(document.getElementById('qualityScore').value);
             const relevanceScore = parseInt(document.getElementById('relevanceScore').value);
-            const verdict = document.getElementById('verdict').value;
             const notes = document.getElementById('notes').value;
-            const confidenceNotes = document.getElementById('confidenceNotes').value;
             const qualityNotes = document.getElementById('qualityNotes').value;
             const relevanceNotes = document.getElementById('relevanceNotes').value;
             
-            if (!confidenceScore || !qualityScore || !relevanceScore || !verdict) {
+            if (!qualityScore || !relevanceScore) {
                 alert('Please fill in all required fields');
                 return;
             }
@@ -1153,12 +1124,9 @@
                 question: testQuestions[currentQuestionIndex].question,
                 category: testQuestions[currentQuestionIndex].category,
                 focus: testQuestions[currentQuestionIndex].focus,
-                confidenceScore: confidenceScore,
                 qualityScore: qualityScore,
                 relevanceScore: relevanceScore,
-                verdict: verdict,
                 notes: notes,
-                confidenceNotes: confidenceNotes,
                 qualityNotes: qualityNotes,
                 relevanceNotes: relevanceNotes,
                 timestamp: new Date().toISOString()
@@ -1168,12 +1136,9 @@
             
             // Save to localStorage
             savedScores[testQuestions[currentQuestionIndex].question] = {
-                confidenceScore: confidenceScore,
                 qualityScore: qualityScore,
                 relevanceScore: relevanceScore,
-                verdict: verdict,
                 notes: notes,
-                confidenceNotes: confidenceNotes,
                 qualityNotes: qualityNotes,
                 relevanceNotes: relevanceNotes,
                 timestamp: new Date().toISOString()
@@ -1224,9 +1189,7 @@
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${result.question}</td>
-                    <td>${result.verdict}</td>
                     <td>${result.qualityScore}</td>
-                    <td>${result.confidenceScore}</td>
                     <td>${result.relevanceScore || 'N/A'}</td>
                     <td><span class="status-badge ${result.qualityScore >= 70 ? 'status-pass' : 'status-fail'}">${result.qualityScore >= 70 ? 'Pass' : 'Fail'}</span></td>
                     <td>${result.notes}</td>
@@ -1322,17 +1285,14 @@
 
         // Generate CSV content
         function generateCSV() {
-            const headers = ['Question', 'Category', 'Focus', 'Your Confidence Score', 'Your Quality Score', 'Your Relevance Score', 'Verdict', 'Overall Notes', 'Confidence Notes', 'Quality Notes', 'Relevance Notes', 'Timestamp'];
+            const headers = ['Question', 'Category', 'Focus', 'Quality Score', 'Relevance Score', 'Overall Notes', 'Quality Notes', 'Relevance Notes', 'Timestamp'];
             const rows = testResults.map(result => [
                 `"${result.question}"`,
                 `"${result.category}"`,
                 `"${result.focus}"`,
-                result.confidenceScore,
                 result.qualityScore,
                 result.relevanceScore || 'N/A',
-                `"${result.verdict}"`,
                 `"${result.notes}"`,
-                `"${result.confidenceNotes || ''}"`,
                 `"${result.qualityNotes || ''}"`,
                 `"${result.relevanceNotes || ''}"`,
                 `"${result.timestamp}"`
@@ -1358,25 +1318,19 @@
                         question: values[0].replace(/"/g, ''),
                         category: values[1].replace(/"/g, ''),
                         focus: values[2].replace(/"/g, ''),
-                        confidenceScore: parseInt(values[3]),
-                        qualityScore: parseInt(values[4]),
-                        relevanceScore: parseInt(values[5]) || 0,
-                        verdict: values[6].replace(/"/g, ''),
-                        notes: values[7].replace(/"/g, ''),
-                        confidenceNotes: values[8] ? values[8].replace(/"/g, '') : '',
-                        qualityNotes: values[9] ? values[9].replace(/"/g, '') : '',
-                        relevanceNotes: values[10] ? values[10].replace(/"/g, '') : '',
-                        timestamp: values[11].replace(/"/g, '')
+                        qualityScore: parseInt(values[3]),
+                        relevanceScore: parseInt(values[4]) || 0,
+                        notes: values[5].replace(/"/g, ''),
+                        qualityNotes: values[6] ? values[6].replace(/"/g, '') : '',
+                        relevanceNotes: values[7] ? values[7].replace(/"/g, '') : '',
+                        timestamp: values[8].replace(/"/g, '')
                     };
                     
                     testResults.push(result);
                     savedScores[result.question] = {
-                        confidenceScore: result.confidenceScore,
                         qualityScore: result.qualityScore,
                         relevanceScore: result.relevanceScore,
-                        verdict: result.verdict,
                         notes: result.notes,
-                        confidenceNotes: result.confidenceNotes,
                         qualityNotes: result.qualityNotes,
                         relevanceNotes: result.relevanceNotes,
                         timestamp: result.timestamp
