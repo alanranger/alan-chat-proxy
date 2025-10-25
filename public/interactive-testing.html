@@ -1114,7 +1114,7 @@
             const qualityNotes = document.getElementById('qualityNotes').value;
             const relevanceNotes = document.getElementById('relevanceNotes').value;
             
-            if (!qualityScore || !relevanceScore) {
+            if (isNaN(qualityScore) || isNaN(relevanceScore)) {
                 alert('Please fill in all required fields');
                 return;
             }
