@@ -412,16 +412,19 @@
                     <label for="confidenceScore">Your Assessment: How confident should the bot be? (0-100):</label>
                     <input type="number" id="confidenceScore" min="0" max="100" placeholder="e.g., 85">
                     <small style="color: #666;">Compare this to the bot's actual confidence shown above</small>
+                    <textarea id="confidenceNotes" placeholder="Why did you score the bot's confidence this way? What should it be based on?" style="margin-top: 5px; min-height: 60px;"></textarea>
                 </div>
                 <div class="score-input">
-                    <label for="qualityScore">Your Assessment: How good is the response? (0-100):</label>
+                    <label for="qualityScore">Initial Response Quality (0-100):</label>
                     <input type="number" id="qualityScore" min="0" max="100" placeholder="e.g., 100">
-                    <small style="color: #666;">Rate the overall quality of the bot's response</small>
+                    <small style="color: #666;">Does the bot's initial answer directly address the question? 100=Perfect direct answer, 50=Partial answer, 0=Wrong/no answer</small>
+                    <textarea id="qualityNotes" placeholder="Why did you score the initial response this way? Was it direct, accurate, helpful?" style="margin-top: 5px; min-height: 60px;"></textarea>
                 </div>
                 <div class="score-input">
-                    <label for="relevanceScore">Your Assessment: Are the article, event or landing page blocks/tiles being listed in more information relevant? (0-100):</label>
+                    <label for="relevanceScore">Related Information Relevance (0-100):</label>
                     <input type="number" id="relevanceScore" min="0" max="100" placeholder="e.g., 100">
-                    <small style="color: #666;">Rate the overall quality of the bot's response for additional information tiles</small>
+                    <small style="color: #666;">Are the articles/events/landing pages shown relevant to the question? 100=All relevant, 50=Some relevant, 0=All irrelevant</small>
+                    <textarea id="relevanceNotes" placeholder="Why did you score the related information this way? Were the articles/events relevant to the question?" style="margin-top: 5px; min-height: 60px;"></textarea>
                 </div>
                 <div class="score-input">
                     <label for="verdict">Your Verdict:</label>
@@ -436,8 +439,8 @@
                     </select>
                 </div>
                 <div class="score-input">
-                    <label for="notes">Your Notes/Issues:</label>
-                    <textarea id="notes" placeholder="What issues did you find? What should be improved?"></textarea>
+                    <label for="notes">Overall Notes/Issues:</label>
+                    <textarea id="notes" placeholder="Overall assessment - what issues did you find? What should be improved?"></textarea>
                 </div>
                 </div>
             
@@ -1082,12 +1085,18 @@
                 document.getElementById('relevanceScore').value = previousScore.relevanceScore || '';
                 document.getElementById('verdict').value = previousScore.verdict || '';
                 document.getElementById('notes').value = previousScore.notes || '';
+                document.getElementById('confidenceNotes').value = previousScore.confidenceNotes || '';
+                document.getElementById('qualityNotes').value = previousScore.qualityNotes || '';
+                document.getElementById('relevanceNotes').value = previousScore.relevanceNotes || '';
             } else {
                 document.getElementById('confidenceScore').value = '';
                 document.getElementById('qualityScore').value = '';
                 document.getElementById('relevanceScore').value = '';
                 document.getElementById('verdict').value = '';
                 document.getElementById('notes').value = '';
+                document.getElementById('confidenceNotes').value = '';
+                document.getElementById('qualityNotes').value = '';
+                document.getElementById('relevanceNotes').value = '';
             }
             
             try {
@@ -1130,6 +1139,9 @@
             const relevanceScore = parseInt(document.getElementById('relevanceScore').value);
             const verdict = document.getElementById('verdict').value;
             const notes = document.getElementById('notes').value;
+            const confidenceNotes = document.getElementById('confidenceNotes').value;
+            const qualityNotes = document.getElementById('qualityNotes').value;
+            const relevanceNotes = document.getElementById('relevanceNotes').value;
             
             if (!confidenceScore || !qualityScore || !relevanceScore || !verdict) {
                 alert('Please fill in all required fields');
@@ -1146,6 +1158,9 @@
                 relevanceScore: relevanceScore,
                 verdict: verdict,
                 notes: notes,
+                confidenceNotes: confidenceNotes,
+                qualityNotes: qualityNotes,
+                relevanceNotes: relevanceNotes,
                 timestamp: new Date().toISOString()
             };
 
@@ -1158,6 +1173,9 @@
                 relevanceScore: relevanceScore,
                 verdict: verdict,
                 notes: notes,
+                confidenceNotes: confidenceNotes,
+                qualityNotes: qualityNotes,
+                relevanceNotes: relevanceNotes,
                 timestamp: new Date().toISOString()
             };
             saveScoresToStorage();
@@ -1304,7 +1322,7 @@
 
         // Generate CSV content
         function generateCSV() {
-            const headers = ['Question', 'Category', 'Focus', 'Your Confidence Score', 'Your Quality Score', 'Your Relevance Score', 'Verdict', 'Notes', 'Timestamp'];
+            const headers = ['Question', 'Category', 'Focus', 'Your Confidence Score', 'Your Quality Score', 'Your Relevance Score', 'Verdict', 'Overall Notes', 'Confidence Notes', 'Quality Notes', 'Relevance Notes', 'Timestamp'];
             const rows = testResults.map(result => [
                 `"${result.question}"`,
                 `"${result.category}"`,
@@ -1314,6 +1332,9 @@
                 result.relevanceScore || 'N/A',
                 `"${result.verdict}"`,
                 `"${result.notes}"`,
+                `"${result.confidenceNotes || ''}"`,
+                `"${result.qualityNotes || ''}"`,
+                `"${result.relevanceNotes || ''}"`,
                 `"${result.timestamp}"`
             ]);
             
@@ -1342,7 +1363,10 @@
                         relevanceScore: parseInt(values[5]) || 0,
                         verdict: values[6].replace(/"/g, ''),
                         notes: values[7].replace(/"/g, ''),
-                        timestamp: values[8].replace(/"/g, '')
+                        confidenceNotes: values[8] ? values[8].replace(/"/g, '') : '',
+                        qualityNotes: values[9] ? values[9].replace(/"/g, '') : '',
+                        relevanceNotes: values[10] ? values[10].replace(/"/g, '') : '',
+                        timestamp: values[11].replace(/"/g, '')
                     };
                     
                     testResults.push(result);
@@ -1352,6 +1376,9 @@
                         relevanceScore: result.relevanceScore,
                         verdict: result.verdict,
                         notes: result.notes,
+                        confidenceNotes: result.confidenceNotes,
+                        qualityNotes: result.qualityNotes,
+                        relevanceNotes: result.relevanceNotes,
                         timestamp: result.timestamp
                     };
                 }
