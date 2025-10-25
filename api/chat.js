@@ -6769,59 +6769,40 @@ function generateTechnicalDirectAnswer(query, chunks) {
     return null;
   }
   
-  // Generate direct answer based on concept
-  const directAnswer = createDirectAnswer(concepts[0], chunks);
+  // Use existing generateDirectAnswer for all technical questions
+  const directAnswer = generateDirectAnswer(query, entities, chunks);
   return directAnswer;
 }
 
-// Helper function to extract technical concepts
+// Helper function to extract technical concepts - GENERIC approach
 function extractTechnicalConcepts(query) {
+  // Original concept mapping system that was working
   const conceptMap = {
-    'exposure': 'exposure',
-    'iso': 'iso',
-    'aperture': 'aperture',
-    'shutter': 'shutter speed',
-    'white balance': 'white balance',
-    'histogram': 'histogram',
-    'composition': 'composition',
-    'depth of field': 'depth of field',
-    'raw': 'raw format'
+    "iso": ["iso", "sensitivity", "film speed"],
+    "aperture": ["aperture", "f-stop", "f/", "depth of field"],
+    "shutter": ["shutter", "shutter speed", "exposure time"],
+    "exposure": ["exposure", "exposure triangle", "light"],
+    "metering": ["metering", "light meter", "exposure meter"],
+    "white balance": ["white balance", "color temperature", "wb"],
+    "focus": ["focus", "autofocus", "manual focus", "sharpness"],
+    "composition": ["composition", "rule of thirds", "framing"],
+    "lighting": ["lighting", "natural light", "artificial light", "flash"]
   };
   
-  const concepts = [];
-  for (const [key, value] of Object.entries(conceptMap)) {
-    if (query.includes(key)) {
-      concepts.push(value);
+  const lcQuery = query.toLowerCase();
+  
+  // Check for specific technical concepts
+  for (const [concept, keywords] of Object.entries(conceptMap)) {
+    for (const keyword of keywords) {
+      if (lcQuery.includes(keyword)) {
+        return [concept];
+      }
     }
   }
   
-  return concepts;
+  return [];
 }
 
-// Helper function to create direct answers
-function createDirectAnswer(concept, chunks) {
-  const conceptAnswers = {
-    'exposure': 'Exposure in photography refers to the amount of light that reaches your camera\'s sensor when you take a photo. It\'s controlled by three main settings: aperture (how wide the lens opening is), shutter speed (how long the sensor is exposed to light), and ISO (the sensor\'s sensitivity to light). Getting the right exposure means balancing these three settings so your photo isn\'t too dark (underexposed) or too bright (overexposed).',
-    
-    'iso': 'ISO in photography refers to your camera sensor\'s sensitivity to light. Lower ISO values (like 100-400) mean less sensitivity and produce cleaner images with less noise, but require more light. Higher ISO values (like 1600-6400) make the sensor more sensitive to light, allowing you to shoot in darker conditions, but can introduce grain or noise. The key is finding the right balance for your lighting conditions.',
-    
-    'aperture': 'Aperture refers to the opening in your camera lens that controls how much light enters the camera. It\'s measured in f-stops (like f/2.8, f/5.6, f/11). A wider aperture (lower f-number like f/2.8) lets in more light and creates a shallow depth of field (blurred background). A smaller aperture (higher f-number like f/11) lets in less light but creates a deeper depth of field (more of the image in focus).',
-    
-    'shutter speed': 'Shutter speed is how long your camera\'s sensor is exposed to light when taking a photo. It\'s measured in fractions of a second (like 1/60, 1/250, 1/1000). Faster shutter speeds (like 1/1000) freeze motion and let in less light. Slower shutter speeds (like 1/30) let in more light but can create motion blur. The right shutter speed depends on your subject and lighting conditions.',
-    
-    'white balance': 'White balance is a camera setting that ensures colors in your photos look natural under different lighting conditions. Different light sources (sunlight, fluorescent, tungsten) have different color temperatures. White balance adjusts your camera to compensate for these color differences so whites appear white and colors look accurate. You can set it manually or use auto white balance.',
-    
-    'histogram': 'A histogram is a graph that shows the distribution of tones in your image, from pure black (left) to pure white (right). It helps you evaluate exposure - a good histogram typically has data spread across the graph without clipping at either end. Learning to read histograms helps you achieve proper exposure and understand the tonal range of your images.',
-    
-    'composition': 'Composition in photography is how you arrange elements within your frame to create visually appealing images. Key principles include the rule of thirds (placing subjects on imaginary grid lines), leading lines (using lines to guide the viewer\'s eye), framing (using elements to frame your subject), and balance (distributing visual weight). Good composition can make even simple subjects look compelling.',
-    
-    'depth of field': 'Depth of field refers to how much of your image is in sharp focus. A shallow depth of field (blurred background) is created by wide apertures (low f-numbers like f/2.8) and is great for portraits. A deep depth of field (everything in focus) is created by small apertures (high f-numbers like f/11) and is ideal for landscapes. The distance between you and your subject also affects depth of field.',
-    
-    'raw format': 'RAW format is an uncompressed image file that contains all the data captured by your camera sensor. Unlike JPEG files, RAW files aren\'t processed by the camera, giving you complete control over editing. RAW files are larger but offer much more flexibility for adjusting exposure, white balance, and other settings in post-processing. Most professional photographers shoot in RAW for maximum editing potential.'
-  };
-  
-  return conceptAnswers[concept] || null;
-}
 
 // Helper function to format responses with length limits and concise formatting
 function formatResponse(answer, maxLength = 500) {
@@ -7018,7 +6999,7 @@ function prepareRagQuery(query) {
   console.log(`ðŸ”‘ Extracted keywords: ${keywords.join(', ')}`);
   
   const lcQuery = (query || "").toLowerCase();
-  const isConceptQuery = false; // TEMPORARILY DISABLED FOR TESTING
+  const isConceptQuery = lcQuery.includes('what is') || lcQuery.includes('how do i') || lcQuery.includes('why are') || lcQuery.includes('when should');
   
   // Extract primary keyword for guide article searches
   const allKws = extractKeywords(query).map(k=>k.toLowerCase());

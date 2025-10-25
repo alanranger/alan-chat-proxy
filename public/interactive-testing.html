@@ -419,6 +419,11 @@
                     <small style="color: #666;">Rate the overall quality of the bot's response</small>
                 </div>
                 <div class="score-input">
+                    <label for="relevanceScore">Your Assessment: Are the article, event or landing page blocks/tiles being listed in more information relevant? (0-100):</label>
+                    <input type="number" id="relevanceScore" min="0" max="100" placeholder="e.g., 100">
+                    <small style="color: #666;">Rate the overall quality of the bot's response for additional information tiles</small>
+                </div>
+                <div class="score-input">
                     <label for="verdict">Your Verdict:</label>
                     <select id="verdict">
                         <option value="">Select verdict...</option>
@@ -469,6 +474,7 @@
                     <th>Verdict</th>
                     <th>Quality Score</th>
                     <th>Confidence Score</th>
+                    <th>Relevance Score</th>
                     <th>Status</th>
                     <th>Notes</th>
                 </tr>
@@ -1073,11 +1079,13 @@
             if (previousScore) {
                 document.getElementById('confidenceScore').value = previousScore.confidenceScore || '';
                 document.getElementById('qualityScore').value = previousScore.qualityScore || '';
+                document.getElementById('relevanceScore').value = previousScore.relevanceScore || '';
                 document.getElementById('verdict').value = previousScore.verdict || '';
                 document.getElementById('notes').value = previousScore.notes || '';
             } else {
                 document.getElementById('confidenceScore').value = '';
                 document.getElementById('qualityScore').value = '';
+                document.getElementById('relevanceScore').value = '';
                 document.getElementById('verdict').value = '';
                 document.getElementById('notes').value = '';
             }
@@ -1119,10 +1127,11 @@
         function saveScore() {
             const confidenceScore = parseInt(document.getElementById('confidenceScore').value);
             const qualityScore = parseInt(document.getElementById('qualityScore').value);
+            const relevanceScore = parseInt(document.getElementById('relevanceScore').value);
             const verdict = document.getElementById('verdict').value;
             const notes = document.getElementById('notes').value;
             
-            if (!confidenceScore || !qualityScore || !verdict) {
+            if (!confidenceScore || !qualityScore || !relevanceScore || !verdict) {
                 alert('Please fill in all required fields');
                 return;
             }
@@ -1134,6 +1143,7 @@
                 focus: testQuestions[currentQuestionIndex].focus,
                 confidenceScore: confidenceScore,
                 qualityScore: qualityScore,
+                relevanceScore: relevanceScore,
                 verdict: verdict,
                 notes: notes,
                 timestamp: new Date().toISOString()
@@ -1145,6 +1155,7 @@
             savedScores[testQuestions[currentQuestionIndex].question] = {
                 confidenceScore: confidenceScore,
                 qualityScore: qualityScore,
+                relevanceScore: relevanceScore,
                 verdict: verdict,
                 notes: notes,
                 timestamp: new Date().toISOString()
@@ -1198,6 +1209,7 @@
                     <td>${result.verdict}</td>
                     <td>${result.qualityScore}</td>
                     <td>${result.confidenceScore}</td>
+                    <td>${result.relevanceScore || 'N/A'}</td>
                     <td><span class="status-badge ${result.qualityScore >= 70 ? 'status-pass' : 'status-fail'}">${result.qualityScore >= 70 ? 'Pass' : 'Fail'}</span></td>
                     <td>${result.notes}</td>
                 `;
@@ -1292,13 +1304,14 @@
 
         // Generate CSV content
         function generateCSV() {
-            const headers = ['Question', 'Category', 'Focus', 'Your Confidence Score', 'Your Quality Score', 'Verdict', 'Notes', 'Timestamp'];
+            const headers = ['Question', 'Category', 'Focus', 'Your Confidence Score', 'Your Quality Score', 'Your Relevance Score', 'Verdict', 'Notes', 'Timestamp'];
             const rows = testResults.map(result => [
                 `"${result.question}"`,
                 `"${result.category}"`,
                 `"${result.focus}"`,
                 result.confidenceScore,
                 result.qualityScore,
+                result.relevanceScore || 'N/A',
                 `"${result.verdict}"`,
                 `"${result.notes}"`,
                 `"${result.timestamp}"`
@@ -1326,15 +1339,17 @@
                         focus: values[2].replace(/"/g, ''),
                         confidenceScore: parseInt(values[3]),
                         qualityScore: parseInt(values[4]),
-                        verdict: values[5].replace(/"/g, ''),
-                        notes: values[6].replace(/"/g, ''),
-                        timestamp: values[7].replace(/"/g, '')
+                        relevanceScore: parseInt(values[5]) || 0,
+                        verdict: values[6].replace(/"/g, ''),
+                        notes: values[7].replace(/"/g, ''),
+                        timestamp: values[8].replace(/"/g, '')
                     };
                     
                     testResults.push(result);
                     savedScores[result.question] = {
                         confidenceScore: result.confidenceScore,
                         qualityScore: result.qualityScore,
+                        relevanceScore: result.relevanceScore,
                         verdict: result.verdict,
                         notes: result.notes,
                         timestamp: result.timestamp
