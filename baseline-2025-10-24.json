@@ -1,0 +1,257 @@
+{
+  "timestamp": "2025-10-24T22:44:42.482Z",
+  "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
+  "tests": [
+    {
+      "query": "What is your refund and cancellation policy?",
+      "timestamp": "2025-10-24T22:44:44.717Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.51,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": "**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated. For full details, visit the [Terms and Conditions page](https://www.alanranger.com/terms-and-conditions).",
+        "debug": null
+      }
+    },
+    {
+      "query": "When is the next Lightroom course in Coventry?",
+      "timestamp": "2025-10-24T22:44:46.837Z",
+      "response": {
+        "type": "events",
+        "confidence": 0.96,
+        "hasEvents": true,
+        "eventsCount": 6,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": "I found 6 events that match your query. The next Devon workshop is \"Lightroom Classic Photo Editing Classes -Week 1 of 3 - 4-11\" on Tuesday, 4 November 2025 in Coventry. These workshops are located in Coventry. These include workshops in various locations with different skill levels and dates.",
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "debugInfo": {
+            "bypassReason": "workshop_query"
+          },
+          "timestamp": "2025-10-24T22:44:48.163Z",
+          "queryText": "When is the next Lightroom course in Coventry?",
+          "keywords": [
+            "coventry",
+            "lightroom",
+            "next",
+            "course"
+          ]
+        }
+      }
+    },
+    {
+      "query": "Do you still run Lake District photography workshops?",
+      "timestamp": "2025-10-24T22:44:48.493Z",
+      "response": {
+        "type": "events",
+        "confidence": 0.96,
+        "hasEvents": true,
+        "eventsCount": 4,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": "I found 4 events that match your query. These include workshops in various locations with different skill levels and dates.",
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "debugInfo": {
+            "bypassReason": "workshop_query"
+          },
+          "timestamp": "2025-10-24T22:44:50.050Z",
+          "queryText": "Do you still run Lake District photography workshops?",
+          "keywords": [
+            "lake district",
+            "still",
+            "lake",
+            "district",
+            "photography",
+            "workshops"
+          ]
+        }
+      }
+    },
+    {
+      "query": "How much is the Lightroom beginners course?",
+      "timestamp": "2025-10-24T22:44:50.842Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.31,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": true,
+        "articlesCount": 25,
+        "answer": "Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n04 WHAT IS ISO IN PHOTOGRAPHY: A GUIDE FOR BEGINNERS.\n\n*For detailed information, read the full guide: https://www.alanranger.com/blog-on-photography/what-is-iso-in-photography*",
+        "debug": null
+      }
+    },
+    {
+      "query": "Can I book a 1-to-1 mentoring session with Alan?",
+      "timestamp": "2025-10-24T22:44:52.204Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.51,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": "**Private Lessons & Mentoring**: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit [Private Lessons](https://www.alanranger.com/private-photography-lessons) for details.\n\n",
+        "debug": null
+      }
+    },
+    {
+      "query": "Do you have tips for composition or leading lines?",
+      "timestamp": "2025-10-24T22:44:53.706Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.76,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": "Great composition is about leading the viewer's eye through your image. Key techniques include the rule of thirds, leading lines, framing, and creating visual balance. The goal is to tell a story or convey emotion through your arrangement of elements.\n\n",
+        "debug": null
+      }
+    },
+    {
+      "query": "Show me an article about the exposure triangle.",
+      "timestamp": "2025-10-24T22:44:55.049Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.51,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": "**The Exposure Triangle** consists of three key settings:\n- **Aperture** (f-stop): Controls depth of field and light\n- **Shutter Speed**: Controls motion blur and light\n- **ISO**: Controls sensor sensitivity and light\n\nBalancing these three creates proper exposure.\n\n",
+        "debug": null
+      }
+    },
+    {
+      "query": "How do I set ISO manually on my camera?",
+      "timestamp": "2025-10-24T22:44:56.410Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.31,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": "**Equipment Recommendations**: Based on Alan's extensive experience with photography equipment, he recommends checking out his detailed equipment guides. He has comprehensive reviews and recommendations for different types of photography and budgets. [View Equipment Guides](https://www.alanranger.com/photography-equipment-recommendations)\n\n",
+        "debug": null
+      }
+    },
+    {
+      "query": "What's the difference between aperture and shutter speed?",
+      "timestamp": "2025-10-24T22:44:58.848Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.76,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": true,
+        "articlesCount": 4,
+        "answer": "The simple facts are that the human eye and the camera operate very differently so it's actually hard to come up with a definitive comparison that simplifies all that biology vs technology stuff. On top of that, Googling for answers also produces a myriad of opinions, explanations and answers that vary considerably. So in simple terms and for the purposes of teaching beginners and for use in this blog post I will use the following conversions that seem to be broadly agreed upon by the people in...",
+        "debug": null
+      }
+    },
+    {
+      "query": "When is the best time of day for landscape photography?",
+      "timestamp": "2025-10-24T22:45:01.150Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.11000000000000001,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": true,
+        "articlesCount": 25,
+        "answer": "Based on Alan Ranger's expertise, here's what you need to know about your question.\n\nFIVE CREATIVE AUTUMN PHOTOGRAPHY PROJECTS: TO INSPIRE YOU\n\n*For detailed information, read the full guide: https://www.alanranger.com/blog-on-photography/five-creative-autumn-photography-projects*",
+        "debug": null
+      }
+    },
+    {
+      "query": "Where do your workshops meet and start from?",
+      "timestamp": "2025-10-24T22:45:02.646Z",
+      "response": {
+        "type": "events",
+        "confidence": 0.96,
+        "hasEvents": true,
+        "eventsCount": 10,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": "I found 10 events that match your query. These include workshops in various locations with different skill levels and dates.",
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "debugInfo": {
+            "bypassReason": "workshop_query"
+          },
+          "timestamp": "2025-10-24T22:45:04.205Z",
+          "queryText": "Where do your workshops meet and start from?",
+          "keywords": [
+            "workshops",
+            "meet",
+            "start",
+            "from"
+          ]
+        }
+      }
+    },
+    {
+      "query": "Do you provide transport or accommodation?",
+      "timestamp": "2025-10-24T22:45:04.842Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.51,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "debug": null
+      }
+    },
+    {
+      "query": "How do I join the Photography Academy?",
+      "timestamp": "2025-10-24T22:45:07.016Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.76,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": true,
+        "articlesCount": 25,
+        "answer": "Practical On-Location Tuition Workshops provide hands-on, practical tuition in real-life conditions. You will learn how to navigate various lighting and weather scenarios, compose compelling shots, and overcome challenges specific to landscape photography. With personalised one-on-one guidance, you can receive tailored instruction based on your level of expertise and individual goals. 2.",
+        "debug": null
+      }
+    },
+    {
+      "query": "How do module exams and certificates work?",
+      "timestamp": "2025-10-24T22:45:09.456Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.76,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": true,
+        "articlesCount": 14,
+        "answer": "Alan's photography courses focus on practical learning and skill development. While formal certificates aren't typically provided, you'll gain valuable hands-on experience and knowledge that's much more valuable than a piece of paper.",
+        "debug": null
+      }
+    },
+    {
+      "query": "Who is Alan Ranger?",
+      "timestamp": "2025-10-24T22:45:11.482Z",
+      "response": {
+        "type": "advice",
+        "confidence": 0.76,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": true,
+        "articlesCount": 13,
+        "answer": "**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of experience. He is a qualified Associate of the British Institute of Professional Photographers (BIPP) and holds ARPS (Associate of the Royal Photographic Society) distinctions. Alan offers personalised photography courses and workshops tailored to all skill levels, spanning various genres from portraits to landscape and black and white photography. He has led over 30 educational lectures at the Xposure International Photography Festival in UAE and has won multiple awards including Landscape Photographer of the Year (7 awards) and International Landscape Photographer of the Year. [Learn more about Alan](https://www.alanranger.com/about-alan-ranger)\n\n",
+        "debug": null
+      }
+    }
+  ]
+}

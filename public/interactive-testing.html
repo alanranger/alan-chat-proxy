@@ -1114,11 +1114,14 @@
             const qualityNotes = document.getElementById('qualityNotes').value;
             const relevanceNotes = document.getElementById('relevanceNotes').value;
             
-            console.log('Quality Score:', qualityScore, 'Relevance Score:', relevanceScore);
-            console.log('Quality Notes:', qualityNotes, 'Relevance Notes:', relevanceNotes);
+            // Check if scores are valid numbers between 0-100
+            if (isNaN(qualityScore) || qualityScore < 0 || qualityScore > 100) {
+                alert('Please enter a valid quality score (0-100)');
+                return;
+            }
             
-            if (isNaN(qualityScore) || isNaN(relevanceScore)) {
-                alert('Please fill in all required fields. Quality: ' + qualityScore + ', Relevance: ' + relevanceScore);
+            if (isNaN(relevanceScore) || relevanceScore < 0 || relevanceScore > 100) {
+                alert('Please enter a valid relevance score (0-100)');
                 return;
             }
 

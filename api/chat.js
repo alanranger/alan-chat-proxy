@@ -6770,7 +6770,7 @@ function generateTechnicalDirectAnswer(query, chunks) {
   }
   
   // Use existing generateDirectAnswer for all technical questions
-  const directAnswer = generateDirectAnswer(query, entities, chunks);
+  const directAnswer = generateDirectAnswer(query, [], chunks);
   return directAnswer;
 }
 
