@@ -1114,8 +1114,11 @@
             const qualityNotes = document.getElementById('qualityNotes').value;
             const relevanceNotes = document.getElementById('relevanceNotes').value;
             
+            console.log('Quality Score:', qualityScore, 'Relevance Score:', relevanceScore);
+            console.log('Quality Notes:', qualityNotes, 'Relevance Notes:', relevanceNotes);
+            
             if (isNaN(qualityScore) || isNaN(relevanceScore)) {
-                alert('Please fill in all required fields');
+                alert('Please fill in all required fields. Quality: ' + qualityScore + ', Relevance: ' + relevanceScore);
                 return;
             }
 
