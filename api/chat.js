@@ -1,4 +1,4 @@
-// /api/chat.js
+﻿// /api/chat.js
 // FIX: 2025-10-06 04:15 - Fixed fitness level extraction from description field
 // This extracts fitness level information from product chunks description field
 // Now parses patterns like "Fitness: 1. Easy" and "Experience - Level: Beginner"
@@ -161,37 +161,37 @@ function isEquipmentAdviceQuery(query) {
   const hasEquipment = equipmentKeywords.some(keyword => query.includes(keyword));
   const hasAdvice = adviceKeywords.some(keyword => query.includes(keyword));
   
-  console.log(`🔧 isEquipmentAdviceQuery: query="${query}", hasEquipment=${hasEquipment}, hasAdvice=${hasAdvice}`);
+  console.log(`ðŸ”§ isEquipmentAdviceQuery: query="${query}", hasEquipment=${hasEquipment}, hasAdvice=${hasAdvice}`);
   
   return hasEquipment && hasAdvice;
 }
 
 // Enhanced equipment advice response generator
 function generateEquipmentAdviceResponse(query, articles, contentChunks) {
-  console.log(`🔧 generateEquipmentAdviceResponse: Processing equipment advice query="${query}"`);
-  console.log(`🔧 generateEquipmentAdviceResponse: Articles available=${articles.length}`);
+  console.log(`ðŸ”§ generateEquipmentAdviceResponse: Processing equipment advice query="${query}"`);
+  console.log(`ðŸ”§ generateEquipmentAdviceResponse: Articles available=${articles.length}`);
   
   // Extract equipment type from query
   const equipmentType = extractEquipmentType(query);
-  console.log(`🔧 generateEquipmentAdviceResponse: Equipment type="${equipmentType}"`);
+  console.log(`ðŸ”§ generateEquipmentAdviceResponse: Equipment type="${equipmentType}"`);
   
   // Find relevant articles for this equipment type
   const relevantArticles = findRelevantEquipmentArticles(equipmentType, articles);
-  console.log(`🔧 generateEquipmentAdviceResponse: Found ${relevantArticles.length} relevant articles`);
+  console.log(`ðŸ”§ generateEquipmentAdviceResponse: Found ${relevantArticles.length} relevant articles`);
   
   // If no relevant articles found, return a basic response
   if (relevantArticles.length === 0) {
-    console.log(`🔧 generateEquipmentAdviceResponse: No relevant articles found, returning basic response`);
+    console.log(`ðŸ”§ generateEquipmentAdviceResponse: No relevant articles found, returning basic response`);
     return generateBasicEquipmentAdvice(equipmentType);
   }
   
   // Extract key considerations from articles
   const keyConsiderations = extractKeyConsiderations(relevantArticles, contentChunks);
-  console.log(`🔧 generateEquipmentAdviceResponse: Key considerations=${JSON.stringify(keyConsiderations)}`);
+  console.log(`ðŸ”§ generateEquipmentAdviceResponse: Key considerations=${JSON.stringify(keyConsiderations)}`);
   
   // Generate synthesized response
   const response = synthesizeEquipmentAdvice(equipmentType, keyConsiderations, relevantArticles);
-  console.log(`🔧 generateEquipmentAdviceResponse: Generated response="${response.substring(0, 200)}..."`);
+  console.log(`ðŸ”§ generateEquipmentAdviceResponse: Generated response="${response.substring(0, 200)}..."`);
   
   return response;
 }
@@ -638,12 +638,12 @@ function extractAnswerFromArticleDescription(relevantArticle, query = '') {
       if (relevantArticle.description && relevantArticle.description.length > 50) {
         // Filter out irrelevant content based on query intent
         if (!filterRelevantContent(relevantArticle.description, query)) {
-          console.log(`🔍 Filtered out irrelevant content from article: "${relevantArticle.title}"`);
+          console.log(`ðŸ” Filtered out irrelevant content from article: "${relevantArticle.title}"`);
           return null;
         }
         
         const cleanDescription = cleanResponseText(relevantArticle.description);
-        console.log(`🔍 generateDirectAnswer: Using article description="${cleanDescription.substring(0, 200)}..."`);
+        console.log(`ðŸ” generateDirectAnswer: Using article description="${cleanDescription.substring(0, 200)}..."`);
         return formatResponseMarkdown({
           title: relevantArticle.title || 'Article Information',
           url: relevantArticle.page_url || relevantArticle.url,
@@ -657,7 +657,7 @@ function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
   const faqData = getFaqData(relevantArticle);
   if (!faqData) return null;
   
-        console.log(`🔍 generateDirectAnswer: Article has JSON-LD FAQ data`);
+        console.log(`ðŸ” generateDirectAnswer: Article has JSON-LD FAQ data`);
       
   const primaryQuestion = findPrimaryQuestion(faqData.mainEntity, exactTerm);
   if (!primaryQuestion) return null;
@@ -665,7 +665,7 @@ function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
   const answerText = extractAndCleanAnswer(primaryQuestion);
   if (!answerText || answerText.length <= 50) return null;
   
-  console.log(`🔍 generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
+  console.log(`ðŸ” generateDirectAnswer: Extracted FAQ answer="${answerText.substring(0, 200)}..."`);
   return formatResponseMarkdown({
     title: relevantArticle.title || 'FAQ Information',
     url: relevantArticle.page_url || relevantArticle.url,
@@ -815,7 +815,7 @@ function findRelevantChunk(exactTerm, contentChunks, queryWords) {
   const scoredChunks = scoreChunks(candidateChunks, queryWords, exactTerm);
   const relevantChunk = (scoredChunks.length ? scoredChunks[0].chunk : null);
   
-  console.log(`🔍 generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
+  console.log(`ðŸ” generateDirectAnswer: Found relevantChunk=${!!relevantChunk}`);
   return relevantChunk;
 }
   
@@ -836,13 +836,13 @@ function extractAnswerFromText(context) {
   if (fitnessAnswer) return fitnessAnswer;
   
   // Look for concept relationship explanations
-  console.log(`🔍 DEBUG: Trying concept explanation for query="${context.query}"`);
+  console.log(`ðŸ” DEBUG: Trying concept explanation for query="${context.query}"`);
   const conceptAnswer = extractConceptExplanation(context);
   if (conceptAnswer) {
-    console.log(`✅ DEBUG: Found concept answer: "${conceptAnswer.substring(0, 100)}..."`);
+    console.log(`âœ… DEBUG: Found concept answer: "${conceptAnswer.substring(0, 100)}..."`);
     return conceptAnswer;
   } else {
-    console.log(`⚠️ DEBUG: No concept answer found`);
+    console.log(`âš ï¸ DEBUG: No concept answer found`);
   }
   
   // Look for definitional sentences
@@ -966,12 +966,12 @@ function extractFitnessLevelAnswer(query, chunkText, relevantChunk) {
   const lc = query.toLowerCase();
   if (!lc.includes('fitness') && !lc.includes('level')) return null;
   
-      console.log(`🔍 generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
+      console.log(`ðŸ” generateDirectAnswer: Looking for fitness level in chunk text="${chunkText.substring(0, 300)}..."`);
       
   // Try pattern matching first
   const fitnessLevel = findFitnessLevelByPatterns(chunkText);
   if (fitnessLevel) {
-    console.log(`🔍 generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
+    console.log(`ðŸ” generateDirectAnswer: Found fitness level="${fitnessLevel}"`);
     return `**The fitness level required is ${fitnessLevel}.** This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.\n\n*From Alan's blog: ${relevantChunk.url}*\n\n`;
   }
   
@@ -1000,7 +1000,7 @@ function findFitnessLevelByPatterns(chunkText) {
       
       for (const pattern of fitnessPatterns) {
         const match = chunkText.match(pattern);
-        console.log(`🔍 generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
+        console.log(`ðŸ” generateDirectAnswer: Pattern ${pattern} match=${!!match}`);
         if (match && match[1]) {
       return match[1].trim();
         }
@@ -1265,7 +1265,7 @@ const SERVICE_PATTERNS = [
   },
   {
     matcher: (lc) => lc.includes("voucher") || lc.includes("gift") || lc.includes("present"),
-    answer: `**Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`
+    answer: `**Gift Vouchers**: Digital photography gift vouchers are available from Â£5-Â£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`
   },
   {
     matcher: (lc) => lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment") || lc.includes("gear") || lc.includes("camera") || lc.includes("lens"),
@@ -1368,7 +1368,7 @@ function getEquipmentQuestionAnswer(lc) {
 // Helper functions for generateDirectAnswer
 function tryCourseEquipmentAnswer(lc) {
   if (isCourseEquipmentQuery(lc)) {
-    console.log(`🔧 Course-specific equipment advice triggered for: "${lc}"`);
+    console.log(`ðŸ”§ Course-specific equipment advice triggered for: "${lc}"`);
     return generateCourseEquipmentAnswer();
   }
   return null;
@@ -1379,7 +1379,7 @@ function tryArticleBasedAnswer(exactTerm, articles, isConceptRelationshipQuery, 
     const relevantArticle = findRelevantArticleForTerm(exactTerm, articles);
     
     if (relevantArticle) {
-      console.log(`🔍 generateDirectAnswer: Found relevant article="${relevantArticle.title}"`);
+      console.log(`ðŸ” generateDirectAnswer: Found relevant article="${relevantArticle.title}"`);
       
       // Use article description first (most reliable)
       const descriptionAnswer = extractAnswerFromArticleDescription(relevantArticle, query);
@@ -1423,9 +1423,9 @@ function prepareQueryData(query) {
 
 // Helper function to log debug information
 function logDirectAnswerDebug(query, articles, contentChunks) {
-  console.log(`🔍 generateDirectAnswer: Query="${query}"`);
-  console.log(`🔍 generateDirectAnswer: Articles count=${articles.length}`);
-  console.log(`🔍 generateDirectAnswer: Content chunks count=${contentChunks.length}`);
+  console.log(`ðŸ” generateDirectAnswer: Query="${query}"`);
+  console.log(`ðŸ” generateDirectAnswer: Articles count=${articles.length}`);
+  console.log(`ðŸ” generateDirectAnswer: Content chunks count=${contentChunks.length}`);
 }
 
 // Helper function to check if query is concept relationship
@@ -1442,7 +1442,7 @@ function tryCourseEquipmentAnswerHelper(lc) {
 // Helper function to try article-based answer
 function tryArticleBasedAnswerWithConcept(exactTerm, articles, lc) {
   const isConceptRelationship = isConceptRelationshipQuery(lc);
-  console.log(`🔍 DEBUG: isConceptRelationshipQuery=${isConceptRelationship} for query="${exactTerm}"`);
+  console.log(`ðŸ” DEBUG: isConceptRelationshipQuery=${isConceptRelationship} for query="${exactTerm}"`);
   return tryArticleBasedAnswer(exactTerm, articles, isConceptRelationship, lc);
 }
 
@@ -1903,7 +1903,7 @@ function logEvidenceDebug(evidence) {
       servicesCount: evidence.services?.length || 0,
       sampleEvents: evidence.events?.slice(0, 2) || []
     };
-    console.log('🔍 Evidence debug:', evidenceDebug);
+    console.log('ðŸ” Evidence debug:', evidenceDebug);
 }
     
 // Helper function to process event evidence
@@ -1911,12 +1911,12 @@ function processEventEvidence(evidence, options) {
     if (evidence.events && evidence.events.length > 0) {
       const { eventTypes, eventCategories } = extractEventTypesAndCategories(evidence.events);
       const eventDebug = { eventTypes: Array.from(eventTypes), eventCategories: Array.from(eventCategories) };
-      console.log('🔍 Event types and categories:', eventDebug);
+      console.log('ðŸ” Event types and categories:', eventDebug);
       addEventOptions(options, eventTypes, eventCategories);
       
       // If we have good event options, skip services to avoid generic options
       if (options.length > 0) {
-        console.log('🔍 Found event-based options, skipping services');
+        console.log('ðŸ” Found event-based options, skipping services');
       return true; // Indicates we should return early
       }
   }
@@ -1934,7 +1934,7 @@ function processArticleEvidence(evidence, options) {
 // Helper function to process service evidence (fallback)
 function processServiceEvidence(evidence, options) {
     if (evidence.services && evidence.services.length > 0 && options.length === 0) {
-      console.log('🔍 No event options found, falling back to services');
+      console.log('ðŸ” No event options found, falling back to services');
       const serviceTypes = extractServiceTypes(evidence.services);
       addServiceOptions(options, serviceTypes);
   }
@@ -2060,12 +2060,12 @@ function checkLoopGuardPatterns(lc) {
 
 function checkSpecialEquipmentPatterns(lc) {
   if (lc.includes("general photography equipment advice clarification")) {
-    console.log(`✅ Found general equipment advice clarification pattern`);
+    console.log(`âœ… Found general equipment advice clarification pattern`);
     return generateGeneralEquipmentClarification();
   }
   
   if (lc.includes("equipment for photography course type clarification")) {
-    console.log(`✅ Found equipment course type clarification pattern`);
+    console.log(`âœ… Found equipment course type clarification pattern`);
     return generateEquipmentCourseTypeClarification();
   }
   
@@ -2432,7 +2432,7 @@ function getClarificationLevelAndConfidence(query, pageContext) {
   const isFollowUp = pageContext?.clarificationLevel > 0;
   const currentLevel = pageContext?.clarificationLevel || 0;
   
-  // Confidence progression: 20% → 50% → 80%
+  // Confidence progression: 20% â†’ 50% â†’ 80%
   const confidenceLevels = [0.2, 0.5, 0.8];
   // For initial query (level 0), use confidenceLevels[0] = 0.2 (20%)
   // For follow-up 1 (level 1), use confidenceLevels[1] = 0.5 (50%)
@@ -2462,7 +2462,7 @@ function checkCourseClarificationPatterns(query) {
   
   for (const pattern of courseClarificationPatterns) {
     if (pattern.test(query)) {
-      console.log(`🎯 Course query detected: "${query}" - routing to clarification`);
+      console.log(`ðŸŽ¯ Course query detected: "${query}" - routing to clarification`);
       return { type: 'clarification', reason: 'course_query_needs_clarification' };
     }
   }
@@ -2495,7 +2495,7 @@ function checkContactAlanPatterns(query) {
   
   for (const pattern of contactAlanPatterns) {
     if (pattern.test(query)) {
-      console.log(`📞 Contact Alan pattern matched: ${pattern} for query: "${query}"`);
+      console.log(`ðŸ“ž Contact Alan pattern matched: ${pattern} for query: "${query}"`);
       return { type: 'direct_answer', reason: 'contact_alan_query' };
     }
   }
@@ -2547,7 +2547,7 @@ function checkWorkshopQueryPatterns(query) {
   
   for (const pattern of workshopPatterns) {
     if (pattern.test(query)) {
-      console.log(`🎯 Workshop pattern matched: ${pattern} for query: "${query}"`);
+      console.log(`ðŸŽ¯ Workshop pattern matched: ${pattern} for query: "${query}"`);
       return { type: 'workshop', reason: 'workshop_related_query' };
     }
   }
@@ -2568,7 +2568,7 @@ function checkPrivateLessonsPatterns(query) {
   
   for (const pattern of privateLessonsPatterns) {
     if (pattern.test(query)) {
-      console.log(`🎯 Private lessons pattern matched: ${pattern} for query: "${query}"`);
+      console.log(`ðŸŽ¯ Private lessons pattern matched: ${pattern} for query: "${query}"`);
       return { type: 'direct_answer', reason: 'private_lessons_query' };
     }
   }
@@ -2831,13 +2831,13 @@ function checkClarificationPatterns(query) {
 }
 
 function classifyQuery(query) {
-  console.log(`🔍 classifyQuery called with: "${query}"`);
+  console.log(`ðŸ” classifyQuery called with: "${query}"`);
   
   // PRIORITY: Check for equipment requirement queries FIRST
   if (query.toLowerCase().includes('what camera do i need') || 
       query.toLowerCase().includes('camera requirements') ||
       query.toLowerCase().includes('equipment requirements')) {
-    console.log(`🎯 Equipment requirement query detected: "${query}" - routing to direct_answer`);
+    console.log(`ðŸŽ¯ Equipment requirement query detected: "${query}" - routing to direct_answer`);
     return { type: 'direct_answer', reason: 'equipment_requirement_query' };
   }
   
@@ -2868,13 +2868,13 @@ function classifyQuery(query) {
 function checkBypassConditions(lc, classification) {
   // BYPASS: If query contains normalized duration categories, skip clarification
   if (lc.includes('1-day') || lc.includes('2.5hrs-4hrs') || lc.includes('2-5-days')) {
-    console.log(`🎯 Bypassing clarification for normalized duration category: "${lc}"`);
+    console.log(`ðŸŽ¯ Bypassing clarification for normalized duration category: "${lc}"`);
     return { shouldBypass: true, reason: 'normalized_duration' };
   }
   
   // BYPASS: Direct answer queries should not go to clarification
   if (classification.type === 'direct_answer') {
-    console.log(`🎯 Bypassing clarification for direct answer query: "${lc}"`);
+    console.log(`ðŸŽ¯ Bypassing clarification for direct answer query: "${lc}"`);
     return { shouldBypass: true, reason: 'direct_answer' };
   }
   
@@ -2887,7 +2887,7 @@ function checkClarificationLevel(query, pageContext) {
   
   // If we've reached max clarifications, show results instead
   if (shouldShowResults) {
-    console.log(`🎯 Max clarifications reached (level ${level}), showing results instead`);
+    console.log(`ðŸŽ¯ Max clarifications reached (level ${level}), showing results instead`);
     return { shouldBypass: true, reason: 'max_clarifications', confidence };
   }
   
@@ -2927,11 +2927,11 @@ async function checkEvidenceBasedClarification(context) {
   // Try evidence-based clarification (only if no workshop patterns matched)
   const evidenceResult = await tryEvidenceBasedClarification(context.client, context.query, context.pageContext);
   if (evidenceResult) {
-    console.log(`🔍 Evidence-based clarification returned:`, evidenceResult);
+    console.log(`ðŸ” Evidence-based clarification returned:`, evidenceResult);
     evidenceResult.confidence = context.confidence;
     return evidenceResult;
   } else {
-    console.log(`❌ No evidence-based clarification for: "${context.lc}"`);
+    console.log(`âŒ No evidence-based clarification for: "${context.lc}"`);
   }
   return null;
   }
@@ -2967,7 +2967,7 @@ function checkAllPatternGroups(lc, confidence) {
 // Helper function to generate generic fallback
 function generateGenericFallback(query, confidence) {
   // CONTENT-BASED FALLBACK: If no specific pattern matches, use generic clarification
-  console.log(`✅ No specific pattern matched for: "${query}" - using generic clarification`);
+  console.log(`âœ… No specific pattern matched for: "${query}" - using generic clarification`);
   const genericResult = generateGenericClarification();
   if (genericResult) {
     genericResult.confidence = confidence;
@@ -2977,11 +2977,11 @@ function generateGenericFallback(query, confidence) {
 
 async function generateClarificationQuestion(query, client = null, pageContext = null) {
   const lc = query.toLowerCase();
-  console.log(`🔍 generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
+  console.log(`ðŸ” generateClarificationQuestion called with: "${query}" (lowercase: "${lc}")`);
   
   // NEW: Query Classification System
   const classification = classifyQuery(query);
-  console.log(`🎯 Query classified as: ${classification.type} (${classification.reason})`);
+  console.log(`ðŸŽ¯ Query classified as: ${classification.type} (${classification.reason})`);
   
   // Check bypass conditions
   const bypassCheck = checkBypassConditions(lc, classification);
@@ -3099,12 +3099,12 @@ async function handleDurationQueries(client, queryText, limit) {
 
 async function processDurationQuery(context) {
   const { client, category, limit, keyword } = context;
-  console.log(`🔍 Using category-based query for ${keyword} workshops`);
+  console.log(`ðŸ” Using category-based query for ${keyword} workshops`);
   const result = await findEventsByDuration(client, category, limit);
-  console.log(`🔍 findEventsByDuration returned: ${result?.length || 0} events for ${keyword}`);
+  console.log(`ðŸ” findEventsByDuration returned: ${result?.length || 0} events for ${keyword}`);
   
   if (result && result.length === 0) {
-    console.log(`🔍 DEBUG: findEventsByDuration returned 0 events for ${keyword}`);
+    console.log(`ðŸ” DEBUG: findEventsByDuration returned 0 events for ${keyword}`);
   }
   
   return result;
@@ -3113,7 +3113,7 @@ async function processDurationQuery(context) {
 // Helper: Handle Lightroom course queries
 async function handleLightroomQueries(client, queryText, limit) {
   if (queryText.includes('lightroom') || queryText.includes('photo editing') || queryText.includes('editing')) {
-    console.log('🔍 Using Lightroom-specific search');
+    console.log('ðŸ” Using Lightroom-specific search');
     const { data, error } = await client
       .from('v_events_for_chat')
       .select('*')
@@ -3123,12 +3123,12 @@ async function handleLightroomQueries(client, queryText, limit) {
       .limit(limit);
     
     if (error) {
-      console.error('❌ Lightroom search error:', error);
+      console.error('âŒ Lightroom search error:', error);
       return [];
     }
     
-    console.log('🔍 Lightroom search found:', data?.length || 0, 'events');
-    console.log('🔍 Lightroom search results:', data?.map(e => ({ title: e.event_title, date: e.date_start })));
+    console.log('ðŸ” Lightroom search found:', data?.length || 0, 'events');
+    console.log('ðŸ” Lightroom search results:', data?.map(e => ({ title: e.event_title, date: e.date_start })));
     return mapEventsData(data);
   }
   
@@ -3137,7 +3137,7 @@ async function handleLightroomQueries(client, queryText, limit) {
 
 // Helper: Handle regular keyword-based search
 async function handleRegularSearch(client, enhancedKeywords, limit) {
-  console.log('🔍 No duration condition matched, using regular query');
+  console.log('ðŸ” No duration condition matched, using regular query');
   
   // Build base query for regular keyword-based search
   let q = buildEventsBaseQuery(client, limit);
@@ -3153,7 +3153,7 @@ async function handleRegularSearch(client, enhancedKeywords, limit) {
   // Execute query and handle results
   const { data, error } = await q;
   if (error) {
-    console.error('❌ v_events_for_chat query error:', error);
+    console.error('âŒ v_events_for_chat query error:', error);
     return [];
   }
   
@@ -3161,11 +3161,11 @@ async function handleRegularSearch(client, enhancedKeywords, limit) {
   logEventsQueryResults(data, q);
   
   // Debug: Log the actual query being executed
-  console.log('🔍 findEvents results count:', data?.length || 0);
+  console.log('ðŸ” findEvents results count:', data?.length || 0);
   if (data && data.length > 0) {
-    console.log('🔍 findEvents first result:', data[0]);
+    console.log('ðŸ” findEvents first result:', data[0]);
   } else {
-    console.log('🔍 findEvents: No results found - this will trigger clarification');
+    console.log('ðŸ” findEvents: No results found - this will trigger clarification');
   }
   
   // Map and return results
@@ -3178,7 +3178,7 @@ async function findEvents(client, { keywords, limit = 50, pageContext = null }) 
   
   // Normalize query text for duration detection
   const queryText = normalizeQueryText(enhancedKeywords);
-  console.log('🔍 findEvents debug:', { enhancedKeywords, queryText });
+  console.log('ðŸ” findEvents debug:', { enhancedKeywords, queryText });
   
   // Check for duration-based queries first
   const durationResult = await handleDurationQueries(client, queryText, limit);
@@ -3211,7 +3211,7 @@ function extractBatsfordTimes(productDesc) {
                 const pmMinute = afternoonMatch[4];
                 const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
     const lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
-                console.log(`🔍 Extracted Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
+                console.log(`ðŸ” Extracted Batsford times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
     return { earlyEndTime, lateStartTime, lateEndTime };
   }
   return null;
@@ -3228,7 +3228,7 @@ function extractBluebellTimes(productDesc) {
                 const pmMinute = sessionMatch[8];
                 const pmHour24 = pmHour === 12 ? 12 : pmHour + 12;
     const lateEndTime = `${pmHour24.toString().padStart(2, '0')}:${pmMinute}:00`;
-                console.log(`🔍 Extracted Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
+                console.log(`ðŸ” Extracted Bluebell times: early end ${earlyEndTime}, late start ${lateStartTime}, late end ${lateEndTime}`);
     return { earlyEndTime, lateStartTime, lateEndTime };
   }
   return null;
@@ -3237,7 +3237,7 @@ function extractBluebellTimes(productDesc) {
 // Helper: Extract session times from product description
 function extractSessionTimes(event) {
   const productDesc = event.product_description || '';
-  console.log(`🔍 Product description for ${event.event_title}:`, productDesc.substring(0, 200) + '...');
+  console.log(`ðŸ” Product description for ${event.event_title}:`, productDesc.substring(0, 200) + '...');
   
   if (productDesc.includes('batsford') || event.event_title.toLowerCase().includes('batsford')) {
     return extractBatsfordTimes(productDesc);
@@ -3245,7 +3245,7 @@ function extractSessionTimes(event) {
     return extractBluebellTimes(productDesc);
   }
   
-              console.log(`🔍 No specific session time extraction for ${event.event_title}`);
+              console.log(`ðŸ” No specific session time extraction for ${event.event_title}`);
   return null;
 }
 
@@ -3309,12 +3309,12 @@ function processEvents(allEvents, categoryType) {
   
   allEvents.forEach(event => {
     if (!event.categories || !Array.isArray(event.categories)) {
-      console.log(`🔍 Event: ${event.event_title}, No categories field, skipping`);
+      console.log(`ðŸ” Event: ${event.event_title}, No categories field, skipping`);
       return;
     }
     
     const hasCategory = event.categories.includes(categoryType);
-    console.log(`🔍 Event: ${event.event_title}, Categories: ${JSON.stringify(event.categories)}, Has ${categoryType}: ${hasCategory}`);
+    console.log(`ðŸ” Event: ${event.event_title}, Categories: ${JSON.stringify(event.categories)}, Has ${categoryType}: ${hasCategory}`);
     
     if (hasCategory) {
       if (event.categories.length > 1 && event.categories.includes('1-day') && event.categories.includes('2.5hrs-4hrs')) {
@@ -3344,12 +3344,12 @@ async function fetchEventsFromDatabase(client) {
     .limit(200);
   
   if (e1) {
-    console.error('❌ Error fetching events:', e1);
+    console.error('âŒ Error fetching events:', e1);
     return [];
   }
 
   if (!allEvents || allEvents.length === 0) {
-    console.log('🔍 No events found');
+    console.log('ðŸ” No events found');
     return [];
   }
 
@@ -3358,7 +3358,7 @@ async function fetchEventsFromDatabase(client) {
 
 // Helper: Process and return final results
 function processAndReturnResults(filteredEvents, categoryType, limit) {
-    console.log(`🔍 Filtered ${filteredEvents.length} events for category: ${categoryType}`);
+    console.log(`ðŸ” Filtered ${filteredEvents.length} events for category: ${categoryType}`);
     
     // Deduplicate by event_url + session_type (since we now have multiple entries per URL)
     const deduped = dedupeEventsByKey(filteredEvents, 'event_url', 'session_type');
@@ -3372,7 +3372,7 @@ function processAndReturnResults(filteredEvents, categoryType, limit) {
 
 async function findEventsByDuration(client, categoryType, limit = 100) {
   try {
-    console.log(`🔍 findEventsByDuration called with categoryType: ${categoryType}, limit: ${limit}`);
+    console.log(`ðŸ” findEventsByDuration called with categoryType: ${categoryType}, limit: ${limit}`);
     
     // Fetch events from database
     const allEvents = await fetchEventsFromDatabase(client);
@@ -3386,7 +3386,7 @@ async function findEventsByDuration(client, categoryType, limit = 100) {
     // Process and return final results
     return processAndReturnResults(filteredEvents, categoryType, limit);
   } catch (error) {
-    console.error('❌ Error in findEventsByDuration:', error);
+    console.error('âŒ Error in findEventsByDuration:', error);
     return [];
   }
 }
@@ -3424,7 +3424,7 @@ function applyKeywordFiltering(q, keywords) {
     const GENERIC_QUERY_WORDS = new Set(["when", "next", "is", "are", "the", "a", "an", "what", "where", "how", "much", "does", "do", "can", "could", "would", "should"]);
     const meaningfulKeywords = keywords.filter(k => k && !GENERIC_QUERY_WORDS.has(String(k).toLowerCase()));
     
-    console.log('🔍 findEvents keyword filtering:', {
+    console.log('ðŸ” findEvents keyword filtering:', {
       originalKeywords: keywords,
       meaningfulKeywords,
       filteredOut: keywords.filter(k => !meaningfulKeywords.includes(k))
@@ -3433,14 +3433,14 @@ function applyKeywordFiltering(q, keywords) {
     // Search in event_title, event_location, and product_title fields
     // Use a simpler approach: search for each keyword individually
     if (meaningfulKeywords.length > 0) {
-      console.log('🔍 findEvents debug:', {
+      console.log('ðŸ” findEvents debug:', {
         meaningfulKeywords
       });
       
       // Generic approach: search for any keyword in both location and title fields
       // This will work for any location or workshop type, not just hardcoded ones
       const searchKeyword = meaningfulKeywords[0];
-      console.log(`🔍 Searching for keyword: ${searchKeyword}`);
+      console.log(`ðŸ” Searching for keyword: ${searchKeyword}`);
       
       // Search in both event_location and event_title to catch location-based and title-based queries
       return q.or(`event_location.ilike.%${searchKeyword}%,event_title.ilike.%${searchKeyword}%`);
@@ -3454,7 +3454,7 @@ function applyDurationFiltering(q, keywords) {
   
   // 2.5hr - 4hr workshops - filter by actual duration using SQL
   if (queryText.includes('short') && (queryText.includes('2-4') || queryText.includes('2.5') || queryText.includes('4hr'))) {
-    console.log('🔍 Applying 2.5-4 hour duration filter');
+    console.log('ðŸ” Applying 2.5-4 hour duration filter');
     // Use SQL to filter by actual duration between 2.5 and 4 hours
     return q.filter('date_start', 'not.is', null)
             .filter('date_end', 'not.is', null)
@@ -3466,7 +3466,7 @@ function applyDurationFiltering(q, keywords) {
   
   // 1 day workshops (6-8 hours)
   if (queryText.includes('one day') || queryText.includes('1 day')) {
-    console.log('🔍 Applying 1 day duration filter');
+    console.log('ðŸ” Applying 1 day duration filter');
     return q.filter('date_start', 'not.is', null)
             .filter('date_end', 'not.is', null)
             .filter('event_title', 'ilike', '%workshop%');
@@ -3474,7 +3474,7 @@ function applyDurationFiltering(q, keywords) {
   
   // Multi day workshops
   if (queryText.includes('multi day') || queryText.includes('residential')) {
-    console.log('🔍 Applying multi-day duration filter');
+    console.log('ðŸ” Applying multi-day duration filter');
     return q.filter('date_start', 'not.is', null)
             .filter('date_end', 'not.is', null)
             .filter('event_title', 'ilike', '%workshop%');
@@ -3484,7 +3484,7 @@ function applyDurationFiltering(q, keywords) {
 }
 
 function logEventsQueryResults(data, q) {
-  console.log('🔍 findEvents query results:', {
+  console.log('ðŸ” findEvents query results:', {
     dataCount: data?.length || 0,
     sampleData: data?.slice(0, 2) || [],
     query: q.toString(),
@@ -3512,7 +3512,7 @@ function mapEventsData(data) {
   // Remove duplicates by event_url + date_start to allow same event on different dates
   const dedupedData = dedupeEventsByKey(mappedData, 'event_url', 'date_start');
   
-  console.log('🔍 findEvents mapped data:', {
+  console.log('ðŸ” findEvents mapped data:', {
     mappedDataCount: mappedData?.length || 0,
     dedupedDataCount: dedupedData?.length || 0,
     originalDataCount: data?.length || 0
@@ -3560,7 +3560,7 @@ function applyServicesKeywordFiltering(q, keywords) {
     
     if (orConditions.length > 0) {
       q = q.or(orConditions.join(','));
-      console.log(`🔧 Using OR conditions: ${orConditions.join(',')}`);
+      console.log(`ðŸ”§ Using OR conditions: ${orConditions.join(',')}`);
     }
   }
   return q;
@@ -3568,7 +3568,7 @@ function applyServicesKeywordFiltering(q, keywords) {
 
 // Helper function to log services results
 function logServicesResults(data) {
-  console.log(`🔧 findServices returned ${data?.length || 0} services`);
+  console.log(`ðŸ”§ findServices returned ${data?.length || 0} services`);
   if (data && data.length > 0) {
     data.forEach((service, i) => {
       console.log(`  ${i+1}. "${service.title}" (${service.page_url})`);
@@ -3577,7 +3577,7 @@ function logServicesResults(data) {
 }
 
 async function findServices(client, { keywords, limit = 50 }) {
-  console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
+  console.log(`ðŸ”§ findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
   
   let q = buildServicesBaseQuery(client, limit);
   q = applyServicesKeywordFiltering(q, keywords);
@@ -3585,7 +3585,7 @@ async function findServices(client, { keywords, limit = 50 }) {
   const { data, error } = await q;
 
   if (error) {
-    console.error(`🔧 findServices error:`, error);
+    console.error(`ðŸ”§ findServices error:`, error);
     return [];
   }
 
@@ -3917,7 +3917,7 @@ function parseGenericEquipmentFormat(ln, helpers) {
     }
     
 function parseSessionField(ln, out) {
-    const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-–—]\s*)(.+)$/i);
+    const m1 = ln.match(/^(\d+\s*(?:hrs?|hours?|day))(?:\s*[-â€“â€”]\s*)(.+)$/i);
     if (m1) {
       const rawLabel = m1[1].replace(/\s+/g, " ").trim();
       const time = m1[2].trim();
@@ -4002,7 +4002,7 @@ function getEventStructuredFields(e) {
 }
 
 function formatEventsForUi(events) {
-  console.log('🔍 formatEventsForUi input:', {
+  console.log('ðŸ” formatEventsForUi input:', {
     inputLength: events?.length || 0,
     inputSample: events?.slice(0, 2) || []
   });
@@ -4011,7 +4011,7 @@ function formatEventsForUi(events) {
   const result = (events || [])
     .map(transformEventForUI);
     
-  console.log('🔍 formatEventsForUi output:', {
+  console.log('ðŸ” formatEventsForUi output:', {
     outputLength: result.length,
     outputSample: result.slice(0, 2)
   });
@@ -4043,7 +4043,7 @@ function getEventLabel(event) {
 function extractEventBrief(products, summarize) {
   if (products && products.length && (products[0].description || products[0]?.raw?.description)) {
     let brief = summarize(products[0].description || products[0]?.raw?.description);
-        if (brief.length > 220) brief = brief.slice(0, 220).replace(/\s+\S*$/, '') + '…';
+        if (brief.length > 220) brief = brief.slice(0, 220).replace(/\s+\S*$/, '') + 'â€¦';
     return brief;
   }
   return '';
@@ -4059,7 +4059,7 @@ function checkEventDate(context) {
   if (context.lowerQuery.includes('when') || context.lowerQuery.includes('date')) {
     if (context.event.date_start) {
       const formattedDate = context.formatDateGB(context.event.date_start);
-      console.log(`✅ RAG: Found date="${formattedDate}" in structured event data`);
+      console.log(`âœ… RAG: Found date="${formattedDate}" in structured event data`);
       const label = getEventLabel(context.event);
       const brief = extractEventBrief(context.products, context.summarize);
       return formatDateResponse(formattedDate, label, brief);
@@ -4071,7 +4071,7 @@ function checkEventDate(context) {
 function checkEventFitnessLevel(event, lowerQuery) {
     if (lowerQuery.includes('fitness') || lowerQuery.includes('level') || lowerQuery.includes('experience')) {
       if (event.fitness_level && event.fitness_level.trim().length > 0) {
-        console.log(`✅ RAG: Found fitness level="${event.fitness_level}" in structured event data`);
+        console.log(`âœ… RAG: Found fitness level="${event.fitness_level}" in structured event data`);
         return `The fitness level required is **${event.fitness_level}**. This ensures the workshop is suitable for your physical capabilities and you can fully enjoy the experience.`;
       }
     }
@@ -4355,9 +4355,9 @@ function analyzeDataAttributes(events, product, context) {
 }
 
 function analyzeResponseContent(responseText, articles, context) {
-  console.log(`🚀 analyzeResponseContent called for query: "${context.queryLower}"`);
-  console.log(`🚀 Response text: "${responseText.substring(0, 100)}..."`);
-  console.log(`🚀 Articles count: ${articles ? articles.length : 0}`);
+  console.log(`ðŸš€ analyzeResponseContent called for query: "${context.queryLower}"`);
+  console.log(`ðŸš€ Response text: "${responseText.substring(0, 100)}..."`);
+  console.log(`ðŸš€ Articles count: ${articles ? articles.length : 0}`);
   
   // Initialize quality indicators if they don't exist
   if (!context.qualityIndicators) {
@@ -4376,14 +4376,14 @@ function analyzeResponseContent(responseText, articles, context) {
   
   // Don't override hasRelevantEvents if it was already set to true by analyzeDataAttributes
   if (existingHasRelevantEvents === true) {
-    console.log(`🔍 Preserving hasRelevantEvents: true from analyzeDataAttributes`);
+    console.log(`ðŸ” Preserving hasRelevantEvents: true from analyzeDataAttributes`);
   }
   
   // Special case for event queries: if this is an event query and we have events, set hasRelevantEvents to true
   const isEventQuery = responseText && responseText.includes('I found') && responseText.includes('events');
   if (isEventQuery && !existingHasRelevantEvents) {
     context.qualityIndicators.hasRelevantEvents = true;
-    console.log(`🔍 Event query detected - setting hasRelevantEvents: true`);
+    console.log(`ðŸ” Event query detected - setting hasRelevantEvents: true`);
   }
   
   // Ensure queryLower exists
@@ -4406,7 +4406,7 @@ function analyzeResponseContent(responseText, articles, context) {
   context.qualityIndicators.responseAccuracy = calculateAccuracy(responseText, queryLower);
   
   // Debug logging
-  console.log(`🔍 Quality Analysis for "${context.queryLower}":`);
+  console.log(`ðŸ” Quality Analysis for "${context.queryLower}":`);
   console.log(`   Direct Answer: ${hasDirectAnswer}`);
   console.log(`   Relevant Articles: ${hasRelevantArticles}`);
   console.log(`   Actionable Info: ${hasActionableInfo}`);
@@ -4416,11 +4416,11 @@ function analyzeResponseContent(responseText, articles, context) {
   // Restore hasRelevantEvents value if it was set to true by analyzeDataAttributes
   if (existingHasRelevantEvents === true) {
     context.qualityIndicators.hasRelevantEvents = true;
-    console.log(`🔍 Restored hasRelevantEvents: true from analyzeDataAttributes`);
+    console.log(`ðŸ” Restored hasRelevantEvents: true from analyzeDataAttributes`);
   }
   
   // Debug logging (removed file writing to avoid ES module issues)
-  console.log('🔍 Quality Analysis Complete');
+  console.log('ðŸ” Quality Analysis Complete');
 }
 
 function analyzeDirectAnswer(responseText, queryLower) {
@@ -4430,8 +4430,8 @@ function analyzeDirectAnswer(responseText, queryLower) {
   // Extract key terms from the query - handle undefined queryLower
   const queryWords = (queryLower || '').split(/\s+/).filter(word => word.length > 2);
   
-  console.log(`🔍 analyzeDirectAnswer: query="${queryLower}", response="${responseText.substring(0, 50)}..."`);
-  console.log(`🔍 Query words: ${queryWords.join(', ')}`);
+  console.log(`ðŸ” analyzeDirectAnswer: query="${queryLower}", response="${responseText.substring(0, 50)}..."`);
+  console.log(`ðŸ” Query words: ${queryWords.join(', ')}`);
   
   // Check for completely irrelevant responses
   const isIrrelevant = (
@@ -4440,10 +4440,10 @@ function analyzeDirectAnswer(responseText, queryLower) {
     !queryLower.includes('autumn') // Query is not about autumn
   );
   
-  console.log(`🔍 Is irrelevant: ${isIrrelevant}`);
+  console.log(`ðŸ” Is irrelevant: ${isIrrelevant}`);
   
   if (isIrrelevant) {
-    console.log(`❌ Response is completely irrelevant`);
+    console.log(`âŒ Response is completely irrelevant`);
     return false;
   }
   
@@ -4454,10 +4454,10 @@ function analyzeDirectAnswer(responseText, queryLower) {
     !responseLower.includes(queryWords[0]) // Doesn't address the specific question
   );
   
-  console.log(`🔍 Is generic: ${isGeneric}`);
+  console.log(`ðŸ” Is generic: ${isGeneric}`);
   
   if (isGeneric) {
-    console.log(`❌ Response is generic and doesn't answer the question`);
+    console.log(`âŒ Response is generic and doesn't answer the question`);
     return false;
   }
   
@@ -4495,7 +4495,7 @@ function analyzeDirectAnswer(responseText, queryLower) {
     )
   );
   
-  console.log(`🔍 Has direct answer: ${hasDirectAnswer}`);
+  console.log(`ðŸ” Has direct answer: ${hasDirectAnswer}`);
   
   return hasDirectAnswer;
 }
@@ -4689,8 +4689,8 @@ function calculateUnhelpfulIndicators(responseLower) {
 }
 
 function calculateAccuracy(responseText, queryLower) {
-  console.log(`🔍 calculateAccuracy called for query: "${queryLower}"`);
-  console.log(`🔍 Response text: "${responseText.substring(0, 100)}..."`);
+  console.log(`ðŸ” calculateAccuracy called for query: "${queryLower}"`);
+  console.log(`ðŸ” Response text: "${responseText.substring(0, 100)}..."`);
   
   const responseLower = responseText.toLowerCase();
   const queryWords = (queryLower || '').split(/\s+/).filter(word => word.length > 2);
@@ -4698,38 +4698,38 @@ function calculateAccuracy(responseText, queryLower) {
   // Check for completely irrelevant responses
   const irrelevantScore = checkIrrelevantResponse(responseLower, queryLower);
   if (irrelevantScore !== null) {
-    console.log(`🔍 Response is irrelevant, returning ${irrelevantScore}`);
+    console.log(`ðŸ” Response is irrelevant, returning ${irrelevantScore}`);
     return irrelevantScore;
   }
   
   // Check for generic responses
   const genericScore = checkGenericResponse(responseLower, queryWords);
   if (genericScore !== null) {
-    console.log(`🔍 Response is generic, returning ${genericScore}`);
+    console.log(`ðŸ” Response is generic, returning ${genericScore}`);
     return genericScore;
   }
   
   let accuracyScore = 0.5; // Start with neutral score
-  console.log(`🔍 Starting accuracy score: ${accuracyScore}`);
+  console.log(`ðŸ” Starting accuracy score: ${accuracyScore}`);
   
   const helpfulScore = calculateHelpfulIndicators(responseLower);
-  console.log(`🔍 Helpful indicators score: ${helpfulScore}`);
+  console.log(`ðŸ” Helpful indicators score: ${helpfulScore}`);
   accuracyScore += helpfulScore;
   
   const relevanceScore = calculateQueryRelevance(responseLower, queryWords);
-  console.log(`🔍 Query relevance score: ${relevanceScore}`);
+  console.log(`ðŸ” Query relevance score: ${relevanceScore}`);
   accuracyScore += relevanceScore;
   
   const eventScore = calculateEventAccuracy(responseLower);
-  console.log(`🔍 Event accuracy score: ${eventScore}`);
+  console.log(`ðŸ” Event accuracy score: ${eventScore}`);
   accuracyScore += eventScore;
   
   const unhelpfulScore = calculateUnhelpfulIndicators(responseLower);
-  console.log(`🔍 Unhelpful indicators score: ${unhelpfulScore}`);
+  console.log(`ðŸ” Unhelpful indicators score: ${unhelpfulScore}`);
   accuracyScore += unhelpfulScore;
   
   const finalScore = Math.max(0.0, Math.min(1.0, accuracyScore));
-  console.log(`🔍 Final accuracy score: ${finalScore}`);
+  console.log(`ðŸ” Final accuracy score: ${finalScore}`);
   return finalScore;
 }
 
@@ -4769,7 +4769,7 @@ function finalizeConfidence(query, context) {
     context.qualityIndicators.responseAccuracy < 0.3
   );
   
-  console.log(`🔍 QUALITY INDICATORS DEBUG for "${query}":`);
+  console.log(`ðŸ” QUALITY INDICATORS DEBUG for "${query}":`);
   console.log(`   hasDirectAnswer: ${context.qualityIndicators.hasDirectAnswer}`);
   console.log(`   hasRelevantEvents: ${context.qualityIndicators.hasRelevantEvents}`);
   console.log(`   hasRelevantArticles: ${context.qualityIndicators.hasRelevantArticles}`);
@@ -4780,7 +4780,7 @@ function finalizeConfidence(query, context) {
   
   if (isCompletelyIrrelevant) {
     confidenceScore = 0.10; // 10% confidence for completely irrelevant responses
-    console.log(`🎯 FORCED TO 10% - Completely irrelevant response`);
+    console.log(`ðŸŽ¯ FORCED TO 10% - Completely irrelevant response`);
   }
   // Perfect (100%): Has everything - direct answer, relevant events, relevant articles, actionable info
   else if (context.qualityIndicators.hasDirectAnswer && 
@@ -4790,7 +4790,7 @@ function finalizeConfidence(query, context) {
       context.qualityIndicators.responseCompleteness >= 0.9 &&
       context.qualityIndicators.responseAccuracy >= 0.9) {
     confidenceScore = 1.0; // 100% confidence for perfect responses
-    console.log(`🎯 SELECTED: Perfect (100%) - All quality indicators met`);
+    console.log(`ðŸŽ¯ SELECTED: Perfect (100%) - All quality indicators met`);
   }
   // Nearly Perfect (95%): Has most elements with high quality
   else if (context.qualityIndicators.hasDirectAnswer && 
@@ -4798,7 +4798,7 @@ function finalizeConfidence(query, context) {
            context.qualityIndicators.responseCompleteness >= 0.8 &&
            context.qualityIndicators.responseAccuracy >= 0.8) {
     confidenceScore = 0.95; // 95% confidence for nearly perfect
-    console.log(`🎯 SELECTED: Nearly Perfect (95%) - Direct answer + supporting content`);
+    console.log(`ðŸŽ¯ SELECTED: Nearly Perfect (95%) - Direct answer + supporting content`);
   }
     // Special case for event queries: High-quality event responses with relevant events
     else if (context.qualityIndicators.hasDirectAnswer && 
@@ -4806,31 +4806,31 @@ function finalizeConfidence(query, context) {
              context.qualityIndicators.responseCompleteness >= 0.3 &&
              context.qualityIndicators.responseAccuracy >= 0.6) {
       confidenceScore = 0.95; // 95% confidence for excellent event responses
-      console.log(`🎯 SELECTED: Nearly Perfect (95%) - Excellent event response with relevant events`);
+      console.log(`ðŸŽ¯ SELECTED: Nearly Perfect (95%) - Excellent event response with relevant events`);
     }
   // Very Good (75%): Has good answer and some supporting content
   else if (context.qualityIndicators.hasDirectAnswer && 
            context.qualityIndicators.responseCompleteness >= 0.4 &&
            context.qualityIndicators.responseAccuracy >= 0.4) {
     confidenceScore = 0.75; // 75% confidence for very good
-    console.log(`🎯 SELECTED: Very Good (75%) - Direct answer + good completeness/accuracy`);
+    console.log(`ðŸŽ¯ SELECTED: Very Good (75%) - Direct answer + good completeness/accuracy`);
   }
   // Good (50%): Has some useful content
   else if (context.qualityIndicators.hasDirectAnswer || 
            context.qualityIndicators.hasRelevantEvents || 
            context.qualityIndicators.hasRelevantArticles) {
     confidenceScore = 0.50; // 50% confidence for good
-    console.log(`🎯 SELECTED: Good (50%) - Some useful content found`);
+    console.log(`ðŸŽ¯ SELECTED: Good (50%) - Some useful content found`);
   }
   // Poor (30%): Limited useful content
   else if (context.qualityIndicators.responseCompleteness >= 0.3) {
     confidenceScore = 0.30; // 30% confidence for poor
-    console.log(`🎯 SELECTED: Poor (30%) - Limited useful content`);
+    console.log(`ðŸŽ¯ SELECTED: Poor (30%) - Limited useful content`);
   }
   // Very Poor (10%): Little to no useful content
   else {
     confidenceScore = 0.10; // 10% confidence for very poor
-    console.log(`🎯 SELECTED: Very Poor (10%) - Little to no useful content`);
+    console.log(`ðŸŽ¯ SELECTED: Very Poor (10%) - Little to no useful content`);
   }
   
   // Apply base confidence adjustments (minimal impact)
@@ -4838,9 +4838,9 @@ function finalizeConfidence(query, context) {
   const finalConfidence = Math.max(0.1, Math.min(1.0, confidenceScore + (baseConfidence * 0.1)));
   
   if (context.confidenceFactors && context.confidenceFactors.length > 0) {
-    console.log(`🎯 Alan's Quality-Based Confidence for "${query}": ${context.confidenceFactors.join(', ')} = ${(finalConfidence * 100).toFixed(1)}%`);
-    console.log(`📊 Quality Indicators: Direct=${context.qualityIndicators.hasDirectAnswer}, Events=${context.qualityIndicators.hasRelevantEvents}, Articles=${context.qualityIndicators.hasRelevantArticles}, Actionable=${context.qualityIndicators.hasActionableInfo}`);
-    console.log(`📊 Quality Scores: Completeness=${(context.qualityIndicators.responseCompleteness * 100).toFixed(1)}%, Accuracy=${(context.qualityIndicators.responseAccuracy * 100).toFixed(1)}%`);
+    console.log(`ðŸŽ¯ Alan's Quality-Based Confidence for "${query}": ${context.confidenceFactors.join(', ')} = ${(finalConfidence * 100).toFixed(1)}%`);
+    console.log(`ðŸ“Š Quality Indicators: Direct=${context.qualityIndicators.hasDirectAnswer}, Events=${context.qualityIndicators.hasRelevantEvents}, Articles=${context.qualityIndicators.hasRelevantArticles}, Actionable=${context.qualityIndicators.hasActionableInfo}`);
+    console.log(`ðŸ“Š Quality Scores: Completeness=${(context.qualityIndicators.responseCompleteness * 100).toFixed(1)}%, Accuracy=${(context.qualityIndicators.responseAccuracy * 100).toFixed(1)}%`);
   }
   
   return finalConfidence;
@@ -4862,7 +4862,7 @@ async function processEventsEarlyReturn(context) {
   // Don't call analyzeResponseContent with empty strings - will be called with actual content later
   const confidence = finalizeConfidence(context.query || "", confidenceContext);
   
-    console.log('🔍 EARLY RETURN EVENTS: Found events via early return path:', {
+    console.log('ðŸ” EARLY RETURN EVENTS: Found events via early return path:', {
       totalEvents: events.length,
       formattedEvents: eventList.length,
       confidence,
@@ -5396,7 +5396,7 @@ function sendEventsResponse(context) {
   
   // Apply quality analysis to recalculate confidence based on new criteria
   if (context.query && formattedAnswer) {
-    console.log(`🔍 Applying quality analysis to event response for: "${context.query}"`);
+    console.log(`ðŸ” Applying quality analysis to event response for: "${context.query}"`);
     try {
       // Initialize quality indicators if they don't exist
       if (!context.qualityIndicators) {
@@ -5415,10 +5415,10 @@ function sendEventsResponse(context) {
       
       // Recalculate confidence based on quality indicators
       const newConfidence = finalizeConfidence(context.query, context);
-      console.log(`🎯 Event confidence updated: ${(newConfidence * 100).toFixed(1)}% (was ${(context.confidence * 100).toFixed(1)}%)`);
+      console.log(`ðŸŽ¯ Event confidence updated: ${(newConfidence * 100).toFixed(1)}% (was ${(context.confidence * 100).toFixed(1)}%)`);
       context.confidence = newConfidence;
     } catch (error) {
-      console.log(`❌ Error in event quality analysis: ${error.message}`);
+      console.log(`âŒ Error in event quality analysis: ${error.message}`);
     }
   }
   
@@ -5584,7 +5584,7 @@ function checkContactAlanQueryPatterns(query) {
 
 // Helper function to handle contact Alan response
 function handleContactAlanResponse(query, res) {
-        console.log(`📞 Contact Alan query detected in handleDirectAnswerQuery: "${query}"`);
+        console.log(`ðŸ“ž Contact Alan query detected in handleDirectAnswerQuery: "${query}"`);
         res.status(200).json({
           ok: true,
           type: 'advice',
@@ -5608,7 +5608,7 @@ function handleContactAlanResponse(query, res) {
     
 // Helper function to handle private lessons response
 function handlePrivateLessonsResponse(query, res) {
-      console.log(`📚 Private lessons query detected in handleDirectAnswerQuery: "${query}"`);
+      console.log(`ðŸ“š Private lessons query detected in handleDirectAnswerQuery: "${query}"`);
       
       const serviceAnswer = getServiceAnswers(query.toLowerCase());
       if (serviceAnswer) {
@@ -5638,7 +5638,7 @@ function handlePrivateLessonsResponse(query, res) {
 
 // Helper function to handle RAG response
 function handleRagResponse(ragResult, res) {
-      console.log(`✅ RAG success for direct answer query: confidence=${ragResult.confidence}`);
+      console.log(`âœ… RAG success for direct answer query: confidence=${ragResult.confidence}`);
       res.status(200).json({
         ok: true,
         type: ragResult.type,
@@ -5738,7 +5738,7 @@ function handleSpecialQueryTypes(context, classification) {
 }
 
 async function handleFallbackSystem(context, classification) {
-  console.log(`⚠️ RAG failed for direct answer query, using fallback system`);
+  console.log(`âš ï¸ RAG failed for direct answer query, using fallback system`);
   const keywords = extractKeywords(context.query);
   
   // Search for relevant content
@@ -5762,11 +5762,11 @@ async function handleFallbackSystem(context, classification) {
 // Helper: Handle clarification queries (Low Complexity)
 async function handleClarificationQuery(context) {
   try {
-    console.log(`🎯 Handling clarification query: "${context.query}" with reason: ${context.classification.reason}`);
+    console.log(`ðŸŽ¯ Handling clarification query: "${context.query}" with reason: ${context.classification.reason}`);
     
     // Check if this is a course-related clarification
     if (context.classification.reason === 'course_query_needs_clarification') {
-      console.log(`📚 Course clarification query detected: "${context.query}"`);
+      console.log(`ðŸ“š Course clarification query detected: "${context.query}"`);
       context.res.status(200).json({
         ok: true,
         type: 'course_clarification',
@@ -5788,7 +5788,7 @@ async function handleClarificationQuery(context) {
     }
     
     // Handle other clarification types
-    console.log(`🔍 Generic clarification query: "${context.query}"`);
+    console.log(`ðŸ” Generic clarification query: "${context.query}"`);
     context.res.status(200).json({
       ok: true,
       type: 'clarification',
@@ -5823,18 +5823,18 @@ function generateArticleAnswer(articles) {
 
 // Helper function to generate equipment service answer
 function generateEquipmentServiceAnswer(bestService) {
-  return `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: ${bestService.page_url}*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`;
+  return `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\nâ€¢ Professional tripod systems\nâ€¢ Camera bodies and lenses\nâ€¢ Accessories and filters\nâ€¢ Budget-friendly alternatives\n\n*View his detailed equipment guide: ${bestService.page_url}*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`;
 }
 
 // Helper function to generate Lightroom service answer
 function generateLightroomServiceAnswer() {
   const serviceUrl = "https://www.alanranger.com/photo-editing-course-coventry";
-  return `Alan Ranger offers comprehensive Lightroom editing courses and workshops. His photo editing training covers:\n\n• Basic to advanced Lightroom techniques\n• Workflow optimization\n• Color correction and enhancement\n• Batch processing methods\n• Creative editing approaches\n\n*Learn more about his Lightroom courses: ${serviceUrl}*`;
+  return `Alan Ranger offers comprehensive Lightroom editing courses and workshops. His photo editing training covers:\n\nâ€¢ Basic to advanced Lightroom techniques\nâ€¢ Workflow optimization\nâ€¢ Color correction and enhancement\nâ€¢ Batch processing methods\nâ€¢ Creative editing approaches\n\n*Learn more about his Lightroom courses: ${serviceUrl}*`;
 }
 
 // Helper function to generate Alan background answer
 function generateAlanBackgroundAnswer() {
-  return `Alan Ranger is a BIPP (British Institute of Professional Photography) qualified photographer with over 20 years of teaching experience and 580+ 5-star reviews.\n\n**His Background:**\n• BIPP Qualified Professional Photographer\n• 20+ years of teaching experience\n• Specializes in landscape photography\n• Based in Coventry, UK\n\n**What He Offers:**\n• Landscape photography workshops (Wales, Devon, Yorkshire)\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n• Free online photography course\n\n**Reviews:** 4.9/5 stars from students and clients\n\n*Learn more about Alan: https://www.alanranger.com/about*`;
+  return `Alan Ranger is a BIPP (British Institute of Professional Photography) qualified photographer with over 20 years of teaching experience and 580+ 5-star reviews.\n\n**His Background:**\nâ€¢ BIPP Qualified Professional Photographer\nâ€¢ 20+ years of teaching experience\nâ€¢ Specializes in landscape photography\nâ€¢ Based in Coventry, UK\n\n**What He Offers:**\nâ€¢ Landscape photography workshops (Wales, Devon, Yorkshire)\nâ€¢ Photo editing and Lightroom training\nâ€¢ Private tuition and mentoring\nâ€¢ Online photography academy\nâ€¢ Free online photography course\n\n**Reviews:** 4.9/5 stars from students and clients\n\n*Learn more about Alan: https://www.alanranger.com/about*`;
 }
 
 // Helper function to generate service-based answer
@@ -5842,7 +5842,7 @@ function generateServiceAnswer(query, services) {
     const bestService = services[0];
   const lc = query.toLowerCase();
   
-    console.log(`🔍 generateEvidenceBasedAnswer: Query "${query}" matched services, testing patterns...`);
+    console.log(`ðŸ” generateEvidenceBasedAnswer: Query "${query}" matched services, testing patterns...`);
     
     if (/tripod|equipment|gear|camera|lens/i.test(lc)) {
     return generateEquipmentServiceAnswer(bestService);
@@ -5860,11 +5860,11 @@ function generateFallbackAnswer(query) {
   const lc = query.toLowerCase();
   
     if (/course|training|learn|teach/i.test(lc)) {
-    return `Alan Ranger offers comprehensive photography courses and training programs. His courses cover:\n\n• Landscape photography workshops\n• Photo editing and Lightroom training\n• Private tuition and mentoring\n• Online photography academy\n\nFor specific course information and availability, please contact Alan directly or visit his website to see the full range of educational offerings.`;
+    return `Alan Ranger offers comprehensive photography courses and training programs. His courses cover:\n\nâ€¢ Landscape photography workshops\nâ€¢ Photo editing and Lightroom training\nâ€¢ Private tuition and mentoring\nâ€¢ Online photography academy\n\nFor specific course information and availability, please contact Alan directly or visit his website to see the full range of educational offerings.`;
     } else if (/equipment|gear|camera|lens|tripod/i.test(lc)) {
-    return `Alan Ranger has extensive experience with photography equipment and can provide personalized recommendations based on your specific needs and budget.\n\nFor equipment advice, consider:\n• Booking a consultation\n• Attending a workshop where equipment is demonstrated\n• Contacting Alan directly for personalized recommendations\n\nHe regularly reviews and recommends equipment based on real-world photography experience.`;
+    return `Alan Ranger has extensive experience with photography equipment and can provide personalized recommendations based on your specific needs and budget.\n\nFor equipment advice, consider:\nâ€¢ Booking a consultation\nâ€¢ Attending a workshop where equipment is demonstrated\nâ€¢ Contacting Alan directly for personalized recommendations\n\nHe regularly reviews and recommends equipment based on real-world photography experience.`;
     } else if (/workshop|event|tour/i.test(lc)) {
-    return `Alan Ranger offers a variety of photography workshops and events throughout the UK. His workshops include:\n\n• Landscape photography in Wales, Devon, Yorkshire\n• Long exposure techniques\n• Photo editing courses\n• Private mentoring sessions\n\nFor current workshop schedules and availability, please visit his website or contact him directly.`;
+    return `Alan Ranger offers a variety of photography workshops and events throughout the UK. His workshops include:\n\nâ€¢ Landscape photography in Wales, Devon, Yorkshire\nâ€¢ Long exposure techniques\nâ€¢ Photo editing courses\nâ€¢ Private mentoring sessions\n\nFor current workshop schedules and availability, please visit his website or contact him directly.`;
     } else {
     return `For specific information about your query, please contact Alan Ranger directly or visit the website for more details.`;
   }
@@ -6055,7 +6055,7 @@ function extractAndNormalizeQuery(body) {
     query = query.replace(/\b(2\.5\s*hr|2\.5\s*hour|2\s*to\s*4\s*hr|2\s*to\s*4\s*hour|2\s*hr|2\s*hour|short)\b/gi, '2.5hrs-4hrs');
     query = query.replace(/\b(2\s*to\s*5\s*day|multi\s*day|residential)\b/gi, '2-5-days');
     if (q0 !== query) {
-      console.log('🔍 Normalized query text:', { before: q0, after: query });
+      console.log('ðŸ” Normalized query text:', { before: q0, after: query });
     }
   }
   
@@ -6065,7 +6065,7 @@ function extractAndNormalizeQuery(body) {
 // Helper: Handle normalized duration queries (Low Complexity)
 async function handleNormalizedDurationQuery(query, pageContext, res) {
   if (typeof query === 'string' && (query.includes('1-day') || query.includes('2.5hrs-4hrs') || query.includes('2-5-days'))) {
-    console.log(`🎯 Bypassing all clarification logic for normalized duration query: "${query}"`);
+    console.log(`ðŸŽ¯ Bypassing all clarification logic for normalized duration query: "${query}"`);
     const client = supabaseAdmin();
     const keywords = extractKeywords(query);
     return await handleEventsPipeline({ client, query, keywords, pageContext, res, debugInfo: { bypassReason: 'normalized_duration' } });
@@ -6294,7 +6294,7 @@ function findIntroPattern(text) {
   
   for (const pattern of introPatterns) {
     if (pattern.test(text)) {
-      console.log(`🎯 Found intro pattern: ${pattern}`);
+      console.log(`ðŸŽ¯ Found intro pattern: ${pattern}`);
       const match = text.match(pattern);
       if (match) {
         return text.substring(match.index);
@@ -6333,7 +6333,7 @@ function cleanRagText(raw) {
   if (!raw) return "";
   let text = String(raw);
   
-  console.log(`🧹 Original text: "${text.substring(0, 100)}..."`);
+  console.log(`ðŸ§¹ Original text: "${text.substring(0, 100)}..."`);
   
   text = removeUrlArtifacts(text);
   text = decodeHtmlEntities(text);
@@ -6353,7 +6353,7 @@ function cleanRagText(raw) {
   // Final cleanup
   text = text.replace(/\s{2,}/g, " ").trim();
   
-  console.log(`🧹 Cleaned text: "${text.substring(0, 100)}..."`);
+  console.log(`ðŸ§¹ Cleaned text: "${text.substring(0, 100)}..."`);
   return text;
 }
 
@@ -6383,7 +6383,7 @@ function checkContactAlanQuery(query) {
   
   for (const pattern of contactAlanQueries) {
     if (pattern.test(query)) {
-      console.log(`📞 Contact Alan query detected: "${query}"`);
+      console.log(`ðŸ“ž Contact Alan query detected: "${query}"`);
       return {
         type: 'advice',
         confidence: 0.8,
@@ -6410,7 +6410,7 @@ async function searchSpecificGuideArticles(client, primaryKeyword) {
       .limit(5);
     
     if (!guideError && guideChunks) {
-      console.log(`🎯 Found ${guideChunks.length} specific guide chunks for "${primaryKeyword}"`);
+      console.log(`ðŸŽ¯ Found ${guideChunks.length} specific guide chunks for "${primaryKeyword}"`);
     return guideChunks;
   }
   return [];
@@ -6426,7 +6426,7 @@ async function searchBroaderGuideArticles(client, primaryKeyword) {
       .limit(3);
     
     if (!broaderError && broaderGuideChunks) {
-      console.log(`🎯 Found ${broaderGuideChunks.length} broader guide chunks`);
+      console.log(`ðŸŽ¯ Found ${broaderGuideChunks.length} broader guide chunks`);
     return broaderGuideChunks;
   }
   return [];
@@ -6476,7 +6476,7 @@ async function searchRagContent(context) {
   
   // For concept queries like "what is exposure", prioritize guide articles
   if (context.isConceptQuery) {
-    console.log(`🎯 Concept query detected: "${context.query}" - prioritizing guide articles`);
+    console.log(`ðŸŽ¯ Concept query detected: "${context.query}" - prioritizing guide articles`);
     
     // Search for specific and broader guide articles
     const specificGuides = await searchSpecificGuideArticles(context.client, context.primaryKeyword);
@@ -6485,9 +6485,9 @@ async function searchRagContent(context) {
     chunks = [...chunks, ...specificGuides, ...broaderGuides];
     
     if (chunks.length > 0) {
-      console.log(`🎯 Using ${chunks.length} guide chunks, skipping general search`);
+      console.log(`ðŸŽ¯ Using ${chunks.length} guide chunks, skipping general search`);
     } else {
-      console.log(`⚠️ No guide chunks found, falling back to general search`);
+      console.log(`âš ï¸ No guide chunks found, falling back to general search`);
     }
   }
   
@@ -6623,7 +6623,7 @@ async function searchRagEntities(context) {
 
 // Helper function to search for concept guide articles
 async function searchConceptGuideArticles(client, primaryKeyword) {
-    console.log(`🎯 Searching for guide articles for concept query`);
+    console.log(`ðŸŽ¯ Searching for guide articles for concept query`);
     const { data: guideArticles, error: guideError } = await client
       .from('page_entities')
       .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
@@ -6632,7 +6632,7 @@ async function searchConceptGuideArticles(client, primaryKeyword) {
       .limit(5);
     
     if (!guideError && guideArticles) {
-      console.log(`🎯 Found ${guideArticles.length} guide articles`);
+      console.log(`ðŸŽ¯ Found ${guideArticles.length} guide articles`);
       guideArticles.forEach(e => console.log(`  - "${e.title}" (${e.url})`));
     return guideArticles;
     }
@@ -6651,7 +6651,7 @@ function buildSearchKeywords(query, keywords) {
   
 // Helper function to search for keyword-based entities
 async function searchKeywordEntities(client, searchKeywords) {
-  console.log(`🔍 Searching for all keywords: ${searchKeywords.join(', ')}`);
+  console.log(`ðŸ” Searching for all keywords: ${searchKeywords.join(', ')}`);
   const { data: keywordEntities, error: entitiesError } = await client
     .from('page_entities')
     .select('url, title, description, meta_description, location, date_start, kind, publish_date, last_seen')
@@ -6660,14 +6660,14 @@ async function searchKeywordEntities(client, searchKeywords) {
     .limit(25);
   
   if (entitiesError) {
-    console.error(`❌ Entity search error:`, entitiesError);
+    console.error(`âŒ Entity search error:`, entitiesError);
     return [];
   } else if (keywordEntities) {
-    console.log(`📄 Found ${keywordEntities.length} entities for all keywords`);
+    console.log(`ðŸ“„ Found ${keywordEntities.length} entities for all keywords`);
     keywordEntities.forEach(e => console.log(`  - "${e.title}" (${e.kind})`));
     return keywordEntities;
   } else {
-    console.log(`📄 No entities found for keywords`);
+    console.log(`ðŸ“„ No entities found for keywords`);
     return [];
   }
   }
@@ -6708,12 +6708,12 @@ function handleEventEntities(entities) {
 
 // Helper function to handle chunk processing
 function handleChunkProcessing(query, entities, chunks) {
-  console.log(`🔍 Using generateDirectAnswer for ${chunks.length} chunks`);
+  console.log(`ðŸ” Using generateDirectAnswer for ${chunks.length} chunks`);
   
   // Try technical direct answer FIRST (priority for technical questions)
   const technicalAnswer = generateTechnicalDirectAnswer(query, chunks);
   if (technicalAnswer) {
-    console.log(`✅ Generated technical direct answer: "${technicalAnswer.substring(0, 100)}..."`);
+    console.log(`âœ… Generated technical direct answer: "${technicalAnswer.substring(0, 100)}..."`);
     const formattedAnswer = formatResponse(technicalAnswer, 500);
     return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url) };
   }
@@ -6721,7 +6721,7 @@ function handleChunkProcessing(query, entities, chunks) {
   // Try existing direct answer system
   const directAnswer = generateDirectAnswer(query, entities, chunks);
   if (directAnswer) {
-    console.log(`✅ Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+    console.log(`âœ… Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
     const formattedAnswer = formatResponse(directAnswer, 500);
     return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url) };
   }
@@ -6732,17 +6732,17 @@ function handleChunkProcessing(query, entities, chunks) {
 
 // Helper function to process chunk fallback
 function processChunkFallback(chunks, query = '') {
-  console.log(`⚠️ No intelligent answer found, using fallback chunk processing`);
+  console.log(`âš ï¸ No intelligent answer found, using fallback chunk processing`);
   const cleaned = chunks
     .map(c => {
       const cleanedText = cleanRagText(c.chunk_text);
-      console.log(`📝 Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
+      console.log(`ðŸ“ Chunk cleaned: "${cleanedText}" (original length: ${c.chunk_text?.length || 0})`);
       return cleanedText;
     })
     .filter(Boolean)
     .filter(content => filterRelevantContent(content, query));
 
-  console.log(`✅ ${cleaned.length} chunks passed cleaning and relevance filter`);
+  console.log(`âœ… ${cleaned.length} chunks passed cleaning and relevance filter`);
   let answer = cleaned.join("\n\n");
   
   // Format response with length limits and concise formatting
@@ -6881,7 +6881,7 @@ function filterRelevantContent(content, query) {
 // Helper function to filter and sort entities
 function filterAndSortEntities(entities, query) {
     const adviceEntities = entities.filter(e => e.kind !== 'event');
-    console.log(`📝 Filtered to ${adviceEntities.length} advice entities`);
+    console.log(`ðŸ“ Filtered to ${adviceEntities.length} advice entities`);
     
     const relevantEntities = adviceEntities.filter(entity => {
       // Use all entities - no hardcoded filtering
@@ -6901,7 +6901,7 @@ function filterAndSortEntities(entities, query) {
       return bDate - aDate;
     });
     
-    console.log(`📝 Filtered to ${relevantEntities.length} relevant entities`);
+    console.log(`ðŸ“ Filtered to ${relevantEntities.length} relevant entities`);
   return relevantEntities;
 }
     
@@ -6927,12 +6927,12 @@ function calculateEntityConfidence(relevantEntities, chunks, results) {
         // High quality: relevant future events
         qualityScore += 0.4;
         qualityFactors.push(`Future events: +40%`);
-        console.log(`🎯 Found ${eventEntities.length} future event entities`);
+        console.log(`ðŸŽ¯ Found ${eventEntities.length} future event entities`);
       } else {
         // Medium quality: advice entities
         qualityScore += 0.2;
         qualityFactors.push(`Advice entities: +20%`);
-        console.log(`🎯 Found ${relevantEntities.length} advice entities`);
+        console.log(`ðŸŽ¯ Found ${relevantEntities.length} advice entities`);
       }
     }
     
@@ -6951,8 +6951,8 @@ function calculateEntityConfidence(relevantEntities, chunks, results) {
       results.confidence = 0.10; // 10% - Very Poor
     }
     
-    console.log(`📊 Alan's Quality-Based Entity Confidence: ${qualityFactors.join(', ')} = ${(results.confidence * 100).toFixed(1)}%`);
-    console.log(`📊 Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
+    console.log(`ðŸ“Š Alan's Quality-Based Entity Confidence: ${qualityFactors.join(', ')} = ${(results.confidence * 100).toFixed(1)}%`);
+    console.log(`ðŸ“Š Final confidence: ${results.confidence}, answerType: ${results.answerType}`);
 }
 
 // Helper function to handle policy queries
@@ -6965,23 +6965,23 @@ function handlePolicyQuery(relevantEntities) {
         
   const answer = `**Terms and Conditions**: Alan Ranger Photography has comprehensive terms and conditions covering booking policies, copyright, privacy, and insurance. All content and photos are copyright of Alan Ranger unless specifically stated.\n\nFor full details, visit the [Terms and Conditions page](${policyEntity.url}).`;
         
-        console.log(`✅ Generated policy-specific answer for terms and conditions query`);
+        console.log(`âœ… Generated policy-specific answer for terms and conditions query`);
   return { answer, type: "advice", sources: [policyEntity.url] };
 }
 
 // Helper function to handle regular entity processing
 function handleRegularEntityProcessing(query, relevantEntities, chunks) {
-        console.log(`🔍 DEBUG: Using generateDirectAnswer for enhanced concept synthesis`);
+        console.log(`ðŸ” DEBUG: Using generateDirectAnswer for enhanced concept synthesis`);
         const directAnswer = generateDirectAnswer(query, relevantEntities, chunks);
         if (directAnswer) {
-          console.log(`✅ Generated enhanced answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+          console.log(`âœ… Generated enhanced answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
     return { answer: directAnswer, type: "advice", sources: relevantEntities.map(e => e.url) };
   }
   
-          console.log(`⚠️ No enhanced answer found, trying fallback`);
+          console.log(`âš ï¸ No enhanced answer found, trying fallback`);
           const primaryEntity = relevantEntities[0];
   const answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
-          console.log(`✅ Generated fallback answer from description`);
+          console.log(`âœ… Generated fallback answer from description`);
   
   return { answer, type: "advice", sources: relevantEntities.map(e => e.url) };
 }
@@ -6996,7 +6996,7 @@ function generateRagAnswer(params) {
   } else if (chunks.length > 0) {
     return handleChunkProcessing(query, entities, chunks);
   } else if (entities.length > 0) {
-    console.log(`🔍 Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
+    console.log(`ðŸ” Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
     const relevantEntities = filterAndSortEntities(entities, query);
     calculateEntityConfidence(relevantEntities, chunks, results);
     
@@ -7004,7 +7004,7 @@ function generateRagAnswer(params) {
       const isPolicyQuery = /terms.*conditions|terms.*anc.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
       return isPolicyQuery ? handlePolicyQuery(relevantEntities) : handleRegularEntityProcessing(query, relevantEntities, chunks);
     } else {
-      console.log(`⚠️ No relevant entities found for query`);
+      console.log(`âš ï¸ No relevant entities found for query`);
       return { answer: "", type: "advice", sources: [] };
     }
   }
@@ -7015,7 +7015,7 @@ function generateRagAnswer(params) {
 // Helper function to prepare RAG query parameters
 function prepareRagQuery(query) {
   const keywords = extractKeywords(query);
-  console.log(`🔑 Extracted keywords: ${keywords.join(', ')}`);
+  console.log(`ðŸ”‘ Extracted keywords: ${keywords.join(', ')}`);
   
   const lcQuery = (query || "").toLowerCase();
   const isConceptQuery = false; // TEMPORARILY DISABLED FOR TESTING
@@ -7038,7 +7038,7 @@ function handleRagFallbackLogic(context) {
       context.answer.includes("Yes, Alan Ranger offers the services you're asking about") ||
       (context.answer.includes("Yes, Alan Ranger") && context.answer.length < 200) ||
       context.answer.includes("I'd be happy to help you with your photography questions")) {
-    console.log(`⚠️ No answer generated or generic response detected, providing fallback`);
+    console.log(`âš ï¸ No answer generated or generic response detected, providing fallback`);
     const fallback = handleRagFallback(context.query);
     finalAnswer = fallback.answer;
     finalType = fallback.type;
@@ -7050,12 +7050,12 @@ function handleRagFallbackLogic(context) {
 function handleRagFallback(query) {
   if (/tripod|equipment|gear|camera|lens/i.test(query.toLowerCase())) {
     return {
-      answer: `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`,
+      answer: `For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\nâ€¢ Professional tripod systems\nâ€¢ Camera bodies and lenses\nâ€¢ Accessories and filters\nâ€¢ Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.`,
       type: "advice"
     };
   } else if (/refund|cancellation|policy/i.test(query.toLowerCase())) {
     return {
-      answer: `Alan Ranger has a clear cancellation and refund policy for all courses and workshops. Here are the key details:\n\n**Cancellation Policy:**\n• Full refund if cancelled 14+ days before the event\n• 50% refund if cancelled 7-13 days before\n• No refund for cancellations within 7 days\n\n**Rescheduling:**\n• Free rescheduling if requested 7+ days in advance\n• Weather-related cancellations are fully refundable\n\nFor specific details or to discuss your situation, please contact Alan directly.\n\n*Contact Alan: https://www.alanranger.com/contact*`,
+      answer: `Alan Ranger has a clear cancellation and refund policy for all courses and workshops. Here are the key details:\n\n**Cancellation Policy:**\nâ€¢ Full refund if cancelled 14+ days before the event\nâ€¢ 50% refund if cancelled 7-13 days before\nâ€¢ No refund for cancellations within 7 days\n\n**Rescheduling:**\nâ€¢ Free rescheduling if requested 7+ days in advance\nâ€¢ Weather-related cancellations are fully refundable\n\nFor specific details or to discuss your situation, please contact Alan directly.\n\n*Contact Alan: https://www.alanranger.com/contact*`,
       type: "advice"
     };
   } else {
@@ -7094,7 +7094,7 @@ async function searchAndProcessRagContent(context) {
     lcQuery: context.lcQuery,
     isConceptQuery: context.isConceptQuery
   });
-  console.log(`📄 Found ${processedChunks.length} relevant chunks`);
+  console.log(`ðŸ“„ Found ${processedChunks.length} relevant chunks`);
   return processedChunks;
 }
 
@@ -7108,7 +7108,7 @@ async function searchAndProcessRagEntities(context) {
     primaryKeyword: context.primaryKeyword
   });
   const processedEntities = entities || [];
-  console.log(`🏷️ Found ${processedEntities.length} relevant entities`);
+  console.log(`ðŸ·ï¸ Found ${processedEntities.length} relevant entities`);
   return processedEntities;
 }
 
@@ -7180,7 +7180,7 @@ async function processRagSearchResults(context) {
 }
 
 async function tryRagFirst(client, query) {
-  console.log(`🔍 RAG-First attempt for: "${query}"`);
+  console.log(`ðŸ” RAG-First attempt for: "${query}"`);
   
   // Check for contact Alan queries first
   const contactResponse = checkContactAlanQuery(query);
@@ -7191,7 +7191,7 @@ async function tryRagFirst(client, query) {
   // Check for service patterns first
   const serviceResponse = getServiceAnswers(query.toLowerCase());
   if (serviceResponse) {
-    console.log(`🎯 Service pattern matched for: "${query}"`);
+    console.log(`ðŸŽ¯ Service pattern matched for: "${query}"`);
     return {
       success: true,
       confidence: 0.8,
@@ -7204,7 +7204,7 @@ async function tryRagFirst(client, query) {
   // Check for technical patterns first
   const technicalResponse = getTechnicalAnswers(query.toLowerCase());
   if (technicalResponse) {
-    console.log(`🎯 Technical pattern matched for: "${query}"`);
+    console.log(`ðŸŽ¯ Technical pattern matched for: "${query}"`);
     return {
       success: true,
       confidence: 0.8,
@@ -7243,23 +7243,23 @@ async function tryRagFirst(client, query) {
 
 // Helper: Process main query (Low Complexity)
 async function processMainQuery(context) {
-  console.log(`🚀 processMainQuery called for: "${context.query}"`);
+  console.log(`ðŸš€ processMainQuery called for: "${context.query}"`);
   const client = supabaseAdmin();
   
   await initializeSession(context);
   
   const classification = await handleQueryClassification(client, context);
-  console.log(`🔍 Classification handled: ${classification.handled}`);
+  console.log(`ðŸ” Classification handled: ${classification.handled}`);
   if (classification.handled) return;
   
   const ragResult = await attemptRagFirst(client, context);
-  console.log(`🔍 RAG result success: ${ragResult.success}`);
+  console.log(`ðŸ” RAG result success: ${ragResult.success}`);
   if (ragResult.success) {
-    console.log(`🔍 Calling sendRagSuccessResponse...`);
+    console.log(`ðŸ” Calling sendRagSuccessResponse...`);
     return sendRagSuccessResponse(context.res, ragResult, context);
   }
   
-  console.log(`🔍 Calling handleRagFallbackWithIntent...`);
+  console.log(`ðŸ” Calling handleRagFallbackWithIntent...`);
   return handleRagFallbackWithIntent(client, context, ragResult);
 }
 
@@ -7271,21 +7271,21 @@ async function initializeSession(context) {
 // Helper function to handle query classification
 async function handleQueryClassification(client, context) {
   const classification = classifyQuery(context.query);
-  console.log(`🔍 Classification result for "${context.query}":`, classification);
+  console.log(`ðŸ” Classification result for "${context.query}":`, classification);
   
   if (classification.type === 'workshop') {
     return await handleWorkshopClassification(client, context);
   } else if (classification.type === 'clarification') {
     return await handleClarificationClassification(client, context, classification);
   } else {
-    console.log(`🔍 Not a workshop or clarification query, proceeding to RAG for: "${context.query}"`);
+    console.log(`ðŸ” Not a workshop or clarification query, proceeding to RAG for: "${context.query}"`);
     return { handled: false };
   }
 }
 
 // Helper function to handle workshop classification
 async function handleWorkshopClassification(client, context) {
-  console.log(`🎯 Workshop query detected: "${context.query}" - skipping RAG, routing to events`);
+  console.log(`ðŸŽ¯ Workshop query detected: "${context.query}" - skipping RAG, routing to events`);
   const keywords = extractKeywords(context.query);
   await handleEventsPipeline({ client, query: context.query, keywords, pageContext: context.pageContext, res: context.res, debugInfo: { bypassReason: 'workshop_query' } });
   return { handled: true };
@@ -7293,7 +7293,7 @@ async function handleWorkshopClassification(client, context) {
 
 // Helper function to handle clarification classification
 async function handleClarificationClassification(client, context, classification) {
-  console.log(`🎯 Clarification query detected: "${context.query}" - routing to clarification`);
+  console.log(`ðŸŽ¯ Clarification query detected: "${context.query}" - routing to clarification`);
   await handleClarificationQuery({
     client,
     query: context.query,
@@ -7306,31 +7306,31 @@ async function handleClarificationClassification(client, context, classification
 
 // Helper function to attempt RAG first
 async function attemptRagFirst(client, context) {
-  console.log(`🚀 Starting RAG-First attempt for: "${context.query}"`);
+  console.log(`ðŸš€ Starting RAG-First attempt for: "${context.query}"`);
   const ragResult = await tryRagFirst(client, context.query);
-  console.log(`📊 RAG Result: success=${ragResult.success}, confidence=${ragResult.confidence}, answerLength=${ragResult.answer?.length || 0}`);
+  console.log(`ðŸ“Š RAG Result: success=${ragResult.success}, confidence=${ragResult.confidence}, answerLength=${ragResult.answer?.length || 0}`);
   return ragResult;
 }
   
 // Helper function to send RAG success response
 function sendRagSuccessResponse(res, ragResult, context) {
-    console.log(`✅ RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
-  console.log(`🔍 Context exists: ${!!context}`);
-  console.log(`🔍 Answer exists: ${!!ragResult.answer}`);
-  console.log(`🔍 Context query: ${context?.query}`);
-  console.log(`🔍 Context queryLower: ${context?.queryLower}`);
-  console.log(`🔍 Quality indicators exist: ${!!context?.qualityIndicators}`);
+    console.log(`âœ… RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
+  console.log(`ðŸ” Context exists: ${!!context}`);
+  console.log(`ðŸ” Answer exists: ${!!ragResult.answer}`);
+  console.log(`ðŸ” Context query: ${context?.query}`);
+  console.log(`ðŸ” Context queryLower: ${context?.queryLower}`);
+  console.log(`ðŸ” Quality indicators exist: ${!!context?.qualityIndicators}`);
   
   // Analyze response content for quality indicators
-  console.log(`🔍 RAG SUCCESS RESPONSE - Quality Analysis Check:`);
-  console.log(`🔍 Context exists: ${!!context}`);
-  console.log(`🔍 Answer exists: ${!!ragResult.answer}`);
-  console.log(`🔍 Context query: ${context?.query}`);
-  console.log(`🔍 Context queryLower: ${context?.queryLower}`);
-  console.log(`🔍 Quality indicators exist: ${!!context?.qualityIndicators}`);
+  console.log(`ðŸ” RAG SUCCESS RESPONSE - Quality Analysis Check:`);
+  console.log(`ðŸ” Context exists: ${!!context}`);
+  console.log(`ðŸ” Answer exists: ${!!ragResult.answer}`);
+  console.log(`ðŸ” Context query: ${context?.query}`);
+  console.log(`ðŸ” Context queryLower: ${context?.queryLower}`);
+  console.log(`ðŸ” Quality indicators exist: ${!!context?.qualityIndicators}`);
   
   if (context && ragResult.answer) {
-    console.log(`🔍 Analyzing response for quality indicators...`);
+    console.log(`ðŸ” Analyzing response for quality indicators...`);
     try {
       // Ensure context has queryLower
       if (!context.queryLower && context.query) {
@@ -7339,14 +7339,14 @@ function sendRagSuccessResponse(res, ragResult, context) {
       analyzeResponseContent(ragResult.answer, ragResult.sources?.articles || [], context);
       // Recalculate confidence based on quality indicators
       const newConfidence = finalizeConfidence(context.query, context);
-      console.log(`🎯 Quality-based confidence: ${(newConfidence * 100).toFixed(1)}% (was ${(ragResult.confidence * 100).toFixed(1)}%)`);
+      console.log(`ðŸŽ¯ Quality-based confidence: ${(newConfidence * 100).toFixed(1)}% (was ${(ragResult.confidence * 100).toFixed(1)}%)`);
       ragResult.confidence = newConfidence;
     } catch (error) {
-      console.log(`❌ Error in quality analysis: ${error.message}`);
-      console.log(`❌ Error stack: ${error.stack}`);
+      console.log(`âŒ Error in quality analysis: ${error.message}`);
+      console.log(`âŒ Error stack: ${error.stack}`);
     }
   } else {
-    console.log(`❌ No context or answer for quality analysis`);
+    console.log(`âŒ No context or answer for quality analysis`);
   }
     
     return res.status(200).json({
@@ -7372,11 +7372,11 @@ function sendRagSuccessResponse(res, ragResult, context) {
   
 // Helper function to handle RAG fallback
 async function handleRagFallbackWithIntent(client, context, ragResult) {
-  console.log(`🔄 RAG-First insufficient (${ragResult.confidence} confidence), falling back to existing system`);
-  console.log(`📊 RAG Debug: chunks=${ragResult.chunksFound}, entities=${ragResult.entitiesFound}, totalMatches=${ragResult.totalMatches}`);
+  console.log(`ðŸ”„ RAG-First insufficient (${ragResult.confidence} confidence), falling back to existing system`);
+  console.log(`ðŸ“Š RAG Debug: chunks=${ragResult.chunksFound}, entities=${ragResult.entitiesFound}, totalMatches=${ragResult.totalMatches}`);
   
   const intent = determineIntent(context.query, context.previousQuery, context.pageContext);
-  console.log(`🎯 Classification Intent: ${intent}`);
+  console.log(`ðŸŽ¯ Classification Intent: ${intent}`);
   
   await processByIntent({
     client,
@@ -7398,7 +7398,7 @@ function determineIntent(query, previousQuery, pageContext) {
   
   // Use new classification system instead of old detectIntent
   const classification = classifyQuery(query || "");
-  console.log(`🎯 Query classified as: ${classification.type} (${classification.reason})`);
+  console.log(`ðŸŽ¯ Query classified as: ${classification.type} (${classification.reason})`);
   
   // Map classification types to intent
   switch (classification.type) {
@@ -7446,7 +7446,7 @@ async function processByIntent(context) {
 
 // Helper function to handle workshop intent
 async function handleWorkshopIntent(context) {
-  console.log(`🎯 Workshop query detected: "${context.query}" - routing to workshop system`);
+  console.log(`ðŸŽ¯ Workshop query detected: "${context.query}" - routing to workshop system`);
   const keywords = extractKeywords(context.query);
   const handled = await handleEventsPipeline({ 
     client: context.client, 
@@ -7474,7 +7474,7 @@ async function handleDirectAnswerOrWorkshop(context) {
 
 // Helper function to handle direct answer classification
 async function handleDirectAnswerClassification(context) {
-  console.log(`🎯 Direct answer query detected: "${context.query}" - bypassing clarification`);
+  console.log(`ðŸŽ¯ Direct answer query detected: "${context.query}" - bypassing clarification`);
   const directAnswerResponse = await handleDirectAnswerQuery({
     client: context.client,
     query: context.query,
@@ -7486,7 +7486,7 @@ async function handleDirectAnswerClassification(context) {
 
 // Helper function to handle workshop classification
 async function handleWorkshopClassificationWithContext(context) {
-  console.log(`🎯 Workshop query detected: "${context.query}" - routing to workshop system`);
+  console.log(`ðŸŽ¯ Workshop query detected: "${context.query}" - routing to workshop system`);
   const keywords = extractKeywords(context.query);
   const handled = await handleEventsPipeline({ 
     client: context.client, 
@@ -7598,10 +7598,10 @@ function handleLocationQueryResponse(eventList) {
 function formatEventDetails(event) {
   const formattedDate = formatEventDate(event.date);
   let details = `\n\n**${event.title || event.event_title}**`;
-  details += `\n• Date: ${formattedDate}`;
-  if (event.location) details += `\n• Location: ${event.location}`;
-  if (event.price) details += `\n• Price: £${event.price}`;
-  if (event.experience_level) details += `\n• Level: ${event.experience_level}`;
+  details += `\nâ€¢ Date: ${formattedDate}`;
+  if (event.location) details += `\nâ€¢ Location: ${event.location}`;
+  if (event.price) details += `\nâ€¢ Price: Â£${event.price}`;
+  if (event.experience_level) details += `\nâ€¢ Level: ${event.experience_level}`;
   return details;
 }
 
@@ -7640,6 +7640,3 @@ function generateEventAnswerMarkdown(eventList, query) {
   return answer;
 }
 
-// Handler is already exported above/ /   F o r c e   d e p l o y m e n t   1 0 / 2 5 / 2 0 2 5   2 0 : 1 2 : 5 1 
- 
- 
