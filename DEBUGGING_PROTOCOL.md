@@ -67,6 +67,26 @@ A fix is only successful when:
 3. No regressions introduced
 4. User confirms it works
 
+## 🚨 CRITICAL OPERATIONAL RULES
+
+### Git Commands - ALWAYS USE MCP:
+- **NEVER** use terminal `git` commands directly
+- **ALWAYS** use MCP GitKraken tools: `mcp_GitKraken_git_add_or_commit`, `mcp_GitKraken_git_push`, etc.
+- **NEVER** attempt `git commit --no-verify` or bypass Husky linting
+- **ALWAYS** let MCP handle authentication and push protection
+
+### Local Server Management:
+- **NEVER** start the local server yourself
+- **ALWAYS** ask the user to start the local server
+- **NEVER** hardcode environment variables in deployed code
+- **ALWAYS** rely on user-provided environment variables
+
+### Why These Rules Matter:
+- Terminal git commands often hang or fail with authentication issues
+- Starting the server yourself leads to hardcoded API keys in deployed code
+- These mistakes cause deployment failures and wasted debugging time
+- User has explicitly requested these rules multiple times
+
 ---
 **Created**: 2025-10-26
 **Purpose**: Prevent recurring debugging mistakes
