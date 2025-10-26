@@ -1270,6 +1270,7 @@
             // Update stats
             updateStats();
             updateResultsTable();
+            updateSummaryStats(); // Force update of ALL masonry blocks
             
             // Move to next question (or show completion message)
             if (currentQuestionIndex + 1 >= filteredQuestions.length) {
