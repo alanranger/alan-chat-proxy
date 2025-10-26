@@ -1402,27 +1402,49 @@
         // Parse and import CSV
         function parseAndImportCSV(csv) {
             const lines = csv.split('\n');
-            const headers = lines[0].split(',');
+            const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
             
             // Clear existing results
             testResults = [];
             savedScores = {};
             
+            // Detect CSV format based on headers
+            const isNewFormat = headers.includes('Bot Response Score') && headers.includes('Related Score');
+            
             for (let i = 1; i < lines.length; i++) {
                 if (lines[i].trim()) {
                     const values = lines[i].split(',');
-                    const result = {
-                        questionIndex: i - 1,
-                        question: values[0].replace(/"/g, ''),
-                        category: values[1].replace(/"/g, ''),
-                        focus: values[2].replace(/"/g, ''),
-                        qualityScore: parseInt(values[3]),
-                        relevanceScore: parseInt(values[4]) || 0,
-                        notes: values[5].replace(/"/g, ''),
-                        qualityNotes: values[6] ? values[6].replace(/"/g, '') : '',
-                        relevanceNotes: values[7] ? values[7].replace(/"/g, '') : '',
-                        timestamp: values[8].replace(/"/g, '')
-                    };
+                    let result;
+                    
+                    if (isNewFormat) {
+                        // New format: Question, Status, Bot Response Score, Bot Response Notes, Related Score, Related Notes, Other Notes, Category, Focus, Timestamp
+                        result = {
+                            questionIndex: i - 1,
+                            question: values[0].replace(/"/g, ''),
+                            category: values[7] ? values[7].replace(/"/g, '') : '',
+                            focus: values[8] ? values[8].replace(/"/g, '') : '',
+                            qualityScore: parseInt(values[2]) || 0,
+                            relevanceScore: parseInt(values[4]) || 0,
+                            notes: values[6] ? values[6].replace(/"/g, '') : '',
+                            qualityNotes: values[3] ? values[3].replace(/"/g, '') : '',
+                            relevanceNotes: values[5] ? values[5].replace(/"/g, '') : '',
+                            timestamp: values[9] ? values[9].replace(/"/g, '') : new Date().toISOString()
+                        };
+                    } else {
+                        // Old format: Question, Category, Focus, Quality Score, Relevance Score, Overall Notes, Quality Notes, Relevance Notes, Timestamp
+                        result = {
+                            questionIndex: i - 1,
+                            question: values[0].replace(/"/g, ''),
+                            category: values[1].replace(/"/g, ''),
+                            focus: values[2].replace(/"/g, ''),
+                            qualityScore: parseInt(values[3]) || 0,
+                            relevanceScore: parseInt(values[4]) || 0,
+                            notes: values[5].replace(/"/g, ''),
+                            qualityNotes: values[6] ? values[6].replace(/"/g, '') : '',
+                            relevanceNotes: values[7] ? values[7].replace(/"/g, '') : '',
+                            timestamp: values[8].replace(/"/g, '')
+                        };
+                    }
                     
                     testResults.push(result);
                     savedScores[result.question] = {
