@@ -452,16 +452,32 @@
         <button class="btn btn-warning" onclick="importResults()">📤 Import Results</button>
         <button class="btn btn-secondary" onclick="clearResults()">🗑️ Clear All Results</button>
         
+        <div id="summaryStats" style="margin-bottom: 20px;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="avgBotResponseScore">0</div>
+                    <div class="stat-label">Avg Bot Response Score</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgRelatedScore">0</div>
+                    <div class="stat-label">Avg Related Score</div>
+                </div>
+            </div>
+            <div id="categoryBreakdown" style="margin-top: 15px;">
+                <!-- Category breakdown will be populated here -->
+            </div>
+        </div>
+        
         <table class="results-table" id="resultsTable">
             <thead>
                 <tr>
                     <th>Question</th>
-                    <th>Quality Score</th>
-                    <th>Relevance Score</th>
                     <th>Status</th>
-                    <th>Quality Notes</th>
-                    <th>Relevance Notes</th>
-                    <th>Overall Notes</th>
+                    <th>Bot Response Score</th>
+                    <th>Bot Response Notes</th>
+                    <th>Related Score</th>
+                    <th>Related Notes</th>
+                    <th>Other Notes</th>
                 </tr>
             </thead>
             <tbody id="resultsBody">
@@ -1185,7 +1201,56 @@
             if (completed > 0) {
                 const avgScore = testResults.reduce((sum, r) => sum + r.qualityScore, 0) / completed;
                 document.getElementById('averageScore').textContent = Math.round(avgScore);
+                
+                // Update summary stats
+                updateSummaryStats();
             }
+        }
+
+        // Update summary statistics and category breakdown
+        function updateSummaryStats() {
+            if (testResults.length === 0) return;
+            
+            // Calculate averages
+            const avgBotResponseScore = testResults.reduce((sum, r) => sum + r.qualityScore, 0) / testResults.length;
+            const avgRelatedScore = testResults.reduce((sum, r) => sum + (r.relevanceScore !== undefined ? r.relevanceScore : 0), 0) / testResults.length;
+            
+            document.getElementById('avgBotResponseScore').textContent = Math.round(avgBotResponseScore);
+            document.getElementById('avgRelatedScore').textContent = Math.round(avgRelatedScore);
+            
+            // Calculate category breakdown
+            const categoryStats = {};
+            testResults.forEach(result => {
+                const category = result.category;
+                if (!categoryStats[category]) {
+                    categoryStats[category] = {
+                        count: 0,
+                        botResponseSum: 0,
+                        relatedSum: 0
+                    };
+                }
+                categoryStats[category].count++;
+                categoryStats[category].botResponseSum += result.qualityScore;
+                categoryStats[category].relatedSum += (result.relevanceScore !== undefined ? result.relevanceScore : 0);
+            });
+            
+            // Display category breakdown
+            const breakdownDiv = document.getElementById('categoryBreakdown');
+            breakdownDiv.innerHTML = '<h4>📊 Breakdown by Category</h4>';
+            
+            Object.keys(categoryStats).forEach(category => {
+                const stats = categoryStats[category];
+                const avgBotResponse = Math.round(stats.botResponseSum / stats.count);
+                const avgRelated = Math.round(stats.relatedSum / stats.count);
+                
+                const categoryDiv = document.createElement('div');
+                categoryDiv.style.cssText = 'background: white; border-radius: 8px; padding: 15px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1);';
+                categoryDiv.innerHTML = `
+                    <strong>${category}</strong> (${stats.count} questions)<br>
+                    <small>Avg Bot Response: ${avgBotResponse} | Avg Related: ${avgRelated}</small>
+                `;
+                breakdownDiv.appendChild(categoryDiv);
+            });
         }
 
         // Update results table
@@ -1197,10 +1262,10 @@
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${result.question}</td>
-                    <td>${result.qualityScore}</td>
-                    <td>${result.relevanceScore !== undefined ? result.relevanceScore : 'N/A'}</td>
                     <td><span class="status-badge ${result.qualityScore >= 70 ? 'status-pass' : 'status-fail'}">${result.qualityScore >= 70 ? 'Pass' : 'Fail'}</span></td>
+                    <td>${result.qualityScore}</td>
                     <td>${result.qualityNotes || ''}</td>
+                    <td>${result.relevanceScore !== undefined ? result.relevanceScore : 0}</td>
                     <td>${result.relevanceNotes || ''}</td>
                     <td>${result.notes || ''}</td>
                 `;
@@ -1277,16 +1342,17 @@
 
         // Generate CSV content
         function generateCSV() {
-            const headers = ['Question', 'Category', 'Focus', 'Quality Score', 'Relevance Score', 'Overall Notes', 'Quality Notes', 'Relevance Notes', 'Timestamp'];
+            const headers = ['Question', 'Status', 'Bot Response Score', 'Bot Response Notes', 'Related Score', 'Related Notes', 'Other Notes', 'Category', 'Focus', 'Timestamp'];
             const rows = testResults.map(result => [
                 `"${result.question}"`,
+                result.qualityScore >= 70 ? 'Pass' : 'Fail',
+                result.qualityScore,
+                `"${result.qualityNotes || ''}"`,
+                result.relevanceScore !== undefined ? result.relevanceScore : 0,
+                `"${result.relevanceNotes || ''}"`,
+                `"${result.notes || ''}"`,
                 `"${result.category}"`,
                 `"${result.focus}"`,
-                result.qualityScore,
-                result.relevanceScore !== undefined ? result.relevanceScore : 'N/A',
-                `"${result.notes}"`,
-                `"${result.qualityNotes || ''}"`,
-                `"${result.relevanceNotes || ''}"`,
                 `"${result.timestamp}"`
             ]);
             
