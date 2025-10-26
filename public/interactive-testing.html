@@ -1157,7 +1157,7 @@
             questionCard.classList.add('completed');
             
             const statusBadge = questionCard.querySelector('.status-badge');
-            statusBadge.textContent = verdict;
+            statusBadge.textContent = qualityScore >= 70 ? 'Pass' : 'Fail';
             statusBadge.className = `status-badge ${qualityScore >= 70 ? 'status-pass' : 'status-fail'}`;
             
             // Update stats
@@ -1204,22 +1204,18 @@
             });
         }
 
-        // Export results
+        // Export results to CSV file
         function exportResults() {
-            const data = {
-                timestamp: new Date().toISOString(),
-                totalQuestions: testQuestions.length,
-                completedQuestions: testResults.length,
-                results: testResults
-            };
-            
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
+            const csvContent = generateCSV();
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `interactive-test-results-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+            a.download = `interactive-test-results-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
             a.click();
-            URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
         }
 
         // Clear all results
@@ -1254,20 +1250,6 @@
                 // Reset to first question
                 loadQuestion(0);
             }
-        }
-
-        // Export results to CSV file
-        function exportResults() {
-            const csvContent = generateCSV();
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `interactive-test-results-${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
         }
 
         // Import results from CSV file
