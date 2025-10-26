@@ -1131,7 +1131,7 @@ function getTechnicalAnswers(lc) {
   return getJpegRawAnswer(lc) ||
          getExposureTriangleAnswer(lc) ||
          getCompositionAnswer(lc) ||
-         getFilterAnswer(lc) ||
+         // getFilterAnswer(lc) ||  // DISABLED: Let RAG system handle filter queries
          getDepthOfFieldAnswer(lc) ||
          getSharpnessAnswer(lc) ||
          getImageQualityAnswer(lc) ||
@@ -1266,10 +1266,6 @@ const SERVICE_PATTERNS = [
   {
     matcher: (lc) => lc.includes("voucher") || lc.includes("gift") || lc.includes("present"),
     answer: `**Gift Vouchers**: Digital photography gift vouchers are available from Â£5-Â£600, perfect for any photography enthusiast. Vouchers can be used for workshops, courses, private lessons, or any photography tuition event. They expire 12 months from purchase date and can be split across multiple purchases. [Buy Gift Vouchers](https://www.alanranger.com/photography-gift-vouchers)\n\n`
-  },
-  {
-    matcher: (lc) => lc.includes("tripod") || lc.includes("tripods") || lc.includes("equipment") || lc.includes("gear") || lc.includes("camera") || lc.includes("lens"),
-    answer: `**Equipment Recommendations**: Based on Alan's extensive experience with photography equipment, he recommends checking out his detailed equipment guides. He has comprehensive reviews and recommendations for different types of photography and budgets. [View Equipment Guides](https://www.alanranger.com/photography-equipment-recommendations)\n\n`
   },
   {
     matcher: (lc) => lc.includes("service") || (lc.includes("what do you offer") && !lc.includes("courses")) || lc.includes("what services"),
@@ -1460,9 +1456,9 @@ function tryAllAnswerSources(context) {
   const chunkAnswer = tryContentChunkAnswer(context);
   if (chunkAnswer) return chunkAnswer;
   
-  // PRIORITY 3: Equipment advice
+  // PRIORITY 3: Equipment advice (ONLY if we have articles/chunks - let RAG try first)
   const equipmentAnswer = tryEquipmentAdviceAnswer(context.lc, context.articles, context.contentChunks);
-  if (equipmentAnswer) return equipmentAnswer;
+  if (equipmentAnswer && (context.articles.length > 0 || context.contentChunks.length > 0)) return equipmentAnswer;
   
   // PRIORITY 4: Hardcoded answers
   const hardcodedAnswer = tryHardcodedAnswer(context.lc);
@@ -1716,10 +1712,14 @@ function extractDurationBasedTypes(events, eventTypes) {
 
 // Helper function to extract categories from titles
 function extractTitleBasedCategories(events, eventCategories) {
+  // Generic workshop mapping based on content analysis
   const categoryMappings = {
     'bluebell': 'Bluebell workshops',
     'woodland': 'Woodland workshops', 
     'autumn': 'Autumn workshops',
+    'spring': 'Spring workshops',
+    'summer': 'Summer workshops',
+    'winter': 'Winter workshops',
     'macro': 'Macro workshops',
     'abstract': 'Abstract workshops'
   };
@@ -1832,13 +1832,14 @@ function shouldSkipServiceType(type) {
 
 // Helper function to format service type
 function formatServiceType(type) {
+  // Generic workshop keyword detection
   const serviceTypeMappings = [
     { keywords: ['2.5hrs-4hrs'], formatted: '2.5hr - 4hr workshops' },
     { keywords: ['1-day'], formatted: '1 day workshops' },
     { keywords: ['2-5-days', 'weekend residential'], formatted: 'Multi day residential workshops' },
     { keywords: ['coastal'], formatted: 'Coastal workshops' },
     { keywords: ['landscape'], formatted: 'Landscape workshops' },
-    { keywords: ['bluebell'], formatted: 'Bluebell workshops' },
+    { keywords: ['bluebell', 'autumn', 'spring', 'summer', 'winter'], formatted: 'Seasonal workshops' },
     { keywords: ['macro', 'abstract'], formatted: 'Macro & Abstract workshops' }
   ];
   
@@ -2269,7 +2270,14 @@ function checkAboutPatterns(lc) {
 }
 
 function checkFreeCourseWorkshopPatterns(lc) {
-  if (lc.includes("is there a free") && lc.includes("course")) {
+  // Generic course clarification detection
+  const courseTerms = ['course', 'lesson', 'class', 'training'];
+  const freeTerms = ['free', 'complimentary', 'no cost'];
+  
+  const hasCourseTerm = courseTerms.some(term => lc.includes(term));
+  const hasFreeTerm = freeTerms.some(term => lc.includes(term));
+  
+  if (hasFreeTerm && hasCourseTerm) {
     return {
       type: "free_course_clarification",
       question: "Yes! We have a free online photography course. Would you like to know more about it?",
@@ -2282,15 +2290,24 @@ function checkFreeCourseWorkshopPatterns(lc) {
     };
   }
   
-  if (lc.includes("when is the next") && lc.includes("bluebell")) {
+  // Generic seasonal workshop clarification detection
+  const seasonalTerms = ['bluebell', 'autumn', 'spring', 'summer', 'winter'];
+  const workshopTerms = ['workshop', 'course', 'lesson', 'class'];
+  
+  const hasSeasonalTerm = seasonalTerms.some(term => lc.includes(term));
+  const hasWorkshopTerm = workshopTerms.some(term => lc.includes(term));
+  const isNextQuery = lc.includes("when is the next") || lc.includes("next");
+  
+  if (isNextQuery && hasSeasonalTerm && hasWorkshopTerm) {
+    const seasonalTerm = seasonalTerms.find(term => lc.includes(term));
     return {
-      type: "bluebell_workshop_clarification",
-      question: "We have bluebell photography workshops coming up! What would you like to know about them?",
+      type: "seasonal_workshop_clarification",
+      question: `We have ${seasonalTerm} photography workshops coming up! What would you like to know about them?`,
       options: [
-        { text: "Dates and times", query: "bluebell workshop dates" },
-        { text: "Cost and booking", query: "bluebell workshop cost" },
-        { text: "Suitable for beginners", query: "bluebell workshop beginners" },
-        { text: "Location details", query: "bluebell workshop location" }
+        { text: "Dates and times", query: `${seasonalTerm} workshop dates` },
+        { text: "Cost and booking", query: `${seasonalTerm} workshop cost` },
+        { text: "Suitable for beginners", query: `${seasonalTerm} workshop beginners` },
+        { text: "Location details", query: `${seasonalTerm} workshop location` }
       ]
     };
   }
@@ -2655,9 +2672,9 @@ function getTechnicalPatterns() {
     /what is the exposure triangle/i,
     /camera settings for low light/i,
     /best camera settings/i,
-    /tripod recommendation/i,
-    /what tripod do you recommend/i,
-    /best tripod for/i,
+    // /tripod recommendation/i,  // TEMPORARILY DISABLED FOR TESTING
+    // /what tripod do you recommend/i,  // TEMPORARILY DISABLED FOR TESTING
+    // /best tripod for/i,  // TEMPORARILY DISABLED FOR TESTING
     /what is long exposure/i,
     /long exposure and how can i find out more/i,
     /pictures never seem sharp/i,
@@ -2784,6 +2801,9 @@ function getMiscellaneousPatterns() {
 
 // Helper function to check direct answer patterns
 function checkDirectAnswerPatterns(query) {
+  // TEMPORARILY DISABLED FOR TESTING
+  return null;
+  
   const allPatterns = [
     ...getAboutAlanPatterns(),
     ...getBusinessPolicyPatterns(),
@@ -2802,7 +2822,7 @@ function checkDirectAnswerPatterns(query) {
     }
   }
   return null;
-  }
+}
   
 // Helper function to check clarification patterns
 function checkClarificationPatterns(query) {
@@ -3040,7 +3060,7 @@ function anyIlike(col, words) {
   const parts = (words || [])
     .map((w) => w.trim())
     .filter(Boolean)
-    .map((w) => `${col}.ilike.'%${w}%'`);
+    .map((w) => `${col}.ilike.%${w}%`);
   return parts.length ? parts.join(",") : null;
 }
 
@@ -3241,7 +3261,23 @@ function extractSessionTimes(event) {
   
   if (productDesc.includes('batsford') || event.event_title.toLowerCase().includes('batsford')) {
     return extractBatsfordTimes(productDesc);
-  } else if (productDesc.includes('bluebell') || event.event_title.toLowerCase().includes('bluebell')) {
+  }
+  
+  // Generic workshop detection based on content analysis
+  const workshopKeywords = ['workshop', 'course', 'lesson', 'training', 'class'];
+  const seasonalKeywords = ['autumn', 'spring', 'summer', 'winter', 'bluebell', 'seasonal'];
+  
+  const hasWorkshopContent = workshopKeywords.some(keyword => 
+    productDesc.toLowerCase().includes(keyword) || 
+    event.event_title.toLowerCase().includes(keyword)
+  );
+  
+  const hasSeasonalContent = seasonalKeywords.some(keyword => 
+    productDesc.toLowerCase().includes(keyword) || 
+    event.event_title.toLowerCase().includes(keyword)
+  );
+  
+  if (hasWorkshopContent && hasSeasonalContent) {
     return extractBluebellTimes(productDesc);
   }
   
@@ -4433,10 +4469,17 @@ function analyzeDirectAnswer(responseText, queryLower) {
   console.log(`ðŸ” analyzeDirectAnswer: query="${queryLower}", response="${responseText.substring(0, 50)}..."`);
   console.log(`ðŸ” Query words: ${queryWords.join(', ')}`);
   
-  // Check for completely irrelevant responses
+  // Generic seasonal content detection for confidence scoring
+  const seasonalTerms = ['autumn', 'spring', 'summer', 'winter', 'bluebell', 'seasonal'];
+  const hasSeasonalContent = seasonalTerms.some(term => 
+    responseLower.includes(`${term} photography`) || 
+    responseLower.includes(`creative ${term}`) ||
+    responseLower.includes(`seasonal photography`)
+  );
+  
   const isIrrelevant = (
     responseLower.includes('based on alan ranger\'s expertise') &&
-    responseLower.includes('autumn photography') && // Generic fallback content
+    hasSeasonalContent && // Generic seasonal content detection
     !queryLower.includes('autumn') // Query is not about autumn
   );
   
@@ -4484,14 +4527,14 @@ function analyzeDirectAnswer(responseText, queryLower) {
       // Educational content
       responseLower.includes('guide') || responseLower.includes('tutorial') ||
       responseLower.includes('photography') || responseLower.includes('technique') ||
-      // Event/workshop content - NEW CRITERIA
+      // Event/workshop content - GENERIC CRITERIA
       responseLower.includes('found') && responseLower.includes('event') ||
       responseLower.includes('workshop') && responseLower.includes('date') ||
       responseLower.includes('course') && responseLower.includes('next') ||
       responseLower.includes('workshop') && responseLower.includes('devon') ||
       responseLower.includes('course') && responseLower.includes('photography') ||
-      responseLower.includes('workshop') && responseLower.includes('bluebell') ||
-      responseLower.includes('workshop') && responseLower.includes('autumn')
+      // Generic seasonal workshop detection
+      (responseLower.includes('workshop') && ['bluebell', 'autumn', 'spring', 'summer', 'winter'].some(season => responseLower.includes(season)))
     )
   );
   
@@ -4506,10 +4549,9 @@ function analyzeArticleRelevance(articles, queryLower) {
   // Extract key terms from the query - handle undefined queryLower
   const queryWords = (queryLower || '').split(/\s+/).filter(word => word.length > 2);
   
-  // Check for completely irrelevant articles (like autumn photography for commercial photography queries)
-  const irrelevantPatterns = [
-    'autumn photography', 'creative autumn', 'seasonal photography'
-  ];
+  // Generic seasonal content detection for irrelevant article filtering
+  const seasonalTerms = ['autumn', 'spring', 'summer', 'winter', 'bluebell', 'seasonal'];
+  const irrelevantPatterns = seasonalTerms.map(term => `${term} photography`).concat(['creative autumn', 'seasonal photography']);
   
   const hasIrrelevantArticles = articles.some(article => {
     const articleTitle = (article.title || '').toLowerCase();
@@ -4569,14 +4611,18 @@ function checkTechnicalActionableInfo(responseLower) {
 }
 
 function checkEventActionableInfo(responseLower) {
+  // Generic workshop and seasonal content detection
+  const workshopTerms = ['workshop', 'course', 'lesson', 'class'];
+  const seasonalTerms = ['bluebell', 'autumn', 'spring', 'summer', 'winter'];
+  const locationTerms = ['devon', 'location', 'venue'];
+  
+  const hasWorkshopContent = workshopTerms.some(term => 
+    responseLower.includes(term) && (responseLower.includes('devon') || responseLower.includes('bluebell') || responseLower.includes('autumn') || responseLower.includes('photography') || responseLower.includes('date') || responseLower.includes('next'))
+  );
+  
   return (
     (responseLower.includes('found') && responseLower.includes('event')) ||
-    (responseLower.includes('workshop') && responseLower.includes('date')) ||
-    (responseLower.includes('course') && responseLower.includes('next')) ||
-    (responseLower.includes('workshop') && responseLower.includes('devon')) ||
-    (responseLower.includes('course') && responseLower.includes('photography')) ||
-    (responseLower.includes('workshop') && responseLower.includes('bluebell')) ||
-    (responseLower.includes('workshop') && responseLower.includes('autumn')) ||
+    hasWorkshopContent ||
     (responseLower.includes('event') && responseLower.includes('match'))
   );
 }
@@ -4623,7 +4669,16 @@ function calculateEventCompleteness(responseLower) {
   if (responseLower.includes('found') && responseLower.includes('event')) score += 0.1;
   if (responseLower.includes('workshop') && responseLower.includes('date')) score += 0.1;
   if (responseLower.includes('course') && responseLower.includes('next')) score += 0.1;
-  if (responseLower.includes('workshop') && (responseLower.includes('devon') || responseLower.includes('bluebell') || responseLower.includes('autumn'))) score += 0.1;
+  // Generic workshop and seasonal content detection for confidence scoring
+  const workshopTerms = ['workshop', 'course', 'lesson', 'class'];
+  const seasonalTerms = ['bluebell', 'autumn', 'spring', 'summer', 'winter'];
+  const locationTerms = ['devon', 'location', 'venue'];
+  
+  const hasWorkshopContent = workshopTerms.some(term => 
+    responseLower.includes(term) && (responseLower.includes('devon') || responseLower.includes('bluebell') || responseLower.includes('autumn'))
+  );
+  
+  if (hasWorkshopContent) score += 0.1;
   return score;
 }
 
@@ -4677,7 +4732,16 @@ function calculateEventAccuracy(responseLower) {
   if (responseLower.includes('found') && responseLower.includes('event')) score += 0.2;
   if (responseLower.includes('workshop') && responseLower.includes('date')) score += 0.2;
   if (responseLower.includes('course') && responseLower.includes('next')) score += 0.2;
-  if (responseLower.includes('workshop') && (responseLower.includes('devon') || responseLower.includes('bluebell') || responseLower.includes('autumn'))) score += 0.1;
+  // Generic workshop and seasonal content detection for confidence scoring
+  const workshopTerms = ['workshop', 'course', 'lesson', 'class'];
+  const seasonalTerms = ['bluebell', 'autumn', 'spring', 'summer', 'winter'];
+  const locationTerms = ['devon', 'location', 'venue'];
+  
+  const hasWorkshopContent = workshopTerms.some(term => 
+    responseLower.includes(term) && (responseLower.includes('devon') || responseLower.includes('bluebell') || responseLower.includes('autumn'))
+  );
+  
+  if (hasWorkshopContent) score += 0.1;
   return score;
 }
 
@@ -6521,7 +6585,7 @@ function scoreAndFilterChunks(context) {
       conceptKeywords,
       workshopKeywords
     }))
-    .filter(c => filterChunkByPrimaryKeyword(c, context.primaryKeyword))
+    .filter(c => true) // Temporarily disable filtering to see if chunks are retrieved
     .sort((a,b)=> b.__score - a.__score)
     .slice(0, 5);
 }
@@ -6594,6 +6658,12 @@ function filterChunkByPrimaryKeyword(chunk, primaryKeyword) {
           return false;
         }
       }
+  
+  // For equipment queries, be more lenient - allow chunks with positive scores even if they don't contain the primary keyword strongly
+  const equipmentNouns = ["tripod", "camera", "lens", "filter", "flash", "head", "ball", "carbon", "aluminium"];
+  if (equipmentNouns.includes(primaryKeyword)) {
+    return chunk.__score > -5; // Very lenient for equipment queries - allow even slightly negative scores
+  }
   
   return hasPrimaryStrong && chunk.__score > 0;
 }
@@ -6740,7 +6810,7 @@ function processChunkFallback(chunks, query = '') {
       return cleanedText;
     })
     .filter(Boolean)
-    .filter(content => filterRelevantContent(content, query));
+    .filter(content => true); // Temporarily disable relevance filtering to debug
 
   console.log(`âœ… ${cleaned.length} chunks passed cleaning and relevance filter`);
   let answer = cleaned.join("\n\n");
@@ -6841,17 +6911,34 @@ function formatResponse(answer, maxLength = 500) {
 // Helper function to filter irrelevant content based on query intent
 function filterRelevantContent(content, query) {
   const queryLower = query.toLowerCase();
-  const irrelevantPatterns = [
-    { pattern: 'autumn', queryCheck: 'autumn' },
-    { pattern: 'UV filter', queryCheck: 'filter' },
-    { pattern: 'bluebell', queryCheck: 'bluebell' },
-    { pattern: 'street photography', queryCheck: 'street' },
-    { pattern: 'free course', queryCheck: 'course' },
-    { pattern: 'contact alan', queryCheck: 'contact' }
+  const contentLower = content.toLowerCase();
+  
+  // Generic logic: if content contains specific topics but query doesn't mention them,
+  // it's likely irrelevant (e.g., autumn photography content for commercial photography query)
+  const topicMismatchPatterns = [
+    // Seasonal content mismatch
+    { contentPattern: /autumn|fall|seasonal/, queryCheck: /autumn|fall|seasonal/ },
+    { contentPattern: /spring|bluebell/, queryCheck: /spring|bluebell/ },
+    { contentPattern: /winter|snow/, queryCheck: /winter|snow/ },
+    
+    // Photography style mismatch  
+    { contentPattern: /street photography/, queryCheck: /street/ },
+    { contentPattern: /macro photography/, queryCheck: /macro/ },
+    { contentPattern: /landscape photography/, queryCheck: /landscape/ },
+    
+    // Equipment type mismatch
+    { contentPattern: /UV filter/, queryCheck: /filter/ },
+    { contentPattern: /tripod/, queryCheck: /tripod/ },
+    { contentPattern: /camera/, queryCheck: /camera/ },
+    
+    // Service type mismatch
+    { contentPattern: /free course/, queryCheck: /course|free/ },
+    { contentPattern: /workshop/, queryCheck: /workshop/ },
+    { contentPattern: /contact alan/, queryCheck: /contact/ }
   ];
   
-  for (const { pattern, queryCheck } of irrelevantPatterns) {
-    if (content.includes(pattern) && !queryLower.includes(queryCheck)) {
+  for (const { contentPattern, queryCheck } of topicMismatchPatterns) {
+    if (contentPattern.test(contentLower) && !queryCheck.test(queryLower)) {
       return false;
     }
   }
@@ -7004,7 +7091,13 @@ function prepareRagQuery(query) {
   // Extract primary keyword for guide article searches
   const allKws = extractKeywords(query).map(k=>k.toLowerCase());
   const stop = new Set(["what","when","where","how","which","the","a","an","your","you","next","is","are","do","i","me","my","course","workshop","lesson"]);
-  const primaryKeyword = (allKws.find(k => k.length >= 5 && !stop.has(k)) || allKws.find(k=>!stop.has(k)) || "").toLowerCase();
+  
+  // For equipment queries, prioritize equipment nouns over action words
+  const equipmentNouns = ["tripod", "camera", "lens", "filter", "flash", "head", "ball", "carbon", "aluminium"];
+  const equipmentPrimaryKeyword = allKws.find(k => equipmentNouns.includes(k));
+  
+  const primaryKeyword = equipmentPrimaryKeyword || 
+    (allKws.find(k => k.length >= 5 && !stop.has(k)) || allKws.find(k=>!stop.has(k)) || "").toLowerCase();
   
   return { keywords, lcQuery, isConceptQuery, primaryKeyword };
 }
@@ -7443,6 +7536,19 @@ async function handleWorkshopIntent(context) {
 // Helper function to handle direct answer or workshop classification
 async function handleDirectAnswerOrWorkshop(context) {
   const classification = classifyQuery(context.query);
+  
+  // Check for equipment queries first - route to NEW RAG system
+  const lc = context.query.toLowerCase();
+  const equipmentKeywords = ['tripod', 'camera', 'lens', 'filter', 'flash', 'bag', 'strap', 'memory card', 'battery', 'charger', 'equipment', 'gear'];
+  const adviceKeywords = ['recommend', 'best', 'what', 'which', 'should i buy', 'need', 'suggest', 'advice', 'opinion', 'prefer', 'choose', 'select'];
+  
+  const hasEquipment = equipmentKeywords.some(keyword => lc.includes(keyword));
+  const hasAdvice = adviceKeywords.some(keyword => lc.includes(keyword));
+  
+  if (hasEquipment && hasAdvice) {
+    console.log(`🎯 Equipment query detected: "${context.query}" - routing to NEW RAG system`);
+    return await processMainQuery(context);
+  }
   
   if (classification.type === 'direct_answer') {
     return await handleDirectAnswerClassification(context);
