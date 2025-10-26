@@ -1198,7 +1198,7 @@
                 row.innerHTML = `
                     <td>${result.question}</td>
                     <td>${result.qualityScore}</td>
-                    <td>${result.relevanceScore || 'N/A'}</td>
+                    <td>${result.relevanceScore !== undefined ? result.relevanceScore : 'N/A'}</td>
                     <td><span class="status-badge ${result.qualityScore >= 70 ? 'status-pass' : 'status-fail'}">${result.qualityScore >= 70 ? 'Pass' : 'Fail'}</span></td>
                     <td>${result.qualityNotes || ''}</td>
                     <td>${result.relevanceNotes || ''}</td>
@@ -1283,7 +1283,7 @@
                 `"${result.category}"`,
                 `"${result.focus}"`,
                 result.qualityScore,
-                result.relevanceScore || 'N/A',
+                result.relevanceScore !== undefined ? result.relevanceScore : 'N/A',
                 `"${result.notes}"`,
                 `"${result.qualityNotes || ''}"`,
                 `"${result.relevanceNotes || ''}"`,
