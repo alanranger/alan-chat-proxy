@@ -1256,19 +1256,29 @@
             
             // Update question card
             const questionCard = document.getElementById(`question-${currentQuestionIndex}`);
-            questionCard.classList.remove('current');
-            questionCard.classList.add('completed');
-            
-            const statusBadge = questionCard.querySelector('.status-badge');
-            statusBadge.textContent = qualityScore >= 70 ? 'Pass' : 'Fail';
-            statusBadge.className = `status-badge ${qualityScore >= 70 ? 'status-pass' : 'status-fail'}`;
+            if (questionCard) {
+                questionCard.classList.remove('current');
+                questionCard.classList.add('completed');
+                
+                const statusBadge = questionCard.querySelector('.status-badge');
+                if (statusBadge) {
+                    statusBadge.textContent = qualityScore >= 70 ? 'Pass' : 'Fail';
+                    statusBadge.className = `status-badge ${qualityScore >= 70 ? 'status-pass' : 'status-fail'}`;
+                }
+            }
             
             // Update stats
             updateStats();
             updateResultsTable();
             
-            // Move to next question
-            loadQuestion(currentQuestionIndex + 1);
+            // Move to next question (or show completion message)
+            if (currentQuestionIndex + 1 >= filteredQuestions.length) {
+                // All questions in current filter completed
+                alert(`All ${currentFilter === 'all' ? '' : currentFilter + ' '}questions completed!`);
+                // Stay on current question to show the completed state
+            } else {
+                loadQuestion(currentQuestionIndex + 1);
+            }
         }
 
         // Skip current question
