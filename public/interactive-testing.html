@@ -1098,21 +1098,24 @@
                 questionDiv.className = 'question-card';
                 questionDiv.id = `question-${index}`;
                 
-                // Check if we have previous scores for this question
+                // Check if we have scores for this question (prefer testResults over savedScores)
+                const currentResult = testResults.find(r => r.question === q.question);
                 const previousScore = savedScores[q.question];
+                const displayScore = currentResult || previousScore;
+                
                 let statusHtml = '<span class="status-badge status-pending">Pending</span>';
                 let previousScoresHtml = '';
                 
-                if (previousScore) {
-                    const statusClass = previousScore.qualityScore >= 70 ? 'status-pass' : 'status-fail';
-                    statusHtml = `<span class="status-badge ${statusClass}">${previousScore.verdict || (previousScore.qualityScore >= 70 ? 'Pass' : 'Fail')}</span>`;
+                if (displayScore) {
+                    const statusClass = displayScore.qualityScore >= 70 ? 'status-pass' : 'status-fail';
+                    statusHtml = `<span class="status-badge ${statusClass}">${displayScore.verdict || (displayScore.qualityScore >= 70 ? 'Pass' : 'Fail')}</span>`;
                     
                     previousScoresHtml = `
                         <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 14px;">
-                            <strong>Previous Score:</strong> ${previousScore.qualityScore}/100 | 
-                            <strong>Related Score:</strong> ${previousScore.relevanceScore || 0}/100
-                            ${previousScore.notes ? `<br><strong>Notes:</strong> ${previousScore.notes}` : ''}
-                            <br><small>Last tested: ${new Date(previousScore.timestamp).toLocaleString()}</small>
+                            <strong>Previous Score:</strong> ${displayScore.qualityScore}/100 | 
+                            <strong>Related Score:</strong> ${displayScore.relevanceScore || 0}/100
+                            ${displayScore.notes ? `<br><strong>Notes:</strong> ${displayScore.notes}` : ''}
+                            <br><small>Last tested: ${new Date(displayScore.timestamp).toLocaleString()}</small>
                         </div>
                     `;
                 }
