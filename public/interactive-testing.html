@@ -451,6 +451,7 @@
         <button class="btn btn-info" onclick="exportResults()">📥 Export Results</button>
         <button class="btn btn-warning" onclick="importResults()">📤 Import Results</button>
         <button class="btn btn-secondary" onclick="clearResults()">🗑️ Clear All Results</button>
+        <button class="btn btn-danger" onclick="clearOldData()">🔄 Clear Old Data & Restart</button>
         
         <div id="summaryStats" style="margin-bottom: 20px;">
             <div class="stats-grid">
@@ -1318,6 +1319,45 @@
                 
                 // Reset to first question
                 loadQuestion(0);
+            }
+        }
+
+        // Clear old data and restart with new format
+        function clearOldData() {
+            if (confirm('This will clear all old data and restart with the new format. Are you sure?')) {
+                testResults = [];
+                currentQuestionIndex = 0;
+                savedScores = {};
+                
+                // Clear localStorage
+                localStorage.removeItem('interactiveTestScores');
+                
+                // Reset all question cards
+                for (let i = 0; i < testQuestions.length; i++) {
+                    const questionCard = document.getElementById(`question-${i}`);
+                    questionCard.classList.remove('current', 'completed', 'failed');
+                    questionCard.classList.add('pending');
+                    
+                    const statusBadge = questionCard.querySelector('.status-badge');
+                    statusBadge.textContent = 'Pending';
+                    statusBadge.className = 'status-badge status-pending';
+                }
+                
+                // Reset stats
+                document.getElementById('completedCount').textContent = '0';
+                document.getElementById('averageScore').textContent = '0';
+                document.getElementById('avgBotResponseScore').textContent = '0';
+                document.getElementById('avgRelatedScore').textContent = '0';
+                document.getElementById('progressFill').style.width = '0%';
+                
+                // Clear results table and summary
+                document.getElementById('resultsBody').innerHTML = '';
+                document.getElementById('categoryBreakdown').innerHTML = '';
+                
+                // Reset to first question
+                loadQuestion(0);
+                
+                alert('Old data cleared! You can now start fresh with the new format.');
             }
         }
 
