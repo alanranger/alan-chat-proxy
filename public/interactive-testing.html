@@ -1304,22 +1304,22 @@
         function updateSummaryStats() {
             if (testResults.length === 0) return;
             
-            // Filter results to current category if not showing all
+            // Always show ALL categories in masonry, but calculate averages based on current filter
             const relevantResults = currentFilter === 'all' ? testResults : 
                 testResults.filter(r => r.category === currentFilter);
             
-            if (relevantResults.length === 0) return;
+            // Calculate averages for current filter
+            if (relevantResults.length > 0) {
+                const avgBotResponseScore = relevantResults.reduce((sum, r) => sum + r.qualityScore, 0) / relevantResults.length;
+                const avgRelatedScore = relevantResults.reduce((sum, r) => sum + (r.relevanceScore !== undefined ? r.relevanceScore : 0), 0) / relevantResults.length;
+                
+                document.getElementById('avgBotResponseScore').textContent = Math.round(avgBotResponseScore);
+                document.getElementById('avgRelatedScore').textContent = Math.round(avgRelatedScore);
+            }
             
-            // Calculate averages
-            const avgBotResponseScore = relevantResults.reduce((sum, r) => sum + r.qualityScore, 0) / relevantResults.length;
-            const avgRelatedScore = relevantResults.reduce((sum, r) => sum + (r.relevanceScore !== undefined ? r.relevanceScore : 0), 0) / relevantResults.length;
-            
-            document.getElementById('avgBotResponseScore').textContent = Math.round(avgBotResponseScore);
-            document.getElementById('avgRelatedScore').textContent = Math.round(avgRelatedScore);
-            
-            // Calculate category breakdown
+            // Calculate category breakdown for ALL categories (not just filtered)
             const categoryStats = {};
-            relevantResults.forEach(result => {
+            testResults.forEach(result => {
                 const category = result.category;
                 if (!categoryStats[category]) {
                     categoryStats[category] = {
@@ -1346,8 +1346,8 @@
                 const avgBotResponse = Math.round(stats.botResponseSum / stats.count);
                 const avgRelated = Math.round(stats.relatedSum / stats.count);
                 
-                // Calculate pass/fail ratio
-                const passCount = relevantResults.filter(r => r.category === category && r.qualityScore >= 70).length;
+                // Calculate pass/fail ratio for this category
+                const passCount = testResults.filter(r => r.category === category && r.qualityScore >= 70).length;
                 const failCount = stats.count - passCount;
                 
                 // Determine overall status color
@@ -1426,17 +1426,34 @@
             const tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
             
-            testResults.forEach(result => {
+            // Always show ALL questions with their results
+            testQuestions.forEach(question => {
+                const result = testResults.find(r => r.question === question.question);
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${result.question}</td>
-                    <td><span class="status-badge ${result.qualityScore >= 70 ? 'status-pass' : 'status-fail'}">${result.qualityScore >= 70 ? 'Pass' : 'Fail'}</span></td>
-                    <td>${result.qualityScore}</td>
-                    <td>${result.qualityNotes || ''}</td>
-                    <td>${result.relevanceScore !== undefined ? result.relevanceScore : 0}</td>
-                    <td>${result.relevanceNotes || ''}</td>
-                    <td>${result.notes || ''}</td>
-                `;
+                
+                if (result) {
+                    // Question has been scored
+                    row.innerHTML = `
+                        <td>${question.question}</td>
+                        <td><span class="status-badge ${result.qualityScore >= 70 ? 'status-pass' : 'status-fail'}">${result.qualityScore >= 70 ? 'Pass' : 'Fail'}</span></td>
+                        <td>${result.qualityScore}</td>
+                        <td>${result.qualityNotes || ''}</td>
+                        <td>${result.relevanceScore !== undefined ? result.relevanceScore : 0}</td>
+                        <td>${result.relevanceNotes || ''}</td>
+                        <td>${result.notes || ''}</td>
+                    `;
+                } else {
+                    // Question not yet scored
+                    row.innerHTML = `
+                        <td>${question.question}</td>
+                        <td><span class="status-badge status-pending">Pending</span></td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    `;
+                }
                 tbody.appendChild(row);
             });
         }
@@ -1558,6 +1575,8 @@
         // Generate CSV content
         function generateCSV() {
             const headers = ['Question', 'Status', 'Bot Response Score', 'Bot Response Notes', 'Related Score', 'Related Notes', 'Other Notes', 'Category', 'Focus', 'Timestamp'];
+            
+            // Always export ALL results
             const rows = testResults.map(result => [
                 `"${result.question}"`,
                 result.qualityScore >= 70 ? 'Pass' : 'Fail',
