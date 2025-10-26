@@ -371,6 +371,26 @@
 
     <div class="test-section">
         <h2>📊 Test Progress</h2>
+        
+        <!-- Category Filter Section -->
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #495057;">🎯 Test by Category</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <button class="btn btn-success" onclick="filterByCategory('all')" id="filterAll">All Categories</button>
+                <button class="btn btn-secondary" onclick="filterByCategory('Technical Photography Concepts')" id="filterTech">Technical Concepts</button>
+                <button class="btn btn-secondary" onclick="filterByCategory('Equipment Recommendations')" id="filterEquipment">Equipment</button>
+                <button class="btn btn-secondary" onclick="filterByCategory('Person Queries')" id="filterPerson">Person Queries</button>
+                <button class="btn btn-secondary" onclick="filterByCategory('Event Queries')" id="filterEvents">Events</button>
+                <button class="btn btn-secondary" onclick="filterByCategory('Technical Advice')" id="filterAdvice">Technical Advice</button>
+                <button class="btn btn-secondary" onclick="filterByCategory('Course/Workshop Logistics')" id="filterCourse">Course Logistics</button>
+                <button class="btn btn-secondary" onclick="filterByCategory('Business Information')" id="filterBusiness">Business Info</button>
+                <button class="btn btn-secondary" onclick="filterByCategory('Equipment Requirements')" id="filterReq">Equipment Req</button>
+            </div>
+            <div style="margin-top: 10px; font-size: 14px; color: #666;">
+                <span id="filterStatus">Showing all 28 questions</span>
+            </div>
+        </div>
+        
         <div class="progress-bar">
             <div class="progress-fill" id="progressFill" style="width: 0%"></div>
         </div>
@@ -664,13 +684,78 @@
         let testResults = [];
         let isTestRunning = false;
         let savedScores = {};
+        let currentFilter = 'all';
+        let filteredQuestions = [];
 
         // Initialize the test
         function initTest() {
             loadSavedScores();
             loadBaselineScores();
             populateQuestionsList();
+            applyFilter('all'); // Start with all questions
             loadQuestion(0);
+        }
+
+        // Filter questions by category
+        function filterByCategory(category) {
+            applyFilter(category);
+            updateFilterButtons(category);
+            loadQuestion(0); // Reset to first question in filtered set
+        }
+
+        // Apply category filter
+        function applyFilter(category) {
+            currentFilter = category;
+            
+            if (category === 'all') {
+                filteredQuestions = testQuestions;
+            } else {
+                filteredQuestions = testQuestions.filter(q => q.category === category);
+            }
+            
+            // Update UI
+            document.getElementById('totalQuestions').textContent = filteredQuestions.length;
+            document.getElementById('filterStatus').textContent = 
+                category === 'all' ? `Showing all ${filteredQuestions.length} questions` : 
+                `Showing ${filteredQuestions.length} questions in "${category}"`;
+            
+            // Update progress
+            updateProgress();
+            
+            // Update questions list display
+            populateQuestionsList();
+        }
+
+        // Update filter button states
+        function updateFilterButtons(activeCategory) {
+            // Reset all buttons to secondary
+            document.querySelectorAll('[id^="filter"]').forEach(btn => {
+                btn.className = 'btn btn-secondary';
+            });
+            
+            // Set active button to success
+            const activeButton = document.getElementById(`filter${activeCategory === 'all' ? 'All' : 
+                activeCategory === 'Technical Photography Concepts' ? 'Tech' :
+                activeCategory === 'Equipment Recommendations' ? 'Equipment' :
+                activeCategory === 'Person Queries' ? 'Person' :
+                activeCategory === 'Event Queries' ? 'Events' :
+                activeCategory === 'Technical Advice' ? 'Advice' :
+                activeCategory === 'Course/Workshop Logistics' ? 'Course' :
+                activeCategory === 'Business Information' ? 'Business' :
+                activeCategory === 'Equipment Requirements' ? 'Req' : 'All'}`);
+            
+            if (activeButton) {
+                activeButton.className = 'btn btn-success';
+            }
+        }
+
+        // Update progress bar based on filtered questions
+        function updateProgress() {
+            const completed = testResults.filter(r => 
+                filteredQuestions.some(q => q.question === r.question)
+            ).length;
+            const progress = filteredQuestions.length > 0 ? (completed / filteredQuestions.length) * 100 : 0;
+            document.getElementById('progressFill').style.width = progress + '%';
         }
 
         // Load baseline scores from Alan's manual testing
@@ -1008,7 +1093,7 @@
             const questionsList = document.getElementById('questionsList');
             questionsList.innerHTML = '';
             
-            testQuestions.forEach((q, index) => {
+            filteredQuestions.forEach((q, index) => {
                 const questionDiv = document.createElement('div');
                 questionDiv.className = 'question-card';
                 questionDiv.id = `question-${index}`;
@@ -1020,13 +1105,12 @@
                 
                 if (previousScore) {
                     const statusClass = previousScore.qualityScore >= 70 ? 'status-pass' : 'status-fail';
-                    statusHtml = `<span class="status-badge ${statusClass}">${previousScore.verdict}</span>`;
+                    statusHtml = `<span class="status-badge ${statusClass}">${previousScore.verdict || (previousScore.qualityScore >= 70 ? 'Pass' : 'Fail')}</span>`;
                     
                     previousScoresHtml = `
                         <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 14px;">
                             <strong>Previous Score:</strong> ${previousScore.qualityScore}/100 | 
-                            <strong>Confidence:</strong> ${previousScore.confidenceScore}% | 
-                            <strong>Verdict:</strong> ${previousScore.verdict}
+                            <strong>Related Score:</strong> ${previousScore.relevanceScore || 0}/100
                             ${previousScore.notes ? `<br><strong>Notes:</strong> ${previousScore.notes}` : ''}
                             <br><small>Last tested: ${new Date(previousScore.timestamp).toLocaleString()}</small>
                         </div>
@@ -1046,13 +1130,13 @@
 
         // Load a specific question
         async function loadQuestion(index) {
-            if (index >= testQuestions.length) {
-                alert('All questions completed!');
+            if (index >= filteredQuestions.length) {
+                alert(`All ${currentFilter === 'all' ? '' : currentFilter + ' '}questions completed!`);
                 return;
             }
 
             currentQuestionIndex = index;
-            const question = testQuestions[index];
+            const question = filteredQuestions[index];
             
             // Update UI
             document.getElementById('questionText').textContent = question.question;
@@ -1060,7 +1144,7 @@
             document.getElementById('currentQuestion').textContent = index + 1;
             
             // Update progress
-            const progress = ((index + 1) / testQuestions.length) * 100;
+            const progress = ((index + 1) / filteredQuestions.length) * 100;
             document.getElementById('progressFill').style.width = progress + '%';
             
             // Update current question card
@@ -1146,9 +1230,9 @@
 
             const result = {
                 questionIndex: currentQuestionIndex,
-                question: testQuestions[currentQuestionIndex].question,
-                category: testQuestions[currentQuestionIndex].category,
-                focus: testQuestions[currentQuestionIndex].focus,
+                question: filteredQuestions[currentQuestionIndex].question,
+                category: filteredQuestions[currentQuestionIndex].category,
+                focus: filteredQuestions[currentQuestionIndex].focus,
                 qualityScore: qualityScore,
                 relevanceScore: relevanceScore,
                 notes: notes,
@@ -1160,7 +1244,7 @@
             testResults.push(result);
             
             // Save to localStorage
-            savedScores[testQuestions[currentQuestionIndex].question] = {
+            savedScores[filteredQuestions[currentQuestionIndex].question] = {
                 qualityScore: qualityScore,
                 relevanceScore: relevanceScore,
                 notes: notes,
@@ -1194,34 +1278,48 @@
 
         // Update statistics
         function updateStats() {
-            const completed = testResults.length;
-            const total = testQuestions.length;
+            const completed = testResults.filter(r => 
+                filteredQuestions.some(q => q.question === r.question)
+            ).length;
+            const total = filteredQuestions.length;
             
             document.getElementById('completedCount').textContent = completed;
             
             if (completed > 0) {
-                const avgScore = testResults.reduce((sum, r) => sum + r.qualityScore, 0) / completed;
+                const filteredResults = testResults.filter(r => 
+                    filteredQuestions.some(q => q.question === r.question)
+                );
+                const avgScore = filteredResults.reduce((sum, r) => sum + r.qualityScore, 0) / completed;
                 document.getElementById('averageScore').textContent = Math.round(avgScore);
                 
                 // Update summary stats
                 updateSummaryStats();
             }
+            
+            // Update progress
+            updateProgress();
         }
 
         // Update summary statistics and category breakdown
         function updateSummaryStats() {
             if (testResults.length === 0) return;
             
+            // Filter results to current category if not showing all
+            const relevantResults = currentFilter === 'all' ? testResults : 
+                testResults.filter(r => r.category === currentFilter);
+            
+            if (relevantResults.length === 0) return;
+            
             // Calculate averages
-            const avgBotResponseScore = testResults.reduce((sum, r) => sum + r.qualityScore, 0) / testResults.length;
-            const avgRelatedScore = testResults.reduce((sum, r) => sum + (r.relevanceScore !== undefined ? r.relevanceScore : 0), 0) / testResults.length;
+            const avgBotResponseScore = relevantResults.reduce((sum, r) => sum + r.qualityScore, 0) / relevantResults.length;
+            const avgRelatedScore = relevantResults.reduce((sum, r) => sum + (r.relevanceScore !== undefined ? r.relevanceScore : 0), 0) / relevantResults.length;
             
             document.getElementById('avgBotResponseScore').textContent = Math.round(avgBotResponseScore);
             document.getElementById('avgRelatedScore').textContent = Math.round(avgRelatedScore);
             
             // Calculate category breakdown
             const categoryStats = {};
-            testResults.forEach(result => {
+            relevantResults.forEach(result => {
                 const category = result.category;
                 if (!categoryStats[category]) {
                     categoryStats[category] = {
@@ -1249,7 +1347,7 @@
                 const avgRelated = Math.round(stats.relatedSum / stats.count);
                 
                 // Calculate pass/fail ratio
-                const passCount = testResults.filter(r => r.category === category && r.qualityScore >= 70).length;
+                const passCount = relevantResults.filter(r => r.category === category && r.qualityScore >= 70).length;
                 const failCount = stats.count - passCount;
                 
                 // Determine overall status color
@@ -1368,14 +1466,18 @@
                 localStorage.removeItem('interactiveTestScores');
                 
                 // Reset all question cards
-                for (let i = 0; i < testQuestions.length; i++) {
+                for (let i = 0; i < filteredQuestions.length; i++) {
                     const questionCard = document.getElementById(`question-${i}`);
-                    questionCard.classList.remove('current', 'completed', 'failed');
-                    questionCard.classList.add('pending');
-                    
-                    const statusBadge = questionCard.querySelector('.status-badge');
-                    statusBadge.textContent = 'Pending';
-                    statusBadge.className = 'status-badge status-pending';
+                    if (questionCard) {
+                        questionCard.classList.remove('current', 'completed', 'failed');
+                        questionCard.classList.add('pending');
+                        
+                        const statusBadge = questionCard.querySelector('.status-badge');
+                        if (statusBadge) {
+                            statusBadge.textContent = 'Pending';
+                            statusBadge.className = 'status-badge status-pending';
+                        }
+                    }
                 }
                 
                 // Reset stats
@@ -1402,14 +1504,18 @@
                 localStorage.removeItem('interactiveTestScores');
                 
                 // Reset all question cards
-                for (let i = 0; i < testQuestions.length; i++) {
+                for (let i = 0; i < filteredQuestions.length; i++) {
                     const questionCard = document.getElementById(`question-${i}`);
-                    questionCard.classList.remove('current', 'completed', 'failed');
-                    questionCard.classList.add('pending');
-                    
-                    const statusBadge = questionCard.querySelector('.status-badge');
-                    statusBadge.textContent = 'Pending';
-                    statusBadge.className = 'status-badge status-pending';
+                    if (questionCard) {
+                        questionCard.classList.remove('current', 'completed', 'failed');
+                        questionCard.classList.add('pending');
+                        
+                        const statusBadge = questionCard.querySelector('.status-badge');
+                        if (statusBadge) {
+                            statusBadge.textContent = 'Pending';
+                            statusBadge.className = 'status-badge status-pending';
+                        }
+                    }
                 }
                 
                 // Reset stats
