@@ -7308,14 +7308,15 @@ function generateRagAnswer(params) {
     
     if (relevantEntities.length > 0) {
       const isPolicyQuery = /terms.*conditions|terms.*anc.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
-      return isPolicyQuery ? handlePolicyQuery(relevantEntities) : handleRegularEntityProcessing(query, relevantEntities, chunks);
+      const result = isPolicyQuery ? handlePolicyQuery(relevantEntities) : handleRegularEntityProcessing(query, relevantEntities, chunks);
+      return { ...result, debugLogs };
     } else {
       console.log(`âš ï¸ No relevant entities found for query`);
-      return { answer: "", type: "advice", sources: [] };
+      return { answer: "", type: "advice", sources: [], debugLogs };
     }
   }
   
-  return { answer: "", type: "advice", sources: [] };
+  return { answer: "", type: "advice", sources: [], debugLogs };
 }
 
 // Helper function to prepare RAG query parameters
