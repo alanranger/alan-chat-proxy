@@ -652,7 +652,28 @@ function extractAnswerFromArticleDescription(relevantArticle, query = '') {
     // For "what is" queries, extract direct answer from meta_description instead of showing article link
     if (query.toLowerCase().includes('what is')) {
       const concept = query.toLowerCase().replace('what is', '').trim();
-      const directAnswer = `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${cleanDescription}`;
+      
+      // Try to extract a proper definition from the meta_description
+      let definition = cleanDescription;
+      
+      // If the meta_description starts with "Discover" or similar, extract the core definition
+      if (definition.toLowerCase().startsWith('discover')) {
+        // Extract the main definition part (before "and download" or similar)
+        const parts = definition.split(/and download|with quick tips|for setup/i);
+        if (parts.length > 1) {
+          definition = parts[0].trim();
+        }
+      }
+      
+      // If the meta_description is a question, try to extract the answer
+      if (definition.includes('?')) {
+        const questionParts = definition.split('?');
+        if (questionParts.length > 1) {
+          definition = questionParts[1].trim();
+        }
+      }
+      
+      const directAnswer = `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${definition}`;
       console.log(`[SUCCESS] Generated direct answer: "${directAnswer.substring(0, 100)}..."`);
       return directAnswer;
     }
