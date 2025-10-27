@@ -7192,6 +7192,50 @@ function extractDirectAnswerFromDescription(description, query) {
   
   return null;
 }
+
+// Helper function to extract direct answers from content chunks
+function extractDirectAnswerFromChunks(chunks, query) {
+  const lc = query.toLowerCase();
+  
+  if (lc.includes('what is') && chunks.length > 0) {
+    const concept = lc.replace('what is', '').trim();
+    
+    // Look for the best chunk that contains definition content
+    for (const chunk of chunks) {
+      if (chunk.chunk_text && chunk.chunk_text.length > 100) {
+        const chunkText = chunk.chunk_text.toLowerCase();
+        
+        // Look for definition patterns in chunk text
+        const definitionPatterns = [
+          new RegExp(`${concept}\\s+is\\s+(?:the\\s+)?([^.]+)`, 'i'),
+          new RegExp(`${concept}\\s+refers\\s+to\\s+([^.]+)`, 'i'),
+          new RegExp(`${concept}\\s+means\\s+([^.]+)`, 'i'),
+          new RegExp(`what\\s+is\\s+${concept}[^.]*?([^.]+)`, 'i')
+        ];
+        
+        for (const pattern of definitionPatterns) {
+          const match = chunk.chunk_text.match(pattern);
+          if (match && match[1] && match[1].length > 20) {
+            const explanation = match[1].trim();
+            return `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${explanation}`;
+          }
+        }
+        
+        // Look for introductory sentences that explain the concept
+        const sentences = chunk.chunk_text.split(/[.!?]+/);
+        for (const sentence of sentences) {
+          if (sentence.toLowerCase().includes(concept) && 
+              sentence.length > 30 && sentence.length < 200 &&
+              (sentence.includes(' is ') || sentence.includes(' refers ') || sentence.includes(' means '))) {
+            return `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${sentence.trim()}`;
+          }
+        }
+      }
+    }
+  }
+  
+  return null;
+}
 // Helper function to handle regular entity processing
 function handleRegularEntityProcessing(query, relevantEntities, chunks) {
         console.log(`ðŸ” DEBUG: Using generateDirectAnswer for enhanced concept synthesis`);
