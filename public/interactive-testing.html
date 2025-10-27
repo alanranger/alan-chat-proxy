@@ -1101,7 +1101,14 @@
                 // Check if we have scores for this question (prefer testResults over savedScores)
                 const currentResult = testResults.find(r => r.question === q.question);
                 const previousScore = savedScores[q.question];
-                const displayScore = currentResult || previousScore;
+                
+                // Use currentResult if it exists and has a more recent timestamp, otherwise use previousScore
+                let displayScore = currentResult || previousScore;
+                if (currentResult && previousScore) {
+                    const currentTime = new Date(currentResult.timestamp).getTime();
+                    const previousTime = new Date(previousScore.timestamp).getTime();
+                    displayScore = currentTime > previousTime ? currentResult : previousScore;
+                }
                 
                 let statusHtml = '<span class="status-badge status-pending">Pending</span>';
                 let previousScoresHtml = '';
@@ -1316,11 +1323,31 @@
 
         // Update summary statistics and category breakdown
         function updateSummaryStats() {
-            if (testResults.length === 0) return;
+            // Combine testResults (current session) with savedScores (previous sessions) for complete data
+            const allResults = [...testResults];
+            
+            // Add any savedScores that aren't already in testResults
+            Object.keys(savedScores).forEach(question => {
+                if (!allResults.find(r => r.question === question)) {
+                    allResults.push({
+                        question: question,
+                        qualityScore: savedScores[question].qualityScore,
+                        relevanceScore: savedScores[question].relevanceScore,
+                        notes: savedScores[question].notes,
+                        qualityNotes: savedScores[question].qualityNotes,
+                        relevanceNotes: savedScores[question].relevanceNotes,
+                        timestamp: savedScores[question].timestamp,
+                        category: testQuestions.find(q => q.question === question)?.category || 'Unknown',
+                        focus: testQuestions.find(q => q.question === question)?.focus || ''
+                    });
+                }
+            });
+            
+            if (allResults.length === 0) return;
             
             // Always show ALL categories in masonry, but calculate averages based on current filter
-            const relevantResults = currentFilter === 'all' ? testResults : 
-                testResults.filter(r => r.category === currentFilter);
+            const relevantResults = currentFilter === 'all' ? allResults : 
+                allResults.filter(r => r.category === currentFilter);
             
             // Calculate averages for current filter
             if (relevantResults.length > 0) {
@@ -1333,7 +1360,7 @@
             
             // Calculate category breakdown for ALL categories (not just filtered)
             const categoryStats = {};
-            testResults.forEach(result => {
+            allResults.forEach(result => {
                 const category = result.category;
                 if (!categoryStats[category]) {
                     categoryStats[category] = {
