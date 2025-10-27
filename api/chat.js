@@ -6863,11 +6863,37 @@ async function searchConceptGuideArticles(client, primaryKeyword) {
 // Helper function to build search keywords
 function buildSearchKeywords(query, keywords) {
   const searchKeywords = [...keywords];
+  
+  // Add related concepts for "what is" queries
+  if (query.toLowerCase().includes('what is')) {
+    const concept = query.toLowerCase().replace('what is', '').trim();
+    
+    // Add related photography concepts based on the main concept
+    if (concept.includes('metering')) {
+      searchKeywords.push('exposure', 'camera', 'photography', 'settings', 'manual');
+    } else if (concept.includes('exposure')) {
+      searchKeywords.push('metering', 'aperture', 'shutter', 'iso', 'camera');
+    } else if (concept.includes('aperture')) {
+      searchKeywords.push('exposure', 'depth', 'field', 'lens', 'camera');
+    } else if (concept.includes('shutter')) {
+      searchKeywords.push('exposure', 'speed', 'motion', 'camera', 'photography');
+    } else if (concept.includes('iso')) {
+      searchKeywords.push('exposure', 'noise', 'sensitivity', 'camera', 'photography');
+    } else if (concept.includes('focus')) {
+      searchKeywords.push('sharpness', 'autofocus', 'manual', 'camera', 'lens');
+    } else if (concept.includes('composition')) {
+      searchKeywords.push('photography', 'techniques', 'rules', 'guidelines', 'tips');
+    }
+    
+    // Add general photography terms for any technical concept
+    searchKeywords.push('photography', 'camera', 'techniques', 'guide', 'beginner');
+  }
+  
   if (/who.*is|who.*are|tell.*about|background|experience/i.test(query)) {
     searchKeywords.push('about');
   }
   return searchKeywords;
-  }
+}
   
 // Helper function to search for keyword-based entities
 async function searchKeywordEntities(client, searchKeywords) {
