@@ -6903,7 +6903,7 @@ function handleChunkProcessing(query, entities, chunks) {
   if (technicalAnswer) {
     console.log(`âœ… Generated technical direct answer: "${technicalAnswer.substring(0, 100)}..."`);
     const formattedAnswer = formatResponse(technicalAnswer, 500);
-    return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url) };
+    return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url), debugLogs };
   }
   
   // Try existing direct answer system
@@ -6911,11 +6911,12 @@ function handleChunkProcessing(query, entities, chunks) {
   if (directAnswer) {
     console.log(`âœ… Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
     const formattedAnswer = formatResponse(directAnswer, 500);
-    return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url) };
+    return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url), debugLogs };
   }
   
   // Fallback to chunk processing
-  return processChunkFallback(chunks, query);
+  const fallbackResult = processChunkFallback(chunks, query);
+  return { ...fallbackResult, debugLogs };
 }
 
 // Helper function to process chunk fallback
