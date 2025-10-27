@@ -1384,6 +1384,8 @@
             updateResultsTable();
             addDebugLog('🔍 DEBUG: About to call updateSummaryStats()');
             updateSummaryStats(); // Force update of ALL masonry blocks
+            addDebugLog('🔍 DEBUG: About to call populateQuestionsList()');
+            populateQuestionsList(); // Force update of ALL question cards
             addDebugLog('🔍 DEBUG: All update functions called');
             
             // Move to next question (or show completion message)
