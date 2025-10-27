@@ -7287,13 +7287,17 @@ function handleRegularEntityProcessing(query, relevantEntities, chunks) {
 // Helper function to generate RAG answer
 function generateRagAnswer(params) {
   const { query, entities, chunks, results } = params;
+  console.log(`[DEBUG] generateRagAnswer called with ${entities.length} entities, ${chunks.length} chunks`);
   
   if (results.answerType === 'events' && entities.length > 0) {
+    console.log(`[DEBUG] Taking events path`);
     const eventResult = handleEventEntities(entities);
     if (eventResult) return eventResult;
   } else if (chunks.length > 0) {
+    console.log(`[DEBUG] Taking chunks path - calling handleChunkProcessing`);
     return handleChunkProcessing(query, entities, chunks);
   } else if (entities.length > 0) {
+    console.log(`[DEBUG] Taking entities path`);
     console.log(`ðŸ” Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
     const relevantEntities = filterAndSortEntities(entities, query);
     calculateEntityConfidence(relevantEntities, chunks, results);
