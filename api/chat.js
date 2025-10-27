@@ -4845,6 +4845,7 @@ function finalizeConfidence(query, context) {
   console.log(`   responseAccuracy: ${context.qualityIndicators.responseAccuracy}`);
   console.log(`   isCompletelyIrrelevant: ${isCompletelyIrrelevant}`);
   
+  let confidenceScore;
   if (isCompletelyIrrelevant) {
     confidenceScore = 0.10; // 10% confidence for completely irrelevant responses
     console.log(`ðŸŽ¯ FORCED TO 10% - Completely irrelevant response`);
