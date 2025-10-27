@@ -4809,8 +4809,8 @@ function applyAllScoringFactors(context) {
 }
 
 function finalizeConfidence(query, context) {
-  // Calculate confidence based on Alan's quality indicators using his requested bands
-  let confidenceScore = 0;
+  // NEW LOGIC: Calculate confidence based on actual quality scores, not boolean existence checks
+  // This aligns with Alan's manual scoring where both bot response and related content quality matter equally
   
   // Ensure quality indicators exist
   if (!context.qualityIndicators) {
@@ -4820,7 +4820,10 @@ function finalizeConfidence(query, context) {
       hasRelevantArticles: false,
       hasActionableInfo: false,
       responseCompleteness: 0,
-      responseAccuracy: 0
+      responseAccuracy: 0,
+      // NEW: Add actual quality scores
+      botResponseQuality: 0,  // 0-100: Quality of the bot's direct response
+      relatedContentQuality: 0  // 0-100: Quality of related articles/events
     };
   }
   
