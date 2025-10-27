@@ -648,11 +648,21 @@ function extractAnswerFromArticleDescription(relevantArticle, query = '') {
     
     const cleanDescription = cleanResponseText(articleText);
     console.log(`[DEBUG] generateDirectAnswer: Using article text="${cleanDescription.substring(0, 200)}..."`);
-        return formatResponseMarkdown({
-          title: relevantArticle.title || 'Article Information',
-          url: relevantArticle.page_url || relevantArticle.url,
-          description: cleanResponseText(relevantArticle.meta_description || relevantArticle.description)
-        });
+    
+    // For "what is" queries, extract direct answer from meta_description instead of showing article link
+    if (query.toLowerCase().includes('what is')) {
+      const concept = query.toLowerCase().replace('what is', '').trim();
+      const directAnswer = `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${cleanDescription}`;
+      console.log(`[SUCCESS] Generated direct answer: "${directAnswer.substring(0, 100)}..."`);
+      return directAnswer;
+    }
+    
+    // For other queries, use the generic article format
+    return formatResponseMarkdown({
+      title: relevantArticle.title || 'Article Information',
+      url: relevantArticle.page_url || relevantArticle.url,
+      description: cleanResponseText(relevantArticle.meta_description || relevantArticle.description)
+    });
   }
   return null;
 }
