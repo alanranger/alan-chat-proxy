@@ -6915,7 +6915,10 @@ function handleEventEntities(entities) {
 
 // Helper function to handle chunk processing
 function handleChunkProcessing(query, entities, chunks) {
-  console.log(`ðŸ” Using generateDirectAnswer for ${chunks.length} chunks`);
+  console.log(`[DEBUG] Using generateDirectAnswer for ${chunks.length} chunks`);
+  
+  const debugLogs = [];
+  debugLogs.push(`Processing ${chunks.length} chunks for query: "${query}"`);
   
   // Try technical direct answer FIRST (priority for technical questions)
   const technicalAnswer = generateTechnicalDirectAnswer(query, chunks);
