@@ -7288,17 +7288,20 @@ function handleRegularEntityProcessing(query, relevantEntities, chunks) {
 // Helper function to generate RAG answer
 function generateRagAnswer(params) {
   const { query, entities, chunks, results } = params;
-  console.log(`[DEBUG] generateRagAnswer called with ${entities.length} entities, ${chunks.length} chunks`);
+  const debugLogs = [];
+  
+  debugLogs.push(`generateRagAnswer called with ${entities.length} entities, ${chunks.length} chunks`);
   
   if (results.answerType === 'events' && entities.length > 0) {
-    console.log(`[DEBUG] Taking events path`);
+    debugLogs.push(`Taking events path`);
     const eventResult = handleEventEntities(entities);
-    if (eventResult) return eventResult;
+    if (eventResult) return { ...eventResult, debugLogs };
   } else if (chunks.length > 0) {
-    console.log(`[DEBUG] Taking chunks path - calling handleChunkProcessing`);
-    return handleChunkProcessing(query, entities, chunks);
+    debugLogs.push(`Taking chunks path - calling handleChunkProcessing`);
+    const result = handleChunkProcessing(query, entities, chunks);
+    return { ...result, debugLogs };
   } else if (entities.length > 0) {
-    console.log(`[DEBUG] Taking entities path`);
+    debugLogs.push(`Taking entities path`);
     console.log(`ðŸ” Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
     const relevantEntities = filterAndSortEntities(entities, query);
     calculateEntityConfidence(relevantEntities, chunks, results);
@@ -7692,7 +7695,13 @@ function sendRagSuccessResponse(res, ragResult, context) {
         entitiesFound: ragResult.entitiesFound,
         entityTitles: ragResult.entities?.map(e => e.title) || [],
         approach: "rag_first_hybrid",
-        debugLogs: ["DEPLOYMENT TEST V2 - This should appear in response"]
+        debugLogs: [
+          "DEPLOYMENT TEST V2 - This should appear in response",
+          `Answer length: ${ragResult.answer?.length || 0}`,
+          `Answer preview: ${ragResult.answer?.substring(0, 50) || 'NO ANSWER'}...`,
+          `Chunks found: ${ragResult.chunksFound || 0}`,
+          `Entities found: ${ragResult.entitiesFound || 0}`
+        ]
       }
     });
   }
