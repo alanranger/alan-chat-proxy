@@ -7208,14 +7208,20 @@ function extractDirectAnswerFromDescription(description, query) {
 // Helper function to extract direct answers from content chunks
 function extractDirectAnswerFromChunks(chunks, query) {
   const lc = query.toLowerCase();
+  console.log(`[DEBUG] extractDirectAnswerFromChunks called with ${chunks.length} chunks for query: "${query}"`);
   
   if (lc.includes('what is') && chunks.length > 0) {
     const concept = lc.replace('what is', '').trim();
+    console.log(`[DEBUG] Extracting concept: "${concept}"`);
     
     // Look for the best chunk that contains definition content
-    for (const chunk of chunks) {
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      console.log(`[DEBUG] Chunk ${i}: length=${chunk.chunk_text ? chunk.chunk_text.length : 0}`);
+      
       if (chunk.chunk_text && chunk.chunk_text.length > 100) {
         const chunkText = chunk.chunk_text.toLowerCase();
+        console.log(`[DEBUG] Chunk ${i} text preview: "${chunk.chunk_text.substring(0, 100)}..."`);
         
         // Look for definition patterns in chunk text
         const definitionPatterns = [
@@ -7225,11 +7231,15 @@ function extractDirectAnswerFromChunks(chunks, query) {
           new RegExp(`what\\s+is\\s+${concept}[^.]*?([^.]+)`, 'i')
         ];
         
-        for (const pattern of definitionPatterns) {
+        for (let j = 0; j < definitionPatterns.length; j++) {
+          const pattern = definitionPatterns[j];
           const match = chunk.chunk_text.match(pattern);
+          console.log(`[DEBUG] Pattern ${j + 1} match: ${match ? 'YES' : 'NO'}`);
           if (match && match[1] && match[1].length > 20) {
             const explanation = match[1].trim();
-            return `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${explanation}`;
+            const result = `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${explanation}`;
+            console.log(`[SUCCESS] Found match! Result: "${result}"`);
+            return result;
           }
         }
         
@@ -7239,13 +7249,16 @@ function extractDirectAnswerFromChunks(chunks, query) {
           if (sentence.toLowerCase().includes(concept) && 
               sentence.length > 30 && sentence.length < 200 &&
               (sentence.includes(' is ') || sentence.includes(' refers ') || sentence.includes(' means '))) {
-            return `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${sentence.trim()}`;
+            const result = `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${sentence.trim()}`;
+            console.log(`[SUCCESS] Found sentence match! Result: "${result}"`);
+            return result;
           }
         }
       }
     }
   }
   
+  console.log(`[DEBUG] No match found, returning null`);
   return null;
 }
 // Helper function to handle regular entity processing
