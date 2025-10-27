@@ -635,42 +635,6 @@ function findRelevantArticleForTerm(exactTerm, articles) {
 }
       
 
-// Helper function to extract technical explanations from article descriptions
-function extractTechnicalExplanation(description, query) {
-  const lc = query.toLowerCase();
-  
-  // For ISO queries
-  if (lc.includes('iso')) {
-    return `**ISO** (International Organization for Standardization) in photography refers to your camera sensor's sensitivity to light. Lower ISO values (like 100-400) produce cleaner images with less noise, while higher ISO values (like 1600-6400) make your sensor more sensitive to light but can introduce grain or noise. The key is finding the right balance for your lighting conditions.`;
-  }
-  
-  // For aperture queries
-  if (lc.includes('aperture')) {
-    return `**Aperture** controls the size of the opening in your camera lens, measured in f-stops (like f/2.8, f/5.6, f/11). A wider aperture (lower f-number like f/2.8) lets in more light and creates a shallow depth of field with blurred backgrounds. A smaller aperture (higher f-number like f/11) lets in less light but keeps more of your image in focus from foreground to background.`;
-  }
-  
-  // For shutter speed queries
-  if (lc.includes('shutter')) {
-    return `**Shutter Speed** controls how long your camera's sensor is exposed to light, measured in fractions of a second (like 1/250, 1/60, 1/4). Fast shutter speeds (like 1/1000) freeze motion and are great for sports or action shots. Slow shutter speeds (like 1/30 or slower) create motion blur and are perfect for creative effects or low-light photography.`;
-  }
-  
-  // For exposure queries (but not exposure triangle)
-  if (lc.includes('exposure') && !lc.includes('triangle')) {
-    return `**Exposure** in photography refers to the amount of light that reaches your camera's sensor. It's controlled by three main settings: aperture (how wide the lens opening is), shutter speed (how long the sensor is exposed), and ISO (how sensitive the sensor is to light). Getting the right exposure means balancing these three elements to capture the image you want.`;
-  }
-  
-  // For depth of field queries
-  if (lc.includes('depth of field')) {
-    return `**Depth of Field** refers to the area in your image that appears sharp and in focus. A shallow depth of field (achieved with wide apertures like f/2.8) keeps only a small area sharp while blurring the background and foreground. A deep depth of field (achieved with smaller apertures like f/11) keeps more of the image sharp from front to back.`;
-  }
-  
-  // For focus queries
-  if (lc.includes('focus')) {
-    return `**Focus** in photography refers to the sharpness and clarity of your subject. There are different focus modes: single-shot AF (good for stationary subjects), continuous AF (good for moving subjects), and manual focus (when you want complete control). The key is ensuring your main subject is sharp and clear.`;
-  }
-  
-  return null;
-}
 function extractAnswerFromArticleDescription(relevantArticle, query = '') {
       if (relevantArticle.description && relevantArticle.description.length > 50) {
         // Filter out irrelevant content based on query intent
@@ -7188,6 +7152,46 @@ function handlePolicyQuery(relevantEntities) {
   return { answer, type: "advice", sources: [policyEntity.url] };
 }
 
+
+// Helper function to extract direct answers from article descriptions
+function extractDirectAnswerFromDescription(description, query) {
+  const lc = query.toLowerCase();
+  
+  // Clean the description
+  const cleanDesc = description.replace(/\d+\s+/, '').replace(/\s+/g, ' ').trim();
+  
+  // For technical concepts, try to extract the core explanation
+  if (lc.includes('what is')) {
+    const concept = lc.replace('what is', '').trim();
+    
+    // Look for definition patterns in the description
+    const definitionPatterns = [
+      /is\s+(?:the\s+)?(?:process\s+of\s+|way\s+to\s+|method\s+of\s+|technique\s+for\s+)?([^.]+)/i,
+      /refers\s+to\s+([^.]+)/i,
+      /means\s+([^.]+)/i,
+      /is\s+([^.]+?)(?:in\s+photography|\s+that\s+)/i
+    ];
+    
+    for (const pattern of definitionPatterns) {
+      const match = cleanDesc.match(pattern);
+      if (match && match[1] && match[1].length > 20) {
+        const explanation = match[1].trim();
+        return `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${explanation.toLowerCase()}`;
+      }
+    }
+    
+    // If no pattern matches, try to extract the first meaningful sentence
+    const sentences = cleanDesc.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    if (sentences.length > 0) {
+      const firstSentence = sentences[0].trim();
+      if (firstSentence.length > 30 && firstSentence.length < 200) {
+        return `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${firstSentence.toLowerCase()}`;
+      }
+    }
+  }
+  
+  return null;
+}
 // Helper function to handle regular entity processing
 function handleRegularEntityProcessing(query, relevantEntities, chunks) {
         console.log(`ðŸ” DEBUG: Using generateDirectAnswer for enhanced concept synthesis`);
