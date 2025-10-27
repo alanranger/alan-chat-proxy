@@ -1407,18 +1407,39 @@
 
         // Update statistics
         function updateStats() {
-            const completed = testResults.filter(r => 
+            // Count completed questions from both testResults and savedScores
+            const completedFromTestResults = testResults.filter(r => 
                 filteredQuestions.some(q => q.question === r.question)
             ).length;
+            
+            const completedFromSavedScores = filteredQuestions.filter(q => 
+                savedScores[q.question] !== undefined
+            ).length;
+            
+            // Use the higher count (in case there's overlap)
+            const completed = Math.max(completedFromTestResults, completedFromSavedScores);
             const total = filteredQuestions.length;
             
             document.getElementById('completedCount').textContent = completed;
             
             if (completed > 0) {
+                // Calculate average from both sources
                 const filteredResults = testResults.filter(r => 
                     filteredQuestions.some(q => q.question === r.question)
                 );
-                const avgScore = filteredResults.reduce((sum, r) => sum + r.qualityScore, 0) / completed;
+                
+                const filteredSavedScores = filteredQuestions
+                    .filter(q => savedScores[q.question] !== undefined)
+                    .map(q => {
+                        const savedScore = savedScores[q.question];
+                        return {
+                            qualityScore: savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
+                                       (savedScore.confidenceScore !== undefined ? savedScore.confidenceScore : 0)
+                        };
+                    });
+                
+                const allFilteredResults = [...filteredResults, ...filteredSavedScores];
+                const avgScore = allFilteredResults.reduce((sum, r) => sum + r.qualityScore, 0) / allFilteredResults.length;
                 document.getElementById('averageScore').textContent = Math.round(avgScore);
             } else {
                 document.getElementById('averageScore').textContent = '0';
