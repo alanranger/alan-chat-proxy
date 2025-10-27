@@ -459,13 +459,6 @@
         </div>
 
     <div class="test-section">
-        <h2>📋 All Questions</h2>
-        <div id="questionsList">
-            <!-- Questions will be populated here -->
-        </div>
-    </div>
-
-    <div class="test-section">
         <h2>📊 Results Summary</h2>
         <button class="btn btn-info" onclick="exportResults()">📥 Export Results</button>
         <button class="btn btn-warning" onclick="importResults()">📤 Import Results</button>
@@ -755,7 +748,6 @@
             addDebugLog('🔍 DEBUG: initTest() called');
             loadSavedScores();
             loadBaselineScores();
-            populateQuestionsList();
             applyFilter('all'); // Start with all questions
             loadQuestion(0);
         }
@@ -787,7 +779,6 @@
             updateProgress();
             
             // Update questions list display
-            populateQuestionsList();
             
             // CRITICAL: Update all UI components after filtering
             updateStats();
@@ -1156,76 +1147,6 @@
             }
         }
 
-        // Populate the questions list
-        function populateQuestionsList() {
-            addDebugLog('🔍 DEBUG: populateQuestionsList() called');
-            addDebugLog(`🔍 DEBUG: filteredQuestions.length = ${filteredQuestions.length}`);
-            addDebugLog(`🔍 DEBUG: testResults.length = ${testResults.length}`);
-            addDebugLog(`🔍 DEBUG: savedScores keys = ${Object.keys(savedScores).join(', ')}`);
-            
-            const questionsList = document.getElementById('questionsList');
-            questionsList.innerHTML = '';
-            
-            // Always show ALL questions, not just filtered ones
-            testQuestions.forEach((q, index) => {
-                addDebugLog(`🔍 DEBUG: Processing question ${index}: ${q.question}`);
-                
-                const questionDiv = document.createElement('div');
-                questionDiv.className = 'question-card';
-                questionDiv.id = `question-${index}`;
-                
-                // Check if we have scores for this question (prefer testResults over savedScores)
-                const currentResult = testResults.find(r => r.question === q.question);
-                const previousScore = savedScores[q.question];
-                
-                addDebugLog(`🔍 DEBUG: Question "${q.question}" - currentResult: ${JSON.stringify(currentResult)}`);
-                addDebugLog(`🔍 DEBUG: Question "${q.question}" - previousScore: ${JSON.stringify(previousScore)}`);
-                
-                // Always prefer currentResult (testResults) over previousScore (savedScores) 
-                // This ensures imported CSV data takes priority over cached localStorage data
-                let displayScore = currentResult || previousScore;
-                if (currentResult && previousScore) {
-                    // Always use currentResult (from testResults) if it exists
-                    displayScore = currentResult;
-                    addDebugLog(`🔍 DEBUG: Question "${q.question}" - using current result (testResults) over previous score (savedScores)`);
-                }
-                
-                addDebugLog(`🔍 DEBUG: Question "${q.question}" - final displayScore: ${JSON.stringify(displayScore)}`);
-                
-                let statusHtml = '<span class="status-badge status-pending">Pending</span>';
-                let previousScoresHtml = '';
-                
-                if (displayScore) {
-                    // Handle both old format (confidenceScore, verdict) and new format (qualityScore, relevanceScore)
-                    const qualityScore = displayScore.qualityScore !== undefined ? displayScore.qualityScore : 
-                                       (displayScore.confidenceScore !== undefined ? displayScore.confidenceScore : 0);
-                    const relevanceScore = displayScore.relevanceScore !== undefined ? displayScore.relevanceScore : 0;
-                    const verdict = displayScore.verdict || (qualityScore >= 70 ? 'Pass' : 'Fail');
-                    
-                    const statusClass = qualityScore >= 70 ? 'status-pass' : 'status-fail';
-                    statusHtml = `<span class="status-badge ${statusClass}">${verdict}</span>`;
-                    
-                    previousScoresHtml = `
-                        <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 14px;">
-                            <strong>Previous Score:</strong> ${qualityScore}/100 | 
-                            <strong>Related Score:</strong> ${relevanceScore}/100
-                            ${displayScore.notes ? `<br><strong>Notes:</strong> ${displayScore.notes}` : ''}
-                            <br><small>Last tested: ${new Date(displayScore.timestamp).toLocaleString()}</small>
-                        </div>
-                    `;
-                }
-                
-                questionDiv.innerHTML = `
-                    <h4>${q.question}</h4>
-                    <p><strong>Category:</strong> ${q.category}</p>
-                    <p><strong>Focus:</strong> ${q.focus}</p>
-                    <p><strong>Status:</strong> ${statusHtml}</p>
-                    ${previousScoresHtml}
-                `;
-                questionsList.appendChild(questionDiv);
-            });
-        }
-
         // Load a specific question
         async function loadQuestion(index) {
             if (index >= filteredQuestions.length) {
@@ -1372,8 +1293,9 @@
                 
                 const statusBadge = questionCard.querySelector('.status-badge');
                 if (statusBadge) {
-                    statusBadge.textContent = qualityScore >= 70 ? 'Pass' : 'Fail';
-                    statusBadge.className = `status-badge ${qualityScore >= 70 ? 'status-pass' : 'status-fail'}`;
+                    const isPass = qualityScore >= 70 && relevanceScore >= 70;
+                    statusBadge.textContent = isPass ? 'Pass' : 'Fail';
+                    statusBadge.className = `status-badge ${isPass ? 'status-pass' : 'status-fail'}`;
                 }
             }
             
@@ -1384,8 +1306,6 @@
             updateResultsTable();
             addDebugLog('🔍 DEBUG: About to call updateSummaryStats()');
             updateSummaryStats(); // Force update of ALL masonry blocks
-            addDebugLog('🔍 DEBUG: About to call populateQuestionsList()');
-            populateQuestionsList(); // Force update of ALL question cards
             addDebugLog('🔍 DEBUG: All update functions called');
             
             // Move to next question (or show completion message)
@@ -1547,12 +1467,13 @@
                     categoryStats[category].botResponseSum += result.qualityScore;
                     categoryStats[category].relatedSum += (result.relevanceScore !== undefined ? result.relevanceScore : 0);
                     
-                    // Count pass/fail for this category
-                    if (result.qualityScore >= 70) {
-                        categoryStats[category].passCount++;
-                    } else {
-                        categoryStats[category].failCount++;
-                    }
+                // Count pass/fail for this category - BOTH scores must be >= 70 to pass
+                const isPass = result.qualityScore >= 70 && result.relevanceScore >= 70;
+                if (isPass) {
+                    categoryStats[category].passCount++;
+                } else {
+                    categoryStats[category].failCount++;
+                }
                 }
             });
             
@@ -1650,7 +1571,7 @@
             
             // Add overall summary masonry tile
             const totalQuestions = allResults.length;
-            const totalPass = allResults.filter(r => r.qualityScore >= 70).length;
+            const totalPass = allResults.filter(r => r.qualityScore >= 70 && r.relevanceScore >= 70).length;
             const totalFail = totalQuestions - totalPass;
             const overallAvgBotResponse = allResults.length > 0 ? Math.round(allResults.reduce((sum, r) => sum + r.qualityScore, 0) / allResults.length) : 0;
             const overallAvgRelated = allResults.length > 0 ? Math.round(allResults.reduce((sum, r) => sum + (r.relevanceScore !== undefined ? r.relevanceScore : 0), 0) / allResults.length) : 0;
@@ -1775,12 +1696,12 @@
                     const qualityScore = displayResult.qualityScore !== undefined ? displayResult.qualityScore : 
                                        (displayResult.confidenceScore !== undefined ? displayResult.confidenceScore : 0);
                     const relevanceScore = displayResult.relevanceScore !== undefined ? displayResult.relevanceScore : 0;
-                    const verdict = displayResult.verdict || (qualityScore >= 70 ? 'Pass' : 'Fail');
+                    const verdict = displayResult.verdict || (qualityScore >= 70 && relevanceScore >= 70 ? 'Pass' : 'Fail');
                     
                     // Question has been scored
                     row.innerHTML = `
                         <td>${question.question}</td>
-                        <td><span class="status-badge ${qualityScore >= 70 ? 'status-pass' : 'status-fail'}">${verdict}</span></td>
+                        <td><span class="status-badge ${qualityScore >= 70 && relevanceScore >= 70 ? 'status-pass' : 'status-fail'}">${verdict}</span></td>
                         <td>${qualityScore}</td>
                         <td>${displayResult.qualityNotes || ''}</td>
                         <td>${relevanceScore}</td>
@@ -1946,7 +1867,7 @@
                     const qualityScore = savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
                                        (savedScore.confidenceScore !== undefined ? savedScore.confidenceScore : 0);
                     const relevanceScore = savedScore.relevanceScore !== undefined ? savedScore.relevanceScore : 0;
-                    const verdict = savedScore.verdict || (qualityScore >= 70 ? 'Pass' : 'Fail');
+                    const verdict = savedScore.verdict || (qualityScore >= 70 && relevanceScore >= 70 ? 'Pass' : 'Fail');
                     
                     questionMap.set(question, {
                         question: question,
@@ -1975,7 +1896,7 @@
             // Always export ALL results
             const rows = allResults.map(result => [
                 `"${result.question}"`,
-                result.verdict || (result.qualityScore >= 70 ? 'Pass' : 'Fail'),
+                result.verdict || (result.qualityScore >= 70 && result.relevanceScore >= 70 ? 'Pass' : 'Fail'),
                 result.qualityScore,
                 `"${result.qualityNotes || ''}"`,
                 result.relevanceScore !== undefined ? result.relevanceScore : 0,
@@ -2074,7 +1995,6 @@
             saveScoresToStorage();
             updateStats();
             updateResultsTable();
-            populateQuestionsList();
             updateSummaryStats();
             
             alert(`Imported ${testResults.length} results successfully!`);
