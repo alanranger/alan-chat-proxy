@@ -1181,13 +1181,13 @@
                 addDebugLog(`🔍 DEBUG: Question "${q.question}" - currentResult: ${JSON.stringify(currentResult)}`);
                 addDebugLog(`🔍 DEBUG: Question "${q.question}" - previousScore: ${JSON.stringify(previousScore)}`);
                 
-                // Use currentResult if it exists and has a more recent timestamp, otherwise use previousScore
+                // Always prefer currentResult (testResults) over previousScore (savedScores) 
+                // This ensures imported CSV data takes priority over cached localStorage data
                 let displayScore = currentResult || previousScore;
                 if (currentResult && previousScore) {
-                    const currentTime = new Date(currentResult.timestamp).getTime();
-                    const previousTime = new Date(previousScore.timestamp).getTime();
-                    displayScore = currentTime > previousTime ? currentResult : previousScore;
-                    addDebugLog(`🔍 DEBUG: Question "${q.question}" - using ${currentTime > previousTime ? 'current' : 'previous'} score`);
+                    // Always use currentResult (from testResults) if it exists
+                    displayScore = currentResult;
+                    addDebugLog(`🔍 DEBUG: Question "${q.question}" - using current result (testResults) over previous score (savedScores)`);
                 }
                 
                 addDebugLog(`🔍 DEBUG: Question "${q.question}" - final displayScore: ${JSON.stringify(displayScore)}`);
@@ -1494,33 +1494,9 @@
                         focus: questionData?.focus || ''
                     });
                 } else {
-                    // Compare timestamps - keep the more recent one
-                    const currentTime = new Date(existingResult.timestamp).getTime();
-                    const savedTime = new Date(savedScore.timestamp).getTime();
-                    
-                    if (savedTime > currentTime) {
-                        // Saved score is more recent, replace
-                        const questionData = testQuestions.find(q => q.question === question);
-                        
-                        const qualityScore = savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
-                                           (savedScore.confidenceScore !== undefined ? savedScore.confidenceScore : 0);
-                        const relevanceScore = savedScore.relevanceScore !== undefined ? savedScore.relevanceScore : 0;
-                        const notes = savedScore.notes || '';
-                        const qualityNotes = savedScore.qualityNotes || '';
-                        const relevanceNotes = savedScore.relevanceNotes || '';
-                        
-                        questionMap.set(question, {
-                            question: question,
-                            qualityScore: qualityScore,
-                            relevanceScore: relevanceScore,
-                            notes: notes,
-                            qualityNotes: qualityNotes,
-                            relevanceNotes: relevanceNotes,
-                            timestamp: savedScore.timestamp,
-                            category: questionData?.category || 'Unknown',
-                            focus: questionData?.focus || ''
-                        });
-                    }
+                    // Always keep the existing result from testResults (current session)
+                    // This ensures imported CSV data takes priority over cached localStorage data
+                    addDebugLog(`🔍 DEBUG: Keeping existing result from testResults for question: ${question}`);
                 }
             });
             
@@ -1774,30 +1750,9 @@
                         focus: questionData?.focus || ''
                     });
                 } else {
-                    // Compare timestamps - keep the more recent one
-                    const currentTime = new Date(existingResult.timestamp).getTime();
-                    const savedTime = new Date(savedScore.timestamp).getTime();
-                    
-                    if (savedTime > currentTime) {
-                        // Saved score is more recent, replace
-                        const questionData = testQuestions.find(q => q.question === question);
-                        
-                        const qualityScore = savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
-                                           (savedScore.confidenceScore !== undefined ? savedScore.confidenceScore : 0);
-                        const relevanceScore = savedScore.relevanceScore !== undefined ? savedScore.relevanceScore : 0;
-                        
-                        questionMap.set(question, {
-                            question: question,
-                            qualityScore: qualityScore,
-                            relevanceScore: relevanceScore,
-                            notes: savedScore.notes || '',
-                            qualityNotes: savedScore.qualityNotes || '',
-                            relevanceNotes: savedScore.relevanceNotes || '',
-                            timestamp: savedScore.timestamp,
-                            category: questionData?.category || 'Unknown',
-                            focus: questionData?.focus || ''
-                        });
-                    }
+                    // Always keep the existing result from testResults (current session)
+                    // This ensures imported CSV data takes priority over cached localStorage data
+                    addDebugLog(`🔍 DEBUG: Keeping existing result from testResults for question: ${question}`);
                 }
             });
             
@@ -2006,32 +1961,9 @@
                         verdict: verdict
                     });
                 } else {
-                    // Compare timestamps - keep the more recent one
-                    const currentTime = new Date(existingResult.timestamp).getTime();
-                    const savedTime = new Date(savedScore.timestamp).getTime();
-                    
-                    if (savedTime > currentTime) {
-                        // Saved score is more recent, replace
-                        const questionData = testQuestions.find(q => q.question === question);
-                        
-                        const qualityScore = savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
-                                           (savedScore.confidenceScore !== undefined ? savedScore.confidenceScore : 0);
-                        const relevanceScore = savedScore.relevanceScore !== undefined ? savedScore.relevanceScore : 0;
-                        const verdict = savedScore.verdict || (qualityScore >= 70 ? 'Pass' : 'Fail');
-                        
-                        questionMap.set(question, {
-                            question: question,
-                            qualityScore: qualityScore,
-                            relevanceScore: relevanceScore,
-                            notes: savedScore.notes || '',
-                            qualityNotes: savedScore.qualityNotes || '',
-                            relevanceNotes: savedScore.relevanceNotes || '',
-                            timestamp: savedScore.timestamp,
-                            category: questionData?.category || 'Unknown',
-                            focus: questionData?.focus || '',
-                            verdict: verdict
-                        });
-                    }
+                    // Always keep the existing result from testResults (current session)
+                    // This ensures imported CSV data takes priority over cached localStorage data
+                    addDebugLog(`🔍 DEBUG: Keeping existing result from testResults for question: ${question}`);
                 }
             });
             
