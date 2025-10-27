@@ -7691,7 +7691,8 @@ function sendRagSuccessResponse(res, ragResult, context) {
         chunksFound: ragResult.chunksFound,
         entitiesFound: ragResult.entitiesFound,
         entityTitles: ragResult.entities?.map(e => e.title) || [],
-        approach: "rag_first_hybrid"
+        approach: "rag_first_hybrid",
+        debugLogs: ["DEPLOYMENT TEST V2 - This should appear in response"]
       }
     });
   }
