@@ -384,7 +384,6 @@
                 <button class="btn btn-secondary" onclick="filterByCategory('Technical Advice')" id="filterAdvice">Technical Advice</button>
                 <button class="btn btn-secondary" onclick="filterByCategory('Course/Workshop Logistics')" id="filterCourse">Course Logistics</button>
                 <button class="btn btn-secondary" onclick="filterByCategory('Business Information')" id="filterBusiness">Business Info</button>
-                <button class="btn btn-secondary" onclick="filterByCategory('Equipment Requirements')" id="filterReq">Equipment Req</button>
             </div>
             <div style="margin-top: 10px; font-size: 14px; color: #666;">
                 <span id="filterStatus">Showing all 28 questions</span>
@@ -683,7 +682,7 @@
                 expectedType: "advice"
             },
             {
-                category: "Equipment Requirements",
+                category: "Equipment Recommendations",
                 question: "what camera do i need for your courses and workshops",
                 focus: "Should specify camera requirements for courses",
                 expectedType: "advice"
@@ -811,8 +810,7 @@
                 activeCategory === 'Event Queries' ? 'Events' :
                 activeCategory === 'Technical Advice' ? 'Advice' :
                 activeCategory === 'Course/Workshop Logistics' ? 'Course' :
-                activeCategory === 'Business Information' ? 'Business' :
-                activeCategory === 'Equipment Requirements' ? 'Req' : 'All'}`);
+                activeCategory === 'Business Information' ? 'Business' : 'All'}`);
             
             if (activeButton) {
                 activeButton.className = 'btn btn-success';
