@@ -6948,6 +6948,15 @@ function generateTechnicalDirectAnswer(query, chunks) {
     return null;
   }
   
+  // For "what is" queries, try to extract direct answers from chunks first
+  if (lcQuery.includes('what is')) {
+    const directAnswerFromChunks = extractDirectAnswerFromChunks(chunks, query);
+    if (directAnswerFromChunks) {
+      console.log(`[SUCCESS] Generated technical direct answer from chunks`);
+      return directAnswerFromChunks;
+    }
+  }
+  
   // Extract key concepts from query
   const concepts = extractTechnicalConcepts(lcQuery);
   if (concepts.length === 0) {
