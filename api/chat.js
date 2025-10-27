@@ -648,11 +648,11 @@ function extractAnswerFromArticleDescription(relevantArticle, query = '') {
     
     const cleanDescription = cleanResponseText(articleText);
     console.log(`[DEBUG] generateDirectAnswer: Using article text="${cleanDescription.substring(0, 200)}..."`);
-    return formatResponseMarkdown({
-      title: relevantArticle.title || 'Article Information',
-      url: relevantArticle.page_url || relevantArticle.url,
-      description: cleanDescription
-    });
+        return formatResponseMarkdown({
+          title: relevantArticle.title || 'Article Information',
+          url: relevantArticle.page_url || relevantArticle.url,
+          description: cleanResponseText(relevantArticle.meta_description || relevantArticle.description)
+        });
   }
   return null;
 }
