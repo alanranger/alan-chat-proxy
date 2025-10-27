@@ -6897,6 +6897,8 @@ function handleChunkProcessing(query, entities, chunks) {
   
   // Try technical direct answer FIRST (priority for technical questions)
   const technicalAnswer = generateTechnicalDirectAnswer(query, chunks);
+  console.log(`[DEBUG] generateTechnicalDirectAnswer returned: ${technicalAnswer ? 'SUCCESS' : 'NULL'}`);
+  
   if (technicalAnswer) {
     console.log(`âœ… Generated technical direct answer: "${technicalAnswer.substring(0, 100)}..."`);
     const formattedAnswer = formatResponse(technicalAnswer, 500);
