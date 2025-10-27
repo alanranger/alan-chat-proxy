@@ -1529,8 +1529,8 @@
             addDebugLog(`🔍 DEBUG: allResults = ${JSON.stringify(allResults, null, 2)}`);
             
             if (allResults.length === 0) {
-                addDebugLog('🔍 DEBUG: No results found, returning early');
-                return;
+                addDebugLog('🔍 DEBUG: No results found, creating empty masonry tiles');
+                // Still create masonry tiles even with no data - they'll show zeros
             }
             
             // Always show ALL categories in masonry, but calculate averages based on current filter
@@ -1548,26 +1548,33 @@
             
             // Calculate category breakdown for ALL categories (not just filtered)
             const categoryStats = {};
+            
+            // Initialize all categories with empty stats
+            const allCategories = [...new Set(testQuestions.map(q => q.category))];
+            allCategories.forEach(category => {
+                categoryStats[category] = {
+                    count: 0,
+                    botResponseSum: 0,
+                    relatedSum: 0,
+                    passCount: 0,
+                    failCount: 0
+                };
+            });
+            
+            // Populate stats from actual results
             allResults.forEach(result => {
                 const category = result.category;
-                if (!categoryStats[category]) {
-                    categoryStats[category] = {
-                        count: 0,
-                        botResponseSum: 0,
-                        relatedSum: 0,
-                        passCount: 0,
-                        failCount: 0
-                    };
-                }
-                categoryStats[category].count++;
-                categoryStats[category].botResponseSum += result.qualityScore;
-                categoryStats[category].relatedSum += (result.relevanceScore !== undefined ? result.relevanceScore : 0);
-                
-                // Count pass/fail for this category
-                if (result.qualityScore >= 70) {
-                    categoryStats[category].passCount++;
-                } else {
-                    categoryStats[category].failCount++;
+                if (categoryStats[category]) {
+                    categoryStats[category].count++;
+                    categoryStats[category].botResponseSum += result.qualityScore;
+                    categoryStats[category].relatedSum += (result.relevanceScore !== undefined ? result.relevanceScore : 0);
+                    
+                    // Count pass/fail for this category
+                    if (result.qualityScore >= 70) {
+                        categoryStats[category].passCount++;
+                    } else {
+                        categoryStats[category].failCount++;
+                    }
                 }
             });
             
