@@ -789,6 +789,11 @@
             
             // Update questions list display
             populateQuestionsList();
+            
+            // CRITICAL: Update all UI components after filtering
+            updateStats();
+            updateResultsTable();
+            updateSummaryStats();
         }
 
         // Update filter button states
@@ -1415,9 +1420,8 @@
                 );
                 const avgScore = filteredResults.reduce((sum, r) => sum + r.qualityScore, 0) / completed;
                 document.getElementById('averageScore').textContent = Math.round(avgScore);
-                
-                // Update summary stats
-                updateSummaryStats();
+            } else {
+                document.getElementById('averageScore').textContent = '0';
             }
             
             // Update progress
