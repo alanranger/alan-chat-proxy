@@ -1173,9 +1173,15 @@
                 currentCard.classList.add('current');
             }
             
-            // Show loading
+            // Show loading with better user feedback
             document.getElementById('loadingSection').classList.remove('hidden');
             document.getElementById('responseSection').classList.add('hidden');
+            
+            // Update loading text to show progress
+            const loadingText = document.querySelector('#loadingSection p');
+            if (loadingText) {
+                loadingText.textContent = `🔄 Loading question ${index + 1} of ${filteredQuestions.length} and getting chat bot response...`;
+            }
             
             // Load previous scores if available
             const questionKey = question.question;
@@ -1299,14 +1305,21 @@
                 }
             }
             
-            // Update stats
+            // Update stats immediately (lightweight)
             addDebugLog('🔍 DEBUG: About to call updateStats()');
             updateStats();
-            addDebugLog('🔍 DEBUG: About to call updateResultsTable()');
-            updateResultsTable();
-            addDebugLog('🔍 DEBUG: About to call updateSummaryStats()');
-            updateSummaryStats(); // Force update of ALL masonry blocks
-            addDebugLog('🔍 DEBUG: All update functions called');
+            
+            // Defer heavy operations to prevent UI blocking
+            setTimeout(() => {
+                addDebugLog('🔍 DEBUG: About to call updateResultsTable()');
+                updateResultsTable();
+            }, 0);
+            
+            setTimeout(() => {
+                addDebugLog('🔍 DEBUG: About to call updateSummaryStats()');
+                updateSummaryStats(); // Force update of ALL masonry blocks
+                addDebugLog('🔍 DEBUG: All update functions called');
+            }, 0);
             
             // Move to next question (or show completion message)
             if (currentQuestionIndex + 1 >= filteredQuestions.length) {
@@ -1316,7 +1329,10 @@
                 // Stay on current question to show the completed state
             } else {
                 addDebugLog(`🔍 DEBUG: Moving to next question: ${currentQuestionIndex + 1}`);
-                loadQuestion(currentQuestionIndex + 1);
+                // Defer loading next question to prevent blocking
+                setTimeout(() => {
+                    loadQuestion(currentQuestionIndex + 1);
+                }, 100);
             }
         }
 
@@ -1424,7 +1440,6 @@
             allResults.push(...questionMap.values());
             
             addDebugLog(`🔍 DEBUG: allResults final length = ${allResults.length}`);
-            addDebugLog(`🔍 DEBUG: allResults = ${JSON.stringify(allResults, null, 2)}`);
             
             if (allResults.length === 0) {
                 addDebugLog('🔍 DEBUG: No results found, creating empty masonry tiles');
@@ -1497,7 +1512,7 @@
                 const passCount = stats.passCount;
                 const failCount = stats.failCount;
                 
-                addDebugLog(`🔍 DEBUG: Category "${category}" - count: ${stats.count}, pass: ${passCount}, fail: ${failCount}`);
+                // Reduced debug logging for performance
                 
                 // Determine overall status color
                 let statusColor, statusText, statusIcon;
