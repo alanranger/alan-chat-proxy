@@ -636,20 +636,23 @@ function findRelevantArticleForTerm(exactTerm, articles) {
       
 
 function extractAnswerFromArticleDescription(relevantArticle, query = '') {
-      if (relevantArticle.description && relevantArticle.description.length > 50) {
-        // Filter out irrelevant content based on query intent
-        if (!filterRelevantContent(relevantArticle.description, query)) {
-          console.log(`ðŸ” Filtered out irrelevant content from article: "${relevantArticle.title}"`);
-          return null;
-        }
-        
-        const cleanDescription = cleanResponseText(relevantArticle.description);
-        console.log(`ðŸ” generateDirectAnswer: Using article description="${cleanDescription.substring(0, 200)}..."`);
-        return formatResponseMarkdown({
-          title: relevantArticle.title || 'Article Information',
-          url: relevantArticle.page_url || relevantArticle.url,
-          description: cleanDescription
-        });
+  // Use meta_description if available (more detailed), otherwise fall back to description
+  const articleText = relevantArticle.meta_description || relevantArticle.description;
+  
+  if (articleText && articleText.length > 50) {
+    // Filter out irrelevant content based on query intent
+    if (!filterRelevantContent(articleText, query)) {
+      console.log(`[DEBUG] Filtered out irrelevant content from article: "${relevantArticle.title}"`);
+      return null;
+    }
+    
+    const cleanDescription = cleanResponseText(articleText);
+    console.log(`[DEBUG] generateDirectAnswer: Using article text="${cleanDescription.substring(0, 200)}..."`);
+    return formatResponseMarkdown({
+      title: relevantArticle.title || 'Article Information',
+      url: relevantArticle.page_url || relevantArticle.url,
+      description: cleanDescription
+    });
   }
   return null;
 }
