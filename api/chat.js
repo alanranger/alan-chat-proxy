@@ -7442,7 +7442,8 @@ function buildRagResponse(context) {
     },
     totalMatches: context.results.totalMatches,
     chunksFound: context.results.chunks.length,
-    entitiesFound: context.results.entities.length
+    entitiesFound: context.results.entities.length,
+    debugLogs: context.debugLogs || []
   };
 }
     
@@ -7558,12 +7559,12 @@ async function tryRagFirst(client, query) {
     });
     
     // Generate answer using helper function
-    const { answer, type, sources } = generateRagAnswer({ query, entities: results.entities, chunks: results.chunks, results });
+    const { answer, type, sources, debugLogs = [] } = generateRagAnswer({ query, entities: results.entities, chunks: results.chunks, results });
     
     // Handle fallback cases
     const { finalAnswer, finalType, finalSources } = handleRagFallbackLogic({ answer, type, sources, query });
     
-    return buildRagResponse({ results, finalAnswer, finalType, finalSources });
+    return buildRagResponse({ results, finalAnswer, finalType, finalSources, debugLogs });
     
   } catch (error) {
     return handleRagError(error);
@@ -7701,7 +7702,8 @@ function sendRagSuccessResponse(res, ragResult, context) {
           `Answer length: ${ragResult.answer?.length || 0}`,
           `Answer preview: ${ragResult.answer?.substring(0, 50) || 'NO ANSWER'}...`,
           `Chunks found: ${ragResult.chunksFound || 0}`,
-          `Entities found: ${ragResult.entitiesFound || 0}`
+          `Entities found: ${ragResult.entitiesFound || 0}`,
+          ...(ragResult.debugLogs || [])
         ]
       }
     });
