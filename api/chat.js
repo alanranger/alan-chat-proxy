@@ -4809,9 +4809,6 @@ function applyAllScoringFactors(context) {
 }
 
 function finalizeConfidence(query, context) {
-  // NEW LOGIC: Calculate confidence based on actual quality scores, not boolean existence checks
-  // This aligns with Alan's manual scoring where both bot response and related content quality matter equally
-  
   // Ensure quality indicators exist
   if (!context.qualityIndicators) {
     context.qualityIndicators = {
@@ -4821,95 +4818,23 @@ function finalizeConfidence(query, context) {
       hasActionableInfo: false,
       responseCompleteness: 0,
       responseAccuracy: 0,
-      // NEW: Add actual quality scores
-      botResponseQuality: 0,  // 0-100: Quality of the bot's direct response
-      relatedContentQuality: 0  // 0-100: Quality of related articles/events
+      botResponseQuality: 0,
+      relatedContentQuality: 0
     };
   }
   
-  // CRITICAL: Check for completely irrelevant responses first
-  // If no direct answer AND no relevant content AND low accuracy, it's very poor
-  const isCompletelyIrrelevant = (
-    !context.qualityIndicators.hasDirectAnswer && 
-    !context.qualityIndicators.hasRelevantEvents && 
-    !context.qualityIndicators.hasRelevantArticles &&
-    context.qualityIndicators.responseAccuracy < 0.3
-  );
+  // Log quality indicators for debugging
+  logQualityIndicators(query, context);
   
-  console.log(`ðŸ” QUALITY INDICATORS DEBUG for "${query}":`);
-  console.log(`   hasDirectAnswer: ${context.qualityIndicators.hasDirectAnswer}`);
-  console.log(`   hasRelevantEvents: ${context.qualityIndicators.hasRelevantEvents}`);
-  console.log(`   hasRelevantArticles: ${context.qualityIndicators.hasRelevantArticles}`);
-  console.log(`   hasActionableInfo: ${context.qualityIndicators.hasActionableInfo}`);
-  console.log(`   responseCompleteness: ${context.qualityIndicators.responseCompleteness}`);
-  console.log(`   responseAccuracy: ${context.qualityIndicators.responseAccuracy}`);
-  console.log(`   isCompletelyIrrelevant: ${isCompletelyIrrelevant}`);
-  
-  let confidenceScore;
-  if (isCompletelyIrrelevant) {
-    confidenceScore = 0.10; // 10% confidence for completely irrelevant responses
-    console.log(`ðŸŽ¯ FORCED TO 10% - Completely irrelevant response`);
-  }
-  // Perfect (100%): Has everything - direct answer, relevant events, relevant articles, actionable info
-  else if (context.qualityIndicators.hasDirectAnswer && 
-      context.qualityIndicators.hasRelevantEvents && 
-      context.qualityIndicators.hasRelevantArticles && 
-      context.qualityIndicators.hasActionableInfo &&
-      context.qualityIndicators.responseCompleteness >= 0.9 &&
-      context.qualityIndicators.responseAccuracy >= 0.9) {
-    confidenceScore = 1.0; // 100% confidence for perfect responses
-    console.log(`ðŸŽ¯ SELECTED: Perfect (100%) - All quality indicators met`);
-  }
-  // Nearly Perfect (95%): Has most elements with high quality
-  else if (context.qualityIndicators.hasDirectAnswer && 
-           (context.qualityIndicators.hasRelevantEvents || context.qualityIndicators.hasRelevantArticles) &&
-           context.qualityIndicators.responseCompleteness >= 0.8 &&
-           context.qualityIndicators.responseAccuracy >= 0.8) {
-    confidenceScore = 0.95; // 95% confidence for nearly perfect
-    console.log(`ðŸŽ¯ SELECTED: Nearly Perfect (95%) - Direct answer + supporting content`);
-  }
-    // Special case for event queries: High-quality event responses with relevant events
-    else if (context.qualityIndicators.hasDirectAnswer && 
-             context.qualityIndicators.hasRelevantEvents &&
-             context.qualityIndicators.responseCompleteness >= 0.3 &&
-             context.qualityIndicators.responseAccuracy >= 0.6) {
-      confidenceScore = 0.95; // 95% confidence for excellent event responses
-      console.log(`ðŸŽ¯ SELECTED: Nearly Perfect (95%) - Excellent event response with relevant events`);
-    }
-  // Very Good (75%): Has good answer and some supporting content
-  else if (context.qualityIndicators.hasDirectAnswer && 
-           context.qualityIndicators.responseCompleteness >= 0.4 &&
-           context.qualityIndicators.responseAccuracy >= 0.4) {
-    confidenceScore = 0.75; // 75% confidence for very good
-    console.log(`ðŸŽ¯ SELECTED: Very Good (75%) - Direct answer + good completeness/accuracy`);
-  }
-  // Good (50%): Has some useful content
-  else if (context.qualityIndicators.hasDirectAnswer || 
-           context.qualityIndicators.hasRelevantEvents || 
-           context.qualityIndicators.hasRelevantArticles) {
-    confidenceScore = 0.50; // 50% confidence for good
-    console.log(`ðŸŽ¯ SELECTED: Good (50%) - Some useful content found`);
-  }
-  // Poor (30%): Limited useful content
-  else if (context.qualityIndicators.responseCompleteness >= 0.3) {
-    confidenceScore = 0.30; // 30% confidence for poor
-    console.log(`ðŸŽ¯ SELECTED: Poor (30%) - Limited useful content`);
-  }
-  // Very Poor (10%): Little to no useful content
-  else {
-    confidenceScore = 0.10; // 10% confidence for very poor
-    console.log(`ðŸŽ¯ SELECTED: Very Poor (10%) - Little to no useful content`);
-  }
+  // Calculate confidence score using extracted helper functions
+  const confidenceScore = calculateConfidenceScore(context);
   
   // Apply base confidence adjustments (minimal impact)
   const baseConfidence = context.baseConfidence || 0.1;
   const finalConfidence = Math.max(0.1, Math.min(1.0, confidenceScore + (baseConfidence * 0.1)));
   
-  if (context.confidenceFactors && context.confidenceFactors.length > 0) {
-    console.log(`ðŸŽ¯ Alan's Quality-Based Confidence for "${query}": ${context.confidenceFactors.join(', ')} = ${(finalConfidence * 100).toFixed(1)}%`);
-    console.log(`ðŸ“Š Quality Indicators: Direct=${context.qualityIndicators.hasDirectAnswer}, Events=${context.qualityIndicators.hasRelevantEvents}, Articles=${context.qualityIndicators.hasRelevantArticles}, Actionable=${context.qualityIndicators.hasActionableInfo}`);
-    console.log(`ðŸ“Š Quality Scores: Completeness=${(context.qualityIndicators.responseCompleteness * 100).toFixed(1)}%, Accuracy=${(context.qualityIndicators.responseAccuracy * 100).toFixed(1)}%`);
-  }
+  // Log final confidence details
+  logFinalConfidence(query, context, finalConfidence);
   
   return finalConfidence;
 }
@@ -7707,7 +7632,7 @@ async function handleDirectAnswerOrWorkshop(context) {
   const hasAdvice = adviceKeywords.some(keyword => lc.includes(keyword));
   
   if (hasEquipment && hasAdvice) {
-    console.log(`🎯 Equipment query detected: "${context.query}" - routing to NEW RAG system`);
+    console.log(`[TARGET] Equipment query detected: "${context.query}" - routing to NEW RAG system`);
     return await processMainQuery(context);
   }
   
