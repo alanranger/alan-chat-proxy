@@ -1649,13 +1649,8 @@ function renderArticlesBlock(structured, query){
     !query.includes('book') && !query.includes('buy') && !query.includes('price') && !query.includes('cost') &&
     !query.includes('workshop') && !query.includes('course') && !query.includes('event') && !query.includes('class') &&
     !query.includes('recommend') && !query.includes('equipment') && !query.includes('tripod') &&
-    // Don't skip technical photography questions
-    !query.includes('iso') && !query.includes('aperture') && !query.includes('shutter') && !query.includes('exposure') &&
-    !query.includes('depth') && !query.includes('field') && !query.includes('contrast') && !query.includes('framing') &&
-    !query.includes('negative') && !query.includes('space') && !query.includes('manual') && !query.includes('mirrorless') &&
-    !query.includes('dslr') && !query.includes('camera') && !query.includes('photography') && !query.includes('photo') &&
-    !query.includes('metering') && !query.includes('white') && !query.includes('balance') && !query.includes('dynamic') &&
-    !query.includes('range') && !query.includes('focus') && !query.includes('composition') && !query.includes('lighting')
+    // Don't skip "what is" queries - these are technical questions that deserve articles
+    !/^what is/i.test(query)
   );
   if (isSimpleFollowUp) return '';
   
