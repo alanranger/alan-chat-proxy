@@ -634,6 +634,43 @@ function findRelevantArticleForTerm(exactTerm, articles) {
   return relevantArticle;
 }
       
+
+// Helper function to extract technical explanations from article descriptions
+function extractTechnicalExplanation(description, query) {
+  const lc = query.toLowerCase();
+  
+  // For ISO queries
+  if (lc.includes('iso')) {
+    return `**ISO** (International Organization for Standardization) in photography refers to your camera sensor's sensitivity to light. Lower ISO values (like 100-400) produce cleaner images with less noise, while higher ISO values (like 1600-6400) make your sensor more sensitive to light but can introduce grain or noise. The key is finding the right balance for your lighting conditions.`;
+  }
+  
+  // For aperture queries
+  if (lc.includes('aperture')) {
+    return `**Aperture** controls the size of the opening in your camera lens, measured in f-stops (like f/2.8, f/5.6, f/11). A wider aperture (lower f-number like f/2.8) lets in more light and creates a shallow depth of field with blurred backgrounds. A smaller aperture (higher f-number like f/11) lets in less light but keeps more of your image in focus from foreground to background.`;
+  }
+  
+  // For shutter speed queries
+  if (lc.includes('shutter')) {
+    return `**Shutter Speed** controls how long your camera's sensor is exposed to light, measured in fractions of a second (like 1/250, 1/60, 1/4). Fast shutter speeds (like 1/1000) freeze motion and are great for sports or action shots. Slow shutter speeds (like 1/30 or slower) create motion blur and are perfect for creative effects or low-light photography.`;
+  }
+  
+  // For exposure queries (but not exposure triangle)
+  if (lc.includes('exposure') && !lc.includes('triangle')) {
+    return `**Exposure** in photography refers to the amount of light that reaches your camera's sensor. It's controlled by three main settings: aperture (how wide the lens opening is), shutter speed (how long the sensor is exposed), and ISO (how sensitive the sensor is to light). Getting the right exposure means balancing these three elements to capture the image you want.`;
+  }
+  
+  // For depth of field queries
+  if (lc.includes('depth of field')) {
+    return `**Depth of Field** refers to the area in your image that appears sharp and in focus. A shallow depth of field (achieved with wide apertures like f/2.8) keeps only a small area sharp while blurring the background and foreground. A deep depth of field (achieved with smaller apertures like f/11) keeps more of the image sharp from front to back.`;
+  }
+  
+  // For focus queries
+  if (lc.includes('focus')) {
+    return `**Focus** in photography refers to the sharpness and clarity of your subject. There are different focus modes: single-shot AF (good for stationary subjects), continuous AF (good for moving subjects), and manual focus (when you want complete control). The key is ensuring your main subject is sharp and clear.`;
+  }
+  
+  return null;
+}
 function extractAnswerFromArticleDescription(relevantArticle, query = '') {
       if (relevantArticle.description && relevantArticle.description.length > 50) {
         // Filter out irrelevant content based on query intent
@@ -1130,6 +1167,9 @@ function getEquipmentAnswer() {
 function getTechnicalAnswers(lc) {
   return getJpegRawAnswer(lc) ||
          getExposureTriangleAnswer(lc) ||
+         getIsoAnswer(lc) ||
+         getApertureAnswer(lc) ||
+         getShutterSpeedAnswer(lc) ||
          getCompositionAnswer(lc) ||
          // getFilterAnswer(lc) ||  // DISABLED: Let RAG system handle filter queries
          getDepthOfFieldAnswer(lc) ||
@@ -1153,6 +1193,30 @@ function getExposureTriangleAnswer(lc) {
   }
   return null;
   }
+
+// Helper function for ISO
+function getIsoAnswer(lc) {
+  if (lc.includes("what is iso")) {
+    return `**ISO** (International Organization for Standardization) in photography refers to your camera sensor's sensitivity to light. Lower ISO values (like 100-400) produce cleaner images with less noise, while higher ISO values (like 1600-6400) make your sensor more sensitive to light but can introduce grain or noise. The key is finding the right balance for your lighting conditions.\n\n`;
+  }
+  return null;
+}
+
+// Helper function for aperture
+function getApertureAnswer(lc) {
+  if (lc.includes("what is aperture")) {
+    return `**Aperture** controls the size of the opening in your camera lens, measured in f-stops (like f/2.8, f/5.6, f/11). A wider aperture (lower f-number like f/2.8) lets in more light and creates a shallow depth of field with blurred backgrounds. A smaller aperture (higher f-number like f/11) lets in less light but keeps more of your image in focus from foreground to background.\n\n`;
+  }
+  return null;
+}
+
+// Helper function for shutter speed
+function getShutterSpeedAnswer(lc) {
+  if (lc.includes("what is shutter speed")) {
+    return `**Shutter Speed** controls how long your camera's sensor is exposed to light, measured in fractions of a second (like 1/250, 1/60, 1/4). Fast shutter speeds (like 1/1000) freeze motion and are great for sports or action shots. Slow shutter speeds (like 1/30 or slower) create motion blur and are perfect for creative effects or low-light photography.\n\n`;
+  }
+  return null;
+}
   
 // Helper function for composition
 function getCompositionAnswer(lc) {
@@ -1426,8 +1490,9 @@ function logDirectAnswerDebug(query, articles, contentChunks) {
 
 // Helper function to check if query is concept relationship
 function isConceptRelationshipQuery(lc) {
+  // Only treat as relationship query if it's specifically about relationships between concepts
   return lc.includes('triangle') || lc.includes('relationship') || 
-         (lc.includes('exposure') && (lc.includes('triangle') || lc.includes('aperture') || lc.includes('shutter') || lc.includes('iso')));
+         (lc.includes('exposure') && lc.includes('triangle'));
 }
 
 // Helper function to try course equipment answer
@@ -5788,7 +5853,7 @@ function handlePrivateLessonsResponse(query, res) {
 
 // Helper function to handle RAG response
 function handleRagResponse(ragResult, res) {
-      console.log(`âœ… RAG success for direct answer query: confidence=${ragResult.confidence}`);
+      console.log(`[SUCCESS] RAG success for direct answer query: confidence=${ragResult.confidence}`);
       res.status(200).json({
         ok: true,
         type: ragResult.type,
@@ -7364,13 +7429,25 @@ async function tryRagFirst(client, query) {
   // Check for technical patterns first
   const technicalResponse = getTechnicalAnswers(query.toLowerCase());
   if (technicalResponse) {
-    console.log(`ðŸŽ¯ Technical pattern matched for: "${query}"`);
+    console.log(`[TARGET] Technical pattern matched for: "${query}"`);
+    
+    // For technical concepts, also search for related articles
+    const keywords = extractKeywords(query);
+    const articles = await findArticles(client, { keywords, limit: 5 });
+    
     return {
       success: true,
       confidence: 0.8,
       answer: technicalResponse,
       type: "advice",
-      sources: { articles: [] }
+      sources: { articles: articles || [] },
+      structured: {
+        intent: "technical_answer",
+        articles: articles || [],
+        events: [],
+        products: [],
+        services: []
+      }
     };
   }
   
