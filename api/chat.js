@@ -7334,13 +7334,10 @@ function generateRagAnswer(params) {
     debugLogs.push(`Taking events path`);
     const eventResult = handleEventEntities(entities);
     if (eventResult) return { ...eventResult, debugLogs };
-  } else if (chunks.length > 0) {
-    debugLogs.push(`Taking chunks path - calling handleChunkProcessing`);
-    const result = handleChunkProcessing(query, entities, chunks);
-    return { ...result, debugLogs };
-  } else if (entities.length > 0) {
-    debugLogs.push(`Taking entities path`);
-    console.log(`ðŸ” Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
+  } else if (entities.length > 0 && query.toLowerCase().includes('what is')) {
+    // For "what is" queries, prioritize entities (articles) over chunks
+    debugLogs.push(`Taking entities path for "what is" query`);
+    console.log(`[DEBUG] Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
     const relevantEntities = filterAndSortEntities(entities, query);
     calculateEntityConfidence(relevantEntities, chunks, results);
     
@@ -7349,7 +7346,25 @@ function generateRagAnswer(params) {
       const result = isPolicyQuery ? handlePolicyQuery(relevantEntities) : handleRegularEntityProcessing(query, relevantEntities, chunks);
       return { ...result, debugLogs };
     } else {
-      console.log(`âš ï¸ No relevant entities found for query`);
+      console.log(`[WARN] No relevant entities found for query`);
+      return { answer: "", type: "advice", sources: [], debugLogs };
+    }
+  } else if (chunks.length > 0) {
+    debugLogs.push(`Taking chunks path - calling handleChunkProcessing`);
+    const result = handleChunkProcessing(query, entities, chunks);
+    return { ...result, debugLogs };
+  } else if (entities.length > 0) {
+    debugLogs.push(`Taking entities path`);
+    console.log(`[DEBUG] Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
+    const relevantEntities = filterAndSortEntities(entities, query);
+    calculateEntityConfidence(relevantEntities, chunks, results);
+    
+    if (relevantEntities.length > 0) {
+      const isPolicyQuery = /terms.*conditions|terms.*anc.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
+      const result = isPolicyQuery ? handlePolicyQuery(relevantEntities) : handleRegularEntityProcessing(query, relevantEntities, chunks);
+      return { ...result, debugLogs };
+    } else {
+      console.log(`[WARN] No relevant entities found for query`);
       return { answer: "", type: "advice", sources: [], debugLogs };
     }
   }
