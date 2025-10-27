@@ -7511,6 +7511,8 @@ async function tryRagFirst(client, query) {
   
   // Check for technical patterns first
   const technicalResponse = getTechnicalAnswers(query.toLowerCase());
+  console.log(`[DEBUG] getTechnicalAnswers returned: ${technicalResponse ? 'SUCCESS' : 'NULL'}`);
+  
   if (technicalResponse) {
     console.log(`[TARGET] Technical pattern matched for: "${query}"`);
     
@@ -7533,6 +7535,8 @@ async function tryRagFirst(client, query) {
       }
     };
   }
+  
+  console.log(`[DEBUG] No technical pattern matched, continuing to RAG processing`);
   
   try {
     // Prepare query parameters
