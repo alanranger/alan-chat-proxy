@@ -6165,6 +6165,7 @@ function generateSmartPills(query, evidence, classification) {
 
 // REFACTORED: Main Handler - Broken into smaller functions
 export default async function handler(req, res) {
+  console.log(`[DEBUG] MAIN HANDLER CALLED - DEPLOYMENT TEST`);
   const started = Date.now();
   try {
     // Validate request method
