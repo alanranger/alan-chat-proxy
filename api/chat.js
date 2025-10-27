@@ -682,11 +682,19 @@ function getFaqData(relevantArticle) {
 
 // Helper function to find primary question
 function findPrimaryQuestion(faqItems, exactTerm) {
-  return faqItems.find(item => {
+  console.log(`[DEBUG] findPrimaryQuestion called with exactTerm: "${exactTerm}"`);
+  console.log(`[DEBUG] Searching through ${faqItems.length} FAQ items`);
+  
+  const result = faqItems.find(item => {
         const question = (item.name || "").toLowerCase();
         const queryLower = exactTerm.toLowerCase();
-        return question.includes(queryLower) || queryLower.includes(question.split(' ')[0]);
+        const matches = question.includes(queryLower) || queryLower.includes(question.split(' ')[0]);
+        console.log(`[DEBUG] Question: "${question}" matches: ${matches}`);
+        return matches;
       });
+      
+  console.log(`[DEBUG] findPrimaryQuestion result: ${result ? 'FOUND' : 'NOT FOUND'}`);
+  return result;
 }
       
 // Helper function to extract and clean answer text
