@@ -6939,12 +6939,16 @@ function processChunkFallback(chunks, query = '') {
 // Helper function to generate direct answers for technical questions
 function generateTechnicalDirectAnswer(query, chunks) {
   const lcQuery = query.toLowerCase();
+  console.log(`[DEBUG] generateTechnicalDirectAnswer called for: "${query}" with ${chunks.length} chunks`);
   
   // Check if this is a technical question
   const isTechnicalQuery = lcQuery.includes('what is') || lcQuery.includes('how do i') || 
                           lcQuery.includes('why are') || lcQuery.includes('when should');
   
+  console.log(`[DEBUG] isTechnicalQuery: ${isTechnicalQuery}, chunks.length: ${chunks.length}`);
+  
   if (!isTechnicalQuery || chunks.length === 0) {
+    console.log(`[DEBUG] Returning null - not technical query or no chunks`);
     return null;
   }
   
