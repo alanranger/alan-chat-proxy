@@ -182,7 +182,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            max-height: 600px;
+            max-height: 800px;
             overflow-y: auto;
             display: block;
         }
@@ -195,7 +195,7 @@
         
         .results-table tbody {
             display: block;
-            max-height: 500px;
+            max-height: 700px;
             overflow-y: auto;
         }
         
@@ -529,16 +529,6 @@
             </div>
         </div>
         
-        <!-- DEBUG PANEL -->
-        <div style="background: #f8f9fa; border: 2px solid #dc3545; border-radius: 8px; padding: 15px; margin: 20px 0;">
-            <h3 style="color: #dc3545; margin-top: 0;">🔍 DEBUG PANEL</h3>
-            <div id="debugLog" style="background: white; border: 1px solid #ccc; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap;"></div>
-            <div style="margin-top: 10px;">
-                <button onclick="clearDebugLog()" style="margin-right: 10px; padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px;">Clear Debug Log</button>
-                <button onclick="copyDebugLog()" style="padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px;">Copy Log</button>
-            </div>
-        </div>
-        
         <table class="results-table" id="resultsTable">
             <thead>
                 <tr>
@@ -556,6 +546,16 @@
                 <!-- Results will be populated here -->
             </tbody>
         </table>
+        
+        <!-- DEBUG PANEL - MOVED TO BOTTOM -->
+        <div style="background: #f8f9fa; border: 2px solid #dc3545; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <h3 style="color: #dc3545; margin-top: 0;">🔍 DEBUG PANEL</h3>
+            <div id="debugLog" style="background: white; border: 1px solid #ccc; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap;"></div>
+            <div style="margin-top: 10px;">
+                <button onclick="clearDebugLog()" style="margin-right: 10px; padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px;">Clear Debug Log</button>
+                <button onclick="copyDebugLog()" style="padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px;">Copy Log</button>
+            </div>
+        </div>
     </div>
 
     <script>
