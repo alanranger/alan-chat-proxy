@@ -1163,7 +1163,8 @@
             const questionsList = document.getElementById('questionsList');
             questionsList.innerHTML = '';
             
-            filteredQuestions.forEach((q, index) => {
+            // Always show ALL questions, not just filtered ones
+            testQuestions.forEach((q, index) => {
                 addDebugLog(`🔍 DEBUG: Processing question ${index}: ${q.question}`);
                 
                 const questionDiv = document.createElement('div');
@@ -1512,8 +1513,9 @@
                 const avgBotResponse = Math.round(stats.botResponseSum / stats.count);
                 const avgRelated = Math.round(stats.relatedSum / stats.count);
                 
-                // Calculate pass/fail ratio for this category
-                const passCount = testResults.filter(r => r.category === category && r.qualityScore >= 70).length;
+                // Calculate pass/fail ratio for this category using merged data
+                const categoryResults = allResults.filter(r => r.category === category);
+                const passCount = categoryResults.filter(r => r.qualityScore >= 70).length;
                 const failCount = stats.count - passCount;
                 
                 // Determine overall status color
