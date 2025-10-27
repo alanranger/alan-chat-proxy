@@ -1589,24 +1589,50 @@
 
         // Update results table
         function updateResultsTable() {
+            addDebugLog('🔍 DEBUG: updateResultsTable() called');
             const tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
             
             // Always show ALL questions with their results
             testQuestions.forEach(question => {
-                const result = testResults.find(r => r.question === question.question);
+                addDebugLog(`🔍 DEBUG: Processing question in table: ${question.question}`);
+                
+                // Check both testResults (current session) and savedScores (previous sessions)
+                const currentResult = testResults.find(r => r.question === question.question);
+                const previousScore = savedScores[question.question];
+                
+                addDebugLog(`🔍 DEBUG: Question "${question.question}" - currentResult: ${JSON.stringify(currentResult)}`);
+                addDebugLog(`🔍 DEBUG: Question "${question.question}" - previousScore: ${JSON.stringify(previousScore)}`);
+                
+                // Use currentResult if it exists and has a more recent timestamp, otherwise use previousScore
+                let displayResult = currentResult || previousScore;
+                if (currentResult && previousScore) {
+                    const currentTime = new Date(currentResult.timestamp).getTime();
+                    const previousTime = new Date(previousScore.timestamp).getTime();
+                    displayResult = currentTime > previousTime ? currentResult : previousScore;
+                    addDebugLog(`🔍 DEBUG: Question "${question.question}" - using ${currentTime > previousTime ? 'current' : 'previous'} result`);
+                }
+                
+                addDebugLog(`🔍 DEBUG: Question "${question.question}" - final displayResult: ${JSON.stringify(displayResult)}`);
+                
                 const row = document.createElement('tr');
                 
-                if (result) {
+                if (displayResult) {
+                    // Handle both old format (confidenceScore, verdict) and new format (qualityScore, relevanceScore)
+                    const qualityScore = displayResult.qualityScore !== undefined ? displayResult.qualityScore : 
+                                       (displayResult.confidenceScore !== undefined ? displayResult.confidenceScore : 0);
+                    const relevanceScore = displayResult.relevanceScore !== undefined ? displayResult.relevanceScore : 0;
+                    const verdict = displayResult.verdict || (qualityScore >= 70 ? 'Pass' : 'Fail');
+                    
                     // Question has been scored
                     row.innerHTML = `
                         <td>${question.question}</td>
-                        <td><span class="status-badge ${result.qualityScore >= 70 ? 'status-pass' : 'status-fail'}">${result.qualityScore >= 70 ? 'Pass' : 'Fail'}</span></td>
-                        <td>${result.qualityScore}</td>
-                        <td>${result.qualityNotes || ''}</td>
-                        <td>${result.relevanceScore !== undefined ? result.relevanceScore : 0}</td>
-                        <td>${result.relevanceNotes || ''}</td>
-                        <td>${result.notes || ''}</td>
+                        <td><span class="status-badge ${qualityScore >= 70 ? 'status-pass' : 'status-fail'}">${verdict}</span></td>
+                        <td>${qualityScore}</td>
+                        <td>${displayResult.qualityNotes || ''}</td>
+                        <td>${relevanceScore}</td>
+                        <td>${displayResult.relevanceNotes || ''}</td>
+                        <td>${displayResult.notes || ''}</td>
                     `;
                 } else {
                     // Question not yet scored
@@ -1740,12 +1766,46 @@
 
         // Generate CSV content
         function generateCSV() {
+            addDebugLog('🔍 DEBUG: generateCSV() called');
             const headers = ['Question', 'Status', 'Bot Response Score', 'Bot Response Notes', 'Related Score', 'Related Notes', 'Other Notes', 'Category', 'Focus', 'Timestamp'];
             
+            // Combine testResults (current session) with savedScores (previous sessions) for complete data
+            const allResults = [...testResults];
+            addDebugLog(`🔍 DEBUG: allResults initial length = ${allResults.length}`);
+            
+            // Add any savedScores that aren't already in testResults
+            Object.keys(savedScores).forEach(question => {
+                if (!allResults.find(r => r.question === question)) {
+                    const questionData = testQuestions.find(q => q.question === question);
+                    const savedScore = savedScores[question];
+                    
+                    // Handle both old format (confidenceScore, verdict) and new format (qualityScore, relevanceScore)
+                    const qualityScore = savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
+                                       (savedScore.confidenceScore !== undefined ? savedScore.confidenceScore : 0);
+                    const relevanceScore = savedScore.relevanceScore !== undefined ? savedScore.relevanceScore : 0;
+                    const verdict = savedScore.verdict || (qualityScore >= 70 ? 'Pass' : 'Fail');
+                    
+                    allResults.push({
+                        question: question,
+                        qualityScore: qualityScore,
+                        relevanceScore: relevanceScore,
+                        notes: savedScore.notes || '',
+                        qualityNotes: savedScore.qualityNotes || '',
+                        relevanceNotes: savedScore.relevanceNotes || '',
+                        timestamp: savedScore.timestamp,
+                        category: questionData?.category || 'Unknown',
+                        focus: questionData?.focus || '',
+                        verdict: verdict
+                    });
+                }
+            });
+            
+            addDebugLog(`🔍 DEBUG: allResults final length = ${allResults.length}`);
+            
             // Always export ALL results
-            const rows = testResults.map(result => [
+            const rows = allResults.map(result => [
                 `"${result.question}"`,
-                result.qualityScore >= 70 ? 'Pass' : 'Fail',
+                result.verdict || (result.qualityScore >= 70 ? 'Pass' : 'Fail'),
                 result.qualityScore,
                 `"${result.qualityNotes || ''}"`,
                 result.relevanceScore !== undefined ? result.relevanceScore : 0,
