@@ -4914,6 +4914,163 @@ function finalizeConfidence(query, context) {
   return finalConfidence;
 }
 
+/**
+ * Helper function to log quality indicators for debugging
+ */
+function logQualityIndicators(query, context) {
+  const isCompletelyIrrelevant = (
+    !context.qualityIndicators.hasDirectAnswer && 
+    !context.qualityIndicators.hasRelevantEvents && 
+    !context.qualityIndicators.hasRelevantArticles &&
+    context.qualityIndicators.responseAccuracy < 0.3
+  );
+  
+  console.log(`QUALITY INDICATORS DEBUG for "${query}":`);
+  console.log(`   hasDirectAnswer: ${context.qualityIndicators.hasDirectAnswer}`);
+  console.log(`   hasRelevantEvents: ${context.qualityIndicators.hasRelevantEvents}`);
+  console.log(`   hasRelevantArticles: ${context.qualityIndicators.hasRelevantArticles}`);
+  console.log(`   hasActionableInfo: ${context.qualityIndicators.hasActionableInfo}`);
+  console.log(`   responseCompleteness: ${context.qualityIndicators.responseCompleteness}`);
+  console.log(`   responseAccuracy: ${context.qualityIndicators.responseAccuracy}`);
+  console.log(`   isCompletelyIrrelevant: ${isCompletelyIrrelevant}`);
+}
+
+/**
+ * Helper function to calculate confidence score based on quality indicators
+ */
+function calculateConfidenceScore(context) {
+  const indicators = context.qualityIndicators;
+  
+  // Check for completely irrelevant responses first
+  if (isCompletelyIrrelevant(indicators)) {
+    console.log(`FORCED TO 10% - Completely irrelevant response`);
+    return 0.10;
+  }
+  
+  // Perfect (100%): Has everything with high quality
+  if (isPerfectResponse(indicators)) {
+    console.log(`SELECTED: Perfect (100%) - All quality indicators met`);
+    return 1.0;
+  }
+  
+  // Nearly Perfect (95%): Has most elements with high quality
+  if (isNearlyPerfectResponse(indicators)) {
+    console.log(`SELECTED: Nearly Perfect (95%) - Direct answer + supporting content`);
+    return 0.95;
+  }
+  
+  // Special case for event queries: High-quality event responses
+  if (isExcellentEventResponse(indicators)) {
+    console.log(`SELECTED: Nearly Perfect (95%) - Excellent event response with relevant events`);
+    return 0.95;
+  }
+  
+  // Very Good (75%): Has good answer and some supporting content
+  if (isVeryGoodResponse(indicators)) {
+    console.log(`SELECTED: Very Good (75%) - Direct answer + good completeness/accuracy`);
+    return 0.75;
+  }
+  
+  // Good (50%): Has some useful content
+  if (isGoodResponse(indicators)) {
+    console.log(`SELECTED: Good (50%) - Some useful content found`);
+    return 0.50;
+  }
+  
+  // Poor (30%): Limited useful content
+  if (indicators.responseCompleteness >= 0.3) {
+    console.log(`SELECTED: Poor (30%) - Limited useful content`);
+    return 0.30;
+  }
+  
+  // Very Poor (10%): Little to no useful content
+  console.log(`SELECTED: Very Poor (10%) - Little to no useful content`);
+  return 0.10;
+}
+
+/**
+ * Helper function to check if response is completely irrelevant
+ */
+function isCompletelyIrrelevant(indicators) {
+  return (
+    !indicators.hasDirectAnswer && 
+    !indicators.hasRelevantEvents && 
+    !indicators.hasRelevantArticles &&
+    indicators.responseAccuracy < 0.3
+  );
+}
+
+/**
+ * Helper function to check if response is perfect
+ */
+function isPerfectResponse(indicators) {
+  return (
+    indicators.hasDirectAnswer && 
+    indicators.hasRelevantEvents && 
+    indicators.hasRelevantArticles && 
+    indicators.hasActionableInfo &&
+    indicators.responseCompleteness >= 0.9 &&
+    indicators.responseAccuracy >= 0.9
+  );
+}
+
+/**
+ * Helper function to check if response is nearly perfect
+ */
+function isNearlyPerfectResponse(indicators) {
+  return (
+    indicators.hasDirectAnswer && 
+    (indicators.hasRelevantEvents || indicators.hasRelevantArticles) &&
+    indicators.responseCompleteness >= 0.8 &&
+    indicators.responseAccuracy >= 0.8
+  );
+}
+
+/**
+ * Helper function to check if response is excellent event response
+ */
+function isExcellentEventResponse(indicators) {
+  return (
+    indicators.hasDirectAnswer && 
+    indicators.hasRelevantEvents &&
+    indicators.responseCompleteness >= 0.3 &&
+    indicators.responseAccuracy >= 0.6
+  );
+}
+
+/**
+ * Helper function to check if response is very good
+ */
+function isVeryGoodResponse(indicators) {
+  return (
+    indicators.hasDirectAnswer && 
+    indicators.responseCompleteness >= 0.4 &&
+    indicators.responseAccuracy >= 0.4
+  );
+}
+
+/**
+ * Helper function to check if response is good
+ */
+function isGoodResponse(indicators) {
+  return (
+    indicators.hasDirectAnswer || 
+    indicators.hasRelevantEvents || 
+    indicators.hasRelevantArticles
+  );
+}
+
+/**
+ * Helper function to log final confidence details
+ */
+function logFinalConfidence(query, context, finalConfidence) {
+  if (context.confidenceFactors && context.confidenceFactors.length > 0) {
+    console.log(`Alan's Quality-Based Confidence for "${query}": ${context.confidenceFactors.join(', ')} = ${(finalConfidence * 100).toFixed(1)}%`);
+    console.log(`Quality Indicators: Direct=${context.qualityIndicators.hasDirectAnswer}, Events=${context.qualityIndicators.hasRelevantEvents}, Articles=${context.qualityIndicators.hasRelevantArticles}, Actionable=${context.qualityIndicators.hasActionableInfo}`);
+    console.log(`Quality Scores: Completeness=${(context.qualityIndicators.responseCompleteness * 100).toFixed(1)}%, Accuracy=${(context.qualityIndicators.responseAccuracy * 100).toFixed(1)}%`);
+  }
+}
+
 /* -------------------------------- Extracted Functions -------------------------------- */
 /**
  * Early-return fallback processing extracted from handler to reduce complexity.
