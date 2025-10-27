@@ -7280,6 +7280,15 @@ function handleRegularEntityProcessing(query, relevantEntities, chunks) {
   
           console.log(`âš ï¸ No enhanced answer found, trying fallback`);
           const primaryEntity = relevantEntities[0];
+          
+          // Try to extract FAQ content from json_ld_data
+          const faqAnswer = extractAnswerFromJsonLd(primaryEntity, query.toLowerCase());
+          if (faqAnswer) {
+            console.log(`âœ… Generated FAQ answer: "${faqAnswer.substring(0, 100)}..."`);
+            return { answer: faqAnswer, type: "advice", sources: relevantEntities.map(e => e.url) };
+          }
+          
+          console.log(`âš ï¸ No FAQ content found, using generic fallback`);
   const answer = `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n${primaryEntity.description || 'More information available'}\n\n*For detailed information, read the full guide: ${primaryEntity.url}*`;
           console.log(`âœ… Generated fallback answer from description`);
   
