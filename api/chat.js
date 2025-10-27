@@ -6950,10 +6950,13 @@ function generateTechnicalDirectAnswer(query, chunks) {
   
   // For "what is" queries, try to extract direct answers from chunks first
   if (lcQuery.includes('what is')) {
+    console.log(`[DEBUG] Attempting chunk extraction for: "${query}"`);
     const directAnswerFromChunks = extractDirectAnswerFromChunks(chunks, query);
     if (directAnswerFromChunks) {
-      console.log(`[SUCCESS] Generated technical direct answer from chunks`);
+      console.log(`[SUCCESS] Generated technical direct answer from chunks: "${directAnswerFromChunks}"`);
       return directAnswerFromChunks;
+    } else {
+      console.log(`[DEBUG] Chunk extraction returned null, falling back to generateDirectAnswer`);
     }
   }
   
