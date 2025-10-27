@@ -6003,9 +6003,22 @@ async function handleClarificationQuery(context) {
 
 // Helper: Generate evidence-based answer (Low Complexity)
 // Helper function to generate article-based answer
-function generateArticleAnswer(articles) {
+function generateArticleAnswer(articles, query = '') {
     const bestArticle = articles[0];
-  return `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
+    
+    // Extract the main concept from the query for FAQ matching
+    const concept = query.toLowerCase().replace(/^(what is|what's|what are|what's the|how does|how do|why is|why are|when should|when do|where is|where are)\s+/i, '').trim();
+    
+    // Try to extract FAQ content from json_ld_data first
+    const faqAnswer = extractAnswerFromJsonLd(bestArticle, concept);
+    if (faqAnswer) {
+        console.log(`[SUCCESS] Generated FAQ answer from article: "${faqAnswer.substring(0, 100)}..."`);
+        return faqAnswer;
+    }
+    
+    // Fallback to generic response
+    console.log(`[FALLBACK] No FAQ content found, using generic response`);
+    return `Based on Alan Ranger's expertise, here's what you need to know about your question.\n\n*For detailed information, read the full guide: ${bestArticle.page_url}*`;
 }
 
 // Helper function to generate equipment service answer
@@ -6061,7 +6074,7 @@ function generateEvidenceBasedAnswer(context) {
   let answer = '';
   
   if (context.articles.length > 0) {
-    answer = generateArticleAnswer(context.articles);
+    answer = generateArticleAnswer(context.articles, context.query);
   } else if (context.services.length > 0) {
     answer = generateServiceAnswer(context.query, context.services);
   } else if (context.events.length > 0) {
