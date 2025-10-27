@@ -7630,9 +7630,10 @@ async function handleClarificationClassification(client, context, classification
 
 // Helper function to attempt RAG first
 async function attemptRagFirst(client, context) {
+  console.log(`[DEBUG] attemptRagFirst called for: "${context.query}"`);
   console.log(`ðŸš€ Starting RAG-First attempt for: "${context.query}"`);
   const ragResult = await tryRagFirst(client, context.query);
-  console.log(`ðŸ“Š RAG Result: success=${ragResult.success}, confidence=${ragResult.confidence}, answerLength=${ragResult.answer?.length || 0}`);
+  console.log(`ðŸ"Š RAG Result: success=${ragResult.success}, confidence=${ragResult.confidence}, answerLength=${ragResult.answer?.length || 0}`);
   return ragResult;
 }
   
