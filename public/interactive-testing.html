@@ -1090,10 +1090,17 @@
 
         // Populate the questions list
         function populateQuestionsList() {
+            console.log('🔍 DEBUG: populateQuestionsList() called');
+            console.log('🔍 DEBUG: filteredQuestions.length =', filteredQuestions.length);
+            console.log('🔍 DEBUG: testResults.length =', testResults.length);
+            console.log('🔍 DEBUG: savedScores keys =', Object.keys(savedScores));
+            
             const questionsList = document.getElementById('questionsList');
             questionsList.innerHTML = '';
             
             filteredQuestions.forEach((q, index) => {
+                console.log(`🔍 DEBUG: Processing question ${index}:`, q.question);
+                
                 const questionDiv = document.createElement('div');
                 questionDiv.className = 'question-card';
                 questionDiv.id = `question-${index}`;
@@ -1102,13 +1109,19 @@
                 const currentResult = testResults.find(r => r.question === q.question);
                 const previousScore = savedScores[q.question];
                 
+                console.log(`🔍 DEBUG: Question "${q.question}" - currentResult:`, currentResult);
+                console.log(`🔍 DEBUG: Question "${q.question}" - previousScore:`, previousScore);
+                
                 // Use currentResult if it exists and has a more recent timestamp, otherwise use previousScore
                 let displayScore = currentResult || previousScore;
                 if (currentResult && previousScore) {
                     const currentTime = new Date(currentResult.timestamp).getTime();
                     const previousTime = new Date(previousScore.timestamp).getTime();
                     displayScore = currentTime > previousTime ? currentResult : previousScore;
+                    console.log(`🔍 DEBUG: Question "${q.question}" - using ${currentTime > previousTime ? 'current' : 'previous'} score`);
                 }
+                
+                console.log(`🔍 DEBUG: Question "${q.question}" - final displayScore:`, displayScore);
                 
                 let statusHtml = '<span class="status-badge status-pending">Pending</span>';
                 let previousScoresHtml = '';
@@ -1221,11 +1234,17 @@
 
         // Save score and move to next question
         function saveScore() {
+            console.log('🔍 DEBUG: saveScore() called');
+            console.log('🔍 DEBUG: currentQuestionIndex =', currentQuestionIndex);
+            console.log('🔍 DEBUG: filteredQuestions.length =', filteredQuestions.length);
+            
             const qualityScore = parseInt(document.getElementById('qualityScore').value);
             const relevanceScore = parseInt(document.getElementById('relevanceScore').value);
             const notes = document.getElementById('notes').value;
             const qualityNotes = document.getElementById('qualityNotes').value;
             const relevanceNotes = document.getElementById('relevanceNotes').value;
+            
+            console.log('🔍 DEBUG: Scores - Quality:', qualityScore, 'Relevance:', relevanceScore);
             
             // Check if scores are valid numbers between 0-100
             if (isNaN(qualityScore) || qualityScore < 0 || qualityScore > 100) {
@@ -1251,7 +1270,13 @@
                 timestamp: new Date().toISOString()
             };
 
+            console.log('🔍 DEBUG: Created result object:', result);
+            console.log('🔍 DEBUG: testResults before push:', testResults.length);
+            
             testResults.push(result);
+            
+            console.log('🔍 DEBUG: testResults after push:', testResults.length);
+            console.log('🔍 DEBUG: testResults contents:', testResults);
             
             // Save to localStorage
             savedScores[filteredQuestions[currentQuestionIndex].question] = {
@@ -1278,16 +1303,22 @@
             }
             
             // Update stats
+            console.log('🔍 DEBUG: About to call updateStats()');
             updateStats();
+            console.log('🔍 DEBUG: About to call updateResultsTable()');
             updateResultsTable();
+            console.log('🔍 DEBUG: About to call updateSummaryStats()');
             updateSummaryStats(); // Force update of ALL masonry blocks
+            console.log('🔍 DEBUG: All update functions called');
             
             // Move to next question (or show completion message)
             if (currentQuestionIndex + 1 >= filteredQuestions.length) {
                 // All questions in current filter completed
+                console.log('🔍 DEBUG: All questions completed in current filter');
                 alert(`All ${currentFilter === 'all' ? '' : currentFilter + ' '}questions completed!`);
                 // Stay on current question to show the completed state
             } else {
+                console.log('🔍 DEBUG: Moving to next question:', currentQuestionIndex + 1);
                 loadQuestion(currentQuestionIndex + 1);
             }
         }
@@ -1323,12 +1354,19 @@
 
         // Update summary statistics and category breakdown
         function updateSummaryStats() {
+            console.log('🔍 DEBUG: updateSummaryStats() called');
+            console.log('🔍 DEBUG: testResults.length =', testResults.length);
+            console.log('🔍 DEBUG: savedScores keys =', Object.keys(savedScores));
+            console.log('🔍 DEBUG: currentFilter =', currentFilter);
+            
             // Combine testResults (current session) with savedScores (previous sessions) for complete data
             const allResults = [...testResults];
+            console.log('🔍 DEBUG: allResults initial length =', allResults.length);
             
             // Add any savedScores that aren't already in testResults
             Object.keys(savedScores).forEach(question => {
                 if (!allResults.find(r => r.question === question)) {
+                    const questionData = testQuestions.find(q => q.question === question);
                     allResults.push({
                         question: question,
                         qualityScore: savedScores[question].qualityScore,
@@ -1337,13 +1375,19 @@
                         qualityNotes: savedScores[question].qualityNotes,
                         relevanceNotes: savedScores[question].relevanceNotes,
                         timestamp: savedScores[question].timestamp,
-                        category: testQuestions.find(q => q.question === question)?.category || 'Unknown',
-                        focus: testQuestions.find(q => q.question === question)?.focus || ''
+                        category: questionData?.category || 'Unknown',
+                        focus: questionData?.focus || ''
                     });
                 }
             });
             
-            if (allResults.length === 0) return;
+            console.log('🔍 DEBUG: allResults final length =', allResults.length);
+            console.log('🔍 DEBUG: allResults =', allResults);
+            
+            if (allResults.length === 0) {
+                console.log('🔍 DEBUG: No results found, returning early');
+                return;
+            }
             
             // Always show ALL categories in masonry, but calculate averages based on current filter
             const relevantResults = currentFilter === 'all' ? allResults : 
