@@ -1431,15 +1431,23 @@
             addDebugLog(`🔍 DEBUG: savedScores keys = ${Object.keys(savedScores).join(', ')}`);
             addDebugLog(`🔍 DEBUG: currentFilter = ${currentFilter}`);
             
-            // Combine testResults (current session) with savedScores (previous sessions) for complete data
-            const allResults = [...testResults];
-            addDebugLog(`🔍 DEBUG: allResults initial length = ${allResults.length}`);
+            // Build allResults with deduplication - each question should only appear once with the most recent result
+            const allResults = [];
+            const questionMap = new Map(); // Use Map to track most recent result per question
             
-            // Add any savedScores that aren't already in testResults
+            // First, add all testResults (current session)
+            testResults.forEach(result => {
+                questionMap.set(result.question, result);
+            });
+            
+            // Then, add savedScores only if not already in testResults (or if older)
             Object.keys(savedScores).forEach(question => {
-                if (!allResults.find(r => r.question === question)) {
+                const savedScore = savedScores[question];
+                const existingResult = questionMap.get(question);
+                
+                if (!existingResult) {
+                    // No current result, add saved score
                     const questionData = testQuestions.find(q => q.question === question);
-                    const savedScore = savedScores[question];
                     
                     // Handle both old format (confidenceScore, verdict) and new format (qualityScore, relevanceScore)
                     const qualityScore = savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
@@ -1449,7 +1457,7 @@
                     const qualityNotes = savedScore.qualityNotes || '';
                     const relevanceNotes = savedScore.relevanceNotes || '';
                     
-                    allResults.push({
+                    questionMap.set(question, {
                         question: question,
                         qualityScore: qualityScore,
                         relevanceScore: relevanceScore,
@@ -1460,8 +1468,39 @@
                         category: questionData?.category || 'Unknown',
                         focus: questionData?.focus || ''
                     });
+                } else {
+                    // Compare timestamps - keep the more recent one
+                    const currentTime = new Date(existingResult.timestamp).getTime();
+                    const savedTime = new Date(savedScore.timestamp).getTime();
+                    
+                    if (savedTime > currentTime) {
+                        // Saved score is more recent, replace
+                        const questionData = testQuestions.find(q => q.question === question);
+                        
+                        const qualityScore = savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
+                                           (savedScore.confidenceScore !== undefined ? savedScore.confidenceScore : 0);
+                        const relevanceScore = savedScore.relevanceScore !== undefined ? savedScore.relevanceScore : 0;
+                        const notes = savedScore.notes || '';
+                        const qualityNotes = savedScore.qualityNotes || '';
+                        const relevanceNotes = savedScore.relevanceNotes || '';
+                        
+                        questionMap.set(question, {
+                            question: question,
+                            qualityScore: qualityScore,
+                            relevanceScore: relevanceScore,
+                            notes: notes,
+                            qualityNotes: qualityNotes,
+                            relevanceNotes: relevanceNotes,
+                            timestamp: savedScore.timestamp,
+                            category: questionData?.category || 'Unknown',
+                            focus: questionData?.focus || ''
+                        });
+                    }
                 }
             });
+            
+            // Convert Map to array
+            allResults.push(...questionMap.values());
             
             addDebugLog(`🔍 DEBUG: allResults final length = ${allResults.length}`);
             addDebugLog(`🔍 DEBUG: allResults = ${JSON.stringify(allResults, null, 2)}`);
@@ -1668,27 +1707,78 @@
             const tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
             
+            // Build allResults with deduplication - same logic as updateSummaryStats
+            const allResults = [];
+            const questionMap = new Map();
+            
+            // First, add all testResults (current session)
+            testResults.forEach(result => {
+                questionMap.set(result.question, result);
+            });
+            
+            // Then, add savedScores only if not already in testResults (or if older)
+            Object.keys(savedScores).forEach(question => {
+                const savedScore = savedScores[question];
+                const existingResult = questionMap.get(question);
+                
+                if (!existingResult) {
+                    // No current result, add saved score
+                    const questionData = testQuestions.find(q => q.question === question);
+                    
+                    const qualityScore = savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
+                                       (savedScore.confidenceScore !== undefined ? savedScore.confidenceScore : 0);
+                    const relevanceScore = savedScore.relevanceScore !== undefined ? savedScore.relevanceScore : 0;
+                    
+                    questionMap.set(question, {
+                        question: question,
+                        qualityScore: qualityScore,
+                        relevanceScore: relevanceScore,
+                        notes: savedScore.notes || '',
+                        qualityNotes: savedScore.qualityNotes || '',
+                        relevanceNotes: savedScore.relevanceNotes || '',
+                        timestamp: savedScore.timestamp,
+                        category: questionData?.category || 'Unknown',
+                        focus: questionData?.focus || ''
+                    });
+                } else {
+                    // Compare timestamps - keep the more recent one
+                    const currentTime = new Date(existingResult.timestamp).getTime();
+                    const savedTime = new Date(savedScore.timestamp).getTime();
+                    
+                    if (savedTime > currentTime) {
+                        // Saved score is more recent, replace
+                        const questionData = testQuestions.find(q => q.question === question);
+                        
+                        const qualityScore = savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
+                                           (savedScore.confidenceScore !== undefined ? savedScore.confidenceScore : 0);
+                        const relevanceScore = savedScore.relevanceScore !== undefined ? savedScore.relevanceScore : 0;
+                        
+                        questionMap.set(question, {
+                            question: question,
+                            qualityScore: qualityScore,
+                            relevanceScore: relevanceScore,
+                            notes: savedScore.notes || '',
+                            qualityNotes: savedScore.qualityNotes || '',
+                            relevanceNotes: savedScore.relevanceNotes || '',
+                            timestamp: savedScore.timestamp,
+                            category: questionData?.category || 'Unknown',
+                            focus: questionData?.focus || ''
+                        });
+                    }
+                }
+            });
+            
+            // Convert Map to array
+            allResults.push(...questionMap.values());
+            
             // Always show ALL questions with their results
             testQuestions.forEach(question => {
                 addDebugLog(`🔍 DEBUG: Processing question in table: ${question.question}`);
                 
-                // Check both testResults (current session) and savedScores (previous sessions)
-                const currentResult = testResults.find(r => r.question === question.question);
-                const previousScore = savedScores[question.question];
+                // Find the result for this question
+                const displayResult = allResults.find(r => r.question === question.question);
                 
-                addDebugLog(`🔍 DEBUG: Question "${question.question}" - currentResult: ${JSON.stringify(currentResult)}`);
-                addDebugLog(`🔍 DEBUG: Question "${question.question}" - previousScore: ${JSON.stringify(previousScore)}`);
-                
-                // Use currentResult if it exists and has a more recent timestamp, otherwise use previousScore
-                let displayResult = currentResult || previousScore;
-                if (currentResult && previousScore) {
-                    const currentTime = new Date(currentResult.timestamp).getTime();
-                    const previousTime = new Date(previousScore.timestamp).getTime();
-                    displayResult = currentTime > previousTime ? currentResult : previousScore;
-                    addDebugLog(`🔍 DEBUG: Question "${question.question}" - using ${currentTime > previousTime ? 'current' : 'previous'} result`);
-                }
-                
-                addDebugLog(`🔍 DEBUG: Question "${question.question}" - final displayResult: ${JSON.stringify(displayResult)}`);
+                addDebugLog(`🔍 DEBUG: Question "${question.question}" - displayResult: ${JSON.stringify(displayResult)}`);
                 
                 const row = document.createElement('tr');
                 
@@ -1844,23 +1934,30 @@
             addDebugLog('🔍 DEBUG: generateCSV() called');
             const headers = ['Question', 'Status', 'Bot Response Score', 'Bot Response Notes', 'Related Score', 'Related Notes', 'Other Notes', 'Category', 'Focus', 'Timestamp'];
             
-            // Combine testResults (current session) with savedScores (previous sessions) for complete data
-            const allResults = [...testResults];
-            addDebugLog(`🔍 DEBUG: allResults initial length = ${allResults.length}`);
+            // Build allResults with deduplication - same logic as updateSummaryStats
+            const allResults = [];
+            const questionMap = new Map();
             
-            // Add any savedScores that aren't already in testResults
+            // First, add all testResults (current session)
+            testResults.forEach(result => {
+                questionMap.set(result.question, result);
+            });
+            
+            // Then, add savedScores only if not already in testResults (or if older)
             Object.keys(savedScores).forEach(question => {
-                if (!allResults.find(r => r.question === question)) {
+                const savedScore = savedScores[question];
+                const existingResult = questionMap.get(question);
+                
+                if (!existingResult) {
+                    // No current result, add saved score
                     const questionData = testQuestions.find(q => q.question === question);
-                    const savedScore = savedScores[question];
                     
-                    // Handle both old format (confidenceScore, verdict) and new format (qualityScore, relevanceScore)
                     const qualityScore = savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
                                        (savedScore.confidenceScore !== undefined ? savedScore.confidenceScore : 0);
                     const relevanceScore = savedScore.relevanceScore !== undefined ? savedScore.relevanceScore : 0;
                     const verdict = savedScore.verdict || (qualityScore >= 70 ? 'Pass' : 'Fail');
                     
-                    allResults.push({
+                    questionMap.set(question, {
                         question: question,
                         qualityScore: qualityScore,
                         relevanceScore: relevanceScore,
@@ -1872,8 +1969,38 @@
                         focus: questionData?.focus || '',
                         verdict: verdict
                     });
+                } else {
+                    // Compare timestamps - keep the more recent one
+                    const currentTime = new Date(existingResult.timestamp).getTime();
+                    const savedTime = new Date(savedScore.timestamp).getTime();
+                    
+                    if (savedTime > currentTime) {
+                        // Saved score is more recent, replace
+                        const questionData = testQuestions.find(q => q.question === question);
+                        
+                        const qualityScore = savedScore.qualityScore !== undefined ? savedScore.qualityScore : 
+                                           (savedScore.confidenceScore !== undefined ? savedScore.confidenceScore : 0);
+                        const relevanceScore = savedScore.relevanceScore !== undefined ? savedScore.relevanceScore : 0;
+                        const verdict = savedScore.verdict || (qualityScore >= 70 ? 'Pass' : 'Fail');
+                        
+                        questionMap.set(question, {
+                            question: question,
+                            qualityScore: qualityScore,
+                            relevanceScore: relevanceScore,
+                            notes: savedScore.notes || '',
+                            qualityNotes: savedScore.qualityNotes || '',
+                            relevanceNotes: savedScore.relevanceNotes || '',
+                            timestamp: savedScore.timestamp,
+                            category: questionData?.category || 'Unknown',
+                            focus: questionData?.focus || '',
+                            verdict: verdict
+                        });
+                    }
                 }
             });
+            
+            // Convert Map to array
+            allResults.push(...questionMap.values());
             
             addDebugLog(`🔍 DEBUG: allResults final length = ${allResults.length}`);
             
