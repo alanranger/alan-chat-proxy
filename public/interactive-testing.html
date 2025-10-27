@@ -489,6 +489,13 @@
             </div>
         </div>
         
+        <!-- DEBUG PANEL -->
+        <div style="background: #f8f9fa; border: 2px solid #dc3545; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <h3 style="color: #dc3545; margin-top: 0;">🔍 DEBUG PANEL</h3>
+            <div id="debugLog" style="background: white; border: 1px solid #ccc; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap;"></div>
+            <button onclick="clearDebugLog()" style="margin-top: 10px; padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px;">Clear Debug Log</button>
+        </div>
+        
         <table class="results-table" id="resultsTable">
             <thead>
                 <tr>
@@ -687,8 +694,21 @@
         let currentFilter = 'all';
         let filteredQuestions = [];
 
+        // Debug logging functions
+        function addDebugLog(message) {
+            const debugLog = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            debugLog.textContent += `[${timestamp}] ${message}\n`;
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+        
+        function clearDebugLog() {
+            document.getElementById('debugLog').textContent = '';
+        }
+
         // Initialize the test
         function initTest() {
+            addDebugLog('🔍 DEBUG: initTest() called');
             loadSavedScores();
             loadBaselineScores();
             populateQuestionsList();
@@ -1090,16 +1110,16 @@
 
         // Populate the questions list
         function populateQuestionsList() {
-            console.log('🔍 DEBUG: populateQuestionsList() called');
-            console.log('🔍 DEBUG: filteredQuestions.length =', filteredQuestions.length);
-            console.log('🔍 DEBUG: testResults.length =', testResults.length);
-            console.log('🔍 DEBUG: savedScores keys =', Object.keys(savedScores));
+            addDebugLog('🔍 DEBUG: populateQuestionsList() called');
+            addDebugLog(`🔍 DEBUG: filteredQuestions.length = ${filteredQuestions.length}`);
+            addDebugLog(`🔍 DEBUG: testResults.length = ${testResults.length}`);
+            addDebugLog(`🔍 DEBUG: savedScores keys = ${Object.keys(savedScores).join(', ')}`);
             
             const questionsList = document.getElementById('questionsList');
             questionsList.innerHTML = '';
             
             filteredQuestions.forEach((q, index) => {
-                console.log(`🔍 DEBUG: Processing question ${index}:`, q.question);
+                addDebugLog(`🔍 DEBUG: Processing question ${index}: ${q.question}`);
                 
                 const questionDiv = document.createElement('div');
                 questionDiv.className = 'question-card';
@@ -1109,8 +1129,8 @@
                 const currentResult = testResults.find(r => r.question === q.question);
                 const previousScore = savedScores[q.question];
                 
-                console.log(`🔍 DEBUG: Question "${q.question}" - currentResult:`, currentResult);
-                console.log(`🔍 DEBUG: Question "${q.question}" - previousScore:`, previousScore);
+                addDebugLog(`🔍 DEBUG: Question "${q.question}" - currentResult: ${JSON.stringify(currentResult)}`);
+                addDebugLog(`🔍 DEBUG: Question "${q.question}" - previousScore: ${JSON.stringify(previousScore)}`);
                 
                 // Use currentResult if it exists and has a more recent timestamp, otherwise use previousScore
                 let displayScore = currentResult || previousScore;
@@ -1118,10 +1138,10 @@
                     const currentTime = new Date(currentResult.timestamp).getTime();
                     const previousTime = new Date(previousScore.timestamp).getTime();
                     displayScore = currentTime > previousTime ? currentResult : previousScore;
-                    console.log(`🔍 DEBUG: Question "${q.question}" - using ${currentTime > previousTime ? 'current' : 'previous'} score`);
+                    addDebugLog(`🔍 DEBUG: Question "${q.question}" - using ${currentTime > previousTime ? 'current' : 'previous'} score`);
                 }
                 
-                console.log(`🔍 DEBUG: Question "${q.question}" - final displayScore:`, displayScore);
+                addDebugLog(`🔍 DEBUG: Question "${q.question}" - final displayScore: ${JSON.stringify(displayScore)}`);
                 
                 let statusHtml = '<span class="status-badge status-pending">Pending</span>';
                 let previousScoresHtml = '';
@@ -1234,9 +1254,9 @@
 
         // Save score and move to next question
         function saveScore() {
-            console.log('🔍 DEBUG: saveScore() called');
-            console.log('🔍 DEBUG: currentQuestionIndex =', currentQuestionIndex);
-            console.log('🔍 DEBUG: filteredQuestions.length =', filteredQuestions.length);
+            addDebugLog('🔍 DEBUG: saveScore() called');
+            addDebugLog(`🔍 DEBUG: currentQuestionIndex = ${currentQuestionIndex}`);
+            addDebugLog(`🔍 DEBUG: filteredQuestions.length = ${filteredQuestions.length}`);
             
             const qualityScore = parseInt(document.getElementById('qualityScore').value);
             const relevanceScore = parseInt(document.getElementById('relevanceScore').value);
@@ -1244,7 +1264,7 @@
             const qualityNotes = document.getElementById('qualityNotes').value;
             const relevanceNotes = document.getElementById('relevanceNotes').value;
             
-            console.log('🔍 DEBUG: Scores - Quality:', qualityScore, 'Relevance:', relevanceScore);
+            addDebugLog(`🔍 DEBUG: Scores - Quality: ${qualityScore}, Relevance: ${relevanceScore}`);
             
             // Check if scores are valid numbers between 0-100
             if (isNaN(qualityScore) || qualityScore < 0 || qualityScore > 100) {
@@ -1270,13 +1290,13 @@
                 timestamp: new Date().toISOString()
             };
 
-            console.log('🔍 DEBUG: Created result object:', result);
-            console.log('🔍 DEBUG: testResults before push:', testResults.length);
+            addDebugLog(`🔍 DEBUG: Created result object: ${JSON.stringify(result, null, 2)}`);
+            addDebugLog(`🔍 DEBUG: testResults before push: ${testResults.length}`);
             
             testResults.push(result);
             
-            console.log('🔍 DEBUG: testResults after push:', testResults.length);
-            console.log('🔍 DEBUG: testResults contents:', testResults);
+            addDebugLog(`🔍 DEBUG: testResults after push: ${testResults.length}`);
+            addDebugLog(`🔍 DEBUG: testResults contents: ${JSON.stringify(testResults, null, 2)}`);
             
             // Save to localStorage
             savedScores[filteredQuestions[currentQuestionIndex].question] = {
@@ -1303,22 +1323,22 @@
             }
             
             // Update stats
-            console.log('🔍 DEBUG: About to call updateStats()');
+            addDebugLog('🔍 DEBUG: About to call updateStats()');
             updateStats();
-            console.log('🔍 DEBUG: About to call updateResultsTable()');
+            addDebugLog('🔍 DEBUG: About to call updateResultsTable()');
             updateResultsTable();
-            console.log('🔍 DEBUG: About to call updateSummaryStats()');
+            addDebugLog('🔍 DEBUG: About to call updateSummaryStats()');
             updateSummaryStats(); // Force update of ALL masonry blocks
-            console.log('🔍 DEBUG: All update functions called');
+            addDebugLog('🔍 DEBUG: All update functions called');
             
             // Move to next question (or show completion message)
             if (currentQuestionIndex + 1 >= filteredQuestions.length) {
                 // All questions in current filter completed
-                console.log('🔍 DEBUG: All questions completed in current filter');
+                addDebugLog('🔍 DEBUG: All questions completed in current filter');
                 alert(`All ${currentFilter === 'all' ? '' : currentFilter + ' '}questions completed!`);
                 // Stay on current question to show the completed state
             } else {
-                console.log('🔍 DEBUG: Moving to next question:', currentQuestionIndex + 1);
+                addDebugLog(`🔍 DEBUG: Moving to next question: ${currentQuestionIndex + 1}`);
                 loadQuestion(currentQuestionIndex + 1);
             }
         }
@@ -1354,14 +1374,14 @@
 
         // Update summary statistics and category breakdown
         function updateSummaryStats() {
-            console.log('🔍 DEBUG: updateSummaryStats() called');
-            console.log('🔍 DEBUG: testResults.length =', testResults.length);
-            console.log('🔍 DEBUG: savedScores keys =', Object.keys(savedScores));
-            console.log('🔍 DEBUG: currentFilter =', currentFilter);
+            addDebugLog('🔍 DEBUG: updateSummaryStats() called');
+            addDebugLog(`🔍 DEBUG: testResults.length = ${testResults.length}`);
+            addDebugLog(`🔍 DEBUG: savedScores keys = ${Object.keys(savedScores).join(', ')}`);
+            addDebugLog(`🔍 DEBUG: currentFilter = ${currentFilter}`);
             
             // Combine testResults (current session) with savedScores (previous sessions) for complete data
             const allResults = [...testResults];
-            console.log('🔍 DEBUG: allResults initial length =', allResults.length);
+            addDebugLog(`🔍 DEBUG: allResults initial length = ${allResults.length}`);
             
             // Add any savedScores that aren't already in testResults
             Object.keys(savedScores).forEach(question => {
@@ -1381,11 +1401,11 @@
                 }
             });
             
-            console.log('🔍 DEBUG: allResults final length =', allResults.length);
-            console.log('🔍 DEBUG: allResults =', allResults);
+            addDebugLog(`🔍 DEBUG: allResults final length = ${allResults.length}`);
+            addDebugLog(`🔍 DEBUG: allResults = ${JSON.stringify(allResults, null, 2)}`);
             
             if (allResults.length === 0) {
-                console.log('🔍 DEBUG: No results found, returning early');
+                addDebugLog('🔍 DEBUG: No results found, returning early');
                 return;
             }
             
