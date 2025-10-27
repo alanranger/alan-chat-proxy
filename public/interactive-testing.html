@@ -182,6 +182,31 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+            display: block;
+        }
+        
+        .results-table thead {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        
+        .results-table tbody {
+            display: block;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .results-table thead tr {
+            display: table-row;
+        }
+        
+        .results-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
         }
         
         .results-table th,
@@ -194,6 +219,29 @@
         .results-table th {
             background: #f8f9fa;
             font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s ease;
+        }
+        
+        .sortable:hover {
+            background: #e9ecef;
+        }
+        
+        .sort-asc::after {
+            content: " ↑";
+            color: #007bff;
+        }
+        
+        .sort-desc::after {
+            content: " ↓";
+            color: #007bff;
         }
         
         .status-badge {
@@ -494,13 +542,14 @@
         <table class="results-table" id="resultsTable">
             <thead>
                 <tr>
-                    <th>Question</th>
-                    <th>Status</th>
-                    <th>Bot Response Score</th>
-                    <th>Bot Response Notes</th>
-                    <th>Related Score</th>
-                    <th>Related Notes</th>
-                    <th>Other Notes</th>
+                    <th onclick="sortTable(0)" class="sortable">Question ↕️</th>
+                    <th onclick="sortTable(1)" class="sortable">Status ↕️</th>
+                    <th onclick="sortTable(2)" class="sortable">Bot Response Score ↕️</th>
+                    <th onclick="sortTable(3)" class="sortable">Bot Response Notes ↕️</th>
+                    <th onclick="sortTable(4)" class="sortable">Related Score ↕️</th>
+                    <th onclick="sortTable(5)" class="sortable">Related Notes ↕️</th>
+                    <th onclick="sortTable(6)" class="sortable">Other Notes ↕️</th>
+                    <th onclick="sortTable(7)" class="sortable">Category ↕️</th>
                 </tr>
             </thead>
             <tbody id="resultsBody">
@@ -1722,6 +1771,7 @@
                         <td>${relevanceScore}</td>
                         <td>${displayResult.relevanceNotes || ''}</td>
                         <td>${displayResult.notes || ''}</td>
+                        <td>${question.category}</td>
                     `;
                 } else {
                     // Question not yet scored
@@ -1733,10 +1783,57 @@
                         <td>-</td>
                         <td>-</td>
                         <td>-</td>
+                        <td>${question.category}</td>
                     `;
                 }
                 tbody.appendChild(row);
             });
+        }
+
+        // Sort table by column
+        let sortDirection = {};
+        
+        function sortTable(columnIndex) {
+            const table = document.getElementById('resultsTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Determine sort direction
+            const currentDirection = sortDirection[columnIndex] || 'asc';
+            const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            sortDirection[columnIndex] = newDirection;
+            
+            // Clear previous sort indicators
+            table.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            
+            // Add sort indicator to current column
+            const header = table.querySelectorAll('th')[columnIndex];
+            header.classList.add(newDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+            
+            // Sort rows
+            rows.sort((a, b) => {
+                const aValue = a.cells[columnIndex].textContent.trim();
+                const bValue = b.cells[columnIndex].textContent.trim();
+                
+                // Handle numeric columns (Bot Response Score, Related Score)
+                if (columnIndex === 2 || columnIndex === 4) {
+                    const aNum = parseInt(aValue) || 0;
+                    const bNum = parseInt(bValue) || 0;
+                    return newDirection === 'asc' ? aNum - bNum : bNum - aNum;
+                }
+                
+                // Handle text columns
+                if (newDirection === 'asc') {
+                    return aValue.localeCompare(bValue);
+                } else {
+                    return bValue.localeCompare(aValue);
+                }
+            });
+            
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
         }
 
         // Export results to CSV file
