@@ -7962,7 +7962,11 @@ async function attemptRagFirst(client, context) {
  
 // Helper function to send RAG success response
 function sendRagSuccessResponse(res, ragResult, context) {
- console.log(`[SUCCESS] RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
+  console.log(`[SUCCESS] RAG-First success: ${ragResult.confidence} confidence, ${ragResult.answerLength} chars`);
+  
+  // Apply Response Composer Layer - Convert any response to conversational format
+  const composedResponse = composeFinalResponse(ragResult, context.query, context);
+  console.log(`🎭 Response Composer: Converted ${ragResult.type} response to conversational format`);
  console.log(`ðŸ” Context exists: ${!!context}`);
  console.log(`ðŸ” Answer exists: ${!!ragResult.answer}`);
  console.log(`ðŸ” Context query: ${context?.query}`);
@@ -7998,29 +8002,29 @@ function sendRagSuccessResponse(res, ragResult, context) {
  }
  
  return res.status(200).json({
- ok: true,
- type: ragResult.type,
- answer: ragResult.answer,
- answer_markdown: ragResult.answer,
- confidence: ragResult.confidence,
- sources: ragResult.sources,
- structured: ragResult.structured,
- debugInfo: {
- intent: "rag_first",
- classification: "direct_answer",
- confidence: ragResult.confidence,
- totalMatches: ragResult.totalMatches,
- chunksFound: ragResult.chunksFound,
- entitiesFound: ragResult.entitiesFound,
- entityTitles: ragResult.entities?.map(e => e.title) || [],
+   ok: true,
+   type: composedResponse.type,
+   answer: composedResponse.answer,
+   answer_markdown: composedResponse.answer,
+   confidence: composedResponse.confidence,
+   sources: composedResponse.sources,
+   structured: composedResponse.structured,
+   debugInfo: {
+     intent: "rag_first",
+     classification: "direct_answer",
+     confidence: composedResponse.confidence,
+     totalMatches: composedResponse.totalMatches,
+     chunksFound: composedResponse.chunksFound,
+     entitiesFound: composedResponse.entitiesFound,
+     entityTitles: composedResponse.entities?.map(e => e.title) || [],
  approach: "rag_first_hybrid",
- debugLogs: [
- "DEPLOYMENT TEST V2 - This should appear in response",
- `Answer length: ${ragResult.answer?.length || 0}`,
- `Answer preview: ${ragResult.answer?.substring(0, 50) || 'NO ANSWER'}...`,
- `Chunks found: ${ragResult.chunksFound || 0}`,
- `Entities found: ${ragResult.entitiesFound || 0}`,
- ...(ragResult.debugLogs || [])
+     debugLogs: [
+       "DEPLOYMENT TEST V2 - This should appear in response",
+       `Answer length: ${composedResponse.answer?.length || 0}`,
+       `Answer preview: ${composedResponse.answer?.substring(0, 50) || 'NO ANSWER'}...`,
+       `Chunks found: ${composedResponse.chunksFound || 0}`,
+       `Entities found: ${composedResponse.entitiesFound || 0}`,
+       ...(composedResponse.debugLogs || [])
  ]
  }
  });
@@ -8307,5 +8311,159 @@ function generateEventAnswerMarkdown(eventList, query) {
  answer += addEventDetails(eventList);
  
  return answer;
+}
+
+// ============================================================================
+// RESPONSE COMPOSER LAYER - Intelligent wrapper for all response types
+// ============================================================================
+
+// Response Composer Layer - Final synthesis of all responses
+function composeFinalResponse(response, query, context = {}) {
+  console.log(`🎭 Response Composer: Processing ${response.type} response for query: "${query}"`);
+  
+  // Extract the core answer
+  let finalAnswer = response.answer || '';
+  let finalType = response.type || 'advice';
+  let finalSources = response.sources || [];
+  
+  // Detect if response contains article links that should be converted
+  const hasArticleLinks = finalAnswer.includes('[http') || finalAnswer.includes('](http');
+  const hasGenericReferences = finalAnswer.includes('check out these guides') || 
+                               finalAnswer.includes('For detailed reviews');
+  
+  if (hasArticleLinks || hasGenericReferences) {
+    console.log(`🎭 Converting article links to direct recommendations`);
+    
+    // Extract equipment type from query
+    const equipmentType = extractEquipmentTypeFromQuery(query);
+    
+    if (equipmentType && response.structured?.articles?.length > 0) {
+      // Generate direct equipment recommendations
+      finalAnswer = generateDirectEquipmentRecommendation(equipmentType, response.structured.articles, query);
+      finalType = 'advice';
+    } else {
+      // Generic conversion - remove article links and make conversational
+      finalAnswer = convertArticleLinksToConversational(finalAnswer, response.structured?.articles || []);
+    }
+  }
+  
+  // Ensure response is conversational and direct
+  if (finalAnswer && !isConversationalResponse(finalAnswer)) {
+    finalAnswer = makeResponseConversational(finalAnswer, query);
+  }
+  
+  return {
+    ...response,
+    answer: finalAnswer,
+    type: finalType,
+    sources: finalSources,
+    confidence: Math.max(response.confidence || 0.1, 0.7) // Boost confidence for composed responses
+  };
+}
+
+// Extract equipment type from query intelligently
+function extractEquipmentTypeFromQuery(query) {
+  const lc = query.toLowerCase();
+  const equipmentMap = {
+    'tripod': ['tripod'],
+    'camera': ['camera', 'dslr', 'mirrorless', 'point and shoot'],
+    'lens': ['lens', 'glass'],
+    'filter': ['filter', 'nd', 'polarizing'],
+    'flash': ['flash', 'speedlight', 'strobe'],
+    'bag': ['bag', 'backpack', 'case'],
+    'memory card': ['memory card', 'sd card', 'storage'],
+    'laptop': ['laptop', 'computer', 'macbook'],
+    'software': ['lightroom', 'photoshop', 'editing', 'post-processing']
+  };
+  
+  for (const [equipment, keywords] of Object.entries(equipmentMap)) {
+    if (keywords.some(keyword => lc.includes(keyword))) {
+      return equipment;
+    }
+  }
+  return null;
+}
+
+// Generate direct equipment recommendations from articles
+function generateDirectEquipmentRecommendation(equipmentType, articles, query) {
+  console.log(`🎭 Generating direct ${equipmentType} recommendations from ${articles.length} articles`);
+  
+  // Filter articles for this equipment type
+  const relevantArticles = findRelevantEquipmentArticles(equipmentType, articles);
+  
+  if (relevantArticles.length === 0) {
+    return `I'd be happy to help you choose ${equipmentType} equipment! Based on your photography needs, I can provide personalized recommendations.`;
+  }
+  
+  // Generate contextual recommendations based on query intent
+  const isBeginnerQuery = query.toLowerCase().includes('beginner') || query.toLowerCase().includes('first');
+  const isCourseQuery = query.toLowerCase().includes('course') || query.toLowerCase().includes('workshop');
+  
+  let recommendation = '';
+  
+  if (equipmentType === 'camera') {
+    if (isBeginnerQuery) {
+      recommendation = `For beginners, I recommend starting with a mirrorless camera or DSLR with good auto modes. Look for cameras with built-in tutorials and scene modes to help you learn.`;
+    } else if (isCourseQuery) {
+      recommendation = `For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and ISO control.`;
+    } else {
+      recommendation = `The best camera depends on your photography style and experience level. Mirrorless cameras offer great image quality in a compact package, while DSLRs provide excellent battery life and lens selection.`;
+    }
+  } else if (equipmentType === 'tripod') {
+    recommendation = `For tripods, I recommend lightweight carbon fiber models for travel, or sturdy aluminum for studio work. Look for features like quick-release plates and adjustable leg angles.`;
+  } else {
+    recommendation = `For ${equipmentType}, I recommend focusing on quality over quantity. Look for reputable brands with good warranties and user reviews.`;
+  }
+  
+  // Add context about available resources
+  if (relevantArticles.length > 0) {
+    recommendation += ` I have detailed guides covering specific recommendations and technical details.`;
+  }
+  
+  return recommendation;
+}
+
+// Convert article links to conversational format
+function convertArticleLinksToConversational(answer, articles) {
+  // Remove article link patterns
+  let conversational = answer
+    .replace(/For detailed reviews and specific recommendations, check out these guides:.*$/s, '')
+    .replace(/\[.*?\]\(https?:\/\/[^)]+\)/g, '')
+    .replace(/\s*-\s*\[.*?\]\(https?:\/\/[^)]+\)/g, '')
+    .trim();
+  
+  // If answer is too short or empty, provide generic helpful response
+  if (conversational.length < 50) {
+    conversational = `I'd be happy to help you with that! I have comprehensive guides and resources that can provide detailed information on this topic.`;
+  }
+  
+  return conversational;
+}
+
+// Check if response is already conversational
+function isConversationalResponse(answer) {
+  const conversationalIndicators = [
+    'I recommend', 'I suggest', 'For beginners', 'The best', 'Look for',
+    'I\'d be happy to help', 'Based on', 'You should', 'Consider'
+  ];
+  
+  return conversationalIndicators.some(indicator => 
+    answer.toLowerCase().includes(indicator.toLowerCase())
+  );
+}
+
+// Make response more conversational
+function makeResponseConversational(answer, query) {
+  // If answer is just a link or reference, convert to helpful response
+  if (answer.includes('http') && answer.length < 100) {
+    return `I have detailed information about this topic that can help answer your question. Let me know if you'd like specific guidance!`;
+  }
+  
+  // If answer is too technical, add conversational wrapper
+  if (answer.length > 200 && !answer.includes('I') && !answer.includes('you')) {
+    return `Here's what I can tell you: ${answer}`;
+  }
+  
+  return answer;
 }
 
