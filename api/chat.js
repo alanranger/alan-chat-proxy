@@ -7918,7 +7918,13 @@ async function processMainQuery(context) {
 
 // Helper function to initialize session
 async function initializeSession(context) {
- await createSession(context.sessionId, context.req.headers['user-agent'], context.req.headers['x-forwarded-for'] || context.req.connection.remoteAddress);
+  // Add defensive check for context.req
+  if (!context.req) {
+    console.log(`🔧 initializeSession: No req object in context, skipping session creation`);
+    return;
+  }
+  
+  await createSession(context.sessionId, context.req.headers['user-agent'], context.req.headers['x-forwarded-for'] || context.req.connection.remoteAddress);
 }
 
 // Helper function to handle query classification
