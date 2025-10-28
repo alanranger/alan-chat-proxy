@@ -283,6 +283,12 @@ function extractEquipmentType(query) {
 
 // Find relevant articles for equipment type
 function findRelevantEquipmentArticles(equipmentType, articles) {
+  // Add null check for articles
+  if (!articles || !Array.isArray(articles)) {
+    console.log(`🔧 findRelevantEquipmentArticles: No articles provided or articles is not an array`);
+    return [];
+  }
+  
   const equipmentKeywords = {
     'tripod': ['tripod', 'tripods'],
     'camera': ['camera', 'cameras', 'dslr', 'mirrorless', 'choosing', 'equipment', 'beginner'],
