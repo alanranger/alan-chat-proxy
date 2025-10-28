@@ -635,57 +635,77 @@ function findRelevantArticleForTerm(exactTerm, articles) {
 }
       
 
+// Helper function to extract concept from "what is" query
+function extractConceptFromQuery(query) {
+  return query.toLowerCase().replace('what is', '').trim();
+}
+
+// Helper function to clean definition text from meta descriptions
+function cleanDefinitionText(definition) {
+  // If the meta_description starts with "Discover" or similar, extract the core definition
+  if (definition.toLowerCase().startsWith('discover')) {
+    // Extract the main definition part (before "and download" or similar)
+    const parts = definition.split(/and download|with quick tips|for setup/i);
+    if (parts.length > 1) {
+      definition = parts[0].trim();
+    }
+  }
+  
+  // If the meta_description is a question, try to extract the answer
+  if (definition.includes('?')) {
+    const questionParts = definition.split('?');
+    if (questionParts.length > 1) {
+      definition = questionParts[1].trim();
+    }
+  }
+  
+  return definition;
+}
+
+// Helper function to format direct answer for "what is" queries
+function formatDirectAnswer(concept, definition) {
+  const capitalizedConcept = concept.charAt(0).toUpperCase() + concept.slice(1);
+  return `**${capitalizedConcept}** ${definition}`;
+}
+
+// Helper function to check if article text is valid for processing
+function isValidArticleText(articleText) {
+  return articleText && articleText.length > 50;
+}
+
 function extractAnswerFromArticleDescription(relevantArticle, query = '') {
   // Use meta_description if available (more detailed), otherwise fall back to description
   const articleText = relevantArticle.meta_description || relevantArticle.description;
   
-  if (articleText && articleText.length > 50) {
-    // Filter out irrelevant content based on query intent
-    if (!filterRelevantContent(articleText, query)) {
-      console.log(`[DEBUG] Filtered out irrelevant content from article: "${relevantArticle.title}"`);
-      return null;
-    }
-    
-    const cleanDescription = cleanResponseText(articleText);
-    console.log(`[DEBUG] generateDirectAnswer: Using article text="${cleanDescription.substring(0, 200)}..."`);
-    
-    // For "what is" queries, extract direct answer from meta_description instead of showing article link
-    if (query.toLowerCase().includes('what is')) {
-      const concept = query.toLowerCase().replace('what is', '').trim();
-      
-      // Try to extract a proper definition from the meta_description
-      let definition = cleanDescription;
-      
-      // If the meta_description starts with "Discover" or similar, extract the core definition
-      if (definition.toLowerCase().startsWith('discover')) {
-        // Extract the main definition part (before "and download" or similar)
-        const parts = definition.split(/and download|with quick tips|for setup/i);
-        if (parts.length > 1) {
-          definition = parts[0].trim();
-        }
-      }
-      
-      // If the meta_description is a question, try to extract the answer
-      if (definition.includes('?')) {
-        const questionParts = definition.split('?');
-        if (questionParts.length > 1) {
-          definition = questionParts[1].trim();
-        }
-      }
-      
-      const directAnswer = `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${definition}`;
-      console.log(`[SUCCESS] Generated direct answer: "${directAnswer.substring(0, 100)}..."`);
-      return directAnswer;
-    }
-    
-    // For other queries, use the generic article format
-    return formatResponseMarkdown({
-      title: relevantArticle.title || 'Article Information',
-      url: relevantArticle.page_url || relevantArticle.url,
-      description: cleanResponseText(relevantArticle.meta_description || relevantArticle.description)
-    });
+  if (!isValidArticleText(articleText)) {
+    return null;
   }
-  return null;
+  
+  // Filter out irrelevant content based on query intent
+  if (!filterRelevantContent(articleText, query)) {
+    console.log(`[DEBUG] Filtered out irrelevant content from article: "${relevantArticle.title}"`);
+    return null;
+  }
+  
+  const cleanDescription = cleanResponseText(articleText);
+  console.log(`[DEBUG] generateDirectAnswer: Using article text="${cleanDescription.substring(0, 200)}..."`);
+  
+  // For "what is" queries, extract direct answer from meta_description instead of showing article link
+  if (query.toLowerCase().includes('what is')) {
+    const concept = extractConceptFromQuery(query);
+    const definition = cleanDefinitionText(cleanDescription);
+    const directAnswer = formatDirectAnswer(concept, definition);
+    
+    console.log(`[SUCCESS] Generated direct answer: "${directAnswer.substring(0, 100)}..."`);
+    return directAnswer;
+  }
+  
+  // For other queries, use the generic article format
+  return formatResponseMarkdown({
+    title: relevantArticle.title || 'Article Information',
+    url: relevantArticle.page_url || relevantArticle.url,
+    description: cleanResponseText(relevantArticle.meta_description || relevantArticle.description)
+  });
 }
 
 function extractAnswerFromJsonLd(relevantArticle, exactTerm) {
@@ -7298,56 +7318,93 @@ function extractDirectAnswerFromDescription(description, query) {
   return null;
 }
 
+// Helper function to create definition patterns for concept matching
+function createDefinitionPatterns(concept) {
+  return [
+    new RegExp(`${concept}\\s+is\\s+(?:the\\s+)?([^.]+)`, 'i'),
+    new RegExp(`${concept}\\s+refers\\s+to\\s+([^.]+)`, 'i'),
+    new RegExp(`${concept}\\s+means\\s+([^.]+)`, 'i'),
+    new RegExp(`what\\s+is\\s+${concept}[^.]*?([^.]+)`, 'i')
+  ];
+}
+
+// Helper function to check if chunk is valid for processing
+function isValidChunk(chunk) {
+  return chunk.chunk_text && chunk.chunk_text.length > 100;
+}
+
+// Helper function to search for definition patterns in chunk text
+function searchDefinitionPatterns(chunkText, concept, patterns) {
+  for (let j = 0; j < patterns.length; j++) {
+    const pattern = patterns[j];
+    const match = chunkText.match(pattern);
+    console.log(`[DEBUG] Pattern ${j + 1} match: ${match ? 'YES' : 'NO'}`);
+    if (match && match[1] && match[1].length > 20) {
+      return match[1].trim();
+    }
+  }
+  return null;
+}
+
+// Helper function to search for definition sentences in chunk text
+function searchDefinitionSentences(chunkText, concept) {
+  const sentences = chunkText.split(/[.!?]+/);
+  for (const sentence of sentences) {
+    if (sentence.toLowerCase().includes(concept) && 
+        sentence.length > 30 && sentence.length < 200 &&
+        (sentence.includes(' is ') || sentence.includes(' refers ') || sentence.includes(' means '))) {
+      return sentence.trim();
+    }
+  }
+  return null;
+}
+
+// Helper function to process a single chunk for definitions
+function processChunkForDefinition(chunk, concept, chunkIndex) {
+  console.log(`[DEBUG] Chunk ${chunkIndex}: length=${chunk.chunk_text ? chunk.chunk_text.length : 0}`);
+  
+  if (!isValidChunk(chunk)) {
+    return null;
+  }
+  
+  const chunkText = chunk.chunk_text.toLowerCase();
+  console.log(`[DEBUG] Chunk ${chunkIndex} text preview: "${chunk.chunk_text.substring(0, 100)}..."`);
+  
+  // Look for definition patterns in chunk text
+  const patterns = createDefinitionPatterns(concept);
+  const patternMatch = searchDefinitionPatterns(chunk.chunk_text, concept, patterns);
+  if (patternMatch) {
+    return formatDirectAnswer(concept, patternMatch);
+  }
+  
+  // Look for introductory sentences that explain the concept
+  const sentenceMatch = searchDefinitionSentences(chunk.chunk_text, concept);
+  if (sentenceMatch) {
+    return formatDirectAnswer(concept, sentenceMatch);
+  }
+  
+  return null;
+}
+
 // Helper function to extract direct answers from content chunks
 function extractDirectAnswerFromChunks(chunks, query) {
   const lc = query.toLowerCase();
   console.log(`[DEBUG] extractDirectAnswerFromChunks called with ${chunks.length} chunks for query: "${query}"`);
   
-  if (lc.includes('what is') && chunks.length > 0) {
-    const concept = lc.replace('what is', '').trim();
-    console.log(`[DEBUG] Extracting concept: "${concept}"`);
-    
-    // Look for the best chunk that contains definition content
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      console.log(`[DEBUG] Chunk ${i}: length=${chunk.chunk_text ? chunk.chunk_text.length : 0}`);
-      
-      if (chunk.chunk_text && chunk.chunk_text.length > 100) {
-        const chunkText = chunk.chunk_text.toLowerCase();
-        console.log(`[DEBUG] Chunk ${i} text preview: "${chunk.chunk_text.substring(0, 100)}..."`);
-        
-        // Look for definition patterns in chunk text
-        const definitionPatterns = [
-          new RegExp(`${concept}\\s+is\\s+(?:the\\s+)?([^.]+)`, 'i'),
-          new RegExp(`${concept}\\s+refers\\s+to\\s+([^.]+)`, 'i'),
-          new RegExp(`${concept}\\s+means\\s+([^.]+)`, 'i'),
-          new RegExp(`what\\s+is\\s+${concept}[^.]*?([^.]+)`, 'i')
-        ];
-        
-        for (let j = 0; j < definitionPatterns.length; j++) {
-          const pattern = definitionPatterns[j];
-          const match = chunk.chunk_text.match(pattern);
-          console.log(`[DEBUG] Pattern ${j + 1} match: ${match ? 'YES' : 'NO'}`);
-          if (match && match[1] && match[1].length > 20) {
-            const explanation = match[1].trim();
-            const result = `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${explanation}`;
-            console.log(`[SUCCESS] Found match! Result: "${result}"`);
-            return result;
-          }
-        }
-        
-        // Look for introductory sentences that explain the concept
-        const sentences = chunk.chunk_text.split(/[.!?]+/);
-        for (const sentence of sentences) {
-          if (sentence.toLowerCase().includes(concept) && 
-              sentence.length > 30 && sentence.length < 200 &&
-              (sentence.includes(' is ') || sentence.includes(' refers ') || sentence.includes(' means '))) {
-            const result = `**${concept.charAt(0).toUpperCase() + concept.slice(1)}** ${sentence.trim()}`;
-            console.log(`[SUCCESS] Found sentence match! Result: "${result}"`);
-            return result;
-          }
-        }
-      }
+  if (!lc.includes('what is') || chunks.length === 0) {
+    console.log(`[DEBUG] No match found, returning null`);
+    return null;
+  }
+  
+  const concept = lc.replace('what is', '').trim();
+  console.log(`[DEBUG] Extracting concept: "${concept}"`);
+  
+  // Look for the best chunk that contains definition content
+  for (let i = 0; i < chunks.length; i++) {
+    const result = processChunkForDefinition(chunks[i], concept, i);
+    if (result) {
+      console.log(`[SUCCESS] Found match! Result: "${result}"`);
+      return result;
     }
   }
   
@@ -7380,6 +7437,52 @@ function handleRegularEntityProcessing(query, relevantEntities, chunks) {
   return { answer, type: "advice", sources: relevantEntities.map(e => e.url) };
 }
 
+// Helper function to check if query is a policy query
+function isPolicyQuery(query) {
+  return /terms.*conditions|terms.*anc.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
+}
+
+// Helper function to check if query is a "what is" query
+function isWhatIsQuery(query) {
+  return query.toLowerCase().includes('what is');
+}
+
+// Helper function to process entities for RAG answer
+function processEntitiesForRag(query, entities, chunks, results, debugLogs) {
+  debugLogs.push(`Taking entities path${isWhatIsQuery(query) ? ' for "what is" query' : ''}`);
+  console.log(`[DEBUG] Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
+  
+  const relevantEntities = filterAndSortEntities(entities, query);
+  calculateEntityConfidence(relevantEntities, chunks, results);
+  
+  if (relevantEntities.length > 0) {
+    const result = isPolicyQuery(query) 
+      ? handlePolicyQuery(relevantEntities) 
+      : handleRegularEntityProcessing(query, relevantEntities, chunks);
+    return { ...result, debugLogs };
+  } else {
+    console.log(`[WARN] No relevant entities found for query`);
+    return { answer: "", type: "advice", sources: [], debugLogs };
+  }
+}
+
+// Helper function to process chunks for RAG answer
+function processChunksForRag(query, entities, chunks, debugLogs) {
+  debugLogs.push(`Taking chunks path - calling handleChunkProcessing`);
+  const result = handleChunkProcessing(query, entities, chunks);
+  return { ...result, debugLogs };
+}
+
+// Helper function to process events for RAG answer
+function processEventsForRag(entities, debugLogs) {
+  debugLogs.push(`Taking events path`);
+  const eventResult = handleEventEntities(entities);
+  if (eventResult) {
+    return { ...eventResult, debugLogs };
+  }
+  return null;
+}
+
 // Helper function to generate RAG answer
 function generateRagAnswer(params) {
   const { query, entities, chunks, results } = params;
@@ -7387,43 +7490,25 @@ function generateRagAnswer(params) {
   
   debugLogs.push(`generateRagAnswer called with ${entities.length} entities, ${chunks.length} chunks`);
   
+  // Handle events path
   if (results.answerType === 'events' && entities.length > 0) {
-    debugLogs.push(`Taking events path`);
-    const eventResult = handleEventEntities(entities);
-    if (eventResult) return { ...eventResult, debugLogs };
-  } else if (entities.length > 0 && query.toLowerCase().includes('what is')) {
-    // For "what is" queries, prioritize entities (articles) over chunks
-    debugLogs.push(`Taking entities path for "what is" query`);
-    console.log(`[DEBUG] Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
-    const relevantEntities = filterAndSortEntities(entities, query);
-    calculateEntityConfidence(relevantEntities, chunks, results);
-    
-    if (relevantEntities.length > 0) {
-      const isPolicyQuery = /terms.*conditions|terms.*anc.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
-      const result = isPolicyQuery ? handlePolicyQuery(relevantEntities) : handleRegularEntityProcessing(query, relevantEntities, chunks);
-      return { ...result, debugLogs };
-    } else {
-      console.log(`[WARN] No relevant entities found for query`);
-      return { answer: "", type: "advice", sources: [], debugLogs };
-    }
-  } else if (chunks.length > 0) {
-    debugLogs.push(`Taking chunks path - calling handleChunkProcessing`);
-    const result = handleChunkProcessing(query, entities, chunks);
-    return { ...result, debugLogs };
-  } else if (entities.length > 0) {
-    debugLogs.push(`Taking entities path`);
-    console.log(`[DEBUG] Found ${entities.length} entities, kinds:`, entities.map(e => e.kind));
-    const relevantEntities = filterAndSortEntities(entities, query);
-    calculateEntityConfidence(relevantEntities, chunks, results);
-    
-    if (relevantEntities.length > 0) {
-      const isPolicyQuery = /terms.*conditions|terms.*anc.*conditions|privacy.*policy|cancellation.*policy|refund.*policy|booking.*policy/i.test(query);
-      const result = isPolicyQuery ? handlePolicyQuery(relevantEntities) : handleRegularEntityProcessing(query, relevantEntities, chunks);
-      return { ...result, debugLogs };
-    } else {
-      console.log(`[WARN] No relevant entities found for query`);
-      return { answer: "", type: "advice", sources: [], debugLogs };
-    }
+    const eventResult = processEventsForRag(entities, debugLogs);
+    if (eventResult) return eventResult;
+  }
+  
+  // Handle "what is" queries with entities (prioritize entities over chunks)
+  if (entities.length > 0 && isWhatIsQuery(query)) {
+    return processEntitiesForRag(query, entities, chunks, results, debugLogs);
+  }
+  
+  // Handle chunks path
+  if (chunks.length > 0) {
+    return processChunksForRag(query, entities, chunks, debugLogs);
+  }
+  
+  // Handle general entities path
+  if (entities.length > 0) {
+    return processEntitiesForRag(query, entities, chunks, results, debugLogs);
   }
   
   return { answer: "", type: "advice", sources: [], debugLogs };
