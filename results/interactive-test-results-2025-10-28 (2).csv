@@ -1,0 +1,63 @@
+Question,Status,Bot Response Score,Bot Response Notes,Related Score,Related Notes,Other Notes,Category,Focus,Timestamp
+"what tripod do you recommend",Fail,50,"the answer now includes article links in the response it didnt before:
+For detailed reviews and specific recommendations, check out these guides: - [Recommended Lightweight Tripods | Professional Guide](https://www.alanranger.
+and bot confidence is only 10% which is way below where it should be because most the response was perfect other than the article link
+",100,"good relevant matches","","Equipment Recommendations","Should provide specific tripod recommendations with reasoning","2025-10-28T19:30:57.860Z"
+"what camera should I buy",Fail,75,"still showing a reference to an articles in the response",40,"better articles are available but not showing: and its showing irrelevant articles now
+
+Should be showing these easily as better results:
+
+https://www.alanranger.com/blog-on-photography/are-mirrorless-cameras-better-than-dslrs
+
+https://www.alanranger.com/blog-on-photography/10-basic-camera-settings-for-camera
+
+https://www.alanranger.com/blog-on-photography/beyond-a-point-and-shoot-camera
+
+https://www.alanranger.com/blog-on-photography/choosing-a-camera
+
+https://www.alanranger.com/blog-on-photography/photography-equipment-for-beginners","","Equipment Recommendations","Should provide camera recommendations based on needs","2025-10-28T19:32:27.431Z"
+"what camera do you recommend for a beginner",Fail,75,"showing article link in response -  For detailed reviews and specific recommendations, check out these guides: For detailed reviews and specific recommendations, check out these guides: - [12 What are CAMERA DRIVE MODES: A Guide for Beginners](https://www.alanranger.",40,"better articles are available but not showing: and showing to many irrelevant articles
+
+
+Should be showing these easily as better results:
+
+https://www.alanranger.com/blog-on-photography/are-mirrorless-cameras-better-than-dslrs
+
+https://www.alanranger.com/blog-on-photography/10-basic-camera-settings-for-camera
+
+https://www.alanranger.com/blog-on-photography/beyond-a-point-and-shoot-camera
+
+https://www.alanranger.com/blog-on-photography/choosing-a-camera
+
+https://www.alanranger.com/blog-on-photography/photography-equipment-for-beginners","","Equipment Recommendations","Should provide beginner camera recommendations","2025-10-28T19:33:38.846Z"
+"what camera do i need for your courses and workshops",Fail,50,"better initial response but showing article link and not a good one
+For detailed reviews and specific recommendations, check out these guides: - [7 Essential Camera Accessories You Need in Your Kit](https://www.alanranger.",10,"articles not related should be looking at equipment needed from events ","","Equipment Recommendations","Should specify camera requirements for courses","2025-10-28T19:35:38.428Z"
+"what is exposure triangle",Pass,100,"perfect initial response. short and relevant",90,"good article selection",".","Technical Photography Concepts","Should explain the relationship between aperture, shutter speed, and ISO","2025-10-28T19:00:33.259Z"
+"what is iso",Pass,100,"perfect short explanation",90,"good article selection","","Technical Photography Concepts","Should explain ISO sensitivity and its role in exposure","2025-10-28T19:01:35.982Z"
+"what is aperture",Pass,100,"",75,"only showed one which is relevant but could shown more, like depth of field for example:
+
+https://www.alanranger.com/blog-on-photography/what-is-focal-length-in-photography","","Technical Photography Concepts","Should explain aperture, f-stops, and depth of field","2025-10-28T19:02:46.445Z"
+"what is shutter speed",Pass,100,"only shows article link not a chat response",75,"good article references but could have shown more related articles
+eg https://www.alanranger.com/blog-on-photography/how-to-take-long-exposure-photos
+
+https://www.alanranger.com/s/Photography-Practice-Assignment-Movement-hp37.pdf","","Technical Photography Concepts","Should explain shutter speed and motion control","2025-10-28T19:04:20.426Z"
+"peter orton",Pass,75,"showed article link rather than chat response",75,"showed relevant article but could have used more logic to show other related articles maybe","","Person Queries","Should find Peter Orton article and connect to related RPS content","2025-10-27T15:05:31.723Z"
+"who is alan ranger",Fail,100,"good chat response",10,"didnt show related pages i would expect, there are pages about alan, about ethics, about feedback","","Person Queries","Should provide biographical information about Alan","2025-10-27T15:05:56.807Z"
+"when is your next devon workshop",Pass,75,"good response but some formatting issues with the the text and random chars",100,"perfect, showed correct events","","Event Queries","Should list Devon workshops with dates and details","2025-10-27T15:07:11.726Z"
+"when is your next photography course",Fail,10,"it responded with 40 events which incudes a mix of workshops and courses and should only be courses",30,"because it isnt filtering to show courses only","it lists workshops not courses in the events block","Event Queries","Should list photography courses with dates","2025-10-27T15:07:47.176Z"
+"when are your next bluebell workshops",Pass,100,"breif and exact answer",100,"all relevant events shown","no changes required","Event Queries","Should list bluebell workshop dates","2025-10-27T15:08:18.881Z"
+"do you have autumn workshops",Pass,100,"good initial response",75,"they are right but missing some, but this maybe to url and descriptions in metadata not saying they are autumn so might need source web page tweaks.  Peak District for example","missing some events for autumn like peak district but need to check if they contain enough clues to be classified as autumn","Event Queries","Should list autumn workshop options","2025-10-27T15:08:50.763Z"
+"how to take sharp photos",Fail,100,"good concise initial response",10,"didnt provide any related articles which there are many with cross logic matching","","Technical Advice","Should provide practical tips for sharp photography","2025-10-27T15:09:52.085Z"
+"what is long exposure photography",Fail,10,"didnt answer the question -njust referenced an article link",10,"showed unrelated articles so should have used some cross logic to identify best matches articles, events to user question","","Technical Advice","Should explain long exposure techniques and applications","2025-10-27T15:10:23.373Z"
+"why are my images always grainy and noisy",Fail,100,"good initial response",10,"didnt show any related articles.  could have shown iso article and a couple more related","","Technical Advice","Should provide solutions for grainy/noisy images","2025-10-27T15:10:53.826Z"
+"why arent my images sharp",Fail,100,"good initial response",10,"didnt show any related articles and should have done","","Technical Advice","Should provide tips for sharper images","2025-10-27T15:11:25.037Z"
+"do I need a laptop for lightroom course",Fail,10,"didnt answer the question",100,"showed the right course events","","Course/Workshop Logistics","Should answer equipment requirements for the course","2025-10-27T15:12:39.425Z"
+"do you provide photography courses",Fail,20,"asked for classification but didnt just list course options for classification",10,"wrong classification options","","Course/Workshop Logistics","Should list available photography courses","2025-10-27T15:13:32.640Z"
+"do you have online lessons",Fail,10,"responded with article link so didnt answer question directly and irrelvant article links",10,"irrelant pages and articles lists","","Course/Workshop Logistics","Should mention online lesson options","2025-10-27T15:14:28.347Z"
+"do you have a lightroom course",Fail,50,"its ok but feels like a generic response rather than direct answer to question.  should have listed options for the courses but also 1-2-1 tuition online or face to face",75,"listed correct events","listed right events but could also have responded initially with a better answer","Course/Workshop Logistics","Should list Lightroom course options","2025-10-27T15:15:04.309Z"
+"whats your online photography course",Fail,10,"wrong classicfication options and should have been able the question with rag/det with a direct answer",10,"no landing page tiles or article tiles","","Course/Workshop Logistics","Should describe online course offerings","2025-10-27T15:15:40.323Z"
+"where i can see your terms and conditions",Fail,100,"good answer but the landing page should have been shown in related pages section",10,"didnt show the landing page tile","","Business Information","Should provide terms and conditions information","2025-10-27T15:17:01.346Z"
+"tell me about rps mentoring",Fail,75,"reasonable answer but the page link should be in the relevant pages section not in the intial response section",10,"should show the landing page for the query in a tile","","Business Information","Should explain RPS mentoring services","2025-10-27T15:17:45.965Z"
+"do you do commercial photography",Fail,10,"its inccorect in the initial response as i provide commercial photography and there is a landing page for it",10,"didnt show landing page tile for related pages which are all under hire Me","","Business Information","Should explain commercial photography services","2025-10-27T15:18:28.204Z"
+"do you do portrait photography",Fail,10,"not true, i have a portraits course and also offer portrait photography as a service to take headshots etc",10,"no relevant pages or events shown","","Business Information","Should explain portrait photography services","2025-10-27T15:20:00.312Z"
+"is your photography academy really free",Fail,75,"good response other than its showing page link in response",10,"should be able to show related pages for the question","","Business Information","Should clarify free vs paid academy content","2025-10-27T15:20:54.720Z"

@@ -1,0 +1,254 @@
+{
+  "categories": [
+    "Event Queries",
+    "General Queries",
+    "Equipment Recommendations",
+    "Course/Workshop Logistics",
+    "Business Information",
+    "Technical Photography Concepts",
+    "Person Queries",
+    "Technical Advice"
+  ],
+  "questions": [
+    {
+      "category": "Event Queries",
+      "questions": [
+        {
+          "question": "whens the next bluebell workshops and whats the cost",
+          "category": "Event Queries",
+          "focus": "Workshop, course, and event scheduling questions"
+        },
+        {
+          "question": "when is the next devon workshop",
+          "category": "Event Queries",
+          "focus": "Workshop, course, and event scheduling questions"
+        },
+        {
+          "question": "what is your next workshop date and where is it",
+          "category": "Event Queries",
+          "focus": "Workshop, course, and event scheduling questions"
+        },
+        {
+          "question": "when are your next Autumn workshops and where are they?",
+          "category": "Event Queries",
+          "focus": "Workshop, course, and event scheduling questions"
+        },
+        {
+          "question": "How long are your workshops?",
+          "category": "Event Queries",
+          "focus": "Workshop, course, and event scheduling questions"
+        }
+      ]
+    },
+    {
+      "category": "General Queries",
+      "questions": [
+        {
+          "question": "How much is a residential photography course and does it include B&B",
+          "category": "General Queries",
+          "focus": "Miscellaneous questions"
+        },
+        {
+          "question": "Do you do astrophotography workshops",
+          "category": "General Queries",
+          "focus": "Miscellaneous questions"
+        },
+        {
+          "question": "Can my 14yr old attend your workshop",
+          "category": "General Queries",
+          "focus": "Miscellaneous questions"
+        },
+        {
+          "question": "My pictures never seem sharp.  Can you advise on what I am doing wrong",
+          "category": "General Queries",
+          "focus": "Miscellaneous questions"
+        },
+        {
+          "question": "What types of photography services do you offer?",
+          "category": "General Queries",
+          "focus": "Miscellaneous questions"
+        }
+      ]
+    },
+    {
+      "category": "Equipment Recommendations",
+      "questions": [
+        {
+          "question": "What tripod do you recommend",
+          "category": "Equipment Recommendations",
+          "focus": "Equipment advice and recommendations"
+        },
+        {
+          "question": "What sort of camera do I need for your camera course",
+          "category": "Equipment Recommendations",
+          "focus": "Equipment advice and recommendations"
+        },
+        {
+          "question": "What gear or equipment do I need to bring to a workshop?",
+          "category": "Equipment Recommendations",
+          "focus": "Equipment advice and recommendations"
+        },
+        {
+          "question": "What is the difference between prime and zoom lenses?",
+          "category": "Equipment Recommendations",
+          "focus": "Equipment advice and recommendations"
+        },
+        {
+          "question": "What memory card should I buy?",
+          "category": "Equipment Recommendations",
+          "focus": "Equipment advice and recommendations"
+        }
+      ]
+    },
+    {
+      "category": "Course/Workshop Logistics",
+      "questions": [
+        {
+          "question": "Do you I get a certificate with the photography course",
+          "category": "Course/Workshop Logistics",
+          "focus": "Course details, requirements, and logistics"
+        },
+        {
+          "question": "Do I need a laptop for the lightroom course",
+          "category": "Course/Workshop Logistics",
+          "focus": "Course details, requirements, and logistics"
+        },
+        {
+          "question": "Is the online photography course really free",
+          "category": "Course/Workshop Logistics",
+          "focus": "Course details, requirements, and logistics"
+        },
+        {
+          "question": "What courses do you offer for complete beginners?",
+          "category": "Course/Workshop Logistics",
+          "focus": "Course details, requirements, and logistics"
+        },
+        {
+          "question": "How many weeks is the beginners’ photography course?",
+          "category": "Course/Workshop Logistics",
+          "focus": "Course details, requirements, and logistics"
+        }
+      ]
+    },
+    {
+      "category": "Business Information",
+      "questions": [
+        {
+          "question": "How do I get personalised feedback on my images",
+          "category": "Business Information",
+          "focus": "Services, policies, contact, and business details"
+        },
+        {
+          "question": "How can I contact you or book a discovery call?",
+          "category": "Business Information",
+          "focus": "Services, policies, contact, and business details"
+        },
+        {
+          "question": "Do you offer gift vouchers?",
+          "category": "Business Information",
+          "focus": "Services, policies, contact, and business details"
+        },
+        {
+          "question": "What is your cancellation or refund policy for courses/workshops?",
+          "category": "Business Information",
+          "focus": "Services, policies, contact, and business details"
+        },
+        {
+          "question": "Where is your gallery and can I submit my images for feedback?",
+          "category": "Business Information",
+          "focus": "Services, policies, contact, and business details"
+        }
+      ]
+    },
+    {
+      "category": "Technical Photography Concepts",
+      "questions": [
+        {
+          "question": "What is long exposure and how can I find out more about it",
+          "category": "Technical Photography Concepts",
+          "focus": "Fundamental photography concepts and definitions"
+        },
+        {
+          "question": "\"What is the exposure triangle (aperture, shutter, ISO)?\"",
+          "category": "Technical Photography Concepts",
+          "focus": "Fundamental photography concepts and definitions"
+        },
+        {
+          "question": "\"What is depth of field, and how do I control it?\"",
+          "category": "Technical Photography Concepts",
+          "focus": "Fundamental photography concepts and definitions"
+        },
+        {
+          "question": "What is white balance and how do I use it?",
+          "category": "Technical Photography Concepts",
+          "focus": "Fundamental photography concepts and definitions"
+        },
+        {
+          "question": "What is HDR photography?",
+          "category": "Technical Photography Concepts",
+          "focus": "Fundamental photography concepts and definitions"
+        }
+      ]
+    },
+    {
+      "category": "Person Queries",
+      "questions": [
+        {
+          "question": "Who is Alan Ranger and what is his photographic background?",
+          "category": "Person Queries",
+          "focus": "Questions about specific people"
+        },
+        {
+          "question": "Where is Alan Ranger based?",
+          "category": "Person Queries",
+          "focus": "Questions about specific people"
+        },
+        {
+          "question": "Can I hire you as a professional photographer in Coventry?",
+          "category": "Person Queries",
+          "focus": "Questions about specific people"
+        },
+        {
+          "question": "peter orton",
+          "category": "Person Queries",
+          "focus": "Questions about specific people"
+        },
+        {
+          "question": "who is alan ranger",
+          "category": "Person Queries",
+          "focus": "Questions about specific people"
+        }
+      ]
+    },
+    {
+      "category": "Technical Advice",
+      "questions": [
+        {
+          "question": "How do I subscribe to the free online photography course?",
+          "category": "Technical Advice",
+          "focus": "How-to and troubleshooting photography advice"
+        },
+        {
+          "question": "How do I improve my composition and storytelling in photos?",
+          "category": "Technical Advice",
+          "focus": "How-to and troubleshooting photography advice"
+        },
+        {
+          "question": "How do I use flash photography?",
+          "category": "Technical Advice",
+          "focus": "How-to and troubleshooting photography advice"
+        },
+        {
+          "question": "How do I edit RAW files?",
+          "category": "Technical Advice",
+          "focus": "How-to and troubleshooting photography advice"
+        },
+        {
+          "question": "How do I improve my photography skills?",
+          "category": "Technical Advice",
+          "focus": "How-to and troubleshooting photography advice"
+        }
+      ]
+    }
+  ]
+}
