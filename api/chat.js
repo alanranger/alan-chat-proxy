@@ -9,6 +9,10 @@ export const config = { runtime: "nodejs" };
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from 'crypto';
 
+/* ----------------------- Global Constants ----------------------- */
+// Seasonal terms for workshop detection and content analysis
+const seasonalTerms = ['autumn', 'spring', 'summer', 'winter', 'bluebell', 'seasonal'];
+
 /* ----------------------- Helper Functions ----------------------- */
 // Hash IP for privacy
 const hashIP = (ip) => {
@@ -2481,7 +2485,6 @@ function checkFreeCourseWorkshopPatterns(lc) {
 // Generic seasonal workshop clarification detection
 
 const workshopTerms = ['workshop', 'course', 'lesson', 'class'];
-const seasonalTerms = ['autumn', 'spring', 'summer', 'winter', 'bluebell', 'seasonal'];
 
 const hasSeasonalTerm = seasonalTerms.some(term => lc.includes(term));
  const hasWorkshopTerm = workshopTerms.some(term => lc.includes(term));
