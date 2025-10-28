@@ -8317,7 +8317,7 @@ function generateEventAnswerMarkdown(eventList, query) {
 // RESPONSE COMPOSER LAYER - Intelligent wrapper for all response types
 // ============================================================================
 
-// Response Composer Layer - Final synthesis of all responses
+// Response Composer Layer - Final synthesis of all responses using business logic categories
 function composeFinalResponse(response, query, context = {}) {
   console.log(`🎭 Response Composer: Processing ${response.type} response for query: "${query}"`);
   
@@ -8326,39 +8326,106 @@ function composeFinalResponse(response, query, context = {}) {
   let finalType = response.type || 'advice';
   let finalSources = response.sources || [];
   
-  // Detect if response contains article links that should be converted
-  const hasArticleLinks = finalAnswer.includes('[http') || finalAnswer.includes('](http');
-  const hasGenericReferences = finalAnswer.includes('check out these guides') || 
-                               finalAnswer.includes('For detailed reviews');
+  // Detect business category for intelligent response enhancement
+  const businessCategory = detectBusinessCategory(query);
+  console.log(`🎭 Detected business category: ${businessCategory}`);
   
-  if (hasArticleLinks || hasGenericReferences) {
-    console.log(`🎭 Converting article links to direct recommendations`);
-    
-    // Extract equipment type from query
-    const equipmentType = extractEquipmentTypeFromQuery(query);
-    
-    if (equipmentType && response.structured?.articles?.length > 0) {
-      // Generate direct equipment recommendations
-      finalAnswer = generateDirectEquipmentRecommendation(equipmentType, response.structured.articles, query);
-      finalType = 'advice';
-    } else {
-      // Generic conversion - remove article links and make conversational
-      finalAnswer = convertArticleLinksToConversational(finalAnswer, response.structured?.articles || []);
-    }
-  }
+  // Apply category-specific response enhancement
+  const enhancedResponse = enhanceResponseByCategory(finalAnswer, businessCategory, query, response, context);
   
   // Ensure response is conversational and direct
-  if (finalAnswer && !isConversationalResponse(finalAnswer)) {
-    finalAnswer = makeResponseConversational(finalAnswer, query);
+  if (enhancedResponse.answer && !isConversationalResponse(enhancedResponse.answer)) {
+    enhancedResponse.answer = makeResponseConversational(enhancedResponse.answer, query);
   }
   
   return {
     ...response,
-    answer: finalAnswer,
-    type: finalType,
-    sources: finalSources,
-    confidence: Math.max(response.confidence || 0.1, 0.7) // Boost confidence for composed responses
+    answer: enhancedResponse.answer,
+    type: enhancedResponse.type || finalType,
+    sources: enhancedResponse.sources || finalSources,
+    confidence: Math.max(response.confidence || 0.1, enhancedResponse.confidenceBoost || 0.7)
   };
+}
+
+// Detect business category from query using business logic
+function detectBusinessCategory(query) {
+  const lc = query.toLowerCase();
+  
+  // 1. TECHNICAL PHOTOGRAPHY CONCEPTS - "What is..." questions about photography fundamentals
+  if (lc.includes('what is') && (
+    lc.includes('exposure') || lc.includes('iso') || lc.includes('aperture') || 
+    lc.includes('shutter') || lc.includes('raw') || lc.includes('white balance') ||
+    lc.includes('depth of field') || lc.includes('histogram') || lc.includes('composition') ||
+    lc.includes('metering') || lc.includes('focal length') || lc.includes('hdr')
+  )) {
+    return 'Technical Photography Concepts';
+  }
+  
+  // 2. EQUIPMENT RECOMMENDATIONS - Questions about what equipment to buy/use
+  if ((lc.includes('what') || lc.includes('which') || lc.includes('recommend')) && (
+    lc.includes('camera') || lc.includes('tripod') || lc.includes('lens') || 
+    lc.includes('filter') || lc.includes('flash') || lc.includes('equipment') ||
+    lc.includes('gear') || lc.includes('need for') || lc.includes('should i buy')
+  )) {
+    return 'Equipment Recommendations';
+  }
+  
+  // 3. PERSON QUERIES - Questions about specific people
+  if (lc.includes('who is') || lc.includes('peter orton') || lc.includes('alan ranger') ||
+      lc.includes('background') || lc.includes('based') || lc.includes('photographer')) {
+    return 'Person Queries';
+  }
+  
+  // 4. EVENT QUERIES - Questions about workshops, courses, events, schedules
+  if ((lc.includes('when') || lc.includes('next') || lc.includes('do you have') || 
+       lc.includes('are your') || lc.includes('schedule')) && (
+    lc.includes('workshop') || lc.includes('course') || lc.includes('class') || 
+    lc.includes('lesson') || lc.includes('training') || lc.includes('event') ||
+    lc.includes('devon') || lc.includes('bluebell') || lc.includes('autumn') ||
+    lc.includes('spring') || lc.includes('summer') || lc.includes('winter')
+  )) {
+    return 'Event Queries';
+  }
+  
+  // 5. TECHNICAL ADVICE - "How to..." and "Why..." questions about photography techniques
+  if ((lc.includes('how to') || lc.includes('how do i') || lc.includes('why') || 
+       lc.includes('why are') || lc.includes('why do') || lc.includes('why is')) && (
+    lc.includes('take') || lc.includes('improve') || lc.includes('photograph') ||
+    lc.includes('sharp') || lc.includes('blurry') || lc.includes('grainy') ||
+    lc.includes('noisy') || lc.includes('lighting') || lc.includes('edit') ||
+    lc.includes('compose') || lc.includes('exposure') || lc.includes('settings')
+  )) {
+    return 'Technical Advice';
+  }
+  
+  // 6. COURSE/WORKSHOP LOGISTICS - Questions about course details, requirements, logistics
+  if ((lc.includes('do i need') || lc.includes('do you provide') || lc.includes('do you have') ||
+       lc.includes('what courses') || lc.includes('course') || lc.includes('workshop')) && (
+    lc.includes('laptop') || lc.includes('equipment') || lc.includes('requirements') ||
+    lc.includes('online') || lc.includes('zoom') || lc.includes('private') ||
+    lc.includes('beginner') || lc.includes('advanced') || lc.includes('certificate') ||
+    lc.includes('cost') || lc.includes('price') || lc.includes('booking')
+  )) {
+    return 'Course/Workshop Logistics';
+  }
+  
+  // 7. BUSINESS INFORMATION - Questions about services, policies, contact, business details
+  if (lc.includes('terms and conditions') || lc.includes('cancellation') || lc.includes('refund') ||
+      lc.includes('contact') || lc.includes('book') || lc.includes('discovery call') ||
+      lc.includes('gift voucher') || lc.includes('commercial photography') ||
+      lc.includes('portrait photography') || lc.includes('property photography') ||
+      lc.includes('product photography') || lc.includes('retouching') ||
+      lc.includes('fine art prints') || lc.includes('turnaround') ||
+      lc.includes('usage rights') || lc.includes('licensing') ||
+      lc.includes('rps mentoring') || lc.includes('photography academy') ||
+      lc.includes('free') || lc.includes('complimentary') ||
+      lc.includes('ethical guidelines') || lc.includes('gallery') ||
+      lc.includes('feedback') || lc.includes('subscribe')) {
+    return 'Business Information';
+  }
+  
+  // Default fallback
+  return 'General Queries';
 }
 
 // Extract equipment type from query intelligently
@@ -8382,6 +8449,145 @@ function extractEquipmentTypeFromQuery(query) {
     }
   }
   return null;
+}
+
+// Enhance response based on business category
+function enhanceResponseByCategory(answer, category, query, response, context) {
+  console.log(`🎭 Enhancing ${category} response for: "${query}"`);
+  
+  switch (category) {
+    case 'Technical Photography Concepts':
+      return enhanceTechnicalConceptsResponse(answer, query, response);
+    
+    case 'Equipment Recommendations':
+      return enhanceEquipmentResponse(answer, query, response);
+    
+    case 'Person Queries':
+      return enhancePersonResponse(answer, query, response);
+    
+    case 'Event Queries':
+      return enhanceEventResponse(answer, query, response);
+    
+    case 'Technical Advice':
+      return enhanceTechnicalAdviceResponse(answer, query, response);
+    
+    case 'Course/Workshop Logistics':
+      return enhanceCourseLogisticsResponse(answer, query, response);
+    
+    case 'Business Information':
+      return enhanceBusinessInfoResponse(answer, query, response);
+    
+    case 'General Queries':
+    default:
+      return enhanceGeneralResponse(answer, query, response);
+  }
+}
+
+// Technical Photography Concepts - "What is..." definitions
+function enhanceTechnicalConceptsResponse(answer, query, response) {
+  // If answer is too short or generic, provide helpful context
+  if (!answer || answer.length < 50) {
+    const concept = query.toLowerCase().replace('what is', '').trim();
+    return `I'd be happy to explain ${concept}! This is a fundamental photography concept that's important to understand. Let me know if you'd like specific guidance on how to apply this in your photography.`;
+  }
+  
+  // If answer contains technical jargon, make it more accessible
+  if (answer.includes('f-stop') || answer.includes('ISO') || answer.includes('shutter speed')) {
+    return `Here's a clear explanation: ${answer} This concept is essential for understanding how your camera works and achieving the results you want.`;
+  }
+  
+  return { answer, confidenceBoost: 0.8 };
+}
+
+// Equipment Recommendations - Equipment advice
+function enhanceEquipmentResponse(answer, query, response) {
+  // Check if response contains article links that should be converted
+  const hasArticleLinks = answer.includes('[http') || answer.includes('](http');
+  const hasGenericReferences = answer.includes('check out these guides') || 
+                               answer.includes('For detailed reviews');
+  
+  if (hasArticleLinks || hasGenericReferences) {
+    console.log(`🎭 Converting equipment article links to direct recommendations`);
+    
+    // Extract equipment type from query
+    const equipmentType = extractEquipmentTypeFromQuery(query);
+    
+    if (equipmentType && response.structured?.articles?.length > 0) {
+      // Generate direct equipment recommendations
+      const recommendation = generateDirectEquipmentRecommendation(equipmentType, response.structured.articles, query);
+      return { answer: recommendation, type: 'advice', confidenceBoost: 0.8 };
+    } else {
+      // Generic conversion - remove article links and make conversational
+      const conversational = convertArticleLinksToConversational(answer, response.structured?.articles || []);
+      return { answer: conversational, confidenceBoost: 0.7 };
+    }
+  }
+  
+  return { answer, confidenceBoost: 0.7 };
+}
+
+// Person Queries - Questions about specific people
+function enhancePersonResponse(answer, query, response) {
+  // If answer is too short, provide helpful context
+  if (!answer || answer.length < 100) {
+    if (query.toLowerCase().includes('alan ranger')) {
+      return `I'd be happy to tell you about Alan Ranger! He's a professional photographer and tutor with extensive experience in landscape and portrait photography. Let me know what specific information you're looking for.`;
+    } else if (query.toLowerCase().includes('peter orton')) {
+      return `I can help you learn about Peter Orton! He's connected to RPS mentoring and photography education. What would you like to know about his work or background?`;
+    }
+  }
+  
+  return { answer, confidenceBoost: 0.8 };
+}
+
+// Event Queries - Workshop/course scheduling
+function enhanceEventResponse(answer, query, response) {
+  // If answer is too short, provide helpful context
+  if (!answer || answer.length < 50) {
+    return `I'd be happy to help you find information about workshops and courses! I run various photography workshops throughout the year. Let me know what specific type of workshop or timing you're interested in.`;
+  }
+  
+  return { answer, confidenceBoost: 0.9 };
+}
+
+// Technical Advice - "How to..." and troubleshooting
+function enhanceTechnicalAdviceResponse(answer, query, response) {
+  // If answer is too short, provide helpful context
+  if (!answer || answer.length < 50) {
+    return `I'd be happy to help you with that photography technique! I have extensive experience teaching these skills. Let me know what specific aspect you'd like guidance on.`;
+  }
+  
+  return { answer, confidenceBoost: 0.8 };
+}
+
+// Course/Workshop Logistics - Course details/requirements
+function enhanceCourseLogisticsResponse(answer, query, response) {
+  // If answer is too short, provide helpful context
+  if (!answer || answer.length < 50) {
+    return `I'd be happy to help you with course information! I offer various photography courses and workshops. Let me know what specific details you need about requirements, logistics, or booking.`;
+  }
+  
+  return { answer, confidenceBoost: 0.8 };
+}
+
+// Business Information - Services/policies/contact
+function enhanceBusinessInfoResponse(answer, query, response) {
+  // If answer is too short, provide helpful context
+  if (!answer || answer.length < 50) {
+    return `I'd be happy to help you with business information! I offer various photography services and have clear policies. Let me know what specific information you need about services, policies, or how to contact me.`;
+  }
+  
+  return { answer, confidenceBoost: 0.8 };
+}
+
+// General Queries - Miscellaneous questions
+function enhanceGeneralResponse(answer, query, response) {
+  // If answer is too short, provide helpful context
+  if (!answer || answer.length < 50) {
+    return `I'd be happy to help you with that! I have extensive experience in photography and can provide guidance on various topics. Let me know what specific information you're looking for.`;
+  }
+  
+  return { answer, confidenceBoost: 0.6 };
 }
 
 // Generate direct equipment recommendations from articles
