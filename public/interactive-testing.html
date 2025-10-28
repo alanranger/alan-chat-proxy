@@ -530,6 +530,12 @@
             </div>
         </div>
         
+        <div style="margin: 20px 0; text-align: right;">
+            <button class="btn btn-success" onclick="copyTableResults()" style="margin-right: 10px;">
+                📋 Copy Table Results
+            </button>
+        </div>
+        
         <table class="results-table" id="resultsTable">
             <thead>
                 <tr>
@@ -1852,6 +1858,25 @@
         }
 
         function copyResults() {
+            const csvContent = generateCSV();
+            navigator.clipboard.writeText(csvContent).then(() => {
+                // Show success feedback
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '✅ Copied!';
+                button.style.backgroundColor = '#28a745';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.backgroundColor = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy to clipboard. Please try exporting instead.');
+            });
+        }
+
+        function copyTableResults() {
             const csvContent = generateCSV();
             navigator.clipboard.writeText(csvContent).then(() => {
                 // Show success feedback
