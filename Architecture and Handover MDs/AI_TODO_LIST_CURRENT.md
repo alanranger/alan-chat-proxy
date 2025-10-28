@@ -18,6 +18,10 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 28 Oct 2025 | **Baseline Testing & Analysis** | 28-question baseline captured with full responses; quality issues identified (inconsistent response styles, missing related info) |
+| 28 Oct 2025 | **Test Script Path Fixes** | Updated quality-benchmark-test.cjs to save to correct `/testing-scripts/test results/` directory |
+| 28 Oct 2025 | **XLSM to JSON Conversion** | Created script to convert routing analysis spreadsheet to JSON format |
+| 28 Oct 2025 | **Interactive Testing Analysis** | Analyzed scoring criteria and response quality patterns from interactive-testing.html |
 | 24–28 Oct 2025 | Major documentation cleanup | All .md files consolidated, archive created, new master handover set deployed |
 | 22–28 Oct 2025 | Cursor AI & MCP environment setup | Config verified; redundant folders handled manually |
 | 20–27 Oct 2025 | Testing framework reorganisation | `testing-scripts/` now hosts all test .js; results stored in `test results/` subfolder |
@@ -27,13 +31,14 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ---
 
 ## 🚧 Active Tasks (Current Focus)
-| Priority | Task | Description | Owner |
-|-----------|------|--------------|-------|
-| 🔸 High | **chat.js Logic Verification** | Validate the latest logic against the reorganised structure (post‑24 Oct). | Alan / Cursor |
-| 🔸 High | **Rebuild TODO Context in Cursor** | Make sure Cursor reads this file first and restores pending tasks. | Cursor |
-| ⚙️ Medium | **Testing Sync Restoration** | Confirm all scripts write to `/testing-scripts/test results/` correctly. | Alan |
-| ⚙️ Medium | **Review Debug Scripts** | Identify duplicates and propose merges where safe. | Cursor |
-| 🪄 Low | **MD Content Expansion** | Expand the short master docs as required. | Alan |
+| Priority | Task | Description | Owner | Status |
+|-----------|------|--------------|-------|--------|
+| 🔸 High | **chat.js Complexity Refactoring** | Reduce 3 high-severity functions to ≤15 complexity while maintaining exact response behavior | Cursor | In Progress |
+| 🔸 High | **Baseline Testing Complete** | 28-question baseline captured with full responses for regression testing | Cursor | ✅ Complete |
+| 🔸 High | **Test Script Path Updates** | All testing scripts now save to `/testing-scripts/test results/` correctly | Cursor | ✅ Complete |
+| ⚙️ Medium | **Interactive Testing Check** | Verify if interactive-testing.html has dual scoring system (Bot Response + Related) | Cursor | Pending |
+| ⚙️ Medium | **Review Debug Scripts** | Identify duplicates and propose merges where safe. | Cursor | Pending |
+| 🪄 Low | **Response Composer Layer** | Future: Add final layer to unify response styles (conversational vs data dumps) | Future | Planned |
 
 ---
 

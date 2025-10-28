@@ -1,2 +1,0 @@
-This file forces a new deployment to test GitHub-Vercel sync
-Timestamp: 2025-10-05 01:00:00
