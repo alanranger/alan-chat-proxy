@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-10-28T18:15:31.135Z",
+  "testType": "dual_scoring",
+  "summary": {
+    "totalQuestions": 28,
+    "averageBotScore": 56,
+    "averageRelatedScore": 33,
+    "averageCombinedScore": 47,
+    "targetMet": false
+  },
+  "keyFindings": {
+    "botResponseIssues": [
+      "Generic clarification responses (30/100 for course queries)",
+      "Short responses for technical questions (45-65/100)",
+      "Poor event formatting (22-55/100 for workshop queries)"
+    ],
+    "relatedInfoIssues": [
+      "Missing sources for most responses",
+      "No articles provided for many queries",
+      "Poor event relevance scoring"
+    ],
+    "worstPerformers": [
+      "do you provide photography courses: 18/100 combined",
+      "whats your online photography course: 15/100 combined", 
+      "do I need a laptop for lightroom course: 18/100 combined"
+    ]
+  }
+}
