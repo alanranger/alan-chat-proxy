@@ -7737,24 +7737,29 @@ async function searchAndProcessRagEntities(context) {
 
 // Helper: Build RAG response structure
 function buildRagResponse(context) {
- return {
- success: context.results.confidence >= 0.3 || context.finalAnswer.length > 0,
- confidence: context.results.confidence >= 0.3 ? context.results.confidence : 0.1,
- answer: context.finalAnswer,
- type: context.finalType,
- sources: context.finalSources,
-  structured: {
-    intent: context.finalType,
-    sources: context.finalSources,
-    events: [],
-    products: [],
-    articles: context.results.articles || []
-  },
- totalMatches: context.results.totalMatches,
- chunksFound: context.results.chunks.length,
- entitiesFound: context.results.entities.length,
- debugLogs: context.debugLogs || []
- };
+  // Ensure success is always a boolean
+  const hasConfidence = context.results && context.results.confidence >= 0.3;
+  const hasAnswer = context.finalAnswer && context.finalAnswer.length > 0;
+  const success = hasConfidence || hasAnswer;
+  
+  return {
+    success: success,
+    confidence: context.results && context.results.confidence >= 0.3 ? context.results.confidence : 0.1,
+    answer: context.finalAnswer || '',
+    type: context.finalType || 'advice',
+    sources: context.finalSources || [],
+    structured: {
+      intent: context.finalType || 'advice',
+      sources: context.finalSources || [],
+      events: [],
+      products: [],
+      articles: context.results && context.results.articles || []
+    },
+    totalMatches: context.results && context.results.totalMatches || 0,
+    chunksFound: context.results && context.results.chunks ? context.results.chunks.length : 0,
+    entitiesFound: context.results && context.results.entities ? context.results.entities.length : 0,
+    debugLogs: context.debugLogs || []
+  };
 }
  
 // Helper: Handle RAG search errors
