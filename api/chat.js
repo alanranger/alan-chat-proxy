@@ -6734,21 +6734,22 @@ function checkContactAlanQuery(query) {
  ];
  
  for (const pattern of contactAlanQueries) {
- if (pattern.test(query)) {
- console.log(`ðŸ“ž Contact Alan query detected: "${query}"`);
- return {
- type: 'advice',
- confidence: 0.8,
- answer: "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
- structured: {
- intent: "contact_required",
- topic: "contact_alan",
- events: [],
- products: [],
- pills: []
- }
- };
- }
+   if (pattern.test(query)) {
+     console.log(`ðŸ"ž Contact Alan query detected: "${query}"`);
+     return {
+       success: true,
+       type: 'advice',
+       confidence: 0.8,
+       answer: "I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly using the contact form or WhatsApp in the header section of this chat. He'll be happy to provide you with accurate and up-to-date information.",
+       structured: {
+         intent: "contact_required",
+         topic: "contact_alan",
+         events: [],
+         products: [],
+         pills: []
+       }
+     };
+   }
  }
  return null;
 }
