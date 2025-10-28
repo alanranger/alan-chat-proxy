@@ -1,0 +1,262 @@
+{
+  "summary": {
+    "total": 26,
+    "keepCurrent": 15,
+    "contactAlan": 11,
+    "keepCurrentPercent": "57.7",
+    "contactAlanPercent": "42.3"
+  },
+  "results": [
+    {
+      "question": "What is your cancellation or refund policy for courses/workshops?",
+      "currentType": "clarification",
+      "currentConfidence": 0.2,
+      "currentAnswerLength": 0,
+      "isClarification": true,
+      "hasAdvice": false,
+      "recommendation": "CONTACT_ALAN - Low confidence clarification"
+    },
+    {
+      "question": "How do I book a course or workshop?",
+      "currentType": "clarification",
+      "currentConfidence": 0.2,
+      "currentAnswerLength": 0,
+      "isClarification": true,
+      "hasAdvice": false,
+      "recommendation": "CONTACT_ALAN - Low confidence clarification"
+    },
+    {
+      "question": "Can the gift voucher be used for any workshop or course?",
+      "currentType": "clarification",
+      "currentConfidence": 0.2,
+      "currentAnswerLength": 0,
+      "isClarification": true,
+      "hasAdvice": false,
+      "recommendation": "CONTACT_ALAN - Low confidence clarification"
+    },
+    {
+      "question": "How do I know which course or workshop is best for me?",
+      "currentType": "clarification",
+      "currentConfidence": 0.2,
+      "currentAnswerLength": 0,
+      "isClarification": true,
+      "hasAdvice": false,
+      "recommendation": "CONTACT_ALAN - Low confidence clarification"
+    },
+    {
+      "question": "Do you do astrophotography workshops",
+      "currentType": "clarification",
+      "currentConfidence": 0.2,
+      "currentAnswerLength": 0,
+      "isClarification": true,
+      "hasAdvice": false,
+      "recommendation": "CONTACT_ALAN - Low confidence clarification"
+    },
+    {
+      "question": "Do you I get a certificate with the photography course",
+      "currentType": "clarification",
+      "currentConfidence": 0.2,
+      "currentAnswerLength": 0,
+      "isClarification": true,
+      "hasAdvice": false,
+      "recommendation": "CONTACT_ALAN - Low confidence clarification"
+    },
+    {
+      "question": "Can my 14yr old attend your workshop",
+      "currentType": "clarification",
+      "currentConfidence": 0.2,
+      "currentAnswerLength": 0,
+      "isClarification": true,
+      "hasAdvice": false,
+      "recommendation": "CONTACT_ALAN - Low confidence clarification"
+    },
+    {
+      "question": "How do I subscribe to the free online photography course?",
+      "currentType": "clarification",
+      "currentConfidence": 0.2,
+      "currentAnswerLength": 0,
+      "isClarification": true,
+      "hasAdvice": false,
+      "recommendation": "CONTACT_ALAN - Low confidence clarification"
+    },
+    {
+      "question": "How many students per workshop / class?",
+      "currentType": "clarification",
+      "currentConfidence": 0.2,
+      "currentAnswerLength": 0,
+      "isClarification": true,
+      "hasAdvice": false,
+      "recommendation": "CONTACT_ALAN - Low confidence clarification"
+    },
+    {
+      "question": "What gear or equipment do I need to bring to a workshop?",
+      "currentType": "clarification",
+      "currentConfidence": 0.2,
+      "currentAnswerLength": 0,
+      "isClarification": true,
+      "hasAdvice": false,
+      "recommendation": "CONTACT_ALAN - Low confidence clarification"
+    },
+    {
+      "question": "How early should I arrive before a class or workshop begins?",
+      "currentType": "clarification",
+      "currentConfidence": 0.2,
+      "currentAnswerLength": 0,
+      "isClarification": true,
+      "hasAdvice": false,
+      "recommendation": "CONTACT_ALAN - Low confidence clarification"
+    },
+    {
+      "question": "Can I change the date of my booking?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 767,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "What happens if a course is canceled due to low enrolment or weather?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 724,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "Do you require a deposit, and when is full payment due?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 1925,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "What payment options are available?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 724,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "Do you offer payment plans or spreading the cost?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 658,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "Are there discounts for multiple bookings (e.g. bundle deals)?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 1932,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "What are the location details for your courses (venues, parking etc.)?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 724,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "If a workshop is outdoors, what happens in bad weather?",
+      "currentType": "events",
+      "currentConfidence": 0.95,
+      "currentAnswerLength": 40,
+      "hasSubstantialContent": false,
+      "isClarification": false,
+      "hasEvents": true,
+      "hasAdvice": false,
+      "recommendation": "KEEP_CURRENT - Good event response"
+    },
+    {
+      "question": "Do you offer gift vouchers?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 658,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "How can I contact you or book a discovery call?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 664,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "What is \"Pick N Mix\" in the payment plans?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 724,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "Do you offer residential workshops or multi-day field trips?",
+      "currentType": "events",
+      "currentConfidence": 0.95,
+      "currentAnswerLength": 18,
+      "hasSubstantialContent": false,
+      "isClarification": false,
+      "hasEvents": true,
+      "hasAdvice": false,
+      "recommendation": "KEEP_CURRENT - Good event response"
+    },
+    {
+      "question": "Do you offer Lightroom / post-processing courses?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 760,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "Do you offer online or Zoom lessons / mentoring?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 658,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    },
+    {
+      "question": "How much do 1-2-1 private lessons cost?",
+      "currentType": "advice",
+      "currentConfidence": 0.7,
+      "currentAnswerLength": 690,
+      "hasSubstantialContent": true,
+      "isClarification": false,
+      "hasAdvice": true,
+      "recommendation": "KEEP_CURRENT - Good RAG response"
+    }
+  ]
+}

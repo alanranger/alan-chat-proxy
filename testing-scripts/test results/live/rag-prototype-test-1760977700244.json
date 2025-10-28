@@ -1,0 +1,95 @@
+[
+  {
+    "question": "What tripod do you recommend",
+    "current": {
+      "type": "advice",
+      "confidence": 0.8,
+      "answerLength": 0,
+      "debug": {
+        "version": "v1.3.20-expanded-classification",
+        "intent": "direct_answer",
+        "classification": "direct_answer",
+        "timestamp": "2025-10-20T16:28:14.555Z"
+      }
+    },
+    "rag": {
+      "error": "HTTP 404: Not Found"
+    },
+    "timestamp": "2025-10-20T16:28:12.787Z"
+  },
+  {
+    "question": "when is the next devon workshop",
+    "current": {
+      "type": "events",
+      "confidence": 0.95,
+      "answerLength": 2,
+      "debug": {
+        "version": "v1.3.20-expanded-classification",
+        "debugInfo": {
+          "intent": "workshop"
+        },
+        "timestamp": "2025-10-20T16:28:16.136Z",
+        "queryText": "when is the next devon workshop",
+        "keywords": [
+          "devon",
+          "when",
+          "next",
+          "workshop"
+        ]
+      },
+      "hasAnswer": true
+    },
+    "rag": {
+      "error": "HTTP 404: Not Found"
+    },
+    "timestamp": "2025-10-20T16:28:14.368Z"
+  },
+  {
+    "question": "what is ISO",
+    "current": {
+      "type": "advice",
+      "confidence": 0.3,
+      "answerLength": 0,
+      "debug": {
+        "version": "v1.3.19-evidence-based",
+        "intent": "fallback",
+        "classification": "fallback",
+        "timestamp": "2025-10-20T16:28:17.934Z"
+      }
+    },
+    "rag": {
+      "type": "advice",
+      "confidence": 0.9,
+      "answerLength": 652,
+      "debug": {
+        "intent": "rag_first",
+        "classification": "mixed",
+        "confidence": 0.9,
+        "totalMatches": 6,
+        "chunksFound": 5,
+        "entitiesFound": 1,
+        "approach": "rag_first_prototype"
+      },
+      "hasAnswer": true
+    },
+    "timestamp": "2025-10-20T16:28:17.094Z"
+  },
+  {
+    "question": "what is the exposure triangle",
+    "current": {
+      "type": "advice",
+      "confidence": 0.8,
+      "answerLength": 0,
+      "debug": {
+        "version": "v1.3.20-expanded-classification",
+        "intent": "direct_answer",
+        "classification": "direct_answer",
+        "timestamp": "2025-10-20T16:28:20.999Z"
+      }
+    },
+    "rag": {
+      "error": "HTTP 404: Not Found"
+    },
+    "timestamp": "2025-10-20T16:28:19.233Z"
+  }
+]

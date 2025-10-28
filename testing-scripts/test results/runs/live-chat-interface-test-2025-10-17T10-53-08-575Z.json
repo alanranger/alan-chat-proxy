@@ -1,0 +1,92 @@
+[
+  {
+    "id": 1,
+    "query": "What is your refund and cancellation policy?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:03.583Z"
+  },
+  {
+    "id": 2,
+    "query": "When is the next Lightroom course in Coventry?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:04.406Z"
+  },
+  {
+    "id": 3,
+    "query": "Do you still run Lake District photography workshops?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:04.705Z"
+  },
+  {
+    "id": 4,
+    "query": "How much is the Lightroom beginners course?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:05.289Z"
+  },
+  {
+    "id": 5,
+    "query": "Can I book a 1-to-1 mentoring session with Alan?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:05.707Z"
+  },
+  {
+    "id": 6,
+    "query": "Do you have tips for composition or leading lines?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:06.009Z"
+  },
+  {
+    "id": 7,
+    "query": "Show me an article about the exposure triangle.",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:06.339Z"
+  },
+  {
+    "id": 8,
+    "query": "How do I set ISO manually on my camera?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:06.593Z"
+  },
+  {
+    "id": 9,
+    "query": "What's the difference between aperture and shutter speed?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:06.855Z"
+  },
+  {
+    "id": 10,
+    "query": "When is the best time of day for landscape photography?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:07.052Z"
+  },
+  {
+    "id": 11,
+    "query": "Where do your workshops meet and start from?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:07.235Z"
+  },
+  {
+    "id": 12,
+    "query": "Do you provide transport or accommodation?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:07.452Z"
+  },
+  {
+    "id": 13,
+    "query": "How do I join the Photography Academy?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:07.621Z"
+  },
+  {
+    "id": 14,
+    "query": "How do module exams and certificates work?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:07.821Z"
+  },
+  {
+    "id": 15,
+    "query": "Who is Alan Ranger?",
+    "error": "page.waitForTimeout is not a function",
+    "timestamp": "2025-10-17T10:53:07.935Z"
+  }
+]

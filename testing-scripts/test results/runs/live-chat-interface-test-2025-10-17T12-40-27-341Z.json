@@ -1,0 +1,190 @@
+[
+  {
+    "id": 1,
+    "query": "What is your refund and cancellation policy?",
+    "response": {
+      "type": "clarification",
+      "options": [
+        "Photography equipment advice",
+        "Photography courses and workshops",
+        "Photography services and mentoring",
+        "General photography advice",
+        "About Alan Ranger"
+      ]
+    },
+    "confidence": null,
+    "timestamp": "2025-10-17T12:38:57.483Z"
+  },
+  {
+    "id": 2,
+    "query": "When is the next Lightroom course in Coventry?",
+    "response": {
+      "type": "text",
+      "content": "Something went wrong: TypeError: md.trim is not a functionIf it continues, please use the Contact form or WhatsApp buttons above."
+    },
+    "confidence": 15,
+    "timestamp": "2025-10-17T12:39:03.803Z"
+  },
+  {
+    "id": 3,
+    "query": "Do you still run Lake District photography workshops?",
+    "response": {
+      "type": "text",
+      "content": "Something went wrong: TypeError: md.trim is not a functionIf it continues, please use the Contact form or WhatsApp buttons above."
+    },
+    "confidence": 15,
+    "timestamp": "2025-10-17T12:39:09.998Z"
+  },
+  {
+    "id": 4,
+    "query": "How much is the Lightroom beginners course?",
+    "response": {
+      "type": "text",
+      "content": "Something went wrong: TypeError: md.trim is not a functionIf it continues, please use the Contact form or WhatsApp buttons above."
+    },
+    "confidence": 15,
+    "timestamp": "2025-10-17T12:39:16.144Z"
+  },
+  {
+    "id": 5,
+    "query": "Can I book a 1-to-1 mentoring session with Alan?",
+    "response": {
+      "type": "text",
+      "content": "Private Lessons & Mentoring: Alan offers face-to-face private photography lessons in Coventry (CV4 9HW) or at a location of your choice. Lessons are bespoke to your needs and available at times that suit you. Also available: RPS mentoring for distinctions, monthly mentoring assignments, and 1-2-1 Zoom support. Visit Private Lessons for details."
+    },
+    "confidence": 6500,
+    "timestamp": "2025-10-17T12:39:22.301Z"
+  },
+  {
+    "id": 6,
+    "query": "Do you have tips for composition or leading lines?",
+    "response": {
+      "type": "clarification",
+      "options": [
+        "2-5-days services"
+      ]
+    },
+    "confidence": null,
+    "timestamp": "2025-10-17T12:39:28.453Z"
+  },
+  {
+    "id": 7,
+    "query": "Show me an article about the exposure triangle.",
+    "response": {
+      "type": "text",
+      "content": "The Exposure Triangle consists of three key settings:Aperture (f-stop): Controls depth of field and lightShutter Speed: Controls motion blur and lightISO: Controls sensor sensitivity and lightBalancing these three creates proper exposure."
+    },
+    "confidence": 6500,
+    "timestamp": "2025-10-17T12:39:34.660Z"
+  },
+  {
+    "id": 8,
+    "query": "How do I set ISO manually on my camera?",
+    "response": {
+      "type": "clarification",
+      "options": [
+        "beginners-courses services",
+        "beginners-photography services",
+        "courses-near-me services",
+        "location-coventry services",
+        "enrol-date services"
+      ]
+    },
+    "confidence": null,
+    "timestamp": "2025-10-17T12:39:40.837Z"
+  },
+  {
+    "id": 9,
+    "query": "What's the difference between aperture and shutter speed?",
+    "response": {
+      "type": "clarification",
+      "options": [
+        "Photography equipment advice",
+        "Photography courses and workshops",
+        "Photography services and mentoring",
+        "General photography advice",
+        "About Alan Ranger"
+      ]
+    },
+    "confidence": null,
+    "timestamp": "2025-10-17T12:39:47.102Z"
+  },
+  {
+    "id": 10,
+    "query": "When is the best time of day for landscape photography?",
+    "response": {
+      "type": "fallback",
+      "message": "I'm not entirely sure about this question, but I can try to help.For the best assistance, please use the Contact form or WhatsApp buttons above to reach Alan directly."
+    },
+    "confidence": 40,
+    "timestamp": "2025-10-17T12:39:53.280Z"
+  },
+  {
+    "id": 11,
+    "query": "Where do your workshops meet and start from?",
+    "response": {
+      "type": "text",
+      "content": "Something went wrong: TypeError: md.trim is not a functionIf it continues, please use the Contact form or WhatsApp buttons above."
+    },
+    "confidence": 15,
+    "timestamp": "2025-10-17T12:39:59.459Z"
+  },
+  {
+    "id": 12,
+    "query": "Do you provide transport or accommodation?",
+    "response": {
+      "type": "clarification",
+      "options": [
+        "Photography equipment advice",
+        "Photography courses and workshops",
+        "Photography services and mentoring",
+        "General photography advice",
+        "About Alan Ranger"
+      ]
+    },
+    "confidence": null,
+    "timestamp": "2025-10-17T12:40:05.654Z"
+  },
+  {
+    "id": 13,
+    "query": "How do I join the Photography Academy?",
+    "response": {
+      "type": "fallback",
+      "message": "I'm not entirely sure about this question, but I can try to help.For the best assistance, please use the Contact form or WhatsApp buttons above to reach Alan directly."
+    },
+    "confidence": 40,
+    "timestamp": "2025-10-17T12:40:11.907Z"
+  },
+  {
+    "id": 14,
+    "query": "How do module exams and certificates work?",
+    "response": {
+      "type": "clarification",
+      "options": [
+        "All Photography Workshops services",
+        "- one day photo workshops services",
+        "Macro & Abstract services",
+        "Woodlands services",
+        "- half-day photo workshops services"
+      ]
+    },
+    "confidence": null,
+    "timestamp": "2025-10-17T12:40:18.119Z"
+  },
+  {
+    "id": 15,
+    "query": "Who is Alan Ranger?",
+    "response": {
+      "type": "clarification",
+      "options": [
+        "photography-classes services",
+        "photography-courses services",
+        "All Photography Workshops services",
+        "- one day photo workshops services",
+        "Macro & Abstract services"
+      ]
+    },
+    "confidence": null,
+    "timestamp": "2025-10-17T12:40:24.227Z"
+  }
+]

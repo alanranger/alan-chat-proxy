@@ -1,0 +1,1366 @@
+{
+  "timestamp": "2025-10-22T19:10:56.201Z",
+  "phase": "before_improvements",
+  "averageScore": 49,
+  "totalTests": 28,
+  "passedTests": 3,
+  "failedTests": 25,
+  "results": [
+    {
+      "query": "what is exposure triangle",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain the relationship between aperture, shutter speed, and ISO",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 55,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 15,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "what is iso",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain ISO sensitivity and its role in exposure",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 55,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 15,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "what is aperture",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain aperture, f-stops, and depth of field",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 55,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 15,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "what is shutter speed",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain shutter speed and motion control",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 55,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 15,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "what tripod do you recommend",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide specific tripod recommendations with reasoning",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.",
+        "answer_markdown": "For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 78,
+        "issues": [
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 22.5,
+          "completeness": 20,
+          "accuracy": 15,
+          "structure": 15,
+          "actionability": 5
+        }
+      }
+    },
+    {
+      "query": "what camera should I buy",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide camera recommendations based on needs",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.",
+        "answer_markdown": "For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 73,
+        "issues": [
+          "Poor relevance to question",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 17.5,
+          "completeness": 20,
+          "accuracy": 15,
+          "structure": 15,
+          "actionability": 5
+        }
+      }
+    },
+    {
+      "query": "peter orton",
+      "expectedType": "advice",
+      "qualityFocus": "Should find Peter Orton article and connect to related RPS content",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 55,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 15,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "who is alan ranger",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide biographical information about Alan",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 62,
+        "issues": [
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 21.666666666666664,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "when is your next devon workshop",
+      "expectedType": "events",
+      "qualityFocus": "Should list Devon workshops with dates and details",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "events",
+        "answer": [],
+        "answer_markdown": "I couldn't find any events matching your query.",
+        "events": [],
+        "structured": {
+          "intent": "events",
+          "topic": "devon, next, workshop",
+          "events": [],
+          "products": [],
+          "pills": []
+        },
+        "confidence": 0.65,
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "debugInfo": {
+            "bypassReason": "workshop_query"
+          },
+          "timestamp": "2025-10-22T19:10:42.378Z",
+          "queryText": "when is your next devon workshop",
+          "keywords": [
+            "devon",
+            "next",
+            "workshop"
+          ]
+        }
+      },
+      "quality": {
+        "overall": 22,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Poor structure",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 2,
+          "completeness": 5,
+          "accuracy": 15,
+          "structure": 0,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "when is your next photography course",
+      "expectedType": "events",
+      "qualityFocus": "Should list photography courses with dates",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "clarification",
+        "answer": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "answer_markdown": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "clarification": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "options": [
+          {
+            "text": "Photography equipment advice",
+            "query": "photography equipment advice"
+          },
+          {
+            "text": "Photography courses and workshops",
+            "query": "photography courses"
+          },
+          {
+            "text": "Photography services and mentoring",
+            "query": "photography services"
+          },
+          {
+            "text": "General photography advice",
+            "query": "photography advice"
+          },
+          {
+            "text": "About Alan Ranger",
+            "query": "about alan ranger"
+          }
+        ],
+        "confidence": 0.2,
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "intent": "events",
+          "timestamp": "2025-10-22T19:10:43.002Z"
+        }
+      },
+      "quality": {
+        "overall": 25,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Poor structure",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 10,
+          "completeness": 0,
+          "accuracy": 15,
+          "structure": 0,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "how to take sharp photos",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide practical tips for sharp photography",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 55,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 15,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "what is long exposure photography",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain long exposure techniques and applications",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 58,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 17.5,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "do I need a laptop for lightroom course",
+      "expectedType": "advice",
+      "qualityFocus": "Should answer equipment requirements for the course",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "clarification",
+        "answer": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "answer_markdown": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "clarification": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "options": [
+          {
+            "text": "Photography equipment advice",
+            "query": "photography equipment advice"
+          },
+          {
+            "text": "Photography courses and workshops",
+            "query": "photography courses"
+          },
+          {
+            "text": "Photography services and mentoring",
+            "query": "photography services"
+          },
+          {
+            "text": "General photography advice",
+            "query": "photography advice"
+          },
+          {
+            "text": "About Alan Ranger",
+            "query": "about alan ranger"
+          }
+        ],
+        "confidence": 0.2,
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "intent": "events",
+          "timestamp": "2025-10-22T19:10:45.306Z"
+        }
+      },
+      "quality": {
+        "overall": 27,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Poor structure",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 12,
+          "completeness": 0,
+          "accuracy": 15,
+          "structure": 0,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "do you provide photography courses",
+      "expectedType": "advice",
+      "qualityFocus": "Should list available photography courses",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "clarification",
+        "answer": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "answer_markdown": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "clarification": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "options": [
+          {
+            "text": "Photography equipment advice",
+            "query": "photography equipment advice"
+          },
+          {
+            "text": "Photography courses and workshops",
+            "query": "photography courses"
+          },
+          {
+            "text": "Photography services and mentoring",
+            "query": "photography services"
+          },
+          {
+            "text": "General photography advice",
+            "query": "photography advice"
+          },
+          {
+            "text": "About Alan Ranger",
+            "query": "about alan ranger"
+          }
+        ],
+        "confidence": 0.2,
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "intent": "events",
+          "timestamp": "2025-10-22T19:10:45.901Z"
+        }
+      },
+      "quality": {
+        "overall": 28,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Poor structure",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 12.5,
+          "completeness": 0,
+          "accuracy": 15,
+          "structure": 0,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "do you have online lessons",
+      "expectedType": "advice",
+      "qualityFocus": "Should mention online lesson options",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 58,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 17.5,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "where i can see your terms and conditions",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide terms and conditions information",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 56,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 16.428571428571427,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "when are your next bluebell workshops",
+      "expectedType": "events",
+      "qualityFocus": "Should list bluebell workshop dates",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "clarification",
+        "answer": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "answer_markdown": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "clarification": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "question": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "options": [
+          {
+            "text": "2.5hr - 4hr workshops",
+            "query": "short photography workshops 2-4 hours"
+          },
+          {
+            "text": "1 day workshops",
+            "query": "one day photography workshops"
+          },
+          {
+            "text": "Multi day residential workshops",
+            "query": "multi day residential photography workshops"
+          }
+        ],
+        "confidence": 0.2,
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "intent": "events",
+          "timestamp": "2025-10-22T19:10:47.940Z"
+        }
+      },
+      "quality": {
+        "overall": 28,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Poor structure",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 13.333333333333332,
+          "completeness": 0,
+          "accuracy": 15,
+          "structure": 0,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "do you have autumn workshops",
+      "expectedType": "events",
+      "qualityFocus": "Should list autumn workshop options",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "clarification",
+        "answer": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "answer_markdown": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "clarification": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "question": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "options": [
+          {
+            "text": "2.5hr - 4hr workshops",
+            "query": "short photography workshops 2-4 hours"
+          },
+          {
+            "text": "1 day workshops",
+            "query": "one day photography workshops"
+          },
+          {
+            "text": "Multi day residential workshops",
+            "query": "multi day residential photography workshops"
+          }
+        ],
+        "confidence": 0.2,
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "intent": "events",
+          "timestamp": "2025-10-22T19:10:48.548Z"
+        }
+      },
+      "quality": {
+        "overall": 30,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Poor structure",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 15,
+          "completeness": 0,
+          "accuracy": 15,
+          "structure": 0,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "tell me about rps mentoring",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain RPS mentoring services",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 58,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 17.5,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "do you have a lightroom course",
+      "expectedType": "advice",
+      "qualityFocus": "Should list Lightroom course options",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "clarification",
+        "answer": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "answer_markdown": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "clarification": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "options": [
+          {
+            "text": "Photography equipment advice",
+            "query": "photography equipment advice"
+          },
+          {
+            "text": "Photography courses and workshops",
+            "query": "photography courses"
+          },
+          {
+            "text": "Photography services and mentoring",
+            "query": "photography services"
+          },
+          {
+            "text": "General photography advice",
+            "query": "photography advice"
+          },
+          {
+            "text": "About Alan Ranger",
+            "query": "about alan ranger"
+          }
+        ],
+        "confidence": 0.2,
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "intent": "events",
+          "timestamp": "2025-10-22T19:10:49.895Z"
+        }
+      },
+      "quality": {
+        "overall": 28,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Poor structure",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 12.5,
+          "completeness": 0,
+          "accuracy": 15,
+          "structure": 0,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "do you do commercial photography",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain commercial photography services",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 62,
+        "issues": [
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 21.666666666666664,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "do you do portrait photography",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain portrait photography services",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 62,
+        "issues": [
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 21.666666666666664,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "why are my images always grainy and noisy",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide solutions for grainy/noisy images",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 55,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 15,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "why arent my images sharp",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide tips for sharper images",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 55,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 15,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "what camera do i need for your courses and workshops",
+      "expectedType": "advice",
+      "qualityFocus": "Should specify camera requirements for courses",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "clarification",
+        "answer": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "answer_markdown": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "clarification": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "question": "Yes, we run photography workshops! What type of workshop are you interested in?",
+        "options": [
+          {
+            "text": "2.5hr - 4hr workshops",
+            "query": "short photography workshops 2-4 hours"
+          },
+          {
+            "text": "1 day workshops",
+            "query": "one day photography workshops"
+          },
+          {
+            "text": "Multi day residential workshops",
+            "query": "multi day residential photography workshops"
+          }
+        ],
+        "confidence": 0.2,
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "intent": "events",
+          "timestamp": "2025-10-22T19:10:53.468Z"
+        }
+      },
+      "quality": {
+        "overall": 28,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Poor structure",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 12.5,
+          "completeness": 0,
+          "accuracy": 15,
+          "structure": 0,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "what camera do you recommend for a beginner",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide beginner camera recommendations",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.",
+        "answer_markdown": "For equipment recommendations like tripods, Alan Ranger has extensive experience and can provide personalized advice based on your specific needs and budget.\n\nHis equipment recommendations cover:\n• Professional tripod systems\n• Camera bodies and lenses\n• Accessories and filters\n• Budget-friendly alternatives\n\n*View his detailed equipment guide: https://www.alanranger.com/photography-equipment-recommendations*\n\nFor personalized recommendations, consider booking a consultation or attending one of his workshops where he demonstrates equipment in real-world conditions.",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 77,
+        "issues": [
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 21.666666666666664,
+          "completeness": 20,
+          "accuracy": 15,
+          "structure": 15,
+          "actionability": 5
+        }
+      }
+    },
+    {
+      "query": "whats your online photography course",
+      "expectedType": "advice",
+      "qualityFocus": "Should describe online course offerings",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "clarification",
+        "answer": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "answer_markdown": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "clarification": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "question": "I'd be happy to help! Could you be more specific about what you're looking for?",
+        "options": [
+          {
+            "text": "Photography equipment advice",
+            "query": "photography equipment advice"
+          },
+          {
+            "text": "Photography courses and workshops",
+            "query": "photography courses"
+          },
+          {
+            "text": "Photography services and mentoring",
+            "query": "photography services"
+          },
+          {
+            "text": "General photography advice",
+            "query": "photography advice"
+          },
+          {
+            "text": "About Alan Ranger",
+            "query": "about alan ranger"
+          }
+        ],
+        "confidence": 0.2,
+        "debug": {
+          "version": "v1.3.20-expanded-classification",
+          "intent": "events",
+          "timestamp": "2025-10-22T19:10:54.807Z"
+        }
+      },
+      "quality": {
+        "overall": 25,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Poor structure",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 10,
+          "completeness": 0,
+          "accuracy": 15,
+          "structure": 0,
+          "actionability": 0
+        }
+      }
+    },
+    {
+      "query": "is your photography academy really free",
+      "expectedType": "advice",
+      "qualityFocus": "Should clarify free vs paid academy content",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "type": "advice",
+        "answer": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "answer_markdown": "I'd be happy to help you with your photography questions. For specific information about your query, please contact Alan Ranger directly or visit his website for more details.\n\n*Contact Alan: https://www.alanranger.com/contact*",
+        "confidence": 0.6,
+        "sources": [],
+        "structured": {
+          "intent": "advice",
+          "sources": [],
+          "events": [],
+          "products": [],
+          "articles": []
+        },
+        "debugInfo": {
+          "intent": "rag_first",
+          "classification": "direct_answer",
+          "confidence": 0.6,
+          "totalMatches": 0,
+          "chunksFound": 0,
+          "entitiesFound": 0,
+          "entityTitles": [],
+          "approach": "rag_first_hybrid"
+        }
+      },
+      "quality": {
+        "overall": 59,
+        "issues": [
+          "Poor relevance to question",
+          "Incomplete response",
+          "Not actionable"
+        ],
+        "breakdown": {
+          "relevance": 19,
+          "completeness": 15,
+          "accuracy": 15,
+          "structure": 10,
+          "actionability": 0
+        }
+      }
+    }
+  ]
+}

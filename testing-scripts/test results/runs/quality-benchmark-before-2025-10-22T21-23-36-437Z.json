@@ -1,0 +1,626 @@
+{
+  "timestamp": "2025-10-22T21:23:36.438Z",
+  "phase": "before_improvements",
+  "averageScore": 0,
+  "totalTests": 28,
+  "passedTests": 0,
+  "failedTests": 56,
+  "results": [
+    {
+      "query": "what is exposure triangle",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain the relationship between aperture, shutter speed, and ISO",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "what is exposure triangle",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "what is iso",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain ISO sensitivity and its role in exposure",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "what is iso",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "what is aperture",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain aperture, f-stops, and depth of field",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "what is aperture",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "what is shutter speed",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain shutter speed and motion control",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "what is shutter speed",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "what tripod do you recommend",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide specific tripod recommendations with reasoning",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "what tripod do you recommend",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "what camera should I buy",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide camera recommendations based on needs",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "what camera should I buy",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "peter orton",
+      "expectedType": "advice",
+      "qualityFocus": "Should find Peter Orton article and connect to related RPS content",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "peter orton",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "who is alan ranger",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide biographical information about Alan",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "who is alan ranger",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "when is your next devon workshop",
+      "expectedType": "events",
+      "qualityFocus": "Should list Devon workshops with dates and details",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "when is your next devon workshop",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "when is your next photography course",
+      "expectedType": "events",
+      "qualityFocus": "Should list photography courses with dates",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "when is your next photography course",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "how to take sharp photos",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide practical tips for sharp photography",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "how to take sharp photos",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "what is long exposure photography",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain long exposure techniques and applications",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "what is long exposure photography",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "do I need a laptop for lightroom course",
+      "expectedType": "advice",
+      "qualityFocus": "Should answer equipment requirements for the course",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "do I need a laptop for lightroom course",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "do you provide photography courses",
+      "expectedType": "advice",
+      "qualityFocus": "Should list available photography courses",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "do you provide photography courses",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "do you have online lessons",
+      "expectedType": "advice",
+      "qualityFocus": "Should mention online lesson options",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "do you have online lessons",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "where i can see your terms and conditions",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide terms and conditions information",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "where i can see your terms and conditions",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "when are your next bluebell workshops",
+      "expectedType": "events",
+      "qualityFocus": "Should list bluebell workshop dates",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "when are your next bluebell workshops",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "do you have autumn workshops",
+      "expectedType": "events",
+      "qualityFocus": "Should list autumn workshop options",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "do you have autumn workshops",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "tell me about rps mentoring",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain RPS mentoring services",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "tell me about rps mentoring",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "do you have a lightroom course",
+      "expectedType": "advice",
+      "qualityFocus": "Should list Lightroom course options",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "do you have a lightroom course",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "do you do commercial photography",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain commercial photography services",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "do you do commercial photography",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "do you do portrait photography",
+      "expectedType": "advice",
+      "qualityFocus": "Should explain portrait photography services",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "do you do portrait photography",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "why are my images always grainy and noisy",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide solutions for grainy/noisy images",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "why are my images always grainy and noisy",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "why arent my images sharp",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide tips for sharper images",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "why arent my images sharp",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "what camera do i need for your courses and workshops",
+      "expectedType": "advice",
+      "qualityFocus": "Should specify camera requirements for courses",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "what camera do i need for your courses and workshops",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "what camera do you recommend for a beginner",
+      "expectedType": "advice",
+      "qualityFocus": "Should provide beginner camera recommendations",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "what camera do you recommend for a beginner",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "whats your online photography course",
+      "expectedType": "advice",
+      "qualityFocus": "Should describe online course offerings",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "whats your online photography course",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    },
+    {
+      "query": "is your photography academy really free",
+      "expectedType": "advice",
+      "qualityFocus": "Should clarify free vs paid academy content",
+      "error": "",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Network error"
+        ]
+      }
+    },
+    {
+      "query": "is your photography academy really free",
+      "error": "Cannot read properties of undefined (reading 'relevance')",
+      "quality": {
+        "overall": 0,
+        "issues": [
+          "Test error"
+        ]
+      }
+    }
+  ]
+}

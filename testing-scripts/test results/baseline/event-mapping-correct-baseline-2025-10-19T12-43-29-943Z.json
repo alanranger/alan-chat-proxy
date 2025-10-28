@@ -1,0 +1,35 @@
+{
+  "timestamp": "2025-10-19T12:43:29.943Z",
+  "totalMappings": 129,
+  "issuesFound": 2,
+  "issues": [
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/fairy-glen-betws-y-coed-photography",
+      "event_title": "",
+      "duration_hours": 3.5,
+      "current_price": 595,
+      "current_product": "WALES Photography Workshop | Lake Vyrnwy 29 - 30 Nov",
+      "expected_price": 125,
+      "expected_product": "Shropshire Landscape Photography Workshop",
+      "issue": "Fairy Glen (3.5h) mapped to £595 but should be £125"
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/landscape-photography-snowdonia-workshop",
+      "event_title": "",
+      "duration_hours": 30,
+      "current_price": 125,
+      "current_product": "Shropshire Landscape Photography Workshop | Shrewsbury",
+      "expected_price": 595,
+      "expected_product": "Landscape Photography SNOWDONIA",
+      "issue": "Snowdonia (30h) mapped to £125 but should be £595"
+    }
+  ],
+  "summary": {
+    "correctMappings": 127,
+    "incorrectMappings": 2,
+    "needsFixing": [
+      "https://www.alanranger.com/photographic-workshops-near-me/fairy-glen-betws-y-coed-photography",
+      "https://www.alanranger.com/photographic-workshops-near-me/landscape-photography-snowdonia-workshop"
+    ]
+  }
+}

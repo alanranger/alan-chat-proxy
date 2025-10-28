@@ -1,0 +1,275 @@
+{
+  "timestamp": "2025-10-17T21:00:37.706Z",
+  "endpoint": "https://alan-chat-proxy.vercel.app/api/chat",
+  "summary": {
+    "total": 11,
+    "passed": 0,
+    "failed": 11,
+    "successRate": 0
+  },
+  "results": [
+    {
+      "testId": "lightroom-coventry",
+      "query": "When is the next Lightroom course in Coventry?",
+      "expected": {
+        "id": "lightroom-coventry",
+        "query": "When is the next Lightroom course in Coventry?",
+        "expectedType": "events",
+        "expectedConfidence": 0.7,
+        "expectedEvents": true,
+        "description": "Lightroom course query - should return high confidence with events"
+      },
+      "actual": {
+        "type": "events",
+        "confidence": 0.44999999999999996,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": []
+      },
+      "passed": false,
+      "error": null,
+      "timestamp": "2025-10-17T21:00:09.064Z"
+    },
+    {
+      "testId": "photography-workshop",
+      "query": "What photography workshops do you have?",
+      "expected": {
+        "id": "photography-workshop",
+        "query": "What photography workshops do you have?",
+        "expectedType": "events",
+        "expectedConfidence": 0.6,
+        "expectedEvents": true,
+        "description": "General workshop query - should return events"
+      },
+      "actual": {
+        "type": "events",
+        "confidence": 0.5,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": []
+      },
+      "passed": false,
+      "error": null,
+      "timestamp": "2025-10-17T21:00:10.506Z"
+    },
+    {
+      "testId": "residential-pricing",
+      "query": "How much is a residential photography workshop and does it include B&B?",
+      "expected": {
+        "id": "residential-pricing",
+        "query": "How much is a residential photography workshop and does it include B&B?",
+        "expectedType": "events",
+        "expectedConfidence": 0.8,
+        "expectedEvents": true,
+        "description": "Residential pricing query - should return high confidence with pricing info"
+      },
+      "actual": {
+        "type": "advice",
+        "confidence": 60,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": null
+      },
+      "passed": false,
+      "error": null,
+      "timestamp": "2025-10-17T21:00:15.348Z"
+    },
+    {
+      "testId": "tripod-recommendation",
+      "query": "What tripod do you recommend?",
+      "expected": {
+        "id": "tripod-recommendation",
+        "query": "What tripod do you recommend?",
+        "expectedType": "advice",
+        "expectedConfidence": 0.7,
+        "expectedEvents": false,
+        "expectedArticles": true,
+        "description": "Tripod recommendation - should return articles/advice"
+      },
+      "actual": {
+        "type": "advice",
+        "confidence": 75,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": null
+      },
+      "passed": false,
+      "error": null,
+      "timestamp": "2025-10-17T21:00:17.620Z"
+    },
+    {
+      "testId": "camera-advice",
+      "query": "What camera should I buy for landscape photography?",
+      "expected": {
+        "id": "camera-advice",
+        "query": "What camera should I buy for landscape photography?",
+        "expectedType": "advice",
+        "expectedConfidence": 0.6,
+        "expectedEvents": false,
+        "expectedArticles": true,
+        "description": "Camera advice - should return articles"
+      },
+      "actual": {
+        "type": "advice",
+        "confidence": 75,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": null
+      },
+      "passed": false,
+      "error": null,
+      "timestamp": "2025-10-17T21:00:20.226Z"
+    },
+    {
+      "testId": "ambiguous-workshop",
+      "query": "I want to learn photography",
+      "expected": {
+        "id": "ambiguous-workshop",
+        "query": "I want to learn photography",
+        "expectedType": "clarification",
+        "expectedConfidence": 0.3,
+        "expectedEvents": false,
+        "expectedClarification": true,
+        "description": "Ambiguous query - should trigger clarification"
+      },
+      "actual": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "hasArticles": false,
+        "hasClarification": true,
+        "eventsCount": 0,
+        "answer": null
+      },
+      "passed": false,
+      "error": null,
+      "timestamp": "2025-10-17T21:00:23.116Z"
+    },
+    {
+      "testId": "vague-equipment",
+      "query": "I need help with my camera",
+      "expected": {
+        "id": "vague-equipment",
+        "query": "I need help with my camera",
+        "expectedType": "clarification",
+        "expectedConfidence": 0.3,
+        "expectedEvents": false,
+        "expectedClarification": true,
+        "description": "Vague equipment query - should trigger clarification"
+      },
+      "actual": {
+        "type": "advice",
+        "confidence": 75,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": null
+      },
+      "passed": false,
+      "error": null,
+      "timestamp": "2025-10-17T21:00:25.540Z"
+    },
+    {
+      "testId": "beginner-course",
+      "query": "Do you have beginner photography courses?",
+      "expected": {
+        "id": "beginner-course",
+        "query": "Do you have beginner photography courses?",
+        "expectedType": "events",
+        "expectedConfidence": 0.7,
+        "expectedEvents": true,
+        "description": "Beginner course query - should return events"
+      },
+      "actual": {
+        "type": "events",
+        "confidence": 0.5,
+        "hasEvents": false,
+        "hasArticles": false,
+        "eventsCount": 0,
+        "answer": []
+      },
+      "passed": false,
+      "error": null,
+      "timestamp": "2025-10-17T21:00:27.241Z"
+    },
+    {
+      "testId": "online-course",
+      "query": "Do you offer online photography courses?",
+      "expected": {
+        "id": "online-course",
+        "query": "Do you offer online photography courses?",
+        "expectedType": "events",
+        "expectedConfidence": 0.6,
+        "expectedEvents": true,
+        "description": "Online course query - should return events"
+      },
+      "actual": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "hasArticles": false,
+        "hasClarification": true,
+        "eventsCount": 0,
+        "answer": null
+      },
+      "passed": false,
+      "error": null,
+      "timestamp": "2025-10-17T21:00:30.790Z"
+    },
+    {
+      "testId": "nonsensical-query",
+      "query": "asdfghjkl qwerty",
+      "expected": {
+        "id": "nonsensical-query",
+        "query": "asdfghjkl qwerty",
+        "expectedType": "clarification",
+        "expectedConfidence": 0.1,
+        "expectedEvents": false,
+        "expectedClarification": true,
+        "description": "Nonsensical query - should trigger clarification"
+      },
+      "actual": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "hasArticles": false,
+        "hasClarification": true,
+        "eventsCount": 0,
+        "answer": null
+      },
+      "passed": false,
+      "error": null,
+      "timestamp": "2025-10-17T21:00:33.332Z"
+    },
+    {
+      "testId": "empty-query",
+      "query": "",
+      "expected": {
+        "id": "empty-query",
+        "query": "",
+        "expectedType": "clarification",
+        "expectedConfidence": 0.1,
+        "expectedEvents": false,
+        "expectedClarification": true,
+        "description": "Empty query - should trigger clarification"
+      },
+      "actual": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "hasArticles": false,
+        "hasClarification": true,
+        "eventsCount": 0,
+        "answer": null
+      },
+      "passed": false,
+      "error": null,
+      "timestamp": "2025-10-17T21:00:36.697Z"
+    }
+  ]
+}

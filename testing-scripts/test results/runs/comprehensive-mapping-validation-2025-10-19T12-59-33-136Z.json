@@ -1,0 +1,1398 @@
+{
+  "timestamp": "2025-10-19T12:59:33.136Z",
+  "summary": {
+    "totalBaseline": 129,
+    "unchanged": 114,
+    "changed": 15,
+    "missing": 0,
+    "added": 0,
+    "expectedChanges": 2,
+    "unexpectedChanges": 13
+  },
+  "changes": [
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/exmoor-photography-workshops-seascapes-lynmouth",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-photography-devon-hartland-quay",
+        "product_title": "Landscape Photography DEVON Workshops - Various Dates",
+        "price_gbp": "750",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/exmoor-photography-workshops-lynmouth",
+        "product_title": "EXMOOR Photography Workshop - Sat 15th - Sun 16th Mar 2025",
+        "price_gbp": 575,
+        "event_title": "Exmoor Photography Workshops - Seascapes | Lynmouth"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/fairy-glen-betws-y-coed-photography",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/wales-photography-workshop-pistyll-rhaeadr",
+        "product_title": "WALES Photography Workshop | Lake Vyrnwy 29 - 30 Nov",
+        "price_gbp": "595",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/long-exposure-photography-workshop-fairy-glen",
+        "product_title": "FAIRY GLEN and Fairy Falls Long Exposure Photography",
+        "price_gbp": 125,
+        "event_title": "Fairy Glen Betws-y-Coed Photography Workshop -  Wales"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/landscape-photography-snowdonia-workshop",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/shropshire-landscape-photography-workshops",
+        "product_title": "Shropshire Landscape Photography Workshop | Shrewsbury",
+        "price_gbp": "125",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-photography-snowdonia-workshops",
+        "product_title": "Landscape Photography SNOWDONIA - Sat 7th - Sun 8th Mar 2026",
+        "price_gbp": 595,
+        "event_title": "Landscape Photography Snowdonia Photography Workshop"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-autumn",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire",
+        "product_title": "\"PEAK DISTRICT Photography Workshops - May",
+        "price_gbp": "Oct and Nov\"",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire",
+        "product_title": "PEAK DISTRICT Photography Workshops - May, Oct and Nov",
+        "price_gbp": 175,
+        "event_title": "Peak District Photography Workshops Padley Gorge | 1-11"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-autumn-2",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire",
+        "product_title": "\"PEAK DISTRICT Photography Workshops - May",
+        "price_gbp": "Oct and Nov\"",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire",
+        "product_title": "PEAK DISTRICT Photography Workshops - May, Oct and Nov",
+        "price_gbp": 175,
+        "event_title": "Peak District Photography Workshops Padley Gorge | 2-11"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-spring",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire",
+        "product_title": "\"PEAK DISTRICT Photography Workshops - May",
+        "price_gbp": "Oct and Nov\"",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire",
+        "product_title": "PEAK DISTRICT Photography Workshops - May, Oct and Nov",
+        "price_gbp": 175,
+        "event_title": "Peak District Photography Workshops Padley Gorge - 16-5"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-winter",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire",
+        "product_title": "\"PEAK DISTRICT Photography Workshops - May",
+        "price_gbp": "Oct and Nov\"",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire",
+        "product_title": "PEAK DISTRICT Photography Workshops - May, Oct and Nov",
+        "price_gbp": 175,
+        "event_title": "Peak District Photography Workshops Padley Gorge | 10-18"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/secrets-of-woodland-photography-masterclass-autumn",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop",
+        "product_title": "\"The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan",
+        "price_gbp": "Apr",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop",
+        "product_title": "The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct",
+        "price_gbp": 125,
+        "event_title": "The Secrets of Woodland Photography - 1-Day Masterclass Oct"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/secrets-of-woodland-photography-masterclass-spring",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop",
+        "product_title": "\"The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan",
+        "price_gbp": "Apr",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop",
+        "product_title": "The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct",
+        "price_gbp": 125,
+        "event_title": "The Secrets of Woodland Photography - 1-Day Masterclass Apr"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/secrets-of-woodland-photography-masterclass-summer",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop",
+        "product_title": "\"The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan",
+        "price_gbp": "Apr",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop",
+        "product_title": "The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct",
+        "price_gbp": 125,
+        "event_title": "The Secrets of Woodland Photography - 1-Day Masterclass Aug"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/secrets-of-woodland-photography-masterclass-winter",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop",
+        "product_title": "\"The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan",
+        "price_gbp": "Apr",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop",
+        "product_title": "The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct",
+        "price_gbp": 125,
+        "event_title": "The Secrets of Woodland Photography - 1-Day Masterclass 11-1"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-coventry-cv4",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/garden-photography-workshop",
+        "product_title": "The Art of GARDEN PHOTOGRAPHY  - Coventry -  May and July",
+        "price_gbp": "35",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire",
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": 15,
+        "event_title": "Woodland Photography Walk - Coventry Tile Hill NR - Winter"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-coventry-piles-coppice",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/garden-photography-workshop",
+        "product_title": "The Art of GARDEN PHOTOGRAPHY  - Coventry -  May and July",
+        "price_gbp": "35",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire",
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": 15,
+        "event_title": "Woodland Photography Walk | Coventry | Piles Coppice"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-coventry-tile-hill",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/garden-photography-workshop",
+        "product_title": "The Art of GARDEN PHOTOGRAPHY  - Coventry -  May and July",
+        "price_gbp": "35",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire",
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": 15,
+        "event_title": "Woodland Photography Walk - Coventry - Tile Hill Wood "
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-kenilworth-crackley-woods",
+      "event_title": "",
+      "baseline": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/fireworks-photography-workshop-kenilworth",
+        "product_title": "Fireworks Photography Workshop | Long Exposure | Kenilworth",
+        "price_gbp": "75",
+        "event_title": ""
+      },
+      "current": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire",
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": 15,
+        "event_title": "Woodland Photography Walk | Kenilworth | Crackley Woods"
+      }
+    }
+  ],
+  "unchanged": [
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-2k99k",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-2n74k",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-2sj27",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-3yj3h",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-4pp2p",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-7breh",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-8ar5x",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-8s2ka",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-bds4t",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-be4sb",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-dfe",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-dg9pz",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-dhecf",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-hl4tm",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-hnp3g",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-mw83l",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-nhjlm",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-nzwzx",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-oct1",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-oct2",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-oct3",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-s2klg",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-w5nkt",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-wc34j",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-wk1",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry-zbcfe",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-week-1",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-week-3",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-wk2",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+        "product_title": "Beginners Photography Course | 3 Weekly Evening Classes",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk1",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk1-kdh5k",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk1-rrkhn",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk1-xx94r",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk2",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk2-55f3d",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk2-n8l4l",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk2-y3262",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk3",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk3-42ynf",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk3-7cd64",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/lightroom-photo-editing-classes-wk3-9b3t3",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/lightroom-courses-for-beginners-coventry",
+        "product_title": "Lightroom Courses for Beginners Photo Editing - Coventry",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/rps-courses-rps-distinctions-mentoring-1",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/rps-mentoring-photography-course",
+        "product_title": "RPS Courses - Independent RPS Mentoring for RPS Distinctions",
+        "price_gbp": "395",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/rps-courses-rps-distinctions-mentoring-2",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/rps-mentoring-photography-course",
+        "product_title": "RPS Courses - Independent RPS Mentoring for RPS Distinctions",
+        "price_gbp": "395",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/rps-courses-rps-distinctions-mentoring-3",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/rps-mentoring-photography-course",
+        "product_title": "RPS Courses - Independent RPS Mentoring for RPS Distinctions",
+        "price_gbp": "395",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/rps-courses-rps-distinctions-mentoring-4",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/rps-mentoring-photography-course",
+        "product_title": "RPS Courses - Independent RPS Mentoring for RPS Distinctions",
+        "price_gbp": "395",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/rps-courses-rps-distinctions-mentoring-5",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/rps-mentoring-photography-course",
+        "product_title": "RPS Courses - Independent RPS Mentoring for RPS Distinctions",
+        "price_gbp": "395",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/beginners-photography-lessons/rps-courses-rps-distinctions-mentoring-6",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photography-services-near-me/rps-mentoring-photography-course",
+        "product_title": "RPS Courses - Independent RPS Mentoring for RPS Distinctions",
+        "price_gbp": "395",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/abstract-and-macro-photography-workshop",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/abstract-and-macro-photography-workshops",
+        "product_title": "MACRO Photography Workshops Warwickshire - Feb and Mar",
+        "price_gbp": "65",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/abstract-and-macro-photography-workshop-coventry",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/abstract-and-macro-photography-workshops",
+        "product_title": "MACRO Photography Workshops Warwickshire - Feb and Mar",
+        "price_gbp": "65",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/anglesey-photography-workshop-wales",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-photography-workshops-anglesey",
+        "product_title": "ANGLESEY Landscape Photography Workshop -  May 2026",
+        "price_gbp": "875",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/batsford-arboretum-autumn-photography-1nov",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/batsford-arboretum-photography-workshops",
+        "product_title": "BATSFORD Arboretum Autumn Photography Workshops 24 - 31 Oct",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/batsford-arboretum-autumn-photography-29oct",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/batsford-arboretum-photography-workshops",
+        "product_title": "BATSFORD Arboretum Autumn Photography Workshops 24 - 31 Oct",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/batsford-arboretum-autumn-photography-2nov",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/batsford-arboretum-photography-workshops",
+        "product_title": "BATSFORD Arboretum Autumn Photography Workshops 24 - 31 Oct",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/batsford-arboretum-autumn-photography-30oct",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/batsford-arboretum-photography-workshops",
+        "product_title": "BATSFORD Arboretum Autumn Photography Workshops 24 - 31 Oct",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/batsford-arboretum-autumn-photography-31oct",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/batsford-arboretum-photography-workshops",
+        "product_title": "BATSFORD Arboretum Autumn Photography Workshops 24 - 31 Oct",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/batsford-arboretum-autumn-photography-3nov",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/batsford-arboretum-photography-workshops",
+        "product_title": "BATSFORD Arboretum Autumn Photography Workshops 24 - 31 Oct",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-01",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-17",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-18",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-19",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-20",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-21",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-22",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-23",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-24",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-25",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-29",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/bluebell-photography-photo-workshop-warwickshire-30",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/bluebell-woodlands-photography-workshops",
+        "product_title": "BLUEBELL WOODLANDS Photography - Warks - 20 Apr- 01 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/dartmoor-photography-workshop-woodlands",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/dartmoor-photography-landscape-workshop",
+        "product_title": "DARTMOOR Photography Workshop - Landscapes - 10th - 12th Oct",
+        "price_gbp": "875",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/dingle-kerry-ireland-photography-workshop",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/ireland-photography-workshops-dingle",
+        "product_title": "KERRY - Southern Ireland Photography Workshop - Mar 2026",
+        "price_gbp": "1595",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/dorset-photography-workshop",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/dorset-landscape-photography-workshop",
+        "product_title": "DORSET Landscape Photography Workshop Purbeck 16 - 18 Jan",
+        "price_gbp": "925",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/fairy-glen-photography-betws-y-coed",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/long-exposure-photography-workshop-fairy-glen",
+        "product_title": "FAIRY GLEN and Fairy Falls Long Exposure Photography",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/fairy-glen-photography-wales",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/long-exposure-photography-workshop-fairy-glen",
+        "product_title": "FAIRY GLEN and Fairy Falls Long Exposure Photography",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/garden-photography-workshop",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/garden-photography-workshop",
+        "product_title": "The Art of GARDEN PHOTOGRAPHY  - Coventry -  May and July",
+        "price_gbp": "35",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/garden-photography-workshop-mxyms",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/garden-photography-workshop",
+        "product_title": "The Art of GARDEN PHOTOGRAPHY  - Coventry -  May and July",
+        "price_gbp": "35",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/hartland-quay-devon-seascapes-ynfcl",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-photography-devon-hartland-quay",
+        "product_title": "Landscape Photography DEVON Workshops - Various Dates",
+        "price_gbp": "750",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/hartland-quay-photography-devon-seascapes",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-photography-devon-hartland-quay",
+        "product_title": "Landscape Photography DEVON Workshops - Various Dates",
+        "price_gbp": "750",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/lake-district-photography-workshop-autumn",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/lake-district-photography-workshop",
+        "product_title": "LAKE DISTRICT Photography Workshops - Jan - Mar - Sep - Nov",
+        "price_gbp": "1050",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/lake-district-photography-workshop-late-summer",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/lake-district-photography-workshop",
+        "product_title": "LAKE DISTRICT Photography Workshops - Jan - Mar - Sep - Nov",
+        "price_gbp": "1050",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/lake-district-photography-workshop-spring",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/lake-district-photography-workshop",
+        "product_title": "LAKE DISTRICT Photography Workshops - Jan - Mar - Sep - Nov",
+        "price_gbp": "1050",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/lake-district-photography-workshop-winter",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/lake-district-photography-workshop",
+        "product_title": "LAKE DISTRICT Photography Workshops - Jan - Mar - Sep - Nov",
+        "price_gbp": "1050",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/landscape-photography-wales-gower-peninsular",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-photography-wales-photo-workshop",
+        "product_title": "GOWER Landscape Photography Wales - 30 Jan - 1 Feb 2026",
+        "price_gbp": "825",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/landscape-photography-workshops-yorkshire",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/yorkshire-dales-photography-workshops",
+        "product_title": "Landscape YORKSHIRE DALES Photography Workshop - 3 - 5 Oct",
+        "price_gbp": "875",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/landscape-photography-workshops-yorkshire-coast",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/north-yorkshire-landscape-photography",
+        "product_title": "NORTH YORKSHIRE Landscape Photography Workshop - May and Sep",
+        "price_gbp": "1495",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/lavender-photography-workshop-sunset",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/photography-workshops-lavender-fields",
+        "product_title": "LAVENDER FIELD Photography Workshop - Gloucestershire July",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/lavender-photography-workshop-sunset-19",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/photography-workshops-lavender-fields",
+        "product_title": "LAVENDER FIELD Photography Workshop - Gloucestershire July",
+        "price_gbp": "150",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/long-exposure-photo-workshop-sunset-kenilworth",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/long-exposure-photography-kenilworth",
+        "product_title": "Long Exposure Photography Workshop KENILWORTH Sunset",
+        "price_gbp": "65",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/long-exposure-photography-burnham-on-sea",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/long-exposure-photography-workshops-burnham",
+        "product_title": "BURNHAM ON SEA Long Exposure Photography Workshop 23 Aug",
+        "price_gbp": "95",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/long-exposure-photography-workshop-kenilworth1",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/long-exposure-photography-kenilworth",
+        "product_title": "Long Exposure Photography Workshop KENILWORTH Sunset",
+        "price_gbp": "65",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/long-exposure-photography-workshop-kenilworth2",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/fireworks-photography-workshop-kenilworth",
+        "product_title": "Fireworks Photography Workshop | Long Exposure | Kenilworth",
+        "price_gbp": "75",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/long-exposure-photography-workshop-kenilworth4",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/fireworks-photography-workshop-kenilworth",
+        "product_title": "Fireworks Photography Workshop | Long Exposure | Kenilworth",
+        "price_gbp": "75",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/nant-mill-woodlands",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-photography-workshops-nant-mill",
+        "product_title": "NANT MILL Woodlands and Waterfalls Photo Workshop 30 May",
+        "price_gbp": "125",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/norfolk-photography-workshop",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-photography-workshop-norfolk",
+        "product_title": "Landscape Photography Workshop NORFOLK - Coastal 12 - 14 Sep",
+        "price_gbp": "1025",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/northumberland-landscape-photography-workshop",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/coastal-northumberland-photography-workshops",
+        "product_title": "NORTHUMBERLAND Photography Workshops - Feb 26 - Mar 1",
+        "price_gbp": "995",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-heathers-sunrise",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/peak-district-heather-photography-workshop",
+        "product_title": "PEAK DISTRICT HEATHER Photography Workshops - 16-17 Aug",
+        "price_gbp": "145",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-heathers-sunset",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/peak-district-heather-photography-workshop",
+        "product_title": "PEAK DISTRICT HEATHER Photography Workshops - 16-17 Aug",
+        "price_gbp": "145",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-sunrise-heathers",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/peak-district-heather-photography-workshop",
+        "product_title": "PEAK DISTRICT HEATHER Photography Workshops - 16-17 Aug",
+        "price_gbp": "145",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/poppy-fields-photography-workshop-sunrise",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/poppy-fields-photography-workshops",
+        "product_title": "Poppy Fields Photography Workshops | Worcestershire",
+        "price_gbp": "95",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/poppy-fields-photography-workshop-sunset",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/poppy-fields-photography-workshops",
+        "product_title": "Poppy Fields Photography Workshops | Worcestershire",
+        "price_gbp": "95",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/sezincote-garden-photography-workshop",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/sezincote-garden-photography-workshop",
+        "product_title": "SEZINCOTE Garden Photography Workshop - Gloucs 29 May",
+        "price_gbp": "55",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/somerset-photography-workshop",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/somerset-landscape-photography-workshops",
+        "product_title": "SOMERSET Landscape Photography Workshops 9 - 11 May 2025",
+        "price_gbp": "895",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/suffolk-landscape-photography-workshop",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/suffolk-landscape-photography-workshops",
+        "product_title": "SUFFOLK Landscape Photography Workshops - 21st - 23rd Nov",
+        "price_gbp": "995",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/sunset-chesterton-windmill-photography-workshop",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/photography-workshops-chesterton-windmill",
+        "product_title": "Photography Workshops CHESTERTON WINDMILL - Warwickshire",
+        "price_gbp": "65",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/sunset-chesterton-windmill-spring",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/photography-workshops-chesterton-windmill",
+        "product_title": "Photography Workshops CHESTERTON WINDMILL - Warwickshire",
+        "price_gbp": "65",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/sunset-chesterton-windmill-spring-7gw7j",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/photography-workshops-chesterton-windmill",
+        "product_title": "Photography Workshops CHESTERTON WINDMILL - Warwickshire",
+        "price_gbp": "65",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/sunset-chesterton-windmill-spring-7gw7j-9akd5",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/photography-workshops-chesterton-windmill",
+        "product_title": "Photography Workshops CHESTERTON WINDMILL - Warwickshire",
+        "price_gbp": "65",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/urban-architecture-photography-workshop-coventry",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/urban-architecture-photography-workshops-coventry",
+        "product_title": "URBAN ARCHITECTURE Photography Workshops - Coventry 24 Sep",
+        "price_gbp": "65",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/wales-photography-workshop-vyrnwy-pistyll-rhaeadr",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/wales-photography-workshop-pistyll-rhaeadr",
+        "product_title": "WALES Photography Workshop | Lake Vyrnwy 29 - 30 Nov",
+        "price_gbp": "595",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-hay-woods",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire",
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": "15",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-leamington-oakley-wood",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire",
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": "15",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-meriden-millisons-wood",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire",
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": "15",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-solihull-hay-woods",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire",
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": "15",
+        "event_title": ""
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/yorkshire-dales-photography-workshop",
+      "event_title": "",
+      "mapping": {
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/yorkshire-dales-photography-workshops",
+        "product_title": "Landscape YORKSHIRE DALES Photography Workshop - 3 - 5 Oct",
+        "price_gbp": "875",
+        "event_title": ""
+      }
+    }
+  ],
+  "missing": [],
+  "added": []
+}

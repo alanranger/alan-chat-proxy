@@ -1,0 +1,438 @@
+{
+  "timestamp": "2025-10-17T21:19:03.291Z",
+  "baselinePath": "baseline-2025-10-17.json",
+  "baselineTimestamp": "2025-10-17T21:18:05.080Z",
+  "results": [
+    {
+      "query": "What is your refund and cancellation policy?",
+      "baseline": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      },
+      "current": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false,
+        "clarification": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "When is the next Lightroom course in Coventry?",
+      "baseline": {
+        "type": "events",
+        "confidence": 0.44999999999999996,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": [],
+        "debug": {
+          "version": "v1.2.48-events-pipeline"
+        }
+      },
+      "current": {
+        "type": "events",
+        "confidence": 0.44999999999999996,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "Do you still run Lake District photography workshops?",
+      "baseline": {
+        "type": "events",
+        "confidence": 0.5,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": [],
+        "debug": {
+          "version": "v1.2.48-events-pipeline"
+        }
+      },
+      "current": {
+        "type": "events",
+        "confidence": 0.5,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "How much is the Lightroom beginners course?",
+      "baseline": {
+        "type": "events",
+        "confidence": 0.65,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": [],
+        "debug": {
+          "version": "v1.2.48-events-pipeline"
+        }
+      },
+      "current": {
+        "type": "events",
+        "confidence": 0.65,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "Can I book a 1-to-1 mentoring session with Alan?",
+      "baseline": {
+        "type": "advice",
+        "confidence": 0.1,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": null,
+        "debug": {
+          "version": "v1.2.37-logical-confidence",
+          "intent": "advice",
+          "keywords": [
+            "book",
+            "1-to-1",
+            "mentoring",
+            "session",
+            "with",
+            "alan"
+          ],
+          "counts": {
+            "events": 0,
+            "products": 0,
+            "articles": 0,
+            "contentChunks": 0
+          },
+          "logicalConfidence": false,
+          "logicalConfidenceReason": "Query lacks specific context - would trigger clarification",
+          "logicalConfidenceDebug": {
+            "query": "Can I book a 1-to-1 mentoring session with Alan?",
+            "queryLowercase": "can i book a 1-to-1 mentoring session with alan?",
+            "hasSpecificService": true,
+            "hasSpecificTechnical": false,
+            "isAboutQuery": false
+          },
+          "debugInfo": []
+        }
+      },
+      "current": {
+        "type": "advice",
+        "confidence": 0.1,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "Do you have tips for composition or leading lines?",
+      "baseline": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      },
+      "current": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false,
+        "clarification": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "Show me an article about the exposure triangle.",
+      "baseline": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      },
+      "current": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false,
+        "clarification": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "How do I set ISO manually on my camera?",
+      "baseline": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      },
+      "current": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false,
+        "clarification": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "What's the difference between aperture and shutter speed?",
+      "baseline": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      },
+      "current": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false,
+        "clarification": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "When is the best time of day for landscape photography?",
+      "baseline": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      },
+      "current": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false,
+        "clarification": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "Where do your workshops meet and start from?",
+      "baseline": {
+        "type": "events",
+        "confidence": 0.65,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "answer": [],
+        "debug": {
+          "version": "v1.2.48-events-pipeline"
+        }
+      },
+      "current": {
+        "type": "events",
+        "confidence": 0.65,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "Do you provide transport or accommodation?",
+      "error": "HTTP 500: Internal Server Error",
+      "status": "ERROR"
+    },
+    {
+      "query": "How do I join the Photography Academy?",
+      "baseline": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true,
+        "answer": null,
+        "debug": null
+      },
+      "current": {
+        "type": "clarification",
+        "confidence": 10,
+        "hasEvents": false,
+        "eventsCount": 0,
+        "hasArticles": false,
+        "articlesCount": 0,
+        "hasClarification": true
+      },
+      "regression": {
+        "type": false,
+        "confidence": false,
+        "events": false,
+        "articles": false,
+        "clarification": false
+      },
+      "hasRegression": false,
+      "hasImprovement": false,
+      "status": "UNCHANGED"
+    },
+    {
+      "query": "How do module exams and certificates work?",
+      "error": "HTTP 500: Internal Server Error",
+      "status": "ERROR"
+    },
+    {
+      "query": "Who is Alan Ranger?",
+      "error": "HTTP 500: Internal Server Error",
+      "status": "ERROR"
+    }
+  ]
+}

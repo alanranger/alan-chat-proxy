@@ -1,0 +1,198 @@
+[
+  {
+    "Question": "what is exposure triangle",
+    "Category": "Technical Photography Concepts",
+    "BaselineQuality": 100,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Conversational definition"
+  },
+  {
+    "Question": "what is iso",
+    "Category": "Technical Photography Concepts",
+    "BaselineQuality": 75,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Conversational definition"
+  },
+  {
+    "Question": "what is aperture",
+    "Category": "Technical Photography Concepts",
+    "BaselineQuality": 10,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Conversational definition"
+  },
+  {
+    "Question": "what is shutter speed",
+    "Category": "Technical Photography Concepts",
+    "BaselineQuality": 50,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Conversational definition"
+  },
+  {
+    "Question": "what tripod do you recommend",
+    "Category": "Equipment Recommendations",
+    "BaselineQuality": 95,
+    "Path": "Chunks",
+    "AnswerStyle": "Generic equipment summary"
+  },
+  {
+    "Question": "what camera should I buy",
+    "Category": "Equipment Recommendations",
+    "BaselineQuality": 50,
+    "Path": "Chunks",
+    "AnswerStyle": "Generic equipment summary"
+  },
+  {
+    "Question": "what camera do you recommend for a beginner",
+    "Category": "Equipment Recommendations",
+    "BaselineQuality": 50,
+    "Path": "Chunks",
+    "AnswerStyle": "Generic equipment summary"
+  },
+  {
+    "Question": "peter orton",
+    "Category": "Person Queries",
+    "BaselineQuality": 75,
+    "Path": "Chunks",
+    "AnswerStyle": "Snippet from article/chunks"
+  },
+  {
+    "Question": "who is alan ranger",
+    "Category": "Person Queries",
+    "BaselineQuality": 75,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Conversational summary"
+  },
+  {
+    "Question": "when is your next devon workshop",
+    "Category": "Event Queries",
+    "BaselineQuality": 95,
+    "Path": "Events",
+    "AnswerStyle": "Events list"
+  },
+  {
+    "Question": "when is your next photography course",
+    "Category": "Event Queries",
+    "BaselineQuality": 30,
+    "Path": "Events",
+    "AnswerStyle": "Events list (course/workshop mix)"
+  },
+  {
+    "Question": "when are your next bluebell workshops",
+    "Category": "Event Queries",
+    "BaselineQuality": 100,
+    "Path": "Events",
+    "AnswerStyle": "Events list"
+  },
+  {
+    "Question": "do you have autumn workshops",
+    "Category": "Event Queries",
+    "BaselineQuality": 50,
+    "Path": "Events",
+    "AnswerStyle": "Events list (partial)"
+  },
+  {
+    "Question": "how to take sharp photos",
+    "Category": "Technical Advice",
+    "BaselineQuality": 50,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Conversational tips"
+  },
+  {
+    "Question": "what is long exposure photography",
+    "Category": "Technical Advice",
+    "BaselineQuality": 75,
+    "Path": "Entities",
+    "AnswerStyle": "Definition from article (meta-like)"
+  },
+  {
+    "Question": "why are my images always grainy and noisy",
+    "Category": "Technical Advice",
+    "BaselineQuality": 10,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Tips (should focus ISO)"
+  },
+  {
+    "Question": "why arent my images sharp",
+    "Category": "Technical Advice",
+    "BaselineQuality": 50,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Conversational tips"
+  },
+  {
+    "Question": "do I need a laptop for lightroom course",
+    "Category": "Course/Workshop Logistics",
+    "BaselineQuality": 75,
+    "Path": "Events",
+    "AnswerStyle": "Lists events; not direct requirement"
+  },
+  {
+    "Question": "do you provide photography courses",
+    "Category": "Course/Workshop Logistics",
+    "BaselineQuality": 10,
+    "Path": "Clarification",
+    "AnswerStyle": "Clarifying prompt"
+  },
+  {
+    "Question": "do you have online lessons",
+    "Category": "Course/Workshop Logistics",
+    "BaselineQuality": 30,
+    "Path": "Chunks",
+    "AnswerStyle": "Snippet list; not synthesized"
+  },
+  {
+    "Question": "do you have a lightroom course",
+    "Category": "Course/Workshop Logistics",
+    "BaselineQuality": 75,
+    "Path": "Events",
+    "AnswerStyle": "Events list"
+  },
+  {
+    "Question": "whats your online photography course",
+    "Category": "Course/Workshop Logistics",
+    "BaselineQuality": 10,
+    "Path": "Clarification",
+    "AnswerStyle": "Clarifying prompt"
+  },
+  {
+    "Question": "where i can see your terms and conditions",
+    "Category": "Business Information",
+    "BaselineQuality": 95,
+    "Path": "Entities/Chunks (policy)",
+    "AnswerStyle": "Snippet with link"
+  },
+  {
+    "Question": "tell me about rps mentoring",
+    "Category": "Business Information",
+    "BaselineQuality": 75,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Conversational summary"
+  },
+  {
+    "Question": "do you do commercial photography",
+    "Category": "Business Information",
+    "BaselineQuality": 10,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Generic; not specific to offering"
+  },
+  {
+    "Question": "do you do portrait photography",
+    "Category": "Business Information",
+    "BaselineQuality": 10,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Generic; not specific to offering"
+  },
+  {
+    "Question": "is your photography academy really free",
+    "Category": "Business Information",
+    "BaselineQuality": 10,
+    "Path": "Hardcoded",
+    "AnswerStyle": "Generic; lacks detail"
+  },
+  {
+    "Question": "what camera do i need for your courses and workshops",
+    "Category": "Equipment Recommendations",
+    "BaselineQuality": 10,
+    "Path": "Chunks",
+    "AnswerStyle": "Generic equipment summary"
+  }
+]

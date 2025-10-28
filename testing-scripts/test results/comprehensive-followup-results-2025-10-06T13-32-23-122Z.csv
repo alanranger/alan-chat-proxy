@@ -1,0 +1,252 @@
+﻿Index,Query,PrevQuery,Intent,Confidence,Events,Products,Articles,Chunks,AnswerLen,Version,DurationMs
+1,"whens the next bluebell workshops and whats the cost","",events,0.8,38,1,0,0,114,v1.2.27-no-typo-normalize,392
+2,"when is the next devon workshop","whens the next bluebell workshops and whats the cost",events,0.8,38,1,0,0,119,v1.2.27-no-typo-normalize,157
+3,"what is your next workshop date and where is it","when is the next devon workshop",advice,0.5,0,0,12,5,965,v1.2.27-no-typo-normalize,971
+4,"when are your next Autumn workshops and where are they?","what is your next workshop date and where is it",events,0.8,38,1,0,0,123,v1.2.27-no-typo-normalize,145
+5,"How much is a residential photography course and does it include B&B","when are your next Autumn workshops and where are they?",events,0.8,70,1,0,0,114,v1.2.27-no-typo-normalize,144
+6,"What tripod do you recommend","How much is a residential photography course and does it include B&B",advice,0.8,0,0,12,5,1129,v1.2.27-no-typo-normalize,809
+7,"Do you I get a certificate with the photography course","What tripod do you recommend",advice,0.8,0,0,12,5,1112,v1.2.27-no-typo-normalize,784
+8,"What sort of camera do I need for your camera course","Do you I get a certificate with the photography course",advice,0.8,0,0,12,5,1141,v1.2.27-no-typo-normalize,864
+9,"Do I need a laptop for the lightroom course","What sort of camera do I need for your camera course",advice,0.8,0,0,12,5,1165,v1.2.27-no-typo-normalize,624
+10,"Do you do astrophotography workshops","Do I need a laptop for the lightroom course",events,0.8,70,1,0,0,102,v1.2.27-no-typo-normalize,142
+11,"How do I get personalised feedback on my images","Do you do astrophotography workshops",advice,0.5,0,0,3,5,500,v1.2.27-no-typo-normalize,906
+12,"Is the online photography course really free","How do I get personalised feedback on my images",advice,0.5,0,0,12,5,960,v1.2.27-no-typo-normalize,617
+13,"Can my 14yr old attend your workshop","Is the online photography course really free",events,0.8,32,1,0,0,102,v1.2.27-no-typo-normalize,130
+14,"What is long exposure and how can I find out more about it","Can my 14yr old attend your workshop",advice,0.5,0,0,12,5,908,v1.2.27-no-typo-normalize,826
+15,"My pictures never seem sharp.  Can you advise on what I am doing wrong","What is long exposure and how can I find out more about it",advice,0.8,0,0,12,5,1132,v1.2.27-no-typo-normalize,619
+16,"General / About / Navigation","My pictures never seem sharp.  Can you advise on what I am doing wrong",advice,0.1,0,0,0,5,48,v1.2.27-no-typo-normalize,298
+17,"1. Who is Alan Ranger and what is his photographic background?","General / About / Navigation",advice,0.8,0,0,12,5,1725,v1.2.27-no-typo-normalize,782
+18,"2. Where is Alan Ranger based?","1. Who is Alan Ranger and what is his photographic background?",advice,0.5,0,0,12,5,1006,v1.2.27-no-typo-normalize,766
+19,"3. What types of photography services do you offer?","2. Where is Alan Ranger based?",advice,0.8,0,0,12,5,1267,v1.2.27-no-typo-normalize,578
+20,"4. What is “Pick N Mix” in the payment plans?","3. What types of photography services do you offer?",error,0,0,0,0,0,0,err,0
+21,"5. How can I contact you or book a discovery call?","4. What is “Pick N Mix” in the payment plans?",error,0,0,0,0,0,0,err,0
+22,"6. Do you offer gift vouchers?","5. How can I contact you or book a discovery call?",advice,0.8,0,0,1,5,532,v1.2.27-no-typo-normalize,788
+23,"7. What is your cancellation or refund policy for courses/workshops?","6. Do you offer gift vouchers?",advice,0.8,0,0,12,5,1254,v1.2.27-no-typo-normalize,851
+24,"8. How do I subscribe to the free online photography course?","7. What is your cancellation or refund policy for courses/workshops?",advice,0.5,0,0,12,5,960,v1.2.27-no-typo-normalize,770
+25,"9. Where is your gallery and can I submit my images for feedback?","8. How do I subscribe to the free online photography course?",advice,0.5,0,0,12,5,1010,v1.2.27-no-typo-normalize,821
+26,"10. What ethical guidelines do you follow as a photography tutor?","9. Where is your gallery and can I submit my images for feedback?",advice,0.8,0,0,12,5,1549,v1.2.27-no-typo-normalize,700
+27,"Courses, Workshops & Tuition","10. What ethical guidelines do you follow as a photography tutor?",events,0.8,70,1,0,0,102,v1.2.27-no-typo-normalize,140
+28,"11. What courses do you offer for complete beginners?","Courses, Workshops & Tuition",events,0.8,70,1,0,0,102,v1.2.27-no-typo-normalize,129
+29,"12. Do you run evening classes in Coventry?","11. What courses do you offer for complete beginners?",events,0.8,40,1,0,0,102,v1.2.27-no-typo-normalize,124
+30,"13. How many weeks is the beginners’ photography course?","12. Do you run evening classes in Coventry?",events,0.8,40,1,0,0,102,v1.2.27-no-typo-normalize,134
+31,"14. Can I just take the “Get Off Auto” class as a standalone?","13. How many weeks is the beginners’ photography course?",error,0,0,0,0,0,0,err,0
+32,"15. What topics are covered in the 5-week beginner course?","14. Can I just take the “Get Off Auto” class as a standalone?",error,0,0,0,0,0,0,err,0
+33,"16. What if I miss one of the weekly classes—can I make it up?","15. What topics are covered in the 5-week beginner course?",events,0.8,32,1,0,0,102,v1.2.27-no-typo-normalize,127
+34,"17. Do you offer online or Zoom lessons / mentoring?","16. What if I miss one of the weekly classes—can I make it up?",advice,0.8,0,0,11,5,1377,v1.2.27-no-typo-normalize,766
+35,"18. How much do 1-2-1 private lessons cost?","17. Do you offer online or Zoom lessons / mentoring?",advice,0.8,0,0,4,5,1014,v1.2.27-no-typo-normalize,598
+36,"19. Do you offer residential workshops or multi-day field trips?","18. How much do 1-2-1 private lessons cost?",events,0.8,42,1,0,0,106,v1.2.27-no-typo-normalize,132
+37,"20. How many students per workshop / class?","19. Do you offer residential workshops or multi-day field trips?",events,0.8,76,1,0,0,102,v1.2.27-no-typo-normalize,133
+38,"21. What gear or equipment do I need to bring to a workshop?","20. How many students per workshop / class?",advice,0.8,0,0,12,5,1160,v1.2.27-no-typo-normalize,696
+39,"22. Can I sign up to monthly mentoring assignments?","21. What gear or equipment do I need to bring to a workshop?",advice,0.8,0,0,5,5,1212,v1.2.27-no-typo-normalize,765
+40,"23. Do you offer Lightroom / post-processing courses?","22. Can I sign up to monthly mentoring assignments?",events,0.8,35,1,0,0,102,v1.2.27-no-typo-normalize,132
+41,"24. What is RPS Mentoring, and can you help me with that?","23. Do you offer Lightroom / post-processing courses?",advice,0.8,0,0,12,5,1328,v1.2.27-no-typo-normalize,828
+42,"25. Are there any prerequisites for advanced courses?","24. What is RPS Mentoring, and can you help me with that?",events,0.8,32,1,0,0,102,v1.2.27-no-typo-normalize,130
+43,"Services / Commercial & Private Shoots","25. Are there any prerequisites for advanced courses?",advice,0.8,0,0,5,5,1253,v1.2.27-no-typo-normalize,784
+44,"26. Do you do property photography / real estate photography?","Services / Commercial & Private Shoots",advice,0.5,0,0,12,5,918,v1.2.27-no-typo-normalize,759
+45,"27. Can you do product photography for my e-commerce store?","26. Do you do property photography / real estate photography?",advice,0.5,0,0,12,5,932,v1.2.27-no-typo-normalize,658
+46,"28. What is your pricing structure for portrait / headshot work?","27. Can you do product photography for my e-commerce store?",advice,0.5,0,0,12,5,941,v1.2.27-no-typo-normalize,866
+47,"29. Do you train staff in corporate photography for businesses?","28. What is your pricing structure for portrait / headshot work?",advice,0.5,0,0,12,5,918,v1.2.27-no-typo-normalize,590
+48,"30. How far will you travel for a shoot (within UK / internationally)?","29. Do you train staff in corporate photography for businesses?",advice,0.5,0,0,12,5,938,v1.2.27-no-typo-normalize,841
+49,"31. Do you provide retouching / editing services?","30. How far will you travel for a shoot (within UK / internationally)?",advice,0.8,0,0,8,5,1324,v1.2.27-no-typo-normalize,748
+50,"32. Can I order fine art prints from you?","31. Do you provide retouching / editing services?",advice,0.5,0,0,12,5,1002,v1.2.27-no-typo-normalize,574
+51,"33. What is your turnaround time for delivering images?","32. Can I order fine art prints from you?",advice,0.5,0,0,12,5,904,v1.2.27-no-typo-normalize,661
+52,"34. Do you provide usage rights or licensing for your photos?","33. What is your turnaround time for delivering images?",advice,0.5,0,0,12,5,983,v1.2.27-no-typo-normalize,857
+53,"35. Can I commission you for a commercial photography project?","34. Do you provide usage rights or licensing for your photos?",advice,0.5,0,0,12,5,904,v1.2.27-no-typo-normalize,602
+54,"Booking, Payment & Logistics","35. Can I commission you for a commercial photography project?",advice,0.8,0,0,3,5,807,v1.2.27-no-typo-normalize,626
+55,"36. How do I book a course or workshop?","Booking, Payment & Logistics",events,0.8,32,1,0,0,102,v1.2.27-no-typo-normalize,128
+56,"37. What payment options are available?","36. How do I book a course or workshop?",advice,0.8,0,0,12,5,1175,v1.2.27-no-typo-normalize,673
+57,"38. Do you offer payment plans or spreading the cost?","37. What payment options are available?",advice,0.8,0,0,3,5,750,v1.2.27-no-typo-normalize,577
+58,"39. What happens if a course is canceled due to low enrolment or weather?","38. Do you offer payment plans or spreading the cost?",events,0.8,32,1,0,0,102,v1.2.27-no-typo-normalize,138
+59,"40. What are the location details for your courses (venues, parking etc.)?","39. What happens if a course is canceled due to low enrolment or weather?",advice,0.5,0,0,12,5,935,v1.2.27-no-typo-normalize,675
+60,"41. Are there discounts for multiple bookings (e.g. bundle deals)?","40. What are the location details for your courses (venues, parking etc.)?",advice,0.8,0,0,6,5,1322,v1.2.27-no-typo-normalize,688
+61,"42. If a workshop is outdoors, what happens in bad weather?","41. Are there discounts for multiple bookings (e.g. bundle deals)?",events,0.2,0,0,0,0,0,v1.2.27-no-typo-normalize,122
+62,"43. Can I change the date of my booking?","42. If a workshop is outdoors, what happens in bad weather?",advice,0.8,0,0,1,5,478,v1.2.27-no-typo-normalize,596
+63,"44. How early should I arrive before a class or workshop begins?","43. Can I change the date of my booking?",events,0.8,37,1,0,0,102,v1.2.27-no-typo-normalize,127
+64,"45. Do you require a deposit, and when is full payment due?","44. How early should I arrive before a class or workshop begins?",advice,0.8,0,0,8,5,1177,v1.2.27-no-typo-normalize,598
+65,"Technical / Photography Questions","45. Do you require a deposit, and when is full payment due?",advice,0.5,0,0,12,5,918,v1.2.27-no-typo-normalize,608
+66,"46. How do I choose between shooting JPEG vs RAW?","Technical / Photography Questions",advice,0.8,0,0,5,5,954,v1.2.27-no-typo-normalize,703
+67,"47. What is the exposure triangle (aperture, shutter, ISO)?","46. How do I choose between shooting JPEG vs RAW?",advice,0.8,0,0,12,5,1100,v1.2.27-no-typo-normalize,674
+68,"48. How do I improve my composition and storytelling in photos?","47. What is the exposure triangle (aperture, shutter, ISO)?",advice,0.8,0,0,12,5,1140,v1.2.27-no-typo-normalize,676
+69,"49. When should I use ND filters or graduated filters?","48. How do I improve my composition and storytelling in photos?",advice,0.8,0,0,12,5,1174,v1.2.27-no-typo-normalize,763
+70,"50. What is depth of field, and how do I control it?","49. When should I use ND filters or graduated filters?",advice,0.8,0,0,12,5,1078,v1.2.27-no-typo-normalize,627
+71,"51. What is white balance and how do I use it?","50. What is depth of field, and how do I control it?",advice,0.5,0,0,12,5,890,v1.2.27-no-typo-normalize,676
+72,"52. How do I focus manually vs autofocus?","51. What is white balance and how do I use it?",advice,0.5,0,0,4,5,657,v1.2.27-no-typo-normalize,700
+73,"53. What is the difference between prime and zoom lenses?","52. How do I focus manually vs autofocus?",advice,0.8,0,0,12,5,1221,v1.2.27-no-typo-normalize,591
+74,"54. How do I use flash photography?","53. What is the difference between prime and zoom lenses?",advice,0.5,0,0,12,5,918,v1.2.27-no-typo-normalize,582
+75,"55. What is HDR photography?","54. How do I use flash photography?",advice,0.5,0,0,12,5,920,v1.2.27-no-typo-normalize,563
+76,"56. How do I shoot in low light?","55. What is HDR photography?",advice,0.5,0,0,12,5,956,v1.2.27-no-typo-normalize,600
+77,"57. What memory card should I buy?","56. How do I shoot in low light?",advice,0.5,0,0,12,5,957,v1.2.27-no-typo-normalize,739
+78,"58. Do I need a camera bag?","57. What memory card should I buy?",advice,0.8,0,0,12,5,1114,v1.2.27-no-typo-normalize,672
+79,"59. What is the best lens for portraits?","58. Do I need a camera bag?",advice,0.8,0,0,12,5,1222,v1.2.27-no-typo-normalize,621
+80,"60. Should I buy a full-frame or crop sensor camera?","59. What is the best lens for portraits?",advice,0.8,0,0,12,5,1209,v1.2.27-no-typo-normalize,608
+81,"61. What accessories do I need for landscape photography?","60. Should I buy a full-frame or crop sensor camera?",advice,0.5,0,0,12,5,913,v1.2.27-no-typo-normalize,642
+82,"62. What is Lightroom vs Photoshop?","61. What accessories do I need for landscape photography?",advice,0.5,0,0,12,5,957,v1.2.27-no-typo-normalize,604
+83,"63. How do I edit RAW files?","62. What is Lightroom vs Photoshop?",advice,0.5,0,0,12,5,919,v1.2.27-no-typo-normalize,653
+84,"64. What is color grading?","63. How do I edit RAW files?",advice,0.5,0,0,12,5,957,v1.2.27-no-typo-normalize,712
+85,"65. How do I remove unwanted objects from photos?","64. What is color grading?",advice,0.5,0,0,12,5,889,v1.2.27-no-typo-normalize,677
+86,"66. What are presets and how do I use them?","65. How do I remove unwanted objects from photos?",advice,0.5,0,0,12,5,957,v1.2.27-no-typo-normalize,679
+87,"67. How much do you charge for headshots?","66. What are presets and how do I use them?",advice,0.5,0,0,2,5,343,v1.2.27-no-typo-normalize,709
+88,"68. Do you travel for photography sessions?","67. How much do you charge for headshots?",advice,0.5,0,0,12,5,936,v1.2.27-no-typo-normalize,681
+89,"69. What is your turnaround time?","68. Do you travel for photography sessions?",advice,0.5,0,0,12,5,904,v1.2.27-no-typo-normalize,632
+90,"70. Do you offer group discounts?","69. What is your turnaround time?",advice,0.1,0,0,0,5,48,v1.2.27-no-typo-normalize,448
+91,"71. Can you teach my staff photography?","70. Do you offer group discounts?",advice,0.5,0,0,12,5,918,v1.2.27-no-typo-normalize,806
+92,"72. What is included in the beginner course?","71. Can you teach my staff photography?",advice,0.5,0,0,12,5,927,v1.2.27-no-typo-normalize,694
+93,"73. How long are your workshops?","72. What is included in the beginner course?",events,0.8,74,1,0,0,102,v1.2.27-no-typo-normalize,199
+94,"74. Do you provide course materials?","73. How long are your workshops?",events,0.8,74,1,0,0,102,v1.2.27-no-typo-normalize,164
+95,"75. Can I get a refund if I can't attend?","74. Do you provide course materials?",advice,0.1,0,0,0,5,48,v1.2.27-no-typo-normalize,345
+96,"76. What happens if it rains during outdoor workshops?","75. Can I get a refund if I can't attend?",events,0.8,38,1,0,0,106,v1.2.27-no-typo-normalize,138
+97,"77. How do I improve my photography skills?","76. What happens if it rains during outdoor workshops?",advice,0.5,0,0,12,5,918,v1.2.27-no-typo-normalize,600
+98,"78. What makes a good photograph?","77. How do I improve my photography skills?",advice,0.5,0,0,12,5,913,v1.2.27-no-typo-normalize,640
+99,"79. How do I find my photography style?","78. What makes a good photograph?",advice,0.5,0,0,12,5,916,v1.2.27-no-typo-normalize,728
+100,"80. What are common photography mistakes?","79. How do I find my photography style?",advice,0.5,0,0,12,5,920,v1.2.27-no-typo-normalize,622
+101,"81. How do I build a photography portfolio?","80. What are common photography mistakes?",advice,0.5,0,0,12,5,918,v1.2.27-no-typo-normalize,616
+102,"82. What landscape photography workshops do you run near me?","81. How do I build a photography portfolio?",events,0.8,48,1,0,0,106,v1.2.27-no-typo-normalize,160
+103,"83. How do I book a one-day workshop?","82. What landscape photography workshops do you run near me?",events,0.8,48,1,0,0,106,v1.2.27-no-typo-normalize,149
+104,"84. Do you run workshops in the Lake District or Wales?","83. How do I book a one-day workshop?",events,0.8,44,1,0,0,106,v1.2.27-no-typo-normalize,134
+105,"85. What's included in your photography workshops?","84. Do you run workshops in the Lake District or Wales?",events,0.8,44,1,0,0,106,v1.2.27-no-typo-normalize,137
+106,"86. Are your workshops suitable for beginners?","85. What's included in your photography workshops?",events,0.8,67,1,0,0,102,v1.2.27-no-typo-normalize,143
+107,"87. How many people are in each workshop group?","86. Are your workshops suitable for beginners?",events,0.8,67,1,0,0,102,v1.2.27-no-typo-normalize,161
+108,"88. Do I need my own camera and tripod?","87. How many people are in each workshop group?",advice,0.8,0,0,12,5,1124,v1.2.27-no-typo-normalize,834
+109,"89. What happens if it rains during a workshop?","88. Do I need my own camera and tripod?",events,0.8,23,1,0,0,102,v1.2.27-no-typo-normalize,145
+110,"90. Can I get a private workshop for my photography club?","89. What happens if it rains during a workshop?",advice,0.8,0,0,12,5,1329,v1.2.27-no-typo-normalize,671
+111,"91. Do you offer weekend or evening workshops?","90. Can I get a private workshop for my photography club?",events,0.8,62,1,0,0,102,v1.2.27-no-typo-normalize,134
+112,"92. How do I join the beginners' photography lessons in Coventry?","91. Do you offer weekend or evening workshops?",advice,0.5,0,0,12,5,940,v1.2.27-no-typo-normalize,651
+113,"93. What will I learn in the ""Get Off Auto"" course?","92. How do I join the beginners' photography lessons in Coventry?",events,0.8,40,1,0,0,102,v1.2.27-no-typo-normalize,145
+114,"94. Are the beginners' classes suitable for DSLR and mirrorless users?","93. What will I learn in the ""Get Off Auto"" course?",events,0.8,32,1,0,0,102,v1.2.27-no-typo-normalize,136
+115,"95. Can I attend online instead of in person?","94. Are the beginners' classes suitable for DSLR and mirrorless users?",advice,0.5,0,0,10,5,1016,v1.2.27-no-typo-normalize,744
+116,"96. How long does the beginners' course last?","95. Can I attend online instead of in person?",events,0.8,37,1,0,0,102,v1.2.27-no-typo-normalize,140
+117,"97. Do I get feedback or assignments during the course?","96. How long does the beginners' course last?",events,0.8,37,1,0,0,102,v1.2.27-no-typo-normalize,134
+118,"98. Can I repeat a class if I miss one?","97. Do I get feedback or assignments during the course?",events,0.8,35,1,0,0,102,v1.2.27-no-typo-normalize,138
+119,"99. What's the difference between the lessons and workshops?","98. Can I repeat a class if I miss one?",events,0.8,73,1,0,0,102,v1.2.27-no-typo-normalize,148
+120,"100. What level should I be before taking the intermediate course?","99. What's the difference between the lessons and workshops?",events,0.8,70,1,0,0,102,v1.2.27-no-typo-normalize,147
+121,"101. Is there a certificate at the end?","100. What level should I be before taking the intermediate course?",advice,0.1,0,0,0,5,48,v1.2.27-no-typo-normalize,629
+122,"102. Can I buy a photography gift voucher online?","101. Is there a certificate at the end?",advice,0.8,0,0,12,5,1246,v1.2.27-no-typo-normalize,907
+123,"103. How long are the vouchers valid for?","102. Can I buy a photography gift voucher online?",advice,0.8,0,0,8,5,1281,v1.2.27-no-typo-normalize,868
+124,"104. Can the gift voucher be used for any workshop or course?","103. How long are the vouchers valid for?",events,0.8,37,1,0,0,102,v1.2.27-no-typo-normalize,182
+125,"105. Do you offer physical gift cards or only digital?","104. Can the gift voucher be used for any workshop or course?",advice,0.8,0,0,4,5,997,v1.2.27-no-typo-normalize,660
+126,"106. How does the ""Pick N Mix"" payment plan work?","105. Do you offer physical gift cards or only digital?",advice,0.8,0,0,12,5,1235,v1.2.27-no-typo-normalize,697
+127,"107. Can I pay for a course in instalments?","106. How does the ""Pick N Mix"" payment plan work?",events,0.8,80,1,0,0,102,v1.2.27-no-typo-normalize,184
+128,"108. Do you accept PayPal or credit cards?","107. Can I pay for a course in instalments?",advice,0.1,0,0,0,5,48,v1.2.27-no-typo-normalize,462
+129,"109. What happens if I cancel after paying with a plan?","108. Do you accept PayPal or credit cards?",advice,0.8,0,0,12,5,1250,v1.2.27-no-typo-normalize,880
+130,"110. Can I transfer a booking paid via Pick N Mix to someone else?","109. What happens if I cancel after paying with a plan?",advice,0.8,0,0,5,5,1107,v1.2.27-no-typo-normalize,682
+131,"111. Do vouchers cover private lessons too?","110. Can I transfer a booking paid via Pick N Mix to someone else?",advice,0.8,0,0,5,5,1211,v1.2.27-no-typo-normalize,673
+132,"112. What's included in your photography mentoring program?","111. Do vouchers cover private lessons too?",advice,0.8,0,0,12,5,1274,v1.2.27-no-typo-normalize,766
+133,"113. How do monthly assignments work in mentoring?","112. What's included in your photography mentoring program?",advice,0.8,0,0,12,5,1394,v1.2.27-no-typo-normalize,645
+134,"114. Can I book one-to-one photography tuition near Coventry?","113. How do monthly assignments work in mentoring?",advice,0.8,0,0,12,5,1263,v1.2.27-no-typo-normalize,750
+135,"115. Do you mentor RPS distinction candidates?","114. Can I book one-to-one photography tuition near Coventry?",advice,0.5,0,0,12,5,979,v1.2.27-no-typo-normalize,662
+136,"116. How often do private lessons run?","115. Do you mentor RPS distinction candidates?",advice,0.8,0,0,3,5,888,v1.2.27-no-typo-normalize,620
+137,"117. Is mentoring done via Zoom or in person?","116. How often do private lessons run?",advice,0.8,0,0,7,5,1365,v1.2.27-no-typo-normalize,867
+138,"118. Can I book an ongoing coaching package?","117. Is mentoring done via Zoom or in person?",advice,0.5,0,0,2,5,377,v1.2.27-no-typo-normalize,757
+139,"119. What's the difference between mentoring and private tuition?","118. Can I book an ongoing coaching package?",advice,0.8,0,0,12,5,1318,v1.2.27-no-typo-normalize,670
+140,"120. Do you give portfolio feedback or image critiques?","119. What's the difference between mentoring and private tuition?",advice,0.5,0,0,3,5,500,v1.2.27-no-typo-normalize,729
+141,"121. Can I pause or resume mentoring later?","120. Do you give portfolio feedback or image critiques?",advice,0.8,0,0,6,5,1359,v1.2.27-no-typo-normalize,643
+142,"122. Where can I find your terms and conditions?","121. Can I pause or resume mentoring later?",advice,0.8,0,0,12,5,1241,v1.2.27-no-typo-normalize,767
+143,"123. What's your refund policy for workshops or lessons?","122. Where can I find your terms and conditions?",events,0.8,38,1,0,0,106,v1.2.27-no-typo-normalize,150
+144,"124. Do you have a privacy policy about newsletter sign-ups?","123. What's your refund policy for workshops or lessons?",advice,0.1,0,0,0,5,48,v1.2.27-no-typo-normalize,270
+145,"125. How do I subscribe to your newsletter?","124. Do you have a privacy policy about newsletter sign-ups?",advice,0.8,0,0,12,5,1284,v1.2.27-no-typo-normalize,695
+146,"126. How do I contact Alan directly?","125. How do I subscribe to your newsletter?",advice,0.8,0,0,12,5,1093,v1.2.27-no-typo-normalize,624
+147,"127. Where are your photography sessions held?","126. How do I contact Alan directly?",advice,0.5,0,0,12,5,960,v1.2.27-no-typo-normalize,644
+148,"128. Do you offer corporate training or team photography days?","127. Where are your photography sessions held?",advice,0.5,0,0,12,5,918,v1.2.27-no-typo-normalize,642
+149,"129. Can I see your awards and qualifications?","128. Do you offer corporate training or team photography days?",advice,0.5,0,0,12,5,1010,v1.2.27-no-typo-normalize,727
+150,"130. Where can I read your photography blog and tips?","129. Can I see your awards and qualifications?",advice,0.5,0,0,12,5,939,v1.2.27-no-typo-normalize,814
+151,"131. How do I know which course or workshop is best for me?","130. Where can I read your photography blog and tips?",events,0.8,32,1,0,0,102,v1.2.27-no-typo-normalize,150
+152,"132. What is exposure and how do I control it?","131. How do I know which course or workshop is best for me?",advice,0.5,0,0,12,5,948,v1.2.27-no-typo-normalize,630
+153,"133. How does aperture affect exposure and depth of field?","132. What is exposure and how do I control it?",advice,0.8,0,0,12,5,1124,v1.2.27-no-typo-normalize,850
+154,"134. What does shutter speed do in photography?","133. How does aperture affect exposure and depth of field?",advice,0.5,0,0,12,5,920,v1.2.27-no-typo-normalize,609
+155,"135. How does ISO sensitivity influence image brightness?","134. What does shutter speed do in photography?",advice,0.5,0,0,8,5,917,v1.2.27-no-typo-normalize,720
+156,"136. What are the relationships between aperture","135. How does ISO sensitivity influence image brightness?",advice,0.5,0,0,12,5,884,v1.2.27-no-typo-normalize,627
+157,"137. How do I use manual mode effectively?","136. What are the relationships between aperture",advice,0.5,0,0,4,5,651,v1.2.27-no-typo-normalize,703
+158,"138. What is the exposure triangle?","137. How do I use manual mode effectively?",advice,0.8,0,0,12,5,1166,v1.2.27-no-typo-normalize,589
+159,"139. How do camera metering modes work?","138. What is the exposure triangle?",advice,0.8,0,0,12,5,1235,v1.2.27-no-typo-normalize,640
+160,"140. When should I use spot vs evaluative metering?","139. How do camera metering modes work?",advice,0.5,0,0,8,5,925,v1.2.27-no-typo-normalize,658
+161,"141. What is exposure bracketing and when should I use it?","140. When should I use spot vs evaluative metering?",advice,0.5,0,0,12,5,960,v1.2.27-no-typo-normalize,566
+162,"142. How do I ensure my focus is sharp in every shot?","141. What is exposure bracketing and when should I use it?",advice,0.8,0,0,4,5,794,v1.2.27-no-typo-normalize,684
+163,"143. What causes out-of-focus images and how can I prevent it?","142. How do I ensure my focus is sharp in every shot?",advice,0.5,0,0,12,5,957,v1.2.27-no-typo-normalize,699
+164,"144. How do I control depth of field for portraits vs landscapes?","143. What causes out-of-focus images and how can I prevent it?",advice,0.8,0,0,12,5,1173,v1.2.27-no-typo-normalize,677
+165,"145. What is dynamic range and how do I maximise it?","144. How do I control depth of field for portraits vs landscapes?",advice,0.5,0,0,12,5,950,v1.2.27-no-typo-normalize,626
+166,"146. How do I balance highlights and shadows in-camera?","145. What is dynamic range and how do I maximise it?",advice,0.8,0,0,12,5,1221,v1.2.27-no-typo-normalize,634
+167,"147. What is white balance and how do I set it correctly?","146. How do I balance highlights and shadows in-camera?",advice,0.5,0,0,12,5,890,v1.2.27-no-typo-normalize,698
+168,"148. What's the difference between auto and manual white balance?","147. What is white balance and how do I set it correctly?",advice,0.5,0,0,12,5,890,v1.2.27-no-typo-normalize,613
+169,"149. How do drive modes work on my camera?","148. What's the difference between auto and manual white balance?",advice,0.8,0,0,12,5,1227,v1.2.27-no-typo-normalize,574
+170,"150. When should I use continuous shooting vs single shot?","149. How do drive modes work on my camera?",advice,0.5,0,0,8,5,912,v1.2.27-no-typo-normalize,671
+171,"151. What are the pros and cons of shooting JPEG vs RAW?","150. When should I use continuous shooting vs single shot?",advice,0.8,0,0,12,5,1126,v1.2.27-no-typo-normalize,605
+172,"152. When should I shoot RAW instead of JPEG?","151. What are the pros and cons of shooting JPEG vs RAW?",advice,0.8,0,0,12,5,1105,v1.2.27-no-typo-normalize,694
+173,"153. What is the difference between full-frame and cropped sensors?","152. When should I shoot RAW instead of JPEG?",advice,0.5,0,0,12,5,961,v1.2.27-no-typo-normalize,569
+174,"154. How does sensor size affect field of view and image quality?","153. What is the difference between full-frame and cropped sensors?",advice,0.5,0,0,12,5,934,v1.2.27-no-typo-normalize,669
+175,"155. What is focal length and how does it change perspective?","154. How does sensor size affect field of view and image quality?",advice,0.5,0,0,12,5,939,v1.2.27-no-typo-normalize,697
+176,"156. How does focal length affect compression in portraits and landscapes?","155. What is focal length and how does it change perspective?",advice,0.5,0,0,12,5,979,v1.2.27-no-typo-normalize,613
+177,"157. What are the 10 most essential camera accessories?","156. How does focal length affect compression in portraits and landscapes?",advice,0.8,0,0,12,5,1213,v1.2.27-no-typo-normalize,583
+178,"158. How do I choose my first camera bag?","157. What are the 10 most essential camera accessories?",advice,0.8,0,0,12,5,1221,v1.2.27-no-typo-normalize,580
+179,"159. What's the difference between prime and zoom lenses?","158. How do I choose my first camera bag?",advice,0.8,0,0,12,5,1221,v1.2.27-no-typo-normalize,585
+180,"160. Should I buy new","159. What's the difference between prime and zoom lenses?",advice,0.5,0,0,3,5,475,v1.2.27-no-typo-normalize,692
+181,"161. How do I clean my camera sensor safely?","160. Should I buy new",advice,0.8,0,0,12,5,1217,v1.2.27-no-typo-normalize,683
+182,"162. What filters should I own as a beginner?","161. How do I clean my camera sensor safely?",advice,0.8,0,0,12,5,1166,v1.2.27-no-typo-normalize,593
+183,"163. What do ND filters do and when should I use them?","162. What filters should I own as a beginner?",advice,0.8,0,0,12,5,1166,v1.2.27-no-typo-normalize,667
+184,"164. Are UV filters necessary for lens protection?","163. What do ND filters do and when should I use them?",advice,0.8,0,0,12,5,1161,v1.2.27-no-typo-normalize,659
+185,"165. How do I choose the right tripod?","164. Are UV filters necessary for lens protection?",advice,0.8,0,0,12,5,1237,v1.2.27-no-typo-normalize,697
+186,"166. How do I stabilise my tripod on uneven ground?","165. How do I choose the right tripod?",advice,0.8,0,0,12,5,1237,v1.2.27-no-typo-normalize,636
+187,"167. What are mirrorless cameras and are they better than DSLRs?","166. How do I stabilise my tripod on uneven ground?",advice,0.8,0,0,12,5,1207,v1.2.27-no-typo-normalize,612
+188,"168. How do I select the best editing software in 2025?","167. What are mirrorless cameras and are they better than DSLRs?",advice,0.5,0,0,12,5,937,v1.2.27-no-typo-normalize,601
+189,"169. What's the difference between Lightroom and Photoshop?","168. How do I select the best editing software in 2025?",advice,0.5,0,0,12,5,957,v1.2.27-no-typo-normalize,577
+190,"170. How do I import and organise photos for editing?","169. What's the difference between Lightroom and Photoshop?",advice,0.5,0,0,12,5,879,v1.2.27-no-typo-normalize,625
+191,"171. What's the best workflow for editing RAW images?","170. How do I import and organise photos for editing?",advice,0.5,0,0,12,5,923,v1.2.27-no-typo-normalize,697
+192,"172. What is framing and how do I use it in composition?","171. What's the best workflow for editing RAW images?",advice,0.8,0,0,12,5,1126,v1.2.27-no-typo-normalize,650
+193,"173. How do I develop my own photography style?","172. What is framing and how do I use it in composition?",advice,0.5,0,0,12,5,936,v1.2.27-no-typo-normalize,696
+194,"174. What makes a photo tell a story?","173. How do I develop my own photography style?",advice,0.5,0,0,12,5,893,v1.2.27-no-typo-normalize,655
+195,"175. What is visual storytelling in photography?","174. What makes a photo tell a story?",advice,0.8,0,0,12,5,1124,v1.2.27-no-typo-normalize,612
+196,"176. How do I find compositional balance in an image?","175. What is visual storytelling in photography?",advice,0.8,0,0,12,5,1146,v1.2.27-no-typo-normalize,687
+197,"177. What is contrast and how does it affect composition?","176. How do I find compositional balance in an image?",advice,0.8,0,0,12,5,1126,v1.2.27-no-typo-normalize,707
+198,"178. How do I improve my photography composition overall?","177. What is contrast and how does it affect composition?",advice,0.8,0,0,12,5,1142,v1.2.27-no-typo-normalize,591
+199,"179. What is negative space and how can I use it creatively?","178. How do I improve my photography composition overall?",advice,0.5,0,0,12,5,956,v1.2.27-no-typo-normalize,678
+200,"180. What are the main composition rules in photography?","179. What is negative space and how can I use it creatively?",advice,0.8,0,0,12,5,1106,v1.2.27-no-typo-normalize,684
+201,"181. How do I use the rule of thirds effectively?","180. What are the main composition rules in photography?",advice,0.5,0,0,3,5,503,v1.2.27-no-typo-normalize,708
+202,"182. What are leading lines and how do they guide the viewer's eye?","181. How do I use the rule of thirds effectively?",advice,0.5,0,0,12,5,954,v1.2.27-no-typo-normalize,605
+203,"183. How can I break composition rules intentionally?","182. What are leading lines and how do they guide the viewer's eye?",advice,0.8,0,0,12,5,1163,v1.2.27-no-typo-normalize,681
+204,"184. What's the difference between balance and symmetry?","183. How can I break composition rules intentionally?",advice,0.5,0,0,12,5,944,v1.2.27-no-typo-normalize,601
+205,"185. How do light and colour affect composition?","184. What's the difference between balance and symmetry?",advice,0.8,0,0,12,5,1186,v1.2.27-no-typo-normalize,587
+206,"186. What are the best compositional tips for landscapes?","185. How do light and colour affect composition?",advice,0.8,0,0,12,5,1194,v1.2.27-no-typo-normalize,751
+207,"187. How do I photograph architecture effectively?","186. What are the best compositional tips for landscapes?",advice,0.5,0,0,12,5,913,v1.2.27-no-typo-normalize,617
+208,"188. What is minimalist photography and how can I try it?","187. How do I photograph architecture effectively?",advice,0.5,0,0,12,5,923,v1.2.27-no-typo-normalize,607
+209,"189. How do I take great portrait photos?","188. What is minimalist photography and how can I try it?",advice,0.5,0,0,12,5,927,v1.2.27-no-typo-normalize,610
+210,"190. What are the key settings for street photography?","189. How do I take great portrait photos?",advice,0.5,0,0,12,5,913,v1.2.27-no-typo-normalize,620
+211,"191. How do I shoot product photos with simple setups?","190. What are the key settings for street photography?",advice,0.5,0,0,12,5,951,v1.2.27-no-typo-normalize,594
+212,"192. What is still life photography and what gear do I need?","191. How do I shoot product photos with simple setups?",advice,0.8,0,0,12,5,1090,v1.2.27-no-typo-normalize,805
+213,"193. How do I capture long exposure photos at night?","192. What is still life photography and what gear do I need?",advice,0.5,0,0,12,5,937,v1.2.27-no-typo-normalize,675
+214,"194. What are the best techniques for macro photography?","193. How do I capture long exposure photos at night?",advice,0.5,0,0,12,5,911,v1.2.27-no-typo-normalize,660
+215,"195. How can I improve my landscape photography?","194. What are the best techniques for macro photography?",advice,0.5,0,0,12,5,928,v1.2.27-no-typo-normalize,722
+216,"196. How do I shoot effective black and white images?","195. How can I improve my landscape photography?",advice,0.5,0,0,12,5,967,v1.2.27-no-typo-normalize,668
+217,"197. How do lighting conditions change across genres?","196. How do I shoot effective black and white images?",advice,0.8,0,0,1,5,492,v1.2.27-no-typo-normalize,664
+218,"198. What camera mode should I use for portraits?","197. How do lighting conditions change across genres?",advice,0.8,0,0,12,5,1207,v1.2.27-no-typo-normalize,613
+219,"199. What's the best lens for street photography?","198. What camera mode should I use for portraits?",advice,0.8,0,0,12,5,1188,v1.2.27-no-typo-normalize,606
+220,"200. How do I control reflections in product photography?","199. What's the best lens for street photography?",advice,0.5,0,0,12,5,932,v1.2.27-no-typo-normalize,693
+221,"201. How can I photograph architecture with straight lines?","200. How do I control reflections in product photography?",advice,0.5,0,0,12,5,929,v1.2.27-no-typo-normalize,631
+222,"202. How can I practice depth of field control?","201. How can I photograph architecture with straight lines?",advice,0.8,0,0,10,5,1211,v1.2.27-no-typo-normalize,813
+223,"203. What exercises help me understand movement blur?","202. How can I practice depth of field control?",advice,0.5,0,0,12,5,957,v1.2.27-no-typo-normalize,675
+224,"204. What is a triptych and how do I create one?","203. What exercises help me understand movement blur?",advice,0.5,0,0,12,5,957,v1.2.27-no-typo-normalize,678
+225,"205. How can I experiment with minimalism in photography?","204. What is a triptych and how do I create one?",advice,0.5,0,0,12,5,925,v1.2.27-no-typo-normalize,605
+226,"206. How do I photograph dice or still objects creatively?","205. How can I experiment with minimalism in photography?",advice,0.5,0,0,12,5,911,v1.2.27-no-typo-normalize,589
+227,"207. How do I shoot portraits using natural light?","206. How do I photograph dice or still objects creatively?",advice,0.5,0,0,12,5,951,v1.2.27-no-typo-normalize,576
+228,"208. What makes a strong landscape composition?","207. How do I shoot portraits using natural light?",advice,0.8,0,0,12,5,1169,v1.2.27-no-typo-normalize,625
+229,"209. How do I photograph macro subjects like flowers or insects?","208. What makes a strong landscape composition?",advice,0.5,0,0,12,5,911,v1.2.27-no-typo-normalize,796
+230,"210. How do I plan an architecture photography shoot?","209. How do I photograph macro subjects like flowers or insects?",advice,0.5,0,0,12,5,921,v1.2.27-no-typo-normalize,575
+231,"211. How do I capture the essence of street life?","210. How do I plan an architecture photography shoot?",advice,0.5,0,0,7,5,848,v1.2.27-no-typo-normalize,655
+232,"212. How do I photograph still life with interesting shadows?","211. How do I capture the essence of street life?",advice,0.5,0,0,12,5,925,v1.2.27-no-typo-normalize,583
+233,"213. What's the best approach to black and white assignments?","212. How do I photograph still life with interesting shadows?",advice,0.5,0,0,12,5,932,v1.2.27-no-typo-normalize,575
+234,"214. How do I use the seasons to influence my photography?","213. What's the best approach to black and white assignments?",advice,0.5,0,0,12,5,918,v1.2.27-no-typo-normalize,610
+235,"215. What are creative ways to interpret ""shadow photography""?","214. How do I use the seasons to influence my photography?",advice,0.5,0,0,12,5,920,v1.2.27-no-typo-normalize,686
+236,"216. How can I combine multiple assignments into one creative project?","215. What are creative ways to interpret ""shadow photography""?",advice,0.5,0,0,12,5,1024,v1.2.27-no-typo-normalize,709
+237,"217. How do I print photos in the correct size and resolution?","216. How can I combine multiple assignments into one creative project?",advice,0.5,0,0,12,5,981,v1.2.27-no-typo-normalize,705
+238,"218. What DPI should I use for printing high-quality images?","217. How do I print photos in the correct size and resolution?",advice,0.5,0,0,12,5,957,v1.2.27-no-typo-normalize,680
+239,"219. How do I resize images for web vs print?","218. What DPI should I use for printing high-quality images?",advice,0.5,0,0,12,5,960,v1.2.27-no-typo-normalize,744
+240,"220. What is the history of photography from film to digital?","219. How do I resize images for web vs print?",advice,0.5,0,0,12,5,920,v1.2.27-no-typo-normalize,670
+241,"221. How can I test my colour vision accuracy?","220. What is the history of photography from film to digital?",advice,0.5,0,0,7,5,993,v1.2.27-no-typo-normalize,582
+242,"222. How do I back up my photos safely using the 3-2-1 method?","221. How can I test my colour vision accuracy?",advice,0.5,0,0,12,5,880,v1.2.27-no-typo-normalize,591
+243,"223. What's the best way to store and organise digital files?","222. How do I back up my photos safely using the 3-2-1 method?",advice,0.5,0,0,12,5,955,v1.2.27-no-typo-normalize,632
+244,"224. How can I use the exposure calculator tool on the site?","223. What's the best way to store and organise digital files?",advice,0.5,0,0,12,5,966,v1.2.27-no-typo-normalize,672
+245,"225. How does light change throughout the seasons?","224. How can I use the exposure calculator tool on the site?",advice,0.5,0,0,12,5,983,v1.2.27-no-typo-normalize,570
+246,"226. What are key tips for shooting in different seasonal conditions?","225. How does light change throughout the seasons?",advice,0.8,0,0,12,5,1251,v1.2.27-no-typo-normalize,583
+247,"227. What defines abstract photography and how do I approach it?","226. What are key tips for shooting in different seasonal conditions?",advice,0.5,0,0,12,5,920,v1.2.27-no-typo-normalize,578
+248,"228. How do I photograph shadows effectively?","227. What defines abstract photography and how do I approach it?",advice,0.5,0,0,12,5,911,v1.2.27-no-typo-normalize,563
+249,"229. What's the difference between DSLR and point-and-shoot cameras?","228. How do I photograph shadows effectively?",advice,0.8,0,0,12,5,1207,v1.2.27-no-typo-normalize,595
+250,"230. How can I improve my technical control while keeping creativity?","229. What's the difference between DSLR and point-and-shoot cameras?",advice,0.5,0,0,10,5,990,v1.2.27-no-typo-normalize,701
+251,"231. How can I combine all modules to build a strong photography portfolio?","230. How can I improve my technical control while keeping creativity?",advice,0.5,0,0,12,5,918,v1.2.27-no-typo-normalize,577

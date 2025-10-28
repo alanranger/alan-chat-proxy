@@ -1,0 +1,434 @@
+{
+  "timestamp": "2025-10-14T17:33:58.350Z",
+  "testType": "complete_followup_handling",
+  "totalFollowUps": 20,
+  "handledFollowUps": 20,
+  "handlingRate": 100,
+  "intentMatches": 17,
+  "intentAccuracy": 85,
+  "categoryAnalysis": {
+    "Generic Course Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Specific Course Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Generic Workshop Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Equipment Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "About Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Service Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Free Course Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Specific Workshop Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Technical Photography Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Equipment Advice Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Private Lesson Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Course Content Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Beginner Suitability Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 0
+    },
+    "Workshop Pricing Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 0
+    },
+    "Technical Settings Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Location-Specific Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Course Format Comparison Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Camera Type Advice Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    },
+    "Upcoming Events Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 0
+    },
+    "About/Experience Query": {
+      "total": 1,
+      "handled": 1,
+      "intentMatches": 1
+    }
+  },
+  "unhandled": [],
+  "intentMismatches": [
+    {
+      "questionId": 13,
+      "category": "Beginner Suitability Query",
+      "gotIntent": "events",
+      "expectedIntent": "advice"
+    },
+    {
+      "questionId": 14,
+      "category": "Workshop Pricing Query",
+      "gotIntent": "events",
+      "expectedIntent": "advice"
+    },
+    {
+      "questionId": 19,
+      "category": "Upcoming Events Query",
+      "gotIntent": "events",
+      "expectedIntent": "advice"
+    }
+  ],
+  "results": [
+    {
+      "questionId": 1,
+      "category": "Generic Course Query",
+      "userQuestion": "do you do photography courses?",
+      "userFollowUpResponse": "I am in interested in the online courses as cant get to coventry",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "online photography courses",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "service",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 2,
+      "category": "Specific Course Query",
+      "userQuestion": "what beginners photography courses do you have?",
+      "userFollowUpResponse": "the one that says camera course",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "camera course for beginners",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "product",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 3,
+      "category": "Generic Workshop Query",
+      "userQuestion": "do you run photography workshops?",
+      "userFollowUpResponse": "the bluebells ones",
+      "followUpResult": {
+        "type": "route_to_events",
+        "newQuery": "bluebell photography workshops",
+        "newIntent": "events"
+      },
+      "expectedIntent": "events",
+      "expectedKind": "event",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 4,
+      "category": "Equipment Query",
+      "userQuestion": "what camera should I buy?",
+      "userFollowUpResponse": "i like to shoot all sorts so any entry level beginners camera - i heard that sony was good",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "sony camera recommendations",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "article",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 5,
+      "category": "About Query",
+      "userQuestion": "who is Alan Ranger?",
+      "userFollowUpResponse": "how long has he been teaching and where is he based?",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "Alan Ranger teaching experience",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "landing",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 6,
+      "category": "Service Query",
+      "userQuestion": "what photography services do you offer?",
+      "userFollowUpResponse": "i am interested in private lessons as my work rota and shifts mean i cant do regular evening classes",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "private photography lessons",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "service",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 7,
+      "category": "Free Course Query",
+      "userQuestion": "is there a free online photography course?",
+      "userFollowUpResponse": "yes , is it really free and how do i join?",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "free online photography course confirmation",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "landing",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 8,
+      "category": "Specific Workshop Query",
+      "userQuestion": "when is the next bluebell photography workshop?",
+      "userFollowUpResponse": "what are the dates and cost and is it suitable for beginners?  where are they?",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "beginner photography courses",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "mixed",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 9,
+      "category": "Technical Photography Query",
+      "userQuestion": "how do I use manual mode on my camera?",
+      "userFollowUpResponse": "the exposure settings",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "manual exposure settings",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "article",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 10,
+      "category": "Equipment Advice Query",
+      "userQuestion": "what's the best lens for portrait photography?",
+      "userFollowUpResponse": "i use a sony and can spend about £100",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "sony camera recommendations",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "article",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 11,
+      "category": "Private Lesson Query",
+      "userQuestion": "do you offer one-to-one photography lessons?",
+      "userFollowUpResponse": "just basic camera settings, composition and general editing",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "camera settings and composition lessons",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "service",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 12,
+      "category": "Course Content Query",
+      "userQuestion": "what's included in your landscape photography course?",
+      "userFollowUpResponse": "i m a beginner, is that ok?  what sort of camera do i need?",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "beginner photography courses",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "mixed",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 13,
+      "category": "Beginner Suitability Query",
+      "userQuestion": "are your photography courses suitable for complete beginners?",
+      "userFollowUpResponse": "the beginners editing course",
+      "followUpResult": {
+        "type": "route_to_events",
+        "newQuery": "beginner editing course",
+        "newIntent": "events"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "event",
+      "intentMatch": false,
+      "handled": true
+    },
+    {
+      "questionId": 14,
+      "category": "Workshop Pricing Query",
+      "userQuestion": "how much does the macro photography workshop cost?",
+      "userFollowUpResponse": "the one for Sunday 17 May 2026",
+      "followUpResult": {
+        "type": "route_to_events",
+        "newQuery": "macro workshop Sunday 17 May 2026",
+        "newIntent": "events"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "article",
+      "intentMatch": false,
+      "handled": true
+    },
+    {
+      "questionId": 15,
+      "category": "Technical Settings Query",
+      "userQuestion": "what camera settings should I use for night photography?",
+      "userFollowUpResponse": "astrophotography",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "astrophotography settings",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "event",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 16,
+      "category": "Location-Specific Query",
+      "userQuestion": "do you have any photography courses in Birmingham?",
+      "userFollowUpResponse": "no i want something close to Birmingham",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "photography courses near Birmingham",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "service",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 17,
+      "category": "Course Format Comparison Query",
+      "userQuestion": "what's the difference between your online and in-person courses?",
+      "userFollowUpResponse": "give me the differences",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "online vs in-person course differences",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "mixed",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 18,
+      "category": "Camera Type Advice Query",
+      "userQuestion": "can you help me choose between a DSLR and mirrorless camera?",
+      "userFollowUpResponse": "I am intermediate.  have had a camera for years but want  to upgrade as my camera is over 10yrs old now",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "camera upgrade for intermediate photographers",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "mixed",
+      "intentMatch": true,
+      "handled": true
+    },
+    {
+      "questionId": 19,
+      "category": "Upcoming Events Query",
+      "userQuestion": "what photography workshops do you have coming up this month?",
+      "userFollowUpResponse": "any outdoor photography",
+      "followUpResult": {
+        "type": "route_to_events",
+        "newQuery": "outdoor photography workshops",
+        "newIntent": "events"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "event",
+      "intentMatch": false,
+      "handled": true
+    },
+    {
+      "questionId": 20,
+      "category": "About/Experience Query",
+      "userQuestion": "how long have you been teaching photography?",
+      "userFollowUpResponse": "are you qualified?",
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "Alan Ranger qualifications",
+        "newIntent": "advice"
+      },
+      "expectedIntent": "advice",
+      "expectedKind": "landing",
+      "intentMatch": true,
+      "handled": true
+    }
+  ]
+}

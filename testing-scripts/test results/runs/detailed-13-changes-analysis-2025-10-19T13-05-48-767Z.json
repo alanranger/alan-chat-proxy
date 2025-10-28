@@ -1,0 +1,293 @@
+{
+  "timestamp": "2025-10-19T13:05:48.766Z",
+  "totalChanges": 15,
+  "unexpectedChanges": 13,
+  "changes": [
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/exmoor-photography-workshops-seascapes-lynmouth",
+      "event_title": "Exmoor Photography Workshops - Seascapes | Lynmouth",
+      "duration_hours": 29.5,
+      "baseline": {
+        "product_title": "Landscape Photography DEVON Workshops - Various Dates",
+        "price_gbp": "750",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-photography-devon-hartland-quay"
+      },
+      "current": {
+        "product_title": "EXMOOR Photography Workshop - Sat 15th - Sun 16th Mar 2025",
+        "price_gbp": 575,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/exmoor-photography-workshops-lynmouth"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": true,
+        "title_change": true,
+        "notes": "Exmoor workshop - price changed from £750 to £575",
+        "likely_cause": "Algorithm now prefers more specific location matching"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-autumn",
+      "event_title": "Peak District Photography Workshops Padley Gorge | 1-11",
+      "duration_hours": 6.5,
+      "baseline": {
+        "product_title": "\"PEAK DISTRICT Photography Workshops - May",
+        "price_gbp": "Oct and Nov\"",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire"
+      },
+      "current": {
+        "product_title": "PEAK DISTRICT Photography Workshops - May, Oct and Nov",
+        "price_gbp": 175,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": false,
+        "title_change": true,
+        "notes": "Peak District workshop - product title formatting improved",
+        "likely_cause": "Algorithm now prefers cleaner product titles"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-autumn-2",
+      "event_title": "Peak District Photography Workshops Padley Gorge | 2-11",
+      "duration_hours": 6.5,
+      "baseline": {
+        "product_title": "\"PEAK DISTRICT Photography Workshops - May",
+        "price_gbp": "Oct and Nov\"",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire"
+      },
+      "current": {
+        "product_title": "PEAK DISTRICT Photography Workshops - May, Oct and Nov",
+        "price_gbp": 175,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": false,
+        "title_change": true,
+        "notes": "Peak District workshop - product title formatting improved",
+        "likely_cause": "Algorithm now prefers cleaner product titles"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-spring",
+      "event_title": "Peak District Photography Workshops Padley Gorge - 16-5",
+      "duration_hours": 6.5,
+      "baseline": {
+        "product_title": "\"PEAK DISTRICT Photography Workshops - May",
+        "price_gbp": "Oct and Nov\"",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire"
+      },
+      "current": {
+        "product_title": "PEAK DISTRICT Photography Workshops - May, Oct and Nov",
+        "price_gbp": 175,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": false,
+        "title_change": true,
+        "notes": "Peak District workshop - product title formatting improved",
+        "likely_cause": "Algorithm now prefers cleaner product titles"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/peak-district-photography-workshops-winter",
+      "event_title": "Peak District Photography Workshops Padley Gorge | 10-18",
+      "duration_hours": 6.5,
+      "baseline": {
+        "product_title": "\"PEAK DISTRICT Photography Workshops - May",
+        "price_gbp": "Oct and Nov\"",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire"
+      },
+      "current": {
+        "product_title": "PEAK DISTRICT Photography Workshops - May, Oct and Nov",
+        "price_gbp": 175,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/landscape-peak-district-photography-workshops-derbyshire"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": false,
+        "title_change": true,
+        "notes": "Peak District workshop - product title formatting improved",
+        "likely_cause": "Algorithm now prefers cleaner product titles"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/secrets-of-woodland-photography-masterclass-autumn",
+      "event_title": "The Secrets of Woodland Photography - 1-Day Masterclass Oct",
+      "duration_hours": 6,
+      "baseline": {
+        "product_title": "\"The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan",
+        "price_gbp": "Apr",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop"
+      },
+      "current": {
+        "product_title": "The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct",
+        "price_gbp": 125,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": false,
+        "title_change": true,
+        "notes": "Woodland Photography workshop - product title formatting improved",
+        "likely_cause": "Algorithm now prefers cleaner product titles"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/secrets-of-woodland-photography-masterclass-spring",
+      "event_title": "The Secrets of Woodland Photography - 1-Day Masterclass Apr",
+      "duration_hours": 6,
+      "baseline": {
+        "product_title": "\"The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan",
+        "price_gbp": "Apr",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop"
+      },
+      "current": {
+        "product_title": "The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct",
+        "price_gbp": 125,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": false,
+        "title_change": true,
+        "notes": "Woodland Photography workshop - product title formatting improved",
+        "likely_cause": "Algorithm now prefers cleaner product titles"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/secrets-of-woodland-photography-masterclass-summer",
+      "event_title": "The Secrets of Woodland Photography - 1-Day Masterclass Aug",
+      "duration_hours": 6,
+      "baseline": {
+        "product_title": "\"The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan",
+        "price_gbp": "Apr",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop"
+      },
+      "current": {
+        "product_title": "The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct",
+        "price_gbp": 125,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": false,
+        "title_change": true,
+        "notes": "Woodland Photography workshop - product title formatting improved",
+        "likely_cause": "Algorithm now prefers cleaner product titles"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/secrets-of-woodland-photography-masterclass-winter",
+      "event_title": "The Secrets of Woodland Photography - 1-Day Masterclass 11-1",
+      "duration_hours": 6,
+      "baseline": {
+        "product_title": "\"The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan",
+        "price_gbp": "Apr",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop"
+      },
+      "current": {
+        "product_title": "The Secret of WOODLAND PHOTOGRAPHY- 1-Day Jan, Apr, Aug, Oct",
+        "price_gbp": 125,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/secrets-of-woodland-photography-workshop"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": false,
+        "title_change": true,
+        "notes": "Woodland Photography workshop - product title formatting improved",
+        "likely_cause": "Algorithm now prefers cleaner product titles"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-coventry-cv4",
+      "event_title": "Woodland Photography Walk - Coventry Tile Hill NR - Winter",
+      "duration_hours": 2,
+      "baseline": {
+        "product_title": "The Art of GARDEN PHOTOGRAPHY  - Coventry -  May and July",
+        "price_gbp": "35",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/garden-photography-workshop"
+      },
+      "current": {
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": 15,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": true,
+        "title_change": true,
+        "notes": "Woodland walk - changed from Garden Photography (£35) to Woodland Walks (£15)",
+        "likely_cause": "Algorithm now prefers more specific activity matching"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-coventry-piles-coppice",
+      "event_title": "Woodland Photography Walk | Coventry | Piles Coppice",
+      "duration_hours": 2,
+      "baseline": {
+        "product_title": "The Art of GARDEN PHOTOGRAPHY  - Coventry -  May and July",
+        "price_gbp": "35",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/garden-photography-workshop"
+      },
+      "current": {
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": 15,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": true,
+        "title_change": true,
+        "notes": "Woodland walk - changed from Garden Photography (£35) to Woodland Walks (£15)",
+        "likely_cause": "Algorithm now prefers more specific activity matching"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-coventry-tile-hill",
+      "event_title": "Woodland Photography Walk - Coventry - Tile Hill Wood ",
+      "duration_hours": 2,
+      "baseline": {
+        "product_title": "The Art of GARDEN PHOTOGRAPHY  - Coventry -  May and July",
+        "price_gbp": "35",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/garden-photography-workshop"
+      },
+      "current": {
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": 15,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": true,
+        "title_change": true,
+        "notes": "Woodland walk - changed from Garden Photography (£35) to Woodland Walks (£15)",
+        "likely_cause": "Algorithm now prefers more specific activity matching"
+      }
+    },
+    {
+      "event_url": "https://www.alanranger.com/photographic-workshops-near-me/woodland-photography-walk-kenilworth-crackley-woods",
+      "event_title": "Woodland Photography Walk | Kenilworth | Crackley Woods",
+      "duration_hours": 2,
+      "baseline": {
+        "product_title": "Fireworks Photography Workshop | Long Exposure | Kenilworth",
+        "price_gbp": "75",
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/fireworks-photography-workshop-kenilworth"
+      },
+      "current": {
+        "product_title": "WARWICKSHIRE Woodland PHOTOGRAPHY WALKS - Monthly - 2hrs",
+        "price_gbp": 15,
+        "product_url": "https://www.alanranger.com/photo-workshops-uk/woodland-photography-walk-warwickshire"
+      },
+      "analysis": {
+        "price_change": true,
+        "product_change": true,
+        "title_change": true,
+        "notes": "Woodland walk - changed from Garden Photography (£35) to Woodland Walks (£15)",
+        "likely_cause": "Algorithm now prefers more specific activity matching"
+      }
+    }
+  ]
+}

@@ -1,0 +1,215 @@
+{
+  "timestamp": "2025-10-14T17:16:24.739Z",
+  "testType": "phase3_simulated_followup",
+  "totalTests": 8,
+  "passedTests": 8,
+  "failedTests": 0,
+  "successRate": 100,
+  "contentMetrics": {
+    "avgContentLength": 334,
+    "avgCitations": 2,
+    "avgConfidence": 83
+  },
+  "results": [
+    {
+      "scenario": "Equipment Clarification - Course Route",
+      "passed": true,
+      "clarification": {
+        "type": "equipment_clarification",
+        "question": "What type of photography activity are you planning? This will help me recommend the right equipment.",
+        "options": [
+          {
+            "text": "Photography course/workshop",
+            "query": "equipment for photography course"
+          },
+          {
+            "text": "General photography advice",
+            "query": "photography equipment advice"
+          },
+          {
+            "text": "Specific camera/lens advice",
+            "query": "camera lens recommendations"
+          }
+        ]
+      },
+      "followUpResult": {
+        "type": "route_to_events",
+        "newQuery": "equipment for photography course",
+        "newIntent": "events"
+      },
+      "content": {
+        "answer_markdown": "Here are the upcoming equipment for photography course:\n\n**Course Details:**\n- Date: Various dates available\n- Location: Coventry and online options\n- Duration: 3-week evening classes\n- Price: £150\n\n**Equipment Needed:**\n- Digital camera (any type)\n- Memory card\n- Notebook and pen\n\n**Booking:**\nContact us to book your place!",
+        "citations": [
+          "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+          "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry"
+        ],
+        "confidence": 0.85
+      },
+      "contentLength": 326,
+      "citationsCount": 2,
+      "confidence": 0.85
+    },
+    {
+      "scenario": "Equipment Clarification - Advice Route",
+      "passed": true,
+      "clarification": {
+        "type": "equipment_clarification",
+        "question": "What type of photography activity are you planning? This will help me recommend the right equipment.",
+        "options": [
+          {
+            "text": "Photography course/workshop",
+            "query": "equipment for photography course"
+          },
+          {
+            "text": "General photography advice",
+            "query": "photography equipment advice"
+          },
+          {
+            "text": "Specific camera/lens advice",
+            "query": "camera lens recommendations"
+          }
+        ]
+      },
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "photography equipment advice",
+        "newIntent": "advice"
+      },
+      "content": {
+        "answer_markdown": "Here's some helpful advice about photography equipment advice:\n\n**Key Recommendations:**\n- Start with basic equipment\n- Focus on learning fundamentals\n- Practice regularly\n- Join photography communities\n\n**Resources:**\n- Free online tutorials\n- Photography books\n- Local photography groups\n\n**Next Steps:**\nConsider our photography courses for hands-on learning!",
+        "citations": [
+          "https://www.alanranger.com/free-online-photography-course",
+          "https://www.alanranger.com/photography-advice"
+        ],
+        "confidence": 0.8
+      },
+      "contentLength": 362,
+      "citationsCount": 2,
+      "confidence": 0.8
+    },
+    {
+      "scenario": "Events Clarification - Courses Route",
+      "passed": true,
+      "clarification": {
+        "type": "events_clarification",
+        "question": "What type of photography events are you interested in?",
+        "options": [
+          {
+            "text": "Photography courses",
+            "query": "photography courses"
+          },
+          {
+            "text": "Photography workshops",
+            "query": "photography workshops"
+          },
+          {
+            "text": "Photography exhibitions",
+            "query": "photography exhibitions"
+          }
+        ]
+      },
+      "followUpResult": {
+        "type": "route_to_events",
+        "newQuery": "photography courses",
+        "newIntent": "events"
+      },
+      "content": {
+        "answer_markdown": "Here are the upcoming photography courses:\n\n**Course Details:**\n- Date: Various dates available\n- Location: Coventry and online options\n- Duration: 3-week evening classes\n- Price: £150\n\n**Equipment Needed:**\n- Digital camera (any type)\n- Memory card\n- Notebook and pen\n\n**Booking:**\nContact us to book your place!",
+        "citations": [
+          "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+          "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry"
+        ],
+        "confidence": 0.85
+      },
+      "contentLength": 313,
+      "citationsCount": 2,
+      "confidence": 0.85
+    },
+    {
+      "scenario": "Training Clarification - Workshops Route",
+      "passed": true,
+      "clarification": {
+        "type": "training_clarification",
+        "question": "What type of photography training are you looking for?",
+        "options": [
+          {
+            "text": "Photography courses",
+            "query": "photography courses"
+          },
+          {
+            "text": "Photography workshops",
+            "query": "photography workshops"
+          },
+          {
+            "text": "Photography mentoring",
+            "query": "photography mentoring"
+          }
+        ]
+      },
+      "followUpResult": {
+        "type": "route_to_events",
+        "newQuery": "photography workshops",
+        "newIntent": "events"
+      },
+      "content": {
+        "answer_markdown": "Here are the upcoming photography workshops:\n\n**Course Details:**\n- Date: Various dates available\n- Location: Coventry and online options\n- Duration: 3-week evening classes\n- Price: £150\n\n**Equipment Needed:**\n- Digital camera (any type)\n- Memory card\n- Notebook and pen\n\n**Booking:**\nContact us to book your place!",
+        "citations": [
+          "https://www.alanranger.com/photography-services-near-me/beginners-photography-course",
+          "https://www.alanranger.com/beginners-photography-lessons/camera-courses-for-beginners-coventry"
+        ],
+        "confidence": 0.85
+      },
+      "contentLength": 315,
+      "citationsCount": 2,
+      "confidence": 0.85
+    },
+    {
+      "scenario": "Training Clarification - Mentoring Route",
+      "passed": true,
+      "clarification": {
+        "type": "training_clarification",
+        "question": "What type of photography training are you looking for?",
+        "options": [
+          {
+            "text": "Photography courses",
+            "query": "photography courses"
+          },
+          {
+            "text": "Photography workshops",
+            "query": "photography workshops"
+          },
+          {
+            "text": "Photography mentoring",
+            "query": "photography mentoring"
+          }
+        ]
+      },
+      "followUpResult": {
+        "type": "route_to_advice",
+        "newQuery": "photography mentoring",
+        "newIntent": "advice"
+      },
+      "content": {
+        "answer_markdown": "Here's some helpful advice about photography mentoring:\n\n**Key Recommendations:**\n- Start with basic equipment\n- Focus on learning fundamentals\n- Practice regularly\n- Join photography communities\n\n**Resources:**\n- Free online tutorials\n- Photography books\n- Local photography groups\n\n**Next Steps:**\nConsider our photography courses for hands-on learning!",
+        "citations": [
+          "https://www.alanranger.com/free-online-photography-course",
+          "https://www.alanranger.com/photography-advice"
+        ],
+        "confidence": 0.8
+      },
+      "contentLength": 355,
+      "citationsCount": 2,
+      "confidence": 0.8
+    },
+    {
+      "scenario": "Edge Case Protection",
+      "test": "protection_test",
+      "passed": true,
+      "protectionResult": {
+        "passed": 3,
+        "failed": 0,
+        "total": 3
+      }
+    }
+  ]
+}
