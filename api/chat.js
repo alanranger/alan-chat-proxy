@@ -305,7 +305,23 @@ function findRelevantEquipmentArticles(equipmentType, articles) {
       const title = (article.title || '').toLowerCase();
       const url = (article.page_url || article.url || '').toLowerCase();
       
-      // Look for specific camera recommendation articles
+      // Look for specific camera recommendation articles by URL patterns
+      const specificCameraArticles = [
+        'are-mirrorless-cameras-better-than-dslrs',
+        '10-basic-camera-settings-for-camera',
+        'beyond-a-point-and-shoot-camera',
+        'choosing-a-camera',
+        'photography-equipment-for-beginners'
+      ];
+      
+      // First check for exact URL matches
+      const hasSpecificUrl = specificCameraArticles.some(pattern => url.includes(pattern));
+      if (hasSpecificUrl) {
+        console.log(`🔧 Found specific camera article: ${title} - ${url}`);
+        return true;
+      }
+      
+      // Then check for title patterns
       const cameraArticlePatterns = [
         'choosing', 'camera', 'equipment', 'beginner', 'mirrorless', 'dslr',
         'point-and-shoot', 'settings', 'recommendations'
