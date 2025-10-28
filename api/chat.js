@@ -2478,11 +2478,12 @@ function checkFreeCourseWorkshopPatterns(lc) {
  };
  }
  
- // Generic seasonal workshop clarification detection
- 
- const workshopTerms = ['workshop', 'course', 'lesson', 'class'];
- 
- const hasSeasonalTerm = seasonalTerms.some(term => lc.includes(term));
+// Generic seasonal workshop clarification detection
+
+const workshopTerms = ['workshop', 'course', 'lesson', 'class'];
+const seasonalTerms = ['autumn', 'spring', 'summer', 'winter', 'bluebell', 'seasonal'];
+
+const hasSeasonalTerm = seasonalTerms.some(term => lc.includes(term));
  const hasWorkshopTerm = workshopTerms.some(term => lc.includes(term));
  const isNextQuery = lc.includes("when is the next") || lc.includes("next");
  
