@@ -3,8 +3,8 @@ const path = require('path');
 
 // Read baseline and current results (from testing-scripts/test results/)
 const resultsDir = path.join(__dirname, 'test results');
-const baselineFile = path.join(resultsDir, 'quality-benchmark-before-2025-10-22T17-04-41-287Z.json');
-const currentFile = path.join(resultsDir, 'quality-benchmark-before-2025-10-22T17-26-44-940Z.json');
+const baselineFile = path.join(resultsDir, 'quality-benchmark-before-2025-10-28T16-39-06-874Z.json');
+const currentFile = path.join(resultsDir, 'quality-benchmark-before-2025-10-28T17-07-43-041Z.json');
 
 const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
 const current = JSON.parse(fs.readFileSync(currentFile, 'utf8'));
