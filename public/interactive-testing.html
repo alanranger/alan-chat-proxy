@@ -509,6 +509,7 @@
     <div class="test-section">
         <h2>📊 Results Summary</h2>
         <button class="btn btn-info" onclick="exportResults()">📥 Export Results</button>
+        <button class="btn btn-success" onclick="copyResults()">📋 Copy Results</button>
         <button class="btn btn-warning" onclick="importResults()">📤 Import Results</button>
         <button class="btn btn-secondary" onclick="clearResults()">🗑️ Clear All Results</button>
         <button class="btn btn-danger" onclick="clearOldData()">🔄 Clear Old Data & Restart</button>
@@ -1848,6 +1849,25 @@
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
+        }
+
+        function copyResults() {
+            const csvContent = generateCSV();
+            navigator.clipboard.writeText(csvContent).then(() => {
+                // Show success feedback
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '✅ Copied!';
+                button.style.backgroundColor = '#28a745';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.backgroundColor = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy to clipboard. Please try exporting instead.');
+            });
         }
 
         // Clear all results

@@ -283,21 +283,41 @@ function extractEquipmentType(query) {
 
 // Find relevant articles for equipment type
 function findRelevantEquipmentArticles(equipmentType, articles) {
- const equipmentKeywords = {
- 'tripod': ['tripod', 'tripods'],
- 'camera': ['camera', 'cameras', 'dslr', 'mirrorless'],
- 'lens': ['lens', 'lenses', 'glass'],
- 'filter': ['filter', 'filters', 'nd', 'polarizing'],
- 'flash': ['flash', 'speedlight', 'strobe'],
- 'bag': ['bag', 'backpack', 'case'],
- 'memory card': ['memory card', 'sd card', 'storage'],
- 'laptop': ['laptop', 'computer', 'macbook'],
- 'software': ['lightroom', 'photoshop', 'editing', 'post-processing']
- };
- 
- const keywords = equipmentKeywords[equipmentType] || [equipmentType];
- 
- return articles.filter(article => filterRelevantArticles(article, keywords)).slice(0, 5);
+  const equipmentKeywords = {
+    'tripod': ['tripod', 'tripods'],
+    'camera': ['camera', 'cameras', 'dslr', 'mirrorless', 'choosing', 'equipment', 'beginner'],
+    'lens': ['lens', 'lenses', 'glass'],
+    'filter': ['filter', 'filters', 'nd', 'polarizing'],
+    'flash': ['flash', 'speedlight', 'strobe'],
+    'bag': ['bag', 'backpack', 'case'],
+    'memory card': ['memory card', 'sd card', 'storage'],
+    'laptop': ['laptop', 'computer', 'macbook'],
+    'software': ['lightroom', 'photoshop', 'editing', 'post-processing']
+  };
+
+  const keywords = equipmentKeywords[equipmentType] || [equipmentType];
+  
+  // Enhanced filtering for camera recommendations
+  if (equipmentType === 'camera') {
+    return articles.filter(article => {
+      if (!article) return false;
+      
+      const title = (article.title || '').toLowerCase();
+      const url = (article.page_url || article.url || '').toLowerCase();
+      
+      // Look for specific camera recommendation articles
+      const cameraArticlePatterns = [
+        'choosing', 'camera', 'equipment', 'beginner', 'mirrorless', 'dslr',
+        'point-and-shoot', 'settings', 'recommendations'
+      ];
+      
+      return cameraArticlePatterns.some(pattern => 
+        title.includes(pattern) || url.includes(pattern)
+      );
+    }).slice(0, 5);
+  }
+  
+  return articles.filter(article => filterRelevantArticles(article, keywords)).slice(0, 5);
 }
 
 function filterRelevantArticles(article, keywords) {
@@ -527,28 +547,80 @@ function addSpecificAdvice(equipmentType) {
  return adviceMap[equipmentType] || 'Consider your specific photography needs and budget when making your choice. ';
 }
 
+// Generate specific equipment advice when relevant articles are found
+function generateSpecificEquipmentAdvice(equipmentType, relevantArticles, query) {
+  const equipmentNames = {
+    'tripod': 'tripod',
+    'camera': 'camera',
+    'lens': 'lens',
+    'filter': 'filter',
+    'flash': 'flash',
+    'bag': 'camera bag',
+    'memory card': 'memory card',
+    'laptop': 'laptop',
+    'software': 'editing software'
+  };
+
+  const equipmentName = equipmentNames[equipmentType] || equipmentType;
+  const queryLower = query.toLowerCase();
+
+  let response = `**${equipmentName.charAt(0).toUpperCase() + equipmentName.slice(1)} Recommendations:**\n\n`;
+
+  // Add specific advice based on equipment type and query context
+  if (equipmentType === 'camera') {
+    if (queryLower.includes('beginner')) {
+      response += `For beginners, I recommend starting with a camera that offers good value and room to grow. `;
+      response += `Look for cameras with manual controls, good low-light performance, and a variety of lens options. `;
+      response += `Consider your budget and whether you prefer DSLR or mirrorless systems.\n\n`;
+    } else {
+      response += `Choosing the right camera depends on your photography style, experience level, and budget. `;
+      response += `Consider factors like sensor size, autofocus performance, and lens availability. `;
+      response += `Both DSLR and mirrorless cameras offer excellent options depending on your needs.\n\n`;
+    }
+  } else if (equipmentType === 'tripod') {
+    response += `A good tripod is essential for sharp images, especially in low light or when using telephoto lenses. `;
+    response += `Consider factors like weight, height, stability, and ease of use. `;
+    response += `Carbon fiber offers the best balance of weight and stability, while aluminum provides good value.\n\n`;
+  } else {
+    response += `Choosing the right ${equipmentName} depends on your specific needs and photography style. `;
+    response += `Consider factors like quality, compatibility, and value for money.\n\n`;
+  }
+
+  // Add reference to specific articles
+  if (relevantArticles.length > 0) {
+    response += `For detailed guides and specific recommendations, check out these articles:\n\n`;
+    relevantArticles.slice(0, 3).forEach(article => {
+      const title = article.title || 'Photography Guide';
+      const url = article.page_url || article.url || '#';
+      response += `- [${title}](${url})\n`;
+    });
+  }
+
+  return response;
+}
+
 // Generate basic equipment advice when no relevant articles are found
 function generateBasicEquipmentAdvice(equipmentType) {
- const equipmentNames = {
- 'tripod': 'tripod',
- 'camera': 'camera',
- 'lens': 'lens',
- 'filter': 'filter',
- 'flash': 'flash',
- 'bag': 'camera bag',
- 'memory card': 'memory card',
- 'laptop': 'laptop',
- 'software': 'editing software'
- };
- 
- const equipmentName = equipmentNames[equipmentType] || equipmentType;
- 
- let response = `**Equipment Recommendations:**\n\n`;
- response += `Choosing the right ${equipmentName} depends on several factors: your budget, intended usage, and photography style. `;
- response += addSpecificAdvice(equipmentType);
- response += `\n\nFor detailed reviews and specific recommendations, check out Alan's photography guides on his blog.`;
- 
- return response;
+  const equipmentNames = {
+    'tripod': 'tripod',
+    'camera': 'camera',
+    'lens': 'lens',
+    'filter': 'filter',
+    'flash': 'flash',
+    'bag': 'camera bag',
+    'memory card': 'memory card',
+    'laptop': 'laptop',
+    'software': 'editing software'
+  };
+
+  const equipmentName = equipmentNames[equipmentType] || equipmentType;
+
+  let response = `**Equipment Recommendations:**\n\n`;
+  response += `Choosing the right ${equipmentName} depends on several factors: your budget, intended usage, and photography style. `;
+  response += addSpecificAdvice(equipmentType);
+  response += `\n\nFor detailed reviews and specific recommendations, check out Alan's photography guides on his blog.`;
+
+  return response;
 }
 // Helper function to clean response text and remove junk characters
 function cleanResponseText(text) {
@@ -1488,10 +1560,13 @@ function tryContentChunkAnswer(context) {
 }
 
 function tryEquipmentAdviceAnswer(lc, articles, contentChunks) {
- if (isEquipmentAdviceQuery(lc)) {
- return generateEquipmentAdviceResponse(lc, articles, contentChunks);
- }
- return null;
+  console.log(`🔧 tryEquipmentAdviceAnswer called with query="${lc}", articles=${articles.length}, chunks=${contentChunks.length}`);
+  if (isEquipmentAdviceQuery(lc)) {
+    console.log(`🔧 Equipment advice query detected, calling generateEquipmentAdviceResponse`);
+    return generateEquipmentAdviceResponse(lc, articles, contentChunks);
+  }
+  console.log(`🔧 Not an equipment advice query`);
+  return null;
 }
 
 function tryHardcodedAnswer(lc) {
@@ -6995,33 +7070,51 @@ function handleEventEntities(entities) {
 
 // Helper function to handle chunk processing
 function handleChunkProcessing(query, entities, chunks) {
- console.log(`[DEBUG] Using generateDirectAnswer for ${chunks.length} chunks`);
- 
- const debugLogs = [];
- debugLogs.push(`Processing ${chunks.length} chunks for query: "${query}"`);
- 
- // Try technical direct answer FIRST (priority for technical questions)
- const technicalAnswer = generateTechnicalDirectAnswer(query, chunks);
- console.log(`[DEBUG] generateTechnicalDirectAnswer returned: ${technicalAnswer ? 'SUCCESS' : 'NULL'}`);
- debugLogs.push(`generateTechnicalDirectAnswer returned: ${technicalAnswer ? `SUCCESS (${technicalAnswer.length} chars)` : 'NULL'}`);
- 
- if (technicalAnswer) {
- console.log(`[SUCCESS] Generated technical direct answer: "${technicalAnswer.substring(0, 100)}..."`);
- const formattedAnswer = formatResponse(technicalAnswer, 500);
- return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url), debugLogs };
- }
- 
- // Try existing direct answer system
- const directAnswer = generateDirectAnswer(query, entities, chunks);
- if (directAnswer) {
- console.log(`[SUCCESS] Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
- const formattedAnswer = formatResponse(directAnswer, 500);
- return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url), debugLogs };
- }
- 
- // Fallback to chunk processing
- const fallbackResult = processChunkFallback(chunks, query);
- return { ...fallbackResult, debugLogs };
+  console.log(`[DEBUG] Using generateDirectAnswer for ${chunks.length} chunks`);
+  
+  const debugLogs = [];
+  debugLogs.push(`Processing ${chunks.length} chunks for query: "${query}"`);
+  
+  // Try technical direct answer FIRST (priority for technical questions)
+  const technicalAnswer = generateTechnicalDirectAnswer(query, chunks);
+  console.log(`[DEBUG] generateTechnicalDirectAnswer returned: ${technicalAnswer ? 'SUCCESS' : 'NULL'}`);
+  debugLogs.push(`generateTechnicalDirectAnswer returned: ${technicalAnswer ? `SUCCESS (${technicalAnswer.length} chars)` : 'NULL'}`);
+  
+  if (technicalAnswer) {
+    console.log(`[SUCCESS] Generated technical direct answer: "${technicalAnswer.substring(0, 100)}..."`);
+    const formattedAnswer = formatResponse(technicalAnswer, 500);
+    return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url), debugLogs };
+  }
+  
+  // Try equipment advice FIRST for equipment queries
+  const lc = query.toLowerCase();
+  const equipmentKeywords = ['tripod', 'camera', 'lens', 'filter', 'flash', 'bag', 'strap', 'memory card', 'battery', 'charger', 'equipment', 'gear'];
+  const adviceKeywords = ['recommend', 'best', 'what', 'which', 'should i buy', 'need', 'suggest', 'advice', 'opinion', 'prefer', 'choose', 'select'];
+  
+  const hasEquipment = equipmentKeywords.some(keyword => lc.includes(keyword));
+  const hasAdvice = adviceKeywords.some(keyword => lc.includes(keyword));
+  
+  if (hasEquipment && hasAdvice) {
+    console.log(`[TARGET] Equipment query detected in handleChunkProcessing: "${query}"`);
+    const equipmentAnswer = tryEquipmentAdviceAnswer(lc, entities, chunks);
+    if (equipmentAnswer) {
+      console.log(`[SUCCESS] Generated equipment advice: "${equipmentAnswer.substring(0, 100)}..."`);
+      const formattedAnswer = formatResponse(equipmentAnswer, 500);
+      return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url), debugLogs };
+    }
+  }
+  
+  // Try existing direct answer system
+  const directAnswer = generateDirectAnswer(query, entities, chunks);
+  if (directAnswer) {
+    console.log(`[SUCCESS] Generated intelligent answer from generateDirectAnswer: "${directAnswer.substring(0, 100)}..."`);
+    const formattedAnswer = formatResponse(directAnswer, 500);
+    return { answer: formattedAnswer, type: "advice", sources: chunks.map(c => c.url), debugLogs };
+  }
+  
+  // Fallback to chunk processing
+  const fallbackResult = processChunkFallback(chunks, query);
+  return { ...fallbackResult, debugLogs };
 }
 
 // Helper function to process chunk fallback
@@ -7467,10 +7560,10 @@ function processEntitiesForRag(query, entities, chunks, results, debugLogs) {
 }
 
 // Helper function to process chunks for RAG answer
-function processChunksForRag(query, entities, chunks, debugLogs) {
- debugLogs.push(`Taking chunks path - calling handleChunkProcessing`);
- const result = handleChunkProcessing(query, entities, chunks);
- return { ...result, debugLogs };
+function processChunksForRag(query, articles, chunks, debugLogs) {
+  debugLogs.push(`Taking chunks path - calling handleChunkProcessing`);
+  const result = handleChunkProcessing(query, articles, chunks);
+  return { ...result, debugLogs };
 }
 
 // Helper function to process events for RAG answer
@@ -7485,33 +7578,33 @@ function processEventsForRag(entities, debugLogs) {
 
 // Helper function to generate RAG answer
 function generateRagAnswer(params) {
- const { query, entities, chunks, results } = params;
- const debugLogs = [];
- 
- debugLogs.push(`generateRagAnswer called with ${entities.length} entities, ${chunks.length} chunks`);
- 
- // Handle events path
- if (results.answerType === 'events' && entities.length > 0) {
- const eventResult = processEventsForRag(entities, debugLogs);
- if (eventResult) return eventResult;
- }
- 
- // Handle "what is" queries with entities (prioritize entities over chunks)
- if (entities.length > 0 && isWhatIsQuery(query)) {
- return processEntitiesForRag(query, entities, chunks, results, debugLogs);
- }
- 
- // Handle chunks path
- if (chunks.length > 0) {
- return processChunksForRag(query, entities, chunks, debugLogs);
- }
- 
- // Handle general entities path
- if (entities.length > 0) {
- return processEntitiesForRag(query, entities, chunks, results, debugLogs);
- }
- 
- return { answer: "", type: "advice", sources: [], debugLogs };
+  const { query, entities, chunks, results, articles } = params;
+  const debugLogs = [];
+
+  debugLogs.push(`generateRagAnswer called with ${entities.length} entities, ${chunks.length} chunks, ${articles.length} articles`);
+
+  // Handle events path
+  if (results.answerType === 'events' && entities.length > 0) {
+    const eventResult = processEventsForRag(entities, debugLogs);
+    if (eventResult) return eventResult;
+  }
+
+  // Handle "what is" queries with entities (prioritize entities over chunks)
+  if (entities.length > 0 && isWhatIsQuery(query)) {
+    return processEntitiesForRag(query, entities, chunks, results, debugLogs);
+  }
+
+  // Handle chunks path
+  if (chunks.length > 0) {
+    return processChunksForRag(query, articles, chunks, debugLogs);
+  }
+
+  // Handle general entities path
+  if (entities.length > 0) {
+    return processEntitiesForRag(query, entities, chunks, results, debugLogs);
+  }
+
+  return { answer: "", type: "advice", sources: [], debugLogs };
 }
 
 // Helper function to prepare RAG query parameters
@@ -7628,13 +7721,13 @@ function buildRagResponse(context) {
  answer: context.finalAnswer,
  type: context.finalType,
  sources: context.finalSources,
- structured: {
- intent: context.finalType,
- sources: context.finalSources,
- events: [],
- products: [],
- articles: context.results.entities || []
- },
+  structured: {
+    intent: context.finalType,
+    sources: context.finalSources,
+    events: [],
+    products: [],
+    articles: context.results.articles || []
+  },
  totalMatches: context.results.totalMatches,
  chunksFound: context.results.chunks.length,
  entitiesFound: context.results.entities.length,
@@ -7671,19 +7764,26 @@ async function processRagSearchResults(context) {
  lcQuery: context.lcQuery
  });
  
- // Search for entities
- results.entities = await searchAndProcessRagEntities({
- client: context.client,
- query: context.query,
- keywords: context.keywords,
- isConceptQuery: context.isConceptQuery,
- primaryKeyword: context.primaryKeyword
- });
- 
- // Calculate confidence and determine answer type
- results.totalMatches = results.chunks.length + results.entities.length;
- results.confidence = 0;
- results.answerType = 'none';
+  // Search for entities
+  results.entities = await searchAndProcessRagEntities({
+    client: context.client,
+    query: context.query,
+    keywords: context.keywords,
+    isConceptQuery: context.isConceptQuery,
+    primaryKeyword: context.primaryKeyword
+  });
+
+  // Search for articles for equipment advice
+  results.articles = await findArticles(context.client, { 
+    keywords: context.keywords, 
+    limit: 25, 
+    pageContext: context.pageContext 
+  });
+
+  // Calculate confidence and determine answer type
+  results.totalMatches = results.chunks.length + results.entities.length;
+  results.confidence = 0;
+  results.answerType = 'none';
  
  return results;
 }
@@ -7753,8 +7853,14 @@ async function tryRagFirst(client, query) {
  lcQuery
  });
  
- // Generate answer using helper function
- const { answer, type, sources, debugLogs = [] } = generateRagAnswer({ query, entities: results.entities, chunks: results.chunks, results });
+  // Generate answer using helper function
+  const { answer, type, sources, debugLogs = [] } = generateRagAnswer({ 
+    query, 
+    entities: results.entities, 
+    chunks: results.chunks, 
+    results,
+    articles: results.articles 
+  });
  
  // Handle fallback cases
  const { finalAnswer, finalType, finalSources } = handleRagFallbackLogic({ answer, type, sources, query });
