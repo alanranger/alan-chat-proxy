@@ -7925,11 +7925,15 @@ async function tryRagFirst(client, query) {
  console.log(`[TARGET] Technical pattern matched for: "${query}"`);
  
  // For technical concepts, also search for related articles
- const keywords = extractKeywords(query);
-    let articles = await findArticles(client, { keywords, limit: 12 });
-    // If query is about sharpness/focus/blur, filter early so UI sees relevant items
+    const keywords = extractKeywords(query);
+    // Enrich search terms for sharpness queries to actually discover relevant guides
     const qlc = String(query).toLowerCase();
     const sharpIntent = qlc.includes('sharp') || qlc.includes('soft') || qlc.includes('blurry') || qlc.includes('blur') || qlc.includes('out of focus') || qlc.includes('focus');
+    const enriched = sharpIntent
+      ? Array.from(new Set([...keywords, 'sharp', 'sharpness', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'tripod', 'shutter speed', 'stabilization', 'ibis', 'vr']))
+      : keywords;
+    let articles = await findArticles(client, { keywords: enriched, limit: 12 });
+    // If query is about sharpness/focus/blur, filter early so UI sees relevant items
     if (sharpIntent) {
       articles = filterArticlesByKeywords(articles, ['sharp', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod']).slice(0, 6);
     }
