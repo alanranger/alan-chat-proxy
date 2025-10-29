@@ -5748,6 +5748,10 @@ function sendEventsResponse(context) {
   const isDurationQuery = (
     lc.includes('how long') && lc.includes('workshop')
   ) || /\b(2\.5\s?hr|2\.5\s?hours|4\s?hr|4\s?hours|one[-\s]?day|1\s?day|two[-\s]?day|multi[-\s]?day|residential)\b/i.test(query);
+  // Detect B&B inclusion intent (keep simple and explicit)
+  const isBnBQuery = (
+    lc.includes('b&b') || lc.includes('bb') || lc.includes('bed and breakfast') || lc.includes('accommodation')
+  ) && (lc.includes('include') || lc.includes('included') || lc.includes('residential') || lc.includes('multi-day') || lc.includes('multiday'));
   
   console.log(`🎭 sendEventsResponse: isDurationQuery=${isDurationQuery} for query="${query}"`);
   
@@ -5763,6 +5767,19 @@ function sendEventsResponse(context) {
     console.log(`🎭 sendEventsResponse: Using duration answer="${formattedAnswer.substring(0, 100)}..."`);
   } else {
     formattedAnswer = generateEventAnswerMarkdown(context.eventList, query);
+  }
+
+  // If user asked about B&B inclusion, prepend a direct, data-derived statement
+  if (isBnBQuery) {
+    const events = Array.isArray(context.eventList) ? context.eventList : [];
+    const hasMultiDay = events.some((e) => {
+      try { return categorizeWorkshopDuration(e) === 'Multi‑day (2–5 days)'; } catch { return false; }
+    });
+    const bnbLine = hasMultiDay
+      ? 'Yes—all multi‑day workshops include transport and B&B in the price. '
+      : 'Multi‑day workshops typically include transport and B&B in the price.';
+    const guideLine = 'See the event cards below for dates and prices.';
+    formattedAnswer = `${bnbLine}${guideLine}\n\n${formattedAnswer}`;
   }
  
  // Apply quality analysis to recalculate confidence based on new criteria
