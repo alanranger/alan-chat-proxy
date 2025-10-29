@@ -5682,33 +5682,42 @@ function extractDurationCategory(query) {
 
 // Helper function to handle direct duration routing
 async function handleDirectDurationRouting(context) {
- const eventsDirect = await findEventsByDuration(context.client, context.durationCategory, 120);
- const eventListDirect = formatEventsForUi(eventsDirect);
- 
- // Use quality-based confidence scoring
- const confidenceContext = initializeConfidenceContext(context.query || "");
- analyzeDataAttributes(eventsDirect, null, confidenceContext);
- // Don't call analyzeResponseContent with empty strings - will be called with actual content later
- const confidenceDirect = finalizeConfidence(context.query || "", confidenceContext);
+  const eventsDirect = await findEventsByDuration(context.client, context.durationCategory, 120);
+  const eventListDirect = formatEventsForUi(eventsDirect);
+  
+  // Use quality-based confidence scoring
+  const confidenceContext = initializeConfidenceContext(context.query || "");
+  analyzeDataAttributes(eventsDirect, null, confidenceContext);
+  // Don't call analyzeResponseContent with empty strings - will be called with actual content later
+  const confidenceDirect = finalizeConfidence(context.query || "", confidenceContext);
+  
+  // Generate formatted duration answer instead of generic event list
+  const query = context.query || "";
+  const responseObj = {
+    structured: { events: eventListDirect },
+    events: eventListDirect
+  };
+  const formattedAnswer = generateWorkshopDurationAnswer(query, responseObj);
+  console.log(`🎭 handleDirectDurationRouting: Using duration answer for query="${query}"`);
 
- context.res.status(200).json({
- ok: true,
- type: "events",
- answer: eventListDirect,
- answer_markdown: `I found ${eventListDirect.length} ${eventListDirect.length === 1 ? 'event' : 'events'} that match your query. These ${eventListDirect.length === 1 ? 'is' : 'are'} ${context.durationCategory} ${eventListDirect.length === 1 ? 'event' : 'events'} with experienced instruction and hands-on learning opportunities.`,
- events: eventListDirect,
- structured: {
- intent: "events",
- topic: (context.keywords || []).join(", "),
- events: eventListDirect,
- products: [],
- pills: []
- },
- confidence: confidenceDirect,
- debug: { version: "v1.3.20-expanded-classification", debugInfo: { ...(context.debugInfo||{}), routed:"duration_direct", durationCategory: context.durationCategory }, timestamp: new Date().toISOString() }
- });
- return true;
- }
+  context.res.status(200).json({
+    ok: true,
+    type: "events",
+    answer: formattedAnswer,
+    answer_markdown: formattedAnswer,
+    events: eventListDirect,
+    structured: {
+      intent: "events",
+      topic: (context.keywords || []).join(", "),
+      events: eventListDirect,
+      products: [],
+      pills: []
+    },
+    confidence: confidenceDirect,
+    debug: { version: "v1.3.20-expanded-classification", debugInfo: { ...(context.debugInfo||{}), routed:"duration_direct", durationCategory: context.durationCategory }, timestamp: new Date().toISOString() }
+  });
+  return true;
+}
 
 // Helper function to handle clarification response
 async function handleClarificationResponse(context) {
