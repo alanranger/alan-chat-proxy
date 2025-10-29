@@ -3987,11 +3987,21 @@ function processAndSortResults(rows, keywords, limit) {
  .map(x => x.r);
 }
 
+function filterArticleKeywords(keywords){
+  const allow = new Set([
+    'sharp','sharpness','focus','focusing','blur','blurry','camera','camera shake','tripod','shutter','shutter speed','stabilization','ibis','vr',
+    'aperture','iso','exposure','metering','composition','white balance','depth of field','focal length','long exposure','hdr','noise','handheld'
+  ]);
+  const cleaned = Array.from(new Set((keywords||[]).map(k=>String(k).toLowerCase().trim())));
+  return cleaned.filter(k=>k.length>=3 && (allow.has(k) || /^(?:iso|hdr|vr|ibis)$/i.test(k) || /\b(sharp|focus|blur|tripod|shutter)\b/.test(k)));
+}
+
 async function findArticles(client, { keywords, limit = 12, pageContext = null }) {
  const enhancedKeywords = handlePageContext(pageContext, keywords);
+ const searchTerms = filterArticleKeywords(enhancedKeywords);
  
  let q = buildArticlesBaseQuery(client, limit);
- q = applySearchConditions(q, enhancedKeywords);
+ q = applySearchConditions(q, (searchTerms.length ? searchTerms : enhancedKeywords).slice(0, 12));
 
  const { data, error } = await q;
   if (error) {
@@ -4000,7 +4010,7 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
   }
 
   let rows = data || [];
-  console.log(`[DEBUG findArticles] Primary query: ${rows.length} results, keywords=${enhancedKeywords.slice(0, 5).join(',')}`);
+  console.log(`[DEBUG findArticles] Primary query: ${rows.length} results, keywords=${(searchTerms.length?searchTerms:enhancedKeywords).slice(0, 8).join(',')}`);
   if (rows.length > 0) {
     console.log(`[DEBUG findArticles] Primary titles: ${rows.slice(0, 3).map(r => r.title || 'NO_TITLE').join(' | ')}`);
   }
