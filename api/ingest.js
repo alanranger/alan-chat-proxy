@@ -1169,34 +1169,37 @@ export default async function handler(req, res) {
     stage = 'db_client';
     const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
 
-    // Reconcile: ensure each service row in csv_metadata has a page_entities row
+    // Reconcile: ensure each service row in csv_metadata has a page_entities row (no RPCs)
     try {
-      await supa.rpc('noop');
-    } catch {}
-    try {
-      const { data: missing, error: missErr } = await supa.rpc('exec_sql', {
-        sql: `with svc as (
-                select id, url from public.csv_metadata
-                where csv_type='landing_service_pages' and kind='service'
-              )
-              select s.id as csv_id, s.url
-              from svc s
-              left join public.page_entities pe on pe.csv_metadata_id = s.id
-              where pe.id is null`
-      });
-      if (!missErr && Array.isArray(missing) && missing.length) {
-        for (const m of missing) {
-          const urlNorm = String(m.url || '').replace(/\/$/, '');
-          await supa.from('page_entities').insert([{
-            url: urlNorm,
-            page_url: urlNorm,
-            kind: 'service',
-            title: null,
-            description: null,
-            csv_type: 'landing_service_pages',
-            csv_metadata_id: m.csv_id,
-            last_seen: new Date().toISOString()
-          }]).catch(()=>{});
+      const { data: svcRows } = await supa
+        .from('csv_metadata')
+        .select('id, url')
+        .eq('csv_type', 'landing_service_pages')
+        .eq('kind', 'service');
+      const csvIds = (svcRows || []).map(r => r.id);
+      if (csvIds.length) {
+        const { data: existing } = await supa
+          .from('page_entities')
+          .select('csv_metadata_id')
+          .eq('csv_type', 'landing_service_pages')
+          .in('csv_metadata_id', csvIds);
+        const present = new Set((existing || []).map(r => r.csv_metadata_id));
+        const toCreate = (svcRows || []).filter(r => !present.has(r.id));
+        if (toCreate.length) {
+          const rows = toCreate.map(r => {
+            const u = String(r.url || '').replace(/\/$/, '');
+            return {
+              url: u,
+              page_url: u,
+              kind: 'service',
+              title: null,
+              description: null,
+              csv_type: 'landing_service_pages',
+              csv_metadata_id: r.id,
+              last_seen: new Date().toISOString()
+            };
+          });
+          await supa.from('page_entities').insert(rows).then(()=>{}).catch(()=>{});
         }
       }
     } catch (reconErr) {
