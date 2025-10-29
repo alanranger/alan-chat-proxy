@@ -1637,8 +1637,12 @@ function renderEventCard(e) {
 // Helper function to render single service card
 function renderServiceCard(s) {
   const href = s.page_url || s.source_url || s.url || '#';
-  const title = s.title ? `${escapeHTML(s.title)}` : 'Photography Service';
-  const description = s.description ? `${escapeHTML(s.description.substring(0, 150))}${s.description.length > 150 ? '...' : ''}` : '';
+  const rawDesc = (s.json_ld_data && s.json_ld_data.description) || s.meta_description || s.excerpt || s.description || '';
+  const rawTitle = (s.json_ld_data && s.json_ld_data.name) || s.name || s.norm_title || s.title || 'Photography Service';
+  const title = `${escapeHTML(rawTitle)}`;
+  const trimmed = typeof rawDesc === 'string' ? rawDesc.replace(/<[^>]+>/g,'') : '';
+  const short = trimmed.length > 180 ? trimmed.slice(0,180) + '...' : trimmed;
+  const description = short ? `${escapeHTML(short)}` : '';
   
   return `
     <div class="service-card">
@@ -1652,7 +1656,7 @@ function renderServiceCard(s) {
         <div class="service-details">
           ${description ? `<div class="service-description">${description}</div>` : ''}
         </div>
-        ${href && href !== '#' ? `<div style="margin-top:12px"><a class="product-book-btn" style="background:#4CAF50;border-color:#4CAF50;color:#ffffff" href="${href}" target="_blank" rel="noopener">Learn More →</a></div>` : ''}
+        ${href && href !== '#' ? `<div style="margin-top:12px"><a class="product-book-btn" style="background:#F15A22;border-color:#F15A22;color:#000000" href="${href}" target="_blank" rel="noopener">More Info →</a></div>` : ''}
       </div>
     </div>
   `;
@@ -1687,11 +1691,21 @@ function renderServicesBlock(structured, query){
   // Skip services block for simple follow-up questions
   if (isSimpleFollowUpQuery(query)) return '';
   
-  const all = structured?.services || [];
+  let all = structured?.services || [];
   if(!all.length) return '';
+
+  // De-duplicate by normalized URL (ignore trailing slash)
+  const seen = new Set();
+  all = all.filter(s => {
+    const u = (s.page_url || s.url || s.source_url || '').replace(/\/$/, '');
+    if (!u) return true;
+    if (seen.has(u)) return false;
+    seen.add(u);
+    return true;
+  });
   
   const kp = extractKeyPhrases(structured?.topic||'', __lastQuery);
-  const list = all.map(s=>({s, score: scoreServiceMatch(s, kp)})).sort((a,b)=> b.score - a.score).map(x=>x.s);
+  const list = all.map(s=>({s, score: scoreServiceMatch(s, kp)})).sort((a,b)=> b.score - a.score).map(x=>x.s).slice(0, 12);
   
   const servicesHTML = list.map(renderServiceCard).join('');
   

@@ -3824,16 +3824,32 @@ function logServicesResults(data) {
 // Generate service answer text
 function generateServiceAnswer(services, query) {
   if (!services || services.length === 0) return '';
-  
-  const lc = query.toLowerCase();
-  const serviceKeywords = ['service', 'hire', 'professional', 'photographer', 'training', 'lesson', 'course', 'mentoring', 'consultation'];
-  const hasServiceIntent = serviceKeywords.some(keyword => lc.includes(keyword));
-  
-  if (hasServiceIntent) {
-    return `I offer several photography services that might help you. Here are some relevant options:`;
-  } else {
-    return `Here are some photography services I provide that might be useful:`;
-  }
+
+  // Build a simple set of service types from titles, urls, categories and tags
+  const typeSet = new Set();
+  const pushIf = (cond, label) => { if (cond) typeSet.add(label); };
+
+  services.forEach(s => {
+    const t = `${s.title||''} ${s.norm_title||''}`.toLowerCase();
+    const u = `${s.page_url||s.url||''}`.toLowerCase();
+    const cats = Array.isArray(s.categories) ? s.categories.join(' ') : `${s.categories||''}`;
+    const tags = Array.isArray(s.tags) ? s.tags.join(' ') : `${s.tags||''}`;
+    const all = `${t} ${u} ${cats} ${tags}`;
+
+    pushIf(/private|1-2-1|one[- ]to[- ]one|lesson/.test(all), 'Private lessons');
+    pushIf(/online|zoom/.test(all), 'Online lessons');
+    pushIf(/course|class/.test(all), 'Courses');
+    pushIf(/workshop/.test(all), 'Workshops');
+    pushIf(/sensor.*clean/.test(all), 'Camera sensor cleaning');
+    pushIf(/rps|mentoring/.test(all), 'RPS mentoring');
+    pushIf(/print.*(prep|prepare)/.test(all), 'Print preparation');
+    pushIf(/gift.*voucher/.test(all), 'Gift vouchers');
+  });
+
+  const types = Array.from(typeSet).slice(0, 6);
+  const list = types.length ? ` — including ${types.join(', ')}.` : '';
+
+  return `I offer a range of photography services${list}`.trim();
 }
 
 async function findServices(client, { keywords, limit = 50 }) {
@@ -8066,7 +8082,7 @@ async function tryRagFirst(client, query) {
 
   // Try to find relevant services from database
   const keywords = extractKeywords(query);
-  const services = await findServices(client, { keywords, limit: 5 });
+  const services = await findServices(client, { keywords, limit: 12 });
   if (services && services.length > 0) {
     console.log(`🎯 Found ${services.length} relevant services for: "${query}"`);
     return {
