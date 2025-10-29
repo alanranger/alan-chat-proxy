@@ -852,7 +852,16 @@ function addTyping() {
 }
 function mdToHtml(md){
   if (!md) return { html:'', liIds:[], items:[] };
-  let s = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // Normalize common UTF-8 mis-encodings that appear as Windows-1252 artifacts
+  // before any escaping/markdown processing.
+  let normalized = String(md)
+    .replace(/â€¢/g, '•')
+    .replace(/â€“/g, '–')
+    .replace(/â€”/g, '—')
+    .replace(/â€™/g, '’')
+    .replace(/â€œ/g, '“')
+    .replace(/â€/g, '”');
+  let s = normalized.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   
   // Enhanced markdown processing for improved API content
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>'); // Bold
