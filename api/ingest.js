@@ -527,30 +527,38 @@ async function ingestSingleUrl(url, supa, options = {}) {
         .eq('url', url);
       
       if (metadataList && metadataList.length > 0) {
+        // Prefer landing_service_pages over older sources, then prefer rows with kind
+        const preferred = [...metadataList].sort((a,b)=>{
+          const aPr = (a.csv_type==='landing_service_pages'?2: a.kind?1:0);
+          const bPr = (b.csv_type==='landing_service_pages'?2: b.kind?1:0);
+          return bPr - aPr;
+        });
+        const primary = preferred[0];
         // Merge all CSV metadata records intelligently - ALL FIELDS
         csvMetadata = {
-          id: metadataList[0].id, // Use first ID as primary
-          csv_type: metadataList[0].csv_type, // Use first csv_type as primary
+          id: primary.id, // Use preferred ID as primary
+          csv_type: primary.csv_type, // Use preferred csv_type as primary
           url: url,
           // Merge ALL fields: keep non-null values, prefer more specific data
-          title: metadataList.find(m => m.title && m.title.trim())?.title || null,
-          categories: metadataList.find(m => m.categories && m.categories.length > 0)?.categories || null,
-          tags: metadataList.find(m => m.tags && m.tags.length > 0)?.tags || null,
-          publish_date: metadataList.find(m => m.publish_date)?.publish_date || null,
-          start_date: metadataList.find(m => m.start_date)?.start_date || null,
-          end_date: metadataList.find(m => m.end_date)?.end_date || null,
-          start_time: metadataList.find(m => m.start_time)?.start_time || null,
-          end_time: metadataList.find(m => m.end_time)?.end_time || null,
-          location_name: metadataList.find(m => m.location_name && m.location_name.trim())?.location_name || null,
-          location_address: metadataList.find(m => m.location_address && m.location_address.trim())?.location_address || null,
-          location_city_state_zip: metadataList.find(m => m.location_city_state_zip && m.location_city_state_zip.trim())?.location_city_state_zip || null,
-          excerpt: metadataList.find(m => m.excerpt && m.excerpt.trim())?.excerpt || null,
-          image_url: metadataList.find(m => m.image_url && m.image_url.trim())?.image_url || null,
-          json_ld_data: metadataList.find(m => m.json_ld_data)?.json_ld_data || null,
-          workflow_state: metadataList.find(m => m.workflow_state && m.workflow_state.trim())?.workflow_state || null,
-          created_at: metadataList.find(m => m.created_at)?.created_at || null,
-          updated_at: metadataList.find(m => m.updated_at)?.updated_at || null,
-          import_session: metadataList.find(m => m.import_session)?.import_session || null
+          title: preferred.find(m => m.title && m.title.trim())?.title || null,
+          categories: preferred.find(m => m.categories && m.categories.length > 0)?.categories || null,
+          tags: preferred.find(m => m.tags && m.tags.length > 0)?.tags || null,
+          publish_date: preferred.find(m => m.publish_date)?.publish_date || null,
+          start_date: preferred.find(m => m.start_date)?.start_date || null,
+          end_date: preferred.find(m => m.end_date)?.end_date || null,
+          start_time: preferred.find(m => m.start_time)?.start_time || null,
+          end_time: preferred.find(m => m.end_time)?.end_time || null,
+          location_name: preferred.find(m => m.location_name && m.location_name.trim())?.location_name || null,
+          location_address: preferred.find(m => m.location_address && m.location_address.trim())?.location_address || null,
+          location_city_state_zip: preferred.find(m => m.location_city_state_zip && m.location_city_state_zip.trim())?.location_city_state_zip || null,
+          excerpt: preferred.find(m => m.excerpt && m.excerpt.trim())?.excerpt || null,
+          image_url: preferred.find(m => m.image_url && m.image_url.trim())?.image_url || null,
+          json_ld_data: preferred.find(m => m.json_ld_data)?.json_ld_data || null,
+          workflow_state: preferred.find(m => m.workflow_state && m.workflow_state.trim())?.workflow_state || null,
+          created_at: preferred.find(m => m.created_at)?.created_at || null,
+          updated_at: preferred.find(m => m.updated_at)?.updated_at || null,
+          import_session: preferred.find(m => m.import_session)?.import_session || null,
+          kind: primary.kind || preferred.find(m=>m.kind)?.kind || null
         };
       }
     } catch (e) {
