@@ -8617,47 +8617,81 @@ function enhanceEventResponse(answer, query, response) {
 }
 
 // ================= Duration intent helpers =================
+function checkShortDurationPatterns(cd, ts) {
+  if (/(^|\b)(2\.5\s?hr|2\.5\s?hours|2\.5h)\b/.test(cd) || /(2\.5\s?hr|2\.5\s?hours)/.test(ts)) return '2.5–4 hours';
+  if (/(^|\b)(3\s?hr|3\s?hours|4\s?hr|4\s?hours)\b/.test(cd) || /(3\s?hr|4\s?hr|hours)/.test(ts)) return '2.5–4 hours';
+  return null;
+}
+
+function checkSingleDayPatterns(cd, ts) {
+  if (/\b(one[-\s]?day|1\s?day|single\s?day)\b/.test(cd) || /one[-\s]?day|1\s?day/.test(ts)) return 'One‑day';
+  return null;
+}
+
+function checkMultiDayPatterns(cd, ts) {
+  if (/\b(two[-\s]?day|2\s?day|three[-\s]?day|3\s?day|four[-\s]?day|4\s?day|five[-\s]?day|5\s?day|multi[-\s]?day|residential)\b/.test(cd+" "+ts)) return 'Multi‑day (2–5 days)';
+  return null;
+}
+
+function checkTextPatternsForDuration(cd, ts) {
+  const shortDuration = checkShortDurationPatterns(cd, ts);
+  if (shortDuration) return shortDuration;
+  
+  const singleDay = checkSingleDayPatterns(cd, ts);
+  if (singleDay) return singleDay;
+  
+  return checkMultiDayPatterns(cd, ts);
+}
+
+function calculateDurationFromTimes(entity) {
+  const startTime = entity.start_time || entity._csv_start_time;
+  const endTime = entity.end_time || entity._csv_end_time;
+  if (!startTime || !endTime) return null;
+  
+  try {
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    const startMinutes = sh * 60 + (sm || 0);
+    const endMinutes = eh * 60 + (em || 0);
+    const durationHours = (endMinutes - startMinutes) / 60;
+    
+    if (durationHours >= 2.5 && durationHours <= 4.5) return '2.5–4 hours';
+    if (durationHours > 4.5 && durationHours <= 8) return 'One‑day';
+  } catch {}
+  return null;
+}
+
+function calculateDurationFromDates(entity) {
+  const s = entity.start_date || entity.date_start || entity.start_at;
+  const e = entity.end_date || entity.date_end || entity.end_at;
+  if (!s || !e) return null;
+  
+  try {
+    const sd = new Date(s);
+    const ed = new Date(e);
+    const days = Math.max(1, Math.round((ed - sd) / (1000*60*60*24)) + 1);
+    
+    if (days === 1) {
+      const timeBasedDuration = calculateDurationFromTimes(entity);
+      return timeBasedDuration || 'One‑day';
+    }
+    if (days >= 2 && days <= 5) return 'Multi‑day (2–5 days)';
+  } catch {}
+  return null;
+}
+
 function categorizeWorkshopDuration(entity){
   const cd = (entity?.course_duration||'').toLowerCase();
   const ts = (entity?.time_schedule||'').toLowerCase();
-  // Direct textual hints
-  if (/(^|\b)(2\.5\s?hr|2\.5\s?hours|2\.5h)\b/.test(cd) || /(2\.5\s?hr|2\.5\s?hours)/.test(ts)) return '2.5–4 hours';
-  if (/(^|\b)(3\s?hr|3\s?hours|4\s?hr|4\s?hours)\b/.test(cd) || /(3\s?hr|4\s?hr|hours)/.test(ts)) return '2.5–4 hours';
-  if (/\b(one[-\s]?day|1\s?day|single\s?day)\b/.test(cd) || /one[-\s]?day|1\s?day/.test(ts)) return 'One‑day';
-  if (/\b(two[-\s]?day|2\s?day|three[-\s]?day|3\s?day|four[-\s]?day|4\s?day|five[-\s]?day|5\s?day|multi[-\s]?day|residential)\b/.test(cd+" "+ts)) return 'Multi‑day (2–5 days)';
-
+  
+  // Check text patterns first
+  const textPatternResult = checkTextPatternsForDuration(cd, ts);
+  if (textPatternResult) return textPatternResult;
+  
   // Infer from dates if present
-  try{
-    const s = entity.start_date || entity.date_start || entity.start_at;
-    const e = entity.end_date || entity.date_end || entity.end_at;
-    if (s && e){
-      const sd = new Date(s), ed = new Date(e);
-      const days = Math.max(1, Math.round((ed - sd) / (1000*60*60*24)) + 1);
-      
-      // If single day, check time duration to differentiate 2.5-4hr vs full day
-      if (days === 1) {
-        const startTime = entity.start_time || entity._csv_start_time;
-        const endTime = entity.end_time || entity._csv_end_time;
-        if (startTime && endTime) {
-          try {
-            const [sh, sm] = startTime.split(':').map(Number);
-            const [eh, em] = endTime.split(':').map(Number);
-            const startMinutes = sh * 60 + (sm || 0);
-            const endMinutes = eh * 60 + (em || 0);
-            const durationHours = (endMinutes - startMinutes) / 60;
-            if (durationHours >= 2.5 && durationHours <= 4.5) {
-              return '2.5–4 hours';
-            }
-            if (durationHours > 4.5 && durationHours <= 8) {
-              return 'One‑day';
-            }
-          } catch {}
-        }
-        return 'One‑day';
-      }
-      if (days >= 2 && days <= 5) return 'Multi‑day (2–5 days)';
-    }
-  } catch {}
+  const dateBasedResult = calculateDurationFromDates(entity);
+  if (dateBasedResult) return dateBasedResult;
+  
   return null;
 }
 
