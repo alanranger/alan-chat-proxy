@@ -3856,9 +3856,14 @@ async function findServices(client, { keywords, limit = 50 }) {
 
 // 1) Primary: prefer landing/service pages imported via CSV
 try {
-  let qPrimary = buildServicesBaseQuery(client, limit)
+  // Primary: only rows from 08 CSV that are flagged as service in csv_metadata
+  // Use inner join on csv_metadata to enforce per-row flag regardless of page_entities.kind
+  let qPrimary = client
+    .from('page_entities')
+    .select('*, csv_metadata!inner(kind)')
     .eq('csv_type', 'landing_service_pages')
-    .eq('kind', 'service');
+    .eq('csv_metadata.kind', 'service')
+    .order('last_seen', { ascending: false });
   qPrimary = applyServicesKeywordFiltering(qPrimary, keywords)
     .range(0, Math.max(0, (limit || 24) - 1));
   const { data: primary, error: errPrimary } = await qPrimary;
