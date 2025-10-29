@@ -860,7 +860,9 @@ function mdToHtml(md){
     .replace(/â€”/g, '—')
     .replace(/â€™/g, '’')
     .replace(/â€œ/g, '“')
-    .replace(/â€/g, '”');
+    .replace(/â€/g, '”')
+    .replace(/Â£/g, '£')
+    .replace(/Ã‚£/g, '£');
   let s = normalized.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   
   // Enhanced markdown processing for improved API content

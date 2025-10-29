@@ -1198,7 +1198,9 @@
                         .replace(/â€”/g, '—')
                         .replace(/â€™/g, '’')
                         .replace(/â€œ/g, '“')
-                        .replace(/â€/g, '”');
+                        .replace(/â€/g, '”')
+                        .replace(/Â£/g, '£')
+                        .replace(/Ã‚£/g, '£');
                 }
                 if (typeof answerText === 'string') {
                     // Convert markdown to HTML
