@@ -19,16 +19,13 @@ function extractMetaDescription(html) {
     const dom = new JSDOM(html);
     const document = dom.window.document;
     
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc && metaDesc.content) {
-      return metaDesc.content.trim();
-    }
-    
-    // Fallback: look for Open Graph description
+    // Prefer Open Graph description first (often most up to date)
     const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc && ogDesc.content) {
-      return ogDesc.content.trim();
-    }
+    if (ogDesc && ogDesc.content) return ogDesc.content.trim();
+
+    // Fallback: standard meta description
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc && metaDesc.content) return metaDesc.content.trim();
     
     return null;
   } catch (e) {
@@ -1001,6 +998,18 @@ async function ingestSingleUrl(url, supa, options = {}) {
         await supa
           .from('page_entities')
           .update({ title: finalPageTitle })
+          .eq('page_url', url)
+          .in('kind', ['service','landing']);
+      }
+    } catch (_) {}
+
+    // Final safeguard: ensure meta_description matches on-page meta (prefer og:description)
+    try {
+      const finalMetaDesc = extractMetaDescription(html);
+      if (finalMetaDesc) {
+        await supa
+          .from('page_entities')
+          .update({ meta_description: finalMetaDesc })
           .eq('page_url', url)
           .in('kind', ['service','landing']);
       }
