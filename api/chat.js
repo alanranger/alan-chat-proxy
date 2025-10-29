@@ -3854,15 +3854,29 @@ function generateServiceAnswer(services, query) {
 
 async function findServices(client, { keywords, limit = 50 }) {
  console.log(`ðŸ”§ findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
- 
+
+ // Primary: prefer entries explicitly marked as service in categories
+ try {
+   let qPrimary = buildServicesBaseQuery(client, limit)
+     .contains('categories', ['service']);
+   qPrimary = applyServicesKeywordFiltering(qPrimary, keywords);
+   const { data: primary, error: errPrimary } = await qPrimary;
+   if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
+     logServicesResults(primary);
+     return primary;
+   }
+ } catch (e) {
+   // fall through to fallback
+ }
+
+ // Fallback: any service kind
  let q = buildServicesBaseQuery(client, limit);
  q = applyServicesKeywordFiltering(q, keywords);
 
  const { data, error } = await q;
-
  if (error) {
- console.error(`ðŸ”§ findServices error:`, error);
- return [];
+   console.error(`ðŸ”§ findServices error:`, error);
+   return [];
  }
 
  logServicesResults(data);
