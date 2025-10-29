@@ -8897,13 +8897,33 @@ function enhanceTechnicalAdviceResponse(answer, query, response) {
       .map(a => `- ${a.title || a.url || 'Guide'}`)
       .join('\n');
 
-    const crafted = [
-      'Here’s a quick sharpness troubleshooting checklist:',
-      ...checklist.map(i => `• ${i}`),
-      '',
-      'Quick tests to isolate the cause:',
-      ...quickTests.map(i => `• ${i}`),
-    ].join('\n');
+    const wantsChecklist = q.includes('checklist');
+    let crafted;
+    if (!wantsChecklist) {
+      // Conversational, concise default
+      const summary = 'Soft photos usually come from three things: focus missing the subject, shutter speed being too slow, or small camera shake.';
+      const threeSteps = [
+        'Use single‑point AF (AF‑C for moving subjects).',
+        'Raise shutter speed: at least 1/(focal length); 1/500–1/1000 for motion.',
+        'Stabilise the camera: brace stance, enable IBIS/VR, or use a tripod.'
+      ];
+      crafted = [
+        summary,
+        '',
+        'Try this now:',
+        ...threeSteps.map(i => `• ${i}`),
+        '',
+        'Want a full checklist and tests? Ask: "show sharpness checklist".'
+      ].join('\n');
+    } else {
+      crafted = [
+        'Here’s a quick sharpness troubleshooting checklist:',
+        ...checklist.map(i => `• ${i}`),
+        '',
+        'Quick tests to isolate the cause:',
+        ...quickTests.map(i => `• ${i}`),
+      ].join('\n');
+    }
 
     const withSources = sources ? `${crafted}\n\nRelated guides:\n${sources}` : crafted;
     return {
