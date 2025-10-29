@@ -5368,7 +5368,13 @@ function filterArticlesByKeywords(articles, keywords) {
       const s = String(text).toLowerCase();
       return keys.some(k => s.includes(k));
     };
-    return (articles || []).filter(a => matches(a.title) || matches(a.page_url || a.source_url) || matches(a.description || a.meta_description));
+    return (articles || []).filter(a => 
+      matches(a.title) || 
+      matches(a.page_url || a.source_url) || 
+      matches(a.description || a.meta_description) ||
+      matches(a.tags?.toString() || '') ||
+      matches(a.categories?.toString() || '')
+    );
   } catch (_) {
     return articles || [];
   }
