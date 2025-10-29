@@ -960,7 +960,7 @@ function extractAnswerFromContentChunks(context) {
  const relevantChunk = findRelevantChunk(context.exactTerm, context.contentChunks, context.queryWords);
  if (!relevantChunk) return null;
  
- 
+  const chunkText = prepareChunkText(relevantChunk);
  return extractAnswerFromText({
  query: context.query,
  queryWords: context.queryWords,
@@ -3252,7 +3252,10 @@ function anyIlike(col, words) {
  const parts = (words || [])
  .map((w) => w.trim())
  .filter(Boolean)
- .map((w) => `${col}.ilike.%${w}%`);
+    .map((w) => {
+      const encoded = encodeURIComponent(w);
+      return `${col}.ilike.%${encoded}%`;
+    });
  return parts.length ? parts.join(",") : null;
 }
 
