@@ -37,6 +37,26 @@ function extractMetaDescription(html) {
   }
 }
 
+// Extract meta title (og:title or <title>) from HTML
+function extractMetaTitle(html) {
+  if (!html || typeof html !== 'string') return null;
+  try {
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
+
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle && ogTitle.content) return ogTitle.content.trim();
+
+    const titleEl = document.querySelector('title');
+    if (titleEl && titleEl.textContent) return titleEl.textContent.trim();
+
+    return null;
+  } catch (e) {
+    console.error('Error extracting meta title:', e);
+    return null;
+  }
+}
+
 const SELF_BASE = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:3000`;
 const EXPECTED_TOKEN = process.env.INGEST_TOKEN || "";
 
@@ -489,7 +509,8 @@ async function ingestSingleUrl(url, supa, options = {}) {
         }
       }
     
-    // Extract HTML title as fallback
+    // Extract titles
+    const metaTitle = extractMetaTitle(html);
     const htmlTitleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
     const htmlTitle = htmlTitleMatch ? htmlTitleMatch[1].trim() : null;
     
@@ -758,7 +779,7 @@ async function ingestSingleUrl(url, supa, options = {}) {
       const entities = [{
         url: url,
         kind: finalKind,
-        title: bestJsonLd.headline || bestJsonLd.title || bestJsonLd.name || htmlTitle || h1Title || null,
+        title: bestJsonLd.headline || bestJsonLd.title || bestJsonLd.name || metaTitle || htmlTitle || h1Title || null,
         description: enhancedDescription,
         meta_description: extractMetaDescription(html),
         date_start: csvMetadata?.start_date && csvMetadata?.start_time 
