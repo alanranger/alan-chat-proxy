@@ -8096,7 +8096,7 @@ async function tryRagFirst(client, query) {
 
   // Try to find relevant services from database
   const keywords = extractKeywords(query);
-  const services = await findServices(client, { keywords, limit: 12 });
+  const services = await findServices(client, { keywords, limit: 24 });
   if (services && services.length > 0) {
     console.log(`🎯 Found ${services.length} relevant services for: "${query}"`);
     return {
