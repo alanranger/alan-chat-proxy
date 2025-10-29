@@ -5360,21 +5360,25 @@ function normalizeArticle(a) {
  return out;
 }
 
-// Simple relevance filter for articles by keyword list (title/url/description)
+// Simple relevance filter for articles by keyword list (title/url/description/tags/categories)
 function filterArticlesByKeywords(articles, keywords) {
   try {
-    const keys = (keywords || []).map(k => String(k).toLowerCase());
+    const keys = (keywords || []).map(k => String(k).toLowerCase().trim());
     const matches = (text = '') => {
       const s = String(text).toLowerCase();
-      return keys.some(k => s.includes(k));
+      // Split on semicolons and commas to handle complex tag formats
+      const parts = s.split(/[;,]/).map(p => p.trim());
+      return keys.some(k => s.includes(k) || parts.some(p => p.includes(k)));
     };
-    return (articles || []).filter(a => 
-      matches(a.title) || 
-      matches(a.page_url || a.source_url) || 
-      matches(a.description || a.meta_description) ||
-      matches(a.tags?.toString() || '') ||
-      matches(a.categories?.toString() || '')
-    );
+    return (articles || []).filter(a => {
+      const tagStr = Array.isArray(a.tags) ? a.tags.join(' ') : (a.tags?.toString() || '');
+      const catStr = Array.isArray(a.categories) ? a.categories.join(' ') : (a.categories?.toString() || '');
+      return matches(a.title) || 
+        matches(a.page_url || a.source_url) || 
+        matches(a.description || a.meta_description) ||
+        matches(tagStr) ||
+        matches(catStr);
+    });
   } catch (_) {
     return articles || [];
   }
