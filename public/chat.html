@@ -1671,8 +1671,8 @@ function renderServiceCard(s) {
   }
   const title = `${escapeHTML(displayTitle)}`;
 
-  // Description: prefer JSON-LD, then meta/excerpt/description
-  const rawDesc = (s.json_ld_data && s.json_ld_data.description) || s.meta_description || s.excerpt || s.description || '';
+  // Description: prefer on-page meta description first, then JSON-LD, then excerpt/description
+  const rawDesc = s.meta_description || (s.json_ld_data && s.json_ld_data.description) || s.excerpt || s.description || '';
   const trimmed = typeof rawDesc === 'string' ? rawDesc.replace(/<[^>]+>/g,'') : '';
   const short = trimmed.length > 180 ? trimmed.slice(0,180) + '...' : trimmed;
   const description = short ? `${escapeHTML(short)}` : '';
