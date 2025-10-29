@@ -741,12 +741,6 @@ async function ingestSingleUrl(url, supa, options = {}) {
       let csvKindRaw = csvMetadata?.kind || csvMetadata?.kind_override || null;
       let csvKind = csvKindRaw ? String(csvKindRaw).trim().toLowerCase() : null;
       if (csvKind && !allowedKinds.has(csvKind)) csvKind = null;
-      
-      // If CSV type is 'landing_service_pages', set kind to 'service' unless explicitly overridden
-      if (!csvKind && csvMetadata?.csv_type === 'landing_service_pages') {
-        csvKind = 'service';
-      }
-      
       const derivedKind = normalizeKind(bestJsonLd, url);
       const finalKind = csvKind || derivedKind;
 
