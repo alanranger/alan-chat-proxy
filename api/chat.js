@@ -3777,10 +3777,20 @@ function buildServicesBaseQuery(client, limit) {
 // Helper function to build OR conditions for keywords
 function buildKeywordConditions(keywords) {
  const orConditions = [];
+ 
+ // For each keyword, create conditions that match both title and URL
  keywords.forEach(keyword => {
- orConditions.push(`title.ilike.%${keyword}%`);
- orConditions.push(`page_url.ilike.%${keyword}%`);
+   orConditions.push(`title.ilike.%${keyword}%`);
+   orConditions.push(`page_url.ilike.%${keyword}%`);
  });
+ 
+ // Also create a combined condition for multi-word phrases
+ if (keywords.length > 1) {
+   const combinedPhrase = keywords.join(' ');
+   orConditions.push(`title.ilike.%${combinedPhrase}%`);
+   orConditions.push(`page_url.ilike.%${combinedPhrase}%`);
+ }
+ 
  return orConditions;
 }
 
