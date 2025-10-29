@@ -3991,10 +3991,18 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
  q = applySearchConditions(q, enhancedKeywords);
 
  const { data, error } = await q;
-  if (error) return [];
+  if (error) {
+    console.log(`[DEBUG findArticles] Primary query error: ${error.message || error}`);
+    return [];
+  }
+
+  let rows = data || [];
+  console.log(`[DEBUG findArticles] Primary query: ${rows.length} results, keywords=${enhancedKeywords.slice(0, 5).join(',')}`);
+  if (rows.length > 0) {
+    console.log(`[DEBUG findArticles] Primary titles: ${rows.slice(0, 3).map(r => r.title || 'NO_TITLE').join(' | ')}`);
+  }
 
   // If PostgREST JSONB search misses tags/categories, do a guarded fallback:
-  let rows = data || [];
   if (!rows || rows.length <= 2) {
     try {
       // Fetch a small recent slice and filter client-side for relevance
@@ -4003,9 +4011,19 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
         .select("id, title, page_url, categories, tags, image_url, publish_date, description, json_ld_data, last_seen, kind, source_type")
         .order("publish_date", { ascending: false })
         .limit(40);
+      console.log(`[DEBUG findArticles] Recent slice: ${fallback.error ? 'ERROR' : fallback.data?.length || 0} raw rows`);
       if (!fallback.error && Array.isArray(fallback.data)) {
+        if (fallback.data.length > 0) {
+          console.log(`[DEBUG findArticles] Recent slice titles: ${fallback.data.slice(0, 3).map(r => r.title || 'NO_TITLE').join(' | ')}`);
+        }
         const filtered = filterArticlesByKeywords(fallback.data, enhancedKeywords);
+        console.log(`[DEBUG findArticles] Recent slice after filter: ${filtered.length} rows`);
+        if (filtered.length > 0) {
+          console.log(`[DEBUG findArticles] Filtered titles: ${filtered.slice(0, 3).map(r => r.title || 'NO_TITLE').join(' | ')}`);
+        }
         rows = filtered && filtered.length ? filtered : rows;
+      } else if (fallback.error) {
+        console.log(`[DEBUG findArticles] Recent slice error: ${fallback.error.message || fallback.error}`);
       }
 
       // Secondary targeted search on titles/headlines if still empty
@@ -4015,51 +4033,35 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
           anyIlike("json_ld_data->>headline", enhancedKeywords),
           anyIlike("json_ld_data->>name", enhancedKeywords)
         ].filter(Boolean).join(",");
+        console.log(`[DEBUG findArticles] Targeted search OR expr: ${orExpr.substring(0, 100)}...`);
         if (orExpr) {
           const targeted = await client
             .from("v_articles_unified")
             .select("id, title, page_url, categories, tags, image_url, publish_date, description, json_ld_data, last_seen, kind, source_type")
             .or(orExpr)
             .limit(30);
+          console.log(`[DEBUG findArticles] Targeted search: ${targeted.error ? 'ERROR' : targeted.data?.length || 0} raw rows`);
           if (!targeted.error && Array.isArray(targeted.data)) {
+            if (targeted.data.length > 0) {
+              console.log(`[DEBUG findArticles] Targeted titles: ${targeted.data.slice(0, 3).map(r => r.title || 'NO_TITLE').join(' | ')}`);
+            }
             const filtered2 = filterArticlesByKeywords(targeted.data, enhancedKeywords);
+            console.log(`[DEBUG findArticles] Targeted after filter: ${filtered2.length} rows`);
             rows = filtered2 && filtered2.length ? filtered2 : rows;
+          } else if (targeted.error) {
+            console.log(`[DEBUG findArticles] Targeted search error: ${targeted.error.message || targeted.error}`);
           }
         }
       }
-
-      // Final fallback: read from ai_articles (public, simpler schema)
-      if (!rows || rows.length === 0) {
-        const aiOr = [
-          anyIlike("title", enhancedKeywords),
-          anyIlike("snippet", enhancedKeywords),
-          anyIlike("url", enhancedKeywords)
-        ].filter(Boolean).join(",");
-        let aiQ = client.from("ai_articles").select("title, url, snippet, kind, last_seen").limit(40);
-        if (aiOr) aiQ = aiQ.or(aiOr);
-        const aiRes = await aiQ;
-        if (!aiRes.error && Array.isArray(aiRes.data)) {
-          const normalized = (aiRes.data || []).map(a => ({
-            id: a.url,
-            title: a.title,
-            page_url: a.url,
-            description: a.snippet,
-            last_seen: a.last_seen,
-            kind: a.kind,
-            source_type: "blog",
-            categories: [],
-            tags: []
-          }));
-          const filteredAI = filterArticlesByKeywords(normalized, enhancedKeywords);
-          rows = filteredAI && filteredAI.length ? filteredAI : rows;
-        }
-      }
-    } catch (_) {
-      // Soft-fail: keep original rows
+    } catch (e) {
+      console.log(`[DEBUG findArticles] Fallback exception: ${e.message}`);
     }
   }
 
-  return processAndSortResults(rows, enhancedKeywords, limit);
+  console.log(`[DEBUG findArticles] Final rows before processAndSort: ${rows.length}`);
+  const final = processAndSortResults(rows, enhancedKeywords, limit);
+  console.log(`[DEBUG findArticles] Final result count: ${final.length}`);
+  return final;
 }
 
 
