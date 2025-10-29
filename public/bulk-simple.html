@@ -1211,7 +1211,7 @@
       addResult(`📊 CSV has ${actualRowCount} data rows (${lines.length} total lines)`);
       
       // Handle special cases that don't use the multi-import endpoint
-      if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'test_questions') {
+      if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'landing_service_pages' || contentType === 'test_questions') {
         // Update total CSV imported count for reference files too
         stats.csvImportedRows += actualRowCount;
         updateStats();
@@ -1237,8 +1237,8 @@
         const urls = lines.slice(1).map(line => {
           const values = line.split(',');
           // Try different URL columns based on CSV type
-          if (contentType === 'site_urls' || contentType === 'landing_pages') {
-            return values[0]; // First column for site URLs
+          if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'landing_service_pages') {
+            return values[0]; // First column for site URLs / landing pages
           } else if (contentType === 'blog') {
             return values.find(v => v && v.includes('alanranger.com')); // Find URL column
           } else if (contentType === 'event' || contentType === 'workshop') {
@@ -1415,6 +1415,7 @@
       if (h.includes('product url') || h.includes('price')) return 'product';
       if (h.includes('service') || h.includes('mentoring') || h.includes('course') || h.includes('class')) return 'service';
       if (h.startsWith('url') || h.includes('url') && !h.includes('title')) return 'site_urls';
+      if (h.includes('landing') && h.includes('service')) return 'landing_service_pages';
       if (h.includes('landing')) return 'landing_pages';
       return null;
     }
@@ -1422,6 +1423,8 @@
     function detectTypeByName(name){
       const n = (name||'').toLowerCase();
       if (n.includes('photo workshops uk')) return 'workshop';
+      // Check for landing and service pages CSV (File 08)
+      if ((n.includes('landing') && n.includes('service')) || (n.includes('landing') && n.includes('sercice'))) return 'landing_service_pages';
       if (n.includes('photography services')) return 'service';
       if (n.includes('workshop')) return 'workshop';
       if (n.includes('event')) return 'event';
@@ -1470,7 +1473,8 @@
           'workshop': 'workshop_events',
           'service': 'course_products',
           'product': 'workshop_products',
-          'site_urls': 'site_urls'
+          'site_urls': 'site_urls',
+          'landing_service_pages': 'landing_service_pages'
         };
         
         // Special case: File 05 (Photo Workshops UK) should be workshop_products, not workshop_events
@@ -1481,6 +1485,11 @@
         // Special case: File 07 (Product Schema) should be product_schema, not workshop_products
         if (f.name.includes('alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS.csv')) {
           type = 'product_schema';
+        }
+        
+        // Special case: File 08 (Landing and Service Pages) should be landing_service_pages
+        if (f.name.includes('08 - Landing') || f.name.includes('08 - Landing and Service') || f.name.includes('Landing and Sercice')) {
+          type = 'landing_service_pages';
         }
         
         const csvType = csvTypeMapping[type] || type;
