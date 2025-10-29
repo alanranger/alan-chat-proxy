@@ -1737,7 +1737,7 @@ function renderServicesBlock(structured, query){
   });
   
   const kp = extractKeyPhrases(structured?.topic||'', __lastQuery);
-  const list = all.map(s=>({s, score: scoreServiceMatch(s, kp)})).sort((a,b)=> b.score - a.score).map(x=>x.s).slice(0, 12);
+  const list = all.map(s=>({s, score: scoreServiceMatch(s, kp)})).sort((a,b)=> b.score - a.score).map(x=>x.s).slice(0, 24);
   
   const servicesHTML = list.map(renderServiceCard).join('');
   
