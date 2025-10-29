@@ -3860,7 +3860,7 @@ try {
   // Use inner join on csv_metadata to enforce per-row flag regardless of page_entities.kind
   let qPrimary = client
     .from('page_entities')
-    .select('*, csv_metadata!inner(kind)')
+    .select('*, csv_metadata!inner(kind, title)')
     .eq('csv_type', 'landing_service_pages')
     .eq('csv_metadata.kind', 'service')
     .order('last_seen', { ascending: false });
@@ -3868,15 +3868,23 @@ try {
     .range(0, Math.max(0, (limit || 24) - 1));
   const { data: primary, error: errPrimary } = await qPrimary;
   if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
-    logServicesResults(primary);
-    return primary;
+    const normalized = primary.map(r => ({
+      ...r,
+      title: (r.csv_metadata && r.csv_metadata.title) || (r.json_ld_data && r.json_ld_data.name) || r.title || r.norm_title
+    }));
+    logServicesResults(normalized);
+    return normalized;
   }
 } catch (e) {
   console.warn('findServices primary query failed, attempting fallback', e);
 }
 
- // 2) Fallback: any page_entities with kind='service'
- let q = buildServicesBaseQuery(client, limit);
+ // 2) Fallback: any page_entities with kind='service' (try to carry CSV title if available)
+ let q = client
+   .from('page_entities')
+   .select('*, csv_metadata(title)')
+   .eq('kind', 'service')
+   .order('last_seen', { ascending: false });
  q = applyServicesKeywordFiltering(q, keywords)
    .range(0, Math.max(0, (limit || 24) - 1));
  const { data, error } = await q;
@@ -3884,8 +3892,12 @@ try {
    console.error('findServices fallback error:', error);
    return [];
  }
- logServicesResults(data);
- return data || [];
+ const fixed = (data || []).map(r => ({
+   ...r,
+   title: (r.csv_metadata && r.csv_metadata.title) || (r.json_ld_data && r.json_ld_data.name) || r.title || r.norm_title
+ }));
+ logServicesResults(fixed);
+ return fixed;
 }
 
 // Helper functions for findArticles scoring
