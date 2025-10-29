@@ -1,11 +1,11 @@
-const http = require('http');
+const https = require('https');
 
 async function reingestUrl(url) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({ url: url });
     const options = {
-      hostname: 'localhost',
-      port: 3000,
+      hostname: 'alan-chat-proxy.vercel.app',
+      port: 443,
       path: '/api/ingest',
       method: 'POST',
       headers: {
@@ -15,7 +15,7 @@ async function reingestUrl(url) {
       }
     };
 
-    const req = http.request(options, (res) => {
+    const req = https.request(options, (res) => {
       let body = '';
       res.on('data', (chunk) => body += chunk);
       res.on('end', () => {

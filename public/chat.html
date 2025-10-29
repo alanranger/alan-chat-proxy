@@ -1637,17 +1637,45 @@ function renderEventCard(e) {
 // Helper function to render single service card
 function renderServiceCard(s) {
   const href = s.page_url || s.source_url || s.url || '#';
-  
-  // Get title from json_ld_data.name first, then fallback to other fields
-  const rawTitle = (s.json_ld_data && s.json_ld_data.name) || s.norm_title || s.title || 'Photography Service';
-  const title = `${escapeHTML(rawTitle)}`;
-  
-  // Get description from json_ld_data.description first, then meta_description, then other fields
+
+  // Prefer specific JSON-LD name when available
+  const jsonName = s && s.json_ld_data && s.json_ld_data.name;
+
+  // Helper: derive human title from URL slug
+  const deriveFromUrl = (url) => {
+    if (!url) return 'Photography Service';
+    try {
+      const path = url.split('?')[0].replace(/\/$/, '');
+      const slug = path.split('/').filter(Boolean).pop() || '';
+      const cleaned = slug
+        .replace(/photography(-|\s)/gi, '')
+        .replace(/photographic(-|\s)/gi, '')
+        .replace(/professional(-|\s)/gi, '')
+        .replace(/near(-|\s)me/gi, 'near me')
+        .replace(/-/g, ' ')
+        .trim();
+      if (!cleaned) return 'Photography Service';
+      return cleaned.replace(/\b\w/g, c => c.toUpperCase());
+    } catch { return 'Photography Service'; }
+  };
+
+  // Choose best title
+  const rawTitle = jsonName || s.norm_title || s.title || '';
+  let displayTitle = rawTitle || '';
+  if (!jsonName && /\balan\s+ranger\b/i.test(rawTitle || '')) {
+    displayTitle = deriveFromUrl(href);
+  }
+  if (!displayTitle || displayTitle.toLowerCase() === 'alan ranger photography') {
+    displayTitle = deriveFromUrl(href);
+  }
+  const title = `${escapeHTML(displayTitle)}`;
+
+  // Description: prefer JSON-LD, then meta/excerpt/description
   const rawDesc = (s.json_ld_data && s.json_ld_data.description) || s.meta_description || s.excerpt || s.description || '';
   const trimmed = typeof rawDesc === 'string' ? rawDesc.replace(/<[^>]+>/g,'') : '';
   const short = trimmed.length > 180 ? trimmed.slice(0,180) + '...' : trimmed;
   const description = short ? `${escapeHTML(short)}` : '';
-  
+
   return `
     <div class="service-card">
       <div class="service-content">
