@@ -1637,9 +1637,13 @@ function renderEventCard(e) {
 // Helper function to render single service card
 function renderServiceCard(s) {
   const href = s.page_url || s.source_url || s.url || '#';
-  const rawDesc = (s.json_ld_data && s.json_ld_data.description) || s.meta_description || s.excerpt || s.description || '';
-  const rawTitle = (s.json_ld_data && s.json_ld_data.name) || s.name || s.norm_title || s.title || 'Photography Service';
+  
+  // Get title from json_ld_data.name first, then fallback to other fields
+  const rawTitle = (s.json_ld_data && s.json_ld_data.name) || s.norm_title || s.title || 'Photography Service';
   const title = `${escapeHTML(rawTitle)}`;
+  
+  // Get description from json_ld_data.description first, then meta_description, then other fields
+  const rawDesc = (s.json_ld_data && s.json_ld_data.description) || s.meta_description || s.excerpt || s.description || '';
   const trimmed = typeof rawDesc === 'string' ? rawDesc.replace(/<[^>]+>/g,'') : '';
   const short = trimmed.length > 180 ? trimmed.slice(0,180) + '...' : trimmed;
   const description = short ? `${escapeHTML(short)}` : '';
