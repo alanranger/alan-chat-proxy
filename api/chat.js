@@ -6373,22 +6373,7 @@ function generateAlanBackgroundAnswer() {
  return `Alan Ranger is a BIPP (British Institute of Professional Photography) qualified photographer with over 20 years of teaching experience and 580+ 5-star reviews.\n\n**His Background:**\nâ€¢ BIPP Qualified Professional Photographer\nâ€¢ 20+ years of teaching experience\nâ€¢ Specializes in landscape photography\nâ€¢ Based in Coventry, UK\n\n**What He Offers:**\nâ€¢ Landscape photography workshops (Wales, Devon, Yorkshire)\nâ€¢ Photo editing and Lightroom training\nâ€¢ Private tuition and mentoring\nâ€¢ Online photography academy\nâ€¢ Free online photography course\n\n**Reviews:** 4.9/5 stars from students and clients\n\n*Learn more about Alan: https://www.alanranger.com/about*`;
 }
 
-// Helper function to generate service-based answer (removed duplicate)
- const bestService = services[0];
- const lc = query.toLowerCase();
- 
- console.log(`ðŸ” generateEvidenceBasedAnswer: Query "${query}" matched services, testing patterns...`);
- 
- if (/tripod|equipment|gear|camera|lens/i.test(lc)) {
- return generateEquipmentServiceAnswer(bestService);
- } else if (/lightroom|photo-?editing/i.test(lc)) {
- return generateLightroomServiceAnswer();
- } else if (/who.*alan|alan.*ranger|background|experience/i.test(lc)) {
- return generateAlanBackgroundAnswer();
- } else {
- return `Yes, Alan Ranger offers the services you're asking about.\n\n*Learn more: ${bestService.page_url}*`;
- }
-}
+// (duplicate generateServiceAnswer block removed)
 
 // Helper function to generate fallback answer
 function generateFallbackAnswer(query) {
