@@ -8500,13 +8500,14 @@ function detectBusinessCategory(query) {
     return 'Event Queries';
   }
   
-  // 5. TECHNICAL ADVICE - "How to..." and "Why..." questions about photography techniques
-  if ((lc.includes('how to') || lc.includes('how do i') || lc.includes('why') || 
-       lc.includes('why are') || lc.includes('why do') || lc.includes('why is')) && (
+  // 5. TECHNICAL ADVICE - How/Why or troubleshooting phrases (incl. sharp/blurry without explicit how/why)
+  if ((lc.includes('how to') || lc.includes('how do i') || lc.includes('why') ||
+       lc.includes('why are') || lc.includes('why do') || lc.includes('why is') ||
+       lc.includes('sharp') || lc.includes('blurry') || lc.includes('out of focus') || lc.includes('soft focus')) && (
     lc.includes('take') || lc.includes('improve') || lc.includes('photograph') ||
     lc.includes('sharp') || lc.includes('blurry') || lc.includes('grainy') ||
     lc.includes('noisy') || lc.includes('lighting') || lc.includes('edit') ||
-    lc.includes('compose') || lc.includes('exposure') || lc.includes('settings')
+    lc.includes('compose') || lc.includes('exposure') || lc.includes('settings') || lc.includes('focus')
   )) {
     return 'Technical Advice';
   }
