@@ -3019,7 +3019,6 @@ function checkDirectAnswerPatterns(query) {
 // Helper function to check clarification patterns
 function checkClarificationPatterns(query) {
  const clarificationPatterns = [
- /photography services/i,
  /photography articles/i,
  /photography tips/i,
  /photography help/i,
