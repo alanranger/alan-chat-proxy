@@ -3868,10 +3868,18 @@ try {
     .range(0, Math.max(0, (limit || 24) - 1));
   const { data: primary, error: errPrimary } = await qPrimary;
   if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
-    const normalized = primary.map(r => ({
-      ...r,
-      title: (r.csv_metadata && r.csv_metadata.title) || (r.json_ld_data && r.json_ld_data.name) || r.title || r.norm_title
-    }));
+    const normalized = primary.map(r => {
+      const csvTitle = r.csv_metadata && r.csv_metadata.title;
+      const jsonName = r.json_ld_data && r.json_ld_data.name;
+      let title = csvTitle || jsonName || r.title || r.norm_title || '';
+      if (/\balan\s+ranger\b/i.test(title)) {
+        const u = (r.page_url || r.url || '').split('?')[0].replace(/\/$/, '');
+        const slug = u.split('/').filter(Boolean).pop() || '';
+        const fromSlug = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        if (fromSlug) title = fromSlug;
+      }
+      return { ...r, title };
+    });
     logServicesResults(normalized);
     return normalized;
   }
@@ -3892,10 +3900,18 @@ try {
    console.error('findServices fallback error:', error);
    return [];
  }
- const fixed = (data || []).map(r => ({
-   ...r,
-   title: (r.csv_metadata && r.csv_metadata.title) || (r.json_ld_data && r.json_ld_data.name) || r.title || r.norm_title
- }));
+  const fixed = (data || []).map(r => {
+    const csvTitle = r.csv_metadata && r.csv_metadata.title;
+    const jsonName = r.json_ld_data && r.json_ld_data.name;
+    let title = csvTitle || jsonName || r.title || r.norm_title || '';
+    if (/\balan\s+ranger\b/i.test(title)) {
+      const u = (r.page_url || r.url || '').split('?')[0].replace(/\/$/, '');
+      const slug = u.split('/').filter(Boolean).pop() || '';
+      const fromSlug = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      if (fromSlug) title = fromSlug;
+    }
+    return { ...r, title };
+  });
  logServicesResults(fixed);
  return fixed;
 }
