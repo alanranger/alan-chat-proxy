@@ -3857,7 +3857,8 @@ async function findServices(client, { keywords, limit = 50 }) {
 // 1) Primary: prefer landing/service pages imported via CSV
 try {
   let qPrimary = buildServicesBaseQuery(client, limit)
-    .eq('csv_type', 'landing_service_pages');
+    .eq('csv_type', 'landing_service_pages')
+    .eq('kind', 'service');
   qPrimary = applyServicesKeywordFiltering(qPrimary, keywords)
     .range(0, Math.max(0, (limit || 24) - 1));
   const { data: primary, error: errPrimary } = await qPrimary;

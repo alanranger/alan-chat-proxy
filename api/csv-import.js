@@ -529,10 +529,18 @@ async function importLandingServicePageMetadata(rows, supa) {
         console.log(`[DEBUG importLandingServicePageMetadata] Skipping row without URL:`, row);
         return null;
       }
+      // Try to capture the per-row flag from common column names
+      const rawKind = (row.kind ?? row.type ?? row.tile_type ?? row.page_type ?? row.category ?? '').toString().trim().toLowerCase();
+      let normalizedKind = null;
+      if (rawKind) {
+        if (/(^|\b)service(s)?($|\b)/.test(rawKind)) normalizedKind = 'service';
+        else if (/(^|\b)landing($|\b)/.test(rawKind)) normalizedKind = 'landing';
+      }
       return {
         csv_type: 'landing_service_pages',
         url: row.url,
         title: row.title ? cleanHTMLText(row.title) : null,
+        kind: normalizedKind,
         categories: [],
         tags: [],
         publish_date: null,

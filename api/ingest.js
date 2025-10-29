@@ -742,9 +742,11 @@ async function ingestSingleUrl(url, supa, options = {}) {
       let csvKind = csvKindRaw ? String(csvKindRaw).trim().toLowerCase() : null;
       if (csvKind && !allowedKinds.has(csvKind)) csvKind = null;
       
-      // Special handling for landing_service_pages CSV type
-      if (csvMetadata?.csv_type === 'landing_service_pages' && !csvKind) {
-        csvKind = 'service';
+      // Special handling for landing_service_pages CSV type: respect per-row kind flag if present
+      // Do not force 'service' if the row is labeled as 'landing' (or unspecified)
+      if (csvMetadata?.csv_type === 'landing_service_pages') {
+        // csvKind already normalized above from csvMetadata.kind/override if present
+        // If csvKind is neither 'service' nor a valid allowed kind, leave it null and fall back to derivedKind
       }
       
       const derivedKind = normalizeKind(bestJsonLd, url);
