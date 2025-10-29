@@ -521,23 +521,41 @@ async function importProductSchemaMetadata(rows, supa) {
 
 /* ========== Landing & Service Pages Metadata Import ========== */
 async function importLandingServicePageMetadata(rows, supa) {
-  const metadata = rows.map(row => ({
-    csv_type: 'landing_service_pages',
-    url: row.url,
-    title: row.title ? cleanHTMLText(row.title) : null,
-    categories: [],
-    tags: [],
-    publish_date: null,
-    image_url: null,
-    excerpt: null,
-    import_session: new Date().toISOString() // Track when this was imported
-  })).filter(item => item.url);
+  try {
+    console.log(`[DEBUG importLandingServicePageMetadata] Processing ${rows.length} rows`);
+    
+    const metadata = rows.map(row => {
+      if (!row.url) {
+        console.log(`[DEBUG importLandingServicePageMetadata] Skipping row without URL:`, row);
+        return null;
+      }
+      return {
+        csv_type: 'landing_service_pages',
+        url: row.url,
+        title: row.title ? cleanHTMLText(row.title) : null,
+        categories: [],
+        tags: [],
+        publish_date: null,
+        image_url: null,
+        excerpt: null,
+        import_session: new Date().toISOString() // Track when this was imported
+      };
+    }).filter(item => item !== null);
 
-  if (metadata.length > 0) {
-    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
-    if (error) throw error;
+    console.log(`[DEBUG importLandingServicePageMetadata] Filtered to ${metadata.length} valid records`);
+
+    if (metadata.length > 0) {
+      const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+      if (error) {
+        console.log(`[DEBUG importLandingServicePageMetadata] Database error:`, error);
+        throw error;
+      }
+    }
+    return { count: metadata.length };
+  } catch (err) {
+    console.log(`[DEBUG importLandingServicePageMetadata] Exception:`, err);
+    throw err;
   }
-  return { count: metadata.length };
 }
 
 /* ========== CSV-Enhanced Blog data transformation ========== */
