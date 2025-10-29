@@ -3945,9 +3945,6 @@ function buildSearchConditions(keywords) {
   const t2 = anyIlike("page_url", keywords); if (t2) parts.push(t2);
   const t3 = anyIlike("json_ld_data->>headline", keywords); if (t3) parts.push(t3);
   const t4 = anyIlike("json_ld_data->>name", keywords); if (t4) parts.push(t4);
-  // Search tags and categories (JSONB arrays converted to text)
-  const t5 = anyIlike("tags::text", keywords); if (t5) parts.push(t5);
-  const t6 = anyIlike("categories::text", keywords); if (t6) parts.push(t6);
   return parts;
 }
 
@@ -4001,7 +3998,7 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
  const searchTerms = filterArticleKeywords(enhancedKeywords);
  
  let q = buildArticlesBaseQuery(client, limit);
- q = applySearchConditions(q, (searchTerms.length ? searchTerms : enhancedKeywords).slice(0, 12));
+ q = applySearchConditions(q, (searchTerms.length ? searchTerms : enhancedKeywords).slice(0, 6));
 
  const { data, error } = await q;
   if (error) {
