@@ -1186,20 +1186,11 @@ export default async function handler(req, res) {
         const present = new Set((existing || []).map(r => r.csv_metadata_id));
         const toCreate = (svcRows || []).filter(r => !present.has(r.id));
         if (toCreate.length) {
-          const rows = toCreate.map(r => {
+          // Use the normal single-URL ingestion path so RLS/logic is respected
+          for (const r of toCreate) {
             const u = String(r.url || '').replace(/\/$/, '');
-            return {
-              url: u,
-              page_url: u,
-              kind: 'service',
-              title: null,
-              description: null,
-              csv_type: 'landing_service_pages',
-              csv_metadata_id: r.id,
-              last_seen: new Date().toISOString()
-            };
-          });
-          await supa.from('page_entities').insert(rows).then(()=>{}).catch(()=>{});
+            try { await ingestSingleUrl(u, supa, { dryRun: false }); } catch (e) { /* continue */ }
+          }
         }
       }
     } catch (reconErr) {
