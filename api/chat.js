@@ -8793,11 +8793,51 @@ function generateWorkshopDurationAnswer(query, response){
 
 // Technical Advice - "How to..." and troubleshooting
 function enhanceTechnicalAdviceResponse(answer, query, response) {
+  const q = (query || '').toLowerCase();
+  const sharpnessIntent = (
+    q.includes('not sharp') || q.includes('never sharp') || q.includes('soft') ||
+    q.includes('blurry') || q.includes('out of focus') || q.includes('unsharp') ||
+    (q.includes('sharp') && (q.includes('pictures') || q.includes('photos') || q.includes('images')))
+  );
+
+  if (sharpnessIntent) {
+    const checklist = [
+      'Focus: use single‑point AF on a high‑contrast area; AF‑C for moving subjects.',
+      'Shutter speed: start at 1/(focal length) as a minimum; 1/500–1/1000 for motion.',
+      'Aperture: avoid extremes; f/5.6–f/8 for most lenses; stop down from wide‑open.',
+      'ISO/Noise: raise shutter first; add ISO only as needed and enable noise reduction in post.',
+      'Stability: brace stance, enable IBIS/VR; use a tripod or support when possible.',
+      'Technique: half‑press to lock focus, smooth shutter press, burst 3–5 frames.'
+    ];
+
+    const quickTests = [
+      'Tripod test: shoot a static subject at 1/200s, f/5.6, ISO 200. If sharp → handshake/motion was the issue.',
+      'Shutter test: raise to 1/1000s handheld; if sharpens → shutter was too slow.',
+      'AF test: single‑point on a bold edge; if misses → switch AF mode or micro‑adjust.'
+    ];
+
+    const sources = (response?.structured?.articles || [])
+      .slice(0, 2)
+      .map(a => `- ${a.title || a.url || 'Guide'}`)
+      .join('\n');
+
+    const crafted = [
+      'Here’s a quick sharpness troubleshooting checklist:',
+      ...checklist.map(i => `• ${i}`),
+      '',
+      'Quick tests to isolate the cause:',
+      ...quickTests.map(i => `• ${i}`),
+    ].join('\n');
+
+    const withSources = sources ? `${crafted}\n\nRelated guides:\n${sources}` : crafted;
+    return { answer: withSources, type: 'advice', confidenceBoost: 0.9 };
+  }
+
   // If answer is too short, provide helpful context
   if (!answer || answer.length < 50) {
     return `I'd be happy to help you with that photography technique! I have extensive experience teaching these skills. Let me know what specific aspect you'd like guidance on.`;
   }
-  
+
   return { answer, confidenceBoost: 0.8 };
 }
 
