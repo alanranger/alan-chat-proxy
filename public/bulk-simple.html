@@ -1213,7 +1213,7 @@
       addResult(`📊 CSV has ${actualRowCount} data rows (${lines.length} total lines)`);
       
       // Handle special cases that don't use the multi-import endpoint
-      if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'test_questions') {
+      if (contentType === 'site_urls' || contentType === 'test_questions') {
         // Update total CSV imported count for reference files too
         stats.csvImportedRows += actualRowCount;
         updateStats();
@@ -1239,7 +1239,7 @@
         const urls = lines.slice(1).map(line => {
           const values = line.split(',');
           // Try different URL columns based on CSV type
-          if (contentType === 'site_urls' || contentType === 'landing_pages') {
+          if (contentType === 'site_urls' || contentType === 'landing_service_pages') {
             return values[0]; // First column for site URLs
           } else if (contentType === 'blog') {
             return values.find(v => v && v.includes('alanranger.com')); // Find URL column
@@ -1305,7 +1305,7 @@
           const urls = lines.slice(1).map(line => {
             const values = line.split(',');
             // Try different URL columns based on CSV type
-            if (contentType === 'site_urls' || contentType === 'landing_pages') {
+            if (contentType === 'site_urls' || contentType === 'landing_service_pages') {
               return values[0]; // First column for site URLs
             } else if (contentType === 'blog') {
               return values.find(v => v && v.includes('alanranger.com')); // Find URL column
@@ -1367,7 +1367,7 @@
         { file: document.getElementById('servicePagesCsv').files[0], type: 'service', csvType: 'course_products', name: 'Service Pages' },
         { file: document.getElementById('productsCsv').files[0], type: 'product', csvType: 'workshop_products', name: 'Physical Products' },
         { file: document.getElementById('siteUrlsCsv').files[0], type: 'site_urls', csvType: 'site_urls', name: 'Site URLs' },
-        { file: document.getElementById('landingPagesCsv').files[0], type: 'landing_pages', csvType: 'site_urls', name: 'Landing Pages' },
+        { file: document.getElementById('landingPagesCsv').files[0], type: 'landing_service_pages', csvType: 'landing_service_pages', name: 'Landing Pages' },
         { file: document.getElementById('testQuestionsCsv').files[0], type: 'test_questions', csvType: 'site_urls', name: 'Test Questions' }
       ];
 
@@ -1417,7 +1417,8 @@
       if (h.includes('product url') || h.includes('price')) return 'product';
       if (h.includes('service') || h.includes('mentoring') || h.includes('course') || h.includes('class')) return 'service';
       if (h.startsWith('url') || h.includes('url') && !h.includes('title')) return 'site_urls';
-      if (h.includes('landing')) return 'landing_pages';
+      if (h.includes('landing') && (h.includes('service') || h.includes('sercice'))) return 'landing_service_pages';
+      if (h.includes('landing')) return 'landing_service_pages';
       return null;
     }
 
@@ -1432,7 +1433,8 @@
       if (n.includes('service') || n.includes('mentoring') || n.includes('course') || n.includes('class')) return 'service';
       if (n.includes('site') && n.includes('url')) return 'site_urls';
       if (n.includes('urls') || n.includes('url')) return 'site_urls';
-      if (n.includes('landing')) return 'landing_pages';
+      if (n.includes('landing') && (n.includes('service') || n.includes('sercice'))) return 'landing_service_pages';
+      if (n.includes('landing')) return 'landing_service_pages';
       if (n.includes('question')) return 'test_questions';
       return null;
     }
@@ -1472,7 +1474,8 @@
           'workshop': 'workshop_events',
           'service': 'course_products',
           'product': 'workshop_products',
-          'site_urls': 'site_urls'
+          'site_urls': 'site_urls',
+          'landing_service_pages': 'landing_service_pages'
         };
         
         // Special case: File 05 (Photo Workshops UK) should be workshop_products, not workshop_events
@@ -1483,6 +1486,11 @@
         // Special case: File 07 (Product Schema) should be product_schema, not workshop_products
         if (f.name.includes('alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS.csv')) {
           type = 'product_schema';
+        }
+        
+        // Special case: File 08 (Landing and Service Pages) should be landing_service_pages
+        if (f.name.includes('08 - Landing') || f.name.includes('Sercice Pages')) {
+          type = 'landing_service_pages';
         }
         
         const csvType = csvTypeMapping[type] || type;
@@ -1797,7 +1805,7 @@
         'workshop_events': cat(),
         'service_pages': cat(),
         'service_products': cat(),
-        'landing_pages': cat(),
+        'landing_service_pages': cat(),
         'test_questions': cat()
       };
       

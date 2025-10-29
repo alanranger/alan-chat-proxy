@@ -519,6 +519,27 @@ async function importProductSchemaMetadata(rows, supa) {
   return { count: metadata.length };
 }
 
+/* ========== Landing & Service Pages Metadata Import ========== */
+async function importLandingServicePageMetadata(rows, supa) {
+  const metadata = rows.map(row => ({
+    csv_type: 'landing_service_pages',
+    url: row.url,
+    title: row.title ? cleanHTMLText(row.title) : null,
+    categories: [],
+    tags: [],
+    publish_date: null,
+    image_url: null,
+    excerpt: null,
+    import_session: new Date().toISOString() // Track when this was imported
+  })).filter(item => item.url);
+
+  if (metadata.length > 0) {
+    const { error } = await supa.from('csv_metadata').upsert(metadata, { onConflict: 'csv_type,url' });
+    if (error) throw error;
+  }
+  return { count: metadata.length };
+}
+
 /* ========== CSV-Enhanced Blog data transformation ========== */
 async function transformBlogDataWithCSV(row, supa) {
   const title = row.title;
@@ -1418,6 +1439,10 @@ export default async function handler(req, res) {
         case 'product_schema':
           const productSchemaResult = await importProductSchemaMetadata(rows, supa);
           metadataCount = productSchemaResult.count;
+          break;
+        case 'landing_service_pages':
+          const landingServiceResult = await importLandingServicePageMetadata(rows, supa);
+          metadataCount = landingServiceResult.count;
           break;
         default:
           return sendJSON(res, 400, { error: 'bad_request', detail: 'Invalid csvType for metadata import', stage });
