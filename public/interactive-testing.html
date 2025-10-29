@@ -818,6 +818,8 @@
         let savedScores = {};
         let currentFilter = 'all';
         let filteredQuestions = [];
+        // Control whether historical baseline scores are auto-merged on load
+        const INCLUDE_BASELINE_SCORES = false;
 
         // Debug logging functions
         function addDebugLog(message) {
@@ -877,7 +879,12 @@
         function initTest() {
             addDebugLog('🔍 DEBUG: initTest() called');
             loadSavedScores();
-            loadBaselineScores();
+            if (INCLUDE_BASELINE_SCORES) {
+                addDebugLog('🔍 DEBUG: Merging baseline scores (flag enabled)');
+                loadBaselineScores();
+            } else {
+                addDebugLog('🔍 DEBUG: Skipping baseline score merge (flag disabled)');
+            }
             applyFilter('all'); // Start with all questions
             loadQuestion(0);
         }
@@ -1183,6 +1190,16 @@
                 answerDiv.className = 'chat-bubble';
                 
                 let answerText = data.answer_markdown || data.answer;
+                // Fix common UTF-8 misinterpretations seen as Windows-1252 artifacts
+                if (typeof answerText === 'string') {
+                    answerText = answerText
+                        .replace(/â€¢/g, '•')
+                        .replace(/â€“/g, '–')
+                        .replace(/â€”/g, '—')
+                        .replace(/â€™/g, '’')
+                        .replace(/â€œ/g, '“')
+                        .replace(/â€/g, '”');
+                }
                 if (typeof answerText === 'string') {
                     // Convert markdown to HTML
                     answerText = answerText
