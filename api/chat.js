@@ -8802,6 +8802,7 @@ function enhanceTechnicalAdviceResponse(answer, query, response) {
 
   if (sharpnessIntent) {
     // Filter related articles to only sharpness/focus topics
+    let filteredForReturn = [];
     if (response && response.structured && Array.isArray(response.structured.articles)) {
       const rel = ['sharp', 'focus', 'focusing', 'blurry', 'blur', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod'];
       const isRelevant = (t='')=>{
@@ -8811,7 +8812,8 @@ function enhanceTechnicalAdviceResponse(answer, query, response) {
       const filtered = response.structured.articles.filter(a =>
         isRelevant(a.title) || isRelevant(a.page_url || a.source_url || '') || isRelevant(a.meta_description || '')
       );
-      response.structured.articles = filtered.slice(0, 6);
+      filteredForReturn = filtered.slice(0, 6);
+      response.structured.articles = filteredForReturn;
     }
 
     const checklist = [
@@ -8829,7 +8831,7 @@ function enhanceTechnicalAdviceResponse(answer, query, response) {
       'AF test: single‑point on a bold edge; if misses → switch AF mode or micro‑adjust.'
     ];
 
-    const sources = (response?.structured?.articles || [])
+    const sources = (filteredForReturn.length ? filteredForReturn : (response?.structured?.articles || []))
       .slice(0, 2)
       .map(a => `- ${a.title || a.url || 'Guide'}`)
       .join('\n');
@@ -8843,7 +8845,16 @@ function enhanceTechnicalAdviceResponse(answer, query, response) {
     ].join('\n');
 
     const withSources = sources ? `${crafted}\n\nRelated guides:\n${sources}` : crafted;
-    return { answer: withSources, type: 'advice', confidenceBoost: 0.9 };
+    return {
+      answer: withSources,
+      type: 'advice',
+      confidenceBoost: 0.9,
+      sources: { articles: filteredForReturn },
+      structured: {
+        ...(response?.structured || {}),
+        articles: filteredForReturn
+      }
+    };
   }
 
   // If answer is too short, provide helpful context
