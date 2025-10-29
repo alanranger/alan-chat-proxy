@@ -8564,12 +8564,94 @@ function enhancePersonResponse(answer, query, response) {
 
 // Event Queries - Workshop/course scheduling
 function enhanceEventResponse(answer, query, response) {
+  // Duration-intent detection (e.g. "How long are your workshops?", "one day", "2.5hr", "multi-day")
+  const lc = (query || '').toLowerCase();
+  const isDurationQuery = (
+    lc.includes('how long') && lc.includes('workshop')
+  ) || /\b(2\.5\s?hr|2\.5\s?hours|4\s?hr|4\s?hours|one[-\s]?day|1\s?day|two[-\s]?day|multi[-\s]?day|residential)\b/i.test(query);
+
+  if (isDurationQuery) {
+    return { answer: generateWorkshopDurationAnswer(query, response), type: 'advice', confidenceBoost: 0.95 };
+  }
+
   // If answer is too short, provide helpful context
   if (!answer || answer.length < 50) {
     return `I'd be happy to help you find information about workshops and courses! I run various photography workshops throughout the year. Let me know what specific type of workshop or timing you're interested in.`;
   }
-  
+
   return { answer, confidenceBoost: 0.9 };
+}
+
+// ================= Duration intent helpers =================
+function categorizeWorkshopDuration(entity){
+  const cd = (entity?.course_duration||'').toLowerCase();
+  const ts = (entity?.time_schedule||'').toLowerCase();
+  // Direct textual hints
+  if (/(^|\b)(2\.5\s?hr|2\.5\s?hours|2\.5h)\b/.test(cd) || /(2\.5\s?hr|2\.5\s?hours)/.test(ts)) return '2.5–4 hours';
+  if (/(^|\b)(3\s?hr|3\s?hours|4\s?hr|4\s?hours)\b/.test(cd) || /(3\s?hr|4\s?hr|hours)/.test(ts)) return '2.5–4 hours';
+  if (/\b(one[-\s]?day|1\s?day|single\s?day)\b/.test(cd) || /one[-\s]?day|1\s?day/.test(ts)) return 'One‑day';
+  if (/\b(two[-\s]?day|2\s?day|three[-\s]?day|3\s?day|four[-\s]?day|4\s?day|five[-\s]?day|5\s?day|multi[-\s]?day|residential)\b/.test(cd+" "+ts)) return 'Multi‑day (2–5 days)';
+
+  // Infer from dates if present
+  try{
+    const s = entity.start_date || entity.date_start || entity.start_at;
+    const e = entity.end_date || entity.date_end || entity.end_at;
+    if (s && e){
+      const sd = new Date(s), ed = new Date(e);
+      const days = Math.max(1, Math.round((ed - sd) / (1000*60*60*24)) + 1);
+      if (days === 1) return 'One‑day';
+      if (days >= 2 && days <= 5) return 'Multi‑day (2–5 days)';
+    }
+  } catch {}
+  return null;
+}
+
+function summarizeDurationBuckets(events){
+  const buckets = { '2.5–4 hours': 0, 'One‑day': 0, 'Multi‑day (2–5 days)': 0 };
+  for (const e of events){
+    const b = categorizeWorkshopDuration(e);
+    if (b) buckets[b]++;
+  }
+  const parts = [];
+  if (buckets['2.5–4 hours']>0) parts.push('2.5–4 hour sessions');
+  if (buckets['One‑day']>0) parts.push('one‑day workshops');
+  if (buckets['Multi‑day (2–5 days)']>0) parts.push('2–5 day multi‑day workshops');
+  return { buckets, parts };
+}
+
+function filterEventsByDurationQuery(events, query){
+  const q = (query||'').toLowerCase();
+  if (/2\.5\s?hr|2\.5\s?hours|3\s?hr|4\s?hr/.test(q)){
+    return events.filter(e=>categorizeWorkshopDuration(e)==='2.5–4 hours');
+  }
+  if (/one[-\s]?day|1\s?day/.test(q)){
+    return events.filter(e=>categorizeWorkshopDuration(e)==='One‑day');
+  }
+  if (/two[-\s]?day|three[-\s]?day|four[-\s]?day|five[-\s]?day|multi[-\s]?day|residential|2\s?day|3\s?day|4\s?day|5\s?day/.test(q)){
+    return events.filter(e=>categorizeWorkshopDuration(e)==='Multi‑day (2–5 days)');
+  }
+  return events;
+}
+
+function formatEventLine(e){
+  const title = e.title || e.event_title || 'Workshop';
+  const when = (e.date_start||e.start_date||e.start_at) ? new Date(e.date_start||e.start_date||e.start_at).toLocaleDateString('en-GB',{year:'numeric',month:'long',day:'numeric'}) : '';
+  const where = e.location || e.location_name || '';
+  return `• ${title}${when?` — ${when}`:''}${where?` — ${where}`:''}`;
+}
+
+function generateWorkshopDurationAnswer(query, response){
+  // Prefer events from structured payload, else fall back to empty list; server can enrich later
+  const all = (response?.structured?.events || []).slice();
+  // Build bucket summary
+  const { buckets, parts } = summarizeDurationBuckets(all);
+  const summary = parts.length ? `I offer ${parts.join(', ').replace(', 2–5', ', and 2–5')}.` : `I offer 2.5–4 hour sessions, one‑day workshops, and 2–5 day multi‑day workshops.`;
+
+  // If user asked for a specific duration, show next 2 examples
+  const subset = filterEventsByDurationQuery(all, query).slice(0, 2);
+  const examples = subset.length ? `\n\nHere ${subset.length===1?'is':'are'} a ${subset.length===1?'matching workshop':'couple of matching workshops'}:\n${subset.map(formatEventLine).join('\n')}` : '';
+
+  return `${summary}${examples}`;
 }
 
 // Technical Advice - "How to..." and troubleshooting
