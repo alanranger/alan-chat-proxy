@@ -3885,6 +3885,18 @@ try {
       }
       return { ...r, title };
     });
+    if (genericServiceIntent) {
+      const seen = new Set();
+      const uniq = [];
+      for (const it of normalized) {
+        const k = (it.page_url || it.url || '').replace(/\/$/, '');
+        if (!k || seen.has(k)) continue;
+        seen.add(k);
+        uniq.push(it);
+      }
+      logServicesResults(uniq);
+      return uniq;
+    }
     logServicesResults(normalized);
     return normalized;
   }
@@ -3892,11 +3904,12 @@ try {
   console.warn('findServices primary query failed, attempting fallback', e);
 }
 
- // 2) Fallback: any page_entities with kind='service' (try to carry CSV title if available)
+ // 2) Fallback: enforce csv_metadata.kind='service' as well to avoid landing bleed-through
  let q = client
    .from('page_entities')
-   .select('*, csv_metadata(title)')
+   .select('*, csv_metadata!inner(title, kind)')
    .eq('kind', 'service')
+   .eq('csv_metadata.kind', 'service')
    .order('last_seen', { ascending: false });
  if (!genericServiceIntent) {
    q = applyServicesKeywordFiltering(q, keywords);
@@ -3920,6 +3933,18 @@ try {
     }
     return { ...r, title };
   });
+ if (genericServiceIntent) {
+   const seen = new Set();
+   const uniq = [];
+   for (const it of fixed) {
+     const k = (it.page_url || it.url || '').replace(/\/$/, '');
+     if (!k || seen.has(k)) continue;
+     seen.add(k);
+     uniq.push(it);
+   }
+   logServicesResults(uniq);
+   return uniq;
+ }
  logServicesResults(fixed);
  return fixed;
 }
