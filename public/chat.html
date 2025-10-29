@@ -1659,8 +1659,9 @@ function renderServiceCard(s) {
     } catch { return 'Photography Service'; }
   };
 
-  // Choose best title
-  const rawTitle = jsonName || s.norm_title || s.title || '';
+  // Choose best title: prefer explicit title (from CSV), then JSON-LD, then fallbacks
+  const csvTitle = s && s.csv_metadata && s.csv_metadata.title;
+  const rawTitle = (s.title || csvTitle || jsonName || s.norm_title || '');
   let displayTitle = rawTitle || '';
   if (!jsonName && /\balan\s+ranger\b/i.test(rawTitle || '')) {
     displayTitle = deriveFromUrl(href);
