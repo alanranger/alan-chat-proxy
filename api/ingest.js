@@ -1001,9 +1001,8 @@ async function ingestSingleUrl(url, supa, options = {}) {
         await supa
           .from('page_entities')
           .update({ title: finalPageTitle })
-          .eq('url', url)
-          .in('kind', ['service','landing'])
-          .or("lower(title).eq.alan ranger photography,lower(title).eq.alan ranger");
+          .eq('page_url', url)
+          .in('kind', ['service','landing']);
       }
     } catch (_) {}
 
