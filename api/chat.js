@@ -8599,7 +8599,28 @@ function categorizeWorkshopDuration(entity){
     if (s && e){
       const sd = new Date(s), ed = new Date(e);
       const days = Math.max(1, Math.round((ed - sd) / (1000*60*60*24)) + 1);
-      if (days === 1) return 'One‑day';
+      
+      // If single day, check time duration to differentiate 2.5-4hr vs full day
+      if (days === 1) {
+        const startTime = entity.start_time || entity._csv_start_time;
+        const endTime = entity.end_time || entity._csv_end_time;
+        if (startTime && endTime) {
+          try {
+            const [sh, sm] = startTime.split(':').map(Number);
+            const [eh, em] = endTime.split(':').map(Number);
+            const startMinutes = sh * 60 + (sm || 0);
+            const endMinutes = eh * 60 + (em || 0);
+            const durationHours = (endMinutes - startMinutes) / 60;
+            if (durationHours >= 2.5 && durationHours <= 4.5) {
+              return '2.5–4 hours';
+            }
+            if (durationHours > 4.5 && durationHours <= 8) {
+              return 'One‑day';
+            }
+          } catch {}
+        }
+        return 'One‑day';
+      }
       if (days >= 2 && days <= 5) return 'Multi‑day (2–5 days)';
     }
   } catch {}
