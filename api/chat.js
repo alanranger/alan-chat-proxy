@@ -3853,6 +3853,8 @@ function generateServiceAnswer(services, query) {
 
 async function findServices(client, { keywords, limit = 50 }) {
  console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
+ // Treat generic service-intent queries as broad: avoid over-filtering by keywords
+ const genericServiceIntent = Array.isArray(keywords) && keywords.length > 0 && keywords.every(k => /^(service|services|type|types|offer|offers|photography|photographic|what|do|you)$/i.test(String(k||'').trim()));
 
 // 1) Primary: prefer landing/service pages imported via CSV
 try {
@@ -3864,8 +3866,10 @@ try {
     .eq('csv_type', 'landing_service_pages')
     .eq('csv_metadata.kind', 'service')
     .order('last_seen', { ascending: false });
-  qPrimary = applyServicesKeywordFiltering(qPrimary, keywords)
-    .range(0, Math.max(0, (limit || 24) - 1));
+  if (!genericServiceIntent) {
+    qPrimary = applyServicesKeywordFiltering(qPrimary, keywords);
+  }
+  qPrimary = qPrimary.range(0, Math.max(0, (limit || 24) - 1));
   const { data: primary, error: errPrimary } = await qPrimary;
   if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
     const normalized = primary.map(r => {
@@ -3894,8 +3898,10 @@ try {
    .select('*, csv_metadata(title)')
    .eq('kind', 'service')
    .order('last_seen', { ascending: false });
- q = applyServicesKeywordFiltering(q, keywords)
-   .range(0, Math.max(0, (limit || 24) - 1));
+ if (!genericServiceIntent) {
+   q = applyServicesKeywordFiltering(q, keywords);
+ }
+ q = q.range(0, Math.max(0, (limit || 24) - 1));
  const { data, error } = await q;
  if (error) {
    console.error('findServices fallback error:', error);
