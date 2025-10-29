@@ -5697,7 +5697,22 @@ async function handleDirectDurationRouting(context) {
     structured: { events: eventListDirect },
     events: eventListDirect
   };
-  const formattedAnswer = generateWorkshopDurationAnswer(query, responseObj);
+  let formattedAnswer = generateWorkshopDurationAnswer(query, responseObj);
+  // Also handle B&B inclusion preface for direct-duration route
+  const lc = query.toLowerCase();
+  const isBnBQuery = (
+    lc.includes('b&b') || lc.includes('bb') || lc.includes('bed and breakfast') || lc.includes('accommodation')
+  ) && (lc.includes('include') || lc.includes('included') || lc.includes('residential') || lc.includes('multi-day') || lc.includes('multiday'));
+  if (isBnBQuery) {
+    const hasMultiDay = (eventListDirect || []).some((e)=>{
+      try { return categorizeWorkshopDuration(e) === 'Multi‑day (2–5 days)'; } catch { return false; }
+    });
+    const bnbLine = hasMultiDay
+      ? 'Yes—all multi‑day workshops include transport and B&B in the price. '
+      : 'Multi‑day workshops typically include transport and B&B in the price. ';
+    const guideLine = 'See individual workshop event cards for current prices.';
+    formattedAnswer = `${bnbLine}${guideLine}\n\n${formattedAnswer}`;
+  }
   console.log(`🎭 handleDirectDurationRouting: Using duration answer for query="${query}"`);
 
   context.res.status(200).json({
@@ -5778,7 +5793,7 @@ function sendEventsResponse(context) {
     const bnbLine = hasMultiDay
       ? 'Yes—all multi‑day workshops include transport and B&B in the price. '
       : 'Multi‑day workshops typically include transport and B&B in the price.';
-    const guideLine = 'See the event cards below for dates and prices.';
+    const guideLine = 'See individual workshop event cards for current prices.';
     formattedAnswer = `${bnbLine}${guideLine}\n\n${formattedAnswer}`;
   }
  
