@@ -3273,7 +3273,7 @@ async function getEvidenceSnapshot(client, query, pageContext) {
  const arts = await findArticles(client, { keywords, limit: 15, pageContext });
  return arts || [];
  })(),
- findServices(client, { keywords, limit: 10, pageContext })
+ findServices(client, { keywords, limit: 24, pageContext })
  ]);
  return { events: events || [], articles: articles || [], services: services || [] };
  } catch {
@@ -6388,7 +6388,7 @@ async function handleFallbackSystem(context, classification) {
  // Search for relevant content
  const [articles, services, events] = await Promise.all([
  findArticles(context.client, { keywords, limit: 5, pageContext: context.pageContext }),
- findServices(context.client, { keywords, limit: 5, pageContext: context.pageContext }),
+ findServices(context.client, { keywords, limit: 24, pageContext: context.pageContext }),
  findEvents(context.client, { keywords, limit: 3, pageContext: context.pageContext })
  ]);
  
