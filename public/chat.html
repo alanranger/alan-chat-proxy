@@ -1707,20 +1707,36 @@ function renderServicesBlock(structured, query){
 
 // Helper function to score service matches
 function scoreServiceMatch(service, keyPhrases) {
-  if (!keyPhrases || keyPhrases.length === 0) return 0.5;
+  if (!keyPhrases || (!keyPhrases.words && !keyPhrases.phrases)) return 0.5;
   
   const title = (service.title || '').toLowerCase();
   const description = (service.description || '').toLowerCase();
   const content = `${title} ${description}`;
   
   let score = 0;
-  keyPhrases.forEach(phrase => {
-    if (content.includes(phrase.toLowerCase())) {
-      score += 1;
-    }
-  });
+  let totalItems = 0;
   
-  return Math.min(score / keyPhrases.length, 1);
+  // Check phrases (2-word combinations)
+  if (keyPhrases.phrases) {
+    for (const phrase of keyPhrases.phrases) {
+      totalItems++;
+      if (content.includes(phrase.toLowerCase())) {
+        score += 2;
+      }
+    }
+  }
+  
+  // Check individual words
+  if (keyPhrases.words) {
+    for (const word of keyPhrases.words) {
+      totalItems++;
+      if (content.includes(word.toLowerCase())) {
+        score += 1;
+      }
+    }
+  }
+  
+  return totalItems > 0 ? Math.min(score / totalItems, 1) : 0.5;
 }
 function articleUrl(a){ 
   // Try multiple fallback sources for URL
