@@ -3774,8 +3774,7 @@ function buildServicesBaseQuery(client, limit) {
  .from("page_entities")
  .select("*")
  .eq("kind", "service")
- .order("last_seen", { ascending: false })
- .limit(limit);
+  .order("last_seen", { ascending: false });
 }
 
 // Helper function to build OR conditions for keywords
@@ -3856,10 +3855,10 @@ async function findServices(client, { keywords, limit = 50 }) {
  console.log(`ðŸ”§ findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
 
  // Primary: prefer entries explicitly marked as service in categories
- try {
+  try {
    let qPrimary = buildServicesBaseQuery(client, limit)
      .contains('categories', ['service']);
-   qPrimary = applyServicesKeywordFiltering(qPrimary, keywords);
+   qPrimary = applyServicesKeywordFiltering(qPrimary, keywords).range(0, Math.max(0, (limit || 24) - 1));
    const { data: primary, error: errPrimary } = await qPrimary;
    if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
      logServicesResults(primary);
@@ -3870,8 +3869,8 @@ async function findServices(client, { keywords, limit = 50 }) {
  }
 
  // Fallback: any service kind
- let q = buildServicesBaseQuery(client, limit);
- q = applyServicesKeywordFiltering(q, keywords);
+  let q = buildServicesBaseQuery(client, limit);
+  q = applyServicesKeywordFiltering(q, keywords).range(0, Math.max(0, (limit || 24) - 1));
 
  const { data, error } = await q;
  if (error) {
