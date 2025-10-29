@@ -8324,6 +8324,16 @@ function formatEventDetails(event) {
  let details = `\n\n**${event.title || event.event_title}**`;
  details += `\nâ€¢ Date: ${formattedDate}`;
  if (event.location) details += `\nâ€¢ Location: ${event.location}`;
+ // Show equipment needed when available
+ if (event.equipment_needed) details += `\nâ€¢ Equipment Needed: ${event.equipment_needed}`;
+ // For multi-day events, explicitly show Transport + B&B included
+ try {
+   const durationCat = categorizeWorkshopDuration(event);
+   if (durationCat === 'Multi‑day (2–5 days)') {
+     details += `\nâ€¢ Transport + B&B included`;
+   }
+ } catch {}
+ // Keep price after equipment and inclusion bullets
  if (event.price) details += `\nâ€¢ Price: Â£${event.price}`;
  if (event.experience_level) details += `\nâ€¢ Level: ${event.experience_level}`;
  return details;
