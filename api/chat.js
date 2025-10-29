@@ -5357,6 +5357,20 @@ function normalizeArticle(a) {
  return out;
 }
 
+// Simple relevance filter for articles by keyword list (title/url/description)
+function filterArticlesByKeywords(articles, keywords) {
+  try {
+    const keys = (keywords || []).map(k => String(k).toLowerCase());
+    const matches = (text = '') => {
+      const s = String(text).toLowerCase();
+      return keys.some(k => s.includes(k));
+    };
+    return (articles || []).filter(a => matches(a.title) || matches(a.page_url || a.source_url) || matches(a.description || a.meta_description));
+  } catch (_) {
+    return articles || [];
+  }
+}
+
 /**
  * Handle follow-up direct synthesis for advice queries (equipment/pricing)
  * Returns true if a response was sent.
@@ -7912,17 +7926,23 @@ async function tryRagFirst(client, query) {
  
  // For technical concepts, also search for related articles
  const keywords = extractKeywords(query);
- const articles = await findArticles(client, { keywords, limit: 5 });
+    let articles = await findArticles(client, { keywords, limit: 12 });
+    // If query is about sharpness/focus/blur, filter early so UI sees relevant items
+    const qlc = String(query).toLowerCase();
+    const sharpIntent = qlc.includes('sharp') || qlc.includes('soft') || qlc.includes('blurry') || qlc.includes('blur') || qlc.includes('out of focus') || qlc.includes('focus');
+    if (sharpIntent) {
+      articles = filterArticlesByKeywords(articles, ['sharp', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod']).slice(0, 6);
+    }
  
  return {
  success: true,
  confidence: 0.8,
  answer: technicalResponse,
  type: "advice",
- sources: { articles: articles || [] },
+      sources: { articles: articles || [] },
  structured: {
  intent: "technical_answer",
- articles: articles || [],
+        articles: articles || [],
  events: [],
  products: [],
  services: []
