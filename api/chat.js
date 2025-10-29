@@ -3937,12 +3937,15 @@ function buildArticlesBaseQuery(client, limit) {
 
 // Helper function to build search conditions
 function buildSearchConditions(keywords) {
- const parts = [];
- const t1 = anyIlike("title", keywords); if (t1) parts.push(t1);
- const t2 = anyIlike("page_url", keywords); if (t2) parts.push(t2);
- const t3 = anyIlike("json_ld_data->>headline", keywords); if (t3) parts.push(t3);
- const t4 = anyIlike("json_ld_data->>name", keywords); if (t4) parts.push(t4);
- return parts;
+  const parts = [];
+  const t1 = anyIlike("title", keywords); if (t1) parts.push(t1);
+  const t2 = anyIlike("page_url", keywords); if (t2) parts.push(t2);
+  const t3 = anyIlike("json_ld_data->>headline", keywords); if (t3) parts.push(t3);
+  const t4 = anyIlike("json_ld_data->>name", keywords); if (t4) parts.push(t4);
+  // Search tags and categories (JSONB arrays converted to text)
+  const t5 = anyIlike("tags::text", keywords); if (t5) parts.push(t5);
+  const t6 = anyIlike("categories::text", keywords); if (t6) parts.push(t6);
+  return parts;
 }
 
 // Helper function to apply search conditions
