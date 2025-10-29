@@ -3854,14 +3854,28 @@ function generateServiceAnswer(services, query) {
 async function findServices(client, { keywords, limit = 50 }) {
  console.log(`🔧 findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
 
- // Strict filter: only results explicitly tagged as service
- let q = buildServicesBaseQuery(client, limit)
-   .contains('categories', ['service']);
- q = applyServicesKeywordFiltering(q, keywords).range(0, Math.max(0, (limit || 24) - 1));
+ // 1) Primary: only results explicitly tagged as service
+ try {
+   let qPrimary = buildServicesBaseQuery(client, limit)
+     .contains('categories', ['service']);
+   qPrimary = applyServicesKeywordFiltering(qPrimary, keywords)
+     .range(0, Math.max(0, (limit || 24) - 1));
+   const { data: primary, error: errPrimary } = await qPrimary;
+   if (!errPrimary && Array.isArray(primary) && primary.length > 0) {
+     logServicesResults(primary);
+     return primary;
+   }
+ } catch (e) {
+   console.warn('findServices primary query failed, attempting fallback', e);
+ }
 
+ // 2) Fallback: any page_entities with kind='service'
+ let q = buildServicesBaseQuery(client, limit);
+ q = applyServicesKeywordFiltering(q, keywords)
+   .range(0, Math.max(0, (limit || 24) - 1));
  const { data, error } = await q;
  if (error) {
-   console.error('findServices error:', error);
+   console.error('findServices fallback error:', error);
    return [];
  }
  logServicesResults(data);
