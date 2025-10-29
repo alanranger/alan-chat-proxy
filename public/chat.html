@@ -1480,6 +1480,41 @@ function getEventTypeInfo(e) {
   return { eventType, eventTypeIcon, residentialIndicator };
 }
 
+// Helper function to check if event is multi-day workshop
+function isMultiDayWorkshop(e) {
+  // Check categories field (preferred method)
+  if (e.categories && Array.isArray(e.categories)) {
+    const categories = e.categories.map(c => String(c).toLowerCase());
+    if (categories.includes('2-5-days') || categories.includes('multi-day') || categories.includes('residential')) {
+      return true;
+    }
+  }
+  
+  // Check course_duration field for multi-day patterns
+  const cd = (e.course_duration || '').toLowerCase();
+  if (/\b(two[-\s]?day|2\s?day|three[-\s]?day|3\s?day|four[-\s]?day|4\s?day|five[-\s]?day|5\s?day|multi[-\s]?day|residential)\b/.test(cd)) {
+    return true;
+  }
+  
+  // Check time_schedule field
+  const ts = (e.time_schedule || '').toLowerCase();
+  if (/\b(two[-\s]?day|2\s?day|three[-\s]?day|3\s?day|four[-\s]?day|4\s?day|five[-\s]?day|5\s?day|multi[-\s]?day|residential)\b/.test(ts)) {
+    return true;
+  }
+  
+  // Fallback to date-based calculation
+  if (e.date_start && e.date_end) {
+    const start = new Date(e.date_start);
+    const end = new Date(e.date_end);
+    const durationHours = (end - start) / (1000 * 60 * 60);
+    if (durationHours > 24) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 // Helper function to render single event card
 function renderEventCard(e) {
   const when = formatEventDateRange(e);
@@ -1489,6 +1524,7 @@ function renderEventCard(e) {
   const price = e.price_gbp ? `From: £${e.price_gbp}` : '';
   const timeInfo = formatEventTimeInfo(e);
   const { eventType, eventTypeIcon, residentialIndicator } = getEventTypeInfo(e);
+  const isMultiDay = isMultiDayWorkshop(e);
   
     return `
       <div class="event-card">
@@ -1508,6 +1544,7 @@ function renderEventCard(e) {
             ${e.experience_level ? `<div class="event-experience">🎯 Experience: ${e.experience_level}</div>` : ''}
             ${e.experience ? `<div class="event-experience">🎯 Experience - Level: ${escapeHTML(e.experience)}</div>` : ''}
             ${e.equipment_needed ? `<div class="event-equipment">📷 Equipment Needed: ${escapeHTML(e.equipment_needed)}</div>` : ''}
+            ${isMultiDay ? `<div class="event-equipment">🚗 Transport + B&B included</div>` : ''}
             ${price ? `<div class="event-price">💰 ${price}</div>` : ''}
           </div>
           ${href && href !== '#' ? `<div style="margin-top:12px"><a class="product-book-btn" style="background:#F15A22;border-color:#F15A22;color:#000000" href="${href}" target="_blank" rel="noopener">More Info →</a></div>` : ''}
