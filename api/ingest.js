@@ -1168,6 +1168,40 @@ export default async function handler(req, res) {
     
     stage = 'db_client';
     const supa = createClient(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'));
+
+    // Reconcile: ensure each service row in csv_metadata has a page_entities row
+    try {
+      await supa.rpc('noop');
+    } catch {}
+    try {
+      const { data: missing, error: missErr } = await supa.rpc('exec_sql', {
+        sql: `with svc as (
+                select id, url from public.csv_metadata
+                where csv_type='landing_service_pages' and kind='service'
+              )
+              select s.id as csv_id, s.url
+              from svc s
+              left join public.page_entities pe on pe.csv_metadata_id = s.id
+              where pe.id is null`
+      });
+      if (!missErr && Array.isArray(missing) && missing.length) {
+        for (const m of missing) {
+          const urlNorm = String(m.url || '').replace(/\/$/, '');
+          await supa.from('page_entities').insert([{
+            url: urlNorm,
+            page_url: urlNorm,
+            kind: 'service',
+            title: null,
+            description: null,
+            csv_type: 'landing_service_pages',
+            csv_metadata_id: m.csv_id,
+            last_seen: new Date().toISOString()
+          }]).catch(()=>{});
+        }
+      }
+    } catch (reconErr) {
+      console.warn('service reconciliation skipped:', reconErr?.message || reconErr);
+    }
     
     // New mode: ingest multiple URLs from CSV files (array of URL strings)
     if (Array.isArray(csvUrls) && csvUrls.length) {
