@@ -776,10 +776,18 @@ async function ingestSingleUrl(url, supa, options = {}) {
       const derivedKind = normalizeKind(bestJsonLd, url);
       const finalKind = csvKind || derivedKind;
 
+      // Choose title: prefer page meta title for service/landing or when JSON-LD name is generic
+      const jsonldTitle = bestJsonLd.headline || bestJsonLd.title || bestJsonLd.name || null;
+      const isGenericJsonName = jsonldTitle && /\balan\s+ranger\s+photography\b/i.test(jsonldTitle);
+      const preferPageTitle = (finalKind === 'service' || finalKind === 'landing' || isGenericJsonName);
+      const chosenTitle = preferPageTitle
+        ? (metaTitle || htmlTitle || h1Title || jsonldTitle)
+        : (jsonldTitle || metaTitle || htmlTitle || h1Title);
+
       const entities = [{
         url: url,
         kind: finalKind,
-        title: bestJsonLd.headline || bestJsonLd.title || bestJsonLd.name || metaTitle || htmlTitle || h1Title || null,
+        title: chosenTitle || null,
         description: enhancedDescription,
         meta_description: extractMetaDescription(html),
         date_start: csvMetadata?.start_date && csvMetadata?.start_time 

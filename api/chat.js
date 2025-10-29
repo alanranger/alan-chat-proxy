@@ -3871,7 +3871,8 @@ try {
     const normalized = primary.map(r => {
       const csvTitle = r.csv_metadata && r.csv_metadata.title;
       const jsonName = r.json_ld_data && r.json_ld_data.name;
-      let title = csvTitle || jsonName || r.title || r.norm_title || '';
+      // Prefer DB title first (post-ingest corrected), then CSV, then JSON-LD
+      let title = r.title || csvTitle || jsonName || r.norm_title || '';
       if (/\balan\s+ranger\b/i.test(title)) {
         const u = (r.page_url || r.url || '').split('?')[0].replace(/\/$/, '');
         const slug = u.split('/').filter(Boolean).pop() || '';
@@ -3903,7 +3904,8 @@ try {
   const fixed = (data || []).map(r => {
     const csvTitle = r.csv_metadata && r.csv_metadata.title;
     const jsonName = r.json_ld_data && r.json_ld_data.name;
-    let title = csvTitle || jsonName || r.title || r.norm_title || '';
+    // Prefer DB title first
+    let title = r.title || csvTitle || jsonName || r.norm_title || '';
     if (/\balan\s+ranger\b/i.test(title)) {
       const u = (r.page_url || r.url || '').split('?')[0].replace(/\/$/, '');
       const slug = u.split('/').filter(Boolean).pop() || '';
