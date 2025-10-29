@@ -7970,7 +7970,7 @@ async function tryRagFirst(client, query) {
       articles = filterArticlesByKeywords(articles, ['sharp', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod']).slice(0, 6);
     }
  
- return {
+    return {
  success: true,
  confidence: 0.8,
  answer: technicalResponse,
@@ -7982,7 +7982,11 @@ async function tryRagFirst(client, query) {
  events: [],
  products: [],
  services: []
- }
+      },
+      debugLogs: [
+        `findArticles.count=${articles?.length || 0}`,
+        `keywords=${(enriched || []).slice(0, 10).join(', ')}`
+      ]
  };
  }
  
