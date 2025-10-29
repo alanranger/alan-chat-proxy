@@ -8801,6 +8801,19 @@ function enhanceTechnicalAdviceResponse(answer, query, response) {
   );
 
   if (sharpnessIntent) {
+    // Filter related articles to only sharpness/focus topics
+    if (response && response.structured && Array.isArray(response.structured.articles)) {
+      const rel = ['sharp', 'focus', 'focusing', 'blurry', 'blur', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod'];
+      const isRelevant = (t='')=>{
+        const s = String(t).toLowerCase();
+        return rel.some(k=>s.includes(k));
+      };
+      const filtered = response.structured.articles.filter(a =>
+        isRelevant(a.title) || isRelevant(a.page_url || a.source_url || '') || isRelevant(a.meta_description || '')
+      );
+      response.structured.articles = filtered.slice(0, 6);
+    }
+
     const checklist = [
       'Focus: use single‑point AF on a high‑contrast area; AF‑C for moving subjects.',
       'Shutter speed: start at 1/(focal length) as a minimum; 1/500–1/1000 for motion.',
