@@ -3991,9 +3991,28 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
  q = applySearchConditions(q, enhancedKeywords);
 
  const { data, error } = await q;
- if (error) return [];
- 
- return processAndSortResults(data || [], enhancedKeywords, limit);
+  if (error) return [];
+
+  // If PostgREST JSONB search misses tags/categories, do a guarded fallback:
+  let rows = data || [];
+  if (!rows || rows.length <= 2) {
+    try {
+      // Fetch a small recent slice and filter client-side for relevance
+      const fallback = await client
+        .from("v_articles_unified")
+        .select("id, title, page_url, categories, tags, image_url, publish_date, description, json_ld_data, last_seen, kind, source_type")
+        .order("publish_date", { ascending: false })
+        .limit(40);
+      if (!fallback.error && Array.isArray(fallback.data)) {
+        const filtered = filterArticlesByKeywords(fallback.data, enhancedKeywords);
+        rows = filtered && filtered.length ? filtered : rows;
+      }
+    } catch (_) {
+      // Soft-fail: keep original rows
+    }
+  }
+
+  return processAndSortResults(rows, enhancedKeywords, limit);
 }
 
 
