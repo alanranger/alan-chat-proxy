@@ -5733,8 +5733,28 @@ async function handleClarificationResponse(context) {
  
 // Helper function to send final events response
 function sendEventsResponse(context) {
- // Generate the formatted answer
- const formattedAnswer = generateEventAnswerMarkdown(context.eventList, context.query || "");
+  // Check for duration-intent queries BEFORE generating the answer
+  const query = context.query || "";
+  const lc = query.toLowerCase();
+  const isDurationQuery = (
+    lc.includes('how long') && lc.includes('workshop')
+  ) || /\b(2\.5\s?hr|2\.5\s?hours|4\s?hr|4\s?hours|one[-\s]?day|1\s?day|two[-\s]?day|multi[-\s]?day|residential)\b/i.test(query);
+  
+  console.log(`🎭 sendEventsResponse: isDurationQuery=${isDurationQuery} for query="${query}"`);
+  
+  // Generate the formatted answer - use duration-specific answer if applicable
+  let formattedAnswer;
+  if (isDurationQuery) {
+    // Create a response-like object for generateWorkshopDurationAnswer
+    const responseObj = {
+      structured: { events: context.eventList || [] },
+      events: context.eventList || []
+    };
+    formattedAnswer = generateWorkshopDurationAnswer(query, responseObj);
+    console.log(`🎭 sendEventsResponse: Using duration answer="${formattedAnswer.substring(0, 100)}..."`);
+  } else {
+    formattedAnswer = generateEventAnswerMarkdown(context.eventList, query);
+  }
  
  // Apply quality analysis to recalculate confidence based on new criteria
  if (context.query && formattedAnswer) {
@@ -8400,7 +8420,7 @@ function detectBusinessCategory(query) {
   
   // 4. EVENT QUERIES - Questions about workshops, courses, events, schedules
   if ((lc.includes('when') || lc.includes('next') || lc.includes('do you have') || 
-       lc.includes('are your') || lc.includes('schedule')) && (
+       lc.includes('are your') || lc.includes('schedule') || lc.includes('how long')) && (
     lc.includes('workshop') || lc.includes('course') || lc.includes('class') || 
     lc.includes('lesson') || lc.includes('training') || lc.includes('event') ||
     lc.includes('devon') || lc.includes('bluebell') || lc.includes('autumn') ||
@@ -8564,21 +8584,26 @@ function enhancePersonResponse(answer, query, response) {
 
 // Event Queries - Workshop/course scheduling
 function enhanceEventResponse(answer, query, response) {
+  console.log(`🎭 enhanceEventResponse: answer="${answer?.substring(0, 50)}...", query="${query}"`);
   // Duration-intent detection (e.g. "How long are your workshops?", "one day", "2.5hr", "multi-day")
   const lc = (query || '').toLowerCase();
   const isDurationQuery = (
     lc.includes('how long') && lc.includes('workshop')
   ) || /\b(2\.5\s?hr|2\.5\s?hours|4\s?hr|4\s?hours|one[-\s]?day|1\s?day|two[-\s]?day|multi[-\s]?day|residential)\b/i.test(query);
+  
+  console.log(`🎭 enhanceEventResponse: isDurationQuery=${isDurationQuery}`);
 
   if (isDurationQuery) {
-    return { answer: generateWorkshopDurationAnswer(query, response), type: 'advice', confidenceBoost: 0.95 };
+    const durationAnswer = generateWorkshopDurationAnswer(query, response);
+    console.log(`🎭 enhanceEventResponse: returning duration answer="${durationAnswer.substring(0, 100)}..."`);
+    return { answer: durationAnswer, type: 'advice', confidenceBoost: 0.95 };
   }
 
   // If answer is too short, provide helpful context
   if (!answer || answer.length < 50) {
     return `I'd be happy to help you find information about workshops and courses! I run various photography workshops throughout the year. Let me know what specific type of workshop or timing you're interested in.`;
   }
-
+  
   return { answer, confidenceBoost: 0.9 };
 }
 
@@ -8662,17 +8687,23 @@ function formatEventLine(e){
 }
 
 function generateWorkshopDurationAnswer(query, response){
-  // Prefer events from structured payload, else fall back to empty list; server can enrich later
-  const all = (response?.structured?.events || []).slice();
+  console.log(`🎭 generateWorkshopDurationAnswer: query="${query}", response.structured exists=${!!response?.structured}, events count=${response?.structured?.events?.length || 0}`);
+  // Prefer events from structured payload, else fall back to response.events, then empty list
+  const all = (response?.structured?.events || response?.events || []).slice();
+  console.log(`🎭 generateWorkshopDurationAnswer: all events=${all.length}`);
   // Build bucket summary
   const { buckets, parts } = summarizeDurationBuckets(all);
   const summary = parts.length ? `I offer ${parts.join(', ').replace(', 2–5', ', and 2–5')}.` : `I offer 2.5–4 hour sessions, one‑day workshops, and 2–5 day multi‑day workshops.`;
+  
+  console.log(`🎭 generateWorkshopDurationAnswer: summary="${summary}"`);
 
   // If user asked for a specific duration, show next 2 examples
   const subset = filterEventsByDurationQuery(all, query).slice(0, 2);
   const examples = subset.length ? `\n\nHere ${subset.length===1?'is':'are'} a ${subset.length===1?'matching workshop':'couple of matching workshops'}:\n${subset.map(formatEventLine).join('\n')}` : '';
-
-  return `${summary}${examples}`;
+  
+  const finalAnswer = `${summary}${examples}`;
+  console.log(`🎭 generateWorkshopDurationAnswer: final answer="${finalAnswer.substring(0, 100)}..."`);
+  return finalAnswer;
 }
 
 // Technical Advice - "How to..." and troubleshooting
