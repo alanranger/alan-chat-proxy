@@ -4027,6 +4027,33 @@ async function findArticles(client, { keywords, limit = 12, pageContext = null }
           }
         }
       }
+
+      // Final fallback: read from ai_articles (public, simpler schema)
+      if (!rows || rows.length === 0) {
+        const aiOr = [
+          anyIlike("title", enhancedKeywords),
+          anyIlike("snippet", enhancedKeywords),
+          anyIlike("url", enhancedKeywords)
+        ].filter(Boolean).join(",");
+        let aiQ = client.from("ai_articles").select("title, url, snippet, kind, last_seen").limit(40);
+        if (aiOr) aiQ = aiQ.or(aiOr);
+        const aiRes = await aiQ;
+        if (!aiRes.error && Array.isArray(aiRes.data)) {
+          const normalized = (aiRes.data || []).map(a => ({
+            id: a.url,
+            title: a.title,
+            page_url: a.url,
+            description: a.snippet,
+            last_seen: a.last_seen,
+            kind: a.kind,
+            source_type: "blog",
+            categories: [],
+            tags: []
+          }));
+          const filteredAI = filterArticlesByKeywords(normalized, enhancedKeywords);
+          rows = filteredAI && filteredAI.length ? filteredAI : rows;
+        }
+      }
     } catch (_) {
       // Soft-fail: keep original rows
     }
