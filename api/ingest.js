@@ -994,6 +994,19 @@ async function ingestSingleUrl(url, supa, options = {}) {
       await supa.rpc('upsert_display_price_all');
     }
     
+    // Final safeguard: ensure service/landing titles are set to meta/HTML title when generic
+    try {
+      const finalPageTitle = metaTitle || htmlTitle || h1Title || null;
+      if (finalPageTitle) {
+        await supa
+          .from('page_entities')
+          .update({ title: finalPageTitle })
+          .eq('url', url)
+          .in('kind', ['service','landing'])
+          .or("lower(title).eq.alan ranger photography,lower(title).eq.alan ranger");
+      }
+    } catch (_) {}
+
     // Extract meta description for debugging
     const metaDesc = extractMetaDescription(html);
     
