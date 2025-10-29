@@ -3807,6 +3807,21 @@ function logServicesResults(data) {
  }
 }
 
+// Generate service answer text
+function generateServiceAnswer(services, query) {
+  if (!services || services.length === 0) return '';
+  
+  const lc = query.toLowerCase();
+  const serviceKeywords = ['service', 'hire', 'professional', 'photographer', 'training', 'lesson', 'course', 'mentoring', 'consultation'];
+  const hasServiceIntent = serviceKeywords.some(keyword => lc.includes(keyword));
+  
+  if (hasServiceIntent) {
+    return `I offer several photography services that might help you. Here are some relevant options:`;
+  } else {
+    return `Here are some photography services I provide that might be useful:`;
+  }
+}
+
 async function findServices(client, { keywords, limit = 50 }) {
  console.log(`ðŸ”§ findServices called with keywords: ${keywords?.join(', ') || 'none'}`);
  
@@ -6358,8 +6373,7 @@ function generateAlanBackgroundAnswer() {
  return `Alan Ranger is a BIPP (British Institute of Professional Photography) qualified photographer with over 20 years of teaching experience and 580+ 5-star reviews.\n\n**His Background:**\nâ€¢ BIPP Qualified Professional Photographer\nâ€¢ 20+ years of teaching experience\nâ€¢ Specializes in landscape photography\nâ€¢ Based in Coventry, UK\n\n**What He Offers:**\nâ€¢ Landscape photography workshops (Wales, Devon, Yorkshire)\nâ€¢ Photo editing and Lightroom training\nâ€¢ Private tuition and mentoring\nâ€¢ Online photography academy\nâ€¢ Free online photography course\n\n**Reviews:** 4.9/5 stars from students and clients\n\n*Learn more about Alan: https://www.alanranger.com/about*`;
 }
 
-// Helper function to generate service-based answer
-function generateServiceAnswer(query, services) {
+// Helper function to generate service-based answer (removed duplicate)
  const bestService = services[0];
  const lc = query.toLowerCase();
  
@@ -7924,7 +7938,8 @@ function buildRagResponse(context) {
       sources: context.finalSources || [],
       events: [],
       products: [],
-      articles: context.results && context.results.articles || []
+      articles: context.results && context.results.articles || [],
+      services: context.results && context.results.services || []
     },
     totalMatches: context.results && context.results.totalMatches || 0,
     chunksFound: context.results && context.results.chunks ? context.results.chunks.length : 0,
@@ -8006,10 +8021,32 @@ async function tryRagFirst(client, query) {
  type: "advice",
  sources: { articles: [] }
  };
- }
- 
- // Check for technical patterns first
- const technicalResponse = getTechnicalAnswers(query.toLowerCase());
+  }
+
+  // Try to find relevant services from database
+  const keywords = extractKeywords(query);
+  const services = await findServices(client, { keywords, limit: 5 });
+  if (services && services.length > 0) {
+    console.log(`🎯 Found ${services.length} relevant services for: "${query}"`);
+    return {
+      success: true,
+      confidence: 0.7,
+      answer: generateServiceAnswer(services, query),
+      type: "services",
+      sources: { services: services },
+      structured: {
+        intent: "services",
+        topic: keywords.join(", "),
+        services: services,
+        events: [],
+        products: [],
+        articles: []
+      }
+    };
+  }
+
+  // Check for technical patterns first
+  const technicalResponse = getTechnicalAnswers(query.toLowerCase());
  console.log(`[DEBUG] getTechnicalAnswers returned: ${technicalResponse ? 'SUCCESS' : 'NULL'}`);
  
  if (technicalResponse) {

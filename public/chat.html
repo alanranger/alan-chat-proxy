@@ -352,6 +352,87 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
   white-space: nowrap;
 }
 
+/* Service Cards */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.service-card {
+  background: #1a1f2e;
+  border: 1px solid #2a3441;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+}
+
+.service-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.service-card:hover {
+  border-color: #4CAF50;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+.service-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.service-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.service-title a {
+  color: #4CAF50 !important;
+  text-decoration: none;
+}
+
+.service-title a:hover {
+  color: #66bb6a;
+  text-decoration: underline;
+}
+
+.service-description {
+  font-size: 13px;
+  color: #d1d5db;
+  line-height: 1.4;
+  margin: 8px 0 12px 0;
+}
+
+.service-type-badge {
+  background: #2e7d32;
+  color: #4CAF50;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.service-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
 /* Product Cards */
 .product-card {
   background: #1a1f2e;
@@ -1553,6 +1634,30 @@ function renderEventCard(e) {
     `;
 }
 
+// Helper function to render single service card
+function renderServiceCard(s) {
+  const href = s.page_url || s.source_url || s.url || '#';
+  const title = s.title ? `${escapeHTML(s.title)}` : 'Photography Service';
+  const description = s.description ? `${escapeHTML(s.description.substring(0, 150))}${s.description.length > 150 ? '...' : ''}` : '';
+  
+  return `
+    <div class="service-card">
+      <div class="service-content">
+        <div class="service-header">
+          <h4 class="service-title">
+            <a href="${href}" target="_blank" rel="noopener">${title}</a>
+          </h4>
+          <div class="service-type-badge">🎯 Service</div>
+        </div>
+        <div class="service-details">
+          ${description ? `<div class="service-description">${description}</div>` : ''}
+        </div>
+        ${href && href !== '#' ? `<div style="margin-top:12px"><a class="product-book-btn" style="background:#4CAF50;border-color:#4CAF50;color:#ffffff" href="${href}" target="_blank" rel="noopener">Learn More →</a></div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
 function renderEventsBlock(structured, query){
   // Skip events block for simple follow-up questions (but not for legitimate event queries)
   if (isSimpleFollowUpQuery(query)) return '';
@@ -1576,6 +1681,46 @@ function renderEventsBlock(structured, query){
       </div>
     </div>
   `;
+}
+
+function renderServicesBlock(structured, query){
+  // Skip services block for simple follow-up questions
+  if (isSimpleFollowUpQuery(query)) return '';
+  
+  const all = structured?.services || [];
+  if(!all.length) return '';
+  
+  const kp = extractKeyPhrases(structured?.topic||'', __lastQuery);
+  const list = all.map(s=>({s, score: scoreServiceMatch(s, kp)})).sort((a,b)=> b.score - a.score).map(x=>x.s);
+  
+  const servicesHTML = list.map(renderServiceCard).join('');
+  
+  return `
+    <div class="answer">
+      <h3>🎯 Photography Services</h3>
+      <div class="services-grid">
+        ${servicesHTML}
+      </div>
+    </div>
+  `;
+}
+
+// Helper function to score service matches
+function scoreServiceMatch(service, keyPhrases) {
+  if (!keyPhrases || keyPhrases.length === 0) return 0.5;
+  
+  const title = (service.title || '').toLowerCase();
+  const description = (service.description || '').toLowerCase();
+  const content = `${title} ${description}`;
+  
+  let score = 0;
+  keyPhrases.forEach(phrase => {
+    if (content.includes(phrase.toLowerCase())) {
+      score += 1;
+    }
+  });
+  
+  return Math.min(score / keyPhrases.length, 1);
 }
 function articleUrl(a){ 
   // Try multiple fallback sources for URL
@@ -2261,6 +2406,9 @@ function renderAnswer(payload){
 
   const evHTML = renderEventsBlock(s, __lastQuery);
   if(evHTML) addBubble(evHTML);
+
+  const svcHTML = renderServicesBlock(s, __lastQuery);
+  if(svcHTML) addBubble(svcHTML);
 
   const artHTML = renderArticlesBlock(s, __lastQuery);
   if(artHTML) addBubble(artHTML);
