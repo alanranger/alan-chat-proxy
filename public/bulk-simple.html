@@ -83,7 +83,8 @@
             ├── Course Products (04) → csv_metadata.csv_type='course_products'<br>
             ├── Workshop Products (05) → csv_metadata.csv_type='workshop_products'<br>
             ├── Site URLs (06) → csv_metadata.csv_type='site_urls'<br>
-            └── Product Schema (07) → csv_metadata.csv_type='product_schema'
+            ├── Product Schema (07) → csv_metadata.csv_type='product_schema'<br>
+            └── Landing & Service Pages (08) → csv_metadata.csv_type='landing_service_pages'
           </div>
           
           <div style="color: #2196F3; font-weight: bold; margin: 20px 0 15px 0;">STEP 2: ENHANCED INGEST → page_entities table</div>
@@ -277,7 +278,8 @@
             ├── Course Products (04) → csv_metadata table<br>
             ├── Workshop Products (05) → csv_metadata table<br>
             ├── Site URLs (06) → csv_metadata table<br>
-            └── Product Schema (07) → csv_metadata table
+            ├── Product Schema (07) → csv_metadata table<br>
+            └── Landing & Service Pages (08) → csv_metadata table
           </div>
           
           <div style="color: #4CAF50; font-weight: bold; margin: 20px 0 15px 0;">STEP 2: INGEST CONTENT</div>
@@ -350,7 +352,7 @@
           <div style="color: #f44336; font-weight: bold; margin-bottom: 10px;">PROBLEMS IDENTIFIED:</div>
           <div style="color: #fff; margin-left: 20px;">
             • <strong>URL-Pattern Based Enrichment:</strong> v_workshop_enrichment only processes workshop URLs, ignores courses<br>
-            • <strong>CSV Metadata Integration:</strong> Rich metadata from 7 CSV types now integrated<br>
+            • <strong>CSV Metadata Integration:</strong> Rich metadata from 8 CSV types now integrated<br>
             • <strong>Enhanced Data Flow:</strong> Import → Enhanced Ingest → Structured Data Extraction<br>
             • <strong>Unified Views:</strong> Consistent enrichment logic across all content types<br>
             • <strong>Structured Data Extraction:</strong> 10 new fields extracted from page content
@@ -436,8 +438,8 @@
           <div>
             <h4 style="margin:0 0 8px 0;color:#4CAF50;">Import CSV Metadata</h4>
             <div style="margin:0;color:#ccc;font-size:14px;line-height:1.5;">
-              <div><strong>What it does:</strong> Imports rich metadata from all 7 CSV files into csv_metadata table.</div>
-              <div><strong>Process:</strong> Parses each CSV type (blog, course_events, workshop_events, course_products, workshop_products, site_urls, product_schema) with specific logic.</div>
+              <div><strong>What it does:</strong> Imports rich metadata from all 8 CSV files into csv_metadata table.</div>
+              <div><strong>Process:</strong> Parses each CSV type (blog, course_events, workshop_events, course_products, workshop_products, site_urls, product_schema, landing_service_pages) with specific logic.</div>
               <div><strong>Updates:</strong> <code>csv_metadata</code> table with categories, tags, dates, locations, excerpts, JSON-LD data.</div>
               <div><strong>Result:</strong> Rich metadata foundation for all content types, enabling metadata-driven enrichment.</div>
             </div>
@@ -553,7 +555,7 @@
         <div style="margin-top:8px;">
           <strong>Where data goes:</strong>
           <ul style="margin:6px 0 0 18px;">
-            <li><code>csv_metadata</code>: Rich metadata from all 7 CSV types (categories, tags, dates, locations, excerpts, JSON-LD data).</li>
+            <li><code>csv_metadata</code>: Rich metadata from all 8 CSV types (categories, tags, dates, locations, excerpts, JSON-LD data).</li>
             <li><code>page_html</code>: Raw HTML content stored for structured data extraction.</li>
             <li><code>page_chunks</code>: Text chunks with CSV metadata context (replaced on each successful scrape).</li>
             <li><code>page_entities</code>: Enhanced entities with CSV metadata (categories, tags, locations, excerpts) linked to csv_metadata table.</li>
@@ -1211,7 +1213,7 @@
       addResult(`📊 CSV has ${actualRowCount} data rows (${lines.length} total lines)`);
       
       // Handle special cases that don't use the multi-import endpoint
-      if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'landing_service_pages' || contentType === 'test_questions') {
+      if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'test_questions') {
         // Update total CSV imported count for reference files too
         stats.csvImportedRows += actualRowCount;
         updateStats();
@@ -1237,8 +1239,8 @@
         const urls = lines.slice(1).map(line => {
           const values = line.split(',');
           // Try different URL columns based on CSV type
-          if (contentType === 'site_urls' || contentType === 'landing_pages' || contentType === 'landing_service_pages') {
-            return values[0]; // First column for site URLs / landing pages
+          if (contentType === 'site_urls' || contentType === 'landing_pages') {
+            return values[0]; // First column for site URLs
           } else if (contentType === 'blog') {
             return values.find(v => v && v.includes('alanranger.com')); // Find URL column
           } else if (contentType === 'event' || contentType === 'workshop') {
@@ -1415,7 +1417,6 @@
       if (h.includes('product url') || h.includes('price')) return 'product';
       if (h.includes('service') || h.includes('mentoring') || h.includes('course') || h.includes('class')) return 'service';
       if (h.startsWith('url') || h.includes('url') && !h.includes('title')) return 'site_urls';
-      if (h.includes('landing') && h.includes('service')) return 'landing_service_pages';
       if (h.includes('landing')) return 'landing_pages';
       return null;
     }
@@ -1423,8 +1424,6 @@
     function detectTypeByName(name){
       const n = (name||'').toLowerCase();
       if (n.includes('photo workshops uk')) return 'workshop';
-      // Check for landing and service pages CSV (File 08)
-      if ((n.includes('landing') && n.includes('service')) || (n.includes('landing') && n.includes('sercice'))) return 'landing_service_pages';
       if (n.includes('photography services')) return 'service';
       if (n.includes('workshop')) return 'workshop';
       if (n.includes('event')) return 'event';
@@ -1473,8 +1472,7 @@
           'workshop': 'workshop_events',
           'service': 'course_products',
           'product': 'workshop_products',
-          'site_urls': 'site_urls',
-          'landing_service_pages': 'landing_service_pages'
+          'site_urls': 'site_urls'
         };
         
         // Special case: File 05 (Photo Workshops UK) should be workshop_products, not workshop_events
@@ -1485,11 +1483,6 @@
         // Special case: File 07 (Product Schema) should be product_schema, not workshop_products
         if (f.name.includes('alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS.csv')) {
           type = 'product_schema';
-        }
-        
-        // Special case: File 08 (Landing and Service Pages) should be landing_service_pages
-        if (f.name.includes('08 - Landing') || f.name.includes('08 - Landing and Service') || f.name.includes('Landing and Sercice')) {
-          type = 'landing_service_pages';
         }
         
         const csvType = csvTypeMapping[type] || type;
@@ -1686,6 +1679,10 @@
               include = includeService;
               source = 'product_schema';
               break;
+            case 'landing_service_pages':
+              include = includeSite;
+              source = 'landing_service_pages';
+              break;
             default:
               include = false;
           }
@@ -1741,6 +1738,8 @@
         'course_products': 0,
         'workshop_products': 0,
         'product_schema': 0,
+        'site_urls': 0,
+        'landing_service_pages': 0,
         'website_urls': 0,
         'json_extraction': 0
       };
@@ -1750,6 +1749,8 @@
         : src === 'service' ? 'course_products'
         : src === 'workshop_products' ? 'workshop_products'
         : src === 'product_schema' ? 'product_schema'
+        : src === 'site_urls' ? 'site_urls'
+        : src === 'landing_service_pages' ? 'landing_service_pages'
         : src === 'site' ? 'website_urls'
         : 'website_urls';
       for (const [src, cnt] of dupBySource.entries()) {
@@ -1812,6 +1813,7 @@
         if (sourceCategory === 'workshop_products') return 'workshop_products';
         if (sourceCategory === 'product_schema') return 'product_schema';
         if (sourceCategory === 'site_urls') return 'site_urls';
+        if (sourceCategory === 'landing_service_pages') return 'landing_service_pages';
         if (sourceCategory === 'site') {
           // site foundation can be any; fall through to URL heuristics
         }
@@ -2403,29 +2405,32 @@
       'course_products': 0,
       'workshop_products': 0,
       'site_urls': 0,
-      'product_schema': 0
+      'product_schema': 0,
+      'landing_service_pages': 0
     };
     
     // URL scraping stats for dashboard display (global for dashboard access)
     window.urlScrapingStats = {
-      'blog': { success: 0, failed: 0, skipped: 0 },
+      'blog_articles': { success: 0, failed: 0, skipped: 0 },
       'course_events': { success: 0, failed: 0, skipped: 0 },
       'workshop_events': { success: 0, failed: 0, skipped: 0 },
       'course_products': { success: 0, failed: 0, skipped: 0 },
       'workshop_products': { success: 0, failed: 0, skipped: 0 },
       'site_urls': { success: 0, failed: 0, skipped: 0 },
-      'product_schema': { success: 0, failed: 0, skipped: 0 }
+      'product_schema': { success: 0, failed: 0, skipped: 0 },
+      'landing_service_pages': { success: 0, failed: 0, skipped: 0 }
     };
 
     // Track within-source duplicates removed per dashboard category (for Step 2)
     let withinSourceDupByCategory = {
-      'blog': 0,
+      'blog_articles': 0,
       'course_events': 0,
       'workshop_events': 0,
       'course_products': 0,
       'workshop_products': 0,
       'site_urls': 0,
-      'product_schema': 0
+      'product_schema': 0,
+      'landing_service_pages': 0
     };
     
     // Map import content types to dashboard category keys
@@ -2447,7 +2452,8 @@
       'course_products': '04 - Photography Services _ courses, 1-2-1 _ mentoring-CSV.csv',
       'workshop_products': '05 - Photo Workshops UK _ Landscape Photography Workshops-CSV.csv',
       'website_urls': '06 - site urls - Sheet1.csv',
-      'json_extraction': '07 - alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS'
+      'json_extraction': '07 - alanranger_product_schema_FINAL_WITH_REVIEW_RATINGS',
+      'landing_service_pages': '08 - Landing and Sercice Pages.csv'
     };
     
     // Global function to update CSV metadata dashboard
@@ -2485,7 +2491,8 @@
           'course-products-count': csvMetadataCounts.course_products || 0,
           'workshop-products-count': csvMetadataCounts.workshop_products || 0,
           'site-urls-count': csvMetadataCounts.site_urls || 0,
-          'product-schema-count': csvMetadataCounts.product_schema || 0
+          'product-schema-count': csvMetadataCounts.product_schema || 0,
+          'landing-service-pages-count': csvMetadataCounts.landing_service_pages || 0
         };
         
         // Update each element
@@ -2637,7 +2644,8 @@
           'course_products': { length: csvRowCounts.course_products || 0 },
           'workshop_products': { length: csvRowCounts.workshop_products || 0 },
           'site_urls': { length: csvRowCounts.site_urls || 0 },
-          'product_schema': { length: csvRowCounts.product_schema || 0 }
+          'product_schema': { length: csvRowCounts.product_schema || 0 },
+          'landing_service_pages': { length: csvRowCounts.landing_service_pages || 0 }
         };
         
         // Update the detailed table to show ORIGINAL CSV IMPORT COUNTS (not current session)
@@ -2648,7 +2656,8 @@
           { key: 'course_products', label: 'Course/Service Products', code: ' — 04' },
           { key: 'workshop_products', label: 'Workshop Products', code: ' — 05' },
           { key: 'site_urls', label: 'site_urls', code: ' — 06' },
-          { key: 'product_schema', label: 'product_schema', code: ' — 07' }
+          { key: 'product_schema', label: 'product_schema', code: ' — 07' },
+          { key: 'landing_service_pages', label: 'Landing & Service Pages', code: ' — 08' }
         ];
         
         // Clear existing content and rebuild table
