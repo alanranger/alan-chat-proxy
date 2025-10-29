@@ -3047,7 +3047,7 @@ function checkClarificationPatterns(query) {
 }
 
 function classifyQuery(query) {
- console.log(`ðŸ" classifyQuery called with: "${query}" - CLASSIFICATION DISABLED`);
+ console.log(`ðŸ” classifyQuery called with: "${query}"`);
  
  // PRIORITY: Check for equipment requirement queries FIRST
  if (query.toLowerCase().includes('what camera do i need') || 
@@ -3057,24 +3057,24 @@ function classifyQuery(query) {
  return { type: 'direct_answer', reason: 'equipment_requirement_query' };
  }
  
- // CLASSIFICATION SYSTEM DISABLED - All patterns commented out
- // const courseResult = checkCourseClarificationPatterns(query);
- // if (courseResult) return courseResult;
-
- // const contactResult = checkContactAlanPatterns(query);
- // if (contactResult) return contactResult;
-
- // const workshopResult = checkWorkshopQueryPatterns(query);
- // if (workshopResult) return workshopResult;
-
- // const privateResult = checkPrivateLessonsPatterns(query);
- // if (privateResult) return privateResult;
-
- // const directResult = checkDirectAnswerPatterns(query);
- // if (directResult) return directResult;
-
- // const clarificationResult = checkClarificationPatterns(query);
- // if (clarificationResult) return clarificationResult;
+ // Check patterns in order of priority
+ const courseResult = checkCourseClarificationPatterns(query);
+ if (courseResult) return courseResult;
+ 
+ const contactResult = checkContactAlanPatterns(query);
+ if (contactResult) return contactResult;
+ 
+ const workshopResult = checkWorkshopQueryPatterns(query);
+ if (workshopResult) return workshopResult;
+ 
+ const privateResult = checkPrivateLessonsPatterns(query);
+ if (privateResult) return privateResult;
+ 
+ const directResult = checkDirectAnswerPatterns(query);
+ if (directResult) return directResult;
+ 
+ const clarificationResult = checkClarificationPatterns(query);
+ if (clarificationResult) return clarificationResult;
  
  // Default to direct_answer for unknown queries - let RAG system try first
  return { type: 'direct_answer', reason: 'unknown_query_default_to_rag' };
