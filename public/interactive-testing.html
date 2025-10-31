@@ -380,6 +380,59 @@
             color: #666;
         }
         
+        .services-block {
+            background: #fff3e0;
+            border: 1px solid #ffcc80;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .services-block h4 {
+            color: #e65100;
+            margin: 0 0 10px 0;
+        }
+        
+        .service-item {
+            background: white;
+            border: 1px solid #ffe0b2;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 8px 0;
+        }
+        
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .service-title {
+            font-weight: 600;
+            color: #e65100;
+            flex: 1;
+        }
+        
+        .service-badge {
+            background: #25D366;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .service-description {
+            font-size: 14px;
+            color: #666;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+        
         .confidence-pill {
             background: #ff9800;
             color: white;
@@ -1266,6 +1319,34 @@
                 });
                 
                 chatResponse.appendChild(articlesBlock);
+            }
+            
+            // Services block
+            if (data.structured && data.structured.services && data.structured.services.length > 0) {
+                const servicesBlock = document.createElement('div');
+                servicesBlock.className = 'services-block';
+                servicesBlock.innerHTML = '<h4>🎯 Photography Services</h4>';
+                
+                data.structured.services.forEach(service => {
+                    const serviceDiv = document.createElement('div');
+                    serviceDiv.className = 'service-item';
+                    const href = service.page_url || service.source_url || service.url || '#';
+                    const title = service.title || service.norm_title || (service.csv_metadata && service.csv_metadata.title) || (service.json_ld_data && service.json_ld_data.name) || 'Photography Service';
+                    const description = service.meta_description || (service.json_ld_data && service.json_ld_data.description) || service.excerpt || service.description || '';
+                    const shortDesc = description.length > 180 ? description.slice(0, 180) + '...' : description;
+                    
+                    serviceDiv.innerHTML = `
+                        <div class="service-header">
+                            <div class="service-title">${title}</div>
+                            <div class="service-badge">🎯 Service</div>
+                        </div>
+                        ${shortDesc ? `<div class="service-description">${shortDesc}</div>` : ''}
+                        ${href && href !== '#' ? `<div style="margin-top:12px"><a href="${href}" target="_blank" style="background:#F15A22;color:#000;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;display:inline-block;">More Info →</a></div>` : ''}
+                    `;
+                    servicesBlock.appendChild(serviceDiv);
+                });
+                
+                chatResponse.appendChild(servicesBlock);
             }
             
             // Pills/action buttons

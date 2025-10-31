@@ -8277,6 +8277,37 @@ async function tryRagFirst(client, query) {
     }
   }
  
+ // Explicit check for "types of services" queries - force database lookup for service tiles
+ const qlcService = query.toLowerCase();
+ const isTypesServiceQuery = (qlcService.includes("types") || qlcService.includes("what kind")) && 
+                             qlcService.includes("services") && 
+                             qlcService.includes("photography");
+ 
+ if (isTypesServiceQuery) {
+   console.log(`🎯 Types of services query detected, routing to service database lookup: "${query}"`);
+   const keywords = extractKeywords(query);
+   // For generic "types of services" queries, use generic intent to avoid keyword filtering
+   const services = await findServices(client, { keywords: [], limit: 24 });
+   if (services && services.length > 0) {
+     console.log(`🎯 Found ${services.length} services for types query`);
+     return {
+       success: true,
+       confidence: 0.8,
+       answer: generateServiceAnswer(services, query),
+       type: "services",
+       sources: { services: services },
+       structured: {
+         intent: "services",
+         topic: "photography services",
+         services: services,
+         events: [],
+         products: [],
+         articles: []
+       }
+     };
+   }
+ }
+ 
  // Check for service patterns first
  const serviceResponse = getServiceAnswers(query.toLowerCase());
  if (serviceResponse) {
@@ -8327,10 +8358,17 @@ async function tryRagFirst(client, query) {
     const enriched = sharpIntent
       ? Array.from(new Set([...keywords, 'sharp', 'sharpness', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'tripod', 'shutter speed', 'stabilization', 'ibis', 'vr']))
       : keywords;
-    let articles = await findArticles(client, { keywords: enriched, limit: 12 });
-    // If query is about sharpness/focus/blur, filter early so UI sees relevant items
+    // Increase limit for sharpness queries to find more relevant articles
+    let articles = await findArticles(client, { keywords: enriched, limit: sharpIntent ? 25 : 12 });
+    // If query is about sharpness/focus/blur, filter but show more results
     if (sharpIntent) {
-      articles = filterArticlesByKeywords(articles, ['sharp', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod']).slice(0, 6);
+      const filtered = filterArticlesByKeywords(articles, ['sharp', 'focus', 'focusing', 'blur', 'blurry', 'camera shake', 'handheld', 'stabilization', 'ibis', 'vr', 'tripod']);
+      // If filtering removed too many, keep some unfiltered ones too
+      if (filtered.length < 6 && articles.length > filtered.length) {
+        articles = [...filtered, ...articles.filter(a => !filtered.includes(a))].slice(0, 12);
+      } else {
+        articles = filtered.slice(0, 12);
+      }
     }
  
     return {
@@ -9237,7 +9275,13 @@ function enhanceTechnicalAdviceResponse(answer, query, response) {
       const filtered = response.structured.articles.filter(a =>
         isRelevant(a.title) || isRelevant(a.page_url || a.source_url || '') || isRelevant(a.meta_description || '')
       );
-      filteredForReturn = filtered.slice(0, 6);
+      // Show more articles for sharpness queries - up to 12 instead of 6
+      filteredForReturn = filtered.slice(0, 12);
+      // If filtering was too aggressive, include some unfiltered ones too
+      if (filteredForReturn.length < 6 && response.structured.articles.length > filteredForReturn.length) {
+        const unfiltered = response.structured.articles.filter(a => !filtered.includes(a)).slice(0, 6);
+        filteredForReturn = [...filteredForReturn, ...unfiltered].slice(0, 12);
+      }
       response.structured.articles = filteredForReturn;
     }
 
