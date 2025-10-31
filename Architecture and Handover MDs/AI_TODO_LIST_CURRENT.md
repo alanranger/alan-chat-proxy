@@ -1,5 +1,5 @@
 # 🧠 AI_TODO_LIST_CURRENT.md  
-_Last updated: 28 Oct 2025_  
+_Last updated: 31 Oct 2025_  
 _Alan Ranger — Chat AI Bot / alan-chat-proxy_
 
 ---
@@ -18,6 +18,11 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## ✅ Recently Completed (Last 2 Weeks)
 | Date | Completed Item | Notes |
 |------|-----------------|-------|
+| 31 Oct 2025 | **40Q Interactive Testing Baseline** | Saved baseline-40q-2025-10-31-interactive.csv - 8 Pass (20%), 32 Fail (80%) - comprehensive analysis completed |
+| 31 Oct 2025 | **Service Rendering Fix** | Added service tile rendering to interactive-testing.html to match live chat display |
+| 31 Oct 2025 | **Critical Issues Analysis** | Documented 32 failing questions with prioritized fixes (P1/P2/P3) and testing strategy |
+| 31 Oct 2025 | **Event Routing Fixes** | Fixed Q6 duration routing, added event routing in tryRagFirst before service lookup |
+| 31 Oct 2025 | **Hardcoded Answers** | Fixed Q12 (equipment), Q22 (contact), Q23 (gift vouchers), Q31 (about Alan) with early pattern matches |
 | 28 Oct 2025 | **CRITICAL: 500 Error Resolution** | Fixed root cause: seasonalTerms scope issue - all 430 questions now return 200 status (100% success rate) |
 | 28 Oct 2025 | **Comprehensive Test Success** | 430-question test completed with 100% success rate, no timeouts or 500 errors |
 | 28 Oct 2025 | **System Deployment Complete** | All fixes committed and deployed - system ready for interactive testing |
@@ -43,7 +48,19 @@ All older references or notes can be found inside `/Archive/AI_TODO_LIST_2025-01
 ## 🚧 Active Tasks (Current Focus)
 | Priority | Task | Description | Owner | Status |
 |-----------|------|--------------|-------|--------|
-| 🔸 High | **User Interactive Testing** | User testing deployed changes with 100% success rate - system ready for comprehensive testing | User | Ready |
+| 🔴 P1 | **Fix Missing Initial Responses** | Q23 (exposure triangle), Q38 (free course subscribe) - ensure technical questions generate answers | Cursor | Pending |
+| 🔴 P1 | **Fix Wrong Routing** | 12+ questions with incorrect routing: equipment, service, technical queries need pattern matches | Cursor | Pending |
+| 🔴 P1 | **Remove Article Cap** | Q7 (tripod) should show ALL related articles - remove 6-article cap for equipment/technical questions | Cursor | Pending |
+| 🔴 P1 | **Fix Service/Landing Tiles** | 7+ questions missing service tiles or should use landing pages for person queries | Cursor | Pending |
+| 🟡 P2 | **Improve Article Relevance** | Wrong articles shown, better matches exist - improve scoring algorithm | Cursor | Pending |
+| 🟡 P2 | **Course vs Workshop Distinction** | Course queries showing workshops - need separate classification | Cursor | Pending |
+| 🟡 P2 | **Answer Quality** | Generate conversational answers from content chunks for technical questions | Cursor | Pending |
+| 🟡 P2 | **Remove URLs from Responses** | Clean up hardcoded answers to remove inline URLs | Cursor | Pending |
+| 🟢 P3 | **Free Course Edge Case** | Special routing for "free online photography course" queries | Cursor | Pending |
+| 🟢 P3 | **Event Selection Criteria** | Improve logging/transparency for event filtering | Cursor | Pending |
+| 🔸 High | **40Q Baseline Saved** | baseline-40q-2025-10-31-interactive.csv saved for comparison | Cursor | ✅ Complete |
+| 🔸 High | **Critical Fixes Document** | CRITICAL_FIXES_AND_TESTING_STRATEGY.md created with prioritized fixes | Cursor | ✅ Complete |
+| 🔸 High | **Service Rendering Fix** | Interactive testing now matches live chat service tile display | Cursor | ✅ Complete |
 | 🔸 High | **Add Missing Hardcoded Answers** | Add hardcoded answers for 'what is histogram' and 'what is long exposure photography' | Cursor | Pending |
 | 🔸 High | **System Stability Achieved** | 430-question test completed with 100% success rate - no more 500 errors or timeouts | Cursor | ✅ Complete |
 | 🔸 High | **Response Composer Layer** | Intelligent wrapper implemented for all 8 business logic categories | Cursor | ✅ Complete |

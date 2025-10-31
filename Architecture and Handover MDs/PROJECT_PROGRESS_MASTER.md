@@ -1,6 +1,8 @@
 # PROJECT_PROGRESS_MASTER.md
 
 ## Latest Snapshot
+- 31 Oct 2025 — 40Q Interactive Testing Baseline established (8 Pass / 32 Fail)
+- 31 Oct 2025 — Critical fixes prioritized and testing strategy documented
 - 28 Oct 2025 — Recovery handover established
 - 20 Oct 2025 — Comprehensive progress summary (migrated)
 - 18 Oct 2025 — Major refactor completion summary
