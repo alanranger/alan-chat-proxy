@@ -8150,6 +8150,9 @@ async function tryRagFirst(client, query) {
   // PRIORITY: Hardcoded answers for specific questions (restore baseline behavior)
   const qlc = query.toLowerCase();
   
+  // Declare equipment check early for use in event routing
+  const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
+  
   // Q22: Contact information queries - explicit pattern match with hardcoded answer
   if (qlc.includes("contact") || qlc.includes("phone") || qlc.includes("address") || qlc.includes("email") || qlc.includes("book a discovery call")) {
     console.log(`✅ Contact information query detected, returning contact details: "${query}"`);
@@ -8210,7 +8213,6 @@ async function tryRagFirst(client, query) {
   }
  
   // Q12: Equipment questions - MUST be before event routing
-  const isEquipmentQuestion = /\b(what\s+(sort\s+of\s+)?camera|what\s+(gear|equipment)|tripod|lens|memory\s+card)\b/i.test(query || '');
   if (isEquipmentQuestion) {
     console.log(`✅ Equipment question detected, routing to articles/advice: "${query}"`);
     const keywords = extractKeywords(query);
@@ -8252,6 +8254,27 @@ async function tryRagFirst(client, query) {
         services: []
       }
     };
+  }
+ 
+  // Event routing - MUST be before service lookup
+  const businessCategory = detectBusinessCategory(query || '');
+  const courseLogistics = !isEquipmentQuestion && /\b(course|beginners|lightroom|camera\s+course|weeks|how\s+many\s+weeks|syllabus|schedule)\b/i.test(query || '');
+  const eventCues = /\b(workshop|workshops|event|photowalk|next\s+.*workshop|where\s+.*workshop|when\s+.*workshop|autumn\s+workshops|devon\s+workshop|bluebell\s+workshop|how\s+long.*workshop|bluebell|autumn|spring|summer|winter)\b/i.test(query || '');
+  
+  if (!isEquipmentQuestion && (businessCategory === 'Event Queries' || courseLogistics || eventCues)) {
+    console.log(`✅ Event query detected in tryRagFirst, routing to events: "${query}"`);
+    const keywords = extractKeywords(query);
+    const events = await findEvents(client, { keywords, limit: 40 });
+    if (events && events.length > 0) {
+      return {
+        success: true,
+        confidence: 0.96,
+        answer: generateEventAnswerMarkdown(events, query),
+        type: 'events',
+        sources: { events },
+        structured: { intent: 'events', events, services: [], products: [], articles: [] }
+      };
+    }
   }
  
  // Check for service patterns first
