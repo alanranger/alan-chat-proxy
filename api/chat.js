@@ -9071,7 +9071,8 @@ function enhanceEventResponse(answer, query, response) {
   if (isDurationQuery) {
     const durationAnswer = generateWorkshopDurationAnswer(query, response);
     console.log(`🎭 enhanceEventResponse: returning duration answer="${durationAnswer.substring(0, 100)}..."`);
-    return { answer: durationAnswer, type: 'advice', confidenceBoost: 0.95 };
+    // Keep type as 'events' even for duration queries - they should still be classified as events
+    return { answer: durationAnswer, type: 'events', confidenceBoost: 0.95 };
   }
 
   // If answer is too short, provide helpful context
