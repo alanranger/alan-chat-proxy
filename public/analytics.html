@@ -1307,6 +1307,213 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
     }
 
     // Load insights data
+    // Helper functions for loadInsights
+    function createAnalysisSummaryCard(analysis) {
+      const card = document.createElement('div');
+      card.className = 'insight-card insight-priority-high';
+      card.innerHTML = `
+        <h4>📊 Analysis Summary</h4>
+        <p>Analyzed ${analysis.totalQuestions} low-confidence questions</p>
+        <p>${analysis.highPriorityCount} high-priority issues identified</p>
+        <p>Average confidence: ${(analysis.avgConfidence * 100).toFixed(1)}%</p>
+      `;
+      return card;
+    }
+
+    function createFeedbackSummaryCard(analysis) {
+      if (!analysis.feedbackSummary || analysis.feedbackSummary.total === 0) return null;
+      const card = document.createElement('div');
+      card.className = 'insight-card insight-priority-medium';
+      card.innerHTML = `
+        <h4>👥 User Feedback Summary</h4>
+        <p><strong>Total Feedback:</strong> ${analysis.feedbackSummary.total}</p>
+        <p><strong>Thumbs Up:</strong> ${analysis.feedbackSummary.thumbsUp} | <strong>Thumbs Down:</strong> ${analysis.feedbackSummary.thumbsDown}</p>
+        <p><strong>Satisfaction Rate:</strong> ${analysis.feedbackSummary.satisfactionRate.toFixed(1)}%</p>
+        ${analysis.feedbackSummary.thumbsDown > 0 ? `<p><strong>Avg Confidence (Thumbs Down):</strong> ${analysis.feedbackSummary.avgConfidenceThumbsDown.toFixed(1)}%</p>` : ''}
+      `;
+      return card;
+    }
+
+    function createStatusCardHTML(counts, recentImprovements) {
+      const improvementsHTML = recentImprovements.length > 0 ? `
+        <details style="margin-top: 15px;">
+          <summary style="cursor: pointer; color: #10b981;">📋 Recent Improvements (${recentImprovements.length})</summary>
+          <div style="margin-top: 10px;">
+            ${recentImprovements.map(imp => `
+              <div style="border: 1px solid #444; padding: 10px; margin: 8px 0; border-radius: 5px; background: #2a2f3e;">
+                <div style="color: #fff; font-weight: bold;">${imp.page_entities?.title || 'Content Improvement'}</div>
+                <div style="color: #ccc; font-size: 0.9em;">Question: "${imp.question}"</div>
+                <div style="color: #10b981; font-size: 0.8em;">Before: ${Math.round((imp.original_confidence || 0) * 100)}% confidence</div>
+                <div style="color: #666; font-size: 0.8em;">Added: ${new Date(imp.implemented_at).toLocaleDateString()}</div>
+              </div>
+            `).join('')}
+          </div>
+        </details>
+      ` : '';
+      return `
+        <h4>📈 Improvement Status Dashboard</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin: 15px 0;">
+          <div style="text-align: center; padding: 10px; background: #0f5132; border-radius: 5px;">
+            <div style="font-size: 24px; font-weight: bold; color: #10b981;">${counts.improved || 0}</div>
+            <div style="font-size: 12px; color: #ccc;">Improved</div>
+          </div>
+          <div style="text-align: center; padding: 10px; background: #58151c; border-radius: 5px;">
+            <div style="font-size: 24px; font-weight: bold; color: #dc3545;">${counts.ignored || 0}</div>
+            <div style="font-size: 12px; color: #ccc;">Ignored</div>
+          </div>
+          <div style="text-align: center; padding: 10px; background: #1a1f2e; border-radius: 5px;">
+            <div style="font-size: 24px; font-weight: bold; color: #ffc107;">${counts.pending || 0}</div>
+            <div style="font-size: 12px; color: #ccc;">Remaining</div>
+          </div>
+          <div style="text-align: center; padding: 10px; background: #6c757d; border-radius: 5px;">
+            <div style="font-size: 24px; font-weight: bold; color: #6c757d;">${counts.failed || 0}</div>
+            <div style="font-size: 12px; color: #ccc;">Failed</div>
+          </div>
+        </div>
+        ${improvementsHTML}
+      `;
+    }
+
+    function createFeedbackRecCard(feedback) {
+      const confidenceVsSatisfaction = feedback.confidence_score > 70 && feedback.rating === 'thumbs_down' ? 'HIGH' : 'MEDIUM';
+      const priorityColor = confidenceVsSatisfaction === 'HIGH' ? '#ef4444' : '#f59e0b';
+      const card = document.createElement('div');
+      card.className = 'insight-card insight-priority-high';
+      card.innerHTML = `
+        <h4 style="color: ${priorityColor};">👎 "${feedback.query}"</h4>
+        <p><strong>User Rating:</strong> <span style="color: #ef4444; font-weight: bold;">THUMBS DOWN</span> | <strong>Bot Confidence:</strong> ${feedback.confidence_score}%</p>
+        <p><strong>Reason:</strong> ${feedback.reason ? feedback.reason.replace('_', ' ') : 'Not specified'}</p>
+        ${feedback.user_feedback_text ? `<p><strong>User Comment:</strong> "${feedback.user_feedback_text}"</p>` : ''}
+        <p><strong>Intent Detected:</strong> ${feedback.intent} | <strong>Priority:</strong> <span style="color: ${priorityColor}; font-weight: bold;">${confidenceVsSatisfaction}</span></p>
+        <div style="background: #1a1f2e; padding: 10px; border-radius: 5px; margin-top: 10px;">
+          <strong>🎯 Action Required:</strong>
+          <ul style="margin: 5px 0; padding-left: 20px;">
+            ${confidenceVsSatisfaction === 'HIGH' ? 
+              '<li style="color: #ef4444;">HIGH PRIORITY: Bot shows high confidence but user is dissatisfied</li>' : 
+              '<li style="color: #f59e0b;">MEDIUM PRIORITY: Review response quality and data sources</li>'
+            }
+            <li>Check if response matches user intent (${feedback.intent})</li>
+            <li>Verify data accuracy for this query</li>
+            <li>Consider adding more specific content for this topic</li>
+          </ul>
+        </div>
+      `;
+      return card;
+    }
+
+    function createRecommendationCard(rec) {
+      const card = document.createElement('div');
+      card.className = `insight-card insight-priority-${rec.recommendations[0]?.severity || 'medium'}`;
+      const recommendationsHtml = rec.recommendations.map(r => 
+        `<li><strong>${r.type.replace('_', ' ').toUpperCase()}:</strong> ${r.message}</li>`
+      ).join('');
+      card.innerHTML = `
+        <h4>❓ "${rec.question}"</h4>
+        <p><strong>Frequency:</strong> ${rec.frequency} times | <strong>Confidence:</strong> ${(rec.avgConfidence * 100).toFixed(1)}%</p>
+        <p><strong>Current Answer:</strong> ${rec.currentAnswer.substring(0, 100)}${rec.currentAnswer.length > 100 ? '...' : ''}</p>
+        <ul>${recommendationsHtml}</ul>
+      `;
+      return card;
+    }
+
+    function createContentSuggestionCard(suggestion) {
+      const card = document.createElement('div');
+      card.className = 'insight-card insight-priority-medium';
+      const patternsHtml = suggestion.commonPatterns.topKeywords.map(k => 
+        `<span class="keyword-tag">${k.word} (${k.count})</span>`
+      ).join('');
+      card.innerHTML = `
+        <h4>🎯 ${suggestion.intent.toUpperCase()} Intent</h4>
+        <p><strong>Affected Questions:</strong> ${suggestion.affectedQuestions}/${suggestion.totalQuestions} | <strong>Avg Confidence:</strong> ${(suggestion.avgConfidence * 100).toFixed(1)}%</p>
+        <p><strong>Recommendation:</strong> ${suggestion.recommendation.message}</p>
+        <div><strong>Common Keywords:</strong> ${patternsHtml}</div>
+        <ul>
+          ${suggestion.recommendation.actions.map(action => `<li>${action}</li>`).join('')}
+        </ul>
+      `;
+      return card;
+    }
+
+    function createFeedbackActionsCard(analysis) {
+      const card = document.createElement('div');
+      card.className = 'insight-card insight-priority-high';
+      card.innerHTML = `
+        <h4>🎯 User Feedback Action Plan</h4>
+        <p>Based on user feedback, here are the immediate actions needed:</p>
+        <div style="margin-top: 15px;">
+          <div style="background: #1a1f2e; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <h5 style="color: #ef4444; margin-bottom: 10px;">📊 Feedback Analysis Summary:</h5>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li><strong>Total Thumbs Down:</strong> ${analysis.feedbackSummary.thumbsDown}</li>
+              <li><strong>Average Confidence (Thumbs Down):</strong> ${analysis.feedbackSummary.avgConfidenceThumbsDown.toFixed(1)}%</li>
+              <li><strong>High Priority Issues:</strong> ${analysis.recentFeedback.filter(f => f.confidence_score > 70 && f.rating === 'thumbs_down').length} queries with high confidence but poor user satisfaction</li>
+            </ul>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+            <button onclick="generateFeedbackImprovementPlan()" class="btn btn-primary">
+              📝 Generate Feedback-Based Plan
+            </button>
+            <button onclick="viewFeedbackDetails()" class="btn btn-secondary">
+              👁️ View Detailed Feedback
+            </button>
+            <button onclick="exportFeedbackReport()" class="btn btn-info">
+              📊 Export Feedback Report
+            </button>
+            <button onclick="exportAllInsightsAndFeedback()" class="btn btn-success">
+              🚀 Export All Data
+            </button>
+          </div>
+        </div>
+        <div id="feedback-improvement-status" style="margin-top: 15px; display: none;"></div>
+      `;
+      return card;
+    }
+
+    function createActionsCard() {
+      const card = document.createElement('div');
+      card.className = 'insight-card insight-priority-high';
+      card.innerHTML = `
+        <h4>📋 Improvement Plan</h4>
+        <p>Click the buttons below to automatically implement content improvements:</p>
+        <div style="margin-top: 15px;">
+          <button onclick="generateImprovementPlan()" class="btn btn-primary" style="margin-right: 10px;">
+            📝 Generate Improvement Plan
+          </button>
+          <button onclick="previewImprovements()" class="btn btn-info" style="margin-right: 10px;">
+            👁️ Preview Content Improvements
+          </button>
+          <button onclick="implementTopImprovements()" class="btn btn-success" style="display: none;" id="implementBtn">
+            ⚡ Implement Approved Improvements
+          </button>
+        </div>
+        <div id="improvement-status" style="margin-top: 15px; display: none;"></div>
+      `;
+      return card;
+    }
+
+    async function loadImprovementStatus(insightsList) {
+      try {
+        const statusResponse = await fetch('/api/chat-improvement?action=improvement_status', {
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
+          }
+        });
+        
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          if (statusData.ok) {
+            const { counts, recentImprovements } = statusData;
+            const statusCard = document.createElement('div');
+            statusCard.className = 'insight-card insight-priority-medium';
+            statusCard.innerHTML = createStatusCardHTML(counts, recentImprovements);
+            insightsList.appendChild(statusCard);
+          }
+        }
+      } catch (statusError) {
+        console.error('Failed to load improvement status:', statusError);
+      }
+    }
+
     async function loadInsights() {
       try {
         document.getElementById('insights-loading').style.display = 'block';
@@ -1330,88 +1537,14 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         insightsList.innerHTML = '';
         
         // Display analysis summary
-        const summaryCard = document.createElement('div');
-        summaryCard.className = 'insight-card insight-priority-high';
-        summaryCard.innerHTML = `
-          <h4>📊 Analysis Summary</h4>
-          <p>Analyzed ${analysis.totalQuestions} low-confidence questions</p>
-          <p>${analysis.highPriorityCount} high-priority issues identified</p>
-          <p>Average confidence: ${(analysis.avgConfidence * 100).toFixed(1)}%</p>
-        `;
-        insightsList.appendChild(summaryCard);
+        insightsList.appendChild(createAnalysisSummaryCard(analysis));
 
         // Add feedback summary if available
-        if (analysis.feedbackSummary && analysis.feedbackSummary.total > 0) {
-          const feedbackCard = document.createElement('div');
-          feedbackCard.className = 'insight-card insight-priority-medium';
-          feedbackCard.innerHTML = `
-            <h4>👥 User Feedback Summary</h4>
-            <p><strong>Total Feedback:</strong> ${analysis.feedbackSummary.total}</p>
-            <p><strong>Thumbs Up:</strong> ${analysis.feedbackSummary.thumbsUp} | <strong>Thumbs Down:</strong> ${analysis.feedbackSummary.thumbsDown}</p>
-            <p><strong>Satisfaction Rate:</strong> ${analysis.feedbackSummary.satisfactionRate.toFixed(1)}%</p>
-            ${analysis.feedbackSummary.thumbsDown > 0 ? `<p><strong>Avg Confidence (Thumbs Down):</strong> ${analysis.feedbackSummary.avgConfidenceThumbsDown.toFixed(1)}%</p>` : ''}
-          `;
-          insightsList.appendChild(feedbackCard);
-        }
+        const feedbackCard = createFeedbackSummaryCard(analysis);
+        if (feedbackCard) insightsList.appendChild(feedbackCard);
         
         // Load and display improvement status dashboard
-        try {
-          const statusResponse = await fetch('/api/chat-improvement?action=improvement_status', {
-            headers: {
-              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M'
-            }
-          });
-          
-          if (statusResponse.ok) {
-            const statusData = await statusResponse.json();
-            if (statusData.ok) {
-              const { counts, recentImprovements } = statusData;
-              
-              // Create improvement status dashboard
-              const statusCard = document.createElement('div');
-              statusCard.className = 'insight-card insight-priority-medium';
-              statusCard.innerHTML = `
-                <h4>📈 Improvement Status Dashboard</h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin: 15px 0;">
-                  <div style="text-align: center; padding: 10px; background: #0f5132; border-radius: 5px;">
-                    <div style="font-size: 24px; font-weight: bold; color: #10b981;">${counts.improved || 0}</div>
-                    <div style="font-size: 12px; color: #ccc;">Improved</div>
-                  </div>
-                  <div style="text-align: center; padding: 10px; background: #58151c; border-radius: 5px;">
-                    <div style="font-size: 24px; font-weight: bold; color: #dc3545;">${counts.ignored || 0}</div>
-                    <div style="font-size: 12px; color: #ccc;">Ignored</div>
-                  </div>
-                  <div style="text-align: center; padding: 10px; background: #1a1f2e; border-radius: 5px;">
-                    <div style="font-size: 24px; font-weight: bold; color: #ffc107;">${counts.pending || 0}</div>
-                    <div style="font-size: 12px; color: #ccc;">Remaining</div>
-                  </div>
-                  <div style="text-align: center; padding: 10px; background: #6c757d; border-radius: 5px;">
-                    <div style="font-size: 24px; font-weight: bold; color: #6c757d;">${counts.failed || 0}</div>
-                    <div style="font-size: 12px; color: #ccc;">Failed</div>
-                  </div>
-                </div>
-                ${recentImprovements.length > 0 ? `
-                  <details style="margin-top: 15px;">
-                    <summary style="cursor: pointer; color: #10b981;">📋 Recent Improvements (${recentImprovements.length})</summary>
-                    <div style="margin-top: 10px;">
-                      ${recentImprovements.map(imp => `
-                        <div style="border: 1px solid #444; padding: 10px; margin: 8px 0; border-radius: 5px; background: #2a2f3e;">
-                          <div style="color: #fff; font-weight: bold;">${imp.page_entities?.title || 'Content Improvement'}</div>
-                          <div style="color: #ccc; font-size: 0.9em;">Question: "${imp.question}"</div>
-                          <div style="color: #10b981; font-size: 0.8em;">Before: ${Math.round((imp.original_confidence || 0) * 100)}% confidence</div>
-                          <div style="color: #666; font-size: 0.8em;">Added: ${new Date(imp.implemented_at).toLocaleDateString()}</div>
-                        </div>
-                      `).join('')}
-                    </div>
-                  </details>
-                ` : ''}
-              `;
-              insightsList.appendChild(statusCard);
-            }
-          }
-        } catch (statusError) {
-          console.error('Failed to load improvement status:', statusError);
-        }
+        await loadImprovementStatus(insightsList);
         
         // Display feedback-based recommendations first (highest priority)
         if (analysis.recentFeedback && analysis.recentFeedback.length > 0) {
@@ -1423,34 +1556,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
           insightsList.appendChild(feedbackRecTitle);
           
           analysis.recentFeedback.slice(0, 5).forEach(feedback => {
-          const card = document.createElement('div');
-            card.className = 'insight-card insight-priority-high';
-            
-            // Determine priority based on confidence vs user satisfaction
-            const confidenceVsSatisfaction = feedback.confidence_score > 70 && feedback.rating === 'thumbs_down' ? 'HIGH' : 'MEDIUM';
-            const priorityColor = confidenceVsSatisfaction === 'HIGH' ? '#ef4444' : '#f59e0b';
-            
-          card.innerHTML = `
-              <h4 style="color: ${priorityColor};">👎 "${feedback.query}"</h4>
-              <p><strong>User Rating:</strong> <span style="color: #ef4444; font-weight: bold;">THUMBS DOWN</span> | <strong>Bot Confidence:</strong> ${feedback.confidence_score}%</p>
-              <p><strong>Reason:</strong> ${feedback.reason ? feedback.reason.replace('_', ' ') : 'Not specified'}</p>
-              ${feedback.user_feedback_text ? `<p><strong>User Comment:</strong> "${feedback.user_feedback_text}"</p>` : ''}
-              <p><strong>Intent Detected:</strong> ${feedback.intent} | <strong>Priority:</strong> <span style="color: ${priorityColor}; font-weight: bold;">${confidenceVsSatisfaction}</span></p>
-              <div style="background: #1a1f2e; padding: 10px; border-radius: 5px; margin-top: 10px;">
-                <strong>🎯 Action Required:</strong>
-                <ul style="margin: 5px 0; padding-left: 20px;">
-                  ${confidenceVsSatisfaction === 'HIGH' ? 
-                    '<li style="color: #ef4444;">HIGH PRIORITY: Bot shows high confidence but user is dissatisfied</li>' : 
-                    '<li style="color: #f59e0b;">MEDIUM PRIORITY: Review response quality and data sources</li>'
-                  }
-                  <li>Check if response matches user intent (${feedback.intent})</li>
-                  <li>Verify data accuracy for this query</li>
-                  <li>Consider adding more specific content for this topic</li>
-                </ul>
-              </div>
-          `;
-          insightsList.appendChild(card);
-        });
+            insightsList.appendChild(createFeedbackRecCard(feedback));
+          });
         }
 
         // Display top recommendations
@@ -1462,20 +1569,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
           insightsList.appendChild(recTitle);
           
           analysis.recommendations.slice(0, 10).forEach(rec => {
-            const card = document.createElement('div');
-            card.className = `insight-card insight-priority-${rec.recommendations[0]?.severity || 'medium'}`;
-            
-            const recommendationsHtml = rec.recommendations.map(r => 
-              `<li><strong>${r.type.replace('_', ' ').toUpperCase()}:</strong> ${r.message}</li>`
-            ).join('');
-            
-            card.innerHTML = `
-              <h4>❓ "${rec.question}"</h4>
-              <p><strong>Frequency:</strong> ${rec.frequency} times | <strong>Confidence:</strong> ${(rec.avgConfidence * 100).toFixed(1)}%</p>
-              <p><strong>Current Answer:</strong> ${rec.currentAnswer.substring(0, 100)}${rec.currentAnswer.length > 100 ? '...' : ''}</p>
-              <ul>${recommendationsHtml}</ul>
-            `;
-            insightsList.appendChild(card);
+            insightsList.appendChild(createRecommendationCard(rec));
           });
         }
         
@@ -1488,23 +1582,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
           insightsList.appendChild(contentTitle);
           
           analysis.contentSuggestions.forEach(suggestion => {
-            const card = document.createElement('div');
-            card.className = 'insight-card insight-priority-medium';
-            
-            const patternsHtml = suggestion.commonPatterns.topKeywords.map(k => 
-              `<span class="keyword-tag">${k.word} (${k.count})</span>`
-            ).join('');
-            
-            card.innerHTML = `
-              <h4>🎯 ${suggestion.intent.toUpperCase()} Intent</h4>
-              <p><strong>Affected Questions:</strong> ${suggestion.affectedQuestions}/${suggestion.totalQuestions} | <strong>Avg Confidence:</strong> ${(suggestion.avgConfidence * 100).toFixed(1)}%</p>
-              <p><strong>Recommendation:</strong> ${suggestion.recommendation.message}</p>
-              <div><strong>Common Keywords:</strong> ${patternsHtml}</div>
-              <ul>
-                ${suggestion.recommendation.actions.map(action => `<li>${action}</li>`).join('')}
-              </ul>
-            `;
-            insightsList.appendChild(card);
+            insightsList.appendChild(createContentSuggestionCard(suggestion));
           });
         }
         
@@ -1528,39 +1606,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
           feedbackActionsTitle.style.marginBottom = '15px';
           feedbackActionsTitle.style.color = '#ef4444';
           insightsList.appendChild(feedbackActionsTitle);
-          
-          const feedbackActionsCard = document.createElement('div');
-          feedbackActionsCard.className = 'insight-card insight-priority-high';
-          feedbackActionsCard.innerHTML = `
-            <h4>🎯 User Feedback Action Plan</h4>
-            <p>Based on user feedback, here are the immediate actions needed:</p>
-            <div style="margin-top: 15px;">
-              <div style="background: #1a1f2e; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                <h5 style="color: #ef4444; margin-bottom: 10px;">📊 Feedback Analysis Summary:</h5>
-                <ul style="margin: 0; padding-left: 20px;">
-                  <li><strong>Total Thumbs Down:</strong> ${analysis.feedbackSummary.thumbsDown}</li>
-                  <li><strong>Average Confidence (Thumbs Down):</strong> ${analysis.feedbackSummary.avgConfidenceThumbsDown.toFixed(1)}%</li>
-                  <li><strong>High Priority Issues:</strong> ${analysis.recentFeedback.filter(f => f.confidence_score > 70 && f.rating === 'thumbs_down').length} queries with high confidence but poor user satisfaction</li>
-                </ul>
-              </div>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                <button onclick="generateFeedbackImprovementPlan()" class="btn btn-primary">
-                  📝 Generate Feedback-Based Plan
-                </button>
-                <button onclick="viewFeedbackDetails()" class="btn btn-secondary">
-                  👁️ View Detailed Feedback
-                </button>
-                <button onclick="exportFeedbackReport()" class="btn btn-info">
-                  📊 Export Feedback Report
-                </button>
-                <button onclick="exportAllInsightsAndFeedback()" class="btn btn-success">
-                  🚀 Export All Data
-                </button>
-              </div>
-            </div>
-            <div id="feedback-improvement-status" style="margin-top: 15px; display: none;"></div>
-          `;
-          insightsList.appendChild(feedbackActionsCard);
+          insightsList.appendChild(createFeedbackActionsCard(analysis));
         }
 
         // Add improvement actions section
@@ -1570,26 +1616,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
           actionsTitle.style.marginTop = '20px';
           actionsTitle.style.marginBottom = '15px';
           insightsList.appendChild(actionsTitle);
-          
-          const actionsCard = document.createElement('div');
-          actionsCard.className = 'insight-card insight-priority-high';
-          actionsCard.innerHTML = `
-            <h4>📋 Improvement Plan</h4>
-            <p>Click the buttons below to automatically implement content improvements:</p>
-            <div style="margin-top: 15px;">
-              <button onclick="generateImprovementPlan()" class="btn btn-primary" style="margin-right: 10px;">
-                📝 Generate Improvement Plan
-              </button>
-              <button onclick="previewImprovements()" class="btn btn-info" style="margin-right: 10px;">
-                👁️ Preview Content Improvements
-              </button>
-              <button onclick="implementTopImprovements()" class="btn btn-success" style="display: none;" id="implementBtn">
-                ⚡ Implement Approved Improvements
-              </button>
-            </div>
-            <div id="improvement-status" style="margin-top: 15px; display: none;"></div>
-          `;
-          insightsList.appendChild(actionsCard);
+          insightsList.appendChild(createActionsCard());
         }
         
         document.getElementById('insights-loading').style.display = 'none';
@@ -1981,19 +2008,10 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       }
     }
 
-    async function implementTopImprovements() {
-      const statusDiv = document.getElementById('improvement-status');
-      statusDiv.style.display = 'block';
-      
-      if (approvedContent.length === 0) {
-        statusDiv.innerHTML = '<p style="color: #ffc107;">⚠️ No approved content to implement. Please approve some suggestions first.</p>';
-        showToast('No approved content to implement', 'warning');
-        return;
-      }
-
-      // Show progress overlay
-      const progressOverlay = document.createElement('div');
-      progressOverlay.style.cssText = `
+    // Helper functions for implementTopImprovements
+    function createProgressOverlay() {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
         position: fixed;
         top: 0;
         left: 0;
@@ -2007,7 +2025,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
         z-index: 10000;
         color: white;
       `;
-      progressOverlay.innerHTML = `
+      overlay.innerHTML = `
         <div style="text-align: center;">
           <div style="font-size: 24px; margin-bottom: 20px;">🔄 Implementing Improvements...</div>
           <div style="background: #1a1f2e; width: 400px; height: 8px; border-radius: 4px; overflow: hidden;">
@@ -2016,6 +2034,112 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
           <div id="implementation-status" style="margin-top: 15px; font-size: 14px; color: #ccc;">Starting implementation...</div>
         </div>
       `;
+      return overlay;
+    }
+
+    function updateProgressUI(index, total, question) {
+      const progressBar = document.getElementById('implementation-progress');
+      const statusText = document.getElementById('implementation-status');
+      if (progressBar) progressBar.style.width = `${((index + 1) / total) * 100}%`;
+      if (statusText) statusText.textContent = `Implementing: "${question}" (${index + 1}/${total})`;
+    }
+
+    async function implementSingleItem(item) {
+      const response = await fetch('/api/chat-improvement?action=implement_improvement', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          question: item.question,
+          suggestedContent: item.suggestedContent,
+          approved: true
+        })
+      });
+
+      if (!response.ok) {
+        let detail = '';
+        try { detail = await response.text(); } catch (e) { /* ignore */ }
+        throw new Error(`HTTP ${response.status}${detail ? ` — ${detail}` : ''}`);
+      }
+      const data = await response.json();
+      if (!data.ok) throw new Error(data.error || 'Unknown error');
+      return { question: item.question, success: true, data, originalConfidence: data.originalConfidence };
+    }
+
+    function createResultsHTML(results, successCount, errorCount) {
+      const successResults = results.filter(r => r.success);
+      const errorResults = results.filter(r => !r.success);
+      let html = `
+        <div style="background: #1a1f2e; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h4 style="color: #fff; margin-bottom: 15px;">📊 Implementation Complete</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            <div style="text-align: center; padding: 15px; background: #0f5132; border-radius: 8px;">
+              <div style="font-size: 24px; font-weight: bold; color: #10b981;">${successCount}</div>
+              <div style="color: #ccc;">Successfully Implemented</div>
+            </div>
+            <div style="text-align: center; padding: 15px; background: #58151c; border-radius: 8px;">
+              <div style="font-size: 24px; font-weight: bold; color: #dc3545;">${errorCount}</div>
+              <div style="color: #ccc;">Failed</div>
+            </div>
+          </div>
+      `;
+      if (successCount > 0) {
+        html += `
+          <div style="margin-bottom: 20px;">
+            <h5 style="color: #10b981;">✅ Successfully Implemented:</h5>
+            <div style="background: #0f1419; padding: 15px; border-radius: 5px; margin: 10px 0;">
+              ${successResults.map((r, idx) => `
+                <div style="border-bottom: ${idx < successResults.length - 1 ? '1px solid #333' : 'none'}; padding: 10px 0;">
+                  <div style="color: #fff; font-weight: bold;">"${r.question}"</div>
+                  <div style="color: #10b981; font-size: 0.9em;">Before: ${Math.round((r.originalConfidence || 0) * 100)}% confidence → After: Content added</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      if (errorCount > 0) {
+        html += `
+          <div style="margin-bottom: 20px;">
+            <h5 style="color: #dc3545;">❌ Failed to Implement:</h5>
+            <div style="background: #0f1419; padding: 15px; border-radius: 5px; margin: 10px 0;">
+              ${errorResults.map((r, idx) => `
+                <div style="border-bottom: ${idx < errorResults.length - 1 ? '1px solid #333' : 'none'}; padding: 10px 0;">
+                  <div style="color: #fff; font-weight: bold;">"${r.question}"</div>
+                  <div style="color: #dc3545; font-size: 0.9em;">Error: ${r.error}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      html += `
+          <div style="text-align: center; margin-top: 20px;">
+            <button onclick="showImplementedContent()" class="btn btn-primary" style="margin-right: 10px;">
+              📋 View What Was Added
+            </button>
+            <button onclick="loadInsights()" class="btn btn-secondary">
+              🔄 Refresh Insights
+            </button>
+          </div>
+        </div>
+      `;
+      return html;
+    }
+
+    async function implementTopImprovements() {
+      const statusDiv = document.getElementById('improvement-status');
+      statusDiv.style.display = 'block';
+      
+      if (approvedContent.length === 0) {
+        statusDiv.innerHTML = '<p style="color: #ffc107;">⚠️ No approved content to implement. Please approve some suggestions first.</p>';
+        showToast('No approved content to implement', 'warning');
+        return;
+      }
+
+      const progressOverlay = createProgressOverlay();
       document.body.appendChild(progressOverlay);
 
       try {
@@ -2025,39 +2149,11 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
 
         for (let i = 0; i < approvedContent.length; i++) {
           const item = approvedContent[i];
-          const progress = ((i + 1) / approvedContent.length) * 100;
-          
-          // Update progress
-          const progressBar = document.getElementById('implementation-progress');
-          const statusText = document.getElementById('implementation-status');
-          if (progressBar) progressBar.style.width = `${progress}%`;
-          if (statusText) statusText.textContent = `Implementing: "${item.question}" (${i + 1}/${approvedContent.length})`;
+          updateProgressUI(i, approvedContent.length, item.question);
 
           try {
-            const response = await fetch('/api/chat-improvement?action=implement_improvement', {
-              method: 'POST',
-              headers: {
-                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnenZ3YnZndm16dnZ6b2NsdWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzY3NzkyOCwiZXhwIjoyMDczMjUzOTI4fQ.W9tkTSYu6Wml0mUr-gJD6hcLMZDcbaYYaOsyDXuwd8M',
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                question: item.question,
-                suggestedContent: item.suggestedContent,
-                approved: true
-              })
-            });
-
-            if (!response.ok) {
-              // Try to extract error details from body
-              let detail = '';
-              try { detail = await response.text(); } catch (e) { /* ignore */ }
-              throw new Error(`HTTP ${response.status}${detail ? ` — ${detail}` : ''}`);
-            }
-            const data = await response.json();
-            
-            if (!data.ok) throw new Error(data.error || 'Unknown error');
-            
-            results.push({ question: item.question, success: true, data, originalConfidence: data.originalConfidence });
+            const result = await implementSingleItem(item);
+            results.push(result);
             successCount++;
             showToast(`✅ Implemented: "${item.question}"`, 'success');
           } catch (error) {
@@ -2067,70 +2163,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
           }
         }
 
-        // Remove progress overlay
         document.body.removeChild(progressOverlay);
-
-        // Display comprehensive results
-        let resultHTML = `
-          <div style="background: #1a1f2e; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h4 style="color: #fff; margin-bottom: 15px;">📊 Implementation Complete</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
-              <div style="text-align: center; padding: 15px; background: #0f5132; border-radius: 8px;">
-                <div style="font-size: 24px; font-weight: bold; color: #10b981;">${successCount}</div>
-                <div style="color: #ccc;">Successfully Implemented</div>
-              </div>
-              <div style="text-align: center; padding: 15px; background: #58151c; border-radius: 8px;">
-                <div style="font-size: 24px; font-weight: bold; color: #dc3545;">${errorCount}</div>
-                <div style="color: #ccc;">Failed</div>
-              </div>
-            </div>
-        `;
-
-        if (successCount > 0) {
-          resultHTML += `
-            <div style="margin-bottom: 20px;">
-              <h5 style="color: #10b981;">✅ Successfully Implemented:</h5>
-              <div style="background: #0f1419; padding: 15px; border-radius: 5px; margin: 10px 0;">
-                ${results.filter(r => r.success).map(r => `
-                  <div style="border-bottom: 1px solid #333; padding: 10px 0; ${r === results.filter(r => r.success)[results.filter(r => r.success).length - 1] ? 'border-bottom: none;' : ''}">
-                    <div style="color: #fff; font-weight: bold;">"${r.question}"</div>
-                    <div style="color: #10b981; font-size: 0.9em;">Before: ${Math.round((r.originalConfidence || 0) * 100)}% confidence → After: Content added</div>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          `;
-        }
-
-        if (errorCount > 0) {
-          resultHTML += `
-            <div style="margin-bottom: 20px;">
-              <h5 style="color: #dc3545;">❌ Failed to Implement:</h5>
-              <div style="background: #0f1419; padding: 15px; border-radius: 5px; margin: 10px 0;">
-                ${results.filter(r => !r.success).map(r => `
-                  <div style="border-bottom: 1px solid #333; padding: 10px 0; ${r === results.filter(r => !r.success)[results.filter(r => !r.success).length - 1] ? 'border-bottom: none;' : ''}">
-                    <div style="color: #fff; font-weight: bold;">"${r.question}"</div>
-                    <div style="color: #dc3545; font-size: 0.9em;">Error: ${r.error}</div>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          `;
-        }
-
-        resultHTML += `
-            <div style="text-align: center; margin-top: 20px;">
-              <button onclick="showImplementedContent()" class="btn btn-primary" style="margin-right: 10px;">
-                📋 View What Was Added
-              </button>
-              <button onclick="loadInsights()" class="btn btn-secondary">
-                🔄 Refresh Insights
-              </button>
-            </div>
-          </div>
-        `;
-
-        statusDiv.innerHTML = resultHTML;
+        statusDiv.innerHTML = createResultsHTML(results, successCount, errorCount);
         showToast(`Implementation complete: ${successCount} successful, ${errorCount} failed`, successCount > 0 ? 'success' : 'error');
 
       } catch (error) {
@@ -2334,10 +2368,109 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       return html;
     }
 
+    // Helper functions for viewQuestion
+    function parseStructuredResponse(interaction) {
+      if (!interaction.structured_response) return null;
+      try {
+        return typeof interaction.structured_response === 'string' 
+          ? JSON.parse(interaction.structured_response)
+          : interaction.structured_response;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function fetchFeedbackForQuestion(questionText) {
+      try {
+        const feedbackResponse = await apiCall('feedback');
+        const normalizedQuestion = questionText.toLowerCase().trim();
+        return feedbackResponse.feedback?.recentFeedback?.filter(f => 
+          f.query.toLowerCase().trim() === normalizedQuestion
+        ) || [];
+      } catch (feedbackError) {
+        console.warn('Could not load feedback data:', feedbackError);
+        return [];
+      }
+    }
+
+    function createFeedbackStatsHTML(feedbackData) {
+      const thumbsUp = feedbackData.filter(f => f.rating === 'thumbs_up').length;
+      const thumbsDown = feedbackData.filter(f => f.rating === 'thumbs_down').length;
+      const satisfactionRate = feedbackData.length > 0 ? (thumbsUp / feedbackData.length * 100).toFixed(1) : 0;
+      return `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 15px;">
+          <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
+            <div style="font-size: 18px; font-weight: bold; color: #10b981;">${thumbsUp}</div>
+            <div style="font-size: 12px; color: #888;">👍 Thumbs Up</div>
+          </div>
+          <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
+            <div style="font-size: 18px; font-weight: bold; color: #ef4444;">${thumbsDown}</div>
+            <div style="font-size: 12px; color: #888;">👎 Thumbs Down</div>
+          </div>
+          <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
+            <div style="font-size: 18px; font-weight: bold; color: #3b82f6;">${satisfactionRate}%</div>
+            <div style="font-size: 12px; color: #888;">Satisfaction</div>
+          </div>
+          <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
+            <div style="font-size: 18px; font-weight: bold; color: #f59e0b;">${feedbackData.length}</div>
+            <div style="font-size: 12px; color: #888;">Total</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function createFeedbackDetailsHTML(feedbackData) {
+      if (feedbackData.length === 0) return '';
+      let html = `
+        <div style="margin-top: 15px;">
+          <h5 style="color: #f59e0b; margin-bottom: 10px;">📝 Recent Feedback Details:</h5>
+          <div style="max-height: 200px; overflow-y: auto;">
+      `;
+      feedbackData.slice(0, 5).forEach(feedback => {
+        const ratingColor = feedback.rating === 'thumbs_up' ? '#10b981' : '#ef4444';
+        const ratingIcon = feedback.rating === 'thumbs_up' ? '👍' : '👎';
+        html += `
+          <div style="margin-bottom: 10px; padding: 10px; background: #0f1419; border-radius: 5px; border-left: 3px solid ${ratingColor};">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+              <span style="color: ${ratingColor}; font-weight: bold;">${ratingIcon} ${feedback.rating.replace('_', ' ').toUpperCase()}</span>
+              <span style="color: #888; font-size: 12px;">${new Date(feedback.timestamp).toLocaleString()}</span>
+            </div>
+            ${feedback.reason ? `<div style="color: #ccc; font-size: 12px; margin-bottom: 5px;"><strong>Reason:</strong> ${feedback.reason.replace('_', ' ')}</div>` : ''}
+            ${feedback.user_feedback_text ? `<div style="color: #ccc; font-size: 12px;"><strong>Comment:</strong> "${feedback.user_feedback_text}"</div>` : ''}
+            <div style="color: #888; font-size: 11px; margin-top: 5px;">
+              Confidence: ${feedback.confidence_score}% | Intent: ${feedback.intent}
+            </div>
+          </div>
+        `;
+      });
+      html += `
+          </div>
+        </div>
+      `;
+      return html;
+    }
+
+    function createFeedbackHTML(feedbackData) {
+      if (!feedbackData || feedbackData.length === 0) {
+        return `
+          <div class="feedback-section" style="margin-top: 20px; padding: 15px; background: #1a1f2e; border-radius: 8px;">
+            <h4 style="color: #888; margin-bottom: 10px;">👥 User Feedback</h4>
+            <p style="color: #888; font-style: italic;">No feedback received for this question yet.</p>
+          </div>
+        `;
+      }
+      return `
+        <div class="feedback-section" style="margin-top: 20px; padding: 15px; background: #1a1f2e; border-radius: 8px;">
+          <h4 style="color: #10b981; margin-bottom: 10px;">👥 User Feedback</h4>
+          ${createFeedbackStatsHTML(feedbackData)}
+          ${createFeedbackDetailsHTML(feedbackData)}
+        </div>
+      `;
+    }
+
     // View question details
     async function viewQuestion(questionText) {
       try {
-        // Get interactions for this specific question
         const data = await apiCall('question_detail', { question: questionText });
         const { interactions } = data.question;
         
@@ -2346,106 +2479,11 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
           return;
         }
         
-        // Interactions already filtered to answered only by backend; compute frequency from answered items
         const answeredInteractions = interactions.filter(i => i.answer);
         const latestInteraction = answeredInteractions[0] || interactions[0];
-        
-        // Parse structured_response if it exists (may come as string or object)
-        let structuredResponse = null;
-        if (latestInteraction.structured_response) {
-          try {
-            structuredResponse = typeof latestInteraction.structured_response === 'string' 
-              ? JSON.parse(latestInteraction.structured_response)
-              : latestInteraction.structured_response;
-          } catch (e) {
-            // Silently fail - structured_response will remain null
-          }
-        }
-        
-        // Fetch feedback data for this question
-        let feedbackData = null;
-        try {
-          const feedbackResponse = await apiCall('feedback');
-          const questionText = latestInteraction.question.toLowerCase().trim();
-          feedbackData = feedbackResponse.feedback?.recentFeedback?.filter(f => 
-            f.query.toLowerCase().trim() === questionText
-          ) || [];
-        } catch (feedbackError) {
-          console.warn('Could not load feedback data:', feedbackError);
-        }
-        
-        // Create feedback display HTML
-        let feedbackHTML = '';
-        if (feedbackData && feedbackData.length > 0) {
-          const thumbsUp = feedbackData.filter(f => f.rating === 'thumbs_up').length;
-          const thumbsDown = feedbackData.filter(f => f.rating === 'thumbs_down').length;
-          const satisfactionRate = feedbackData.length > 0 ? (thumbsUp / feedbackData.length * 100).toFixed(1) : 0;
-          
-          feedbackHTML = `
-            <div class="feedback-section" style="margin-top: 20px; padding: 15px; background: #1a1f2e; border-radius: 8px;">
-              <h4 style="color: #10b981; margin-bottom: 10px;">👥 User Feedback</h4>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 15px;">
-                <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
-                  <div style="font-size: 18px; font-weight: bold; color: #10b981;">${thumbsUp}</div>
-                  <div style="font-size: 12px; color: #888;">👍 Thumbs Up</div>
-                </div>
-                <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
-                  <div style="font-size: 18px; font-weight: bold; color: #ef4444;">${thumbsDown}</div>
-                  <div style="font-size: 12px; color: #888;">👎 Thumbs Down</div>
-                </div>
-                <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
-                  <div style="font-size: 18px; font-weight: bold; color: #3b82f6;">${satisfactionRate}%</div>
-                  <div style="font-size: 12px; color: #888;">Satisfaction</div>
-                </div>
-                <div style="text-align: center; padding: 10px; background: #0f1419; border-radius: 5px;">
-                  <div style="font-size: 18px; font-weight: bold; color: #f59e0b;">${feedbackData.length}</div>
-                  <div style="font-size: 12px; color: #888;">Total</div>
-                </div>
-              </div>
-          `;
-          
-          // Show recent feedback details
-          if (feedbackData.length > 0) {
-            feedbackHTML += `
-              <div style="margin-top: 15px;">
-                <h5 style="color: #f59e0b; margin-bottom: 10px;">📝 Recent Feedback Details:</h5>
-                <div style="max-height: 200px; overflow-y: auto;">
-            `;
-            
-            feedbackData.slice(0, 5).forEach(feedback => {
-              const ratingColor = feedback.rating === 'thumbs_up' ? '#10b981' : '#ef4444';
-              const ratingIcon = feedback.rating === 'thumbs_up' ? '👍' : '👎';
-              
-              feedbackHTML += `
-                <div style="margin-bottom: 10px; padding: 10px; background: #0f1419; border-radius: 5px; border-left: 3px solid ${ratingColor};">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    <span style="color: ${ratingColor}; font-weight: bold;">${ratingIcon} ${feedback.rating.replace('_', ' ').toUpperCase()}</span>
-                    <span style="color: #888; font-size: 12px;">${new Date(feedback.timestamp).toLocaleString()}</span>
-                  </div>
-                  ${feedback.reason ? `<div style="color: #ccc; font-size: 12px; margin-bottom: 5px;"><strong>Reason:</strong> ${feedback.reason.replace('_', ' ')}</div>` : ''}
-                  ${feedback.user_feedback_text ? `<div style="color: #ccc; font-size: 12px;"><strong>Comment:</strong> "${feedback.user_feedback_text}"</div>` : ''}
-                  <div style="color: #888; font-size: 11px; margin-top: 5px;">
-                    Confidence: ${feedback.confidence_score}% | Intent: ${feedback.intent}
-                  </div>
-                </div>
-              `;
-            });
-            
-            feedbackHTML += `
-                </div>
-              </div>
-            `;
-          }
-          
-          feedbackHTML += `</div>`;
-        } else {
-          feedbackHTML = `
-            <div class="feedback-section" style="margin-top: 20px; padding: 15px; background: #1a1f2e; border-radius: 8px;">
-              <h4 style="color: #888; margin-bottom: 10px;">👥 User Feedback</h4>
-              <p style="color: #888; font-style: italic;">No feedback received for this question yet.</p>
-            </div>
-          `;
-        }
+        const structuredResponse = parseStructuredResponse(latestInteraction);
+        const feedbackData = await fetchFeedbackForQuestion(latestInteraction.question);
+        const feedbackHTML = createFeedbackHTML(feedbackData);
         
         // Create a modal to show the question and answer
         const modal = document.createElement('div');
