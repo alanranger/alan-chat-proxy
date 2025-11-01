@@ -6303,7 +6303,7 @@ function sendEventsResponse(context) {
 }
 
 async function handleEventsPipeline(params) {
- const { client, query, keywords, pageContext, res, debugInfo = null } = params;
+ const { client, query, keywords, pageContext, res, debugInfo = null, sessionId = null, started = null } = params;
  
  // Early routing: if the original query already carries a normalized duration token,
  // bypass keyword-derived routing and fetch by category directly. This avoids
@@ -6339,14 +6339,17 @@ async function handleEventsPipeline(params) {
  });
  if (clarificationHandled) return true;
  }
- 
+
  sendEventsResponse({
  eventList,
  query,
  keywords,
  confidence,
  res,
- debugInfo
+ debugInfo,
+ sessionId,
+ started,
+ pageContext
  });
  return true;
 }
@@ -9200,7 +9203,7 @@ async function handleQueryClassification(client, context) {
 async function handleWorkshopClassification(client, context) {
  console.log(`ðŸŽ¯ Workshop query detected: "${context.query}" - skipping RAG, routing to events`);
  const keywords = extractKeywords(context.query);
- await handleEventsPipeline({ client, query: context.query, keywords, pageContext: context.pageContext, res: context.res, debugInfo: { bypassReason: 'workshop_query' } });
+ await handleEventsPipeline({ client, query: context.query, keywords, pageContext: context.pageContext, res: context.res, debugInfo: { bypassReason: 'workshop_query' }, sessionId: context.sessionId, started: context.started });
  return { handled: true };
 }
 
