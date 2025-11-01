@@ -4228,6 +4228,53 @@ function buildPrimaryServicesQuery(client, genericServiceIntent, keywords, limit
   return q.range(0, Math.max(0, (limit || 24) - 1));
 }
 
+async function findProducts(client, { keywords, limit = 6 }) {
+  console.log(`🔧 findProducts called with keywords: ${keywords?.join(', ') || 'none'}`);
+  
+  try {
+    // Query products from page_entities with kind='product'
+    let q = client
+      .from('page_entities')
+      .select('id, url, title, description, page_url, price, price_currency, availability, image_url, categories, tags, json_ld_data, last_seen')
+      .eq('kind', 'product')
+      .order('last_seen', { ascending: false })
+      .limit(limit);
+    
+    // Apply keyword filtering if keywords provided
+    if (keywords && keywords.length > 0) {
+      const keywordConditions = keywords
+        .filter(k => k && k.length > 2)
+        .map(k => `title.ilike.%${k}%,description.ilike.%${k}%,url.ilike.%${k}%`)
+        .join(',');
+      
+      if (keywordConditions) {
+        q = q.or(keywordConditions);
+      }
+    }
+    
+    const { data, error } = await q;
+    
+    if (error) {
+      console.warn(`[ENRICH] findProducts error: ${error.message}`);
+      return [];
+    }
+    
+    if (data && data.length > 0) {
+      console.log(`[ENRICH] Found ${data.length} products`);
+      return data.map(product => ({
+        ...product,
+        page_url: product.page_url || product.url,
+        href: product.page_url || product.url
+      }));
+    }
+    
+    return [];
+  } catch (e) {
+    console.warn(`[ENRICH] findProducts exception: ${e.message}`);
+    return [];
+  }
+}
+
 // Helper: Build fallback services query
 function buildFallbackServicesQuery(client, genericServiceIntent, keywords, limit) {
   let q = client
@@ -10001,6 +10048,25 @@ async function addServicesForEnrichment(client, keywords, enriched, businessCate
   }
 }
 
+// Helper: Add products for enrichment (Complexity: Low)
+async function addProductsForEnrichment(client, keywords, enriched, businessCategory, query) {
+  const lc = (query || '').toLowerCase();
+  
+  // Add products for equipment queries
+  const shouldAddProducts = 
+    businessCategory === 'Equipment Recommendations' ||
+    // Keyword-based matching for equipment/product queries
+    /\b(tripod|camera|lens|filter|flash|bag|memory card|sd card|equipment|gear|accessory|accessories|recommend|suggest|buy|purchase|need|required)\b/i.test(query || '');
+  
+  if (shouldAddProducts) {
+    const products = await findProducts(client, { keywords, limit: 6 });
+    if (products && products.length > 0) {
+      enriched.products = (enriched.products || []).concat(products).slice(0, 6);
+      console.log(`[ENRICH] Added ${products.length} products for ${businessCategory}`);
+    }
+  }
+}
+
 // Helper: Add events for enrichment (Complexity: Low)
 async function addEventsForEnrichment(client, keywords, enriched, businessCategory, query) {
   const lc = (query || '').toLowerCase();
@@ -10051,6 +10117,11 @@ async function enrichAdviceWithRelatedInfo(client, query, structured) {
     // Add events if missing or query suggests events
     if (!enriched.events || enriched.events.length === 0) {
       await addEventsForEnrichment(client, keywords, enriched, businessCategory, query);
+    }
+    
+    // Add products if missing or query suggests equipment/products
+    if (!enriched.products || enriched.products.length === 0) {
+      await addProductsForEnrichment(client, keywords, enriched, businessCategory, query);
     }
     
     // Ensure we have at least one type of related info
