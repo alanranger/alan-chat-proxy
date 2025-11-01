@@ -1,30 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Analytics Dashboard - Alan Ranger Assistant</title>
-  <style>
-    :root {
-      --bg: #0f1419;
-      --panel: #1a1f2e;
-      --text: #e2e8f0;
-      --text-muted: #9ca3af;
-      --brand: #f59e0b;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --error: #ef4444;
-      --border: #374151;
-      --ring: rgba(245, 158, 11, 0.3);
-    }
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Chat Analytics Dashboard - Alan Ranger Assistant</title>
+<meta name="description" content="Alan Ranger Assistant Analytics Dashboard — Monitor chat bot performance, user interactions, and insights."/>
+<meta property="og:title" content="Chat Analytics Dashboard - Alan Ranger Assistant"/>
+<meta property="og:description" content="Monitor chat bot performance, user interactions, and insights for Alan Ranger Photography Assistant."/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://alan-chat-proxy.vercel.app/analytics.html"/>
+<meta property="og:image" content="https://alan-chat-proxy.vercel.app/chat%20white.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Chat Analytics Dashboard - Alan Ranger Assistant"/>
+<meta name="twitter:description" content="Monitor chat bot performance, user interactions, and insights."/>
+<meta name="twitter:image" content="https://alan-chat-proxy.vercel.app/chat%20white.png"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1726; --panel:#121C2D; --text:#DDE7F6; --muted:#93A4C1; --bubble:#1B2A44;
+  --brand:#F15A22; --wa:#25D366; --ring:rgba(241,90,34,.35);
+  --input-bg:#E9EEF5; --input-text:#0b0f16; --input-border:#CBD5E1; --input-ph:#6b7280;
+  --chip-bg:#13203e; --chip-br:#1b2540; --link:#9cd3ff; --link-hover:#cfe7ff;
+  --user-bg:#e6edf7; --user-text:#0b0f16;
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
-      background: var(--bg); 
-      color: var(--text); 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      line-height: 1.6;
-    }
+  --status-green-bg:#12381e; --status-green-br:#245f3a; --status-green-tx:#b8f3c7;
+  --status-amber-bg:#3a2d0c; --status-amber-br:#6f5616; --status-amber-tx:#ffeab0;
+  --status-red-bg:#3c161b; --status-red-br:#6f2831; --status-red-tx:#ffc3cc;
+
+  /* Analytics-specific variables */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --border: #374151;
+  --text-muted: #9ca3af;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45;font-size:15px;-webkit-overflow-scrolling:touch}
 
     .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
     .header { margin-bottom: 30px; }
@@ -551,7 +563,35 @@
       .table { font-size: 0.9rem; }
       .metric-value { font-size: 2rem; }
     }
-  </style>
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Chat Analytics Dashboard - Alan Ranger Assistant",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "url": "https://alan-chat-proxy.vercel.app/analytics.html",
+  "description": "Monitor chat bot performance, user interactions, and insights for Alan Ranger Photography Assistant",
+  "author": { "@type": "Person", "name": "Alan Ranger" },
+  "publisher": { "@type": "Organization", "name": "Alan Ranger Photography", "url": "https://www.alanranger.com" }
+}
+</script>
+<!-- GA4 (optional) -- set GA4_ID via data attribute in embed or inline here -->
+<script>
+  (function(){
+    var GA4_ID = (new URL(location.href)).searchParams.get('ga4') || '';
+    if (!GA4_ID) return;
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    window.gtag = gtag;
+    gtag('js', new Date());
+    gtag('config', GA4_ID, { send_page_view: false });
+    var s=document.createElement('script'); s.async=true; s.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(GA4_ID);
+    document.head.appendChild(s);
+    window.__ga4_id = GA4_ID;
+  })();
+</script>
 </head>
 <body>
   <div class="container">
