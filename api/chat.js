@@ -9983,72 +9983,103 @@ function addEventDetails(eventList) {
  }
 }
 
+// Helper: Check if query is asking about course content/inclusions (Complexity: Low)
+function isCourseContentQuery(query) {
+  const lcQuery = query.toLowerCase();
+  return (lcQuery.includes("what is included") || lcQuery.includes("what's included") || 
+          lcQuery.includes("what does") || lcQuery.includes("what do") ||
+          lcQuery.includes("include") || lcQuery.includes("cover") || 
+          lcQuery.includes("covers")) && 
+         (lcQuery.includes("course") || lcQuery.includes("beginner") || 
+          lcQuery.includes("class") || lcQuery.includes("workshop"));
+}
+
+// Helper: Determine course type from query (Complexity: Low)
+function determineCourseType(lcQuery) {
+  if (lcQuery.includes("beginner")) return "beginner";
+  if (lcQuery.includes("lightroom")) return "Lightroom";
+  if (lcQuery.includes("portrait")) return "portrait";
+  return "photography";
+}
+
+// Helper: Get course type label for answer (Complexity: Low)
+function getCourseTypeLabel(courseType) {
+  if (courseType === "beginner") return "beginner photography courses";
+  if (courseType === "Lightroom") return "Lightroom courses";
+  if (courseType === "portrait") return "portrait photography courses";
+  return "photography courses";
+}
+
+// Helper: Extract common course elements from event descriptions (Complexity: Low)
+function extractCommonCourseElements(eventList) {
+  const commonElements = new Set();
+  eventList.slice(0, 5).forEach(event => {
+    const desc = (event.description || event.brief || '').toLowerCase();
+    if (desc.includes('camera') || desc.includes('settings')) commonElements.add('Camera settings and controls');
+    if (desc.includes('exposure') || desc.includes('aperture') || desc.includes('iso')) commonElements.add('Exposure fundamentals (aperture, shutter speed, ISO)');
+    if (desc.includes('composition')) commonElements.add('Composition techniques');
+    if (desc.includes('practical') || desc.includes('hands-on')) commonElements.add('Practical hands-on sessions');
+    if (desc.includes('lightroom') || desc.includes('editing')) commonElements.add('Photo editing and post-processing');
+    if (desc.includes('feedback') || desc.includes('review')) commonElements.add('Image review and feedback');
+    if (desc.includes('portfolio') || desc.includes('project')) commonElements.add('Portfolio development');
+  });
+  return Array.from(commonElements).slice(0, 6);
+}
+
+// Helper: Generate course content answer (Complexity: Low)
+function generateCourseContentAnswer(eventList, query) {
+  const lcQuery = query.toLowerCase();
+  const courseType = determineCourseType(lcQuery);
+  const courseLabel = getCourseTypeLabel(courseType);
+  
+  let answer = `I found ${eventList.length} ${eventList.length === 1 ? 'course' : 'courses'} that match your query. `;
+  answer += `Here's what ${courseLabel} typically include:\n\n`;
+  
+  const commonElements = extractCommonCourseElements(eventList);
+  if (commonElements.length > 0) {
+    answer += commonElements.map(el => `• ${el}`).join('\n') + '\n\n';
+  }
+  
+  answer += `Each course varies in content and duration. Below are the specific courses available:\n\n`;
+  answer += eventList.slice(0, 10).map(event => {
+    const title = event.title || event.name || 'Untitled Course';
+    const brief = event.brief || event.description || '';
+    const briefPreview = brief.length > 150 ? brief.substring(0, 150) + '...' : brief;
+    return `**${title}**${briefPreview ? '\n' + briefPreview : ''}`;
+  }).join('\n\n');
+  
+  return answer;
+}
+
+// Helper: Generate standard event answer (Complexity: Low)
+function generateStandardEventAnswer(eventList, query) {
+  const { isLocationQuery, isTimeQuery } = analyzeQueryTypes(query);
+  
+  let answer = `I found ${eventList.length} ${eventList.length === 1 ? 'event' : 'events'} that match your query.`;
+  
+  if (isTimeQuery && eventList.length > 0) {
+    answer += handleTimeQueryResponse(eventList, isLocationQuery);
+  }
+  
+  if (isLocationQuery) {
+    answer += handleLocationQueryResponse(eventList);
+  }
+  
+  answer += addEventDetails(eventList);
+  
+  return answer;
+}
+
 function generateEventAnswerMarkdown(eventList, query) {
- if (!eventList || eventList.length === 0) {
- return "I couldn't find any events matching your query.";
- }
- 
- // Check if query is asking about course content/inclusions
- const lcQuery = query.toLowerCase();
- const isCourseContentQuery = (lcQuery.includes("what is included") || lcQuery.includes("what's included") || 
-                                lcQuery.includes("what does") || lcQuery.includes("what do") ||
-                                lcQuery.includes("include") || lcQuery.includes("cover") || 
-                                lcQuery.includes("covers")) && 
-                               (lcQuery.includes("course") || lcQuery.includes("beginner") || 
-                                lcQuery.includes("class") || lcQuery.includes("workshop"));
- 
- if (isCourseContentQuery && eventList.length > 0) {
-   // For course content queries, provide a more detailed answer
-   const courseType = lcQuery.includes("beginner") ? "beginner" : 
-                     lcQuery.includes("lightroom") ? "Lightroom" :
-                     lcQuery.includes("portrait") ? "portrait" : "photography";
-   
-   let answer = `I found ${eventList.length} ${eventList.length === 1 ? 'course' : 'courses'} that match your query. `;
-   answer += `Here's what ${courseType === "beginner" ? "beginner photography courses" : courseType === "Lightroom" ? "Lightroom courses" : courseType === "portrait" ? "portrait photography courses" : "photography courses"} typically include:\n\n`;
-   
-   // Extract common course elements from event descriptions
-   const commonElements = new Set();
-   eventList.slice(0, 5).forEach(event => {
-     const desc = (event.description || event.brief || '').toLowerCase();
-     if (desc.includes('camera') || desc.includes('settings')) commonElements.add('Camera settings and controls');
-     if (desc.includes('exposure') || desc.includes('aperture') || desc.includes('iso')) commonElements.add('Exposure fundamentals (aperture, shutter speed, ISO)');
-     if (desc.includes('composition')) commonElements.add('Composition techniques');
-     if (desc.includes('practical') || desc.includes('hands-on')) commonElements.add('Practical hands-on sessions');
-     if (desc.includes('lightroom') || desc.includes('editing')) commonElements.add('Photo editing and post-processing');
-     if (desc.includes('feedback') || desc.includes('review')) commonElements.add('Image review and feedback');
-     if (desc.includes('portfolio') || desc.includes('project')) commonElements.add('Portfolio development');
-   });
-   
-   if (commonElements.size > 0) {
-     answer += Array.from(commonElements).slice(0, 6).map(el => `• ${el}`).join('\n') + '\n\n';
-   }
-   
-   answer += `Each course varies in content and duration. Below are the specific courses available:\n\n`;
-   answer += eventList.slice(0, 10).map(event => {
-     const title = event.title || event.name || 'Untitled Course';
-     const brief = event.brief || event.description || '';
-     const briefPreview = brief.length > 150 ? brief.substring(0, 150) + '...' : brief;
-     return `**${title}**${briefPreview ? '\n' + briefPreview : ''}`;
-   }).join('\n\n');
-   
-   return answer;
- }
- 
- const { isLocationQuery, isTimeQuery } = analyzeQueryTypes(query);
- 
- let answer = `I found ${eventList.length} ${eventList.length === 1 ? 'event' : 'events'} that match your query.`;
- 
- if (isTimeQuery && eventList.length > 0) {
- answer += handleTimeQueryResponse(eventList, isLocationQuery);
- }
- 
- if (isLocationQuery) {
- answer += handleLocationQueryResponse(eventList);
- }
- 
- answer += addEventDetails(eventList);
- 
- return answer;
+  if (!eventList || eventList.length === 0) {
+    return "I couldn't find any events matching your query.";
+  }
+  
+  if (isCourseContentQuery(query)) {
+    return generateCourseContentAnswer(eventList, query);
+  }
+  
+  return generateStandardEventAnswer(eventList, query);
 }
 
 // ============================================================================
