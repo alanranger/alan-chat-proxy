@@ -461,9 +461,14 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       transition: all 0.2s ease;
       min-width: 0;
       max-width: 100%;
+      min-height: auto;
+      height: auto;
       box-sizing: border-box;
       word-wrap: break-word;
       overflow-wrap: break-word;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
     }
 
     .article-card:hover, .service-card:hover, .event-card:hover {
@@ -478,6 +483,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       word-wrap: break-word;
       overflow-wrap: break-word;
       line-height: 1.4;
+      flex-shrink: 0;
     }
 
     .article-card a, .service-card a, .event-card a {
@@ -486,6 +492,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       word-wrap: break-word;
       overflow-wrap: break-word;
       display: block;
+      width: 100%;
     }
 
     .article-card a:hover, .service-card a:hover, .event-card a:hover {
@@ -493,13 +500,30 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       text-decoration: underline;
     }
 
-    .article-description, .service-description, .event-details {
+    .article-description, .service-description {
       color: #d1d5db;
       font-size: 14px;
       margin: 8px 0;
       line-height: 1.5;
       word-wrap: break-word;
       overflow-wrap: break-word;
+    }
+
+    .event-details {
+      color: #d1d5db;
+      font-size: 14px;
+      margin: 8px 0;
+      line-height: 1.5;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .event-details > div {
+      margin: 4px 0;
+      white-space: normal;
     }
 
     .event-meta, .article-meta {
@@ -526,7 +550,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui
       background: #1f2937;
       border-radius: 8px;
       max-width: 1000px;
-      max-height: 80vh;
+      max-height: 90vh;
       width: 90%;
       overflow: hidden;
       display: flex;
