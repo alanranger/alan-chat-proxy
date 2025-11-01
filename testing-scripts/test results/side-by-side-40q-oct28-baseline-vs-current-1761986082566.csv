@@ -1,0 +1,89 @@
+Question #,Question,Category,Baseline Status (Oct 28),Current Status,Status Change,Baseline Confidence,Current Confidence,Baseline Answer (Snippet),Current Answer (Snippet),Baseline Type,Current Type,Baseline Events Count,Current Events Count,Baseline Articles Count,Current Articles Count,Content Quality,Changes Detected
+1,whens the next bluebell workshops and whats the cost,Event Queries,Pass,Pass,Same,63,96,"I found 12 events that match your query. The next workshop is ""Bluebell Photography Workshop | Warwickshire | 20 Apr"" on Monday, 20 April 2026 in Warw","I found 12 events that match your query. The next workshop is ""Bluebell Photography Workshop | Warwickshire | 20 Apr"" on Monday, 20 April 2026 in Warw",events,events,12,12,0,0,Has content,
+2,when is the next devon workshop,Event Queries,Pass,Pass,Same,62,96,"I found 2 events that match your query. The next Devon workshop is ""Hartland Quay, Devon Seascape Photography Workshop"" on Thursday, 19 February 2026 ","I found 2 events that match your query. The next Devon workshop is ""Hartland Quay, Devon Seascape Photography Workshop"" on Thursday, 19 February 2026 ",events,events,2,2,0,0,Has content,
+3,what is your next workshop date and where is it,Event Queries,Pass,Pass,Same,63,96,"I found 40 events that match your query. The next workshop is ""Batsford Arboretum Autumn Photography Workshop -29/10"" on Wednesday, 29 October 2025 in","I found 20 events that match your query. The next workshop is ""Abstract and Macro Photography Workshop - Warwickshire"" on Saturday, 8 November 2025 in",events,events,40,20,0,0,Has content,
+4,when are your next Autumn workshops and where are they?,Event Queries,Pass,Pass,Same,63,96,"I found 4 events that match your query. The next workshop is ""Batsford Arboretum Autumn Photography Workshop -29/10"" on Wednesday, 29 October 2025 in ","I found 7 events that match your query. The next workshop is ""Lake District Photography Workshops | Autumn in Cumbria"" on Friday, 14 November 2025 in ",events,events,4,7,0,0,Has content,
+5,How long are your workshops?,Event Queries,Pass,Pass,Same,62,96,I found 4 events that match your query. These include workshops in various locations with different skill levels and dates.,"I offer 2.5–4 hour sessions, one‑day workshops, and 2–5 day multi‑day workshops.
+
+Here are a couple of matching workshops:
+• Suffolk Landscape Photogr",events,events,4,4,0,0,Has content,
+6,How much is a residential photography course and does it include B&B,General Queries,Pass,Pass,Same,53,53,"[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[objec","Yes—all multi‑day workshops include transport and B&B in the price. See individual workshop event cards for current prices.
+
+I offer 2–5 day multi‑day",events,events,18,18,0,0,Has content,
+7,Do you do astrophotography workshops,General Queries,Pass,Pass,Same,80,80,"I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin","I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin",advice,advice,0,0,0,0,Has content,
+8,Can my 14yr old attend your workshop,General Queries,Pass,Pass,Same,80,80,"I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin","I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin",advice,advice,0,0,0,0,Has content,
+9,My pictures never seem sharp.  Can you advise on what I am doing wrong,General Queries,Pass,Pass,Same,80,90,"Here's what I can tell you: Sharp images come from proper technique: use a fast enough shutter speed to avoid camera shake, focus accurately, and use ","Soft photos usually come from three things: focus missing the subject, shutter speed being too slow, or small camera shake.
+
+Try this now:
+• Use singl",advice,advice,0,0,4,3,Has content,
+10,What types of photography services do you offer?,General Queries,Fail,Pass,Improved,0,80,,"I offer a range of photography services — including Workshops, Camera sensor cleaning, Online lessons, Courses, Private lessons, RPS mentoring.",clarification,services,0,0,0,0,Changed,Status: Fail → Pass; 
+11,What tripod do you recommend,Equipment Recommendations,Pass,Pass,Same,80,80,"For tripods, I recommend lightweight carbon fiber models for travel, or sturdy aluminum for studio work. Look for features like quick-release plates a","For tripods, I recommend lightweight carbon fiber models for travel, or sturdy aluminum for studio work. Look for features like quick-release plates a",advice,advice,0,0,9,9,Has content,
+12,What sort of camera do I need for your camera course,Equipment Recommendations,Pass,Pass,Same,80,80,"For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and I","For my courses and workshops, any DSLR or mirrorless camera with manual controls will work perfectly. The key is having aperture, shutter speed, and I",advice,advice,0,0,25,25,Has content,
+13,What gear or equipment do I need to bring to a workshop?,Equipment Recommendations,Pass,Pass,Same,80,80,"I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin","I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin",advice,advice,0,0,0,0,Has content,
+14,What is the difference between prime and zoom lenses?,Equipment Recommendations,Pass,Pass,Same,80,80,"For lens, I recommend focusing on quality over quantity. Look for reputable brands with good warranties and user reviews. I have detailed guides cover",**The difference between prime and zoom lenses?** 13 JPEG VS RAW: THE KEY DIFFERENCES: A GUIDE FOR BEGINNERS,advice,advice,0,0,8,8,Has content,
+15,What memory card should I buy?,Equipment Recommendations,Pass,Pass,Same,80,80,"I'd be happy to help you choose memory card equipment! Based on your photography needs, I can provide personalized recommendations.","I'd be happy to help you choose memory card equipment! Based on your photography needs, I can provide personalized recommendations.",advice,advice,0,0,2,2,Has content,
+16,Do you I get a certificate with the photography course,Course/Workshop Logistics,Pass,Pass,Same,80,80,"I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin","I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin",advice,advice,0,0,0,0,Has content,
+17,Do I need a laptop for the lightroom course,Course/Workshop Logistics,Pass,Pass,Same,62,80,I found 6 events that match your query. These include workshops in various locations with different skill levels and dates.,"# Kickstart 2024: Beginners Photography Course in Coventry
+
+**Source**: [https://www.alanranger.com/blog-on-photography/beginners-photography-course-i",events,advice,6,0,0,16,Has content,
+18,Is the online photography course really free,Course/Workshop Logistics,Pass,Pass,Same,57,96,"I found 2 events that match your query. Here are the details:
+
+**RPS Courses - RPS Distinctions Course - Enrol Anytime - 6-11**
+â€¢ Date: Thursday, 6 ","I found 2 events that match your query. Here are the details:
+
+**RPS Courses - RPS Distinctions Course - Enrol Anytime - 6-11**
+â€¢ Date: Thursday, 6 ",events,events,2,2,0,0,Has content,
+19,What courses do you offer for complete beginners?,Course/Workshop Logistics,Fail,Pass,Improved,0,96,,I found 18 events that match your query. These include workshops in various locations with different skill levels and dates.,course_clarification,events,0,18,0,0,Has content,Status: Fail → Pass; 
+20,How many weeks is the beginners’ photography course?,Course/Workshop Logistics,Pass,Pass,Same,62,80,I found 18 events that match your query. These include workshops in various locations with different skill levels and dates.,"# Kickstart 2024: Beginners Photography Course in Coventry
+
+**Source**: [https://www.alanranger.com/blog-on-photography/beginners-photography-course-i",events,advice,18,0,0,25,Has content,
+21,How do I get personalised feedback on my images,Business Information,Pass,Pass,Same,80,80,"As you continue to explore the vast world of photography, let the knowledge and techniques shared here inspire you to push the boundaries of focus, cr",**Personalised Feedback**: Alan offers 1-2-1 private photography lessons (face-to-face in Coventry or online via Zoom) where you can get personalised ,advice,services,0,0,2,0,Has content,
+22,How can I contact you or book a discovery call?,Business Information,Pass,Pass,Same,80,80,"**Contact Information**: - **Address**: 45 Hathaway Road, Coventry, CV4 9HW, United Kingdom - **Phone**: +44 781 701 7994 - **Email**: info@alanranger","**Contact Information**:
+- **Address**: 45 Hathaway Road, Coventry, CV4 9HW, United Kingdom
+- **Phone**: +44 781 701 7994
+- **Email**: info@alanranger",advice,advice,0,0,1,0,Has content,
+23,Do you offer gift vouchers?,Business Information,Pass,Pass,Same,80,80,"Here's what I can tell you: **Gift Vouchers**: Digital photography gift vouchers are available from Â£5-Â£600, perfect for any photography enthusiast.","Here's what I can tell you: **Gift Vouchers**: Digital photography gift vouchers are available from £5-£600, perfect for any photography enthusiast. V",advice,advice,0,0,0,0,Has content,
+24,What is your cancellation or refund policy for courses/workshops?,Business Information,Pass,Pass,Same,80,80,"I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin","I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin",advice,advice,0,0,0,0,Has content,
+25,Where is your gallery and can I submit my images for feedback?,Business Information,Pass,Pass,Same,80,80,"ES AND WORKSHOPS TO QUALIFICATIONS, FOSTERING ONGOING GROWTH AND LEARNING. KIRSTEN PEARCE FLEXIBLE OPTIONS - ENROL ANYTIMEONLINE - ZOOM IS THIS FOR ME","Alan doesn't have a physical gallery location. However, you can view his photography work on his website and social media. For feedback on your images",advice,advice,0,0,3,3,Has content,
+26,What is long exposure and how can I find out more about it,Technical Photography Concepts,Pass,Pass,Same,80,80,"Based on Alan Ranger's expertise, here's what you need to know about your question.
+
+FIVE CREATIVE AUTUMN PHOTOGRAPHY PROJECTS: TO INSPIRE YOU
+
+*For d","Here's a clear explanation: # 01 What is EXPOSURE in photography: A Guide for Beginners
+
+**Source**: [https://www.alanranger.com/blog-on-photography/w",advice,advice,0,0,16,13,Improved (generic → real content),Content quality improved
+27,"""What is the exposure triangle (aperture, shutter, ISO)?""",Technical Photography Concepts,Fail,Pass,Improved,80,80,,"Here's a clear explanation: **The Exposure Triangle** consists of three key settings:
+- **Aperture** (f-stop): Controls depth of field and light
+- **S",advice,advice,0,0,5,18,Has content,Status: Fail → Pass; 
+28,"""What is depth of field, and how do I control it?""",Technical Photography Concepts,Pass,Pass,Same,80,80,**Depth of field** is the area of your image that appears sharp. You control it with aperture: wider apertures (lower f-numbers) create shallow depth ,"**Depth of Field (DoF)** is the zone that appears acceptably sharp in front of and behind your focus distance. It's controlled by three main factors:
+",advice,advice,0,0,5,7,Has content,
+29,What is white balance and how do I use it?,Technical Photography Concepts,Pass,Pass,Same,80,80,"Based on Alan Ranger's expertise, here's what you need to know about your question.
+
+FIVE CREATIVE AUTUMN PHOTOGRAPHY PROJECTS: TO INSPIRE YOU
+
+*For d","**White balance and how do i use it?** Download 10 Composition Photography Field Checklists PDFs. Learn balance, lines, framing, perspective, colour, ",advice,advice,0,0,4,1,Improved (generic → real content),Content quality improved
+30,What is HDR photography?,Technical Photography Concepts,Pass,Pass,Same,80,80,"Based on Alan Ranger's expertise, here's what you need to know about your question.
+
+FIVE CREATIVE AUTUMN PHOTOGRAPHY PROJECTS: TO INSPIRE YOU
+
+*For d",**Hdr photography?** WHAT IS CONTRAST IN PHOTOGRAPHY: A GUIDE FOR BEGINNERS,advice,advice,0,0,25,25,Improved (generic → real content),Content quality improved
+31,Who is Alan Ranger and what is his photographic background?,Person Queries,Pass,Pass,Same,80,80,"**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of exp","**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of exp",advice,advice,0,0,25,25,Has content,
+32,Where is Alan Ranger based?,Person Queries,Pass,Pass,Same,80,80,# Finding Your Compositional Balance: A Guide For Beginner&#39;s **Source**: [https://www.alanranger.com/blog-on-photography/finding-your-compositiona,"# Finding Your Compositional Balance: A Guide For Beginner's
+
+**Source**: [https://www.alanranger.com/blog-on-photography/finding-your-compositional-b",advice,advice,0,0,25,25,Has content,
+33,Can I hire you as a professional photographer in Coventry?,Person Queries,Pass,Pass,Same,80,80,# Power of Professional Commercial Photography in Coventry **Source**: [https://www.alanranger.com/blog-on-photography/professional-commercial-photogr,"I offer a range of photography services — including Camera sensor cleaning, Online lessons, Courses, Private lessons.",advice,services,0,0,25,0,Changed,
+34,peter orton,Person Queries,Pass,Pass,Same,80,80,# Case Study - Peter Orton - ARPS | RPS Distinctions Panel **Source**: [https://www.alanranger.com/blog-on-photography/peter-orton-rps-distinctions](h,# Case Study - Peter Orton - ARPS | RPS Distinctions Panel **Source**: [https://www.alanranger.com/blog-on-photography/peter-orton-rps-distinctions](h,advice,advice,0,0,1,1,Has content,
+35,who is alan ranger,Person Queries,Pass,Pass,Same,80,80,# Finding Your Compositional Balance: A Guide For Beginner&#39;s **Source**: [https://www.alanranger.com/blog-on-photography/finding-your-compositiona,"**About Alan Ranger**: Alan is a highly qualified professional photographer and photography tutor based in the Midlands, UK, with over 20 years of exp",advice,advice,0,0,25,25,Has content,
+36,How do I subscribe to the free online photography course?,Technical Advice,Pass,Pass,Same,80,80,"I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin","I can't find a reliable answer for that specific question in my knowledge base. For detailed information about this, please contact Alan directly usin",advice,advice,0,0,0,0,Has content,
+37,How do I improve my composition and storytelling in photos?,Technical Advice,Pass,Pass,Same,80,80,"Great composition is about leading the viewer's eye through your image. Key techniques include the rule of thirds, leading lines, framing, and creatin","# How to Improve Your Photography Composition: A Guide
+
+**Source**: [https://www.alanranger.com/blog-on-photography/how-to-improve-your-photography-co",advice,advice,0,0,5,11,Has content,
+38,How do I use flash photography?,Technical Advice,Pass,Pass,Same,80,80,# What is CONTRAST in Photography: A Guide for Beginners **Source**: [https://www.alanranger.com/blog-on-photography/what-is-contrast-in-photography](,"# What is CONTRAST in Photography: A Guide for Beginners
+
+**Source**: [https://www.alanranger.com/blog-on-photography/what-is-contrast-in-photography]",advice,advice,0,0,25,25,Has content,
+39,How do I edit RAW files?,Technical Advice,Pass,Pass,Same,80,80,# 13 JPEG vs RAW: The Key Differences: A Guide for Beginners **Source**: [https://www.alanranger.com/blog-on-photography/jpeg-vs-raw-the-key-differenc,"# 13 JPEG vs RAW: The Key Differences: A Guide for Beginners
+
+**Source**: [https://www.alanranger.com/blog-on-photography/jpeg-vs-raw-the-key-differen",advice,advice,0,0,9,9,Has content,
+40,How do I improve my photography skills?,Technical Advice,Pass,Pass,Same,80,80,# What is CONTRAST in Photography: A Guide for Beginners **Source**: [https://www.alanranger.com/blog-on-photography/what-is-contrast-in-photography](,"# Beginners Photography Basics-How to improve your photography
+
+**Source**: [https://www.alanranger.com/blog-on-photography/photography-basics-how-to-",advice,advice,0,0,25,25,Has content,
